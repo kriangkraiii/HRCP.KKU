@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div class="card card-academic">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> เอกสารที่ [[${documentType}]]: [[${documentLabel}]]
+                    </h4>
+                    <small class="text-muted">คำร้องหมายเลข #[[${request.id}]] — ผู้ยื่น:
+                        [[${request.applicant.name}]]</small>
+                </div>
+                <div class="card-body">
+                    <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
+                        method="post" id="docForm">
+
+                        <!-- ==================== Document 2: ขอรายชื่อแต่งตั้งกรรมการ ==================== -->
+                        <div th:if="${documentType == 2}">
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลคณบดี</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ชื่อคณบดี</label>
+                                    <select name="dean_name" class="form-select staff-dropdown" data-role="DEAN">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="d : ${deans}" th:value="${d.displayName}"
+                                            th:text="${d.displayName}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่ง</label>
+                                    <input type="text" name="dean_position" class="form-control"
+                                        value="คณบดีวิทยาลัยการคอมพิวเตอร์">
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">เจ้าหน้าที่</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ชื่อเจ้าหน้าที่</label>
+                                    <select name="hr_name" class="form-select staff-dropdown" data-role="HR">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="h : ${hrStaff}" th:value="${h.displayName}"
+                                            th:text="${h.displayName}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่ง</label>
+                                    <input type="text" name="hr_position" class="form-control"
+                                        value="เจ้าหน้าที่บริหารงานทั่วไป">
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">หัวหน้าสาขา</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ชื่อหัวหน้าสาขา</label>
+                                    <select name="cs_head_name" class="form-select staff-dropdown" data-role="HEAD">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="h : ${heads}" th:value="${h.displayName}"
+                                            th:text="${h.displayName}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่ง</label>
+                                    <input type="text" name="cs_head_position" class="form-control"
+                                        value="หัวหน้าสาขาวิทยาการคอมพิวเตอร์">
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">รายชื่อกรรมการ (3 ท่าน)</h5>
+                            <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
+                                <div class="col-md-6">
+                                    <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+                                    <select th:name="'n_' + ${i}" class="form-select staff-dropdown"
+                                        data-role="COMMITTEE">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="c : ${committee}" th:value="${c.displayName}"
+                                            th:text="${c.displayName}"></option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ==================== Document 3: คำสั่งแต่งตั้งอนุกรรมการ ==================== -->
+                        <div th:if="${documentType == 3}">
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลคำสั่ง</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">เลขที่คำสั่ง</label><input type="text"
+                                        name="no" class="form-control"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้ยื่น</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ชื่อผู้ยื่น</label>
+                                    <select name="dropdownname_applicant" class="form-select staff-dropdown"
+                                        data-role="GENERAL">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="s : ${staffMembers}" th:value="${s.displayName}"
+                                            th:text="${s.displayName}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ประเภทตำแหน่ง</label>
+                                    <select name="staff_type" class="form-select">
+                                        <option value="พนักงานมหาวิทยาลัย">พนักงานมหาวิทยาลัย</option>
+                                        <option value="ข้าราชการ">ข้าราชการ</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่งปัจจุบัน</label>
+                                    <select name="dropdown_position" class="form-select">
+                                        <option value="อาจารย์">อาจารย์</option>
+                                        <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                        <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่งที่ขอ</label>
+                                    <select name="dropdown_positionnd" class="form-select">
+                                        <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                        <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                        <option value="ศาสตราจารย์">ศาสตราจารย์</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">คณะกรรมการ (3 ท่าน)</h5>
+                            <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
+                                <div class="col-md-8">
+                                    <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+                                    <select th:name="'dropdown_committee' + ${i}" class="form-select staff-dropdown"
+                                        data-role="COMMITTEE">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="c : ${committee}" th:value="${c.displayName}"
+                                            th:text="${c.displayName}"></option>
+                                    </select>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">วันที่มีผลบังคับใช้</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
+                                        name="start_day" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">เดือน</label><input type="text"
+                                        name="start_month" class="form-control"></div>
+                                <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
+                                        name="start_year" class="form-control"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ลงนาม</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
+                                        name="signed_day" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">เดือน</label><input type="text"
+                                        name="signed_month" class="form-control"></div>
+                                <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
+                                        name="signed_year" class="form-control"></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ชื่อคณบดี (ลงนาม)</label>
+                                    <select name="dean_name" class="form-select staff-dropdown" data-role="DEAN">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="d : ${deans}" th:value="${d.displayName}"
+                                            th:text="${d.displayName}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่งคณบดี</label>
+                                    <input type="text" name="deandropdown_position" class="form-control"
+                                        value="คณบดีวิทยาลัยการคอมพิวเตอร์">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ==================== Document 4: ขอเชิญเป็นกรรมการ (3 สำเนา) ==================== -->
+                        <div th:if="${documentType == 4}">
+                            <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้จะถูกสร้าง 3 ชุด
+                                สำหรับกรรมการแต่ละท่าน</div>
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลเอกสาร</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-8"><label class="form-label">เรื่อง</label><input type="text"
+                                        name="text" class="form-control" value="ขอเชิญประชุมคณะอนุกรรมการ..."></div>
+                                <div class="col-md-4"><label class="form-label">วันที่</label><input type="text"
+                                        name="currentDate" class="form-control"></div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">เลขที่อ้างอิง</label><input type="text"
+                                        name="no" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">ปี</label><input type="text" name="year"
+                                        class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">คณะกรรมการ</label><input type="text"
+                                        name="committee" class="form-control" value="คณะอนุกรรมการประเมินผลการสอน">
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้ยื่น</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">ชื่อผู้ยื่น</label>
+                                    <select name="name" class="form-select staff-dropdown" data-role="GENERAL">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="s : ${staffMembers}" th:value="${s.displayName}"
+                                            th:text="${s.displayName}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">วันที่แต่งตั้ง</label><input type="text"
+                                        name="date_month_year" class="form-control"></div>
+                                <div class="col-md-4">
+                                    <label class="form-label">ประเภท</label>
+                                    <select name="dropdown1" class="form-select">
+                                        <option value="พนักงานมหาวิทยาลัย">พนักงานมหาวิทยาลัย</option>
+                                        <option value="ข้าราชการ">ข้าราชการ</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่งปัจจุบัน</label>
+                                    <select name="dropdown2" class="form-select">
+                                        <option value="อาจารย์">อาจารย์</option>
+                                        <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                        <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่งที่ขอ</label>
+                                    <select name="dropdown3" class="form-select">
+                                        <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                        <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                        <option value="ศาสตราจารย์">ศาสตราจารย์</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">วันเวลาประชุม</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">วันที่ประชุม</label><input type="text"
+                                        name="date_month_year2" class="form-control"></div>
+                                <div class="col-md-2"><label class="form-label">เวลาเริ่ม</label><input type="text"
+                                        name="time1" class="form-control" placeholder="09.30"></div>
+                                <div class="col-md-2"><label class="form-label">เวลาสิ้นสุด</label><input type="text"
+                                        name="time2" class="form-control" placeholder="11.00"></div>
+                                <div class="col-md-4"><label class="form-label">สถานที่</label><input type="text"
+                                        name="place" class="form-control"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">กรรมการ 3 ท่าน (สร้าง 3 ชุด)</h5>
+                            <div th:each="i : ${#numbers.sequence(1, 3)}" class="card p-3 mb-2">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+                                        <select th:name="'committee_name_' + ${i}" class="form-select staff-dropdown"
+                                            data-role="COMMITTEE">
+                                            <option value="">-- เลือก --</option>
+                                            <option th:each="c : ${committee}" th:value="${c.displayName}"
+                                                th:text="${c.displayName}"></option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="form-label">ตำแหน่ง</label>
+                                        <input type="text" th:name="'committee_position_' + ${i}" class="form-control"
+                                            value="กรรมการผู้ทรงคุณวุฒิ">
+                                    </div>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ลงนาม</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ชื่อคณบดี</label>
+                                    <select name="dropdownDeanName" class="form-select staff-dropdown" data-role="DEAN">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="d : ${deans}" th:value="${d.displayName}"
+                                            th:text="${d.displayName}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่ง</label>
+                                    <input type="text" name="dropdownDean" class="form-control"
+                                        value="คณบดีวิทยาลัยการคอมพิวเตอร์">
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ==================== Document 5: ประชุมกรรมการ ==================== -->
+                        <div th:if="${documentType == 5}">
+                            <h5 class="border-bottom pb-2 mb-3">ข้อเสนอแนะจากคณะอนุกรรมการ</h5>
+                            <div class="mb-3">
+                                <label class="form-label">ข้อเสนอแนะ</label>
+                                <textarea name="descirption" class="form-control" rows="8"
+                                    placeholder="กรอกข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน"></textarea>
+                            </div>
+                        </div>
+
+                        <!-- ==================== Document 6: แบบฟอร์มประเมินการสอน ==================== -->
+                        <div th:if="${documentType == 6}">
+                            <h5 class="border-bottom pb-2 mb-3">คะแนนประเมิน ส่วนที่ 1</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-2" th:each="i : ${#numbers.sequence(1, 5)}">
+                                    <label class="form-label">เกณฑ์ [[${i}]]</label>
+                                    <input type="text" th:name="'score1' + ${i}" class="form-control score-input"
+                                        placeholder="0.0">
+                                </div>
+                                <div class="col-md-2">
+                                    <label class="form-label">รวม</label>
+                                    <input type="text" name="score1x" class="form-control" id="totalScore1" readonly>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">คะแนนส่วนอื่น</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">ส่วนที่ 2</label><input type="text"
+                                        name="score2-5x" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">ส่วนที่ 3</label><input type="text"
+                                        name="score3-5x" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">ส่วนที่ 4</label><input type="text"
+                                        name="score4-5x" class="form-control"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">กรรมการ</h5>
+                            <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
+                                <div class="col-md-8">
+                                    <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+                                    <select th:name="'committee' + ${i}" class="form-select staff-dropdown"
+                                        data-role="COMMITTEE">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="c : ${committee}" th:value="${c.displayName}"
+                                            th:text="${c.displayName}"></option>
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ==================== Document 7: ส่วนที่ 3 แบบประเมินผลการสอน ==================== -->
+                        <div th:if="${documentType == 7}">
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลการประชุม</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-3"><label class="form-label">ครั้งที่/ปี</label><input type="text"
+                                        name="meeting_no" class="form-control" placeholder="1/2568"></div>
+                                <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
+                                        name="meeting_day" class="form-control"></div>
+                                <div class="col-md-3"><label class="form-label">เดือน</label><input type="text"
+                                        name="meeting_month" class="form-control"></div>
+                                <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
+                                        name="meeting_year" class="form-control"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">รหัสวิชา</label><input type="text"
+                                        name="subject_code" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">ชื่อวิชา</label><input type="text"
+                                        name="subject_name" class="form-control"></div>
+                                <div class="col-md-4">
+                                    <label class="form-label">ชื่อผู้ยื่น</label>
+                                    <select name="applicant_name" class="form-select staff-dropdown"
+                                        data-role="GENERAL">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="s : ${staffMembers}" th:value="${s.displayName}"
+                                            th:text="${s.displayName}"></option>
+                                    </select>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ผลการประเมิน</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <div class="form-check"><input type="radio" name="eval_level" value="skilled"
+                                            class="form-check-input"><label class="form-check-label">ชำนาญ</label></div>
+                                    <div class="form-check"><input type="radio" name="eval_level" value="specialist"
+                                            class="form-check-input"><label class="form-check-label">ชำนาญพิเศษ</label>
+                                    </div>
+                                    <div class="form-check"><input type="radio" name="eval_level" value="expert"
+                                            class="form-check-input"><label class="form-check-label">เชี่ยวชาญ</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">วันที่ลงนาม</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
+                                        name="signed_day" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">เดือน</label><input type="text"
+                                        name="signed_month" class="form-control"></div>
+                                <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
+                                        name="signed_year" class="form-control"></div>
+                            </div>
+                        </div>
+
+                        <!-- ==================== Document 8: แจ้งผลการประเมิน ==================== -->
+                        <div th:if="${documentType == 8}">
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลเอกสาร</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">เลขที่เอกสาร</label><input type="text"
+                                        name="document_number" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">วันที่เอกสาร</label><input type="text"
+                                        name="document_date" class="form-control"></div>
+                                <div class="col-md-4">
+                                    <label class="form-label">ชื่อผู้ยื่น</label>
+                                    <select name="applicant_name" class="form-select staff-dropdown"
+                                        data-role="GENERAL">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="s : ${staffMembers}" th:value="${s.displayName}"
+                                            th:text="${s.displayName}"></option>
+                                    </select>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">หนังสืออ้างอิง</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6"><label class="form-label">เลขที่หนังสืออ้างอิง</label><input
+                                        type="text" name="ref_doc_number" class="form-control"></div>
+                                <div class="col-md-6"><label class="form-label">วันที่หนังสืออ้างอิง</label><input
+                                        type="text" name="ref_doc_date" class="form-control"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">ชื่อวิชา</label><input type="text"
+                                        name="subject_name" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">รหัสวิชา</label><input type="text"
+                                        name="subject_code" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">ภาค/ปี</label><input type="text"
+                                        name="semester_year" class="form-control" placeholder="1/2566"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ข้อมูลการขอ</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่งที่ขอ</label>
+                                    <select name="requested_position" class="form-select">
+                                        <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                        <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                        <option value="ศาสตราจารย์">ศาสตราจารย์</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">กระบวนการประเมิน</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4"><label class="form-label">วันที่ประเมิน</label><input type="text"
+                                        name="evaluation_date" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">ครั้งที่ประชุม</label><input type="text"
+                                        name="board_meeting_no" class="form-control"></div>
+                                <div class="col-md-4"><label class="form-label">วันที่ประชุมบอร์ด</label><input
+                                        type="text" name="board_meeting_date" class="form-control"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ผลการประเมิน</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">ระดับ</label>
+                                    <select name="result_level" class="form-select">
+                                        <option value="ชำนาญ">ชำนาญ</option>
+                                        <option value="ชำนาญพิเศษ">ชำนาญพิเศษ</option>
+                                        <option value="เชี่ยวชาญ">เชี่ยวชาญ</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">คุณภาพ</label>
+                                    <select name="quality_status" class="form-select">
+                                        <option value="มี">มี</option>
+                                        <option value="ไม่มี">ไม่มี</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-4"><label class="form-label">วันหมดอายุ</label><input type="text"
+                                        name="expiration_date" class="form-control"></div>
+                            </div>
+                            <h5 class="border-bottom pb-2 mb-3">ลงนาม</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ชื่อคณบดี</label>
+                                    <select name="dean_name" class="form-select staff-dropdown" data-role="DEAN">
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="d : ${deans}" th:value="${d.displayName}"
+                                            th:text="${d.displayName}"></option>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่ง</label>
+                                    <input type="text" name="dean_position" class="form-control"
+                                        value="คณบดีวิทยาลัยการคอมพิวเตอร์">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="submit" class="btn btn-academic"><i class="fas fa-save"></i>
+                                สร้าง/บันทึกเอกสาร</button>
+                            <a th:href="'/admin/academic/request/' + ${request.id}" class="btn btn-outline-secondary"><i
+                                    class="fas fa-arrow-left"></i> กลับ</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <script>
+            // Auto-calculate total score for Document 6
+            document.querySelectorAll('.score-input').forEach(input => {
+                input.addEventListener('input', () => {
+                    let total = 0;
+                    document.querySelectorAll('.score-input').forEach(el => {
+                        total += parseFloat(el.value) || 0;
+                    });
+                    const totalEl = document.getElementById('totalScore1');
+                    if (totalEl) totalEl.value = total.toFixed(1);
+                });
+            });
+        </script>
+    </section>
+</body>
+
+</html>

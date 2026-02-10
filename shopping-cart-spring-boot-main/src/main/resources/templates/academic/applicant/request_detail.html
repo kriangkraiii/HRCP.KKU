@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle"></i> ดำเนินการสำเร็จ
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> คำร้องหมายเลข #[[${request.id}]]</h4>
+                    <span class="status-badge" th:classappend="'status-' + ${request.currentStatus.name()}"
+                        th:text="${request.currentStatus.thaiLabel}"></span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>วันที่ยื่น:</strong> <span
+                                th:text="${#temporals.format(request.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></div>
+                    </div>
+
+                    <!-- Progress Tracker -->
+                    <div class="progress-tracker">
+                        <div class="progress-step" th:each="status : ${statuses}"
+                            th:classappend="${request.currentStatus.name() == status.name()} ? 'active' : 
+                                     (${request.currentStatus.ordinal() > status.ordinal()} ? 'completed' : 
+                                     (${request.currentStatus.name() == 'COMPLETED_REVISE' && status.name() == 'COMPLETED_REVISE'} ? 'revise' :
+                                     (${request.currentStatus.name() == 'REJECTED' && status.name() == 'REJECTED'} ? 'rejected' : '')))">
+                            <div class="step-icon">
+                                <i th:if="${status.name() == 'COMPLETED_PASS'}" class="fas fa-check"></i>
+                                <i th:if="${status.name() == 'COMPLETED_REVISE'}" class="fas fa-exclamation"></i>
+                                <i th:if="${status.name() == 'REJECTED'}" class="fas fa-times"></i>
+                                <i th:if="${status.name() != 'COMPLETED_PASS' && status.name() != 'COMPLETED_REVISE' && status.name() != 'REJECTED'}"
+                                    class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                            </div>
+                            <div class="step-label" th:text="${status.thaiLabel}"></div>
+                        </div>
+                    </div>
+
+                    <!-- Meeting Info -->
+                    <div th:if="${request.meetingDate != null}" class="alert alert-info">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <strong>วันประชุม:</strong> <span
+                            th:text="${#temporals.format(request.meetingDate, 'dd/MM/yyyy HH:mm')}"></span>
+                        <span th:if="${request.meetingLocation != null}"> | <strong>สถานที่:</strong>
+                            [[${request.meetingLocation}]]</span>
+                    </div>
+
+                    <!-- Result Actions -->
+                    <div th:if="${request.currentStatus.name() == 'COMPLETED_PASS'}" class="alert alert-success">
+                        <i class="fas fa-check-circle me-2 fa-2x"></i> <strong>ผ่านการประเมิน</strong>
+                        <a th:if="${request.resultFilePath != null}"
+                            th:href="'/user/academic/download-result/' + ${request.id}"
+                            class="btn btn-sm btn-success ms-3">
+                            <i class="fas fa-download"></i> ดาวน์โหลดผลการประเมิน
+                        </a>
+                    </div>
+                    <div th:if="${request.currentStatus.name() == 'COMPLETED_REVISE'}" class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2 fa-2x"></i> <strong>ต้องแก้ไขเอกสาร</strong>
+                        <form th:action="'/user/academic/upload-revision/' + ${request.id}" method="post"
+                            enctype="multipart/form-data" class="mt-2">
+                            <div class="input-group">
+                                <input type="file" name="file" class="form-control" required>
+                                <button type="submit" class="btn btn-warning"><i class="fas fa-upload"></i>
+                                    อัปโหลดเอกสารที่แก้ไข</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div th:if="${request.currentStatus.name() == 'REJECTED'}" class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2 fa-2x"></i> <strong>ไม่รับคำร้อง</strong>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Documents List -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-file-word"></i> เอกสารที่สร้างแล้ว</h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${documents == null || documents.isEmpty()}" class="text-muted text-center py-3">
+                        ยังไม่มีเอกสาร</div>
+                    <div th:each="doc : ${documents}" class="card doc-card generated mb-2 p-3">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong th:text="${doc.documentLabel}"></strong>
+                                <br><small class="text-muted">สร้างเมื่อ: <span
+                                        th:text="${#temporals.format(doc.createdAt, 'dd/MM/yyyy HH:mm')}"></span></small>
+                            </div>
+                            <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id}"
+                                class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-download"></i> ดาวน์โหลด
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status History -->
+            <div class="card card-academic">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> ประวัติการเปลี่ยนสถานะ</h5>
+                </div>
+                <div class="card-body">
+                    <div th:each="history : ${statusHistory}" class="border-bottom py-2">
+                        <div class="d-flex justify-content-between">
+                            <div>
+                                <span class="status-badge" th:classappend="'status-' + ${history.newStatus.name()}"
+                                    th:text="${history.newStatus.thaiLabel}"></span>
+                                <span th:if="${history.note != null}" class="ms-2 text-muted"
+                                    th:text="${history.note}"></span>
+                            </div>
+                            <small class="text-muted"
+                                th:text="${#temporals.format(history.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-3">
+                <a href="/user/academic/dashboard" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i>
+                    กลับแดชบอร์ด</a>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>
