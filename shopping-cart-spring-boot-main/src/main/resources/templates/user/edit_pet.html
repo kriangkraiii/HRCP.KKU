@@ -1,0 +1,126 @@
+<!--edit_pet.html-->
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{base::layout(~{::section})}">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Edit Pet</title>
+</head>
+
+<body>
+	<section>
+		<div class="container profile-card">
+			<!-- ✅ Form to edit an existing pet -->
+			<div class="card mt-4 p-3">
+				<h3>Edit Pet</h3>
+				<form th:action="@{'/user/pet/edit/' + ${pet.id}}" method="post" enctype="multipart/form-data">
+					<div class="row mb-2">
+						<div class="col">
+							<label for="name" class="form-label">Pet Name</label>
+							<input type="text" class="form-control" id="name" name="name" th:value="${pet.name}"
+								required>
+						</div>
+					</div>
+
+					<div class="row mb-2">
+						<div class="col"> 
+							<label for="type" class="form-label">Pet Type</label> 
+							<input type="text" class="form-control" id="type" name="type" th:value="${pet.type}" readonly> </div>
+						<div class="col">
+							<label for="breed" class="form-label">Breed</label>
+							<select class="form-control" name="breed" id="breed" required>
+								<option value="">-- Select Breed --</option>
+							</select>
+						</div>
+					</div>
+
+					<div class="row mb-2">
+
+						<div class="col">
+							<label for="description" class="form-label">Description</label>
+							<input type="text" class="form-control" id="description" name="description"
+								th:value="${pet.description}" >
+						</div>
+					</div>
+
+					<div class="mb-2">
+						<label for="imagePet" class="form-label">Upload New Image</label>
+						<input type="file" class="form-control" id="imagePet" name="imagePet" accept="image/*"
+							onchange="previewImage(event)">
+
+						<!-- แสดงภาพเดิม -->
+						<img id="preview" th:src="${pet.imagePet}" alt="Current Pet Image"
+							class="mt-2" style="width: 150px; height: 150px; object-fit: cover;">
+					</div>
+
+					<button type="submit" class="btn btn-primary">Update Pet</button>
+					<a th:href="@{/user/pet}" class="btn btn-secondary ms-2">Cancel</a>
+					<!-- ✅ success / error message -->
+					<div th:if="${session.succMsg}" class="alert alert-success mt-2" th:text="${session.succMsg}"></div>
+					<div th:if="${session.errorMsg}" class="alert alert-danger mt-2" th:text="${session.errorMsg}">
+					</div>
+				</form>
+
+				<script>
+					function previewImage(event) {
+						const input = event.target;
+						const preview = document.getElementById('preview');
+
+						if (input.files && input.files[0]) {
+							const reader = new FileReader();
+
+							reader.onload = function (e) {
+								preview.src = e.target.result; // เปลี่ยน src ของภาพให้เป็นภาพใหม่
+							};
+
+							reader.readAsDataURL(input.files[0]);
+						}
+					}
+				</script>
+
+				<script th:inline="javascript">
+					// กำหนด breeds ของแต่ละ type
+					const breedOptions = {
+						Dog: ['Thai Ridgeback', 'Bang Kaew Dog', 'Thai native village dog', 'Labrador Retriever', 'Golden Retriever',
+							'Poodle', 'Shih Tzu', 'Pomeranian', 'Chihuahua', 'French Bulldog', 'English Bulldog', 'Beagle', 'German Shepherd', 'Siberian Husky',
+							'Corgi', 'Dachshund', 'Boxer', 'Rottweiler', 'Maltese', 'Yorkshire Terrier (Yorkie)', 'Shiba Inu', 'Samoyed / Alaskan Malamute',
+							'American Bully / Pit-type', 'Cockapoo', 'Cavapoo', 'Maltipoo', 'Goldendoodle', 'Labradoodle', 'Great Dane', 'Mastiff', 'Saluki',
+							'Afghan Hound', 'Irish Setter'],
+						Cat: ['Thai/Wichien-maat', 'Korat / Si-Sawat', 'Suphalak', 'Khao Manee', 'Mekong Bobtail', 'Siamese',
+							'Persian / Exotic Shorthair', 'Maine Coon', 'Ragdoll', 'British Shorthair', 'Scottish Fold', 'Bengal',
+							'Sphynx', 'Russian Blue', 'Burmese', 'Abyssinian', 'Savannah', 'Chausie', 'Domestic shorthair', 'Norwegian Forest',
+							'Turkish Angora', 'Van, Singapura', 'Maine']
+					};
+
+					const type = /*[[${pet.type}]]*/ 'Dog'; // type ของสัตว์ปัจจุบัน
+					const currentBreed = /*[[${pet.breed}]]*/ ''; // breed ปัจจุบัน
+
+					const breedSelect = document.getElementById('breed');
+
+					function populateBreeds(selectedType, selectedBreed) {
+						breedSelect.innerHTML = '<option value="">-- Select Breed --</option>';
+
+						if (breedOptions[selectedType]) {
+							const sortedBreeds = breedOptions[selectedType].sort((a, b) => a.localeCompare(b));
+							sortedBreeds.forEach(b => {
+								const option = document.createElement('option');
+								option.value = b;
+								option.text = b;
+								if (b === selectedBreed) {
+									option.selected = true; // เลือกค่าเดิม
+								}
+								breedSelect.appendChild(option);
+							});
+						}
+					}
+
+					populateBreeds(type, currentBreed);
+
+
+				</script>
+			</div>
+		</div>
+	</section>
+</body>
+
+</html>

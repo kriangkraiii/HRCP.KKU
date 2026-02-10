@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{base::layout(~{::section})}">
+<head>
+<meta charset="UTF-8">
+<title>My Purchases</title>
+</head>
+<body>
+	<section>
+		<div class="container mt-5 p-5">
+			<div class="row">
+				<p class="text-center fs-3">My Purchases</p>
+				<th:block th:if="${session.succMsg}">
+					<p class="text-success fw-bold text-center">[[${session.succMsg}]]</p>
+					<th:block th:text="${@commnServiceImpl.removeSessionMessage()}"></th:block>
+				</th:block>
+
+				<th:block th:if="${session.errorMsg}">
+					<p class="text-danger fw-bold text-center">[[${session.errorMsg}]]</p>
+					<th:block th:text="${@commnServiceImpl.removeSessionMessage()}"></th:block>
+				</th:block>
+				<div class="col-md-12 ">
+
+					<table class="table table-bordered card-sh">
+						<thead >
+							<tr >
+								<th scope="col">Order Id</th>
+								<th scope="col">Date</th>
+								<th scope="col">Game</th>
+								<th scope="col">Price</th>
+								<th scope="col">Game Key</th>
+								<th scope="col">Status</th>
+							</tr>
+						</thead>
+						<tbody>
+							<tr th:each="o:${orders}">
+								<th scope="row">[[${o.orderId}]]</th>
+								<td>[[${o.orderDate}]]</td>
+								<td>[[${o.product.title}]]</td>
+								<td>[[${o.price}]] <th:block th:utext="${@commnServiceImpl.bahtSign()}"></th:block></td>
+								<td>
+									<th:block th:if="${o.gameKey != null}">
+										<div class="d-flex align-items-center gap-1">
+											<code class="text-success">[[${o.gameKey}]]</code>
+											<span class="badge bg-dark" style="font-size: 0.6em;" title="ใช้เป็นรหัสผ่านแตกไฟล์ ZIP">
+												<i class="fa-solid fa-lock"></i> AES-256
+											</span>
+										</div>
+										<small class="text-muted" style="font-size: 0.7em;">
+											<i class="fa-solid fa-key me-1"></i>ใช้เป็นรหัสผ่านแตกไฟล์
+										</small>
+									</th:block>
+									<th:block th:unless="${o.gameKey != null}">
+										<span class="text-muted">-</span>
+									</th:block>
+								</td>
+								<td>
+									<span th:switch="${o.status}">
+										<span th:case="'Pending Payment'" class="badge bg-warning">[[${o.status}]]</span>
+										<span th:case="'Paid'" class="badge bg-success">[[${o.status}]]</span>
+										<span th:case="'Completed'" class="badge bg-primary">[[${o.status}]]</span>
+										<span th:case="'Cancelled'" class="badge bg-danger">[[${o.status}]]</span>
+										<span th:case="'Refunded'" class="badge bg-info">[[${o.status}]]</span>
+										<span th:case="*" class="badge bg-secondary">[[${o.status}]]</span>
+									</span>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+			</div>
+
+		</div>
+	</section>
+</body>
+</html>

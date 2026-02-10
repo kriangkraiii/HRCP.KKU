@@ -1,0 +1,62 @@
+<!--<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{base::layout(~{::section})}">
+	<head>
+		<meta charset="UTF-8">
+		<title>Add Pet</title>
+		</head>
+		<body>
+			<section>
+				<div class="container profile-card">
+					
+					<div th:if="${session.succAddPetMsg}" class="alert alert-success mt-2" th:text="${session.succAddPetMsg}">
+					</div>
+					<div th:if="${session.errorAddPetMsg}" class="alert alert-danger mt-2" th:text="${session.errorAddPetMsg}">
+					</div>
+			
+					
+					<div class="card mt-4 p-3">
+						<h3>Add a New Pet</h3>
+						<form th:action="@{/admin/pet/add}" method="post" enctype="multipart/form-data">
+							<div class="row mb-2">
+								<div class="col">
+									<input type="text" class="form-control" name="name" placeholder="Pet Name" required>
+								</div>
+								<div class="col">
+									<input type="text" class="form-control" name="type" placeholder="Pet Type" required>
+								</div>
+							</div>
+			
+							<div class="row mb-2">
+								<div class="col">
+									<input type="text" class="form-control" name="breed" placeholder="Breed" required>
+								</div>
+								<div class="col">
+									<input type="number" class="form-control" name="age" placeholder="Age" required>
+								</div>
+							</div>
+			
+							<div class="row mb-2">
+								<div class="col">
+									<input type="text" class="form-control" name="color" placeholder="Color" required>
+								</div>
+								<div class="col">
+									<input type="text" class="form-control" name="description" placeholder="Description" required>
+								</div>
+							</div>
+			
+							<div class="mb-2">
+								<input type="file" class="form-control" name="imagePet" accept="image/*">
+							</div>
+			
+							<button type="submit" class="btn btn-primary">Add Pet</button>
+						</form>
+					</div>
+			
+					                       
+					</div>
+					</section>
+					</body>
+					</html>
+					  -->
+					
+			

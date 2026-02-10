@@ -1,0 +1,87 @@
+<!--admin pet.html-->
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{base::layout(~{::section})}">
+
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>Admin - Pet Management</title>
+	<link rel="stylesheet" th:href="@{/css/admin.css}">
+	<script th:src="@{/js/admin.js}" defer></script>
+</head>
+
+<body>
+	<main>
+		<section>
+			
+			<h2>All Pets</h2>
+			<div class="container profile-card">
+				<!-- ✅ success / error message -->
+				<div th:if="${session.succAddPetMsg}" class="alert alert-success mt-2"
+					th:text="${session.succAddPetMsg}">
+				</div>
+				<div th:if="${session.errorAddPetMsg}" class="alert alert-danger mt-2"
+					th:text="${session.errorAddPetMsg}">
+				</div>
+
+				
+				<!--<div class="justify-content-end mt-3 mb-3">
+					<a href="/admin/pet/add" class="btn btn-primary">Add New Pet</a>
+				</div>-->
+			</div>
+			<div class="table-responsive">
+				<table class="table table-striped table-hover align-middle text-center">
+					<thead class="table-dark">
+						<tr>
+							<th>ID</th>
+							<th>Name</th>
+							<th>Type</th>
+							<th>Breed</th>
+					
+							<th>Description</th>
+							<th>Image</th>
+							<th>Owner ID</th>
+							<th>Owner Name</th>
+							<th>Owner Email</th>
+							<th>Actions</th>
+						</tr>
+					</thead>
+					<tbody>
+						<tr th:each="pet : ${pets}">
+							<td th:text="${pet.id}"></td>
+							<td th:text="${pet.name}"></td>
+							<td th:text="${pet.type}"></td>
+							<td th:text="${pet.breed}"></td>
+						
+							<td th:text="${pet.description}"></td>
+							<td>
+								<img th:if="${pet.imagePet}" th:src="${pet.imagePet}" class="img-thumbnail"
+									style="width:80px; height:80px; object-fit:cover;">
+							</td>
+							<td th:text="${pet.owner.id}"></td>
+							<td th:text="${pet.owner.name}"></td>
+							<td th:text="${pet.owner.email}"></td>
+							<td>
+								<a th:href="@{|/admin/pet/edit/${pet.id}|}" class="btn btn-sm btn-warning me-1">Edit</a>
+								<form th:action="@{'/admin/pet/delete/' + ${pet.id}}" method="post"
+									style="display:inline;">
+									<button type="submit" class="btn btn-sm btn-danger"
+										onclick="return confirm('Are you sure you want to delete this pet?')">
+										Delete
+									</button>
+								</form>
+							</td>
+						</tr>
+					</tbody>
+				</table>
+			</div>
+
+		</section>
+	</main>
+	<footer>
+		<p>&copy; 2024 Pet Management System</p>
+	</footer>
+</body>
+
+</html>
+<!-- End of admin pet.html -->

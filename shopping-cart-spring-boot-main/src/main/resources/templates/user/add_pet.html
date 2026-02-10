@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{base::layout(~{::section})}">
+<head>
+<meta charset="UTF-8">
+<title>Add Pet</title>
+</head>
+<body>
+	<section>
+		<div class="container profile-card">
+			<!-- ✅ success / error message -->
+			<div th:if="${session.succAddPetMsg}"
+				class="alert alert-success mt-2" th:text="${session.succAddPetMsg}">
+			</div>
+			<div th:if="${session.errorAddPetMsg}"
+				class="alert alert-danger mt-2" th:text="${session.errorAddPetMsg}">
+			</div>
+
+			<!-- ✅ Form to add a new pet -->
+			<div class="card mt-4 p-3">
+				<h3>Add a New Pet</h3>
+				<form th:action="@{/user/pet/add}" method="post"
+					enctype="multipart/form-data" onsubmit="return validateForm()">
+					<div class="row mb-2">
+						<div class="col">
+							<input type="text" class="form-control" name="name"
+								placeholder="Pet Name" required minlength="2" maxlength="50">
+						</div>
+						<div class="row mb-2">
+							<div class="col">
+								<label for="type">Pet Type</label> <select class="form-control"
+									name="type" id="type" required>
+									<option value="">-- Select Type --</option>
+									<option value="Dog">Dog</option>
+									<option value="Cat">Cat</option>
+								</select>
+							</div>
+							<div class="col">
+								<label for="breed">Breed</label> <select class="form-control"
+									name="breed" id="breed" required>
+									<option value="">-- Select Breed --</option>
+								</select>
+							</div>
+						</div>
+
+						<div class="row mb-2">
+
+							<div class="col">
+								<input type="text" class="form-control" name="description"
+									placeholder="Description">
+							</div>
+						</div>
+
+						<div class="mb-2">
+							<input type="file" class="form-control" name="imagePet"
+								accept="image/*">
+						</div>
+
+						<button type="submit" class="btn btn-primary">Add Pet</button>
+				</form>
+			</div>
+
+			<!--                         -->
+		</div>
+
+		<script>
+					function validateForm() {
+					    const fileInput = document.querySelector('input[name="imagePet"]');
+					    if (fileInput.files.length > 0) {
+					        const file = fileInput.files[0];
+					        const allowedTypes = ['image/jpeg','image/png','image/gif','image/webp','image/heic'];
+					        if (!allowedTypes.includes(file.type)) {
+					            alert("Only JPG, PNG, GIF, WEBP ,HEIC allowed!");
+					            return false;
+					        }
+					    }
+					    return true;
+					}
+					</script>
+
+		<script>
+					    // กำหนด breeds ของแต่ละ type
+					    const breedOptions = {
+					        Dog: ['Thai Ridgeback', 'Bang Kaew Dog', 'Thai native village dog', 'Labrador Retriever','Golden Retriever',
+							'Poodle','Shih Tzu','Pomeranian','Chihuahua','French Bulldog','English Bulldog','Beagle','German Shepherd','Siberian Husky',
+							'Corgi','Dachshund','Boxer','Rottweiler','Maltese','Yorkshire Terrier (Yorkie)','Shiba Inu','Samoyed / Alaskan Malamute',
+							'American Bully / Pit-type','Cockapoo','Cavapoo','Maltipoo','Goldendoodle','Labradoodle','Great Dane','Mastiff','Saluki',
+							'Afghan Hound','Irish Setter'],
+					        Cat: ['Thai/Wichien-maat', 'Korat / Si-Sawat', 'Suphalak', 'Khao Manee','Mekong Bobtail','Siamese',
+							'Persian / Exotic Shorthair','Maine Coon','Ragdoll','British Shorthair','Scottish Fold','Bengal',
+							'Sphynx','Russian Blue','Burmese','Abyssinian','Savannah','Chausie','Domestic shorthair','Norwegian Forest',
+							'Turkish Angora','Van, Singapura','Maine']
+					    };
+
+					    const typeSelect = document.getElementById('type');
+					    const breedSelect = document.getElementById('breed');
+
+					    typeSelect.addEventListener('change', function() {
+					        const selectedType = this.value;
+					        breedSelect.innerHTML = '<option value="">-- Select Breed --</option>'; // reset
+
+					        if (breedOptions[selectedType]) {
+								// sort alphabetically
+								const sortedBreeds = breedOptions[selectedType].sort((a, b) => a.localeCompare(b));
+					            
+								sortedBreeds.forEach(breed => {
+								                const option = document.createElement('option');
+								                option.value = breed;
+								                option.text = breed;
+								                breedSelect.appendChild(option);
+					            });
+					        }
+					    });
+					</script>
+
+	</section>
+</body>
+</html>
+<!--  -->
+

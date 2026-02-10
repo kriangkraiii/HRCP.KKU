@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{base::layout(~{::section})}">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Admin Community Management</title>
+	<style>
+		.post-card {
+			border: 1px solid #dee2e6;
+			border-radius: 10px;
+			margin-bottom: 20px;
+			box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+		}
+
+		.post-header {
+			padding: 15px;
+			border-bottom: 1px solid #dee2e6;
+			background-color: #f8f9fa;
+		}
+
+		.post-content {
+			padding: 15px;
+		}
+		.btn-group .btn {
+    border-radius: 0;
+    font-size: 11px;
+    padding: 4px 8px;
+    font-weight: 500;
+}
+
+.post-image {
+    max-width: 300px;
+    max-height: 200px;
+    object-fit: cover;
+    border-radius: 5px;
+    border: 1px solid #dee2e6;
+}
+		.pet-info {
+			display: flex;
+			align-items: center;
+			margin-bottom: 10px;
+		}
+
+		.pet-avatar {
+			width: 50px;
+			height: 50px;
+			border-radius: 50%;
+			object-fit: cover;
+			margin-right: 10px;
+		}
+
+		.admin-actions {
+    padding: 12px 15px;
+    background: linear-gradient(135deg, #fff3cd 0%, #ffeaa7 100%);
+    border-top: 1px solid #dee2e6;
+    border-radius: 0 0 10px 10px;
+}
+
+		.btn-admin {
+			margin-right: 5px;
+			font-size: 12px;
+		}
+		.btn-group .btn:first-child {
+    border-radius: 4px 0 0 4px;
+}
+
+.btn-group .btn:last-child {
+    border-radius: 0 4px 4px 0;
+}
+
+.btn-group .btn + .btn {
+    margin-left: 0;
+    border-left: none;
+}
+	</style>
+</head>
+
+<body>
+	<section>
+		<!-- Back Button -->
+		<div class="col-12 mb-3">
+			<a href="/admin/" class="btn btn-outline-secondary"> <i class="fa-solid fa-arrow-left me-2"></i>Back to
+				Dashboard
+			</a>
+		</div>
+		<div class="container-fluid p-3">
+			<!-- Header -->
+			<div class="row">
+				<div class="col-12">
+					<div class="card">
+						<div class="card-header bg-primary text-white">
+							<h4>
+								<i class="fas fa-users"></i> Community Management
+							</h4>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Messages -->
+			<div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show mt-3">
+				<span th:text="${succMsg}"></span>
+				<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+			</div>
+			<div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show mt-3">
+				<span th:text="${errorMsg}"></span>
+				<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+			</div>
+
+			<!-- Posts Content -->
+			<div class="row mt-3">
+				<div class="col-12">
+					<div th:if="${communityPosts != null and !communityPosts.empty}">
+						<div th:each="post : ${communityPosts}" class="post-card">
+							<!-- Post Header -->
+							<div class="post-header">
+								<div class="d-flex justify-content-between align-items-center">
+									<div class="d-flex align-items-center">
+										<img th:src="${post.user.profileImage}"
+											class="rounded-circle me-2"
+											style="width: 40px; height: 40px; object-fit: cover;"onerror="this.src='/img/profile_img/default.png'">
+										<div>
+											<h6 class="mb-0" th:text="${post.user.name}"></h6>
+											<small class="text-muted"
+												th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}"></small>
+										</div>
+									</div>
+									<span class="badge bg-info">Post ID: [[${post.id}]]</span>
+								</div>
+							</div>
+
+							<!-- Post Content -->
+							<div class="post-content">
+								<!-- Pet Info -->
+								<div class="pet-info d-flex align-items-center" 
+															     style="background: #f8fafc; padding: 12px; border-radius: 8px; margin: 12px 0;">
+																<img th:src="${post.pet.imagePet}" 
+																     alt="Pet Image"
+																     style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 12px;">
+																<div>
+																	<strong th:text="${post.pet.name}">Pet Name</strong>
+																	<div class="text-muted small"
+																	     th:text="${post.pet.type + ' • ' + post.pet.breed}">
+																	     Pet Info
+																	</div>
+																</div>
+															</div>
+
+								<!-- Post Description -->
+								<p th:if="${post.description != null and !post.description.empty}"
+									th:text="${post.description}" class="mb-3"></p>
+
+<!-- Post Image -->
+<div th:if="${post.postImage != null and !post.postImage.empty}" class="mb-3">
+    <img th:src="${post.postImage}" 
+         th:if="${post.postImage != null}" 
+         class="post-image" 
+         style="max-height: 200px; width: auto; object-fit: cover;">
+</div>
+
+								<!-- Post Stats -->
+								<div class="d-flex justify-content-between align-items-center text-muted">
+									<div>
+										<i class="fas fa-heart text-danger"></i> <span
+											th:text="${post.likeCount}">0</span> likes
+									</div>
+									<div>
+
+									</div>
+								</div>
+							</div>
+
+<!-- Admin Actions -->
+<div class="admin-actions">
+    <div class="d-flex justify-content-between align-items-center">
+        <div>
+            <strong class="text-dark">
+                <i class="fas fa-tools"></i> Admin Actions:
+            </strong>
+        </div>
+        <div class="btn-group" role="group">
+            <a th:href="@{/admin/community/post/{id}/edit(id=${post.id})}"
+                class="btn btn-outline-warning btn-sm"> 
+                <i class="fas fa-edit"></i> Edit
+            </a> 
+            <a th:href="@{/admin/community/post/{id}/comments(id=${post.id})}"
+                class="btn btn-outline-info btn-sm"> 
+                <i class="fas fa-comments"></i> Comments
+            </a>
+            <form th:action="@{/admin/community/post/{id}/delete(id=${post.id})}"
+                method="post" class="d-inline"
+                onsubmit="return confirm('Are you sure you want to delete this post?')">
+                <button type="submit" class="btn btn-outline-danger btn-sm">
+                    <i class="fas fa-trash"></i> Delete
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+						</div>
+					</div>
+
+					<!-- No Posts Message -->
+					<div th:if="${communityPosts == null or communityPosts.empty}" class="text-center py-5">
+						<i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+						<h5 class="text-muted">No community posts found</h5>
+					</div>
+
+					<!-- Pagination -->
+					<div th:if="${totalElements > 0}" class="d-flex justify-content-center mt-4">
+						<nav>
+							<ul class="pagination">
+								<li class="page-item" th:classappend="${isFirst} ? 'disabled' : ''"><a class="page-link"
+										th:href="@{/admin/community(pageNo=${pageNo-1}, pageSize=${pageSize})}">Previous</a>
+								</li>
+
+								<li th:each="i : ${#numbers.sequence(0, totalPages-1)}" class="page-item"
+									th:classappend="${i == pageNo} ? 'active' : ''"><a class="page-link"
+										th:href="@{/admin/community(pageNo=${i}, pageSize=${pageSize})}"
+										th:text="${i+1}">1</a></li>
+
+								<li class="page-item" th:classappend="${isLast} ? 'disabled' : ''"><a class="page-link"
+										th:href="@{/admin/community(pageNo=${pageNo+1}, pageSize=${pageSize})}">Next</a>
+								</li>
+							</ul>
+						</nav>
+					</div>
+
+					<!-- Pagination Info -->
+					<div th:if="${totalElements > 0}" class="text-center mt-2">
+						<small class="text-muted"> Showing [[${pageNo * pageSize +
+							1}]] to [[${(pageNo + 1) * pageSize > totalElements ?
+							totalElements : (pageNo + 1) * pageSize}]] of
+							[[${totalElements}]] posts </small>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+</body>
+
+</html>

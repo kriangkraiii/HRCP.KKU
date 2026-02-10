@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{base::layout(~{::section})}">
+
+<head>
+<meta charset="UTF-8" />
+<title th:text="'Pet Profile'">Pet Profile</title>
+<meta name="_csrf" th:content="${_csrf?.token}" />
+<meta name="_csrf_header" th:content="${_csrf?.headerName}" />
+
+
+</head>
+
+<body>
+	<style>
+/* Container */
+.container {
+	max-width: 1100px;
+	margin: 40px auto 80px;
+	padding: 0 16px;
+}
+
+/* Pet Header */
+.pet-header {
+	background: #fff;
+	border-radius: 16px;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, .08);
+	overflow: hidden;
+	margin: 24px 0;
+	border: 1px solid #e6e9ef;
+	padding: 16px;
+	display: flex;
+	gap: 24px;
+	align-items: center;
+}
+
+.pet-avatar img {
+	width: 120px;
+	height: 120px;
+	object-fit: cover;
+	border-radius: 12px;
+	border: 1px solid #e6e9ef;
+}
+
+.pet-main h2 {
+	margin: 0 0 6px;
+	color: #1f2937;
+}
+
+.pet-meta {
+	color: #64748b;
+	margin-bottom: 8px;
+}
+
+.pet-desc {
+	color: #334155;
+}
+
+/* Owner card */
+.owner-card {
+	background: #f8fafc;
+	border: 1px solid #e6e9ef;
+	border-radius: 12px;
+	padding: 12px 14px;
+	text-align: center;
+}
+
+/* Posts */
+.post-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	gap: 32px;
+	margin-top: 40px;
+}
+
+.post-card .card {
+	border-radius: 16px;
+	overflow: hidden;
+	background: #fff;
+	box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+	position: relative;
+}
+
+.card-img-top {
+	width: 100%;
+	max-height: 320px;
+	object-fit: cover;
+}
+
+.card-body {
+	padding: 16px;
+}
+
+/* Dropdown */
+.dropdown-menu-post-actions {
+	position: absolute;
+	right: 0;
+	top: 100%;
+	background: #fff;
+	border: 1px solid #ccc;
+	border-radius: 8px;
+	z-index: 1000;
+	display: none;
+	min-width: 140px;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-menu-post-actions .dropdown-item {
+	padding: 8px 12px;
+	display: block;
+	cursor: pointer;
+	text-decoration: none;
+	color: inherit;
+}
+
+.dropdown-menu-post-actions .dropdown-item:hover {
+	background: #f1f5f9;
+}
+
+/* Like button */
+.btn-light.liked {
+	color: #ed4956;
+}
+
+.btn-light i.fas {
+	color: #ed4956;
+}
+
+/* Pet info inside post */
+.pet-info {
+	background: #f8fafc;
+	padding: 12px;
+	border-radius: 8px;
+	margin-bottom: 12px;
+	display: flex;
+	align-items: center;
+}
+
+.pet-info img {
+	width: 40px;
+	height: 40px;
+	margin-right: 12px;
+	border-radius: 8px;
+	object-fit: cover;
+}
+/* Three-dot menu button */
+.btn-light:hover {
+	background-color: #f8fafc;
+}
+
+.dropdown-toggle-no-caret::after {
+	display: none;
+}
+
+/* Ensure card has relative positioning for absolute menu */
+.post-card .card {
+	position: relative;
+}
+/* Action Buttons */
+.d-flex.gap-2 button, .d-flex.gap-2 a {
+	transition: all 0.2s ease;
+}
+
+.btn-light:hover {
+	background-color: #fef2f2;
+	border-color: #ed4956;
+}
+
+.btn-light.liked {
+	background-color: #fef2f2;
+	border-color: #ed4956;
+}
+
+@media ( max-width : 480px) {
+	.d-flex.gap-2 {
+		flex-direction: column;
+	}
+	.flex-fill {
+		width: 100%;
+	}
+}
+</style>
+	<section>
+		<a href="javascript:history.back()" class="btn btn-outline-secondary ms-5 mt-2">Back to previous page</a>
+	</div>
+		<div class="container">
+			
+
+			<!-- Pet Header -->
+			<div class="card position-relative" >
+				<div style="margin-left: 25px; margin-top: 25px; margin-bottom: 25px; margin-right: 25px;">
+			<div class="pet-header">
+				<div class="pet-avatar">
+					<!-- ถ้ามีรูป -->
+					<img th:if="${pet.imagePet != null}" th:src="${pet.imagePet}"
+						alt="Pet avatar"
+						style="width: 100px; height: 100px; border-radius: 50%; object-fit: cover;"onerror="this.src='/img/profile_img/default.png'">
+
+					<!-- ถ้าไม่มีรูป ใช้ default -->
+					<img th:if="${pet.imagePet == null}"
+						th:src="@{/img/pet_img/default.png}" alt="Default avatar"
+						style="width: 60px; height: 60px; border-radius: 50%; object-fit: cover;">
+				</div>
+
+				<div class="pet-main">
+					<h2 th:text="${pet.name}">Pet Name</h2>
+					<div class="pet-meta">
+						<label>Type:</label>
+						<span  th:text="${pet.type}">Type</span> 
+						<br>
+						<span
+							th:if="${pet.breed != null}">Breed: <span
+							
+							th:text="${pet.breed}">Breed</span></span>
+					</div>
+					<div class="pet-desc" th:if="${pet.description != null}"
+						th:text="${pet.description}">Description</div>
+						<br>
+				</div>
+				<div class="owner-card d-flex align-items-center">
+					<!-- ✅ รูปโปรไฟล์ owner -->
+					<img th:if="${owner?.profileImage != null}"
+						th:src="${owner.profileImage}" alt="Owner Profile"
+						style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 12px;"onerror="this.src='/img/profile_img/default.png'">
+
+					<!-- ✅ ถ้า owner ยังไม่มีรูป -->
+					<img th:if="${owner?.profileImage == null}"
+						th:src="@{/img/profile_img/default.png}" alt="Default Owner"
+						style="width: 50px; height: 50px; border-radius: 50%; object-fit: cover; margin-right: 12px;">
+
+					<!-- ✅ ข้อมูลเจ้าของ -->
+					<div>
+						<div>
+							<strong>Owner</strong>
+						</div>
+						<div th:text="${owner?.name}">Owner Name</div>
+					</div>
+				</div>
+			</div>
+			</div>
+			</div>
+
+
+			<!-- Posts -->
+			<h3 style="margin: 24px 0 12px; color: #1f2937;">
+				Posts<br>
+			</h3>
+
+			<div th:if="${#lists.isEmpty(petPosts)}" class="text-center py-5">
+				<i class="fas fa-paw fa-3x text-muted mb-3"></i>
+				<h4 class="text-muted">No posts yet</h4>
+				<p class="text-muted">Be the first to share something about this
+					pet!</p>
+			</div>
+
+			<div class="post-grid" th:if="${!#lists.isEmpty(petPosts)}">
+				<div class="post-card" th:each="post : ${petPosts}">
+					<div class="card position-relative">
+						<div style="margin-left: 12px; margin-top: 12px; margin-bottom: 12px; margin-right: 12px;">
+						<!-- Dropdown for post actions -->
+						<div th:if="${user != null and post.user.id == user.id}"
+							class="position-absolute top-0 end-0 m-3">
+							<button class="btn btn-sm btn-light dropdown-toggle-no-caret"
+								type="button" id="postActionsBtn" data-bs-toggle="dropdown"
+								aria-expanded="false"
+								style="border-radius: 50%; width: 36px; height: 36px; padding: 0; border: 1px solid #e5e7eb;">
+								<i class="fas fa-ellipsis-v"></i>
+							</button>
+							<ul class="dropdown-menu dropdown-menu-end"
+								aria-labelledby="postActionsBtn">
+								<li>
+									<form
+										th:action="@{'/community/post/' + ${post.id} + '/delete'}"
+										method="post" onsubmit="return confirmDelete()">
+										<input type="hidden" th:if="${_csrf != null}"
+											th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+										<button type="submit" class="dropdown-item text-danger">
+											<i class="fas fa-trash-alt me-2"></i>Delete Post
+										</button>
+									</form>
+								</li>
+								<li><a class="dropdown-item text-primary"
+									th:href="@{'/community/post/' + ${post.id} + '/edit'}"> <i
+										class="fas fa-edit me-2"></i>Update Post
+								</a></li>
+							</ul>
+						</div>
+						<br>
+						<!-- Post Owner -->
+						<div class="d-flex align-items-center mb-3">
+							<img th:if="${post.user.profileImage != null}"
+								th:src="${post.user.profileImage}" alt="User Profile"
+								style="width: 50px; height: 50px; margin-right: 12px; border-radius: 50%; object-fit: cover;"onerror="this.src='/img/profile_img/default.png'">
+
+							<img th:if="${post.user.profileImage == null}"
+								th:src="@{/img/profile_img/default.png}" alt="Default Profile"
+								style="width: 50px; height: 50px; margin-right: 12px; border-radius: 50%; object-fit: cover;"onerror="this.src='/img/profile_img/default.png'">
+
+							<div>
+								<h5 class="mb-0" th:text="${post.user.name}">User Name</h5>
+								<small class="text-muted"
+									th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}">Date</small>
+							</div>
+						</div>
+
+						<!-- Pet Info -->
+						<div class="pet-info d-flex align-items-center"
+							style="background: #f8fafc; padding: 12px; border-radius: 8px; margin: 12px 0;">
+							<img th:src="${post.pet.imagePet}" alt="Pet Image"
+								style="width: 40px; height: 40px; border-radius: 50%; object-fit: cover; margin-right: 12px;">
+							<div>
+								<strong th:text="${post.pet.name}">Pet Name</strong>
+								<div class="text-muted small"
+									th:text="${post.pet.type + ' • ' + post.pet.breed}">Pet
+									Info</div>
+							</div>
+						</div>
+
+						<!-- Post Description -->
+						<!-- Post Description -->
+						<p class="px-3 mb-3" th:text="${post.description}">Post
+							Description</p>
+
+						<!-- Post Image -->
+						<img th:if="${post.postImage != null and !post.postImage.empty}"
+							th:src="${post.postImage}" alt="Post Image" class="card-img-top">
+						<div th:if="${post.postImage == null or post.postImage.empty}"
+							class="card-img-top d-flex align-items-center justify-content-center"
+							style="height: 220px; color: #94a3b8;">No image</div>
+
+
+						
+
+
+
+
+
+							<!-- Like and Comments Actions -->
+							<div class="d-flex align-items-center gap-2 mt-3">
+								<!-- Like Button -->
+								<button type="button" th:id="'like-btn-' + ${post.id}"
+									class="btn btn-light flex-fill"
+									th:classappend="${post.likedByCurrentUser} ? ' liked' : ''"
+									th:onclick="'toggleLike(' + ${post.id} + ')'"
+									style="border: 1px solid #e5e7eb;">
+									<i class="fa-heart"
+										th:classappend="${post.likedByCurrentUser} ? ' fas' : ' far'"
+										style="color: #ed4956;"></i> <span
+										th:id="'like-count-' + ${post.id}" th:text="${post.likeCount}">0</span>
+									Likes
+								</button>
+
+								<!-- Comments Button -->
+								<a class="btn btn-outline-primary flex-fill"
+									th:href="@{'/community/post/' + ${post.id} + '/comments'}">
+									<i class="fas fa-comment"></i> Comments
+								</a>
+							</div>
+						
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			function toggleMenu(button) {
+				const menu = button.nextElementSibling;
+				document.querySelectorAll('.dropdown-menu-post-actions').forEach(el => {if (el !== menu) el.style.display = 'none';});
+				menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
+			}
+			document.addEventListener('click', function (event) {
+				if (!event.target.closest('.dropdown-menu-post-actions') && !event.target.closest('.dropdown-toggle')) {
+					document.querySelectorAll('.dropdown-menu-post-actions').forEach(el => el.style.display = 'none');
+				}
+			});
+
+			function confirmDelete() {return confirm("Are you sure you want to delete this post?");}
+
+			function getCSRFToken() {const token = document.querySelector('meta[name="_csrf"]'); return token ? token.getAttribute('content') : '';}
+			function getCSRFHeader() {const header = document.querySelector('meta[name="_csrf_header"]'); return header ? header.getAttribute('content') : 'X-CSRF-TOKEN';}
+			function authHeaders() {const headers = {'X-Requested-With': 'XMLHttpRequest'}; const t = getCSRFToken(), h = getCSRFHeader(); if (t && h) headers[h] = t; return headers;}
+
+			async function toggleLike(postId) {
+				const btn = document.getElementById('like-btn-' + postId);
+				const countEl = document.getElementById('like-count-' + postId);
+				const icon = btn.querySelector('i.fa-heart');
+				const liked = btn.classList.contains('liked');
+				const url = liked ? `/community/post/${postId}/unlike` : `/community/post/${postId}/like`;
+				btn.disabled = true;
+				try {
+					const res = await fetch(url, {method: 'POST', headers: authHeaders(), credentials: 'same-origin'});
+					if (res.status === 401 || res.status === 403) {window.location = '/signin'; return;}
+					const n = parseInt(await res.text(), 10);
+					if (Number.isNaN(n)) throw new Error('Invalid response');
+					countEl.textContent = n.toString();
+					btn.classList.toggle('liked', !liked);
+					icon.classList.remove('far', 'fas');
+					icon.classList.add(!liked ? 'fas' : 'far');
+				} catch (e) {console.error('toggleLike error', e); alert('Failed to like.');}
+				finally {btn.disabled = false;}
+			}
+		</script>
+	</section>
+</body>
+
+</html>

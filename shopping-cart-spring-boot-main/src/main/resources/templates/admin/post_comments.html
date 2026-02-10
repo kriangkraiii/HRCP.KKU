@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{base::layout(~{::section})}">
+<head>
+    <meta charset="UTF-8">
+    <title>Manage Post Comments</title>
+    <style>
+        .comment-card {
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .comment-header {
+            background-color: #f8f9fa;
+            padding: 10px 15px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .comment-content {
+            padding: 15px;
+        }
+        .admin-actions {
+            padding: 10px 15px;
+            background-color: #fff3cd;
+            border-top: 1px solid #dee2e6;
+        }
+    </style>
+</head>
+<body>
+<section>
+    <div class="container p-4">
+        <!-- Post Info -->
+        <div class="card mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4><i class="fas fa-comments"></i> Manage Comments for Post ID: [[${post.id}]]</h4>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Posted by:</strong> [[${post.user.name}]]</p>
+                        <p><strong>Pet:</strong> [[${post.pet.name}]] ([[${post.pet.type}]])</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Posted on:</strong> [[${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}]]</p>
+                        <p><strong>Total Comments:</strong> [[${commentCount}]]</p>
+                    </div>
+                </div>
+                <div th:if="${post.description != null and !post.description.empty}">
+                    <p><strong>Description:</strong> [[${post.description}]]</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages -->
+        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show">
+            <span th:text="${succMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show">
+            <span th:text="${errorMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Comments List -->
+        <div class="row">
+            <div class="col-12">
+                <div th:if="${comments != null and !comments.empty}">
+                    <h5 class="mb-3">Comments ([[${commentCount}]])</h5>
+                    
+                    <div th:each="comment : ${comments}" class="comment-card">
+                        <!-- Comment Header -->
+                        <div class="comment-header">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div class="d-flex align-items-center">
+                                    <img th:src="${comment.user.profileImage}" 
+                                         class="rounded-circle me-2" style="width: 30px; height: 30px; object-fit: cover;"onerror="this.src='/img/profile_img/default.png'">
+                                    <div>
+                                        <strong th:text="${comment.user.name}"></strong>
+                                        <small class="text-muted ms-2" th:text="${#temporals.format(comment.createdAt, 'dd/MM/yyyy HH:mm')}"></small>
+                                    </div>
+                                </div>
+                                <span class="badge bg-secondary">Comment ID: [[${comment.id}]]</span>
+                            </div>
+                        </div>
+
+                        <!-- Comment Content -->
+                        <div class="comment-content">
+                            <p th:text="${comment.content}" class="mb-0"></p>
+                        </div>
+
+                        <!-- Admin Actions -->
+                        <div class="admin-actions">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-muted">Admin Actions:</small>
+                                <form th:action="@{/admin/community/comment/{id}/delete(id=${comment.id})}" 
+                                      method="post" class="d-inline"
+                                      onsubmit="return confirm('Are you sure you want to delete this comment?')">
+                                    <button type="submit" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-trash"></i> Delete Comment
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- No Comments Message -->
+                <div th:if="${comments == null or comments.empty}" class="text-center py-5">
+                    <i class="fas fa-comment-slash fa-3x text-muted mb-3"></i>
+                    <h5 class="text-muted">No comments found for this post</h5>
+                </div>
+            </div>
+        </div>
+
+        <!-- Back Button -->
+        <div class="mt-4">
+            <a href="/admin/community" class="btn btn-secondary">
+                <i class="fas fa-arrow-left"></i> Back to Community Management
+            </a>
+        </div>
+    </div>
+</section>
+</body>
+</html>

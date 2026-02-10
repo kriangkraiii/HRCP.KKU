@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{base::layout(~{::section})}">
+<head>
+<meta charset="UTF-8">
+<title>Orders Management</title>
+</head>
+<body>
+	<section>
+		<div class="container-fluid mt-4 p-4">
+			<!-- Header Section -->
+			<div class="d-flex justify-content-between align-items-center mb-4">
+				<div>
+					<h2 class="mb-0">Orders Management</h2>
+					<p class="text-muted mb-0">Track and manage customer orders</p>
+				</div>
+				<a href="/admin/" class="btn btn-outline-secondary"> <i
+					class="fa-solid fa-arrow-left me-2"></i>Back to Dashboard
+				</a>
+			</div>
+
+			<!-- Dashboard Cards -->
+			<div class="row mb-4">
+				<div class="col-xl-3 col-md-6">
+					<div class="card bg-primary text-white mb-4">
+						<div class="card-body">
+							<div class="d-flex justify-content-between">
+								<div>
+									<h4 class="mb-0">[[${totalElements}]]</h4>
+									<p class="mb-0">Total Orders</p>
+								</div>
+								<div class="align-self-center">
+									<i class="fa-solid fa-shopping-cart fa-2x"></i>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-xl-3 col-md-6">
+					<div class="card bg-warning text-white mb-4">
+						<div class="card-body">
+							<div class="d-flex justify-content-between">
+								<div>
+									<h4 class="mb-0"
+										th:text="${orders != null ? orders.?[status == 'In Progress'].size() : 0}">0</h4>
+									<p class="mb-0">In Progress</p>
+								</div>
+								<div class="align-self-center">
+									<i class="fa-solid fa-clock fa-2x"></i>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-xl-3 col-md-6">
+					<div class="card bg-success text-white mb-4">
+						<div class="card-body">
+							<div class="d-flex justify-content-between">
+								<div>
+									<h4 class="mb-0"
+										th:text="${orders != null ? orders.?[status == 'Delivered'].size() : 0}">0</h4>
+									<p class="mb-0">Delivered</p>
+								</div>
+								<div class="align-self-center">
+									<i class="fa-solid fa-check-circle fa-2x"></i>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+				<div class="col-xl-3 col-md-6">
+					<div class="card bg-danger text-white mb-4">
+						<div class="card-body">
+							<div class="d-flex justify-content-between">
+								<div>
+									<h4 class="mb-0"
+										th:text="${orders != null ? orders.?[status == 'Cancelled'].size() : 0}">0</h4>
+									<p class="mb-0">Cancelled</p>
+								</div>
+								<div class="align-self-center">
+									<i class="fa-solid fa-times-circle fa-2x"></i>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Alerts -->
+			<th:block th:if="${session.succMsg}">
+				<div class="alert alert-success alert-dismissible fade show"
+					role="alert">
+					<i class="fa-solid fa-check-circle me-2"></i>[[${session.succMsg}]]
+					<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+				</div>
+				<th:block th:text="${@commnServiceImpl.removeSessionMessage()}"></th:block>
+			</th:block>
+
+			<th:block th:if="${session.errorMsg}">
+				<div class="alert alert-danger alert-dismissible fade show"
+					role="alert">
+					<i class="fa-solid fa-exclamation-circle me-2"></i>[[${session.errorMsg}]]
+					<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+				</div>
+				<th:block th:text="${@commnServiceImpl.removeSessionMessage()}"></th:block>
+			</th:block>
+
+			<!-- Search Section -->
+			<div class="card mb-4">
+				<div class="card-body">
+					<div class="row align-items-center">
+						<div class="col-md-8">
+							<form action="/admin/search-order" method="get" class="d-flex">
+								<div class="input-group">
+									<span class="input-group-text"> <i
+										class="fa-solid fa-search"></i>
+									</span> <input type="text" class="form-control" name="orderId"
+										placeholder="Enter order ID to search..."
+										th:value="${param.orderId}">
+									<button class="btn btn-primary" type="submit">
+										<i class="fa-solid fa-search me-1"></i>Search Order
+									</button>
+								</div>
+							</form>
+						</div>
+						<div class="col-md-4 text-end">
+							<a href="/admin/orders" class="btn btn-outline-secondary"
+								th:if="${srch}"> <i class="fa-solid fa-list me-1"></i>View
+								All Orders
+							</a>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Search Result Alert -->
+			<th:block th:if="${srch && orderDtls == null}">
+				<div class="alert alert-warning" role="alert">
+					<i class="fa-solid fa-exclamation-triangle me-2"></i>[[${errorMsg}]]
+				</div>
+			</th:block>
+
+			<!-- Orders Table -->
+			<div class="card">
+				<div class="card-header bg-light">
+					<h5 class="mb-0">
+						<span th:if="${srch && orderDtls != null}">Search Result</span> <span
+							th:unless="${srch}">Orders List</span>
+					</h5>
+				</div>
+				<div class="card-body p-0">
+					<div class="table-responsive">
+						<table class="table table-hover mb-0">
+							<thead class="table-dark">
+								<tr>
+									<th scope="col">Order ID</th>
+									<th scope="col">Customer Details</th>
+									<th scope="col">Order Date</th>
+									<th scope="col">Product</th>
+									<th scope="col">Order Summary</th>
+									<th scope="col" class="text-center">Status</th>
+									<th scope="col" class="text-center">Actions</th>
+								</tr>
+							</thead>
+							<tbody>
+								<!-- Search Result Display -->
+								<th:block th:if="${srch && orderDtls != null}">
+									<tr class="align-middle">
+										<th scope="row"><span class="badge bg-primary">[[${orderDtls.orderId}]]</span>
+										</th>
+										<td>
+											<div class="customer-info">
+												<h6 class="mb-1">[[${orderDtls.orderAddress.firstName +
+													' ' + orderDtls.orderAddress.lastName}]]</h6>
+												<small class="text-muted d-block"> <i
+													class="fa-solid fa-envelope me-1"></i>[[${orderDtls.orderAddress.email}]]
+												</small> <small class="text-muted d-block"> <i
+													class="fa-solid fa-phone me-1"></i>[[${orderDtls.orderAddress.mobileNo}]]
+												</small> <small class="text-muted"> <i
+													class="fa-solid fa-map-marker-alt me-1"></i>
+													[[${orderDtls.orderAddress.address + ', ' +
+													orderDtls.orderAddress.city + ', ' +
+													orderDtls.orderAddress.state + ' - ' +
+													orderDtls.orderAddress.pincode}]]
+												</small>
+											</div>
+										</td>
+										<td><span class="badge bg-info">[[${orderDtls.orderDate}]]</span>
+										</td>
+										<td><strong>[[${orderDtls.product.title}]]</strong></td>
+										<td>
+											<div>
+												<small class="d-block">Quantity: <strong>[[${orderDtls.quantity}]]</strong></small>
+												<small class="d-block">Unit Price: <strong>฿[[${orderDtls.price}]]</strong></small>
+												<small class="d-block text-success">Total: <strong>฿[[${orderDtls.quantity
+														* orderDtls.price}]]</strong></small>
+											</div>
+										</td>
+										<td class="text-center"><span
+											th:switch="${orderDtls.status}"> <span
+												th:case="'In Progress'" class="badge bg-warning">[[${orderDtls.status}]]</span>
+												<span th:case="'Order Received'" class="badge bg-info">[[${orderDtls.status}]]</span>
+												<span th:case="'Product Packed'" class="badge bg-primary">[[${orderDtls.status}]]</span>
+												<span th:case="'Out for Delivery'"
+												class="badge bg-secondary">[[${orderDtls.status}]]</span> <span
+												th:case="'Delivered'" class="badge bg-success">[[${orderDtls.status}]]</span>
+												<span th:case="'Cancelled'" class="badge bg-danger">[[${orderDtls.status}]]</span>
+												<span th:case="*" class="badge bg-light text-dark">[[${orderDtls.status}]]</span>
+										</span></td>
+										<td class="text-center">
+											<div class="d-flex justify-content-center gap-2">
+												<!-- Update Status Form -->
+												<form action="/admin/update-order-status" method="post"
+													class="d-inline-block"
+													th:if="${orderDtls.status != 'Cancelled' && orderDtls.status != 'Delivered'}">
+													<div class="input-group input-group-sm">
+														<select class="form-select" name="st" required
+															style="max-width: 120px;">
+															<option value="">--select--</option>
+															<option value="1"
+																th:selected="${orderDtls.status == 'In Progress'}">In
+																Progress</option>
+															<option value="2"
+																th:selected="${orderDtls.status == 'Order Received'}">Order
+																Received</option>
+															<option value="3"
+																th:selected="${orderDtls.status == 'Product Packed'}">Product
+																Packed</option>
+															<option value="4"
+																th:selected="${orderDtls.status == 'Out for Delivery'}">Out
+																for Delivery</option>
+															<option value="5"
+																th:selected="${orderDtls.status == 'Delivered'}">Delivered</option>
+															<option value="6"
+																th:selected="${orderDtls.status == 'Cancelled'}">Cancelled</option>
+														</select> <input th:value="${orderDtls.id}" name="id" type="hidden">
+														<button class="btn btn-sm btn-primary" type="submit">
+															<i class="fa-solid fa-sync-alt"></i>
+														</button>
+													</div>
+												</form>
+
+												<!-- Delete Button (only for cancelled orders) -->
+												<!-- 										<th:block th:if="${orderDtls.status == 'Cancelled'}">
+<button class="btn btn-sm btn-outline-danger"
+        th:data-order-id="${orderDtls.id}" 
+        th:data-order-id-text="${orderDtls.orderId}"
+        onclick="showDeleteOrderModal(this.dataset.orderId, this.dataset.orderIdText)"
+        data-bs-toggle="tooltip" title="Delete Order">
+    <i class="fa-solid fa-trash"></i>
+</button>
+
+												</th:block> -->
+											</div>
+										</td>
+									</tr>
+								</th:block>
+
+								<!-- All Orders Display -->
+								<th:block th:unless="${srch}">
+									<tr th:each="o:${orders}" class="align-middle">
+										<th scope="row"><span class="badge bg-primary">[[${o.orderId}]]</span>
+										</th>
+										<td>
+											<div class="customer-info">
+												<h6 class="mb-1">[[${o.orderAddress.firstName + ' ' +
+													o.orderAddress.lastName}]]</h6>
+												<small class="text-muted d-block"> <i
+													class="fa-solid fa-envelope me-1"></i>[[${o.orderAddress.email}]]
+												</small> <small class="text-muted d-block"> <i
+													class="fa-solid fa-phone me-1"></i>[[${o.orderAddress.mobileNo}]]
+												</small> <small class="text-muted"> <i
+													class="fa-solid fa-map-marker-alt me-1"></i>
+													[[${o.orderAddress.address + ', ' + o.orderAddress.city +
+													', ' + o.orderAddress.state + ' - ' +
+													o.orderAddress.pincode}]]
+												</small>
+											</div>
+										</td>
+										<td><span class="badge bg-info">[[${o.orderDate}]]</span>
+										</td>
+										<td><strong>[[${o.product.title}]]</strong></td>
+										<td>
+											<div>
+												<small class="d-block">Quantity: <strong>[[${o.quantity}]]</strong></small>
+												<small class="d-block">Unit Price: <strong>฿[[${o.price}]]</strong></small>
+												<small class="d-block text-success">Total: <strong>฿[[${o.quantity
+														* o.price}]]</strong></small>
+											</div>
+										</td>
+										<td class="text-center"><span th:switch="${o.status}">
+												<span th:case="'In Progress'" class="badge bg-warning">[[${o.status}]]</span>
+												<span th:case="'Order Received'" class="badge bg-info">[[${o.status}]]</span>
+												<span th:case="'Product Packed'" class="badge bg-primary">[[${o.status}]]</span>
+												<span th:case="'Out for Delivery'"
+												class="badge bg-secondary">[[${o.status}]]</span> <span
+												th:case="'Delivered'" class="badge bg-success">[[${o.status}]]</span>
+												<span th:case="'Cancelled'" class="badge bg-danger">[[${o.status}]]</span>
+												<span th:case="*" class="badge bg-light text-dark">[[${o.status}]]</span>
+										</span></td>
+										<td class="text-center">
+											<div class="d-flex justify-content-center gap-2">
+												<!-- Update Status Form -->
+												<form action="/admin/update-order-status" method="post"
+													class="d-inline-block"
+													th:if="${o.status != 'Cancelled' && o.status != 'Delivered'}">
+													<div class="input-group input-group-sm">
+														<select class="form-select" name="st" required
+															style="max-width: 120px;">
+															<option value="">--select--</option>
+															<option value="1"
+																th:selected="${o.status == 'In Progress'}">In
+																Progress</option>
+															<option value="2"
+																th:selected="${o.status == 'Order Received'}">Order
+																Received</option>
+															<option value="3"
+																th:selected="${o.status == 'Product Packed'}">Product
+																Packed</option>
+															<option value="4"
+																th:selected="${o.status == 'Out for Delivery'}">Out
+																for Delivery</option>
+															<option value="5"
+																th:selected="${o.status == 'Delivered'}">Delivered</option>
+															<option value="6"
+																th:selected="${o.status == 'Cancelled'}">Cancelled</option>
+														</select> <input th:value="${o.id}" name="id" type="hidden">
+														<button class="btn btn-sm btn-primary" type="submit">
+															<i class="fa-solid fa-sync-alt"></i>
+														</button>
+													</div>
+												</form>
+
+												<!-- Delete Button (only for cancelled orders) -->
+												<!-- 	<th:block th:if="${o.status == 'Cancelled'}">
+<button class="btn btn-sm btn-outline-danger" 
+        th:data-order-id="${o.id}" 
+        th:data-order-id-text="${o.orderId}"
+        onclick="showDeleteOrderModal(this.dataset.orderId, this.dataset.orderIdText)"
+        data-bs-toggle="tooltip" title="Delete Order">
+    <i class="fa-solid fa-trash"></i>
+</button>
+
+</th:block> -->
+
+												<!-- Disabled buttons for delivered/cancelled orders -->
+												<th:block
+													th:if="${o.status == 'Delivered' || o.status == 'Cancelled'}">
+													<span class="badge bg-secondary">Final Status</span>
+												</th:block>
+											</div>
+										</td>
+									</tr>
+									<tr th:if="${#lists.isEmpty(orders)}">
+										<td colspan="7" class="text-center py-4"><i
+											class="fa-solid fa-shopping-cart fa-3x text-muted mb-3"></i>
+											<h5 class="text-muted">No orders found</h5>
+											<p class="text-muted">Orders will appear here once
+												customers place them</p></td>
+									</tr>
+								</th:block>
+							</tbody>
+						</table>
+					</div>
+				</div>
+
+				<!-- Pagination Footer -->
+				<div class="card-footer bg-light" th:if="${!srch && totalPages > 1}">
+					<div class="d-flex justify-content-between align-items-center">
+						<div>
+							<small class="text-muted"> Showing [[${pageNo * 10 + 1}]]
+								to [[${(pageNo + 1) * 10 > totalElements ? totalElements :
+								(pageNo + 1) * 10}]] of [[${totalElements}]] orders </small>
+						</div>
+						<nav aria-label="Page navigation">
+							<ul class="pagination pagination-sm mb-0">
+								<li class="page-item"
+									th:classappend="${isFirst} ? 'disabled':''"><th:block
+										th:if="${!isFirst}">
+										<a class="page-link"
+											th:href="@{'/admin/orders?pageNo='+${pageNo-1}}"
+											aria-label="Previous"> <span aria-hidden="true">&laquo;</span>
+										</a>
+									</th:block> <th:block th:if="${isFirst}">
+										<span class="page-link" aria-label="Previous"> <span
+											aria-hidden="true">&laquo;</span>
+										</span>
+									</th:block></li>
+
+								<li th:each="i:${#numbers.sequence(1,totalPages)}"
+									class="page-item" th:classappend="${pageNo+1==i}?'active':''">
+									<a class="page-link"
+									th:href="@{'/admin/orders?pageNo='+${i-1}}">[[${i}]]</a>
+								</li>
+
+								<li class="page-item" th:classappend="${isLast} ? 'disabled':''">
+									<th:block th:if="${!isLast}">
+										<a class="page-link"
+											th:href="@{'/admin/orders?pageNo='+${pageNo+1}}"
+											aria-label="Next"> <span aria-hidden="true">&raquo;</span>
+										</a>
+									</th:block> <th:block th:if="${isLast}">
+										<span class="page-link" aria-label="Next"> <span
+											aria-hidden="true">&raquo;</span>
+										</span>
+									</th:block>
+								</li>
+							</ul>
+						</nav>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		
+<!-- 		<!-- Hidden form for delete operation -->
+		<!-- <form id="deleteForm" action="/admin/delete-order" method="post"
+			style="display: none;">
+			<input type="hidden" id="deleteOrderId" name="id">
+		</form> --> 
+
+	</section>
+
+
+	<!-- <div class="modal fade" id="deleteOrderModal" tabindex="-1"
+		aria-labelledby="deleteOrderModalLabel" aria-hidden="true">
+		<div class="modal-dialog">
+			<div class="modal-content">
+				<div class="modal-header">
+					<h5 class="modal-title" id="deleteOrderModalLabel">Confirm
+						Delete</h5>
+					<button type="button" class="btn-close" data-bs-dismiss="modal"
+						aria-label="Close"></button>
+				</div>
+				<div class="modal-body">
+					<p>
+						Are you sure you want to delete order <strong id="orderIdToDelete"></strong>?
+					</p>
+					<p class="text-danger">
+						<small>This action cannot be undone.</small>
+					</p>
+					<input type="hidden" id="deleteOrderId">
+				</div>
+				<div class="modal-footer">
+					<button type="button" class="btn btn-secondary"
+						data-bs-dismiss="modal">Cancel</button>
+					<button type="button" class="btn btn-danger"
+						onclick="confirmDeleteOrder()">
+						<i class="fa-solid fa-trash me-1"></i>Delete Order
+					</button>
+				</div>
+			</div>
+		</div>
+	</div> -->
+</body>
+
+</html>

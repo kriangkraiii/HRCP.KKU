@@ -1,0 +1,496 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{base::layout(~{::section})}">
+<head>
+<meta charset="UTF-8">
+<title>Admin Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+	<section>
+		<div class="container p-5">
+			<div class="dashboard-hero text-center">
+				<h1 class="dashboard-title">
+					<i class="fa-solid fa-crown me-3"></i>
+					Admin Dashboard
+				</h1>
+			</div>
+
+			<!-- Dashboard Insights Section -->
+			<div class="row mb-5">
+				<div class="col-12">
+					<h3 class="text-center mb-4">
+						<i class="fa-solid fa-chart-line me-2"></i>Dashboard Insights
+					</h3>
+				</div>
+
+				<!-- Key Metrics Cards -->
+				<div class="col-lg-3 col-md-6 mb-4">
+					<div class="card card-sh bg-gradient-primary text-white">
+						<div class="card-body">
+							<div class="d-flex justify-content-between">
+								<div>
+									<h4 class="mb-0" th:text="${totalRevenue ?: '฿0'}">฿0</h4>
+									<p class="mb-0">Total Revenue</p>
+								</div>
+								<div class="align-self-center">
+									<i class="fa-solid fa-dollar-sign fa-2x opacity-75"></i>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-lg-3 col-md-6 mb-4">
+					<div class="card card-sh bg-gradient-success text-white">
+						<div class="card-body">
+							<div class="d-flex justify-content-between">
+								<div>
+									<h4 class="mb-0" th:text="${todayRevenue ?: '฿0'}">฿0</h4>
+									<p class="mb-0">Today's Revenue</p>
+								</div>
+								<div class="align-self-center">
+									<i class="fa-solid fa-chart-line fa-2x opacity-75"></i>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-lg-3 col-md-6 mb-4">
+					<div class="card card-sh bg-gradient-warning text-white">
+						<div class="card-body">
+							<div class="d-flex justify-content-between">
+								<div>
+									<h4 class="mb-0" th:text="${todayOrders ?: '0'}">0</h4>
+									<p class="mb-0">Today's Orders</p>
+								</div>
+								<div class="align-self-center">
+									<i class="fa-solid fa-shopping-cart fa-2x opacity-75"></i>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+
+				<div class="col-lg-3 col-md-6 mb-4">
+					<div class="card card-sh bg-gradient-info text-white">
+						<div class="card-body">
+							<div class="d-flex justify-content-between">
+								<div>
+									<h4 class="mb-0" th:text="${newUsersToday ?: '0'}">0</h4>
+									<p class="mb-0">New Users Today</p>
+								</div>
+								<div class="align-self-center">
+									<i class="fa-solid fa-user-plus fa-2x opacity-75"></i>
+								</div>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Charts Section -->
+			<!-- <div class="row mb-5">
+				Daily Revenue Chart
+				<div class="col-lg-6 mb-4">
+					<div class="card card-sh">
+						<div class="card-header bg-primary text-white">
+							<h5 class="mb-0">
+								<i class="fa-solid fa-chart-area me-2"></i>Daily Revenue (Last 7 Days)
+							</h5>
+						</div>
+						<div class="card-body">
+							<canvas id="revenueChart" height="300"></canvas>
+						</div>
+					</div>
+				</div>
+
+				Daily Orders Chart
+				<div class="col-lg-6 mb-4">
+					<div class="card card-sh">
+						<div class="card-header bg-success text-white">
+							<h5 class="mb-0">
+								<i class="fa-solid fa-chart-bar me-2"></i>Daily Orders (Last 7 Days)
+							</h5>
+						</div>
+						<div class="card-body">
+							<canvas id="ordersChart" height="300"></canvas>
+						</div>
+					</div>
+				</div>
+
+				Top Categories Chart
+				<div class="col-lg-6 mb-4">
+					<div class="card card-sh">
+						<div class="card-header bg-warning text-white">
+							<h5 class="mb-0">
+								<i class="fa-solid fa-chart-pie me-2"></i>Top Selling Categories
+							</h5>
+						</div>
+						<div class="card-body">
+							<canvas id="categoriesChart" height="300"></canvas>
+						</div>
+					</div>
+				</div>
+
+				Top Products Chart
+				<div class="col-lg-6 mb-4">
+					<div class="card card-sh">
+						<div class="card-header bg-info text-white">
+							<h5 class="mb-0">
+								<i class="fa-solid fa-star me-2"></i>Top Selling Products
+							</h5>
+						</div>
+						<div class="card-body">
+							<canvas id="productsChart" height="300"></canvas>
+						</div>
+					</div>
+				</div>
+			</div> -->
+
+			<!-- Recent Users Section -->
+			<div class="row mb-5">
+				<div class="col-12">
+					<div class="card card-sh">
+						<div class="card-header bg-secondary text-white">
+							<h5 class="mb-0">
+								<i class="fa-solid fa-users me-2"></i>Recently Registered Users
+							</h5>
+						</div>
+						<div class="card-body">
+							<div class="table-responsive">
+								<table class="table table-hover">
+									<thead>
+										<tr>
+											<th>Profile</th>
+											<th>Name</th>
+											<th>Email</th>
+											<th>Registration Date</th>
+											<th>Status</th>
+										</tr>
+									</thead>
+									<tbody>
+										<tr th:each="user : ${recentUsers}" th:if="${recentUsers}">
+											<td>
+												<img th:src="${user.profileImage}" 
+													 class="rounded-circle" width="50" height="50" 
+													 style="object-fit: cover;"
+													 onerror="this.src='/img/profile_img/default.png'">
+											</td>
+											<td th:text="${user.name}">John Doe</td>
+											<td th:text="${user.email}">john@example.com</td>
+											<td th:text="${#dates.format(user.createdDate, 'dd/MM/yyyy')}">01/01/2024</td>
+											<td>
+												<span th:if="${user.isEnable}" class="badge bg-success">Active</span>
+												<span th:unless="${user.isEnable}" class="badge bg-danger">Inactive</span>
+											</td>
+										</tr>
+										<tr th:if="${#lists.isEmpty(recentUsers)}">
+											<td colspan="5" class="text-center text-muted">No recent users found</td>
+										</tr>
+									</tbody>
+								</table>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<!-- Original Dashboard Cards -->
+			<div class="row p-5">
+				<div class="col-md-4 mt-2">
+					<a href="/admin/loadAddProduct" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-primary">
+								<i class="fa-solid fa-square-plus fa-3x"></i>
+								<h4>Add Product</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+
+				<div class="col-md-4 mt-2">
+					<a href="/admin/category" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-warning">
+								<i class="fa-solid fa-list fa-3x"></i>
+								<h4>Add Category</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+
+				<div class="col-md-4 mt-2">
+					<a href="/admin/products" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-success">
+								<i class="fa-solid fa-table-list fa-3x"></i>
+								<h4>View Product</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+
+				<div class="col-md-4 mt-4">
+					<a href="/admin/orders" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-warning">
+								<i class="fa-solid fa-box-open fa-3x"></i>
+								<h4>Orders</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+
+				<div class="col-md-4 mt-4">
+					<a href="/admin/users?type=1" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-primary">
+								<i class="fa-solid fa-circle-user fa-3x"></i>
+								<h4>Users</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+
+				<div class="col-md-4 mt-4">
+					<a href="/admin/add-admin" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-primary">
+								<i class="fa-solid fa-user-plus fa-3x"></i>
+								<h4>Add Admin</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+
+				<div class="col-md-4 mt-4">
+					<a href="/admin/users?type=2" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-primary">
+								<i class="fa-solid fa-circle-user fa-3x"></i>
+								<h4>Admin</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+								<div class="col-md-4 mt-4">
+					<a href="/admin/pet" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-primary">
+								<i class="fa-solid fa-paw fa-3x"></i>
+								<h4>Pet</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+
+				<div class="col-md-4 mt-4">
+					<a href="/admin/community" class="text-decoration-none">
+						<div class="card card-sh">
+							<div class="card-body text-center text-primary">
+								<i class="fa-solid fa-people-group fa-3x"></i>
+								<h4>Community</h4>
+							</div>
+						</div>
+					</a>
+				</div>
+			</div>
+		</div>
+
+		<!-- Chart.js Scripts -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Get data from Thymeleaf - properly formatted
+    const revenueData = [/*[+${dailyRevenueData}+*/];
+    const revenueLabels = [/*[+${dailyRevenueLabels}+*/];
+    const ordersData = [/*[+${dailyOrdersData}+*/];
+    const ordersLabels = [/*[+${dailyOrdersLabels}+*/];
+    const categoriesData = [/*[+${topCategoriesData}+*/];
+    const categoriesLabels = [/*[+${topCategoriesLabels}+*/];
+    const productsData = [/*[+${topProductsData}+*/];
+    const productsLabels = [/*[+${topProductsLabels}+*/];
+    
+    // Check if data exists, otherwise use default values
+    const finalRevenueData = revenueData.length > 0 ? revenueData : [0, 0, 0, 0, 0, 0, 0];
+    const finalRevenueLabels = revenueLabels.length > 0 ? revenueLabels : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const finalOrdersData = ordersData.length > 0 ? ordersData : [0, 0, 0, 0, 0, 0, 0];
+    const finalOrdersLabels = ordersLabels.length > 0 ? ordersLabels : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    
+    // Revenue Chart
+    const revenueCtx = document.getElementById('revenueChart').getContext('2d');
+    new Chart(revenueCtx, {
+        type: 'line',
+        data: {
+            labels: finalRevenueLabels,
+            datasets: [{
+                label: 'Revenue (฿)',
+                data: finalRevenueData,
+                borderColor: '#007bff',
+                backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                borderWidth: 3,
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        callback: function(value) {
+                            return '฿' + value.toLocaleString();
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // Orders Chart
+    const ordersCtx = document.getElementById('ordersChart').getContext('2d');
+    new Chart(ordersCtx, {
+        type: 'bar',
+        data: {
+            labels: finalOrdersLabels,
+            datasets: [{
+                label: 'Orders',
+                data: finalOrdersData,
+                backgroundColor: '#28a745',
+                borderColor: '#1e7e34',
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+
+    // Categories Chart
+    const categoriesCtx = document.getElementById('categoriesChart').getContext('2d');
+    new Chart(categoriesCtx, {
+        type: 'doughnut',
+        data: {
+            labels: categoriesLabels,
+            datasets: [{
+                data: categoriesData,
+                backgroundColor: [
+                    '#ffc107',
+                    '#dc3545',
+                    '#007bff',
+                    '#28a745',
+                    '#6f42c1'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+
+    // Products Chart
+    const productsCtx = document.getElementById('productsChart').getContext('2d');
+    new Chart(productsCtx, {
+        type: 'polarArea',
+        data: {
+            labels: productsLabels,
+            datasets: [{
+                data: productsData,
+                backgroundColor: [
+                    'rgba(23, 162, 184, 0.7)',
+                    'rgba(40, 167, 69, 0.7)',
+                    'rgba(255, 193, 7, 0.7)',
+                    'rgba(220, 53, 69, 0.7)',
+                    'rgba(111, 66, 193, 0.7)'
+                ],
+                borderColor: [
+                    '#17a2b8',
+                    '#28a745',
+                    '#ffc107',
+                    '#dc3545',
+                    '#6f42c1'
+                ],
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+});
+</script>
+
+
+		<style>
+			.bg-gradient-primary {
+				background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+			}
+			
+			.bg-gradient-success {
+				background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);
+			}
+			
+			.bg-gradient-warning {
+				background: linear-gradient(135deg, #ffc107 0%, #e0a800 100%);
+			}
+			
+			.bg-gradient-info {
+				background: linear-gradient(135deg, #17a2b8 0%, #117a8b 100%);
+			}
+			
+			.card-sh {
+				box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+				border: 1px solid rgba(0, 0, 0, 0.125);
+				border-radius: 0.375rem;
+				transition: all 0.3s ease;
+			}
+			
+			.card-sh:hover {
+				box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.15);
+				transform: translateY(-2px);
+			}
+			
+			.dashboard-title {
+				background: linear-gradient(135deg, #007bff, #6f42c1);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+				background-clip: text;
+			}
+		</style>
+	</section>
+</body>
+</html>

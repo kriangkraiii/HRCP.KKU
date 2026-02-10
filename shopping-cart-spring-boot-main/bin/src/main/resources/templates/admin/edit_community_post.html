@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{base::layout(~{::section})}">
+<head>
+<meta charset="UTF-8">
+<title>Edit Community Post</title>
+</head>
+<body>
+	<section>
+		<div class="container p-4">
+			<div class="row justify-content-center">
+				<div class="col-md-8">
+					<div class="card">
+						<div class="card-header bg-primary text-white">
+							<h4>
+								<i class="fas fa-edit"></i> Edit Community Post
+							</h4>
+						</div>
+						<div class="card-body">
+							<!-- Messages -->
+							<div th:if="${succMsg}" class="alert alert-success">
+								<span th:text="${succMsg}"></span>
+							</div>
+							<div th:if="${errorMsg}" class="alert alert-danger">
+								<span th:text="${errorMsg}"></span>
+							</div>
+
+							<form
+								th:action="@{/admin/community/post/{id}/update(id=${post.id})}"
+								method="post" enctype="multipart/form-data">
+
+								<!-- Current Post Info -->
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label"><strong>Post ID:</strong></label> <span
+											th:text="${post.id}" class="form-control-plaintext"></span>
+									</div>
+									<div class="col-md-6">
+										<label class="form-label"><strong>Posted by:</strong></label>
+										<span th:text="${post.user.name}"
+											class="form-control-plaintext"></span>
+									</div>
+								</div>
+
+								<!-- Pet Selection -->
+								<div class="mb-3">
+									<label for="petId" class="form-label"><strong>Select
+											Pet (Owner: <span th:text="${post.user.name}"></span>):
+									</strong></label> <select class="form-select" id="petId" name="petId" required>
+										<option value="">Choose a pet...</option>
+										<option th:each="pet : ${allPets}" th:value="${pet.id}"
+											th:text="${pet.name + ' (' + pet.type + ')'}"
+											th:selected="${pet.id == post.pet.id}"></option>
+									</select> <small class="text-muted">Only pets owned by the post
+										creator are shown</small>
+								</div>
+
+
+								<!-- Description -->
+								<div class="mb-3">
+									<label for="description" class="form-label"><strong>Description:</strong></label>
+									<textarea class="form-control" id="description"
+										name="description" rows="4" th:text="${post.description}"></textarea>
+								</div>
+
+								<!-- Current Image -->
+								<div th:if="${post.postImage != null and !post.postImage.empty}"
+									class="mb-3">
+									<label class="form-label"><strong>Current
+											Image:</strong></label>
+									<div>
+										<img th:src="${post.postImage}" class="img-thumbnail"
+											style="max-width: 300px;">
+									</div>
+								</div>
+
+								<!-- New Image Upload -->
+								<div class="mb-3">
+									<label for="postImage" class="form-label"><strong>Update
+											Image (optional):</strong></label> <input type="file" class="form-control"
+										id="postImage" name="postImage" accept="image/*"> <small
+										class="text-muted">Leave empty to keep current image</small>
+								</div>
+
+								<!-- Action Buttons -->
+								<div class="d-flex justify-content-between">
+									<a href="/admin/community" class="btn btn-secondary"> <i
+										class="fas fa-arrow-left"></i> Back to Community
+									</a>
+									<button type="submit" class="btn btn-primary">
+										<i class="fas fa-save"></i> Update Post
+									</button>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+</body>
+</html>

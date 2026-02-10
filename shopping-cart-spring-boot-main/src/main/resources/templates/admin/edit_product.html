@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+	th:replace="~{base::layout(~{::section})}">
+<head>
+<meta charset="UTF-8">
+<title>Edit Game</title>
+</head>
+<body>
+	<section>
+		<div class="container p-5 mt-3">
+			<div class="row">
+				<div class="col-md-8 offset-md-2">
+					<div class="card card-sh">
+						<div class="card-header text-center ">
+							<p class="fs-4">Edit Game</p>
+
+							<th:block th:if="${session.succMsg}">
+								<p class="text-success fw-bold">[[${session.succMsg}]]</p>
+								<th:block th:text="${@commnServiceImpl.removeSessionMessage()}"></th:block>
+							</th:block>
+
+							<th:block th:if="${session.errorMsg}">
+								<p class="text-danger fw-bold">[[${session.errorMsg}]]</p>
+								<th:block th:text="${@commnServiceImpl.removeSessionMessage()}"></th:block>
+							</th:block>
+
+						</div>
+						<div class="card-body">
+							<form action="/admin/updateProduct" method="post"
+								enctype="multipart/form-data">
+								<input type="hidden" name="id" th:value="${product.id}">
+								<div class="mb-3">
+										<label>Game Title</label> <input type="text" name="title"
+											th:value="${product.title}" class="form-control">
+									</div>
+
+									<div class="mb-3">
+										<label>Game Description</label>
+									<textarea rows="3" cols="" class="form-control"
+										name="description">[[${product.description}]]</textarea>
+								</div>
+								<div class="row">
+									<div class="mb-3 col">
+										<label>Genre</label> <select class="form-control"
+											name="category">
+											<option value="">None</option>
+											<option th:each="cat : ${categories}"
+												th:selected="${product.category != null and product.category == cat.name}"
+												th:text="${cat.name}" th:value="${cat.name}"></option>
+										</select>
+									</div>
+
+									<div class="mb-3 col">
+										<label>Enter Price</label> <input type="number" name="price"
+											th:value="${product.price}" class="form-control">
+									</div>
+								</div>
+
+								<div class="row">
+									<div class="mb-3 col">
+										<label>Discount(%)</label> <input type="number" name="discount"
+											th:value="${product.discount}" class="form-control">
+									</div>
+									<div class="mb-3 col">
+										<label>Discount Price</label> <input type="number" readonly
+											th:value="${product.discountPrice}" class="form-control">
+									</div>
+								</div>
+
+								<div class="mb-3">
+									<label>Status</label>
+
+									<div class="form-check">
+										<input class="form-check-input" type="radio"
+											th:checked="${product.isActive==true}" value="true"
+											name="isActive" id="flexRadioDefault1"> <label
+											class="form-check-label" for="flexRadioDefault1">
+											Active </label>
+									</div>
+									<div class="form-check">
+										<input class="form-check-input" type="radio" name="isActive"
+											th:checked="${product.isActive==false}" value="false"
+											id="flexRadioDefault2"> <label
+											class="form-check-label" for="flexRadioDefault2">
+											Inactive </label>
+									</div>
+
+								</div>
+
+								<div class="row">
+
+									<div class="mb-3 col">
+										<label>Cover Image</label> <input type="file" name="file"
+											class="form-control" accept="image/*">
+									</div>
+
+									<div class="mt-1">
+										<img th:src="${product.image}"
+											width="100px" height="100px">
+									</div>
+
+								</div>
+
+								<div class="mb-3">
+									<label>Additional Images (Optional)</label>
+									<input type="file" name="files" class="form-control" accept="image/*" multiple>
+									<small class="text-muted">Select multiple images for game gallery (will replace existing extra images)</small>
+									<th:block th:if="${product.images != null and !product.images.isEmpty()}">
+										<div class="d-flex flex-wrap gap-2 mt-2">
+											<th:block th:each="imgUrl : ${product.getImageList()}">
+												<img th:src="${imgUrl}" width="80px" height="80px" class="rounded" style="object-fit: cover;">
+											</th:block>
+										</div>
+									</th:block>
+								</div>
+
+								<!-- 🔐 Secure Digital Delivery - Game File Upload -->
+								<div class="mb-3">
+									<label class="form-label">
+										<i class="fa-solid fa-file-zipper me-1"></i> Game File (for Secure Download)
+									</label>
+									<input type="file" name="gameFile" class="form-control">
+									<small class="text-muted">
+										<i class="fa-solid fa-shield-halved me-1"></i>
+										ไฟล์จะถูกเข้ารหัส AES-256 อัตโนมัติเมื่อผู้ใช้ดาวน์โหลด
+									</small>
+									<th:block th:if="${product.gameFilePath != null and !product.gameFilePath.isEmpty()}">
+										<div class="mt-2">
+											<span class="badge bg-success">
+												<i class="fa-solid fa-check-circle me-1"></i> มีไฟล์เกมแล้ว
+											</span>
+											<small class="text-muted ms-2" th:text="${product.gameFilePath}"></small>
+										</div>
+										<small class="text-warning">อัปโหลดใหม่จะแทนที่ไฟล์เดิม</small>
+									</th:block>
+								</div>
+
+								<div class="mb-3">
+									<label>Download Link (URL) <small class="text-muted">(Optional - ถ้าไม่อัปโหลดไฟล์)</small></label>
+									<input type="url" name="downloadLink"
+										th:value="${product.downloadLink}" class="form-control"
+										placeholder="https://example.com/game-file.zip">
+								</div>
+
+								<div class="mb-3">
+									<label>File Size</label> <input type="text" name="fileSize"
+										th:value="${product.fileSize}" class="form-control"
+										placeholder="e.g. 2.5 GB">
+								</div>
+
+								<div class="row">
+									<div class="col-md-6">
+										<a href="/admin/products" class="btn btn-secondary col-md-12">Back</a>
+									</div>
+									<div class="col-md-6">
+										<button class="btn btn-primary col-md-12">Update Game</button>
+									</div>
+								</div>
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+</body>
+</html>

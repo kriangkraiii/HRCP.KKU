@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" th:replace="~{base::layout(~{::section})}">
+
+<head>
+	<meta charset="UTF-8" />
+	<title>Notifications</title>
+</head>
+
+<body>
+	<section>
+
+		<!-- ===== CSS Styling ===== -->
+		<style>
+			.notifications-container {
+				max-width: 600px;
+				margin: 90px auto 40px;
+				padding: 0 16px;
+			}
+
+			.notifications-header {
+				background: #fff;
+				border-radius: 20px;
+				box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+				padding: 28px;
+				margin-bottom: 24px;
+				border: 1px solid #e3e7ed;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+			}
+
+			.notification-item {
+				background: #fff;
+				border-radius: 16px;
+				box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+				padding: 20px;
+				margin-bottom: 16px;
+				border: 1px solid #e3e7ed;
+				transition: all 0.3s ease;
+				cursor: pointer;
+			}
+
+			.notification-item:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+			}
+
+			.notification-item.unread {
+				border-left: 4px solid #3b82f6;
+				background: linear-gradient(135deg, #f8faff, #f1f5f9);
+			}
+
+			.notification-content {
+				display: flex;
+				align-items: center;
+				gap: 16px;
+			}
+
+			.notification-avatar {
+				width: 48px;
+				height: 48px;
+				border-radius: 50%;
+				object-fit: cover;
+				border: 2px solid #fff;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+			}
+
+			.notification-details {
+				flex: 1;
+			}
+
+			.notification-message {
+				color: #2d3a4b;
+				font-weight: 500;
+				margin-bottom: 4px;
+				line-height: 1.4;
+			}
+
+			.notification-time {
+				color: #64748b;
+				font-size: 0.85rem;
+			}
+
+			.notification-icon {
+				font-size: 1.2rem;
+				padding: 10px;
+				border-radius: 50%;
+			}
+
+			.notification-icon.like {
+				color: #ff3040;
+				background: rgba(255, 48, 64, .1);
+			}
+
+			.notification-icon.comment {
+				color: #3b82f6;
+				background: rgba(59, 130, 246, .1);
+			}
+
+			.empty-notifications {
+				text-align: center;
+				padding: 80px 20px;
+				color: #64748b;
+			}
+
+			.empty-notifications i {
+				font-size: 4rem;
+				margin-bottom: 20px;
+				color: #cbd5e0;
+			}
+		</style>
+
+		<!-- ===== Notifications Container ===== -->
+		<div class="notifications-container">
+
+			<!-- Header -->
+			<div class="notifications-header">
+				<h2 style="margin: 0; color: #2d3a4b; font-weight: 700;">
+					<i class="fas fa-bell" style="margin-right: 12px; color: #3b82f6;"></i>
+					Notifications
+				</h2>
+				<button class="btn btn-outline-primary btn-sm" onclick="markAllAsRead()"
+					th:if="${!notifications.isEmpty()}">
+					<i class="fas fa-check-double"></i> Mark All Read
+				</button>
+			</div>
+
+			<!-- Empty Notification Message -->
+			<div th:if="${notifications.isEmpty()}" class="empty-notifications">
+				<i class="fas fa-bell-slash"></i>
+				<h4>No notifications yet</h4>
+				<p>You'll see notifications here when someone likes or comments
+					on your posts.</p>
+			</div>
+
+			<!-- Notification Items -->
+			<div class="notification-item" th:each="notification : ${notifications}"
+				th:classappend="${!notification.read} ? ' unread' : ''"
+				th:attr="data-notification-id=${notification.id}"
+				th:onclick="'openPost(' + ${notification.post.id} + ', ' + ${notification.id} + ')'">
+
+				<div class="notification-content">
+
+
+
+					<div class="notification-details">
+						<div class="notification-message" th:text="${notification.message}">Notification message</div>
+						<div class="notification-time"
+							th:text="${#temporals.format(notification.createdAt, 'dd/MM/yyyy HH:mm')}">
+							Time</div>
+					</div>
+
+					<div class="notification-icon"
+						th:classappend="${notification.type.name() == 'LIKE'} ? ' like' : ' comment'">
+						<i th:class="${notification.type.name() == 'LIKE'} ? 'fas fa-heart' : 'fas fa-comment'"></i>
+					</div>
+				</div>
+
+			</div>
+			<!-- /notification-item -->
+
+		</div>
+		<!-- /notifications-container -->
+
+		<!-- ===== Scripts ===== -->
+		<script th:inline="javascript">
+			const CSRF_TOKEN = /*[[${_csrf?.token}]]*/ '';
+			const CSRF_HEADER = /*[[${_csrf?.headerName}]]*/ 'X-CSRF-TOKEN';
+
+			function authHeaders() {
+				const h = {'X-Requested-With': 'XMLHttpRequest'};
+				if (CSRF_TOKEN) h[CSRF_HEADER] = CSRF_TOKEN;
+				return h;
+			}
+
+			function openPost(postId, notificationId) {
+				fetch(`/notifications/${notificationId}/read`, {
+					method: 'POST',
+					headers: authHeaders(),
+					credentials: 'same-origin'
+				}).finally(() => {
+					// เปลี่ยนเส้นทางให้ตรงกับ mapping ที่มีอยู่
+					window.location.href = `/community/post/${postId}/comments#comments`;
+				});
+			}
+
+			async function markAllAsRead() {
+				try {
+					const response = await fetch('/notifications/read-all', {
+						method: 'POST',
+						headers: authHeaders(),
+						credentials: 'same-origin'
+					});
+					const data = await response.json();
+					if (data.success) location.reload();
+				} catch (error) {
+					console.error('Error marking all as read:', error);
+				}
+			}
+		</script>
+
+	</section>
+</body>
+
+</html>

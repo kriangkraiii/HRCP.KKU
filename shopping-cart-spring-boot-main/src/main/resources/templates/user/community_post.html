@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{base::layout(~{::section})}">
+<head>
+    <meta charset="UTF-8"/>
+    <title th:text="'Post by ' + ${post.user.name}">Post Details</title>
+    <style>
+        .post-container {
+            max-width: 900px;
+            margin: 40px auto;
+            padding: 0 16px;
+        }
+
+        .post-card {
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
+            padding: 24px;
+            margin-bottom: 24px;
+            border: 1.5px solid #e3e7ed;
+        }
+
+        .post-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-bottom: 20px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid #eaeef4;
+        }
+
+        .user-profile, .pet-profile {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .user-profile img, .pet-profile img {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid #e3e7ed;
+        }
+
+        .profile-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .profile-name {
+            font-weight: 600;
+            color: #2d3a4b;
+            margin: 0;
+            font-size: 0.95rem;
+        }
+
+        .profile-label {
+            font-size: 0.8rem;
+            color: #5a6270;
+            margin-top: 2px;
+        }
+
+        .arrow-icon {
+            font-size: 1.2rem;
+            color: #94a3b8;
+            margin: 0 8px;
+        }
+
+        .post-image {
+            width: 100%;
+            max-height: 500px;
+            object-fit: cover;
+            border-radius: 12px;
+            margin: 16px 0;
+        }
+
+        .pet-details {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 12px;
+            margin: 16px 0;
+        }
+
+        .pet-info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .pet-info-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+        }
+
+        .heart-btn {
+            background: none !important;
+            border: none !important;
+            outline: none !important;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px;
+            border-radius: 50px;
+            transition: all 0.3s ease;
+            box-shadow: none !important;
+        }
+
+        .heart-btn i {
+            font-size: 1.4rem;
+            transition: all 0.3s ease;
+        }
+
+        .heart-btn .far {
+            color: #262626;
+        }
+
+        .heart-btn .fas {
+            color: #ed4956;
+        }
+
+        .comments-section {
+            margin-top: 24px;
+        }
+
+        .comment-form {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .comment-item {
+            background: #f8fafc;
+            padding: 16px;
+            border-radius: 12px;
+            margin-bottom: 12px;
+        }
+
+        @media (max-width: 768px) {
+            .post-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 12px;
+            }
+            
+            .arrow-icon {
+                transform: rotate(90deg);
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+<section>
+    <div class="post-container">
+        <!-- Post Content -->
+        <div class="post-card">
+            <!-- Post Header with User and Pet Profiles -->
+            <div class="post-header">
+                <!-- User Profile -->
+                <div class="user-profile">
+                    <img th:src="${post.user.profileImage}" alt="User Profile">
+                    <div class="profile-info">
+                        <div class="profile-name" th:text="${post.user.name}">User Name</div>
+                        <div class="profile-label">Owner</div>
+                    </div>
+                </div>
+
+                <!-- Arrow -->
+                <div class="arrow-icon">
+                    <i class="fas fa-arrow-right"></i>
+                </div>
+
+                <!-- Pet Profile -->
+                <div class="pet-profile">
+                    <img th:src="${post.pet.imagePet}" alt="Pet Profile">
+                    <div class="profile-info">
+                        <div class="profile-name" th:text="${post.pet.name}">Pet Name</div>
+                        <div class="profile-label" th:text="${post.pet.type}">Pet Type</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Post Meta Info -->
+            <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 16px; color: #5a6270;">
+                <i class="fas fa-clock"></i>
+                <span th:text="${#temporals.format(post.createdAt, 'dd/MM/yyyy HH:mm')}">Date</span>
+            </div>
+
+            <!-- Post Description -->
+            <div th:if="${post.description}" style="margin-bottom: 16px; color: #334155; font-size: 1.1rem;"
+                 th:text="${post.description}">Post description</div>
+
+            <!-- Post Image -->
+            <img class="post-image" 
+                 th:src="${post.postImage}" 
+                 alt="Post Image"/>
+
+            <!-- Pet Details -->
+            <div class="pet-details">
+                <h5 style="margin: 0 0 12px 0; color: #2d3a4b;">
+                    <i class="fas fa-paw" style="margin-right: 8px;"></i>
+                    About <span th:text="${post.pet.name}">Pet Name</span>
+                </h5>
+                <div class="pet-info-grid">
+                    <div class="pet-info-item">
+                        <strong>Type:</strong>
+                        <span th:text="${post.pet.type}">Type</span>
+                    </div>
+                    <div class="pet-info-item">
+                        <strong>Breed:</strong>
+                        <span th:text="${post.pet.breed}">Breed</span>
+                    </div>
+                </div>
+                <div th:if="${post.pet.description}" style="margin-top: 12px; padding-top: 12px; border-top: 1px solid #e3e7ed;">
+                    <strong style="color: #2d3a4b;">Description:</strong>
+                    <div style="color: #5a6270; margin-top: 4px;" th:text="${post.pet.description}">Pet Description</div>
+                </div>
+            </div>
+
+            <!-- Post Actions -->
+            <div style="display: flex; align-items: center; gap: 20px; margin: 20px 0; padding: 16px 0; border-top: 1px solid #eaeef4; border-bottom: 1px solid #eaeef4;">
+                <button type="button" th:id="'like-btn-' + ${post.id}" class="heart-btn"
+                        th:classappend="${post.likedByCurrentUser} ? ' liked' : ''"
+                        th:onclick="'toggleLike(' + ${post.id} + ')'">
+                    <i class="fa-heart" th:classappend="${post.likedByCurrentUser} ? ' fas' : ' far'"></i>
+                    <span th:id="'like-count-' + ${post.id}" th:text="${post.likeCount}">0</span>
+                </button>
+                <a href="/community" class="btn btn-outline-secondary btn-sm">
+                    <i class="fas fa-arrow-left"></i> Back to Community
+                </a>
+            </div>
+
+            <!-- Comments Section -->
+            <div class="comments-section">
+                <h5 style="color: #2d3a4b; margin-bottom: 16px;">
+                    <i class="fas fa-comments" style="margin-right: 8px;"></i>
+                    Comments (<span id="comment-count" th:text="${commentCount}">0</span>)
+                </h5>
+
+                <!-- Comment Form -->
+                <div th:if="${user != null}" class="comment-form">
+                    <input type="text" class="form-control" id="commentInput" 
+                           placeholder="Write a comment..." th:attr="data-post-id=${post.id}">
+                    <button class="btn btn-primary" onclick="addComment()">Post</button>
+                </div>
+                <div th:if="${user == null}" class="text-muted" style="margin-bottom: 20px;">
+                    Please <a href="/signin">login</a> to comment.
+                </div>
+
+                <!-- Comments List -->
+                <div id="commentsList">
+                    <div class="comment-item" th:each="comment : ${comments}">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 600; color: #2d3a4b;" th:text="${comment.user.name}">User Name</span>
+                            <span style="font-size: 0.8rem; color: #94a3b8;" th:text="${#temporals.format(comment.createdAt, 'dd/MM/yyyy HH:mm')}">Time</span>
+                        </div>
+                        <div style="color: #334155;" th:text="${comment.content}">Comment content</div>
+                    </div>
+                    <div th:if="${comments.isEmpty()}" class="text-center text-muted" style="padding: 40px 0;">
+                        <i class="fas fa-comment-slash" style="font-size: 2rem; margin-bottom: 12px; display: block;"></i>
+                        No comments yet. Be the first to comment!
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<script th:inline="javascript">
+    const CSRF_TOKEN = /*[[${_csrf?.token}]]*/ '';
+    const CSRF_HEADER = /*[[${_csrf?.headerName}]]*/ 'X-CSRF-TOKEN';
+    const POST_ID = /*[[${post.id}]]*/ 0;
+
+    function authHeaders() {
+        const h = {'X-Requested-With': 'XMLHttpRequest'};
+        if (CSRF_TOKEN) h[CSRF_HEADER] = CSRF_TOKEN;
+        return h;
+    }
+
+    async function toggleLike(postId) {
+        const btn = document.getElementById('like-btn-' + postId);
+        const countEl = document.getElementById('like-count-' + postId);
+        const icon = btn.querySelector('i.fa-heart');
+        const liked = btn.classList.contains('liked');
+
+        // Check if user is logged in
+        const user = /*[[${user}]]*/ null;
+        if (!user) {
+            alert('กรุณาเข้าสู่ระบบเพื่อกดไลค์');
+            window.location.href = '/signin';
+            return;
+        }
+
+        const url = liked ? `/community/post/${postId}/unlike` : `/community/post/${postId}/like`;
+        btn.disabled = true;
+        try {
+            const res = await fetch(url, {
+                method: 'POST', 
+                headers: authHeaders(), 
+                credentials: 'same-origin'
+            });
+            if (res.status === 401 || res.status === 403) {
+                window.location = '/signin';
+                return;
+            }
+            const data = await res.json();
+            if (data.success) {
+                countEl.textContent = data.likeCount;
+                btn.classList.toggle('liked', !liked);
+                icon.classList.remove('far', 'fas');
+                icon.classList.add(!liked ? 'fas' : 'far');
+            } else {
+                alert(data.message || 'เกิดข้อผิดพลาด');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    async function addComment() {
+        const input = document.getElementById('commentInput');
+        const content = input.value.trim();
+        if (!content) return;
+
+        // Check if user is logged in
+        const user = /*[[${user}]]*/ null;
+        if (!user) {
+            alert('กรุณาเข้าสู่ระบบเพื่อแสดงความคิดเห็น');
+            window.location.href = '/signin';
+            return;
+        }
+
+        try {
+            const res = await fetch(`/community/post/${POST_ID}/comment`, {
+                method: 'POST',
+                headers: {
+                    ...authHeaders(),
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                credentials: 'same-origin',
+                body: new URLSearchParams({content})
+            });
+
+            if (res.status === 401 || res.status === 403) {
+                window.location = '/signin';
+                return;
+            }
+
+            const data = await res.json();
+            if (data.success) {
+                // Add new comment to the list
+                const commentHTML = `
+                    <div class="comment-item">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                            <span style="font-weight: 600; color: #2d3a4b;">${data.user}</span>
+                            <span style="font-size: 0.8rem; color: #94a3b8;">Just now</span>
+                        </div>
+                        <div style="color: #334155;">${data.content}</div>
+                    </div>
+                `;
+                
+                // Remove "no comments" message if exists
+                const noCommentsMsg = document.querySelector('.text-center.text-muted');
+                if (noCommentsMsg) {
+                    noCommentsMsg.remove();
+                }
+                
+                document.getElementById('commentsList').insertAdjacentHTML('afterbegin', commentHTML);
+                input.value = '';
+                
+                // Update comment count
+                const countSpan = document.getElementById('comment-count');
+                const currentCount = parseInt(countSpan.textContent);
+                countSpan.textContent = currentCount + 1;
+            } else {
+                alert(data.message || 'เกิดข้อผิดพลาด');
+            }
+        } catch (e) {
+            console.error(e);
+            alert('เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง');
+        }
+    }
+
+    // Allow Enter key to submit comment
+    document.getElementById('commentInput')?.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            addComment();
+        }
+    });
+</script>
+</body>
+</html>
