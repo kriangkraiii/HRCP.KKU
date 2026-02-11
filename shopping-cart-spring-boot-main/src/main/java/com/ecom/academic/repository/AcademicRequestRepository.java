@@ -14,4 +14,6 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
     List<AcademicRequest> findByCurrentStatus(RequestStatus status);
 
     List<AcademicRequest> findAllByOrderByCreatedAtDesc();
+
+    List<AcademicRequest> findByApplicantIdAndCurrentStatusNotIn(Integer applicantId, List<RequestStatus> statuses);
 }

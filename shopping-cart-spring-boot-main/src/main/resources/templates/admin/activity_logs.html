@@ -107,7 +107,7 @@
                                     <th style="width:160px">ผู้ดำเนินการ</th>
                                     <th style="width:160px">การกระทำ</th>
                                     <th>รายละเอียด</th>
-                                    <th style="width:130px">IP Address</th>
+                                    <!-- <th style="width:130px">IP Address</th> -->
                                 </tr>
                             </thead>
                             <tbody>
@@ -131,7 +131,7 @@
                                             th:text="${log.action}"></span>
                                     </td>
                                     <td><small th:text="${log.details}"></small></td>
-                                    <td><code class="small" th:text="${log.ipAddress}"></code></td>
+                                    <!-- <td><code class="small" th:text="${log.ipAddress}"></code></td> -->
                                 </tr>
                                 <tr th:if="${logs.totalElements == 0}">
                                     <td colspan="6" class="text-center py-5 text-muted">

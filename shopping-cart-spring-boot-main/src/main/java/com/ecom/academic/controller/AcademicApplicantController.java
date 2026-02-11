@@ -56,11 +56,16 @@ public class AcademicApplicantController {
         List<AcademicRequest> requests = requestService.findByApplicant(user.getId());
         model.addAttribute("requests", requests);
         model.addAttribute("statuses", RequestStatus.values());
+        model.addAttribute("hasActiveRequest", requestService.hasActiveRequest(user.getId()));
         return "academic/applicant/dashboard";
     }
 
     @GetMapping("/new-request")
-    public String newRequestForm(Model model) {
+    public String newRequestForm(Principal principal, Model model) {
+        UserDtls user = getUser(principal);
+        if (requestService.hasActiveRequest(user.getId())) {
+            return "redirect:/user/academic/dashboard?error=active-request";
+        }
         model.addAttribute("staffMembers", staffMemberService.findAll());
         return "academic/applicant/new_request";
     }
@@ -70,6 +75,9 @@ public class AcademicApplicantController {
             Principal principal,
             Model model) throws IOException {
         UserDtls user = getUser(principal);
+        if (requestService.hasActiveRequest(user.getId())) {
+            return "redirect:/user/academic/dashboard?error=active-request";
+        }
         AcademicRequest request = requestService.createRequest(user);
 
         String jsonData = objectMapper.writeValueAsString(formData);

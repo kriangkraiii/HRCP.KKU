@@ -19,8 +19,7 @@
 				<div class="card-header text-center">
 					<p class="fs-4" th:if="${userType==1}">Users</p>
 					<p class="fs-4" th:if="${userType==2}">Admin</p>
-					<a th:if="${userType==2}" th:href="@{/admin/logs}" class="btn btn-secondary float-end">Activity
-						Logs</a>
+					
 
 					<th:block th:if="${succMsg}">
 						<p class="text-success fw-bold">[[${succMsg}]]</p>

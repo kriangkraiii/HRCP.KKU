@@ -1,6 +1,7 @@
 package com.ecom.academic.service;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
@@ -144,5 +145,17 @@ public class AcademicRequestService {
 
     public AcademicRequest save(AcademicRequest request) {
         return requestRepository.save(request);
+    }
+
+    /**
+     * Check if applicant has any active (non-terminal) requests.
+     * Terminal statuses are: REJECTED
+     * Active means: RECEIVED, SUB_COMMITTEE_APPOINTED, MEETING_SCHEDULED, COMPLETED_PASS, COMPLETED_REVISE
+     */
+    public boolean hasActiveRequest(Integer applicantId) {
+        List<RequestStatus> terminalStatuses = Arrays.asList(RequestStatus.REJECTED);
+        List<AcademicRequest> activeRequests = requestRepository
+                .findByApplicantIdAndCurrentStatusNotIn(applicantId, terminalStatuses);
+        return !activeRequests.isEmpty();
     }
 }
