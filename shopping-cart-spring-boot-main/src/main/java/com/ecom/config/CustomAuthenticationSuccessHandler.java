@@ -3,7 +3,6 @@ package com.ecom.config;
 import java.io.IOException;
 import java.util.Collection;
 
-
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -16,16 +15,16 @@ import jakarta.servlet.http.HttpServletResponse;
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
-                                        Authentication authentication) throws IOException, ServletException {
+            Authentication authentication) throws IOException, ServletException {
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-        String redirectUrl = "/";
+        String redirectUrl = "/signin";
 
         for (GrantedAuthority authority : authorities) {
             if (authority.getAuthority().equals("ROLE_ADMIN")) {
-                redirectUrl = "/admin/";
+                redirectUrl = "/admin/academic/requests";
                 break;
             } else if (authority.getAuthority().equals("ROLE_USER")) {
-                redirectUrl = "/user/";
+                redirectUrl = "/user/academic/dashboard";
                 break;
             }
         }

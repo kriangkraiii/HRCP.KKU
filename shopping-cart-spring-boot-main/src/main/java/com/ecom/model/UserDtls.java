@@ -17,13 +17,11 @@ public class UserDtls {
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
 	private Integer id;
 
+	private String title;
 	private String name;
 	private String mobileNumber;
 	private String email;
-	private String address;
-	private String city;
-	private String state;
-	private String pincode;
+	private String academicPosition;
 	private String password;
 	private String profileImage;
 	private String role;
@@ -32,41 +30,29 @@ public class UserDtls {
 	private Integer failedAttempt;
 	private Date lockTime;
 	private String resetToken;
-	
+
+	@Column(name = "is_first_login")
+	private Boolean isFirstLogin;
+
+	@Column(name = "otp_code")
+	private String otpCode;
+
+	@Column(name = "otp_expiry")
+	private LocalDateTime otpExpiry;
+
 	@Column(name = "created_date")
 	private Date createdDate;
 
-	// Default constructor
 	public UserDtls() {
-	}
-
-	// All args constructor
-	public UserDtls(Integer id, String name, String mobileNumber, String email, String address, String city,
-			String state, String pincode, String password, String profileImage, String role, Boolean isEnable,
-			Boolean accountNonLocked, Integer failedAttempt, Date lockTime, String resetToken, Date createdDate) {
-		this.id = id;
-		this.name = name;
-		this.mobileNumber = mobileNumber;
-		this.email = email;
-		this.address = address;
-		this.city = city;
-		this.state = state;
-		this.pincode = pincode;
-		this.password = password;
-		this.profileImage = profileImage;
-		this.role = role;
-		this.isEnable = isEnable;
-		this.accountNonLocked = accountNonLocked;
-		this.failedAttempt = failedAttempt;
-		this.lockTime = lockTime;
-		this.resetToken = resetToken;
-		this.createdDate = createdDate;
 	}
 
 	@PrePersist
 	protected void onCreate() {
 		if (createdDate == null) {
 			createdDate = new Date();
+		}
+		if (isFirstLogin == null) {
+			isFirstLogin = true;
 		}
 	}
 
@@ -77,6 +63,14 @@ public class UserDtls {
 
 	public void setId(Integer id) {
 		this.id = id;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public void setTitle(String title) {
+		this.title = title;
 	}
 
 	public String getName() {
@@ -103,36 +97,12 @@ public class UserDtls {
 		this.email = email;
 	}
 
-	public String getAddress() {
-		return address;
+	public String getAcademicPosition() {
+		return academicPosition;
 	}
 
-	public void setAddress(String address) {
-		this.address = address;
-	}
-
-	public String getCity() {
-		return city;
-	}
-
-	public void setCity(String city) {
-		this.city = city;
-	}
-
-	public String getState() {
-		return state;
-	}
-
-	public void setState(String state) {
-		this.state = state;
-	}
-
-	public String getPincode() {
-		return pincode;
-	}
-
-	public void setPincode(String pincode) {
-		this.pincode = pincode;
+	public void setAcademicPosition(String academicPosition) {
+		this.academicPosition = academicPosition;
 	}
 
 	public String getPassword() {
@@ -197,6 +167,30 @@ public class UserDtls {
 
 	public void setResetToken(String resetToken) {
 		this.resetToken = resetToken;
+	}
+
+	public Boolean getIsFirstLogin() {
+		return isFirstLogin;
+	}
+
+	public void setIsFirstLogin(Boolean isFirstLogin) {
+		this.isFirstLogin = isFirstLogin;
+	}
+
+	public String getOtpCode() {
+		return otpCode;
+	}
+
+	public void setOtpCode(String otpCode) {
+		this.otpCode = otpCode;
+	}
+
+	public LocalDateTime getOtpExpiry() {
+		return otpExpiry;
+	}
+
+	public void setOtpExpiry(LocalDateTime otpExpiry) {
+		this.otpExpiry = otpExpiry;
 	}
 
 	public Date getCreatedDate() {

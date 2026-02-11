@@ -18,16 +18,16 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 @EnableWebSecurity
 public class SecurityConfig {
 
-	@Bean
-	@Primary
-	public AuthenticationSuccessHandler authenticationSuccessHandler() {
-	    return new CustomAuthenticationSuccessHandler();
-	}
+    @Bean
+    @Primary
+    public AuthenticationSuccessHandler authenticationSuccessHandler() {
+        return new CustomAuthenticationSuccessHandler();
+    }
 
     @Autowired
     @Lazy
     private AuthFailureHandlerImpl authenticationFailureHandler;
-    
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
@@ -39,55 +39,50 @@ public class SecurityConfig {
     }
 
     @Bean
-    public DaoAuthenticationProvider authenticationProvider(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
+    public DaoAuthenticationProvider authenticationProvider(UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
         return provider;
     }
-    
+
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http, DaoAuthenticationProvider authenticationProvider) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, DaoAuthenticationProvider authenticationProvider)
+            throws Exception {
         http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session
-                .maximumSessions(1)
-                .maxSessionsPreventsLogin(false)
-            )
-            .authenticationProvider(authenticationProvider)
-            .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/", "/signin", "/register", "/saveUser", "/products/**", "/product/**", 
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session
+                        .maximumSessions(1)
+                        .maxSessionsPreventsLogin(false))
+                .authenticationProvider(authenticationProvider)
+                .authorizeHttpRequests(authz -> authz
+                        .requestMatchers("/", "/signin",
                                 "/static/**", "/css/**", "/js/**", "/img/**", "/img/profile_img/**",
                                 "/admin/css/**", "/admin/js/**", "/admin/img/**",
-                                "/forgot-password", "/reset-password", "/search",
-                                "/game_library").permitAll()
-                .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/user/**").hasRole("USER")
-                .anyRequest().authenticated()
-            )
-            .formLogin(form -> form
-                .loginPage("/signin")
-                .loginProcessingUrl("/login")
-                .usernameParameter("email")
-                .passwordParameter("password")
-                .successHandler(authenticationSuccessHandler())
-                .failureHandler(authenticationFailureHandler)
-                .defaultSuccessUrl("/", true)
-                .permitAll()
-            )
-            .logout(logout -> logout
-                .logoutUrl("/logout")
-                .logoutSuccessUrl("/signin?logout=true")
-                .invalidateHttpSession(true)
-                .clearAuthentication(true)
-                .permitAll()
-            )
-            .exceptionHandling(ex -> ex
-                .authenticationEntryPoint((request, response, authException) -> {
-                    response.sendRedirect("/signin?expired=true");
-                })
-            );
+                                "/forgot-password", "/reset-password",
+                                "/first-login", "/first-login/**")
+                        .permitAll()
+                        .requestMatchers("/admin/**").hasRole("ADMIN")
+                        .requestMatchers("/user/**").hasRole("USER")
+                        .anyRequest().authenticated())
+                .formLogin(form -> form
+                        .loginPage("/signin")
+                        .loginProcessingUrl("/login")
+                        .usernameParameter("email")
+                        .passwordParameter("password")
+                        .successHandler(authenticationSuccessHandler())
+                        .failureHandler(authenticationFailureHandler)
+                        .permitAll())
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/signin?logout=true")
+                        .invalidateHttpSession(true)
+                        .clearAuthentication(true)
+                        .permitAll())
+                .exceptionHandling(ex -> ex
+                        .authenticationEntryPoint((request, response, authException) -> {
+                            response.sendRedirect("/signin?expired=true");
+                        }));
         return http.build();
     }
-
-
 }

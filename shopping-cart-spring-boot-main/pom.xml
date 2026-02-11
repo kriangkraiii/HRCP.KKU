@@ -10,10 +10,10 @@
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.ecom</groupId>
-	<artifactId>Shopping_Cart</artifactId>
+	<artifactId>HRCP_KKU</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>Shopping_Cart</name>
-	<description>Online Shopping Cart Spring boot mvc Project</description>
+	<name>HRCP_KKU</name>
+	<description> Spring boot mvc Project</description>
 	<properties>
 		<java.version>17</java.version>
 	</properties>

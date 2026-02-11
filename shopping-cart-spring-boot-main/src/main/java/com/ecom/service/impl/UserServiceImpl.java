@@ -5,14 +5,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.security.SecureRandom;
+import java.time.LocalDateTime;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,7 +25,6 @@ import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.UserService;
 import com.ecom.util.AppConstant;
-import com.ecom.util.BucketType;
 import com.ecom.util.CommonUtil;
 
 @Service
@@ -35,63 +36,57 @@ public class UserServiceImpl implements UserService {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
-	
-@Autowired
-@Lazy
-private CommonUtil commonUtil;
 
-@Autowired
-private FileServiceImpl fileServiceImpl;
+	@Autowired
+	@Lazy
+	private CommonUtil commonUtil;
 
 	@Override
 	public Integer getUsersCount() {
-	    return (int) userRepository.count();
+		return (int) userRepository.count();
 	}
 
 	@Override
 	public Integer getNewUsersToday() {
-	    Date today = new Date();
-	    Calendar cal = Calendar.getInstance();
-	    cal.setTime(today);
-	    cal.set(Calendar.HOUR_OF_DAY, 0);
-	    cal.set(Calendar.MINUTE, 0);
-	    cal.set(Calendar.SECOND, 0);
-	    cal.set(Calendar.MILLISECOND, 0);
-	    Date startOfDay = cal.getTime();
-	    
-	    cal.add(Calendar.DAY_OF_MONTH, 1);
-	    Date startOfNextDay = cal.getTime();
-	    
-	    return userRepository.countByCreatedDateBetween(startOfDay, startOfNextDay);
+		Date today = new Date();
+		Calendar cal = Calendar.getInstance();
+		cal.setTime(today);
+		cal.set(Calendar.HOUR_OF_DAY, 0);
+		cal.set(Calendar.MINUTE, 0);
+		cal.set(Calendar.SECOND, 0);
+		cal.set(Calendar.MILLISECOND, 0);
+		Date startOfDay = cal.getTime();
+		cal.add(Calendar.DAY_OF_MONTH, 1);
+		Date startOfNextDay = cal.getTime();
+		return userRepository.countByCreatedDateBetween(startOfDay, startOfNextDay);
 	}
 
 	@Override
 	public List<UserDtls> getRecentUsers(int limit) {
-	    return userRepository.findTop5ByOrderByCreatedDateDesc();
+		return userRepository.findTop5ByOrderByCreatedDateDesc();
 	}
 
 	@Override
 	public UserDtls saveUser(UserDtls user) {
-	    user.setRole("ROLE_USER");
-	    user.setIsEnable(true);
-	    user.setAccountNonLocked(true);
-	    user.setFailedAttempt(0);
-	    user.setCreatedDate(new Date()); // Add creation date
-	    
-	    // Set default profile image if none provided
-	    if (user.getProfileImage() == null || user.getProfileImage().isEmpty()) {
-	        user.setProfileImage("default.png");
-	    }
-
-	    String encodePassword = passwordEncoder.encode(user.getPassword());
-	    user.setPassword(encodePassword);
-	    UserDtls saveUser = userRepository.save(user);
-	    return saveUser;
+		user.setRole("ROLE_USER");
+		user.setIsEnable(true);
+		user.setAccountNonLocked(true);
+		user.setFailedAttempt(0);
+		user.setIsFirstLogin(true);
+		user.setCreatedDate(new Date());
+		if (user.getProfileImage() == null || user.getProfileImage().isEmpty()) {
+			user.setProfileImage("default.png");
+		}
+		// Generate random placeholder password (user will set via OTP flow)
+		String randomPassword = UUID.randomUUID().toString();
+		user.setPassword(passwordEncoder.encode(randomPassword));
+		return userRepository.save(user);
 	}
+
 	@Override
 	public UserDtls getUserById(Integer id) {
-	    Optional<UserDtls> user = userRepository.findById(id);
-	    return user.orElse(null);
+		Optional<UserDtls> user = userRepository.findById(id);
+		return user.orElse(null);
 	}
 
 	@Override
@@ -106,16 +101,13 @@ private FileServiceImpl fileServiceImpl;
 
 	@Override
 	public Boolean updateAccountStatus(Integer id, Boolean status) {
-
 		Optional<UserDtls> findByuser = userRepository.findById(id);
-
 		if (findByuser.isPresent()) {
 			UserDtls userDtls = findByuser.get();
 			userDtls.setIsEnable(status);
 			userRepository.save(userDtls);
 			return true;
 		}
-
 		return false;
 	}
 
@@ -135,12 +127,9 @@ private FileServiceImpl fileServiceImpl;
 
 	@Override
 	public boolean unlockAccountTimeExpired(UserDtls user) {
-
 		long lockTime = user.getLockTime().getTime();
 		long unLockTime = lockTime + AppConstant.UNLOCK_DURATION_TIME;
-
 		long currentTime = System.currentTimeMillis();
-
 		if (unLockTime < currentTime) {
 			user.setAccountNonLocked(true);
 			user.setFailedAttempt(0);
@@ -148,13 +137,11 @@ private FileServiceImpl fileServiceImpl;
 			userRepository.save(user);
 			return true;
 		}
-
 		return false;
 	}
 
 	@Override
 	public void resetAttempt(int userId) {
-
 	}
 
 	@Override
@@ -176,58 +163,51 @@ private FileServiceImpl fileServiceImpl;
 
 	@Override
 	public UserDtls updateUserProfile(UserDtls user, MultipartFile img) {
-	    UserDtls dbUser = userRepository.findById(user.getId()).get();
+		UserDtls dbUser = userRepository.findById(user.getId()).get();
 
-	    if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-	        dbUser.setProfileImage(user.getProfileImage());
-	    }
+		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
+			dbUser.setProfileImage(user.getProfileImage());
+		}
 
-	    if (!ObjectUtils.isEmpty(dbUser)) {
-	        dbUser.setName(user.getName());
-	        dbUser.setMobileNumber(user.getMobileNumber());
-	        dbUser.setAddress(user.getAddress());
-	        dbUser.setCity(user.getCity());
-	        dbUser.setState(user.getState());
-	        dbUser.setPincode(user.getPincode());
-	        dbUser = userRepository.save(dbUser);
-	    }
+		if (!ObjectUtils.isEmpty(dbUser)) {
+			dbUser.setTitle(user.getTitle());
+			dbUser.setName(user.getName());
+			dbUser.setMobileNumber(user.getMobileNumber());
+			dbUser.setAcademicPosition(user.getAcademicPosition());
+			dbUser = userRepository.save(dbUser);
+		}
 
-	    try {
-	        if (!img.isEmpty()) {
-	            // Save locally with original filename
-	            String uploadDir = System.getProperty("user.dir") + "/uploads/profile_img/";
-	            File uploadFolder = new File(uploadDir);
-	            if (!uploadFolder.exists()) {
-	                uploadFolder.mkdirs();
-	            }
-
-	            Path filePath = Paths.get(uploadDir, img.getOriginalFilename());
-	            Files.copy(img.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-	        }
-	    } catch (Exception e) {
-	        e.printStackTrace();
-	    }
-
-	    return dbUser;
+		try {
+			if (!img.isEmpty()) {
+				String uploadDir = System.getProperty("user.dir") + "/uploads/profile_img/";
+				File uploadFolder = new File(uploadDir);
+				if (!uploadFolder.exists()) {
+					uploadFolder.mkdirs();
+				}
+				Path filePath = Paths.get(uploadDir, img.getOriginalFilename());
+				Files.copy(img.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return dbUser;
 	}
 
 	@Override
 	public UserDtls saveAdmin(UserDtls user) {
-	    user.setRole("ROLE_ADMIN");
-	    user.setIsEnable(true);
-	    user.setAccountNonLocked(true);
-	    user.setFailedAttempt(0);
-	    user.setCreatedDate(new Date()); // Add creation date
-	    
-	    // Set default profile image if none provided
-	    if (user.getProfileImage() == null || user.getProfileImage().isEmpty()) {
-	        user.setProfileImage("default.png");
-	    }
-
-	    String encodePassword = passwordEncoder.encode(user.getPassword());
-	    user.setPassword(encodePassword);
-	    UserDtls saveUser = userRepository.save(user);
-	    return saveUser;
+		user.setRole("ROLE_ADMIN");
+		user.setIsEnable(true);
+		user.setAccountNonLocked(true);
+		user.setFailedAttempt(0);
+		user.setIsFirstLogin(true);
+		user.setCreatedDate(new Date());
+		if (user.getProfileImage() == null || user.getProfileImage().isEmpty()) {
+			user.setProfileImage("default.png");
+		}
+		// Generate random placeholder password (admin will set via OTP flow)
+		String randomPassword = UUID.randomUUID().toString();
+		user.setPassword(passwordEncoder.encode(randomPassword));
+		return userRepository.save(user);
 	}
 
 	@Override
@@ -240,5 +220,53 @@ private FileServiceImpl fileServiceImpl;
 		return userRepository.findAll();
 	}
 
+	// ====== OTP First-Time Login Methods ======
 
+	@Override
+	public void generateAndSendOtp(String email) throws Exception {
+		UserDtls user = userRepository.findByEmail(email);
+		if (user == null) {
+			throw new Exception("ไม่พบอีเมลนี้ในระบบ");
+		}
+		if (user.getIsFirstLogin() == null || !user.getIsFirstLogin()) {
+			throw new Exception("บัญชีนี้ได้ตั้งรหัสผ่านแล้ว กรุณาเข้าสู่ระบบตามปกติ");
+		}
+
+		// Generate 8-digit OTP
+		SecureRandom random = new SecureRandom();
+		int otpNumber = 10000000 + random.nextInt(90000000);
+		String otp = String.valueOf(otpNumber);
+
+		// Save OTP with 5-minute expiry
+		user.setOtpCode(otp);
+		user.setOtpExpiry(LocalDateTime.now().plusMinutes(5));
+		userRepository.save(user);
+
+		// Send OTP email
+		commonUtil.sendOtpEmail(email, otp);
+	}
+
+	@Override
+	public boolean verifyOtp(String email, String otpCode) {
+		UserDtls user = userRepository.findByEmail(email);
+		if (user == null)
+			return false;
+		if (user.getOtpCode() == null)
+			return false;
+		if (user.getOtpExpiry() == null || LocalDateTime.now().isAfter(user.getOtpExpiry()))
+			return false;
+		return user.getOtpCode().equals(otpCode);
+	}
+
+	@Override
+	public void activateAccount(String email, String password) {
+		UserDtls user = userRepository.findByEmail(email);
+		if (user != null) {
+			user.setPassword(passwordEncoder.encode(password));
+			user.setIsFirstLogin(false);
+			user.setOtpCode(null);
+			user.setOtpExpiry(null);
+			userRepository.save(user);
+		}
+	}
 }

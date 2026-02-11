@@ -35,11 +35,21 @@ public interface UserService {
 	public UserDtls saveAdmin(UserDtls user);
 
 	public Boolean existsEmail(String email);
+
 	public UserDtls getUserById(Integer id);
-public Integer getNewUsersToday();
-public List<UserDtls> getRecentUsers(int limit);
 
-public Integer getUsersCount();
+	public Integer getNewUsersToday();
 
-List<UserDtls> getAllUsers();
+	public List<UserDtls> getRecentUsers(int limit);
+
+	public Integer getUsersCount();
+
+	public List<UserDtls> getAllUsers();
+
+	// OTP First-Time Login methods
+	public void generateAndSendOtp(String email) throws Exception;
+
+	public boolean verifyOtp(String email, String otpCode);
+
+	public void activateAccount(String email, String password);
 }
