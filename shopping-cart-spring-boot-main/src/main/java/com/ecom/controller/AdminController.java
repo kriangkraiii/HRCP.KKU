@@ -215,10 +215,24 @@ public class AdminController {
 	// ====== Activity Logs ======
 
 	@GetMapping("/activity-logs")
-	public String activityLogs(Model m, @RequestParam(defaultValue = "0") int page) {
-		Page<AdminLog> logs = adminLogService.getAllLogs(page, 20);
+	public String activityLogs(Model m,
+			@RequestParam(defaultValue = "0") int page,
+			@RequestParam(required = false) String search,
+			@RequestParam(required = false) String action,
+			@RequestParam(required = false) String dateFrom,
+			@RequestParam(required = false) String dateTo) {
+		Page<AdminLog> logs = adminLogService.getAllLogs(page, 20, search, action, dateFrom, dateTo);
 		m.addAttribute("logs", logs);
 		m.addAttribute("currentPage", page);
+		m.addAttribute("search", search);
+		m.addAttribute("actionFilter", action);
+		m.addAttribute("dateFrom", dateFrom);
+		m.addAttribute("dateTo", dateTo);
+
+		// Summary counts
+		m.addAttribute("createCount", adminLogService.countByAction("CREATE_ACCOUNT"));
+		m.addAttribute("updateCount", adminLogService.countByAction("UPDATE_ACCOUNT_STATUS"));
+		m.addAttribute("docCount", adminLogService.countByAction("GENERATE_DOCUMENT"));
 		return "admin/activity_logs";
 	}
 }

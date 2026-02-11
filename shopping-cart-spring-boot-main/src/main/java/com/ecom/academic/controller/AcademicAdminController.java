@@ -32,13 +32,15 @@ import org.springframework.web.multipart.MultipartFile;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.RequestStatus;
-import com.ecom.academic.model.StaffMember;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.ecom.service.AdminLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 @RequestMapping("/admin/academic")
@@ -55,6 +57,12 @@ public class AcademicAdminController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AdminLogService adminLogService;
+
+    @Autowired
+    private HttpServletRequest httpRequest;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -105,6 +113,13 @@ public class AcademicAdminController {
         } else {
             requestService.updateStatus(id, newStatus, admin, note);
         }
+
+        // Log activity
+        adminLogService.log(principal.getName(),
+                admin != null ? admin.getName() : principal.getName(),
+                "UPDATE_REQUEST_STATUS",
+                "อัพเดทสถานะคำร้อง #" + id + " เป็น " + newStatus.name() + (note != null ? " (" + note + ")" : ""),
+                getClientIpAddress());
 
         return "redirect:/admin/academic/request/" + id + "?success=status_updated";
     }
@@ -163,6 +178,14 @@ public class AcademicAdminController {
             requestService.saveDocument(request, type, jsonData, filePath,
                     DOC_LABELS.getOrDefault(type, "Document " + type), null);
         }
+
+        // Log activity
+        UserDtls admin = getUser(principal);
+        adminLogService.log(principal.getName(),
+                admin != null ? admin.getName() : principal.getName(),
+                "GENERATE_DOCUMENT",
+                "สร้างเอกสารที่ " + type + " (" + DOC_LABELS.getOrDefault(type, "Document " + type) + ") สำหรับคำร้อง #" + id,
+                getClientIpAddress());
 
         return "redirect:/admin/academic/request/" + id + "?success=doc_generated";
     }
@@ -231,5 +254,13 @@ public class AcademicAdminController {
 
     private UserDtls getUser(Principal principal) {
         return userRepository.findByEmail(principal.getName());
+    }
+
+    private String getClientIpAddress() {
+        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0];
+        }
+        return httpRequest.getRemoteAddr();
     }
 }
