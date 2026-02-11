@@ -24,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.ecom.model.AdminLog;
 import com.ecom.model.UserDtls;
+import com.ecom.service.AdminLogService;
 import com.ecom.service.UserService;
 import com.ecom.util.CommonUtil;
 
@@ -45,6 +46,9 @@ public class AdminController {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+
+	@Autowired
+	private AdminLogService adminLogService;
 
 	@ModelAttribute
 	public void getUserDetails(Principal p, Model m) {
@@ -102,6 +106,13 @@ public class AdminController {
 		Boolean f = userService.updateAccountStatus(id, status);
 		if (f) {
 			session.setAttribute("succMsg", "อัพเดทสถานะบัญชีสำเร็จ");
+			Principal p = request.getUserPrincipal();
+			if (p != null) {
+				UserDtls admin = userService.getUserByEmail(p.getName());
+				adminLogService.log(p.getName(), admin != null ? admin.getName() : p.getName(),
+						"UPDATE_ACCOUNT_STATUS", "เปลี่ยนสถานะบัญชี ID:" + id + " เป็น " + (status ? "เปิด" : "ปิด"),
+						getClientIpAddress(request));
+			}
 		} else {
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาด");
 		}
@@ -141,6 +152,13 @@ public class AdminController {
 				Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 			}
 			session.setAttribute("succMsg", "เพิ่มบัญชีสำเร็จ");
+			Principal p = request.getUserPrincipal();
+			if (p != null) {
+				UserDtls admin = userService.getUserByEmail(p.getName());
+				adminLogService.log(p.getName(), admin != null ? admin.getName() : p.getName(),
+						"CREATE_ACCOUNT", "สร้างบัญชี: " + user.getEmail() + " (" + user.getRole() + ")",
+						getClientIpAddress(request));
+			}
 		} else {
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาด");
 		}
@@ -184,11 +202,23 @@ public class AdminController {
 				session.setAttribute("errorMsg", "เปลี่ยนรหัสผ่านไม่สำเร็จ");
 			} else {
 				session.setAttribute("succMsg", "เปลี่ยนรหัสผ่านสำเร็จ");
+				adminLogService.log(p.getName(), loggedInUserDetails.getName(),
+						"CHANGE_PASSWORD", "เปลี่ยนรหัสผ่านสำเร็จ", getClientIpAddress(request));
 			}
 		} else {
 			session.setAttribute("errorMsg", "รหัสผ่านปัจจุบันไม่ถูกต้อง");
 		}
 
 		return "redirect:/admin/profile";
+	}
+
+	// ====== Activity Logs ======
+
+	@GetMapping("/activity-logs")
+	public String activityLogs(Model m, @RequestParam(defaultValue = "0") int page) {
+		Page<AdminLog> logs = adminLogService.getAllLogs(page, 20);
+		m.addAttribute("logs", logs);
+		m.addAttribute("currentPage", page);
+		return "admin/activity_logs";
 	}
 }
