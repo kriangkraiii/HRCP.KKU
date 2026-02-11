@@ -427,10 +427,26 @@
             <th:block th:if="${user != null && user.role == 'ROLE_ADMIN'}">
                 <div class="sidebar-section-title">จัดการระบบ</div>
                 <a href="/admin/academic/requests" class="sidebar-link" id="nav-requests">
-                    <i class="fas fa-clipboard-list"></i> คำร้องทั้งหมด
+                    <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
                 </a>
                 <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff">
                     <i class="fas fa-users-cog"></i> จัดการบุคลากร
+                </a>
+
+                <div class="sidebar-section-title">จัดการผู้ใช้</div>
+                <a href="/admin/add-admin" class="sidebar-link" id="nav-add-user">
+                    <i class="fas fa-user-plus"></i> เพิ่มผู้ใช้
+                </a>
+                <a href="/admin/users?type=1" class="sidebar-link" id="nav-users">
+                    <i class="fas fa-users"></i> จัดการผู้ใช้
+                </a>
+                <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins">
+                    <i class="fas fa-user-shield"></i> จัดการแอดมิน
+                </a>
+
+                <div class="sidebar-section-title">บัญชีของฉัน</div>
+                <a href="/admin/profile" class="sidebar-link" id="nav-profile">
+                    <i class="fas fa-id-card"></i> โปรไฟล์
                 </a>
             </th:block>
 
@@ -443,12 +459,12 @@
                 <a href="/user/academic/new-request" class="sidebar-link" id="nav-new">
                     <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
                 </a>
-            </th:block>
 
-            <div class="sidebar-section-title">อื่นๆ</div>
-            <a href="/" class="sidebar-link">
-                <i class="fas fa-home"></i> กลับหน้าหลัก
-            </a>
+                <div class="sidebar-section-title">บัญชีของฉัน</div>
+                <a href="/user/profile" class="sidebar-link" id="nav-profile">
+                    <i class="fas fa-id-card"></i> โปรไฟล์
+                </a>
+            </th:block>
         </nav>
 
         <!-- Sidebar Footer: User Info -->
