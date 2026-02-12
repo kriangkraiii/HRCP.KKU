@@ -41,7 +41,6 @@
 								<th scope="col">Mobile No</th>
 								<th scope="col">ตำแหน่งทางวิชาการ</th>
 								<th scope="col">Status</th>
-								<th scope="col">Action</th>
 							</tr>
 						</thead>
 						<tbody>
@@ -55,13 +54,20 @@
 								<td>[[${u.email}]]</td>
 								<td>[[${u.mobileNumber}]]</td>
 								<td>[[${u.academicPosition != null ? u.academicPosition : '-'}]]</td>
-								<td>[[${u.isEnable}]]</td>
-								<td><a th:href="@{'/admin/updateSts?status=true&id='+${u.id}}+'&type='+${userType}"
-										class="btn btn-sm btn-primary">Active</a> <a
-										th:href="@{'/admin/updateSts?status=false&id='+${u.id}}+'&type='+${userType}"
-										class="btn btn-sm btn-danger"
-										onclick="return confirm('Are you sure you want to deactivate this user account?')">
-										Inactive</a></td>
+								<td>
+									<div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
+										<input class="form-check-input status-toggle" type="checkbox" role="switch"
+											th:checked="${u.isEnable}"
+											th:data-id="${u.id}"
+											th:data-type="${userType}"
+											style="width: 3em; height: 1.5em; cursor: pointer;"
+											onchange="toggleStatus(this)">
+										<label class="form-check-label fw-semibold"
+											th:classappend="${u.isEnable} ? 'text-success' : 'text-danger'"
+											th:text="${u.isEnable} ? 'Active' : 'Inactive'"></label>
+									</div>
+								</td>
+
 							</tr>
 
 						</tbody>
@@ -69,6 +75,23 @@
 				</div>
 			</div>
 		</div>
+
+		<script th:inline="javascript">
+			function toggleStatus(el) {
+				const id = el.dataset.id;
+				const type = el.dataset.type;
+				const newStatus = el.checked;
+
+				if (!newStatus) {
+					if (!confirm('Are you sure you want to deactivate this user account?')) {
+						el.checked = true;
+						return;
+					}
+				}
+
+				window.location.href = '/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type;
+			}
+		</script>
 
 	</section>
 </body>

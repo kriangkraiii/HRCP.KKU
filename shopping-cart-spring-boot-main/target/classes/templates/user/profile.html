@@ -87,14 +87,7 @@
 										<label class="form-label fw-bold">Profile Image</label>
 										<input type="file" name="img" class="form-control">
 									</div>
-									<div class="col-md-3">
-										<label class="form-label fw-bold">Role</label>
-										<input type="text" class="form-control" readonly th:value="${user.role}">
-									</div>
-									<div class="col-md-3">
-										<label class="form-label fw-bold">Account Status</label>
-										<input type="text" class="form-control" readonly th:value="${user.isEnable}">
-									</div>
+									
 								</div>
 
 								<input type="hidden" th:value="${user.id}" name="id">
