@@ -145,6 +145,41 @@ public class AcademicAdminController {
             model.addAttribute("existingData", existingDocs.get(0).getJsonData());
         }
 
+        // ดึงรายชื่อกรรมการ 3 คนจาก doc_2 เพื่อ auto-fill ในเอกสารถัดไป
+        if (type != 2) {
+            List<AcademicDocument> doc2List = requestService.getDocumentsByType(id, 2);
+            if (!doc2List.isEmpty()) {
+                try {
+                    String doc2Json = doc2List.get(0).getJsonData();
+                    Map<String, Object> doc2Data = objectMapper.readValue(doc2Json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                    String c1 = doc2Data.getOrDefault("n_1", "").toString();
+                    String c2 = doc2Data.getOrDefault("n_2", "").toString();
+                    String c3 = doc2Data.getOrDefault("n_3", "").toString();
+                    model.addAttribute("defaultCommittee1", c1);
+                    model.addAttribute("defaultCommittee2", c2);
+                    model.addAttribute("defaultCommittee3", c3);
+                } catch (Exception e) {
+                    // ignore parse errors
+                }
+            }
+        }
+
+        // สำหรับ doc_1 (admin): ดึงข้อมูลที่ผู้ยื่นกรอกมาแสดง
+        if (type == 1) {
+            List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
+            if (!doc1List.isEmpty()) {
+                try {
+                    String doc1Json = doc1List.get(0).getJsonData();
+                    Map<String, String> doc1Data = objectMapper.readValue(doc1Json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                    model.addAttribute("doc1Data", doc1Data);
+                } catch (Exception e) {
+                    // ignore parse errors
+                }
+            }
+        }
+
         return "academic/admin/document_form";
     }
 
