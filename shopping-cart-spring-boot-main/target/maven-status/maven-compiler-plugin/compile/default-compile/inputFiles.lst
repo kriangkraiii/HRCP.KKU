@@ -32,6 +32,7 @@
 /Users/kriangkrai/eclipse-workspace/Spring pj/pjweb/HRCP.KKU/shopping-cart-spring-boot-main/src/main/java/com/ecom/repository/AdminLogRepository.java
 /Users/kriangkrai/eclipse-workspace/Spring pj/pjweb/HRCP.KKU/shopping-cart-spring-boot-main/src/main/java/com/ecom/repository/NotificationRepository.java
 /Users/kriangkrai/eclipse-workspace/Spring pj/pjweb/HRCP.KKU/shopping-cart-spring-boot-main/src/main/java/com/ecom/repository/UserRepository.java
+/Users/kriangkrai/eclipse-workspace/Spring pj/pjweb/HRCP.KKU/shopping-cart-spring-boot-main/src/main/java/com/ecom/service/AdminLogService.java
 /Users/kriangkrai/eclipse-workspace/Spring pj/pjweb/HRCP.KKU/shopping-cart-spring-boot-main/src/main/java/com/ecom/service/UserService.java
 /Users/kriangkrai/eclipse-workspace/Spring pj/pjweb/HRCP.KKU/shopping-cart-spring-boot-main/src/main/java/com/ecom/service/impl/UserServiceImpl.java
 /Users/kriangkrai/eclipse-workspace/Spring pj/pjweb/HRCP.KKU/shopping-cart-spring-boot-main/src/main/java/com/ecom/util/AppConstant.java
