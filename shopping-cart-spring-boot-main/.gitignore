@@ -31,3 +31,7 @@ build/
 
 ### VS Code ###
 .vscode/
+.metadata/
+.settings/
+.plugins/
+*.prefs
