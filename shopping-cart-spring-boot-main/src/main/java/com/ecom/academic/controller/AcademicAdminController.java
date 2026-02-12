@@ -191,6 +191,40 @@ public class AcademicAdminController {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
+        // ============ Document 6: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
+        if (type == 6) {
+            // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1=20, 2=30, 3=30, 4=20
+            int[] weights = {20, 30, 30, 20};
+            double grandTotal = 0;
+
+            for (int sec = 1; sec <= 4; sec++) {
+                double sum = 0;
+                for (int item = 1; item <= 5; item++) {
+                    String key = "re" + sec + item;
+                    String val = formData.getOrDefault(key, "0");
+                    try {
+                        sum += Double.parseDouble(val);
+                    } catch (NumberFormatException e) {
+                        sum += 0;
+                    }
+                }
+                // สูตร: (ผลรวมคะแนน / 25) × ค่าน้ำหนัก
+                double weighted = (sum / 25.0) * weights[sec - 1];
+                formData.put("score" + sec + "x", String.format("%.2f", weighted));
+                grandTotal += weighted;
+            }
+
+            // คะแนนรวม
+            formData.put("scorex", String.format("%.2f", grandTotal));
+
+            // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์
+            long roundedTotal = Math.round(grandTotal);
+            formData.put("ch1", roundedTotal < 56 ? "☑" : "☐");
+            formData.put("ch2", (roundedTotal >= 57 && roundedTotal <= 70) ? "☑" : "☐");
+            formData.put("ch3", (roundedTotal >= 71 && roundedTotal <= 85) ? "☑" : "☐");
+            formData.put("ch4", roundedTotal >= 86 ? "☑" : "☐");
+        }
+
         String jsonData = objectMapper.writeValueAsString(formData);
 
         if (type == 4) {

@@ -482,27 +482,124 @@
 
                         <!-- ==================== Document 6: แบบฟอร์มประเมินการสอน ==================== -->
                         <div th:if="${documentType == 6}">
-                            <h5 class="border-bottom pb-2 mb-3">คะแนนประเมิน ส่วนที่ 1</h5>
-                            <div class="row mb-3">
-                                <div class="col-md-2" th:each="i : ${#numbers.sequence(1, 5)}">
-                                    <label class="form-label">เกณฑ์ [[${i}]]</label>
-                                    <input type="text" th:name="'score1' + ${i}" class="form-control score-input"
-                                        placeholder="0.0">
+                            <p class="text-muted mb-3">กรอกคะแนนระดับการประเมิน (๑-๕) ในแต่ละข้อ ระบบจะคำนวณคะแนนถ่วงน้ำหนักให้อัตโนมัติ</p>
+
+                            <!-- ส่วนที่ ๑: ปริมาณคุณภาพของเอกสารและหลักฐาน (ค่าน้ำหนัก ๒๐) -->
+                            <h5 class="border-bottom pb-2 mb-3">๑. ปริมาณคุณภาพของเอกสารและหลักฐานที่ใช้ในการประเมินการสอน (ค่าน้ำหนัก ๒๐)</h5>
+                            <div class="row mb-3 align-items-end">
+                                <div class="col" th:each="i : ${#numbers.sequence(1, 5)}">
+                                    <label class="form-label">ข้อ [[${i}]] <small class="text-muted">(๑-๕)</small></label>
+                                    <input type="number" th:name="'re1' + ${i}" class="form-control sec-score" data-section="1"
+                                        min="1" max="5" step="1" placeholder="0">
                                 </div>
-                                <div class="col-md-2">
-                                    <label class="form-label">รวม</label>
-                                    <input type="text" name="score1x" class="form-control" id="totalScore1" readonly>
+                                <div class="col">
+                                    <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                    <input type="text" name="score1x" class="form-control fw-bold" id="totalScore1" readonly>
                                 </div>
                             </div>
-                            <h5 class="border-bottom pb-2 mb-3">คะแนนส่วนอื่น</h5>
-                            <div class="row mb-3">
-                                <div class="col-md-4"><label class="form-label">ส่วนที่ 2</label><input type="text"
-                                        name="score2-5x" class="form-control"></div>
-                                <div class="col-md-4"><label class="form-label">ส่วนที่ 3</label><input type="text"
-                                        name="score3-5x" class="form-control"></div>
-                                <div class="col-md-4"><label class="form-label">ส่วนที่ 4</label><input type="text"
-                                        name="score4-5x" class="form-control"></div>
+
+                            <!-- ส่วนที่ ๒: ความสามารถด้านการวางแผนการสอนและการประเมินผล (ค่าน้ำหนัก ๓๐) -->
+                            <h5 class="border-bottom pb-2 mb-3">๒. ความสามารถด้านการวางแผนการสอนและการประเมินผลการเรียนการสอน (ค่าน้ำหนัก ๓๐)</h5>
+                            <div class="row mb-3 align-items-end">
+                                <div class="col" th:each="i : ${#numbers.sequence(1, 5)}">
+                                    <label class="form-label">ข้อ [[${i}]] <small class="text-muted">(๑-๕)</small></label>
+                                    <input type="number" th:name="'re2' + ${i}" class="form-control sec-score" data-section="2"
+                                        min="1" max="5" step="1" placeholder="0">
+                                </div>
+                                <div class="col">
+                                    <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                    <input type="text" name="score2x" class="form-control fw-bold" id="totalScore2" readonly>
+                                </div>
                             </div>
+
+                            <!-- ส่วนที่ ๓: ความสามารถด้านการจัดการเรียนการสอน (ค่าน้ำหนัก ๓๐) -->
+                            <h5 class="border-bottom pb-2 mb-3">๓. ความสามารถด้านการจัดการเรียนการสอน (ค่าน้ำหนัก ๓๐)</h5>
+                            <div class="row mb-3 align-items-end">
+                                <div class="col" th:each="i : ${#numbers.sequence(1, 5)}">
+                                    <label class="form-label">ข้อ [[${i}]] <small class="text-muted">(๑-๕)</small></label>
+                                    <input type="number" th:name="'re3' + ${i}" class="form-control sec-score" data-section="3"
+                                        min="1" max="5" step="1" placeholder="0">
+                                </div>
+                                <div class="col">
+                                    <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                    <input type="text" name="score3x" class="form-control fw-bold" id="totalScore3" readonly>
+                                </div>
+                            </div>
+
+                            <!-- ส่วนที่ ๔: ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู (ค่าน้ำหนัก ๒๐) -->
+                            <h5 class="border-bottom pb-2 mb-3">๔. ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู (ค่าน้ำหนัก ๒๐)</h5>
+                            <div class="row mb-3 align-items-end">
+                                <div class="col" th:each="i : ${#numbers.sequence(1, 5)}">
+                                    <label class="form-label">ข้อ [[${i}]] <small class="text-muted">(๑-๕)</small></label>
+                                    <input type="number" th:name="'re4' + ${i}" class="form-control sec-score" data-section="4"
+                                        min="1" max="5" step="1" placeholder="0">
+                                </div>
+                                <div class="col">
+                                    <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                    <input type="text" name="score4x" class="form-control fw-bold" id="totalScore4" readonly>
+                                </div>
+                            </div>
+
+                            <!-- สรุปคะแนนรวม -->
+                            <div class="card bg-light mb-4">
+                                <div class="card-body">
+                                    <div class="row align-items-center">
+                                        <div class="col-md-6">
+                                            <h5 class="mb-0">รวมผลการประเมิน ๔ ด้าน</h5>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-bold">คะแนนรวม (เต็ม ๑๐๐)</label>
+                                            <input type="text" name="scorex" class="form-control fw-bold fs-4 text-center" id="grandTotal" readonly>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- สรุปผลการประเมิน (Checkboxes) -->
+                            <div class="card border-primary mb-4">
+                                <div class="card-header bg-primary text-white">
+                                    <h5 class="mb-0">สรุปผลการประเมิน ผู้ถูกประเมินมีผลการสอนอยู่ในระดับ</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input eval-check" id="chk1" disabled>
+                                                <input type="hidden" name="ch1" id="ch1_val" value="">
+                                                <label class="form-check-label" for="chk1">ไม่ผ่าน <small class="text-muted">(ต่ำกว่า ๕๖)</small></label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input eval-check" id="chk2" disabled>
+                                                <input type="hidden" name="ch2" id="ch2_val" value="">
+                                                <label class="form-check-label" for="chk2">ชำนาญ <small class="text-muted">(๕๗-๗๐)</small></label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input eval-check" id="chk3" disabled>
+                                                <input type="hidden" name="ch3" id="ch3_val" value="">
+                                                <label class="form-check-label" for="chk3">ชำนาญพิเศษ <small class="text-muted">(๗๑-๘๕)</small></label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <div class="form-check">
+                                                <input type="checkbox" class="form-check-input eval-check" id="chk4" disabled>
+                                                <input type="hidden" name="ch4" id="ch4_val" value="">
+                                                <label class="form-check-label" for="chk4">เชี่ยวชาญ <small class="text-muted">(๘๖-๑๐๐)</small></label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <small class="text-muted">
+                                            <strong>เกณฑ์:</strong> ต่ำกว่า ๕๖ = ไม่ผ่าน | ๕๗-๗๐ = ชำนาญ | ๗๑-๘๕ = ชำนาญพิเศษ | ๘๖-๑๐๐ = เชี่ยวชาญ
+                                        </small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- กรรมการ -->
                             <h5 class="border-bottom pb-2 mb-3">กรรมการ</h5>
                             <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
                                 <div class="col-md-5">
@@ -710,16 +807,83 @@
                 });
             })();
 
-            // ==================== Auto-calculate total score for Document 6 ====================
-            document.querySelectorAll('.score-input').forEach(input => {
-                input.addEventListener('input', () => {
-                    let total = 0;
-                    document.querySelectorAll('.score-input').forEach(el => {
-                        total += parseFloat(el.value) || 0;
+            // ==================== Auto-calculate weighted scores for Document 6 ====================
+            // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1 = 20, ส่วนที่ 2 = 30, ส่วนที่ 3 = 30, ส่วนที่ 4 = 20
+            const sectionWeights = { 1: 20, 2: 30, 3: 30, 4: 20 };
+
+            function calculateDoc6Scores() {
+                let grandTotal = 0;
+                let allFilled = false;
+
+                for (let sec = 1; sec <= 4; sec++) {
+                    const inputs = document.querySelectorAll('.sec-score[data-section="' + sec + '"]');
+                    let sum = 0;
+                    let count = 0;
+                    inputs.forEach(el => {
+                        const v = parseFloat(el.value) || 0;
+                        sum += v;
+                        if (v > 0) count++;
                     });
-                    const totalEl = document.getElementById('totalScore1');
-                    if (totalEl) totalEl.value = total.toFixed(1);
-                });
+
+                    // สูตร: (ผลรวมคะแนน / คะแนนเต็ม) × ค่าน้ำหนัก
+                    // คะแนนเต็มต่อข้อ = 5, จำนวนข้อ = 5, รวม = 25
+                    const maxScore = 25;
+                    const weight = sectionWeights[sec];
+                    const weighted = (sum / maxScore) * weight;
+                    const totalEl = document.getElementById('totalScore' + sec);
+                    if (totalEl) totalEl.value = weighted.toFixed(2);
+
+                    grandTotal += weighted;
+                }
+
+                const grandEl = document.getElementById('grandTotal');
+                if (grandEl) grandEl.value = grandTotal.toFixed(2);
+
+                // ตรวจว่ามีคะแนนบ้างหรือยัง
+                allFilled = grandTotal > 0;
+
+                // Auto-select evaluation level checkbox
+                updateEvalCheckboxes(grandTotal, allFilled);
+            }
+
+            function updateEvalCheckboxes(total, hasSomeScore) {
+                const chk1 = document.getElementById('chk1');
+                const chk2 = document.getElementById('chk2');
+                const chk3 = document.getElementById('chk3');
+                const chk4 = document.getElementById('chk4');
+                const ch1Val = document.getElementById('ch1_val');
+                const ch2Val = document.getElementById('ch2_val');
+                const ch3Val = document.getElementById('ch3_val');
+                const ch4Val = document.getElementById('ch4_val');
+
+                if (!chk1) return; // ไม่ใช่ doc6
+
+                // Reset all
+                [chk1, chk2, chk3, chk4].forEach(c => c.checked = false);
+                [ch1Val, ch2Val, ch3Val, ch4Val].forEach(v => v.value = '');
+
+                if (!hasSomeScore) return;
+
+                const roundedTotal = Math.round(total * 100) / 100;
+
+                if (roundedTotal < 56) {
+                    chk1.checked = true;
+                    ch1Val.value = '☑';
+                } else if (roundedTotal >= 57 && roundedTotal <= 70) {
+                    chk2.checked = true;
+                    ch2Val.value = '☑';
+                } else if (roundedTotal >= 71 && roundedTotal <= 85) {
+                    chk3.checked = true;
+                    ch3Val.value = '☑';
+                } else if (roundedTotal >= 86) {
+                    chk4.checked = true;
+                    ch4Val.value = '☑';
+                }
+            }
+
+            // Attach event listeners to all score inputs
+            document.querySelectorAll('.sec-score').forEach(input => {
+                input.addEventListener('input', calculateDoc6Scores);
             });
 
             // ==================== Checkbox toggle สำหรับ ✔️ ====================
