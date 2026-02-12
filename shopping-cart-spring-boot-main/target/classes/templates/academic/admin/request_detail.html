@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle"></i>
+                <span th:if="${param.success[0] == 'status_updated'}">อัปเดตสถานะสำเร็จ</span>
+                <span th:if="${param.success[0] == 'doc_generated'}">สร้างเอกสารสำเร็จ</span>
+                <span th:if="${param.success[0] == 'result_uploaded'}">อัปโหลดผลการประเมินสำเร็จ</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Request Header -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> คำร้องหมายเลข #[[${request.id}]]</h4>
+                    <span class="status-badge" th:classappend="'status-' + ${request.currentStatus.name()}"
+                        th:text="${request.currentStatus.thaiLabel}"></span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4"><strong>ผู้ยื่น:</strong> [[${request.applicant.name}]]</div>
+                        <div class="col-md-4"><strong>อีเมล:</strong> [[${request.applicant.email}]]</div>
+                        <div class="col-md-4"><strong>วันที่ยื่น:</strong> <span
+                                th:text="${#temporals.format(request.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column: Status Update -->
+                <div class="col-md-5">
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> อัปเดตสถานะ</h5>
+                        </div>
+                        <div class="card-body">
+                            <form th:action="'/admin/academic/request/' + ${request.id} + '/status'" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label">สถานะใหม่</label>
+                                    <select name="status" id="statusSelect" class="form-select" required>
+                                        <option value="">-- เลือกสถานะ --</option>
+                                        <option th:each="s : ${statuses}" th:value="${s.name()}"
+                                            th:text="${s.thaiLabel}"
+                                            th:selected="${s.name() == request.currentStatus.name()}"></option>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="meetingFields" style="display: none;">
+                                    <label class="form-label">วันเวลาประชุม</label>
+                                    <input type="datetime-local" name="meetingDate" class="form-control"
+                                        th:value="${request.meetingDate}">
+                                    <label class="form-label mt-2">สถานที่ประชุม</label>
+                                    <input type="text" name="meetingLocation" class="form-control"
+                                        th:value="${request.meetingLocation}"
+                                        placeholder="เช่น ห้องประชุมสารบรรณ ชั้น 1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">หมายเหตุ</label>
+                                    <textarea name="note" class="form-control" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-academic w-100"><i class="fas fa-save"></i>
+                                    บันทึกสถานะ</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Upload Result File -->
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-upload"></i> อัปโหลดผลการประเมิน</h5>
+                        </div>
+                        <div class="card-body">
+                            <form th:action="'/admin/academic/request/' + ${request.id} + '/upload-result'"
+                                method="post" enctype="multipart/form-data">
+                                <div class="mb-3">
+                                    <input type="file" name="file" class="form-control" accept=".pdf,.docx" required>
+                                </div>
+                                <button type="submit" class="btn btn-success w-100"><i class="fas fa-upload"></i>
+                                    อัปโหลด</button>
+                            </form>
+                            <div th:if="${request.resultFilePath != null}" class="mt-2 text-success">
+                                <i class="fas fa-check"></i> มีไฟล์ผลการประเมินแล้ว
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status History -->
+                    <div class="card card-academic">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-history"></i> ประวัติสถานะ</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                            <div th:each="h : ${statusHistory}" class="border-bottom py-2">
+                                <span class="status-badge" th:classappend="'status-' + ${h.newStatus.name()}"
+                                    th:text="${h.newStatus.thaiLabel}"></span>
+                                <small class="text-muted ms-2"
+                                    th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                                <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Document Management -->
+                <div class="col-md-7">
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-file-word"></i> จัดการเอกสาร (8 แบบฟอร์ม)</h5>
+                            <a th:href="'/admin/academic/request/' + ${request.id} + '/download-all'"
+                                class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-file-archive"></i> ดาวน์โหลดทั้งหมด (ZIP)
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div th:each="entry : ${docLabels}" class="card doc-card mb-2 p-3"
+                                th:classappend="${#lists.isEmpty(documents.?[documentType == __${entry.key}__])} ? '' : 'generated'">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>เอกสารที่ [[${entry.key}]]</strong>: [[${entry.value}]]
+                                        <span th:if="${entry.key == 4}" class="badge bg-info">3 สำเนา</span>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <a th:href="'/admin/academic/request/' + ${request.id} + '/document/' + ${entry.key}"
+                                            class="btn btn-sm btn-academic">
+                                            <i class="fas fa-edit"></i> กรอก/แก้ไข
+                                        </a>
+                                    </div>
+                                </div>
+                                <!-- Show generated copies for this doc type -->
+                                <div th:each="doc : ${documents}" th:if="${doc.documentType == entry.key}"
+                                    class="mt-2 ps-3 border-start border-success">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-success"><i class="fas fa-check"></i>
+                                            [[${doc.documentLabel}]]</small>
+                                        <a th:href="'/admin/academic/request/' + ${request.id} + '/download/' + ${doc.id}"
+                                            class="btn btn-sm btn-outline-primary">
+                                            <i class="fas fa-download"></i>
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="/admin/academic/requests" class="btn btn-outline-secondary mt-2"><i class="fas fa-arrow-left"></i>
+                กลับรายการ</a>
+        </div>
+
+        <script>
+            document.getElementById('statusSelect').addEventListener('change', function () {
+                document.getElementById('meetingFields').style.display =
+                    this.value === 'MEETING_SCHEDULED' ? 'block' : 'none';
+            });
+        </script>
+    </section>
+</body>
+
+</html>

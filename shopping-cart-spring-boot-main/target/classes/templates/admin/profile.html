@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+	<meta charset="UTF-8">
+	<title>Profile</title>
+</head>
+
+<body>
+	<section>
+		<div class="container-fluid mt-5 p-5 bg-light">
+			<div class="row">
+				<div class="col-md-10 offset-md-1">
+
+					<p class="fs-3 text-center">My Profile</p>
+					<th:block th:if="${succMsg}">
+						<p class="text-success fw-bold text-center">[[${succMsg}]]</p>
+					</th:block>
+
+					<th:block th:if="${errorMsg}">
+						<p class="text-danger fw-bold text-center">[[${errorMsg}]]</p>
+					</th:block>
+
+					<hr>
+
+					<!-- Profile Image -->
+					<div class="d-flex justify-content-center mb-4">
+						<img th:src="@{'/img/profile_img/' + ${user.profileImage}}" alt="Profile Image" class="border p-2"
+							style="width: 180px; height: 180px; border-radius: 50%; object-fit: cover;"
+							onerror="this.src='/img/profile_img/default.png'">
+					</div>
+
+
+
+					<!-- Profile Update Form -->
+					<div class="card shadow-sm mb-5">
+						<div class="card-header bg-primary text-white">
+							<h5 class="mb-0">Update Profile Information</h5>
+						</div>
+						<div class="card-body">
+							<form action="/admin/update-profile" method="post" enctype="multipart/form-data">
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">Name</label> <input type="text" name="name"
+											class="form-control" th:value="${user.name}">
+									</div>
+									<div class="col-md-6">
+										<label class="form-label fw-bold">Mobile Number</label> <input type="text"
+											name="mobileNumber" class="form-control" th:value="${user.mobileNumber}">
+									</div>
+								</div>
+
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">Email</label> <input type="email"
+											class="form-control" readonly th:value="${user.email}">
+									</div>
+									<div class="col-md-6">
+										<label class="form-label fw-bold">ตำแหน่งทางวิชาการ</label>
+										<select name="academicPosition" class="form-select">
+											<option value="" th:selected="${user.academicPosition == null || user.academicPosition == ''}">-- เลือกตำแหน่งทางวิชาการ --</option>
+											<option value="อาจารย์" th:selected="${user.academicPosition == 'อาจารย์'}">อาจารย์</option>
+											<option value="ผู้ช่วยศาสตราจารย์" th:selected="${user.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
+											<option value="รองศาสตราจารย์" th:selected="${user.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
+											<option value="ศาสตราจารย์" th:selected="${user.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
+										</select>
+									</div>
+								</div>
+
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">คำนำหน้าชื่อ</label>
+										<select name="title" class="form-select">
+											<option value="" th:selected="${user.title == null || user.title == ''}">-- เลือกคำนำหน้า --</option>
+											<option value="นาย" th:selected="${user.title == 'นาย'}">นาย</option>
+											<option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
+											<option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
+											<option value="ดร." th:selected="${user.title == 'ดร.'}">ดร.</option>
+											<option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
+											<option value="รศ.ดร." th:selected="${user.title == 'รศ.ดร.'}">รศ.ดร.</option>
+											<option value="ศ.ดร." th:selected="${user.title == 'ศ.ดร.'}">ศ.ดร.</option>
+										</select>
+									</div>
+								</div>
+
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">Profile Image</label> <input type="file"
+											name="img" class="form-control">
+									</div>
+									<div class="col-md-3">
+										<label class="form-label fw-bold">Role</label> <input type="text"
+											class="form-control" readonly th:value="${user.role}">
+									</div>
+									<div class="col-md-3">
+										<label class="form-label fw-bold">Account Status</label> <input type="text"
+											class="form-control" readonly th:value="${user.isEnable}">
+									</div>
+								</div>
+
+								<input type="hidden" th:value="${user.id}" name="id">
+
+								<div class="text-center">
+									<button type="submit" class="btn btn-primary px-5">Update
+										Profile</button>
+								</div>
+							</form>
+						</div>
+					</div>
+
+					<!-- Change Password Button -->
+					<div class="text-center mb-5">
+						<button type="button" class="btn btn-warning px-5" data-bs-toggle="modal"
+							data-bs-target="#adminChangePasswordModal">
+							<i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
+						</button>
+					</div>
+
+				</div>
+			</div>
+		</div>
+
+		<!-- Change Password Modal -->
+		<div class="modal fade" id="adminChangePasswordModal" tabindex="-1" aria-labelledby="adminChangePasswordModalLabel"
+			aria-hidden="true">
+			<div class="modal-dialog modal-dialog-centered">
+				<div class="modal-content">
+					<div class="modal-header bg-warning">
+						<h5 class="modal-title" id="adminChangePasswordModalLabel">
+							<i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
+						</h5>
+						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+					</div>
+					<form action="/admin/change-password" method="post" id="adminChangePasswordForm">
+						<div class="modal-body">
+							<div class="mb-3">
+								<label class="form-label fw-bold">รหัสผ่านปัจจุบัน</label>
+								<input type="password" name="currentPassword" class="form-control" required>
+							</div>
+							<div class="mb-3">
+								<label class="form-label fw-bold">รหัสผ่านใหม่</label>
+								<input type="password" name="newPassword" class="form-control" required minlength="6" id="adminNewPassword">
+							</div>
+							<div class="mb-3">
+								<label class="form-label fw-bold">ยืนยันรหัสผ่านใหม่</label>
+								<input type="password" name="confirmPassword" class="form-control" required minlength="6" id="adminConfirmPassword">
+								<div class="invalid-feedback">รหัสผ่านไม่ตรงกัน</div>
+							</div>
+						</div>
+						<div class="modal-footer">
+							<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+							<button type="submit" class="btn btn-warning">
+								<i class="fas fa-save me-1"></i>เปลี่ยนรหัสผ่าน
+							</button>
+						</div>
+					</form>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			document.getElementById('adminChangePasswordForm').addEventListener('submit', function (e) {
+				var newPass = document.getElementById('adminNewPassword').value;
+				var confirmPass = document.getElementById('adminConfirmPassword').value;
+				if (newPass !== confirmPass) {
+					e.preventDefault();
+					document.getElementById('adminConfirmPassword').classList.add('is-invalid');
+				}
+			});
+			document.getElementById('adminConfirmPassword').addEventListener('input', function () {
+				this.classList.remove('is-invalid');
+			});
+		</script>
+	</section>
+</body>
+
+</html>
