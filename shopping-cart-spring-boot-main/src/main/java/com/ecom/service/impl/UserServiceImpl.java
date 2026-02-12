@@ -13,8 +13,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.context.annotation.Lazy;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -195,7 +195,10 @@ public class UserServiceImpl implements UserService {
 
 	@Override
 	public UserDtls saveAdmin(UserDtls user) {
-		user.setRole("ROLE_ADMIN");
+		// ใช้ role ที่เลือกจากฟอร์ม ถ้าไม่ได้เลือกให้ default เป็น ROLE_ADMIN
+		if (user.getRole() == null || user.getRole().isEmpty()) {
+			user.setRole("ROLE_ADMIN");
+		}
 		user.setIsEnable(true);
 		user.setAccountNonLocked(true);
 		user.setFailedAttempt(0);
