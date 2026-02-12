@@ -33,3 +33,10 @@ build/
 .vscode/
 
 
+# Eclipse / STS junk files
+.metadata/
+.settings/
+.classpath
+.project
+bin/
+*.prefs
