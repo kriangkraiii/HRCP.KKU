@@ -1,12 +1,12 @@
 package com.ecom.academic.service;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +41,7 @@ public class DocumentGenerationService {
         ClassPathResource resource = new ClassPathResource(templateFile);
 
         String outputDir = OUTPUT_BASE_DIR + requestId + "/";
-        Files.createDirectories(Paths.get(outputDir));
+        Files.createDirectories(Path.of(outputDir));
 
         String outputFileName;
         if (copyNumber != null && copyNumber > 0) {
@@ -92,8 +92,54 @@ public class DocumentGenerationService {
         return generatedPaths;
     }
 
+    /**
+     * สร้าง DOCX preview ในหน่วยความจำ (ไม่บันทึกไฟล์)
+     * ใช้ template docx + แทนที่ placeholder แล้วส่ง DOCX bytes กลับ
+     */
+    public byte[] generatePreviewDocx(int documentType, String jsonData) throws IOException {
+        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, String> placeholders = flattenMap(dataMap, "");
+
+        String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
+        ClassPathResource resource = new ClassPathResource(templateFile);
+
+        try (FileInputStream fis = new FileInputStream(resource.getFile());
+                XWPFDocument document = new XWPFDocument(fis)) {
+
+            replacePlaceholdersInParagraphs(document.getParagraphs(), placeholders);
+
+            for (XWPFTable table : document.getTables()) {
+                for (XWPFTableRow row : table.getRows()) {
+                    for (XWPFTableCell cell : row.getTableCells()) {
+                        replacePlaceholdersInParagraphs(cell.getParagraphs(), placeholders);
+                    }
+                }
+            }
+
+            // เขียน XWPFDocument เป็น DOCX bytes ใน memory
+            ByteArrayOutputStream docxOut = new ByteArrayOutputStream();
+            document.write(docxOut);
+            return docxOut.toByteArray();
+        }
+    }
+
+    /**
+     * สร้าง DOCX preview สำหรับ doc_4 (สำเนาเดียว สำหรับ preview)
+     */
+    public byte[] generatePreviewDocxForCopy(int documentType, String jsonData,
+            String committeeName, String committeePosition) throws IOException {
+        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+        });
+        dataMap.put("committee_name", committeeName);
+        dataMap.put("committee_position", committeePosition);
+
+        String modifiedJson = objectMapper.writeValueAsString(dataMap);
+        return generatePreviewDocx(documentType, modifiedJson);
+    }
+
     public byte[] getDocumentBytes(String filePath) throws IOException {
-        return Files.readAllBytes(Paths.get(filePath));
+        return Files.readAllBytes(Path.of(filePath));
     }
 
     public File getDocumentFile(String filePath) {
@@ -119,7 +165,7 @@ public class DocumentGenerationService {
                 continue;
 
             // Preserve formatting from first run
-            XWPFRun firstRun = runs.get(0);
+            XWPFRun firstRun = runs.getFirst();
             String fontFamily = firstRun.getFontFamily();
             int fontSize = firstRun.getFontSize();
             boolean isBold = firstRun.isBold();

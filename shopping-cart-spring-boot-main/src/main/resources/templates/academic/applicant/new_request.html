@@ -35,7 +35,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น</label>
-                                <input type="text" name="name_applicant" class="form-control" required
+                                <input type="text" name="name_applicant" class="form-control" th:value="${(user.academicPosition ?: user.title) + user.name}" readonly
                                     placeholder="เช่น อาจารย์ ดร.สมชาย ใจดี">
                             </div>
                         </div>
@@ -110,12 +110,19 @@
                         </div>
 
                         <div class="d-flex gap-2 mt-4">
+                            <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                                <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+                            </button>
                             <button type="submit" class="btn btn-academic"><i class="fas fa-paper-plane"></i>
                                 ส่งคำร้อง</button>
                             <a href="/user/academic/dashboard" class="btn btn-outline-secondary"><i
                                     class="fas fa-arrow-left"></i> กลับ</a>
                         </div>
                     </form>
+
+                    <!-- Preview CSS & JS -->
+                    <link rel="stylesheet" href="/css/doc_preview.css">
+                    <script src="/js/doc_preview.js"></script>
 
                     <script>
                         // Checkbox toggle สำหรับผู้ยื่น ✔️
@@ -124,10 +131,13 @@
                                 const targetId = this.getAttribute('data-target');
                                 const hiddenInput = document.getElementById(targetId);
                                 if (hiddenInput) {
-                                    hiddenInput.value = this.checked ? '✔️' : '';
+                                    hiddenInput.value = this.checked ? '✓' : '';
                                 }
                             });
                         });
+
+                        // Initialize real-time preview for Doc 1
+                        initDocPreview('doc1Form', 1);
                     </script>
                 </div>
             </div>

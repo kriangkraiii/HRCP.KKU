@@ -3,7 +3,6 @@ package com.ecom.service.impl;
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
@@ -184,7 +183,7 @@ public class UserServiceImpl implements UserService {
 				if (!uploadFolder.exists()) {
 					uploadFolder.mkdirs();
 				}
-				Path filePath = Paths.get(uploadDir, img.getOriginalFilename());
+				Path filePath = Path.of(uploadDir, img.getOriginalFilename());
 				Files.copy(img.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 			}
 		} catch (Exception e) {

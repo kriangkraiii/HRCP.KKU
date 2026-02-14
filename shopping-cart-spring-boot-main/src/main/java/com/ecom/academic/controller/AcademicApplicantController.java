@@ -3,7 +3,6 @@ package com.ecom.academic.controller;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
@@ -120,9 +119,9 @@ public class AcademicApplicantController {
         }
 
         String uploadDir = "uploads/academic/" + id + "/revisions/";
-        Files.createDirectories(Paths.get(uploadDir));
+        Files.createDirectories(Path.of(uploadDir));
         String filePath = uploadDir + file.getOriginalFilename();
-        file.transferTo(Paths.get(filePath));
+        file.transferTo(Path.of(filePath));
 
         requestService.setRevisionFile(id, filePath);
         return "redirect:/user/academic/request/" + id + "?success=uploaded";
@@ -148,7 +147,7 @@ public class AcademicApplicantController {
 
         byte[] data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
         ByteArrayResource resource = new ByteArrayResource(data);
-        String filename = Paths.get(doc.getGeneratedFilePath()).getFileName().toString();
+        String filename = Path.of(doc.getGeneratedFilePath()).getFileName().toString();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
@@ -172,7 +171,7 @@ public class AcademicApplicantController {
             return ResponseEntity.notFound().build();
         }
 
-        Path path = Paths.get(request.getResultFilePath());
+        Path path = Path.of(request.getResultFilePath());
         byte[] data = Files.readAllBytes(path);
         ByteArrayResource resource = new ByteArrayResource(data);
 

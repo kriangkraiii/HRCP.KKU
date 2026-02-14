@@ -4,7 +4,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -142,7 +141,7 @@ public class AcademicAdminController {
 
         // Load existing JSON data if available
         if (!existingDocs.isEmpty()) {
-            model.addAttribute("existingData", existingDocs.get(0).getJsonData());
+            model.addAttribute("existingData", existingDocs.getFirst().getJsonData());
         }
 
         // ดึงรายชื่อกรรมการ 3 คนจาก doc_2 เพื่อ auto-fill ในเอกสารถัดไป
@@ -150,7 +149,7 @@ public class AcademicAdminController {
             List<AcademicDocument> doc2List = requestService.getDocumentsByType(id, 2);
             if (!doc2List.isEmpty()) {
                 try {
-                    String doc2Json = doc2List.get(0).getJsonData();
+                    String doc2Json = doc2List.getFirst().getJsonData();
                     Map<String, Object> doc2Data = objectMapper.readValue(doc2Json,
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
                     String c1 = doc2Data.getOrDefault("n_1", "").toString();
@@ -170,7 +169,7 @@ public class AcademicAdminController {
             List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
             if (!doc1List.isEmpty()) {
                 try {
-                    String doc1Json = doc1List.get(0).getJsonData();
+                    String doc1Json = doc1List.getFirst().getJsonData();
                     Map<String, String> doc1Data = objectMapper.readValue(doc1Json,
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
                     model.addAttribute("doc1Data", doc1Data);
@@ -210,12 +209,12 @@ public class AcademicAdminController {
                 }
                 // สูตร: (ผลรวมคะแนน / 25) × ค่าน้ำหนัก
                 double weighted = (sum / 25.0) * weights[sec - 1];
-                formData.put("score" + sec + "x", String.format("%.2f", weighted));
+                formData.put("score" + sec + "x", "%.2f".formatted(weighted));
                 grandTotal += weighted;
             }
 
             // คะแนนรวม
-            formData.put("scorex", String.format("%.2f", grandTotal));
+            formData.put("scorex", "%.2f".formatted(grandTotal));
 
             // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์
             long roundedTotal = Math.round(grandTotal);
@@ -270,7 +269,7 @@ public class AcademicAdminController {
 
         byte[] data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
         ByteArrayResource resource = new ByteArrayResource(data);
-        String filename = Paths.get(doc.getGeneratedFilePath()).getFileName().toString();
+        String filename = Path.of(doc.getGeneratedFilePath()).getFileName().toString();
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
@@ -288,7 +287,7 @@ public class AcademicAdminController {
             for (AcademicDocument doc : docs) {
                 if (doc.getGeneratedFilePath() == null)
                     continue;
-                Path filePath = Paths.get(doc.getGeneratedFilePath());
+                Path filePath = Path.of(doc.getGeneratedFilePath());
                 if (!Files.exists(filePath))
                     continue;
 
@@ -313,9 +312,9 @@ public class AcademicAdminController {
     public String uploadResult(@PathVariable Long id,
             @RequestParam("file") MultipartFile file) throws IOException {
         String uploadDir = "uploads/academic/" + id + "/";
-        Files.createDirectories(Paths.get(uploadDir));
+        Files.createDirectories(Path.of(uploadDir));
         String filePath = uploadDir + "result_" + file.getOriginalFilename();
-        file.transferTo(Paths.get(filePath));
+        file.transferTo(Path.of(filePath));
 
         requestService.setResultFile(id, filePath);
         return "redirect:/admin/academic/request/" + id + "?success=result_uploaded";
