@@ -59,7 +59,7 @@
                                             <td class="text-center">1</td>
                                             <td>บันทึกนำส่งเอกสารประกอบประเมินผลการสอน</td>
                                             <td class="text-center">1</td>
-                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_1', '') == '✔️' ? '✔️' : ''}"></td>
+                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_1', '') == '✓' ? '✓' : ''}"></td>
                                             <td class="text-center">
                                                 <div class="form-check d-flex justify-content-center">
                                                     <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_1_cb" data-target="chk_off_1">
@@ -72,7 +72,7 @@
                                             <td class="text-center">2</td>
                                             <td>แผนการสอน พร้อมเกณฑ์และวิธีวัดประเมินผลผู้เรียน</td>
                                             <td class="text-center">3</td>
-                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_2', '') == '✔️' ? '✔️' : ''}"></td>
+                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_2', '') == '✓' ? '✓' : ''}"></td>
                                             <td class="text-center">
                                                 <div class="form-check d-flex justify-content-center">
                                                     <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_2_cb" data-target="chk_off_2">
@@ -85,7 +85,7 @@
                                             <td class="text-center">3</td>
                                             <td>สาระสำคัญของเนื้อหาวิชาประกอบการบรรยายหรือการจัดกิจกรรมการเรียนรู้ (เอกสารประกอบการสอน)</td>
                                             <td class="text-center">3</td>
-                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_3', '') == '✔️' ? '✔️' : ''}"></td>
+                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_3', '') == '✓' ? '✓' : ''}"></td>
                                             <td class="text-center">
                                                 <div class="form-check d-flex justify-content-center">
                                                     <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_3_cb" data-target="chk_off_3">
@@ -98,7 +98,7 @@
                                             <td class="text-center">4</td>
                                             <td>สื่อการสอน เช่น ชีทเอกสาร PowerPoint แผ่นใส สื่อปฏิสัมพันธ์แบบดิจิทัล และอื่นๆ เป็นต้น</td>
                                             <td class="text-center">3</td>
-                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_4', '') == '✔️' ? '✔️' : ''}"></td>
+                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_4', '') == '✓' ? '✓' : ''}"></td>
                                             <td class="text-center">
                                                 <div class="form-check d-flex justify-content-center">
                                                     <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_4_cb" data-target="chk_off_4">
@@ -111,7 +111,7 @@
                                             <td class="text-center">5</td>
                                             <td>ผลการประเมินการสอนโดยนักศึกษา</td>
                                             <td class="text-center">3</td>
-                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_5', '') == '✔️' ? '✔️' : ''}"></td>
+                                            <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_5', '') == '✓' ? '✓' : ''}"></td>
                                             <td class="text-center">
                                                 <div class="form-check d-flex justify-content-center">
                                                     <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_5_cb" data-target="chk_off_5">
@@ -770,6 +770,9 @@
                         </div>
 
                         <div class="d-flex gap-2 mt-4">
+                            <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                                <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+                            </button>
                             <button type="submit" class="btn btn-academic"><i class="fas fa-save"></i>
                                 สร้าง/บันทึกเอกสาร</button>
                             <a th:href="'/admin/academic/request/' + ${request.id}" class="btn btn-outline-secondary"><i
@@ -779,6 +782,10 @@
                 </div>
             </div>
         </div>
+
+        <!-- Preview CSS & JS -->
+        <link rel="stylesheet" href="/css/doc_preview.css">
+        <script src="/js/doc_preview.js"></script>
 
         <script>
             // ==================== Thai Date Defaults ====================
@@ -892,7 +899,7 @@
                     const targetId = this.getAttribute('data-target');
                     const hiddenInput = document.getElementById(targetId);
                     if (hiddenInput) {
-                        hiddenInput.value = this.checked ? '✔️' : '';
+                        hiddenInput.value = this.checked ? '✓' : '';
                     }
                 });
             });
@@ -902,10 +909,13 @@
                 document.querySelectorAll('.chk-toggle').forEach(cb => {
                     const targetId = cb.getAttribute('data-target');
                     const hiddenInput = document.getElementById(targetId);
-                    if (hiddenInput && hiddenInput.value === '✔️') {
+                    if (hiddenInput && hiddenInput.value === '✓') {
                         cb.checked = true;
                     }
                 });
+
+                // Initialize real-time preview for the current document type
+                initDocPreview('docForm', [[${documentType}]]);
             });
         </script>
     </section>
