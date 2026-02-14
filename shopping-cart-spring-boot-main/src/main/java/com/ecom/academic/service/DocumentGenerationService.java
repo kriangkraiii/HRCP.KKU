@@ -6,7 +6,6 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -41,7 +40,7 @@ public class DocumentGenerationService {
         ClassPathResource resource = new ClassPathResource(templateFile);
 
         String outputDir = OUTPUT_BASE_DIR + requestId + "/";
-        Files.createDirectories(Paths.get(outputDir));
+        Files.createDirectories(Path.of(outputDir));
 
         String outputFileName;
         if (copyNumber != null && copyNumber > 0) {
@@ -93,7 +92,7 @@ public class DocumentGenerationService {
     }
 
     public byte[] getDocumentBytes(String filePath) throws IOException {
-        return Files.readAllBytes(Paths.get(filePath));
+        return Files.readAllBytes(Path.of(filePath));
     }
 
     public File getDocumentFile(String filePath) {
@@ -119,7 +118,7 @@ public class DocumentGenerationService {
                 continue;
 
             // Preserve formatting from first run
-            XWPFRun firstRun = runs.get(0);
+            XWPFRun firstRun = runs.getFirst();
             String fontFamily = firstRun.getFontFamily();
             int fontSize = firstRun.getFontSize();
             boolean isBold = firstRun.isBold();

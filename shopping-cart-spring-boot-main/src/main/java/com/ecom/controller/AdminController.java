@@ -4,7 +4,6 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.security.Principal;
 import java.util.List;
@@ -148,7 +147,7 @@ public class AdminController {
 				if (!uploadFolder.exists()) {
 					uploadFolder.mkdirs();
 				}
-				Path path = Paths.get(uploadDir + file.getOriginalFilename());
+				Path path = Path.of(uploadDir + file.getOriginalFilename());
 				Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 			}
 			session.setAttribute("succMsg", "เพิ่มบัญชีสำเร็จ");
