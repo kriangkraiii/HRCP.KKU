@@ -9,10 +9,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.academic.model.AcademicAttachment;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.RequestStatusHistory;
+import com.ecom.academic.repository.AcademicAttachmentRepository;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
 import com.ecom.academic.repository.RequestStatusHistoryRepository;
@@ -26,6 +28,9 @@ public class AcademicRequestService {
 
     @Autowired
     private AcademicDocumentRepository documentRepository;
+
+    @Autowired
+    private AcademicAttachmentRepository attachmentRepository;
 
     @Autowired
     private RequestStatusHistoryRepository historyRepository;
@@ -157,5 +162,27 @@ public class AcademicRequestService {
         List<AcademicRequest> activeRequests = requestRepository
                 .findByApplicantIdAndCurrentStatusNotIn(applicantId, terminalStatuses);
         return !activeRequests.isEmpty();
+    }
+
+    // ==================== Attachment Methods ====================
+
+    public AcademicAttachment saveAttachment(AcademicAttachment attachment) {
+        return attachmentRepository.save(attachment);
+    }
+
+    public List<AcademicAttachment> getAttachments(Long requestId) {
+        return attachmentRepository.findByRequestIdOrderByUploadedAtDesc(requestId);
+    }
+
+    public long countAttachments(Long requestId) {
+        return attachmentRepository.countByRequestId(requestId);
+    }
+
+    public Optional<AcademicAttachment> findAttachmentById(Long attachmentId) {
+        return attachmentRepository.findById(attachmentId);
+    }
+
+    public void deleteAttachment(Long attachmentId) {
+        attachmentRepository.deleteById(attachmentId);
     }
 }

@@ -165,7 +165,7 @@ public class DocumentGenerationService {
                 continue;
 
             // Preserve formatting from first run
-            XWPFRun firstRun = runs.getFirst();
+            XWPFRun firstRun = runs.get(0);
             String fontFamily = firstRun.getFontFamily();
             int fontSize = firstRun.getFontSize();
             boolean isBold = firstRun.isBold();

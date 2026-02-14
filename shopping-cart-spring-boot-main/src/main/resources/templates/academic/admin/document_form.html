@@ -482,61 +482,101 @@
 
                         <!-- ==================== Document 6: แบบฟอร์มประเมินการสอน ==================== -->
                         <div th:if="${documentType == 6}">
-                            <p class="text-muted mb-3">กรอกคะแนนระดับการประเมิน (๑-๕) ในแต่ละข้อ ระบบจะคำนวณคะแนนถ่วงน้ำหนักให้อัตโนมัติ</p>
+                            <p class="text-muted mb-3">กรอกคะแนน 1 ค่าต่อส่วน (0-5) ระบบจะคำนวณคะแนนถ่วงน้ำหนักและจัดวางช่วงคะแนนให้อัตโนมัติ</p>
 
                             <!-- ส่วนที่ ๑: ปริมาณคุณภาพของเอกสารและหลักฐาน (ค่าน้ำหนัก ๒๐) -->
-                            <h5 class="border-bottom pb-2 mb-3">๑. ปริมาณคุณภาพของเอกสารและหลักฐานที่ใช้ในการประเมินการสอน (ค่าน้ำหนัก ๒๐)</h5>
-                            <div class="row mb-3 align-items-end">
-                                <div class="col" th:each="i : ${#numbers.sequence(1, 5)}">
-                                    <label class="form-label">ข้อ [[${i}]] <small class="text-muted">(๑-๕)</small></label>
-                                    <input type="number" th:name="'re1' + ${i}" class="form-control sec-score" data-section="1"
-                                        min="1" max="5" step="1" placeholder="0">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">๑. ปริมาณคุณภาพของเอกสารและหลักฐานที่ใช้ในการประเมินการสอน <span class="badge bg-secondary">ค่าน้ำหนัก ๒๐</span></h6>
                                 </div>
-                                <div class="col">
-                                    <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
-                                    <input type="text" name="score1x" class="form-control fw-bold" id="totalScore1" readonly>
+                                <div class="card-body">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label">คะแนน <small class="text-muted">(0-5)</small></label>
+                                            <input type="number" name="sec_score_1" class="form-control sec-score-single" data-section="1"
+                                                min="0" max="5" step="0.01" placeholder="0">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">ช่วงที่ตกอยู่</label>
+                                            <input type="text" class="form-control" id="rangeDisplay1" readonly>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                            <input type="text" name="score1x" class="form-control fw-bold" id="totalScore1" readonly>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- ส่วนที่ ๒: ความสามารถด้านการวางแผนการสอนและการประเมินผล (ค่าน้ำหนัก ๓๐) -->
-                            <h5 class="border-bottom pb-2 mb-3">๒. ความสามารถด้านการวางแผนการสอนและการประเมินผลการเรียนการสอน (ค่าน้ำหนัก ๓๐)</h5>
-                            <div class="row mb-3 align-items-end">
-                                <div class="col" th:each="i : ${#numbers.sequence(1, 5)}">
-                                    <label class="form-label">ข้อ [[${i}]] <small class="text-muted">(๑-๕)</small></label>
-                                    <input type="number" th:name="'re2' + ${i}" class="form-control sec-score" data-section="2"
-                                        min="1" max="5" step="1" placeholder="0">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">๒. ความสามารถด้านการวางแผนการสอนและการประเมินผลการเรียนการสอน <span class="badge bg-secondary">ค่าน้ำหนัก ๓๐</span></h6>
                                 </div>
-                                <div class="col">
-                                    <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
-                                    <input type="text" name="score2x" class="form-control fw-bold" id="totalScore2" readonly>
+                                <div class="card-body">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label">คะแนน <small class="text-muted">(0-5)</small></label>
+                                            <input type="number" name="sec_score_2" class="form-control sec-score-single" data-section="2"
+                                                min="0" max="5" step="0.01" placeholder="0">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">ช่วงที่ตกอยู่</label>
+                                            <input type="text" class="form-control" id="rangeDisplay2" readonly>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                            <input type="text" name="score2x" class="form-control fw-bold" id="totalScore2" readonly>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- ส่วนที่ ๓: ความสามารถด้านการจัดการเรียนการสอน (ค่าน้ำหนัก ๓๐) -->
-                            <h5 class="border-bottom pb-2 mb-3">๓. ความสามารถด้านการจัดการเรียนการสอน (ค่าน้ำหนัก ๓๐)</h5>
-                            <div class="row mb-3 align-items-end">
-                                <div class="col" th:each="i : ${#numbers.sequence(1, 5)}">
-                                    <label class="form-label">ข้อ [[${i}]] <small class="text-muted">(๑-๕)</small></label>
-                                    <input type="number" th:name="'re3' + ${i}" class="form-control sec-score" data-section="3"
-                                        min="1" max="5" step="1" placeholder="0">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">๓. ความสามารถด้านการจัดการเรียนการสอน <span class="badge bg-secondary">ค่าน้ำหนัก ๓๐</span></h6>
                                 </div>
-                                <div class="col">
-                                    <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
-                                    <input type="text" name="score3x" class="form-control fw-bold" id="totalScore3" readonly>
+                                <div class="card-body">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label">คะแนน <small class="text-muted">(0-5)</small></label>
+                                            <input type="number" name="sec_score_3" class="form-control sec-score-single" data-section="3"
+                                                min="0" max="5" step="0.01" placeholder="0">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">ช่วงที่ตกอยู่</label>
+                                            <input type="text" class="form-control" id="rangeDisplay3" readonly>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                            <input type="text" name="score3x" class="form-control fw-bold" id="totalScore3" readonly>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
                             <!-- ส่วนที่ ๔: ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู (ค่าน้ำหนัก ๒๐) -->
-                            <h5 class="border-bottom pb-2 mb-3">๔. ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู (ค่าน้ำหนัก ๒๐)</h5>
-                            <div class="row mb-3 align-items-end">
-                                <div class="col" th:each="i : ${#numbers.sequence(1, 5)}">
-                                    <label class="form-label">ข้อ [[${i}]] <small class="text-muted">(๑-๕)</small></label>
-                                    <input type="number" th:name="'re4' + ${i}" class="form-control sec-score" data-section="4"
-                                        min="1" max="5" step="1" placeholder="0">
+                            <div class="card mb-3">
+                                <div class="card-header bg-light">
+                                    <h6 class="mb-0">๔. ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู <span class="badge bg-secondary">ค่าน้ำหนัก ๒๐</span></h6>
                                 </div>
-                                <div class="col">
-                                    <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
-                                    <input type="text" name="score4x" class="form-control fw-bold" id="totalScore4" readonly>
+                                <div class="card-body">
+                                    <div class="row align-items-end">
+                                        <div class="col-md-4">
+                                            <label class="form-label">คะแนน <small class="text-muted">(0-5)</small></label>
+                                            <input type="number" name="sec_score_4" class="form-control sec-score-single" data-section="4"
+                                                min="0" max="5" step="0.01" placeholder="0">
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label">ช่วงที่ตกอยู่</label>
+                                            <input type="text" class="form-control" id="rangeDisplay4" readonly>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                            <input type="text" name="score4x" class="form-control fw-bold" id="totalScore4" readonly>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -622,6 +662,9 @@
 
                         <!-- ==================== Document 7: ส่วนที่ 3 แบบประเมินผลการสอน ==================== -->
                         <div th:if="${documentType == 7}">
+                            <div th:if="${doc6Data != null}" class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle"></i> ข้อมูลด้านล่างถูกดึงจากผลการประเมิน (เอกสารที่ 6) โดยอัตโนมัติ สามารถแก้ไขได้
+                            </div>
                             <h5 class="border-bottom pb-2 mb-3">ข้อมูลการประชุม</h5>
                             <div class="row mb-3">
                                 <div class="col-md-3"><label class="form-label">ครั้งที่/ปี</label><input type="text"
@@ -651,14 +694,29 @@
                             </div>
                             <h5 class="border-bottom pb-2 mb-3">ผลการประเมิน</h5>
                             <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">คะแนนรวม (จาก doc6)</label>
+                                    <input type="text" class="form-control" readonly
+                                        th:value="${doc6Data != null ? doc6Data.getOrDefault('scorex', '-') : '-'}">
+                                </div>
+                            </div>
+                            <div class="row mb-3">
                                 <div class="col-md-4">
-                                    <div class="form-check"><input type="radio" name="eval_level" value="skilled"
-                                            class="form-check-input"><label class="form-check-label">ชำนาญ</label></div>
-                                    <div class="form-check"><input type="radio" name="eval_level" value="specialist"
-                                            class="form-check-input"><label class="form-check-label">ชำนาญพิเศษ</label>
+                                    <!-- ถ้ามี doc6Data ให้ pre-select ตามผล eval_result_level -->
+                                    <div class="form-check">
+                                        <input type="radio" name="eval_level" value="skilled" class="form-check-input"
+                                            th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญ'}">
+                                        <label class="form-check-label">ชำนาญ</label>
                                     </div>
-                                    <div class="form-check"><input type="radio" name="eval_level" value="expert"
-                                            class="form-check-input"><label class="form-check-label">เชี่ยวชาญ</label>
+                                    <div class="form-check">
+                                        <input type="radio" name="eval_level" value="specialist" class="form-check-input"
+                                            th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ'}">
+                                        <label class="form-check-label">ชำนาญพิเศษ</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input type="radio" name="eval_level" value="expert" class="form-check-input"
+                                            th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ'}">
+                                        <label class="form-check-label">เชี่ยวชาญ</label>
                                     </div>
                                 </div>
                             </div>
@@ -675,6 +733,9 @@
 
                         <!-- ==================== Document 8: แจ้งผลการประเมิน ==================== -->
                         <div th:if="${documentType == 8}">
+                            <div th:if="${doc6Data != null}" class="alert alert-info mb-3">
+                                <i class="fas fa-info-circle"></i> ผลการประเมินระดับถูกดึงจากเอกสารที่ 6 โดยอัตโนมัติ สามารถแก้ไขได้
+                            </div>
                             <h5 class="border-bottom pb-2 mb-3">ข้อมูลเอกสาร</h5>
                             <div class="row mb-3">
                                 <div class="col-md-4"><label class="form-label">เลขที่เอกสาร</label><input type="text"
@@ -732,7 +793,8 @@
                             <div class="row mb-3">
                                 <div class="col-md-4">
                                     <label class="form-label">ระดับ</label>
-                                    <input type="text" name="result_level" class="form-control" list="levelList8" placeholder="เลือกหรือพิมพ์...">
+                                    <input type="text" name="result_level" class="form-control" list="levelList8" placeholder="เลือกหรือพิมพ์..."
+                                        th:value="${doc6Data != null ? doc6Data.getOrDefault('eval_result_level', '') : ''}">
                                     <datalist id="levelList8">
                                         <option value="ชำนาญ">
                                         <option value="ชำนาญพิเศษ">
@@ -783,6 +845,10 @@
             </div>
         </div>
 
+        <!-- Hidden holders for Thymeleaf data (avoid inline JS expressions) -->
+        <input type="hidden" id="currentDocType" th:value="${documentType}">
+        <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
+
         <!-- Preview CSS & JS -->
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
@@ -817,26 +883,36 @@
             // ==================== Auto-calculate weighted scores for Document 6 ====================
             // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1 = 20, ส่วนที่ 2 = 30, ส่วนที่ 3 = 30, ส่วนที่ 4 = 20
             const sectionWeights = { 1: 20, 2: 30, 3: 30, 4: 20 };
+            const rangeLabels = ['', 'ช่วง ๑ (0-1)', 'ช่วง ๒ (1.01-2)', 'ช่วง ๓ (2.01-3)', 'ช่วง ๔ (3.01-4)', 'ช่วง ๕ (4.01-5)'];
+
+            function getScoreRange(score) {
+                if (score <= 0) return 0;
+                if (score <= 1) return 1;
+                if (score <= 2) return 2;
+                if (score <= 3) return 3;
+                if (score <= 4) return 4;
+                return 5;
+            }
 
             function calculateDoc6Scores() {
                 let grandTotal = 0;
-                let allFilled = false;
+                let hasSomeScore = false;
 
                 for (let sec = 1; sec <= 4; sec++) {
-                    const inputs = document.querySelectorAll('.sec-score[data-section="' + sec + '"]');
-                    let sum = 0;
-                    let count = 0;
-                    inputs.forEach(el => {
-                        const v = parseFloat(el.value) || 0;
-                        sum += v;
-                        if (v > 0) count++;
-                    });
+                    const input = document.querySelector('.sec-score-single[data-section="' + sec + '"]');
+                    if (!input) continue;
 
-                    // สูตร: (ผลรวมคะแนน / คะแนนเต็ม) × ค่าน้ำหนัก
-                    // คะแนนเต็มต่อข้อ = 5, จำนวนข้อ = 5, รวม = 25
-                    const maxScore = 25;
+                    const score = parseFloat(input.value) || 0;
+                    if (score > 0) hasSomeScore = true;
+
+                    // แสดงช่วงที่ตกอยู่
+                    const rangeEl = document.getElementById('rangeDisplay' + sec);
+                    const rangeIdx = getScoreRange(score);
+                    if (rangeEl) rangeEl.value = rangeIdx > 0 ? rangeLabels[rangeIdx] : '-';
+
+                    // สูตร: (คะแนน / 5) × ค่าน้ำหนัก
                     const weight = sectionWeights[sec];
-                    const weighted = (sum / maxScore) * weight;
+                    const weighted = (score / 5) * weight;
                     const totalEl = document.getElementById('totalScore' + sec);
                     if (totalEl) totalEl.value = weighted.toFixed(2);
 
@@ -846,11 +922,8 @@
                 const grandEl = document.getElementById('grandTotal');
                 if (grandEl) grandEl.value = grandTotal.toFixed(2);
 
-                // ตรวจว่ามีคะแนนบ้างหรือยัง
-                allFilled = grandTotal > 0;
-
                 // Auto-select evaluation level checkbox
-                updateEvalCheckboxes(grandTotal, allFilled);
+                updateEvalCheckboxes(grandTotal, hasSomeScore);
             }
 
             function updateEvalCheckboxes(total, hasSomeScore) {
@@ -888,8 +961,8 @@
                 }
             }
 
-            // Attach event listeners to all score inputs
-            document.querySelectorAll('.sec-score').forEach(input => {
+            // Attach event listeners to all score inputs (new single-input class)
+            document.querySelectorAll('.sec-score-single').forEach(input => {
                 input.addEventListener('input', calculateDoc6Scores);
             });
 
@@ -904,7 +977,7 @@
                 });
             });
 
-            // โหลดข้อมูลเดิม (ถ้ามี) สำหรับ checkbox
+            // โหลดข้อมูลเดิม (ถ้ามี) สำหรับ checkbox และ doc6 scores
             document.addEventListener('DOMContentLoaded', function () {
                 document.querySelectorAll('.chk-toggle').forEach(cb => {
                     const targetId = cb.getAttribute('data-target');
@@ -914,8 +987,32 @@
                     }
                 });
 
+                // โหลดข้อมูลเดิมสำหรับทุก input ในฟอร์ม (ถ้ามี existingData)
+                var existingJson = document.getElementById('existingDataHolder') ? document.getElementById('existingDataHolder').value : null;
+                var currentDocType = parseInt(document.getElementById('currentDocType').value) || 0;
+                if (existingJson) {
+                    try {
+                        var data = JSON.parse(existingJson);
+                        var form = document.getElementById('docForm');
+                        if (form && data) {
+                            Object.keys(data).forEach(function(key) {
+                                var el = form.querySelector('[name="' + key + '"]');
+                                if (el && !el.value) {
+                                    el.value = data[key];
+                                }
+                            });
+                            // ถ้าเป็น doc6 → recalculate scores หลังจากใส่ค่าเดิมแล้ว
+                            if (currentDocType === 6) {
+                                calculateDoc6Scores();
+                            }
+                        }
+                    } catch (e) {
+                        console.warn('Failed to load existing data:', e);
+                    }
+                }
+
                 // Initialize real-time preview for the current document type
-                initDocPreview('docForm', [[${documentType}]]);
+                initDocPreview('docForm', currentDocType);
             });
         </script>
     </section>

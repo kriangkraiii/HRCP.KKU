@@ -45,17 +45,27 @@ public class DocumentPreviewController {
                 double grandTotal = 0;
 
                 for (int sec = 1; sec <= 4; sec++) {
-                    double sum = 0;
-                    for (int item = 1; item <= 5; item++) {
-                        String key = "re" + sec + item;
-                        String val = formData.getOrDefault(key, "0");
-                        try {
-                            sum += Double.parseDouble(val);
-                        } catch (NumberFormatException e) {
-                            sum += 0;
-                        }
+                    String secScoreVal = formData.getOrDefault("sec_score_" + sec, "0");
+                    double secScore = 0;
+                    try {
+                        secScore = Double.parseDouble(secScoreVal);
+                    } catch (NumberFormatException e) {
+                        secScore = 0;
                     }
-                    double weighted = (sum / 25.0) * weights[sec - 1];
+
+                    for (int range = 1; range <= 5; range++) {
+                        String key = "score" + sec + range;
+                        boolean inRange = false;
+                        if (range == 1) inRange = (secScore > 0 && secScore <= 1);
+                        else if (range == 2) inRange = (secScore > 1 && secScore <= 2);
+                        else if (range == 3) inRange = (secScore > 2 && secScore <= 3);
+                        else if (range == 4) inRange = (secScore > 3 && secScore <= 4);
+                        else if (range == 5) inRange = (secScore > 4 && secScore <= 5);
+                        // ช่วงที่ตรง → ใส่คะแนน, ช่วงอื่น → ว่าง
+                        formData.put(key, inRange ? String.valueOf(secScore) : "");
+                    }
+
+                    double weighted = (secScore / 5.0) * weights[sec - 1];
                     formData.put("score" + sec + "x", "%.2f".formatted(weighted));
                     grandTotal += weighted;
                 }
