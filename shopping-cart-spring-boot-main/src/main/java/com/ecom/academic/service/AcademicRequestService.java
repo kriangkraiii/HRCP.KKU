@@ -55,7 +55,11 @@ public class AcademicRequestService {
     }
 
     public List<AcademicRequest> findAll() {
-        return requestRepository.findAllByOrderByCreatedAtDesc();
+        List<AcademicRequest> all = requestRepository.findAllByOrderByCreatedAtDesc();
+        // กรอง draft ออก - แอดมินไม่ต้องเห็น
+        return all.stream()
+                .filter(r -> r.getCurrentStatus() != RequestStatus.DRAFT)
+                .collect(java.util.stream.Collectors.toList());
     }
 
     @Transactional
@@ -133,6 +137,31 @@ public class AcademicRequestService {
         doc.setJsonData(jsonData);
         doc.setGeneratedFilePath(filePath);
         doc.setDocumentLabel(label);
+        doc.setIsDraft(false);
+        return documentRepository.save(doc);
+    }
+
+    /**
+     * บันทึกแบบร่าง - เก็บเฉพาะ jsonData ไม่สร้างไฟล์ DOCX
+     */
+    public AcademicDocument saveDraft(AcademicRequest request, int documentType, String jsonData,
+            String label, Integer copyNumber) {
+        Optional<AcademicDocument> existing = documentRepository
+                .findByRequestIdAndDocumentTypeAndCopyNumber(request.getId(), documentType,
+                        copyNumber != null ? copyNumber : 0);
+
+        AcademicDocument doc;
+        if (existing.isPresent()) {
+            doc = existing.get();
+        } else {
+            doc = new AcademicDocument();
+            doc.setRequest(request);
+            doc.setDocumentType(documentType);
+            doc.setCopyNumber(copyNumber != null ? copyNumber : 0);
+        }
+        doc.setJsonData(jsonData);
+        doc.setDocumentLabel(label);
+        doc.setIsDraft(true);
         return documentRepository.save(doc);
     }
 
@@ -154,14 +183,45 @@ public class AcademicRequestService {
 
     /**
      * Check if applicant has any active (non-terminal) requests.
-     * Terminal statuses are: REJECTED
+     * Terminal statuses are: REJECTED, COMPLETED
+     * DRAFT is excluded from active check (ถ้ามี draft ถือว่ายังสร้างคำร้องได้)
      * Active means: RECEIVED, SUB_COMMITTEE_APPOINTED, MEETING_SCHEDULED, COMPLETED_PASS, COMPLETED_REVISE
      */
     public boolean hasActiveRequest(Integer applicantId) {
-        List<RequestStatus> terminalStatuses = Arrays.asList(RequestStatus.REJECTED);
+        List<RequestStatus> excludedStatuses = Arrays.asList(
+                RequestStatus.REJECTED, RequestStatus.COMPLETED, RequestStatus.DRAFT);
         List<AcademicRequest> activeRequests = requestRepository
-                .findByApplicantIdAndCurrentStatusNotIn(applicantId, terminalStatuses);
+                .findByApplicantIdAndCurrentStatusNotIn(applicantId, excludedStatuses);
         return !activeRequests.isEmpty();
+    }
+
+    /**
+     * ค้นหา draft request ของ applicant (ยังไม่ส่งคำร้อง)
+     */
+    public AcademicRequest findDraftByApplicant(Integer applicantId) {
+        List<AcademicRequest> drafts = requestRepository
+                .findByApplicantIdAndCurrentStatus(applicantId, RequestStatus.DRAFT);
+        return drafts.isEmpty() ? null : drafts.get(0);
+    }
+
+    /**
+     * สร้าง draft request ใหม่ (ยังไม่ submit)
+     */
+    public AcademicRequest createDraftRequest(UserDtls applicant) {
+        AcademicRequest request = new AcademicRequest();
+        request.setApplicant(applicant);
+        request.setCurrentStatus(RequestStatus.DRAFT);
+        return requestRepository.save(request);
+    }
+
+    /**
+     * แปลง draft request เป็น request จริง (submit)
+     */
+    @Transactional
+    public AcademicRequest submitDraftRequest(AcademicRequest draftRequest) {
+        draftRequest.setCurrentStatus(RequestStatus.RECEIVED);
+        draftRequest.setSubmissionDate(LocalDateTime.now());
+        return requestRepository.save(draftRequest);
     }
 
     // ==================== Attachment Methods ====================
@@ -184,5 +244,64 @@ public class AcademicRequestService {
 
     public void deleteAttachment(Long attachmentId) {
         attachmentRepository.deleteById(attachmentId);
+    }
+
+    /**
+     * อัพเดตสถานะอัตโนมัติตามเอกสารที่กรอกเสร็จ
+     * - Doc 3 saved → SUB_COMMITTEE_APPOINTED
+     * - Doc 6 saved → COMPLETED_PASS or COMPLETED_REVISE (based on score)
+     * - Doc 8 saved → COMPLETED
+     */
+    @Transactional
+    public void autoUpdateStatusByDocument(Long requestId, int documentType, UserDtls changedBy, String jsonData) {
+        AcademicRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
+
+        switch (documentType) {
+            case 3 -> {
+                if (request.getCurrentStatus().ordinal() < RequestStatus.SUB_COMMITTEE_APPOINTED.ordinal()) {
+                    updateStatus(requestId, RequestStatus.SUB_COMMITTEE_APPOINTED, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ");
+                }
+            }
+            case 6 -> {
+                // ตรวจผลคะแนนจาก jsonData
+                try {
+                    var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                    java.util.Map<String, Object> data = objectMapper.readValue(jsonData,
+                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                    String evalLevel = data.getOrDefault("eval_result_level", "").toString();
+                    if ("ไม่ผ่าน".equals(evalLevel)) {
+                        updateStatus(requestId, RequestStatus.COMPLETED_REVISE, changedBy,
+                                "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel);
+                    } else if (!evalLevel.isEmpty()) {
+                        updateStatus(requestId, RequestStatus.COMPLETED_PASS, changedBy,
+                                "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel);
+                    }
+                } catch (Exception e) {
+                    // fallback: set to COMPLETED_PASS
+                    updateStatus(requestId, RequestStatus.COMPLETED_PASS, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึกแบบฟอร์มประเมิน");
+                }
+            }
+            case 8 -> {
+                updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
+                        "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน");
+            }
+        }
+    }
+
+    /**
+     * ค้นหาคำร้องตามชื่อผู้ยื่น
+     */
+    public List<AcademicRequest> searchByApplicantName(String name) {
+        return requestRepository.findByApplicantNameContainingIgnoreCaseOrderByCreatedAtDesc(name);
+    }
+
+    /**
+     * ดึงเอกสารเรียงตามลำดับ documentType
+     */
+    public List<AcademicDocument> getDocumentsSorted(Long requestId) {
+        return documentRepository.findByRequestIdOrderByDocumentTypeAscCopyNumberAsc(requestId);
     }
 }

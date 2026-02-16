@@ -79,6 +79,10 @@
                                 <option value="CREATE_ACCOUNT" th:selected="${actionFilter == 'CREATE_ACCOUNT'}">สร้างบัญชี</option>
                                 <option value="UPDATE_ACCOUNT_STATUS" th:selected="${actionFilter == 'UPDATE_ACCOUNT_STATUS'}">อัพเดทสถานะ</option>
                                 <option value="CHANGE_PASSWORD" th:selected="${actionFilter == 'CHANGE_PASSWORD'}">เปลี่ยนรหัสผ่าน</option>
+                                <option value="EDIT_USER_ACCOUNT" th:selected="${actionFilter == 'EDIT_USER_ACCOUNT'}">แก้ไขบัญชีผู้ใช้</option>
+                                <option value="EDIT_ADMIN_ACCOUNT" th:selected="${actionFilter == 'EDIT_ADMIN_ACCOUNT'}">แก้ไขบัญชีแอดมิน</option>
+                                <option value="DELETE_USER_ACCOUNT" th:selected="${actionFilter == 'DELETE_USER_ACCOUNT'}">ลบบัญชีผู้ใช้</option>
+                                <option value="DELETE_ADMIN_ACCOUNT" th:selected="${actionFilter == 'DELETE_ADMIN_ACCOUNT'}">ลบบัญชีแอดมิน</option>
                                 <option value="GENERATE_DOCUMENT" th:selected="${actionFilter == 'GENERATE_DOCUMENT'}">สร้างเอกสาร</option>
                                 <option value="UPDATE_REQUEST_STATUS" th:selected="${actionFilter == 'UPDATE_REQUEST_STATUS'}">อัพเดทคำร้อง</option>
                             </select>
@@ -124,10 +128,11 @@
                                     <td>
                                         <span class="badge"
                                             th:classappend="${log.action.contains('CREATE')} ? 'bg-success' :
+                                                (${log.action.contains('EDIT')} ? 'bg-warning text-dark' :
                                                 (${log.action.contains('UPDATE')} ? 'bg-warning text-dark' :
                                                 (${log.action.contains('CHANGE')} ? 'bg-info' :
                                                 (${log.action.contains('DOCUMENT') or log.action.contains('GENERATE')} ? 'bg-primary' :
-                                                (${log.action.contains('DELETE')} ? 'bg-danger' : 'bg-secondary'))))"
+                                                (${log.action.contains('DELETE')} ? 'bg-danger' : 'bg-secondary')))))"
                                             th:text="${log.action}"></span>
                                     </td>
                                     <td><small th:text="${log.details}"></small></td>

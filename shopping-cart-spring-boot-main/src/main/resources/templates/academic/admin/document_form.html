@@ -125,6 +125,108 @@
                             </div>
                         </div>
 
+                        <!-- ==================== Document 0: บันทึกข้อความ ขอรับการประเมิน ==================== -->
+                        <div th:if="${documentType == 0}">
+                            <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-file-signature"></i> ข้อมูลบันทึกข้อความ</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-4">
+                                    <label class="form-label">เลขที่เอกสาร <small class="text-muted">(ถ้ามี)</small></label>
+                                    <input type="text" name="document_number" class="form-control"
+                                        placeholder="เช่น วทค. 001/2568"
+                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('document_number', '') : ''}">
+                                </div>
+                                <div class="col-md-4">
+                                    <label class="form-label">วันที่เอกสาร</label>
+                                    <input type="date" name="document_date" class="form-control"
+                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('document_date', '') : ''}" required>
+                                </div>
+                            </div>
+
+                            <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-user"></i> ข้อมูลผู้ขอรับการประเมิน</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-3">
+                                    <label class="form-label">คำนำหน้า</label>
+                                    <select name="applicant_prefix" class="form-select" required>
+                                        <option value="">-- เลือก --</option>
+                                        <option value="นาย" th:selected="${doc0Data != null && doc0Data.getOrDefault('applicant_prefix', '') == 'นาย'}">นาย</option>
+                                        <option value="นาง" th:selected="${doc0Data != null && doc0Data.getOrDefault('applicant_prefix', '') == 'นาง'}">นาง</option>
+                                        <option value="นางสาว" th:selected="${doc0Data != null && doc0Data.getOrDefault('applicant_prefix', '') == 'นางสาว'}">นางสาว</option>
+                                    </select>
+                                </div>
+                                <div class="col-md-5">
+                                    <label class="form-label">ชื่อ-นามสกุล</label>
+                                    <input type="text" name="applicant_name" class="form-control"
+                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
+                                        required placeholder="เช่น สมชาย ใจดี">
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ประเภทบุคลากร</label>
+                                    <div class="d-flex gap-4 mt-1">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="employment_type"
+                                                id="empType1" value="พนักงานมหาวิทยาลัย" required
+                                                th:checked="${doc0Data != null && doc0Data.getOrDefault('employment_type', '') == 'พนักงานมหาวิทยาลัย'}">
+                                            <label class="form-check-label" for="empType1">พนักงานมหาวิทยาลัย</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="employment_type"
+                                                id="empType2" value="ข้าราชการ"
+                                                th:checked="${doc0Data != null && doc0Data.getOrDefault('employment_type', '') == 'ข้าราชการ'}">
+                                            <label class="form-check-label" for="empType2">ข้าราชการ</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่งทางวิชาการปัจจุบัน</label>
+                                    <select name="current_academic_rank" class="form-select" required>
+                                        <option value="">-- เลือก --</option>
+                                        <option value="อาจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_academic_rank', '') == 'อาจารย์'}">อาจารย์</option>
+                                        <option value="ผู้ช่วยศาสตราจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_academic_rank', '') == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
+                                        <option value="รองศาสตราจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_academic_rank', '') == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-graduation-cap"></i> ขอรับการประเมินผลการสอนเพื่อขอกำหนดตำแหน่ง</h5>
+                            <div class="row mb-3">
+                                <div class="col-md-12">
+                                    <div class="d-flex gap-4">
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="chk1" id="chk1" value="✓"
+                                                th:checked="${doc0Data != null && doc0Data.getOrDefault('chk1', '') == '✓'}">
+                                            <label class="form-check-label" for="chk1">ผู้ช่วยศาสตราจารย์ (ผศ.)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="chk2" id="chk2" value="✓"
+                                                th:checked="${doc0Data != null && doc0Data.getOrDefault('chk2', '') == '✓'}">
+                                            <label class="form-check-label" for="chk2">รองศาสตราจารย์ (รศ.)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" name="chk3" id="chk3" value="✓"
+                                                th:checked="${doc0Data != null && doc0Data.getOrDefault('chk3', '') == '✓'}">
+                                            <label class="form-check-label" for="chk3">ศาสตราจารย์ (ศ.)</label>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="row mb-3">
+                                <div class="col-md-8">
+                                    <label class="form-label">ชื่อ-สกุล เต็ม (สำหรับพิมพ์ในเอกสาร)</label>
+                                    <input type="text" name="applicant_name_full_print" class="form-control"
+                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name_full_print', '') : ''}"
+                                        placeholder="เช่น ผู้ช่วยศาสตราจารย์ ดร.สมชาย ใจดี">
+                                    <small class="text-muted">ระบุคำนำหน้า ตำแหน่ง และชื่อเต็ม สำหรับพิมพ์ในลายเซ็น</small>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- ==================== Document 2: ขอรายชื่อแต่งตั้งกรรมการ ==================== -->
                         <div th:if="${documentType == 2}">
                             <!-- Hidden fields สำหรับเช็คติ๊ก (เริ่มต้นยังไม่ติ๊ก) -->
@@ -831,11 +933,20 @@
                             </div>
                         </div>
 
+                        <!-- Draft saved alert -->
+                        <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">
+                            <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+
                         <div class="d-flex gap-2 mt-4">
                             <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
                                 <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                             </button>
-                            <button type="submit" class="btn btn-academic"><i class="fas fa-save"></i>
+                            <button type="submit" name="action" value="draft" class="btn btn-outline-success">
+                                <i class="fas fa-save"></i> บันทึกแบบร่าง
+                            </button>
+                            <button type="submit" name="action" value="submit" class="btn btn-academic"><i class="fas fa-save"></i>
                                 สร้าง/บันทึกเอกสาร</button>
                             <a th:href="'/admin/academic/request/' + ${request.id}" class="btn btn-outline-secondary"><i
                                     class="fas fa-arrow-left"></i> กลับ</a>

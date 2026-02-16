@@ -1,5 +1,7 @@
 package com.ecom.academic.service;
 
+import java.util.List;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -8,6 +10,8 @@ import org.springframework.stereotype.Service;
 
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.RequestStatus;
+import com.ecom.model.UserDtls;
+import com.ecom.repository.UserRepository;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -16,6 +20,9 @@ public class AcademicEmailService {
 
     @Autowired
     private JavaMailSender mailSender;
+
+    @Autowired
+    private UserRepository userRepository;
 
     @Async
     public void sendStatusChangeEmail(AcademicRequest request, RequestStatus oldStatus, RequestStatus newStatus) {
@@ -35,6 +42,57 @@ public class AcademicEmailService {
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Email sending failed: " + e.getMessage());
+        }
+    }
+
+    /**
+     * ส่งอีเมลแจ้งเตือนแอดมินทุกคนที่เปิดการแจ้งเตือนไว้ เมื่อมีคำร้องใหม่
+     */
+    @Async
+    public void sendNewRequestNotificationToAdmins(AcademicRequest request) {
+        try {
+            List<UserDtls> admins = userRepository.findByRole("ROLE_ADMIN");
+            for (UserDtls admin : admins) {
+                // ตรวจสอบว่าแอดมินเปิดการแจ้งเตือนหรือไม่ (default = false/ปิด)
+                if (admin.getEmailNotificationEnabled() != null && admin.getEmailNotificationEnabled()) {
+                    sendAdminNotification(admin, request);
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("Admin notification failed: " + e.getMessage());
+        }
+    }
+
+    private void sendAdminNotification(UserDtls admin, AcademicRequest request) {
+        try {
+            String subject = "แจ้งเตือน: มีคำร้องใหม่จาก " + request.getApplicant().getName();
+            StringBuilder sb = new StringBuilder();
+            sb.append("<html><body style='font-family: Sarabun, sans-serif;'>");
+            sb.append("<h2 style='color:#1a237e;'>🔔 แจ้งเตือนคำร้องใหม่</h2>");
+            sb.append("<p>เรียน ").append(admin.getName()).append("</p>");
+            sb.append("<p>มีคำร้องใหม่เข้ามาในระบบ:</p>");
+            sb.append("<table style='border-collapse:collapse;'>");
+            sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>ผู้ยื่น:</td><td>")
+                    .append(request.getApplicant().getName()).append("</td></tr>");
+            sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>อีเมล:</td><td>")
+                    .append(request.getApplicant().getEmail()).append("</td></tr>");
+            sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>คำร้องหมายเลข:</td><td>#")
+                    .append(request.getId()).append("</td></tr>");
+            sb.append("</table>");
+            sb.append("<hr>");
+            sb.append("<p>กรุณาเข้าสู่ระบบเพื่อจัดการคำร้อง</p>");
+            sb.append("<p style='color:#888;font-size:0.85em;'>หากต้องการปิดการแจ้งเตือน ");
+            sb.append("สามารถตั้งค่าได้ที่โปรไฟล์ของท่าน</p>");
+            sb.append("</body></html>");
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(admin.getEmail());
+            helper.setSubject(subject);
+            helper.setText(sb.toString(), true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Failed to send admin notification to " + admin.getEmail() + ": " + e.getMessage());
         }
     }
 

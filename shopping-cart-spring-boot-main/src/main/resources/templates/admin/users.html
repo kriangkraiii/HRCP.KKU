@@ -10,11 +10,7 @@
 	<section>
 		<div class="container-fluid mt-5 p-5">
 			<!-- Back Button -->
-			<div class="col-12 mb-3">
-				<a href="/admin/" class="btn btn-outline-secondary"> <i class="fa-solid fa-arrow-left me-2"></i>Back to
-					Dashboard
-				</a>
-			</div>
+
 			<div class="card card-sh">
 				<div class="card-header text-center">
 					<p class="fs-4" th:if="${userType==1}">Users</p>
@@ -39,22 +35,35 @@
 								<th scope="col">Name</th>
 								<th scope="col">Email</th>
 								<th scope="col">Mobile No</th>
-								<th scope="col">ตำแหน่งทางวิชาการ</th>
-								<th scope="col">Status</th>
+								<th scope="col">ตำแหน่งทางวิชาการ</th>							<th scope="col" th:if="${userType==2}">แจ้งเตือนคำร้อง</th>								<th scope="col">Status</th>
+								<th scope="col">Actions</th>
 							</tr>
 						</thead>
 						<tbody>
 							<tr th:each="u,c:${users}">
 								<th scope="row">[[${c.count}]]</th>
-								<td><img th:src="${u.profileImage}" width="70px" height="70px"
+								<td><img th:src="@{'/img/profile_img/' + ${u.profileImage} + '?t=' + ${#dates.createNow().time}}" 
+										th:data-user-id="${u.id}"
+										width="70px" height="70px"
 										style="object-fit: cover; border-radius: 50%;"
 										onerror="this.src='/img/profile_img/default.png'"></td>
 
 								<td>[[${u.name}]]</td>
 								<td>[[${u.email}]]</td>
 								<td>[[${u.mobileNumber}]]</td>
-								<td>[[${u.academicPosition != null ? u.academicPosition : '-'}]]</td>
-								<td>
+								<td>[[${u.academicPosition != null ? u.academicPosition : '-'}]]</td>							<td th:if="${userType==2}">
+								<div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
+									<input class="form-check-input" type="checkbox" role="switch"
+										th:checked="${u.emailNotificationEnabled != null && u.emailNotificationEnabled}"
+										th:data-id="${u.id}"
+										th:data-type="${userType}"
+										style="width: 3em; height: 1.5em; cursor: pointer;"
+										onchange="toggleNotification(this)">
+									<label class="form-check-label fw-semibold"
+										th:classappend="${u.emailNotificationEnabled != null && u.emailNotificationEnabled} ? 'text-success' : 'text-secondary'"
+										th:text="${u.emailNotificationEnabled != null && u.emailNotificationEnabled} ? 'เปิด' : 'ปิด'"></label>
+								</div>
+							</td>								<td>
 									<div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
 										<input class="form-check-input status-toggle" type="checkbox" role="switch"
 											th:checked="${u.isEnable}"
@@ -65,6 +74,25 @@
 										<label class="form-check-label fw-semibold"
 											th:classappend="${u.isEnable} ? 'text-success' : 'text-danger'"
 											th:text="${u.isEnable} ? 'Active' : 'Inactive'"></label>
+									</div>
+								</td>
+								<td>
+									<div class="d-flex gap-2">
+										<a th:if="${userType==1}" 
+											th:href="@{/admin/edit-user(id=${u.id})}" 
+											class="btn btn-sm btn-primary">
+											<i class="fa-solid fa-pen-to-square"></i> Edit
+										</a>
+										<a th:if="${userType==2}" 
+											th:href="@{/admin/edit-admin(id=${u.id})}" 
+											class="btn btn-sm btn-primary">
+											<i class="fa-solid fa-pen-to-square"></i> Edit
+										</a>
+										<a href="javascript:void(0)" 
+											th:onclick="'confirmDelete(' + ${u.id} + ', ' + ${userType} + ')'" 
+											class="btn btn-sm btn-danger">
+											<i class="fa-solid fa-trash"></i> Delete
+										</a>
 									</div>
 								</td>
 
@@ -90,6 +118,27 @@
 				}
 
 				window.location.href = '/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type;
+			}
+
+			function toggleNotification(el) {
+				const id = el.dataset.id;
+				const type = el.dataset.type;
+				const newEnabled = el.checked;
+				window.location.href = '/admin/updateEmailNotification?enabled=' + newEnabled + '&id=' + id + '&type=' + type;
+			}
+
+			function confirmDelete(userId, userType) {
+				const accountType = userType === 1 ? 'user' : 'admin';
+				const message = userType === 1 
+					? 'Are you sure you want to delete this user account? This action cannot be undone.' 
+					: 'Are you sure you want to delete this admin account? This action cannot be undone.';
+				
+				if (confirm(message)) {
+					const deleteUrl = userType === 1 
+						? '/admin/delete-user?id=' + userId + '&type=' + userType
+						: '/admin/delete-admin?id=' + userId + '&type=' + userType;
+					window.location.href = deleteUrl;
+				}
 			}
 		</script>
 

@@ -35,7 +35,7 @@ public class AcademicRequest {
     private UserDtls applicant;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "current_status", nullable = false)
+    @Column(name = "current_status", nullable = false, columnDefinition = "varchar(50)")
     private RequestStatus currentStatus;
 
     @Column(name = "submission_date")

@@ -54,6 +54,13 @@
 			<artifactId>spring-boot-starter-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- jqwik for property-based testing -->
+		<dependency>
+			<groupId>net.jqwik</groupId>
+			<artifactId>jqwik</artifactId>
+			<version>1.8.2</version>
+			<scope>test</scope>
+		</dependency>
 		<!-- https://mvnrepository.com/artifact/javax.xml.bind/jaxb-api -->
 <dependency>
     <groupId>javax.xml.bind</groupId>
@@ -130,6 +137,18 @@
     <groupId>org.apache.poi</groupId>
     <artifactId>poi-ooxml-full</artifactId>
     <version>5.3.0</version>
+</dependency>
+
+<!-- XDocReport - DOCX to PDF Conversion -->
+<dependency>
+    <groupId>fr.opensagres.xdocreport</groupId>
+    <artifactId>fr.opensagres.poi.xwpf.converter.pdf</artifactId>
+    <version>2.0.4</version>
+</dependency>
+<dependency>
+    <groupId>fr.opensagres.xdocreport</groupId>
+    <artifactId>fr.opensagres.poi.xwpf.converter.core</artifactId>
+    <version>2.0.4</version>
 </dependency>
 
 <!-- Jackson - JSON Processing for DocumentData -->

@@ -1,0 +1,385 @@
+package com.ecom.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockMultipartFile;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.web.multipart.MultipartFile;
+
+import com.ecom.model.UserDtls;
+import com.ecom.repository.UserRepository;
+
+import net.jqwik.api.Arbitraries;
+import net.jqwik.api.Arbitrary;
+
+/**
+ * Property-Based Test for Profile Image Upload and Database Update
+ * 
+ * **Validates: Requirements 5.1, 5.2, 5.3, 5.5**
+ * 
+ * Property 7: Profile Image Upload and Database Update
+ * For any valid image file upload for an account, the system should save the file 
+ * to the uploads/profile_img/ directory, update the account's profileImage field 
+ * in the database with the filename, and return a response containing the new image 
+ * URL with a cache-busting timestamp.
+ */
+@SpringBootTest
+@TestPropertySource(properties = {
+    "spring.datasource.url=jdbc:h2:mem:testdb",
+    "spring.datasource.driver-class-name=org.h2.Driver",
+    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+    "spring.jpa.hibernate.ddl-auto=create-drop",
+    "spring.jpa.show-sql=false"
+})
+public class ProfileImageUploadPropertyTest {
+
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    private String uploadDir;
+
+    @BeforeEach
+    void setUp() {
+        // Clean up before each test
+        userRepository.deleteAll();
+        
+        // Set up upload directory
+        uploadDir = System.getProperty("user.dir") + "/uploads/profile_img/";
+        File uploadFolder = new File(uploadDir);
+        if (!uploadFolder.exists()) {
+            uploadFolder.mkdirs();
+        }
+    }
+
+    @AfterEach
+    void tearDown() {
+        // Clean up after each test
+        userRepository.deleteAll();
+        
+        // Clean up uploaded test files
+        cleanUpTestFiles();
+    }
+
+    /**
+     * Property Test: Profile Image Upload and Database Update
+     * 
+     * Tests that for any valid image file upload, the system:
+     * 1. Saves the file to the uploads/profile_img/ directory
+     * 2. Updates the account's profileImage field in the database
+     * 3. Returns a response with the new image URL and cache-busting timestamp
+     * 
+     * This test runs 100 iterations with randomly generated image files.
+     */
+    @Test
+    void profileImageUploadAndDatabaseUpdate() {
+        // Create arbitrary generator for image files
+        Arbitrary<ImageFileData> imageFilesArbitrary = validImageFiles();
+        
+        // Run property test for 100 iterations
+        for (int i = 0; i < 100; i++) {
+            ImageFileData imageData = imageFilesArbitrary.sample();
+            
+            // Given: An existing account in the database
+            UserDtls user = createTestAccount(i);
+            Integer userId = user.getId();
+            String originalProfileImage = user.getProfileImage();
+            
+            // Create a mock multipart file
+            MultipartFile imageFile = createMockImageFile(imageData);
+            
+            // When: Administrator uploads a new profile image
+            Map<String, String> result = userService.updateProfileImageOnly(userId, imageFile);
+            
+            // Then: The operation should succeed
+            assertThat(result.get("success")).isEqualTo("true");
+            assertThat(result.get("error")).isNull();
+            
+            // And: The response should contain the new image URL with cache-busting timestamp
+            String imageUrl = result.get("imageUrl");
+            assertThat(imageUrl).isNotNull();
+            assertThat(imageUrl).startsWith("/uploads/profile_img/");
+            assertThat(imageUrl).contains("?t=");
+            
+            // And: The response should contain the image filename
+            String imageName = result.get("imageName");
+            assertThat(imageName).isNotNull();
+            assertThat(imageName).isEqualTo(imageData.getFilename());
+            
+            // And: The file should be saved to the uploads/profile_img/ directory
+            File uploadedFile = new File(uploadDir + imageName);
+            assertThat(uploadedFile.exists()).isTrue();
+            assertThat(uploadedFile.isFile()).isTrue();
+            
+            // And: The account's profileImage field should be updated in the database
+            UserDtls updatedUser = userService.getUserById(userId);
+            assertThat(updatedUser).isNotNull();
+            assertThat(updatedUser.getProfileImage()).isEqualTo(imageName);
+            assertThat(updatedUser.getProfileImage()).isNotEqualTo(originalProfileImage);
+            
+            // And: All other account fields should remain unchanged
+            assertThat(updatedUser.getName()).isEqualTo(user.getName());
+            assertThat(updatedUser.getEmail()).isEqualTo(user.getEmail());
+            assertThat(updatedUser.getRole()).isEqualTo(user.getRole());
+            assertThat(updatedUser.getPassword()).isEqualTo(user.getPassword());
+            
+            // Clean up this iteration's file
+            uploadedFile.delete();
+        }
+    }
+
+    /**
+     * Property Test: Profile Image Upload for Admin Accounts
+     * 
+     * Tests that profile image upload works the same way for admin accounts
+     * as it does for user accounts.
+     * 
+     * This test runs 100 iterations with randomly generated image files for admin accounts.
+     */
+    @Test
+    void adminProfileImageUploadAndDatabaseUpdate() {
+        // Create arbitrary generator for image files
+        Arbitrary<ImageFileData> imageFilesArbitrary = validImageFiles();
+        
+        // Run property test for 100 iterations
+        for (int i = 0; i < 100; i++) {
+            ImageFileData imageData = imageFilesArbitrary.sample();
+            
+            // Given: An existing admin account in the database
+            UserDtls admin = createTestAdminAccount(i);
+            Integer adminId = admin.getId();
+            
+            // Create a mock multipart file
+            MultipartFile imageFile = createMockImageFile(imageData);
+            
+            // When: Administrator uploads a new profile image for an admin account
+            Map<String, String> result = userService.updateProfileImageOnly(adminId, imageFile);
+            
+            // Then: The operation should succeed
+            assertThat(result.get("success")).isEqualTo("true");
+            
+            // And: The admin account's profileImage field should be updated
+            UserDtls updatedAdmin = userService.getUserById(adminId);
+            assertThat(updatedAdmin).isNotNull();
+            assertThat(updatedAdmin.getProfileImage()).isEqualTo(imageData.getFilename());
+            assertThat(updatedAdmin.getRole()).isEqualTo("ROLE_ADMIN");
+            
+            // Clean up
+            File uploadedFile = new File(uploadDir + imageData.getFilename());
+            uploadedFile.delete();
+        }
+    }
+
+    /**
+     * Property Test: Multiple Profile Image Updates
+     * 
+     * Tests that uploading multiple profile images for the same account works correctly,
+     * with each upload replacing the previous image filename in the database.
+     * 
+     * This test runs 50 iterations with 3 uploads per account.
+     */
+    @Test
+    void multipleProfileImageUpdates() {
+        // Run property test for 50 iterations
+        for (int i = 0; i < 50; i++) {
+            // Given: An existing account in the database
+            UserDtls user = createTestAccount(i);
+            Integer userId = user.getId();
+            
+            // When: Administrator uploads multiple profile images sequentially
+            String previousImageName = user.getProfileImage();
+            
+            for (int uploadNum = 1; uploadNum <= 3; uploadNum++) {
+                ImageFileData imageData = new ImageFileData(
+                    "test_image_" + i + "_" + uploadNum + ".jpg",
+                    "image/jpeg",
+                    createTestImageContent()
+                );
+                
+                MultipartFile imageFile = createMockImageFile(imageData);
+                Map<String, String> result = userService.updateProfileImageOnly(userId, imageFile);
+                
+                // Then: Each upload should succeed
+                assertThat(result.get("success")).isEqualTo("true");
+                
+                // And: The database should be updated with the new image filename
+                UserDtls updatedUser = userService.getUserById(userId);
+                assertThat(updatedUser.getProfileImage()).isEqualTo(imageData.getFilename());
+                assertThat(updatedUser.getProfileImage()).isNotEqualTo(previousImageName);
+                
+                previousImageName = imageData.getFilename();
+                
+                // Clean up
+                File uploadedFile = new File(uploadDir + imageData.getFilename());
+                uploadedFile.delete();
+            }
+        }
+    }
+
+    /**
+     * Provides arbitrary valid image file data for property testing
+     */
+    private Arbitrary<ImageFileData> validImageFiles() {
+        Arbitrary<String> extensions = Arbitraries.of("jpg", "jpeg", "png", "gif");
+        
+        Arbitrary<String> filenames = Arbitraries.strings()
+            .alpha()
+            .numeric()
+            .ofMinLength(5)
+            .ofMaxLength(20);
+        
+        return extensions.flatMap(ext -> 
+            filenames.map(name -> {
+                String filename = name + "." + ext;
+                String contentType = getContentType(ext);
+                byte[] content = createTestImageContent();
+                return new ImageFileData(filename, contentType, content);
+            })
+        );
+    }
+
+    /**
+     * Helper method to get content type based on file extension
+     */
+    private String getContentType(String extension) {
+        switch (extension.toLowerCase()) {
+            case "jpg":
+            case "jpeg":
+                return "image/jpeg";
+            case "png":
+                return "image/png";
+            case "gif":
+                return "image/gif";
+            default:
+                return "image/jpeg";
+        }
+    }
+
+    /**
+     * Helper method to create test image content
+     */
+    private byte[] createTestImageContent() {
+        // Create a minimal valid image file content (1x1 pixel PNG)
+        // This is a valid PNG file that can be written to disk
+        return new byte[] {
+            (byte) 0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+            0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+            0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+            0x08, 0x06, 0x00, 0x00, 0x00, 0x1F, 0x15, (byte) 0xC4,
+            (byte) 0x89, 0x00, 0x00, 0x00, 0x0A, 0x49, 0x44, 0x41, 0x54,
+            0x78, (byte) 0x9C, 0x63, 0x00, 0x01, 0x00, 0x00, 0x05,
+            0x00, 0x01, 0x0D, 0x0A, 0x2D, (byte) 0xB4, 0x00, 0x00,
+            0x00, 0x00, 0x49, 0x45, 0x4E, 0x44, (byte) 0xAE, 0x42,
+            0x60, (byte) 0x82
+        };
+    }
+
+    /**
+     * Helper method to create a mock multipart file
+     */
+    private MultipartFile createMockImageFile(ImageFileData imageData) {
+        return new MockMultipartFile(
+            "img",
+            imageData.getFilename(),
+            imageData.getContentType(),
+            imageData.getContent()
+        );
+    }
+
+    /**
+     * Helper method to create a test user account in the database
+     */
+    private UserDtls createTestAccount(int iteration) {
+        UserDtls user = new UserDtls();
+        user.setTitle("นาย");
+        user.setName("Test User " + iteration);
+        user.setEmail("test" + iteration + System.currentTimeMillis() + "@test.com");
+        user.setMobileNumber("08" + String.format("%08d", iteration));
+        user.setAcademicPosition("อาจารย์");
+        user.setPassword("encodedPassword123");
+        user.setRole("ROLE_USER");
+        user.setIsEnable(true);
+        user.setAccountNonLocked(true);
+        user.setFailedAttempt(0);
+        user.setProfileImage("default.png");
+        
+        return userRepository.save(user);
+    }
+
+    /**
+     * Helper method to create a test admin account in the database
+     */
+    private UserDtls createTestAdminAccount(int iteration) {
+        UserDtls admin = new UserDtls();
+        admin.setTitle("ดร.");
+        admin.setName("Test Admin " + iteration);
+        admin.setEmail("admin" + iteration + System.currentTimeMillis() + "@test.com");
+        admin.setMobileNumber("09" + String.format("%08d", iteration));
+        admin.setAcademicPosition("ผู้ช่วยศาสตราจารย์");
+        admin.setPassword("encodedPassword123");
+        admin.setRole("ROLE_ADMIN");
+        admin.setIsEnable(true);
+        admin.setAccountNonLocked(true);
+        admin.setFailedAttempt(0);
+        admin.setProfileImage("default_admin.png");
+        
+        return userRepository.save(admin);
+    }
+
+    /**
+     * Helper method to clean up test files
+     */
+    private void cleanUpTestFiles() {
+        File uploadFolder = new File(uploadDir);
+        if (uploadFolder.exists() && uploadFolder.isDirectory()) {
+            File[] files = uploadFolder.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.getName().startsWith("test_image_")) {
+                        file.delete();
+                    }
+                }
+            }
+        }
+    }
+
+    /**
+     * Data class to hold image file information for property testing
+     */
+    public static class ImageFileData {
+        private final String filename;
+        private final String contentType;
+        private final byte[] content;
+
+        public ImageFileData(String filename, String contentType, byte[] content) {
+            this.filename = filename;
+            this.contentType = contentType;
+            this.content = content;
+        }
+
+        public String getFilename() {
+            return filename;
+        }
+
+        public String getContentType() {
+            return contentType;
+        }
+
+        public byte[] getContent() {
+            return content;
+        }
+    }
+}

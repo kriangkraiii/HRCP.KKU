@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+	<meta charset="UTF-8">
+	<title>แก้ไขข้อมูลแอดมิน</title>
+</head>
+
+<body>
+	<section>
+		<div class="container-fluid py-4">
+			<div class="row justify-content-center">
+				<div class="col-lg-8 col-md-10">
+					<div class="card shadow-sm border-0" style="border-radius: 16px;">
+						<div class="card-header bg-primary text-white"
+							style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #1a237e, #0d47a1) !important;">
+							<h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>แก้ไขข้อมูลแอดมิน</h5>
+						</div>
+						<div class="card-body p-4">
+
+							<div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show"
+								role="alert">
+								<i class="fas fa-check-circle me-2"></i>
+								<span th:text="${succMsg}"></span>
+								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+							</div>
+							<div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show"
+								role="alert">
+								<i class="fas fa-exclamation-circle me-2"></i>
+								<span th:text="${errorMsg}"></span>
+								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+			</div>
+
+							<form th:action="@{/admin/update-admin}" method="post" enctype="multipart/form-data" id="editAdminForm">
+								<input type="hidden" name="id" th:value="${admin.id}">
+
+								<h6 class="text-muted mb-3 mt-3"><i class="fas fa-id-card me-1"></i> ข้อมูลส่วนตัว</h6>
+								<hr class="mt-0">
+
+								<div class="row mb-3">
+									<div class="col-md-4">
+										<label class="form-label fw-bold">คำนำหน้าชื่อ <span
+												class="text-danger">*</span></label>
+										<select name="title" class="form-select" required>
+											<option value="">-- เลือก --</option>
+											<option value="นาย" th:selected="${admin.title == 'นาย'}">นาย</option>
+											<option value="นาง" th:selected="${admin.title == 'นาง'}">นาง</option>
+											<option value="นางสาว" th:selected="${admin.title == 'นางสาว'}">นางสาว</option>
+											<option value="ดร." th:selected="${admin.title == 'ดร.'}">ดร.</option>
+											<option value="ผศ.ดร." th:selected="${admin.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
+											<option value="รศ.ดร." th:selected="${admin.title == 'รศ.ดร.'}">รศ.ดร.</option>
+											<option value="ศ.ดร." th:selected="${admin.title == 'ศ.ดร.'}">ศ.ดร.</option>
+										</select>
+									</div>
+									<div class="col-md-8">
+										<label class="form-label fw-bold">ชื่อ-นามสกุล <span
+												class="text-danger">*</span></label>
+										<input type="text" name="name" class="form-control"
+											placeholder="กรอกชื่อ-นามสกุล" th:value="${admin.name}" required>
+									</div>
+								</div>
+
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">ตำแหน่งทางวิชาการ</label>
+										<select name="academicPosition" class="form-select">
+											<option value="" th:selected="${admin.academicPosition == null || admin.academicPosition == ''}">-- ไม่ระบุ --</option>
+											<option value="อาจารย์" th:selected="${admin.academicPosition == 'อาจารย์'}">อาจารย์</option>
+											<option value="ผู้ช่วยศาสตราจารย์" th:selected="${admin.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์ (ผศ.)</option>
+											<option value="รองศาสตราจารย์" th:selected="${admin.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์ (รศ.)</option>
+											<option value="ศาสตราจารย์" th:selected="${admin.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์ (ศ.)</option>
+										</select>
+									</div>
+									<div class="col-md-6">
+										<label class="form-label fw-bold">เบอร์โทรศัพท์</label>
+										<input type="tel" name="mobileNumber" class="form-control"
+											placeholder="0XX-XXX-XXXX" th:value="${admin.mobileNumber}">
+									</div>
+								</div>
+
+								<h6 class="text-muted mb-3 mt-4"><i class="fas fa-envelope me-1"></i> ข้อมูลบัญชี</h6>
+								<hr class="mt-0">
+
+								<div class="row mb-3">
+									<div class="col-md-12">
+										<label class="form-label fw-bold">อีเมล <span
+												class="text-danger">*</span></label>
+										<input type="email" name="email" class="form-control" id="emailInput"
+											placeholder="example@kku.ac.th" th:value="${admin.email}" required>
+										<div class="invalid-feedback">กรุณากรอกอีเมลที่ถูกต้อง</div>
+									</div>
+								</div>
+
+								<h6 class="text-muted mb-3 mt-4"><i class="fas fa-camera me-1"></i> รูปโปรไฟล์</h6>
+								<hr class="mt-0">
+
+								<div class="mb-3">
+									<div class="d-flex align-items-center gap-3 mb-2">
+										<img th:src="@{'/img/profile_img/' + ${admin.profileImage}}" alt="Current Profile" 
+											th:data-user-id="${admin.id}"
+											class="border" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;"
+											onerror="this.src='/img/profile_img/default.png'">
+										<div class="flex-grow-1">
+											<input type="file" name="img" class="form-control" accept="image/*" id="profileImageInput">
+											<small class="text-muted">ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเดิม (รองรับ JPG, PNG, GIF สูงสุด 5MB)</small>
+										</div>
+									</div>
+								</div>
+
+								<div class="text-center mt-4 d-flex gap-2 justify-content-center">
+									<button type="submit" class="btn btn-primary btn-lg px-5"
+										style="background: linear-gradient(135deg, #1a237e, #0d47a1); border: none; border-radius: 10px;">
+										<i class="fas fa-save me-2"></i>บันทึกการเปลี่ยนแปลง
+									</button>
+									<a th:href="@{/admin/users(type=2)}" class="btn btn-secondary btn-lg px-5"
+										style="border-radius: 10px;">
+										<i class="fas fa-times me-2"></i>ยกเลิก
+									</a>
+								</div>
+
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<script>
+			// Client-side email validation
+			document.getElementById('editAdminForm').addEventListener('submit', function(e) {
+				const emailInput = document.getElementById('emailInput');
+				const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+				
+				if (!emailPattern.test(emailInput.value)) {
+					e.preventDefault();
+					emailInput.classList.add('is-invalid');
+					return false;
+				}
+				emailInput.classList.remove('is-invalid');
+			});
+
+			// Remove invalid class on input
+			document.getElementById('emailInput').addEventListener('input', function() {
+				this.classList.remove('is-invalid');
+			});
+
+			// File size validation (5MB max)
+			document.getElementById('profileImageInput').addEventListener('change', function(e) {
+				const file = e.target.files[0];
+				if (file) {
+					const maxSize = 5 * 1024 * 1024; // 5MB
+					if (file.size > maxSize) {
+						alert('ไฟล์มีขนาดใหญ่เกินไป (สูงสุด 5MB)');
+						this.value = '';
+						return;
+					}
+
+					// File type validation
+					const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+					if (!allowedTypes.includes(file.type)) {
+						alert('รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, GIF)');
+						this.value = '';
+						return;
+					}
+
+					// Trigger real-time profile image update
+					const userId = document.querySelector('input[name="id"]').value;
+					updateProfileImage(userId, this);
+				}
+			});
+
+			// Real-time profile image update function
+			function updateProfileImage(userId, fileInput) {
+				const file = fileInput.files[0];
+				if (!file) return;
+
+				const formData = new FormData();
+				formData.append('id', userId);
+				formData.append('img', file);
+
+				fetch('/admin/update-profile-image', {
+					method: 'POST',
+					body: formData
+				})
+				.then(response => response.json())
+				.then(data => {
+					if (data.success === 'true') {
+						// Update all instances of this user's profile image on the page
+						const imgElements = document.querySelectorAll(`img[data-user-id="${userId}"]`);
+						imgElements.forEach(img => {
+							img.src = data.imageUrl;
+						});
+
+						// Update the preview image on this form
+						const previewImg = document.querySelector('img[alt="Current Profile"]');
+						if (previewImg) {
+							previewImg.src = data.imageUrl;
+						}
+
+						// Show success message
+						showSuccessMessage('อัพเดทรูปโปรไฟล์สำเร็จ');
+					} else {
+						showErrorMessage('เกิดข้อผิดพลาด: ' + data.error);
+					}
+				})
+				.catch(error => {
+					showErrorMessage('เกิดข้อผิดพลาดในการอัพโหลด');
+					console.error('Error:', error);
+				});
+			}
+
+			// Helper function to show success message
+			function showSuccessMessage(message) {
+				// Remove existing alerts
+				const existingAlerts = document.querySelectorAll('.alert');
+				existingAlerts.forEach(alert => alert.remove());
+
+				// Create and insert success alert
+				const alertHtml = `
+					<div class="alert alert-success alert-dismissible fade show" role="alert">
+						<i class="fas fa-check-circle me-2"></i>
+						<span>${message}</span>
+						<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+					</div>
+				`;
+				const cardBody = document.querySelector('.card-body');
+				cardBody.insertAdjacentHTML('afterbegin', alertHtml);
+			}
+
+			// Helper function to show error message
+			function showErrorMessage(message) {
+				// Remove existing alerts
+				const existingAlerts = document.querySelectorAll('.alert');
+				existingAlerts.forEach(alert => alert.remove());
+
+				// Create and insert error alert
+				const alertHtml = `
+					<div class="alert alert-danger alert-dismissible fade show" role="alert">
+						<i class="fas fa-exclamation-circle me-2"></i>
+						<span>${message}</span>
+						<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+					</div>
+				`;
+				const cardBody = document.querySelector('.card-body');
+				cardBody.insertAdjacentHTML('afterbegin', alertHtml);
+			}
+		</script>
+	</section>
+</body>
+
+</html>

@@ -43,6 +43,9 @@ public class AcademicDocument {
     @Column(name = "copy_number")
     private Integer copyNumber;
 
+    @Column(name = "is_draft", nullable = false)
+    private Boolean isDraft = false;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -115,6 +118,14 @@ public class AcademicDocument {
 
     public void setCopyNumber(Integer copyNumber) {
         this.copyNumber = copyNumber;
+    }
+
+    public Boolean getIsDraft() {
+        return isDraft;
+    }
+
+    public void setIsDraft(Boolean isDraft) {
+        this.isDraft = isDraft;
     }
 
     public LocalDateTime getCreatedAt() {

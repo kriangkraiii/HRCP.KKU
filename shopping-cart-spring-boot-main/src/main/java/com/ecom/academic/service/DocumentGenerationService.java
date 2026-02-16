@@ -146,6 +146,28 @@ public class DocumentGenerationService {
         return new File(filePath);
     }
 
+    /**
+     * แปลง DOCX bytes เป็น PDF bytes
+     * ใช้ XDocReport (fr.opensagres.poi.xwpf.converter.pdf) แปลง XWPFDocument → PDF
+     */
+    public byte[] convertDocxToPdf(byte[] docxBytes) throws IOException {
+        try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(docxBytes);
+             XWPFDocument document = new XWPFDocument(bais)) {
+
+            ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
+
+            fr.opensagres.poi.xwpf.converter.pdf.PdfOptions options =
+                    fr.opensagres.poi.xwpf.converter.pdf.PdfOptions.create();
+
+            fr.opensagres.poi.xwpf.converter.pdf.PdfConverter.getInstance()
+                    .convert(document, pdfOut, options);
+
+            return pdfOut.toByteArray();
+        } catch (Exception e) {
+            throw new IOException("ไม่สามารถแปลงเอกสารเป็น PDF ได้: " + e.getMessage(), e);
+        }
+    }
+
     private void replacePlaceholdersInParagraphs(List<XWPFParagraph> paragraphs, Map<String, String> placeholders) {
         for (XWPFParagraph paragraph : paragraphs) {
             String fullText = paragraph.getText();

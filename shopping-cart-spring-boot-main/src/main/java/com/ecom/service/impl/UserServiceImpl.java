@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,8 @@ import com.ecom.util.CommonUtil;
 @Service
 @Transactional
 public class UserServiceImpl implements UserService {
+
+	private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
 	@Autowired
 	private UserRepository userRepository;
@@ -104,6 +108,18 @@ public class UserServiceImpl implements UserService {
 		if (findByuser.isPresent()) {
 			UserDtls userDtls = findByuser.get();
 			userDtls.setIsEnable(status);
+			userRepository.save(userDtls);
+			return true;
+		}
+		return false;
+	}
+
+	@Override
+	public Boolean updateEmailNotification(Integer id, Boolean enabled) {
+		Optional<UserDtls> findByuser = userRepository.findById(id);
+		if (findByuser.isPresent()) {
+			UserDtls userDtls = findByuser.get();
+			userDtls.setEmailNotificationEnabled(enabled);
 			userRepository.save(userDtls);
 			return true;
 		}
@@ -270,5 +286,131 @@ public class UserServiceImpl implements UserService {
 			user.setOtpExpiry(null);
 			userRepository.save(user);
 		}
+	}
+
+	// ====== Admin User Management Methods ======
+
+	@Override
+	public UserDtls updateUserDetails(UserDtls user, MultipartFile img) {
+		try {
+			// Fetch existing user from database
+			UserDtls dbUser = userRepository.findById(user.getId())
+					.orElseThrow(() -> new RuntimeException("User not found"));
+
+			// Check email uniqueness if email is being changed
+			if (!dbUser.getEmail().equals(user.getEmail())) {
+				// Check if the new email already exists for a different account
+				UserDtls existingUser = userRepository.findByEmail(user.getEmail());
+				if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+					throw new RuntimeException("อีเมลนี้มีในระบบแล้ว");
+				}
+			}
+
+			// Update fields (preserve password, role, security fields)
+			dbUser.setTitle(user.getTitle());
+			dbUser.setName(user.getName());
+			dbUser.setEmail(user.getEmail());
+			dbUser.setMobileNumber(user.getMobileNumber());
+			dbUser.setAcademicPosition(user.getAcademicPosition());
+
+			// Handle profile image if provided
+			if (img != null && !img.isEmpty()) {
+				try {
+					String imageName = saveProfileImage(img);
+					dbUser.setProfileImage(imageName);
+				} catch (Exception e) {
+					logger.error("Failed to save profile image for user ID: " + user.getId(), e);
+					throw new RuntimeException("Failed to save profile image: " + e.getMessage());
+				}
+			}
+
+			// Save and return
+			UserDtls savedUser = userRepository.save(dbUser);
+			logger.info("Successfully updated user details for user ID: " + user.getId());
+			return savedUser;
+		} catch (RuntimeException e) {
+			logger.error("Error updating user details for user ID: " + user.getId(), e);
+			throw e; // Re-throw to trigger transaction rollback
+		} catch (Exception e) {
+			logger.error("Unexpected error updating user details for user ID: " + user.getId(), e);
+			throw new RuntimeException("เกิดข้อผิดพลาดในการอัพเดทข้อมูล", e);
+		}
+	}
+
+	@Override
+	public Boolean deleteUserById(Integer id) {
+		try {
+			Optional<UserDtls> user = userRepository.findById(id);
+			if (user.isPresent()) {
+				userRepository.deleteById(id);
+				logger.info("Successfully deleted user with ID: " + id);
+				return true;
+			}
+			logger.warn("User not found with ID: " + id);
+			return false;
+		} catch (Exception e) {
+			logger.error("Error deleting user with ID: " + id, e);
+			throw new RuntimeException("เกิดข้อผิดพลาดในการลบบัญชี", e);
+		}
+	}
+
+	@Override
+	public Boolean canDeleteUser(Integer id, String currentUserEmail) {
+		Optional<UserDtls> user = userRepository.findById(id);
+		if (user.isEmpty())
+			return false;
+
+		// Prevent self-deletion
+		if (user.get().getEmail().equals(currentUserEmail)) {
+			return false;
+		}
+
+		return true;
+	}
+
+	@Override
+	public java.util.Map<String, String> updateProfileImageOnly(Integer id, MultipartFile img) {
+		java.util.Map<String, String> result = new java.util.HashMap<>();
+
+		try {
+			UserDtls user = userRepository.findById(id)
+					.orElseThrow(() -> new RuntimeException("User not found"));
+
+			// Save image file
+			String imageName = saveProfileImage(img);
+			user.setProfileImage(imageName);
+			userRepository.save(user);
+
+			// Return new image URL with timestamp for cache busting
+			long timestamp = System.currentTimeMillis();
+			String imageUrl = "/img/profile_img/" + imageName + "?t=" + timestamp;
+
+			result.put("success", "true");
+			result.put("imageUrl", imageUrl);
+			result.put("imageName", imageName);
+			
+			logger.info("Successfully updated profile image for user ID: " + id);
+
+		} catch (Exception e) {
+			logger.error("Error updating profile image for user ID: " + id, e);
+			result.put("success", "false");
+			result.put("error", "ไม่สามารถบันทึกไฟล์ได้ กรุณาลองใหม่อีกครั้ง");
+		}
+
+		return result;
+	}
+
+	private String saveProfileImage(MultipartFile img) throws Exception {
+		String uploadDir = System.getProperty("user.dir") + "/uploads/profile_img/";
+		File uploadFolder = new File(uploadDir);
+		if (!uploadFolder.exists()) {
+			uploadFolder.mkdirs();
+		}
+
+		String imageName = img.getOriginalFilename();
+		Path filePath = Path.of(uploadDir, imageName);
+		Files.copy(img.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+
+		return imageName;
 	}
 }

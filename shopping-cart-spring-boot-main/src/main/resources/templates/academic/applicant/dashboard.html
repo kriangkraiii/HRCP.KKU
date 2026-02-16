@@ -21,13 +21,13 @@
             <!-- Alert for active request -->
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>ไม่สามารถยื่นคำร้องใหม่ได้</strong> คุณมีคำร้องที่กำลังดำเนินการอยู่ กรุณารอให้คำร้องเดิมขึ้นสถานะ "ไม่รับคำร้อง" ก่อนจึงยื่นคำร้องใหม่ได้
+                <strong>ไม่สามารถยื่นคำร้องใหม่ได้</strong> คุณมีคำร้องที่กำลังดำเนินการอยู่ กรุณารอให้คำร้องเดิมขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น" ก่อนจึงยื่นคำร้องใหม่ได้
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
             <div th:if="${hasActiveRequest}" class="alert alert-info mb-4">
                 <i class="fas fa-info-circle me-2"></i>
-                คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องใหม่ได้จนกว่าคำร้องเดิมจะขึ้นสถานะ "ไม่รับคำร้อง"
+                คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องใหม่ได้จนกว่าคำร้องเดิมจะขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น"
             </div>
 
             <div th:if="${requests == null || requests.isEmpty()}" class="text-center py-5">
@@ -39,7 +39,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
-                            <h5 class="mb-1">คำร้องหมายเลข #[[${req.id}]]</h5>
+                            <h5 class="mb-1">คำร้องของ [[${req.applicant.name}]]</h5>
                             <small class="text-muted">วันที่ยื่น: <span
                                     th:text="${#temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></small>
                         </div>
@@ -47,19 +47,72 @@
                             th:text="${req.currentStatus.thaiLabel}"></span>
                     </div>
 
-                    <!-- Progress Tracker -->
+                    <!-- Progress Tracker - แสดงเฉพาะสถานะที่เกิดขึ้นจริง -->
                     <div class="progress-tracker">
-                        <div class="progress-step" th:each="status : ${statuses}" th:classappend="${req.currentStatus.name() == status.name()} ? 'active' : 
-                                     (${req.currentStatus.ordinal() > status.ordinal()} ? 'completed' : '')">
+                        <!-- สถานะหลัก: รับคำร้อง → แต่งตั้งอนุกรรมการ → นัดหมายวันประชุม -->
+                        <div th:each="step : ${progressSteps}" class="progress-step"
+                            th:classappend="${req.currentStatus.ordinal() == step.ordinal()} ? 'active' : 
+                                     (${req.currentStatus.ordinal() > step.ordinal()} ? 'completed' : '')">
                             <div class="step-icon">
-                                <i th:if="${status.name() == 'COMPLETED_PASS'}" class="fas fa-check"></i>
-                                <i th:if="${status.name() == 'COMPLETED_REVISE'}" class="fas fa-exclamation"></i>
-                                <i th:if="${status.name() == 'REJECTED'}" class="fas fa-times"></i>
-                                <i th:if="${status.name() != 'COMPLETED_PASS' && status.name() != 'COMPLETED_REVISE' && status.name() != 'REJECTED'}"
-                                    class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                                <i th:class="'fas ' + ${step.icon}" th:if="${req.currentStatus.ordinal() > step.ordinal()}" style="font-size: 0.9rem;"></i>
+                                <i class="fas fa-circle" th:unless="${req.currentStatus.ordinal() > step.ordinal()}" style="font-size: 0.5rem;"></i>
                             </div>
-                            <div class="step-label" th:text="${status.thaiLabel}"></div>
+                            <div class="step-label" th:text="${step.thaiLabel}"></div>
                         </div>
+                        
+                        <!-- สถานะผลลัพธ์ (แสดงตามจริง) -->
+                        <th:block th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}">
+                            <div class="progress-step active">
+                                <div class="step-icon" style="border-color:#2e7d32;background:#2e7d32;color:#fff;">
+                                    <i class="fas fa-check" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#2e7d32;">แจ้งผล - ผ่าน</div>
+                            </div>
+                        </th:block>
+                        <th:block th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}">
+                            <div class="progress-step active">
+                                <div class="step-icon" style="border-color:#f57f17;background:#f57f17;color:#fff;">
+                                    <i class="fas fa-exclamation" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#f57f17;">แจ้งผล - แก้ไข</div>
+                            </div>
+                        </th:block>
+                        <th:block th:if="${req.currentStatus.name() == 'REJECTED'}">
+                            <div class="progress-step active">
+                                <div class="step-icon" style="border-color:#c62828;background:#c62828;color:#fff;">
+                                    <i class="fas fa-times" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#c62828;">ไม่รับคำร้อง</div>
+                            </div>
+                        </th:block>
+                        <th:block th:if="${req.currentStatus.ordinal() >= T(com.ecom.academic.model.RequestStatus).COMPLETED_PASS.ordinal() 
+                            && req.currentStatus.name() != 'REJECTED'}">
+                            <!-- ถ้ายังไม่เสร็จสิ้น แสดง step ว่างๆ -->
+                            <th:block th:unless="${req.currentStatus.name() == 'COMPLETED'}">
+                                <div class="progress-step">
+                                    <div class="step-icon">
+                                        <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                                    </div>
+                                    <div class="step-label">เสร็จสิ้น</div>
+                                </div>
+                            </th:block>
+                        </th:block>
+                        
+                        <!-- สถานะเสร็จสิ้น -->
+                        <th:block th:if="${req.currentStatus.name() == 'COMPLETED'}">
+                            <div class="progress-step active">
+                                <div class="step-icon" style="border-color:#2e7d32;background:#2e7d32;color:#fff;">
+                                    <i class="fas fa-check" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#2e7d32;">แจ้งผล</div>
+                            </div>
+                            <div class="progress-step completed-final active">
+                                <div class="step-icon" style="border-color:#1b5e20;background:#1b5e20;color:#fff;">
+                                    <i class="fas fa-flag-checkered" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#1b5e20;">เสร็จสิ้น</div>
+                            </div>
+                        </th:block>
                     </div>
 
                     <!-- Meeting Date Display -->
@@ -76,10 +129,6 @@
                     <!-- Result Actions -->
                     <div th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}" class="alert alert-success">
                         <i class="fas fa-check-circle me-2"></i> <strong>ผ่านการประเมิน</strong>
-                        <a th:if="${req.resultFilePath != null}" th:href="'/user/academic/download-result/' + ${req.id}"
-                            class="btn btn-sm btn-outline-success ms-2">
-                            <i class="fas fa-download"></i> ดาวน์โหลดผลการประเมิน
-                        </a>
                     </div>
 
                     <div th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}" class="alert alert-warning">
@@ -96,6 +145,10 @@
 
                     <div th:if="${req.currentStatus.name() == 'REJECTED'}" class="alert alert-danger">
                         <i class="fas fa-times-circle me-2"></i> <strong>ไม่รับคำร้อง</strong>
+                    </div>
+
+                    <div th:if="${req.currentStatus.name() == 'COMPLETED'}" class="alert alert-success">
+                        <i class="fas fa-flag-checkered me-2"></i> <strong>เสร็จสิ้น</strong> - คำร้องได้ดำเนินการเสร็จสิ้นแล้ว
                     </div>
 
                     <a th:href="'/user/academic/request/' + ${req.id}" class="btn btn-outline-primary btn-sm">

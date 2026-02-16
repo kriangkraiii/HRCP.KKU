@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<head>
+    <link rel="stylesheet" th:href="@{/css/petition-status.css}">
+</head>
+
+<body>
+    <section>
+        <div class="container py-4">
+            <!-- Success Message -->
+            <div th:if="${success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Petition Details Card -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> รายละเอียดคำร้อง</h4>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <h5 th:text="${petition.title}">ชื่อคำร้อง</h5>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <strong>ผู้ยื่นคำร้อง:</strong>
+                            <span th:text="${petition.user.name != null && !petition.user.name.isEmpty()} ? ${petition.user.name} : ${petition.user.email}">
+                                ชื่อผู้ยื่น
+                            </span>
+                        </div>
+                        <div class="col-md-6">
+                            <strong>วันที่ยื่น:</strong>
+                            <span th:text="${#temporals.format(petition.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                วันที่
+                            </span>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <strong>รายละเอียด:</strong>
+                            <p th:text="${petition.description}">รายละเอียดคำร้อง</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status Timeline Card -->
+            <div class="card card-academic">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> สถานะคำร้อง</h5>
+                </div>
+                <div class="card-body">
+                    <div class="status-timeline">
+                        <div class="status-item" th:each="status : ${statusHistory}">
+                            <span class="status-badge" th:classappend="'status-' + ${status.statusType.color}">
+                                <i th:class="'fas ' + ${status.statusType.iconClass}"></i>
+                                <span th:text="${status.statusType.displayName}">สถานะ</span>
+                            </span>
+                            <span class="status-date"
+                                  th:text="${#temporals.format(status.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                วันที่
+                            </span>
+                            <p th:if="${status.note != null && !status.note.isEmpty()}"
+                               th:text="${status.note}"
+                               class="status-note">
+                                หมายเหตุ
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Back Button -->
+            <div class="mt-3">
+                <a href="/petitions/my-petitions" class="btn btn-outline-secondary">
+                    <i class="fas fa-arrow-left"></i> กลับรายการคำร้อง
+                </a>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>

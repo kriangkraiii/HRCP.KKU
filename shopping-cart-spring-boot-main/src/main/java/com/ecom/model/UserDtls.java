@@ -43,6 +43,9 @@ public class UserDtls {
 	@Column(name = "created_date")
 	private Date createdDate;
 
+	@Column(name = "email_notification_enabled")
+	private Boolean emailNotificationEnabled;
+
 	public UserDtls() {
 	}
 
@@ -199,5 +202,13 @@ public class UserDtls {
 
 	public void setCreatedDate(Date createdDate) {
 		this.createdDate = createdDate;
+	}
+
+	public Boolean getEmailNotificationEnabled() {
+		return emailNotificationEnabled;
+	}
+
+	public void setEmailNotificationEnabled(Boolean emailNotificationEnabled) {
+		this.emailNotificationEnabled = emailNotificationEnabled;
 	}
 }

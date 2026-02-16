@@ -10,6 +10,27 @@
                     จัดการบุคลากร</a>
             </div>
 
+            <!-- Search Bar -->
+            <div class="card card-academic mb-3">
+                <div class="card-body py-2">
+                    <form action="/admin/academic/requests" method="get" class="d-flex gap-2">
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="fas fa-search"></i></span>
+                            <input type="text" name="search" class="form-control" placeholder="ค้นหาชื่อผู้ยื่นคำร้อง..."
+                                th:value="${search}">
+                        </div>
+                        <button type="submit" class="btn btn-academic">ค้นหา</button>
+                        <a href="/admin/academic/requests" class="btn btn-outline-secondary" th:if="${search != null && !search.isEmpty()}">
+                            <i class="fas fa-times"></i> ล้าง
+                        </a>
+                    </form>
+                </div>
+            </div>
+
+            <div th:if="${search != null && !search.isEmpty()}" class="alert alert-info mb-3">
+                <i class="fas fa-info-circle me-2"></i> ผลการค้นหา "<strong th:text="${search}"></strong>": พบ <strong th:text="${requests != null ? requests.size() : 0}"></strong> รายการ
+            </div>
+
             <div class="card card-academic">
                 <div class="card-body">
                     <div th:if="${requests == null || requests.isEmpty()}" class="text-center py-4 text-muted">

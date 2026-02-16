@@ -15,4 +15,6 @@ public interface AcademicDocumentRepository extends JpaRepository<AcademicDocume
             Integer copyNumber);
 
     List<AcademicDocument> findByRequestIdAndDocumentType(Long requestId, Integer documentType);
+
+    List<AcademicDocument> findByRequestIdOrderByDocumentTypeAscCopyNumberAsc(Long requestId);
 }

@@ -65,19 +65,30 @@ public class AcademicAdminController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    private static final Map<Integer, String> DOC_LABELS = Map.of(
-            1, "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน",
-            2, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ",
-            3, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน",
-            4, "บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ",
-            5, "ประชุมกรรมการประเมินผลการสอน",
-            6, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66",
-            7, "ส่วนที่ 3 แบบประเมินผลการสอน",
-            8, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
+    private static final Map<Integer, String> DOC_LABELS;
+    static {
+        DOC_LABELS = new java.util.LinkedHashMap<>();
+        DOC_LABELS.put(1, "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน");
+        DOC_LABELS.put(0, "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน");
+        DOC_LABELS.put(2, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ");
+        DOC_LABELS.put(3, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน");
+        DOC_LABELS.put(4, "บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ");
+        DOC_LABELS.put(5, "ประชุมกรรมการประเมินผลการสอน");
+        DOC_LABELS.put(6, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66");
+        DOC_LABELS.put(7, "ส่วนที่ 3 แบบประเมินผลการสอน");
+        DOC_LABELS.put(8, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
+    }
 
     @GetMapping("/requests")
-    public String listRequests(Model model) {
-        model.addAttribute("requests", requestService.findAll());
+    public String listRequests(@RequestParam(value = "search", required = false) String search, Model model) {
+        List<AcademicRequest> requests;
+        if (search != null && !search.trim().isEmpty()) {
+            requests = requestService.searchByApplicantName(search.trim());
+            model.addAttribute("searchQuery", search.trim());
+        } else {
+            requests = requestService.findAll();
+        }
+        model.addAttribute("requests", requests);
         model.addAttribute("statuses", RequestStatus.values());
         return "academic/admin/requests";
     }
@@ -87,10 +98,11 @@ public class AcademicAdminController {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
-        List<AcademicDocument> documents = requestService.getDocuments(id);
+        List<AcademicDocument> documents = requestService.getDocumentsSorted(id);
         model.addAttribute("request", request);
         model.addAttribute("documents", documents);
         model.addAttribute("statuses", RequestStatus.values());
+        model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
         model.addAttribute("statusHistory", requestService.getStatusHistory(id));
         model.addAttribute("docLabels", DOC_LABELS);
         model.addAttribute("attachments", requestService.getAttachments(id));
@@ -196,6 +208,21 @@ public class AcademicAdminController {
             }
         }
 
+        // สำหรับ doc_0 (admin): ดึงข้อมูลที่ผู้ยื่นกรอกมาแสดง
+        if (type == 0) {
+            List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
+            if (!doc0List.isEmpty()) {
+                try {
+                    String doc0Json = doc0List.get(0).getJsonData();
+                    Map<String, String> doc0Data = objectMapper.readValue(doc0Json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                    model.addAttribute("doc0Data", doc0Data);
+                } catch (Exception e) {
+                    // ignore parse errors
+                }
+            }
+        }
+
         return "academic/admin/document_form";
     }
 
@@ -206,6 +233,19 @@ public class AcademicAdminController {
 
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        // ดึง action (draft / submit) แล้วเอาออกจาก formData
+        String action = formData.getOrDefault("action", "submit");
+        formData.remove("action");
+        formData.remove("_csrf");
+
+        // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
+        if ("draft".equals(action)) {
+            String jsonData = objectMapper.writeValueAsString(formData);
+            requestService.saveDraft(request, type, jsonData,
+                    DOC_LABELS.getOrDefault(type, "Document " + type), null);
+            return "redirect:/admin/academic/request/" + id + "/document/" + type + "?saved=draft";
+        }
 
         // ============ Document 6: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
         if (type == 6) {
@@ -294,12 +334,16 @@ public class AcademicAdminController {
                 "สร้างเอกสารที่ " + type + " (" + DOC_LABELS.getOrDefault(type, "Document " + type) + ") สำหรับคำร้อง #" + id,
                 getClientIpAddress());
 
+        // Auto-update status based on document type
+        requestService.autoUpdateStatusByDocument(id, type, admin, jsonData);
+
         return "redirect:/admin/academic/request/" + id + "?success=doc_generated";
     }
 
     @GetMapping("/request/{id}/download/{docId}")
     public ResponseEntity<ByteArrayResource> downloadDocument(@PathVariable Long id,
-            @PathVariable Long docId) throws IOException {
+            @PathVariable Long docId,
+            @RequestParam(value = "format", defaultValue = "docx") String format) throws IOException {
         List<AcademicDocument> docs = requestService.getDocuments(id);
         AcademicDocument doc = docs.stream()
                 .filter(d -> d.getId().equals(docId))
@@ -307,6 +351,19 @@ public class AcademicAdminController {
                 .orElseThrow(() -> new RuntimeException("Document not found"));
 
         byte[] data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
+
+        if ("pdf".equalsIgnoreCase(format)) {
+            byte[] pdfData = documentService.convertDocxToPdf(data);
+            ByteArrayResource resource = new ByteArrayResource(pdfData);
+            String filename = Path.of(doc.getGeneratedFilePath()).getFileName().toString()
+                    .replace(".docx", ".pdf");
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .contentLength(pdfData.length)
+                    .body(resource);
+        }
+
         ByteArrayResource resource = new ByteArrayResource(data);
         String filename = Path.of(doc.getGeneratedFilePath()).getFileName().toString();
 

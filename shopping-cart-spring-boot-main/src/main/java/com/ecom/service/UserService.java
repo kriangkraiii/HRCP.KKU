@@ -52,4 +52,15 @@ public interface UserService {
 	public boolean verifyOtp(String email, String otpCode);
 
 	public void activateAccount(String email, String password);
+
+	// Admin User Management methods
+	public UserDtls updateUserDetails(UserDtls user, MultipartFile img);
+
+	public Boolean deleteUserById(Integer id);
+
+	public Boolean canDeleteUser(Integer id, String currentUserEmail);
+
+	public java.util.Map<String, String> updateProfileImageOnly(Integer id, MultipartFile img);
+
+	public Boolean updateEmailNotification(Integer id, Boolean enabled);
 }

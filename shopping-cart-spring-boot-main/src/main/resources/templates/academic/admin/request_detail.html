@@ -22,7 +22,7 @@
             <!-- Request Header -->
             <div class="card card-academic mb-4">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> คำร้องหมายเลข #[[${request.id}]]</h4>
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> คำร้องของ [[${request.applicant.name}]]</h4>
                     <span class="status-badge" th:classappend="'status-' + ${request.currentStatus.name()}"
                         th:text="${request.currentStatus.thaiLabel}"></span>
                 </div>
@@ -192,10 +192,16 @@
                                     <div class="d-flex justify-content-between align-items-center">
                                         <small class="text-success"><i class="fas fa-check"></i>
                                             [[${doc.documentLabel}]]</small>
-                                        <a th:href="'/admin/academic/request/' + ${request.id} + '/download/' + ${doc.id}"
-                                            class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-download"></i>
-                                        </a>
+                                        <div class="btn-group btn-group-sm">
+                                            <a th:href="'/admin/academic/request/' + ${request.id} + '/download/' + ${doc.id} + '?format=docx'"
+                                                class="btn btn-outline-primary" title="ดาวน์โหลด DOCX">
+                                                <i class="fas fa-file-word"></i> DOCX
+                                            </a>
+                                            <a th:href="'/admin/academic/request/' + ${request.id} + '/download/' + ${doc.id} + '?format=pdf'"
+                                                class="btn btn-outline-danger" title="ดาวน์โหลด PDF">
+                                                <i class="fas fa-file-pdf"></i> PDF
+                                            </a>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
