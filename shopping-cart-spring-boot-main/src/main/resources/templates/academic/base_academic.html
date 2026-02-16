@@ -19,6 +19,59 @@
             --accent-color: #42a5f5;
         }
 
+        /* ===== Google Translate Customization ===== */
+        .goog-te-banner-frame.skiptranslate {
+            display: none !important;
+        }
+
+        body {
+            top: 0px !important;
+        }
+
+        #google_translate_element {
+            display: none !important;
+        }
+
+        /* Mini Language Switch in Footer */
+        .lang-switch-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            /* Closer gap */
+            transform: scale(0.85);
+            /* Reduce overall size */
+            transform-origin: right center;
+            /* Anchor to right */
+            margin-right: auto;
+            /* Push to right */
+        }
+
+        .lang-label {
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 0.8rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+        .lang-label:hover {
+            color: rgba(255, 255, 255, 0.8);
+        }
+
+        .lang-label.active {
+            color: var(--accent-color);
+            font-weight: 700;
+        }
+
+        .form-check-input {
+            cursor: pointer;
+        }
+
+        .form-check-input:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+        }
+
         * {
             font-family: 'Sarabun', sans-serif;
         }
@@ -430,7 +483,8 @@
     <!-- ===== Left Sidebar ===== -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <img src="/img/logo_cphr.jpg" alt="Logo" style="width:50px;height:50px;border-radius:14px;margin-bottom:10px;">
+            <img src="/img/logo_cphr.jpg" alt="Logo"
+                style="width:50px;height:50px;border-radius:14px;margin-bottom:10px;">
             <h6>ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ</h6>
             <small>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</small>
         </div>
@@ -484,6 +538,77 @@
                 </a>
             </th:block>
         </nav>
+
+        <!-- Custom Language Switcher -->
+        <div id="google_translate_element"></div> <!-- Hidden but required for init -->
+
+        <div class="lang-switch-wrapper">
+            <span class="lang-label" id="label-th">TH</span>
+            <div class="form-check form-switch mb-0">
+                <input class="form-check-input" type="checkbox" id="langToggle" style="cursor: pointer;">
+            </div>
+            <span class="lang-label" id="label-en">EN</span>
+        </div>
+
+        <script type="text/javascript">
+            function googleTranslateElementInit() {
+                new google.translate.TranslateElement({
+                    pageLanguage: 'th',
+                    includedLanguages: 'en,th',
+                    layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+                    autoDisplay: false
+                }, 'google_translate_element');
+            }
+
+            // Custom Switch Logic
+            document.addEventListener("DOMContentLoaded", function () {
+                const toggle = document.getElementById('langToggle');
+                const labelTh = document.getElementById('label-th');
+                const labelEn = document.getElementById('label-en');
+
+                // 1. Check current cookie
+                // Cookie format: googtrans=/th/en (or /th/th)
+                const getCookie = (name) => {
+                    const value = `; ${document.cookie}`;
+                    const parts = value.split(`; ${name}=`);
+                    if (parts.length === 2) return parts.pop().split(';').shift();
+                };
+
+                const currentLang = getCookie('googtrans');
+                const isEnglish = currentLang === '/th/en';
+
+                // 2. Set initial state
+                toggle.checked = isEnglish;
+                updateLabels(isEnglish);
+
+                // 3. Handle Toggle
+                toggle.addEventListener('change', function () {
+                    const isChecked = this.checked;
+                    updateLabels(isChecked);
+
+                    // Set cookie and reload
+                    // /th/th = Thai, /th/en = English
+                    const langCode = isChecked ? '/th/en' : '/th/th';
+
+                    document.cookie = `googtrans=${langCode}; path=/; domain=${window.location.hostname}`;
+                    document.cookie = `googtrans=${langCode}; path=/;`; // Fallback for localhost
+
+                    window.location.reload();
+                });
+
+                function updateLabels(isEn) {
+                    if (isEn) {
+                        labelEn.classList.add('active');
+                        labelTh.classList.remove('active');
+                    } else {
+                        labelTh.classList.add('active');
+                        labelEn.classList.remove('active');
+                    }
+                }
+            });
+        </script>
+        <script type="text/javascript"
+            src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
         <!-- Sidebar Footer: User Info -->
         <div class="sidebar-footer" th:if="${user != null}">
