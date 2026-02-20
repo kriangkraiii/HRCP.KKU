@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <h5 class="border-bottom pb-2 mb-3">ข้อมูลคำสั่ง</h5>
+    <div class="row mb-3">
+        <div class="col-md-4"><label class="form-label">เลขที่คำสั่ง</label><input type="text"
+                name="no" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">ปีของเลขที่หนังสือ (พ.ศ.)</label><input type="text"
+                name="no_year" class="form-control thai-year"></div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้ยื่น</h5>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label class="form-label">ชื่อผู้ยื่น</label>
+            <div class="combo-input">
+                <input type="text" name="dropdownname_applicant" class="form-control" list="staffList3" placeholder="เลือกหรือพิมพ์ชื่อ..."
+                    th:value="${request.applicant.title != null ? request.applicant.title + ' ' + request.applicant.name : request.applicant.name}">
+                <datalist id="staffList3">
+                    <option th:each="s : ${staffMembers}" th:value="${s.displayName}"></option>
+                </datalist>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ประเภทตำแหน่ง</label>
+            <input type="text" name="staff_type" class="form-control" list="staffTypeList3" placeholder="เลือกหรือพิมพ์...">
+            <datalist id="staffTypeList3">
+                <option value="พนักงานมหาวิทยาลัย">
+                <option value="ข้าราชการ">
+            </datalist>
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label class="form-label">ตำแหน่งปัจจุบัน</label>
+            <input type="text" name="dropdown_position" class="form-control" list="posList3" placeholder="เลือกหรือพิมพ์...">
+            <datalist id="posList3">
+                <option value="อาจารย์">
+                <option value="ผู้ช่วยศาสตราจารย์">
+                <option value="รองศาสตราจารย์">
+            </datalist>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ตำแหน่งที่ขอ</label>
+            <input type="text" name="dropdown_positionnd" class="form-control" list="posReqList3" placeholder="เลือกหรือพิมพ์...">
+            <datalist id="posReqList3">
+                <option value="ผู้ช่วยศาสตราจารย์">
+                <option value="รองศาสตราจารย์">
+                <option value="ศาสตราจารย์">
+            </datalist>
+        </div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">คณะกรรมการ (3 ท่าน)</h5>
+    <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
+        <div class="col-md-5">
+            <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+            <div class="combo-input">
+                <input type="text" th:name="'dropdown_committee' + ${i}" class="form-control" th:list="'committeeList3_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
+                    th:value="${i == 1 ? defaultCommittee1 : (i == 2 ? defaultCommittee2 : defaultCommittee3)}">
+                <datalist th:id="'committeeList3_' + ${i}">
+                    <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
+                </datalist>
+            </div>
+        </div>
+        <div class="col-md-5">
+            <label class="form-label">ตำแหน่ง</label>
+            <input type="text" th:name="'dropdown_committee_position' + ${i}" class="form-control"
+                th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')}">
+        </div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">วันที่มีผลบังคับใช้</h5>
+    <div class="row mb-3">
+        <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
+                name="start_date" class="form-control thai-day"></div>
+        <div class="col-md-4"><label class="form-label">เดือน</label><input type="text"
+                name="start_month" class="form-control thai-month"></div>
+        <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
+                name="start_year" class="form-control thai-year"></div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ลงนาม</h5>
+    <div class="row mb-3">
+        <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
+                name="signed_day" class="form-control thai-day"></div>
+        <div class="col-md-4"><label class="form-label">เดือน</label><input type="text"
+                name="signed_month" class="form-control thai-month"></div>
+        <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
+                name="signed_year" class="form-control thai-year"></div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label class="form-label">ชื่อคณบดี (ลงนาม)</label>
+            <div class="combo-input">
+                <input type="text" name="dean_name" class="form-control" list="deanList3" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                <datalist id="deanList3">
+                    <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
+                </datalist>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ตำแหน่งคณบดี</label>
+            <input type="text" name="deandropdown_position" class="form-control"
+                value="คณบดีวิทยาลัยการคอมพิวเตอร์">
+        </div>
+    </div>
+</div>
+</body>
+</html>

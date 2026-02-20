@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <div th:if="${doc6Data != null}" class="alert alert-info mb-3">
+        <i class="fas fa-info-circle"></i> ข้อมูลด้านล่างถูกดึงจากผลการประเมิน (เอกสารที่ 6) โดยอัตโนมัติ สามารถแก้ไขได้
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ข้อมูลการประชุม</h5>
+    <div class="row mb-3">
+        <div class="col-md-3"><label class="form-label">ครั้งที่/ปี</label><input type="text"
+                name="meeting_no" class="form-control" placeholder="1/2568"></div>
+        <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
+                name="meet_day" class="form-control thai-day"></div>
+        <div class="col-md-3"><label class="form-label">เดือน</label><input type="text"
+                name="meet_month" class="form-control thai-month"></div>
+        <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
+                name="meet_year" class="form-control thai-year"></div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
+    <div class="row mb-3">
+        <div class="col-md-4"><label class="form-label">รหัสวิชา</label><input type="text"
+                name="subject_code" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">ชื่อวิชา</label><input type="text"
+                name="subject_name" class="form-control"></div>
+        <div class="col-md-4">
+            <label class="form-label">ชื่อผู้ยื่น</label>
+            <div class="combo-input">
+                <input type="text" name="applicant_name" class="form-control" list="staffList7" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                <datalist id="staffList7">
+                    <option th:each="s : ${staffMembers}" th:value="${s.displayName}"></option>
+                </datalist>
+            </div>
+        </div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ผลการประเมิน</h5>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label class="form-label">คะแนนรวม (จาก doc6)</label>
+            <input type="text" class="form-control" readonly
+                th:value="${doc6Data != null ? doc6Data.getOrDefault('scorex', '-') : '-'}">
+        </div>
+    </div>
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <div class="form-check">
+                <input type="radio" name="eval_level" value="skilled" class="form-check-input"
+                    th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญ'}">
+                <label class="form-check-label">ชำนาญ</label>
+            </div>
+            <div class="form-check">
+                <input type="radio" name="eval_level" value="specialist" class="form-check-input"
+                    th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ'}">
+                <label class="form-check-label">ชำนาญพิเศษ</label>
+            </div>
+            <div class="form-check">
+                <input type="radio" name="eval_level" value="expert" class="form-check-input"
+                    th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ'}">
+                <label class="form-check-label">เชี่ยวชาญ</label>
+            </div>
+        </div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">วันที่ลงนาม</h5>
+    <div class="row mb-3">
+        <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
+                name="signed_day" class="form-control thai-day"></div>
+        <div class="col-md-4"><label class="form-label">เดือน</label><input type="text"
+                name="signed_month" class="form-control thai-month"></div>
+        <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
+                name="signed_year" class="form-control thai-year"></div>
+    </div>
+</div>
+</body>
+</html>

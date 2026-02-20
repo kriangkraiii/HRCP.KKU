@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="content">
+    <div th:if="${doc6Data != null}" class="alert alert-info mb-3">
+        <i class="fas fa-info-circle"></i> ผลการประเมินระดับถูกดึงจากเอกสารที่ 6 โดยอัตโนมัติ สามารถแก้ไขได้
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ข้อมูลเอกสาร</h5>
+    <div class="row mb-3">
+        <div class="col-md-4"><label class="form-label">เลขที่เอกสาร</label><input type="text"
+                name="document_number" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">วันที่เอกสาร</label>
+            <div class="input-group">
+                <input type="text" name="document_date" class="form-control thai-full-date">
+                <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">ชื่อผู้ยื่น</label>
+            <div class="combo-input">
+                <input type="text" name="applicant_name" class="form-control" list="staffList8" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                <datalist id="staffList8">
+                    <option th:each="s : ${staffMembers}" th:value="${s.displayName}"></option>
+                </datalist>
+            </div>
+        </div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">หนังสืออ้างอิง</h5>
+    <div class="row mb-3">
+        <div class="col-md-6"><label class="form-label">เลขที่หนังสืออ้างอิง</label><input
+                type="text" name="ref_doc_number" class="form-control"></div>
+        <div class="col-md-6"><label class="form-label">วันที่หนังสืออ้างอิง</label><input
+                type="text" name="ref_doc_date" class="form-control"></div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
+    <div class="row mb-3">
+        <div class="col-md-4"><label class="form-label">ชื่อวิชา</label><input type="text"
+                name="subject_name" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">รหัสวิชา</label><input type="text"
+                name="subject_code" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">ภาค/ปี</label><input type="text"
+                name="semester_year" class="form-control" placeholder="1/2566"></div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ข้อมูลการขอ</h5>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label class="form-label">ตำแหน่งที่ขอ</label>
+            <input type="text" name="requested_position" class="form-control" list="posReqList8" placeholder="เลือกหรือพิมพ์...">
+            <datalist id="posReqList8">
+                <option value="ผู้ช่วยศาสตราจารย์">
+                <option value="รองศาสตราจารย์">
+                <option value="ศาสตราจารย์">
+            </datalist>
+        </div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">กระบวนการประเมิน</h5>
+    <div class="row mb-3">
+        <div class="col-md-4"><label class="form-label">วันที่ประเมิน</label>
+            <div class="input-group">
+                <input type="text" name="evaluation_date" class="form-control thai-full-date">
+                <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+            </div>
+        </div>
+        <div class="col-md-4"><label class="form-label">ครั้งที่ประชุม</label><input type="text"
+                name="board_meeting_no" class="form-control"></div>
+        <div class="col-md-4"><label class="form-label">วันที่ประชุมบอร์ด</label>
+            <div class="input-group">
+                <input type="text" name="board_meeting_date" class="form-control thai-full-date">
+                <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+            </div>
+        </div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ผลการประเมิน</h5>
+    <div class="row mb-3">
+        <div class="col-md-4">
+            <label class="form-label">ระดับ</label>
+            <input type="text" name="result_level" class="form-control" list="levelList8" placeholder="เลือกหรือพิมพ์..."
+                th:value="${doc6Data != null ? doc6Data.getOrDefault('eval_result_level', '') : ''}">
+            <datalist id="levelList8">
+                <option value="ชำนาญ">
+                <option value="ชำนาญพิเศษ">
+                <option value="เชี่ยวชาญ">
+            </datalist>
+        </div>
+        <div class="col-md-4">
+            <label class="form-label">คุณภาพ</label>
+            <input type="text" name="quality_status" class="form-control" list="qualityList8" placeholder="เลือกหรือพิมพ์...">
+            <datalist id="qualityList8">
+                <option value="มี">
+                <option value="ไม่มี">
+            </datalist>
+        </div>
+        <div class="col-md-4"><label class="form-label">วันหมดอายุ</label><input type="text"
+                name="expiration_date" class="form-control"></div>
+    </div>
+    <h5 class="border-bottom pb-2 mb-3">ลงนาม</h5>
+    <div class="row mb-3">
+        <div class="col-md-6">
+            <label class="form-label">ชื่อคณบดี</label>
+            <div class="combo-input">
+                <input type="text" name="dean_name" class="form-control" list="deanList8" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                <datalist id="deanList8">
+                    <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
+                </datalist>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label">ตำแหน่ง</label>
+            <input type="text" name="dean_position" class="form-control"
+                value="คณบดีวิทยาลัยการคอมพิวเตอร์">
+        </div>
+    </div>
+</div>
+</body>
+</html>

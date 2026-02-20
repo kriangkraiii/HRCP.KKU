@@ -65,6 +65,8 @@ public class AcademicAdminController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+
+    // คำอธิบายประเภทเอกสาร (type) เพื่อแสดงใน UI
     private static final Map<Integer, String> DOC_LABELS;
     static {
         DOC_LABELS = new java.util.LinkedHashMap<>();
