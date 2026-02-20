@@ -146,9 +146,28 @@ public class DocumentGenerationService {
         return new File(filePath);
     }
 
+    private static volatile boolean fontsRegistered = false;
+
+    private static synchronized void registerFontsOnce() {
+        if (fontsRegistered) return;
+        // Register all system font directories (Windows, Linux, Mac)
+        // so Thai fonts (TH Sarabun New, Cordia New, etc.) are discoverable
+        com.lowagie.text.FontFactory.registerDirectories();
+        // Also register bundled fonts from classpath if available
+        try {
+            ClassPathResource fontsDir = new ClassPathResource("fonts/");
+            if (fontsDir.exists()) {
+                com.lowagie.text.FontFactory.registerDirectory(fontsDir.getFile().getAbsolutePath());
+            }
+        } catch (Exception ignored) {
+        }
+        fontsRegistered = true;
+    }
+
     /**
      * แปลง DOCX bytes เป็น PDF bytes
      * ใช้ XDocReport (fr.opensagres.poi.xwpf.converter.pdf) แปลง XWPFDocument → PDF
+     * รองรับภาษาไทยด้วย Identity-H encoding + system font registration
      */
     public byte[] convertDocxToPdf(byte[] docxBytes) throws IOException {
         try (java.io.ByteArrayInputStream bais = new java.io.ByteArrayInputStream(docxBytes);
@@ -156,8 +175,40 @@ public class DocumentGenerationService {
 
             ByteArrayOutputStream pdfOut = new ByteArrayOutputStream();
 
+            // Register system fonts once (for Thai font discovery)
+            registerFontsOnce();
+
             fr.opensagres.poi.xwpf.converter.pdf.PdfOptions options =
                     fr.opensagres.poi.xwpf.converter.pdf.PdfOptions.create();
+
+            // Identity-H encoding is required for Thai/CJK/Unicode characters
+            options.fontEncoding(com.lowagie.text.pdf.BaseFont.IDENTITY_H);
+
+            // Custom font provider: forces Identity-H encoding and font embedding
+            options.fontProvider(
+                    new fr.opensagres.xdocreport.itext.extension.font.IFontProvider() {
+                        @Override
+                        public com.lowagie.text.Font getFont(String familyName, String encoding,
+                                float size, int style, java.awt.Color color) {
+                            try {
+                                // Always use Identity-H + EMBEDDED for Thai support
+                                com.lowagie.text.Font font = com.lowagie.text.FontFactory.getFont(
+                                        familyName,
+                                        com.lowagie.text.pdf.BaseFont.IDENTITY_H,
+                                        com.lowagie.text.pdf.BaseFont.EMBEDDED,
+                                        size, style, color);
+                                if (font != null && font.getBaseFont() != null) {
+                                    return font;
+                                }
+                            } catch (Exception ignored) {
+                            }
+                            // Fallback to XDocReport's default registry with Identity-H
+                            return fr.opensagres.xdocreport.itext.extension.font.ITextFontRegistry
+                                    .getRegistry().getFont(familyName,
+                                            com.lowagie.text.pdf.BaseFont.IDENTITY_H,
+                                            size, style, color);
+                        }
+                    });
 
             fr.opensagres.poi.xwpf.converter.pdf.PdfConverter.getInstance()
                     .convert(document, pdfOut, options);

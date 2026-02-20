@@ -197,10 +197,12 @@
                                                 class="btn btn-outline-primary" title="ดาวน์โหลด DOCX">
                                                 <i class="fas fa-file-word"></i> DOCX
                                             </a>
-                                            <a th:href="'/admin/academic/request/' + ${request.id} + '/download/' + ${doc.id} + '?format=pdf'"
-                                                class="btn btn-outline-danger" title="ดาวน์โหลด PDF">
+                                            <button type="button"
+                                                class="btn btn-outline-danger btn-pdf-print"
+                                                th:attr="data-request-id=${request.id},data-doc-id=${doc.id},data-doc-label=${doc.documentLabel}"
+                                                title="พิมพ์/บันทึก PDF">
                                                 <i class="fas fa-file-pdf"></i> PDF
-                                            </a>
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -218,6 +220,118 @@
             document.getElementById('statusSelect').addEventListener('change', function () {
                 document.getElementById('meetingFields').style.display =
                     this.value === 'MEETING_SCHEDULED' ? 'block' : 'none';
+            });
+
+            // ======================================================
+            // PDF direct download: fetch DOCX → docx-preview (hidden)
+            //   → html2canvas (screenshot each page) → jsPDF → save
+            // ไม่มี popup — download โดยตรง รองรับภาษาไทย
+            // ======================================================
+
+            /** โหลด scripts จาก CDN ครั้งเดียว */
+            function loadPdfLibs() {
+                const libs = [
+                    { key: 'JSZip',       src: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js' },
+                    { key: 'docx',        src: 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.3/dist/docx-preview.min.js' },
+                    { key: 'html2canvas', src: 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js' },
+                    { key: 'jspdf',       src: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js' }
+                ];
+                return Promise.all(libs.map(({ key, src }) => {
+                    if (window[key]) return Promise.resolve();
+                    return new Promise((res, rej) => {
+                        const s = document.createElement('script');
+                        s.src = src; s.onload = res;
+                        s.onerror = () => rej(new Error('โหลด library ล้มเหลว'));
+                        document.head.appendChild(s);
+                    });
+                }));
+            }
+
+            document.querySelectorAll('.btn-pdf-print').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const requestId = this.dataset.requestId;
+                    const docId     = this.dataset.docId;
+                    const docLabel  = this.dataset.docLabel || 'เอกสาร';
+
+                    const icon = this.querySelector('i');
+                    const origClass = icon.className;
+                    icon.className = 'fas fa-spinner fa-spin';
+                    this.disabled = true;
+
+                    // container ซ่อนนอกหน้าจอสำหรับ render DOCX
+                    const container = document.createElement('div');
+                    container.style.cssText =
+                        'position:absolute;left:-9999px;top:0;width:794px;background:#fff;';
+                    document.body.appendChild(container);
+
+                    try {
+                        await loadPdfLibs();
+
+                        // ดึง DOCX bytes จาก server แบบเงียบ
+                        const resp = await fetch(
+                            `/admin/academic/request/${requestId}/download/${docId}?format=docx`,
+                            { credentials: 'same-origin' }
+                        );
+                        if (!resp.ok) throw new Error('ดาวน์โหลดล้มเหลว (' + resp.status + ')');
+                        const blob = await resp.blob();
+
+                        // Render DOCX เป็น HTML ใน container ซ่อน
+                        await window.docx.renderAsync(blob, container, null, {
+                            className: 'docx-content',
+                            inWrapper: true,
+                            ignoreFonts: false,
+                            breakPages: true,
+                            ignoreLastRenderedPageBreak: true,
+                            trimXmlDeclaration: true,
+                            useBase64URL: true
+                        });
+
+                        // รอ fonts (base64 embedded จาก docx-preview) โหลดครบ
+                        await document.fonts.ready;
+                        await new Promise(r => setTimeout(r, 400));
+
+                        // หา page sections ที่ docx-preview สร้าง
+                        const sections = [...container.querySelectorAll('section')];
+                        const targets  = sections.length > 0 ? sections : [container];
+
+                        const { jsPDF } = window.jspdf;
+                        const PAGE_W_MM = 210; // A4 width (mm)
+                        let pdf = null;
+
+                        for (let i = 0; i < targets.length; i++) {
+                            const canvas = await html2canvas(targets[i], {
+                                scale: 2,
+                                useCORS: true,
+                                backgroundColor: '#ffffff',
+                                logging: false
+                            });
+                            // คำนวณความสูงหน้านี้จาก aspect ratio จริงของ DOCX section
+                            const pageH = (canvas.height * PAGE_W_MM) / canvas.width;
+                            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+                            if (pdf === null) {
+                                // สร้าง PDF ด้วยขนาดหน้าแรก
+                                pdf = new jsPDF({ unit: 'mm', format: [PAGE_W_MM, pageH] });
+                            } else {
+                                // เพิ่มหน้าใหม่ด้วยขนาดของหน้านั้นๆ
+                                pdf.addPage([PAGE_W_MM, pageH], 'p');
+                            }
+                            pdf.addImage(imgData, 'JPEG', 0, 0, PAGE_W_MM, pageH);
+                        }
+
+                        // บันทึกไฟล์โดยตรง ไม่มี popup
+                        const filename = docLabel.replace(/[/\\:*?"<>|]/g, '_') + '.pdf';
+                        pdf.save(filename);
+
+                    } catch (err) {
+                        alert('เกิดข้อผิดพลาด: ' + err.message);
+                        console.error(err);
+                    } finally {
+                        if (container.parentNode) document.body.removeChild(container);
+                        icon.className = origClass;
+                        this.disabled = false;
+                    }
+                });
             });
         </script>
     </section>
