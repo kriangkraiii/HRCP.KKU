@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!-- ==================== Shared Buttons ==================== -->
+<div th:fragment="buttons" class="d-flex gap-2 mt-4">
+    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+        <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+    </button>
+    <button type="submit" name="action" value="draft" class="btn btn-outline-success">
+        <i class="fas fa-save"></i> บันทึกแบบร่าง
+    </button>
+    <button type="submit" name="action" value="submit" class="btn btn-academic">
+        <i class="fas fa-save"></i> สร้าง/บันทึกเอกสาร
+    </button>
+    <a th:href="'/admin/academic/request/' + ${request.id}" class="btn btn-outline-secondary">
+        <i class="fas fa-arrow-left"></i> กลับ
+    </a>
+</div>
+
+<!-- ==================== Shared Scripts ==================== -->
+<th:block th:fragment="scripts">
+    <script>
+        // ==================== ติ๊กได้แค่อันเดียว (chk1, chk2, chk3) ====================
+        document.querySelectorAll('.chk-position').forEach(cb => {
+            cb.addEventListener('change', function () {
+                if (this.checked) {
+                    document.querySelectorAll('.chk-position').forEach(other => {
+                        if (other !== this) other.checked = false;
+                    });
+                }
+            });
+        });
+
+        // ==================== Thai Date Defaults ====================
+        (function () {
+            const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+            const now = new Date();
+            const thaiDay = now.getDate().toString();
+            const thaiMonth = thaiMonths[now.getMonth()];
+            const thaiYear = (now.getFullYear() + 543).toString();
+            const thaiFullDate = thaiDay + ' ' + thaiMonth + ' ' + thaiYear;
+
+            document.querySelectorAll('.thai-day').forEach(el => {
+                if (!el.value) el.value = thaiDay;
+            });
+            document.querySelectorAll('.thai-month').forEach(el => {
+                if (!el.value) el.value = thaiMonth;
+            });
+            document.querySelectorAll('.thai-year').forEach(el => {
+                if (!el.value) el.value = thaiYear;
+                el.setAttribute('inputmode', 'numeric');
+                el.setAttribute('pattern', '[0-9]*');
+                el.addEventListener('input', function () {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            });
+            document.querySelectorAll('.thai-full-date').forEach(el => {
+                if (!el.value) el.value = thaiFullDate;
+            });
+
+            document.querySelectorAll('.thai-day').forEach(el => {
+                el.setAttribute('inputmode', 'numeric');
+                el.setAttribute('pattern', '[0-9]*');
+                el.addEventListener('input', function () {
+                    this.value = this.value.replace(/[^0-9]/g, '');
+                });
+            });
+
+            // ==================== Thai Date Picker ====================
+            function toThaiDate(dateStr) {
+                const d = new Date(dateStr);
+                if (isNaN(d)) return '';
+                const day = d.getDate();
+                const month = thaiMonths[d.getMonth()];
+                const year = d.getFullYear() + 543;
+                return day + ' ' + month + ' ' + year;
+            }
+
+            document.querySelectorAll('.thai-date-btn').forEach(btn => {
+                const group = btn.closest('.input-group');
+                const picker = group.querySelector('.thai-date-picker');
+                btn.addEventListener('click', () => picker.showPicker());
+            });
+
+            document.querySelectorAll('.thai-date-picker').forEach(picker => {
+                picker.addEventListener('change', function () {
+                    const group = this.closest('.input-group');
+                    const textInput = group.querySelector('.thai-full-date');
+                    if (this.value) {
+                        textInput.value = toThaiDate(this.value);
+                    }
+                });
+            });
+        })();
+
+        // ==================== Auto-calculate weighted scores for Document 6 ====================
+        const sectionWeights = { 1: 20, 2: 30, 3: 30, 4: 20 };
+        const rangeLabels = ['', 'ช่วง ๑ (0-1)', 'ช่วง ๒ (1.01-2)', 'ช่วง ๓ (2.01-3)', 'ช่วง ๔ (3.01-4)', 'ช่วง ๕ (4.01-5)'];
+
+        function getScoreRange(score) {
+            if (score <= 0) return 0;
+            if (score <= 1) return 1;
+            if (score <= 2) return 2;
+            if (score <= 3) return 3;
+            if (score <= 4) return 4;
+            return 5;
+        }
+
+        function calculateDoc6Scores() {
+            let grandTotal = 0;
+            let hasSomeScore = false;
+
+            for (let sec = 1; sec <= 4; sec++) {
+                const input = document.querySelector('.sec-score-single[data-section="' + sec + '"]');
+                if (!input) continue;
+
+                const score = parseFloat(input.value) || 0;
+                if (score > 0) hasSomeScore = true;
+
+                const rangeEl = document.getElementById('rangeDisplay' + sec);
+                const rangeIdx = getScoreRange(score);
+                if (rangeEl) rangeEl.value = rangeIdx > 0 ? rangeLabels[rangeIdx] : '-';
+
+                const weight = sectionWeights[sec];
+                const weighted = (score / 5) * weight;
+                const totalEl = document.getElementById('totalScore' + sec);
+                if (totalEl) totalEl.value = weighted.toFixed(2);
+
+                grandTotal += weighted;
+            }
+
+            const grandEl = document.getElementById('grandTotal');
+            if (grandEl) grandEl.value = grandTotal.toFixed(2);
+
+            updateEvalCheckboxes(grandTotal, hasSomeScore);
+        }
+
+        function updateEvalCheckboxes(total, hasSomeScore) {
+            const chk1 = document.getElementById('chk1');
+            const chk2 = document.getElementById('chk2');
+            const chk3 = document.getElementById('chk3');
+            const chk4 = document.getElementById('chk4');
+            const ch1Val = document.getElementById('ch1_val');
+            const ch2Val = document.getElementById('ch2_val');
+            const ch3Val = document.getElementById('ch3_val');
+            const ch4Val = document.getElementById('ch4_val');
+
+            if (!chk1) return;
+
+            [chk1, chk2, chk3, chk4].forEach(c => c.checked = false);
+            [ch1Val, ch2Val, ch3Val, ch4Val].forEach(v => v.value = '');
+
+            if (!hasSomeScore) return;
+
+            const roundedTotal = Math.round(total * 100) / 100;
+
+            if (roundedTotal < 56) {
+                chk1.checked = true;
+                ch1Val.value = '☑';
+            } else if (roundedTotal >= 57 && roundedTotal <= 70) {
+                chk2.checked = true;
+                ch2Val.value = '☑';
+            } else if (roundedTotal >= 71 && roundedTotal <= 85) {
+                chk3.checked = true;
+                ch3Val.value = '☑';
+            } else if (roundedTotal >= 86) {
+                chk4.checked = true;
+                ch4Val.value = '☑';
+            }
+        }
+
+        document.querySelectorAll('.sec-score-single').forEach(input => {
+            input.addEventListener('input', calculateDoc6Scores);
+        });
+
+        // ==================== Checkbox toggle สำหรับ ✔️ ====================
+        document.querySelectorAll('.chk-toggle').forEach(cb => {
+            cb.addEventListener('change', function () {
+                const targetId = this.getAttribute('data-target');
+                const hiddenInput = document.getElementById(targetId);
+                if (hiddenInput) {
+                    hiddenInput.value = this.checked ? '✓' : '';
+                }
+            });
+        });
+
+        // โหลดข้อมูลเดิม (ถ้ามี) สำหรับ checkbox และ doc6 scores
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('.chk-toggle').forEach(cb => {
+                const targetId = cb.getAttribute('data-target');
+                const hiddenInput = document.getElementById(targetId);
+                if (hiddenInput && hiddenInput.value === '✓') {
+                    cb.checked = true;
+                }
+            });
+
+            var existingJson = document.getElementById('existingDataHolder') ? document.getElementById('existingDataHolder').value : null;
+            var currentDocType = parseInt(document.getElementById('currentDocType').value) || 0;
+            if (existingJson) {
+                try {
+                    var data = JSON.parse(existingJson);
+                    var form = document.getElementById('docForm');
+                    if (form && data) {
+                        Object.keys(data).forEach(function(key) {
+                            var el = form.querySelector('[name="' + key + '"]');
+                            if (el && !el.value) {
+                                el.value = data[key];
+                            }
+                        });
+                        if (currentDocType === 6) {
+                            calculateDoc6Scores();
+                        }
+                    }
+                } catch (e) {
+                    console.warn('Failed to load existing data:', e);
+                }
+            }
+
+            initDocPreview('docForm', currentDocType);
+        });
+    </script>
+</th:block>
+
+</body>
+</html>

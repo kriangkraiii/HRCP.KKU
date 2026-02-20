@@ -225,7 +225,7 @@ public class AcademicAdminController {
             }
         }
 
-        return "academic/admin/document_form";
+        return "academic/admin/doc_fragments/" + type;
     }
 
     @PostMapping("/request/{id}/document/{type}")

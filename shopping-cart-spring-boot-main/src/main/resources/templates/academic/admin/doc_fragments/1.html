@@ -1,113 +1,142 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
 <body>
-<div th:fragment="content">
-    <!-- Hidden fields สำหรับเก็บค่า ✔️ ของผู้ยื่น (อ่านจาก doc_1 เดิม) -->
-    <input type="hidden" name="chk_app_1" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_1', '') : ''}">
-    <input type="hidden" name="chk_app_2" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_2', '') : ''}">
-    <input type="hidden" name="chk_app_3" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_3', '') : ''}">
-    <input type="hidden" name="chk_app_4" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_4', '') : ''}">
-    <input type="hidden" name="chk_app_5" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_5', '') : ''}">
-    <input type="hidden" name="name_applicant" th:value="${doc1Data != null ? doc1Data.getOrDefault('name_applicant', '') : ''}">
+    <section>
+        <div class="container py-4">
+            <div class="card card-academic">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> เอกสารที่ [[${documentType}]]: [[${documentLabel}]]</h4>
+                    <small class="text-muted">คำร้องหมายเลข #[[${request.id}]] — ผู้ยื่น: [[${request.applicant.name}]]</small>
+                </div>
+                <div class="card-body">
+                    <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
+                        method="post" id="docForm">
 
-    <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ เจ้าหน้าที่ (เริ่มต้นยังไม่ติ๊ก) -->
-    <input type="hidden" name="chk_off_1" id="chk_off_1" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_1', '') : ''}">
-    <input type="hidden" name="chk_off_2" id="chk_off_2" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_2', '') : ''}">
-    <input type="hidden" name="chk_off_3" id="chk_off_3" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_3', '') : ''}">
-    <input type="hidden" name="chk_off_4" id="chk_off_4" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_4', '') : ''}">
-    <input type="hidden" name="chk_off_5" id="chk_off_5" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_5', '') : ''}">
+                        <!-- Hidden fields สำหรับเก็บค่า ✔️ ของผู้ยื่น (อ่านจาก doc_1 เดิม) -->
+                        <input type="hidden" name="chk_app_1" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_1', '') : ''}">
+                        <input type="hidden" name="chk_app_2" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_2', '') : ''}">
+                        <input type="hidden" name="chk_app_3" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_3', '') : ''}">
+                        <input type="hidden" name="chk_app_4" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_4', '') : ''}">
+                        <input type="hidden" name="chk_app_5" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_5', '') : ''}">
+                        <input type="hidden" name="name_applicant" th:value="${doc1Data != null ? doc1Data.getOrDefault('name_applicant', '') : ''}">
 
-    <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> ผู้ยื่นคำร้อง</h5>
-    <div class="row mb-3">
-        <div class="col-md-6">
-            <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น</label>
-            <input type="text" class="form-control" readonly
-                th:value="${doc1Data != null ? doc1Data.getOrDefault('name_applicant', '-') : '-'}">
+                        <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ เจ้าหน้าที่ (เริ่มต้นยังไม่ติ๊ก) -->
+                        <input type="hidden" name="chk_off_1" id="chk_off_1" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_1', '') : ''}">
+                        <input type="hidden" name="chk_off_2" id="chk_off_2" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_2', '') : ''}">
+                        <input type="hidden" name="chk_off_3" id="chk_off_3" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_3', '') : ''}">
+                        <input type="hidden" name="chk_off_4" id="chk_off_4" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_4', '') : ''}">
+                        <input type="hidden" name="chk_off_5" id="chk_off_5" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_5', '') : ''}">
+
+                        <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> ผู้ยื่นคำร้อง</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น</label>
+                                <input type="text" class="form-control" readonly
+                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('name_applicant', '-') : '-'}">
+                            </div>
+                        </div>
+
+                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-clipboard-check"></i> ตรวจสอบเอกสาร</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th style="width:5%">ลำดับ</th>
+                                        <th>เอกสาร</th>
+                                        <th style="width:8%">จำนวน</th>
+                                        <th style="width:10%">เจ้าตัว</th>
+                                        <th style="width:10%">เจ้าหน้าที่</th>
+                                        <th style="width:18%">หมายเหตุ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-center">1</td>
+                                        <td>บันทึกนำส่งเอกสารประกอบประเมินผลการสอน</td>
+                                        <td class="text-center">1</td>
+                                        <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_1', '') == '✓' ? '✓' : ''}"></td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_1_cb" data-target="chk_off_1">
+                                            </div>
+                                        </td>
+                                        <td><input type="text" name="text_1" class="form-control form-control-sm" placeholder="-"
+                                            th:value="${doc1Data != null ? doc1Data.getOrDefault('text_1', '') : ''}"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">2</td>
+                                        <td>แผนการสอน พร้อมเกณฑ์และวิธีวัดประเมินผลผู้เรียน</td>
+                                        <td class="text-center">3</td>
+                                        <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_2', '') == '✓' ? '✓' : ''}"></td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_2_cb" data-target="chk_off_2">
+                                            </div>
+                                        </td>
+                                        <td><input type="text" name="text_2" class="form-control form-control-sm" placeholder="-"
+                                            th:value="${doc1Data != null ? doc1Data.getOrDefault('text_2', '') : ''}"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">3</td>
+                                        <td>สาระสำคัญของเนื้อหาวิชาประกอบการบรรยายหรือการจัดกิจกรรมการเรียนรู้ (เอกสารประกอบการสอน)</td>
+                                        <td class="text-center">3</td>
+                                        <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_3', '') == '✓' ? '✓' : ''}"></td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_3_cb" data-target="chk_off_3">
+                                            </div>
+                                        </td>
+                                        <td><input type="text" name="text_3" class="form-control form-control-sm" placeholder="-"
+                                            th:value="${doc1Data != null ? doc1Data.getOrDefault('text_3', '') : ''}"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">4</td>
+                                        <td>สื่อการสอน เช่น ชีทเอกสาร PowerPoint แผ่นใส สื่อปฏิสัมพันธ์แบบดิจิทัล และอื่นๆ เป็นต้น</td>
+                                        <td class="text-center">3</td>
+                                        <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_4', '') == '✓' ? '✓' : ''}"></td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_4_cb" data-target="chk_off_4">
+                                            </div>
+                                        </td>
+                                        <td><input type="text" name="text_4" class="form-control form-control-sm" placeholder="-"
+                                            th:value="${doc1Data != null ? doc1Data.getOrDefault('text_4', '') : ''}"></td>
+                                    </tr>
+                                    <tr>
+                                        <td class="text-center">5</td>
+                                        <td>ผลการประเมินการสอนโดยนักศึกษา</td>
+                                        <td class="text-center">3</td>
+                                        <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_5', '') == '✓' ? '✓' : ''}"></td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_5_cb" data-target="chk_off_5">
+                                            </div>
+                                        </td>
+                                        <td><input type="text" name="text_5" class="form-control form-control-sm" placeholder="-"
+                                            th:value="${doc1Data != null ? doc1Data.getOrDefault('text_5', '') : ''}"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">
+                            <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+
+                        <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
+                    </form>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-clipboard-check"></i> ตรวจสอบเอกสาร</h5>
-    <div class="table-responsive">
-        <table class="table table-bordered align-middle">
-            <thead class="table-light text-center">
-                <tr>
-                    <th style="width:5%">ลำดับ</th>
-                    <th>เอกสาร</th>
-                    <th style="width:8%">จำนวน</th>
-                    <th style="width:10%">เจ้าตัว</th>
-                    <th style="width:10%">เจ้าหน้าที่</th>
-                    <th style="width:18%">หมายเหตุ</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td class="text-center">1</td>
-                    <td>บันทึกนำส่งเอกสารประกอบประเมินผลการสอน</td>
-                    <td class="text-center">1</td>
-                    <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_1', '') == '✓' ? '✓' : ''}"></td>
-                    <td class="text-center">
-                        <div class="form-check d-flex justify-content-center">
-                            <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_1_cb" data-target="chk_off_1">
-                        </div>
-                    </td>
-                    <td><input type="text" name="text_1" class="form-control form-control-sm" placeholder="-"
-                        th:value="${doc1Data != null ? doc1Data.getOrDefault('text_1', '') : ''}"></td>
-                </tr>
-                <tr>
-                    <td class="text-center">2</td>
-                    <td>แผนการสอน พร้อมเกณฑ์และวิธีวัดประเมินผลผู้เรียน</td>
-                    <td class="text-center">3</td>
-                    <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_2', '') == '✓' ? '✓' : ''}"></td>
-                    <td class="text-center">
-                        <div class="form-check d-flex justify-content-center">
-                            <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_2_cb" data-target="chk_off_2">
-                        </div>
-                    </td>
-                    <td><input type="text" name="text_2" class="form-control form-control-sm" placeholder="-"
-                        th:value="${doc1Data != null ? doc1Data.getOrDefault('text_2', '') : ''}"></td>
-                </tr>
-                <tr>
-                    <td class="text-center">3</td>
-                    <td>สาระสำคัญของเนื้อหาวิชาประกอบการบรรยายหรือการจัดกิจกรรมการเรียนรู้ (เอกสารประกอบการสอน)</td>
-                    <td class="text-center">3</td>
-                    <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_3', '') == '✓' ? '✓' : ''}"></td>
-                    <td class="text-center">
-                        <div class="form-check d-flex justify-content-center">
-                            <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_3_cb" data-target="chk_off_3">
-                        </div>
-                    </td>
-                    <td><input type="text" name="text_3" class="form-control form-control-sm" placeholder="-"
-                        th:value="${doc1Data != null ? doc1Data.getOrDefault('text_3', '') : ''}"></td>
-                </tr>
-                <tr>
-                    <td class="text-center">4</td>
-                    <td>สื่อการสอน เช่น ชีทเอกสาร PowerPoint แผ่นใส สื่อปฏิสัมพันธ์แบบดิจิทัล และอื่นๆ เป็นต้น</td>
-                    <td class="text-center">3</td>
-                    <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_4', '') == '✓' ? '✓' : ''}"></td>
-                    <td class="text-center">
-                        <div class="form-check d-flex justify-content-center">
-                            <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_4_cb" data-target="chk_off_4">
-                        </div>
-                    </td>
-                    <td><input type="text" name="text_4" class="form-control form-control-sm" placeholder="-"
-                        th:value="${doc1Data != null ? doc1Data.getOrDefault('text_4', '') : ''}"></td>
-                </tr>
-                <tr>
-                    <td class="text-center">5</td>
-                    <td>ผลการประเมินการสอนโดยนักศึกษา</td>
-                    <td class="text-center">3</td>
-                    <td class="text-center fs-5" th:text="${doc1Data != null && doc1Data.getOrDefault('chk_app_5', '') == '✓' ? '✓' : ''}"></td>
-                    <td class="text-center">
-                        <div class="form-check d-flex justify-content-center">
-                            <input type="checkbox" class="form-check-input chk-toggle" id="chk_off_5_cb" data-target="chk_off_5">
-                        </div>
-                    </td>
-                    <td><input type="text" name="text_5" class="form-control form-control-sm" placeholder="-"
-                        th:value="${doc1Data != null ? doc1Data.getOrDefault('text_5', '') : ''}"></td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
-</div>
+        <input type="hidden" id="currentDocType" th:value="${documentType}">
+        <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
+        <link rel="stylesheet" href="/css/doc_preview.css">
+        <script src="/js/doc_preview.js"></script>
+        <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
+    </section>
 </body>
+
 </html>
