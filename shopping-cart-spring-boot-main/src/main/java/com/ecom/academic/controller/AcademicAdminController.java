@@ -180,6 +180,21 @@ public class AcademicAdminController {
             }
         }
 
+        // สำหรับ doc_6: ดึงข้อมูลจาก doc_0 มา auto-fill (prefix, position)
+        if (type == 6) {
+            List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
+            if (!doc0List.isEmpty()) {
+                try {
+                    String doc0Json = doc0List.get(0).getJsonData();
+                    Map<String, String> doc0Data = objectMapper.readValue(doc0Json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                    model.addAttribute("doc0Data", doc0Data);
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+        }
+
         // สำหรับ doc_7 หรือ doc_8: ดึงผลจาก doc_6 มา auto-fill (default)
         if (type == 7 || type == 8) {
             List<AcademicDocument> doc6List = requestService.getDocumentsByType(id, 6);
@@ -287,22 +302,53 @@ public class AcademicAdminController {
             }
 
             // คะแนนรวม
-            formData.put("scorex", "%.2f".formatted(grandTotal));
+            formData.put("scorex", toThaiDigits("%.2f".formatted(grandTotal)));
+
+            // แปลง score fields ทั้งหมดเป็นเลขไทยสำหรับ DOCX
+            for (int sec = 1; sec <= 4; sec++) {
+                for (int range = 1; range <= 5; range++) {
+                    String key = "score" + sec + range;
+                    String val = formData.get(key);
+                    if (val != null && !val.isEmpty()) {
+                        formData.put(key, toThaiDigits(val));
+                    }
+                }
+                formData.put("score" + sec + "x", toThaiDigits(formData.get("score" + sec + "x")));
+            }
 
             // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์
             long roundedTotal = Math.round(grandTotal);
-            formData.put("ch1", roundedTotal < 56 ? "☑" : "☐");
+            formData.put("ch1", roundedTotal <= 56 ? "☑" : "☐");
             formData.put("ch2", (roundedTotal >= 57 && roundedTotal <= 70) ? "☑" : "☐");
             formData.put("ch3", (roundedTotal >= 71 && roundedTotal <= 85) ? "☑" : "☐");
-            formData.put("ch4", roundedTotal >= 86 ? "☑" : "☐");
+            formData.put("ch4", (roundedTotal >= 86 && roundedTotal <= 100) ? "☑" : "☐");
 
             // กำหนด eval_level จากผลคะแนนเพื่อส่งต่อไป doc7/doc8
             String evalLevel = "";
-            if (roundedTotal < 56) evalLevel = "ไม่ผ่าน";
+            if (roundedTotal <= 56) evalLevel = "ไม่ผ่าน";
             else if (roundedTotal <= 70) evalLevel = "ชำนาญ";
             else if (roundedTotal <= 85) evalLevel = "ชำนาญพิเศษ";
             else evalLevel = "เชี่ยวชาญ";
             formData.put("eval_result_level", evalLevel);
+
+            // auto-fill title/applicantName/academicPosition จาก doc0 ถ้า form ไม่ได้ส่งมา
+            if (formData.getOrDefault("title", " ").isBlank()) {
+                List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
+                if (!doc0List.isEmpty()) {
+                    try {
+                        Map<String, String> doc0Data = objectMapper.readValue(
+                                doc0List.get(0).getJsonData(),
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                        formData.put("title", doc0Data.getOrDefault("applicant_prefix", " "));
+                        formData.put("applicantName", doc0Data.getOrDefault("applicant_name", " "));
+                        String pos = " ";
+                        if ("✓".equals(doc0Data.get("chk1"))) pos = "ผู้ช่วยศาสตราจารย์";
+                        else if ("✓".equals(doc0Data.get("chk2"))) pos = "รองศาสตราจารย์";
+                        else if ("✓".equals(doc0Data.get("chk3"))) pos = "ศาสตราจารย์";
+                        formData.put("academicPosition", pos);
+                    } catch (Exception ignored) {}
+                }
+            }
         }
 
         String jsonData = objectMapper.writeValueAsString(formData);
@@ -502,6 +548,15 @@ public class AcademicAdminController {
         }
 
         return "redirect:/admin/academic/request/" + id + "?success=attachment_deleted";
+    }
+
+    /** แปลงตัวเลข Arabic เป็นเลขไทย เช่น "3.50" → "๓.๕๐" */
+    private static String toThaiDigits(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.replace("0", "๐").replace("1", "๑").replace("2", "๒")
+                .replace("3", "๓").replace("4", "๔").replace("5", "๕")
+                .replace("6", "๖").replace("7", "๗").replace("8", "๘")
+                .replace("9", "๙");
     }
 
     private UserDtls getUser(Principal principal) {
