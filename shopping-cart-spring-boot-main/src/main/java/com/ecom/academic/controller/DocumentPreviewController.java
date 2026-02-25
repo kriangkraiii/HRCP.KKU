@@ -62,21 +62,21 @@ public class DocumentPreviewController {
                         else if (range == 4) inRange = (secScore > 3 && secScore <= 4);
                         else if (range == 5) inRange = (secScore > 4 && secScore <= 5);
                         // ช่วงที่ตรง → ใส่คะแนน, ช่วงอื่น → ว่าง
-                        formData.put(key, inRange ? String.valueOf(secScore) : "");
+                        formData.put(key, inRange ? toThaiDigits(String.valueOf(secScore)) : "");
                     }
 
                     double weighted = (secScore / 5.0) * weights[sec - 1];
-                    formData.put("score" + sec + "x", "%.2f".formatted(weighted));
+                    formData.put("score" + sec + "x", toThaiDigits("%.2f".formatted(weighted)));
                     grandTotal += weighted;
                 }
 
-                formData.put("scorex", "%.2f".formatted(grandTotal));
+                formData.put("scorex", toThaiDigits("%.2f".formatted(grandTotal)));
 
                 long roundedTotal = Math.round(grandTotal);
-                formData.put("ch1", roundedTotal < 56 ? "☑" : "☐");
+                formData.put("ch1", roundedTotal <= 56 ? "☑" : "☐");
                 formData.put("ch2", (roundedTotal >= 57 && roundedTotal <= 70) ? "☑" : "☐");
                 formData.put("ch3", (roundedTotal >= 71 && roundedTotal <= 85) ? "☑" : "☐");
-                formData.put("ch4", roundedTotal >= 86 ? "☑" : "☐");
+                formData.put("ch4", (roundedTotal >= 86 && roundedTotal <= 100) ? "☑" : "☐");
             }
 
             String jsonData = objectMapper.writeValueAsString(formData);
@@ -91,5 +91,13 @@ public class DocumentPreviewController {
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
+    }
+
+    private static String toThaiDigits(String s) {
+        if (s == null || s.isEmpty()) return s;
+        return s.replace("0", "๐").replace("1", "๑").replace("2", "๒")
+                .replace("3", "๓").replace("4", "๔").replace("5", "๕")
+                .replace("6", "๖").replace("7", "๗").replace("8", "๘")
+                .replace("9", "๙");
     }
 }

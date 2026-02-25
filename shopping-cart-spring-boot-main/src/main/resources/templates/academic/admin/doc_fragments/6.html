@@ -13,6 +13,35 @@
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
                         method="post" id="docForm">
 
+
+                        <!-- ข้อมูลผู้เสนอขอ -->
+                        <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้เสนอขอ</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า / ตำแหน่งวิชาการ</label>
+                                <input type="text" name="title" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_prefix',' ') : ' '}"
+                                    placeholder="เช่น นาย / ผศ.ดร.">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ-สกุล</label>
+                                <input type="text" name="applicantName" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name',' ') : ' '}"
+                                    placeholder="เช่น สมชาย ใจดี">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ขอกำหนดตำแหน่ง</label>
+                                <input type="text" name="academicPosition" class="form-control" list="positionList6"
+                                    th:value="${doc0Data != null ? (doc0Data.getOrDefault('chk1','') == '✓' ? 'ผู้ช่วยศาสตราจารย์' : (doc0Data.getOrDefault('chk2','') == '✓' ? 'รองศาสตราจารย์' : (doc0Data.getOrDefault('chk3','') == '✓' ? 'ศาสตราจารย์' : ' '))) : ' '}"
+                                    placeholder="เลือกหรือพิมพ์...">
+                                <datalist id="positionList6">
+                                    <option value="ผู้ช่วยศาสตราจารย์">
+                                    <option value="รองศาสตราจารย์">
+                                    <option value="ศาสตราจารย์">
+                                </datalist>
+                            </div>
+                        </div>
+
                         <p class="text-muted mb-3">กรอกคะแนน 1 ค่าต่อส่วน (0-5) ระบบจะคำนวณคะแนนถ่วงน้ำหนักและจัดวางช่วงคะแนนให้อัตโนมัติ</p>
 
                         <!-- ส่วนที่ ๑ -->
@@ -66,7 +95,7 @@
                         <!-- ส่วนที่ ๓ -->
                         <div class="card mb-3">
                             <div class="card-header bg-light">
-                                <h6 class="mb-0">๓. ความสามารถด้านการจัดการเรียนการสอน <span class="badge bg-secondary">ค่าน้ำหนัก ๓๐</span></h6>
+                                <h6 class="mb-0">๓. ความสามารถด้านการจัดการเรียนการสอน <span class="badge bg-secondary">ค่าน้ำหนัก 30</span></h6>
                             </div>
                             <div class="card-body">
                                 <div class="row align-items-end">
@@ -90,7 +119,7 @@
                         <!-- ส่วนที่ ๔ -->
                         <div class="card mb-3">
                             <div class="card-header bg-light">
-                                <h6 class="mb-0">๔. ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู <span class="badge bg-secondary">ค่าน้ำหนัก ๒๐</span></h6>
+                                <h6 class="mb-0">๔. ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู <span class="badge bg-secondary">ค่าน้ำหนัก 20</span></h6>
                             </div>
                             <div class="card-body">
                                 <div class="row align-items-end">
@@ -116,10 +145,10 @@
                             <div class="card-body">
                                 <div class="row align-items-center">
                                     <div class="col-md-6">
-                                        <h5 class="mb-0">รวมผลการประเมิน ๔ ด้าน</h5>
+                                        <h5 class="mb-0">รวมผลการประเมิน 4 ด้าน</h5>
                                     </div>
                                     <div class="col-md-3">
-                                        <label class="form-label fw-bold">คะแนนรวม (เต็ม ๑๐๐)</label>
+                                        <label class="form-label fw-bold">คะแนนรวม (เต็ม 100)</label>
                                         <input type="text" name="scorex" class="form-control fw-bold fs-4 text-center" id="grandTotal" readonly>
                                     </div>
                                 </div>
@@ -135,36 +164,36 @@
                                 <div class="row">
                                     <div class="col-md-3">
                                         <div class="form-check">
-                                            <input type="checkbox" class="form-check-input eval-check" id="chk1" disabled>
+                                            <input type="checkbox" class="form-check-input eval-check" id="chk1" style="pointer-events:none;" onclick="return false;">
                                             <input type="hidden" name="ch1" id="ch1_val" value="">
-                                            <label class="form-check-label" for="chk1">ไม่ผ่าน <small class="text-muted">(ต่ำกว่า ๕๖)</small></label>
+                                            <label class="form-check-label" for="chk1">ไม่ผ่าน <small class="text-muted">(ต่ำกว่า 56)</small></label>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-check">
-                                            <input type="checkbox" class="form-check-input eval-check" id="chk2" disabled>
+                                            <input type="checkbox" class="form-check-input eval-check" id="chk2" style="pointer-events:none;" onclick="return false;">
                                             <input type="hidden" name="ch2" id="ch2_val" value="">
-                                            <label class="form-check-label" for="chk2">ชำนาญ <small class="text-muted">(๕๗-๗๐)</small></label>
+                                            <label class="form-check-label" for="chk2">ชำนาญ <small class="text-muted">(57-70)</small></label>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-check">
-                                            <input type="checkbox" class="form-check-input eval-check" id="chk3" disabled>
+                                            <input type="checkbox" class="form-check-input eval-check" id="chk3" style="pointer-events:none;" onclick="return false;">
                                             <input type="hidden" name="ch3" id="ch3_val" value="">
-                                            <label class="form-check-label" for="chk3">ชำนาญพิเศษ <small class="text-muted">(๗๑-๘๕)</small></label>
+                                            <label class="form-check-label" for="chk3">ชำนาญพิเศษ <small class="text-muted">(71-85)</small></label>
                                         </div>
                                     </div>
                                     <div class="col-md-3">
                                         <div class="form-check">
-                                            <input type="checkbox" class="form-check-input eval-check" id="chk4" disabled>
+                                            <input type="checkbox" class="form-check-input eval-check" id="chk4" style="pointer-events:none;" onclick="return false;">
                                             <input type="hidden" name="ch4" id="ch4_val" value="">
-                                            <label class="form-check-label" for="chk4">เชี่ยวชาญ <small class="text-muted">(๘๖-๑๐๐)</small></label>
+                                            <label class="form-check-label" for="chk4">เชี่ยวชาญ <small class="text-muted">(86-100)</small></label>
                                         </div>
                                     </div>
                                 </div>
                                 <div class="mt-2">
                                     <small class="text-muted">
-                                        <strong>เกณฑ์:</strong> ต่ำกว่า ๕๖ = ไม่ผ่าน | ๕๗-๗๐ = ชำนาญ | ๗๑-๘๕ = ชำนาญพิเศษ | ๘๖-๑๐๐ = เชี่ยวชาญ
+                                        <strong>เกณฑ์:</strong> ต่ำกว่า 56 = ไม่ผ่าน | 57-70 = ชำนาญ | 71-85 = ชำนาญพิเศษ | 86-100 = เชี่ยวชาญ
                                     </small>
                                 </div>
                             </div>

@@ -156,7 +156,7 @@
 
             const roundedTotal = Math.round(total * 100) / 100;
 
-            if (roundedTotal < 56) {
+            if (roundedTotal <= 56) {
                 chk1.checked = true;
                 ch1Val.value = '☑';
             } else if (roundedTotal >= 57 && roundedTotal <= 70) {
@@ -165,7 +165,7 @@
             } else if (roundedTotal >= 71 && roundedTotal <= 85) {
                 chk3.checked = true;
                 ch3Val.value = '☑';
-            } else if (roundedTotal >= 86) {
+            } else if (roundedTotal >= 86 && roundedTotal <= 100) {
                 chk4.checked = true;
                 ch4Val.value = '☑';
             }
