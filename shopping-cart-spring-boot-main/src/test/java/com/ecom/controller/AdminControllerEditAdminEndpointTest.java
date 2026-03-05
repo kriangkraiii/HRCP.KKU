@@ -34,11 +34,11 @@ import java.util.List;
  */
 @SpringBootTest
 @TestPropertySource(properties = {
-    "spring.datasource.url=jdbc:h2:mem:testdb",
-    "spring.datasource.driver-class-name=org.h2.Driver",
-    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
-    "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.jpa.show-sql=false"
+        "spring.datasource.url=jdbc:h2:mem:testdb",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.jpa.show-sql=false"
 })
 public class AdminControllerEditAdminEndpointTest {
 
@@ -64,7 +64,7 @@ public class AdminControllerEditAdminEndpointTest {
         userRepository.deleteAll();
         adminLogRepository.deleteAll();
         session = new MockHttpSession();
-        
+
         // Setup test admin to be edited
         testAdmin = new UserDtls();
         testAdmin.setTitle("นาย");
@@ -117,7 +117,8 @@ public class AdminControllerEditAdminEndpointTest {
 
     /**
      * Test GET /admin/edit-admin returns correct view with admin data
-     * Validates Requirement 2.1: Display form pre-populated with current account details
+     * Validates Requirement 2.1: Display form pre-populated with current account
+     * details
      */
     @Test
     void testGetEditAdmin_ReturnsCorrectViewWithAdminData() {
@@ -129,10 +130,10 @@ public class AdminControllerEditAdminEndpointTest {
 
         // Then: Returns correct view
         assertThat(viewName).isEqualTo("admin/edit_admin");
-        
+
         // Verify admin was added to model
-        assertThat(model.containsAttribute("user")).isTrue();
-        UserDtls modelAdmin = (UserDtls) model.getAttribute("user");
+        assertThat(model.containsAttribute("admin")).isTrue();
+        UserDtls modelAdmin = (UserDtls) model.getAttribute("admin");
         assertThat(modelAdmin).isNotNull();
         assertThat(modelAdmin.getId()).isEqualTo(testAdmin.getId());
         assertThat(modelAdmin.getEmail()).isEqualTo(testAdmin.getEmail());
@@ -229,7 +230,7 @@ public class AdminControllerEditAdminEndpointTest {
         // Then: Audit log is created with correct parameters
         List<AdminLog> logs = adminLogRepository.findAll();
         assertThat(logs).isNotEmpty();
-        
+
         AdminLog log = logs.get(0);
         assertThat(log.getAdminEmail()).isEqualTo("admin@example.com");
         assertThat(log.getAdminName()).isEqualTo("Performing Admin");
@@ -238,7 +239,6 @@ public class AdminControllerEditAdminEndpointTest {
         assertThat(log.getDetails()).contains(testAdmin.getEmail());
         assertThat(log.getIpAddress()).isNotNull();
     }
-
 
     /**
      * Test POST /admin/update-admin allows same admin to keep their email

@@ -32,7 +32,8 @@
 							</div>
 
 							<form th:action="@{/admin/update-user}" method="post" enctype="multipart/form-data" id="editUserForm">
-								<input type="hidden" name="id" th:value="${user.id}">
+								<input type="hidden" name="id" th:value="${editUser.id}">
+								<input type="hidden" name="type" value="1">
 
 								<h6 class="text-muted mb-3 mt-3"><i class="fas fa-id-card me-1"></i> ข้อมูลส่วนตัว</h6>
 								<hr class="mt-0">
@@ -43,20 +44,20 @@
 												class="text-danger">*</span></label>
 										<select name="title" class="form-select" required>
 											<option value="">-- เลือก --</option>
-											<option value="นาย" th:selected="${user.title == 'นาย'}">นาย</option>
-											<option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
-											<option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
-											<option value="ดร." th:selected="${user.title == 'ดร.'}">ดร.</option>
-											<option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
-											<option value="รศ.ดร." th:selected="${user.title == 'รศ.ดร.'}">รศ.ดร.</option>
-											<option value="ศ.ดร." th:selected="${user.title == 'ศ.ดร.'}">ศ.ดร.</option>
+											<option value="นาย" th:selected="${editUser.title == 'นาย'}">นาย</option>
+											<option value="นาง" th:selected="${editUser.title == 'นาง'}">นาง</option>
+											<option value="นางสาว" th:selected="${editUser.title == 'นางสาว'}">นางสาว</option>
+											<option value="ดร." th:selected="${editUser.title == 'ดร.'}">ดร.</option>
+											<option value="ผศ.ดร." th:selected="${editUser.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
+											<option value="รศ.ดร." th:selected="${editUser.title == 'รศ.ดร.'}">รศ.ดร.</option>
+											<option value="ศ.ดร." th:selected="${editUser.title == 'ศ.ดร.'}">ศ.ดร.</option>
 										</select>
 									</div>
 									<div class="col-md-8">
 										<label class="form-label fw-bold">ชื่อ-นามสกุล <span
 												class="text-danger">*</span></label>
 										<input type="text" name="name" class="form-control"
-											placeholder="กรอกชื่อ-นามสกุล" th:value="${user.name}" required>
+											placeholder="กรอกชื่อ-นามสกุล" th:value="${editUser.name}" required>
 									</div>
 								</div>
 
@@ -64,17 +65,17 @@
 									<div class="col-md-6">
 										<label class="form-label fw-bold">ตำแหน่งทางวิชาการ</label>
 										<select name="academicPosition" class="form-select">
-											<option value="" th:selected="${user.academicPosition == null || user.academicPosition == ''}">-- ไม่ระบุ --</option>
-											<option value="อาจารย์" th:selected="${user.academicPosition == 'อาจารย์'}">อาจารย์</option>
-											<option value="ผู้ช่วยศาสตราจารย์" th:selected="${user.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์ (ผศ.)</option>
-											<option value="รองศาสตราจารย์" th:selected="${user.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์ (รศ.)</option>
-											<option value="ศาสตราจารย์" th:selected="${user.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์ (ศ.)</option>
+											<option value="" th:selected="${editUser.academicPosition == null || editUser.academicPosition == ''}">-- ไม่ระบุ --</option>
+											<option value="อาจารย์" th:selected="${editUser.academicPosition == 'อาจารย์'}">อาจารย์</option>
+											<option value="ผู้ช่วยศาสตราจารย์" th:selected="${editUser.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์ (ผศ.)</option>
+											<option value="รองศาสตราจารย์" th:selected="${editUser.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์ (รศ.)</option>
+											<option value="ศาสตราจารย์" th:selected="${editUser.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์ (ศ.)</option>
 										</select>
 									</div>
 									<div class="col-md-6">
 										<label class="form-label fw-bold">เบอร์โทรศัพท์</label>
 										<input type="tel" name="mobileNumber" class="form-control"
-											placeholder="0XX-XXX-XXXX" th:value="${user.mobileNumber}">
+											placeholder="0XX-XXX-XXXX" th:value="${editUser.mobileNumber}">
 									</div>
 								</div>
 
@@ -86,7 +87,7 @@
 										<label class="form-label fw-bold">อีเมล <span
 												class="text-danger">*</span></label>
 										<input type="email" name="email" class="form-control" id="emailInput"
-											placeholder="example@kku.ac.th" th:value="${user.email}" required>
+											placeholder="example@kku.ac.th" th:value="${editUser.email}" required>
 										<div class="invalid-feedback">กรุณากรอกอีเมลที่ถูกต้อง</div>
 									</div>
 								</div>
@@ -96,8 +97,8 @@
 
 								<div class="mb-3">
 									<div class="d-flex align-items-center gap-3 mb-2">
-										<img th:src="@{'/img/profile_img/' + ${user.profileImage}}" alt="Current Profile" 
-											th:data-user-id="${user.id}"
+										<img th:src="@{'/img/profile_img/' + ${editUser.profileImage}}" alt="Current Profile" 
+											th:data-user-id="${editUser.id}"
 											class="border" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;"
 											onerror="this.src='/img/profile_img/default.png'">
 										<div class="flex-grow-1">

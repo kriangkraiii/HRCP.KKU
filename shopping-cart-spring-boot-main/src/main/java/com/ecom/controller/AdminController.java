@@ -73,6 +73,7 @@ public class AdminController {
 
 	/**
 	 * Validates uploaded image file for size and type
+	 * 
 	 * @param file The uploaded file
 	 * @return Error message if validation fails, null if valid
 	 */
@@ -90,7 +91,7 @@ public class AdminController {
 		// Check file type by extension and MIME type
 		String originalFilename = file.getOriginalFilename();
 		String contentType = file.getContentType();
-		
+
 		if (originalFilename != null) {
 			String extension = originalFilename.substring(originalFilename.lastIndexOf(".") + 1).toLowerCase();
 			if (!extension.matches("jpg|jpeg|png|gif")) {
@@ -210,7 +211,6 @@ public class AdminController {
 		}
 	}
 
-
 	@GetMapping("/delete-user")
 	public String deleteUser(@RequestParam Integer id, @RequestParam Integer type, HttpSession session, Principal p) {
 		try {
@@ -241,12 +241,11 @@ public class AdminController {
 				// Log the action
 				UserDtls admin = userService.getUserByEmail(currentUserEmail);
 				adminLogService.log(
-					currentUserEmail,
-					admin != null ? admin.getName() : currentUserEmail,
-					"DELETE_USER_ACCOUNT",
-					"ลบบัญชีผู้ใช้ ID:" + id + " (" + deletedEmail + ")",
-					getClientIpAddress(request)
-				);
+						currentUserEmail,
+						admin != null ? admin.getName() : currentUserEmail,
+						"DELETE_USER_ACCOUNT",
+						"ลบบัญชีผู้ใช้ ID:" + id + " (" + deletedEmail + ")",
+						getClientIpAddress(request));
 				session.setAttribute("succMsg", "ลบบัญชีผู้ใช้สำเร็จ");
 			} else {
 				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการลบบัญชี");
@@ -289,12 +288,11 @@ public class AdminController {
 				// Log the action
 				UserDtls admin = userService.getUserByEmail(currentUserEmail);
 				adminLogService.log(
-					currentUserEmail,
-					admin != null ? admin.getName() : currentUserEmail,
-					"DELETE_ADMIN_ACCOUNT",
-					"ลบบัญชีแอดมิน ID:" + id + " (" + deletedEmail + ")",
-					getClientIpAddress(request)
-				);
+						currentUserEmail,
+						admin != null ? admin.getName() : currentUserEmail,
+						"DELETE_ADMIN_ACCOUNT",
+						"ลบบัญชีแอดมิน ID:" + id + " (" + deletedEmail + ")",
+						getClientIpAddress(request));
 				session.setAttribute("succMsg", "ลบบัญชีแอดมินสำเร็จ");
 			} else {
 				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการลบบัญชี");
@@ -308,76 +306,75 @@ public class AdminController {
 	}
 
 	@PostMapping("/update-admin")
-		public String updateAdmin(@ModelAttribute UserDtls user, @RequestParam("img") MultipartFile file,
-				@RequestParam Integer type, HttpSession session, Principal p) {
+	public String updateAdmin(@ModelAttribute UserDtls user, @RequestParam("img") MultipartFile file,
+			@RequestParam Integer type, HttpSession session, Principal p) {
 
-			// Validate email format
-			if (user.getEmail() == null || !user.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
-				session.setAttribute("errorMsg", "รูปแบบอีเมลไม่ถูกต้อง");
-				return "redirect:/admin/edit-admin?id=" + user.getId();
-			}
+		// Validate email format
+		if (user.getEmail() == null || !user.getEmail().matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+			session.setAttribute("errorMsg", "รูปแบบอีเมลไม่ถูกต้อง");
+			return "redirect:/admin/edit-admin?id=" + user.getId();
+		}
 
-			// Validate required fields
-			if (user.getName() == null || user.getName().trim().isEmpty()) {
-				session.setAttribute("errorMsg", "กรุณากรอกชื่อ");
-				return "redirect:/admin/edit-admin?id=" + user.getId();
-			}
+		// Validate required fields
+		if (user.getName() == null || user.getName().trim().isEmpty()) {
+			session.setAttribute("errorMsg", "กรุณากรอกชื่อ");
+			return "redirect:/admin/edit-admin?id=" + user.getId();
+		}
 
-			// Validate file upload if provided
-			String fileValidationError = validateImageFile(file);
-			if (fileValidationError != null) {
-				session.setAttribute("errorMsg", fileValidationError);
-				return "redirect:/admin/edit-admin?id=" + user.getId();
-			}
+		// Validate file upload if provided
+		String fileValidationError = validateImageFile(file);
+		if (fileValidationError != null) {
+			session.setAttribute("errorMsg", fileValidationError);
+			return "redirect:/admin/edit-admin?id=" + user.getId();
+		}
 
-			// Check email uniqueness (exclude current admin)
-			UserDtls existingUser = userService.getUserByEmail(user.getEmail());
-			if (existingUser != null && !existingUser.getId().equals(user.getId())) {
-				session.setAttribute("errorMsg", "อีเมลนี้มีในระบบแล้ว");
-				return "redirect:/admin/edit-admin?id=" + user.getId();
-			}
+		// Check email uniqueness (exclude current admin)
+		UserDtls existingUser = userService.getUserByEmail(user.getEmail());
+		if (existingUser != null && !existingUser.getId().equals(user.getId())) {
+			session.setAttribute("errorMsg", "อีเมลนี้มีในระบบแล้ว");
+			return "redirect:/admin/edit-admin?id=" + user.getId();
+		}
 
-			try {
-				// Update admin details
-				UserDtls updatedAdmin = userService.updateUserDetails(user, file);
+		try {
+			// Update admin details
+			UserDtls updatedAdmin = userService.updateUserDetails(user, file);
 
-				if (updatedAdmin != null) {
-					// Log the action
-					if (p != null) {
-						UserDtls admin = userService.getUserByEmail(p.getName());
-						adminLogService.log(
+			if (updatedAdmin != null) {
+				// Log the action
+				if (p != null) {
+					UserDtls admin = userService.getUserByEmail(p.getName());
+					adminLogService.log(
 							p.getName(),
 							admin != null ? admin.getName() : p.getName(),
 							"EDIT_ADMIN_ACCOUNT",
 							"แก้ไขบัญชีแอดมิน ID:" + user.getId() + " (" + user.getEmail() + ")",
-							getClientIpAddress(request)
-						);
-					}
-					session.setAttribute("succMsg", "อัพเดทข้อมูลแอดมินสำเร็จ");
-				} else {
-					session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
+							getClientIpAddress(request));
 				}
-			} catch (Exception e) {
+				session.setAttribute("succMsg", "อัพเดทข้อมูลแอดมินสำเร็จ");
+			} else {
 				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
-				e.printStackTrace();
 			}
-
-			return "redirect:/admin/users?type=" + type;
+		} catch (Exception e) {
+			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
+			e.printStackTrace();
 		}
+
+		return "redirect:/admin/users?type=" + type;
+	}
+
 	@GetMapping("/edit-user")
 	public String loadEditUser(@RequestParam Integer id, Model m) {
-		UserDtls user = userService.getUserById(id);
-		m.addAttribute("user", user);
+		UserDtls editUser = userService.getUserById(id);
+		m.addAttribute("editUser", editUser);
 		return "admin/edit_user";
 	}
 
 	@GetMapping("/edit-admin")
 	public String loadEditAdmin(@RequestParam Integer id, Model m) {
 		UserDtls admin = userService.getUserById(id);
-		m.addAttribute("user", admin);
+		m.addAttribute("admin", admin);
 		return "admin/edit_admin";
 	}
-
 
 	@PostMapping("/update-user")
 	public String updateUser(@ModelAttribute UserDtls user, @RequestParam("img") MultipartFile file,
@@ -418,12 +415,11 @@ public class AdminController {
 				if (p != null) {
 					UserDtls admin = userService.getUserByEmail(p.getName());
 					adminLogService.log(
-						p.getName(),
-						admin != null ? admin.getName() : p.getName(),
-						"EDIT_USER_ACCOUNT",
-						"แก้ไขบัญชีผู้ใช้ ID:" + user.getId() + " (" + user.getEmail() + ")",
-						getClientIpAddress(request)
-					);
+							p.getName(),
+							admin != null ? admin.getName() : p.getName(),
+							"EDIT_USER_ACCOUNT",
+							"แก้ไขบัญชีผู้ใช้ ID:" + user.getId() + " (" + user.getEmail() + ")",
+							getClientIpAddress(request));
 				}
 				session.setAttribute("succMsg", "อัพเดทข้อมูลผู้ใช้สำเร็จ");
 			} else {
@@ -436,8 +432,6 @@ public class AdminController {
 
 		return "redirect:/admin/users?type=" + type;
 	}
-
-
 
 	// ====== Add User/Admin ======
 
