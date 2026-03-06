@@ -2,7 +2,9 @@ package com.ecom.config;
 
 import java.util.TimeZone;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
@@ -10,6 +12,17 @@ import jakarta.annotation.PostConstruct;
 
 @Configuration
 public class WebConfig implements WebMvcConfigurer {
+
+	@Autowired
+	private RequestLoggingInterceptor requestLoggingInterceptor;
+
+	@Override
+	public void addInterceptors(InterceptorRegistry registry) {
+		registry.addInterceptor(requestLoggingInterceptor)
+				.addPathPatterns("/**")
+				.excludePathPatterns("/css/**", "/js/**", "/img/**", "/uploads/**",
+						"/admin/css/**", "/admin/js/**", "/webjars/**", "/favicon.ico");
+	}
 
 	@Override
 	public void addResourceHandlers(ResourceHandlerRegistry registry) {
@@ -46,8 +59,9 @@ public class WebConfig implements WebMvcConfigurer {
 
 		registry.addResourceHandler("/uploads/**").addResourceLocations("file:" + uploadDir);
 	}
-	 @PostConstruct
-	    public void init() {
-	        TimeZone.setDefault(TimeZone.getTimeZone("Asia/Bangkok"));
-	    }
+
+	@PostConstruct
+	public void init() {
+		TimeZone.setDefault(TimeZone.getTimeZone("Asia/Bangkok"));
+	}
 }

@@ -39,4 +39,17 @@ public interface AdminLogRepository extends JpaRepository<AdminLog, Long> {
 			@Param("startDate") LocalDateTime startDate,
 			@Param("endDate") LocalDateTime endDate,
 			Pageable pageable);
+
+	@Query("SELECT a FROM AdminLog a WHERE " +
+			"(:search IS NULL OR (LOWER(a.adminName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+			"OR LOWER(a.adminEmail) LIKE LOWER(CONCAT('%', :search, '%')) " +
+			"OR LOWER(a.details) LIKE LOWER(CONCAT('%', :search, '%')))) " +
+			"AND (:action IS NULL OR a.action = :action) " +
+			"AND (:startDate IS NULL OR a.timestamp >= :startDate) " +
+			"AND (:endDate IS NULL OR a.timestamp <= :endDate) " +
+			"ORDER BY a.timestamp DESC")
+	List<AdminLog> findByFiltersForExport(@Param("search") String search,
+			@Param("action") String action,
+			@Param("startDate") LocalDateTime startDate,
+			@Param("endDate") LocalDateTime endDate);
 }

@@ -29,6 +29,12 @@ public class AdminLog {
 	@Column
 	private String ipAddress;
 
+	@Column(length = 500)
+	private String resource;
+
+	@Column(length = 500)
+	private String userAgent;
+
 	// Constructors
 	public AdminLog() {
 	}
@@ -40,6 +46,13 @@ public class AdminLog {
 		this.details = details;
 		this.ipAddress = ipAddress;
 		this.timestamp = LocalDateTime.now();
+	}
+
+	public AdminLog(String adminEmail, String adminName, String action, String details, String ipAddress,
+			String resource, String userAgent) {
+		this(adminEmail, adminName, action, details, ipAddress);
+		this.resource = resource;
+		this.userAgent = userAgent;
 	}
 
 	// Getters and Setters
@@ -97,5 +110,21 @@ public class AdminLog {
 
 	public void setIpAddress(String ipAddress) {
 		this.ipAddress = ipAddress;
+	}
+
+	public String getResource() {
+		return resource;
+	}
+
+	public void setResource(String resource) {
+		this.resource = resource;
+	}
+
+	public String getUserAgent() {
+		return userAgent;
+	}
+
+	public void setUserAgent(String userAgent) {
+		this.userAgent = userAgent;
 	}
 }

@@ -24,6 +24,12 @@ public class AdminLogService {
         adminLogRepository.save(log);
     }
 
+    public void logWithDetails(String email, String name, String action, String details, String ip, String resource,
+            String userAgent) {
+        AdminLog log = new AdminLog(email, name, action, details, ip, resource, userAgent);
+        adminLogRepository.save(log);
+    }
+
     public Page<AdminLog> getAllLogs(int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
         return adminLogRepository.findAllByOrderByTimestampDesc(pageable);
@@ -43,8 +49,10 @@ public class AdminLogService {
         }
 
         // Normalize empty strings to null
-        if (search != null && search.trim().isEmpty()) search = null;
-        if (action != null && action.trim().isEmpty()) action = null;
+        if (search != null && search.trim().isEmpty())
+            search = null;
+        if (action != null && action.trim().isEmpty())
+            action = null;
 
         return adminLogRepository.findByFilters(search, action, startDate, endDate, pageable);
     }
@@ -59,5 +67,22 @@ public class AdminLogService {
 
     public long countByAction(String action) {
         return adminLogRepository.countByAction(action);
+    }
+
+    public List<AdminLog> getAllLogsForExport(String search, String action, String dateFrom, String dateTo) {
+        LocalDateTime startDate = null;
+        LocalDateTime endDate = null;
+        if (dateFrom != null && !dateFrom.isEmpty()) {
+            startDate = LocalDate.parse(dateFrom).atStartOfDay();
+        }
+        if (dateTo != null && !dateTo.isEmpty()) {
+            endDate = LocalDate.parse(dateTo).atTime(23, 59, 59);
+        }
+        if (search != null && search.trim().isEmpty())
+            search = null;
+        if (action != null && action.trim().isEmpty())
+            action = null;
+
+        return adminLogRepository.findByFiltersForExport(search, action, startDate, endDate);
     }
 }
