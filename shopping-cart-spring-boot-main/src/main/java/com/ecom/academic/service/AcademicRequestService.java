@@ -43,6 +43,8 @@ public class AcademicRequestService {
         request.setApplicant(applicant);
         request.setCurrentStatus(RequestStatus.RECEIVED);
         request.setSubmissionDate(LocalDateTime.now());
+        request = requestRepository.save(request);
+        request.generateRequestCode();
         return requestRepository.save(request);
     }
 
@@ -219,6 +221,8 @@ public class AcademicRequestService {
         AcademicRequest request = new AcademicRequest();
         request.setApplicant(applicant);
         request.setCurrentStatus(RequestStatus.DRAFT);
+        request = requestRepository.save(request);
+        request.generateRequestCode();
         return requestRepository.save(request);
     }
 

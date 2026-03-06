@@ -30,6 +30,9 @@ public class AcademicRequest {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "request_code", unique = true)
+    private String requestCode;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "applicant_id", nullable = false)
     private UserDtls applicant;
@@ -74,6 +77,27 @@ public class AcademicRequest {
     @PreUpdate
     protected void onUpdate() {
         updatedAt = LocalDateTime.now();
+    }
+
+    /** Generate request code from ID after entity gets its auto-generated ID */
+    public String generateRequestCode() {
+        if (this.id == null)
+            return null;
+        int beYear = (createdAt != null ? createdAt.getYear() : LocalDateTime.now().getYear()) + 543;
+        this.requestCode = String.format("KKU-ACAD-%d-%04d", beYear, this.id);
+        return this.requestCode;
+    }
+
+    /** Get request code, auto-calculate if not yet set */
+    public String getRequestCode() {
+        if (requestCode == null && id != null) {
+            return generateRequestCode();
+        }
+        return requestCode;
+    }
+
+    public void setRequestCode(String requestCode) {
+        this.requestCode = requestCode;
     }
 
     // Getters and Setters

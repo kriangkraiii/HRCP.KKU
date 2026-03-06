@@ -63,8 +63,11 @@ public class SecurityConfig {
                                 "/api/**",
                                 "/admin/toggle-image-mode",
                                 "/admin/update-profile-image",
-                                "/admin/activity-logs/export"))
-
+                                "/admin/activity-logs/export",
+                                "/admin/file-manager/delete/**",
+                                "/admin/file-manager/restore/**",
+                                "/admin/file-manager/permanent-delete/**",
+                                "/admin/file-manager/empty-trash"))
                 // Session management
                 .sessionManagement(session -> session
                         .maximumSessions(1)

@@ -39,7 +39,7 @@
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
-                            <h5 class="mb-1">คำร้องของ [[${req.applicant.name}]]</h5>
+                            <h5 class="mb-1">คำร้อง [[${req.requestCode}]] — [[${req.applicant.name}]]</h5>
                             <small class="text-muted">วันที่ยื่น: <span
                                     th:text="${#temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></small>
                         </div>

@@ -108,6 +108,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:50px">#</th>
+                                        <th>รหัสคำร้อง</th>
                                         <th>ผู้ยื่นคำร้อง</th>
                                         <th>อีเมล</th>
                                         <th style="width:150px">วันที่ยื่น</th>
@@ -118,6 +119,7 @@
                                 <tbody>
                                     <tr th:each="req, iter : ${requests}">
                                         <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
+                                        <td><small class="fw-semibold text-primary" th:text="${req.requestCode}"></small></td>
                                         <td>
                                             <div class="fw-semibold" th:text="${req.applicant.name}"></div>
                                         </td>
@@ -168,6 +170,7 @@
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:50px">#</th>
+                                        <th>รหัสคำร้อง</th>
                                         <th>ผู้ยื่นคำร้อง</th>
                                         <th>อีเมล</th>
                                         <th style="width:150px">วันที่ยื่น</th>
@@ -178,6 +181,7 @@
                                 <tbody>
                                     <tr th:each="req, iter : ${pendingRequests}">
                                         <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
+                                        <td><small class="fw-semibold text-primary" th:text="${req.requestCode}"></small></td>
                                         <td>
                                             <div class="fw-semibold" th:text="${req.applicant.name}"></div>
                                         </td>
