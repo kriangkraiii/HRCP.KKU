@@ -667,9 +667,12 @@ document.addEventListener('DOMContentLoaded', function() {
 				statusEl.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-1"></i>Switching...';
 
 				fetch('/admin/toggle-image-mode', {
-					method: 'POST',
-					headers: { 'Content-Type': 'application/json' }
-				})
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+					'X-XSRF-TOKEN': document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''
+				}
+			})
 				.then(function(res) { return res.json(); })
 				.then(function(data) {
 					progressBar.style.width = '100%';
