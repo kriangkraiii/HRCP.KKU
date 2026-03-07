@@ -10,296 +10,108 @@
                 <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
+            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle"></i> ดำเนินการสำเร็จ
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-circle"></i> เกิดข้อผิดพลาด
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h3 class="mb-0"><i class="fas fa-edit"></i> ยื่นคำร้องใหม่</h3>
+                <span class="badge bg-secondary fs-6">แบบร่าง</span>
+            </div>
 
             <!-- Step Indicator -->
             <div class="d-flex justify-content-center mb-4">
                 <div class="d-flex align-items-center gap-2 flex-wrap justify-content-center">
-                    <div class="step-indicator active" id="stepInd1">
-                        <span class="step-number">1</span>
+                    <div class="step-indicator" th:classappend="${hasDoc0} ? 'completed' : 'active'" id="stepInd1">
+                        <span class="step-number">
+                            <i th:if="${hasDoc0}" class="fas fa-check"></i>
+                            <span th:unless="${hasDoc0}">1</span>
+                        </span>
                         <span class="step-text">เอกสารที่ 0: บันทึกข้อความ</span>
                     </div>
                     <i class="fas fa-chevron-right text-muted mx-1"></i>
-                    <div class="step-indicator" id="stepInd2">
-                        <span class="step-number">2</span>
+                    <div class="step-indicator" th:classappend="${hasDoc1} ? 'completed' : (${hasDoc0} ? 'active' : '')" id="stepInd2">
+                        <span class="step-number">
+                            <i th:if="${hasDoc1}" class="fas fa-check"></i>
+                            <span th:unless="${hasDoc1}">2</span>
+                        </span>
                         <span class="step-text">เอกสารที่ 1: แบบตรวจสอบ</span>
                     </div>
                     <i class="fas fa-chevron-right text-muted mx-1"></i>
-                    <div class="step-indicator" id="stepInd3">
+                    <div class="step-indicator" th:classappend="${hasDoc0 and hasDoc1} ? 'active' : ''" id="stepInd3">
                         <span class="step-number">3</span>
                         <span class="step-text">ตรวจสอบและส่ง</span>
                     </div>
                 </div>
             </div>
 
-            <form th:action="@{/user/academic/new-request}" method="post" id="mainForm">
-
-                <!-- ==================== STEP 1: เอกสารที่ 0 ==================== -->
-                <div class="card card-academic mb-4" id="step1">
-                    <div class="card-header bg-white border-bottom">
-                        <h4 class="mb-0"><i class="fas fa-file-signature"></i> เอกสารที่ 0: บันทึกข้อความ ขอรับการประเมินผลการสอน</h4>
-                    </div>
-                    <div class="card-body">
-
-                        <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-file-signature"></i> ข้อมูลบันทึกข้อความ</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label class="form-label">เลขที่เอกสาร <small class="text-muted">(ถ้ามี)</small></label>
-                                <input type="text" name="doc0_document_number" class="form-control doc0-field"
-                                    placeholder="เช่น วทค. 001/2568"
-                                    th:value="${doc0Draft != null ? doc0Draft : ''}">
-                            </div>
-                            <div class="col-md-4">
-                                <label class="form-label">วันที่เอกสาร <span class="text-danger">*</span></label>
-                                <input type="date" name="doc0_document_date" class="form-control doc0-field" required>
-                            </div>
-                        </div>
-
-                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-user"></i> ข้อมูลผู้ขอรับการประเมิน</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-3">
-                                <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
-                                <select name="doc0_applicant_prefix" class="form-select doc0-field" required>
-                                    <option value="">-- เลือก --</option>
-                                    <option value="นาย" th:selected="${user.title == 'นาย'}">นาย</option>
-                                    <option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
-                                    <option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
-                                </select>
-                            </div>
-                            <div class="col-md-5">
-                                <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
-                                <input type="text" name="doc0_applicant_name" class="form-control doc0-field" required
-                                    placeholder="เช่น สมชาย ใจดี" th:value="${user.name}">
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">ประเภทบุคลากร <span class="text-danger">*</span></label>
-                                <div class="d-flex gap-4 mt-1">
-                                    <div class="form-check">
-                                        <input class="form-check-input doc0-field" type="radio" name="doc0_employment_type"
-                                            id="empType1" value="พนักงานมหาวิทยาลัย" required>
-                                        <label class="form-check-label" for="empType1">พนักงานมหาวิทยาลัย</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input doc0-field" type="radio" name="doc0_employment_type"
-                                            id="empType2" value="ข้าราชการ">
-                                        <label class="form-check-label" for="empType2">ข้าราชการ</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">ตำแหน่งทางวิชาการปัจจุบัน <span class="text-danger">*</span></label>
-                                <select name="doc0_current_academic_rank" class="form-select doc0-field" required>
-                                    <option value="">-- เลือก --</option>
-                                    <option value="อาจารย์">อาจารย์</option>
-                                    <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
-                                    <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-graduation-cap"></i> ขอรับการประเมินผลการสอนเพื่อขอกำหนดตำแหน่ง</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-12">
-                                <div class="d-flex gap-4">
-                                    <div class="form-check">
-                                        <input class="form-check-input doc0-field" type="checkbox" name="doc0_chk1" id="doc0_chk1" value="✓">
-                                        <label class="form-check-label" for="doc0_chk1">ผู้ช่วยศาสตราจารย์ (ผศ.)</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input doc0-field" type="checkbox" name="doc0_chk2" id="doc0_chk2" value="✓">
-                                        <label class="form-check-label" for="doc0_chk2">รองศาสตราจารย์ (รศ.)</label>
-                                    </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input doc0-field" type="checkbox" name="doc0_chk3" id="doc0_chk3" value="✓">
-                                        <label class="form-check-label" for="doc0_chk3">ศาสตราจารย์ (ศ.)</label>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <label class="form-label">ชื่อ-สกุล เต็ม (สำหรับพิมพ์ในเอกสาร)</label>
-                                <input type="text" name="doc0_applicant_name_full_print" class="form-control doc0-field"
-                                    placeholder="เช่น ผู้ช่วยศาสตราจารย์ ดร.สมชาย ใจดี">
-                                <small class="text-muted">ระบุคำนำหน้า ตำแหน่ง และชื่อเต็ม สำหรับพิมพ์ในลายเซ็น</small>
-                            </div>
-                        </div>
-
-                        <div class="d-flex gap-2 mt-4">
-                            <button type="button" class="btn btn-outline-primary" onclick="previewDoc(0)">
-                                <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
-                            </button>
-                            <button type="button" class="btn btn-outline-success" onclick="saveDraft(0)">
-                                <i class="fas fa-save"></i> บันทึกแบบร่าง
-                            </button>
-                            <button type="button" class="btn btn-academic" onclick="goToStep(2)">
-                                <i class="fas fa-arrow-right"></i> ถัดไป: เอกสารที่ 1
-                            </button>
-                            <a href="/user/academic/dashboard" class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> กลับ</a>
-                        </div>
-                    </div>
+            <!-- ==================== เอกสารที่ 0 ==================== -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-file-signature"></i> เอกสารที่ 0: บันทึกข้อความ ขอรับการประเมินผลการสอน</h4>
+                    <span th:if="${hasDoc0}" class="badge bg-success fs-6"><i class="fas fa-check me-1"></i>กรอกแล้ว</span>
+                    <span th:unless="${hasDoc0}" class="badge bg-warning text-dark fs-6"><i class="fas fa-clock me-1"></i>รอกรอก</span>
                 </div>
-
-                <!-- ==================== STEP 2: เอกสารที่ 1 ==================== -->
-                <div class="card card-academic mb-4" id="step2" style="display:none;">
-                    <div class="card-header bg-white border-bottom">
-                        <h4 class="mb-0"><i class="fas fa-clipboard-check"></i> เอกสารที่ 1: แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน</h4>
-                    </div>
-                    <div class="card-body">
-                        <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ ผู้ยื่น -->
-                        <input type="hidden" name="chk_app_1" id="chk_app_1" value="">
-                        <input type="hidden" name="chk_app_2" id="chk_app_2" value="">
-                        <input type="hidden" name="chk_app_3" id="chk_app_3" value="">
-                        <input type="hidden" name="chk_app_4" id="chk_app_4" value="">
-                        <input type="hidden" name="chk_app_5" id="chk_app_5" value="">
-                        <!-- ฝั่งเจ้าหน้าที่ ส่งค่าว่างไปก่อน -->
-                        <input type="hidden" name="chk_off_1" value="">
-                        <input type="hidden" name="chk_off_2" value="">
-                        <input type="hidden" name="chk_off_3" value="">
-                        <input type="hidden" name="chk_off_4" value="">
-                        <input type="hidden" name="chk_off_5" value="">
-                        <input type="hidden" name="text_1" value="">
-                        <input type="hidden" name="text_2" value="">
-                        <input type="hidden" name="text_3" value="">
-                        <input type="hidden" name="text_4" value="">
-                        <input type="hidden" name="text_5" value="">
-
-                        <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> ข้อมูลผู้ยื่นคำร้อง</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น</label>
-                                <input type="text" name="name_applicant" class="form-control"
-                                    th:value="${(user.academicPosition ?: user.title) + user.name}" readonly>
-                            </div>
-                        </div>
-
-                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-clipboard-check"></i> รายการตรวจสอบเอกสาร</h5>
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle">
-                                <thead class="table-light text-center">
-                                    <tr>
-                                        <th style="width:5%">ลำดับ</th>
-                                        <th>เอกสาร</th>
-                                        <th style="width:8%">จำนวน</th>
-                                        <th style="width:12%">ผู้ยื่น (เจ้าตัว)</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr>
-                                        <td class="text-center">1</td>
-                                        <td>บันทึกนำส่งเอกสารประกอบประเมินผลการสอน</td>
-                                        <td class="text-center">1</td>
-                                        <td class="text-center">
-                                            <div class="form-check d-flex justify-content-center">
-                                                <input type="checkbox" class="form-check-input chk-toggle-app" id="chk_app_1_cb" data-target="chk_app_1">
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-center">2</td>
-                                        <td>แผนการสอน พร้อมเกณฑ์และวิธีวัดประเมินผลผู้เรียน</td>
-                                        <td class="text-center">3</td>
-                                        <td class="text-center">
-                                            <div class="form-check d-flex justify-content-center">
-                                                <input type="checkbox" class="form-check-input chk-toggle-app" id="chk_app_2_cb" data-target="chk_app_2">
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-center">3</td>
-                                        <td>สาระสำคัญของเนื้อหาวิชาประกอบการบรรยายหรือการจัดกิจกรรมการเรียนรู้ (เอกสารประกอบการสอน)</td>
-                                        <td class="text-center">3</td>
-                                        <td class="text-center">
-                                            <div class="form-check d-flex justify-content-center">
-                                                <input type="checkbox" class="form-check-input chk-toggle-app" id="chk_app_3_cb" data-target="chk_app_3">
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-center">4</td>
-                                        <td>สื่อการสอน เช่น ชีทเอกสาร PowerPoint แผ่นใส สื่อปฏิสัมพันธ์แบบดิจิทัล และอื่นๆ เป็นต้น</td>
-                                        <td class="text-center">3</td>
-                                        <td class="text-center">
-                                            <div class="form-check d-flex justify-content-center">
-                                                <input type="checkbox" class="form-check-input chk-toggle-app" id="chk_app_4_cb" data-target="chk_app_4">
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td class="text-center">5</td>
-                                        <td>ผลการประเมินการสอนโดยนักศึกษา</td>
-                                        <td class="text-center">3</td>
-                                        <td class="text-center">
-                                            <div class="form-check d-flex justify-content-center">
-                                                <input type="checkbox" class="form-check-input chk-toggle-app" id="chk_app_5_cb" data-target="chk_app_5">
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        <div class="d-flex gap-2 mt-4">
-                            <button type="button" class="btn btn-outline-secondary" onclick="goToStep(1)">
-                                <i class="fas fa-arrow-left"></i> กลับ: เอกสารที่ 0
-                            </button>
-                            <button type="button" class="btn btn-outline-primary" onclick="previewDoc(1)">
-                                <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
-                            </button>
-                            <button type="button" class="btn btn-outline-success" onclick="saveDraft(1)">
-                                <i class="fas fa-save"></i> บันทึกแบบร่าง
-                            </button>
-                            <button type="button" class="btn btn-academic" onclick="goToStep(3)">
-                                <i class="fas fa-arrow-right"></i> ถัดไป: ตรวจสอบและส่งคำร้อง
-                            </button>
-                        </div>
-                    </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน</p>
+                    <a th:href="'/user/academic/request/' + ${request.id} + '/document-0'"
+                       class="btn" th:classappend="${hasDoc0} ? 'btn-outline-success' : 'btn-academic'">
+                        <i th:class="${hasDoc0} ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
+                        [[${hasDoc0} ? 'แก้ไขเอกสาร' : 'กรอกเอกสาร']]
+                    </a>
                 </div>
+            </div>
 
-                <!-- ==================== STEP 3: ตรวจสอบและส่ง ==================== -->
-                <div class="card card-academic mb-4" id="step3" style="display:none;">
-                    <div class="card-header bg-white border-bottom">
-                        <h4 class="mb-0"><i class="fas fa-check-double"></i> ตรวจสอบข้อมูลก่อนส่งคำร้อง</h4>
-                    </div>
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="card border-info mb-3">
-                                    <div class="card-header bg-info-subtle"><i class="fas fa-file-signature"></i> เอกสารที่ 0: บันทึกข้อความ</div>
-                                    <div class="card-body" id="summary_doc0"></div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="card border-primary mb-3">
-                                    <div class="card-header bg-primary-subtle"><i class="fas fa-clipboard-check"></i> เอกสารที่ 1: แบบตรวจสอบ</div>
-                                    <div class="card-body" id="summary_doc1"></div>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="d-flex gap-2 mt-4">
-                            <button type="button" class="btn btn-outline-secondary" onclick="goToStep(2)">
-                                <i class="fas fa-arrow-left"></i> กลับแก้ไข
-                            </button>
-                            <button type="button" class="btn btn-academic btn-lg" data-bs-toggle="modal" data-bs-target="#confirmSubmitModal">
-                                <i class="fas fa-paper-plane"></i> ส่งคำร้อง
-                            </button>
-                        </div>
-                    </div>
+            <!-- ==================== เอกสารที่ 1 ==================== -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-clipboard-check"></i> เอกสารที่ 1: แบบตรวจสอบเบื้องต้น</h4>
+                    <span th:if="${hasDoc1}" class="badge bg-success fs-6"><i class="fas fa-check me-1"></i>กรอกแล้ว</span>
+                    <span th:unless="${hasDoc1}" class="badge bg-warning text-dark fs-6"><i class="fas fa-clock me-1"></i>รอกรอก</span>
                 </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน</p>
+                    <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'"
+                       class="btn" th:classappend="${hasDoc1} ? 'btn-outline-success' : 'btn-academic'">
+                        <i th:class="${hasDoc1} ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
+                        [[${hasDoc1} ? 'แก้ไขเอกสาร' : 'กรอกเอกสาร']]
+                    </a>
+                </div>
+            </div>
 
-            </form>
-
-            <!-- Draft save form (hidden) -->
-            <form id="draftForm" th:action="@{/user/academic/save-draft}" method="post" style="display:none;">
-                <input type="hidden" name="docType" id="draftDocType" value="0">
-            </form>
+            <!-- ==================== ส่งคำร้อง ==================== -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white border-bottom">
+                    <h4 class="mb-0"><i class="fas fa-check-double"></i> ตรวจสอบและส่งคำร้อง</h4>
+                </div>
+                <div class="card-body">
+                    <th:block th:if="${hasDoc0 and hasDoc1}">
+                        <div class="alert alert-success mb-3">
+                            <i class="fas fa-check-circle me-2"></i> เอกสารครบถ้วน พร้อมส่งคำร้อง
+                        </div>
+                        <button type="button" class="btn btn-academic btn-lg" data-bs-toggle="modal" data-bs-target="#confirmSubmitModal">
+                            <i class="fas fa-paper-plane me-1"></i> ส่งคำร้อง
+                        </button>
+                    </th:block>
+                    <th:block th:unless="${hasDoc0 and hasDoc1}">
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i> กรุณากรอกเอกสารให้ครบทั้ง 2 รายการก่อนส่งคำร้อง
+                        </div>
+                        <button class="btn btn-secondary btn-lg" disabled>
+                            <i class="fas fa-paper-plane me-1"></i> ส่งคำร้อง
+                        </button>
+                    </th:block>
+                    <a href="/user/academic/dashboard" class="btn btn-outline-secondary btn-lg ms-2">
+                        <i class="fas fa-arrow-left"></i> กลับแดชบอร์ด
+                    </a>
+                </div>
+            </div>
 
             <!-- Confirmation Modal -->
             <div class="modal fade" id="confirmSubmitModal" tabindex="-1" aria-labelledby="confirmSubmitModalLabel" aria-hidden="true">
@@ -316,9 +128,11 @@
                             <p class="fs-5 mb-0">กรุณานำส่งเอกสารฉบับจริง<br>ให้นักทรัพยากรบุคคลวิทยาลัยการคอมพิวเตอร์</p>
                         </div>
                         <div class="modal-footer justify-content-center border-0 pb-4">
-                            <button type="button" class="btn btn-academic btn-lg px-5" id="confirmSubmitBtn">
-                                <i class="fas fa-check-circle me-2"></i> เข้าใจแล้ว ส่งคำร้อง
-                            </button>
+                            <form th:action="'/user/academic/request/' + ${request.id} + '/submit'" method="post">
+                                <button type="submit" class="btn btn-academic btn-lg px-5">
+                                    <i class="fas fa-check-circle me-2"></i> เข้าใจแล้ว ส่งคำร้อง
+                                </button>
+                            </form>
                         </div>
                     </div>
                 </div>
@@ -367,222 +181,6 @@
                 font-weight: 500;
             }
         </style>
-
-        <!-- Preview CSS & JS -->
-        <link rel="stylesheet" href="/css/doc_preview.css">
-        <script src="/js/doc_preview.js"></script>
-
-        <script th:inline="javascript">
-            let currentStep = 1;
-            let docPreviewInstances = {};
-
-            // Load draft data if available
-            var doc0DraftJson = /*[[${doc0Draft}]]*/ null;
-            var doc1DraftJson = /*[[${doc1Draft}]]*/ null;
-
-            document.addEventListener('DOMContentLoaded', function() {
-                if (doc0DraftJson) {
-                    try {
-                        let data = typeof doc0DraftJson === 'string' ? JSON.parse(doc0DraftJson) : doc0DraftJson;
-                        if (data.document_number) document.querySelector('[name="doc0_document_number"]').value = data.document_number;
-                        if (data.document_date) document.querySelector('[name="doc0_document_date"]').value = data.document_date;
-                        if (data.applicant_prefix) document.querySelector('[name="doc0_applicant_prefix"]').value = data.applicant_prefix;
-                        if (data.applicant_name) document.querySelector('[name="doc0_applicant_name"]').value = data.applicant_name;
-                        if (data.employment_type) {
-                            let radio = document.querySelector('input[name="doc0_employment_type"][value="' + data.employment_type + '"]');
-                            if (radio) radio.checked = true;
-                        }
-                        if (data.current_academic_rank) document.querySelector('[name="doc0_current_academic_rank"]').value = data.current_academic_rank;
-                        if (data.chk1 === '✓') document.getElementById('doc0_chk1').checked = true;
-                        if (data.chk2 === '✓') document.getElementById('doc0_chk2').checked = true;
-                        if (data.chk3 === '✓') document.getElementById('doc0_chk3').checked = true;
-                        if (data.applicant_name_full_print) document.querySelector('[name="doc0_applicant_name_full_print"]').value = data.applicant_name_full_print;
-                    } catch(e) { console.log('Error loading doc0 draft', e); }
-                }
-
-                if (doc1DraftJson) {
-                    try {
-                        let data = typeof doc1DraftJson === 'string' ? JSON.parse(doc1DraftJson) : doc1DraftJson;
-                        for (let i = 1; i <= 5; i++) {
-                            if (data['chk_app_' + i] === '✓') {
-                                document.getElementById('chk_app_' + i).value = '✓';
-                                document.getElementById('chk_app_' + i + '_cb').checked = true;
-                            }
-                        }
-                    } catch(e) { console.log('Error loading doc1 draft', e); }
-                }
-            });
-
-            function goToStep(step) {
-                if (step > currentStep) {
-                    if (currentStep === 1 && !validateStep1()) return;
-                }
-
-                document.getElementById('step1').style.display = step === 1 ? 'block' : 'none';
-                document.getElementById('step2').style.display = step === 2 ? 'block' : 'none';
-                document.getElementById('step3').style.display = step === 3 ? 'block' : 'none';
-
-                for (let i = 1; i <= 3; i++) {
-                    let ind = document.getElementById('stepInd' + i);
-                    ind.classList.remove('active', 'completed');
-                    if (i === step) ind.classList.add('active');
-                    else if (i < step) ind.classList.add('completed');
-                }
-
-                if (step === 3) generateSummary();
-                currentStep = step;
-                window.scrollTo({ top: 0, behavior: 'smooth' });
-            }
-
-            function validateStep1() {
-                let fields = [
-                    { el: document.querySelector('[name="doc0_document_date"]'), label: 'วันที่เอกสาร' },
-                    { el: document.querySelector('[name="doc0_applicant_prefix"]'), label: 'คำนำหน้า' },
-                    { el: document.querySelector('[name="doc0_applicant_name"]'), label: 'ชื่อ-นามสกุล' },
-                    { el: document.querySelector('[name="doc0_current_academic_rank"]'), label: 'ตำแหน่งทางวิชาการ' }
-                ];
-                for (let f of fields) {
-                    if (!f.el.value || f.el.value.trim() === '') {
-                        f.el.focus();
-                        f.el.classList.add('is-invalid');
-                        alert('กรุณากรอก: ' + f.label);
-                        return false;
-                    }
-                    f.el.classList.remove('is-invalid');
-                }
-                let empType = document.querySelector('input[name="doc0_employment_type"]:checked');
-                if (!empType) {
-                    alert('กรุณาเลือกประเภทบุคลากร');
-                    return false;
-                }
-                return true;
-            }
-
-            function generateSummary() {
-                let doc0Html = '<table class="table table-sm mb-0">';
-                let prefix = document.querySelector('[name="doc0_applicant_prefix"]').value || '-';
-                let name = document.querySelector('[name="doc0_applicant_name"]').value || '-';
-                let docDate = document.querySelector('[name="doc0_document_date"]').value || '-';
-                let empType = document.querySelector('input[name="doc0_employment_type"]:checked');
-                let rank = document.querySelector('[name="doc0_current_academic_rank"]').value || '-';
-                doc0Html += '<tr><td><strong>คำนำหน้า:</strong></td><td>' + prefix + '</td></tr>';
-                doc0Html += '<tr><td><strong>ชื่อ-สกุล:</strong></td><td>' + name + '</td></tr>';
-                doc0Html += '<tr><td><strong>วันที่:</strong></td><td>' + docDate + '</td></tr>';
-                doc0Html += '<tr><td><strong>ประเภท:</strong></td><td>' + (empType ? empType.value : '-') + '</td></tr>';
-                doc0Html += '<tr><td><strong>ตำแหน่ง:</strong></td><td>' + rank + '</td></tr>';
-                let positions = [];
-                if (document.getElementById('doc0_chk1').checked) positions.push('ผศ.');
-                if (document.getElementById('doc0_chk2').checked) positions.push('รศ.');
-                if (document.getElementById('doc0_chk3').checked) positions.push('ศ.');
-                doc0Html += '<tr><td><strong>ขอรับการประเมิน:</strong></td><td>' + (positions.length > 0 ? positions.join(', ') : '-') + '</td></tr>';
-                doc0Html += '</table>';
-                document.getElementById('summary_doc0').innerHTML = doc0Html;
-
-                let doc1Html = '<table class="table table-sm mb-0">';
-                let nameApp = document.querySelector('[name="name_applicant"]').value || '-';
-                doc1Html += '<tr><td><strong>ผู้ยื่น:</strong></td><td>' + nameApp + '</td></tr>';
-                let checkedItems = [];
-                let docNames = ['บันทึกนำส่ง', 'แผนการสอน', 'สาระสำคัญ', 'สื่อการสอน', 'ผลประเมินนศ.'];
-                for (let i = 1; i <= 5; i++) {
-                    let cb = document.getElementById('chk_app_' + i + '_cb');
-                    if (cb && cb.checked) checkedItems.push(i + '. ' + docNames[i-1]);
-                }
-                doc1Html += '<tr><td><strong>เอกสารที่ตรวจ:</strong></td><td>' + (checkedItems.length > 0 ? checkedItems.join('<br>') : '<span class="text-muted">ยังไม่ได้ติ๊ก</span>') + '</td></tr>';
-                doc1Html += '</table>';
-                document.getElementById('summary_doc1').innerHTML = doc1Html;
-            }
-
-            function saveDraft(docType) {
-                let draftForm = document.getElementById('draftForm');
-                document.getElementById('draftDocType').value = docType;
-
-                let existingInputs = draftForm.querySelectorAll('input:not([name="docType"]):not([name="_csrf"])');
-                existingInputs.forEach(el => el.remove());
-
-                if (docType === 0) {
-                    document.querySelectorAll('.doc0-field').forEach(field => {
-                        let input = document.createElement('input');
-                        input.type = 'hidden';
-                        input.name = field.name.replace('doc0_', '');
-                        if (field.type === 'checkbox') {
-                            input.value = field.checked ? '✓' : '';
-                        } else if (field.type === 'radio') {
-                            if (field.checked) input.value = field.value;
-                            else return;
-                        } else {
-                            input.value = field.value;
-                        }
-                        draftForm.appendChild(input);
-                    });
-                } else {
-                    let mainForm = document.getElementById('mainForm');
-                    ['chk_app_1','chk_app_2','chk_app_3','chk_app_4','chk_app_5','name_applicant'].forEach(function(name) {
-                        let field = mainForm.querySelector('[name="' + name + '"]');
-                        if (field) {
-                            let input = document.createElement('input');
-                            input.type = 'hidden';
-                            input.name = name;
-                            input.value = field.value;
-                            draftForm.appendChild(input);
-                        }
-                    });
-                }
-
-                draftForm.submit();
-            }
-
-            // Checkbox toggle สำหรับผู้ยื่น ✔️
-            document.querySelectorAll('.chk-toggle-app').forEach(function(cb) {
-                cb.addEventListener('change', function () {
-                    const targetId = this.getAttribute('data-target');
-                    const hiddenInput = document.getElementById(targetId);
-                    if (hiddenInput) {
-                        hiddenInput.value = this.checked ? '✓' : '';
-                    }
-                });
-            });
-
-            // Confirmation modal submit handler
-            // Preview function สำหรับ doc 0 และ doc 1
-            function previewDoc(docType) {
-                // สร้าง temporary form สำหรับ preview โดยแปลง field names
-                let tempFormId = 'previewTempForm_' + docType;
-                let existingTemp = document.getElementById(tempFormId);
-                if (existingTemp) existingTemp.remove();
-
-                let tempForm = document.createElement('form');
-                tempForm.id = tempFormId;
-                tempForm.style.display = 'none';
-                document.body.appendChild(tempForm);
-
-                let mainForm = document.getElementById('mainForm');
-                let formData = new FormData(mainForm);
-
-                for (let [key, value] of formData.entries()) {
-                    let input = document.createElement('input');
-                    input.type = 'hidden';
-                    if (docType === 0 && key.startsWith('doc0_')) {
-                        input.name = key.substring(5); // strip doc0_ prefix
-                    } else if (docType === 1 && !key.startsWith('doc0_')) {
-                        input.name = key;
-                    } else {
-                        continue;
-                    }
-                    input.value = value;
-                    tempForm.appendChild(input);
-                }
-
-                // สร้าง preview instance ชั่วคราว
-                let preview = new DocPreviewEngine(tempFormId, docType);
-                preview.show();
-            }
-
-            document.getElementById('confirmSubmitBtn').addEventListener('click', function() {
-                var modal = bootstrap.Modal.getInstance(document.getElementById('confirmSubmitModal'));
-                modal.hide();
-                document.getElementById('mainForm').submit();
-            });
-        </script>
     </section>
 </body>
 

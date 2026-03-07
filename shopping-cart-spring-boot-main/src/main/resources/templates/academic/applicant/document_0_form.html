@@ -1,21 +1,3 @@
-
-
-
-
-
-
-
-
-
-
-
-{% comment %} หน้าไร {% endcomment %}
-
-
-
-
-
-
 <!DOCTYPE html>
 <html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
 
@@ -43,16 +25,22 @@
                         </h5>
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">เลขที่เอกสาร <small class="text-muted">(ถ้ามี)</small></label>
-                                <input type="text" name="document_number" class="form-control"
-                                    placeholder="เช่น วทค. 001/2568"
-                                    th:value="${existingData != null ? existingData.getOrDefault('document_number', '') : ''}">
+                                <label class="form-label">เลขที่หนังสือ <small class="text-muted">(ถ้ามี)</small></label>
+                                <input type="text" name="memo_no" class="form-control"
+                                    placeholder="เช่น อว 660301.26.8/"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('memo_no', '') : ''}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วันที่เอกสาร</label>
-                                <input type="date" name="document_date" class="form-control"
-                                    th:value="${existingData != null ? existingData.getOrDefault('document_date', '') : ''}"
-                                    required>
+                                <div class="input-group">
+                                    <input type="text" name="date" class="form-control thai-full-date"
+                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('date', '') : ''}"
+                                        placeholder="เช่น 17 กุมภาพันธ์ 2569" required>
+                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -62,23 +50,23 @@
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
-                                <select name="applicant_prefix" class="form-select" required>
+                                <select name="title" class="form-select" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย"
-                                        th:selected="${existingData != null && existingData.getOrDefault('applicant_prefix', '') == 'นาย'}">
+                                        th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นาย'}">
                                         นาย</option>
                                     <option value="นาง"
-                                        th:selected="${existingData != null && existingData.getOrDefault('applicant_prefix', '') == 'นาง'}">
+                                        th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นาง'}">
                                         นาง</option>
                                     <option value="นางสาว"
-                                        th:selected="${existingData != null && existingData.getOrDefault('applicant_prefix', '') == 'นางสาว'}">
+                                        th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นางสาว'}">
                                         นางสาว</option>
                                 </select>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล</label>
-                                <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${existingData != null ? existingData.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
+                                <input type="text" name="full_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}"
                                     required placeholder="เช่น สมชาย ใจดี">
                             </div>
                         </div>
@@ -88,16 +76,16 @@
                                 <label class="form-label">ประเภทบุคลากร</label>
                                 <div class="d-flex gap-4 mt-1">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="employment_type"
+                                        <input class="form-check-input" type="radio" name="employee_type"
                                             id="empType1" value="พนักงานมหาวิทยาลัย"
-                                            th:checked="${existingData != null && existingData.getOrDefault('employment_type', '') == 'พนักงานมหาวิทยาลัย'}"
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('employee_type', '') == 'พนักงานมหาวิทยาลัย'}"
                                             required>
                                         <label class="form-check-label" for="empType1">พนักงานมหาวิทยาลัย</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="employment_type"
+                                        <input class="form-check-input" type="radio" name="employee_type"
                                             id="empType2" value="ข้าราชการ"
-                                            th:checked="${existingData != null && existingData.getOrDefault('employment_type', '') == 'ข้าราชการ'}">
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('employee_type', '') == 'ข้าราชการ'}">
                                         <label class="form-check-label" for="empType2">ข้าราชการ</label>
                                     </div>
                                 </div>
@@ -107,16 +95,16 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งทางวิชาการปัจจุบัน</label>
-                                <select name="current_academic_rank" class="form-select" required>
+                                <select name="current_position" class="form-select" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="อาจารย์"
-                                        th:selected="${existingData != null && existingData.getOrDefault('current_academic_rank', '') == 'อาจารย์'}">
+                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'อาจารย์'}">
                                         อาจารย์</option>
                                     <option value="ผู้ช่วยศาสตราจารย์"
-                                        th:selected="${existingData != null && existingData.getOrDefault('current_academic_rank', '') == 'ผู้ช่วยศาสตราจารย์'}">
+                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'ผู้ช่วยศาสตราจารย์'}">
                                         ผู้ช่วยศาสตราจารย์</option>
                                     <option value="รองศาสตราจารย์"
-                                        th:selected="${existingData != null && existingData.getOrDefault('current_academic_rank', '') == 'รองศาสตราจารย์'}">
+                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'รองศาสตราจารย์'}">
                                         รองศาสตราจารย์</option>
                                 </select>
                             </div>
@@ -131,19 +119,19 @@
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="chk1" id="chk1"
                                             value="✓"
-                                            th:checked="${existingData != null && existingData.getOrDefault('chk1', '') == '✓'}">
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk1', '') == '✓'}">
                                         <label class="form-check-label" for="chk1">ผู้ช่วยศาสตราจารย์ (ผศ.)</label>
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="chk2" id="chk2"
                                             value="✓"
-                                            th:checked="${existingData != null && existingData.getOrDefault('chk2', '') == '✓'}">
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk2', '') == '✓'}">
                                         <label class="form-check-label" for="chk2">รองศาสตราจารย์ (รศ.)</label>
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input" type="checkbox" name="chk3" id="chk3"
                                             value="✓"
-                                            th:checked="${existingData != null && existingData.getOrDefault('chk3', '') == '✓'}">
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk3', '') == '✓'}">
                                         <label class="form-check-label" for="chk3">ศาสตราจารย์ (ศ.)</label>
                                     </div>
                                 </div>
@@ -155,7 +143,7 @@
                             <div class="col-md-8">
                                 <label class="form-label">ชื่อ-สกุล เต็ม (สำหรับพิมพ์ในเอกสาร)</label>
                                 <input type="text" name="applicant_name_full_print" class="form-control"
-                                    th:value="${existingData != null ? existingData.getOrDefault('applicant_name_full_print', '') : ''}"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name_full_print', '') : ''}"
                                     placeholder="เช่น ผู้ช่วยศาสตราจารย์ ดร.สมชาย ใจดี">
                                 <small class="text-muted">ระบุคำนำหน้า ตำแหน่ง และชื่อเต็ม สำหรับพิมพ์ในลายเซ็น</small>
                             </div>
@@ -201,6 +189,9 @@
                     <link rel="stylesheet" href="/css/doc_preview.css">
                     <script src="/js/doc_preview.js"></script>
 
+                    <input type="hidden" id="currentDocType" value="0">
+                    <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
+
                     <script>
                         // ติ๊กได้แค่อันเดียว (chk1, chk2, chk3)
                         document.querySelectorAll('#chk1, #chk2, #chk3').forEach(cb => {
@@ -212,6 +203,50 @@
                                 }
                             });
                         });
+
+                        // Thai Date Defaults & Picker
+                        (function () {
+                            const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+                            const now = new Date();
+                            const thaiFullDate = now.getDate() + ' ' + thaiMonths[now.getMonth()] + ' ' + (now.getFullYear() + 543);
+                            document.querySelectorAll('.thai-full-date').forEach(el => {
+                                if (!el.value) el.value = thaiFullDate;
+                            });
+
+                            function toThaiDate(dateStr) {
+                                const d = new Date(dateStr);
+                                if (isNaN(d)) return '';
+                                return d.getDate() + ' ' + thaiMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                            }
+                            document.querySelectorAll('.thai-date-btn').forEach(btn => {
+                                const group = btn.closest('.input-group');
+                                const picker = group.querySelector('.thai-date-picker');
+                                btn.addEventListener('click', () => picker.showPicker());
+                            });
+                            document.querySelectorAll('.thai-date-picker').forEach(picker => {
+                                picker.addEventListener('change', function () {
+                                    const group = this.closest('.input-group');
+                                    const textInput = group.querySelector('.thai-full-date');
+                                    if (this.value) textInput.value = toThaiDate(this.value);
+                                });
+                            });
+                        })();
+
+                        // โหลดข้อมูลเดิม (ถ้ามี)
+                        var existingJson = document.getElementById('existingDataHolder') ? document.getElementById('existingDataHolder').value : null;
+                        if (existingJson) {
+                            try {
+                                var data = JSON.parse(existingJson);
+                                var form = document.getElementById('doc0Form');
+                                if (form && data) {
+                                    Object.keys(data).forEach(function(key) {
+                                        var el = form.querySelector('[name="' + key + '"]');
+                                        if (el && !el.value) el.value = data[key];
+                                    });
+                                }
+                            } catch (e) { console.warn('Failed to load existing data:', e); }
+                        }
 
                         // Initialize real-time preview for Doc 0
                         initDocPreview('doc0Form', 0);

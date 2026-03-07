@@ -16,17 +16,27 @@
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลคำสั่ง</h5>
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">เลขที่คำสั่ง</label><input type="text"
-                                    name="no" class="form-control"></div>
+                                    name="order_no" class="form-control"></div>
                             <div class="col-md-4"><label class="form-label">ปีของเลขที่หนังสือ (พ.ศ.)</label><input type="text"
-                                    name="no_year" class="form-control thai-year"></div>
+                                    name="year" class="form-control thai-year"></div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้ยื่น</h5>
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า</label>
+                                <input type="text" name="applicant_title" class="form-control" list="titleList3" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${request.applicant.title}" >
+                                <datalist id="titleList3">
+                                    <option value="นาย">
+                                    <option value="นาง">
+                                    <option value="นางสาว">
+                                </datalist>
+                            </div>
+                            <div class="col-md-5">
                                 <label class="form-label">ชื่อผู้ยื่น</label>
                                 <div class="combo-input">
-                                    <input type="text" name="dropdownname_applicant" class="form-control" list="staffList3" placeholder="เลือกหรือพิมพ์ชื่อ..."
-                                        th:value="${request.applicant.title != null ? request.applicant.title + ' ' + request.applicant.name : request.applicant.name}">
+                                    <input type="text" name="applicant_name" class="form-control" list="staffList3" placeholder="เลือกหรือพิมพ์ชื่อ..."
+                                        th:value="${request.applicant.name}" >
                                     <datalist id="staffList3">
                                         <option th:each="s : ${staffMembers}" th:value="${s.displayName}"></option>
                                     </datalist>
@@ -34,7 +44,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ประเภทตำแหน่ง</label>
-                                <input type="text" name="staff_type" class="form-control" list="staffTypeList3" placeholder="เลือกหรือพิมพ์...">
+                                <input type="text" name="employee_type" class="form-control" list="staffTypeList3" placeholder="เลือกหรือพิมพ์...">
                                 <datalist id="staffTypeList3">
                                     <option value="พนักงานมหาวิทยาลัย">
                                     <option value="ข้าราชการ">
@@ -44,7 +54,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งปัจจุบัน</label>
-                                <input type="text" name="dropdown_position" class="form-control" list="posList3" placeholder="เลือกหรือพิมพ์...">
+                                <input type="text" name="current_position" class="form-control" list="posList3" placeholder="เลือกหรือพิมพ์..."  th:value="${request.applicant.academicPosition}">
                                 <datalist id="posList3">
                                     <option value="อาจารย์">
                                     <option value="ผู้ช่วยศาสตราจารย์">
@@ -53,7 +63,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งที่ขอ</label>
-                                <input type="text" name="dropdown_positionnd" class="form-control" list="posReqList3" placeholder="เลือกหรือพิมพ์...">
+                                <input type="text" name="requested_position" class="form-control" list="posReqList3" placeholder="เลือกหรือพิมพ์...">
                                 <datalist id="posReqList3">
                                     <option value="ผู้ช่วยศาสตราจารย์">
                                     <option value="รองศาสตราจารย์">
@@ -66,7 +76,7 @@
                             <div class="col-md-5">
                                 <label class="form-label">กรรมการคนที่ [[${i}]]</label>
                                 <div class="combo-input">
-                                    <input type="text" th:name="'dropdown_committee' + ${i}" class="form-control" th:list="'committeeList3_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
+                                    <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control" th:list="'committeeList3_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
                                         th:value="${i == 1 ? defaultCommittee1 : (i == 2 ? defaultCommittee2 : defaultCommittee3)}">
                                     <datalist th:id="'committeeList3_' + ${i}">
                                         <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
@@ -75,27 +85,31 @@
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" th:name="'dropdown_committee_position' + ${i}" class="form-control"
-                                    th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')}">
+                                <input type="text" th:name="'committee_' + ${i} + '_role'" class="form-control"
+                                    th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')} " >
                             </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">วันที่มีผลบังคับใช้</h5>
                         <div class="row mb-3">
-                            <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
-                                    name="start_date" class="form-control thai-day"></div>
-                            <div class="col-md-4"><label class="form-label">เดือน</label><input type="text"
-                                    name="start_month" class="form-control thai-month"></div>
-                            <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
-                                    name="start_year" class="form-control thai-year"></div>
+                            <div class="col-md-6">
+                                <label class="form-label">วันที่</label>
+                                <div class="input-group">
+                                    <input type="text" name="effective_date" class="form-control thai-full-date">
+                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                </div>
+                            </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">ลงนาม</h5>
                         <div class="row mb-3">
-                            <div class="col-md-3"><label class="form-label">วันที่</label><input type="text"
-                                    name="signed_day" class="form-control thai-day"></div>
-                            <div class="col-md-4"><label class="form-label">เดือน</label><input type="text"
-                                    name="signed_month" class="form-control thai-month"></div>
-                            <div class="col-md-3"><label class="form-label">ปี พ.ศ.</label><input type="text"
-                                    name="signed_year" class="form-control thai-year"></div>
+                            <div class="col-md-6">
+                                <label class="form-label">วันที่สั่ง (ลงนาม)</label>
+                                <div class="input-group">
+                                    <input type="text" name="order_date" class="form-control thai-full-date">
+                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                </div>
+                            </div>
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
@@ -130,6 +144,39 @@
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
+        <script>
+            // Override order_date picker to use "พ.ศ." format (picker + existing data)
+            document.addEventListener('DOMContentLoaded', function () {
+                var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+                function addPorSor(val) {
+                    if (!val || val.indexOf('พ.ศ.') !== -1) return val;
+                    // match "6  มีนาคม  2569" or "6 มีนาคม 2569"
+                    var m = val.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+                    if (m) return m[1] + '  ' + m[2] + '  พ.ศ. ' + m[3];
+                    return val;
+                }
+
+                var orderDateInput = document.querySelector('input[name="order_date"]');
+                if (orderDateInput) {
+                    // Reformat existing/restored value
+                    if (orderDateInput.value) {
+                        orderDateInput.value = addPorSor(orderDateInput.value);
+                    }
+                    // Override picker
+                    var picker = orderDateInput.closest('.input-group').querySelector('.thai-date-picker');
+                    if (picker) {
+                        picker.addEventListener('change', function () {
+                            if (this.value) {
+                                var d = new Date(this.value);
+                                orderDateInput.value = d.getDate() + '  ' + thaiMonths[d.getMonth()] + '  พ.ศ. ' + (d.getFullYear() + 543);
+                            }
+                        });
+                    }
+                }
+            });
+        </script>
     </section>
 </body>
 

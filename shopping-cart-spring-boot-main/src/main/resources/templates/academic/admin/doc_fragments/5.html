@@ -16,8 +16,14 @@
                         <h5 class="border-bottom pb-2 mb-3">ข้อเสนอแนะจากคณะอนุกรรมการ</h5>
                         <div class="mb-3">
                             <label class="form-label">ข้อเสนอแนะ</label>
-                            <textarea name="descirption" class="form-control" rows="8"
+                            <textarea name="suggestions_text" class="form-control" rows="8"
                                 placeholder="กรอกข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input type="checkbox" class="form-check-input" name="send_to_applicant_email" id="sendEmail" value="true" checked>
+                                <label class="form-check-label" for="sendEmail">ส่งข้อเสนอแนะถึงผู้ยื่นทางอีเมล</label>
+                            </div>
                         </div>
 
                         <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">

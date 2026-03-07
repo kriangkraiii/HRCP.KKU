@@ -30,7 +30,23 @@
                 คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องใหม่ได้จนกว่าคำร้องเดิมจะขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น"
             </div>
 
-            <div th:if="${requests == null || requests.isEmpty()}" class="text-center py-5">
+            <!-- Draft Request Card -->
+            <div th:if="${draftRequest != null}" class="card card-academic mb-4 border-warning">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start mb-3">
+                        <div>
+                            <h5 class="mb-1"><i class="fas fa-edit text-warning me-2"></i> คำร้องฉบับร่าง</h5>
+                            <small class="text-muted">กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง</small>
+                        </div>
+                        <span class="badge bg-warning text-dark fs-6">แบบร่าง</span>
+                    </div>
+                    <a th:href="'/user/academic/request/' + ${draftRequest.id}" class="btn btn-warning">
+                        <i class="fas fa-arrow-right"></i> ดำเนินการต่อ
+                    </a>
+                </div>
+            </div>
+
+            <div th:if="${requests == null || requests.isEmpty()}" class="text-center py-5" th:unless="${draftRequest != null}">
                 <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
                 <p class="text-muted">ยังไม่มีคำร้อง กดปุ่ม "ยื่นคำร้องใหม่" เพื่อเริ่มต้น</p>
             </div>

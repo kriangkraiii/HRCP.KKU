@@ -16,16 +16,16 @@
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-file-signature"></i> ข้อมูลบันทึกข้อความ</h5>
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">เลขที่เอกสาร <small class="text-muted">(ถ้ามี)</small></label>
-                                <input type="text" name="document_number" class="form-control"
-                                    placeholder="เช่น วทค. 001/2568"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('document_number', '') : ''}">
+                                <label class="form-label">เลขที่หนังสือ <small class="text-muted">(ถ้ามี)</small></label>
+                                <input type="text" name="memo_no" class="form-control"
+                                    placeholder="เช่น อว 660301.26.8/"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('memo_no', '') : ''}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วันที่เอกสาร</label>
                                 <div class="input-group">
-                                    <input type="text" name="document_date" class="form-control thai-full-date"
-                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('document_date', '') : ''}"
+                                    <input type="text" name="date" class="form-control thai-full-date"
+                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('date', '') : ''}"
                                         placeholder="เช่น 17 กุมภาพันธ์ 2569" required>
                                     <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
                                     <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่">
@@ -39,17 +39,17 @@
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
-                                <select name="applicant_prefix" class="form-select" required>
+                                <select name="title" class="form-select" required>
                                     <option value="">-- เลือก --</option>
-                                    <option value="นาย"     th:selected="${(doc0Data?.applicant_prefix ?: request.applicant.title) == 'นาย'}">นาย</option>
-                                    <option value="นาง"     th:selected="${(doc0Data?.applicant_prefix ?: request.applicant.title) == 'นาง'}">นาง</option>
-                                    <option value="นางสาว" th:selected="${(doc0Data?.applicant_prefix ?: request.applicant.title) == 'นางสาว'}">นางสาว</option>
+                                    <option value="นาย"     th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นาย'}">นาย</option>
+                                    <option value="นาง"     th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นาง'}">นาง</option>
+                                    <option value="นางสาว" th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นางสาว'}">นางสาว</option>
                                 </select>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล</label>
-                                <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
+                                <input type="text" name="full_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}"
                                     required placeholder="เช่น สมชาย ใจดี">
                             </div>
                         </div>
@@ -59,15 +59,15 @@
                                 <label class="form-label">ประเภทบุคลากร</label>
                                 <div class="d-flex gap-4 mt-1">
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="employment_type"
+                                        <input class="form-check-input" type="radio" name="employee_type"
                                             id="empType1" value="พนักงานมหาวิทยาลัย" required
-                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('employment_type', '') == 'พนักงานมหาวิทยาลัย'}">
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('employee_type', '') == 'พนักงานมหาวิทยาลัย'}">
                                         <label class="form-check-label" for="empType1">พนักงานมหาวิทยาลัย</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input" type="radio" name="employment_type"
+                                        <input class="form-check-input" type="radio" name="employee_type"
                                             id="empType2" value="ข้าราชการ"
-                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('employment_type', '') == 'ข้าราชการ'}">
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('employee_type', '') == 'ข้าราชการ'}">
                                         <label class="form-check-label" for="empType2">ข้าราชการ</label>
                                     </div>
                                 </div>
@@ -77,11 +77,11 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งทางวิชาการปัจจุบัน</label>
-                                <select name="current_academic_rank" class="form-select" required>
+                                <select name="current_position" class="form-select" required>
                                     <option value="">-- เลือก --</option>
-                                    <option value="อาจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_academic_rank', '') == 'อาจารย์'}">อาจารย์</option>
-                                    <option value="ผู้ช่วยศาสตราจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_academic_rank', '') == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
-                                    <option value="รองศาสตราจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_academic_rank', '') == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
+                                    <option value="อาจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'อาจารย์'}">อาจารย์</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
                                 </select>
                             </div>
                         </div>
@@ -113,12 +113,15 @@
                             <div class="col-md-8">
                                 <label class="form-label">ชื่อ-สกุล เต็ม (สำหรับพิมพ์ในเอกสาร)</label>
                                 <input type="text" name="applicant_name_full_print" class="form-control"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name_full_print', '') : ''}"
-                                    placeholder="เช่น ผู้ช่วยศาสตราจารย์ ดร.สมชาย ใจดี">
+                                    th:value="${doc0Data != null && doc0Data.getOrDefault('applicant_name_full_print', '') != ''
+                                        ? doc0Data.get('applicant_name_full_print')
+                                        : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty()
+                                            ? request.applicant.academicPosition + request.applicant.name
+                                            : request.applicant.title + request.applicant.name)}"
+                                    placeholder="เช่น ผู้ช่วยศาสตราจารย์สมชาย ใจดี">
                                 <small class="text-muted">ระบุคำนำหน้า ตำแหน่ง และชื่อเต็ม สำหรับพิมพ์ในลายเซ็น</small>
                             </div>
                         </div>
-
                         <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">
                             <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>

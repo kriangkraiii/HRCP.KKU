@@ -65,6 +65,7 @@ public class AcademicAdminController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+
     // คำอธิบายประเภทเอกสาร (type) เพื่อแสดงใน UI
     private static final Map<Integer, String> DOC_LABELS;
     static {
@@ -166,11 +167,10 @@ public class AcademicAdminController {
                 try {
                     String doc2Json = doc2List.get(0).getJsonData();
                     Map<String, Object> doc2Data = objectMapper.readValue(doc2Json,
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
-                            });
-                    String c1 = doc2Data.getOrDefault("n_1", "").toString();
-                    String c2 = doc2Data.getOrDefault("n_2", "").toString();
-                    String c3 = doc2Data.getOrDefault("n_3", "").toString();
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
+                    String c1 = doc2Data.getOrDefault("committee_1_name", "").toString();
+                    String c2 = doc2Data.getOrDefault("committee_2_name", "").toString();
+                    String c3 = doc2Data.getOrDefault("committee_3_name", "").toString();
                     model.addAttribute("defaultCommittee1", c1);
                     model.addAttribute("defaultCommittee2", c2);
                     model.addAttribute("defaultCommittee3", c3);
@@ -187,8 +187,7 @@ public class AcademicAdminController {
                 try {
                     String doc0Json = doc0List.get(0).getJsonData();
                     Map<String, String> doc0Data = objectMapper.readValue(doc0Json,
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                            });
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
                     model.addAttribute("doc0Data", doc0Data);
                 } catch (Exception e) {
                     // ignore
@@ -203,8 +202,7 @@ public class AcademicAdminController {
                 try {
                     String doc6Json = doc6List.get(0).getJsonData();
                     Map<String, Object> doc6Data = objectMapper.readValue(doc6Json,
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
-                            });
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {});
                     model.addAttribute("doc6Data", doc6Data);
                 } catch (Exception e) {
                     // ignore
@@ -219,8 +217,7 @@ public class AcademicAdminController {
                 try {
                     String doc1Json = doc1List.get(0).getJsonData();
                     Map<String, String> doc1Data = objectMapper.readValue(doc1Json,
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                            });
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
                     model.addAttribute("doc1Data", doc1Data);
                 } catch (Exception e) {
                     // ignore parse errors
@@ -235,8 +232,7 @@ public class AcademicAdminController {
                 try {
                     String doc0Json = doc0List.get(0).getJsonData();
                     Map<String, String> doc0Data = objectMapper.readValue(doc0Json,
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                            });
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
                     model.addAttribute("doc0Data", doc0Data);
                 } catch (Exception e) {
                     // ignore parse errors
@@ -268,10 +264,24 @@ public class AcademicAdminController {
             return "redirect:/admin/academic/request/" + id + "/document/" + type + "?saved=draft";
         }
 
+        // ============ chk checkbox: ติ๊กอันเดียว อันอื่นเป็น " " ============
+        String[] chkKeys = {"chk1", "chk2", "chk3"};
+        boolean hasAnyChk = false;
+        for (String k : chkKeys) {
+            if ("✓".equals(formData.get(k))) { hasAnyChk = true; break; }
+        }
+        if (hasAnyChk) {
+            for (String k : chkKeys) {
+                if (!"✓".equals(formData.get(k))) {
+                    formData.put(k, " ");
+                }
+            }
+        }
+
         // ============ Document 6: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
         if (type == 6) {
             // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1=20, 2=30, 3=30, 4=20
-            int[] weights = { 20, 30, 30, 20 };
+            int[] weights = {20, 30, 30, 20};
             double grandTotal = 0;
 
             for (int sec = 1; sec <= 4; sec++) {
@@ -285,22 +295,16 @@ public class AcademicAdminController {
                 }
 
                 // วิเคราะห์ว่าคะแนนตกอยู่ในช่วงไหน (5 ช่วง)
-                // ช่วง: 0-1 = score_1, 1.01-2 = score_2, 2.01-3 = score_3, 3.01-4 = score_4,
-                // 4.01-5 = score_5
+                // ช่วง: 0-1 = score_1, 1.01-2 = score_2, 2.01-3 = score_3, 3.01-4 = score_4, 4.01-5 = score_5
                 // placeholder ใน template DOCX: {{score11}}, {{score12}}, ..., {{score45}}
                 for (int range = 1; range <= 5; range++) {
                     String key = "score" + sec + range;
                     boolean inRange = false;
-                    if (range == 1)
-                        inRange = (secScore > 0 && secScore <= 1);
-                    else if (range == 2)
-                        inRange = (secScore > 1 && secScore <= 2);
-                    else if (range == 3)
-                        inRange = (secScore > 2 && secScore <= 3);
-                    else if (range == 4)
-                        inRange = (secScore > 3 && secScore <= 4);
-                    else if (range == 5)
-                        inRange = (secScore > 4 && secScore <= 5);
+                    if (range == 1) inRange = (secScore > 0 && secScore <= 1);
+                    else if (range == 2) inRange = (secScore > 1 && secScore <= 2);
+                    else if (range == 3) inRange = (secScore > 2 && secScore <= 3);
+                    else if (range == 4) inRange = (secScore > 3 && secScore <= 4);
+                    else if (range == 5) inRange = (secScore > 4 && secScore <= 5);
                     // ช่วงที่ตรง → ใส่คะแนน, ช่วงอื่น → ว่าง
                     formData.put(key, inRange ? String.valueOf(secScore) : "");
                 }
@@ -328,44 +332,35 @@ public class AcademicAdminController {
 
             // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์
             long roundedTotal = Math.round(grandTotal);
-            formData.put("ch1", roundedTotal <= 56 ? "☑︎" : "☐");
-            formData.put("ch2", (roundedTotal >= 57 && roundedTotal <= 70) ? "☑︎" : "☐");
-            formData.put("ch3", (roundedTotal >= 71 && roundedTotal <= 85) ? "☑︎" : "☐");
-            formData.put("ch4", (roundedTotal >= 86 && roundedTotal <= 100) ? "☑︎" : "☐");
+            formData.put("ch1", roundedTotal <= 56 ? "☑" : "☐");
+            formData.put("ch2", (roundedTotal >= 57 && roundedTotal <= 70) ? "☑" : "☐");
+            formData.put("ch3", (roundedTotal >= 71 && roundedTotal <= 85) ? "☑" : "☐");
+            formData.put("ch4", (roundedTotal >= 86 && roundedTotal <= 100) ? "☑" : "☐");
 
             // กำหนด eval_level จากผลคะแนนเพื่อส่งต่อไป doc7/doc8
             String evalLevel = "";
-            if (roundedTotal <= 56)
-                evalLevel = "ไม่ผ่าน";
-            else if (roundedTotal <= 70)
-                evalLevel = "ชำนาญ";
-            else if (roundedTotal <= 85)
-                evalLevel = "ชำนาญพิเศษ";
-            else
-                evalLevel = "เชี่ยวชาญ";
+            if (roundedTotal <= 56) evalLevel = "ไม่ผ่าน";
+            else if (roundedTotal <= 70) evalLevel = "ชำนาญ";
+            else if (roundedTotal <= 85) evalLevel = "ชำนาญพิเศษ";
+            else evalLevel = "เชี่ยวชาญ";
             formData.put("eval_result_level", evalLevel);
 
-            // auto-fill title/applicantName/academicPosition จาก doc0 ถ้า form ไม่ได้ส่งมา
+            // auto-fill title/applicant_name/requested_position จาก doc0 ถ้า form ไม่ได้ส่งมา
             if (formData.getOrDefault("title", " ").isBlank()) {
                 List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
                 if (!doc0List.isEmpty()) {
                     try {
                         Map<String, String> doc0Data = objectMapper.readValue(
                                 doc0List.get(0).getJsonData(),
-                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                                });
-                        formData.put("title", doc0Data.getOrDefault("applicant_prefix", " "));
-                        formData.put("applicantName", doc0Data.getOrDefault("applicant_name", " "));
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                        formData.put("title", doc0Data.getOrDefault("title", " "));
+                        formData.put("applicant_name", doc0Data.getOrDefault("full_name", " "));
                         String pos = " ";
-                        if ("✓".equals(doc0Data.get("chk1")))
-                            pos = "ผู้ช่วยศาสตราจารย์";
-                        else if ("✓".equals(doc0Data.get("chk2")))
-                            pos = "รองศาสตราจารย์";
-                        else if ("✓".equals(doc0Data.get("chk3")))
-                            pos = "ศาสตราจารย์";
-                        formData.put("academicPosition", pos);
-                    } catch (Exception ignored) {
-                    }
+                        if ("✓".equals(doc0Data.get("chk1"))) pos = "ผู้ช่วยศาสตราจารย์";
+                        else if ("✓".equals(doc0Data.get("chk2"))) pos = "รองศาสตราจารย์";
+                        else if ("✓".equals(doc0Data.get("chk3"))) pos = "ศาสตราจารย์";
+                        formData.put("requested_position", pos);
+                    } catch (Exception ignored) {}
                 }
             }
         }
@@ -398,8 +393,7 @@ public class AcademicAdminController {
         adminLogService.log(principal.getName(),
                 admin != null ? admin.getName() : principal.getName(),
                 "GENERATE_DOCUMENT",
-                "สร้างเอกสารที่ " + type + " (" + DOC_LABELS.getOrDefault(type, "Document " + type) + ") สำหรับคำร้อง #"
-                        + id,
+                "สร้างเอกสารที่ " + type + " (" + DOC_LABELS.getOrDefault(type, "Document " + type) + ") สำหรับคำร้อง #" + id,
                 getClientIpAddress());
 
         // Auto-update status based on document type
@@ -489,8 +483,7 @@ public class AcademicAdminController {
         // ตรวจสอบประเภทไฟล์
         String originalFilename = file.getOriginalFilename();
         if (originalFilename == null ||
-                (!originalFilename.toLowerCase().endsWith(".pdf")
-                        && !originalFilename.toLowerCase().endsWith(".docx"))) {
+                (!originalFilename.toLowerCase().endsWith(".pdf") && !originalFilename.toLowerCase().endsWith(".docx"))) {
             return "redirect:/admin/academic/request/" + id + "?error=invalid_file_type";
         }
 
@@ -573,8 +566,7 @@ public class AcademicAdminController {
 
     /** แปลงตัวเลข Arabic เป็นเลขไทย เช่น "3.50" → "๓.๕๐" */
     private static String toThaiDigits(String s) {
-        if (s == null || s.isEmpty())
-            return s;
+        if (s == null || s.isEmpty()) return s;
         return s.replace("0", "๐").replace("1", "๑").replace("2", "๒")
                 .replace("3", "๓").replace("4", "๔").replace("5", "๕")
                 .replace("6", "๖").replace("7", "๗").replace("8", "๘")

@@ -172,6 +172,15 @@
 		</dependency>
 
 		<!-- ============================================================ -->
+		<!-- XDocReport - DOCX→PDF converter (opensagres + iText/OpenPDF)  -->
+		<!-- ============================================================ -->
+		<dependency>
+			<groupId>fr.opensagres.xdocreport</groupId>
+			<artifactId>fr.opensagres.poi.xwpf.converter.pdf</artifactId>
+			<version>2.1.0</version>
+		</dependency>
+
+		<!-- ============================================================ -->
 		<!-- Jackson - JSON Processing                                     -->
 		<!-- ============================================================ -->
 		<dependency>

@@ -19,7 +19,7 @@
                         <input type="hidden" name="chk_app_3" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_3', '') : ''}">
                         <input type="hidden" name="chk_app_4" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_4', '') : ''}">
                         <input type="hidden" name="chk_app_5" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_5', '') : ''}">
-                        <input type="hidden" name="name_applicant" th:value="${doc1Data != null ? doc1Data.getOrDefault('name_applicant', '') : ''}">
+                        <input type="hidden" name="applicant_name" th:value="${doc1Data != null ? doc1Data.getOrDefault('applicant_name', '') : ''}">
 
                         <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ เจ้าหน้าที่ (เริ่มต้นยังไม่ติ๊ก) -->
                         <input type="hidden" name="chk_off_1" id="chk_off_1" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_off_1', '') : ''}">
@@ -32,8 +32,13 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น</label>
-                                <input type="text" class="form-control" readonly
-                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('name_applicant', '-') : '-'}">
+                                <input type="text" class="form-control"
+                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('applicant_name', '-') : '-'}">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อเจ้าหน้าที่ (ภารกิจทรัพยากรบุคคล)</label>
+                                <input type="text" name="hr_staff_name" class="form-control"
+                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('hr_staff_name', 'นางสาวจิราภรณ์ หอมอ่อน') : 'นางสาวจิราภรณ์ หอมอ่อน'}">
                             </div>
                         </div>
 

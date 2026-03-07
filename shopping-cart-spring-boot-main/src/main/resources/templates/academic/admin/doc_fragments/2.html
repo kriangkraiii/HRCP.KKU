@@ -35,7 +35,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อคณบดี</label>
                                 <div class="combo-input">
-                                    <input type="text" name="dropdownDeanName" class="form-control" list="deanList" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                                    <input type="text" name="dean_name" class="form-control" list="deanList" placeholder="เลือกหรือพิมพ์ชื่อ...">
                                     <datalist id="deanList">
                                         <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
                                     </datalist>
@@ -62,7 +62,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อเจ้าหน้าที่ (ภารกิจทรัพยากรบุคคล)</label>
                                 <div class="combo-input">
-                                    <input type="text" name="hrName" class="form-control" list="hrList" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                                    <input type="text" name="hr_staff_name" class="form-control" list="hrList" placeholder="เลือกหรือพิมพ์ชื่อ...">
                                     <datalist id="hrList">
                                         <option th:each="h : ${hrStaff}" th:value="${h.displayName}"></option>
                                     </datalist>
@@ -93,7 +93,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อหัวหน้าสาขา</label>
                                 <div class="combo-input">
-                                    <input type="text" name="dropdownCsHeadName" class="form-control" list="headList" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                                    <input type="text" name="department_head" class="form-control" list="headList" placeholder="เลือกหรือพิมพ์ชื่อ...">
                                     <datalist id="headList">
                                         <option th:each="h : ${heads}" th:value="${h.displayName}"></option>
                                     </datalist>
@@ -115,8 +115,12 @@
                                     <label class="form-check-label" for="chk_dean_sign2_cb">เห็นชอบ และดำเนินการนัดวันประเมินผลการสอนต่อไป</label>
                                 </div>
                                 <div class="form-check mt-1">
-                                    <input type="checkbox" class="form-check-input chk-toggle" id="chk_dean_sign3_cb" data-target="chk_dean_sign3">
-                                    <label class="form-check-label" for="chk_dean_sign3_cb">ลงนามคณบดี (ส่วนที่ 5)</label>
+                                    <input type="checkbox" class="form-check-input" id="chk_dean_sign3_cb" data-target="chk_dean_sign3"
+                                        onchange="document.getElementById('dean_comment_wrapper').style.display = this.checked ? 'block' : 'none'; if(!this.checked){ document.getElementById('dean_comment_input').value=''; document.getElementById('chk_dean_sign3').value=''; } else { document.getElementById('chk_dean_sign3').value='✓'; }">
+                                    <label class="form-check-label" for="chk_dean_sign3_cb">ความเห็นคณบดี</label>
+                                </div>
+                                <div id="dean_comment_wrapper" class="mt-2 ms-4" style="display:none;">
+                                    <textarea name="dean_comment" id="dean_comment_input" class="form-control" rows="3" placeholder="พิมพ์ความเห็นคณบดี..."></textarea>
                                 </div>
                             </div>
                         </div>
@@ -127,7 +131,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">กรรมการคนที่ [[${i}]]</label>
                                 <div class="combo-input">
-                                    <input type="text" th:name="'n_' + ${i}" class="form-control" th:list="'committeeList2_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                                    <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control" th:list="'committeeList2_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ...">
                                     <datalist th:id="'committeeList2_' + ${i}">
                                         <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
                                     </datalist>
@@ -135,8 +139,8 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" th:name="'n_position_' + ${i}" class="form-control"
-                                    th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')}">
+                                <input type="text" th:name="'committee_' + ${i} + '_role'" class="form-control" 
+                                    th:value="${i == 1 ? 'ประธานอนุกรรมการ (ภายใน)' : (i == 3 ? 'อนุกรรมการและเลขานุการ (ภายใน)' : 'อนุกรรมการ (ภายนอก)')}">
                             </div>
                         </div>
 

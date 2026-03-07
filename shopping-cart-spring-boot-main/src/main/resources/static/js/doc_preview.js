@@ -11,6 +11,8 @@ class DocPreviewEngine {
         this.renderContainer = null;
         this.debounceTimer = null;
         this.isVisible = false;
+        this.tabs = null;
+        this.activeTab = 0;
         this.init();
     }
 
@@ -36,7 +38,7 @@ class DocPreviewEngine {
                 await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
             }
             if (!window.docx) {
-                await loadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.3.3/dist/docx-preview.min.js');
+                await loadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js');
             }
         })();
     }
@@ -56,6 +58,9 @@ class DocPreviewEngine {
                         <span class="docx-live-badge" id="docxLiveBadge">LIVE</span>
                     </div>
                     <div class="docx-toolbar-right">
+                        <button class="docx-toolbar-btn" id="docxDownloadBtn" title="ดาวน์โหลด">
+                            <i class="fas fa-download"></i> ดาวน์โหลด
+                        </button>
                         <button class="docx-toolbar-btn" id="docxRefreshBtn" title="รีเฟรช">
                             <i class="fas fa-sync-alt"></i> รีเฟรช
                         </button>
@@ -79,6 +84,7 @@ class DocPreviewEngine {
         // Events
         document.getElementById('docxCloseBtn').addEventListener('click', () => this.hide());
         document.getElementById('docxRefreshBtn').addEventListener('click', () => this.loadDocx());
+        document.getElementById('docxDownloadBtn').addEventListener('click', () => this.downloadDocx());
 
         this.overlay.addEventListener('click', (e) => {
             if (e.target === this.overlay) this.hide();
@@ -89,6 +95,9 @@ class DocPreviewEngine {
         });
 
         this.renderContainer = document.getElementById('docxRenderArea');
+
+        // render tabs ถ้ามีการตั้งค่าไว้ก่อน overlay ถูกสร้าง
+        if (this.tabs) this.renderTabs();
     }
 
     /** ผูก event listeners กับทุก input สำหรับ real-time update */
@@ -137,6 +146,11 @@ class DocPreviewEngine {
             data[rb.name] = rb.value;
         });
 
+        // ส่ง committee_index เมื่อมี tabs
+        if (this.tabs) {
+            data['committee_index'] = this.tabs[this.activeTab].index.toString();
+        }
+
         return data;
     }
 
@@ -171,10 +185,14 @@ class DocPreviewEngine {
                 ignoreHeight: false,
                 ignoreFonts: false,
                 breakPages: true,
-                ignoreLastRenderedPageBreak: true,
-                experimental: false,
+                ignoreLastRenderedPageBreak: false,
+                experimental: true,
                 trimXmlDeclaration: true,
-                useBase64URL: true
+                useBase64URL: true,
+                renderHeaders: true,
+                renderFooters: true,
+                renderFootnotes: true,
+                renderEndnotes: true
             });
 
             if (badge) {
@@ -196,6 +214,70 @@ class DocPreviewEngine {
             }
         } finally {
             loading.style.display = 'none';
+        }
+    }
+
+    /** ตั้งค่า tabs สำหรับ preview (เช่น กรรมการ 3 ท่าน) */
+    setTabs(tabsList) {
+        this.tabs = tabsList;
+        this.activeTab = 0;
+        if (this.overlay) {
+            this.renderTabs();
+        }
+    }
+
+    /** สร้าง tab bar ใน overlay */
+    renderTabs() {
+        if (!this.tabs || !this.overlay) return;
+
+        const existing = this.overlay.querySelector('.docx-tab-bar');
+        if (existing) existing.remove();
+
+        const tabBar = document.createElement('div');
+        tabBar.className = 'docx-tab-bar';
+
+        this.tabs.forEach((tab, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'docx-tab' + (idx === this.activeTab ? ' active' : '');
+            btn.textContent = tab.label;
+            btn.addEventListener('click', () => {
+                this.activeTab = idx;
+                tabBar.querySelectorAll('.docx-tab').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                this.loadDocx();
+            });
+            tabBar.appendChild(btn);
+        });
+
+        const toolbar = this.overlay.querySelector('.docx-preview-toolbar');
+        toolbar.after(tabBar);
+    }
+
+    /** ดาวน์โหลดเอกสาร DOCX ปัจจุบัน */
+    async downloadDocx() {
+        const formData = this.getFormData();
+        try {
+            const response = await fetch(`/api/academic/preview/${this.docType}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(formData)
+            });
+            if (!response.ok) throw new Error('Server error: ' + response.status);
+            const blob = await response.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            let filename = 'doc_' + this.docType;
+            if (this.tabs) {
+                filename += '_' + this.tabs[this.activeTab].label;
+            }
+            a.download = filename + '.docx';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Download error:', err);
         }
     }
 
