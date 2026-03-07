@@ -11,4 +11,8 @@ public interface AcademicAttachmentRepository extends JpaRepository<AcademicAtta
     List<AcademicAttachment> findByRequestIdOrderByUploadedAtDesc(Long requestId);
 
     long countByRequestId(Long requestId);
+
+    List<AcademicAttachment> findByIsDeletedFalseOrIsDeletedIsNull();
+
+    List<AcademicAttachment> findByIsDeletedTrue();
 }

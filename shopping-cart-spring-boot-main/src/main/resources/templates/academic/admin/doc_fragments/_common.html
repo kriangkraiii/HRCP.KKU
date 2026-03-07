@@ -3,24 +3,102 @@
 <body>
 
 <!-- ==================== Shared Buttons ==================== -->
-<div th:fragment="buttons" class="d-flex gap-2 mt-4">
+<div th:fragment="buttons" class="d-flex flex-wrap gap-2 mt-4">
     <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
     </button>
     <button type="submit" name="action" value="draft" class="btn btn-outline-success">
         <i class="fas fa-save"></i> บันทึกแบบร่าง
     </button>
-    <button type="submit" name="action" value="submit" class="btn btn-academic">
+    <button type="button" id="btnSubmitDoc" class="btn btn-academic">
         <i class="fas fa-save"></i> สร้าง/บันทึกเอกสาร
     </button>
     <a th:href="'/admin/academic/request/' + ${request.id}" class="btn btn-outline-secondary">
         <i class="fas fa-arrow-left"></i> กลับ
     </a>
+    <input type="hidden" name="sendNotify" id="sendNotifyField" value="false">
+
+    <!-- Notification Confirm Modal (inside fragment so auto-included) -->
+    <div class="modal fade" id="notifyConfirmModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-warning bg-opacity-10 border-0">
+                    <h5 class="modal-title"><i class="fas fa-bell text-warning"></i> แจ้งเตือนผู้ยื่นคำร้อง</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>ต้องการ<strong>แจ้งเตือนผู้ยื่นคำร้อง</strong>ทางอีเมลเกี่ยวกับการอัพเดตนี้หรือไม่?</p>
+                    <div class="alert alert-info small mb-0">
+                        <i class="fas fa-info-circle me-1"></i>
+                        หากเอกสารยังไม่เรียบร้อย สามารถเลือก <strong>"ไม่แจ้งเตือน"</strong> เพื่อบันทึกก่อนได้
+                    </div>
+                </div>
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-secondary" id="btnNoNotify">
+                        <i class="fas fa-bell-slash"></i> ไม่แจ้งเตือน (บันทึกอย่างเดียว)
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnYesNotify">
+                        <i class="fas fa-bell"></i> แจ้งเตือนผู้ยื่น
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- ==================== Shared Scripts ==================== -->
 <th:block th:fragment="scripts">
     <script>
+        // ==================== Notification Confirm Logic ====================
+        (function() {
+            const submitBtn = document.getElementById('btnSubmitDoc');
+            const sendNotifyField = document.getElementById('sendNotifyField');
+            const modalEl = document.getElementById('notifyConfirmModal');
+            const currentDocType = parseInt(document.getElementById('currentDocType')?.value) || 0;
+
+            // Doc types that trigger status change + notification
+            const notifyDocTypes = [3, 6, 8];
+
+            if (submitBtn) {
+                submitBtn.addEventListener('click', function() {
+                    if (notifyDocTypes.includes(currentDocType) && modalEl) {
+                        const modal = new bootstrap.Modal(modalEl);
+                        modal.show();
+                    } else {
+                        // No status change for this doc type → submit directly
+                        sendNotifyField.value = 'false';
+                        submitFormAsSubmit();
+                    }
+                });
+            }
+
+            document.getElementById('btnNoNotify')?.addEventListener('click', function() {
+                sendNotifyField.value = 'false';
+                submitFormAsSubmit();
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+            });
+
+            document.getElementById('btnYesNotify')?.addEventListener('click', function() {
+                sendNotifyField.value = 'true';
+                submitFormAsSubmit();
+                if (modalEl) bootstrap.Modal.getInstance(modalEl)?.hide();
+            });
+
+            function submitFormAsSubmit() {
+                const form = document.getElementById('docForm');
+                if (!form) return;
+                let actionInput = form.querySelector('input[name="action"][type="hidden"]');
+                if (!actionInput) {
+                    actionInput = document.createElement('input');
+                    actionInput.type = 'hidden';
+                    actionInput.name = 'action';
+                    form.appendChild(actionInput);
+                }
+                actionInput.value = 'submit';
+                form.submit();
+            }
+        })();
+
         // ==================== ติ๊กได้แค่อันเดียว (chk1, chk2, chk3) ====================
         document.querySelectorAll('.chk-position').forEach(cb => {
             cb.addEventListener('change', function () {
@@ -225,3 +303,4 @@
 
 </body>
 </html>
+

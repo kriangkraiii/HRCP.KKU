@@ -43,6 +43,8 @@ public class AcademicRequestService {
         request.setApplicant(applicant);
         request.setCurrentStatus(RequestStatus.RECEIVED);
         request.setSubmissionDate(LocalDateTime.now());
+        request = requestRepository.save(request);
+        request.generateRequestCode();
         return requestRepository.save(request);
     }
 
@@ -64,6 +66,12 @@ public class AcademicRequestService {
 
     @Transactional
     public AcademicRequest updateStatus(Long requestId, RequestStatus newStatus, UserDtls changedBy, String note) {
+        return updateStatus(requestId, newStatus, changedBy, note, true);
+    }
+
+    @Transactional
+    public AcademicRequest updateStatus(Long requestId, RequestStatus newStatus, UserDtls changedBy, String note,
+            boolean sendNotification) {
         AcademicRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 
@@ -79,11 +87,12 @@ public class AcademicRequestService {
         history.setNote(note);
         historyRepository.save(history);
 
-        try {
-            emailService.sendStatusChangeEmail(request, oldStatus, newStatus);
-        } catch (Exception e) {
-            // Log but don't fail the status update
-            System.err.println("Failed to send email notification: " + e.getMessage());
+        if (sendNotification) {
+            try {
+                emailService.sendStatusChangeEmail(request, oldStatus, newStatus);
+            } catch (Exception e) {
+                System.err.println("Failed to send email notification: " + e.getMessage());
+            }
         }
 
         return request;
@@ -185,7 +194,8 @@ public class AcademicRequestService {
      * Check if applicant has any active (non-terminal) requests.
      * Terminal statuses are: REJECTED, COMPLETED
      * DRAFT is excluded from active check (ถ้ามี draft ถือว่ายังสร้างคำร้องได้)
-     * Active means: RECEIVED, SUB_COMMITTEE_APPOINTED, MEETING_SCHEDULED, COMPLETED_PASS, COMPLETED_REVISE
+     * Active means: RECEIVED, SUB_COMMITTEE_APPOINTED, MEETING_SCHEDULED,
+     * COMPLETED_PASS, COMPLETED_REVISE
      */
     public boolean hasActiveRequest(Integer applicantId) {
         List<RequestStatus> excludedStatuses = Arrays.asList(
@@ -211,6 +221,8 @@ public class AcademicRequestService {
         AcademicRequest request = new AcademicRequest();
         request.setApplicant(applicant);
         request.setCurrentStatus(RequestStatus.DRAFT);
+        request = requestRepository.save(request);
+        request.generateRequestCode();
         return requestRepository.save(request);
     }
 
@@ -254,6 +266,12 @@ public class AcademicRequestService {
      */
     @Transactional
     public void autoUpdateStatusByDocument(Long requestId, int documentType, UserDtls changedBy, String jsonData) {
+        autoUpdateStatusByDocument(requestId, documentType, changedBy, jsonData, true);
+    }
+
+    @Transactional
+    public void autoUpdateStatusByDocument(Long requestId, int documentType, UserDtls changedBy, String jsonData,
+            boolean sendNotify) {
         AcademicRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 
@@ -261,32 +279,31 @@ public class AcademicRequestService {
             case 3 -> {
                 if (request.getCurrentStatus().ordinal() < RequestStatus.SUB_COMMITTEE_APPOINTED.ordinal()) {
                     updateStatus(requestId, RequestStatus.SUB_COMMITTEE_APPOINTED, changedBy,
-                            "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ");
+                            "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ", sendNotify);
                 }
             }
             case 6 -> {
-                // ตรวจผลคะแนนจาก jsonData
                 try {
                     var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                     java.util.Map<String, Object> data = objectMapper.readValue(jsonData,
-                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
+                            });
                     String evalLevel = data.getOrDefault("eval_result_level", "").toString();
                     if ("ไม่ผ่าน".equals(evalLevel)) {
                         updateStatus(requestId, RequestStatus.COMPLETED_REVISE, changedBy,
-                                "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel);
+                                "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel, sendNotify);
                     } else if (!evalLevel.isEmpty()) {
                         updateStatus(requestId, RequestStatus.COMPLETED_PASS, changedBy,
-                                "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel);
+                                "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel, sendNotify);
                     }
                 } catch (Exception e) {
-                    // fallback: set to COMPLETED_PASS
                     updateStatus(requestId, RequestStatus.COMPLETED_PASS, changedBy,
-                            "อัพเดตอัตโนมัติ: บันทึกแบบฟอร์มประเมิน");
+                            "อัพเดตอัตโนมัติ: บันทึกแบบฟอร์มประเมิน", sendNotify);
                 }
             }
             case 8 -> {
                 updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
-                        "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน");
+                        "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน", sendNotify);
             }
         }
     }

@@ -549,4 +549,45 @@ public class AdminController {
 		m.addAttribute("docCount", adminLogService.countByAction("GENERATE_DOCUMENT"));
 		return "admin/activity_logs";
 	}
+
+	@GetMapping("/activity-logs/export")
+	public void exportActivityLogs(
+			@RequestParam(required = false) String search,
+			@RequestParam(required = false) String action,
+			@RequestParam(required = false) String dateFrom,
+			@RequestParam(required = false) String dateTo,
+			jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+
+		response.setContentType("text/csv; charset=UTF-8");
+		response.setHeader("Content-Disposition", "attachment; filename=activity_logs.csv");
+
+		java.io.OutputStream out = response.getOutputStream();
+		out.write(new byte[] { (byte) 0xEF, (byte) 0xBB, (byte) 0xBF });
+
+		java.io.PrintWriter writer = new java.io.PrintWriter(new java.io.OutputStreamWriter(out, "UTF-8"));
+		writer.println("ID,วันเวลา,ผู้ดำเนินการ,อีเมล,การกระทำ,รายละเอียด,IP Address,Resource,User Agent");
+
+		java.util.List<AdminLog> logs = adminLogService.getAllLogsForExport(search, action, dateFrom, dateTo);
+		java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
+
+		for (AdminLog log : logs) {
+			writer.printf("%d,\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\",\"%s\"%n",
+					log.getId(),
+					log.getTimestamp() != null ? log.getTimestamp().format(fmt) : "",
+					escapeCsv(log.getAdminName()),
+					escapeCsv(log.getAdminEmail()),
+					escapeCsv(log.getAction()),
+					escapeCsv(log.getDetails()),
+					escapeCsv(log.getIpAddress()),
+					escapeCsv(log.getResource()),
+					escapeCsv(log.getUserAgent()));
+		}
+		writer.flush();
+	}
+
+	private String escapeCsv(String value) {
+		if (value == null)
+			return "";
+		return value.replace("\"", "\"\"");
+	}
 }

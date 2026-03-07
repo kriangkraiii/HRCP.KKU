@@ -82,16 +82,72 @@ public class AcademicAdminController {
     }
 
     @GetMapping("/requests")
-    public String listRequests(@RequestParam(value = "search", required = false) String search, Model model) {
-        List<AcademicRequest> requests;
+    public String listRequests(@RequestParam(value = "search", required = false) String search,
+            @RequestParam(value = "status", required = false) String statusFilter,
+            Model model) {
+        List<AcademicRequest> allRequests;
         if (search != null && !search.trim().isEmpty()) {
-            requests = requestService.searchByApplicantName(search.trim());
+            allRequests = requestService.searchByApplicantName(search.trim());
             model.addAttribute("searchQuery", search.trim());
         } else {
-            requests = requestService.findAll();
+            allRequests = requestService.findAll();
         }
-        model.addAttribute("requests", requests);
+
+        // Status counts for dashboard cards (count from ALL requests, before filtering)
+        java.util.Map<String, Long> statusCounts = new java.util.LinkedHashMap<>();
+        for (RequestStatus status : RequestStatus.values()) {
+            if (!status.isDraft()) {
+                long count = allRequests.stream()
+                        .filter(r -> r.getCurrentStatus() == status)
+                        .count();
+                statusCounts.put(status.name(), count);
+            }
+        }
+
+        // Apply status filter if provided
+        if (statusFilter != null && !statusFilter.trim().isEmpty()) {
+            try {
+                RequestStatus filterStatus = RequestStatus.valueOf(statusFilter);
+                allRequests = allRequests.stream()
+                        .filter(r -> r.getCurrentStatus() == filterStatus)
+                        .collect(java.util.stream.Collectors.toList());
+                model.addAttribute("activeStatus", statusFilter);
+            } catch (IllegalArgumentException ignored) {
+            }
+        }
+
+        // Split into pending vs completed/rejected
+        List<AcademicRequest> pendingRequests = allRequests.stream()
+                .filter(r -> !r.getCurrentStatus().isTerminal() && !r.getCurrentStatus().isDraft())
+                .sorted((a, b) -> {
+                    if (a.getSubmissionDate() == null && b.getSubmissionDate() == null)
+                        return 0;
+                    if (a.getSubmissionDate() == null)
+                        return 1;
+                    if (b.getSubmissionDate() == null)
+                        return -1;
+                    return a.getSubmissionDate().compareTo(b.getSubmissionDate());
+                })
+                .collect(java.util.stream.Collectors.toList());
+
+        List<AcademicRequest> completedRequests = allRequests.stream()
+                .filter(r -> r.getCurrentStatus().isTerminal())
+                .sorted((a, b) -> {
+                    if (a.getUpdatedAt() == null && b.getUpdatedAt() == null)
+                        return 0;
+                    if (a.getUpdatedAt() == null)
+                        return 1;
+                    if (b.getUpdatedAt() == null)
+                        return -1;
+                    return b.getUpdatedAt().compareTo(a.getUpdatedAt());
+                })
+                .collect(java.util.stream.Collectors.toList());
+
+        model.addAttribute("pendingRequests", pendingRequests);
+        model.addAttribute("completedRequests", completedRequests);
+        model.addAttribute("statusCounts", statusCounts);
         model.addAttribute("statuses", RequestStatus.values());
+        model.addAttribute("requests", allRequests);
         return "academic/admin/requests";
     }
 
@@ -253,8 +309,10 @@ public class AcademicAdminController {
 
         // ดึง action (draft / submit) แล้วเอาออกจาก formData
         String action = formData.getOrDefault("action", "submit");
+        boolean sendNotify = "true".equals(formData.getOrDefault("sendNotify", "false"));
         formData.remove("action");
         formData.remove("_csrf");
+        formData.remove("sendNotify");
 
         // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
         if ("draft".equals(action)) {
@@ -396,8 +454,10 @@ public class AcademicAdminController {
                 "สร้างเอกสารที่ " + type + " (" + DOC_LABELS.getOrDefault(type, "Document " + type) + ") สำหรับคำร้อง #" + id,
                 getClientIpAddress());
 
-        // Auto-update status based on document type
-        requestService.autoUpdateStatusByDocument(id, type, admin, jsonData);
+        // Auto-update status + notify only if admin chose to
+        if (sendNotify) {
+            requestService.autoUpdateStatusByDocument(id, type, admin, jsonData);
+        }
 
         return "redirect:/admin/academic/request/" + id + "?success=doc_generated";
     }

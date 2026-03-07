@@ -40,30 +40,87 @@ public class AcademicAttachment {
     @Column(name = "uploaded_at")
     private LocalDateTime uploadedAt;
 
+    @Column(name = "is_deleted")
+    private Boolean isDeleted = false;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
+
     @PrePersist
     protected void onCreate() {
         uploadedAt = LocalDateTime.now();
     }
 
     // Getters and Setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public Long getId() {
+        return id;
+    }
 
-    public AcademicRequest getRequest() { return request; }
-    public void setRequest(AcademicRequest request) { this.request = request; }
+    public void setId(Long id) {
+        this.id = id;
+    }
 
-    public String getOriginalFilename() { return originalFilename; }
-    public void setOriginalFilename(String originalFilename) { this.originalFilename = originalFilename; }
+    public AcademicRequest getRequest() {
+        return request;
+    }
 
-    public String getStoredFilePath() { return storedFilePath; }
-    public void setStoredFilePath(String storedFilePath) { this.storedFilePath = storedFilePath; }
+    public void setRequest(AcademicRequest request) {
+        this.request = request;
+    }
 
-    public String getFileType() { return fileType; }
-    public void setFileType(String fileType) { this.fileType = fileType; }
+    public String getOriginalFilename() {
+        return originalFilename;
+    }
 
-    public Long getFileSize() { return fileSize; }
-    public void setFileSize(Long fileSize) { this.fileSize = fileSize; }
+    public void setOriginalFilename(String originalFilename) {
+        this.originalFilename = originalFilename;
+    }
 
-    public LocalDateTime getUploadedAt() { return uploadedAt; }
-    public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
+    public String getStoredFilePath() {
+        return storedFilePath;
+    }
+
+    public void setStoredFilePath(String storedFilePath) {
+        this.storedFilePath = storedFilePath;
+    }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
+    }
+
+    public Long getFileSize() {
+        return fileSize;
+    }
+
+    public void setFileSize(Long fileSize) {
+        this.fileSize = fileSize;
+    }
+
+    public LocalDateTime getUploadedAt() {
+        return uploadedAt;
+    }
+
+    public void setUploadedAt(LocalDateTime uploadedAt) {
+        this.uploadedAt = uploadedAt;
+    }
+
+    public Boolean getIsDeleted() {
+        return isDeleted;
+    }
+
+    public void setIsDeleted(Boolean isDeleted) {
+        this.isDeleted = isDeleted;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
+    }
 }

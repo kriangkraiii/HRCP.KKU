@@ -3,15 +3,62 @@
 
 <body>
     <section>
-        <div class="container py-4">
+        <div class="container-fluid py-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3><i class="fas fa-list"></i> คำร้องทั้งหมด</h3>
-                <a href="/admin/academic/staff" class="btn btn-outline-primary"><i class="fas fa-users"></i>
-                    จัดการบุคลากร</a>
+                <h3><i class="fas fa-columns"></i> แดชบอร์ดจัดการคำร้อง</h3>
+                <a href="/admin/academic/staff" class="btn btn-outline-primary btn-sm"><i class="fas fa-users"></i> จัดการบุคลากร</a>
+            </div>
+
+            <div class="row g-3 mb-4">
+                <th:block th:each="status : ${statuses}" th:if="${!status.isDraft()}">
+                    <div class="col-6 col-md-4 col-lg">
+                        <a th:href="'/admin/academic/requests?status=' + ${status.name()}"
+                           class="text-decoration-none">
+                            <div class="card border-0 shadow-sm h-100 position-relative"
+                                 th:classappend="${activeStatus == status.name()} ? 'ring-active'"
+                                 style="border-left: 4px solid transparent !important; cursor:pointer; transition: transform 0.15s, box-shadow 0.15s"
+                                 th:style="'border-left: 4px solid ' + ${status.color} + ' !important; cursor:pointer; transition: transform 0.15s, box-shadow 0.15s'"
+                                 onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 .5rem 1rem rgba(0,0,0,.12)'"
+                                 onmouseout="this.style.transform='';this.style.boxShadow=''">
+                                <div class="card-body py-3 px-3">
+                                    <div class="d-flex align-items-center justify-content-between">
+                                        <div>
+                                            <div class="text-muted small" th:text="${status.thaiLabel}"></div>
+                                            <h3 class="mb-0 fw-bold text-dark" th:text="${statusCounts.get(status.name()) ?: 0}">0</h3>
+                                        </div>
+                                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                             style="width:40px;height:40px"
+                                             th:style="'width:40px;height:40px;background-color:' + ${status.color} + '20'">
+                                            <i class="fas" th:classappend="${status.icon}" th:style="'color:' + ${status.color}"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <!-- Active indicator -->
+                                <div th:if="${activeStatus == status.name()}"
+                                     style="position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 4px 4px"
+                                     th:style="'position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 4px 4px;background-color:' + ${status.color}"></div>
+                            </div>
+                        </a>
+                    </div>
+                </th:block>
+            </div>
+
+            <!-- Active filter indicator -->
+            <div th:if="${activeStatus != null}" class="alert alert-light border d-flex justify-content-between align-items-center mb-3 shadow-sm">
+                <span>
+                    <i class="fas fa-filter text-primary me-2"></i>
+                    กำลังแสดงเฉพาะสถานะ:
+                    <th:block th:each="s : ${statuses}">
+                        <strong th:if="${s.name() == activeStatus}" th:text="${s.thaiLabel}"></strong>
+                    </th:block>
+                </span>
+                <a href="/admin/academic/requests" class="btn btn-sm btn-outline-secondary">
+                    <i class="fas fa-times"></i> แสดงทั้งหมด
+                </a>
             </div>
 
             <!-- Search Bar -->
-            <div class="card card-academic mb-3">
+            <div class="card card-academic mb-3 border-0 shadow-sm">
                 <div class="card-body py-2">
                     <form action="/admin/academic/requests" method="get" class="d-flex gap-2">
                         <div class="input-group">
@@ -28,49 +75,142 @@
             </div>
 
             <div th:if="${search != null && !search.isEmpty()}" class="alert alert-info mb-3">
-                <i class="fas fa-info-circle me-2"></i> ผลการค้นหา "<strong th:text="${search}"></strong>": พบ <strong th:text="${requests != null ? requests.size() : 0}"></strong> รายการ
+                <i class="fas fa-info-circle me-2"></i> ผลการค้นหา "<strong th:text="${search}"></strong>":
+                พบ <strong th:text="${requests != null ? requests.size() : 0}"></strong> รายการ
             </div>
 
-            <div class="card card-academic">
-                <div class="card-body">
-                    <div th:if="${requests == null || requests.isEmpty()}" class="text-center py-4 text-muted">
-                        ยังไม่มีคำร้อง
+            <!-- ========== FILTERED VIEW (single status) ========== -->
+            <th:block th:if="${activeStatus != null}">
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <th:block th:each="s : ${statuses}">
+                                <th:block th:if="${s.name() == activeStatus}">
+                                    <i class="fas" th:classappend="${s.icon}" th:style="'color:' + ${s.color}"></i>
+                                    <span th:text="${s.thaiLabel}"></span>
+                                </th:block>
+                            </th:block>
+                            <span class="badge ms-2"
+                                  th:style="'background-color:' + ${statuses[0].color}"
+                                  th:each="s : ${statuses}" th:if="${s.name() == activeStatus}"
+                                  th:styleappend="'background-color:' + ${s.color}"
+                                  th:text="${requests != null ? requests.size() : 0}"></span>
+                        </h5>
+                        <small class="text-muted"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</small>
                     </div>
-                    <div class="table-responsive" th:if="${requests != null && !requests.isEmpty()}">
-                        <table class="table table-hover align-middle">
-                            <thead class="table-light">
-                                <tr>
-                                    <th>#</th>
-                                    <th>ผู้ยื่นคำร้อง</th>
-                                    <th>อีเมล</th>
-                                    <th>วันที่ยื่น</th>
-                                    <th>สถานะ</th>
-                                    <th>จัดการ</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr th:each="req : ${requests}">
-                                    <td th:text="${req.id}"></td>
-                                    <td th:text="${req.applicant.name}"></td>
-                                    <td th:text="${req.applicant.email}"></td>
-                                    <td th:text="${#temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm')}"></td>
-                                    <td>
-                                        <span class="status-badge"
-                                            th:classappend="'status-' + ${req.currentStatus.name()}"
-                                            th:text="${req.currentStatus.thaiLabel}"></span>
-                                    </td>
-                                    <td>
-                                        <a th:href="'/admin/academic/request/' + ${req.id}"
-                                            class="btn btn-sm btn-academic">
-                                            <i class="fas fa-cog"></i> จัดการ
-                                        </a>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
+                    <div class="card-body p-0">
+                        <div th:if="${requests == null || requests.isEmpty()}" class="text-center py-5 text-muted">
+                            <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                            <p class="mb-0">ไม่มีคำร้องในสถานะนี้</p>
+                        </div>
+                        <div class="table-responsive" th:if="${requests != null && !requests.isEmpty()}">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:50px">#</th>
+                                        <th>รหัสคำร้อง</th>
+                                        <th>ผู้ยื่นคำร้อง</th>
+                                        <th>อีเมล</th>
+                                        <th style="width:150px">วันที่ยื่น</th>
+                                        <th style="width:180px">สถานะ</th>
+                                        <th style="width:100px">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="req, iter : ${requests}">
+                                        <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
+                                        <td><small class="fw-semibold text-primary" th:text="${req.requestCode}"></small></td>
+                                        <td>
+                                            <div class="fw-semibold" th:text="${req.applicant.name}"></div>
+                                        </td>
+                                        <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
+                                        <td>
+                                            <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                        </td>
+                                        <td>
+                                            <span class="badge rounded-pill"
+                                                  th:style="'background-color:' + ${req.currentStatus.color} + ';color:#fff'">
+                                                <i class="fas me-1" th:classappend="${req.currentStatus.icon}"></i>
+                                                <span th:text="${req.currentStatus.thaiLabel}"></span>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a th:href="'/admin/academic/request/' + ${req.id}"
+                                                class="btn btn-sm btn-academic">
+                                                <i class="fas fa-cog"></i> จัดการ
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
-            </div>
+            </th:block>
+
+            <!-- ========== DEFAULT VIEW (pending + completed) ========== -->
+            <th:block th:if="${activeStatus == null}">
+                <!-- PENDING REQUESTS TABLE -->
+                <div class="card border-0 shadow-sm mb-4">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="fas fa-clock text-warning"></i> รอดำเนินการ
+                            <span class="badge bg-warning text-dark ms-2"
+                                  th:text="${pendingRequests != null ? pendingRequests.size() : 0}"></span>
+                        </h5>
+                        <small class="text-muted"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</small>
+                    </div>
+                    <div class="card-body p-0">
+                        <div th:if="${pendingRequests == null || pendingRequests.isEmpty()}" class="text-center py-5 text-muted">
+                            <i class="fas fa-check-circle fa-3x mb-3 d-block text-success"></i>
+                            <p class="mb-0">ไม่มีคำร้องที่รอดำเนินการ</p>
+                        </div>
+                        <div class="table-responsive" th:if="${pendingRequests != null && !pendingRequests.isEmpty()}">
+                            <table class="table table-hover align-middle mb-0">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:50px">#</th>
+                                        <th>รหัสคำร้อง</th>
+                                        <th>ผู้ยื่นคำร้อง</th>
+                                        <th>อีเมล</th>
+                                        <th style="width:150px">วันที่ยื่น</th>
+                                        <th style="width:180px">สถานะ</th>
+                                        <th style="width:100px">จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="req, iter : ${pendingRequests}">
+                                        <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
+                                        <td><small class="fw-semibold text-primary" th:text="${req.requestCode}"></small></td>
+                                        <td>
+                                            <div class="fw-semibold" th:text="${req.applicant.name}"></div>
+                                        </td>
+                                        <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
+                                        <td>
+                                            <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                        </td>
+                                        <td>
+                                            <span class="badge rounded-pill"
+                                                  th:style="'background-color:' + ${req.currentStatus.color} + ';color:#fff'">
+                                                <i class="fas me-1" th:classappend="${req.currentStatus.icon}"></i>
+                                                <span th:text="${req.currentStatus.thaiLabel}"></span>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <a th:href="'/admin/academic/request/' + ${req.id}"
+                                                class="btn btn-sm btn-academic">
+                                                <i class="fas fa-cog"></i> จัดการ
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+               
+            </th:block>
         </div>
     </section>
 </body>

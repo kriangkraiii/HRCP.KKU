@@ -3,7 +3,7 @@
 
 <body>
     <section>
-        <div class="container py-4">
+        <div class="container-fluid py-4">
             <!-- Summary Cards -->
             <div class="row mb-4">
                 <div class="col-md-3">
@@ -64,7 +64,13 @@
                 <div class="card-header bg-white">
                     <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h4 class="mb-0"><i class="fas fa-history"></i> ประวัติกิจกรรม (Activity Log)</h4>
-                        <span class="badge bg-primary" th:text="'ทั้งหมด ' + ${logs.totalElements} + ' รายการ'"></span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary" th:text="'ทั้งหมด ' + ${logs.totalElements} + ' รายการ'"></span>
+                            <a th:href="'/admin/activity-logs/export?' + (${search != null ? 'search=' + search + '&' : ''}) + (${actionFilter != null ? 'action=' + actionFilter + '&' : ''}) + (${dateFrom != null ? 'dateFrom=' + dateFrom + '&' : ''}) + (${dateTo != null ? 'dateTo=' + dateTo : ''})"
+                               class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-file-csv"></i> Export CSV
+                            </a>
+                        </div>
                     </div>
                     <!-- Search/Filter Bar -->
                     <form method="get" action="/admin/activity-logs" class="row g-2 mt-2">
@@ -76,15 +82,22 @@
                         <div class="col-md-2">
                             <select name="action" class="form-select form-select-sm">
                                 <option value="">-- ทุกประเภท --</option>
-                                <option value="CREATE_ACCOUNT" th:selected="${actionFilter == 'CREATE_ACCOUNT'}">สร้างบัญชี</option>
-                                <option value="UPDATE_ACCOUNT_STATUS" th:selected="${actionFilter == 'UPDATE_ACCOUNT_STATUS'}">อัพเดทสถานะ</option>
-                                <option value="CHANGE_PASSWORD" th:selected="${actionFilter == 'CHANGE_PASSWORD'}">เปลี่ยนรหัสผ่าน</option>
-                                <option value="EDIT_USER_ACCOUNT" th:selected="${actionFilter == 'EDIT_USER_ACCOUNT'}">แก้ไขบัญชีผู้ใช้</option>
-                                <option value="EDIT_ADMIN_ACCOUNT" th:selected="${actionFilter == 'EDIT_ADMIN_ACCOUNT'}">แก้ไขบัญชีแอดมิน</option>
-                                <option value="DELETE_USER_ACCOUNT" th:selected="${actionFilter == 'DELETE_USER_ACCOUNT'}">ลบบัญชีผู้ใช้</option>
-                                <option value="DELETE_ADMIN_ACCOUNT" th:selected="${actionFilter == 'DELETE_ADMIN_ACCOUNT'}">ลบบัญชีแอดมิน</option>
-                                <option value="GENERATE_DOCUMENT" th:selected="${actionFilter == 'GENERATE_DOCUMENT'}">สร้างเอกสาร</option>
-                                <option value="UPDATE_REQUEST_STATUS" th:selected="${actionFilter == 'UPDATE_REQUEST_STATUS'}">อัพเดทคำร้อง</option>
+                                <optgroup label="Traffic">
+                                    <option value="PAGE_VIEW" th:selected="${actionFilter == 'PAGE_VIEW'}">เข้าชมหน้า</option>
+                                    <option value="FORM_SUBMIT" th:selected="${actionFilter == 'FORM_SUBMIT'}">ส่งฟอร์ม</option>
+                                    <option value="API_CALL" th:selected="${actionFilter == 'API_CALL'}">เรียก API</option>
+                                </optgroup>
+                                <optgroup label="Admin Actions">
+                                    <option value="CREATE_ACCOUNT" th:selected="${actionFilter == 'CREATE_ACCOUNT'}">สร้างบัญชี</option>
+                                    <option value="UPDATE_ACCOUNT_STATUS" th:selected="${actionFilter == 'UPDATE_ACCOUNT_STATUS'}">อัพเดทสถานะ</option>
+                                    <option value="CHANGE_PASSWORD" th:selected="${actionFilter == 'CHANGE_PASSWORD'}">เปลี่ยนรหัสผ่าน</option>
+                                    <option value="EDIT_USER_ACCOUNT" th:selected="${actionFilter == 'EDIT_USER_ACCOUNT'}">แก้ไขบัญชีผู้ใช้</option>
+                                    <option value="EDIT_ADMIN_ACCOUNT" th:selected="${actionFilter == 'EDIT_ADMIN_ACCOUNT'}">แก้ไขบัญชีแอดมิน</option>
+                                    <option value="DELETE_USER_ACCOUNT" th:selected="${actionFilter == 'DELETE_USER_ACCOUNT'}">ลบบัญชีผู้ใช้</option>
+                                    <option value="DELETE_ADMIN_ACCOUNT" th:selected="${actionFilter == 'DELETE_ADMIN_ACCOUNT'}">ลบบัญชีแอดมิน</option>
+                                    <option value="GENERATE_DOCUMENT" th:selected="${actionFilter == 'GENERATE_DOCUMENT'}">สร้างเอกสาร</option>
+                                    <option value="UPDATE_REQUEST_STATUS" th:selected="${actionFilter == 'UPDATE_REQUEST_STATUS'}">อัพเดทคำร้อง</option>
+                                </optgroup>
                             </select>
                         </div>
                         <div class="col-md-2">
@@ -103,15 +116,17 @@
                 </div>
                 <div class="card-body p-0">
                     <div class="table-responsive">
-                        <table class="table table-hover mb-0">
+                        <table class="table table-hover mb-0" style="font-size:0.85rem">
                             <thead class="table-light">
                                 <tr>
-                                    <th style="width:50px">#</th>
-                                    <th style="width:160px">วันเวลา</th>
-                                    <th style="width:160px">ผู้ดำเนินการ</th>
-                                    <th style="width:160px">การกระทำ</th>
+                                    <th style="width:40px">#</th>
+                                    <th style="width:140px">วันเวลา</th>
+                                    <th style="width:140px">ผู้ดำเนินการ</th>
+                                    <th style="width:140px">การกระทำ</th>
                                     <th>รายละเอียด</th>
-                                    <!-- <th style="width:130px">IP Address</th> -->
+                                    <th style="width:110px">IP Address</th>
+                                    <th style="width:160px">Resource</th>
+                                    <th style="width:180px">User Agent</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -127,19 +142,24 @@
                                     </td>
                                     <td>
                                         <span class="badge"
-                                            th:classappend="${log.action.contains('CREATE')} ? 'bg-success' :
+                                            th:classappend="${log.action == 'PAGE_VIEW'} ? 'bg-secondary' :
+                                                (${log.action == 'FORM_SUBMIT'} ? 'bg-dark' :
+                                                (${log.action == 'API_CALL'} ? 'bg-secondary' :
+                                                (${log.action.contains('CREATE')} ? 'bg-success' :
                                                 (${log.action.contains('EDIT')} ? 'bg-warning text-dark' :
                                                 (${log.action.contains('UPDATE')} ? 'bg-warning text-dark' :
                                                 (${log.action.contains('CHANGE')} ? 'bg-info' :
                                                 (${log.action.contains('DOCUMENT') or log.action.contains('GENERATE')} ? 'bg-primary' :
-                                                (${log.action.contains('DELETE')} ? 'bg-danger' : 'bg-secondary')))))"
+                                                (${log.action.contains('DELETE')} ? 'bg-danger' : 'bg-secondary'))))))))"
                                             th:text="${log.action}"></span>
                                     </td>
-                                    <td><small th:text="${log.details}"></small></td>
-                                    <!-- <td><code class="small" th:text="${log.ipAddress}"></code></td> -->
+                                    <td><small th:text="${log.details}" style="word-break:break-all"></small></td>
+                                    <td><code class="small" th:text="${log.ipAddress}"></code></td>
+                                    <td><small th:text="${log.resource}" style="word-break:break-all"></small></td>
+                                    <td><small class="text-muted" th:text="${log.userAgent}" style="max-width:180px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" th:title="${log.userAgent}"></small></td>
                                 </tr>
                                 <tr th:if="${logs.totalElements == 0}">
-                                    <td colspan="6" class="text-center py-5 text-muted">
+                                    <td colspan="8" class="text-center py-5 text-muted">
                                         <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
                                         ยังไม่มีประวัติกิจกรรม
                                     </td>

@@ -13,10 +13,14 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
+
+    @Autowired
+    private RateLimitFilter rateLimitFilter;
 
     @Bean
     @Primary
@@ -50,18 +54,36 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http, DaoAuthenticationProvider authenticationProvider)
             throws Exception {
         http
-                .csrf(csrf -> csrf.disable())
+                // Rate limit filter runs before authentication
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
+
+                // CSRF protection (session-based, auto-injects into Thymeleaf forms)
+                .csrf(csrf -> csrf
+                        .ignoringRequestMatchers(
+                                "/api/**",
+                                "/admin/toggle-image-mode",
+                                "/admin/update-profile-image",
+                                "/admin/activity-logs/export",
+                                "/admin/file-manager/delete/**",
+                                "/admin/file-manager/restore/**",
+                                "/admin/file-manager/permanent-delete/**",
+                                "/admin/file-manager/empty-trash"))
+                // Session management
                 .sessionManagement(session -> session
                         .maximumSessions(1)
                         .maxSessionsPreventsLogin(false))
+
                 .authenticationProvider(authenticationProvider)
                 .authorizeHttpRequests(authz -> authz
                         .requestMatchers("/", "/signin",
                                 "/static/**", "/css/**", "/js/**", "/img/**", "/img/profile_img/**",
                                 "/admin/css/**", "/admin/js/**", "/admin/img/**",
                                 "/forgot-password", "/reset-password",
-                                "/first-login", "/first-login/**")
+                                "/first-login", "/first-login/**",
+                                "/favicon.ico", "/error")
                         .permitAll()
+                        // Lock down Actuator endpoints
+                        .requestMatchers("/actuator/**").hasRole("ADMIN")
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/user/**").hasRole("USER")
                         .anyRequest().authenticated())
@@ -77,6 +99,7 @@ public class SecurityConfig {
                         .logoutUrl("/logout")
                         .logoutSuccessUrl("/signin?logout=true")
                         .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                         .clearAuthentication(true)
                         .permitAll())
                 .exceptionHandling(ex -> ex

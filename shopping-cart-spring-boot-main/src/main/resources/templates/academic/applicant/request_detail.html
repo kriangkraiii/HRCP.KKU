@@ -8,9 +8,104 @@
                 <i class="fas fa-check-circle"></i> ดำเนินการสำเร็จ
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-            <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
-                <i class="fas fa-exclamation-circle"></i> เกิดข้อผิดพลาด
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> คำร้อง [[${request.requestCode}]] — [[${request.applicant.name}]]</h4>
+                    <span class="status-badge" th:classappend="'status-' + ${request.currentStatus.name()}"
+                        th:text="${request.currentStatus.thaiLabel}"></span>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-4"><strong>วันที่ยื่น:</strong> <span
+                                th:text="${#temporals.format(request.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></div>
+                    </div>
+
+                    <!-- Progress Tracker - แสดงเฉพาะสถานะที่เกิดขึ้นจริง -->
+                    <div class="progress-tracker">
+                        <!-- สถานะหลัก: รับคำร้อง → แต่งตั้งอนุกรรมการ → นัดหมายวันประชุม -->
+                        <div th:each="step : ${progressSteps}" class="progress-step"
+                            th:classappend="${request.currentStatus.ordinal() == step.ordinal()} ? 'active' : 
+                                     (${request.currentStatus.ordinal() > step.ordinal()} ? 'completed' : '')">
+                            <div class="step-icon">
+                                <i th:class="'fas ' + ${step.icon}" th:if="${request.currentStatus.ordinal() > step.ordinal()}" style="font-size: 0.9rem;"></i>
+                                <i class="fas fa-circle" th:unless="${request.currentStatus.ordinal() > step.ordinal()}" style="font-size: 0.5rem;"></i>
+                            </div>
+                            <div class="step-label" th:text="${step.thaiLabel}"></div>
+                        </div>
+                        
+                        <!-- สถานะผลลัพธ์ -->
+                        <th:block th:if="${request.currentStatus.name() == 'COMPLETED_PASS'}">
+                            <div class="progress-step active">
+                                <div class="step-icon" style="border-color:#2e7d32;background:#2e7d32;color:#fff;">
+                                    <i class="fas fa-check" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#2e7d32;">แจ้งผล - ผ่าน</div>
+                            </div>
+                        </th:block>
+                        <th:block th:if="${request.currentStatus.name() == 'COMPLETED_REVISE'}">
+                            <div class="progress-step active">
+                                <div class="step-icon" style="border-color:#f57f17;background:#f57f17;color:#fff;">
+                                    <i class="fas fa-exclamation" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#f57f17;">แจ้งผล - แก้ไข</div>
+                            </div>
+                        </th:block>
+                        <th:block th:if="${request.currentStatus.name() == 'REJECTED'}">
+                            <div class="progress-step active">
+                                <div class="step-icon" style="border-color:#c62828;background:#c62828;color:#fff;">
+                                    <i class="fas fa-times" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#c62828;">ไม่รับคำร้อง</div>
+                            </div>
+                        </th:block>
+                        <th:block th:if="${request.currentStatus.name() == 'COMPLETED'}">
+                            <div class="progress-step active">
+                                <div class="step-icon" style="border-color:#2e7d32;background:#2e7d32;color:#fff;">
+                                    <i class="fas fa-check" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#2e7d32;">แจ้งผล</div>
+                            </div>
+                            <div class="progress-step completed-final active">
+                                <div class="step-icon" style="border-color:#1b5e20;background:#1b5e20;color:#fff;">
+                                    <i class="fas fa-flag-checkered" style="font-size: 0.9rem;"></i>
+                                </div>
+                                <div class="step-label" style="font-weight:600;color:#1b5e20;">เสร็จสิ้น</div>
+                            </div>
+                        </th:block>
+                    </div>
+
+                    <!-- Meeting Info -->
+                    <div th:if="${request.meetingDate != null}" class="alert alert-info">
+                        <i class="fas fa-calendar-alt me-2"></i>
+                        <strong>วันประชุม:</strong> <span
+                            th:text="${#temporals.format(request.meetingDate, 'dd/MM/yyyy HH:mm')}"></span>
+                        <span th:if="${request.meetingLocation != null}"> | <strong>สถานที่:</strong>
+                            [[${request.meetingLocation}]]</span>
+                    </div>
+
+                    <!-- Result Actions -->
+                    <div th:if="${request.currentStatus.name() == 'COMPLETED_PASS'}" class="alert alert-success">
+                        <i class="fas fa-check-circle me-2 fa-2x"></i> <strong>ผ่านการประเมิน</strong>
+                    </div>
+                    <div th:if="${request.currentStatus.name() == 'COMPLETED_REVISE'}" class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle me-2 fa-2x"></i> <strong>ต้องแก้ไขเอกสาร</strong>
+                        <form th:action="'/user/academic/upload-revision/' + ${request.id}" method="post"
+                            enctype="multipart/form-data" class="mt-2">
+                            <div class="input-group">
+                                <input type="file" name="file" class="form-control" required>
+                                <button type="submit" class="btn btn-warning"><i class="fas fa-upload"></i>
+                                    อัปโหลดเอกสารที่แก้ไข</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div th:if="${request.currentStatus.name() == 'REJECTED'}" class="alert alert-danger">
+                        <i class="fas fa-times-circle me-2 fa-2x"></i> <strong>ไม่รับคำร้อง</strong>
+                    </div>
+                    <div th:if="${request.currentStatus.name() == 'COMPLETED'}" class="alert alert-success">
+                        <i class="fas fa-flag-checkered me-2 fa-2x"></i> <strong>เสร็จสิ้น</strong> - คำร้องได้ดำเนินการเสร็จสิ้นแล้ว
+                    </div>
+                </div>
             </div>
 
             <!-- ==================== แสดงรายละเอียดคำร้อง ==================== -->
