@@ -382,18 +382,25 @@ public class DocumentGenerationService {
 
     private String findLibreOffice() throws IOException {
         String[] candidates = {
+                // Windows
+                "C:\\Program Files\\LibreOffice\\program\\soffice.exe",
+                "C:\\Program Files (x86)\\LibreOffice\\program\\soffice.exe",
+                // macOS
                 "/Applications/LibreOffice.app/Contents/MacOS/soffice",
                 "/opt/homebrew/bin/soffice",
+                // Linux
                 "/usr/bin/soffice",
                 "/usr/bin/libreoffice",
                 "/usr/local/bin/soffice",
         };
 
+        // Try 'which' (Mac/Linux) or 'where' (Windows)
+        String whichCmd = System.getProperty("os.name", "").toLowerCase().contains("win") ? "where" : "which";
         try {
-            Process p = new ProcessBuilder("which", "soffice").start();
+            Process p = new ProcessBuilder(whichCmd, "soffice").start();
             String path = new String(p.getInputStream().readAllBytes()).trim();
             if (p.waitFor() == 0 && !path.isEmpty())
-                return path;
+                return path.lines().findFirst().orElse(path);
         } catch (Exception ignored) {
         }
 
@@ -402,7 +409,10 @@ public class DocumentGenerationService {
                 return c;
         }
 
-        throw new IOException("LibreOffice not found. Install: brew install --cask libreoffice");
+        throw new IOException("LibreOffice not found. " +
+                "Windows: https://www.libreoffice.org/download | " +
+                "Mac: brew install --cask libreoffice | " +
+                "Linux: sudo apt install libreoffice");
     }
 
     // =====================================================================
