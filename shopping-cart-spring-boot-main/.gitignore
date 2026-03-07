@@ -31,7 +31,8 @@ build/
 
 ### VS Code ###
 .vscode/
-
+.
+*.properties
 
 # Eclipse / STS junk files
 .metadata/
