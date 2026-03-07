@@ -36,7 +36,7 @@
 							<h5 class="mb-0">Update Profile Information</h5>
 						</div>
 						<div class="card-body">
-							<form action="/user/update-profile" method="post" enctype="multipart/form-data">
+							<form th:action="@{/user/update-profile}" method="post" enctype="multipart/form-data">
 								<div class="row mb-3">
 									<div class="col-md-6">
 										<label class="form-label fw-bold">Name</label>
@@ -122,7 +122,7 @@
 						</h5>
 						<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
 					</div>
-					<form action="/user/change-password" method="post" id="userChangePasswordForm">
+					<form th:action="@{/user/change-password}" method="post" id="userChangePasswordForm">
 						<div class="modal-body">
 							<div class="mb-3">
 								<label class="form-label fw-bold">รหัสผ่านปัจจุบัน</label>

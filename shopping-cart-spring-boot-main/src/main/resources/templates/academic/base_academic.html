@@ -623,9 +623,12 @@
                     </div>
                 </div>
             </div>
-            <a href="/logout" class="sidebar-logout">
-                <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
-            </a>
+            <form method="post" action="/logout" style="margin:0;padding:0;">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <button type="submit" class="sidebar-logout" style="border:none;width:100%;cursor:pointer;background:inherit;font:inherit;color:inherit;text-align:left;">
+                    <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                </button>
+            </form>
         </div>
     </aside>
 
