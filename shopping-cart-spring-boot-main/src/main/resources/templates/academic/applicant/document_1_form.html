@@ -49,9 +49,8 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น</label>
-                                <input type="text" name="name_applicant" class="form-control"
-                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('name_applicant', (request.applicant.academicPosition ?: request.applicant.title) + request.applicant.name) : (request.applicant.academicPosition ?: request.applicant.title) + request.applicant.name}"
-                                    readonly>
+                                <input type="text" name="applicant_name" class="form-control"
+                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('applicant_name', (request.applicant.academicPosition ?: request.applicant.title) + request.applicant.name) : (request.applicant.academicPosition ?: request.applicant.title) + request.applicant.name}">
                             </div>
                         </div>
 

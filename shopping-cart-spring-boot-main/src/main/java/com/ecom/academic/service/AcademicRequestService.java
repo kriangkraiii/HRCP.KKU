@@ -261,6 +261,7 @@ public class AcademicRequestService {
     /**
      * อัพเดตสถานะอัตโนมัติตามเอกสารที่กรอกเสร็จ
      * - Doc 3 saved → SUB_COMMITTEE_APPOINTED
+     * - Doc 4 saved → MEETING_SCHEDULED
      * - Doc 6 saved → COMPLETED_PASS or COMPLETED_REVISE (based on score)
      * - Doc 8 saved → COMPLETED
      */
@@ -280,6 +281,12 @@ public class AcademicRequestService {
                 if (request.getCurrentStatus().ordinal() < RequestStatus.SUB_COMMITTEE_APPOINTED.ordinal()) {
                     updateStatus(requestId, RequestStatus.SUB_COMMITTEE_APPOINTED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ", sendNotify);
+                }
+            }
+            case 4 -> {
+                if (request.getCurrentStatus().ordinal() < RequestStatus.MEETING_SCHEDULED.ordinal()) {
+                    updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึกเอกสารขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", sendNotify);
                 }
             }
             case 6 -> {
