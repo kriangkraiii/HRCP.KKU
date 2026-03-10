@@ -433,12 +433,11 @@ public class AcademicRequestService {
      * ค้นหาคำร้องที่ผลประเมินใกล้หมดอายุ (สำหรับ scheduler)
      */
     public List<AcademicRequest> findRequestsExpiringSoon(LocalDateTime before) {
-        return requestRepository.findByApplicantIdOrderByCreatedAtDesc(null); // placeholder
-=======
-     * ส่งอีเมลข้อเสนอแนะถึงผู้ยื่นคำร้อง
-     */
+        return requestRepository.findByApplicantIdOrderByCreatedAtDesc(null); 
+    }
+
     public void sendSuggestionEmail(AcademicRequest request, String suggestionsText) {
         emailService.sendSuggestionEmail(request, suggestionsText);
->>>>>>> 83bc74cd1befa525f304434dca7b85bb7848ff2f
+
     }
 }
