@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+<body>
+    <section>
+        <div class="container py-4">
+            <h3 class="mb-4"><i class="fas fa-user-shield"></i> เอกสารที่ 8: แบบสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ</h3>
+            <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>แอดมิน</strong></div>
+
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/8'" method="post">
+
+                <!-- ข้อมูลผู้ยื่น -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้ยื่นคำร้อง</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ-นามสกุล</label>
+                                <input type="text" name="applicant_name" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ตำแหน่งปัจจุบัน</label>
+                                <input type="text" name="current_position" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">ตำแหน่งผู้ยื่น</label>
+                                <input type="text" name="applicant_position" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">สาขาปัจจุบัน</label>
+                                <input type="text" name="current_major" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ตำแหน่งที่ขอ</label>
+                                <select name="target_position" class="form-select">
+                                    <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                    <option value="ศาสตราจารย์">ศาสตราจารย์</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">โดยวิธี</label>
+                                <select name="evaluation_method" class="form-select">
+                                    <option value="ปกติ">ปกติ</option>
+                                    <option value="พิเศษ">พิเศษ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">สาขาวิชา</label>
+                                <input type="text" name="major" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">รหัสสาขา</label>
+                                <input type="text" name="major_code" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">รหัสหมวดวิชา</label>
+                                <input type="text" name="docsubject_code" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">วิชาที่สอน (ชื่อวิชา)</label>
+                                <input type="text" name="subject_name" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">รหัสวิชา</label>
+                                <input type="text" name="subject" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">วันที่</label>
+                                <input type="text" name="date" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">วันที่ได้รับคำร้อง</label>
+                                <input type="text" name="receivedrequest_date" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">วันที่ดำรงตำแหน่งปัจจุบัน</label>
+                                <input type="text" name="currentpositiondate" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ผลงานวิจัย -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ผลงานวิจัยที่ยื่นเสนอ</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">รายละเอียดผลงานวิจัย</label>
+                                <input type="text" name="des_research" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">จำนวนงานวิจัย</label>
+                                <input type="number" name="research_count" class="form-control" min="0">
+                            </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>ผลงาน</th>
+                                        <th>First author</th>
+                                        <th>Corresponding</th>
+                                        <th>Essential contributor</th>
+                                        <th>Impact Factor</th>
+                                        <th>ฐานข้อมูล</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Main entry -->
+                                    <tr>
+                                        <td>หลัก</td>
+                                        <td><input type="text" name="des_research" class="form-control form-control-sm" placeholder="ผลงานหลัก" disabled></td>
+                                        <td><input type="text" name="firstauthor" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="corresauthor" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="essencontributor" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="impact_factor" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="database" class="form-control form-control-sm"></td>
+                                    </tr>
+                                    <tr th:each="i : ${#numbers.sequence(1, 3)}">
+                                        <td th:text="${i}"></td>
+                                        <td><input type="text" th:name="'research_des' + ${i}" class="form-control form-control-sm"></td>
+                                        <td><input type="text" th:name="'firstauthor' + ${i}" class="form-control form-control-sm"></td>
+                                        <td><input type="text" th:name="'corresautho' + (${i} == 3 ? '3r' : ${i})" class="form-control form-control-sm"></td>
+                                        <td><input type="text" th:name="'essencontributor' + ${i}" class="form-control form-control-sm"></td>
+                                        <td><input type="text" th:name="'impact_factor' + ${i}" class="form-control form-control-sm"></td>
+                                        <td><input type="text" th:name="'database' + ${i}" class="form-control form-control-sm"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">จำนวนรายการวิจัยชุดที่ 1</label>
+                                <input type="text" name="research1_count" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">รายละเอียดวิจัยชุด 1</label>
+                                <input type="text" name="research1_des" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">จำนวนรายการวิจัยชุดที่ 2</label>
+                                <input type="text" name="research2_count" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- รายชื่อผู้ทรงคุณวุฒิ (10 คน) -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">รายชื่อผู้ทรงคุณวุฒิ (สูงสุด 10 คน)</h5></div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:5%">#</th>
+                                        <th style="width:25%">ชื่อ-นามสกุล</th>
+                                        <th style="width:20%">สาขาที่เชี่ยวชาญ</th>
+                                        <th style="width:20%">ความเชี่ยวชาญ</th>
+                                        <th style="width:30%">ข้อมูลเพิ่มเติม</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="i : ${#numbers.sequence(1, 10)}">
+                                        <td th:text="${i}"></td>
+                                        <td><input type="text" th:name="'name' + ${i}" class="form-control form-control-sm"></td>
+                                        <td><input type="text" th:name="'majorcom' + ${i}" class="form-control form-control-sm"></td>
+                                        <td><input type="text" th:name="'major_expert' + ${i}" class="form-control form-control-sm"></td>
+                                        <td><input type="text" th:name="'Information' + ${i}" class="form-control form-control-sm"></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ข้อมูลการประชุม -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลการประชุม</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">ครั้งที่ประชุม</label>
+                                <input type="text" name="count_meet" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">เดือนที่ประชุม</label>
+                                <input type="text" name="count_month" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ปีที่ประชุม</label>
+                                <input type="text" name="count_year" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">วันที่ประชุม</label>
+                                <input type="text" name="date_meet" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ภาค/สาขาวิชาที่ประชุม</label>
+                                <input type="text" name="department_meet" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">สาขาที่ประชุม</label>
+                                <input type="text" name="major_meet" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- สรุป/Footer -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">สรุปผลและผู้ลงนาม</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อประธานกรรมการ</label>
+                                <input type="text" name="committee_name" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ผลการประเมิน</label>
+                                <input type="text" name="result_estimate" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อแอดมินผู้บันทึก</label>
+                                <input type="text" name="name_admin" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-academic btn-lg">
+                        <i class="fas fa-save"></i> บันทึกและสร้างเอกสาร
+                    </button>
+                    <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> กลับ
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                const existingData = /*[[${existingData}]]*/ null;
+                if (existingData) {
+                    try {
+                        const data = JSON.parse(existingData);
+                        for (const [key, value] of Object.entries(data)) {
+                            const el = document.querySelector(`[name="${key}"]`);
+                            if (el) el.value = value;
+                        }
+                    } catch(e) {}
+                }
+            });
+        </script>
+    </section>
+</body>
+</html>

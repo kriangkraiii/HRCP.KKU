@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+	<meta charset="UTF-8">
+	<title>เพิ่มบัญชีผู้ใช้</title>
+</head>
+
+<body>
+	<section>
+		<div class="container-fluid py-4">
+			<div class="row justify-content-center">
+				<div class="col-lg-8 col-md-10">
+					<div class="card shadow-sm border-0" style="border-radius: 16px;">
+						<div class="card-header bg-primary text-white"
+							style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #1a237e, #0d47a1) !important;">
+							<h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>เพิ่มบัญชีผู้ใช้งาน</h5>
+						</div>
+						<div class="card-body p-4">
+
+							<div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show"
+								role="alert">
+								<i class="fas fa-check-circle me-2"></i>
+								<span th:text="${succMsg}"></span>
+								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+							</div>
+							<div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show"
+								role="alert">
+								<i class="fas fa-exclamation-circle me-2"></i>
+								<span th:text="${errorMsg}"></span>
+								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+							</div>
+
+							<div class="alert alert-info border-0" style="background: #e8eaf6;">
+								<i class="fas fa-info-circle me-2 text-primary"></i>
+								<strong>หมายเหตุ:</strong> บัญชีที่เพิ่มจะยังไม่มีรหัสผ่าน ผู้ใช้ต้องกด
+								"เข้าสู่ระบบครั้งแรก" เพื่อตั้งรหัสผ่านผ่าน OTP
+							</div>
+
+							<form th:action="@{/admin/save-admin}" method="post" enctype="multipart/form-data">
+
+								<h6 class="text-muted mb-3 mt-3"><i class="fas fa-id-card me-1"></i> ข้อมูลส่วนตัว</h6>
+								<hr class="mt-0">
+
+								<div class="row mb-3">
+									<div class="col-md-4">
+										<label class="form-label fw-bold">คำนำหน้าชื่อ <span
+												class="text-danger">*</span></label>
+										<select name="title" class="form-select" required>
+											<option value="">-- เลือก --</option>
+											<option value="นาย">นาย</option>
+											<option value="นาง">นาง</option>
+											<option value="นางสาว">นางสาว</option>
+											<option value="ดร.">ดร.</option>
+										</select>
+									</div>
+									<div class="col-md-8">
+										<label class="form-label fw-bold">ชื่อ-นามสกุล <span
+												class="text-danger">*</span></label>
+										<input type="text" name="name" class="form-control"
+											placeholder="กรอกชื่อ-นามสกุล" required>
+									</div>
+								</div>
+
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">ตำแหน่งทางวิชาการ</label>
+										<select name="academicPosition" class="form-select">
+											<option value="">-- ไม่ระบุ --</option>
+											<option value="อาจารย์">อาจารย์</option>
+											<option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์ (ผศ.)</option>
+											<option value="รองศาสตราจารย์">รองศาสตราจารย์ (รศ.)</option>
+											<option value="ศาสตราจารย์">ศาสตราจารย์ (ศ.)</option>
+										</select>
+									</div>
+									<div class="col-md-6">
+										<label class="form-label fw-bold">เบอร์โทรศัพท์</label>
+										<input type="tel" name="mobileNumber" class="form-control"
+											placeholder="0XX-XXX-XXXX">
+									</div>
+								</div>
+
+								<h6 class="text-muted mb-3 mt-4"><i class="fas fa-envelope me-1"></i> ข้อมูลบัญชี</h6>
+								<hr class="mt-0">
+
+								<div class="row mb-3">
+									<div class="col-md-8">
+										<label class="form-label fw-bold">อีเมล <span
+												class="text-danger">*</span></label>
+										<input type="email" name="email" class="form-control"
+											placeholder="example@kku.ac.th" required>
+									</div>
+									<div class="col-md-4">
+										<label class="form-label fw-bold">บทบาท <span
+												class="text-danger">*</span></label>
+										<select name="role" class="form-select" required>
+											<option value="ROLE_USER">ผู้ใช้งาน</option>
+											<option value="ROLE_ADMIN">ผู้ดูแลระบบ</option>
+										</select>
+									</div>
+								</div>
+
+								<h6 class="text-muted mb-3 mt-4"><i class="fas fa-camera me-1"></i> รูปโปรไฟล์</h6>
+								<hr class="mt-0">
+
+								<div class="mb-3">
+									<input type="file" name="img" class="form-control" accept="image/*">
+									<small class="text-muted">ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเริ่มต้น</small>
+								</div>
+
+								<div class="text-center mt-4">
+									<button type="submit" class="btn btn-primary btn-lg px-5"
+										style="background: linear-gradient(135deg, #1a237e, #0d47a1); border: none; border-radius: 10px;">
+										<i class="fas fa-user-plus me-2"></i>เพิ่มบัญชี
+									</button>
+								</div>
+
+							</form>
+						</div>
+					</div>
+				</div>
+			</div>
+		</div>
+	</section>
+</body>
+
+</html>

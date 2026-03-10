@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic::layout(~{::section})}">
+<head>
+    <meta charset="UTF-8">
+    <title>จัดการไฟล์</title>
+</head>
+<body>
+<section>
+    <div class="container-fluid py-4">
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h4 class="fw-bold mb-1">
+                    <i class="fas fa-folder-open me-2" style="color: var(--accent-color);"></i>จัดการไฟล์
+                </h4>
+                <small class="text-muted">จัดการไฟล์เอกสารทั้งหมดในระบบ</small>
+            </div>
+        </div>
+
+        <!-- Summary Cards -->
+        <div class="row mb-4">
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width: 50px; height: 50px; background: rgba(13,71,161,0.1); color: #0d47a1;">
+                            <i class="fas fa-file-alt fa-lg"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold" th:text="${totalFiles}">0</h5>
+                            <small class="text-muted">ไฟล์ทั้งหมด</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width: 50px; height: 50px; background: rgba(46,125,50,0.1); color: #2e7d32;">
+                            <i class="fas fa-hdd fa-lg"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold" th:text="${totalSize}">0 B</h5>
+                            <small class="text-muted">พื้นที่ใช้งาน</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width: 50px; height: 50px; background: rgba(198,40,40,0.1); color: #c62828;">
+                            <i class="fas fa-trash-alt fa-lg"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold" th:text="${trashCount}">0</h5>
+                            <small class="text-muted">ในถังขยะ</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab Buttons -->
+        <div class="d-flex gap-2 mb-4">
+            <a href="/admin/file-manager"
+               class="btn"
+               th:classappend="${viewMode == 'files'} ? 'btn-primary' : 'btn-outline-secondary'"
+               style="border-radius: 10px;">
+                <i class="fas fa-folder me-1"></i> ไฟล์ทั้งหมด
+            </a>
+            <a href="/admin/file-manager/trash"
+               class="btn"
+               th:classappend="${viewMode == 'trash'} ? 'btn-danger' : 'btn-outline-secondary'"
+               style="border-radius: 10px;">
+                <i class="fas fa-trash me-1"></i> ถังขยะ
+                <span class="badge bg-white text-danger ms-1" th:if="${trashCount > 0}" th:text="${trashCount}"></span>
+            </a>
+            <button th:if="${viewMode == 'trash' && trashCount > 0}"
+                    class="btn btn-outline-danger ms-auto"
+                    style="border-radius: 10px;"
+                    onclick="emptyTrash()">
+                <i class="fas fa-dumpster-fire me-1"></i> ล้างถังขยะทั้งหมด
+            </button>
+        </div>
+
+        <!-- Search & Filter -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+            <div class="card-body py-3">
+                <div class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" class="form-control border-start-0" id="searchInput"
+                                   placeholder="ค้นหาชื่อไฟล์, ผู้ยื่น..." onkeyup="filterTable()">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select class="form-select" id="typeFilter" onchange="filterTable()">
+                            <option value="">ทุกประเภท</option>
+                            <option value="DOCX">DOCX</option>
+                            <option value="PDF">PDF</option>
+                            <option value="JPG">JPG/PNG</option>
+                            <option value="DOCUMENT">เอกสารที่สร้าง</option>
+                            <option value="ATTACHMENT">ไฟล์แนบ</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-select" id="requestFilter" onchange="filterTable()">
+                            <option value="">ทุกคำร้อง</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- File Table -->
+        <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+            <div class="card-body p-0">
+                <div th:if="${files == null || files.isEmpty()}" class="text-center py-5">
+                    <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
+                    <p class="text-muted mb-0" th:if="${viewMode == 'files'}">ยังไม่มีไฟล์ในระบบ</p>
+                    <p class="text-muted mb-0" th:if="${viewMode == 'trash'}">ถังขยะว่างเปล่า</p>
+                </div>
+                <div class="table-responsive" th:if="${files != null && !files.isEmpty()}">
+                    <table class="table table-hover align-middle mb-0" id="fileTable">
+                        <thead class="table-light">
+                            <tr>
+                                <th style="width:40px">#</th>
+                                <th>ชื่อไฟล์</th>
+                                <th>ประเภท</th>
+                                <th>ขนาด</th>
+                                <th>คำร้อง</th>
+                                <th>ผู้ยื่น</th>
+                                <th>เอกสาร</th>
+                                <th th:if="${viewMode == 'files'}">วันที่สร้าง</th>
+                                <th th:if="${viewMode == 'trash'}">วันที่ลบ</th>
+                                <th style="width:160px">การดำเนินการ</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="file, iter : ${files}" class="file-row"
+                                th:data-search="|${file.fileName} ${file.applicantName} ${file.applicantEmail} ${file.requestCode}|"
+                                th:data-type="|${file.fileExtension} ${file.sourceType}|"
+                                th:data-request="${file.requestId}"
+                                th:data-active="${file.requestActive}"
+                                th:data-status="${file.requestStatusLabel}"
+                                th:id="'row-' + ${file.fileId}">
+                                <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
+                                <td>
+                                    <div class="d-flex align-items-center gap-2">
+                                        <div class="file-icon" th:switch="${file.fileExtension}">
+                                            <i th:case="'DOCX'" class="fas fa-file-word text-primary"></i>
+                                            <i th:case="'PDF'" class="fas fa-file-pdf text-danger"></i>
+                                            <i th:case="'JPG'" class="fas fa-file-image text-success"></i>
+                                            <i th:case="'PNG'" class="fas fa-file-image text-success"></i>
+                                            <i th:case="*" class="fas fa-file text-secondary"></i>
+                                        </div>
+                                        <div>
+                                            <div class="fw-semibold text-truncate" style="max-width: 200px;"
+                                                 th:text="${file.fileName}" th:title="${file.fileName}"></div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <span class="badge rounded-pill"
+                                          th:classappend="${file.sourceType == 'DOCUMENT'} ? 'bg-primary' : 'bg-info'"
+                                          th:text="${file.sourceType == 'DOCUMENT'} ? 'เอกสาร' : 'ไฟล์แนบ'"></span>
+                                    <small class="d-block text-muted mt-1" th:text="${file.fileExtension}"></small>
+                                </td>
+                                <td><small th:text="${file.getFormattedSize()}"></small></td>
+                                <td>
+                                    <a th:if="${file.requestCode != null}"
+                                       th:href="'/admin/academic/request/' + ${file.requestId}"
+                                       class="text-decoration-none">
+                                        <span class="fw-semibold" style="font-size: 0.8rem;" th:text="${file.requestCode}"></span>
+                                    </a>
+                                    <div th:if="${file.requestActive && file.requestStatusLabel != null}" class="mt-1">
+                                        <span class="badge rounded-pill bg-warning text-dark" style="font-size: 0.65rem;">
+                                            <i class="fas fa-spinner fa-spin me-1"></i><span th:text="${file.requestStatusLabel}"></span>
+                                        </span>
+                                    </div>
+                                    <div th:if="${!file.requestActive && file.requestStatusLabel != null}" class="mt-1">
+                                        <span class="badge rounded-pill bg-success" style="font-size: 0.65rem;" th:text="${file.requestStatusLabel}"></span>
+                                    </div>
+                                    <small th:if="${file.requestCode == null}" class="text-muted">-</small>
+                                </td>
+                                <td>
+                                    <div th:if="${file.applicantName != null}">
+                                        <div class="fw-semibold" style="font-size: 0.85rem;" th:text="${file.applicantName}"></div>
+                                        <small class="text-muted" th:text="${file.applicantEmail}"></small>
+                                    </div>
+                                    <small th:if="${file.applicantName == null}" class="text-muted">-</small>
+                                </td>
+                                <td>
+                                    <small th:text="${file.documentLabel}"></small>
+                                </td>
+                                <td th:if="${viewMode == 'files'}">
+                                    <small th:text="${file.createdAt != null ? #temporals.format(file.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                </td>
+                                <td th:if="${viewMode == 'trash'}">
+                                    <small th:text="${file.deletedAt != null ? #temporals.format(file.deletedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                </td>
+                                <td>
+                                    <!-- Active file actions -->
+                                    <th:block th:if="${viewMode == 'files'}">
+                                        <div class="btn-group">
+                                            <a th:href="'/admin/file-manager/download/' + ${file.fileId.split('-')[0]} + '/' + ${file.fileId.split('-')[1]}"
+                                               class="btn btn-sm btn-outline-primary" title="ดาวน์โหลด">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <a th:if="${file.requestId != null}"
+                                               th:href="'/admin/academic/request/' + ${file.requestId}"
+                                               class="btn btn-sm btn-outline-info" title="ไปที่คำร้อง">
+                                                <i class="fas fa-external-link-alt"></i>
+                                            </a>
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    th:data-fileid="${file.fileId}"
+                                                    th:data-filename="${file.fileName}"
+                                                    onclick="softDelete(this)"
+                                                    title="ย้ายไปถังขยะ">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    </th:block>
+                                    <!-- Trash actions -->
+                                    <th:block th:if="${viewMode == 'trash'}">
+                                        <div class="btn-group">
+                                            <button class="btn btn-sm btn-outline-success"
+                                                    th:data-fileid="${file.fileId}"
+                                                    onclick="restoreFile(this)"
+                                                    title="กู้คืน">
+                                                <i class="fas fa-undo"></i>
+                                            </button>
+                                            <button class="btn btn-sm btn-outline-danger"
+                                                    th:data-fileid="${file.fileId}"
+                                                    th:data-filename="${file.fileName}"
+                                                    onclick="permanentDeleteFile(this)"
+                                                    title="ลบถาวร">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </div>
+                                    </th:block>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Confirm Modal -->
+    <div class="modal fade" id="confirmModal" tabindex="-1">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content" style="border-radius: 16px; border: none;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title" id="confirmTitle">
+                        <i class="fas fa-exclamation-triangle text-warning me-2"></i>ยืนยันการดำเนินการ
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body" id="confirmBody">
+                    คุณแน่ใจหรือไม่?
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">ยกเลิก</button>
+                    <button type="button" class="btn btn-danger" id="confirmBtn" style="border-radius: 10px;">ยืนยัน</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+        <div id="toastNotif" class="toast align-items-center text-white border-0" role="alert"
+             style="border-radius: 12px;">
+            <div class="d-flex">
+                <div class="toast-body" id="toastMsg"></div>
+                <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .file-icon { font-size: 1.3rem; width: 30px; text-align: center; }
+        .file-row { transition: all 0.3s ease; }
+        .file-row.removing { opacity: 0; transform: translateX(50px); }
+        .table th { font-size: 0.82rem; font-weight: 600; color: #555; }
+        .table td { font-size: 0.85rem; vertical-align: middle; }
+    </style>
+
+    <script>
+        // Populate request filter dropdown
+        document.addEventListener('DOMContentLoaded', function() {
+            const rows = document.querySelectorAll('.file-row');
+            const requestIds = new Set();
+            rows.forEach(r => {
+                const rid = r.getAttribute('data-request');
+                if (rid && rid !== 'null') requestIds.add(rid);
+            });
+            const sel = document.getElementById('requestFilter');
+            requestIds.forEach(id => {
+                const opt = document.createElement('option');
+                opt.value = id;
+                opt.textContent = 'คำร้อง #' + id;
+                sel.appendChild(opt);
+            });
+        });
+
+        function filterTable() {
+            const search = document.getElementById('searchInput').value.toLowerCase();
+            const typeFilter = document.getElementById('typeFilter').value.toUpperCase();
+            const requestFilter = document.getElementById('requestFilter').value;
+
+            document.querySelectorAll('.file-row').forEach(row => {
+                const searchData = (row.getAttribute('data-search') || '').toLowerCase();
+                const typeData = (row.getAttribute('data-type') || '').toUpperCase();
+                const requestData = row.getAttribute('data-request') || '';
+
+                let show = true;
+                if (search && !searchData.includes(search)) show = false;
+                if (typeFilter && !typeData.includes(typeFilter)) show = false;
+                if (requestFilter && requestData !== requestFilter) show = false;
+
+                row.style.display = show ? '' : 'none';
+            });
+        }
+
+        function showToast(msg, isSuccess) {
+            const toast = document.getElementById('toastNotif');
+            const toastMsg = document.getElementById('toastMsg');
+            toastMsg.textContent = msg;
+            toast.className = 'toast align-items-center text-white border-0 ' +
+                (isSuccess ? 'bg-success' : 'bg-danger');
+            toast.style.borderRadius = '12px';
+            new bootstrap.Toast(toast, { delay: 3000 }).show();
+        }
+
+        function parseFileId(fileId) {
+            const parts = fileId.split('-');
+            return { type: parts[0], id: parts[1] };
+        }
+
+        function softDelete(btn) {
+            const fileId = btn.getAttribute('data-fileid');
+            const fileName = btn.getAttribute('data-filename');
+            const row = document.getElementById('row-' + fileId);
+            const isActive = row && row.getAttribute('data-active') === 'true';
+            const statusLabel = row ? row.getAttribute('data-status') : '';
+
+            let bodyMsg = 'ต้องการย้าย <strong>' + fileName + '</strong> ไปถังขยะหรือไม่?<br><small class="text-muted">สามารถกู้คืนได้ภายหลัง</small>';
+
+            if (isActive) {
+                bodyMsg = '<div class="alert alert-warning py-2 px-3 mb-3" style="border-radius:10px;">' +
+                    '<i class="fas fa-exclamation-triangle me-2"></i>' +
+                    '<strong>ไฟล์นี้อยู่ในคำร้องที่กำลังดำเนินการ</strong><br>' +
+                    '<small>สถานะปัจจุบัน: <strong>' + (statusLabel || '-') + '</strong></small>' +
+                    '</div>' +
+                    'ต้องการย้าย <strong>' + fileName + '</strong> ไปถังขยะหรือไม่?<br>' +
+                    '<small class="text-danger"><i class="fas fa-info-circle me-1"></i>การลบไฟล์อาจกระทบต่อการดำเนินงานของคำร้องนี้</small>';
+            }
+
+            showConfirm(
+                isActive ? '⚠️ ไฟล์อยู่ในคำร้องที่ยังไม่เสร็จสิ้น' : 'ย้ายไปถังขยะ',
+                bodyMsg,
+                function() {
+                    const { type, id } = parseFileId(fileId);
+                    fetch('/admin/file-manager/delete/' + type + '/' + id, { method: 'POST' })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                const row = document.getElementById('row-' + fileId);
+                                row.classList.add('removing');
+                                setTimeout(() => row.remove(), 300);
+                                showToast(data.message, true);
+                            } else {
+                                showToast(data.message, false);
+                            }
+                        })
+                        .catch(() => showToast('เกิดข้อผิดพลาด', false));
+                }
+            );
+        }
+
+        function restoreFile(btn) {
+            const fileId = btn.getAttribute('data-fileid');
+            const { type, id } = parseFileId(fileId);
+            fetch('/admin/file-manager/restore/' + type + '/' + id, { method: 'POST' })
+                .then(r => r.json())
+                .then(data => {
+                    if (data.success) {
+                        const row = document.getElementById('row-' + fileId);
+                        row.classList.add('removing');
+                        setTimeout(() => row.remove(), 300);
+                        showToast(data.message, true);
+                    } else {
+                        showToast(data.message, false);
+                    }
+                })
+                .catch(() => showToast('เกิดข้อผิดพลาด', false));
+        }
+
+        function permanentDeleteFile(btn) {
+            const fileId = btn.getAttribute('data-fileid');
+            const fileName = btn.getAttribute('data-filename');
+            showConfirm(
+                'ลบถาวร',
+                '⚠️ ต้องการลบ <strong>' + fileName + '</strong> ถาวรหรือไม่?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+                function() {
+                    const { type, id } = parseFileId(fileId);
+                    fetch('/admin/file-manager/permanent-delete/' + type + '/' + id, { method: 'POST' })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                const row = document.getElementById('row-' + fileId);
+                                row.classList.add('removing');
+                                setTimeout(() => row.remove(), 300);
+                                showToast(data.message, true);
+                            } else {
+                                showToast(data.message, false);
+                            }
+                        })
+                        .catch(() => showToast('เกิดข้อผิดพลาด', false));
+                }
+            );
+        }
+
+        function emptyTrash() {
+            showConfirm(
+                'ล้างถังขยะทั้งหมด',
+                '⚠️ ลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+                function() {
+                    fetch('/admin/file-manager/empty-trash', { method: 'POST' })
+                        .then(r => r.json())
+                        .then(data => {
+                            if (data.success) {
+                                showToast(data.message, true);
+                                setTimeout(() => window.location.reload(), 1000);
+                            } else {
+                                showToast(data.message, false);
+                            }
+                        })
+                        .catch(() => showToast('เกิดข้อผิดพลาด', false));
+                }
+            );
+        }
+
+        function showConfirm(title, body, onConfirm) {
+            document.getElementById('confirmTitle').innerHTML =
+                '<i class="fas fa-exclamation-triangle text-warning me-2"></i>' + title;
+            document.getElementById('confirmBody').innerHTML = body;
+            const modal = new bootstrap.Modal(document.getElementById('confirmModal'));
+            const btn = document.getElementById('confirmBtn');
+            const newBtn = btn.cloneNode(true);
+            btn.parentNode.replaceChild(newBtn, btn);
+            newBtn.addEventListener('click', function() {
+                modal.hide();
+                onConfirm();
+            });
+            modal.show();
+        }
+    </script>
+</section>
+</body>
+</html>

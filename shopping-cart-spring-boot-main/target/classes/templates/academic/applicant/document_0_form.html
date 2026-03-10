@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div class="card card-academic">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> เอกสารที่ 0: บันทึกข้อความ ขอรับการประ
+                    </h4>
+                    <small class="text-muted">คำร้อง [[${request.requestCode}]] — [[${request.applicant.name}]]</small>
+                </div>
+                <div class="card-body">
+
+                    <!-- Draft saved alert -->
+                    <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show">
+                        <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <form th:action="'/user/academic/request/' + ${request.id} + '/document-0'" method="post"
+                        id="doc0Form">
+
+                        <!-- ข้อมูลบันทึกข้อความ -->
+                        <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-file-signature"></i> ข้อมูลบันทึกข้อความ
+                        </h5>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label">เลขที่หนังสือ <small class="text-muted">(ถ้ามี)</small></label>
+                                <input type="text" name="memo_no" class="form-control"
+                                    placeholder="เช่น อว 660301.26.8/"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('memo_no', '') : ''}">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">วันที่เอกสาร</label>
+                                <div class="input-group">
+                                    <input type="text" name="date" class="form-control thai-full-date"
+                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('date', '') : ''}"
+                                        placeholder="เช่น 17 กุมภาพันธ์ 2569" required>
+                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่">
+                                        <i class="fas fa-calendar-alt"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ข้อมูลผู้ขอรับการประเมิน -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-user"></i> ข้อมูลผู้ขอรับการประเมิน
+                        </h5>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า</label>
+                                <select name="title" class="form-select" required>
+                                    <option value="">-- เลือก --</option>
+                                    <option value="นาย"
+                                        th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นาย'}">
+                                        นาย</option>
+                                    <option value="นาง"
+                                        th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นาง'}">
+                                        นาง</option>
+                                    <option value="นางสาว"
+                                        th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นางสาว'}">
+                                        นางสาว</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ-นามสกุล</label>
+                                <input type="text" name="full_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}"
+                                    required placeholder="เช่น สมชาย ใจดี">
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ประเภทบุคลากร</label>
+                                <div class="d-flex gap-4 mt-1">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="employee_type"
+                                            id="empType1" value="พนักงานมหาวิทยาลัย"
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('employee_type', '') == 'พนักงานมหาวิทยาลัย'}"
+                                            required>
+                                        <label class="form-check-label" for="empType1">พนักงานมหาวิทยาลัย</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="radio" name="employee_type"
+                                            id="empType2" value="ข้าราชการ"
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('employee_type', '') == 'ข้าราชการ'}">
+                                        <label class="form-check-label" for="empType2">ข้าราชการ</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่งทางวิชาการปัจจุบัน</label>
+                                <select name="current_position" class="form-select" required>
+                                    <option value="">-- เลือก --</option>
+                                    <option value="อาจารย์"
+                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'อาจารย์'}">
+                                        อาจารย์</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์"
+                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'ผู้ช่วยศาสตราจารย์'}">
+                                        ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์"
+                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'รองศาสตราจารย์'}">
+                                        รองศาสตราจารย์</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- ตำแหน่งที่ขอรับการประเมิน -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-graduation-cap"></i>
+                            ขอรับการประเมินผลการสอนเพื่อขอกำหนดตำแหน่ง</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <div class="d-flex gap-4">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="chk1" id="chk1"
+                                            value="✓"
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk1', '') == '✓'}">
+                                        <label class="form-check-label" for="chk1">ผู้ช่วยศาสตราจารย์ (ผศ.)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="chk2" id="chk2"
+                                            value="✓"
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk2', '') == '✓'}">
+                                        <label class="form-check-label" for="chk2">รองศาสตราจารย์ (รศ.)</label>
+                                    </div>
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="chk3" id="chk3"
+                                            value="✓"
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk3', '') == '✓'}">
+                                        <label class="form-check-label" for="chk3">ศาสตราจารย์ (ศ.)</label>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ชื่อเต็มสำหรับพิมพ์ -->
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label class="form-label">ชื่อ-สกุล เต็ม (สำหรับพิมพ์ในเอกสาร)</label>
+                                <input type="text" name="applicant_name_full_print" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name_full_print', '') : ''}"
+                                    placeholder="เช่น ผู้ช่วยศาสตราจารย์ ดร.สมชาย ใจดี">
+                                <small class="text-muted">ระบุคำนำหน้า ตำแหน่ง และชื่อเต็ม สำหรับพิมพ์ในลายเซ็น</small>
+                            </div>
+                        </div>
+
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                                <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+                            </button>
+                            <button type="submit" name="action" value="draft" class="btn btn-outline-success">
+                                <i class="fas fa-save"></i> บันทึกแบบร่าง
+                            </button>
+                            <button type="submit" name="action" value="submit" class="btn btn-academic">
+                                <i class="fas fa-paper-plane"></i> บันทึกเอกสาร
+                            </button>
+                            <a th:href="'/user/academic/request/' + ${request.id}"
+                                class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> กลับ</a>
+                        </div>
+                    </form>
+
+                    <!-- เอกสารที่สร้างแล้ว -->
+                    <div th:if="${existingDocs != null && !existingDocs.isEmpty()}" class="mt-4">
+                        <h6 class="text-success"><i class="fas fa-check-circle"></i> เอกสารที่สร้างแล้ว</h6>
+                        <div th:each="doc : ${existingDocs}" class="card doc-card generated mb-2 p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-success"><i class="fas fa-check"></i>
+                                    [[${doc.documentLabel}]]</small>
+                                <div class="btn-group btn-group-sm">
+                                    <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=docx'"
+                                        class="btn btn-outline-primary" title="ดาวน์โหลด DOCX">
+                                        <i class="fas fa-file-word"></i> DOCX
+                                    </a>
+                                    <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=pdf'"
+                                        class="btn btn-outline-danger" title="ดาวน์โหลด PDF">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview CSS & JS -->
+                    <link rel="stylesheet" href="/css/doc_preview.css">
+                    <script src="/js/doc_preview.js"></script>
+
+                    <input type="hidden" id="currentDocType" value="0">
+                    <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
+
+                    <script>
+                        // ติ๊กได้แค่อันเดียว (chk1, chk2, chk3)
+                        document.querySelectorAll('#chk1, #chk2, #chk3').forEach(cb => {
+                            cb.addEventListener('change', function () {
+                                if (this.checked) {
+                                    document.querySelectorAll('#chk1, #chk2, #chk3').forEach(other => {
+                                        if (other !== this) other.checked = false;
+                                    });
+                                }
+                            });
+                        });
+
+                        // Thai Date Defaults & Picker
+                        (function () {
+                            const thaiMonths = ['มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
+                                'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'];
+                            const now = new Date();
+                            const thaiFullDate = now.getDate() + ' ' + thaiMonths[now.getMonth()] + ' ' + (now.getFullYear() + 543);
+                            document.querySelectorAll('.thai-full-date').forEach(el => {
+                                if (!el.value) el.value = thaiFullDate;
+                            });
+
+                            function toThaiDate(dateStr) {
+                                const d = new Date(dateStr);
+                                if (isNaN(d)) return '';
+                                return d.getDate() + ' ' + thaiMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                            }
+                            document.querySelectorAll('.thai-date-btn').forEach(btn => {
+                                const group = btn.closest('.input-group');
+                                const picker = group.querySelector('.thai-date-picker');
+                                btn.addEventListener('click', () => picker.showPicker());
+                            });
+                            document.querySelectorAll('.thai-date-picker').forEach(picker => {
+                                picker.addEventListener('change', function () {
+                                    const group = this.closest('.input-group');
+                                    const textInput = group.querySelector('.thai-full-date');
+                                    if (this.value) textInput.value = toThaiDate(this.value);
+                                });
+                            });
+                        })();
+
+                        // โหลดข้อมูลเดิม (ถ้ามี)
+                        var existingJson = document.getElementById('existingDataHolder') ? document.getElementById('existingDataHolder').value : null;
+                        if (existingJson) {
+                            try {
+                                var data = JSON.parse(existingJson);
+                                var form = document.getElementById('doc0Form');
+                                if (form && data) {
+                                    Object.keys(data).forEach(function(key) {
+                                        var el = form.querySelector('[name="' + key + '"]');
+                                        if (el && !el.value) el.value = data[key];
+                                    });
+                                }
+                            } catch (e) { console.warn('Failed to load existing data:', e); }
+                        }
+
+                        // Initialize real-time preview for Doc 0
+                        initDocPreview('doc0Form', 0);
+                    </script>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>

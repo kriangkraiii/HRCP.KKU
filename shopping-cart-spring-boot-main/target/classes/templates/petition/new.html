@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div class="row justify-content-center">
+                <div class="col-md-8">
+                    <!-- Page Header -->
+                    <div class="mb-4">
+                        <h3><i class="fas fa-plus-circle text-primary"></i> ยื่นคำร้องใหม่</h3>
+                        <p class="text-muted">กรุณากรอกข้อมูลคำร้องของคุณให้ครบถ้วน</p>
+                    </div>
+
+                    <!-- Error Message -->
+                    <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Petition Form Card -->
+                    <div class="card card-academic shadow-sm">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0">
+                                <i class="fas fa-file-alt"></i> ข้อมูลคำร้อง
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <form th:action="@{/petitions/create}" th:object="${petition}" method="post">
+                                <!-- Title Field -->
+                                <div class="mb-3">
+                                    <label for="title" class="form-label">
+                                        หัวข้อคำร้อง <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text"
+                                           class="form-control"
+                                           th:classappend="${#fields.hasErrors('title')} ? 'is-invalid' : ''"
+                                           id="title"
+                                           th:field="*{title}"
+                                           placeholder="กรุณากรอกหัวข้อคำร้อง"
+                                           maxlength="255">
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('title')}"
+                                         th:errors="*{title}">
+                                        กรุณากรอกหัวข้อคำร้อง
+                                    </div>
+                                </div>
+
+                                <!-- Description Field -->
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">
+                                        รายละเอียดคำร้อง <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control"
+                                              th:classappend="${#fields.hasErrors('description')} ? 'is-invalid' : ''"
+                                              id="description"
+                                              th:field="*{description}"
+                                              rows="6"
+                                              placeholder="กรุณากรอกรายละเอียดคำร้องของคุณ"></textarea>
+                                    <div class="invalid-feedback" th:if="${#fields.hasErrors('description')}"
+                                         th:errors="*{description}">
+                                        กรุณากรอกรายละเอียดคำร้อง
+                                    </div>
+                                    <small class="form-text text-muted">
+                                        <i class="fas fa-info-circle"></i> กรุณาอธิบายรายละเอียดคำร้องของคุณให้ชัดเจน
+                                    </small>
+                                </div>
+
+                                <!-- Required Fields Note -->
+                                <div class="alert alert-light border">
+                                    <small>
+                                        <i class="fas fa-asterisk text-danger" style="font-size: 0.6rem;"></i>
+                                        ช่องที่มีเครื่องหมายดอกจันสีแดงจำเป็นต้องกรอก
+                                    </small>
+                                </div>
+
+                                <!-- Form Buttons -->
+                                <div class="d-flex justify-content-between">
+                                    <a href="/petitions/my-petitions" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times"></i> ยกเลิก
+                                    </a>
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-paper-plane"></i> ยื่นคำร้อง
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Info Box -->
+                    <div class="alert alert-info border-0 shadow-sm mt-4">
+                        <i class="fas fa-lightbulb me-2"></i>
+                        <strong>คำแนะนำ:</strong> หลังจากยื่นคำร้องแล้ว คุณจะได้รับสถานะ "รับคำร้อง" โดยอัตโนมัติ
+                        และสามารถติดตามสถานะคำร้องของคุณได้ในหน้ารายการคำร้อง
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>

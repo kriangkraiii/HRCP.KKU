@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container-fluid py-4">
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="rounded-circle bg-primary bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-list-alt text-primary fa-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">กิจกรรมทั้งหมด</div>
+                                <h4 class="mb-0" th:text="${logs.totalElements}">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="rounded-circle bg-success bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-user-plus text-success fa-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">สร้างบัญชี</div>
+                                <h4 class="mb-0" th:text="${createCount ?: 0}">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="rounded-circle bg-warning bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-edit text-warning fa-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">อัพเดทสถานะ</div>
+                                <h4 class="mb-0" th:text="${updateCount ?: 0}">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body d-flex align-items-center">
+                            <div class="rounded-circle bg-info bg-opacity-10 p-3 me-3">
+                                <i class="fas fa-file-alt text-info fa-lg"></i>
+                            </div>
+                            <div>
+                                <div class="text-muted small">สร้างเอกสาร</div>
+                                <h4 class="mb-0" th:text="${docCount ?: 0}">0</h4>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card card-academic">
+                <div class="card-header bg-white">
+                    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <h4 class="mb-0"><i class="fas fa-history"></i> ประวัติกิจกรรม (Activity Log)</h4>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-primary" th:text="'ทั้งหมด ' + ${logs.totalElements} + ' รายการ'"></span>
+                            <a th:href="'/admin/activity-logs/export?' + (${search != null ? 'search=' + search + '&' : ''}) + (${actionFilter != null ? 'action=' + actionFilter + '&' : ''}) + (${dateFrom != null ? 'dateFrom=' + dateFrom + '&' : ''}) + (${dateTo != null ? 'dateTo=' + dateTo : ''})"
+                               class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-file-csv"></i> Export CSV
+                            </a>
+                        </div>
+                    </div>
+                    <!-- Search/Filter Bar -->
+                    <form method="get" action="/admin/activity-logs" class="row g-2 mt-2">
+                        <div class="col-md-3">
+                            <input type="text" name="search" class="form-control form-control-sm"
+                                placeholder="ค้นหาชื่อ, อีเมล, รายละเอียด..."
+                                th:value="${search}">
+                        </div>
+                        <div class="col-md-2">
+                            <select name="action" class="form-select form-select-sm">
+                                <option value="">-- ทุกประเภท --</option>
+                                <optgroup label="Traffic">
+                                    <option value="PAGE_VIEW" th:selected="${actionFilter == 'PAGE_VIEW'}">เข้าชมหน้า</option>
+                                    <option value="FORM_SUBMIT" th:selected="${actionFilter == 'FORM_SUBMIT'}">ส่งฟอร์ม</option>
+                                    <option value="API_CALL" th:selected="${actionFilter == 'API_CALL'}">เรียก API</option>
+                                </optgroup>
+                                <optgroup label="Admin Actions">
+                                    <option value="CREATE_ACCOUNT" th:selected="${actionFilter == 'CREATE_ACCOUNT'}">สร้างบัญชี</option>
+                                    <option value="UPDATE_ACCOUNT_STATUS" th:selected="${actionFilter == 'UPDATE_ACCOUNT_STATUS'}">อัพเดทสถานะ</option>
+                                    <option value="CHANGE_PASSWORD" th:selected="${actionFilter == 'CHANGE_PASSWORD'}">เปลี่ยนรหัสผ่าน</option>
+                                    <option value="EDIT_USER_ACCOUNT" th:selected="${actionFilter == 'EDIT_USER_ACCOUNT'}">แก้ไขบัญชีผู้ใช้</option>
+                                    <option value="EDIT_ADMIN_ACCOUNT" th:selected="${actionFilter == 'EDIT_ADMIN_ACCOUNT'}">แก้ไขบัญชีแอดมิน</option>
+                                    <option value="DELETE_USER_ACCOUNT" th:selected="${actionFilter == 'DELETE_USER_ACCOUNT'}">ลบบัญชีผู้ใช้</option>
+                                    <option value="DELETE_ADMIN_ACCOUNT" th:selected="${actionFilter == 'DELETE_ADMIN_ACCOUNT'}">ลบบัญชีแอดมิน</option>
+                                    <option value="GENERATE_DOCUMENT" th:selected="${actionFilter == 'GENERATE_DOCUMENT'}">สร้างเอกสาร</option>
+                                    <option value="UPDATE_REQUEST_STATUS" th:selected="${actionFilter == 'UPDATE_REQUEST_STATUS'}">อัพเดทคำร้อง</option>
+                                </optgroup>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="dateFrom" class="form-control form-control-sm"
+                                th:value="${dateFrom}" placeholder="จากวันที่">
+                        </div>
+                        <div class="col-md-2">
+                            <input type="date" name="dateTo" class="form-control form-control-sm"
+                                th:value="${dateTo}" placeholder="ถึงวันที่">
+                        </div>
+                        <div class="col-md-3 d-flex gap-1">
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> ค้นหา</button>
+                            <a href="/admin/activity-logs" class="btn btn-outline-secondary btn-sm"><i class="fas fa-redo"></i> รีเซ็ต</a>
+                        </div>
+                    </form>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0" style="font-size:0.85rem">
+                            <thead class="table-light">
+                                <tr>
+                                    <th style="width:40px">#</th>
+                                    <th style="width:140px">วันเวลา</th>
+                                    <th style="width:140px">ผู้ดำเนินการ</th>
+                                    <th style="width:140px">การกระทำ</th>
+                                    <th>รายละเอียด</th>
+                                    <th style="width:110px">IP Address</th>
+                                    <th style="width:160px">Resource</th>
+                                    <th style="width:180px">User Agent</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="log, iter : ${logs.content}">
+                                    <td><small class="text-muted" th:text="${logs.totalElements - (currentPage * 20) - iter.index}"></small></td>
+                                    <td>
+                                        <small
+                                            th:text="${#temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm')}"></small>
+                                    </td>
+                                    <td>
+                                        <div class="fw-semibold" th:text="${log.adminName}"></div>
+                                        <small class="text-muted" th:text="${log.adminEmail}"></small>
+                                    </td>
+                                    <td>
+                                        <span class="badge"
+                                            th:classappend="${log.action == 'PAGE_VIEW'} ? 'bg-secondary' :
+                                                (${log.action == 'FORM_SUBMIT'} ? 'bg-dark' :
+                                                (${log.action == 'API_CALL'} ? 'bg-secondary' :
+                                                (${log.action.contains('CREATE')} ? 'bg-success' :
+                                                (${log.action.contains('EDIT')} ? 'bg-warning text-dark' :
+                                                (${log.action.contains('UPDATE')} ? 'bg-warning text-dark' :
+                                                (${log.action.contains('CHANGE')} ? 'bg-info' :
+                                                (${log.action.contains('DOCUMENT') or log.action.contains('GENERATE')} ? 'bg-primary' :
+                                                (${log.action.contains('DELETE')} ? 'bg-danger' : 'bg-secondary'))))))))"
+                                            th:text="${log.action}"></span>
+                                    </td>
+                                    <td><small th:text="${log.details}" style="word-break:break-all"></small></td>
+                                    <td><code class="small" th:text="${log.ipAddress}"></code></td>
+                                    <td><small th:text="${log.resource}" style="word-break:break-all"></small></td>
+                                    <td><small class="text-muted" th:text="${log.userAgent}" style="max-width:180px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" th:title="${log.userAgent}"></small></td>
+                                </tr>
+                                <tr th:if="${logs.totalElements == 0}">
+                                    <td colspan="8" class="text-center py-5 text-muted">
+                                        <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
+                                        ยังไม่มีประวัติกิจกรรม
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Pagination -->
+                    <div class="d-flex justify-content-between align-items-center px-3 py-3" th:if="${logs.totalPages > 1}">
+                        <small class="text-muted" th:text="'หน้า ' + (${currentPage} + 1) + ' จาก ' + ${logs.totalPages}"></small>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item" th:classappend="${currentPage == 0} ? 'disabled'">
+                                    <a class="page-link" th:href="'/admin/activity-logs?page=' + ${currentPage - 1} + (${search != null ? '&search=' + search : ''}) + (${actionFilter != null ? '&action=' + actionFilter : ''})">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                                <li th:each="i : ${#numbers.sequence(0, logs.totalPages - 1)}" class="page-item"
+                                    th:classappend="${i == currentPage} ? 'active'"
+                                    th:if="${logs.totalPages <= 10 || (i <= 2) || (i >= logs.totalPages - 3) || (i >= currentPage - 1 && i <= currentPage + 1)}">
+                                    <a class="page-link" th:href="'/admin/activity-logs?page=' + ${i} + (${search != null ? '&search=' + search : ''}) + (${actionFilter != null ? '&action=' + actionFilter : ''})"
+                                        th:text="${i + 1}"></a>
+                                </li>
+                                <li class="page-item"
+                                    th:classappend="${currentPage == logs.totalPages - 1} ? 'disabled'">
+                                    <a class="page-link" th:href="'/admin/activity-logs?page=' + ${currentPage + 1} + (${search != null ? '&search=' + search : ''}) + (${actionFilter != null ? '&action=' + actionFilter : ''})">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>

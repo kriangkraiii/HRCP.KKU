@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<head>
+    <link rel="stylesheet" th:href="@{/css/petition-status.css}">
+</head>
+
+<body>
+    <section>
+        <div class="container py-4">
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3><i class="fas fa-list-alt text-primary"></i> รายการคำร้องของฉัน</h3>
+                    <p class="text-muted mb-0">ติดตามสถานะคำร้องทั้งหมดของคุณ</p>
+                </div>
+                <a href="/petitions/new" class="btn btn-primary">
+                    <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
+                </a>
+            </div>
+
+            <!-- Success Message -->
+            <div th:if="${success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Petitions List -->
+            <div th:if="${petitions != null && !petitions.isEmpty()}">
+                <div class="row">
+                    <div class="col-12" th:each="petition : ${petitions}">
+                        <div class="card card-academic mb-3 petition-card">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <!-- Petition Info -->
+                                    <div class="col-md-8">
+                                        <h5 class="card-title mb-2">
+                                            <i class="fas fa-file-alt text-primary"></i>
+                                            <span th:text="${petition.title}">ชื่อคำร้อง</span>
+                                        </h5>
+                                        <p class="card-text text-muted mb-2" th:text="${petition.description}">
+                                            รายละเอียดคำร้อง
+                                        </p>
+                                        <small class="text-muted">
+                                            <i class="fas fa-calendar"></i> ยื่นเมื่อ:
+                                            <span th:text="${#temporals.format(petition.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                                วันที่
+                                            </span>
+                                        </small>
+                                    </div>
+
+                                    <!-- Status and Actions -->
+                                    <div class="col-md-4 text-end">
+                                        <div class="mb-3" th:if="${petition.currentStatus != null}">
+                                            <span class="status-badge"
+                                                  th:classappend="'status-' + ${petition.currentStatus.statusType.color}">
+                                                <i th:class="'fas ' + ${petition.currentStatus.statusType.iconClass}"></i>
+                                                <span th:text="${petition.currentStatus.statusType.displayName}">สถานะ</span>
+                                            </span>
+                                        </div>
+                                        <a th:href="@{/petitions/{id}(id=${petition.id})}"
+                                           class="btn btn-outline-primary btn-sm">
+                                            <i class="fas fa-eye"></i> ดูรายละเอียด
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Empty State -->
+            <div th:if="${petitions == null || petitions.isEmpty()}" class="text-center py-5">
+                <div class="empty-state">
+                    <i class="fas fa-inbox fa-5x text-muted mb-3"></i>
+                    <h4 class="text-muted">ยังไม่มีคำร้อง</h4>
+                    <p class="text-muted mb-4">คุณยังไม่มีคำร้องในระบบ เริ่มต้นโดยการยื่นคำร้องใหม่</p>
+                    <a href="/petitions/new" class="btn btn-primary">
+                        <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>
