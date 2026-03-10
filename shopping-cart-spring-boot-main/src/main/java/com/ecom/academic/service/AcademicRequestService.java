@@ -283,6 +283,9 @@ public class AcademicRequestService {
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ", sendNotify);
                 }
             }
+            case 5 -> {
+                // Doc 5 auto-status is handled separately via /send-suggestion endpoint
+            }
             case 4 -> {
                 if (request.getCurrentStatus().ordinal() < RequestStatus.MEETING_SCHEDULED.ordinal()) {
                     updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
@@ -297,7 +300,7 @@ public class AcademicRequestService {
                             });
                     String evalLevel = data.getOrDefault("eval_result_level", "").toString();
                     if ("ไม่ผ่าน".equals(evalLevel)) {
-                        updateStatus(requestId, RequestStatus.COMPLETED_REVISE, changedBy,
+                        updateStatus(requestId, RequestStatus.COMPLETED_FAIL, changedBy,
                                 "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel, sendNotify);
                     } else if (!evalLevel.isEmpty()) {
                         updateStatus(requestId, RequestStatus.COMPLETED_PASS, changedBy,
@@ -327,5 +330,12 @@ public class AcademicRequestService {
      */
     public List<AcademicDocument> getDocumentsSorted(Long requestId) {
         return documentRepository.findByRequestIdOrderByDocumentTypeAscCopyNumberAsc(requestId);
+    }
+
+    /**
+     * ส่งอีเมลข้อเสนอแนะถึงผู้ยื่นคำร้อง
+     */
+    public void sendSuggestionEmail(AcademicRequest request, String suggestionsText) {
+        emailService.sendSuggestionEmail(request, suggestionsText);
     }
 }

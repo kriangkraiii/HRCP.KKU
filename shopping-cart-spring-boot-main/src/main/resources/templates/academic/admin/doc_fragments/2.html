@@ -21,8 +21,8 @@
                         <input type="hidden" name="chk_dean_sign2" id="chk_dean_sign2" value="">
                         <input type="hidden" name="chk_dean_sign3" id="chk_dean_sign3" value="">
 
-                        <!-- ส่วนที่ (2) เรียน คณบดี ผ่าน ภารกิจด้านทรัพยากรบุคคล -->
-                        <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (2) เรียน คณบดี</h5>
+                        <!-- ส่วนที่ (2) กรุณาบันทึกข้อมูลคณบดีที่เกี่ยวข้อง -->
+                        <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (2) กรุณาบันทึกข้อมูลคณบดีที่เกี่ยวข้อง</h5>
                         <div class="row mb-3">
                             <div class="col-md-12 mb-2">
                                 <div class="form-check">
@@ -33,23 +33,23 @@
                         </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">ชื่อคณบดี</label>
+                                <label class="form-label">ชื่อรองคณบดี</label>
                                 <div class="combo-input">
-                                    <input type="text" name="dean_name" class="form-control" list="deanList" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist id="deanList">
+                                    <input type="text" name="associate_dean_name" class="form-control" list="assocDeanList" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                                    <datalist id="assocDeanList">
                                         <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
                                     </datalist>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">ตำแหน่งคณบดี</label>
-                                <input type="text" name="dropdownDean" class="form-control"
-                                    value="คณบดีวิทยาลัยการคอมพิวเตอร์">
+                                <label class="form-label">ตำแหน่ง</label>
+                                <input type="text" name="dropdownAssociateDean" class="form-control"
+                                    value="รองคณบดีวิทยาลัยการคอมพิวเตอร์">
                             </div>
                         </div>
 
-                        <!-- ส่วนที่ (3) เรียน หัวหน้าสาขาวิชาฯ -->
-                        <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (3) หัวหน้าสาขาวิชาฯ</h5>
+                        <!-- ส่วนที่ (3) สำหรับผู้รับผิดชอบด้านทรัพยากรบุคคล -->
+                        <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (3) สำหรับผู้รับผิดชอบด้านทรัพยากรบุคคล</h5>
                         <div class="row mb-3">
                             <div class="col-md-12 mb-2">
                                 <div class="form-check">
@@ -71,12 +71,12 @@
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
                                 <input type="text" name="dropdownHr" class="form-control"
-                                    value="เจ้าหน้าที่บริหารงานทั่วไป">
+                                    value="นักทรัพยากรบุคคล">
                             </div>
                         </div>
 
-                        <!-- ส่วนที่ (4) เรียน คณบดี (หัวหน้าสาขา) -->
-                        <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (4) เรียน คณบดี (จากหัวหน้าสาขา)</h5>
+                        <!-- ส่วนที่ (4) สำหรับหัวหน้าสาขาวิชา -->
+                        <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (4) สำหรับหัวหน้าสาขาวิชา</h5>
                         <div class="row mb-3">
                             <div class="col-md-12 mb-2">
                                 <div class="form-check">
@@ -139,7 +139,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" th:name="'committee_' + ${i} + '_role'" class="form-control" 
+                                <input type="text" th:name="'committee_' + ${i} + '_role'" class="form-control" readonly
                                     th:value="${i == 1 ? 'ประธานอนุกรรมการ (ภายใน)' : (i == 3 ? 'อนุกรรมการและเลขานุการ (ภายใน)' : 'อนุกรรมการ (ภายนอก)')}">
                             </div>
                         </div>

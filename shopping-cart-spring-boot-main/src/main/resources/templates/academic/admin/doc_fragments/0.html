@@ -100,26 +100,29 @@
                                             th:checked="${doc0Data != null && doc0Data.getOrDefault('chk2', '') == '✓'}">
                                         <label class="form-check-label" for="chk2">รองศาสตราจารย์ (รศ.)</label>
                                     </div>
-                                    <div class="form-check">
-                                        <input class="form-check-input chk-position" type="checkbox" name="chk3" id="chk3" value="✓"
-                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk3', '') == '✓'}">
-                                        <label class="form-check-label" for="chk3">ศาสตราจารย์ (ศ.)</label>
-                                    </div>
                                 </div>
                             </div>
                         </div>
 
+                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-book"></i> ข้อมูลรายวิชา</h5>
                         <div class="row mb-3">
-                            <div class="col-md-8">
-                                <label class="form-label">ชื่อ-สกุล เต็ม (สำหรับพิมพ์ในเอกสาร)</label>
-                                <input type="text" name="applicant_name_full_print" class="form-control"
-                                    th:value="${doc0Data != null && doc0Data.getOrDefault('applicant_name_full_print', '') != ''
-                                        ? doc0Data.get('applicant_name_full_print')
-                                        : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty()
-                                            ? request.applicant.academicPosition + request.applicant.name
-                                            : request.applicant.title + request.applicant.name)}"
-                                    placeholder="เช่น ผู้ช่วยศาสตราจารย์สมชาย ใจดี">
-                                <small class="text-muted">ระบุคำนำหน้า ตำแหน่ง และชื่อเต็ม สำหรับพิมพ์ในลายเซ็น</small>
+                            <div class="col-md-4">
+                                <label class="form-label">รหัสวิชา</label>
+                                <input type="text" name="course_code" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_code', '') : ''}"
+                                    placeholder="เช่น CP 123 456">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">รายวิชา</label>
+                                <input type="text" name="course_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_name', '') : ''}"
+                                    placeholder="เช่น Introduction to Computer Science">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ปีการศึกษา</label>
+                                <input type="text" name="academic_year" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('academic_year', '') : ''}"
+                                    placeholder="เช่น 2568">
                             </div>
                         </div>
                         <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">

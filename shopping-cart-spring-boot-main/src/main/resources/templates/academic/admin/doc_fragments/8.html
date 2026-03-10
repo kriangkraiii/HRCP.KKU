@@ -19,7 +19,7 @@
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลเอกสาร</h5>
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">เลขที่เอกสาร</label><input type="text"
-                                    name="memo_no" class="form-control"></div>
+                                    name="memo_no" class="form-control" placeholder="อว 660301.26.4/ว."></div>
                             <div class="col-md-4"><label class="form-label">วันที่เอกสาร</label>
                                 <div class="input-group">
                                     <input type="text" name="date" class="form-control thai-full-date">
@@ -32,9 +32,7 @@
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
                                 <input type="text" name="applicant_title" class="form-control" list="titleList8" placeholder="คำนำหน้า"
-                                    th:value="${request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty()
-                                        ? request.applicant.academicPosition
-                                        : request.applicant.title}">
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('title', (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)) : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)}">
                                 <datalist id="titleList8">
                                     <option value="นาย">
                                     <option value="นาง">
@@ -47,13 +45,14 @@
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อผู้ยื่น</label>
                                 <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${request.applicant.name}">
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}">
                             </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">หนังสืออ้างอิง</h5>
                         <div class="row mb-3">
                             <div class="col-md-6"><label class="form-label">เลขที่หนังสืออ้างอิง</label><input
-                                    type="text" name="ref_memo_no" class="form-control"></div>
+                                    type="text" name="ref_memo_no" class="form-control" placeholder="เช่น. อว 660301.26.8/ว."
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('memo_no', '') : ''}"></div>
                             <div class="col-md-6"><label class="form-label">วันที่หนังสืออ้างอิง</label>
                                 <div class="input-group">
                                     <input type="text" name="ref_memo_date" class="form-control thai-full-date">
@@ -65,9 +64,11 @@
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">ชื่อวิชา</label><input type="text"
-                                    name="course_name" class="form-control"></div>
+                                    name="course_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_name', '') : ''}"></div>
                             <div class="col-md-4"><label class="form-label">รหัสวิชา</label><input type="text"
-                                    name="course_code" class="form-control"></div>
+                                    name="course_code" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_code', '') : ''}"></div>
                             <div class="col-md-4"><label class="form-label">ภาค/ปี</label><input type="text"
                                     name="semester" class="form-control" placeholder="1/2566"></div>
                         </div>
@@ -75,7 +76,8 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งที่ขอ</label>
-                                <input type="text" name="requested_position" class="form-control" list="posReqList8" placeholder="เลือกหรือพิมพ์...">
+                                <input type="text" name="requested_position" class="form-control" list="posReqList8" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${doc0Data != null ? (doc0Data.getOrDefault('chk1','') == '✓' ? 'ผู้ช่วยศาสตราจารย์' : (doc0Data.getOrDefault('chk2','') == '✓' ? 'รองศาสตราจารย์' : '')) : ''}">
                                 <datalist id="posReqList8">
                                     <option value="ผู้ช่วยศาสตราจารย์">
                                     <option value="รองศาสตราจารย์">
@@ -87,16 +89,19 @@
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">วันที่ประเมิน</label>
                                 <div class="input-group">
-                                    <input type="text" name="evaluation_date" class="form-control thai-full-date">
+                                    <input type="text" name="evaluation_date" class="form-control thai-full-date"
+                                        th:value="${doc7Data != null ? doc7Data.getOrDefault('meeting_date', '') : ''}">
                                     <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
                                     <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
                             <div class="col-md-4"><label class="form-label">ครั้งที่ประชุม</label><input type="text"
-                                    name="faculty_board_meeting_no" class="form-control"></div>
+                                    name="faculty_board_meeting_no" class="form-control"
+                                    th:value="${doc7Data != null ? doc7Data.getOrDefault('meeting_no', '') : ''}"></div>
                             <div class="col-md-4"><label class="form-label">วันที่ประชุมบอร์ด</label>
                                 <div class="input-group">
-                                    <input type="text" name="faculty_board_meeting_date" class="form-control thai-full-date">
+                                    <input type="text" name="faculty_board_meeting_date" class="form-control thai-full-date"
+                                        th:value="${doc7Data != null ? doc7Data.getOrDefault('meeting_date', '') : ''}">
                                     <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
                                     <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
@@ -116,11 +121,13 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">คุณภาพ</label>
-                                <input type="text" name="is_qualified" class="form-control" list="qualityList8" placeholder="เลือกหรือพิมพ์...">
+                                <input type="text" name="is_qualified" class="form-control" list="qualityList8" placeholder="เลือกหรือพิมพ์..." readonly
+                                    th:value="${doc6Data != null ? (doc6Data.getOrDefault('eval_result_level', '') == 'ไม่ผ่าน' ? 'ไม่มี' : (doc6Data.getOrDefault('eval_result_level', '') != '' ? 'มี' : '')) : ''}">
                                 <datalist id="qualityList8">
                                     <option value="มี">
                                     <option value="ไม่มี">
                                 </datalist>
+                                <small class="text-muted">กำหนดอัตโนมัติ: ชำนาญ/ชำนาญพิเศษ/เชี่ยวชาญ = มี, ไม่ผ่าน = ไม่มี</small>
                             </div>
                             <div class="col-md-4"><label class="form-label">วันหมดอายุ</label>
                                 <div class="input-group">
@@ -164,6 +171,57 @@
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
+        <script>
+            // Auto-calculate expiration date (+3 years from evaluation date)
+            (function() {
+                var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+                function parseThaiDate(str) {
+                    if (!str) return null;
+                    var m = str.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
+                    if (!m) return null;
+                    var day = parseInt(m[1]);
+                    var monthIdx = thaiMonths.indexOf(m[2]);
+                    if (monthIdx === -1) return null;
+                    var year = parseInt(m[3]) - 543; // BE to CE
+                    return new Date(year, monthIdx, day);
+                }
+
+                function toThaiDate(d) {
+                    return d.getDate() + ' ' + thaiMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                }
+
+                function calculateExpiry() {
+                    var evalDateInput = document.querySelector('input[name="evaluation_date"]');
+                    var expiryInput = document.querySelector('input[name="expiration_date"]');
+                    if (!evalDateInput || !expiryInput) return;
+
+                    var d = parseThaiDate(evalDateInput.value);
+                    if (d) {
+                        d.setFullYear(d.getFullYear() + 3);
+                        expiryInput.value = toThaiDate(d);
+                    }
+                }
+
+                document.addEventListener('DOMContentLoaded', function() {
+                    // Calculate on load if evaluation_date has value
+                    calculateExpiry();
+
+                    // Recalculate when evaluation_date changes
+                    var evalInput = document.querySelector('input[name="evaluation_date"]');
+                    if (evalInput) {
+                        evalInput.addEventListener('change', calculateExpiry);
+                        var evalPicker = evalInput.closest('.input-group')?.querySelector('.thai-date-picker');
+                        if (evalPicker) {
+                            evalPicker.addEventListener('change', function() {
+                                setTimeout(calculateExpiry, 100);
+                            });
+                        }
+                    }
+                });
+            })();
+        </script>
     </section>
 </body>
 

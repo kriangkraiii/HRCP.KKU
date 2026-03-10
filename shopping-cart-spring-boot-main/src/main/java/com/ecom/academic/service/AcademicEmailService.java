@@ -109,6 +109,7 @@ public class AcademicEmailService {
         switch (newStatus) {
             case COMPLETED_PASS -> sb.append("green");
             case COMPLETED_REVISE -> sb.append("#FFA500");
+            case COMPLETED_FAIL -> sb.append("red");
             case REJECTED -> sb.append("red");
             default -> sb.append("#333");
         }
@@ -127,5 +128,43 @@ public class AcademicEmailService {
         sb.append("<p>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</p>");
         sb.append("</body></html>");
         return sb.toString();
+    }
+
+    /**
+     * ส่งอีเมลข้อเสนอแนะจากคณะอนุกรรมการถึงผู้ยื่นคำร้อง
+     */
+    @Async
+    public void sendSuggestionEmail(AcademicRequest request, String suggestionsText) {
+        try {
+            String applicantEmail = request.getApplicant().getEmail();
+            if (applicantEmail == null || applicantEmail.isEmpty())
+                return;
+
+            String subject = "ข้อเสนอแนะจากคณะอนุกรรมการ - กรุณาแก้ไขเอกสาร";
+            StringBuilder sb = new StringBuilder();
+            sb.append("<html><body style='font-family: Sarabun, sans-serif;'>");
+            sb.append("<h2 style='color:#e65100;'>ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน</h2>");
+            sb.append("<p>เรียน ").append(request.getApplicant().getName()).append("</p>");
+            sb.append("<p>คำร้องหมายเลข: <strong>#").append(request.getId()).append("</strong></p>");
+            sb.append("<hr>");
+            sb.append("<h3 style='color:#1a237e;'>ข้อเสนอแนะ:</h3>");
+            sb.append("<div style='background:#fff3e0;padding:15px;border-radius:8px;border-left:4px solid #e65100;'>");
+            sb.append("<p style='white-space:pre-wrap;'>").append(suggestionsText != null ? suggestionsText.replace("<", "&lt;").replace(">", "&gt;") : "").append("</p>");
+            sb.append("</div>");
+            sb.append("<hr>");
+            sb.append("<p><strong style='color:#c62828;'>กรุณาดำเนินการแก้ไขเอกสารตามข้อเสนอแนะข้างต้น</strong></p>");
+            sb.append("<p>กรุณาเข้าสู่ระบบเพื่อดำเนินการแก้ไข</p>");
+            sb.append("<p>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</p>");
+            sb.append("</body></html>");
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setTo(applicantEmail);
+            helper.setSubject(subject);
+            helper.setText(sb.toString(), true);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Suggestion email sending failed: " + e.getMessage());
+        }
     }
 }

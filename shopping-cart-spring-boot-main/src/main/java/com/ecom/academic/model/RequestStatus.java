@@ -7,6 +7,7 @@ public enum RequestStatus {
     MEETING_SCHEDULED("นัดหมายวันประชุม", "fa-calendar-check", "#7b1fa2"),
     COMPLETED_PASS("แจ้งผล - ผ่าน", "fa-check-circle", "#2e7d32"),
     COMPLETED_REVISE("แจ้งผล - แก้ไข", "fa-exclamation-circle", "#f57f17"),
+    COMPLETED_FAIL("แจ้งผล - ไม่ผ่าน", "fa-times-circle", "#d32f2f"),
     REJECTED("ไม่รับคำร้อง", "fa-times-circle", "#c62828"),
     COMPLETED("เสร็จสิ้น", "fa-flag-checkered", "#1b5e20");
 
@@ -42,7 +43,7 @@ public enum RequestStatus {
 
     /** สถานะที่ถือว่าเสร็จสิ้นแล้ว (ยื่นคำร้องใหม่ได้) */
     public boolean isTerminal() {
-        return this == REJECTED || this == COMPLETED;
+        return this == REJECTED || this == COMPLETED || this == COMPLETED_FAIL;
     }
 
     /** สถานะ draft - ยังไม่ส่งคำร้อง */
