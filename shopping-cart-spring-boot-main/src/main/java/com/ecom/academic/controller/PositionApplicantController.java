@@ -18,6 +18,7 @@ import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
@@ -34,6 +35,9 @@ public class PositionApplicantController {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private AcademicRequestService academicService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ================== Dashboard ==================
@@ -49,6 +53,12 @@ public class PositionApplicantController {
 
         Optional<PositionRequest> draftRequest = positionService.findDraftByApplicant(user.getId());
         boolean hasActiveRequest = positionService.hasActiveRequest(user.getId());
+
+        // Evaluation expiry countdown
+        java.time.LocalDateTime expiryDate = academicService.getLatestEvaluationExpiry(user.getId());
+        if (expiryDate != null) {
+            model.addAttribute("evaluationExpiryDate", expiryDate.toString());
+        }
 
         model.addAttribute("requests", requests);
         model.addAttribute("draftRequest", draftRequest.orElse(null));

@@ -328,4 +328,107 @@ public class AcademicRequestService {
     public List<AcademicDocument> getDocumentsSorted(Long requestId) {
         return documentRepository.findByRequestIdOrderByDocumentTypeAscCopyNumberAsc(requestId);
     }
+
+    /**
+     * ค้นหาวันหมดอายุผลประเมินล่าสุดของผู้ใช้
+     * คำนวณ: วันอนุมัติใน Doc 8 + 5 ปี
+     */
+    public LocalDateTime getLatestEvaluationExpiry(Integer applicantId) {
+        // Find completed requests (COMPLETED_PASS or COMPLETED)
+        List<AcademicRequest> requests = requestRepository
+                .findByApplicantIdOrderByCreatedAtDesc(applicantId);
+
+        for (AcademicRequest req : requests) {
+            if (req.getCurrentStatus() == RequestStatus.COMPLETED_PASS
+                    || req.getCurrentStatus() == RequestStatus.COMPLETED) {
+
+                // If expiry is already computed, return it
+                if (req.getEvaluationExpiryDate() != null) {
+                    return req.getEvaluationExpiryDate();
+                }
+
+                // Try to extract from Doc 8 JSON
+                try {
+                    Optional<AcademicDocument> doc8 = documentRepository
+                            .findByRequestIdAndDocumentTypeAndCopyNumber(req.getId(), 8, 0);
+                    if (doc8.isPresent() && doc8.get().getJsonData() != null) {
+                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                        @SuppressWarnings("unchecked")
+                        java.util.Map<String, String> data = mapper.readValue(
+                                doc8.get().getJsonData(), java.util.Map.class);
+
+                        // Try evaluation_date or faculty_board_meeting_date
+                        String dateStr = data.getOrDefault("evaluation_date",
+                                data.getOrDefault("faculty_board_meeting_date", null));
+
+                        if (dateStr != null && !dateStr.isEmpty()) {
+                            LocalDateTime approvalDate = parseThaiDate(dateStr);
+                            if (approvalDate != null) {
+                                LocalDateTime expiry = approvalDate.plusYears(3);
+                                req.setEvaluationExpiryDate(expiry);
+                                requestRepository.save(req);
+                                return expiry;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    // Fall through
+                }
+
+                // Fallback: use submission date + 3 years
+                if (req.getSubmissionDate() != null) {
+                    LocalDateTime expiry = req.getSubmissionDate().plusYears(3);
+                    req.setEvaluationExpiryDate(expiry);
+                    requestRepository.save(req);
+                    return expiry;
+                }
+            }
+        }
+        return null;
+    }
+
+    /** Parse Thai date format: "17 กุมภาพันธ์ 2569" → LocalDateTime */
+    private LocalDateTime parseThaiDate(String thaiDate) {
+        try {
+            String[] thaiMonths = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+
+            // Convert Thai digits to Arabic
+            String normalized = thaiDate
+                    .replace("๐", "0").replace("๑", "1").replace("๒", "2")
+                    .replace("๓", "3").replace("๔", "4").replace("๕", "5")
+                    .replace("๖", "6").replace("๗", "7").replace("๘", "8")
+                    .replace("๙", "9").trim();
+
+            String[] parts = normalized.split("\\s+");
+            if (parts.length < 3)
+                return null;
+
+            int day = Integer.parseInt(parts[0]);
+            int month = -1;
+            for (int i = 0; i < thaiMonths.length; i++) {
+                if (thaiMonths[i].equals(parts[1])) {
+                    month = i + 1;
+                    break;
+                }
+            }
+            if (month == -1)
+                return null;
+
+            int year = Integer.parseInt(parts[2]);
+            if (year > 2400)
+                year -= 543; // Convert Buddhist year
+
+            return LocalDateTime.of(year, month, day, 0, 0);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
+     * ค้นหาคำร้องที่ผลประเมินใกล้หมดอายุ (สำหรับ scheduler)
+     */
+    public List<AcademicRequest> findRequestsExpiringSoon(LocalDateTime before) {
+        return requestRepository.findByApplicantIdOrderByCreatedAtDesc(null); // placeholder
+    }
 }

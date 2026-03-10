@@ -122,6 +122,18 @@ public class DocumentGenerationService {
     // Phase 2: Position Request Document Generation
     // =====================================================================
 
+    /** Preview-only (in-memory) for Phase 2 position documents */
+    public byte[] generateP2PreviewDocx(int documentType, String jsonData) throws IOException {
+        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, String> placeholders = flattenMap(dataMap, "");
+
+        String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
+        ClassPathResource resource = new ClassPathResource(templateFile);
+
+        return processTemplate(resource.getInputStream(), placeholders);
+    }
+
     public String generateP2Document(com.ecom.academic.model.PositionRequest request,
             int documentType, String jsonData) throws IOException {
         Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {

@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <h3 class="mb-4"><i class="fas fa-cog"></i> การตั้งค่า</h3>
+
+                    <!-- Success/Error Alerts -->
+                    <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+                        <i class="fas fa-check-circle"></i> [[${success}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-circle"></i> [[${error}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <form th:action="${settingsBasePath}" method="post">
+                        <!-- Section 1: General -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0"><i class="fas fa-sliders-h text-primary"></i> ทั่วไป</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
+                                    <div>
+                                        <h6 class="mb-1"><i class="fas fa-save text-success"></i> บันทึกแบบร่างอัตโนมัติ
+                                        </h6>
+                                        <small class="text-muted">บันทึกข้อมูลในฟอร์มอัตโนมัติทุก 5
+                                            วินาทีเมื่อมีการแก้ไข</small>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox" name="autoDraftEnabled"
+                                            value="true" id="autoDraftToggle"
+                                            th:checked="${user.autoDraftEnabled != null && user.autoDraftEnabled}"
+                                            style="width:3em;height:1.5em;cursor:pointer">
+                                    </div>
+                                </div>
+                                <div class="d-flex justify-content-between align-items-center py-3">
+                                    <div>
+                                        <h6 class="mb-1"><i class="fas fa-envelope text-info"></i>
+                                            การแจ้งเตือนทางอีเมล</h6>
+                                        <small class="text-muted">รับการแจ้งเตือนเกี่ยวกับสถานะคำร้องทางอีเมล</small>
+                                    </div>
+                                    <div class="form-check form-switch">
+                                        <input class="form-check-input" type="checkbox"
+                                            name="emailNotificationEnabled" value="true" id="emailToggle"
+                                            th:checked="${user.emailNotificationEnabled != null && user.emailNotificationEnabled}"
+                                            style="width:3em;height:1.5em;cursor:pointer">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Section 2: Expiry Alerts -->
+                        <div class="card mb-4">
+                            <div class="card-header bg-white">
+                                <h5 class="mb-0"><i class="fas fa-bell text-warning"></i>
+                                    แจ้งเตือนผลประเมินใกล้หมดอายุ</h5>
+                            </div>
+                            <div class="card-body">
+                                <p class="text-muted mb-3">
+                                    <i class="fas fa-info-circle"></i>
+                                    เลือกช่วงเวลาที่ต้องการรับการแจ้งเตือนก่อนผลประเมินการสอนหมดอายุ (อายุ 3
+                                    ปีนับจากวันอนุมัติ)
+                                </p>
+
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="card h-100" style="border-left: 4px solid #4caf50">
+                                            <div class="card-body d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-0"><i class="fas fa-calendar-check text-success"></i>
+                                                        6 เดือนก่อนหมด</h6>
+                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 6 เดือน</small>
+                                                </div>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        name="expiryAlert6m" value="true"
+                                                        th:checked="${user.expiryAlert6m != null && user.expiryAlert6m}"
+                                                        style="width:2.5em;height:1.3em;cursor:pointer">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card h-100" style="border-left: 4px solid #ff9800">
+                                            <div class="card-body d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-0"><i
+                                                            class="fas fa-exclamation-triangle text-warning"></i> 3
+                                                        เดือนก่อนหมด</h6>
+                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 3 เดือน</small>
+                                                </div>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        name="expiryAlert3m" value="true"
+                                                        th:checked="${user.expiryAlert3m != null && user.expiryAlert3m}"
+                                                        style="width:2.5em;height:1.3em;cursor:pointer">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card h-100" style="border-left: 4px solid #f44336">
+                                            <div class="card-body d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-0"><i class="fas fa-clock text-danger"></i> 1
+                                                        เดือนก่อนหมด</h6>
+                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 1 เดือน</small>
+                                                </div>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        name="expiryAlert1m" value="true"
+                                                        th:checked="${user.expiryAlert1m != null && user.expiryAlert1m}"
+                                                        style="width:2.5em;height:1.3em;cursor:pointer">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="card h-100" style="border-left: 4px solid #9c27b0">
+                                            <div class="card-body d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-0"><i class="fas fa-bell text-purple"></i> 1
+                                                        สัปดาห์ก่อนหมด</h6>
+                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 7 วัน</small>
+                                                </div>
+                                                <div class="form-check form-switch">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        name="expiryAlert1w" value="true"
+                                                        th:checked="${user.expiryAlert1w != null && user.expiryAlert1w}"
+                                                        style="width:2.5em;height:1.3em;cursor:pointer">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Save Button -->
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-lg">
+                                <i class="fas fa-save"></i> บันทึกการตั้งค่า
+                            </button>
+                            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/academic/requests' : '/user/academic/dashboard'}"
+                                class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-arrow-left"></i> กลับ
+                            </a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>

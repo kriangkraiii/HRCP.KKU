@@ -10,7 +10,7 @@
 
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 1: แบบ ก.พ.ว. มข. 03 (ประวัติและผลงาน)</h3>
 
-            <form th:action="'/user/position/request/' + ${request.id} + '/document/1'" method="post" id="doc1Form">
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/1'" method="post" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/1'" id="doc1Form">
 
                 <!-- ========== ส่วนที่ 1: ข้อมูลพื้นฐาน ========== -->
                 <div class="card card-academic mb-4">
@@ -445,6 +445,9 @@
                         <i class="fas fa-save"></i> บันทึก
                     </button>
                     <button type="submit" name="action" value="draft" class="btn btn-outline-secondary btn-lg">
+                        <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                            <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+                        </button>
                         <i class="fas fa-file-alt"></i> บันทึกแบบร่าง
                     </button>
                     <a th:href="'/user/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
@@ -569,6 +572,10 @@
                 }
             });
         </script>
+
+        <link rel="stylesheet" href="/css/doc_preview.css">
+        <script src="/js/doc_preview.js"></script>
+        <script>initDocPreview('doc1Form', 1, '/api/position/preview');</script>
     </section>
 </body>
 </html>

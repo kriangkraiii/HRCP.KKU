@@ -4,9 +4,10 @@
  * ใช้ library: https://cdn.jsdelivr.net/npm/docx-preview/dist/docx-preview.min.js
  */
 class DocPreviewEngine {
-    constructor(formId, docType) {
+    constructor(formId, docType, previewBasePath) {
         this.form = document.getElementById(formId);
         this.docType = docType;
+        this.previewBasePath = previewBasePath || '/api/academic/preview';
         this.overlay = null;
         this.renderContainer = null;
         this.debounceTimer = null;
@@ -164,7 +165,7 @@ class DocPreviewEngine {
         try {
             const formData = this.getFormData();
 
-            const response = await fetch(`/api/academic/preview/${this.docType}`, {
+            const response = await fetch(`${this.previewBasePath}/${this.docType}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
@@ -257,7 +258,7 @@ class DocPreviewEngine {
     async downloadDocx() {
         const formData = this.getFormData();
         try {
-            const response = await fetch(`/api/academic/preview/${this.docType}`, {
+            const response = await fetch(`${this.previewBasePath}/${this.docType}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(formData)
@@ -301,6 +302,6 @@ class DocPreviewEngine {
 let docPreview = null;
 
 /** Initialize DOCX preview */
-function initDocPreview(formId, docType) {
-    docPreview = new DocPreviewEngine(formId, docType);
+function initDocPreview(formId, docType, previewBasePath) {
+    docPreview = new DocPreviewEngine(formId, docType, previewBasePath);
 }

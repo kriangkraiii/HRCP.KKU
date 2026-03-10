@@ -17,7 +17,7 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
 
-                    <form th:action="'/user/academic/request/' + ${request.id} + '/document-1'" method="post"
+                    <form th:action="'/user/academic/request/' + ${request.id} + '/document-1'" method="post" th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/1'"
                         id="doc1Form">
 
                         <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ ผู้ยื่น -->

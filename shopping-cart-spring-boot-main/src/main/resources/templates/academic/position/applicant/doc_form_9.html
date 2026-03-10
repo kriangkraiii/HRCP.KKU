@@ -10,7 +10,7 @@
 
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 9: แบบแสดงหลักฐานการมีส่วนร่วมในผลงานทางวิชาการ</h3>
 
-            <form th:action="'/user/position/request/' + ${request.id} + '/document/9'" method="post">
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/9'" method="post" id="doc9Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/9'">
 
                 <!-- ข้อมูลผลงาน -->
                 <div class="card card-academic mb-4">
@@ -171,6 +171,9 @@
                         <i class="fas fa-save"></i> บันทึก
                     </button>
                     <button type="submit" name="action" value="draft" class="btn btn-outline-secondary btn-lg">
+                        <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                            <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+                        </button>
                         <i class="fas fa-file-alt"></i> บันทึกแบบร่าง
                     </button>
                     <a th:href="'/user/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
@@ -197,6 +200,10 @@
                 }
             });
         </script>
+
+        <link rel="stylesheet" href="/css/doc_preview.css">
+        <script src="/js/doc_preview.js"></script>
+        <script>initDocPreview('doc9Form', 9, '/api/position/preview');</script>
     </section>
 </body>
 </html>

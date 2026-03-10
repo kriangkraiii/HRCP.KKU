@@ -11,7 +11,7 @@
                 แอดมินสามารถดูและแก้ไขได้
             </div>
 
-            <form th:action="'/admin/position/request/' + ${request.id} + '/document/' + ${documentType}" method="post">
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/' + ${documentType}" method="post" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/' + ${documentType}">
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลเอกสาร (JSON)</h5></div>
                     <div class="card-body">

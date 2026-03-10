@@ -6,7 +6,7 @@
             <h3 class="mb-4"><i class="fas fa-user-shield"></i> เอกสารที่ 5: แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา</h3>
             <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>แอดมิน</strong></div>
 
-            <form th:action="'/admin/position/request/' + ${request.id} + '/document/5'" method="post">
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/5'" method="post" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/5'">
 
                 <!-- Header -->
                 <div class="card card-academic mb-4">

@@ -56,6 +56,9 @@ public class AcademicRequest {
     @Column(name = "revision_file_path")
     private String revisionFilePath;
 
+    @Column(name = "evaluation_expiry_date")
+    private LocalDateTime evaluationExpiryDate;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -195,5 +198,13 @@ public class AcademicRequest {
 
     public void setStatusHistory(List<RequestStatusHistory> statusHistory) {
         this.statusHistory = statusHistory;
+    }
+
+    public LocalDateTime getEvaluationExpiryDate() {
+        return evaluationExpiryDate;
+    }
+
+    public void setEvaluationExpiryDate(LocalDateTime evaluationExpiryDate) {
+        this.evaluationExpiryDate = evaluationExpiryDate;
     }
 }

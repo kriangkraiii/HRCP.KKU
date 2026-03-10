@@ -46,6 +46,21 @@ public class UserDtls {
 	@Column(name = "email_notification_enabled")
 	private Boolean emailNotificationEnabled;
 
+	@Column(name = "auto_draft_enabled")
+	private Boolean autoDraftEnabled = true;
+
+	@Column(name = "expiry_alert_6m")
+	private Boolean expiryAlert6m = true;
+
+	@Column(name = "expiry_alert_3m")
+	private Boolean expiryAlert3m = true;
+
+	@Column(name = "expiry_alert_1m")
+	private Boolean expiryAlert1m = true;
+
+	@Column(name = "expiry_alert_1w")
+	private Boolean expiryAlert1w = true;
+
 	public UserDtls() {
 	}
 
@@ -56,6 +71,9 @@ public class UserDtls {
 		}
 		if (isFirstLogin == null) {
 			isFirstLogin = true;
+		}
+		if (autoDraftEnabled == null) {
+			autoDraftEnabled = true;
 		}
 	}
 
@@ -210,5 +228,45 @@ public class UserDtls {
 
 	public void setEmailNotificationEnabled(Boolean emailNotificationEnabled) {
 		this.emailNotificationEnabled = emailNotificationEnabled;
+	}
+
+	public Boolean getAutoDraftEnabled() {
+		return autoDraftEnabled;
+	}
+
+	public void setAutoDraftEnabled(Boolean autoDraftEnabled) {
+		this.autoDraftEnabled = autoDraftEnabled;
+	}
+
+	public Boolean getExpiryAlert6m() {
+		return expiryAlert6m;
+	}
+
+	public void setExpiryAlert6m(Boolean expiryAlert6m) {
+		this.expiryAlert6m = expiryAlert6m;
+	}
+
+	public Boolean getExpiryAlert3m() {
+		return expiryAlert3m;
+	}
+
+	public void setExpiryAlert3m(Boolean expiryAlert3m) {
+		this.expiryAlert3m = expiryAlert3m;
+	}
+
+	public Boolean getExpiryAlert1m() {
+		return expiryAlert1m;
+	}
+
+	public void setExpiryAlert1m(Boolean expiryAlert1m) {
+		this.expiryAlert1m = expiryAlert1m;
+	}
+
+	public Boolean getExpiryAlert1w() {
+		return expiryAlert1w;
+	}
+
+	public void setExpiryAlert1w(Boolean expiryAlert1w) {
+		this.expiryAlert1w = expiryAlert1w;
 	}
 }

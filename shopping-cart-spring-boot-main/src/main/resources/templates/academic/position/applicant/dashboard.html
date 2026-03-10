@@ -18,6 +18,94 @@
                 </th:block>
             </div>
 
+            <!-- Evaluation Expiry Countdown -->
+            <div th:if="${evaluationExpiryDate != null}" class="card mb-4" id="expiryCountdownCard"
+                style="border-left: 5px solid #4caf50; border-radius: 12px; overflow: hidden;">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h6 class="mb-0"><i class="fas fa-hourglass-half"></i> ผลประเมินการสอนคงเหลือ</h6>
+                        <small class="text-muted" id="expiryDateLabel"></small>
+                    </div>
+                    <div id="countdownDisplay" class="fw-bold mb-2" style="font-size: 1.4rem; letter-spacing: 1px;">
+                    </div>
+                    <div class="progress" style="height: 8px; border-radius: 4px;">
+                        <div class="progress-bar" id="expiryProgress" role="progressbar"
+                            style="background: linear-gradient(90deg, #4caf50, #66bb6a); border-radius: 4px;">
+                        </div>
+                    </div>
+                    <small class="text-muted mt-1 d-block" id="expiryWarning"></small>
+                </div>
+            </div>
+
+            <script th:if="${evaluationExpiryDate != null}" th:inline="javascript">
+                (function () {
+                    const expiryStr = /*[[${evaluationExpiryDate}]]*/ '';
+                    const expiryDate = new Date(expiryStr);
+                    const totalDuration = 3 * 365.25 * 24 * 60 * 60 * 1000; // 3 years in ms
+                    const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
+                        'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];
+
+                    // Thai formatted expiry date
+                    const d = expiryDate;
+                    document.getElementById('expiryDateLabel').textContent =
+                        'หมดอายุ: ' + d.getDate() + ' ' + thaiMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+
+                    function updateCountdown() {
+                        const now = new Date();
+                        const remaining = expiryDate - now;
+                        const card = document.getElementById('expiryCountdownCard');
+                        const bar = document.getElementById('expiryProgress');
+                        const warn = document.getElementById('expiryWarning');
+
+                        if (remaining <= 0) {
+                            document.getElementById('countdownDisplay').innerHTML =
+                                '<span class="text-danger"><i class="fas fa-exclamation-circle"></i> หมดอายุแล้ว</span>';
+                            bar.style.width = '0%';
+                            card.style.borderLeftColor = '#c62828';
+                            warn.textContent = '⚠️ ผลประเมินการสอนหมดอายุแล้ว กรุณาดำเนินการประเมินใหม่';
+                            return;
+                        }
+
+                        // Calculate years, months, days
+                        let y = expiryDate.getFullYear() - now.getFullYear();
+                        let m = expiryDate.getMonth() - now.getMonth();
+                        let dd = expiryDate.getDate() - now.getDate();
+                        if (dd < 0) { m--; dd += 30; }
+                        if (m < 0) { y--; m += 12; }
+
+                        let parts = [];
+                        if (y > 0) parts.push(y + ' ปี');
+                        if (m > 0) parts.push(m + ' เดือน');
+                        parts.push(dd + ' วัน');
+
+                        document.getElementById('countdownDisplay').textContent = parts.join(' ');
+
+                        // Progress bar
+                        const pct = Math.max(0, Math.min(100, (remaining / totalDuration) * 100));
+                        bar.style.width = pct + '%';
+
+                        // Color based on urgency
+                        if (remaining < 30 * 24 * 60 * 60 * 1000) { // < 1 month
+                            card.style.borderLeftColor = '#c62828';
+                            bar.style.background = 'linear-gradient(90deg, #ef5350, #c62828)';
+                            warn.textContent = '🔴 กรุณายื่นขอตำแหน่งโดยเร็ว';
+                        } else if (remaining < 90 * 24 * 60 * 60 * 1000) { // < 3 months
+                            card.style.borderLeftColor = '#f57f17';
+                            bar.style.background = 'linear-gradient(90deg, #ffa726, #f57f17)';
+                            warn.textContent = '🟡 ใกล้หมดอายุ กรุณายื่นขอตำแหน่งภายในเร็วๆ นี้';
+                        } else if (remaining < 180 * 24 * 60 * 60 * 1000) { // < 6 months
+                            card.style.borderLeftColor = '#ff9800';
+                            warn.textContent = '🟠 ผลประเมินจะหมดอายุในอีกไม่ถึง 6 เดือน';
+                        } else {
+                            warn.textContent = '';
+                        }
+                    }
+
+                    updateCountdown();
+                    setInterval(updateCountdown, 1000);
+                })();
+            </script>
+
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <span th:if="${param.error[0] == 'active_exists'}">ไม่สามารถยื่นคำร้องใหม่ได้ มีคำร้องที่กำลังดำเนินการอยู่</span>
