@@ -239,10 +239,90 @@
 			color: rgba(255, 255, 255, 0.6);
 			font-size: 13px;
 		}
+
+		/* ===== Google Translate Hidden ===== */
+		.goog-te-banner-frame.skiptranslate { display: none !important; }
+		body { top: 0px !important; }
+		.goog-te-gadget { font-size: 0 !important; }
+		.skiptranslate { display: none !important; }
+		#google_translate_element {
+			position: absolute; top: -9999px; left: -9999px;
+			width: 0; height: 0; overflow: hidden;
+		}
+
+		/* ===== Language Dropdown (Top-Right) ===== */
+		.lang-dropdown {
+			position: fixed;
+			top: 18px;
+			right: 18px;
+			z-index: 1000;
+		}
+		.lang-dropdown-btn {
+			display: flex; align-items: center; gap: 8px;
+			background: rgba(255,255,255,0.15);
+			backdrop-filter: blur(10px);
+			border: 1px solid rgba(255,255,255,0.25);
+			color: #fff;
+			font-size: 0.85rem; font-weight: 600;
+			cursor: pointer; padding: 8px 14px;
+			border-radius: 10px;
+			transition: all 0.2s;
+			font-family: 'Sarabun', sans-serif;
+		}
+		.lang-dropdown-btn:hover {
+			background: rgba(255,255,255,0.25);
+		}
+		.lang-dropdown-btn .lang-icon {
+			font-size: 1.2rem; color: #90caf9;
+		}
+		.lang-dropdown-menu {
+			display: none; position: absolute;
+			top: 100%; right: 0;
+			min-width: 150px;
+			background: #2a2a2a;
+			border-radius: 12px;
+			box-shadow: 0 8px 24px rgba(0,0,0,0.35);
+			padding: 8px 0; margin-top: 6px;
+			overflow: hidden;
+		}
+		.lang-dropdown-menu.show {
+			display: block;
+			animation: langDropIn 0.18s ease-out;
+		}
+		@keyframes langDropIn {
+			from { opacity: 0; transform: translateY(-8px); }
+			to { opacity: 1; transform: translateY(0); }
+		}
+		.lang-dropdown-item {
+			display: block; width: 100%;
+			padding: 10px 20px;
+			background: none; border: none;
+			color: #fff; font-size: 0.95rem;
+			text-align: left; cursor: pointer;
+			transition: background 0.15s;
+			font-family: 'Sarabun', sans-serif;
+		}
+		.lang-dropdown-item:hover { background: rgba(255,255,255,0.08); }
+		.lang-dropdown-item.active { color: #90caf9; font-weight: 600; }
 	</style>
 </head>
 
 <body>
+	<!-- Google Translate (hidden) -->
+	<div id="google_translate_element"></div>
+
+	<!-- Language Switcher -->
+	<div class="lang-dropdown">
+		<button type="button" class="lang-dropdown-btn" id="langDropdownBtn">
+			<i class="fas fa-language lang-icon"></i>
+			<span id="langCurrentLabel">TH</span>
+		</button>
+		<div class="lang-dropdown-menu" id="langDropdownMenu">
+			<button type="button" class="lang-dropdown-item" data-lang="th">Thai</button>
+			<button type="button" class="lang-dropdown-item" data-lang="en">English</button>
+		</div>
+	</div>
+
 	<div class="login-container">
 		<div class="login-header">
 			<div> <img class="logo-icon"  src="img/logo_cphr.jpg" width="100" height="100" alt="Logo"> </div>
@@ -305,6 +385,88 @@
 
 		<div class="footer-text">© 2569 วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
 	</div>
+	<script type="text/javascript">
+		var _gtTranslateReady = false;
+		function googleTranslateElementInit() {
+			try {
+				new google.translate.TranslateElement({
+					pageLanguage: 'th',
+					includedLanguages: 'en,th',
+					layout: google.translate.TranslateElement.InlineLayout.SIMPLE,
+					autoDisplay: false
+				}, 'google_translate_element');
+				_gtTranslateReady = true;
+			} catch (e) { console.warn('[GT] Init failed:', e); }
+		}
+		(function () {
+			var MAX_RETRIES = 3, RETRY_DELAY = 2000, attempt = 0;
+			function load() {
+				attempt++;
+				var s = document.createElement('script');
+				s.src = 'https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit';
+				s.onerror = function () {
+					if (s.parentNode) s.parentNode.removeChild(s);
+					if (attempt < MAX_RETRIES) setTimeout(load, RETRY_DELAY);
+				};
+				document.head.appendChild(s);
+			}
+			load();
+		})();
+
+		document.addEventListener('DOMContentLoaded', function () {
+			var btn = document.getElementById('langDropdownBtn');
+			var menu = document.getElementById('langDropdownMenu');
+			var label = document.getElementById('langCurrentLabel');
+			var items = menu.querySelectorAll('.lang-dropdown-item');
+
+			function getCookie(n) {
+				var m = document.cookie.match(new RegExp('(^|;\\s*)' + n + '=([^;]*)'));
+				return m ? decodeURIComponent(m[2]) : null;
+			}
+			function clearGT() {
+				['', window.location.hostname, '.' + window.location.hostname].forEach(function (d) {
+					['/', ''].forEach(function (p) {
+						var c = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC';
+						if (p) c += '; path=' + p;
+						if (d) c += '; domain=' + d;
+						document.cookie = c;
+					});
+				});
+			}
+			function setGT(v) {
+				['', window.location.hostname, '.' + window.location.hostname].forEach(function (d) {
+					var c = 'googtrans=' + v + '; path=/';
+					if (d) c += '; domain=' + d;
+					document.cookie = c;
+				});
+			}
+
+			var cur = getCookie('googtrans');
+			var active = (cur && cur.indexOf('/en') !== -1) ? 'en' : 'th';
+			label.textContent = active.toUpperCase();
+			items.forEach(function (it) { if (it.dataset.lang === active) it.classList.add('active'); });
+
+			btn.addEventListener('click', function (e) { e.stopPropagation(); menu.classList.toggle('show'); });
+			items.forEach(function (item) {
+				item.addEventListener('click', function (e) {
+					e.stopPropagation();
+					var lang = this.dataset.lang;
+					menu.classList.remove('show');
+					if (_gtTranslateReady) {
+						var combo = document.querySelector('#google_translate_element select');
+						if (combo) { combo.value = lang; combo.dispatchEvent(new Event('change'));
+							label.textContent = lang.toUpperCase();
+							items.forEach(function (it) { it.classList.toggle('active', it.dataset.lang === lang); });
+							return;
+						}
+					}
+					clearGT(); setGT(lang === 'en' ? '/th/en' : '/th/th');
+					window.location.reload();
+				});
+			});
+			document.addEventListener('click', function () { menu.classList.remove('show'); });
+		});
+	</script>
 </body>
 
 </html>
