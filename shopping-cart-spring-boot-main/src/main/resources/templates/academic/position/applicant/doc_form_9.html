@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+<body>
+    <section>
+        <div class="container py-4">
+            <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 9: แบบแสดงหลักฐานการมีส่วนร่วมในผลงานทางวิชาการ</h3>
+
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/9'" method="post">
+
+                <!-- ข้อมูลผลงาน -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ก. ข้อมูลผลงาน</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <label class="form-label">ชื่อผลงาน <span class="text-danger">*</span></label>
+                                <input type="text" name="title_name" class="form-control" required>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- สถานะผู้ขอ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ข. สถานะผู้ขอในผลงาน</h5></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="chk_ firstauthor" value="☑" id="chkFA">
+                            <label class="form-check-label" for="chkFA">ผู้ประพันธ์อันดับแรก (first author)</label>
+                        </div>
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="checkbox" name="chk_essen" value="☑" id="chkEssen">
+                            <label class="form-check-label" for="chkEssen">ผู้มีส่วนสำคัญทางปัญญา (essentially intellectual contributor)</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="chk_corresp" value="☑" id="chkCorr">
+                            <label class="form-check-label" for="chkCorr">ผู้ประพันธ์บรรณกิจ (corresponding author)</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ประเภทผลงาน -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ค. ประเภทของผลงาน</h5></div>
+                    <div class="card-body">
+                        <h6 class="fw-bold mb-2">กลุ่มที่ ๑</h6>
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="checkbox" name="group1_research" value="☑" id="g1res">
+                            <label class="form-check-label" for="g1res">งานวิจัย</label>
+                        </div>
+
+                        <h6 class="fw-bold mb-2">กลุ่มที่ ๒ — ผลงานทางวิชาการในลักษณะอื่น</h6>
+                        <div class="row">
+                            <div class="col-md-6" th:each="item, stat : ${{'ผลงานวิชาการเพื่ออุตสาหกรรม','กรณีศึกษา (Case Study)','ผลงานวิชาการเพื่อพัฒนาการเรียนการสอนฯ','งานแปล','ผลงานวิชาการเพื่อพัฒนานโยบายสาธารณะ','สิทธิบัตร','ผลงานสร้างสรรค์ด้านวิทยาศาสตร์ฯ','ซอฟต์แวร์','พจนานุกรม สารานุกรม นามานุกรมฯ','ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ','ผลงานนวัตกรรม','ผลงานรับใช้ท้องถิ่นและสังคม'}}">
+                                <div class="form-check mb-1">
+                                    <input class="form-check-input" type="checkbox"
+                                        th:name="'chkgroup2_' + ${stat.count}" value="☑"
+                                        th:id="'g2_' + ${stat.count}">
+                                    <label class="form-check-label" th:for="'g2_' + ${stat.count}"
+                                        th:text="${item}" style="font-size:0.9em"></label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <h6 class="fw-bold mt-3 mb-2">กลุ่มที่ ๓</h6>
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox" name="chkgroup3_ treatise" value="☑" id="g3t">
+                            <label class="form-check-label" for="g3t">ตำรา</label>
+                        </div>
+                        <div class="form-check mb-1">
+                            <input class="form-check-input" type="checkbox" name="chkgroup3_book" value="☑" id="g3b">
+                            <label class="form-check-label" for="g3b">หนังสือ</label>
+                        </div>
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="chkgroup3_Academicarticles" value="☑" id="g3a">
+                            <label class="form-check-label" for="g3a">บทความทางวิชาการ</label>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ส่วนที่ 1: รายละเอียดการมีส่วนร่วม -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ส่วนที่ ๑: รายละเอียดการมีส่วนร่วม</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ก. ความคิดริเริ่ม (idea) และสมมุติฐาน</label>
+                            <textarea name="role_des1" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ข. การออกแบบ การทดลอง การทดสอบ เครื่องมือวัด วิธีการเก็บข้อมูล</label>
+                            <textarea name="role_des2" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ค. การจัดเก็บข้อมูล การวิเคราะห์ข้อมูล การแปรผล</label>
+                            <textarea name="role_des3" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ง. การวิพากษ์วิจารณ์ผล การเปรียบเทียบกับองค์ความรู้เดิม</label>
+                            <textarea name="role_des4" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">จ. การมีส่วนร่วมในการเขียน manuscript / ผลงานสร้างสรรค์</label>
+                            <textarea name="role_des5" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ฉ. การให้การสนับสนุน (specimens, ทุนวิจัย, เครื่องมือ ฯลฯ)</label>
+                            <textarea name="role_des6" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div>
+                            <label class="form-label fw-bold">ช. อื่นๆ</label>
+                            <textarea name="role_des7" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ส่วนที่ 2: การเผยแพร่ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ส่วนที่ ๒: การเผยแพร่ / ถ่ายทอดเทคโนโลยี</h5></div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ก. วารสาร — Journal, Impact factor, Citations (ฐานข้อมูล)</label>
+                            <textarea name="des_journal" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ข. สิทธิบัตร — ประเภท ปีที่ได้รับ จดแบบ ครอบคลุมประเทศ</label>
+                            <textarea name="des_ patent" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ค. Technical report — ผู้ใช้งานคือใคร</label>
+                            <textarea name="des_techreport" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">ง. การนำเสนอ — poster/oral, session, ชื่อการประชุม, สถานที่</label>
+                            <textarea name="des_poster" class="form-control" rows="2"></textarea>
+                        </div>
+                        <div>
+                            <label class="form-label fw-bold">จ. ประวัติการได้รับทุนวิจัยที่เกี่ยวข้อง</label>
+                            <textarea name="des_scholarship" class="form-control" rows="2"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ลงชื่อ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ผู้ลงนาม</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">ผู้ขอกำหนดตำแหน่ง</label>
+                                <input type="text" name="applicant_name" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ผู้ประพันธ์อันดับแรก (First author)</label>
+                                <input type="text" name="firstauthor_name" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ผู้ประพันธ์บรรณกิจ (Corresponding)</label>
+                                <input type="text" name="corres_name" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">
+                        <i class="fas fa-save"></i> บันทึก
+                    </button>
+                    <button type="submit" name="action" value="draft" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-file-alt"></i> บันทึกแบบร่าง
+                    </button>
+                    <a th:href="'/user/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> กลับ
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                const existingData = /*[[${existingData}]]*/ null;
+                if (existingData) {
+                    try {
+                        const data = JSON.parse(existingData);
+                        for (const [key, value] of Object.entries(data)) {
+                            const el = document.querySelector(`[name="${key}"]`);
+                            if (el) {
+                                if (el.type === 'checkbox') { el.checked = (value === '☑'); }
+                                else { el.value = value; }
+                            }
+                        }
+                    } catch(e) {}
+                }
+            });
+        </script>
+    </section>
+</body>
+</html>

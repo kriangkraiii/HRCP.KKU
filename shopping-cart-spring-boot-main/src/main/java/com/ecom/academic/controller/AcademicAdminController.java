@@ -30,9 +30,12 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentGenerationService;
+import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
@@ -61,6 +64,9 @@ public class AcademicAdminController {
     private AdminLogService adminLogService;
 
     @Autowired
+    private PositionRequestService positionRequestService;
+
+    @Autowired
     private HttpServletRequest httpRequest;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -83,6 +89,7 @@ public class AcademicAdminController {
     @GetMapping("/requests")
     public String listRequests(@RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "status", required = false) String statusFilter,
+            @RequestParam(value = "type", required = false) String typeFilter,
             Model model) {
         List<AcademicRequest> allRequests;
         if (search != null && !search.trim().isEmpty()) {
@@ -147,6 +154,33 @@ public class AcademicAdminController {
         model.addAttribute("statusCounts", statusCounts);
         model.addAttribute("statuses", RequestStatus.values());
         model.addAttribute("requests", allRequests);
+        model.addAttribute("activeType", typeFilter);
+
+        // Phase 2: Position requests data
+        try {
+            List<PositionRequest> positionRequests = positionRequestService.findAll();
+            long positionPendingCount = positionRequests.stream()
+                    .filter(r -> !r.getCurrentStatus().isTerminal() && !r.getCurrentStatus().isEditable())
+                    .count();
+            long positionCompletedCount = positionRequests.stream()
+                    .filter(r -> r.getCurrentStatus().isTerminal())
+                    .count();
+            model.addAttribute("positionRequests", positionRequests);
+            model.addAttribute("positionStatuses", PositionRequestStatus.values());
+            model.addAttribute("positionPendingCount", positionPendingCount);
+            model.addAttribute("positionCompletedCount", positionCompletedCount);
+            model.addAttribute("positionTotalCount", (long) positionRequests.size());
+        } catch (Exception e) {
+            model.addAttribute("positionRequests", java.util.Collections.emptyList());
+            model.addAttribute("positionPendingCount", 0L);
+            model.addAttribute("positionCompletedCount", 0L);
+            model.addAttribute("positionTotalCount", 0L);
+        }
+
+        // Evaluation counts
+        long evalTotal = allRequests.stream().filter(r -> !r.getCurrentStatus().isDraft()).count();
+        model.addAttribute("evaluationTotalCount", evalTotal);
+
         return "academic/admin/requests";
     }
 
@@ -173,25 +207,44 @@ public class AcademicAdminController {
             @RequestParam(value = "note", required = false) String note,
             @RequestParam(value = "meetingDate", required = false) String meetingDateStr,
             @RequestParam(value = "meetingLocation", required = false) String meetingLocation,
-            Principal principal) {
-        UserDtls admin = getUser(principal);
-        RequestStatus newStatus = RequestStatus.valueOf(status);
+            Principal principal,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+        try {
+            UserDtls admin = getUser(principal);
+            if (admin == null) {
+                redirectAttributes.addFlashAttribute("errorDetail",
+                        "ไม่พบข้อมูลผู้ใช้ในระบบ (email: " + principal.getName() + ")");
+                return "redirect:/admin/academic/request/" + id + "?error=status_update_failed";
+            }
 
-        if (newStatus == RequestStatus.MEETING_SCHEDULED && meetingDateStr != null && !meetingDateStr.isEmpty()) {
-            LocalDateTime meetingDate = LocalDateTime.parse(meetingDateStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-            requestService.setMeetingDate(id, meetingDate, meetingLocation, admin);
-        } else {
-            requestService.updateStatus(id, newStatus, admin, note);
+            RequestStatus newStatus = RequestStatus.valueOf(status);
+
+            if (newStatus == RequestStatus.MEETING_SCHEDULED && meetingDateStr != null && !meetingDateStr.isEmpty()) {
+                LocalDateTime meetingDate = LocalDateTime.parse(meetingDateStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
+                requestService.setMeetingDate(id, meetingDate, meetingLocation, admin);
+            } else {
+                requestService.updateStatus(id, newStatus, admin, note);
+            }
+
+            // Log activity
+            try {
+                adminLogService.log(principal.getName(),
+                        admin.getName(),
+                        "UPDATE_REQUEST_STATUS",
+                        "อัพเดทสถานะคำร้อง #" + id + " เป็น " + newStatus.name()
+                                + (note != null ? " (" + note + ")" : ""),
+                        getClientIpAddress());
+            } catch (Exception logEx) {
+                System.err.println("Admin log failed: " + logEx.getMessage());
+            }
+
+            return "redirect:/admin/academic/request/" + id + "?success=status_updated";
+        } catch (Exception e) {
+            System.err.println("Status update failed for request #" + id + ": " + e.getMessage());
+            e.printStackTrace();
+            redirectAttributes.addFlashAttribute("errorDetail", e.getClass().getSimpleName() + ": " + e.getMessage());
+            return "redirect:/admin/academic/request/" + id + "?error=status_update_failed";
         }
-
-        // Log activity
-        adminLogService.log(principal.getName(),
-                admin != null ? admin.getName() : principal.getName(),
-                "UPDATE_REQUEST_STATUS",
-                "อัพเดทสถานะคำร้อง #" + id + " เป็น " + newStatus.name() + (note != null ? " (" + note + ")" : ""),
-                getClientIpAddress());
-
-        return "redirect:/admin/academic/request/" + id + "?success=status_updated";
     }
 
     @GetMapping("/request/{id}/document/{type}")

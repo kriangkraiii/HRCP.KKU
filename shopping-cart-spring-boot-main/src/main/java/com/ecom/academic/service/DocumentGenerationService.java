@@ -119,6 +119,33 @@ public class DocumentGenerationService {
     }
 
     // =====================================================================
+    // Phase 2: Position Request Document Generation
+    // =====================================================================
+
+    public String generateP2Document(com.ecom.academic.model.PositionRequest request,
+            int documentType, String jsonData) throws IOException {
+        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, String> placeholders = flattenMap(dataMap, "");
+
+        String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
+        ClassPathResource resource = new ClassPathResource(templateFile);
+
+        String outputDir = OUTPUT_BASE_DIR + "position/" + request.getId() + "/";
+        Files.createDirectories(Path.of(outputDir));
+
+        String outputPath = outputDir + "p2doc_" + documentType + ".docx";
+
+        byte[] result = processTemplate(resource.getInputStream(), placeholders);
+
+        try (FileOutputStream fos = new FileOutputStream(outputPath)) {
+            fos.write(result);
+        }
+
+        return outputPath;
+    }
+
+    // =====================================================================
     // Core: Pure ZIP/XML Processing (format-preserving)
     // =====================================================================
 

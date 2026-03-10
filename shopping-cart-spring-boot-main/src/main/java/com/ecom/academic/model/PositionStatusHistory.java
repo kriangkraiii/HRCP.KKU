@@ -18,8 +18,8 @@ import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "request_status_history")
-public class RequestStatusHistory {
+@Table(name = "position_status_history")
+public class PositionStatusHistory {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -27,15 +27,15 @@ public class RequestStatusHistory {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "request_id", nullable = false)
-    private AcademicRequest request;
+    private PositionRequest request;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "old_status", columnDefinition = "varchar(50)")
-    private RequestStatus oldStatus;
+    private PositionRequestStatus oldStatus;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "new_status", nullable = false, columnDefinition = "varchar(50)")
-    private RequestStatus newStatus;
+    private PositionRequestStatus newStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "changed_by")
@@ -61,27 +61,27 @@ public class RequestStatusHistory {
         this.id = id;
     }
 
-    public AcademicRequest getRequest() {
+    public PositionRequest getRequest() {
         return request;
     }
 
-    public void setRequest(AcademicRequest request) {
+    public void setRequest(PositionRequest request) {
         this.request = request;
     }
 
-    public RequestStatus getOldStatus() {
+    public PositionRequestStatus getOldStatus() {
         return oldStatus;
     }
 
-    public void setOldStatus(RequestStatus oldStatus) {
+    public void setOldStatus(PositionRequestStatus oldStatus) {
         this.oldStatus = oldStatus;
     }
 
-    public RequestStatus getNewStatus() {
+    public PositionRequestStatus getNewStatus() {
         return newStatus;
     }
 
-    public void setNewStatus(RequestStatus newStatus) {
+    public void setNewStatus(PositionRequestStatus newStatus) {
         this.newStatus = newStatus;
     }
 
