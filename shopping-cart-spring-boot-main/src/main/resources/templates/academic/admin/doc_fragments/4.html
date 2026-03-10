@@ -18,7 +18,7 @@
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลเอกสาร</h5>
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">เลขที่หนังสือ</label><input type="text"
-                                    name="memo_no" class="form-control" placeholder="อว 660301.26.4/"></div>
+                                    name="memo_no" class="form-control" placeholder="อว 660301.26.4/ว." value="อว 660301.26.4/ว."></div>
                             <div class="col-md-4"><label class="form-label">วันที่</label>
                                 <div class="input-group">
                                     <input type="text" name="date" class="form-control thai-full-date">
@@ -36,22 +36,19 @@
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
                                 <input type="text" name="applicant_title" class="form-control" list="titleList4" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty()
-                                        ? request.applicant.academicPosition
-                                        : request.applicant.title}">
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('applicant_title', (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)) : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)}">
                                 <datalist id="titleList4">
                                     <option value="นาย">
                                     <option value="นาง">
                                     <option value="นางสาว">
                                     <option value="ผู้ช่วยศาสตราจารย์">
                                     <option value="รองศาสตราจารย์">
-                                    <option value="ศาสตราจารย์">
                                 </datalist>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อผู้ยื่น</label>
                                 <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${request.applicant.name}">
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}">
                             </div>
                             <div class="col-md-4"><label class="form-label">วันที่คำสั่งอ้างอิง</label>
                                 <div class="input-group">
@@ -62,7 +59,8 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">ประเภท</label>
-                                <input type="text" name="applicant_employee_type" class="form-control" list="typeList4" placeholder="เลือกหรือพิมพ์...">
+                                <input type="text" name="applicant_employee_type" class="form-control" list="typeList4" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('employee_type', '') : ''}">
                                 <datalist id="typeList4">
                                     <option value="พนักงานมหาวิทยาลัย">
                                     <option value="ข้าราชการ">
@@ -72,7 +70,8 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งปัจจุบัน</label>
-                                <input type="text" name="applicant_current_pos" class="form-control" list="posList4" placeholder="เลือกหรือพิมพ์...">
+                                <input type="text" name="applicant_current_pos" class="form-control" list="posList4" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('current_position', '') : ''}">
                                 <datalist id="posList4">
                                     <option value="อาจารย์">
                                     <option value="ผู้ช่วยศาสตราจารย์">
@@ -81,7 +80,8 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งที่ขอ</label>
-                                <input type="text" name="applicant_req_pos" class="form-control" list="posReqList4" placeholder="เลือกหรือพิมพ์...">
+                                <input type="text" name="applicant_req_pos" class="form-control" list="posReqList4" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('requested_position', '') : ''}">
                                 <datalist id="posReqList4">
                                     <option value="ผู้ช่วยศาสตราจารย์">
                                     <option value="รองศาสตราจารย์">
@@ -120,7 +120,7 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">ตำแหน่ง</label>
-                                    <input type="text" th:name="'committee_position_' + ${i}" class="form-control"
+                                    <input type="text" th:name="'committee_position_' + ${i}" class="form-control" readonly
                                         th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')}">
                                 </div>
                             </div>

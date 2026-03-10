@@ -289,8 +289,8 @@ public class AcademicAdminController {
             }
         }
 
-        // สำหรับ doc_6: ดึงข้อมูลจาก doc_0 มา auto-fill (prefix, position)
-        if (type == 6) {
+        // สำหรับ doc_3, doc_6, doc_7, doc_8: ดึงข้อมูลจาก doc_0 มา auto-fill
+        if (type == 3 || type == 6 || type == 7 || type == 8) {
             List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
             if (!doc0List.isEmpty()) {
                 try {
@@ -299,6 +299,38 @@ public class AcademicAdminController {
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
                             });
                     model.addAttribute("doc0Data", doc0Data);
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+        }
+
+        // สำหรับ doc_4: ดึงข้อมูลจาก doc_3 มา auto-fill (applicant info)
+        if (type == 4) {
+            List<AcademicDocument> doc3List = requestService.getDocumentsByType(id, 3);
+            if (!doc3List.isEmpty()) {
+                try {
+                    String doc3Json = doc3List.get(0).getJsonData();
+                    Map<String, String> doc3Data = objectMapper.readValue(doc3Json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                            });
+                    model.addAttribute("doc3Data", doc3Data);
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+        }
+
+        // สำหรับ doc_8: ดึงข้อมูลจาก doc_7 มา auto-fill (meeting_date, meeting_no)
+        if (type == 8) {
+            List<AcademicDocument> doc7List = requestService.getDocumentsByType(id, 7);
+            if (!doc7List.isEmpty()) {
+                try {
+                    String doc7Json = doc7List.get(0).getJsonData();
+                    Map<String, Object> doc7Data = objectMapper.readValue(doc7Json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                            });
+                    model.addAttribute("doc7Data", doc7Data);
                 } catch (Exception e) {
                     // ignore
                 }
@@ -499,6 +531,25 @@ public class AcademicAdminController {
             }
         }
 
+        // Document 7: แปลงเลขอาราบิกเป็นเลขไทยสำหรับ DOCX (ทำฝั่ง server เท่านั้น)
+        if (type == 7) {
+            String[] thaiConvertFields = {"meeting_no"};
+            for (String field : thaiConvertFields) {
+                String val = formData.get(field);
+                if (val != null && !val.isEmpty()) {
+                    formData.put(field + "_thai", toThaiDigits(val));
+                }
+            }
+            // แปลงวันที่เป็นเลขไทยสำหรับเอกสาร
+            String[] dateFields = {"meeting_date", "sign_date"};
+            for (String field : dateFields) {
+                String val = formData.get(field);
+                if (val != null && !val.isEmpty()) {
+                    formData.put(field + "_thai", toThaiDigits(val));
+                }
+            }
+        }
+
         String jsonData = objectMapper.writeValueAsString(formData);
 
         if (type == 4) {
@@ -543,6 +594,43 @@ public class AcademicAdminController {
         }
 
         return "redirect:/admin/academic/request/" + id + "?success=doc_generated";
+    }
+
+    @PostMapping("/request/{id}/document/5/send-suggestion")
+    public String sendSuggestionEmail(@PathVariable Long id, Principal principal) {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        UserDtls admin = getUser(principal);
+
+        // ดึงข้อเสนอแนะจาก doc_5 JSON
+        String suggestionsText = "";
+        List<AcademicDocument> doc5List = requestService.getDocumentsByType(id, 5);
+        if (!doc5List.isEmpty()) {
+            try {
+                Map<String, String> doc5Data = objectMapper.readValue(doc5List.get(0).getJsonData(),
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                        });
+                suggestionsText = doc5Data.getOrDefault("suggestions_text", "");
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+
+        // เปลี่ยนสถานะเป็น แจ้งผล - แก้ไข
+        requestService.updateStatus(id, RequestStatus.COMPLETED_REVISE, admin,
+                "ส่งข้อเสนอแนะเพื่อแก้ไขเอกสาร", true);
+
+        // ส่งอีเมลข้อเสนอแนะ
+        requestService.sendSuggestionEmail(request, suggestionsText);
+
+        // Log activity
+        adminLogService.log(principal.getName(),
+                admin != null ? admin.getName() : principal.getName(),
+                "SEND_SUGGESTION",
+                "ส่งข้อเสนอแนะถึงผู้ยื่นคำร้อง #" + id + " เพื่อแก้ไขเอกสาร",
+                getClientIpAddress());
+
+        return "redirect:/admin/academic/request/" + id + "?success=suggestion_sent";
     }
 
     @GetMapping("/request/{id}/download/{docId}")

@@ -29,10 +29,19 @@
 
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> ผู้ยื่นคำร้อง</h5>
                         <div class="row mb-3">
-                            <div class="col-md-6">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า</label>
+                                <select name="title" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="นาย"     th:selected="${(doc1Data != null ? doc1Data.getOrDefault('title', '') : request.applicant.title) == 'นาย'}">นาย</option>
+                                    <option value="นาง"     th:selected="${(doc1Data != null ? doc1Data.getOrDefault('title', '') : request.applicant.title) == 'นาง'}">นาง</option>
+                                    <option value="นางสาว" th:selected="${(doc1Data != null ? doc1Data.getOrDefault('title', '') : request.applicant.title) == 'นางสาว'}">นางสาว</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น</label>
                                 <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('applicant_name', '-') : '-'}">
+                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}">
                             </div>
                         </div>
 

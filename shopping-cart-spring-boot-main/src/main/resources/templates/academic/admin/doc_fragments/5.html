@@ -19,12 +19,6 @@
                             <textarea name="suggestions_text" class="form-control" rows="8"
                                 placeholder="กรอกข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน"></textarea>
                         </div>
-                        <div class="mb-3">
-                            <div class="form-check">
-                                <input type="checkbox" class="form-check-input" name="send_to_applicant_email" id="sendEmail" value="true" checked>
-                                <label class="form-check-label" for="sendEmail">ส่งข้อเสนอแนะถึงผู้ยื่นทางอีเมล</label>
-                            </div>
-                        </div>
 
                         <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">
                             <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
@@ -33,6 +27,42 @@
 
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
+
+                    <!-- ปุ่มส่งข้อเสนอแนะ (แสดงหลังบันทึกเอกสารแล้ว) -->
+                    <div th:if="${param.success != null || param.saved != null}" class="mt-3 border-top pt-3">
+                        <form th:action="'/admin/academic/request/' + ${request.id} + '/document/5/send-suggestion'" method="post" id="suggestionForm">
+                            <button type="button" class="btn btn-warning" id="btnSendSuggestion">
+                                <i class="fas fa-envelope"></i> ส่งข้อเสนอแนะถึงผู้ยื่นทางอีเมลเพื่อทำการแก้ไขเอกสาร
+                            </button>
+                        </form>
+                    </div>
+
+                    <!-- Confirm Modal for sending suggestion -->
+                    <div class="modal fade" id="suggestionConfirmModal" tabindex="-1" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered">
+                            <div class="modal-content">
+                                <div class="modal-header bg-warning bg-opacity-10 border-0">
+                                    <h5 class="modal-title"><i class="fas fa-envelope text-warning"></i> ยืนยันส่งข้อเสนอแนะ</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body">
+                                    <p>ต้องการ<strong>ส่งข้อเสนอแนะถึงผู้ยื่นทางอีเมล</strong>เพื่อทำการแก้ไขเอกสารหรือไม่?</p>
+                                    <div class="alert alert-warning small mb-0">
+                                        <i class="fas fa-exclamation-triangle me-1"></i>
+                                        สถานะจะเปลี่ยนเป็น <strong>"แจ้งผล - แก้ไข"</strong> อัตโนมัติ และผู้ยื่นจะได้รับอีเมลแจ้งเตือนพร้อมข้อเสนอแนะ
+                                    </div>
+                                </div>
+                                <div class="modal-footer border-0">
+                                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times"></i> ยกเลิก
+                                    </button>
+                                    <button type="button" class="btn btn-warning" id="btnConfirmSendSuggestion">
+                                        <i class="fas fa-paper-plane"></i> ยืนยันส่ง
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -42,6 +72,24 @@
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
+        <script>
+            // Send suggestion button logic
+            (function() {
+                var btnSend = document.getElementById('btnSendSuggestion');
+                if (btnSend) {
+                    btnSend.addEventListener('click', function() {
+                        var modal = new bootstrap.Modal(document.getElementById('suggestionConfirmModal'));
+                        modal.show();
+                    });
+                }
+                var btnConfirm = document.getElementById('btnConfirmSendSuggestion');
+                if (btnConfirm) {
+                    btnConfirm.addEventListener('click', function() {
+                        document.getElementById('suggestionForm').submit();
+                    });
+                }
+            })();
+        </script>
     </section>
 </body>
 

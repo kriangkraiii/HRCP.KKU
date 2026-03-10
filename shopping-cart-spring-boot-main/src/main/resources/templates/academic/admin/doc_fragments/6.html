@@ -214,7 +214,7 @@
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" th:name="'committee_position' + ${i}" class="form-control"
+                                <input type="text" th:name="'committee_position' + ${i}" class="form-control" readonly
                                     th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')}">
                             </div>
                         </div>

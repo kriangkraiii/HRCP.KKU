@@ -19,7 +19,7 @@
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลการประชุม</h5>
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">ครั้งที่/ปี</label><input type="text"
-                                    name="meeting_no" class="form-control" placeholder="1/2569"></div>
+                                    name="meeting_no" class="form-control" placeholder="ex. 1/2569"></div>
                             <div class="col-md-4"><label class="form-label">วันที่ประชุม</label>
                                 <div class="input-group">
                                     <input type="text" name="meeting_date" class="form-control thai-full-date">
@@ -31,15 +31,15 @@
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">รหัสวิชา</label><input type="text"
-                                    name="course_code" class="form-control"></div>
+                                    name="course_code" class="form-control" placeholder="ex. CP 123 456"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_code', '') : ''}"></div>
                             <div class="col-md-4"><label class="form-label">ชื่อวิชา</label><input type="text"
-                                    name="course_name" class="form-control"></div>
+                                    name="course_name" class="form-control" placeholder="ex. Introduction to Computer Science"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_name', '') : ''}"></div>
                             <div class="col-md-2">
                                 <label class="form-label">คำนำหน้า</label>
                                 <input type="text" name="applicant_title" class="form-control" list="titleList7" placeholder="คำนำหน้า"
-                                    th:value="${request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty()
-                                        ? request.applicant.academicPosition
-                                        : request.applicant.title}">
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('title', (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)) : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)}">
                                 <datalist id="titleList7">
                                     <option value="นาย">
                                     <option value="นาง">
@@ -52,7 +52,7 @@
                             <div class="col-md-4">
                                 <label class="form-label">ชื่อผู้ยื่น</label>
                                 <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${request.applicant.name}">
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}">
                             </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">ผลการประเมิน</h5>
@@ -95,12 +95,9 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อประธานคณะกรรมการ</label>
-                                <div class="combo-input">
-                                    <input type="text" name="committee_president_name" class="form-control" list="staffList7b" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist id="staffList7b">
-                                        <option th:each="s : ${staffMembers}" th:value="${s.displayName}"></option>
-                                    </datalist>
-                                </div>
+                                <input type="text" name="committee_president_name" class="form-control" readonly
+                                    th:value="${defaultCommittee1 != null ? defaultCommittee1 : ''}">
+                                <small class="text-muted">ดึงจากกรรมการคนที่ 1 (เอกสารที่ 2)</small>
                             </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">วันที่ลงนาม</h5>
@@ -132,71 +129,40 @@
         <script src="/js/doc_preview.js"></script>
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
         <script>
-            // แปลงเลขอาราบิกเป็นเลขไทย + จัดรูปแบบวันที่ "เดือน" และ "พ.ศ."
+            // แปลงเลขอาราบิกเป็นเลขไทยจะทำฝั่ง server ตอนสร้างเอกสารเท่านั้น
+            // ไม่แปลงเลขในฟอร์มเพื่อไม่ให้สับสนตอนกรอก
             (function() {
                 var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                     'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-                var thaiDigits = ['๐','๑','๒','๓','๔','๕','๖','๗','๘','๙'];
 
-                function toThai(str) {
-                    return String(str).replace(/\d/g, function(d) { return thaiDigits[d]; });
-                }
-
-                function formatThaiDate(dateStr) {
-                    if (!dateStr) return '';
-                    // ถ้ามี "เดือน" อยู่แล้วให้แปลงเลขไทยอย่างเดียว
-                    if (dateStr.indexOf('เดือน') !== -1) return toThai(dateStr);
-                    // parse "7 มีนาคม 2569" → "๗ เดือน มีนาคม พ.ศ. ๒๕๖๙"
-                    var m = dateStr.match(/^(\d{1,2})\s+(\S+)\s+(\d{4})$/);
-                    if (m) return toThai(m[1]) + ' เดือน ' + m[2] + ' พ.ศ. ' + toThai(m[3]);
-                    return toThai(dateStr);
-                }
-
-                function fromPickerDate(d) {
-                    return toThai(d.getDate()) + ' เดือน ' + thaiMonths[d.getMonth()] + ' พ.ศ. ' + toThai(d.getFullYear() + 543);
-                }
-
-                document.addEventListener('DOMContentLoaded', function() {
-                    // meeting_date: แปลงเลขไทยอย่างเดียว (ไม่ใส่ เดือน/พ.ศ.)
-                    var meetingInput = document.querySelector('input[name="meeting_date"]');
-                    if (meetingInput) {
-                        if (meetingInput.value) meetingInput.value = toThai(meetingInput.value);
-                        var meetingPicker = meetingInput.closest('.input-group').querySelector('.thai-date-picker');
-                        if (meetingPicker) {
-                            meetingPicker.addEventListener('change', function() {
-                                if (this.value) {
-                                    var d = new Date(this.value);
-                                    meetingInput.value = toThai(d.getDate()) + ' ' + thaiMonths[d.getMonth()] + ' ' + toThai(d.getFullYear() + 543);
-                                }
-                            });
-                        }
-                    }
-
-                    // sign_date: แปลงเลขไทย + ใส่ เดือน/พ.ศ.
-                    var signInput = document.querySelector('input[name="sign_date"]');
-                    if (signInput) {
-                        if (signInput.value) signInput.value = formatThaiDate(signInput.value);
-                        var signPicker = signInput.closest('.input-group').querySelector('.thai-date-picker');
-                        if (signPicker) {
-                            signPicker.addEventListener('change', function() {
-                                if (this.value) signInput.value = fromPickerDate(new Date(this.value));
-                            });
-                        }
-                    }
-
-                    // meeting_no: แปลงเลขอาราบิกเป็นเลขไทย
-                    var meetingNo = document.querySelector('input[name="meeting_no"]');
-                    if (meetingNo) {
-                        if (meetingNo.value) meetingNo.value = toThai(meetingNo.value);
-                        meetingNo.addEventListener('input', function() {
-                            var pos = this.selectionStart;
-                            this.value = toThai(this.value);
-                            this.setSelectionRange(pos, pos);
+                // meeting_date: ใช้รูปแบบ "7 มีนาคม 2569" (เลขอาราบิก)
+                var meetingInput = document.querySelector('input[name="meeting_date"]');
+                if (meetingInput) {
+                    var meetingPicker = meetingInput.closest('.input-group').querySelector('.thai-date-picker');
+                    if (meetingPicker) {
+                        meetingPicker.addEventListener('change', function() {
+                            if (this.value) {
+                                var d = new Date(this.value);
+                                meetingInput.value = d.getDate() + ' ' + thaiMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
+                            }
                         });
                     }
-                });
-            })();
+                }
 
+                // sign_date: ใช้รูปแบบ "7 เดือน มีนาคม พ.ศ. 2569" (เลขอาราบิก)
+                var signInput = document.querySelector('input[name="sign_date"]');
+                if (signInput) {
+                    var signPicker = signInput.closest('.input-group').querySelector('.thai-date-picker');
+                    if (signPicker) {
+                        signPicker.addEventListener('change', function() {
+                            if (this.value) {
+                                var d = new Date(this.value);
+                                signInput.value = d.getDate() + ' เดือน ' + thaiMonths[d.getMonth()] + ' พ.ศ. ' + (d.getFullYear() + 543);
+                            }
+                        });
+                    }
+                }
+            })();
         </script>
     </section>
 </body>
