@@ -480,7 +480,13 @@ public class AcademicAdminController {
 
         // Auto-update status + notify only if admin chose to
         if (sendNotify) {
-            requestService.autoUpdateStatusByDocument(id, type, admin, jsonData);
+            try {
+                requestService.autoUpdateStatusByDocument(id, type, admin, jsonData);
+            } catch (Exception e) {
+                System.err.println(
+                        "Auto status update failed for request #" + id + ", doc type " + type + ": " + e.getMessage());
+                return "redirect:/admin/academic/request/" + id + "?success=doc_generated&warn=notify_failed";
+            }
         }
 
         return "redirect:/admin/academic/request/" + id + "?success=doc_generated";
