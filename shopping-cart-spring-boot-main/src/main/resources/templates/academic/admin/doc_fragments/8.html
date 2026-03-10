@@ -54,8 +54,13 @@
                         <div class="row mb-3">
                             <div class="col-md-6"><label class="form-label">เลขที่หนังสืออ้างอิง</label><input
                                     type="text" name="ref_memo_no" class="form-control"></div>
-                            <div class="col-md-6"><label class="form-label">วันที่หนังสืออ้างอิง</label><input
-                                    type="text" name="ref_memo_date" class="form-control"></div>
+                            <div class="col-md-6"><label class="form-label">วันที่หนังสืออ้างอิง</label>
+                                <div class="input-group">
+                                    <input type="text" name="ref_memo_date" class="form-control thai-full-date">
+                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                </div>
+                            </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
                         <div class="row mb-3">
