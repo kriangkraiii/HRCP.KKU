@@ -2,213 +2,179 @@
  * Auto-Draft Engine — บันทึกแบบร่างอัตโนมัติ (Google Forms Style)
  *
  * Usage:
- *   1. <form id="myForm" data-auto-draft="/api/draft/position/123/1"> ... </form>
+ *   1. <form data-auto-draft="/api/draft/position/123/1"> ... </form>
  *   2. <script> window.AUTO_DRAFT_ENABLED = true; </script>
  *   3. <script src="/js/auto_draft.js"></script>
  *
- * The engine binds to all forms with [data-auto-draft] attribute.
- * Debounce: 5 seconds after last input change.
- * Only saves when form data actually changed (dirty tracking).
- * Shows a Google Forms-style persistent status indicator inside each form.
+ * Debounce: 1.5 seconds after last input change.
+ * Dirty tracking: only saves when data actually changed.
  */
 (function () {
   "use strict";
 
-  var DEBOUNCE_MS = 5000;
+  var DEBOUNCE_MS = 1000;
 
-  // ==================== CSS (injected once) ====================
+  /* ---------- CSS (injected once) ---------- */
   var styleInjected = false;
   function injectStyles() {
     if (styleInjected) return;
     styleInjected = true;
-    var css = document.createElement("style");
-    css.textContent =
-      ".auto-draft-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-radius:8px;font-size:0.82rem;font-family:'Sarabun',sans-serif;font-weight:500;margin-bottom:12px;transition:all .3s ease}" +
-      ".auto-draft-bar.ad-idle{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}" +
-      ".auto-draft-bar.ad-saving{background:#fffbeb;color:#92400e;border:1px solid #fde68a}" +
-      ".auto-draft-bar.ad-saved{background:#f0fdf4;color:#166534;border:1px solid #bbf7d0}" +
-      ".auto-draft-bar.ad-error{background:#fef2f2;color:#991b1b;border:1px solid #fecaca}" +
-      ".auto-draft-bar.ad-disabled{background:#f3f4f6;color:#6b7280;border:1px solid #e5e7eb}" +
-      ".auto-draft-bar .ad-icon{font-size:1rem;width:18px;text-align:center}" +
-      ".auto-draft-bar .ad-text{flex:1}" +
-      ".auto-draft-bar .ad-time{font-size:0.75rem;opacity:0.7}";
-    document.head.appendChild(css);
+    var s = document.createElement("style");
+    s.textContent =
+      ".adb{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;font-size:.85rem;font-weight:500;margin-bottom:14px;transition:all .3s;line-height:1.4}" +
+      ".adb--idle{background:#f0fdf4;color:#15803d;border:1px solid #86efac}" +
+      ".adb--saving{background:#fffbeb;color:#b45309;border:1px solid #fcd34d}" +
+      ".adb--saved{background:#f0fdf4;color:#15803d;border:1px solid #86efac}" +
+      ".adb--error{background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5}" +
+      ".adb--disabled{background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db}" +
+      ".adb__icon{font-size:1.05rem;flex-shrink:0;width:20px;text-align:center}" +
+      "@keyframes adbPulse{0%,80%,100%{opacity:.3}40%{opacity:1}}" +
+      ".adb__dots span{animation:adbPulse 1.4s infinite both}" +
+      ".adb__dots span:nth-child(2){animation-delay:.2s}" +
+      ".adb__dots span:nth-child(3){animation-delay:.4s}";
+    document.head.appendChild(s);
   }
 
-  // ==================== AutoDraftEngine Class ====================
-  function AutoDraftEngine(form) {
+  /* ---------- Engine ---------- */
+  function Engine(form) {
     this.form = form;
     this.endpoint = form.getAttribute("data-auto-draft");
     this.timer = null;
     this.lastHash = "";
     this.saving = false;
-    this.bar = null;
-    this._init();
+
+    /* Build UI elements and keep direct references */
+    this.bar = document.createElement("div");
+    this.iconEl = document.createElement("span");
+    this.labelEl = document.createElement("span");
+
+    this.iconEl.className = "adb__icon";
+    this.bar.appendChild(this.iconEl);
+    this.bar.appendChild(this.labelEl);
+
+    this._setup();
   }
 
-  AutoDraftEngine.prototype._init = function () {
+  Engine.prototype._setup = function () {
     if (!this.endpoint) return;
-
     injectStyles();
-    this._createBar();
 
-    // Show disabled state if auto-draft is off
+    /* Insert bar at top of form */
+    this.form.insertBefore(this.bar, this.form.firstChild);
+
+    /* Check if auto-draft is enabled */
     if (!window.AUTO_DRAFT_ENABLED) {
-      this._setState("disabled");
+      this._show("disabled");
       return;
     }
 
-    // Compute initial hash
-    this.lastHash = this._computeHash();
-    this._setState("idle");
+    this.lastHash = this._hash();
+    this._show("idle");
 
-    // Bind input/change events
     var self = this;
-    ["input", "change"].forEach(function (evt) {
-      self.form.addEventListener(evt, function () { self._onFormChange(); }, true);
-    });
+    this.form.addEventListener("input", function () { self._onChange(); }, true);
+    this.form.addEventListener("change", function () { self._onChange(); }, true);
   };
 
-  AutoDraftEngine.prototype._createBar = function () {
-    this.bar = document.createElement("div");
-    this.bar.className = "auto-draft-bar ad-idle";
-    this.bar.innerHTML =
-      '<i class="ad-icon fas fa-cloud"></i>' +
-      '<span class="ad-text"></span>' +
-      '<span class="ad-time"></span>';
-
-    // Insert at the top of the form
-    if (this.form.firstChild) {
-      this.form.insertBefore(this.bar, this.form.firstChild);
-    } else {
-      this.form.appendChild(this.bar);
-    }
-  };
-
-  AutoDraftEngine.prototype._setState = function (state, extra) {
-    if (!this.bar) return;
-
-    // Reset all state classes
-    this.bar.className = "auto-draft-bar ad-" + state;
-
-    var icon = this.bar.querySelector(".ad-icon");
-    var text = this.bar.querySelector(".ad-text");
-    var time = this.bar.querySelector(".ad-time");
+  Engine.prototype._show = function (state, extra) {
+    this.bar.className = "adb adb--" + state;
 
     switch (state) {
       case "idle":
-        icon.className = "ad-icon fas fa-cloud";
-        text.textContent = "บันทึกแบบร่างอัตโนมัติเปิดใช้งาน";
-        time.textContent = "";
+        this.iconEl.innerHTML = '<i class="fas fa-cloud"></i>';
+        this.labelEl.textContent = "บันทึกแบบร่างอัตโนมัติเปิดใช้งาน";
         break;
       case "saving":
-        icon.className = "ad-icon fas fa-spinner fa-spin";
-        text.textContent = "กำลังบันทึก...";
-        time.textContent = "";
+        this.iconEl.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
+        this.labelEl.innerHTML = 'กำลังบันทึกข้อมูลแบบร่าง<span class="adb__dots"><span>.</span><span>.</span><span>.</span></span>';
         break;
       case "saved":
-        icon.className = "ad-icon fas fa-cloud";
-        text.textContent = "บันทึกแบบร่างอัตโนมัติแล้ว";
-        time.textContent = extra || "";
+        this.iconEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i>';
+        this.labelEl.textContent = "บันทึกแบบร่างอัตโนมัติแล้ว — " + (extra || "");
         break;
       case "error":
-        icon.className = "ad-icon fas fa-exclamation-triangle";
-        text.textContent = extra || "บันทึกอัตโนมัติล้มเหลว";
-        time.textContent = "";
+        this.iconEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
+        this.labelEl.textContent = extra || "บันทึกอัตโนมัติล้มเหลว กรุณาลองใหม่";
         break;
       case "disabled":
-        icon.className = "ad-icon fas fa-pause-circle";
-        text.textContent = "บันทึกแบบร่างอัตโนมัติปิดอยู่";
-        time.textContent = "";
+        this.iconEl.innerHTML = '<i class="fas fa-pause-circle"></i>';
+        this.labelEl.textContent = "บันทึกแบบร่างอัตโนมัติปิดอยู่";
         break;
     }
   };
 
-  AutoDraftEngine.prototype._getTimeString = function () {
-    var now = new Date();
-    var h = now.getHours().toString().padStart(2, "0");
-    var m = now.getMinutes().toString().padStart(2, "0");
-    return "เมื่อ " + h + ":" + m;
+  Engine.prototype._timeStr = function () {
+    var d = new Date();
+    return "เมื่อเวลา " + d.getHours().toString().padStart(2, "0") + ":" +
+           d.getMinutes().toString().padStart(2, "0") + ":" +
+           d.getSeconds().toString().padStart(2, "0") + " น.";
   };
 
-  AutoDraftEngine.prototype._onFormChange = function () {
+  Engine.prototype._onChange = function () {
     if (this.saving) return;
     var self = this;
     clearTimeout(this.timer);
     this.timer = setTimeout(function () { self._save(); }, DEBOUNCE_MS);
   };
 
-  AutoDraftEngine.prototype._computeHash = function () {
-    return JSON.stringify(this._collectData());
+  Engine.prototype._hash = function () {
+    return JSON.stringify(this._collect());
   };
 
-  AutoDraftEngine.prototype._collectData = function () {
-    var data = {};
-    var elements = this.form.querySelectorAll("input, select, textarea");
-    elements.forEach(function (el) {
-      var name = el.name;
-      if (!name || name === "_csrf" || name === "action") return;
-
+  Engine.prototype._collect = function () {
+    var d = {};
+    this.form.querySelectorAll("input,select,textarea").forEach(function (el) {
+      var n = el.name;
+      if (!n || n === "_csrf" || n === "action") return;
       if (el.type === "checkbox") {
-        if (el.checked) data[name] = el.value || "✓";
+        if (el.checked) d[n] = el.value || "on";
       } else if (el.type === "radio") {
-        if (el.checked) data[name] = el.value;
-      } else {
-        if (el.value) data[name] = el.value;
+        if (el.checked) d[n] = el.value;
+      } else if (el.value) {
+        d[n] = el.value;
       }
     });
-    return data;
+    return d;
   };
 
-  AutoDraftEngine.prototype._save = function () {
+  Engine.prototype._save = function () {
     if (!window.AUTO_DRAFT_ENABLED) return;
-
-    var currentHash = this._computeHash();
-    if (currentHash === this.lastHash) return;
+    var h = this._hash();
+    if (h === this.lastHash) return;
 
     this.saving = true;
-    this._setState("saving");
+    this._show("saving");
 
     var self = this;
-    var csrfEl =
-      document.querySelector('input[name="_csrf"]') ||
-      document.querySelector('meta[name="_csrf"]');
-    var csrfToken = csrfEl
-      ? csrfEl.value || csrfEl.content || ""
-      : "";
+    var csrfEl = document.querySelector('input[name="_csrf"]') ||
+                 document.querySelector('meta[name="_csrf"]');
+    var token = csrfEl ? (csrfEl.value || csrfEl.content || "") : "";
 
     fetch(this.endpoint, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "X-CSRF-TOKEN": csrfToken,
-      },
-      body: JSON.stringify(this._collectData()),
+      headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": token },
+      body: JSON.stringify(this._collect()),
     })
-      .then(function (res) {
-        if (res.ok) {
-          self.lastHash = currentHash;
-          self._setState("saved", self._getTimeString());
+      .then(function (r) {
+        if (r.ok) {
+          self.lastHash = h;
+          self._show("saved", self._timeStr());
         } else {
-          self._setState("error");
+          self._show("error", "เซิร์ฟเวอร์ตอบกลับ " + r.status);
         }
       })
-      .catch(function (e) {
-        console.warn("Auto-draft failed:", e);
-        self._setState("error");
+      .catch(function () {
+        self._show("error");
       })
       .finally(function () {
         self.saving = false;
       });
   };
 
-  // ==================== Initialize ====================
+  /* ---------- Init ---------- */
   document.addEventListener("DOMContentLoaded", function () {
-    var forms = document.querySelectorAll("form[data-auto-draft]");
-    if (forms.length === 0) return;
-
-    forms.forEach(function (form) {
-      new AutoDraftEngine(form);
+    document.querySelectorAll("form[data-auto-draft]").forEach(function (f) {
+      new Engine(f);
     });
   });
 })();
