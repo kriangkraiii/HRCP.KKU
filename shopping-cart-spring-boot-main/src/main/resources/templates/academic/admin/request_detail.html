@@ -16,6 +16,7 @@
                 <i class="fas fa-exclamation-circle"></i>
                 <span th:if="${param.error[0] == 'max_attachments'}">ไม่สามารถอัปโหลดได้ (สูงสุด 10 ไฟล์)</span>
                 <span th:if="${param.error[0] == 'invalid_file_type'}">รองรับเฉพาะไฟล์ .pdf และ .docx เท่านั้น</span>
+                <span th:if="${param.error[0] == 'status_update_failed'}">ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             <div th:if="${param.warn != null}" class="alert alert-warning alert-dismissible fade show">

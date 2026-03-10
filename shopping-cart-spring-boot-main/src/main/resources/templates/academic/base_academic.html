@@ -29,47 +29,92 @@
         }
 
         #google_translate_element {
-            display: none !important;
+            position: fixed;
+            left: -9999px;
+            top: -9999px;
+            opacity: 0;
+            width: 1px;
+            height: 1px;
+            overflow: hidden;
         }
 
-        /* Mini Language Switch in Footer */
-        .lang-switch-wrapper {
+        /* ===== Language Dropdown ===== */
+        .lang-dropdown {
+            position: relative;
+            margin-bottom: 8px;
+        }
+
+        .lang-dropdown-btn {
             display: flex;
             align-items: center;
-            gap: 6px;
-            /* Closer gap */
-            transform: scale(0.85);
-            /* Reduce overall size */
-            transform-origin: right center;
-            /* Anchor to right */
-            margin-right: auto;
-            /* Push to right */
-        }
-
-        .lang-label {
-            color: rgba(255, 255, 255, 0.5);
-            font-size: 0.8rem;
+            gap: 8px;
+            background: transparent;
+            border: none;
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 0.85rem;
             font-weight: 500;
             cursor: pointer;
-            transition: color 0.2s;
+            padding: 6px 10px;
+            border-radius: 8px;
+            transition: all 0.2s;
         }
 
-        .lang-label:hover {
-            color: rgba(255, 255, 255, 0.8);
+        .lang-dropdown-btn:hover {
+            background: rgba(255, 255, 255, 0.08);
+            color: #fff;
         }
 
-        .lang-label.active {
+        .lang-dropdown-btn .lang-icon {
+            font-size: 1.2rem;
             color: var(--accent-color);
-            font-weight: 700;
         }
 
-        .form-check-input {
+        .lang-dropdown-menu {
+            display: none;
+            position: absolute;
+            bottom: 100%;
+            left: 0;
+            min-width: 160px;
+            background: #2a2a2a;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+            padding: 8px 0;
+            margin-bottom: 6px;
+            z-index: 1000;
+            overflow: hidden;
+        }
+
+        .lang-dropdown-menu.show {
+            display: block;
+            animation: langDropIn 0.18s ease-out;
+        }
+
+        @keyframes langDropIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .lang-dropdown-item {
+            display: block;
+            width: 100%;
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            color: #fff;
+            font-size: 0.95rem;
+            font-weight: 400;
+            text-align: left;
             cursor: pointer;
+            transition: background 0.15s;
         }
 
-        .form-check-input:checked {
-            background-color: var(--accent-color);
-            border-color: var(--accent-color);
+        .lang-dropdown-item:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+
+        .lang-dropdown-item.active {
+            color: var(--accent-color);
+            font-weight: 600;
         }
 
         * {
@@ -228,7 +273,7 @@
             display: flex;
             align-items: center;
             gap: 8px;
-            color: rgba(255, 255, 255, 0.5);
+            color: #ef5350;
             text-decoration: none;
             font-size: 0.78rem;
             margin-top: 12px;
@@ -238,8 +283,8 @@
         }
 
         .sidebar-logout:hover {
-            background: rgba(239, 83, 80, 0.15);
-            color: #ef5350;
+            background: rgba(239, 83, 80, 0.25);
+            color: #ff1744;
         }
 
         /* ===== Main Content ===== */
@@ -493,11 +538,21 @@
             <!-- ADMIN Navigation -->
             <th:block th:if="${user != null && user.role == 'ROLE_ADMIN'}">
                 <div class="sidebar-section-title">จัดการระบบ</div>
-                <a href="/admin/academic/requests" class="sidebar-link" id="nav-requests">
+                <a href="/admin/academic/requests" class="sidebar-link" id="nav-dashboard">
                     <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
+                </a>
+
+                <div class="sidebar-section-title">ประเมินผลการสอน</div>
+                <a href="/admin/academic/requests?type=evaluation" class="sidebar-link" id="nav-eval">
+                    <i class="fas fa-clipboard-check"></i> คำร้องประเมินผล
                 </a>
                 <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff">
                     <i class="fas fa-users-cog"></i> จัดการบุคลากร
+                </a>
+
+                <div class="sidebar-section-title">ขอตำแหน่งทางวิชาการ</div>
+                <a href="/admin/academic/requests?type=position" class="sidebar-link" id="nav-position">
+                    <i class="fas fa-university"></i> คำร้องขอตำแหน่ง
                 </a>
 
                 <div class="sidebar-section-title">จัดการผู้ใช้</div>
@@ -535,6 +590,11 @@
                     <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
                 </a>
 
+                <div class="sidebar-section-title">ขอตำแหน่งทางวิชาการ</div>
+                <a href="/user/position/dashboard" class="sidebar-link" id="nav-position">
+                    <i class="fas fa-university"></i> ยื่นขอตำแหน่ง
+                </a>
+
                 <div class="sidebar-section-title">บัญชีของฉัน</div>
                 <a href="/user/profile" class="sidebar-link" id="nav-profile">
                     <i class="fas fa-id-card"></i> โปรไฟล์
@@ -545,12 +605,15 @@
         <!-- Custom Language Switcher -->
         <div id="google_translate_element"></div> <!-- Hidden but required for init -->
 
-        <div class="lang-switch-wrapper">
-            <span class="lang-label" id="label-th">TH</span>
-            <div class="form-check form-switch mb-0">
-                <input class="form-check-input" type="checkbox" id="langToggle" style="cursor: pointer;">
+        <div class="lang-dropdown">
+            <button type="button" class="lang-dropdown-btn" id="langDropdownBtn">
+                <i class="fas fa-language lang-icon"></i>
+                <span id="langCurrentLabel">TH</span>
+            </button>
+            <div class="lang-dropdown-menu" id="langDropdownMenu">
+                <button type="button" class="lang-dropdown-item" data-lang="th">Thai</button>
+                <button type="button" class="lang-dropdown-item" data-lang="en">English</button>
             </div>
-            <span class="lang-label" id="label-en">EN</span>
         </div>
 
         <script type="text/javascript">
@@ -563,14 +626,14 @@
                 }, 'google_translate_element');
             }
 
-            // Custom Switch Logic
+            // Language Dropdown Logic
             document.addEventListener("DOMContentLoaded", function () {
-                const toggle = document.getElementById('langToggle');
-                const labelTh = document.getElementById('label-th');
-                const labelEn = document.getElementById('label-en');
+                const btn = document.getElementById('langDropdownBtn');
+                const menu = document.getElementById('langDropdownMenu');
+                const currentLabel = document.getElementById('langCurrentLabel');
+                const items = menu.querySelectorAll('.lang-dropdown-item');
 
-                // 1. Check current cookie
-                // Cookie format: googtrans=/th/en (or /th/th)
+                // Read current language from cookie
                 const getCookie = (name) => {
                     const value = `; ${document.cookie}`;
                     const parts = value.split(`; ${name}=`);
@@ -578,36 +641,74 @@
                 };
 
                 const currentLang = getCookie('googtrans');
-                const isEnglish = currentLang === '/th/en';
+                const activeLang = (currentLang && currentLang.indexOf('/en') !== -1) ? 'en' : 'th';
 
-                // 2. Set initial state
-                toggle.checked = isEnglish;
-                updateLabels(isEnglish);
-
-                // 3. Handle Toggle
-                toggle.addEventListener('change', function () {
-                    const isChecked = this.checked;
-                    updateLabels(isChecked);
-
-                    // Set cookie and reload
-                    // /th/th = Thai, /th/en = English
-                    const langCode = isChecked ? '/th/en' : '/th/th';
-
-                    document.cookie = `googtrans=${langCode}; path=/; domain=${window.location.hostname}`;
-                    document.cookie = `googtrans=${langCode}; path=/;`; // Fallback for localhost
-
-                    window.location.reload();
+                // Set initial label & active item
+                currentLabel.textContent = activeLang.toUpperCase();
+                items.forEach(item => {
+                    if (item.dataset.lang === activeLang) {
+                        item.classList.add('active');
+                    }
                 });
 
-                function updateLabels(isEn) {
-                    if (isEn) {
-                        labelEn.classList.add('active');
-                        labelTh.classList.remove('active');
+                // Toggle dropdown
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    menu.classList.toggle('show');
+                });
+
+                // Select language via Google Translate widget
+                function triggerGoogleTranslate(lang) {
+                    var combo = document.querySelector('select.goog-te-combo');
+                    if (combo) {
+                        combo.value = lang;
+                        combo.dispatchEvent(new Event('change'));
+                        // Update UI after short delay
+                        setTimeout(function () {
+                            currentLabel.textContent = lang.toUpperCase();
+                            items.forEach(function (item) {
+                                item.classList.toggle('active', item.dataset.lang === lang);
+                            });
+                        }, 300);
+                        return;
+                    }
+                    // Fallback: set cookie and reload
+                    var langCode = lang === 'en' ? '/th/en' : '/th/th';
+                    document.cookie = 'googtrans=' + langCode + '; path=/; domain=' + window.location.hostname;
+                    document.cookie = 'googtrans=' + langCode + '; path=/';
+                    window.location.reload();
+                }
+
+                // Wait for Google Translate widget to be ready, then trigger
+                function waitAndTranslate(lang, retries) {
+                    retries = retries || 0;
+                    var combo = document.querySelector('select.goog-te-combo');
+                    if (combo) {
+                        triggerGoogleTranslate(lang);
+                    } else if (retries < 20) {
+                        setTimeout(function () { waitAndTranslate(lang, retries + 1); }, 250);
                     } else {
-                        labelTh.classList.add('active');
-                        labelEn.classList.remove('active');
+                        // Final fallback after 5 seconds
+                        var langCode = lang === 'en' ? '/th/en' : '/th/th';
+                        document.cookie = 'googtrans=' + langCode + '; path=/; domain=' + window.location.hostname;
+                        document.cookie = 'googtrans=' + langCode + '; path=/';
+                        window.location.reload();
                     }
                 }
+
+                items.forEach(item => {
+                    item.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var lang = this.dataset.lang;
+                        menu.classList.remove('show');
+                        waitAndTranslate(lang);
+                    });
+                });
+
+                // Close dropdown on outside click
+                document.addEventListener('click', function () {
+                    menu.classList.remove('show');
+                });
             });
         </script>
         <script type="text/javascript"

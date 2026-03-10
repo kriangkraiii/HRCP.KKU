@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+<body>
+    <section>
+        <div class="container py-4">
+            <!-- Alert messages -->
+            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle"></i>
+                <span th:if="${param.success[0] == 'status_updated'}">อัพเดทสถานะสำเร็จ</span>
+                <span th:if="${param.success[0] == 'doc_generated'}">บันทึกเอกสารสำเร็จ</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-circle"></i> เกิดข้อผิดพลาด
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="mb-0"><i class="fas fa-university"></i> คำร้อง [[${request.requestCode}]]</h3>
+                    <small class="text-muted">ผู้ยื่น: [[${request.applicant.name}]]</small>
+                </div>
+                <span class="badge fs-5" th:classappend="'bg-' + ${request.currentStatus.badgeClass}"
+                    th:text="${request.currentStatus.thaiLabel}"></span>
+            </div>
+
+            <div class="row">
+                <!-- Left: Documents -->
+                <div class="col-lg-8">
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-file-alt"></i> เอกสารทั้งหมด</h5>
+                        </div>
+                        <div class="card-body">
+                            <table class="table table-sm align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>เอกสาร</th>
+                                        <th>สถานะ</th>
+                                        <th>กรอกโดย</th>
+                                        <th>จัดการ</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="entry : ${docLabels}">
+                                        <td>
+                                            <strong>ที่ [[${entry.key}]]</strong>: [[${entry.value}]]
+                                        </td>
+                                        <td>
+                                            <span th:if="${completedDocs.contains(entry.key)}" class="badge bg-success">
+                                                <i class="fas fa-check"></i> กรอกแล้ว
+                                            </span>
+                                            <span th:unless="${completedDocs.contains(entry.key)}" class="badge bg-warning text-dark">
+                                                <i class="fas fa-clock"></i> รอกรอก
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <th:block th:each="doc : ${documents}" th:if="${doc.documentType == entry.key}">
+                                                <small th:text="${doc.filledBy ?: '-'}"></small>
+                                            </th:block>
+                                        </td>
+                                        <td>
+                                            <a th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key}"
+                                                class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                                [[${completedDocs.contains(entry.key)} ? 'แก้ไข' : 'กรอก']]
+                                            </a>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right: Status & Actions -->
+                <div class="col-lg-4">
+                    <!-- Status Update Card -->
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> อัพเดทสถานะ</h5>
+                        </div>
+                        <div class="card-body">
+                            <form th:action="'/admin/position/request/' + ${request.id} + '/status'" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label">สถานะใหม่</label>
+                                    <select name="status" class="form-select" required>
+                                        <option value="">-- เลือก --</option>
+                                        <option th:each="s : ${statuses}" th:value="${s.name()}"
+                                            th:text="${s.thaiLabel}"
+                                            th:disabled="${s == request.currentStatus}"></option>
+                                    </select>
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">หมายเหตุ</label>
+                                    <textarea name="note" class="form-control" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-academic w-100">
+                                    <i class="fas fa-save"></i> อัพเดทสถานะ
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Status History -->
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-history"></i> ประวัติสถานะ</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                            <div th:each="h : ${statusHistory}" class="border-bottom py-2">
+                                <span class="badge" th:classappend="'bg-' + ${h.newStatus.badgeClass}"
+                                    th:text="${h.newStatus.thaiLabel}"></span>
+                                <small class="text-muted ms-2"
+                                    th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                                <small th:if="${h.changedBy != null}" class="text-muted d-block">
+                                    โดย: [[${h.changedBy.name}]]
+                                </small>
+                                <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
+                            </div>
+                            <div th:if="${statusHistory.isEmpty()}" class="text-muted text-center py-2">
+                                ยังไม่มีประวัติสถานะ
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Request Info -->
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-info-circle"></i> ข้อมูลคำร้อง</h5>
+                        </div>
+                        <div class="card-body">
+                            <dl class="mb-0">
+                                <dt>ตำแหน่งที่ขอ</dt>
+                                <dd th:text="${request.targetPosition ?: '-'}"></dd>
+                                <dt>สาขาวิชา</dt>
+                                <dd th:text="${request.major ?: '-'}"></dd>
+                                <dt>วิธีการ</dt>
+                                <dd th:text="${request.evaluationMethod ?: '-'}"></dd>
+                                <dt>สร้างเมื่อ</dt>
+                                <dd th:text="${#temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm')}"></dd>
+                            </dl>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="/admin/position/requests" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> กลับรายการคำร้อง
+            </a>
+        </div>
+    </section>
+</body>
+</html>

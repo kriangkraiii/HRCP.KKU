@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+<body>
+    <section>
+        <div class="container py-4">
+            <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 6: บันทึกข้อความจริยธรรมการวิจัยในมนุษย์ (Exemption)</h3>
+
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/6'" method="post">
+
+                <!-- หัวบันทึก -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">หัวบันทึกข้อความ</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">วันที่</label>
+                                <input type="text" name="date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ข้อมูลผู้ขอ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้ขอกำหนดตำแหน่ง</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า</label>
+                                <select name="applicant_title" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="นาย">นาย</option>
+                                    <option value="นาง">นาง</option>
+                                    <option value="นางสาว">นางสาว</option>
+                                    <option value="ผศ.ดร.">ผศ.ดร.</option>
+                                    <option value="รศ.ดร.">รศ.ดร.</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                                <input type="text" name="applicant_name" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ตำแหน่งปัจจุบัน</label>
+                                <input type="text" name="current_position" class="form-control" placeholder="เช่น อาจารย์">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่งที่ขอ</label>
+                                <select name="target_position" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                    <option value="ศาสตราจารย์">ศาสตราจารย์</option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">จำนวนงานวิจัย</label>
+                                <input type="number" name="research_count" class="form-control" min="1" max="5" value="1">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ตารางผลงานวิจัย (5 รายการ) -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">รายการผลงานวิจัย (สูงสุด 5 รายการ)</h5></div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:5%">#</th>
+                                        <th style="width:30%">ผลงาน</th>
+                                        <th style="width:25%">สถานะผู้ขอในผลงาน</th>
+                                        <th style="width:15%">Impact Factor</th>
+                                        <th style="width:15%">ฐานข้อมูล</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="i : ${#numbers.sequence(1, 5)}">
+                                        <td th:text="${i}"></td>
+                                        <td>
+                                            <input type="text" th:name="'des_research' + ${i}" class="form-control form-control-sm" placeholder="ชื่อผลงานวิจัย">
+                                        </td>
+                                        <td>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" th:name="'chk_firstauthor' + ${i}" value="☑">
+                                                <label class="form-check-label" style="font-size:0.85em">First author</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" th:name="'chk_Corres' + ${i}" value="☑">
+                                                <label class="form-check-label" style="font-size:0.85em">Corresponding</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" th:name="'essen' + ${i}" value="☑">
+                                                <label class="form-check-label" style="font-size:0.85em">Essential contributor</label>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <input type="text" th:name="'impactfacttor' + ${i}" class="form-control form-control-sm">
+                                        </td>
+                                        <td>
+                                            <input type="text" th:name="'data' + ${i}" class="form-control form-control-sm" placeholder="เช่น Scopus">
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ลงชื่อ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ผู้ลงนาม</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อหัวหน้าส่วนงาน</label>
+                                <select name="dean_signature_name" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option th:each="dean : ${deans}" th:value="${dean.name}" th:text="${dean.name}"></option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่ง</label>
+                                <input type="text" name="position_title" class="form-control" placeholder="เช่น คณบดีวิทยาลัยการคอมพิวเตอร์">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">
+                        <i class="fas fa-save"></i> บันทึก
+                    </button>
+                    <button type="submit" name="action" value="draft" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-file-alt"></i> บันทึกแบบร่าง
+                    </button>
+                    <a th:href="'/user/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> กลับ
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                const existingData = /*[[${existingData}]]*/ null;
+                if (existingData) {
+                    try {
+                        const data = JSON.parse(existingData);
+                        for (const [key, value] of Object.entries(data)) {
+                            const el = document.querySelector(`[name="${key}"]`);
+                            if (el) {
+                                if (el.type === 'checkbox') { el.checked = (value === '☑'); }
+                                else { el.value = value; }
+                            }
+                        }
+                    } catch(e) {}
+                }
+            });
+        </script>
+    </section>
+</body>
+</html>

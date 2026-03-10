@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+<body>
+    <section>
+        <div class="container py-4">
+            <h3 class="mb-4"><i class="fas fa-user-shield"></i> เอกสารที่ 5: แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา</h3>
+            <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>แอดมิน</strong></div>
+
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/5'" method="post">
+
+                <!-- Header -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลการประเมิน</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">ตำแหน่งที่ขอ</label>
+                                <select name="target_position" class="form-select">
+                                    <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                    <option value="ศาสตราจารย์">ศาสตราจารย์</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">โดยวิธี</label>
+                                <select name="evaluation_method" class="form-select">
+                                    <option value="ปกติ">ปกติ</option>
+                                    <option value="พิเศษ">พิเศษ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">สาขาวิชา</label>
+                                <input type="text" name="major" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">รหัสสาขา</label>
+                                <input type="text" name="major_code" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">อนุสาขาวิชา</label>
+                                <input type="text" name="sub_major" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">รหัสอนุสาขา</label>
+                                <input type="text" name="sub_major_code" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ข้อมูลผู้ยื่น -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้ยื่นคำร้อง</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า</label>
+                                <input type="text" name="applicant_title" class="form-control">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ-นามสกุล</label>
+                                <input type="text" name="applicant_name" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ภาค/สาขาวิชา</label>
+                                <input type="text" name="department" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">คณะ</label>
+                                <input type="text" name="faculty" class="form-control" value="วิทยาลัยการคอมพิวเตอร์">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">มหาวิทยาลัย/สถาบัน</label>
+                                <input type="text" name="university" class="form-control" value="มหาวิทยาลัยขอนแก่น">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ความเห็นหัวหน้าภาค/สาขา -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ความเห็นหัวหน้าภาค/สาขาวิชา</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ตรวจสอบให้ตำแหน่ง</label>
+                                <input type="text" name="checked_position" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า (ผู้ถูกตรวจ)</label>
+                                <input type="text" name="checked_applicant_title" class="form-control">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อผู้ถูกตรวจ</label>
+                                <input type="text" name="checked_applicant_name" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ผลประเมิน</label>
+                                <select name="qualification_status" class="form-select">
+                                    <option value="ครบถ้วน">ครบถ้วน</option>
+                                    <option value="ไม่ครบถ้วน">ไม่ครบถ้วน</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อหัวหน้าภาค</label>
+                                <input type="text" name="department_head_name" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่ง</label>
+                                <input type="text" name="position_title" class="form-control" placeholder="เช่น หัวหน้าสาขาวิชาวิทยาการคอมพิวเตอร์">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">วันที่</label>
+                                <input type="text" name="dept_date" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">เดือน</label>
+                                <input type="text" name="dept_month" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">พ.ศ.</label>
+                                <input type="text" name="dept_year" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ความเห็นคณบดี -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ความเห็นผู้บังคับบัญชาระดับคณบดี</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า (ผู้ถูกตรวจ)</label>
+                                <input type="text" name="dean_checked_applicant_title" class="form-control">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อผู้ถูกตรวจ</label>
+                                <input type="text" name="dean_checked_applicant_name" class="form-control">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ผลประเมิน</label>
+                                <select name="dean_qualification_status" class="form-select">
+                                    <option value="ครบถ้วน">ครบถ้วน</option>
+                                    <option value="ไม่ครบถ้วน">ไม่ครบถ้วน</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่งที่ขอ (ระดับคณบดี)</label>
+                                <input type="text" name="dean_target_position" class="form-control">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อคณบดี</label>
+                                <select name="dean_name" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option th:each="dean : ${deans}" th:value="${dean.name}" th:text="${dean.name}"></option>
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">วันที่</label>
+                                <input type="text" name="dean_date" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">เดือน</label>
+                                <input type="text" name="dean_month" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">พ.ศ.</label>
+                                <input type="text" name="dean_year" class="form-control">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-academic btn-lg">
+                        <i class="fas fa-save"></i> บันทึกและสร้างเอกสาร
+                    </button>
+                    <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> กลับ
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <script th:inline="javascript">
+            document.addEventListener('DOMContentLoaded', function() {
+                const existingData = /*[[${existingData}]]*/ null;
+                if (existingData) {
+                    try {
+                        const data = JSON.parse(existingData);
+                        for (const [key, value] of Object.entries(data)) {
+                            const el = document.querySelector(`[name="${key}"]`);
+                            if (el) el.value = value;
+                        }
+                    } catch(e) {}
+                }
+            });
+        </script>
+    </section>
+</body>
+</html>
