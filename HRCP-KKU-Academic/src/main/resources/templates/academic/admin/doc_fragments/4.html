@@ -11,7 +11,8 @@
                 </div>
                 <div class="card-body">
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
-                        method="post" id="docForm">
+                        method="post" id="docForm"
+                        th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
                         <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้จะถูกสร้าง 3 ชุด
                             สำหรับกรรมการแต่ละท่าน</div>

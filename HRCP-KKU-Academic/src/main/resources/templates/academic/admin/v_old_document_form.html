@@ -50,7 +50,8 @@
                 </div>
                 <div class="card-body">
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
-                        method="post" id="docForm">
+                        method="post" id="docForm"
+                        th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
                         <!-- Dynamic fragment inclusion based on documentType -->
                         <th:block th:replace="~{academic/admin/doc_fragments/__${documentType}__ :: content}"></th:block>
@@ -65,9 +66,7 @@
                             <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
                                 <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                             </button>
-                            <button type="submit" name="action" value="draft" class="btn btn-outline-success">
-                                <i class="fas fa-save"></i> บันทึกแบบร่าง
-                            </button>
+
                             <button type="submit" name="action" value="submit" class="btn btn-academic"><i class="fas fa-save"></i>
                                 สร้าง/บันทึกเอกสาร</button>
                             <a th:href="'/admin/academic/request/' + ${request.id}" class="btn btn-outline-secondary"><i

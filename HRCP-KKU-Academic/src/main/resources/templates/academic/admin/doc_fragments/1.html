@@ -11,7 +11,8 @@
                 </div>
                 <div class="card-body">
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
-                        method="post" id="docForm">
+                        method="post" id="docForm"
+                        th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
                         <!-- Hidden fields สำหรับเก็บค่า ✔️ ของผู้ยื่น (อ่านจาก doc_1 เดิม) -->
                         <input type="hidden" name="chk_app_1" th:value="${doc1Data != null ? doc1Data.getOrDefault('chk_app_1', '') : ''}">

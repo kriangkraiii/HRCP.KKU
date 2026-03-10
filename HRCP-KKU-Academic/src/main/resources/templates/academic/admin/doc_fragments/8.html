@@ -11,7 +11,8 @@
                 </div>
                 <div class="card-body">
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
-                        method="post" id="docForm">
+                        method="post" id="docForm"
+                        th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
                         <div th:if="${doc6Data != null}" class="alert alert-info mb-3">
                             <i class="fas fa-info-circle"></i> ผลการประเมินระดับถูกดึงจากเอกสารที่ 6 โดยอัตโนมัติ สามารถแก้ไขได้
