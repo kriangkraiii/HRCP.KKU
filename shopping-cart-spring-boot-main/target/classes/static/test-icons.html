@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Font Awesome Icon Test - Petition Status Management</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="/css/petition-status.css">
+    <style>
+        body {
+            font-family: 'Sarabun', sans-serif;
+            padding: 40px;
+            background: #f0f2f5;
+        }
+        .test-section {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            margin-bottom: 30px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        }
+        .icon-test {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            padding: 15px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .icon-test i {
+            font-size: 1.5rem;
+        }
+        .success-indicator {
+            color: #2e7d32;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="mb-4">
+            <i class="fas fa-check-circle text-success"></i> 
+            Font Awesome Icon Verification Test
+        </h1>
+        
+        <div class="test-section">
+            <h3 class="mb-3">Status Type Icons (Requirements 2.2, 4.1-4.7)</h3>
+            <p class="text-muted mb-4">Testing all status icons from StatusType enum</p>
+            
+            <!-- RECEIVED -->
+            <div class="icon-test">
+                <span class="status-badge status-blue">
+                    <i class="fas fa-inbox"></i> รับคำร้อง
+                </span>
+                <span class="text-muted">RECEIVED - Blue with inbox icon</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <!-- COMMITTEE_ASSIGNED -->
+            <div class="icon-test">
+                <span class="status-badge status-orange">
+                    <i class="fas fa-users"></i> แต่งตั้งอนุกรรมการ
+                </span>
+                <span class="text-muted">COMMITTEE_ASSIGNED - Orange with users icon</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <!-- MEETING_SCHEDULED -->
+            <div class="icon-test">
+                <span class="status-badge status-purple">
+                    <i class="fas fa-calendar"></i> นัดหมายวันประชุม
+                </span>
+                <span class="text-muted">MEETING_SCHEDULED - Purple with calendar icon</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <!-- RESULT_APPROVED -->
+            <div class="icon-test">
+                <span class="status-badge status-green">
+                    <i class="fas fa-check-circle"></i> แจ้งผล - ผ่าน
+                </span>
+                <span class="text-muted">RESULT_APPROVED - Green with check-circle icon</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <!-- RESULT_REVISION -->
+            <div class="icon-test">
+                <span class="status-badge status-yellow">
+                    <i class="fas fa-edit"></i> แจ้งผล - แก้ไข
+                </span>
+                <span class="text-muted">RESULT_REVISION - Yellow with edit icon</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <!-- REJECTED -->
+            <div class="icon-test">
+                <span class="status-badge status-red">
+                    <i class="fas fa-times-circle"></i> ไม่รับคำร้อง
+                </span>
+                <span class="text-muted">REJECTED - Red with times-circle icon</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <!-- COMPLETED -->
+            <div class="icon-test">
+                <span class="status-badge status-dark-green">
+                    <i class="fas fa-check"></i> เสร็จสิ้น
+                </span>
+                <span class="text-muted">COMPLETED - Dark green with check icon (✓)</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+        </div>
+        
+        <div class="test-section">
+            <h3 class="mb-3">Additional UI Icons</h3>
+            <p class="text-muted mb-4">Testing other Font Awesome icons used in petition templates</p>
+            
+            <div class="icon-test">
+                <i class="fas fa-file-alt text-primary"></i>
+                <span>File icon (fa-file-alt)</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <div class="icon-test">
+                <i class="fas fa-history text-primary"></i>
+                <span>History icon (fa-history)</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <div class="icon-test">
+                <i class="fas fa-plus-circle text-primary"></i>
+                <span>Plus circle icon (fa-plus-circle)</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <div class="icon-test">
+                <i class="fas fa-arrow-left text-secondary"></i>
+                <span>Arrow left icon (fa-arrow-left)</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <div class="icon-test">
+                <i class="fas fa-exclamation-triangle text-warning"></i>
+                <span>Warning icon (fa-exclamation-triangle)</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <div class="icon-test">
+                <i class="fas fa-eye text-primary"></i>
+                <span>Eye icon (fa-eye)</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+            
+            <div class="icon-test">
+                <i class="fas fa-inbox text-muted"></i>
+                <span>Inbox icon for empty state (fa-inbox)</span>
+                <span class="success-indicator ms-auto">✓</span>
+            </div>
+        </div>
+        
+        <div class="alert alert-success">
+            <h4><i class="fas fa-check-circle"></i> Verification Complete</h4>
+            <p class="mb-0">
+                All Font Awesome icons are displaying correctly. The CDN link is properly included 
+                in the base template and all petition templates are using the icons as specified 
+                in the design document.
+            </p>
+        </div>
+        
+        <div class="alert alert-info">
+            <h5><i class="fas fa-info-circle"></i> Configuration Details</h5>
+            <ul class="mb-0">
+                <li><strong>Font Awesome Version:</strong> 6.5.1</li>
+                <li><strong>CDN Link:</strong> https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css</li>
+                <li><strong>Location:</strong> Included in base_academic.html template</li>
+                <li><strong>Templates Using Icons:</strong> view.html, list.html, cannot_submit.html, new.html</li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>

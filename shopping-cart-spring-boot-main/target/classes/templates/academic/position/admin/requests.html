@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+<body>
+    <section>
+        <div class="container py-4">
+            <h3 class="mb-4"><i class="fas fa-university"></i> คำร้องขอตำแหน่งทางวิชาการ — ระบบแอดมิน</h3>
+
+            <div th:if="${requests.isEmpty()}" class="text-center py-5">
+                <i class="fas fa-inbox fa-3x text-muted mb-3"></i>
+                <p class="text-muted">ยังไม่มีคำร้อง</p>
+            </div>
+
+            <div class="table-responsive" th:unless="${requests.isEmpty()}">
+                <table class="table table-hover align-middle">
+                    <thead class="table-dark">
+                        <tr>
+                            <th>รหัสคำร้อง</th>
+                            <th>ผู้ยื่น</th>
+                            <th>ตำแหน่งที่ขอ</th>
+                            <th>วันที่ยื่น</th>
+                            <th>สถานะ</th>
+                            <th>จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="req : ${requests}">
+                            <td th:text="${req.requestCode}"></td>
+                            <td th:text="${req.applicant.name}"></td>
+                            <td th:text="${req.targetPosition ?: '-'}"></td>
+                            <td th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy') : '-'}"></td>
+                            <td>
+                                <span class="badge" th:classappend="'bg-' + ${req.currentStatus.badgeClass}"
+                                    th:text="${req.currentStatus.thaiLabel}"></span>
+                            </td>
+                            <td>
+                                <a th:href="'/admin/position/request/' + ${req.id}" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-eye"></i> ดู
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </section>
+</body>
+</html>

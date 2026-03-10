@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <!-- Alert messages -->
+            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle"></i>
+                <span th:if="${param.success[0] == 'doc_saved'}">บันทึกเอกสารสำเร็จ</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:if="${param.error[0] == 'incomplete_docs'}">กรุณากรอกเอกสารให้ครบทุกรายการก่อนส่งคำร้อง</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Page Header -->
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <div>
+                    <h3 class="mb-0"><i class="fas fa-university"></i> คำร้องขอตำแหน่งทางวิชาการ</h3>
+                    <small class="text-muted">[[${request.requestCode}]]</small>
+                </div>
+                <span class="badge fs-6" th:classappend="'bg-' + ${request.currentStatus.badgeClass}"
+                    th:text="${request.currentStatus.thaiLabel}"></span>
+            </div>
+
+            <!-- Step Indicator -->
+            <div class="d-flex justify-content-center mb-4 flex-wrap gap-2">
+                <th:block th:each="entry : ${docLabels}">
+                    <div class="step-indicator"
+                        th:classappend="${completedDocs.contains(entry.key)} ? 'completed' : ''">
+                        <span class="step-number">
+                            <i th:if="${completedDocs.contains(entry.key)}" class="fas fa-check"></i>
+                            <span th:unless="${completedDocs.contains(entry.key)}" th:text="${entry.key}"></span>
+                        </span>
+                    </div>
+                </th:block>
+            </div>
+
+            <!-- Document Cards -->
+            <th:block th:each="entry : ${docLabels}">
+                <div class="card card-academic mb-3">
+                    <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i th:class="${completedDocs.contains(entry.key)} ? 'fas fa-check-circle text-success' : 'fas fa-file-alt'"></i>
+                            เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
+                        </h5>
+                        <span th:if="${completedDocs.contains(entry.key)}" class="badge bg-success fs-6">
+                            <i class="fas fa-check me-1"></i>กรอกแล้ว
+                        </span>
+                        <span th:unless="${completedDocs.contains(entry.key)}" class="badge bg-warning text-dark fs-6">
+                            <i class="fas fa-clock me-1"></i>รอกรอก
+                        </span>
+                    </div>
+                    <div class="card-body">
+                        <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${entry.key}"
+                            class="btn" th:classappend="${completedDocs.contains(entry.key)} ? 'btn-outline-success' : 'btn-academic'">
+                            <i th:class="${completedDocs.contains(entry.key)} ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
+                            [[${completedDocs.contains(entry.key)} ? 'แก้ไขเอกสาร' : 'กรอกเอกสาร']]
+                        </a>
+                    </div>
+                </div>
+            </th:block>
+
+            <!-- Submit Section -->
+            <div class="card card-academic mb-4" th:if="${request.currentStatus.name() == 'DRAFT'}">
+                <div class="card-header bg-white border-bottom">
+                    <h4 class="mb-0"><i class="fas fa-check-double"></i> ตรวจสอบและส่งคำร้อง</h4>
+                </div>
+                <div class="card-body">
+                    <th:block th:if="${#lists.size(completedDocs) >= #lists.size(applicantDocs)}">
+                        <div class="alert alert-success mb-3">
+                            <i class="fas fa-check-circle me-2"></i> เอกสารครบถ้วน พร้อมส่งคำร้อง
+                        </div>
+                        <button type="button" class="btn btn-academic btn-lg" data-bs-toggle="modal"
+                            data-bs-target="#confirmSubmitModal">
+                            <i class="fas fa-paper-plane me-1"></i> ส่งคำร้อง
+                        </button>
+                    </th:block>
+                    <th:block th:unless="${#lists.size(completedDocs) >= #lists.size(applicantDocs)}">
+                        <div class="alert alert-warning mb-3">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            กรุณากรอกเอกสารให้ครบทุกรายการก่อนส่งคำร้อง
+                            (<span th:text="${#lists.size(completedDocs)}"></span>/<span th:text="${#lists.size(applicantDocs)}"></span>)
+                        </div>
+                        <button class="btn btn-secondary btn-lg" disabled>
+                            <i class="fas fa-paper-plane me-1"></i> ส่งคำร้อง
+                        </button>
+                    </th:block>
+                </div>
+            </div>
+
+            <!-- Status History -->
+            <div th:if="${request.currentStatus.name() != 'DRAFT'}" class="card card-academic mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> ประวัติสถานะ</h5>
+                </div>
+                <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                    <div th:each="h : ${statusHistory}" class="border-bottom py-2">
+                        <span class="badge" th:classappend="'bg-' + ${h.newStatus.badgeClass}"
+                            th:text="${h.newStatus.thaiLabel}"></span>
+                        <small class="text-muted ms-2"
+                            th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                        <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="/user/position/dashboard" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> กลับแดชบอร์ด
+            </a>
+
+            <!-- Confirmation Modal -->
+            <div class="modal fade" id="confirmSubmitModal" tabindex="-1">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning-subtle border-warning">
+                            <h5 class="modal-title">
+                                <i class="fas fa-exclamation-triangle text-warning me-2"></i> ยืนยันส่งคำร้อง
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <i class="fas fa-university fa-3x text-primary mb-3"></i>
+                            <p class="fs-5 mb-0">กรุณานำส่งเอกสารฉบับจริง<br>ให้นักทรัพยากรบุคคลวิทยาลัยการคอมพิวเตอร์</p>
+                        </div>
+                        <div class="modal-footer justify-content-center border-0 pb-4">
+                            <form th:action="'/user/position/request/' + ${request.id} + '/submit'" method="post">
+                                <button type="submit" class="btn btn-academic btn-lg px-5">
+                                    <i class="fas fa-check-circle me-2"></i> เข้าใจแล้ว ส่งคำร้อง
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .step-indicator {
+                width: 36px; height: 36px; border-radius: 50%;
+                background: #f0f0f0; color: #999;
+                display: flex; align-items: center; justify-content: center;
+                font-weight: bold; font-size: 0.8rem; transition: all 0.3s;
+            }
+            .step-indicator.completed { background: #e8f5e9; color: #2e7d32; }
+        </style>
+    </section>
+</body>
+</html>

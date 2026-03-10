@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle"></i>
+                <span th:if="${param.success[0] == 'status_updated'}">อัปเดตสถานะสำเร็จ</span>
+                <span th:if="${param.success[0] == 'doc_generated'}">สร้างเอกสารสำเร็จ</span>
+                <span th:if="${param.success[0] == 'attachment_uploaded'}">อัปโหลดเอกสารเพิ่มเติมสำเร็จ</span>
+                <span th:if="${param.success[0] == 'attachment_deleted'}">ลบเอกสารสำเร็จ</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-circle"></i>
+                <span th:if="${param.error[0] == 'max_attachments'}">ไม่สามารถอัปโหลดได้ (สูงสุด 10 ไฟล์)</span>
+                <span th:if="${param.error[0] == 'invalid_file_type'}">รองรับเฉพาะไฟล์ .pdf และ .docx เท่านั้น</span>
+                <span th:if="${param.error[0] == 'status_update_failed'}">ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง</span>
+                <small th:if="${errorDetail != null}" class="d-block mt-1 text-danger" th:text="'รายละเอียด: ' + ${errorDetail}"></small>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${param.warn != null}" class="alert alert-warning alert-dismissible fade show">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span th:if="${param.warn[0] == 'notify_failed'}">เอกสารถูกสร้างสำเร็จ แต่การอัพเดตสถานะ/แจ้งเตือนผู้ยื่นล้มเหลว — กรุณาลองอัพเดตสถานะด้วยตนเอง</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!-- Request Header -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> คำร้อง [[${request.requestCode}]] — [[${request.applicant.name}]]</h4>
+                    <span class="status-badge" th:classappend="'status-' + ${request.currentStatus.name()}"
+                        th:text="${request.currentStatus.thaiLabel}"></span>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4"><strong>ผู้ยื่น:</strong> [[${request.applicant.name}]]</div>
+                        <div class="col-md-4"><strong>อีเมล:</strong> [[${request.applicant.email}]]</div>
+                        <div class="col-md-4"><strong>วันที่ยื่น:</strong> <span
+                                th:text="${#temporals.format(request.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="row">
+                <!-- Left Column: Status Update -->
+                <div class="col-md-5">
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-exchange-alt"></i> อัปเดตสถานะ</h5>
+                        </div>
+                        <div class="card-body">
+                            <form th:action="'/admin/academic/request/' + ${request.id} + '/status'" method="post">
+                                <div class="mb-3">
+                                    <label class="form-label">สถานะใหม่</label>
+                                    <select name="status" id="statusSelect" class="form-select" required>
+                                        <option value="">-- เลือกสถานะ --</option>
+                                        <option th:each="s : ${statuses}" th:value="${s.name()}"
+                                            th:text="${s.thaiLabel}"
+                                            th:selected="${s.name() == request.currentStatus.name()}"></option>
+                                    </select>
+                                </div>
+                                <div class="mb-3" id="meetingFields" style="display: none;">
+                                    <label class="form-label">วันเวลาประชุม</label>
+                                    <input type="datetime-local" name="meetingDate" class="form-control"
+                                        th:value="${request.meetingDate}">
+                                    <label class="form-label mt-2">สถานที่ประชุม</label>
+                                    <input type="text" name="meetingLocation" class="form-control"
+                                        th:value="${request.meetingLocation}"
+                                        placeholder="เช่น ห้องประชุมสารบรรณ ชั้น 1">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label">หมายเหตุ</label>
+                                    <textarea name="note" class="form-control" rows="2"></textarea>
+                                </div>
+                                <button type="submit" class="btn btn-academic w-100"><i class="fas fa-save"></i>
+                                    บันทึกสถานะ</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <!-- Document Repository (คลังเอกสารเพิ่มเติม) -->
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-folder-open"></i> คลังเอกสารเพิ่มเติม</h5>
+                            <span class="badge bg-secondary" th:text="${attachmentCount} + ' / 10 ไฟล์'"></span>
+                        </div>
+                        <div class="card-body">
+                            <!-- Upload Form -->
+                            <form th:action="'/admin/academic/request/' + ${request.id} + '/upload-result'"
+                                method="post" enctype="multipart/form-data" th:if="${attachmentCount < 10}">
+                                <div class="input-group mb-3">
+                                    <input type="file" name="file" class="form-control" accept=".pdf,.docx" required>
+                                    <button type="submit" class="btn btn-success"><i class="fas fa-upload"></i> อัปโหลด</button>
+                                </div>
+                                <small class="text-muted"><i class="fas fa-info-circle"></i> รองรับไฟล์ .pdf และ .docx (สูงสุด 10 ไฟล์)</small>
+                            </form>
+                            <div th:if="${attachmentCount >= 10}" class="alert alert-warning mb-3">
+                                <i class="fas fa-exclamation-triangle"></i> ถึงจำนวนเอกสารสูงสุดแล้ว (10 ไฟล์)
+                            </div>
+
+                            <!-- Attachment List -->
+                            <div th:if="${#lists.isEmpty(attachments)}" class="text-muted text-center py-3">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                ยังไม่มีเอกสารเพิ่มเติม
+                            </div>
+                            <div th:unless="${#lists.isEmpty(attachments)}">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width:5%">#</th>
+                                                <th>ชื่อไฟล์</th>
+                                                <th style="width:10%">ประเภท</th>
+                                                <th style="width:15%">ขนาด</th>
+                                                <th style="width:18%">อัปโหลดเมื่อ</th>
+                                                <th style="width:15%" class="text-center">จัดการ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="att, iterStat : ${attachments}">
+                                                <td th:text="${iterStat.count}"></td>
+                                                <td>
+                                                    <i class="fas fa-file-pdf text-danger" th:if="${att.fileType == 'PDF'}"></i>
+                                                    <i class="fas fa-file-word text-primary" th:if="${att.fileType == 'DOCX'}"></i>
+                                                    <span th:text="${att.originalFilename}"></span>
+                                                </td>
+                                                <td><span class="badge" th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : 'bg-primary'}" th:text="${att.fileType}"></span></td>
+                                                <td th:text="${att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-'}"></td>
+                                                <td th:text="${#temporals.format(att.uploadedAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                                <td class="text-center">
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
+                                                            class="btn btn-outline-primary" title="ดาวน์โหลด">
+                                                            <i class="fas fa-download"></i>
+                                                        </a>
+                                                        <form th:action="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
+                                                            method="post" style="display:inline" onsubmit="return confirm('ต้องการลบเอกสารนี้หรือไม่?')">
+                                                            <button type="submit" class="btn btn-outline-danger" title="ลบ">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Status History -->
+                    <div class="card card-academic">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-history"></i> ประวัติสถานะ</h5>
+                        </div>
+                        <div class="card-body" style="max-height: 300px; overflow-y: auto;">
+                            <div th:each="h : ${statusHistory}" class="border-bottom py-2">
+                                <span class="status-badge" th:classappend="'status-' + ${h.newStatus.name()}"
+                                    th:text="${h.newStatus.thaiLabel}"></span>
+                                <small class="text-muted ms-2"
+                                    th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                                <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Column: Document Management -->
+                <div class="col-md-7">
+                    <div class="card card-academic mb-4">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-file-word"></i> จัดการเอกสาร (8 แบบฟอร์ม)</h5>
+                            <a th:href="'/admin/academic/request/' + ${request.id} + '/download-all'"
+                                class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-file-archive"></i> ดาวน์โหลดทั้งหมด (ZIP)
+                            </a>
+                        </div>
+                        <div class="card-body">
+                            <div th:each="entry : ${docLabels}" class="card doc-card mb-2 p-3"
+                                th:classappend="${#lists.isEmpty(documents.?[documentType == __${entry.key}__])} ? '' : 'generated'">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>เอกสารที่ [[${entry.key}]]</strong>: [[${entry.value}]]
+                                        <span th:if="${entry.key == 4}" class="badge bg-info">3 สำเนา</span>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <a th:href="'/admin/academic/request/' + ${request.id} + '/document/' + ${entry.key}"
+                                            class="btn btn-sm btn-academic">
+                                            <i class="fas fa-edit"></i> กรอก/แก้ไข
+                                        </a>
+                                    </div>
+                                </div>
+                                <!-- Show generated copies for this doc type -->
+                                <div th:each="doc : ${documents}" th:if="${doc.documentType == entry.key}"
+                                    class="mt-2 ps-3 border-start border-success">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <small class="text-success"><i class="fas fa-check"></i>
+                                            [[${doc.documentLabel}]]</small>
+                                        <div class="btn-group btn-group-sm">
+                                            <a th:href="'/admin/academic/request/' + ${request.id} + '/download/' + ${doc.id} + '?format=docx'"
+                                                class="btn btn-outline-primary" title="ดาวน์โหลด DOCX">
+                                                <i class="fas fa-file-word"></i> DOCX
+                                            </a>
+                                            <button type="button"
+                                                class="btn btn-outline-danger btn-pdf-print"
+                                                th:attr="data-request-id=${request.id},data-doc-id=${doc.id},data-doc-label=${doc.documentLabel}"
+                                                title="พิมพ์/บันทึก PDF">
+                                                <i class="fas fa-file-pdf"></i> PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <a href="/admin/academic/requests" class="btn btn-outline-secondary mt-2"><i class="fas fa-arrow-left"></i>
+                กลับรายการ</a>
+        </div>
+
+        <script>
+            document.getElementById('statusSelect').addEventListener('change', function () {
+                document.getElementById('meetingFields').style.display =
+                    this.value === 'MEETING_SCHEDULED' ? 'block' : 'none';
+            });
+
+            // ======================================================
+            // PDF direct download: fetch DOCX → docx-preview (hidden)
+            //   → html2canvas (screenshot each page) → jsPDF → save
+            // ไม่มี popup — download โดยตรง รองรับภาษาไทย
+            // ======================================================
+
+            /** โหลด scripts จาก CDN ครั้งเดียว */
+            function loadPdfLibs() {
+                const libs = [
+                    { key: 'JSZip',       src: 'https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js' },
+                    { key: 'docx',        src: 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js' },
+                    { key: 'html2canvas', src: 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js' },
+                    { key: 'jspdf',       src: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js' }
+                ];
+                return Promise.all(libs.map(({ key, src }) => {
+                    if (window[key]) return Promise.resolve();
+                    return new Promise((res, rej) => {
+                        const s = document.createElement('script');
+                        s.src = src; s.onload = res;
+                        s.onerror = () => rej(new Error('โหลด library ล้มเหลว'));
+                        document.head.appendChild(s);
+                    });
+                }));
+            }
+
+            document.querySelectorAll('.btn-pdf-print').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const requestId = this.dataset.requestId;
+                    const docId     = this.dataset.docId;
+                    const docLabel  = this.dataset.docLabel || 'เอกสาร';
+
+                    const icon = this.querySelector('i');
+                    const origClass = icon.className;
+                    icon.className = 'fas fa-spinner fa-spin';
+                    this.disabled = true;
+
+                    // container ซ่อนนอกหน้าจอสำหรับ render DOCX
+                    const container = document.createElement('div');
+                    container.style.cssText =
+                        'position:absolute;left:-9999px;top:0;width:794px;background:#fff;';
+                    document.body.appendChild(container);
+
+                    try {
+                        await loadPdfLibs();
+
+                        // ดึง DOCX bytes จาก server แบบเงียบ
+                        const resp = await fetch(
+                            `/admin/academic/request/${requestId}/download/${docId}?format=docx`,
+                            { credentials: 'same-origin' }
+                        );
+                        if (!resp.ok) throw new Error('ดาวน์โหลดล้มเหลว (' + resp.status + ')');
+                        const blob = await resp.blob();
+
+                        // Render DOCX เป็น HTML ใน container ซ่อน
+                        await window.docx.renderAsync(blob, container, null, {
+                            className: 'docx-content',
+                            inWrapper: true,
+                            ignoreFonts: false,
+                            breakPages: true,
+                            ignoreLastRenderedPageBreak: true,
+                            trimXmlDeclaration: true,
+                            useBase64URL: true
+                        });
+
+                        // รอ fonts (base64 embedded จาก docx-preview) โหลดครบ
+                        await document.fonts.ready;
+                        await new Promise(r => setTimeout(r, 400));
+
+                        // หา page sections ที่ docx-preview สร้าง
+                        const sections = [...container.querySelectorAll('section')];
+                        const targets  = sections.length > 0 ? sections : [container];
+
+                        const { jsPDF } = window.jspdf;
+                        const PAGE_W_MM = 210; // A4 width (mm)
+                        let pdf = null;
+
+                        for (let i = 0; i < targets.length; i++) {
+                            const canvas = await html2canvas(targets[i], {
+                                scale: 2,
+                                useCORS: true,
+                                backgroundColor: '#ffffff',
+                                logging: false
+                            });
+                            // คำนวณความสูงหน้านี้จาก aspect ratio จริงของ DOCX section
+                            const pageH = (canvas.height * PAGE_W_MM) / canvas.width;
+                            const imgData = canvas.toDataURL('image/jpeg', 0.92);
+
+                            if (pdf === null) {
+                                // สร้าง PDF ด้วยขนาดหน้าแรก
+                                pdf = new jsPDF({ unit: 'mm', format: [PAGE_W_MM, pageH] });
+                            } else {
+                                // เพิ่มหน้าใหม่ด้วยขนาดของหน้านั้นๆ
+                                pdf.addPage([PAGE_W_MM, pageH], 'p');
+                            }
+                            pdf.addImage(imgData, 'JPEG', 0, 0, PAGE_W_MM, pageH);
+                        }
+
+                        // บันทึกไฟล์โดยตรง ไม่มี popup
+                        const filename = docLabel.replace(/[/\\:*?"<>|]/g, '_') + '.pdf';
+                        pdf.save(filename);
+
+                    } catch (err) {
+                        alert('เกิดข้อผิดพลาด: ' + err.message);
+                        console.error(err);
+                    } finally {
+                        if (container.parentNode) document.body.removeChild(container);
+                        icon.className = origClass;
+                        this.disabled = false;
+                    }
+                });
+            });
+        </script>
+    </section>
+</body>
+
+</html>

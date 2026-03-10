@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div class="card card-academic">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> เอกสารที่ [[${documentType}]]: [[${documentLabel}]]</h4>
+                    <small class="text-muted">คำร้อง [[${request.requestCode}]] — ผู้ยื่น: [[${request.applicant.name}]]</small>
+                </div>
+                <div class="card-body">
+                    <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
+                        method="post" id="docForm">
+
+                        <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้จะถูกสร้าง 3 ชุด
+                            สำหรับกรรมการแต่ละท่าน</div>
+                        <h5 class="border-bottom pb-2 mb-3">ข้อมูลเอกสาร</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-4"><label class="form-label">เลขที่หนังสือ</label><input type="text"
+                                    name="memo_no" class="form-control" placeholder="อว 660301.26.4/ว." value="อว 660301.26.4/ว."></div>
+                            <div class="col-md-4"><label class="form-label">วันที่</label>
+                                <div class="input-group">
+                                    <input type="text" name="date" class="form-control thai-full-date">
+                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4"><label class="form-label">เลขที่คำสั่งอ้างอิง</label><input type="text"
+                                    name="ref_order_no" class="form-control" placeholder="27/2567"></div>
+                        </div>
+                        <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้ยื่น</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า</label>
+                                <input type="text" name="applicant_title" class="form-control" list="titleList4" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('applicant_title', (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)) : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)}">
+                                <datalist id="titleList4">
+                                    <option value="นาย">
+                                    <option value="นาง">
+                                    <option value="นางสาว">
+                                    <option value="ผู้ช่วยศาสตราจารย์">
+                                    <option value="รองศาสตราจารย์">
+                                </datalist>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อผู้ยื่น</label>
+                                <input type="text" name="applicant_name" class="form-control"
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}">
+                            </div>
+                            <div class="col-md-4"><label class="form-label">วันที่คำสั่งอ้างอิง</label>
+                                <div class="input-group">
+                                    <input type="text" name="ref_order_date" class="form-control thai-full-date">
+                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ประเภท</label>
+                                <input type="text" name="applicant_employee_type" class="form-control" list="typeList4" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('employee_type', '') : ''}">
+                                <datalist id="typeList4">
+                                    <option value="พนักงานมหาวิทยาลัย">
+                                    <option value="ข้าราชการ">
+                                </datalist>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่งปัจจุบัน</label>
+                                <input type="text" name="applicant_current_pos" class="form-control" list="posList4" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('current_position', '') : ''}">
+                                <datalist id="posList4">
+                                    <option value="อาจารย์">
+                                    <option value="ผู้ช่วยศาสตราจารย์">
+                                    <option value="รองศาสตราจารย์">
+                                </datalist>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่งที่ขอ</label>
+                                <input type="text" name="applicant_req_pos" class="form-control" list="posReqList4" placeholder="เลือกหรือพิมพ์..."
+                                    th:value="${doc3Data != null ? doc3Data.getOrDefault('requested_position', '') : ''}">
+                                <datalist id="posReqList4">
+                                    <option value="ผู้ช่วยศาสตราจารย์">
+                                    <option value="รองศาสตราจารย์">
+                                    <option value="ศาสตราจารย์">
+                                </datalist>
+                            </div>
+                        </div>
+                        <h5 class="border-bottom pb-2 mb-3">วันเวลาประชุม</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-4"><label class="form-label">วันที่ประชุม</label>
+                                <div class="input-group">
+                                    <input type="text" name="schedule_date" class="form-control thai-full-date">
+                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                </div>
+                            </div>
+                            <div class="col-md-2"><label class="form-label">เวลาเริ่ม</label><input type="text"
+                                    name="schedule_time_start" class="form-control" placeholder="09.30"></div>
+                            <div class="col-md-2"><label class="form-label">เวลาสิ้นสุด</label><input type="text"
+                                    name="schedule_time_end" class="form-control" placeholder="11.00"></div>
+                            <div class="col-md-4"><label class="form-label">สถานที่</label><input type="text"
+                                    name="schedule_venue" class="form-control"></div>
+                        </div>
+                        <h5 class="border-bottom pb-2 mb-3">กรรมการ 3 ท่าน (สร้าง 3 ชุด)</h5>
+                        <div th:each="i : ${#numbers.sequence(1, 3)}" class="card p-3 mb-2">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+                                    <div class="combo-input">
+                                        <input type="text" th:name="'committee_name_' + ${i}" class="form-control" th:list="'committeeList4_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
+                                            th:value="${i == 1 ? defaultCommittee1 : (i == 2 ? defaultCommittee2 : defaultCommittee3)}">
+                                        <datalist th:id="'committeeList4_' + ${i}">
+                                            <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
+                                        </datalist>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label">ตำแหน่ง</label>
+                                    <input type="text" th:name="'committee_position_' + ${i}" class="form-control" readonly
+                                        th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')}">
+                                </div>
+                            </div>
+                        </div>
+                        <h5 class="border-bottom pb-2 mb-3">ลงนาม</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อคณบดี</label>
+                                <div class="combo-input">
+                                    <input type="text" name="dean_name" class="form-control" list="deanList4" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                                    <datalist id="deanList4">
+                                        <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
+                                    </datalist>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่ง</label>
+                                <input type="text" name="dropdownDean" class="form-control"
+                                    value="คณบดีวิทยาลัยการคอมพิวเตอร์">
+                            </div>
+                        </div>
+
+                        <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">
+                            <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
+                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                        </div>
+
+                        <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <input type="hidden" id="currentDocType" th:value="${documentType}">
+        <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
+        <link rel="stylesheet" href="/css/doc_preview.css">
+        <script src="/js/doc_preview.js"></script>
+        <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
+
+        <script>
+            // ตั้งค่า tabs สำหรับ preview กรรมการ 3 ท่าน
+            document.addEventListener('DOMContentLoaded', function () {
+                if (docPreview) {
+                    docPreview.setTabs([
+                        { label: 'กรรมการคนที่ 1', index: 1 },
+                        { label: 'กรรมการคนที่ 2', index: 2 },
+                        { label: 'กรรมการคนที่ 3', index: 3 }
+                    ]);
+                }
+            });
+        </script>
+    </section>
+</body>
+
+</html>
