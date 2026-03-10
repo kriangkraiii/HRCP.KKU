@@ -108,10 +108,10 @@ public class PositionEmailService {
         sb.append("<p>สถานะใหม่: <strong style='color: ");
 
         switch (newStatus) {
-            case APPROVED -> sb.append("green");
-            case REJECTED -> sb.append("red");
-            case COMPLETED -> sb.append("#1b5e20");
-            default -> sb.append("#333");
+            case SCREENING_APPROVED, COLLEGE_APPROVED -> sb.append("green");
+            case REVISION_REQUESTED -> sb.append("#f57f17");
+            case SENT_TO_HR -> sb.append("#004d40");
+            default -> sb.append(newStatus.getColor());
         }
 
         sb.append(";'>").append(newStatus.getThaiLabel()).append("</strong></p>");

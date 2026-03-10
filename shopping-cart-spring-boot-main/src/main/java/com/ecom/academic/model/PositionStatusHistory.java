@@ -30,11 +30,11 @@ public class PositionStatusHistory {
     private PositionRequest request;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "old_status")
+    @Column(name = "old_status", columnDefinition = "varchar(50)")
     private PositionRequestStatus oldStatus;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "new_status", nullable = false)
+    @Column(name = "new_status", nullable = false, columnDefinition = "varchar(50)")
     private PositionRequestStatus newStatus;
 
     @ManyToOne(fetch = FetchType.LAZY)

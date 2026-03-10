@@ -28,13 +28,20 @@
             top: 0px !important;
         }
 
+        .goog-te-gadget {
+            font-size: 0 !important;
+        }
+
+        .skiptranslate {
+            display: none !important;
+        }
+
         #google_translate_element {
-            position: fixed;
-            left: -9999px;
+            position: absolute;
             top: -9999px;
-            opacity: 0;
-            width: 1px;
-            height: 1px;
+            left: -9999px;
+            width: 0;
+            height: 0;
             overflow: hidden;
         }
 
@@ -542,12 +549,14 @@
                     <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
                 </a>
 
+                <div class="sidebar-section-title">จัดการบุคลากร</div>
+                <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff">
+                    <i class="fas fa-users-cog"></i> จัดการบุคลากร
+                </a>
+
                 <div class="sidebar-section-title">ประเมินผลการสอน</div>
                 <a href="/admin/academic/requests?type=evaluation" class="sidebar-link" id="nav-eval">
                     <i class="fas fa-clipboard-check"></i> คำร้องประเมินผล
-                </a>
-                <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff">
-                    <i class="fas fa-users-cog"></i> จัดการบุคลากร
                 </a>
 
                 <div class="sidebar-section-title">ขอตำแหน่งทางวิชาการ</div>
@@ -626,14 +635,15 @@
                 }, 'google_translate_element');
             }
 
-            // Language Dropdown Logic
+            // Language Dropdown Logic (cookie-based, same as original toggle)
             document.addEventListener("DOMContentLoaded", function () {
                 const btn = document.getElementById('langDropdownBtn');
                 const menu = document.getElementById('langDropdownMenu');
                 const currentLabel = document.getElementById('langCurrentLabel');
                 const items = menu.querySelectorAll('.lang-dropdown-item');
 
-                // Read current language from cookie
+                // Check current cookie
+                // Cookie format: googtrans=/th/en (or /th/th)
                 const getCookie = (name) => {
                     const value = `; ${document.cookie}`;
                     const parts = value.split(`; ${name}=`);
@@ -641,7 +651,8 @@
                 };
 
                 const currentLang = getCookie('googtrans');
-                const activeLang = (currentLang && currentLang.indexOf('/en') !== -1) ? 'en' : 'th';
+                const isEnglish = currentLang === '/th/en';
+                const activeLang = isEnglish ? 'en' : 'th';
 
                 // Set initial label & active item
                 currentLabel.textContent = activeLang.toUpperCase();
@@ -657,51 +668,27 @@
                     menu.classList.toggle('show');
                 });
 
-                // Select language via Google Translate widget
-                function triggerGoogleTranslate(lang) {
-                    var combo = document.querySelector('select.goog-te-combo');
-                    if (combo) {
-                        combo.value = lang;
-                        combo.dispatchEvent(new Event('change'));
-                        // Update UI after short delay
-                        setTimeout(function () {
-                            currentLabel.textContent = lang.toUpperCase();
-                            items.forEach(function (item) {
-                                item.classList.toggle('active', item.dataset.lang === lang);
-                            });
-                        }, 300);
-                        return;
-                    }
-                    // Fallback: set cookie and reload
-                    var langCode = lang === 'en' ? '/th/en' : '/th/th';
-                    document.cookie = 'googtrans=' + langCode + '; path=/; domain=' + window.location.hostname;
-                    document.cookie = 'googtrans=' + langCode + '; path=/';
-                    window.location.reload();
-                }
-
-                // Wait for Google Translate widget to be ready, then trigger
-                function waitAndTranslate(lang, retries) {
-                    retries = retries || 0;
-                    var combo = document.querySelector('select.goog-te-combo');
-                    if (combo) {
-                        triggerGoogleTranslate(lang);
-                    } else if (retries < 20) {
-                        setTimeout(function () { waitAndTranslate(lang, retries + 1); }, 250);
-                    } else {
-                        // Final fallback after 5 seconds
-                        var langCode = lang === 'en' ? '/th/en' : '/th/th';
-                        document.cookie = 'googtrans=' + langCode + '; path=/; domain=' + window.location.hostname;
-                        document.cookie = 'googtrans=' + langCode + '; path=/';
-                        window.location.reload();
-                    }
-                }
-
+                // Select language - set cookie and reload (original logic)
                 items.forEach(item => {
                     item.addEventListener('click', function (e) {
                         e.stopPropagation();
-                        var lang = this.dataset.lang;
+                        const lang = this.dataset.lang;
                         menu.classList.remove('show');
-                        waitAndTranslate(lang);
+
+                        // /th/th = Thai, /th/en = English
+                        const langCode = lang === 'en' ? '/th/en' : '/th/th';
+
+                        // Clear all existing googtrans cookies first
+                        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+                        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=' + window.location.hostname;
+                        document.cookie = 'googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=.' + window.location.hostname;
+
+                        // Set new cookie
+                        document.cookie = 'googtrans=' + langCode + '; path=/';
+                        document.cookie = 'googtrans=' + langCode + '; path=/; domain=' + window.location.hostname;
+                        document.cookie = 'googtrans=' + langCode + '; path=/; domain=.' + window.location.hostname;
+
+                        window.location.reload();
                     });
                 });
 

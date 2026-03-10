@@ -190,18 +190,18 @@ public class PositionRequestService {
 
     public boolean hasActiveRequest(Integer userId) {
         List<PositionRequestStatus> terminal = Arrays.asList(
-                PositionRequestStatus.REJECTED, PositionRequestStatus.COMPLETED);
+                PositionRequestStatus.SENT_TO_HR);
         return requestRepository.findActiveByApplicantId(userId, terminal).isPresent();
     }
 
     @Transactional
     public PositionRequest submitRequest(PositionRequest request) {
         PositionRequestStatus old = request.getCurrentStatus();
-        request.setCurrentStatus(PositionRequestStatus.SUBMITTED);
+        request.setCurrentStatus(PositionRequestStatus.DOCUMENT_RECEIVED);
         request.setSubmissionDate(LocalDateTime.now());
         request = requestRepository.save(request);
 
-        addStatusHistory(request, old, PositionRequestStatus.SUBMITTED, null, "ส่งคำร้องเข้าระบบ");
+        addStatusHistory(request, old, PositionRequestStatus.DOCUMENT_RECEIVED, null, "ส่งคำร้องเข้าระบบ");
 
         // Send notification to admins
         try {

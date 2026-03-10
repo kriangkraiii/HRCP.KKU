@@ -68,6 +68,7 @@ public class PositionAdminController {
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
         model.addAttribute("statuses", PositionRequestStatus.values());
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
+        model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
 
         return "academic/position/admin/request_detail";
     }
@@ -78,13 +79,20 @@ public class PositionAdminController {
     public String updateStatus(@PathVariable Long id,
             @RequestParam("status") String statusStr,
             @RequestParam(value = "note", required = false) String note,
-            Principal principal) {
-        UserDtls admin = getUser(principal);
-
+            Principal principal,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
         try {
+            UserDtls admin = getUser(principal);
+            if (admin == null) {
+                redirectAttributes.addFlashAttribute("errorDetail",
+                        "ไม่พบข้อมูลผู้ใช้ในระบบ (email: " + principal.getName() + ")");
+                return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
+            }
+
             PositionRequestStatus newStatus = PositionRequestStatus.valueOf(statusStr);
             positionService.updateStatus(id, newStatus, admin, note);
         } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorDetail", e.getClass().getSimpleName() + ": " + e.getMessage());
             return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
         }
 

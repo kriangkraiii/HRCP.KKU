@@ -3,7 +3,6 @@ package com.ecom.academic.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -161,7 +160,7 @@ public class PositionRequestServiceTest {
             PositionRequest request = positionService.createDraftRequest(testUser, null);
             PositionRequest submitted = positionService.submitRequest(request);
 
-            assertThat(submitted.getCurrentStatus()).isEqualTo(PositionRequestStatus.SUBMITTED);
+            assertThat(submitted.getCurrentStatus()).isEqualTo(PositionRequestStatus.DOCUMENT_RECEIVED);
             assertThat(submitted.getSubmissionDate()).isNotNull();
         }
 
@@ -172,7 +171,7 @@ public class PositionRequestServiceTest {
 
             List<PositionStatusHistory> history = positionService.getStatusHistory(request.getId());
             assertThat(history).isNotEmpty();
-            assertThat(history.get(0).getNewStatus()).isEqualTo(PositionRequestStatus.SUBMITTED);
+            assertThat(history.get(0).getNewStatus()).isEqualTo(PositionRequestStatus.DOCUMENT_RECEIVED);
             assertThat(history.get(0).getOldStatus()).isEqualTo(PositionRequestStatus.DRAFT);
             assertThat(history.get(0).getNote()).isEqualTo("ส่งคำร้องเข้าระบบ");
         }
@@ -183,31 +182,33 @@ public class PositionRequestServiceTest {
             positionService.submitRequest(request);
 
             PositionRequest updated = positionService.updateStatus(
-                    request.getId(), PositionRequestStatus.UNDER_REVIEW, testAdmin, "กำลังตรวจสอบ");
+                    request.getId(), PositionRequestStatus.DOCUMENT_VERIFICATION, testAdmin, "กำลังตรวจสอบ");
 
-            assertThat(updated.getCurrentStatus()).isEqualTo(PositionRequestStatus.UNDER_REVIEW);
+            assertThat(updated.getCurrentStatus()).isEqualTo(PositionRequestStatus.DOCUMENT_VERIFICATION);
         }
 
         @Test
         void updateStatus_RecordsHistory() {
             PositionRequest request = positionService.createDraftRequest(testUser, null);
             positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.UNDER_REVIEW, testAdmin, "ตรวจสอบ");
-            positionService.updateStatus(request.getId(), PositionRequestStatus.APPROVED, testAdmin, "อนุมัติ");
+            positionService.updateStatus(request.getId(), PositionRequestStatus.DOCUMENT_VERIFICATION, testAdmin,
+                    "ตรวจสอบ");
+            positionService.updateStatus(request.getId(), PositionRequestStatus.SCREENING_APPROVED, testAdmin,
+                    "อนุมัติ");
 
             List<PositionStatusHistory> history = positionService.getStatusHistory(request.getId());
             assertThat(history).hasSize(3); // submit + 2 updates
             assertThat(history).extracting(PositionStatusHistory::getNewStatus)
-                    .contains(PositionRequestStatus.SUBMITTED,
-                            PositionRequestStatus.UNDER_REVIEW,
-                            PositionRequestStatus.APPROVED);
+                    .contains(PositionRequestStatus.DOCUMENT_RECEIVED,
+                            PositionRequestStatus.DOCUMENT_VERIFICATION,
+                            PositionRequestStatus.SCREENING_APPROVED);
         }
 
         @Test
         void updateStatus_RecordsChangedByUser() {
             PositionRequest request = positionService.createDraftRequest(testUser, null);
             positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.UNDER_REVIEW,
+            positionService.updateStatus(request.getId(), PositionRequestStatus.DOCUMENT_VERIFICATION,
                     testAdmin, "โดยแอดมิน");
 
             List<PositionStatusHistory> history = positionService.getStatusHistory(request.getId());
@@ -219,20 +220,21 @@ public class PositionRequestServiceTest {
         @Test
         void updateStatus_ThrowsException_WhenRequestNotFound() {
             assertThatThrownBy(
-                    () -> positionService.updateStatus(99999L, PositionRequestStatus.APPROVED, testAdmin, "note"))
+                    () -> positionService.updateStatus(99999L, PositionRequestStatus.SCREENING_APPROVED, testAdmin,
+                            "note"))
                     .isInstanceOf(RuntimeException.class);
         }
 
         @Test
-        void updateStatus_FullLifecycle_DraftToCompleted() {
+        void updateStatus_FullLifecycle_DraftToSentToHR() {
             PositionRequest request = positionService.createDraftRequest(testUser, null);
             positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.UNDER_REVIEW, testAdmin, null);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.APPROVED, testAdmin, null);
+            positionService.updateStatus(request.getId(), PositionRequestStatus.DOCUMENT_VERIFICATION, testAdmin, null);
+            positionService.updateStatus(request.getId(), PositionRequestStatus.SCREENING_APPROVED, testAdmin, null);
             PositionRequest completed = positionService.updateStatus(
-                    request.getId(), PositionRequestStatus.COMPLETED, testAdmin, "เสร็จสิ้น");
+                    request.getId(), PositionRequestStatus.SENT_TO_HR, testAdmin, "ส่งออก");
 
-            assertThat(completed.getCurrentStatus()).isEqualTo(PositionRequestStatus.COMPLETED);
+            assertThat(completed.getCurrentStatus()).isEqualTo(PositionRequestStatus.SENT_TO_HR);
 
             List<PositionStatusHistory> history = positionService.getStatusHistory(request.getId());
             assertThat(history).hasSize(4); // submit + 3 updates
@@ -263,10 +265,10 @@ public class PositionRequestServiceTest {
         }
 
         @Test
-        void hasActiveRequest_ReturnsFalse_WhenRejected() {
+        void hasActiveRequest_ReturnsFalse_WhenSentToHR() {
             PositionRequest request = positionService.createDraftRequest(testUser, null);
             positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.REJECTED, testAdmin, null);
+            positionService.updateStatus(request.getId(), PositionRequestStatus.SENT_TO_HR, testAdmin, null);
             assertThat(positionService.hasActiveRequest(testUser.getId())).isFalse();
         }
 
@@ -274,7 +276,7 @@ public class PositionRequestServiceTest {
         void hasActiveRequest_ReturnsFalse_WhenCompleted() {
             PositionRequest request = positionService.createDraftRequest(testUser, null);
             positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.COMPLETED, testAdmin, null);
+            positionService.updateStatus(request.getId(), PositionRequestStatus.SENT_TO_HR, testAdmin, null);
             assertThat(positionService.hasActiveRequest(testUser.getId())).isFalse();
         }
     }
@@ -430,23 +432,23 @@ public class PositionRequestServiceTest {
         }
 
         @Test
-        void status_SubmittedIsNotEditable() {
-            assertThat(PositionRequestStatus.SUBMITTED.isEditable()).isFalse();
+        void status_DocumentReceivedIsNotEditable() {
+            assertThat(PositionRequestStatus.DOCUMENT_RECEIVED.isEditable()).isFalse();
         }
 
         @Test
-        void status_CompletedIsTerminal() {
-            assertThat(PositionRequestStatus.COMPLETED.isTerminal()).isTrue();
+        void status_SentToHRIsTerminal() {
+            assertThat(PositionRequestStatus.SENT_TO_HR.isTerminal()).isTrue();
         }
 
         @Test
-        void status_RejectedIsTerminal() {
-            assertThat(PositionRequestStatus.REJECTED.isTerminal()).isTrue();
+        void status_RevisionRequestedIsNotTerminal() {
+            assertThat(PositionRequestStatus.REVISION_REQUESTED.isTerminal()).isFalse();
         }
 
         @Test
-        void status_UnderReviewIsNotTerminal() {
-            assertThat(PositionRequestStatus.UNDER_REVIEW.isTerminal()).isFalse();
+        void status_DocumentVerificationIsNotTerminal() {
+            assertThat(PositionRequestStatus.DOCUMENT_VERIFICATION.isTerminal()).isFalse();
         }
 
         @Test

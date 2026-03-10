@@ -207,9 +207,16 @@ public class AcademicAdminController {
             @RequestParam(value = "note", required = false) String note,
             @RequestParam(value = "meetingDate", required = false) String meetingDateStr,
             @RequestParam(value = "meetingLocation", required = false) String meetingLocation,
-            Principal principal) {
+            Principal principal,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
         try {
             UserDtls admin = getUser(principal);
+            if (admin == null) {
+                redirectAttributes.addFlashAttribute("errorDetail",
+                        "ไม่พบข้อมูลผู้ใช้ในระบบ (email: " + principal.getName() + ")");
+                return "redirect:/admin/academic/request/" + id + "?error=status_update_failed";
+            }
+
             RequestStatus newStatus = RequestStatus.valueOf(status);
 
             if (newStatus == RequestStatus.MEETING_SCHEDULED && meetingDateStr != null && !meetingDateStr.isEmpty()) {
@@ -222,7 +229,7 @@ public class AcademicAdminController {
             // Log activity
             try {
                 adminLogService.log(principal.getName(),
-                        admin != null ? admin.getName() : principal.getName(),
+                        admin.getName(),
                         "UPDATE_REQUEST_STATUS",
                         "อัพเดทสถานะคำร้อง #" + id + " เป็น " + newStatus.name()
                                 + (note != null ? " (" + note + ")" : ""),
@@ -235,10 +242,8 @@ public class AcademicAdminController {
         } catch (Exception e) {
             System.err.println("Status update failed for request #" + id + ": " + e.getMessage());
             e.printStackTrace();
-            String errorMsg = e.getMessage() != null ? e.getMessage().replaceAll("[^a-zA-Z0-9_. ]", "").substring(0,
-                    Math.min(e.getMessage().length(), 100)) : "unknown";
-            return "redirect:/admin/academic/request/" + id + "?error=status_update_failed&detail="
-                    + java.net.URLEncoder.encode(errorMsg, java.nio.charset.StandardCharsets.UTF_8);
+            redirectAttributes.addFlashAttribute("errorDetail", e.getClass().getSimpleName() + ": " + e.getMessage());
+            return "redirect:/admin/academic/request/" + id + "?error=status_update_failed";
         }
     }
 
