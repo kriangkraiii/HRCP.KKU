@@ -144,6 +144,7 @@
                                                 <th>ผู้ยื่นคำร้อง</th>
                                                 <th>อีเมล</th>
                                                 <th style="width:150px">วันที่ยื่น</th>
+                                                <th style="width:150px">อัปเดตล่าสุด</th>
                                                 <th style="width:180px">สถานะ</th>
                                                 <th style="width:100px">จัดการ</th>
                                             </tr>
@@ -158,6 +159,9 @@
                                                 <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                                 <td>
                                                     <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                                </td>
+                                                <td>
+                                                    <small th:text="${req.updatedAt != null ? #temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
                                                 </td>
                                                 <td>
                                                     <span class="badge rounded-pill"
@@ -206,6 +210,7 @@
                                                 <th>ผู้ยื่นคำร้อง</th>
                                                 <th>อีเมล</th>
                                                 <th style="width:150px">วันที่ยื่น</th>
+                                                <th style="width:150px">อัปเดตล่าสุด</th>
                                                 <th style="width:180px">สถานะ</th>
                                                 <th style="width:100px">จัดการ</th>
                                             </tr>
@@ -220,6 +225,9 @@
                                                 <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                                 <td>
                                                     <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                                </td>
+                                                <td>
+                                                    <small th:text="${req.updatedAt != null ? #temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
                                                 </td>
                                                 <td>
                                                     <span class="badge rounded-pill"
@@ -322,6 +330,7 @@
                                             <th>ผู้ยื่นคำร้อง</th>
                                             <th>ตำแหน่งที่ขอ</th>
                                             <th style="width:150px">วันที่ยื่น</th>
+                                            <th style="width:150px">อัปเดตล่าสุด</th>
                                             <th style="width:180px">สถานะ</th>
                                             <th style="width:100px">จัดการ</th>
                                         </tr>
@@ -337,6 +346,9 @@
                                             <td><span th:text="${req.targetPosition} ?: '-'"></span></td>
                                             <td>
                                                 <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                            </td>
+                                            <td>
+                                                <small th:text="${req.updatedAt != null ? #temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
                                             </td>
                                             <td>
                                                 <span class="badge rounded-pill"

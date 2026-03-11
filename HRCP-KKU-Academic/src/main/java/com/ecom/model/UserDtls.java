@@ -9,6 +9,7 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
 
 @Entity
 public class UserDtls {
@@ -61,6 +62,16 @@ public class UserDtls {
 	@Column(name = "expiry_alert_1w")
 	private Boolean expiryAlert1w = true;
 
+	@Column(name = "applicant_id")
+	private String applicantId;
+
+	@Column(name = "updated_date")
+	private Date updatedDate;
+
+	@Column(name = "last_login_date")
+	private LocalDateTime lastLoginDate;
+
+
 	public UserDtls() {
 	}
 
@@ -69,12 +80,18 @@ public class UserDtls {
 		if (createdDate == null) {
 			createdDate = new Date();
 		}
+		updatedDate = new Date();
 		if (isFirstLogin == null) {
 			isFirstLogin = true;
 		}
 		if (autoDraftEnabled == null) {
 			autoDraftEnabled = true;
 		}
+	}
+
+	@PreUpdate
+	protected void onUpdate() {
+		updatedDate = new Date();
 	}
 
 	// Getters and Setters
@@ -269,4 +286,30 @@ public class UserDtls {
 	public void setExpiryAlert1w(Boolean expiryAlert1w) {
 		this.expiryAlert1w = expiryAlert1w;
 	}
+
+	public String getApplicantId() {
+		return applicantId;
+	}
+
+	public void setApplicantId(String applicantId) {
+		this.applicantId = applicantId;
+	}
+
+	public Date getUpdatedDate() {
+		return updatedDate;
+	}
+
+	public void setUpdatedDate(Date updatedDate) {
+		this.updatedDate = updatedDate;
+	}
+
+	public LocalDateTime getLastLoginDate() {
+		return lastLoginDate;
+	}
+
+	public void setLastLoginDate(LocalDateTime lastLoginDate) {
+		this.lastLoginDate = lastLoginDate;
+	}
+
+
 }

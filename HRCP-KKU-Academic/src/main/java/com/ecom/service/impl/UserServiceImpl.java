@@ -5,7 +5,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.security.SecureRandom;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
@@ -77,6 +79,7 @@ public class UserServiceImpl implements UserService {
 		user.setFailedAttempt(0);
 		user.setIsFirstLogin(true);
 		user.setCreatedDate(new Date());
+		user.setApplicantId(generateApplicantId());
 		if (user.getProfileImage() == null || user.getProfileImage().isEmpty()) {
 			user.setProfileImage("default.png");
 		}
@@ -226,6 +229,23 @@ public class UserServiceImpl implements UserService {
 		String randomPassword = UUID.randomUUID().toString();
 		user.setPassword(passwordEncoder.encode(randomPassword));
 		return userRepository.save(user);
+	}
+
+	/**
+	 * Generates a unique applicant ID in format APP-YYYYMMDD-XXXX.
+	 * The 4-digit sequence resets daily.
+	 */
+	private String generateApplicantId() {
+		String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+		String prefix = "APP-" + dateStr + "-";
+
+		UserDtls lastUser = userRepository.findTopByApplicantIdStartingWithOrderByApplicantIdDesc(prefix);
+		int nextSeq = 1;
+		if (lastUser != null && lastUser.getApplicantId() != null) {
+			String lastSeq = lastUser.getApplicantId().substring(prefix.length());
+			nextSeq = Integer.parseInt(lastSeq) + 1;
+		}
+		return prefix + String.format("%04d", nextSeq);
 	}
 
 	@Override

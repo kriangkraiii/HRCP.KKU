@@ -77,6 +77,18 @@ public class AcademicApplicantController {
         return "academic/applicant/dashboard";
     }
 
+    @GetMapping("/history")
+    public String history(Principal principal, Model model) {
+        UserDtls user = getUser(principal);
+        List<AcademicRequest> allRequests = requestService.findByApplicant(user.getId());
+        List<AcademicRequest> requests = allRequests.stream()
+                .filter(r -> r.getCurrentStatus() != RequestStatus.DRAFT)
+                .collect(Collectors.toList());
+        model.addAttribute("requests", requests);
+        model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
+        return "academic/applicant/request_history";
+    }
+
     @GetMapping("/new-request")
     public String newRequestForm(Principal principal, Model model) {
         UserDtls user = getUser(principal);

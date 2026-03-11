@@ -31,6 +31,7 @@
 						<thead>
 							<tr>
 								<th scope="col">Sl No.</th>
+								<th scope="col" th:if="${userType==1}">Applicant ID</th>
 								<th scope="col">Profile</th>
 								<th scope="col">Name</th>
 								<th scope="col">Email</th>
@@ -42,6 +43,7 @@
 						<tbody>
 							<tr th:each="u,c:${users}">
 								<th scope="row">[[${c.count}]]</th>
+								<td th:if="${userType==1}"><span class="badge bg-secondary">[[${u.applicantId != null ? u.applicantId : '-'}]]</span></td>
 								<td><img th:src="@{'/img/profile_img/' + ${u.profileImage} + '?t=' + ${#dates.createNow().time}}" 
 										th:data-user-id="${u.id}"
 										width="70px" height="70px"
