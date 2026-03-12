@@ -179,7 +179,7 @@
                                                     [[${completedDocs.contains(entry.key)} ? 'แก้ไข' : 'กรอก']]
                                                 </a>
                                                 <!-- DOCX Download -->
-                                                <th:block th:each="doc : ${documents}" th:if="${doc.documentType == entry.key && doc.filePath != null}">
+                                                <th:block th:each="doc : ${documents}" th:if="${doc.documentType == entry.key && doc.generatedFilePath != null}">
                                                     <a th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download'"
                                                         class="btn btn-sm btn-outline-success" title="ดาวน์โหลด DOCX">
                                                         <i class="fas fa-download"></i>

@@ -46,7 +46,10 @@ public class PositionAdminController {
 
     @GetMapping("/requests")
     public String listRequests(Model model) {
-        List<PositionRequest> requests = positionService.findAll();
+        List<PositionRequest> requests = positionService.findAll()
+                .stream()
+                .filter(r -> r.getCurrentStatus() != PositionRequestStatus.DRAFT)
+                .toList();
         model.addAttribute("requests", requests);
         model.addAttribute("statuses", PositionRequestStatus.values());
         return "academic/position/admin/requests";
@@ -115,11 +118,8 @@ public class PositionAdminController {
         model.addAttribute("existingData", existingData);
         model.addAttribute("deans", staffMemberService.findAll());
 
-        // Admin-specific forms for docs 5 and 8, generic view for others
-        if (type == 5 || type == 8) {
-            return "academic/position/admin/doc_form_" + type;
-        }
-        return "academic/position/admin/doc_form_generic";
+        // All document types have dedicated admin forms
+        return "academic/position/admin/doc_form_" + type;
     }
 
     @PostMapping("/request/{id}/document/{type}")
