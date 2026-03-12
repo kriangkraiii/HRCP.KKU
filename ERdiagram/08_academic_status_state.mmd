@@ -1,0 +1,14 @@
+stateDiagram-v2
+    [*] --> DRAFT
+    DRAFT --> RECEIVED : Submit
+    RECEIVED --> SUB_COMMITTEE_APPOINTED : Admin Appoint
+    SUB_COMMITTEE_APPOINTED --> MEETING_SCHEDULED : Schedule Meeting
+    MEETING_SCHEDULED --> COMPLETED_PASS : Pass
+    MEETING_SCHEDULED --> COMPLETED_REVISE : Revise
+    MEETING_SCHEDULED --> COMPLETED_FAIL : Fail
+    RECEIVED --> REJECTED : Reject
+    COMPLETED_PASS --> COMPLETED : Finalize
+    COMPLETED_REVISE --> RECEIVED : Resubmit
+    COMPLETED_FAIL --> [*]
+    COMPLETED --> [*]
+    REJECTED --> [*]

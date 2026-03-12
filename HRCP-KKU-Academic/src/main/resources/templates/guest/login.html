@@ -333,9 +333,16 @@
 		<div class="login-card">
 			<h2>เข้าสู่ระบบ</h2>
 
-			<div th:if="${param.error}" class="alert alert-danger">
+			<div th:if="${param.error}" class="alert alert-danger" id="errorAlert"
+				 th:data-blocked-until="${session.blockedUntilMillis}">
 				<i class="fas fa-exclamation-circle"></i>
-				<span>อีเมลหรือรหัสผ่านไม่ถูกต้อง</span>
+				<div>
+					<span th:if="${session.errorMessage}" th:text="${session.errorMessage}"></span>
+					<span th:unless="${session.errorMessage}">อีเมลหรือรหัสผ่านไม่ถูกต้อง</span>
+					<div id="countdownTimer" style="display:none; margin-top:6px; font-weight:700; color:#b71c1c;">
+						⏳ เหลือเวลาอีก <span id="countdownText"></span>
+					</div>
+				</div>
 			</div>
 			<div th:if="${param.logout}" class="alert alert-success">
 				<i class="fas fa-check-circle"></i>
@@ -467,6 +474,36 @@
 			});
 			document.addEventListener('click', function () { menu.classList.remove('show'); });
 		});
+	</script>
+	<script>
+		// Real-time lockout countdown timer
+		(function() {
+			var alertEl = document.getElementById('errorAlert');
+			if (!alertEl) return;
+			var blockedUntil = parseInt(alertEl.getAttribute('data-blocked-until'), 10);
+			if (!blockedUntil || isNaN(blockedUntil) || blockedUntil <= 0) return;
+
+			var timerDiv = document.getElementById('countdownTimer');
+			var timerText = document.getElementById('countdownText');
+			if (!timerDiv || !timerText) return;
+
+			timerDiv.style.display = 'block';
+
+			function update() {
+				var now = Date.now();
+				var diff = Math.max(0, Math.floor((blockedUntil - now) / 1000));
+				if (diff <= 0) {
+					timerText.textContent = 'หมดเวลาแล้ว กำลังโหลดใหม่...';
+					setTimeout(function() { window.location.href = '/signin'; }, 1500);
+					return;
+				}
+				var min = Math.floor(diff / 60);
+				var sec = diff % 60;
+				timerText.textContent = min + ':' + (sec < 10 ? '0' : '') + sec + ' นาที';
+				setTimeout(update, 1000);
+			}
+			update();
+		})();
 	</script>
 </body>
 

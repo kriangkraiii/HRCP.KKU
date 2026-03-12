@@ -1,0 +1,62 @@
+flowchart TD
+    START(("●")) --> A["All Requests\n/admin/academic/requests"]
+
+    subgraph Manage["Manage Requests"]
+        A --> B["Search / Filter by Status"]
+        B --> C["Select Request\nView Detail"]
+    end
+
+    subgraph Status["Update Status"]
+        C --> D["Change Status"]
+        D --> E{"Selected Status?"}
+        E -->|RECEIVED| F["รับคำร้อง"]
+        E -->|SUB_COMMITTEE_APPOINTED| G["แต่งตั้งอนุกรรมการ"]
+        E -->|MEETING_SCHEDULED| H["นัดหมายวันประชุม\nSet Date + Location"]
+        E -->|COMPLETED_PASS| I["แจ้งผล: ผ่าน"]
+        E -->|COMPLETED_REVISE| J["แจ้งผล: แก้ไข"]
+        E -->|COMPLETED_FAIL| K["แจ้งผล: ไม่ผ่าน"]
+        E -->|REJECTED| L["ไม่รับคำร้อง"]
+        F & G & H & I & J & K & L --> M["Save StatusHistory\nLog AdminLog"]
+    end
+
+    subgraph Docs["Manage Documents 0-8"]
+        C --> N["Select Document\nDoc 0-8"]
+        N --> O["Fill Form\nAuto-fill from previous docs"]
+        O --> P{"Select Action"}
+        P -->|"Save Draft"| Q["saveDraft"]
+        Q --> N
+        P -->|"Generate"| R["generateDocument\nCreate DOCX"]
+        R --> S{"Doc 4?"}
+        S -->|"Yes"| T["Generate 3 copies\nfor 3 committee members"]
+        S -->|"No"| U["Generate 1 file"]
+        T & U --> V{"Doc 6?\nScore Calculation"}
+        V -->|"Yes"| W["Calculate weighted score\nDetermine evaluation level"]
+        V -->|"No"| X["Save"]
+        W --> X
+    end
+
+    subgraph Attach["Attachments"]
+        C --> Y["Upload additional files\nPDF/DOCX max 10"]
+        C --> Z["Delete attachment"]
+    end
+
+    subgraph Download["Download"]
+        C --> AA["Download Document\nDOCX / PDF"]
+        C --> AB["Download All as ZIP"]
+    end
+
+    subgraph Suggest["Send Suggestion"]
+        C --> AC["Send Suggestion\nDoc 5"]
+        AC --> AD["Status to COMPLETED_REVISE\nSend Email to Applicant"]
+    end
+
+    M --> ENDX(("◉"))
+    X --> ENDX
+    Y --> ENDX
+    Z --> ENDX
+    AA --> ENDX
+    AB --> ENDX
+    AD --> ENDX
+
+    style START fill:#000,color:#fff
+    style ENDX fill:#000,color:#fff

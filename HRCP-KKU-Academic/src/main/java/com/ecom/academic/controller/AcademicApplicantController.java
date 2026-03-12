@@ -32,6 +32,7 @@ import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.ecom.util.FileUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Controller
@@ -320,7 +321,8 @@ public class AcademicApplicantController {
 
         String uploadDir = "uploads/academic/" + id + "/revisions/";
         Files.createDirectories(Path.of(uploadDir));
-        String filePath = uploadDir + file.getOriginalFilename();
+        String safeFilename = FileUtils.sanitizeFilename(file.getOriginalFilename());
+        String filePath = uploadDir + safeFilename;
         file.transferTo(Path.of(filePath));
 
         requestService.setRevisionFile(id, filePath);
@@ -361,10 +363,12 @@ public class AcademicApplicantController {
         }
 
         ByteArrayResource resource = new ByteArrayResource(data);
-        String filename = Path.of(doc.getGeneratedFilePath()).getFileName().toString();
+        String rawFilename = Path.of(doc.getGeneratedFilePath()).getFileName().toString();
+        String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safeFilename)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(data.length)
                 .body(resource);
@@ -388,10 +392,12 @@ public class AcademicApplicantController {
         Path path = Path.of(request.getResultFilePath());
         byte[] data = Files.readAllBytes(path);
         ByteArrayResource resource = new ByteArrayResource(data);
+        String safeFilename = java.net.URLEncoder.encode(path.getFileName().toString(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + path.getFileName().toString() + "\"")
+                        "attachment; filename*=UTF-8''" + safeFilename)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(data.length)
                 .body(resource);

@@ -135,7 +135,7 @@
 			</div>
 		</div>
 
-		<script>
+		<script th:inline="javascript">
 			// Client-side email validation
 			document.getElementById('editUserForm').addEventListener('submit', function(e) {
 				const emailInput = document.getElementById('emailInput');
@@ -191,7 +191,7 @@
 				fetch('/admin/update-profile-image', {
 					method: 'POST',
 					headers: {
-						'X-XSRF-TOKEN': document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''
+						'X-XSRF-TOKEN': /*[[${_csrf.token}]]*/ ''
 					},
 					body: formData
 				})

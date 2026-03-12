@@ -17,6 +17,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.ecom.model.UserDtls;
 import com.ecom.service.UserService;
 import com.ecom.util.CommonUtil;
+import com.ecom.util.PasswordValidator;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -80,6 +81,11 @@ public class UserController {
 		boolean matches = passwordEncoder.matches(currentPassword, loggedInUserDetails.getPassword());
 
 		if (matches) {
+			String passwordError = PasswordValidator.validate(newPassword);
+			if (passwordError != null) {
+				session.setAttribute("errorMsg", passwordError);
+				return "redirect:/user/profile";
+			}
 			String encodePassword = passwordEncoder.encode(newPassword);
 			loggedInUserDetails.setPassword(encodePassword);
 			UserDtls updateUser = userService.updateUser(loggedInUserDetails);

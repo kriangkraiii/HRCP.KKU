@@ -648,7 +648,7 @@ document.addEventListener('DOMContentLoaded', function() {
 		</style>
 
 		<!-- Image Mode Switch Script -->
-		<script>
+		<script th:inline="javascript">
 		document.addEventListener('DOMContentLoaded', function() {
 			var toggle = document.getElementById('imageModeSwitchToggle');
 			if (!toggle) return;
@@ -670,7 +670,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'X-XSRF-TOKEN': document.cookie.match(/XSRF-TOKEN=([^;]+)/)?.[1] || ''
+					'X-XSRF-TOKEN': /*[[${_csrf.token}]]*/ ''
 				}
 			})
 				.then(function(res) { return res.json(); })

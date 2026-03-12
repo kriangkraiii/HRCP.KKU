@@ -1,0 +1,50 @@
+flowchart TD
+    START(("●")) --> A["Dashboard"]
+
+    subgraph Create["Create New Request"]
+        A --> B{"Has Active Request?"}
+        B -->|"Yes"| C["Error: Cannot create new"]
+        B -->|"No"| D{"Has Draft?"}
+        D -->|"Yes"| E["Open existing Draft"]
+        D -->|"No"| F["Create new Draft\nstatus = DRAFT"]
+        F --> E
+    end
+
+    subgraph FillDoc["Fill Documents"]
+        E --> G["new_request page\nShow Doc 0 and Doc 1 status"]
+        G --> H["Fill Doc 0\nบันทึกข้อความ"]
+        G --> I["Fill Doc 1\nแบบตรวจสอบเบื้องต้น"]
+        H --> J{"Select Action"}
+        I --> J
+        J -->|"Save Draft"| K["saveDraft\nisDraft = true"]
+        K --> G
+        J -->|"Submit"| L["saveDocument\nGenerate DOCX"]
+        L --> G
+    end
+
+    subgraph Submit["Submit Request"]
+        G --> M{"Doc 0 + Doc 1\ncompleted?"}
+        M -->|"No"| N["Error: incomplete_docs"]
+        N --> G
+        M -->|"Yes"| O["Submit Request"]
+        O --> P["DRAFT to RECEIVED\nSend Email to Admin"]
+        P --> Q["Back to Dashboard"]
+    end
+
+    subgraph Track["Track Progress"]
+        Q --> R["View Request Detail\nProgress Tracker"]
+        R --> S["Download DOCX / PDF"]
+        R --> T{"status =\nCOMPLETED_REVISE?"}
+        T -->|"Yes"| U["Upload Revision File"]
+        T -->|"No"| V["Wait for Result"]
+        R --> W["Download Evaluation Result"]
+    end
+
+    C --> ENDX(("◉"))
+    V --> ENDX
+    U --> ENDX
+    W --> ENDX
+    S --> ENDX
+
+    style START fill:#000,color:#fff
+    style ENDX fill:#000,color:#fff

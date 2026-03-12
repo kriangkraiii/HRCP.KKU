@@ -107,6 +107,23 @@
 		</div>
 
 		<script th:inline="javascript">
+			// Use Thymeleaf-rendered CSRF token (most reliable for Spring Security 6)
+			var csrfToken = /*[[${_csrf.token}]]*/ '';
+			var csrfParamName = /*[[${_csrf.parameterName}]]*/ '_csrf';
+
+			function postForm(url) {
+				const form = document.createElement('form');
+				form.method = 'POST';
+				form.action = url;
+				const csrf = document.createElement('input');
+				csrf.type = 'hidden';
+				csrf.name = csrfParamName;
+				csrf.value = csrfToken;
+				form.appendChild(csrf);
+				document.body.appendChild(form);
+				form.submit();
+			}
+
 			function toggleStatus(el) {
 				const id = el.dataset.id;
 				const type = el.dataset.type;
@@ -119,18 +136,17 @@
 					}
 				}
 
-				window.location.href = '/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type;
+				postForm('/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type);
 			}
 
 			function toggleNotification(el) {
 				const id = el.dataset.id;
 				const type = el.dataset.type;
 				const newEnabled = el.checked;
-				window.location.href = '/admin/updateEmailNotification?enabled=' + newEnabled + '&id=' + id + '&type=' + type;
+				postForm('/admin/updateEmailNotification?enabled=' + newEnabled + '&id=' + id + '&type=' + type);
 			}
 
 			function confirmDelete(userId, userType) {
-				const accountType = userType === 1 ? 'user' : 'admin';
 				const message = userType === 1 
 					? 'Are you sure you want to delete this user account? This action cannot be undone.' 
 					: 'Are you sure you want to delete this admin account? This action cannot be undone.';
@@ -139,7 +155,7 @@
 					const deleteUrl = userType === 1 
 						? '/admin/delete-user?id=' + userId + '&type=' + userType
 						: '/admin/delete-admin?id=' + userId + '&type=' + userType;
-					window.location.href = deleteUrl;
+					postForm(deleteUrl);
 				}
 			}
 		</script>

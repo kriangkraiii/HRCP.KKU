@@ -1,0 +1,22 @@
+flowchart TD
+    START(("●")) --> A["เข้าหน้า Login"]
+    A --> B{"กรอก Email + Password"}
+    B --> C{"ตรวจสอบ Credentials"}
+    C -->|"ไม่ถูกต้อง"| D["เพิ่ม failedAttempt"]
+    D --> E{"failedAttempt >= 3?"}
+    E -->|"ใช่"| F["ล็อกบัญชี lockTime"]
+    F --> A
+    E -->|"ไม่"| A
+    C -->|"ถูกต้อง"| G{"isFirstLogin?"}
+    G -->|"ใช่"| H["บังคับเปลี่ยนรหัสผ่าน"]
+    H --> I["บันทึกรหัสใหม่"]
+    I --> J{"ตรวจสอบ Role"}
+    G -->|"ไม่"| J
+    J -->|ROLE_USER| K["/user/academic/dashboard"]
+    J -->|ROLE_ADMIN| L["/admin/academic/requests"]
+    K --> ENDU(("◉"))
+    L --> ENDA(("◉"))
+
+    style START fill:#000,color:#fff
+    style ENDU fill:#000,color:#fff
+    style ENDA fill:#000,color:#fff
