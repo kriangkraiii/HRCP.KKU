@@ -6,7 +6,7 @@
             <h3 class="mb-4"><i class="fas fa-user-shield"></i> เอกสารที่ 5: แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา</h3>
             <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>แอดมิน</strong></div>
 
-            <form th:action="'/admin/position/request/' + ${request.id} + '/document/5'" method="post" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/5'">
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/5'" method="post" id="doc5Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/5'">
 
                 <!-- Header -->
                 <div class="card card-academic mb-4">
@@ -176,6 +176,9 @@
                     <button type="submit" class="btn btn-academic btn-lg">
                         <i class="fas fa-save"></i> บันทึกและสร้างเอกสาร
                     </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                        <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+                    </button>
                     <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
                         <i class="fas fa-arrow-left"></i> กลับ
                     </a>
@@ -197,6 +200,10 @@
                 }
             });
         </script>
+
+        <link rel="stylesheet" href="/css/doc_preview.css">
+        <script src="/js/doc_preview.js"></script>
+        <script>initDocPreview('doc5Form', 5, '/api/position/preview');</script>
     </section>
 </body>
 </html>

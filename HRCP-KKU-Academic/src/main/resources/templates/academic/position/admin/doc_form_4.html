@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+<body>
+    <section>
+        <div class="container py-4">
+            <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 4: บันทึกรับรองผลงานทางวิชาการ (วิทยานิพนธ์)</h3>
+            <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>ผู้ยื่นคำร้อง</strong> — แอดมินสามารถดูและแก้ไขได้</div>
+
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/4'" method="post" id="doc4Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/4'">
+
+                <!-- ข้อมูลบันทึกข้อความ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">หัวบันทึกข้อความ</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">เลขที่</label>
+                                <input type="text" name="memo_no" class="form-control" placeholder="เช่น ๑๒๓/๒๕๖๙">
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">วันที่</label>
+                                <input type="text" name="date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ข้อมูลผู้เสนอขอ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้เสนอขอ</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
+                                <select name="title" class="form-select" required>
+                                    <option value="">-- เลือก --</option>
+                                    <option value="นาย">นาย</option>
+                                    <option value="นาง">นาง</option>
+                                    <option value="นางสาว">นางสาว</option>
+                                    <option value="ผศ.ดร.">ผศ.ดร.</option>
+                                    <option value="รศ.ดร.">รศ.ดร.</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
+                                <input type="text" name="applicant_name" class="form-control" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ตำแหน่งปัจจุบัน</label>
+                                <input type="text" name="current_position" class="form-control" placeholder="เช่น อาจารย์">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">สังกัด</label>
+                                <input type="text" name="affiliation" class="form-control" value="วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ขอกำหนดตำแหน่ง</label>
+                                <select name="request_position" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                    <option value="ศาสตราจารย์">ศาสตราจารย์</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- วิทยานิพนธ์ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">วิทยานิพนธ์ที่จัดทำ</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-12">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="master_thesis" value="☑" id="chkMaster">
+                                    <label class="form-check-label" for="chkMaster">ระดับปริญญาโท</label>
+                                </div>
+                                <div class="ms-4 mb-3">
+                                    <label class="form-label">ชื่อวิทยานิพนธ์ปริญญาโท</label>
+                                    <input type="text" name="master_thesis_title" class="form-control">
+                                </div>
+                            </div>
+                            <div class="col-12">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" name="doctoral_thesis" value="☑" id="chkDoc">
+                                    <label class="form-check-label" for="chkDoc">ระดับปริญญาเอก</label>
+                                </div>
+                                <div class="ms-4">
+                                    <label class="form-label">ชื่อวิทยานิพนธ์ปริญญาเอก</label>
+                                    <input type="text" name="doctoral_thesis_title" class="form-control">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- บทความทางวิชาการ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">บทความทางวิชาการที่เสนอขอตำแหน่ง</h5></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="academic_paper_status" value="not_part" id="apNotPart">
+                            <label class="form-check-label" for="apNotPart">ไม่เป็นส่วนหนึ่งของการศึกษาเพื่อรับปริญญา</label>
+                        </div>
+                        <input type="hidden" name="academic_paper_not_part_edu" value="">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="academic_paper_status" value="is_part" id="apIsPart">
+                            <label class="form-check-label" for="apIsPart">เป็นส่วนหนึ่งของการศึกษาเพื่อรับปริญญา</label>
+                        </div>
+                        <input type="hidden" name="academic_paper_is_part_edu" value="">
+
+                        <div class="row g-3" id="academicPaperSection">
+                            <div class="col-md-4">
+                                <label class="form-label">จำนวนเรื่อง</label>
+                                <input type="number" name="academic_paper_count" class="form-control" min="0" value="0">
+                            </div>
+                            <div class="col-12" id="paperListContainer">
+                                <label class="form-label">รายชื่อบทความ</label>
+                                <div id="paperRows">
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text">1.</span>
+                                        <input type="text" name="paper_title_1" class="form-control" placeholder="ชื่อบทความ">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPaperRow()">
+                                    <i class="fas fa-plus"></i> เพิ่มบทความ
+                                </button>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">รายละเอียดการศึกษาวิจัยเพิ่มเติม</label>
+                                <textarea name="academic_paper_additional_detail" class="form-control" rows="3"></textarea>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ผลงานวิจัย -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ผลงานวิจัยที่เสนอขอตำแหน่ง</h5></div>
+                    <div class="card-body">
+                        <div class="form-check mb-2">
+                            <input class="form-check-input" type="radio" name="research_status" value="not_part" id="resNotPart">
+                            <label class="form-check-label" for="resNotPart">ไม่เป็นส่วนหนึ่งของการศึกษาเพื่อรับปริญญา</label>
+                        </div>
+                        <input type="hidden" name="research_not_part_edu" value="">
+                        <div class="form-check mb-3">
+                            <input class="form-check-input" type="radio" name="research_status" value="is_part" id="resIsPart">
+                            <label class="form-check-label" for="resIsPart">เป็นส่วนหนึ่งของการศึกษาเพื่อรับปริญญา</label>
+                        </div>
+                        <input type="hidden" name="research_is_part_edu" value="">
+
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">จำนวนเรื่อง</label>
+                                <input type="number" name="research_count" class="form-control" min="0" value="0">
+                            </div>
+                            <div class="col-12" id="researchListContainer">
+                                <label class="form-label">รายชื่อผลงานวิจัย</label>
+                                <div id="researchRows">
+                                    <div class="input-group mb-2">
+                                        <span class="input-group-text">1.</span>
+                                        <input type="text" name="research_title_1" class="form-control" placeholder="ชื่อผลงานวิจัย">
+                                    </div>
+                                </div>
+                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addResearchRow()">
+                                    <i class="fas fa-plus"></i> เพิ่มผลงานวิจัย
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-academic btn-lg">
+                        <i class="fas fa-save"></i> บันทึกและสร้างเอกสาร
+                    </button>
+                    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                        <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+                    </button>
+                    <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
+                        <i class="fas fa-arrow-left"></i> กลับ
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <script th:inline="javascript">
+            let paperCount = 1;
+            let researchCount = 1;
+
+            function addPaperRow() {
+                paperCount++;
+                const row = document.createElement('div');
+                row.className = 'input-group mb-2';
+                row.innerHTML = `<span class="input-group-text">${paperCount}.</span>
+                    <input type="text" name="paper_title_${paperCount}" class="form-control" placeholder="ชื่อบทความ">
+                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+                document.getElementById('paperRows').appendChild(row);
+            }
+
+            function addResearchRow() {
+                researchCount++;
+                const row = document.createElement('div');
+                row.className = 'input-group mb-2';
+                row.innerHTML = `<span class="input-group-text">${researchCount}.</span>
+                    <input type="text" name="research_title_${researchCount}" class="form-control" placeholder="ชื่อผลงานวิจัย">
+                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+                document.getElementById('researchRows').appendChild(row);
+            }
+
+            // Radio → hidden field sync
+            document.querySelectorAll('[name="academic_paper_status"]').forEach(r => {
+                r.addEventListener('change', function() {
+                    document.querySelector('[name="academic_paper_not_part_edu"]').value = this.value === 'not_part' ? '☑' : '☐';
+                    document.querySelector('[name="academic_paper_is_part_edu"]').value = this.value === 'is_part' ? '☑' : '☐';
+                });
+            });
+            document.querySelectorAll('[name="research_status"]').forEach(r => {
+                r.addEventListener('change', function() {
+                    document.querySelector('[name="research_not_part_edu"]').value = this.value === 'not_part' ? '☑' : '☐';
+                    document.querySelector('[name="research_is_part_edu"]').value = this.value === 'is_part' ? '☑' : '☐';
+                });
+            });
+
+            document.addEventListener('DOMContentLoaded', function() {
+                const existingData = /*[[${existingData}]]*/ null;
+                if (existingData) {
+                    try {
+                        const data = JSON.parse(existingData);
+                        for (const [key, value] of Object.entries(data)) {
+                            const el = document.querySelector(`[name="${key}"]`);
+                            if (el) {
+                                if (el.type === 'checkbox') { el.checked = (value === '☑'); }
+                                else if (el.type === 'radio') {
+                                    const r = document.querySelector(`[name="${key}"][value="${value}"]`);
+                                    if (r) r.checked = true;
+                                } else { el.value = value; }
+                            }
+                        }
+                    } catch(e) {}
+                }
+            });
+        </script>
+
+        <link rel="stylesheet" href="/css/doc_preview.css">
+        <script src="/js/doc_preview.js"></script>
+        <script>initDocPreview('doc4Form', 4, '/api/position/preview');</script>
+    </section>
+</body>
+</html>
