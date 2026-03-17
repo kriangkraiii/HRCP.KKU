@@ -1,0 +1,11 @@
+stateDiagram-v2
+    [*] --> RECEIVED : Submit Petition
+    RECEIVED --> COMMITTEE_ASSIGNED : Assign Committee
+    COMMITTEE_ASSIGNED --> MEETING_SCHEDULED : Schedule Meeting
+    MEETING_SCHEDULED --> RESULT_APPROVED : Approved
+    MEETING_SCHEDULED --> RESULT_REVISION : Need Revision
+    RECEIVED --> REJECTED : Reject
+    RESULT_APPROVED --> COMPLETED : Complete
+    RESULT_REVISION --> RECEIVED : Resubmit
+    COMPLETED --> [*]
+    REJECTED --> [*]

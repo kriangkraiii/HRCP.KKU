@@ -22,7 +22,7 @@ import com.ecom.service.impl.UserServiceImpl;
 import com.ecom.util.AppConstant;
 
 @ExtendWith(MockitoExtension.class)
-@DisplayName("Account Lock/Unlock Tests")
+@DisplayName("Account Lock/Unlock Tests (Progressive Lockout)")
 class AccountLockTest {
 
     @Mock
@@ -62,25 +62,25 @@ class AccountLockTest {
     }
 
     @Test
-    @DisplayName("ใส่รหัสผิด 2 ครั้ง → failedAttempt เพิ่มเป็น 2")
-    void increaseFailedAttempt_secondAttempt_shouldBeTwo() {
-        user.setFailedAttempt(1);
+    @DisplayName("ใส่รหัสผิด 4 ครั้ง → failedAttempt เป็น 4 (ยังไม่ถึงเกณฑ์)")
+    void increaseFailedAttempt_fourthAttempt_shouldBeFour() {
+        user.setFailedAttempt(3);
         when(userRepository.save(any(UserDtls.class))).thenReturn(user);
 
         userService.increaseFailedAttempt(user);
 
-        assertEquals(2, user.getFailedAttempt());
+        assertEquals(4, user.getFailedAttempt());
     }
 
     @Test
-    @DisplayName("ใส่รหัสผิดครั้งที่ 3 → failedAttempt เป็น 3 (ถึงเกณฑ์ล็อก)")
-    void increaseFailedAttempt_thirdAttempt_shouldReachLockThreshold() {
-        user.setFailedAttempt(2);
+    @DisplayName("ใส่รหัสผิดครั้งที่ 5 → failedAttempt เป็น 5 (ถึงเกณฑ์ล็อก)")
+    void increaseFailedAttempt_fifthAttempt_shouldReachLockThreshold() {
+        user.setFailedAttempt(4);
         when(userRepository.save(any(UserDtls.class))).thenReturn(user);
 
         userService.increaseFailedAttempt(user);
 
-        assertEquals(3, user.getFailedAttempt());
+        assertEquals(5, user.getFailedAttempt());
         assertEquals((int) AppConstant.ATTEMPT_TIME, user.getFailedAttempt());
     }
 
@@ -121,24 +121,22 @@ class AccountLockTest {
     @Test
     @DisplayName("ยังไม่ครบ 15 นาที → ไม่ปลดล็อก (return false)")
     void unlockAccountTimeExpired_notYetExpired_shouldReturnFalse() {
-        // ล็อกเมื่อ 5 นาทีก่อน (ยังไม่ครบ 15 นาที)
         user.setAccountNonLocked(false);
-        user.setFailedAttempt(3);
+        user.setFailedAttempt(5);
         user.setLockTime(new Date(System.currentTimeMillis() - 5 * 60 * 1000));
 
         boolean result = userService.unlockAccountTimeExpired(user);
 
         assertFalse(result, "ยังไม่ครบ 15 นาที ต้อง return false");
         assertFalse(user.getAccountNonLocked(), "บัญชีต้องยังล็อกอยู่");
-        assertEquals(3, user.getFailedAttempt(), "failedAttempt ต้องยังเป็น 3");
+        assertEquals(5, user.getFailedAttempt(), "failedAttempt ต้องยังเป็น 5");
     }
 
     @Test
     @DisplayName("ครบ 15 นาทีแล้ว → ปลดล็อก (return true)")
     void unlockAccountTimeExpired_expired_shouldReturnTrue() {
-        // ล็อกเมื่อ 20 นาทีก่อน (เกิน 15 นาที)
         user.setAccountNonLocked(false);
-        user.setFailedAttempt(3);
+        user.setFailedAttempt(5);
         user.setLockTime(new Date(System.currentTimeMillis() - 20 * 60 * 1000));
 
         when(userRepository.save(any(UserDtls.class))).thenReturn(user);
@@ -155,10 +153,9 @@ class AccountLockTest {
     @Test
     @DisplayName("ล็อกพอดี 15 นาที → ปลดล็อก (boundary)")
     void unlockAccountTimeExpired_exactlyAtBoundary_shouldUnlock() {
-        // ล็อกพอดี 15 นาที + 1ms (เกินพอดี)
         long lockDuration = AppConstant.UNLOCK_DURATION_TIME + 1;
         user.setAccountNonLocked(false);
-        user.setFailedAttempt(3);
+        user.setFailedAttempt(5);
         user.setLockTime(new Date(System.currentTimeMillis() - lockDuration));
 
         when(userRepository.save(any(UserDtls.class))).thenReturn(user);
@@ -172,10 +169,9 @@ class AccountLockTest {
     @Test
     @DisplayName("ล็อกครบ 14 นาที 59 วินาที → ยังไม่ปลดล็อก (boundary)")
     void unlockAccountTimeExpired_justBeforeBoundary_shouldNotUnlock() {
-        // ล็อกก่อนครบ 15 นาที 1 วินาที
         long lockDuration = AppConstant.UNLOCK_DURATION_TIME - 1000;
         user.setAccountNonLocked(false);
-        user.setFailedAttempt(3);
+        user.setFailedAttempt(5);
         user.setLockTime(new Date(System.currentTimeMillis() - lockDuration));
 
         boolean result = userService.unlockAccountTimeExpired(user);
@@ -240,9 +236,9 @@ class AccountLockTest {
     }
 
     @Test
-    @DisplayName("ATTEMPT_TIME ต้องเป็น 3 ครั้ง")
-    void attemptTime_shouldBeThree() {
-        assertEquals(3, AppConstant.ATTEMPT_TIME,
-                "จำนวนครั้งที่ผิดก่อนล็อก ต้องเป็น 3");
+    @DisplayName("ATTEMPT_TIME ต้องเป็น 5 ครั้ง")
+    void attemptTime_shouldBeFive() {
+        assertEquals(5, AppConstant.ATTEMPT_TIME,
+                "จำนวนครั้งที่ผิดก่อนล็อก ต้องเป็น 5");
     }
 }

@@ -53,7 +53,7 @@ public class SecurityHeadersFilter implements Filter {
                 // Content Security Policy (includes Google Translate domains)
                 httpRes.setHeader("Content-Security-Policy",
                                 "default-src 'self'; "
-                                                + "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; "
+                                                + "script-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://translate.google.com https://translate.googleapis.com https://translate-pa.googleapis.com; "
                                                 + "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://fonts.googleapis.com https://translate.googleapis.com; "
                                                 + "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
                                                 + "img-src 'self' data: blob: https://translate.google.com https://www.google.com https://*.gstatic.com; "

@@ -14,6 +14,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 @Configuration
 @EnableWebSecurity
@@ -22,10 +23,14 @@ public class SecurityConfig {
         @Autowired
         private RateLimitFilter rateLimitFilter;
 
+        @Autowired
+        @Lazy
+        private CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
+
         @Bean
         @Primary
         public AuthenticationSuccessHandler authenticationSuccessHandler() {
-                return new CustomAuthenticationSuccessHandler();
+                return customAuthenticationSuccessHandler;
         }
 
         @Autowired
@@ -37,9 +42,13 @@ public class SecurityConfig {
                 return new BCryptPasswordEncoder();
         }
 
+        @Autowired
+        @Lazy
+        private UserDetailsServiceImpl userDetailsServiceImpl;
+
         @Bean
         public UserDetailsService userDetailsService() {
-                return new UserDetailsServiceImpl();
+                return userDetailsServiceImpl;
         }
 
         @Bean
@@ -57,17 +66,18 @@ public class SecurityConfig {
                                 // Rate limit filter runs before authentication
                                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
 
-                                // CSRF protection (session-based, auto-injects into Thymeleaf forms)
-                                .csrf(csrf -> csrf
-                                                .ignoringRequestMatchers(
-                                                                "/api/**",
-                                                                "/admin/toggle-image-mode",
-                                                                "/admin/update-profile-image",
-                                                                "/admin/activity-logs/export",
-                                                                "/admin/file-manager/delete/**",
-                                                                "/admin/file-manager/restore/**",
-                                                                "/admin/file-manager/permanent-delete/**",
-                                                                "/admin/file-manager/empty-trash"))
+                // CSRF protection with CookieCsrfTokenRepository for AJAX and form-based POST
+                .csrf(csrf -> {
+                        // Spring Security 6 uses deferred tokens by default.
+                        // Force eager loading so the XSRF-TOKEN cookie is always set.
+                        var handler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
+                        handler.setCsrfRequestAttributeName(null); // force eager token resolution
+                        csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                .csrfTokenRequestHandler(handler)
+                                .ignoringRequestMatchers(
+                                                "/admin/toggle-image-mode",
+                                                "/admin/activity-logs/export");
+                })
                                 // Session management
                                 .sessionManagement(session -> session
                                                 .maximumSessions(1)

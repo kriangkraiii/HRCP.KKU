@@ -17,6 +17,8 @@ import java.util.zip.ZipOutputStream;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
+
+import com.ecom.util.FileUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -40,6 +42,7 @@ import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
+import com.ecom.util.FileUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -722,8 +725,8 @@ public class AcademicAdminController {
         String uploadDir = "uploads/academic/" + id + "/attachments/";
         Files.createDirectories(Path.of(uploadDir));
 
-        // สร้างชื่อไฟล์ไม่ซ้ำ
-        String storedFilename = System.currentTimeMillis() + "_" + originalFilename;
+        // สร้างชื่อไฟล์ไม่ซ้ำ (sanitize เพื่อป้องกัน Path Traversal)
+        String storedFilename = FileUtils.sanitizeFilename(originalFilename);
         String filePath = uploadDir + storedFilename;
         file.transferTo(Path.of(filePath));
 
@@ -760,9 +763,12 @@ public class AcademicAdminController {
                 ? "application/pdf"
                 : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
+        String safeFilename = java.net.URLEncoder.encode(attachment.getOriginalFilename(), java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + attachment.getOriginalFilename() + "\"")
+                        "attachment; filename*=UTF-8''" + safeFilename)
                 .contentType(MediaType.parseMediaType(contentType))
                 .contentLength(data.length)
                 .body(resource);

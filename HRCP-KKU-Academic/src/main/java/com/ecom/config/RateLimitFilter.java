@@ -24,7 +24,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class RateLimitFilter implements Filter {
 
     private static final int GENERAL_LIMIT = 100;
-    private static final int LOGIN_LIMIT = 5;
+    private static final int LOGIN_LIMIT = 20;
     private static final long WINDOW_MS = 60_000; // 1 minute
 
     private final Map<String, RateBucket> generalBuckets = new ConcurrentHashMap<>();
@@ -43,11 +43,9 @@ public class RateLimitFilter implements Filter {
         if ("/login".equals(uri) && "POST".equalsIgnoreCase(httpReq.getMethod())) {
             RateBucket bucket = loginBuckets.computeIfAbsent(clientIp, k -> new RateBucket());
             if (!bucket.tryConsume(LOGIN_LIMIT)) {
-                httpRes.setStatus(429);
-                httpRes.setContentType("text/html;charset=UTF-8");
-                httpRes.getWriter().write(
-                        "<html><body><h2>คุณพยายามเข้าสู่ระบบบ่อยเกินไป</h2>"
-                                + "<p>กรุณารอ 1 นาที แล้วลองใหม่อีกครั้ง</p></body></html>");
+                httpReq.getSession().setAttribute("errorMessage",
+                        "คุณพยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอ 1 นาที แล้วลองใหม่อีกครั้ง");
+                httpRes.sendRedirect("/signin?error");
                 return;
             }
         }

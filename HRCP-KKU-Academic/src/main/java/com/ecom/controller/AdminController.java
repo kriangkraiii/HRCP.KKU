@@ -31,6 +31,8 @@ import com.ecom.model.UserDtls;
 import com.ecom.service.AdminLogService;
 import com.ecom.service.UserService;
 import com.ecom.util.CommonUtil;
+import com.ecom.util.FileUtils;
+import com.ecom.util.PasswordValidator;
 
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
@@ -140,7 +142,7 @@ public class AdminController {
 		return "admin/users";
 	}
 
-	@GetMapping("/updateEmailNotification")
+	@PostMapping("/updateEmailNotification")
 	public String updateEmailNotification(@RequestParam Boolean enabled, @RequestParam Integer id,
 			@RequestParam Integer type, HttpSession session) {
 		Boolean f = userService.updateEmailNotification(id, enabled);
@@ -152,7 +154,7 @@ public class AdminController {
 		return "redirect:/admin/users?type=" + type;
 	}
 
-	@GetMapping("/updateSts")
+	@PostMapping("/updateSts")
 	public String updateUserAccountStatus(@RequestParam Boolean status, @RequestParam Integer id,
 			@RequestParam Integer type, HttpSession session) {
 		Boolean f = userService.updateAccountStatus(id, status);
@@ -177,9 +179,17 @@ public class AdminController {
 	@ResponseBody
 	public ResponseEntity<Map<String, String>> updateProfileImage(
 			@RequestParam Integer id,
-			@RequestParam("img") MultipartFile file) {
+			@RequestParam("img") MultipartFile file,
+			Principal principal) {
 
 		Map<String, String> response = new HashMap<>();
+
+		// SEC-03: Verify admin is authenticated
+		if (principal == null) {
+			response.put("success", "false");
+			response.put("error", "ไม่ได้เข้าสู่ระบบ");
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+		}
 
 		// Validate file upload
 		String fileValidationError = validateImageFile(file);
@@ -211,7 +221,7 @@ public class AdminController {
 		}
 	}
 
-	@GetMapping("/delete-user")
+	@PostMapping("/delete-user")
 	public String deleteUser(@RequestParam Integer id, @RequestParam Integer type, HttpSession session, Principal p) {
 		try {
 			// Get current user's email
@@ -258,7 +268,7 @@ public class AdminController {
 		return "redirect:/admin/users?type=" + type;
 	}
 
-	@GetMapping("/delete-admin")
+	@PostMapping("/delete-admin")
 	public String deleteAdmin(@RequestParam Integer id, @RequestParam Integer type, HttpSession session, Principal p) {
 		try {
 			// Get current user's email
@@ -462,7 +472,7 @@ public class AdminController {
 				if (!uploadFolder.exists()) {
 					uploadFolder.mkdirs();
 				}
-				Path path = Path.of(uploadDir + file.getOriginalFilename());
+				Path path = Path.of(uploadDir + FileUtils.sanitizeFilename(file.getOriginalFilename()));
 				Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
 			}
 			session.setAttribute("succMsg", "เพิ่มบัญชีสำเร็จ");
@@ -509,6 +519,11 @@ public class AdminController {
 		boolean matches = passwordEncoder.matches(currentPassword, loggedInUserDetails.getPassword());
 
 		if (matches) {
+			String passwordError = PasswordValidator.validate(newPassword);
+			if (passwordError != null) {
+				session.setAttribute("errorMsg", passwordError);
+				return "redirect:/admin/profile";
+			}
 			String encodePassword = passwordEncoder.encode(newPassword);
 			loggedInUserDetails.setPassword(encodePassword);
 			UserDtls updateUser = userService.updateUser(loggedInUserDetails);

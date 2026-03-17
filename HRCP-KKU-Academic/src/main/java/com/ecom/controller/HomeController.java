@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.ecom.model.UserDtls;
 import com.ecom.service.UserService;
 import com.ecom.util.CommonUtil;
+import com.ecom.util.PasswordValidator;
 
 import jakarta.mail.MessagingException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -128,8 +129,9 @@ public class HomeController {
 			return "redirect:/first-login/set-password";
 		}
 
-		if (password.length() < 6) {
-			session.setAttribute("errorMsg", "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+		String passwordError = PasswordValidator.validate(password);
+		if (passwordError != null) {
+			session.setAttribute("errorMsg", passwordError);
 			return "redirect:/first-login/set-password";
 		}
 
@@ -196,8 +198,9 @@ public class HomeController {
 			m.addAttribute("token", token);
 			return "guest/reset_password";
 		}
-		if (password.length() < 6) {
-			session.setAttribute("errorMsg", "รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร");
+		String passwordError = PasswordValidator.validate(password);
+		if (passwordError != null) {
+			session.setAttribute("errorMsg", passwordError);
 			m.addAttribute("token", token);
 			return "guest/reset_password";
 		}

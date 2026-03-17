@@ -2,6 +2,7 @@ package com.ecom.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.security.Principal;
 import java.util.Map;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -42,6 +43,7 @@ public class AdminControllerUpdateProfileImageTest {
     private UserRepository userRepository;
 
     private UserDtls testUser;
+    private Principal mockPrincipal;
 
     @BeforeEach
     void setUp() {
@@ -58,6 +60,9 @@ public class AdminControllerUpdateProfileImageTest {
         testUser.setIsEnable(true);
         testUser.setAccountNonLocked(true);
         testUser = userRepository.save(testUser);
+
+        // Create mock principal for admin
+        mockPrincipal = () -> "admin@example.com";
     }
 
     /**
@@ -77,7 +82,8 @@ public class AdminControllerUpdateProfileImageTest {
         // When: Admin uploads the image
         ResponseEntity<Map<String, String>> response = adminController.updateProfileImage(
             testUser.getId(), 
-            imageFile
+            imageFile,
+            mockPrincipal
         );
 
         // Then: Returns success response with image URL
@@ -111,7 +117,8 @@ public class AdminControllerUpdateProfileImageTest {
         // When: Admin uploads the image for non-existent user
         ResponseEntity<Map<String, String>> response = adminController.updateProfileImage(
             99999, // Non-existent ID
-            imageFile
+            imageFile,
+            mockPrincipal
         );
 
         // Then: Returns error response
@@ -138,7 +145,8 @@ public class AdminControllerUpdateProfileImageTest {
         // When: Admin uploads the image
         ResponseEntity<Map<String, String>> response = adminController.updateProfileImage(
             testUser.getId(), 
-            imageFile
+            imageFile,
+            mockPrincipal
         );
 
         // Then: Image URL contains timestamp parameter
@@ -168,7 +176,8 @@ public class AdminControllerUpdateProfileImageTest {
         // When: Admin uploads the empty file
         ResponseEntity<Map<String, String>> response = adminController.updateProfileImage(
             testUser.getId(), 
-            emptyFile
+            emptyFile,
+            mockPrincipal
         );
 
         // Then: Returns error response

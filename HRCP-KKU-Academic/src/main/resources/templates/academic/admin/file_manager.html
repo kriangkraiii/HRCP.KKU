@@ -293,7 +293,17 @@
         .table td { font-size: 0.85rem; vertical-align: middle; }
     </style>
 
-    <script>
+    <script th:inline="javascript">
+        // CSRF token from Thymeleaf (reliable with Spring Security 6)
+        var csrfToken = /*[[${_csrf.token}]]*/ '';
+        var csrfHeaderName = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+
+        function getCsrfHeaders() {
+            var headers = {};
+            headers[csrfHeaderName] = csrfToken;
+            return headers;
+        }
+
         // Populate request filter dropdown
         document.addEventListener('DOMContentLoaded', function() {
             const rows = document.querySelectorAll('.file-row');
@@ -369,7 +379,10 @@
                 bodyMsg,
                 function() {
                     const { type, id } = parseFileId(fileId);
-                    fetch('/admin/file-manager/delete/' + type + '/' + id, { method: 'POST' })
+                    fetch('/admin/file-manager/delete/' + type + '/' + id, {
+                        method: 'POST',
+                        headers: getCsrfHeaders()
+                    })
                         .then(r => r.json())
                         .then(data => {
                             if (data.success) {
@@ -389,7 +402,10 @@
         function restoreFile(btn) {
             const fileId = btn.getAttribute('data-fileid');
             const { type, id } = parseFileId(fileId);
-            fetch('/admin/file-manager/restore/' + type + '/' + id, { method: 'POST' })
+            fetch('/admin/file-manager/restore/' + type + '/' + id, {
+                method: 'POST',
+                headers: getCsrfHeaders()
+            })
                 .then(r => r.json())
                 .then(data => {
                     if (data.success) {
@@ -412,7 +428,10 @@
                 '⚠️ ต้องการลบ <strong>' + fileName + '</strong> ถาวรหรือไม่?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
                 function() {
                     const { type, id } = parseFileId(fileId);
-                    fetch('/admin/file-manager/permanent-delete/' + type + '/' + id, { method: 'POST' })
+                    fetch('/admin/file-manager/permanent-delete/' + type + '/' + id, {
+                        method: 'POST',
+                        headers: getCsrfHeaders()
+                    })
                         .then(r => r.json())
                         .then(data => {
                             if (data.success) {
@@ -434,7 +453,10 @@
                 'ล้างถังขยะทั้งหมด',
                 '⚠️ ลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
                 function() {
-                    fetch('/admin/file-manager/empty-trash', { method: 'POST' })
+                    fetch('/admin/file-manager/empty-trash', {
+                        method: 'POST',
+                        headers: getCsrfHeaders()
+                    })
                         .then(r => r.json())
                         .then(data => {
                             if (data.success) {

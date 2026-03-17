@@ -1,0 +1,38 @@
+flowchart TD
+    START(("●")) --> A["Position Requests\nShow submitted only\nExclude DRAFT"]
+
+    subgraph Manage["Manage Requests"]
+        A --> B["Select Request\nView Detail + Progress"]
+    end
+
+    subgraph Status["Update Status"]
+        B --> C["Change Status"]
+        C --> D{"Selected Status?"}
+        D -->|DOCUMENT_RECEIVED| E["รับคำร้อง"]
+        D -->|DOCUMENT_VERIFICATION| F["ตรวจสอบเอกสาร"]
+        D -->|SCREENING_COMMITTEE| G["เสนอวาระกลั่นกรอง"]
+        D -->|REVISION_REQUESTED| H["ส่งแก้ไข"]
+        D -->|SCREENING_APPROVED| I["รับรองมติกลั่นกรอง"]
+        D -->|COLLEGE_COMMITTEE| J["เสนอวาระคณะกรรมการ"]
+        D -->|COLLEGE_APPROVED| K["รับรองมติคณะกรรมการ"]
+        D -->|SENT_TO_HR| L["ส่งออกกองทรัพยากรบุคคล"]
+        E & F & G & H & I & J & K & L --> M["Save PositionStatusHistory"]
+    end
+
+    subgraph Docs["Fill Documents 1-9"]
+        B --> N["Select Document\nDoc 1-9"]
+        N --> O["Fill / Edit Data"]
+        O --> P["Save + Generate DOCX\nfilledBy = ADMIN"]
+    end
+
+    subgraph Preview["Document Preview"]
+        N --> Q["Click Preview\nDocPreviewEngine"]
+        Q --> R["Show DOCX Preview\nin browser"]
+    end
+
+    M --> ENDX(("◉"))
+    P --> ENDX
+    R --> ENDX
+
+    style START fill:#000,color:#fff
+    style ENDX fill:#000,color:#fff

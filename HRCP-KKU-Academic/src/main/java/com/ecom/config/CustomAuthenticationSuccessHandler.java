@@ -1,6 +1,7 @@
 package com.ecom.config;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.Collection;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -8,6 +9,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
+
+import com.ecom.model.UserDtls;
+import com.ecom.service.UserService;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,6 +22,9 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
 
     @Autowired
     private BruteForceProtection bruteForceProtection;
+
+    @Autowired
+    private UserService userService;
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
@@ -28,6 +36,21 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         bruteForceProtection.resetAttempts("ip:" + clientIp);
         if (email != null) {
             bruteForceProtection.resetAttempts("user:" + email);
+        }
+
+        // Reset DB failed attempt counter
+        String username = authentication.getName();
+        UserDtls user = userService.getUserByEmail(username);
+        if (user != null) {
+            if (user.getFailedAttempt() != null && user.getFailedAttempt() > 0) {
+                user.setFailedAttempt(0);
+                user.setAccountNonLocked(true);
+                user.setLockTime(null);
+                userService.updateUser(user);
+            }
+            // Update last login date
+            user.setLastLoginDate(LocalDateTime.now());
+            userService.updateUser(user);
         }
 
         // Regenerate session to prevent session fixation
