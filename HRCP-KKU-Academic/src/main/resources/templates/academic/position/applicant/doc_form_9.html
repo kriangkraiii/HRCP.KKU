@@ -56,7 +56,7 @@
 
                         <h6 class="fw-bold mb-2">กลุ่มที่ ๒ — ผลงานทางวิชาการในลักษณะอื่น</h6>
                         <div class="row">
-                            <div class="col-md-6" th:each="item, stat : ${{'ผลงานวิชาการเพื่ออุตสาหกรรม','กรณีศึกษา (Case Study)','ผลงานวิชาการเพื่อพัฒนาการเรียนการสอนฯ','งานแปล','ผลงานวิชาการเพื่อพัฒนานโยบายสาธารณะ','สิทธิบัตร','ผลงานสร้างสรรค์ด้านวิทยาศาสตร์ฯ','ซอฟต์แวร์','พจนานุกรม สารานุกรม นามานุกรมฯ','ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ','ผลงานนวัตกรรม','ผลงานรับใช้ท้องถิ่นและสังคม'}}">
+                            <div class="col-md-6" th:each="item, stat : ${ {'ผลงานวิชาการเพื่ออุตสาหกรรม','กรณีศึกษา (Case Study)','ผลงานวิชาการเพื่อพัฒนาการเรียนการสอนฯ','งานแปล','ผลงานวิชาการเพื่อพัฒนานโยบายสาธารณะ','สิทธิบัตร','ผลงานสร้างสรรค์ด้านวิทยาศาสตร์ฯ','ซอฟต์แวร์','พจนานุกรม สารานุกรม นามานุกรมฯ','ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ','ผลงานนวัตกรรม','ผลงานรับใช้ท้องถิ่นและสังคม'} }">
                                 <div class="form-check mb-1">
                                     <input class="form-check-input" type="checkbox"
                                         th:name="'chkgroup2_' + ${stat.count}" value="☑"
@@ -197,6 +197,18 @@
                 }
             });
         </script>
+
+        <script th:inline="javascript">
+            window.AUTOFILL_USER = {
+                title: /*[[${user.title}]]*/ '',
+                name: /*[[${user.name}]]*/ '',
+                academicPosition: /*[[${user.academicPosition}]]*/ '',
+                email: /*[[${user.email}]]*/ '',
+                mobileNumber: /*[[${user.mobileNumber}]]*/ ''
+            };
+            window.AUTOFILL_DOC1 = /*[[${doc1Data}]]*/ null;
+        </script>
+        <script src="/js/position_autofill.js"></script>
 
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>

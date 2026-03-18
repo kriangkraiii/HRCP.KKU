@@ -184,6 +184,14 @@ public class PositionApplicantController {
         model.addAttribute("documentType", type);
         model.addAttribute("documentLabel", positionService.getDocLabel(type));
         model.addAttribute("existingData", existingData);
+        model.addAttribute("user", user);
+
+        // Load doc 1 data for cross-document auto-fill (for docs other than 1)
+        if (type != 1) {
+            List<PositionDocument> doc1Docs = positionService.getDocumentsByType(id, 1);
+            String doc1Data = doc1Docs.isEmpty() ? null : doc1Docs.get(0).getJsonData();
+            model.addAttribute("doc1Data", doc1Data);
+        }
 
         return "academic/position/applicant/doc_form_" + type;
     }

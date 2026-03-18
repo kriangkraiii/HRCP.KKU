@@ -88,6 +88,17 @@ public class PositionAdminController {
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
 
+        // Calculate progress percentage for the line
+        PositionRequestStatus[] steps = PositionRequestStatus.getProgressSteps();
+        int currentIdx = 0;
+        for (int i = 0; i < steps.length; i++) {
+            if (request.getCurrentStatus().ordinal() >= steps[i].ordinal()) {
+                currentIdx = i;
+            }
+        }
+        int progressPercent = steps.length > 1 ? (currentIdx * 100) / (steps.length - 1) : 0;
+        model.addAttribute("progressPercent", progressPercent);
+
         // ดึงข้อมูลตำแหน่งจาก doc_2
         List<PositionDocument> doc2List = positionService.getDocumentsByType(id, 2);
         if (!doc2List.isEmpty()) {

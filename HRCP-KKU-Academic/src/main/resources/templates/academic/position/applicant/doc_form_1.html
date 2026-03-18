@@ -570,6 +570,17 @@
             });
         </script>
 
+        <script th:inline="javascript">
+            window.AUTOFILL_USER = {
+                title: /*[[${user.title}]]*/ '',
+                name: /*[[${user.name}]]*/ '',
+                academicPosition: /*[[${user.academicPosition}]]*/ '',
+                email: /*[[${user.email}]]*/ '',
+                mobileNumber: /*[[${user.mobileNumber}]]*/ ''
+            };
+        </script>
+        <script src="/js/position_autofill.js"></script>
+
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
         <script>initDocPreview('doc1Form', 1, '/api/position/preview');</script>
