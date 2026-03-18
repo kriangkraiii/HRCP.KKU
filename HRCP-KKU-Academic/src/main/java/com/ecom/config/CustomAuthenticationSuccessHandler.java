@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collection;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
@@ -20,18 +19,21 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
-    @Autowired
-    private BruteForceProtection bruteForceProtection;
+    private final BruteForceProtection bruteForceProtection;
+    private final UserService userService;
 
-    @Autowired
-    private UserService userService;
+    public CustomAuthenticationSuccessHandler(BruteForceProtection bruteForceProtection,
+                                              UserService userService) {
+        this.bruteForceProtection = bruteForceProtection;
+        this.userService = userService;
+    }
 
     @Override
     public void onAuthenticationSuccess(HttpServletRequest request, HttpServletResponse response,
             Authentication authentication) throws IOException, ServletException {
 
         // Clear brute-force records on successful login
-        String clientIp = getClientIp(request);
+        String clientIp = ClientIpUtils.resolveClientIp(request);
         String email = request.getParameter("email");
         bruteForceProtection.resetAttempts("ip:" + clientIp);
         if (email != null) {
@@ -69,13 +71,5 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             }
         }
         response.sendRedirect(redirectUrl);
-    }
-
-    private String getClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isEmpty()) {
-            return xff.split(",")[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 }

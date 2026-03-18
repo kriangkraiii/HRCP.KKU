@@ -154,15 +154,13 @@
                     </div>
 
                     <div th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}" class="alert alert-warning">
-                        <i class="fas fa-exclamation-triangle me-2"></i> <strong>ต้องแก้ไขเอกสาร</strong>
-                        <form th:action="'/user/academic/upload-revision/' + ${req.id}" method="post"
-                            enctype="multipart/form-data" class="mt-2">
-                            <div class="input-group">
-                                <input type="file" name="file" class="form-control" required>
-                                <button type="submit" class="btn btn-warning"><i class="fas fa-upload"></i>
-                                    อัปโหลดเอกสารที่แก้ไข</button>
+                        <div class="d-flex align-items-start">
+                            <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                            <div>
+                                <strong class="d-block mb-1">ต้องแก้ไขเอกสาร</strong>
+                                <p class="mb-0">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
                             </div>
-                        </form>
+                        </div>
                     </div>
 
                     <div th:if="${req.currentStatus.name() == 'REJECTED'}" class="alert alert-danger">
