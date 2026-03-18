@@ -27,7 +27,7 @@
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
-                                <select name="title" class="form-select" required>
+                                <select name="title" class="form-select">
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย">นาย</option>
                                     <option value="นาง">นาง</option>
@@ -38,7 +38,7 @@
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล (ผู้เสนอขอฯ) <span class="text-danger">*</span></label>
-                                <input type="text" name="applicant_name" class="form-control" required>
+                                <input type="text" name="applicant_name" class="form-control">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วันที่รับรอง</label>
@@ -55,12 +55,11 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อหัวหน้าส่วนงาน</label>
-                                <select name="dean_name" class="form-select">
-                                    <option value="">-- เลือก --</option>
-                                    <option th:each="dean : ${deans}"
-                                            th:value="${dean.name}"
-                                            th:text="${dean.name}"></option>
-                                </select>
+                                <input type="text" name="dean_name" class="form-control" list="deanList"
+                                       placeholder="พิมพ์หรือเลือกชื่อหัวหน้าส่วนงาน">
+                                <datalist id="deanList">
+                                    <option th:each="dean : ${deans}" th:value="${dean.name}"></option>
+                                </datalist>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
@@ -114,6 +113,7 @@
             window.AUTOFILL_DOC1 = /*[[${doc1Data}]]*/ null;
         </script>
         <script src="/js/position_autofill.js"></script>
+        <script src="/js/position_form_validate.js"></script>
 
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>

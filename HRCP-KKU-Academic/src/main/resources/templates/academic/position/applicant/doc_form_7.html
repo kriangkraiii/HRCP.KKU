@@ -19,11 +19,11 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">ชื่อ <span class="text-danger">*</span></label>
-                                <input type="text" name="applicant_firstname" class="form-control" required>
+                                <input type="text" name="applicant_firstname" class="form-control">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">นามสกุล <span class="text-danger">*</span></label>
-                                <input type="text" name="applicant_lastname" class="form-control" required>
+                                <input type="text" name="applicant_lastname" class="form-control">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">สถานะ</label>
@@ -477,6 +477,7 @@
             window.AUTOFILL_DOC1 = /*[[${doc1Data}]]*/ null;
         </script>
         <script src="/js/position_autofill.js"></script>
+        <script src="/js/position_form_validate.js"></script>
 
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>

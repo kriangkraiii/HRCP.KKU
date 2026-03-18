@@ -17,7 +17,7 @@
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
-                                <select name="title" class="form-select" required>
+                                <select name="title" class="form-select">
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย">นาย</option>
                                     <option value="นาง">นาง</option>
@@ -29,7 +29,7 @@
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
-                                <input type="text" name="applicant_name" class="form-control" required>
+                                <input type="text" name="applicant_name" class="form-control">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">สถานะ</label>
@@ -44,7 +44,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งที่เสนอขอ <span class="text-danger">*</span></label>
-                                <select name="request_position" class="form-select" required>
+                                <select name="request_position" class="form-select">
                                     <option value="">-- เลือก --</option>
                                     <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
                                     <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
@@ -126,6 +126,7 @@
             window.AUTOFILL_DOC1 = /*[[${doc1Data}]]*/ null;
         </script>
         <script src="/js/position_autofill.js"></script>
+        <script src="/js/position_form_validate.js"></script>
 
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
