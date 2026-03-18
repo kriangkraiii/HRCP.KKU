@@ -50,6 +50,9 @@ public class PositionRequestService {
     @Autowired
     private PositionEmailService emailService;
 
+    @Autowired
+    private com.ecom.academic.repository.PositionAttachmentRepository attachmentRepository;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     // ================== Document labels ==================
@@ -287,6 +290,7 @@ public class PositionRequestService {
                 request.getId(), documentType);
 
         PositionDocument doc;
+        boolean isExistingSubmitted = false;
         if (existing.isPresent()) {
             doc = existing.get();
         } else {
@@ -294,6 +298,10 @@ public class PositionRequestService {
                     request.getId(), documentType);
             if (!docs.isEmpty()) {
                 doc = docs.get(0);
+                // If this doc was already submitted (isDraft=false), don't revert to draft
+                if (!doc.getIsDraft()) {
+                    isExistingSubmitted = true;
+                }
             } else {
                 doc = new PositionDocument();
                 doc.setRequest(request);
@@ -303,7 +311,10 @@ public class PositionRequestService {
         }
         doc.setJsonData(jsonData);
         doc.setDocumentLabel(label);
-        doc.setIsDraft(true);
+        // Only set isDraft=true for truly new drafts, not for already-submitted docs
+        if (!isExistingSubmitted) {
+            doc.setIsDraft(true);
+        }
         doc.setFilledBy(filledBy);
         return documentRepository.save(doc);
     }
@@ -322,5 +333,30 @@ public class PositionRequestService {
 
     public PositionRequest save(PositionRequest request) {
         return requestRepository.save(request);
+    }
+
+    // ================== Attachments ==================
+
+    public List<com.ecom.academic.model.PositionAttachment> getAttachments(Long requestId) {
+        return attachmentRepository.findActiveByRequestId(requestId);
+    }
+
+    public long countAttachments(Long requestId) {
+        return attachmentRepository.countActiveByRequestId(requestId);
+    }
+
+    public void saveAttachment(com.ecom.academic.model.PositionAttachment attachment) {
+        attachmentRepository.save(attachment);
+    }
+
+    public Optional<com.ecom.academic.model.PositionAttachment> findAttachmentById(Long id) {
+        return attachmentRepository.findById(id);
+    }
+
+    public void deleteAttachment(Long id) {
+        attachmentRepository.findById(id).ifPresent(att -> {
+            att.setIsDeleted(true);
+            attachmentRepository.save(att);
+        });
     }
 }

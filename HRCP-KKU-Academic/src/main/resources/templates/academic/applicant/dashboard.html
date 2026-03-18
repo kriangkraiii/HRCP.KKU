@@ -4,213 +4,367 @@
 <body>
     <section>
         <div class="container py-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3><i class="fas fa-tachometer-alt"></i> แดชบอร์ดผู้ยื่นคำร้อง</h3>
-                <th:block th:if="${!hasActiveRequest}">
-                    <a href="/user/academic/new-request" class="btn btn-academic">
-                        <i class="fas fa-plus-circle"></i> ยื่นคำร้องขอการประเมินการสอน
-                    </a>
-                </th:block>
-                <th:block th:if="${hasActiveRequest}">
-                    <button class="btn btn-secondary" disabled title="มีคำร้องที่กำลังดำเนินการอยู่">
-                        <i class="fas fa-plus-circle"></i> ยื่นคำร้องขอการประเมินการสอน
-                    </button>
-                </th:block>
-            </div>
+            <h3 class="mb-4"><i class="fas fa-tachometer-alt"></i> แดชบอร์ดผู้ยื่นคำร้อง</h3>
 
-            <!-- Alert for active request -->
+            <!-- Alert -->
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>ไม่สามารถยื่นคำร้องขอการประเมินการสอนได้</strong> คุณมีคำร้องที่กำลังดำเนินการอยู่ กรุณารอให้คำร้องเดิมขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น" ก่อนจึงยื่นคำร้องขอการประเมินการสอนได้
+                <strong>ไม่สามารถยื่นคำร้องได้</strong> คุณมีคำร้องที่กำลังดำเนินการอยู่
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <div th:if="${hasActiveRequest}" class="alert alert-info mb-4">
-                <i class="fas fa-info-circle me-2"></i>
-                คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องขอการประเมินการสอนได้จนกว่าคำร้องเดิมจะขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น"
-            </div>
+            <!-- ================== TAB NAVIGATION ================== -->
+            <ul class="nav nav-tabs mb-4" id="dashboardTabs" role="tablist" style="border-bottom: 2px solid #e0e0e0;">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="eval-tab" data-bs-toggle="tab" data-bs-target="#evalPane"
+                        type="button" role="tab" aria-controls="evalPane" aria-selected="true"
+                        style="font-weight:600;font-size:1rem;color:#1565c0;border-bottom:3px solid #1565c0;padding:10px 24px">
+                        <i class="fas fa-clipboard-check me-2"></i> ประเมินผลการสอน
+                        <span class="badge bg-primary ms-1" th:text="${(requests != null ? requests.size() : 0) + (draftRequest != null ? 1 : 0)}">0</span>
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="pos-tab" data-bs-toggle="tab" data-bs-target="#posPane"
+                        type="button" role="tab" aria-controls="posPane" aria-selected="false"
+                        style="font-weight:600;font-size:1rem;padding:10px 24px">
+                        <i class="fas fa-university me-2"></i> ตำแหน่งทางวิชาการ
+                        <span class="badge ms-1" style="background:#2e7d32;color:#fff"
+                            th:text="${(positionRequests != null ? positionRequests.size() : 0) + (positionDraft != null ? 1 : 0)}">0</span>
+                    </button>
+                </li>
+            </ul>
 
-            <!-- Draft Request Card -->
-            <div th:if="${draftRequest != null}" class="card card-academic mb-4 border-warning">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <h5 class="mb-1"><i class="fas fa-edit text-warning me-2"></i> คำร้องฉบับร่าง</h5>
-                            <small class="text-muted">กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง</small>
-                        </div>
-                        <span class="badge bg-warning text-dark fs-6">แบบร่าง</span>
-                    </div>
-                    <a th:href="'/user/academic/request/' + ${draftRequest.id}" class="btn btn-warning">
-                        <i class="fas fa-arrow-right"></i> ดำเนินการต่อ
-                    </a>
-                </div>
-            </div>
+            <!-- ================== TAB CONTENT ================== -->
+            <div class="tab-content" id="dashboardTabContent">
 
-            <div th:if="${requests == null || requests.isEmpty()}" class="text-center py-5" th:unless="${draftRequest != null}">
-                <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                <p class="text-muted">ยังไม่มีคำร้อง กดปุ่ม "ยื่นคำร้องขอการประเมินการสอน" เพื่อเริ่มต้น</p>
-            </div>
+                <!-- ========== TAB 1: ประเมินผลการสอน ========== -->
+                <div class="tab-pane fade show active" id="evalPane" role="tabpanel" aria-labelledby="eval-tab">
 
-            <div th:each="req, iter : ${requests}" class="card card-academic mb-4 request-card"
-                th:attr="data-index=${iter.index}">
-                <div class="card-body">
-                    <div class="d-flex justify-content-between align-items-start mb-3">
-                        <div>
-                            <h5 class="mb-2">คำร้อง [[${req.requestCode}]] — [[${req.applicant.name}]]</h5>
-                            <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
-                                <span class="badge" style="background:#1565c0">
-                                    <i class="fas fa-clipboard-check me-1"></i> ประเมินผลการสอน
-                                </span>
-                                <span class="badge bg-light text-dark border">
-                                    <i class="fas fa-calendar me-1"></i> วันที่ยื่น:
-                                    <span th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></span>
-                                </span>
-                                <span class="status-badge" th:classappend="'status-' + ${req.currentStatus.name()}"
-                                    th:text="${req.currentStatus.thaiLabel}"></span>
-                            </div>
-                            <small th:if="${req.updatedAt != null}" class="text-muted">
-                                <i class="fas fa-sync-alt me-1"></i>อัปเดตล่าสุด:
-                                <span th:text="${#temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm')}"></span>
-                            </small>
-                        </div>
+                    <div class="d-flex justify-content-end mb-3">
+                        <th:block th:if="${!hasActiveRequest}">
+                            <a href="/user/academic/new-request" class="btn btn-academic">
+                                <i class="fas fa-plus-circle"></i> ยื่นคำร้องขอการประเมินการสอน
+                            </a>
+                        </th:block>
+                        <th:block th:if="${hasActiveRequest}">
+                            <button class="btn btn-secondary" disabled>
+                                <i class="fas fa-plus-circle"></i> ยื่นคำร้องขอการประเมินการสอน
+                            </button>
+                        </th:block>
                     </div>
 
-                    <!-- ข้อมูลรายวิชา (จากเอกสารที่ 0) -->
-                    <div th:if="${doc0DataMap.containsKey(req.id)}" class="mb-3 p-2 rounded"
-                        style="background:#f0f7ff; border-left: 3px solid #1976d2; font-size: 0.9rem;">
-                        <i class="fas fa-book text-primary me-1"></i>
-                        <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
-                        <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
-                        <span class="text-muted ms-2">ปีการศึกษา <span th:text="${doc0DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
+                    <div th:if="${hasActiveRequest}" class="alert alert-info mb-4">
+                        <i class="fas fa-info-circle me-2"></i>
+                        คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องใหม่ได้จนกว่าจะเสร็จสิ้น
                     </div>
 
-                    <!-- Progress Tracker - แสดงเฉพาะสถานะที่เกิดขึ้นจริง -->
-                    <div class="progress-tracker">
-                        <!-- สถานะหลัก: รับคำร้อง → แต่งตั้งอนุกรรมการ → นัดหมายวันประชุม -->
-                        <div th:each="step : ${progressSteps}" class="progress-step"
-                            th:classappend="${req.currentStatus.ordinal() == step.ordinal()} ? 'active' : 
-                                     (${req.currentStatus.ordinal() > step.ordinal()} ? 'completed' : '')">
-                            <div class="step-icon">
-                                <i th:class="'fas ' + ${step.icon}" th:if="${req.currentStatus.ordinal() > step.ordinal()}" style="font-size: 0.9rem;"></i>
-                                <i class="fas fa-circle" th:unless="${req.currentStatus.ordinal() > step.ordinal()}" style="font-size: 0.5rem;"></i>
+                    <!-- Draft Card -->
+                    <div th:if="${draftRequest != null}" class="card card-academic mb-4 border-warning">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="mb-1"><i class="fas fa-edit text-warning me-2"></i> คำร้องฉบับร่าง</h5>
+                                    <small class="text-muted">กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง</small>
+                                </div>
+                                <span class="badge bg-warning text-dark fs-6">แบบร่าง</span>
                             </div>
-                            <div class="step-label" th:text="${step.thaiLabel}"></div>
+                            <a th:href="'/user/academic/request/' + ${draftRequest.id}" class="btn btn-warning">
+                                <i class="fas fa-arrow-right"></i> ดำเนินการต่อ
+                            </a>
                         </div>
-                        
-                        <!-- สถานะผลลัพธ์ (แสดงตามจริง) -->
-                        <th:block th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}">
-                            <div class="progress-step active">
-                                <div class="step-icon" style="border-color:#2e7d32;background:#2e7d32;color:#fff;">
-                                    <i class="fas fa-check" style="font-size: 0.9rem;"></i>
-                                </div>
-                                <div class="step-label" style="font-weight:600;color:#2e7d32;">แจ้งผล - ผ่าน</div>
-                            </div>
-                        </th:block>
-                        <th:block th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}">
-                            <div class="progress-step active">
-                                <div class="step-icon" style="border-color:#f57f17;background:#f57f17;color:#fff;">
-                                    <i class="fas fa-exclamation" style="font-size: 0.9rem;"></i>
-                                </div>
-                                <div class="step-label" style="font-weight:600;color:#f57f17;">แจ้งผล - แก้ไข</div>
-                            </div>
-                        </th:block>
-                        <th:block th:if="${req.currentStatus.name() == 'REJECTED'}">
-                            <div class="progress-step active">
-                                <div class="step-icon" style="border-color:#c62828;background:#c62828;color:#fff;">
-                                    <i class="fas fa-times" style="font-size: 0.9rem;"></i>
-                                </div>
-                                <div class="step-label" style="font-weight:600;color:#c62828;">ไม่รับคำร้อง</div>
-                            </div>
-                        </th:block>
-                        <th:block th:if="${req.currentStatus.ordinal() >= T(com.ecom.academic.model.RequestStatus).COMPLETED_PASS.ordinal() 
-                            && req.currentStatus.name() != 'REJECTED'}">
-                            <!-- ถ้ายังไม่เสร็จสิ้น แสดง step ว่างๆ -->
-                            <th:block th:unless="${req.currentStatus.name() == 'COMPLETED'}">
-                                <div class="progress-step">
-                                    <div class="step-icon">
-                                        <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                    </div>
+
+                    <!-- Empty -->
+                    <div th:if="${(requests == null || requests.isEmpty()) && draftRequest == null}"
+                         class="text-center py-5">
+                        <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
+                        <p class="text-muted">ยังไม่มีคำร้อง กดปุ่ม "ยื่นคำร้องขอการประเมินการสอน" เพื่อเริ่มต้น</p>
+                    </div>
+
+                    <!-- Academic Request Cards -->
+                    <div th:each="req, iter : ${requests}" class="card card-academic mb-4 request-card"
+                        th:attr="data-index=${iter.index}">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="mb-2">คำร้อง [[${req.requestCode}]] — [[${req.applicant.name}]]</h5>
+                                    <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+                                        <span class="badge" style="background:#1565c0">
+                                            <i class="fas fa-clipboard-check me-1"></i> ประเมินผลการสอน
+                                        </span>
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="fas fa-calendar me-1"></i> วันที่ยื่น:
+                                            <span th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></span>
+                                        </span>
+                                        <span class="status-badge" th:classappend="'status-' + ${req.currentStatus.name()}"
+                                            th:text="${req.currentStatus.thaiLabel}"></span>
                                     </div>
-                                    <div class="step-label">เสร็จสิ้น</div>
+                                    <small th:if="${req.updatedAt != null}" class="text-muted">
+                                        <i class="fas fa-sync-alt me-1"></i>อัปเดตล่าสุด:
+                                        <span th:text="${#temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                                    </small>
                                 </div>
-                            </th:block>
-                        </th:block>
-                        
-                        <!-- สถานะเสร็จสิ้น -->
-                        <th:block th:if="${req.currentStatus.name() == 'COMPLETED'}">
-                            <div class="progress-step active">
-                                <div class="step-icon" style="border-color:#2e7d32;background:#2e7d32;color:#fff;">
-                                    <i class="fas fa-check" style="font-size: 0.9rem;"></i>
-                                </div>
-                                <div class="step-label" style="font-weight:600;color:#2e7d32;">แจ้งผล</div>
                             </div>
-                            <div class="progress-step completed-final active">
-                                <div class="step-icon" style="border-color:#1b5e20;background:#1b5e20;color:#fff;">
-                                    <i class="fas fa-flag-checkered" style="font-size: 0.9rem;"></i>
-                                </div>
-                                <div class="step-label" style="font-weight:600;color:#1b5e20;">เสร็จสิ้น</div>
-                            </div>
-                        </th:block>
-                    </div>
 
-                    <!-- Meeting Date Display -->
-                    <div th:if="${req.meetingDate != null}" class="alert alert-info d-flex align-items-center mb-3">
-                        <i class="fas fa-calendar-alt me-2"></i>
-                        <div>
-                            <strong>วันประชุม:</strong> <span
-                                th:text="${#temporals.format(req.meetingDate, 'dd/MM/yyyy HH:mm')}"></span>
-                            <span th:if="${req.meetingLocation != null}"> | <strong>สถานที่:</strong>
-                                [[${req.meetingLocation}]]</span>
+                            <!-- ข้อมูลรายวิชา (จากเอกสารที่ 0) -->
+                            <div th:if="${doc0DataMap.containsKey(req.id)}" class="mb-3 p-2 rounded"
+                                style="background:#f0f7ff; border-left: 3px solid #1976d2; font-size: 0.9rem;">
+                                <i class="fas fa-book text-primary me-1"></i>
+                                <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
+                                <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
+                                <span class="text-muted ms-2">ปีการศึกษา <span th:text="${doc0DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
+                            </div>
+
+                            <!-- Progress Tracker -->
+                            <div class="progress-tracker">
+                                <div th:each="step : ${progressSteps}" class="progress-step"
+                                    th:classappend="${req.currentStatus.ordinal() == step.ordinal()} ? 'active' : 
+                                             (${req.currentStatus.ordinal() > step.ordinal()} ? 'completed' : '')">
+                                    <div class="step-icon">
+                                        <i th:class="'fas ' + ${step.icon}" th:if="${req.currentStatus.ordinal() > step.ordinal()}" style="font-size: 0.9rem;"></i>
+                                        <i class="fas fa-circle" th:unless="${req.currentStatus.ordinal() > step.ordinal()}" style="font-size: 0.5rem;"></i>
+                                    </div>
+                                    <div class="step-label" th:text="${step.thaiLabel}"></div>
+                                </div>
+                                
+                                <!-- สถานะผลลัพธ์ -->
+                                <th:block th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}">
+                                    <div class="progress-step active">
+                                        <div class="step-icon" style="border-color:#2e7d32;background:#2e7d32;color:#fff;">
+                                            <i class="fas fa-check" style="font-size: 0.9rem;"></i>
+                                        </div>
+                                        <div class="step-label" style="font-weight:600;color:#2e7d32;">แจ้งผล - ผ่าน</div>
+                                    </div>
+                                </th:block>
+                                <th:block th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}">
+                                    <div class="progress-step active">
+                                        <div class="step-icon" style="border-color:#f57f17;background:#f57f17;color:#fff;">
+                                            <i class="fas fa-exclamation" style="font-size: 0.9rem;"></i>
+                                        </div>
+                                        <div class="step-label" style="font-weight:600;color:#f57f17;">แจ้งผล - แก้ไข</div>
+                                    </div>
+                                </th:block>
+                                <th:block th:if="${req.currentStatus.name() == 'REJECTED'}">
+                                    <div class="progress-step active">
+                                        <div class="step-icon" style="border-color:#c62828;background:#c62828;color:#fff;">
+                                            <i class="fas fa-times" style="font-size: 0.9rem;"></i>
+                                        </div>
+                                        <div class="step-label" style="font-weight:600;color:#c62828;">ไม่รับคำร้อง</div>
+                                    </div>
+                                </th:block>
+                                <th:block th:if="${req.currentStatus.ordinal() >= T(com.ecom.academic.model.RequestStatus).COMPLETED_PASS.ordinal() 
+                                    && req.currentStatus.name() != 'REJECTED'}">
+                                    <th:block th:unless="${req.currentStatus.name() == 'COMPLETED'}">
+                                        <div class="progress-step">
+                                            <div class="step-icon">
+                                                <i class="fas fa-circle" style="font-size: 0.5rem;"></i>
+                                            </div>
+                                            <div class="step-label">เสร็จสิ้น</div>
+                                        </div>
+                                    </th:block>
+                                </th:block>
+                                <th:block th:if="${req.currentStatus.name() == 'COMPLETED'}">
+                                    <div class="progress-step active">
+                                        <div class="step-icon" style="border-color:#2e7d32;background:#2e7d32;color:#fff;">
+                                            <i class="fas fa-check" style="font-size: 0.9rem;"></i>
+                                        </div>
+                                        <div class="step-label" style="font-weight:600;color:#2e7d32;">แจ้งผล</div>
+                                    </div>
+                                    <div class="progress-step completed-final active">
+                                        <div class="step-icon" style="border-color:#1b5e20;background:#1b5e20;color:#fff;">
+                                            <i class="fas fa-flag-checkered" style="font-size: 0.9rem;"></i>
+                                        </div>
+                                        <div class="step-label" style="font-weight:600;color:#1b5e20;">เสร็จสิ้น</div>
+                                    </div>
+                                </th:block>
+                            </div>
+
+                            <!-- Meeting Date -->
+                            <div th:if="${req.meetingDate != null}" class="alert alert-info d-flex align-items-center mb-3">
+                                <i class="fas fa-calendar-alt me-2"></i>
+                                <div>
+                                    <strong>วันประชุม:</strong> <span
+                                        th:text="${#temporals.format(req.meetingDate, 'dd/MM/yyyy HH:mm')}"></span>
+                                    <span th:if="${req.meetingLocation != null}"> | <strong>สถานที่:</strong>
+                                        [[${req.meetingLocation}]]</span>
+                                </div>
+                            </div>
+
+                            <!-- Result Alerts -->
+                            <div th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}" class="alert alert-success">
+                                <i class="fas fa-check-circle me-2"></i> <strong>ผ่านการประเมิน</strong>
+                            </div>
+                            <div th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}" class="alert alert-warning">
+                                <div class="d-flex align-items-start">
+                                    <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
+                                    <div>
+                                        <strong class="d-block mb-1">ต้องแก้ไขเอกสาร</strong>
+                                        <p class="mb-0">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${req.currentStatus.name() == 'REJECTED'}" class="alert alert-danger">
+                                <i class="fas fa-times-circle me-2"></i> <strong>ไม่รับคำร้อง</strong>
+                            </div>
+                            <div th:if="${req.currentStatus.name() == 'COMPLETED'}" class="alert alert-success">
+                                <i class="fas fa-flag-checkered me-2"></i> <strong>เสร็จสิ้น</strong> - คำร้องได้ดำเนินการเสร็จสิ้นแล้ว
+                            </div>
+
+                            <a th:href="'/user/academic/request/' + ${req.id}" class="btn btn-outline-primary btn-sm">
+                                <i class="fas fa-eye"></i> ดูรายละเอียด
+                            </a>
                         </div>
                     </div>
 
-                    <!-- Result Actions -->
-                    <div th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}" class="alert alert-success">
-                        <i class="fas fa-check-circle me-2"></i> <strong>ผ่านการประเมิน</strong>
+                    <!-- Pagination -->
+                    <nav th:if="${requests != null && requests.size() > 5}" aria-label="Page navigation" id="paginationNav">
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <small class="text-muted" id="pageInfo"></small>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item" id="prevPage">
+                                    <a class="page-link" href="#" onclick="changePage(-1); return false;">
+                                        <i class="fas fa-chevron-left"></i> ก่อนหน้า
+                                    </a>
+                                </li>
+                                <li class="page-item" id="nextPage">
+                                    <a class="page-link" href="#" onclick="changePage(1); return false;">
+                                        ถัดไป <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
+                    </nav>
+
+                </div>
+
+                <!-- ========== TAB 2: ตำแหน่งทางวิชาการ ========== -->
+                <div class="tab-pane fade" id="posPane" role="tabpanel" aria-labelledby="pos-tab">
+
+                    <div class="d-flex justify-content-end mb-3">
+                        <th:block th:if="${!hasActivePositionRequest}">
+                            <a href="/user/position/new-request" class="btn"
+                               style="background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff;border:none;">
+                                <i class="fas fa-plus-circle"></i> ยื่นคำร้องขอตำแหน่ง
+                            </a>
+                        </th:block>
+                        <th:block th:if="${hasActivePositionRequest}">
+                            <button class="btn btn-secondary" disabled>
+                                <i class="fas fa-plus-circle"></i> ยื่นคำร้องขอตำแหน่ง
+                            </button>
+                        </th:block>
                     </div>
 
-                    <div th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}" class="alert alert-warning">
-                        <div class="d-flex align-items-start">
-                            <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
-                            <div>
-                                <strong class="d-block mb-1">ต้องแก้ไขเอกสาร</strong>
-                                <p class="mb-0">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
+                    <!-- Position Draft -->
+                    <div th:if="${positionDraft != null}" class="card mb-4" style="border-left: 4px solid #ffc107; border-radius:8px;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="mb-1"><i class="fas fa-edit text-warning me-2"></i> คำร้องตำแหน่ง (ฉบับร่าง)</h5>
+                                    <small class="text-muted">กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง</small>
+                                </div>
+                                <span class="badge bg-warning text-dark fs-6">แบบร่าง</span>
                             </div>
+                            <a th:href="'/user/position/request/' + ${positionDraft.id}" class="btn btn-warning">
+                                <i class="fas fa-arrow-right"></i> ดำเนินการต่อ
+                            </a>
                         </div>
                     </div>
 
-                    <div th:if="${req.currentStatus.name() == 'REJECTED'}" class="alert alert-danger">
-                        <i class="fas fa-times-circle me-2"></i> <strong>ไม่รับคำร้อง</strong>
+                    <!-- Empty -->
+                    <div th:if="${(positionRequests == null || positionRequests.isEmpty()) && positionDraft == null}"
+                         class="text-center py-5">
+                        <i class="fas fa-folder-open fa-3x mb-3 d-block" style="color:#ccc"></i>
+                        <p class="text-muted">ยังไม่มีคำร้องขอตำแหน่ง กดปุ่ม "ยื่นคำร้องขอตำแหน่ง" เพื่อเริ่มต้น</p>
                     </div>
 
-                    <div th:if="${req.currentStatus.name() == 'COMPLETED'}" class="alert alert-success">
-                        <i class="fas fa-flag-checkered me-2"></i> <strong>เสร็จสิ้น</strong> - คำร้องได้ดำเนินการเสร็จสิ้นแล้ว
+                    <!-- Position Request Cards -->
+                    <div th:each="posReq : ${positionRequests}" class="card mb-4 position-request-card"
+                         style="border-left: 4px solid #2e7d32; border-radius:8px;">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-3">
+                                <div>
+                                    <h5 class="mb-2">คำร้อง [[${posReq.requestCode}]] — [[${posReq.applicant.name}]]</h5>
+                                    <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+                                        <span class="badge" style="background:#2e7d32;color:#fff">
+                                            <i class="fas fa-university me-1"></i> ขอตำแหน่งทางวิชาการ
+                                        </span>
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="fas fa-calendar me-1"></i> วันที่ยื่น:
+                                            <span th:text="${posReq.submissionDate != null ? #temporals.format(posReq.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></span>
+                                        </span>
+                                        <span class="badge" th:style="'background:' + ${posReq.currentStatus.color} + ';color:#fff'"
+                                            th:text="${posReq.currentStatus.thaiLabel}"></span>
+                                    </div>
+                                    <small th:if="${posReq.updatedAt != null}" class="text-muted">
+                                        <i class="fas fa-sync-alt me-1"></i>อัปเดตล่าสุด:
+                                        <span th:text="${#temporals.format(posReq.updatedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                                    </small>
+                                </div>
+                            </div>
+
+                            <!-- ข้อมูลตำแหน่ง -->
+                            <div th:if="${posDoc2DataMap.containsKey(posReq.id)}" class="mb-3 p-2 rounded"
+                                style="background:#e8f5e9; border-left: 3px solid #2e7d32; font-size: 0.9rem;">
+                                <i class="fas fa-user-tie text-success me-1"></i>
+                                ตำแหน่งที่เสนอ: <strong th:text="${posDoc2DataMap.get(posReq.id).getOrDefault('request_position', '-')}"></strong>
+                                <span class="text-muted ms-2">สาขา: <span th:text="${posDoc2DataMap.get(posReq.id).getOrDefault('major', '-')}"></span></span>
+                            </div>
+
+                            <!-- Progress Tracker -->
+                            <div class="position-progress-tracker mb-3" style="position:relative;padding:0 20px;">
+                                <div style="position:absolute;top:16px;left:40px;right:40px;height:2px;background:#e0e0e0;z-index:0;"></div>
+                                <div class="d-flex justify-content-between" style="position:relative;z-index:1;">
+                                    <th:block th:each="step, stepStat : ${positionProgressSteps}">
+                                        <div class="text-center" style="min-width:50px;flex:1;">
+                                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center"
+                                                 th:style="${posReq.currentStatus.ordinal() >= step.ordinal()
+                                                     ? 'width:32px;height:32px;background:' + step.color + ';color:#fff;border:2px solid #fff;box-shadow:0 1px 3px rgba(0,0,0,0.15);font-size:0.7rem'
+                                                     : 'width:32px;height:32px;background:#f5f5f5;color:#bbb;border:2px solid #e0e0e0;font-size:0.7rem'}">
+                                                <i class="fas" th:classappend="${step.icon}"></i>
+                                            </div>
+                                            <div class="mt-1" style="font-size:0.55rem;line-height:1.1;max-width:70px;margin:0 auto;"
+                                                 th:style="${posReq.currentStatus.ordinal() >= step.ordinal() ? 'color:' + step.color + ';font-weight:600' : 'color:#bbb'}"
+                                                 th:text="${step.thaiLabel}"></div>
+                                        </div>
+                                    </th:block>
+                                </div>
+                            </div>
+
+                            <a th:href="'/user/position/request/' + ${posReq.id}" class="btn btn-outline-success btn-sm">
+                                <i class="fas fa-eye"></i> ดูรายละเอียด
+                            </a>
+                        </div>
                     </div>
 
-                    <a th:href="'/user/academic/request/' + ${req.id}" class="btn btn-outline-primary btn-sm">
-                        <i class="fas fa-eye"></i> ดูรายละเอียด
-                    </a>
                 </div>
             </div>
 
-            <!-- Pagination -->
-            <nav th:if="${requests != null && requests.size() > 5}" aria-label="Page navigation" id="paginationNav">
-                <div class="d-flex justify-content-between align-items-center mt-3">
-                    <small class="text-muted" id="pageInfo"></small>
-                    <ul class="pagination pagination-sm mb-0">
-                        <li class="page-item" id="prevPage">
-                            <a class="page-link" href="#" onclick="changePage(-1); return false;">
-                                <i class="fas fa-chevron-left"></i> ก่อนหน้า
-                            </a>
-                        </li>
-                        <li class="page-item" id="nextPage">
-                            <a class="page-link" href="#" onclick="changePage(1); return false;">
-                                ถัดไป <i class="fas fa-chevron-right"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </nav>
+            <!-- Tab Styling -->
+            <style>
+                #dashboardTabs .nav-link {
+                    color: #666;
+                    border: none;
+                    border-bottom: 3px solid transparent;
+                    transition: all 0.2s ease;
+                    border-radius: 0;
+                }
+                #dashboardTabs .nav-link:hover {
+                    color: #333;
+                    border-bottom-color: #ccc;
+                    background: #f8f9fa;
+                }
+                #dashboardTabs .nav-link.active {
+                    color: #1565c0 !important;
+                    border-bottom: 3px solid #1565c0 !important;
+                    background: transparent;
+                }
+                #pos-tab.active {
+                    color: #2e7d32 !important;
+                    border-bottom-color: #2e7d32 !important;
+                }
+            </style>
 
+            <!-- Pagination Script -->
             <script>
                 (function() {
                     const ITEMS_PER_PAGE = 5;

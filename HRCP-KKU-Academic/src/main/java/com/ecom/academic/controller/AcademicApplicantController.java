@@ -25,10 +25,14 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.PositionDocument;
+import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.service.AcademicEmailService;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentGenerationService;
+import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
@@ -53,6 +57,9 @@ public class AcademicApplicantController {
 
     @Autowired
     private AcademicEmailService emailService;
+
+    @Autowired
+    private PositionRequestService positionRequestService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -89,6 +96,34 @@ public class AcademicApplicantController {
             }
         }
         model.addAttribute("doc0DataMap", doc0DataMap);
+
+        // ============ Position Requests ============
+        List<PositionRequest> allPositionRequests = positionRequestService.findByApplicant(user.getId());
+        PositionRequest positionDraft = allPositionRequests.stream()
+                .filter(r -> r.getCurrentStatus() == PositionRequestStatus.DRAFT)
+                .findFirst().orElse(null);
+        List<PositionRequest> positionRequests = allPositionRequests.stream()
+                .filter(r -> r.getCurrentStatus() != PositionRequestStatus.DRAFT)
+                .collect(Collectors.toList());
+        model.addAttribute("positionRequests", positionRequests);
+        model.addAttribute("positionDraft", positionDraft);
+        model.addAttribute("positionStatuses", PositionRequestStatus.values());
+        model.addAttribute("positionProgressSteps", PositionRequestStatus.getProgressSteps());
+        model.addAttribute("hasActivePositionRequest", positionRequestService.hasActiveRequest(user.getId()));
+
+        // ดึงข้อมูลตำแหน่งจาก doc_2 สำหรับทุก position request
+        Map<Long, Map<String, String>> posDoc2DataMap = new java.util.HashMap<>();
+        for (PositionRequest posReq : positionRequests) {
+            List<PositionDocument> doc2List = positionRequestService.getDocumentsByType(posReq.getId(), 2);
+            if (!doc2List.isEmpty()) {
+                try {
+                    Map<String, String> doc2Data = objectMapper.readValue(doc2List.get(0).getJsonData(),
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                    posDoc2DataMap.put(posReq.getId(), doc2Data);
+                } catch (Exception e) { /* ignore */ }
+            }
+        }
+        model.addAttribute("posDoc2DataMap", posDoc2DataMap);
 
         return "academic/applicant/dashboard";
     }
