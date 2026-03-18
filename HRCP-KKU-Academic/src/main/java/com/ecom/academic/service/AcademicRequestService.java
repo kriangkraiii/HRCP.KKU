@@ -432,7 +432,7 @@ public class AcademicRequestService {
      * ค้นหาคำร้องที่ผลประเมินใกล้หมดอายุ (สำหรับ scheduler)
      */
     public List<AcademicRequest> findRequestsExpiringSoon(LocalDateTime before) {
-        return requestRepository.findByApplicantIdOrderByCreatedAtDesc(null); 
+        return requestRepository.findByApplicantIdOrderByCreatedAtDesc(null);
     }
 
     public void sendSuggestionEmail(AcademicRequest request, String suggestionsText) {

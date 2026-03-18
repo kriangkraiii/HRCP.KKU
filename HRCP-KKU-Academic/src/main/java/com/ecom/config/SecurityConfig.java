@@ -66,18 +66,18 @@ public class SecurityConfig {
                                 // Rate limit filter runs before authentication
                                 .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class)
 
-                // CSRF protection with CookieCsrfTokenRepository for AJAX and form-based POST
-                .csrf(csrf -> {
-                        // Spring Security 6 uses deferred tokens by default.
-                        // Force eager loading so the XSRF-TOKEN cookie is always set.
-                        var handler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
-                        handler.setCsrfRequestAttributeName(null); // force eager token resolution
-                        csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                                .csrfTokenRequestHandler(handler)
-                                .ignoringRequestMatchers(
-                                                "/admin/toggle-image-mode",
-                                                "/admin/activity-logs/export");
-                })
+                                // CSRF protection with CookieCsrfTokenRepository for AJAX and form-based POST
+                                .csrf(csrf -> {
+                                        // Spring Security 6 uses deferred tokens by default.
+                                        // Force eager loading so the XSRF-TOKEN cookie is always set.
+                                        var handler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
+                                        handler.setCsrfRequestAttributeName(null); // force eager token resolution
+                                        csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                                                        .csrfTokenRequestHandler(handler)
+                                                        .ignoringRequestMatchers(
+                                                                        "/admin/toggle-image-mode",
+                                                                        "/admin/activity-logs/export");
+                                })
                                 // Session management
                                 .sessionManagement(session -> session
                                                 .maximumSessions(1)
