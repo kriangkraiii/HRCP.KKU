@@ -65,6 +65,12 @@ public class UserDtls {
 	@Column(name = "applicant_id")
 	private String applicantId;
 
+	@Column(name = "two_factor_enabled")
+	private Boolean twoFactorEnabled = false;
+
+	@Column(name = "email_verified")
+	private Boolean emailVerified = false;
+
 	@Column(name = "updated_date")
 	private Date updatedDate;
 
@@ -309,6 +315,22 @@ public class UserDtls {
 
 	public void setLastLoginDate(LocalDateTime lastLoginDate) {
 		this.lastLoginDate = lastLoginDate;
+	}
+
+	public Boolean getTwoFactorEnabled() {
+		return twoFactorEnabled;
+	}
+
+	public void setTwoFactorEnabled(Boolean twoFactorEnabled) {
+		this.twoFactorEnabled = twoFactorEnabled;
+	}
+
+	public Boolean getEmailVerified() {
+		return emailVerified;
+	}
+
+	public void setEmailVerified(Boolean emailVerified) {
+		this.emailVerified = emailVerified;
 	}
 
 

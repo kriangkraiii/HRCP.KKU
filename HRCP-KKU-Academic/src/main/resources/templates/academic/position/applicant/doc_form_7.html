@@ -375,37 +375,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 3: ผู้ตรวจสอบ ========== -->
-                <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">ส่วนที่ 3: ผลการตรวจสอบ</h5></div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">เจ้าหน้าที่ผู้ตรวจสอบ</label>
-                                <input type="text" name="hr_officer_name" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" name="hr_officer_position" class="form-control">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">ชื่อคณบดี</label>
-                                <select name="dean_name" class="form-select">
-                                    <option value="">-- เลือก --</option>
-                                    <option th:each="dean : ${deans}" th:value="${dean.name}" th:text="${dean.name}"></option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">ตำแหน่งคณบดี</label>
-                                <input type="text" name="dean_position" class="form-control">
-                            </div>
-                            <div class="col-12">
-                                <label class="form-label">หมายเหตุ (กรณีเอกสารไม่ครบ)</label>
-                                <textarea name="reason_if_none" class="form-control" rows="2"></textarea>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+
 
                 <div class="d-flex gap-2">
                     <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">

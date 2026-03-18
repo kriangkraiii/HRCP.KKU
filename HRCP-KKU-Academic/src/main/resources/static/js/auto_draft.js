@@ -27,7 +27,7 @@
       ".adb--saved{background:#f0fdf4;color:#15803d;border:1px solid #86efac}" +
       ".adb--error{background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5}" +
       ".adb--disabled{background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db}" +
-      ".adb__icon{font-size:1.05rem;flex-shrink:0;width:20px;text-align:center}" +
+      ".adb__icon{font-size:1.05rem;flex-shrink:0;width:20px;text-align:center;position:relative}" +
       "@keyframes adbPulse{0%,80%,100%{opacity:.3}40%{opacity:1}}" +
       ".adb__dots span{animation:adbPulse 1.4s infinite both}" +
       ".adb__dots span:nth-child(2){animation-delay:.2s}" +
@@ -89,8 +89,8 @@
         this.labelEl.innerHTML = 'กำลังบันทึกข้อมูลแบบร่าง<span class="adb__dots"><span>.</span><span>.</span><span>.</span></span>';
         break;
       case "saved":
-        this.iconEl.innerHTML = '<i class="fas fa-cloud-upload-alt"></i>';
-        this.labelEl.textContent = "บันทึกแบบร่างอัตโนมัติแล้ว — " + (extra || "");
+        this.iconEl.innerHTML = '<span class="fa-stack" style="font-size:.55em;vertical-align:middle"><i class="fas fa-cloud fa-stack-2x"></i><i class="fas fa-check fa-stack-1x fa-inverse" style="font-size:.7em;margin-top:-2px"></i></span>';
+        this.labelEl.textContent = "บันทึกฉบับร่างแล้ว — " + (extra || "");
         break;
       case "error":
         this.iconEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
@@ -146,13 +146,20 @@
     this._show("saving");
 
     var self = this;
-    var csrfEl = document.querySelector('input[name="_csrf"]') ||
+    // Read CSRF token: try form hidden input → meta tag → XSRF-TOKEN cookie
+    var csrfEl = this.form.querySelector('input[name="_csrf"]') ||
+                 document.querySelector('input[name="_csrf"]') ||
                  document.querySelector('meta[name="_csrf"]');
     var token = csrfEl ? (csrfEl.value || csrfEl.content || "") : "";
+    if (!token) {
+      // Read from XSRF-TOKEN cookie (set by CookieCsrfTokenRepository)
+      var match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+      if (match) token = decodeURIComponent(match[1]);
+    }
 
     fetch(this.endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-CSRF-TOKEN": token },
+      headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": token },
       body: JSON.stringify(this._collect()),
     })
       .then(function (r) {

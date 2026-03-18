@@ -5,7 +5,7 @@
     <section>
         <div class="container py-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3><i class="fas fa-university"></i> ยื่นขอตำแหน่งทางวิชาการ</h3>
+                <h3><i class="fas fa-university"></i> การยื่นขอตำแหน่งทางวิชาการ</h3>
                 <th:block th:if="${!hasActiveRequest}">
                     <a href="/user/position/new-request" class="btn btn-academic">
                         <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
@@ -140,18 +140,37 @@
                 <p class="text-muted">ยังไม่มีคำร้อง กดปุ่ม "ยื่นคำร้องใหม่" เพื่อเริ่มต้น</p>
             </div>
 
-            <div th:each="req : ${requests}" class="card card-academic mb-4">
+            <div th:each="req, iter : ${requests}" class="card card-academic mb-4 request-card"
+                th:attr="data-index=${iter.index}">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
-                            <h5 class="mb-1">คำร้อง [[${req.requestCode}]]</h5>
-                            <small class="text-muted">วันที่ยื่น: <span
-                                    th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></span></small>
-                            <br>
-                            <small class="text-muted" th:if="${req.targetPosition != null}">ตำแหน่งที่ขอ: [[${req.targetPosition}]]</small>
+                            <h5 class="mb-2">คำร้อง [[${req.requestCode}]]</h5>
+                            <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+                                <span class="badge" style="background:#2e7d32">
+                                    <i class="fas fa-university me-1"></i> ขอตำแหน่งทางวิชาการ
+                                </span>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fas fa-calendar me-1"></i> วันที่ยื่น:
+                                    <span th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></span>
+                                </span>
+                                <span class="badge fs-6" th:classappend="'bg-' + ${req.currentStatus.badgeClass}"
+                                    th:text="${req.currentStatus.thaiLabel}"></span>
+                            </div>
+                            <small class="text-muted" th:if="${req.targetPosition != null}">
+                                <i class="fas fa-user-tie me-1"></i>ตำแหน่งที่ขอ: [[${req.targetPosition}]]
+                            </small>
                         </div>
-                        <span class="badge fs-6" th:classappend="'bg-' + ${req.currentStatus.badgeClass}"
-                            th:text="${req.currentStatus.thaiLabel}"></span>
+                    </div>
+
+                    <!-- ข้อมูลตำแหน่ง (จากเอกสารที่ 2) -->
+                    <div th:if="${doc2DataMap.containsKey(req.id)}" class="mb-3 p-2 rounded"
+                        style="background:#f0f7f0; border-left: 3px solid #2e7d32; font-size: 0.9rem;">
+                        <i class="fas fa-user-tie text-success me-1"></i>
+                        <strong th:text="${doc2DataMap.get(req.id).getOrDefault('request_position', '')}"></strong>
+                        <span th:if="${doc2DataMap.get(req.id).getOrDefault('major', '') != ''}" class="text-muted ms-2">
+                            สาขา <span th:text="${doc2DataMap.get(req.id).getOrDefault('major', '')}"></span>
+                        </span>
                     </div>
 
                     <!-- Progress Tracker -->
@@ -172,6 +191,54 @@
                     </a>
                 </div>
             </div>
+
+            <!-- Pagination -->
+            <nav th:if="${requests != null && requests.size() > 5}" aria-label="Page navigation" id="paginationNav">
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <small class="text-muted" id="pageInfo"></small>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" id="prevPage">
+                            <a class="page-link" href="#" onclick="changePage(-1); return false;">
+                                <i class="fas fa-chevron-left"></i> ก่อนหน้า
+                            </a>
+                        </li>
+                        <li class="page-item" id="nextPage">
+                            <a class="page-link" href="#" onclick="changePage(1); return false;">
+                                ถัดไป <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <script>
+                (function() {
+                    const ITEMS_PER_PAGE = 5;
+                    const cards = document.querySelectorAll('.request-card');
+                    if (cards.length <= ITEMS_PER_PAGE) return;
+                    let currentPage = 0;
+                    const totalPages = Math.ceil(cards.length / ITEMS_PER_PAGE);
+
+                    function showPage(page) {
+                        currentPage = page;
+                        const start = page * ITEMS_PER_PAGE;
+                        const end = start + ITEMS_PER_PAGE;
+                        cards.forEach((card, i) => {
+                            card.style.display = (i >= start && i < end) ? '' : 'none';
+                        });
+                        document.getElementById('pageInfo').textContent =
+                            `แสดง ${start + 1}-${Math.min(end, cards.length)} จาก ${cards.length} คำร้อง`;
+                        document.getElementById('prevPage').classList.toggle('disabled', page === 0);
+                        document.getElementById('nextPage').classList.toggle('disabled', page >= totalPages - 1);
+                    }
+
+                    window.changePage = function(delta) {
+                        const newPage = currentPage + delta;
+                        if (newPage >= 0 && newPage < totalPages) showPage(newPage);
+                    };
+                    showPage(0);
+                })();
+            </script>
         </div>
     </section>
 </body>

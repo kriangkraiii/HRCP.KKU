@@ -75,6 +75,21 @@ public class AcademicApplicantController {
         model.addAttribute("statuses", RequestStatus.values());
         model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
         model.addAttribute("hasActiveRequest", requestService.hasActiveRequest(user.getId()));
+
+        // ดึงข้อมูลรายวิชาจาก doc_0 สำหรับทุกคำร้อง
+        Map<Long, Map<String, String>> doc0DataMap = new java.util.HashMap<>();
+        for (AcademicRequest req : requests) {
+            List<AcademicDocument> doc0List = requestService.getDocumentsByType(req.getId(), 0);
+            if (!doc0List.isEmpty()) {
+                try {
+                    Map<String, String> doc0Data = objectMapper.readValue(doc0List.get(0).getJsonData(),
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                    doc0DataMap.put(req.getId(), doc0Data);
+                } catch (Exception e) { /* ignore */ }
+            }
+        }
+        model.addAttribute("doc0DataMap", doc0DataMap);
+
         return "academic/applicant/dashboard";
     }
 
@@ -303,6 +318,19 @@ public class AcademicApplicantController {
         boolean hasDoc1 = allDocuments.stream().anyMatch(d -> d.getDocumentType() == 1);
         model.addAttribute("hasDoc0", hasDoc0);
         model.addAttribute("hasDoc1", hasDoc1);
+
+        // ดึงข้อมูลจาก doc_0 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
+        List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
+        if (!doc0List.isEmpty()) {
+            try {
+                String doc0Json = doc0List.get(0).getJsonData();
+                Map<String, String> doc0Data = objectMapper.readValue(doc0Json,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                model.addAttribute("doc0Data", doc0Data);
+            } catch (Exception e) {
+                // ignore parse errors
+            }
+        }
 
         return "academic/applicant/request_detail";
     }

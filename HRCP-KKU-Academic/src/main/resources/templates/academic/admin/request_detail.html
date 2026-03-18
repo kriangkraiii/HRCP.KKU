@@ -43,6 +43,38 @@
                 </div>
             </div>
 
+            <!-- ข้อมูลรายวิชา จากเอกสารที่ 0 -->
+            <div th:if="${doc0Data != null}" class="card card-academic mb-4"
+                style="border-left: 4px solid #1976d2;">
+                <div class="card-body py-3">
+                    <h6 class="mb-3"><i class="fas fa-book text-primary me-2"></i> ข้อมูลรายวิชา
+                        <small class="text-muted">(จากเอกสารที่ 0: บันทึกข้อความ)</small>
+                    </h6>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">รหัสวิชา</small>
+                            <strong th:text="${doc0Data.getOrDefault('course_code', '-')}">-</strong>
+                        </div>
+                        <div class="col-md-5">
+                            <small class="text-muted d-block">รายวิชา</small>
+                            <strong th:text="${doc0Data.getOrDefault('course_name', '-')}">-</strong>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted d-block">ปีการศึกษา</small>
+                            <strong th:text="${doc0Data.getOrDefault('academic_year', '-')}">-</strong>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted d-block">ตำแหน่งที่ขอ</small>
+                            <strong>
+                                <span th:if="${doc0Data.getOrDefault('chk1', '') == '✓'}">ผศ.</span>
+                                <span th:if="${doc0Data.getOrDefault('chk2', '') == '✓'}">รศ.</span>
+                                <span th:if="${doc0Data.getOrDefault('chk1', '') != '✓' and doc0Data.getOrDefault('chk2', '') != '✓'}">-</span>
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <div class="row">
                 <!-- Left Column: Status Update -->
                 <div class="col-md-5">

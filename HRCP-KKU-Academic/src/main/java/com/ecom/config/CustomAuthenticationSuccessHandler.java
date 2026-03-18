@@ -6,26 +6,32 @@ import java.util.Collection;
 
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import com.ecom.model.UserDtls;
+import com.ecom.service.TwoFactorService;
 import com.ecom.service.UserService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.HttpSession;
 
 @Component
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
     private final BruteForceProtection bruteForceProtection;
     private final UserService userService;
+    private final TwoFactorService twoFactorService;
 
     public CustomAuthenticationSuccessHandler(BruteForceProtection bruteForceProtection,
-                                              UserService userService) {
+                                              UserService userService,
+                                              TwoFactorService twoFactorService) {
         this.bruteForceProtection = bruteForceProtection;
         this.userService = userService;
+        this.twoFactorService = twoFactorService;
     }
 
     @Override
@@ -55,12 +61,9 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             userService.updateUser(user);
         }
 
-        // Regenerate session to prevent session fixation
-        request.changeSessionId();
-
+        // Determine redirect URL
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
         String redirectUrl = "/signin";
-
         for (GrantedAuthority authority : authorities) {
             if (authority.getAuthority().equals("ROLE_ADMIN")) {
                 redirectUrl = "/admin/academic/requests";
@@ -70,6 +73,27 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
                 break;
             }
         }
+
+        // === 2FA CHECK ===
+        if (user != null && Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
+            HttpSession session = request.getSession();
+            session.setAttribute("2FA_USER_EMAIL", user.getEmail());
+            session.setAttribute("2FA_REDIRECT", redirectUrl);
+
+            // Generate and send OTP
+            twoFactorService.generateOtp(user);
+            twoFactorService.sendOtpEmail(user, "LOGIN");
+
+            // Clear security context — user is not fully authenticated yet
+            SecurityContextHolder.clearContext();
+
+            response.sendRedirect("/2fa/verify");
+            return;
+        }
+
+        // Regenerate session to prevent session fixation
+        request.changeSessionId();
         response.sendRedirect(redirectUrl);
     }
 }
+

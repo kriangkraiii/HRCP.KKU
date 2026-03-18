@@ -91,6 +91,7 @@ public class SecurityConfig {
                                                                 "/admin/css/**", "/admin/js/**", "/admin/img/**",
                                                                 "/forgot-password", "/reset-password",
                                                                 "/first-login", "/first-login/**",
+                                                                "/2fa/**",
                                                                 "/favicon.ico", "/error")
                                                 .permitAll()
                                                 // Lock down Actuator endpoints

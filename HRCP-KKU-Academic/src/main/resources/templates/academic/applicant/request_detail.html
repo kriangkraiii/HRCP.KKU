@@ -21,6 +21,34 @@
                                 th:text="${#temporals.format(request.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></div>
                     </div>
 
+                    <!-- ข้อมูลรายวิชา จากเอกสารที่ 0 -->
+                    <div th:if="${doc0Data != null}" class="row mb-3 mt-2 p-3 rounded"
+                        style="background: #f0f7ff; border-left: 4px solid #1976d2;">
+                        <div class="col-12 mb-2">
+                            <small class="text-muted"><i class="fas fa-book me-1"></i> ข้อมูลรายวิชา (จากเอกสารที่ 0)</small>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted d-block">รหัสวิชา</small>
+                            <strong th:text="${doc0Data.getOrDefault('course_code', '-')}">-</strong>
+                        </div>
+                        <div class="col-md-5">
+                            <small class="text-muted d-block">รายวิชา</small>
+                            <strong th:text="${doc0Data.getOrDefault('course_name', '-')}">-</strong>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted d-block">ปีการศึกษา</small>
+                            <strong th:text="${doc0Data.getOrDefault('academic_year', '-')}">-</strong>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted d-block">ตำแหน่งที่ขอ</small>
+                            <strong>
+                                <span th:if="${doc0Data.getOrDefault('chk1', '') == '✓'}">ผศ.</span>
+                                <span th:if="${doc0Data.getOrDefault('chk2', '') == '✓'}">รศ.</span>
+                                <span th:if="${doc0Data.getOrDefault('chk1', '') != '✓' and doc0Data.getOrDefault('chk2', '') != '✓'}">-</span>
+                            </strong>
+                        </div>
+                    </div>
+
                     <!-- Progress Tracker - แสดงเฉพาะสถานะที่เกิดขึ้นจริง -->
                     <div class="progress-tracker">
                         <!-- สถานะหลัก: รับคำร้อง → แต่งตั้งอนุกรรมการ → นัดหมายวันประชุม -->
@@ -93,7 +121,7 @@
                             <i class="fas fa-exclamation-triangle me-3 fa-2x mt-1"></i>
                             <div>
                                 <strong class="d-block mb-1">ต้องแก้ไขเอกสาร</strong>
-                                <p class="mb-0">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
+                                <p class="mb-0">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
                             </div>
                         </div>
                     </div>

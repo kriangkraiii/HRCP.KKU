@@ -66,51 +66,33 @@
                     </div>
                 </div>
 
-                <!-- ตารางผลงานวิจัย (5 รายการ) -->
+                <!-- ตารางผลงานวิจัย (เพิ่มได้ไม่จำกัด) -->
                 <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">รายการผลงานวิจัย (สูงสุด 5 รายการ)</h5></div>
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">รายการผลงานวิจัย</h5>
+                        <button type="button" class="btn btn-success btn-sm" id="btnAddResearch">
+                            <i class="fas fa-plus-circle"></i> เพิ่มรายการ
+                        </button>
+                    </div>
                     <div class="card-body">
                         <div class="table-responsive">
-                            <table class="table table-bordered align-middle">
+                            <table class="table table-bordered align-middle" id="researchTable">
                                 <thead class="table-light">
                                     <tr>
                                         <th style="width:5%">#</th>
-                                        <th style="width:30%">ผลงาน</th>
-                                        <th style="width:25%">สถานะผู้ขอในผลงาน</th>
-                                        <th style="width:15%">Impact Factor</th>
+                                        <th style="width:28%">ผลงาน</th>
+                                        <th style="width:27%">สถานะผู้ขอในผลงาน</th>
+                                        <th style="width:13%">Impact Factor</th>
                                         <th style="width:15%">ฐานข้อมูล</th>
+                                        <th style="width:5%"></th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <tr th:each="i : ${#numbers.sequence(1, 5)}">
-                                        <td th:text="${i}"></td>
-                                        <td>
-                                            <input type="text" th:name="'des_research' + ${i}" class="form-control form-control-sm" placeholder="ชื่อผลงานวิจัย">
-                                        </td>
-                                        <td>
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="checkbox" th:name="'chk_firstauthor' + ${i}" value="☑">
-                                                <label class="form-check-label" style="font-size:0.85em">First author</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="checkbox" th:name="'chk_Corres' + ${i}" value="☑">
-                                                <label class="form-check-label" style="font-size:0.85em">Corresponding</label>
-                                            </div>
-                                            <div class="form-check form-check-inline">
-                                                <input class="form-check-input" type="checkbox" th:name="'essen' + ${i}" value="☑">
-                                                <label class="form-check-label" style="font-size:0.85em">Essential contributor</label>
-                                            </div>
-                                        </td>
-                                        <td>
-                                            <input type="text" th:name="'impactfacttor' + ${i}" class="form-control form-control-sm">
-                                        </td>
-                                        <td>
-                                            <input type="text" th:name="'data' + ${i}" class="form-control form-control-sm" placeholder="เช่น Scopus">
-                                        </td>
-                                    </tr>
+                                <tbody id="researchBody">
+                                    <!-- rows จะถูกสร้างจาก JS -->
                                 </tbody>
                             </table>
                         </div>
+                        <input type="hidden" name="research_count" id="researchCountField" value="1">
                     </div>
                 </div>
 
@@ -149,11 +131,97 @@
         </div>
 
         <script th:inline="javascript">
+            // ==================== Dynamic Research Rows ====================
+            let researchRowCount = 0;
+
+            function createResearchRow(idx) {
+                const tr = document.createElement('tr');
+                tr.setAttribute('data-row-idx', idx);
+                tr.innerHTML = `
+                    <td class="text-center fw-bold row-number">${idx}</td>
+                    <td>
+                        <input type="text" name="des_research${idx}" class="form-control form-control-sm" placeholder="ชื่อผลงานวิจัย">
+                    </td>
+                    <td>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="chk_firstauthor${idx}" value="☑">
+                            <label class="form-check-label" style="font-size:0.85em">ผู้ประพันธ์อันดับแรก (First author)</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="chk_Corres${idx}" value="☑">
+                            <label class="form-check-label" style="font-size:0.85em">ผู้ประพันธ์บรรณกิจ (Corresponding author)</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" name="essen${idx}" value="☑">
+                            <label class="form-check-label" style="font-size:0.85em">ผู้มีส่วนสำคัญทางปัญญา (Essentially intellectual contributor)</label>
+                        </div>
+                    </td>
+                    <td>
+                        <input type="text" name="impactfacttor${idx}" class="form-control form-control-sm">
+                    </td>
+                    <td>
+                        <input type="text" name="data${idx}" class="form-control form-control-sm" placeholder="เช่น Scopus">
+                    </td>
+                    <td class="text-center">
+                        <button type="button" class="btn btn-outline-danger btn-sm btn-remove-row" title="ลบรายการ">
+                            <i class="fas fa-trash-alt"></i>
+                        </button>
+                    </td>
+                `;
+                // Bind remove
+                tr.querySelector('.btn-remove-row').addEventListener('click', function() {
+                    tr.remove();
+                    renumberRows();
+                });
+                return tr;
+            }
+
+            function addResearchRow() {
+                researchRowCount++;
+                const tbody = document.getElementById('researchBody');
+                tbody.appendChild(createResearchRow(researchRowCount));
+                document.getElementById('researchCountField').value = researchRowCount;
+            }
+
+            function renumberRows() {
+                const rows = document.querySelectorAll('#researchBody tr');
+                researchRowCount = rows.length;
+                rows.forEach((tr, i) => {
+                    const num = i + 1;
+                    tr.setAttribute('data-row-idx', num);
+                    tr.querySelector('.row-number').textContent = num;
+                    // Rename all inputs
+                    tr.querySelectorAll('input').forEach(input => {
+                        const oldName = input.name;
+                        // Replace trailing digits
+                        const newName = oldName.replace(/\d+$/, num);
+                        input.name = newName;
+                    });
+                });
+                document.getElementById('researchCountField').value = researchRowCount;
+            }
+
             document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('btnAddResearch').addEventListener('click', addResearchRow);
+
+                // Load existing data
                 const existingData = /*[[${existingData}]]*/ null;
                 if (existingData) {
                     try {
                         const data = JSON.parse(existingData);
+
+                        // Detect how many research rows exist from saved data
+                        let maxRow = 0;
+                        for (const key of Object.keys(data)) {
+                            const match = key.match(/^des_research(\d+)$/);
+                            if (match) maxRow = Math.max(maxRow, parseInt(match[1]));
+                        }
+
+                        // Create rows
+                        const rowsNeeded = Math.max(maxRow, parseInt(data.research_count || '1'));
+                        for (let i = 0; i < rowsNeeded; i++) addResearchRow();
+
+                        // Fill values
                         for (const [key, value] of Object.entries(data)) {
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
@@ -161,7 +229,10 @@
                                 else { el.value = value; }
                             }
                         }
-                    } catch(e) {}
+                    } catch(e) { addResearchRow(); }
+                } else {
+                    // Start with 1 empty row
+                    addResearchRow();
                 }
             });
         </script>

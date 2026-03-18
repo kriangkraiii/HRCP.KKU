@@ -184,6 +184,22 @@ public class AcademicAdminController {
         long evalTotal = allRequests.stream().filter(r -> !r.getCurrentStatus().isDraft()).count();
         model.addAttribute("evaluationTotalCount", evalTotal);
 
+        // ดึงข้อมูลรายวิชาจาก doc_0 สำหรับทุกคำร้องประเมินผล
+        Map<Long, Map<String, String>> doc0DataMap = new HashMap<>();
+        for (AcademicRequest req : allRequests) {
+            if (!req.getCurrentStatus().isDraft()) {
+                List<AcademicDocument> doc0List = requestService.getDocumentsByType(req.getId(), 0);
+                if (!doc0List.isEmpty()) {
+                    try {
+                        Map<String, String> doc0Data = objectMapper.readValue(doc0List.get(0).getJsonData(),
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                        doc0DataMap.put(req.getId(), doc0Data);
+                    } catch (Exception e) { /* ignore */ }
+                }
+            }
+        }
+        model.addAttribute("doc0DataMap", doc0DataMap);
+
         return "academic/admin/requests";
     }
 
@@ -201,6 +217,20 @@ public class AcademicAdminController {
         model.addAttribute("docLabels", DOC_LABELS);
         model.addAttribute("attachments", requestService.getAttachments(id));
         model.addAttribute("attachmentCount", requestService.countAttachments(id));
+
+        // ดึงข้อมูลจาก doc_0 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
+        List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
+        if (!doc0List.isEmpty()) {
+            try {
+                String doc0Json = doc0List.get(0).getJsonData();
+                Map<String, String> doc0Data = objectMapper.readValue(doc0Json,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                model.addAttribute("doc0Data", doc0Data);
+            } catch (Exception e) {
+                // ignore parse errors
+            }
+        }
+
         return "academic/admin/request_detail";
     }
 

@@ -26,6 +26,26 @@
                     th:text="${request.currentStatus.thaiLabel}"></span>
             </div>
 
+            <!-- ข้อมูลตำแหน่ง (จากเอกสารที่ 2) -->
+            <div th:if="${doc2Data != null}" class="card mb-4" style="border-left: 4px solid #2e7d32; border-radius: 8px;">
+                <div class="card-body py-3">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <small class="text-muted">ตำแหน่งที่เสนอขอ</small>
+                            <div class="fw-bold text-success" th:text="${doc2Data.getOrDefault('request_position', '-')}"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">ตำแหน่งปัจจุบัน</small>
+                            <div th:text="${doc2Data.getOrDefault('current_position', '-')}"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <small class="text-muted">สาขาวิชา</small>
+                            <div th:text="${doc2Data.getOrDefault('major', '-')}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- Step Indicator -->
             <div class="d-flex justify-content-center mb-4 flex-wrap gap-2">
                 <th:block th:each="entry : ${docLabels}">

@@ -80,58 +80,25 @@
                     </div>
                 </div>
 
-                <!-- ผลงานวิจัย -->
+                <!-- ผลงานวิจัย (Dynamic from Doc 6) -->
                 <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">ผลงานวิจัยที่ยื่นเสนอ</h5></div>
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">ผลงานวิจัยที่ยื่นเสนอ</h5>
+                        <div>
+                            <span class="badge bg-info me-2" id="doc6Badge" style="display:none">
+                                <i class="fas fa-sync"></i> ดึงจากเอกสารที่ 6 ของผู้ยื่น
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-success" onclick="addResearchRow()">
+                                <i class="fas fa-plus"></i> เพิ่มรายการ
+                            </button>
+                        </div>
+                    </div>
                     <div class="card-body">
                         <div class="row g-3 mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">รายละเอียดผลงานวิจัย</label>
-                                <input type="text" name="des_research" class="form-control">
-                            </div>
-                            <div class="col-md-4">
                                 <label class="form-label">จำนวนงานวิจัย</label>
-                                <input type="number" name="research_count" class="form-control" min="0">
+                                <input type="number" name="research_count" class="form-control" min="0" id="researchCountField">
                             </div>
-                        </div>
-
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>#</th>
-                                        <th>ผลงาน</th>
-                                        <th>First author</th>
-                                        <th>Corresponding</th>
-                                        <th>Essential contributor</th>
-                                        <th>Impact Factor</th>
-                                        <th>ฐานข้อมูล</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <!-- Main entry -->
-                                    <tr>
-                                        <td>หลัก</td>
-                                        <td><input type="text" name="des_research" class="form-control form-control-sm" placeholder="ผลงานหลัก" disabled></td>
-                                        <td><input type="text" name="firstauthor" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="corresauthor" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="essencontributor" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="impact_factor" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="database" class="form-control form-control-sm"></td>
-                                    </tr>
-                                    <tr th:each="i : ${#numbers.sequence(1, 3)}">
-                                        <td th:text="${i}"></td>
-                                        <td><input type="text" th:name="'research_des' + ${i}" class="form-control form-control-sm"></td>
-                                        <td><input type="text" th:name="'firstauthor' + ${i}" class="form-control form-control-sm"></td>
-                                        <td><input type="text" th:name="'corresautho' + (${i} == 3 ? '3r' : ${i})" class="form-control form-control-sm"></td>
-                                        <td><input type="text" th:name="'essencontributor' + ${i}" class="form-control form-control-sm"></td>
-                                        <td><input type="text" th:name="'impact_factor' + ${i}" class="form-control form-control-sm"></td>
-                                        <td><input type="text" th:name="'database' + ${i}" class="form-control form-control-sm"></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                        <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">จำนวนรายการวิจัยชุดที่ 1</label>
                                 <input type="text" name="research1_count" class="form-control">
@@ -144,6 +111,26 @@
                                 <label class="form-label">จำนวนรายการวิจัยชุดที่ 2</label>
                                 <input type="text" name="research2_count" class="form-control">
                             </div>
+                        </div>
+
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle" id="researchTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th style="width:3%">#</th>
+                                        <th style="width:25%">ผลงาน</th>
+                                        <th>ผู้ประพันธ์อันดับแรก (First author)</th>
+                                        <th>ผู้ประพันธ์บรรณกิจ (Corresponding author)</th>
+                                        <th>ผู้มีส่วนสำคัญทางปัญญา (Essentially intellectual contributor)</th>
+                                        <th>Impact Factor</th>
+                                        <th>ฐานข้อมูล</th>
+                                        <th style="width:3%"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="researchTbody">
+                                    <!-- Rows generated by JS -->
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -246,16 +233,154 @@
         </div>
 
         <script th:inline="javascript">
+            let researchRowCount = 0;
+
+            /**
+             * DOCX placeholder mapping:
+             * Row 0 (main): des_research, firstauthor, corresauthor, essencontributor, impact_factor, database
+             * Row N (1+):   research_desN, firstauthorN, corresauthoN (3→corresautho3r), essencontributorN, impact_factorN, databaseN
+             */
+            function getFieldNames(idx) {
+                if (idx === 0) {
+                    return {
+                        des: 'des_research', first: 'firstauthor', corres: 'corresauthor',
+                        essen: 'essencontributor', impact: 'impact_factor', db: 'database'
+                    };
+                }
+                return {
+                    des: `research_des${idx}`, first: `firstauthor${idx}`,
+                    corres: idx === 3 ? 'corresautho3r' : `corresauthor${idx}`,
+                    essen: `essencontributor${idx}`, impact: `impact_factor${idx}`, db: `database${idx}`
+                };
+            }
+
+            function createResearchRow(idx, data) {
+                const fn = getFieldNames(idx);
+                const label = idx === 0 ? 'หลัก' : idx;
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${label}</td>
+                    <td><input type="text" name="${fn.des}" class="form-control form-control-sm" value="${escHtml(data?.des || '')}"></td>
+                    <td><input type="text" name="${fn.first}" class="form-control form-control-sm" value="${escHtml(data?.first || '')}"></td>
+                    <td><input type="text" name="${fn.corres}" class="form-control form-control-sm" value="${escHtml(data?.corres || '')}"></td>
+                    <td><input type="text" name="${fn.essen}" class="form-control form-control-sm" value="${escHtml(data?.essen || '')}"></td>
+                    <td><input type="text" name="${fn.impact}" class="form-control form-control-sm" value="${escHtml(data?.impact || '')}"></td>
+                    <td><input type="text" name="${fn.db}" class="form-control form-control-sm" value="${escHtml(data?.db || '')}"></td>
+                    <td>${idx > 0 ? '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeResearchRow(this)"><i class="fas fa-trash"></i></button>' : ''}</td>`;
+                return tr;
+            }
+
+            function escHtml(s) { return s ? s.replace(/"/g, '&quot;').replace(/</g, '&lt;') : ''; }
+
+            function addResearchRow(data) {
+                const tbody = document.getElementById('researchTbody');
+                const tr = createResearchRow(researchRowCount, data || null);
+                tbody.appendChild(tr);
+                researchRowCount++;
+                updateResearchCount();
+            }
+
+            function removeResearchRow(btn) {
+                btn.closest('tr').remove();
+                renumberResearchRows();
+                updateResearchCount();
+            }
+
+            function renumberResearchRows() {
+                const rows = document.querySelectorAll('#researchTbody tr');
+                researchRowCount = rows.length;
+                rows.forEach((tr, i) => {
+                    const fn = getFieldNames(i);
+                    const inputs = tr.querySelectorAll('input');
+                    tr.querySelector('td').textContent = i === 0 ? 'หลัก' : i;
+                    if (inputs[0]) inputs[0].name = fn.des;
+                    if (inputs[1]) inputs[1].name = fn.first;
+                    if (inputs[2]) inputs[2].name = fn.corres;
+                    if (inputs[3]) inputs[3].name = fn.essen;
+                    if (inputs[4]) inputs[4].name = fn.impact;
+                    if (inputs[5]) inputs[5].name = fn.db;
+                    // Update delete button visibility
+                    const lastTd = tr.querySelector('td:last-child');
+                    if (i === 0) lastTd.innerHTML = '';
+                    else if (!lastTd.querySelector('button')) {
+                        lastTd.innerHTML = '<button type="button" class="btn btn-sm btn-outline-danger" onclick="removeResearchRow(this)"><i class="fas fa-trash"></i></button>';
+                    }
+                });
+            }
+
+            function updateResearchCount() {
+                const countField = document.getElementById('researchCountField');
+                if (countField) countField.value = document.querySelectorAll('#researchTbody tr').length;
+            }
+
             document.addEventListener('DOMContentLoaded', function() {
                 const existingData = /*[[${existingData}]]*/ null;
-                if (existingData) {
-                    try {
-                        const data = JSON.parse(existingData);
-                        for (const [key, value] of Object.entries(data)) {
-                            const el = document.querySelector(`[name="${key}"]`);
-                            if (el) el.value = value;
+                const doc6Raw = /*[[${doc6Data}]]*/ null;
+                let data = null;
+                let doc6 = null;
+
+                if (existingData) { try { data = JSON.parse(existingData); } catch(e) {} }
+                if (doc6Raw) { try { doc6 = JSON.parse(doc6Raw); } catch(e) {} }
+
+                // Determine how many research rows to create
+                let hasExistingResearch = false;
+                if (data) {
+                    // Check if doc 8 already has saved research data
+                    if (data.des_research || data.research_des1) hasExistingResearch = true;
+                }
+
+                if (hasExistingResearch && data) {
+                    // Load from doc 8's own saved data
+                    // Main row (idx 0)
+                    addResearchRow({ des: data.des_research || '', first: data.firstauthor || '',
+                        corres: data.corresauthor || '', essen: data.essencontributor || '',
+                        impact: data.impact_factor || '', db: data.database || '' });
+                    // Numbered rows
+                    for (let i = 1; i <= 50; i++) {
+                        const desKey = `research_des${i}`;
+                        if (data[desKey]) {
+                            const corresKey = i === 3 ? 'corresautho3r' : `corresauthor${i}`;
+                            addResearchRow({ des: data[desKey], first: data[`firstauthor${i}`] || '',
+                                corres: data[corresKey] || '', essen: data[`essencontributor${i}`] || '',
+                                impact: data[`impact_factor${i}`] || '', db: data[`database${i}`] || '' });
                         }
-                    } catch(e) {}
+                    }
+                } else if (doc6) {
+                    // Auto-populate from doc 6 (applicant's research data)
+                    document.getElementById('doc6Badge').style.display = '';
+                    let maxIdx = 0;
+                    for (const key of Object.keys(doc6)) {
+                        const m = key.match(/^des_research(\d+)$/);
+                        if (m) maxIdx = Math.max(maxIdx, parseInt(m[1]));
+                    }
+                    for (let i = 1; i <= maxIdx; i++) {
+                        // Map doc 6 fields → doc 8 fields
+                        addResearchRow({
+                            des: doc6[`des_research${i}`] || '',
+                            first: doc6[`chk_firstauthor${i}`] === '☑' ? '☑' : '',
+                            corres: doc6[`chk_Corres${i}`] === '☑' ? '☑' : '',
+                            essen: doc6[`essen${i}`] === '☑' ? '☑' : '',
+                            impact: doc6[`impactfacttor${i}`] || '',
+                            db: doc6[`data${i}`] || ''
+                        });
+                    }
+                    if (maxIdx === 0) addResearchRow(); // At least one empty row
+                } else {
+                    // No data at all — create one empty row
+                    addResearchRow();
+                }
+
+                // Fill non-research fields from existing data
+                if (data) {
+                    for (const [key, value] of Object.entries(data)) {
+                        // Skip research fields (already handled above)
+                        if (key === 'des_research' || key.startsWith('research_des') ||
+                            key.startsWith('firstauthor') || key.startsWith('corresautho') ||
+                            key.startsWith('essencontributor') || key.startsWith('impact_factor') ||
+                            key.match(/^database\d*$/)) continue;
+                        const el = document.querySelector(`[name="${key}"]`);
+                        if (el) el.value = value;
+                    }
                 }
             });
         </script>
@@ -266,3 +391,4 @@
     </section>
 </body>
 </html>
+

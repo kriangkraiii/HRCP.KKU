@@ -150,7 +150,8 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr th:each="req, iter : ${requests}">
+                                            <th:block th:each="req, iter : ${requests}">
+                                            <tr>
                                                 <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
                                                 <td><small class="fw-semibold text-primary" th:text="${req.requestCode}"></small></td>
                                                 <td>
@@ -177,6 +178,18 @@
                                                     </a>
                                                 </td>
                                             </tr>
+                                            <tr th:if="${doc0DataMap.containsKey(req.id)}" style="background:#f8fbff">
+                                                <td></td>
+                                                <td colspan="7" style="border-top:0; padding-top:0">
+                                                    <small style="color:#1565c0">
+                                                        <i class="fas fa-book me-1"></i>
+                                                        <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
+                                                        <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
+                                                        <span class="text-muted ms-2">ปีการศึกษา <span th:text="${doc0DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
+                                                    </small>
+                                                </td>
+                                            </tr>
+                                            </th:block>
                                         </tbody>
                                     </table>
                                 </div>
@@ -216,7 +229,8 @@
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            <tr th:each="req, iter : ${pendingRequests}">
+                                            <th:block th:each="req, iter : ${pendingRequests}">
+                                            <tr>
                                                 <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
                                                 <td><small class="fw-semibold text-primary" th:text="${req.requestCode}"></small></td>
                                                 <td>
@@ -243,6 +257,18 @@
                                                     </a>
                                                 </td>
                                             </tr>
+                                            <tr th:if="${doc0DataMap.containsKey(req.id)}" style="background:#f8fbff">
+                                                <td></td>
+                                                <td colspan="7" style="border-top:0; padding-top:0">
+                                                    <small style="color:#1565c0">
+                                                        <i class="fas fa-book me-1"></i>
+                                                        <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
+                                                        <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
+                                                        <span class="text-muted ms-2">ปีการศึกษา <span th:text="${doc0DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
+                                                    </small>
+                                                </td>
+                                            </tr>
+                                            </th:block>
                                         </tbody>
                                     </table>
                                 </div>

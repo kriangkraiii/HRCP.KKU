@@ -8,12 +8,12 @@
                 <h3><i class="fas fa-tachometer-alt"></i> แดชบอร์ดผู้ยื่นคำร้อง</h3>
                 <th:block th:if="${!hasActiveRequest}">
                     <a href="/user/academic/new-request" class="btn btn-academic">
-                        <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
+                        <i class="fas fa-plus-circle"></i> ยื่นคำร้องขอการประเมินการสอน
                     </a>
                 </th:block>
                 <th:block th:if="${hasActiveRequest}">
                     <button class="btn btn-secondary" disabled title="มีคำร้องที่กำลังดำเนินการอยู่">
-                        <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
+                        <i class="fas fa-plus-circle"></i> ยื่นคำร้องขอการประเมินการสอน
                     </button>
                 </th:block>
             </div>
@@ -21,13 +21,13 @@
             <!-- Alert for active request -->
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>ไม่สามารถยื่นคำร้องใหม่ได้</strong> คุณมีคำร้องที่กำลังดำเนินการอยู่ กรุณารอให้คำร้องเดิมขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น" ก่อนจึงยื่นคำร้องใหม่ได้
+                <strong>ไม่สามารถยื่นคำร้องขอการประเมินการสอนได้</strong> คุณมีคำร้องที่กำลังดำเนินการอยู่ กรุณารอให้คำร้องเดิมขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น" ก่อนจึงยื่นคำร้องขอการประเมินการสอนได้
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
             <div th:if="${hasActiveRequest}" class="alert alert-info mb-4">
                 <i class="fas fa-info-circle me-2"></i>
-                คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องใหม่ได้จนกว่าคำร้องเดิมจะขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น"
+                คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องขอการประเมินการสอนได้จนกว่าคำร้องเดิมจะขึ้นสถานะ "ไม่รับคำร้อง" หรือ "เสร็จสิ้น"
             </div>
 
             <!-- Draft Request Card -->
@@ -48,25 +48,40 @@
 
             <div th:if="${requests == null || requests.isEmpty()}" class="text-center py-5" th:unless="${draftRequest != null}">
                 <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
-                <p class="text-muted">ยังไม่มีคำร้อง กดปุ่ม "ยื่นคำร้องใหม่" เพื่อเริ่มต้น</p>
+                <p class="text-muted">ยังไม่มีคำร้อง กดปุ่ม "ยื่นคำร้องขอการประเมินการสอน" เพื่อเริ่มต้น</p>
             </div>
 
-            <div th:each="req : ${requests}" class="card card-academic mb-4">
+            <div th:each="req, iter : ${requests}" class="card card-academic mb-4 request-card"
+                th:attr="data-index=${iter.index}">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
-                            <h5 class="mb-1">คำร้อง [[${req.requestCode}]] — [[${req.applicant.name}]]</h5>
-                            <small class="text-muted">
-                                <i class="fas fa-calendar-plus me-1"></i>วันที่ยื่น: <span
-                                    th:text="${#temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm')}"></span>
-                                <span th:if="${req.updatedAt != null}" class="ms-3">
-                                    <i class="fas fa-sync-alt me-1"></i>อัปเดตล่าสุด: <span
-                                        th:text="${#temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                            <h5 class="mb-2">คำร้อง [[${req.requestCode}]] — [[${req.applicant.name}]]</h5>
+                            <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
+                                <span class="badge" style="background:#1565c0">
+                                    <i class="fas fa-clipboard-check me-1"></i> ประเมินผลการสอน
                                 </span>
+                                <span class="badge bg-light text-dark border">
+                                    <i class="fas fa-calendar me-1"></i> วันที่ยื่น:
+                                    <span th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></span>
+                                </span>
+                                <span class="status-badge" th:classappend="'status-' + ${req.currentStatus.name()}"
+                                    th:text="${req.currentStatus.thaiLabel}"></span>
+                            </div>
+                            <small th:if="${req.updatedAt != null}" class="text-muted">
+                                <i class="fas fa-sync-alt me-1"></i>อัปเดตล่าสุด:
+                                <span th:text="${#temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm')}"></span>
                             </small>
                         </div>
-                        <span class="status-badge" th:classappend="'status-' + ${req.currentStatus.name()}"
-                            th:text="${req.currentStatus.thaiLabel}"></span>
+                    </div>
+
+                    <!-- ข้อมูลรายวิชา (จากเอกสารที่ 0) -->
+                    <div th:if="${doc0DataMap.containsKey(req.id)}" class="mb-3 p-2 rounded"
+                        style="background:#f0f7ff; border-left: 3px solid #1976d2; font-size: 0.9rem;">
+                        <i class="fas fa-book text-primary me-1"></i>
+                        <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
+                        <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
+                        <span class="text-muted ms-2">ปีการศึกษา <span th:text="${doc0DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
                     </div>
 
                     <!-- Progress Tracker - แสดงเฉพาะสถานะที่เกิดขึ้นจริง -->
@@ -158,7 +173,7 @@
                             <i class="fas fa-exclamation-triangle me-2 mt-1"></i>
                             <div>
                                 <strong class="d-block mb-1">ต้องแก้ไขเอกสาร</strong>
-                                <p class="mb-0">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
+                                <p class="mb-0">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
                             </div>
                         </div>
                     </div>
@@ -176,6 +191,54 @@
                     </a>
                 </div>
             </div>
+
+            <!-- Pagination -->
+            <nav th:if="${requests != null && requests.size() > 5}" aria-label="Page navigation" id="paginationNav">
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <small class="text-muted" id="pageInfo"></small>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" id="prevPage">
+                            <a class="page-link" href="#" onclick="changePage(-1); return false;">
+                                <i class="fas fa-chevron-left"></i> ก่อนหน้า
+                            </a>
+                        </li>
+                        <li class="page-item" id="nextPage">
+                            <a class="page-link" href="#" onclick="changePage(1); return false;">
+                                ถัดไป <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <script>
+                (function() {
+                    const ITEMS_PER_PAGE = 5;
+                    const cards = document.querySelectorAll('.request-card');
+                    if (cards.length <= ITEMS_PER_PAGE) return;
+                    let currentPage = 0;
+                    const totalPages = Math.ceil(cards.length / ITEMS_PER_PAGE);
+
+                    function showPage(page) {
+                        currentPage = page;
+                        const start = page * ITEMS_PER_PAGE;
+                        const end = start + ITEMS_PER_PAGE;
+                        cards.forEach((card, i) => {
+                            card.style.display = (i >= start && i < end) ? '' : 'none';
+                        });
+                        document.getElementById('pageInfo').textContent =
+                            `แสดง ${start + 1}-${Math.min(end, cards.length)} จาก ${cards.length} คำร้อง`;
+                        document.getElementById('prevPage').classList.toggle('disabled', page === 0);
+                        document.getElementById('nextPage').classList.toggle('disabled', page >= totalPages - 1);
+                    }
+
+                    window.changePage = function(delta) {
+                        const newPage = currentPage + delta;
+                        if (newPage >= 0 && newPage < totalPages) showPage(newPage);
+                    };
+                    showPage(0);
+                })();
+            </script>
         </div>
     </section>
 </body>

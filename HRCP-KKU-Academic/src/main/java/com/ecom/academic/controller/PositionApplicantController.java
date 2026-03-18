@@ -65,6 +65,20 @@ public class PositionApplicantController {
         model.addAttribute("hasActiveRequest", hasActiveRequest);
         model.addAttribute("statuses", PositionRequestStatus.values());
 
+        // ดึงข้อมูลตำแหน่งจาก doc_2 สำหรับทุกคำร้อง
+        java.util.Map<Long, java.util.Map<String, String>> doc2DataMap = new java.util.HashMap<>();
+        for (PositionRequest req : requests) {
+            List<PositionDocument> doc2List = positionService.getDocumentsByType(req.getId(), 2);
+            if (!doc2List.isEmpty()) {
+                try {
+                    java.util.Map<String, String> doc2Data = objectMapper.readValue(doc2List.get(0).getJsonData(),
+                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
+                    doc2DataMap.put(req.getId(), doc2Data);
+                } catch (Exception e) { /* ignore */ }
+            }
+        }
+        model.addAttribute("doc2DataMap", doc2DataMap);
+
         return "academic/position/applicant/dashboard";
     }
 
@@ -130,6 +144,16 @@ public class PositionApplicantController {
         model.addAttribute("docLabels", docLabels);
         model.addAttribute("applicantDocs", PositionRequestService.APPLICANT_DOCS);
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
+
+        // ดึงข้อมูลตำแหน่งจาก doc_2
+        List<PositionDocument> doc2List = positionService.getDocumentsByType(id, 2);
+        if (!doc2List.isEmpty()) {
+            try {
+                java.util.Map<String, String> doc2Data = objectMapper.readValue(doc2List.get(0).getJsonData(),
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
+                model.addAttribute("doc2Data", doc2Data);
+            } catch (Exception e) { /* ignore */ }
+        }
 
         return "academic/position/applicant/request_detail";
     }

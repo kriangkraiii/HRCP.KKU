@@ -11,11 +11,12 @@
             </div>
 
             <div class="table-responsive" th:unless="${requests.isEmpty()}">
-                <table class="table table-hover align-middle">
+                <table class="table table-hover align-middle" id="requestsTable">
                     <thead class="table-dark">
                         <tr>
                             <th>รหัสคำร้อง</th>
                             <th>ผู้ยื่น</th>
+                            <th>ประเภท</th>
                             <th>ตำแหน่งที่ขอ</th>
                             <th>วันที่ยื่น</th>
                             <th>สถานะ</th>
@@ -23,9 +24,11 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr th:each="req : ${requests}">
+                        <th:block th:each="req, iter : ${requests}">
+                        <tr class="request-row" th:attr="data-index=${iter.index}">
                             <td th:text="${req.requestCode}"></td>
                             <td th:text="${req.applicant.name}"></td>
+                            <td><span class="badge" style="background:#2e7d32"><i class="fas fa-university me-1"></i> ขอตำแหน่ง</span></td>
                             <td th:text="${req.targetPosition ?: '-'}"></td>
                             <td th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy') : '-'}"></td>
                             <td>
@@ -38,10 +41,77 @@
                                 </a>
                             </td>
                         </tr>
+                        <tr th:if="${doc2DataMap.containsKey(req.id)}" style="background:#f8fbf8"
+                            class="request-row-sub" th:attr="data-parent=${iter.index}">
+                            <td></td>
+                            <td colspan="6" style="border-top:0; padding-top:0">
+                                <small style="color:#2e7d32">
+                                    <i class="fas fa-user-tie me-1"></i>
+                                    ตำแหน่งที่ขอ: <strong th:text="${doc2DataMap.get(req.id).getOrDefault('request_position', '-')}"></strong>
+                                    <span th:if="${doc2DataMap.get(req.id).getOrDefault('major', '') != ''}" class="text-muted ms-2">
+                                        สาขา <span th:text="${doc2DataMap.get(req.id).getOrDefault('major', '')}"></span>
+                                    </span>
+                                </small>
+                            </td>
+                        </tr>
+                        </th:block>
                     </tbody>
                 </table>
             </div>
+
+            <!-- Pagination -->
+            <nav th:if="${requests != null && requests.size() > 10}" aria-label="Page navigation" id="paginationNav">
+                <div class="d-flex justify-content-between align-items-center mt-3">
+                    <small class="text-muted" id="pageInfo"></small>
+                    <ul class="pagination pagination-sm mb-0">
+                        <li class="page-item" id="prevPage">
+                            <a class="page-link" href="#" onclick="changePage(-1); return false;">
+                                <i class="fas fa-chevron-left"></i> ก่อนหน้า
+                            </a>
+                        </li>
+                        <li class="page-item" id="nextPage">
+                            <a class="page-link" href="#" onclick="changePage(1); return false;">
+                                ถัดไป <i class="fas fa-chevron-right"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <script>
+                (function() {
+                    const ITEMS_PER_PAGE = 10;
+                    const rows = document.querySelectorAll('.request-row');
+                    if (rows.length <= ITEMS_PER_PAGE) return;
+                    let currentPage = 0;
+                    const totalPages = Math.ceil(rows.length / ITEMS_PER_PAGE);
+
+                    function showPage(page) {
+                        currentPage = page;
+                        const start = page * ITEMS_PER_PAGE;
+                        const end = start + ITEMS_PER_PAGE;
+                        rows.forEach((row, i) => {
+                            const show = i >= start && i < end;
+                            row.style.display = show ? '' : 'none';
+                            // Also show/hide sub-rows
+                            const sub = document.querySelector(`.request-row-sub[data-parent="${i}"]`);
+                            if (sub) sub.style.display = show ? '' : 'none';
+                        });
+                        document.getElementById('pageInfo').textContent =
+                            `แสดง ${start + 1}-${Math.min(end, rows.length)} จาก ${rows.length} คำร้อง`;
+                        document.getElementById('prevPage').classList.toggle('disabled', page === 0);
+                        document.getElementById('nextPage').classList.toggle('disabled', page >= totalPages - 1);
+                    }
+
+                    window.changePage = function(delta) {
+                        const newPage = currentPage + delta;
+                        if (newPage >= 0 && newPage < totalPages) showPage(newPage);
+                    };
+                    showPage(0);
+                })();
+            </script>
         </div>
     </section>
 </body>
 </html>
+

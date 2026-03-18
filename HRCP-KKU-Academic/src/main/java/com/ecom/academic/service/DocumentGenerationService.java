@@ -177,6 +177,9 @@ public class DocumentGenerationService {
                         // Step 1: Defragment - รวม placeholder ที่ Word แยกข้าม <w:t> กลับเป็นชิ้นเดียว
                         xml = defragmentPlaceholders(xml);
 
+                        // Step 1.5: Dynamic row cloning - เพิ่มแถวตารางสำหรับนวิจัยที่เกิน 5 รายการ
+                        xml = expandDynamicRows(xml, placeholders);
+
                         // Step 2: Simple replace - แทนค่า {{placeholder}} ทั้งหมด
                         for (Map.Entry<String, String> ph : placeholders.entrySet()) {
                             String token = "{{" + ph.getKey() + "}}";
@@ -341,6 +344,77 @@ public class DocumentGenerationService {
             idx = closeIdx + 2;
         }
         return true;
+    }
+
+    // =====================================================================
+    // Step 1.5: Dynamic Table Row Expansion
+    // =====================================================================
+
+    /**
+     * สำหรับเอกสารที่ 6 (จริยธรรมการวิจัย):
+     * Template มี 5 แถวตายตั้ง (des_research1-5)
+     * ถ้า research_count > 5 จะ clone แถวที่ 5 แล้วเปลี่ยนหมายเลข placeholder
+     */
+    private String expandDynamicRows(String xml, Map<String, String> placeholders) {
+        // เช็คว่าเป็นเอกสารที่ 6 หรือไม่ (มี des_research5 ใน template)
+        if (!xml.contains("{{des_research5}}")) {
+            return xml;
+        }
+
+        // หาจำนวน row ที่ต้องการจาก placeholder data
+        int maxRow = 5;
+        for (String key : placeholders.keySet()) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("^des_research(\\d+)$").matcher(key);
+            if (m.matches()) {
+                int n = Integer.parseInt(m.group(1));
+                if (n > maxRow) maxRow = n;
+            }
+        }
+
+        // ถ้าไม่เกิน 5 ไม่ต้องทำอะไร
+        if (maxRow <= 5) {
+            return xml;
+        }
+
+        // หาแถวที่ 5 ใน XML (แถวตารางที่มี des_research5)
+        // หา <w:tr ที่มี des_research5 แล้วหา </w:tr> ที่ปิด
+        int searchFrom = 0;
+        while (true) {
+            int trIdx = xml.indexOf("<w:tr ", searchFrom);
+            if (trIdx == -1) trIdx = xml.indexOf("<w:tr>", searchFrom);
+            if (trIdx == -1) break;
+
+            int trEnd = xml.indexOf("</w:tr>", trIdx);
+            if (trEnd == -1) break;
+            trEnd += "</w:tr>".length();
+
+            String rowXml = xml.substring(trIdx, trEnd);
+            if (rowXml.contains("des_research5")) {
+                // Clone this row for 6, 7, 8, ..., maxRow
+                StringBuilder newRows = new StringBuilder();
+                for (int n = 6; n <= maxRow; n++) {
+                    String cloned = rowXml
+                            .replace("des_research5", "des_research" + n)
+                            .replace("chk_firstauthor5", "chk_firstauthor" + n)
+                            .replace("chk_Corres5", "chk_Corres" + n)
+                            .replace("essen5", "essen" + n)
+                            .replace("impactfacttor5", "impactfacttor" + n)
+                            .replace("data5", "data" + n);
+                    // เปลี่ยนเลขลำดับแถว ("5." → "N.")
+                    // หาตัวเลข 5 ใน cell แรกที่เป็นลำดับแถว
+                    // Pattern: >5.</ หรือ >5</
+                    cloned = cloned.replaceFirst(">5\\.<", ">" + n + ".<")
+                                   .replaceFirst(">5<", ">" + n + "<");
+                    newRows.append(cloned);
+                }
+                // แทรกแถวใหม่หลังแถวที่ 5
+                xml = xml.substring(0, trEnd) + newRows.toString() + xml.substring(trEnd);
+                break;
+            }
+            searchFrom = trEnd;
+        }
+
+        return xml;
     }
 
     // =====================================================================

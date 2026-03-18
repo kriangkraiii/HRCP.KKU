@@ -556,12 +556,12 @@
 
                 <div class="sidebar-section-title">ประเมินผลการสอน</div>
                 <a href="/admin/academic/requests?type=evaluation" class="sidebar-link" id="nav-eval">
-                    <i class="fas fa-clipboard-check"></i> คำร้องประเมินผล
+                    <i class="fas fa-clipboard-check"></i> คำร้องประเมินผลทางวิชาการ
                 </a>
 
                 <div class="sidebar-section-title">ขอตำแหน่งทางวิชาการ</div>
                 <a href="/admin/academic/requests?type=position" class="sidebar-link" id="nav-position">
-                    <i class="fas fa-university"></i> คำร้องขอตำแหน่ง
+                    <i class="fas fa-university"></i> คำร้องขอตำแหน่งทางวิชาการ
                 </a>
 
                 <div class="sidebar-section-title">จัดการผู้ใช้</div>
@@ -591,15 +591,17 @@
 
             <!-- USER Navigation -->
             <th:block th:if="${user != null && user.role == 'ROLE_USER'}">
-                <div class="sidebar-section-title">เมนูหลัก</div>
+                <div class="sidebar-section-title">หน้าหลัก</div>
                 <a href="/user/academic/dashboard" class="sidebar-link" id="nav-dashboard">
                     <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
                 </a>
-                <a href="/user/academic/new-request" class="sidebar-link" id="nav-new">
-                    <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
-                </a>
                 <a href="/user/academic/history" class="sidebar-link" id="nav-history">
-                    <i class="fas fa-history"></i> ประวัติคำร้อง
+                    <i class="fas fa-history"></i> ประวัติการยื่นคำร้อง
+                </a>
+
+                <div class="sidebar-section-title">ประเมินผลการสอน</div>
+                <a href="/user/academic/new-request" class="sidebar-link" id="nav-new">
+                    <i class="fas fa-clipboard-check"></i> ยื่นคำร้องขอประเมิน
                 </a>
 
                 <div class="sidebar-section-title">ขอตำแหน่งทางวิชาการ</div>
