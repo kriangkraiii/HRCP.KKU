@@ -57,6 +57,9 @@ public class UserDtls {
 	@Column(name = "auto_draft_enabled")
 	private Boolean autoDraftEnabled = true;
 
+	@Column(name = "theme_preference")
+	private String themePreference = "light";
+
 	@Column(name = "expiry_alert_6m")
 	private Boolean expiryAlert6m = true;
 
@@ -289,6 +292,14 @@ public class UserDtls {
 
 	public void setAutoDraftEnabled(Boolean autoDraftEnabled) {
 		this.autoDraftEnabled = autoDraftEnabled;
+	}
+
+	public String getThemePreference() {
+		return themePreference;
+	}
+
+	public void setThemePreference(String themePreference) {
+		this.themePreference = themePreference;
 	}
 
 	public Boolean getExpiryAlert6m() {

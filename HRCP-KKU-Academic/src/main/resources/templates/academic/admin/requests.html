@@ -95,7 +95,7 @@
                                 <input type="hidden" name="type" value="evaluation">
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-search"></i></span>
-                                    <input type="text" name="search" class="form-control" placeholder="ค้นหาชื่อผู้ยื่นคำร้อง..."
+                                    <input type="text" name="search" class="form-control" placeholder="ค้นหาชื่อหรืออีเมลผู้ยื่นคำร้อง..."
                                         th:value="${search}">
                                 </div>
                                 <button type="submit" class="btn btn-academic">ค้นหา</button>
@@ -203,8 +203,8 @@
                             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                                 <h5 class="mb-0">
                                     <span class="badge me-2" style="background:#1565c0;font-size:0.7rem;vertical-align:middle">ประเมินผล</span>
-                                    <i class="fas fa-clock text-warning"></i> รอดำเนินการ
-                                    <span class="badge bg-warning text-dark ms-2"
+                                    <i class="fas fa-clipboard-check" style="color:#1565c0"></i> คำร้องประเมินผลการสอน
+                                    <span class="badge ms-2" style="background:#1565c0"
                                           th:text="${pendingRequests != null ? pendingRequests.size() : 0}"></span>
                                 </h5>
                                 <small class="text-muted"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</small>
@@ -281,56 +281,75 @@
                 <div class="tab-pane fade" id="posPane" role="tabpanel"
                      th:classappend="${activeType == 'position'} ? 'show active'">
 
-                    <!-- Summary Cards -->
+                    <!-- Status Cards (clickable) -->
                     <div class="row g-3 mb-4">
-                        <div class="col-md-4">
-                            <div class="card border-0 shadow-sm" style="border-left: 4px solid #ff9800 !important">
-                                <div class="card-body py-3 px-3">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <div>
-                                            <div class="text-muted small">รอดำเนินการ</div>
-                                            <h3 class="mb-0 fw-bold text-dark" th:text="${positionPendingCount} ?: 0">0</h3>
-                                        </div>
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center"
-                                             style="width:40px;height:40px;background:#ff980020">
-                                            <i class="fas fa-hourglass-half" style="color:#ff9800"></i>
-                                        </div>
+                        <th:block th:each="ps : ${positionStatuses}" th:if="${!ps.isDraft()}">
+                            <div class="col-6 col-md-4 col-lg">
+                                <a th:href="'/admin/academic/requests?type=position&posStatus=' + ${ps.name()}"
+                                   class="text-decoration-none">
+                                    <div class="card border-0 shadow-sm h-100 position-relative"
+                                         th:classappend="${activePosStatus == ps.name()} ? 'ring-active'"
+                                         style="border-left: 4px solid transparent !important; cursor:pointer; transition: transform 0.15s, box-shadow 0.15s"
+                                         th:style="'border-left: 4px solid ' + ${ps.color} + ' !important; cursor:pointer; transition: transform 0.15s, box-shadow 0.15s'"
+                                         onmouseover="this.style.transform='translateY(-2px)';this.style.boxShadow='0 .5rem 1rem rgba(0,0,0,.12)'"
+                                         onmouseout="this.style.transform='';this.style.boxShadow=''">
+                                            <div class="card-body py-3 px-3">
+                                                <div class="d-flex align-items-center justify-content-between">
+                                                    <div>
+                                                        <div class="text-muted small" th:text="${ps.thaiLabel}"></div>
+                                                        <h3 class="mb-0 fw-bold text-dark" th:text="${posStatusCounts?.get(ps.name()) ?: 0}">0</h3>
+                                                    </div>
+                                                    <div class="rounded-circle d-flex align-items-center justify-content-center"
+                                                         style="width:40px;height:40px"
+                                                         th:style="'width:40px;height:40px;background-color:' + ${ps.color} + '20'">
+                                                        <i class="fas" th:classappend="${ps.icon}" th:style="'color:' + ${ps.color}"></i>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div th:if="${activePosStatus == ps.name()}"
+                                                 style="position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 4px 4px"
+                                                 th:style="'position:absolute;bottom:0;left:0;right:0;height:3px;border-radius:0 0 4px 4px;background-color:' + ${ps.color}"></div>
                                     </div>
-                                </div>
+                                </a>
                             </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="card border-0 shadow-sm" style="border-left: 4px solid #2e7d32 !important">
-                                <div class="card-body py-3 px-3">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <div>
-                                            <div class="text-muted small">เสร็จสิ้น/อนุมัติ</div>
-                                            <h3 class="mb-0 fw-bold text-dark" th:text="${positionCompletedCount} ?: 0">0</h3>
-                                        </div>
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center"
-                                             style="width:40px;height:40px;background:#2e7d3220">
-                                            <i class="fas fa-check-double" style="color:#2e7d32"></i>
-                                        </div>
-                                    </div>
+                        </th:block>
+                    </div>
+
+                    <!-- Active filter indicator -->
+                    <div th:if="${activePosStatus != null}" class="alert alert-light border d-flex justify-content-between align-items-center mb-3 shadow-sm">
+                        <span>
+                            <i class="fas fa-filter text-success me-2"></i>
+                            กำลังแสดงเฉพาะสถานะ:
+                            <th:block th:each="ps : ${positionStatuses}">
+                                <strong th:if="${ps.name() == activePosStatus}" th:text="${ps.thaiLabel}"></strong>
+                            </th:block>
+                        </span>
+                        <a href="/admin/academic/requests?type=position" class="btn btn-sm btn-outline-secondary">
+                            <i class="fas fa-times"></i> แสดงทั้งหมด
+                        </a>
+                    </div>
+
+                    <!-- Search Bar -->
+                    <div class="card card-academic mb-3 border-0 shadow-sm">
+                        <div class="card-body py-2">
+                            <form action="/admin/academic/requests" method="get" class="d-flex gap-2">
+                                <input type="hidden" name="type" value="position">
+                                <div class="input-group">
+                                    <span class="input-group-text"><i class="fas fa-search"></i></span>
+                                    <input type="text" name="posSearch" class="form-control" placeholder="ค้นหาชื่อหรืออีเมลผู้ยื่นคำร้อง..."
+                                        th:value="${posSearch}">
                                 </div>
-                            </div>
+                                <button type="submit" class="btn" style="background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff">ค้นหา</button>
+                                <a href="/admin/academic/requests?type=position" class="btn btn-outline-secondary" th:if="${posSearch != null && !posSearch.isEmpty()}">
+                                    <i class="fas fa-times"></i> ล้าง
+                                </a>
+                            </form>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card border-0 shadow-sm" style="border-left: 4px solid #1565c0 !important">
-                                <div class="card-body py-3 px-3">
-                                    <div class="d-flex align-items-center justify-content-between">
-                                        <div>
-                                            <div class="text-muted small">ทั้งหมด</div>
-                                            <h3 class="mb-0 fw-bold text-dark" th:text="${positionTotalCount} ?: 0">0</h3>
-                                        </div>
-                                        <div class="rounded-circle d-flex align-items-center justify-content-center"
-                                             style="width:40px;height:40px;background:#1565c020">
-                                            <i class="fas fa-university" style="color:#1565c0"></i>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    </div>
+
+                    <div th:if="${posSearch != null && !posSearch.isEmpty()}" class="alert alert-info mb-3">
+                        <i class="fas fa-info-circle me-2"></i> ผลการค้นหา "<strong th:text="${posSearch}"></strong>":
+                        พบ <strong th:text="${positionRequests != null ? positionRequests.size() : 0}"></strong> รายการ
                     </div>
 
                     <!-- Position Requests Table -->
@@ -338,14 +357,24 @@
                         <div class="card-header bg-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0">
                                 <span class="badge me-2" style="background:#2e7d32;font-size:0.7rem;vertical-align:middle">ขอตำแหน่ง</span>
-                                <i class="fas fa-university" style="color:#2e7d32"></i> คำร้องขอตำแหน่งทางวิชาการ
-                                <span class="badge ms-2" style="background:#2e7d32" th:text="${positionTotalCount} ?: 0"></span>
+                                <th:block th:if="${activePosStatus != null}">
+                                    <th:block th:each="ps : ${positionStatuses}" th:if="${ps.name() == activePosStatus}">
+                                        <i class="fas" th:classappend="${ps.icon}" th:style="'color:' + ${ps.color}"></i>
+                                        <span th:text="${ps.thaiLabel}"></span>
+                                    </th:block>
+                                </th:block>
+                                <th:block th:if="${activePosStatus == null}">
+                                    <i class="fas fa-university" style="color:#2e7d32"></i> คำร้องขอตำแหน่งทางวิชาการ
+                                </th:block>
+                                <span class="badge ms-2" style="background:#2e7d32"
+                                      th:text="${positionRequests != null ? positionRequests.size() : 0}"></span>
                             </h5>
+                            <small class="text-muted"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</small>
                         </div>
                         <div class="card-body p-0">
                             <div th:if="${positionRequests == null || positionRequests.isEmpty()}" class="text-center py-5 text-muted">
                                 <i class="fas fa-inbox fa-3x mb-3 d-block"></i>
-                                <p class="mb-0">ยังไม่มีคำร้องขอตำแหน่ง</p>
+                                <p class="mb-0">ไม่มีคำร้องขอตำแหน่ง</p>
                             </div>
                             <div class="table-responsive" th:if="${positionRequests != null && !positionRequests.isEmpty()}">
                                 <table class="table table-hover align-middle mb-0">
@@ -354,6 +383,7 @@
                                             <th style="width:50px">#</th>
                                             <th>รหัสคำร้อง</th>
                                             <th>ผู้ยื่นคำร้อง</th>
+                                            <th>อีเมล</th>
                                             <th>ตำแหน่งที่ขอ</th>
                                             <th style="width:150px">วันที่ยื่น</th>
                                             <th style="width:150px">อัปเดตล่าสุด</th>
@@ -367,8 +397,8 @@
                                             <td><small class="fw-semibold" style="color:#2e7d32" th:text="${req.requestCode}"></small></td>
                                             <td>
                                                 <div class="fw-semibold" th:text="${req.applicant.name}"></div>
-                                                <small class="text-muted" th:text="${req.applicant.email}"></small>
                                             </td>
+                                            <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                             <td><span th:text="${req.targetPosition} ?: '-'"></span></td>
                                             <td>
                                                 <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
@@ -378,7 +408,7 @@
                                             </td>
                                             <td>
                                                 <span class="badge rounded-pill"
-                                                      th:classappend="'bg-' + ${req.currentStatus.badgeClass}">
+                                                      th:style="'background-color:' + ${req.currentStatus.color} + ';color:#fff'">
                                                     <i class="fas me-1" th:classappend="${req.currentStatus.icon}"></i>
                                                     <span th:text="${req.currentStatus.thaiLabel}"></span>
                                                 </span>
@@ -421,14 +451,371 @@
             border-bottom-color: #2e7d32 !important;
         }
     </style>
+    <style>
+        .ac-dropdown {
+            position: fixed;
+            z-index: 9999;
+            max-height: 260px;
+            overflow-y: auto;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.18);
+            display: none;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,.1);
+            border-top: none;
+        }
+        .ac-dropdown.show { display: block; }
+        .ac-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(0,0,0,.05);
+            transition: background .12s;
+        }
+        .ac-item:last-child { border-bottom: none; }
+        .ac-item:hover, .ac-item.active { background: rgba(21,101,192,.08); }
+        .ac-item .ac-icon {
+            width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; flex-shrink: 0;
+        }
+        .ac-item .ic-name { background: #e3f2fd; color: #1565c0; }
+        .ac-item .ic-email { background: #e8f5e9; color: #2e7d32; }
+        .ac-item .ac-text mark { background: #fff9c4; padding: 0; border-radius: 2px; }
+        /* Dark mode */
+        [data-bs-theme="dark"] .ac-dropdown, .dark-mode .ac-dropdown {
+            background: #1e293b; border-color: rgba(255,255,255,.1);
+            box-shadow: 0 6px 24px rgba(0,0,0,.5);
+        }
+        [data-bs-theme="dark"] .ac-item, .dark-mode .ac-item {
+            color: #e2e8f0; border-bottom-color: rgba(255,255,255,.06);
+        }
+        [data-bs-theme="dark"] .ac-item:hover, [data-bs-theme="dark"] .ac-item.active,
+        .dark-mode .ac-item:hover, .dark-mode .ac-item.active {
+            background: rgba(56,189,248,.12);
+        }
+        [data-bs-theme="dark"] .ac-item .ic-name, .dark-mode .ac-item .ic-name { background: #1e3a5f; color: #60a5fa; }
+        [data-bs-theme="dark"] .ac-item .ic-email, .dark-mode .ac-item .ic-email { background: #1a3a2a; color: #4ade80; }
+        [data-bs-theme="dark"] .ac-item .ac-text mark, .dark-mode .ac-item .ac-text mark { background: #854d0e; color: #fef08a; }
+    </style>
 
     <script>
         // Handle tab from URL param
-        const urlParams = new URLSearchParams(window.location.search);
-        const tabType = urlParams.get('type');
+        var urlParams = new URLSearchParams(window.location.search);
+        var tabType = urlParams.get('type');
         if (tabType === 'position') {
-            document.getElementById('pos-tab')?.click();
+            var posTab = document.getElementById('pos-tab');
+            if (posTab) posTab.click();
         }
+
+        // Build suggestions by scanning all table rows (pure client-side, no server dependency)
+        var suggestionsSet = {};
+        document.querySelectorAll('table tbody tr').forEach(function(tr) {
+            var cells = tr.querySelectorAll('td');
+            cells.forEach(function(td) {
+                var text = td.textContent.trim();
+                if (text.length > 1 && text.length < 100) {
+                    // Check if it looks like a name (has spaces, no special chars) or email (has @)
+                    if (text.indexOf('@') !== -1) {
+                        suggestionsSet[text] = 'email';
+                    } else if (/^[a-zA-Zก-๙\s.]+$/.test(text) && text.indexOf(' ') !== -1) {
+                        suggestionsSet[text] = 'name';
+                    }
+                }
+            });
+        });
+        var applicantSuggestions = [];
+        for (var key in suggestionsSet) {
+            applicantSuggestions.push({ text: key, type: suggestionsSet[key] });
+        }
+        console.log('[AC] Built suggestions from DOM:', applicantSuggestions.length, applicantSuggestions);
+
+        // Custom autocomplete
+        var searchInputs = document.querySelectorAll('input[name="search"], input[name="posSearch"]');
+        console.log('[AC] Found search inputs:', searchInputs.length);
+
+        searchInputs.forEach(function(input) {
+            var dropdown = document.createElement('div');
+            dropdown.className = 'ac-dropdown';
+            document.body.appendChild(dropdown);
+
+            var activeIdx = -1;
+
+            function escapeHtml(text) {
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(text));
+                return div.innerHTML;
+            }
+
+            function highlight(text, query) {
+                if (!query) return escapeHtml(text);
+                var lowerText = text.toLowerCase();
+                var lowerQuery = query.toLowerCase();
+                var idx = lowerText.indexOf(lowerQuery);
+                if (idx === -1) return escapeHtml(text);
+                return escapeHtml(text.substring(0, idx))
+                    + '<mark>' + escapeHtml(text.substring(idx, idx + query.length)) + '</mark>'
+                    + escapeHtml(text.substring(idx + query.length));
+            }
+
+            function positionDropdown() {
+                var rect = input.getBoundingClientRect();
+                dropdown.style.left = rect.left + 'px';
+                dropdown.style.top = rect.bottom + 'px';
+                dropdown.style.width = rect.width + 'px';
+            }
+
+            function render(query) {
+                if (!query || query.length < 1) { dropdown.classList.remove('show'); return; }
+                var q = query.toLowerCase();
+                var matches = [];
+                for (var i = 0; i < applicantSuggestions.length && matches.length < 8; i++) {
+                    if (applicantSuggestions[i].text.toLowerCase().indexOf(q) !== -1) {
+                        matches.push(applicantSuggestions[i]);
+                    }
+                }
+                if (matches.length === 0) { dropdown.classList.remove('show'); return; }
+
+                var html = '';
+                for (var j = 0; j < matches.length; j++) {
+                    var m = matches[j];
+                    var isEmail = m.type === 'email';
+                    html += '<div class="ac-item" data-value="' + escapeHtml(m.text) + '">'
+                        + '<span class="ac-icon ' + (isEmail ? 'ic-email' : 'ic-name') + '">'
+                        + '<i class="fas ' + (isEmail ? 'fa-envelope' : 'fa-user') + '"></i>'
+                        + '</span>'
+                        + '<span class="ac-text">' + highlight(m.text, query) + '</span>'
+                        + '</div>';
+                }
+                dropdown.innerHTML = html;
+                activeIdx = -1;
+                positionDropdown();
+                dropdown.classList.add('show');
+            }
+
+            input.addEventListener('input', function() { render(input.value); });
+            input.addEventListener('focus', function() { if (input.value) render(input.value); });
+            input.addEventListener('blur', function() {
+                setTimeout(function() { dropdown.classList.remove('show'); }, 200);
+            });
+
+            dropdown.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                var item = e.target.closest('.ac-item');
+                if (item) {
+                    input.value = item.getAttribute('data-value');
+                    dropdown.classList.remove('show');
+                    input.closest('form').submit();
+                }
+            });
+
+            input.addEventListener('keydown', function(e) {
+                var items = dropdown.querySelectorAll('.ac-item');
+                if (!items.length || !dropdown.classList.contains('show')) return;
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    activeIdx = Math.min(activeIdx + 1, items.length - 1);
+                    for (var k = 0; k < items.length; k++) items[k].classList.toggle('active', k === activeIdx);
+                    items[activeIdx].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    activeIdx = Math.max(activeIdx - 1, 0);
+                    for (var k = 0; k < items.length; k++) items[k].classList.toggle('active', k === activeIdx);
+                } else if (e.key === 'Enter' && activeIdx >= 0) {
+                    e.preventDefault();
+                    input.value = items[activeIdx].getAttribute('data-value');
+                    dropdown.classList.remove('show');
+                    input.closest('form').submit();
+                } else if (e.key === 'Escape') {
+                    dropdown.classList.remove('show');
+                }
+            });
+
+            window.addEventListener('scroll', function() {
+                if (dropdown.classList.contains('show')) positionDropdown();
+            }, true);
+            window.addEventListener('resize', function() { dropdown.classList.remove('show'); });
+        });
+    </script>
+</body>
+
+</html>
+
+    <style>
+        .ac-dropdown {
+            position: fixed;
+            z-index: 9999;
+            max-height: 260px;
+            overflow-y: auto;
+            border-radius: 0 0 10px 10px;
+            box-shadow: 0 6px 24px rgba(0,0,0,.18);
+            display: none;
+            background: #fff;
+            border: 1px solid rgba(0,0,0,.1);
+            border-top: none;
+        }
+        .ac-dropdown.show { display: block; }
+        .ac-item {
+            padding: 10px 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 0.9rem;
+            border-bottom: 1px solid rgba(0,0,0,.05);
+            transition: background .12s;
+        }
+        .ac-item:last-child { border-bottom: none; }
+        .ac-item:hover, .ac-item.active { background: rgba(21,101,192,.08); }
+        .ac-item .ac-icon {
+            width: 28px; height: 28px; border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 0.75rem; flex-shrink: 0;
+        }
+        .ac-item .ic-name { background: #e3f2fd; color: #1565c0; }
+        .ac-item .ic-email { background: #e8f5e9; color: #2e7d32; }
+        .ac-item .ac-text mark { background: #fff9c4; padding: 0; border-radius: 2px; }
+        /* Dark mode */
+        [data-bs-theme="dark"] .ac-dropdown, .dark-mode .ac-dropdown {
+            background: #1e293b; border-color: rgba(255,255,255,.1);
+            box-shadow: 0 6px 24px rgba(0,0,0,.5);
+        }
+        [data-bs-theme="dark"] .ac-item, .dark-mode .ac-item {
+            color: #e2e8f0; border-bottom-color: rgba(255,255,255,.06);
+        }
+        [data-bs-theme="dark"] .ac-item:hover, [data-bs-theme="dark"] .ac-item.active,
+        .dark-mode .ac-item:hover, .dark-mode .ac-item.active {
+            background: rgba(56,189,248,.12);
+        }
+        [data-bs-theme="dark"] .ac-item .ic-name, .dark-mode .ac-item .ic-name { background: #1e3a5f; color: #60a5fa; }
+        [data-bs-theme="dark"] .ac-item .ic-email, .dark-mode .ac-item .ic-email { background: #1a3a2a; color: #4ade80; }
+        [data-bs-theme="dark"] .ac-item .ac-text mark, .dark-mode .ac-item .ac-text mark { background: #854d0e; color: #fef08a; }
+    </style>
+
+    <script>
+        // Handle tab from URL param
+        var urlParams = new URLSearchParams(window.location.search);
+        var tabType = urlParams.get('type');
+        if (tabType === 'position') {
+            var posTab = document.getElementById('pos-tab');
+            if (posTab) posTab.click();
+        }
+
+        // Debug: verify suggestions data
+        console.log('[AC] Suggestions loaded:', typeof applicantSuggestions, applicantSuggestions ? applicantSuggestions.length : 0, applicantSuggestions);
+
+        // Custom autocomplete
+        var searchInputs = document.querySelectorAll('input[name="search"], input[name="posSearch"]');
+        console.log('[AC] Found search inputs:', searchInputs.length);
+
+        searchInputs.forEach(function(input) {
+            var dropdown = document.createElement('div');
+            dropdown.className = 'ac-dropdown';
+            document.body.appendChild(dropdown);
+
+            var activeIdx = -1;
+
+            function isEmail(s) { return s.indexOf('@') !== -1; }
+
+            function escapeHtml(text) {
+                var div = document.createElement('div');
+                div.appendChild(document.createTextNode(text));
+                return div.innerHTML;
+            }
+
+            function highlight(text, query) {
+                if (!query) return escapeHtml(text);
+                var lowerText = text.toLowerCase();
+                var lowerQuery = query.toLowerCase();
+                var idx = lowerText.indexOf(lowerQuery);
+                if (idx === -1) return escapeHtml(text);
+                return escapeHtml(text.substring(0, idx))
+                    + '<mark>' + escapeHtml(text.substring(idx, idx + query.length)) + '</mark>'
+                    + escapeHtml(text.substring(idx + query.length));
+            }
+
+            function positionDropdown() {
+                var rect = input.getBoundingClientRect();
+                dropdown.style.left = rect.left + 'px';
+                dropdown.style.top = rect.bottom + 'px';
+                dropdown.style.width = rect.width + 'px';
+            }
+
+            function render(query) {
+                if (!query || query.length < 1) { dropdown.classList.remove('show'); return; }
+                var q = query.toLowerCase();
+                var data = applicantSuggestions || [];
+                var matches = [];
+                for (var i = 0; i < data.length && matches.length < 8; i++) {
+                    if (data[i].toLowerCase().indexOf(q) !== -1) {
+                        matches.push(data[i]);
+                    }
+                }
+                if (matches.length === 0) { dropdown.classList.remove('show'); return; }
+
+                var html = '';
+                for (var j = 0; j < matches.length; j++) {
+                    var m = matches[j];
+                    var email = isEmail(m);
+                    html += '<div class="ac-item" data-value="' + escapeHtml(m) + '">'
+                        + '<span class="ac-icon ' + (email ? 'ic-email' : 'ic-name') + '">'
+                        + '<i class="fas ' + (email ? 'fa-envelope' : 'fa-user') + '"></i>'
+                        + '</span>'
+                        + '<span class="ac-text">' + highlight(m, query) + '</span>'
+                        + '</div>';
+                }
+                dropdown.innerHTML = html;
+                activeIdx = -1;
+                positionDropdown();
+                dropdown.classList.add('show');
+            }
+
+            input.addEventListener('input', function() { render(input.value); });
+            input.addEventListener('focus', function() { if (input.value) render(input.value); });
+            input.addEventListener('blur', function() {
+                setTimeout(function() { dropdown.classList.remove('show'); }, 200);
+            });
+
+            dropdown.addEventListener('mousedown', function(e) {
+                e.preventDefault();
+                var item = e.target.closest('.ac-item');
+                if (item) {
+                    input.value = item.getAttribute('data-value');
+                    dropdown.classList.remove('show');
+                    input.closest('form').submit();
+                }
+            });
+
+            input.addEventListener('keydown', function(e) {
+                var items = dropdown.querySelectorAll('.ac-item');
+                if (!items.length || !dropdown.classList.contains('show')) return;
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    activeIdx = Math.min(activeIdx + 1, items.length - 1);
+                    for (var k = 0; k < items.length; k++) items[k].classList.toggle('active', k === activeIdx);
+                    items[activeIdx].scrollIntoView({ block: 'nearest' });
+                } else if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    activeIdx = Math.max(activeIdx - 1, 0);
+                    for (var k = 0; k < items.length; k++) items[k].classList.toggle('active', k === activeIdx);
+                } else if (e.key === 'Enter' && activeIdx >= 0) {
+                    e.preventDefault();
+                    input.value = items[activeIdx].getAttribute('data-value');
+                    dropdown.classList.remove('show');
+                    input.closest('form').submit();
+                } else if (e.key === 'Escape') {
+                    dropdown.classList.remove('show');
+                }
+            });
+
+            window.addEventListener('scroll', function() {
+                if (dropdown.classList.contains('show')) positionDropdown();
+            }, true);
+            window.addEventListener('resize', function() { dropdown.classList.remove('show'); });
+        });
     </script>
 </body>
 

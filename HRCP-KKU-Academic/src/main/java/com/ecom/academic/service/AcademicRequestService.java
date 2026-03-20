@@ -322,7 +322,7 @@ public class AcademicRequestService {
      * ค้นหาคำร้องตามชื่อผู้ยื่น
      */
     public List<AcademicRequest> searchByApplicantName(String name) {
-        return requestRepository.findByApplicantNameContainingIgnoreCaseOrderByCreatedAtDesc(name);
+        return requestRepository.searchByNameOrEmail(name);
     }
 
     /**

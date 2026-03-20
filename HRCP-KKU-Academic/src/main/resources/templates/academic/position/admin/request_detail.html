@@ -209,46 +209,96 @@
                         </div>
                     </div>
 
-                    <!-- Status History -->
+                    <!-- History (Status + Edit) — Tabbed -->
                     <div class="card card-academic mb-4">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0"><i class="fas fa-history"></i> ประวัติสถานะ</h5>
+                        <div class="card-header bg-white px-3 py-2">
+                            <ul class="nav nav-pills nav-fill" role="tablist" style="gap:6px">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active py-1 px-3" id="statusHistTab" data-bs-toggle="pill"
+                                        data-bs-target="#statusHistPane" type="button" role="tab"
+                                        style="font-weight:600;font-size:0.8rem;border-radius:20px">
+                                        <i class="fas fa-history me-1"></i>ประวัติสถานะ
+                                        <span class="badge bg-white text-primary ms-1" style="font-size:0.7rem" th:text="${statusHistory.size()}">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link py-1 px-3" id="editHistTab" data-bs-toggle="pill"
+                                        data-bs-target="#editHistPane" type="button" role="tab"
+                                        style="font-weight:600;font-size:0.8rem;border-radius:20px">
+                                        <i class="fas fa-edit me-1"></i>ประวัติการแก้ไข
+                                        <span class="badge bg-secondary ms-1" style="font-size:0.7rem" th:text="${editHistory.size()}">0</span>
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
-                        <div class="card-body" style="max-height: 350px; overflow-y: auto;">
-                            <div th:each="h : ${statusHistory}" class="border-bottom py-2">
-                                <span class="badge" th:style="'background:' + ${h.newStatus.color} + ';color:#fff'"
-                                    th:text="${h.newStatus.thaiLabel}"></span>
-                                <small class="text-muted ms-2"
-                                    th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
-                                <small th:if="${h.changedBy != null}" class="text-muted d-block">
-                                    โดย: [[${h.changedBy.name}]]
-                                </small>
-                                <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
+                        <div class="card-body tab-content" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Tab 1: Status History -->
+                            <div class="tab-pane fade show active" id="statusHistPane" role="tabpanel">
+                                <div th:each="h : ${statusHistory}" class="border-bottom py-2">
+                                    <span class="badge" th:style="'background:' + ${h.newStatus.color} + ';color:#fff'"
+                                        th:text="${h.newStatus.thaiLabel}"></span>
+                                    <small class="text-muted ms-2"
+                                        th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                                    <small th:if="${h.changedBy != null}" class="text-muted d-block">
+                                        โดย: [[${h.changedBy.name}]]
+                                    </small>
+                                    <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
+                                </div>
+                                <div th:if="${statusHistory.isEmpty()}" class="text-muted text-center py-3">
+                                    <i class="fas fa-inbox d-block mb-2" style="font-size:1.5rem;opacity:0.4"></i>
+                                    ยังไม่มีประวัติสถานะ
+                                </div>
                             </div>
-                            <div th:if="${statusHistory.isEmpty()}" class="text-muted text-center py-2">
-                                ยังไม่มีประวัติสถานะ
+                            <!-- Tab 2: Edit History -->
+                            <div class="tab-pane fade" id="editHistPane" role="tabpanel">
+                                <!-- Document filter -->
+                                <div class="mb-3">
+                                    <select id="editHistFilter" class="form-select form-select-sm"
+                                        style="max-width:280px;font-size:0.85rem">
+                                        <option value="all">ทุกเอกสาร</option>
+                                        <option th:each="entry : ${docLabels}"
+                                            th:value="${entry.key}"
+                                            th:text="'เอกสารที่ ' + ${entry.key} + ' — ' + ${entry.value}">
+                                        </option>
+                                    </select>
+                                </div>
+                                <!-- Log entries -->
+                                <div id="editHistEntries">
+                                    <div th:each="log : ${editHistory}" class="border-bottom py-2 edit-log-entry"
+                                        th:attr="data-doc-type=${log.documentType}">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge"
+                                                th:style="'background:' + ${log.action.color} + ';color:#fff'">
+                                                <i class="fas" th:classappend="${log.action.icon}"></i>
+                                                [[${log.action.thaiLabel}]]
+                                            </span>
+                                            <strong style="font-size:0.85rem">เอกสารที่ [[${log.documentType}]]</strong>
+                                        </div>
+                                        <small class="text-muted d-block mt-1"
+                                            th:text="${log.documentLabel}"></small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            [[${#temporals.format(log.editedAt, 'dd/MM/yyyy HH:mm:ss')}]]
+                                        </small>
+                                        <small th:if="${log.editedBy != null}" class="text-muted d-block">
+                                            <i class="fas fa-user me-1"></i> โดย: [[${log.editedBy.name}]]
+                                        </small>
+                                    </div>
+                                </div>
+                                <div id="editHistEmpty" th:if="${editHistory.isEmpty()}" class="text-muted text-center py-3">
+                                    <i class="fas fa-inbox d-block mb-2" style="font-size:1.5rem;opacity:0.4"></i>
+                                    ยังไม่มีประวัติการแก้ไขเอกสาร
+                                </div>
+                                <div id="editHistNoMatch" class="text-muted text-center py-3" style="display:none">
+                                    <i class="fas fa-search d-block mb-2" style="font-size:1.5rem;opacity:0.4"></i>
+                                    ไม่มีประวัติการแก้ไขสำหรับเอกสารที่เลือก
+                                </div>
                             </div>
+
                         </div>
                     </div>
 
-                    <!-- Request Info -->
-                    <div class="card card-academic mb-4">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0"><i class="fas fa-info-circle"></i> ข้อมูลคำร้อง</h5>
-                        </div>
-                        <div class="card-body">
-                            <dl class="mb-0">
-                                <dt>ตำแหน่งที่ขอ</dt>
-                                <dd th:text="${request.targetPosition ?: '-'}"></dd>
-                                <dt>สาขาวิชา</dt>
-                                <dd th:text="${request.major ?: '-'}"></dd>
-                                <dt>วิธีการ</dt>
-                                <dd th:text="${request.evaluationMethod ?: '-'}"></dd>
-                                <dt>สร้างเมื่อ</dt>
-                                <dd th:text="${#temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm')}"></dd>
-                            </dl>
-                        </div>
-                    </div>
+
                 </div>
 
                 <!-- Right Column: Document Management -->
@@ -310,7 +360,7 @@
                 </div>
             </div>
 
-            <a href="/admin/position/requests" class="btn btn-outline-secondary">
+            <a href="/admin/position/requests?type=position" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> กลับรายการคำร้อง
             </a>
         </div>
@@ -402,6 +452,30 @@
                     }
                 });
             });
+
+            // Edit history document filter
+            const editFilter = document.getElementById('editHistFilter');
+            if (editFilter) {
+                editFilter.addEventListener('change', function() {
+                    const val = this.value;
+                    const entries = document.querySelectorAll('.edit-log-entry');
+                    const noMatch = document.getElementById('editHistNoMatch');
+                    let visibleCount = 0;
+
+                    entries.forEach(el => {
+                        if (val === 'all' || el.dataset.docType === val) {
+                            el.style.display = '';
+                            visibleCount++;
+                        } else {
+                            el.style.display = 'none';
+                        }
+                    });
+
+                    if (noMatch) {
+                        noMatch.style.display = (entries.length > 0 && visibleCount === 0) ? '' : 'none';
+                    }
+                });
+            }
         </script>
     </section>
 </body>

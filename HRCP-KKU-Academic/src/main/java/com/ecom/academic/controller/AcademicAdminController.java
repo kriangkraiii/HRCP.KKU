@@ -93,6 +93,7 @@ public class AcademicAdminController {
     public String listRequests(@RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "status", required = false) String statusFilter,
             @RequestParam(value = "type", required = false) String typeFilter,
+            jakarta.servlet.http.HttpServletRequest httpRequest,
             Model model) {
         List<AcademicRequest> allRequests;
         if (search != null && !search.trim().isEmpty()) {
@@ -161,7 +162,46 @@ public class AcademicAdminController {
 
         // Phase 2: Position requests data
         try {
-            List<PositionRequest> positionRequests = positionRequestService.findAll();
+            String posSearch = httpRequest.getParameter("posSearch");
+            String posStatus = httpRequest.getParameter("posStatus");
+
+            List<PositionRequest> positionRequests;
+            if (posSearch != null && !posSearch.trim().isEmpty()) {
+                positionRequests = positionRequestService.searchByNameOrEmail(posSearch.trim());
+                model.addAttribute("posSearch", posSearch.trim());
+            } else {
+                positionRequests = positionRequestService.findAll();
+            }
+
+            // Filter out drafts
+            positionRequests = positionRequests.stream()
+                    .filter(r -> r.getCurrentStatus() != PositionRequestStatus.DRAFT)
+                    .collect(java.util.stream.Collectors.toList());
+
+            // Per-status counts for dashboard cards (before status filtering)
+            java.util.Map<String, Long> posStatusCounts = new java.util.LinkedHashMap<>();
+            for (PositionRequestStatus ps : PositionRequestStatus.values()) {
+                if (!ps.isDraft()) {
+                    long c = positionRequests.stream()
+                            .filter(r -> r.getCurrentStatus() == ps)
+                            .count();
+                    posStatusCounts.put(ps.name(), c);
+                }
+            }
+            model.addAttribute("posStatusCounts", posStatusCounts);
+
+            // Apply status filter if provided
+            if (posStatus != null && !posStatus.trim().isEmpty()) {
+                try {
+                    PositionRequestStatus filterSt = PositionRequestStatus.valueOf(posStatus);
+                    positionRequests = positionRequests.stream()
+                            .filter(r -> r.getCurrentStatus() == filterSt)
+                            .collect(java.util.stream.Collectors.toList());
+                    model.addAttribute("activePosStatus", posStatus);
+                } catch (IllegalArgumentException ignored) {
+                }
+            }
+
             long positionPendingCount = positionRequests.stream()
                     .filter(r -> !r.getCurrentStatus().isTerminal() && !r.getCurrentStatus().isEditable())
                     .count();
@@ -199,6 +239,30 @@ public class AcademicAdminController {
             }
         }
         model.addAttribute("doc0DataMap", doc0DataMap);
+
+        // Build autocomplete suggestions from all applicants
+        java.util.Set<String> suggestionsSet = new java.util.LinkedHashSet<>();
+        for (AcademicRequest req : allRequests) {
+            if (!req.getCurrentStatus().isDraft() && req.getApplicant() != null) {
+                if (req.getApplicant().getName() != null) suggestionsSet.add(req.getApplicant().getName());
+                if (req.getApplicant().getEmail() != null) suggestionsSet.add(req.getApplicant().getEmail());
+            }
+        }
+        try {
+            List<PositionRequest> posAll = positionRequestService.findAll();
+            for (PositionRequest pr : posAll) {
+                if (!pr.getCurrentStatus().isDraft() && pr.getApplicant() != null) {
+                    if (pr.getApplicant().getName() != null) suggestionsSet.add(pr.getApplicant().getName());
+                    if (pr.getApplicant().getEmail() != null) suggestionsSet.add(pr.getApplicant().getEmail());
+                }
+            }
+        } catch (Exception ignored) {}
+        try {
+            String suggestionsJson = objectMapper.writeValueAsString(new java.util.ArrayList<>(suggestionsSet));
+            model.addAttribute("searchSuggestionsJson", suggestionsJson);
+        } catch (Exception e) {
+            model.addAttribute("searchSuggestionsJson", "[]");
+        }
 
         return "academic/admin/requests";
     }

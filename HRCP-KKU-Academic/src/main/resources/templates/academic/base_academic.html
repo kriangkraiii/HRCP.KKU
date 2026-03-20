@@ -9,6 +9,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="icon" type="image/png" href="/img/cphr_new.png">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <link rel="stylesheet" href="/css/dark-theme.css">
+    <script th:inline="javascript">
+        // Anti-flash: apply user's server-side theme BEFORE paint
+        (function(){var t=/*[[${user != null && user.themePreference != null ? user.themePreference : 'light'}]]*/ 'light';
+        window.USER_THEME_PREFERENCE=t;
+        if(t==='system'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
+        if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();
+    </script>
     <style>
         :root {
             --sidebar-width: 260px;
@@ -195,6 +205,17 @@
             padding: 12px 20px 6px;
             font-weight: 600;
         }
+
+        /* Sidebar dropdown */
+        .sidebar-dropdown-toggle:hover { color: rgba(255,255,255,.55); }
+        .sidebar-dropdown-toggle .fa-chevron-down { transition: transform .25s ease; }
+        .sidebar-dropdown-toggle.open .fa-chevron-down { transform: rotate(180deg); }
+        .sidebar-dropdown-menu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+        }
+        .sidebar-dropdown-menu.show { max-height: 200px; }
 
         .sidebar-link {
             display: flex;
@@ -564,16 +585,21 @@
                     <i class="fas fa-university"></i> คำร้องขอตำแหน่งทางวิชาการ
                 </a>
 
-                <div class="sidebar-section-title">จัดการผู้ใช้</div>
-                <a href="/admin/add-admin" class="sidebar-link" id="nav-add-user">
-                    <i class="fas fa-user-plus"></i> เพิ่มผู้ใช้
-                </a>
-                <a href="/admin/users?type=1" class="sidebar-link" id="nav-users">
-                    <i class="fas fa-users"></i> จัดการผู้ใช้
-                </a>
-                <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins">
-                    <i class="fas fa-user-shield"></i> จัดการแอดมิน
-                </a>
+                <div class="sidebar-section-title sidebar-dropdown-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('show')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none">
+                    <span>จัดการผู้ใช้</span>
+                    <i class="fas fa-chevron-down" style="font-size:0.55rem;transition:transform .25s ease"></i>
+                </div>
+                <div class="sidebar-dropdown-menu">
+                    <a href="/admin/add-admin" class="sidebar-link" id="nav-add-user">
+                        <i class="fas fa-user-plus"></i> เพิ่มผู้ใช้
+                    </a>
+                    <a href="/admin/users?type=1" class="sidebar-link" id="nav-users">
+                        <i class="fas fa-users"></i> จัดการผู้ใช้
+                    </a>
+                    <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins">
+                        <i class="fas fa-user-shield"></i> จัดการแอดมิน
+                    </a>
+                </div>
 
                 <div class="sidebar-section-title">ระบบ</div>
                 <a href="/admin/activity-logs" class="sidebar-link" id="nav-logs">
@@ -845,7 +871,17 @@
                 link.classList.add('active');
             }
         });
+
+        // Auto-open sidebar dropdowns if a child link is active
+        document.querySelectorAll('.sidebar-dropdown-menu').forEach(menu => {
+            if (menu.querySelector('.sidebar-link.active')) {
+                menu.classList.add('show');
+                var toggle = menu.previousElementSibling;
+                if (toggle) toggle.classList.add('open');
+            }
+        });
     </script>
+<script src="/js/theme-switcher.js"></script>
 </body>
 
 </html>

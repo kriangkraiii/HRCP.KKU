@@ -15,12 +15,14 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
+import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
+import com.ecom.academic.repository.PositionDocumentEditLogRepository;
 import com.ecom.academic.repository.PositionDocumentRepository;
 import com.ecom.academic.repository.PositionRequestRepository;
 import com.ecom.academic.repository.PositionStatusHistoryRepository;
@@ -40,6 +42,9 @@ public class PositionRequestService {
 
     @Autowired
     private PositionStatusHistoryRepository statusHistoryRepository;
+
+    @Autowired
+    private PositionDocumentEditLogRepository editLogRepository;
 
     @Autowired
     private AcademicRequestRepository academicRequestRepository;
@@ -187,6 +192,10 @@ public class PositionRequestService {
         return requestRepository.findAllOrderByCreatedAtDesc();
     }
 
+    public List<PositionRequest> searchByNameOrEmail(String keyword) {
+        return requestRepository.searchByNameOrEmail(keyword);
+    }
+
     public Optional<PositionRequest> findDraftByApplicant(Integer userId) {
         return requestRepository.findDraftByApplicantId(userId);
     }
@@ -253,6 +262,25 @@ public class PositionRequestService {
         return statusHistoryRepository.findByRequestId(requestId);
     }
 
+    // ================== Document Edit Logging ==================
+
+    public void logDocumentEdit(PositionRequest request, int documentType, String label,
+            UserDtls user, PositionDocumentEditLog.EditAction action) {
+        PositionDocumentEditLog log = new PositionDocumentEditLog();
+        log.setRequest(request);
+        log.setDocumentType(documentType);
+        log.setDocumentLabel(label != null ? label : getDocLabel(documentType));
+        log.setEditedBy(user);
+        log.setAction(action);
+        editLogRepository.save(log);
+    }
+
+    public List<PositionDocumentEditLog> getEditHistory(Long requestId) {
+        PositionRequest request = requestRepository.findById(requestId).orElse(null);
+        if (request == null) return List.of();
+        return editLogRepository.findByRequestOrderByEditedAtDesc(request);
+    }
+
     // ================== Document CRUD ==================
 
     public PositionDocument saveDocument(PositionRequest request, int documentType, String jsonData,
@@ -281,7 +309,14 @@ public class PositionRequestService {
         doc.setDocumentLabel(label);
         doc.setIsDraft(false);
         doc.setFilledBy(filledBy);
-        return documentRepository.save(doc);
+        PositionDocument saved = documentRepository.save(doc);
+
+        // Sync doc 2 fields back to request
+        if (documentType == 2 && jsonData != null) {
+            syncDoc2ToRequest(request, jsonData);
+        }
+
+        return saved;
     }
 
     public PositionDocument saveDraft(PositionRequest request, int documentType, String jsonData,
@@ -316,7 +351,14 @@ public class PositionRequestService {
             doc.setIsDraft(true);
         }
         doc.setFilledBy(filledBy);
-        return documentRepository.save(doc);
+        PositionDocument saved = documentRepository.save(doc);
+
+        // Sync doc 2 fields back to request
+        if (documentType == 2 && jsonData != null) {
+            syncDoc2ToRequest(request, jsonData);
+        }
+
+        return saved;
     }
 
     public List<PositionDocument> getDocuments(Long requestId) {
@@ -333,6 +375,29 @@ public class PositionRequestService {
 
     public PositionRequest save(PositionRequest request) {
         return requestRepository.save(request);
+    }
+
+    @SuppressWarnings("unchecked")
+    private void syncDoc2ToRequest(PositionRequest request, String jsonData) {
+        try {
+            Map<String, String> data = objectMapper.readValue(jsonData,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+            String pos = data.get("request_position");
+            if (pos != null && !pos.isBlank()) {
+                request.setTargetPosition(pos);
+            }
+            String major = data.get("major");
+            if (major != null && !major.isBlank()) {
+                request.setMajor(major);
+            }
+            String method = data.get("evaluation_method");
+            if (method != null && !method.isBlank()) {
+                request.setEvaluationMethod(method);
+            }
+            requestRepository.save(request);
+        } catch (Exception e) {
+            System.err.println("Sync doc2 to request failed: " + e.getMessage());
+        }
     }
 
     // ================== Attachments ==================

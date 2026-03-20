@@ -26,6 +26,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
+import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.service.DocumentGenerationService;
@@ -97,6 +98,7 @@ public class PositionAdminController {
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
         model.addAttribute("statuses", PositionRequestStatus.values());
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
+        model.addAttribute("editHistory", positionService.getEditHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
 
         // Attachments
@@ -218,7 +220,14 @@ public class PositionAdminController {
                 System.err.println("Phase2 doc generation failed for type " + type + ": " + e.getMessage());
             }
 
+            boolean isNew = positionService.getDocumentsByType(id, type).isEmpty();
             positionService.saveDocument(request, type, jsonData, filePath, label, null, "ADMIN");
+
+            // Log document edit
+            UserDtls admin = getUser(principal);
+            positionService.logDocumentEdit(request, type, label, admin,
+                    isNew ? PositionDocumentEditLog.EditAction.CREATED : PositionDocumentEditLog.EditAction.UPDATED);
+
             return "redirect:/admin/position/request/" + id + "?success=doc_generated";
         } catch (Exception e) {
             return "redirect:/admin/position/request/" + id + "?error=doc_save_failed";
