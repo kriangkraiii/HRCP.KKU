@@ -14,6 +14,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -351,12 +353,26 @@ public class AdminController {
 			UserDtls updatedAdmin = userService.updateUserDetails(user, file);
 
 			if (updatedAdmin != null) {
-				// Log the action
 				if (p != null) {
-					UserDtls admin = userService.getUserByEmail(p.getName());
+					String oldEmail = p.getName();
+					// Check if admin is editing themselves (compare IDs)
+					UserDtls currentAdmin = userService.getUserByEmail(oldEmail);
+					boolean isSelfEdit = (currentAdmin == null && updatedAdmin.getEmail().equals(user.getEmail()))
+							|| (currentAdmin != null && currentAdmin.getId().equals(user.getId()));
+
+					if (isSelfEdit && !oldEmail.equals(updatedAdmin.getEmail())) {
+						// Email changed for self — refresh SecurityContext
+						var auth = SecurityContextHolder.getContext().getAuthentication();
+						var newAuth = new UsernamePasswordAuthenticationToken(
+								updatedAdmin.getEmail(), auth.getCredentials(), auth.getAuthorities());
+						SecurityContextHolder.getContext().setAuthentication(newAuth);
+					}
+
+					// Log with the correct (possibly new) email
+					String logEmail = isSelfEdit ? updatedAdmin.getEmail() : oldEmail;
 					adminLogService.log(
-							p.getName(),
-							admin != null ? admin.getName() : p.getName(),
+							logEmail,
+							updatedAdmin.getName(),
 							"EDIT_ADMIN_ACCOUNT",
 							"แก้ไขบัญชีแอดมิน ID:" + user.getId() + " (" + user.getEmail() + ")",
 							getClientIpAddress(request));
@@ -423,12 +439,14 @@ public class AdminController {
 			UserDtls updatedUser = userService.updateUserDetails(user, file);
 
 			if (updatedUser != null) {
-				// Log the action
 				if (p != null) {
-					UserDtls admin = userService.getUserByEmail(p.getName());
+					String oldEmail = p.getName();
+					UserDtls currentAdmin = userService.getUserByEmail(oldEmail);
+
+					// Admin editing a user (not self) — no SecurityContext change needed
 					adminLogService.log(
-							p.getName(),
-							admin != null ? admin.getName() : p.getName(),
+							oldEmail,
+							currentAdmin != null ? currentAdmin.getName() : oldEmail,
 							"EDIT_USER_ACCOUNT",
 							"แก้ไขบัญชีผู้ใช้ ID:" + user.getId() + " (" + user.getEmail() + ")",
 							getClientIpAddress(request));

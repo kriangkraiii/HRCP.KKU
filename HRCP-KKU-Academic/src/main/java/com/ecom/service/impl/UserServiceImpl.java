@@ -325,6 +325,8 @@ public class UserServiceImpl implements UserService {
 				if (existingUser != null && !existingUser.getId().equals(user.getId())) {
 					throw new RuntimeException("อีเมลนี้มีในระบบแล้ว");
 				}
+				// Reset email verification — user must re-verify the new email
+				dbUser.setEmailVerified(false);
 			}
 
 			dbUser.setTitle(user.getTitle());
