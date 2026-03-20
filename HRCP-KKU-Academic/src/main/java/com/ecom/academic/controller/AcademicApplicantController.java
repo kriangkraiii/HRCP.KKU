@@ -156,7 +156,7 @@ public class AcademicApplicantController {
         // เช็คว่ามี doc 0 และ doc 1 แล้วหรือยัง
         List<AcademicDocument> allDocs = requestService.getDocumentsSorted(draftRequest.getId());
         boolean hasDoc0 = allDocs.stream().anyMatch(d -> d.getDocumentType() == 0);
-        boolean hasDoc1 = allDocs.stream().anyMatch(d -> d.getDocumentType() == 1);
+        boolean hasDoc1 = isDoc1Complete(allDocs);
 
         model.addAttribute("user", user);
         model.addAttribute("request", draftRequest);
@@ -350,7 +350,7 @@ public class AcademicApplicantController {
 
         // เช็คว่า doc 0, doc 1 ถูกกรอกแล้วหรือยัง
         boolean hasDoc0 = allDocuments.stream().anyMatch(d -> d.getDocumentType() == 0);
-        boolean hasDoc1 = allDocuments.stream().anyMatch(d -> d.getDocumentType() == 1);
+        boolean hasDoc1 = isDoc1Complete(allDocuments);
         model.addAttribute("hasDoc0", hasDoc0);
         model.addAttribute("hasDoc1", hasDoc1);
 
@@ -468,5 +468,28 @@ public class AcademicApplicantController {
 
     private UserDtls getUser(Principal principal) {
         return userRepository.findByEmail(principal.getName());
+    }
+
+    /**
+     * เช็คว่าเอกสารที่ 1 สมบูรณ์หรือไม่ (ผู้ยื่นติ๊ก ✓ ครบทุก 5 ข้อ)
+     */
+    private boolean isDoc1Complete(List<AcademicDocument> docs) {
+        return docs.stream()
+                .filter(d -> d.getDocumentType() == 1)
+                .findFirst()
+                .map(doc -> {
+                    try {
+                        Map<String, String> data = objectMapper.readValue(doc.getJsonData(),
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                        return "✓".equals(data.get("chk_app_1"))
+                                && "✓".equals(data.get("chk_app_2"))
+                                && "✓".equals(data.get("chk_app_3"))
+                                && "✓".equals(data.get("chk_app_4"))
+                                && "✓".equals(data.get("chk_app_5"));
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .orElse(false);
     }
 }

@@ -189,7 +189,8 @@ public class UserServiceImpl implements UserService {
 
 		if (!ObjectUtils.isEmpty(dbUser)) {
 			dbUser.setTitle(user.getTitle());
-			dbUser.setName(user.getName());
+			dbUser.setFirstName(user.getFirstName());
+			dbUser.setLastName(user.getLastName());
 			dbUser.setMobileNumber(user.getMobileNumber());
 			dbUser.setAcademicPosition(user.getAcademicPosition());
 			dbUser = userRepository.save(dbUser);
@@ -326,9 +327,9 @@ public class UserServiceImpl implements UserService {
 				}
 			}
 
-			// Update fields (preserve password, role, security fields)
 			dbUser.setTitle(user.getTitle());
-			dbUser.setName(user.getName());
+			dbUser.setFirstName(user.getFirstName());
+			dbUser.setLastName(user.getLastName());
 			dbUser.setEmail(user.getEmail());
 			dbUser.setMobileNumber(user.getMobileNumber());
 			dbUser.setAcademicPosition(user.getAcademicPosition());

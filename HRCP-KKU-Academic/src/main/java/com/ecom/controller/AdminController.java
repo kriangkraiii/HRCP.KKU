@@ -326,8 +326,9 @@ public class AdminController {
 		}
 
 		// Validate required fields
-		if (user.getName() == null || user.getName().trim().isEmpty()) {
-			session.setAttribute("errorMsg", "กรุณากรอกชื่อ");
+		if (user.getFirstName() == null || user.getFirstName().trim().isEmpty()
+				|| user.getLastName() == null || user.getLastName().trim().isEmpty()) {
+			session.setAttribute("errorMsg", "กรุณากรอกชื่อและนามสกุล");
 			return "redirect:/admin/edit-admin?id=" + user.getId();
 		}
 
@@ -397,8 +398,9 @@ public class AdminController {
 		}
 
 		// Validate required fields
-		if (user.getName() == null || user.getName().trim().isEmpty()) {
-			session.setAttribute("errorMsg", "กรุณากรอกชื่อ");
+		if (user.getFirstName() == null || user.getFirstName().trim().isEmpty()
+				|| user.getLastName() == null || user.getLastName().trim().isEmpty()) {
+			session.setAttribute("errorMsg", "กรุณากรอกชื่อและนามสกุล");
 			return "redirect:/admin/edit-user?id=" + user.getId();
 		}
 

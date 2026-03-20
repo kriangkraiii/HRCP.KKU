@@ -62,11 +62,17 @@
 											<option value="ศ.ดร." th:selected="${editUser.title == 'ศ.ดร.'}">ศ.ดร.</option>
 										</select>
 									</div>
-									<div class="col-md-8">
-										<label class="form-label fw-bold">ชื่อ-นามสกุล <span
+									<div class="col-md-4">
+										<label class="form-label fw-bold">ชื่อ <span
 												class="text-danger">*</span></label>
-										<input type="text" name="name" class="form-control"
-											placeholder="กรอกชื่อ-นามสกุล" th:value="${editUser.name}" required>
+										<input type="text" name="firstName" class="form-control"
+											placeholder="กรอกชื่อ" th:value="${editUser.firstName}" required>
+									</div>
+									<div class="col-md-4">
+										<label class="form-label fw-bold">นามสกุล <span
+												class="text-danger">*</span></label>
+										<input type="text" name="lastName" class="form-control"
+											placeholder="กรอกนามสกุล" th:value="${editUser.lastName}" required>
 									</div>
 								</div>
 
