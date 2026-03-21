@@ -127,6 +127,7 @@ public class DocumentGenerationService {
         Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
         });
         Map<String, String> placeholders = flattenMap(dataMap, "");
+        mapUsedCheckboxes(placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
@@ -355,63 +356,119 @@ public class DocumentGenerationService {
      * Template มี 5 แถวตายตั้ง (des_research1-5)
      * ถ้า research_count > 5 จะ clone แถวที่ 5 แล้วเปลี่ยนหมายเลข placeholder
      */
-    private String expandDynamicRows(String xml, Map<String, String> placeholders) {
-        // เช็คว่าเป็นเอกสารที่ 6 หรือไม่ (มี des_research5 ใน template)
-        if (!xml.contains("{{des_research5}}")) {
-            return xml;
-        }
-
-        // หาจำนวน row ที่ต้องการจาก placeholder data
-        int maxRow = 5;
-        for (String key : placeholders.keySet()) {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("^des_research(\\d+)$").matcher(key);
+    private void mapUsedCheckboxes(Map<String, String> placeholders) {
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                "^(asst|assoc|prof)_used_(research|other|book)_(\\d+)$");
+        Map<String, String> toAdd = new java.util.LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : new java.util.ArrayList<>(placeholders.entrySet())) {
+            java.util.regex.Matcher m = p.matcher(entry.getKey());
             if (m.matches()) {
-                int n = Integer.parseInt(m.group(1));
-                if (n > maxRow) maxRow = n;
-            }
-        }
-
-        // ถ้าไม่เกิน 5 ไม่ต้องทำอะไร
-        if (maxRow <= 5) {
-            return xml;
-        }
-
-        // หาแถวที่ 5 ใน XML (แถวตารางที่มี des_research5)
-        // หา <w:tr ที่มี des_research5 แล้วหา </w:tr> ที่ปิด
-        int searchFrom = 0;
-        while (true) {
-            int trIdx = xml.indexOf("<w:tr ", searchFrom);
-            if (trIdx == -1) trIdx = xml.indexOf("<w:tr>", searchFrom);
-            if (trIdx == -1) break;
-
-            int trEnd = xml.indexOf("</w:tr>", trIdx);
-            if (trEnd == -1) break;
-            trEnd += "</w:tr>".length();
-
-            String rowXml = xml.substring(trIdx, trEnd);
-            if (rowXml.contains("des_research5")) {
-                // Clone this row for 6, 7, 8, ..., maxRow
-                StringBuilder newRows = new StringBuilder();
-                for (int n = 6; n <= maxRow; n++) {
-                    String cloned = rowXml
-                            .replace("des_research5", "des_research" + n)
-                            .replace("chk_firstauthor5", "chk_firstauthor" + n)
-                            .replace("chk_Corres5", "chk_Corres" + n)
-                            .replace("essen5", "essen" + n)
-                            .replace("impactfacttor5", "impactfacttor" + n)
-                            .replace("data5", "data" + n);
-                    // เปลี่ยนเลขลำดับแถว ("5." → "N.")
-                    // หาตัวเลข 5 ใน cell แรกที่เป็นลำดับแถว
-                    // Pattern: >5.</ หรือ >5</
-                    cloned = cloned.replaceFirst(">5\\.<", ">" + n + ".<")
-                                   .replaceFirst(">5<", ">" + n + "<");
-                    newRows.append(cloned);
+                String prefix = m.group(1);
+                String type = m.group(2);
+                String n = m.group(3);
+                boolean notUsed = "not_used".equals(entry.getValue());
+                if ("research".equals(type)) {
+                    // Generate both spellings — DOCX template is inconsistent:
+                    // ASST section uses typo "reseach", ASSOC/PROF use correct "research"
+                    toAdd.put(prefix + "_not_used_reseach_" + n,  notUsed ? "☑" : "☐");
+                    toAdd.put(prefix + "_is_used_reseach_" + n,   notUsed ? "☐" : "☑");
+                    toAdd.put(prefix + "_not_used_research_" + n, notUsed ? "☑" : "☐");
+                    toAdd.put(prefix + "_is_used_research_" + n,  notUsed ? "☐" : "☑");
+                } else {
+                    toAdd.put(prefix + "_not_used_" + type + "_" + n, notUsed ? "☑" : "☐");
+                    toAdd.put(prefix + "_is_used_" + type + "_" + n,  notUsed ? "☐" : "☑");
                 }
-                // แทรกแถวใหม่หลังแถวที่ 5
-                xml = xml.substring(0, trEnd) + newRows.toString() + xml.substring(trEnd);
-                break;
             }
-            searchFrom = trEnd;
+        }
+        placeholders.putAll(toAdd);
+    }
+
+    private String expandDynamicRows(String xml, Map<String, String> placeholders) {
+        // Block A: เอกสารที่ 6 — research rows (des_research)
+        if (xml.contains("{{des_research5}}")) {
+            // หาจำนวน row ที่ต้องการจาก placeholder data
+            int maxRow = 5;
+            for (String key : placeholders.keySet()) {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("^des_research(\\d+)$").matcher(key);
+                if (m.matches()) {
+                    int n = Integer.parseInt(m.group(1));
+                    if (n > maxRow) maxRow = n;
+                }
+            }
+
+            if (maxRow > 5) {
+                int searchFrom = 0;
+                while (true) {
+                    int trIdx = xml.indexOf("<w:tr ", searchFrom);
+                    if (trIdx == -1) trIdx = xml.indexOf("<w:tr>", searchFrom);
+                    if (trIdx == -1) break;
+
+                    int trEnd = xml.indexOf("</w:tr>", trIdx);
+                    if (trEnd == -1) break;
+                    trEnd += "</w:tr>".length();
+
+                    String rowXml = xml.substring(trIdx, trEnd);
+                    if (rowXml.contains("des_research5")) {
+                        StringBuilder newRows = new StringBuilder();
+                        for (int n = 6; n <= maxRow; n++) {
+                            String cloned = rowXml
+                                    .replace("des_research5", "des_research" + n)
+                                    .replace("chk_firstauthor5", "chk_firstauthor" + n)
+                                    .replace("chk_Corres5", "chk_Corres" + n)
+                                    .replace("essen5", "essen" + n)
+                                    .replace("impactfacttor5", "impactfacttor" + n)
+                                    .replace("data5", "data" + n);
+                            cloned = cloned.replaceFirst(">5\\.<", ">" + n + ".<")
+                                           .replaceFirst(">5<", ">" + n + "<");
+                            newRows.append(cloned);
+                        }
+                        xml = xml.substring(0, trEnd) + newRows.toString() + xml.substring(trEnd);
+                        break;
+                    }
+                    searchFrom = trEnd;
+                }
+            }
+        }
+
+        // Block B: เอกสารที่ 1 — education history rows (ประวัติการศึกษา)
+        if (xml.contains("{{education_degree_1}}")) {
+            int maxEduRow = 1;
+            for (String key : placeholders.keySet()) {
+                java.util.regex.Matcher m =
+                    java.util.regex.Pattern.compile("^education_degree_(\\d+)$").matcher(key);
+                if (m.matches()) {
+                    int n = Integer.parseInt(m.group(1));
+                    if (n > maxEduRow) maxEduRow = n;
+                }
+            }
+            if (maxEduRow > 1) {
+                int eduSearchFrom = 0;
+                while (true) {
+                    int trIdx = xml.indexOf("<w:tr ", eduSearchFrom);
+                    if (trIdx == -1) trIdx = xml.indexOf("<w:tr>", eduSearchFrom);
+                    if (trIdx == -1) break;
+                    int trEnd = xml.indexOf("</w:tr>", trIdx);
+                    if (trEnd == -1) break;
+                    trEnd += "</w:tr>".length();
+                    String rowXml = xml.substring(trIdx, trEnd);
+                    if (rowXml.contains("education_degree_1")) {
+                        StringBuilder newRows = new StringBuilder();
+                        for (int n = 2; n <= maxEduRow; n++) {
+                            String cloned = rowXml
+                                .replace("education_no_1",          "education_no_"          + n)
+                                .replace("education_degree_1",      "education_degree_"      + n)
+                                .replace("education_major_1",       "education_major_"       + n)
+                                .replace("education_institution_1", "education_institution_" + n)
+                                .replace("education_country_1",     "education_country_"     + n)
+                                .replace("education_year_1",        "education_year_"        + n);
+                            newRows.append(cloned);
+                        }
+                        xml = xml.substring(0, trEnd) + newRows.toString() + xml.substring(trEnd);
+                        break;
+                    }
+                    eduSearchFrom = trEnd;
+                }
+            }
         }
 
         return xml;

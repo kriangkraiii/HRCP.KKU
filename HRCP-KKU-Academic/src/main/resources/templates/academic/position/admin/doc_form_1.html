@@ -293,10 +293,10 @@
                                             <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 ms-auto">
+                                    <div class="col-md-4 ms-auto year-level-group">
                                         <input type="text" name="asst_used_research_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ.">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-4 year-level-group">
                                         <input type="text" name="asst_used_research_level_1" class="form-control form-control-sm" placeholder="ระดับคุณภาพ">
                                     </div>
                                 </div>
@@ -322,10 +322,10 @@
                                             <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 ms-auto">
+                                    <div class="col-md-4 ms-auto year-level-group">
                                         <input type="text" name="asst_used_other_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ.">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-4 year-level-group">
                                         <input type="text" name="asst_used_other_level_1" class="form-control form-control-sm" placeholder="ระดับคุณภาพ">
                                     </div>
                                 </div>
@@ -351,10 +351,10 @@
                                             <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
                                         </div>
                                     </div>
-                                    <div class="col-md-4 ms-auto">
+                                    <div class="col-md-4 ms-auto year-level-group">
                                         <input type="text" name="asst_used_book_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ.">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-4 year-level-group">
                                         <input type="text" name="asst_used_book_level_1" class="form-control form-control-sm" placeholder="ระดับคุณภาพ">
                                     </div>
                                 </div>
@@ -376,8 +376,18 @@
                                 <div class="row g-2">
                                     <div class="col-1"><input type="text" name="assoc_research_working_no_1" class="form-control form-control-sm" value="๑"></div>
                                     <div class="col-7"><input type="text" name="assoc_research_working_1" class="form-control form-control-sm" placeholder="ชื่อผลงานวิจัย"></div>
-                                    <div class="col-md-4 ms-auto"><input type="text" name="assoc_used_research_year_1" class="form-control form-control-sm" placeholder="ปีที่เคยใช้ (ถ้ามี)"></div>
-                                    <div class="col-md-4"><input type="text" name="assoc_used_research_level_1" class="form-control form-control-sm" placeholder="ระดับคุณภาพ"></div>
+                                    <div class="col-4">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="assoc_used_research_1" value="not_used">
+                                            <label class="form-check-label" style="font-size:0.85em">ไม่เคยใช้</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="assoc_used_research_1" value="used">
+                                            <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 ms-auto year-level-group"><input type="text" name="assoc_used_research_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ."></div>
+                                    <div class="col-md-4 year-level-group"><input type="text" name="assoc_used_research_level_1" class="form-control form-control-sm" placeholder="ระดับคุณภาพ"></div>
                                 </div>
                             </div>
                         </div>
@@ -391,8 +401,18 @@
                                 <div class="row g-2">
                                     <div class="col-1"><input type="text" name="assoc_other_working_no_1" class="form-control form-control-sm" value="๑"></div>
                                     <div class="col-7"><input type="text" name="assoc_other_working_1" class="form-control form-control-sm" placeholder="ชื่อผลงาน"></div>
-                                    <div class="col-md-4 ms-auto"><input type="text" name="assoc_used_other_year_1" class="form-control form-control-sm" placeholder="ปี"></div>
-                                    <div class="col-md-4"><input type="text" name="assoc_used_other_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
+                                    <div class="col-4">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="assoc_used_other_1" value="not_used">
+                                            <label class="form-check-label" style="font-size:0.85em">ไม่เคยใช้</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="assoc_used_other_1" value="used">
+                                            <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 ms-auto year-level-group"><input type="text" name="assoc_used_other_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ."></div>
+                                    <div class="col-md-4 year-level-group"><input type="text" name="assoc_used_other_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
                                 </div>
                             </div>
                         </div>
@@ -406,8 +426,18 @@
                                 <div class="row g-2">
                                     <div class="col-1"><input type="text" name="assoc_book_working_no_1" class="form-control form-control-sm" value="๑"></div>
                                     <div class="col-7"><input type="text" name="assoc_book_working_1" class="form-control form-control-sm" placeholder="ชื่อตำรา/หนังสือ"></div>
-                                    <div class="col-md-4 ms-auto"><input type="text" name="assoc_used_book_year_1" class="form-control form-control-sm" placeholder="ปี"></div>
-                                    <div class="col-md-4"><input type="text" name="assoc_used_book_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
+                                    <div class="col-4">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="assoc_used_book_1" value="not_used">
+                                            <label class="form-check-label" style="font-size:0.85em">ไม่เคยใช้</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="assoc_used_book_1" value="used">
+                                            <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 ms-auto year-level-group"><input type="text" name="assoc_used_book_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ."></div>
+                                    <div class="col-md-4 year-level-group"><input type="text" name="assoc_used_book_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
                                 </div>
                             </div>
                         </div>
@@ -493,8 +523,18 @@
                                 <div class="row g-2">
                                     <div class="col-1"><input type="text" name="prof_research_working_no_1" class="form-control form-control-sm" value="๑"></div>
                                     <div class="col-7"><input type="text" name="prof_research_working_1" class="form-control form-control-sm" placeholder="ชื่อผลงานวิจัย"></div>
-                                    <div class="col-md-4 ms-auto"><input type="text" name="prof_used_research_year_1" class="form-control form-control-sm" placeholder="ปี"></div>
-                                    <div class="col-md-4"><input type="text" name="prof_used_research_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
+                                    <div class="col-4">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="prof_used_research_1" value="not_used">
+                                            <label class="form-check-label" style="font-size:0.85em">ไม่เคยใช้</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="prof_used_research_1" value="used">
+                                            <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 ms-auto year-level-group"><input type="text" name="prof_used_research_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ."></div>
+                                    <div class="col-md-4 year-level-group"><input type="text" name="prof_used_research_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
                                 </div>
                             </div>
                         </div>
@@ -508,8 +548,18 @@
                                 <div class="row g-2">
                                     <div class="col-1"><input type="text" name="prof_other_working_no_1" class="form-control form-control-sm" value="๑"></div>
                                     <div class="col-7"><input type="text" name="prof_other_working_1" class="form-control form-control-sm" placeholder="ชื่อผลงาน"></div>
-                                    <div class="col-md-4 ms-auto"><input type="text" name="prof_used_other_year_1" class="form-control form-control-sm" placeholder="ปี"></div>
-                                    <div class="col-md-4"><input type="text" name="prof_used_other_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
+                                    <div class="col-4">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="prof_used_other_1" value="not_used">
+                                            <label class="form-check-label" style="font-size:0.85em">ไม่เคยใช้</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="prof_used_other_1" value="used">
+                                            <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 ms-auto year-level-group"><input type="text" name="prof_used_other_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ."></div>
+                                    <div class="col-md-4 year-level-group"><input type="text" name="prof_used_other_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
                                 </div>
                             </div>
                         </div>
@@ -523,8 +573,18 @@
                                 <div class="row g-2">
                                     <div class="col-1"><input type="text" name="prof_book_working_no_1" class="form-control form-control-sm" value="๑"></div>
                                     <div class="col-7"><input type="text" name="prof_book_working_1" class="form-control form-control-sm" placeholder="ชื่อตำรา/หนังสือ"></div>
-                                    <div class="col-md-4 ms-auto"><input type="text" name="prof_used_book_year_1" class="form-control form-control-sm" placeholder="ปี"></div>
-                                    <div class="col-md-4"><input type="text" name="prof_used_book_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
+                                    <div class="col-4">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="prof_used_book_1" value="not_used">
+                                            <label class="form-check-label" style="font-size:0.85em">ไม่เคยใช้</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input" type="radio" name="prof_used_book_1" value="used">
+                                            <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4 ms-auto year-level-group"><input type="text" name="prof_used_book_year_1" class="form-control form-control-sm" placeholder="ปี พ.ศ."></div>
+                                    <div class="col-md-4 year-level-group"><input type="text" name="prof_used_book_level_1" class="form-control form-control-sm" placeholder="ระดับ"></div>
                                 </div>
                             </div>
                         </div>
@@ -666,13 +726,40 @@
                 div.className = 'border rounded p-3 mb-2';
                 div.innerHTML = `<div class="row g-2">
                     <div class="col-1"><input type="text" name="${namePrefix}_no_${n}" class="form-control form-control-sm"></div>
-                    <div class="col-6"><input type="text" name="${namePrefix}_${n}" class="form-control form-control-sm" placeholder="ชื่อผลงาน"></div>
-                    <div class="col-md-2"><input type="text" name="${usedPrefix}_year_${n}" class="form-control form-control-sm" placeholder="ปี"></div>
-                    <div class="col-md-2"><input type="text" name="${usedPrefix}_level_${n}" class="form-control form-control-sm" placeholder="ระดับ"></div>
+                    <div class="col-7"><input type="text" name="${namePrefix}_${n}" class="form-control form-control-sm" placeholder="ชื่อผลงาน"></div>
+                    <div class="col-4">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="${usedPrefix}_${n}" value="not_used">
+                            <label class="form-check-label" style="font-size:0.85em">ไม่เคยใช้</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="radio" name="${usedPrefix}_${n}" value="used">
+                            <label class="form-check-label" style="font-size:0.85em">เคยใช้</label>
+                        </div>
+                    </div>
+                    <div class="col-md-4 ms-auto year-level-group"><input type="text" name="${usedPrefix}_year_${n}" class="form-control form-control-sm" placeholder="ปี"></div>
+                    <div class="col-md-4 year-level-group"><input type="text" name="${usedPrefix}_level_${n}" class="form-control form-control-sm" placeholder="ระดับ"></div>
                     <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
                 </div>`;
                 document.getElementById(containerId).appendChild(div);
             }
+
+            // Toggle year/level visibility when ไม่เคยใช้/เคยใช้ is selected
+            document.addEventListener('change', function(e) {
+                const radio = e.target;
+                if (radio.type === 'radio' && (radio.value === 'not_used' || radio.value === 'used')) {
+                    const row = radio.closest('.border.rounded');
+                    if (!row) return;
+                    const groups = row.querySelectorAll('.year-level-group');
+                    groups.forEach(function(g) {
+                        g.style.display = radio.value === 'not_used' ? 'none' : '';
+                        g.querySelectorAll('input').forEach(function(inp) {
+                            inp.disabled = radio.value === 'not_used';
+                            if (radio.value === 'not_used') inp.value = '';
+                        });
+                    });
+                }
+            });
 
             function addOtherPosRow() {
                 counters.otherPos++;
