@@ -451,7 +451,7 @@ public class DocumentGenerationService {
             return xml;
         }
 
-        // หา paragraph ที่มี {{corres_name}}
+        // หา paragraph ที่มี {{corres_name}} ตัวแรก
         int corresIdx = xml.indexOf("{{corres_name}}");
         if (corresIdx == -1) return xml;
 
@@ -483,26 +483,16 @@ public class DocumentGenerationService {
         if (pSignEnd == -1) return xml;
         pSignEnd += "</w:p>".length();
 
-        // ตรวจว่า pSignEnd == pNameStart (ต่อเนื่องกัน)
-        // ถ้าไม่ใช่: ลองใช้ pNameStart เป็น pSignStart
-        // เพื่อ clone เฉพาะ 2 paragraphs (ชื่อ + ตำแหน่ง)
-        String signBlock, nameBlock, roleBlock;
-        String fullBlock; // 3 paragraphs: ลงชื่อ + ชื่อ + ตำแหน่ง
+        String fullBlock;
         int insertAfter;
 
         if (pSignEnd <= pNameStart) {
-            // 3 paragraphs ต่อเนื่อง
-            signBlock = xml.substring(pSignStart, pSignEnd);
-            nameBlock = xml.substring(pNameStart, pNameEnd);
-            roleBlock = xml.substring(pRoleStart, pRoleEnd);
-            fullBlock = signBlock + nameBlock + roleBlock;
+            // 3 paragraphs ต่อเนื่อง: ลงชื่อ + ชื่อ + ตำแหน่ง
+            fullBlock = xml.substring(pSignStart, pRoleEnd);
             insertAfter = pRoleEnd;
         } else {
             // ใช้ 2 paragraphs (ชื่อ + ตำแหน่ง)
-            nameBlock = xml.substring(pNameStart, pNameEnd);
-            roleBlock = xml.substring(pRoleStart, pRoleEnd);
-            signBlock = null;
-            fullBlock = nameBlock + roleBlock;
+            fullBlock = xml.substring(pNameStart, pRoleEnd);
             insertAfter = pRoleEnd;
         }
 
@@ -510,21 +500,54 @@ public class DocumentGenerationService {
         StringBuilder coauthorBlocks = new StringBuilder();
         for (int i = 1; i <= count; i++) {
             String coName = placeholders.getOrDefault("coauthor_name_" + i, "");
-            String coRole = placeholders.getOrDefault("coauthor_role_" + i, "ผู้ร่วมประพันธ์");
             if (coName.isEmpty()) continue;
 
             String block = fullBlock;
-            // แทนชื่อ: {{corres_name}} → coauthor name
+            // แทนชื่อ: {{corres_name}} → {{coauthor_name_N}}
             block = block.replace("{{corres_name}}", "{{coauthor_name_" + i + "}}");
-            // แทนตำแหน่ง: หาข้อความ "ผู้ประพันธ์บรรณกิจ (Corresponding author)" แล้วเปลี่ยน
-            block = block.replace("Corresponding author", coRole.isEmpty() ? "ผู้ร่วมประพันธ์" : escapeXml(coRole));
-            block = block.replace("\u0E1C\u0E39\u0E49\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E1A\u0E23\u0E23\u0E13\u0E01\u0E34\u0E08", 
-                    coRole.isEmpty() ? "\u0E1C\u0E39\u0E49\u0E23\u0E48\u0E27\u0E21\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C" : escapeXml(coRole));
+            // แทนตำแหน่ง: "Corresponding author" → "Co-author"
+            block = block.replace("Corresponding author", "Co-author");
+            // แทนตำแหน่งภาษาไทย: "ผู้ประพันธ์บรรณกิจ" → "ผู้ร่วมประพันธ์"
+            block = block.replace("\u0E1C\u0E39\u0E49\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E1A\u0E23\u0E23\u0E13\u0E01\u0E34\u0E08",
+                    "\u0E1C\u0E39\u0E49\u0E23\u0E48\u0E27\u0E21\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C");
             coauthorBlocks.append(block);
         }
 
         if (coauthorBlocks.length() > 0) {
             xml = xml.substring(0, insertAfter) + coauthorBlocks.toString() + xml.substring(insertAfter);
+        }
+
+        // ลบ signature block ของ {{corres_name}} ที่ซ้ำ (ตัวที่ 2 ขึ้นไป)
+        // หลัง expand แล้ว ถ้ายังมี {{corres_name}} เหลืออีก ให้ลบ 3-paragraph group ทิ้ง
+        while (true) {
+            int nextCorres = xml.indexOf("{{corres_name}}", insertAfter);
+            if (nextCorres == -1) break;
+
+            // หา <w:p> ที่ครอบ
+            int np = xml.lastIndexOf("<w:p ", nextCorres);
+            if (np == -1) np = xml.lastIndexOf("<w:p>", nextCorres);
+            if (np == -1) break;
+
+            // หา paragraph ก่อนหน้า (ลงชื่อ...)
+            int npPrev = xml.lastIndexOf("<w:p ", np - 1);
+            if (npPrev == -1) npPrev = xml.lastIndexOf("<w:p>", np - 1);
+
+            // หา </w:p> ของ paragraph ชื่อ
+            int npEnd = xml.indexOf("</w:p>", nextCorres);
+            if (npEnd == -1) break;
+            npEnd += "</w:p>".length();
+
+            // หา paragraph ถัดไป (ตำแหน่ง)
+            int npRole = xml.indexOf("<w:p ", npEnd);
+            if (npRole == -1) npRole = xml.indexOf("<w:p>", npEnd);
+            if (npRole == -1) break;
+            int npRoleEnd = xml.indexOf("</w:p>", npRole);
+            if (npRoleEnd == -1) break;
+            npRoleEnd += "</w:p>".length();
+
+            // ลบ 3 paragraphs (ลงชื่อ + ชื่อ + ตำแหน่ง) หรือ 2 paragraphs
+            int removeStart = (npPrev != -1 && npPrev < np) ? npPrev : np;
+            xml = xml.substring(0, removeStart) + xml.substring(npRoleEnd);
         }
 
         return xml;
