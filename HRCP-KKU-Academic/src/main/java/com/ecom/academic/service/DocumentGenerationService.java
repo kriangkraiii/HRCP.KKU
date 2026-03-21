@@ -60,7 +60,12 @@ public class DocumentGenerationService {
                 : "doc_" + documentType + ".docx";
         String outputPath = outputDir + outputFileName;
 
-        byte[] result = processTemplate(resource.getInputStream(), placeholders);
+        // Doc 4: remap form field names to template placeholder names
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
 
         try (FileOutputStream fos = new FileOutputStream(outputPath)) {
             fos.write(result);
@@ -97,7 +102,12 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        return processTemplate(resource.getInputStream(), placeholders);
+        // Doc 4: remap form field names to template placeholder names
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        return processTemplate(resource.getInputStream(), placeholders, documentType);
     }
 
     public byte[] generatePreviewDocxForCopy(int documentType, String jsonData,
@@ -131,7 +141,12 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        return processTemplate(resource.getInputStream(), placeholders);
+        // Doc 4: remap form field names to template placeholder names
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        return processTemplate(resource.getInputStream(), placeholders, documentType);
     }
 
     public String generateP2Document(com.ecom.academic.model.PositionRequest request,
@@ -148,7 +163,12 @@ public class DocumentGenerationService {
 
         String outputPath = outputDir + "p2doc_" + documentType + ".docx";
 
-        byte[] result = processTemplate(resource.getInputStream(), placeholders);
+        // Doc 4: remap form field names to template placeholder names
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
 
         try (FileOutputStream fos = new FileOutputStream(outputPath)) {
             fos.write(result);
@@ -161,7 +181,7 @@ public class DocumentGenerationService {
     // Core: Pure ZIP/XML Processing (format-preserving)
     // =====================================================================
 
-    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders) throws IOException {
+    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType) throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
 
         try (ZipInputStream zis = new ZipInputStream(templateStream);
@@ -195,8 +215,16 @@ public class DocumentGenerationService {
                         // Step 2.5: Cleanup - ลบ {{...}} ที่เหลือซึ่งไม่มีค่าจากฟอร์ม
                         xml = xml.replaceAll("\\{\\{[^}]+\\}\\}", "");
 
-                        // Step 3: Checkbox rendering - ☑/☐ → MS Gothic font runs
-                        xml = renderCheckboxes(xml);
+                        // Step 3: Checkbox rendering
+                        if (docType == 4) {
+                            // Doc 4: ใช้ ✔ เฉยๆ ไม่มีกรอบ — แปลงค่าเก่า ☑→✔, ☐→ว่าง
+                            xml = xml.replace("\u2611\uFE0E", "\u2714");
+                            xml = xml.replace("\u2611", "\u2714");
+                            xml = xml.replace("\u2610", "");
+                        } else {
+                            // เอกสารอื่น: ☑/☐ → MS Gothic font runs (กล่อง)
+                            xml = renderCheckboxes(xml);
+                        }
 
                         data = xml.getBytes(StandardCharsets.UTF_8);
                     }
@@ -421,6 +449,70 @@ public class DocumentGenerationService {
         }
 
         return xml;
+    }
+
+    // =====================================================================
+    // Doc 4: Field Name Remapping & Dynamic List Expansion
+    // =====================================================================
+
+    /**
+     * เอกสารที่ 4: Remap form field names → DOCX template placeholder names
+     * 
+     * form: paper_title_1, paper_title_2 → template: research_title1, research_title2
+     * form: research_title_1, research_title_2 → template: research_title, research_title_2
+     * auto-generate: index1, index2... and index, index_2...
+     */
+    private void preprocessDoc4Placeholders(Map<String, String> placeholders) {
+        // Section 1: Academic Papers
+        // Template: {{index1}}{{research_title1}} — รวมทุกบทความเป็น text เดียว
+        // เพราะ Word fragment placeholder ทำให้จับคู่ไม่ได้ถ้าแยกทีละรายการ
+        int maxPaper = 0;
+        for (String key : placeholders.keySet()) {
+            if (key.startsWith("paper_title_")) {
+                try {
+                    int n = Integer.parseInt(key.substring("paper_title_".length()));
+                    if (n > maxPaper) maxPaper = n;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        if (maxPaper > 0) {
+            StringBuilder paperList = new StringBuilder();
+            for (int i = 1; i <= maxPaper; i++) {
+                String val = placeholders.get("paper_title_" + i);
+                if (val != null && !val.isEmpty()) {
+                    if (paperList.length() > 0) paperList.append("\n");
+                    paperList.append(i).append(". ").append(val);
+                }
+            }
+            placeholders.put("index1", "");
+            placeholders.put("research_title1", paperList.toString());
+        }
+
+        // Section 2: Research
+        // Template: {{index}}{{research_title}} — รวมทุกวิจัยเป็น text เดียว
+        int maxResearch = 0;
+        for (String key : placeholders.keySet()) {
+            if (key.startsWith("research_title_")) {
+                try {
+                    int n = Integer.parseInt(key.substring("research_title_".length()));
+                    if (n > maxResearch) maxResearch = n;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        if (maxResearch > 0) {
+            StringBuilder resList = new StringBuilder();
+            for (int i = 1; i <= maxResearch; i++) {
+                String val = placeholders.get("research_title_" + i);
+                if (val != null && !val.isEmpty()) {
+                    if (resList.length() > 0) resList.append("\n");
+                    resList.append(i).append(". ").append(val);
+                }
+            }
+            placeholders.put("index", "");
+            placeholders.put("research_title", resList.toString());
+        }
     }
 
     // =====================================================================
@@ -671,11 +763,16 @@ public class DocumentGenerationService {
     private String escapeXml(String s) {
         if (s == null)
             return "";
-        return s.replace("&", "&amp;")
+        s = s.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
+        // \n → DOCX line break: stay in same <w:r> to preserve font (TH Sarabun New)
+        if (s.contains("\n")) {
+            s = s.replace("\n", "</w:t><w:br/><w:t xml:space=\"preserve\">");
+        }
+        return s;
     }
 
     @SuppressWarnings("unchecked")

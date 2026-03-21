@@ -18,6 +18,10 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
+                                <label class="form-label">เลขที่</label>
+                                <input type="text" name="memo_no" class="form-control" placeholder="เลขที่หนังสือ">
+                            </div>
+                            <div class="col-md-4">
                                 <label class="form-label">วันที่</label>
                                 <input type="text" name="date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙">
                             </div>
@@ -73,7 +77,7 @@
                         <div class="row g-3">
                             <div class="col-12">
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="master_thesis" value="☑" id="chkMaster">
+                                    <input class="form-check-input" type="checkbox" name="master_thesis" value="✔" id="chkMaster">
                                     <label class="form-check-label" for="chkMaster">ระดับปริญญาโท</label>
                                 </div>
                                 <div class="ms-4 mb-3">
@@ -83,7 +87,7 @@
                             </div>
                             <div class="col-12">
                                 <div class="form-check mb-2">
-                                    <input class="form-check-input" type="checkbox" name="doctoral_thesis" value="☑" id="chkDoc">
+                                    <input class="form-check-input" type="checkbox" name="doctoral_thesis" value="✔" id="chkDoc">
                                     <label class="form-check-label" for="chkDoc">ระดับปริญญาเอก</label>
                                 </div>
                                 <div class="ms-4">
@@ -113,7 +117,7 @@
                         <div class="row g-3" id="academicPaperSection">
                             <div class="col-md-4">
                                 <label class="form-label">จำนวนเรื่อง</label>
-                                <input type="number" name="academic_paper_count" class="form-control" min="0" value="0">
+                                <input type="number" name="academic_paper_count" class="form-control" min="0" value="0" readonly>
                             </div>
                             <div class="col-12" id="paperListContainer">
                                 <label class="form-label">รายชื่อบทความ</label>
@@ -153,7 +157,7 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">จำนวนเรื่อง</label>
-                                <input type="number" name="research_count" class="form-control" min="0" value="0">
+                                <input type="number" name="research_count" class="form-control" min="0" value="0" readonly>
                             </div>
                             <div class="col-12" id="researchListContainer">
                                 <label class="form-label">รายชื่อผลงานวิจัย</label>
@@ -190,37 +194,78 @@
             let paperCount = 1;
             let researchCount = 1;
 
-            function addPaperRow() {
+            // --- Auto-update count fields ---
+            function updatePaperCount() {
+                const rows = document.querySelectorAll('#paperRows .input-group');
+                const countField = document.querySelector('[name="academic_paper_count"]');
+                if (countField) countField.value = rows.length;
+                // Renumber
+                rows.forEach((row, i) => {
+                    const span = row.querySelector('.input-group-text');
+                    if (span) span.textContent = (i + 1) + '.';
+                    const input = row.querySelector('input[type="text"]');
+                    if (input) input.name = 'paper_title_' + (i + 1);
+                });
+                paperCount = rows.length;
+            }
+
+            function updateResearchCount() {
+                const rows = document.querySelectorAll('#researchRows .input-group');
+                const countField = document.querySelector('[name="research_count"]');
+                if (countField) countField.value = rows.length;
+                // Renumber
+                rows.forEach((row, i) => {
+                    const span = row.querySelector('.input-group-text');
+                    if (span) span.textContent = (i + 1) + '.';
+                    const input = row.querySelector('input[type="text"]');
+                    if (input) input.name = 'research_title_' + (i + 1);
+                });
+                researchCount = rows.length;
+            }
+
+            function removePaperRow(btn) {
+                btn.closest('.input-group').remove();
+                updatePaperCount();
+            }
+
+            function removeResearchRow(btn) {
+                btn.closest('.input-group').remove();
+                updateResearchCount();
+            }
+
+            function addPaperRow(value) {
                 paperCount++;
                 const row = document.createElement('div');
                 row.className = 'input-group mb-2';
                 row.innerHTML = `<span class="input-group-text">${paperCount}.</span>
-                    <input type="text" name="paper_title_${paperCount}" class="form-control" placeholder="ชื่อบทความ">
-                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+                    <input type="text" name="paper_title_${paperCount}" class="form-control" placeholder="ชื่อบทความ" value="${value || ''}">
+                    <button type="button" class="btn btn-outline-danger" onclick="removePaperRow(this)"><i class="fas fa-times"></i></button>`;
                 document.getElementById('paperRows').appendChild(row);
+                updatePaperCount();
             }
 
-            function addResearchRow() {
+            function addResearchRow(value) {
                 researchCount++;
                 const row = document.createElement('div');
                 row.className = 'input-group mb-2';
                 row.innerHTML = `<span class="input-group-text">${researchCount}.</span>
-                    <input type="text" name="research_title_${researchCount}" class="form-control" placeholder="ชื่อผลงานวิจัย">
-                    <button type="button" class="btn btn-outline-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+                    <input type="text" name="research_title_${researchCount}" class="form-control" placeholder="ชื่อผลงานวิจัย" value="${value || ''}">
+                    <button type="button" class="btn btn-outline-danger" onclick="removeResearchRow(this)"><i class="fas fa-times"></i></button>`;
                 document.getElementById('researchRows').appendChild(row);
+                updateResearchCount();
             }
 
             // Radio → hidden field sync
             document.querySelectorAll('[name="academic_paper_status"]').forEach(r => {
                 r.addEventListener('change', function() {
-                    document.querySelector('[name="academic_paper_not_part_edu"]').value = this.value === 'not_part' ? '☑' : '☐';
-                    document.querySelector('[name="academic_paper_is_part_edu"]').value = this.value === 'is_part' ? '☑' : '☐';
+                    document.querySelector('[name="academic_paper_not_part_edu"]').value = this.value === 'not_part' ? '✔' : '';
+                    document.querySelector('[name="academic_paper_is_part_edu"]').value = this.value === 'is_part' ? '✔' : '';
                 });
             });
             document.querySelectorAll('[name="research_status"]').forEach(r => {
                 r.addEventListener('change', function() {
-                    document.querySelector('[name="research_not_part_edu"]').value = this.value === 'not_part' ? '☑' : '☐';
-                    document.querySelector('[name="research_is_part_edu"]').value = this.value === 'is_part' ? '☑' : '☐';
+                    document.querySelector('[name="research_not_part_edu"]').value = this.value === 'not_part' ? '✔' : '';
+                    document.querySelector('[name="research_is_part_edu"]').value = this.value === 'is_part' ? '✔' : '';
                 });
             });
 
@@ -229,18 +274,51 @@
                 if (existingData) {
                     try {
                         const data = JSON.parse(existingData);
+
+                        // Restore dynamic paper rows FIRST
+                        let maxPaper = 1;
+                        for (const key of Object.keys(data)) {
+                            const match = key.match(/^paper_title_(\d+)$/);
+                            if (match) maxPaper = Math.max(maxPaper, parseInt(match[1]));
+                        }
+                        for (let i = 2; i <= maxPaper; i++) {
+                            if (data['paper_title_' + i]) addPaperRow(data['paper_title_' + i]);
+                        }
+
+                        // Restore dynamic research rows FIRST
+                        let maxResearch = 1;
+                        for (const key of Object.keys(data)) {
+                            const match = key.match(/^research_title_(\d+)$/);
+                            if (match) maxResearch = Math.max(maxResearch, parseInt(match[1]));
+                        }
+                        for (let i = 2; i <= maxResearch; i++) {
+                            if (data['research_title_' + i]) addResearchRow(data['research_title_' + i]);
+                        }
+
+                        // Now set other field values
                         for (const [key, value] of Object.entries(data)) {
+                            // Skip dynamic rows (already handled above)
+                            if (key.match(/^paper_title_[2-9]\d*$/) || key.match(/^research_title_[2-9]\d*$/)) continue;
+
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
-                                if (el.type === 'checkbox') { el.checked = (value === '☑'); }
+                                if (el.type === 'checkbox') { el.checked = (value === '✔' || value === '☑'); }
                                 else if (el.type === 'radio') {
                                     const r = document.querySelector(`[name="${key}"][value="${value}"]`);
-                                    if (r) r.checked = true;
+                                    if (r) { r.checked = true; r.dispatchEvent(new Event('change')); }
                                 } else { el.value = value; }
                             }
                         }
+
+                        // Update counts
+                        updatePaperCount();
+                        updateResearchCount();
                     } catch(e) {}
                 }
+
+                // Initial count update
+                updatePaperCount();
+                updateResearchCount();
             });
         </script>
 
