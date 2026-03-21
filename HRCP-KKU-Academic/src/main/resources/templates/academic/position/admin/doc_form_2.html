@@ -58,16 +58,17 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ความประสงค์เรื่องการรับรู้ข้อมูล</h5></div>
                     <div class="card-body">
+                        <input type="hidden" name="not_wish_to_know_committee_names" id="notWish" value="☐">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="radio" name="wish_to_know_committee_names"
-                                value="☑" id="intent1">
+                                value="☑" id="intent1" onchange="document.getElementById('notWish').value='☐'">
                             <label class="form-check-label" for="intent1">
                                 ประสงค์จะทราบรายชื่อกรรมการประเมินผลงานทางวิชาการ
                             </label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="wish_to_know_committee_names"
-                                value="☐" id="intent2">
+                                value="☐" id="intent2" onchange="document.getElementById('notWish').value='☑'">
                             <label class="form-check-label" for="intent2">
                                 ไม่ประสงค์จะทราบรายชื่อกรรมการประเมินผลงานทางวิชาการ ไม่ว่ากรณีใด ๆ
                             </label>

@@ -87,11 +87,117 @@
                                 <label class="form-label">อายุ (ปี)</label>
                                 <input type="text" name="age" class="form-control">
                             </div>
-                            <div class="col-md-3">
+                            <div class="col-md-2">
                                 <label class="form-label">อายุราชการ (ปี)</label>
                                 <input type="text" name="years" class="form-control">
                             </div>
+                            <div class="col-md-2">
+                                <label class="form-label">เดือน</label>
+                                <input type="text" name="months" class="form-control">
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ========== ส่วนที่ 1.5: ประวัติการรับราชการ ========== -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">๒. ประวัติการรับราชการ</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label">เงินเดือนปัจจุบัน (บาท)</label>
+                                <input type="text" name="current_salary" class="form-control">
+                            </div>
+                            <div class="col-md-8">
+                                <label class="form-label">วันที่ได้รับแต่งตั้งให้ดำรงตำแหน่งอาจารย์</label>
+                                <input type="text" name="lecturer_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๐">
+                            </div>
+                            <div class="col-12"><hr><h6 class="fw-bold">ตำแหน่งผู้ช่วยศาสตราจารย์</h6></div>
+                            <div class="col-md-3">
+                                <label class="form-label">วิธีแต่งตั้ง</label>
+                                <select name="assistant_method" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="ปกติ">ปกติ</option>
+                                    <option value="พิเศษ">พิเศษ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">สาขาวิชา</label>
+                                <input type="text" name="assistant_department" class="form-control">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">วันที่แต่งตั้ง</label>
+                                <input type="text" name="assistant_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๓">
+                            </div>
+                            <div class="col-12"><hr><h6 class="fw-bold">ตำแหน่งรองศาสตราจารย์</h6></div>
+                            <div class="col-md-3">
+                                <label class="form-label">วิธีแต่งตั้ง</label>
+                                <select name="associate_method" class="form-select">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="ปกติ">ปกติ</option>
+                                    <option value="พิเศษ">พิเศษ</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">สาขาวิชา</label>
+                                <input type="text" name="associate_department" class="form-control">
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">วันที่แต่งตั้ง</label>
+                                <input type="text" name="associate_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๖">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== ส่วนที่ 1.6: ตำแหน่งอื่นๆ & วิทยากร ========== -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">๒.๕ ตำแหน่งอื่นๆ</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addOtherPosRow()">
+                            <i class="fas fa-plus"></i> เพิ่มแถว
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div id="otherPosRows">
+                            <div class="row g-2 mb-2">
+                                <div class="col-1"><input type="text" name="other_position_no_1" class="form-control form-control-sm" value="๑"></div>
+                                <div class="col-10"><input type="text" name="other_position_1" class="form-control form-control-sm" placeholder="ตำแหน่ง สังกัด วัน เดือน ปี"></div>
+                            </div>
+                        </div>
+                        <hr>
+                        <h6 class="fw-bold">๒.๖ การได้รับเชิญเป็นวิทยากร / ได้รับการยกย่องระดับนานาชาติ (ย้อนหลัง ๕ ปี)</h6>
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-2" onclick="addSpeakerRow()">
+                            <i class="fas fa-plus"></i> เพิ่มแถว
+                        </button>
+                        <div id="speakerRows">
+                            <div class="row g-2 mb-2">
+                                <div class="col-1"><input type="text" name="international_speaker_last_5_years_no_1" class="form-control form-control-sm" value="๑"></div>
+                                <div class="col-10"><input type="text" name="international_speaker_last_5_years_1" class="form-control form-control-sm" placeholder="รายละเอียดการเป็นวิทยากร"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== ส่วนที่ 1.7: ภาระงานย้อนหลัง ========== -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">๓. ภาระงานย้อนหลัง ๓ ปี</h5></div>
+                    <div class="card-body">
+                        <h6 class="fw-bold">๓.๒ งานวิจัย</h6>
+                        <p class="text-muted small">ระบุเรื่องที่ได้รับทุนวิจัยในฐานะหัวหน้าโครงการ แหล่งทุน ระยะเวลา</p>
+                        <textarea name="reseach" class="form-control mb-3" rows="4"></textarea>
+
+                        <h6 class="fw-bold">๓.๓ งานบริการทางวิชาการ</h6>
+                        <p class="text-muted small">ระบุประเภทกิจกรรม และปริมาณเวลาที่ใช้ต่อสัปดาห์</p>
+                        <textarea name="academic_service" class="form-control mb-3" rows="4"></textarea>
+
+                        <h6 class="fw-bold">๓.๔ งานบริหาร</h6>
+                        <p class="text-muted small">ระบุงานบริหารที่รับผิดชอบ และปริมาณเวลาที่ใช้ต่อสัปดาห์</p>
+                        <textarea name="administration" class="form-control mb-3" rows="4"></textarea>
+
+                        <h6 class="fw-bold">๓.๕ งานอื่นๆ ที่เกี่ยวข้อง</h6>
+                        <p class="text-muted small">ระบุประเภทของงานและปริมาณเวลาที่ใช้ต่อสัปดาห์</p>
+                        <textarea name="other" class="form-control" rows="4"></textarea>
                     </div>
                 </div>
 
@@ -305,8 +411,74 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addWorkRow('assocBookRows','assoc_book_working','assoc_used_book')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('assocBookRows','assoc_book_working','assoc_used_book')">
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
+                        </button>
+
+                        <hr>
+                        <h6 class="fw-bold">๔.๒.๔ เอกสารหลักฐานวิธีที่ ๓</h6>
+                        <div class="border rounded p-3 mb-3">
+                            <label class="form-label fw-bold">งานวิจัย — วิธีที่ ๓</label>
+                            <div id="assocM3ResearchRows">
+                                <div class="border rounded p-2 mb-2 bg-light">
+                                    <div class="row g-2">
+                                        <div class="col-1"><input type="text" name="assoc_method3_research_no_1" class="form-control form-control-sm"></div>
+                                        <div class="col-5"><input type="text" name="assoc_method3_research_1" class="form-control form-control-sm" placeholder="ชื่องานวิจัย"></div>
+                                        <div class="col-3">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="assoc_m3_q1_1" value="☑">
+                                                <label class="form-check-label" style="font-size:0.8em">Q1</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="assoc_m3_q2_1" value="☑">
+                                                <label class="form-check-label" style="font-size:0.8em">Q2</label>
+                                            </div>
+                                        </div>
+                                        <div class="col-3">
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="assoc_m3_first_1" value="☑">
+                                                <label class="form-check-label" style="font-size:0.8em">First</label>
+                                            </div>
+                                            <div class="form-check form-check-inline">
+                                                <input class="form-check-input" type="checkbox" name="assoc_m3_corresp_1" value="☑">
+                                                <label class="form-check-label" style="font-size:0.8em">Corresp</label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addAssocM3Row()">
+                                <i class="fas fa-plus"></i> เพิ่ม
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <div class="col-md-3">
+                                <label class="form-label">Scopus จำนวนเรื่อง</label>
+                                <input type="text" name="assoc_scopus_stories_count" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">Scopus citation</label>
+                                <input type="text" name="assoc_scopus_citation_count" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">h-index (Scopus)</label>
+                                <input type="text" name="assoc_h_index" class="form-control">
+                            </div>
+                        </div>
+
+                        <label class="form-label fw-bold mt-3">โครงการวิจัยที่เป็น PI</label>
+                        <div id="assocPIRows">
+                            <div class="border rounded p-2 mb-2 bg-light">
+                                <div class="row g-2">
+                                    <div class="col-1"><input type="text" name="assoc_pi_project_no_1" class="form-control form-control-sm"></div>
+                                    <div class="col-5"><input type="text" name="assoc_pi_project_1" class="form-control form-control-sm" placeholder="ชื่อโครงการวิจัย"></div>
+                                    <div class="col-4"><input type="text" name="assoc_pi_source_1" class="form-control form-control-sm" placeholder="แหล่งทุน"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addAssocPIRow()">
+                            <i class="fas fa-plus"></i> เพิ่มโครงการ
                         </button>
                     </div>
                 </div>
@@ -457,7 +629,7 @@
 
         <script th:inline="javascript">
             // Dynamic row counters
-            const counters = { edu: 1, teach: 1, m3: 1, pi: 1 };
+            const counters = { edu: 1, teach: 1, m3: 1, pi: 1, otherPos: 1, speaker: 1, assocM3: 1, assocPi: 1 };
             const workCounters = {};
 
             function addEduRow() {
@@ -502,6 +674,28 @@
                 document.getElementById(containerId).appendChild(div);
             }
 
+            function addOtherPosRow() {
+                counters.otherPos++;
+                const n = counters.otherPos;
+                const div = document.createElement('div');
+                div.className = 'row g-2 mb-2';
+                div.innerHTML = `<div class="col-1"><input type="text" name="other_position_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-10"><input type="text" name="other_position_${n}" class="form-control form-control-sm" placeholder="ตำแหน่ง สังกัด วัน เดือน ปี"></div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()"><i class="fas fa-times"></i></button></div>`;
+                document.getElementById('otherPosRows').appendChild(div);
+            }
+
+            function addSpeakerRow() {
+                counters.speaker++;
+                const n = counters.speaker;
+                const div = document.createElement('div');
+                div.className = 'row g-2 mb-2';
+                div.innerHTML = `<div class="col-1"><input type="text" name="international_speaker_last_5_years_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-10"><input type="text" name="international_speaker_last_5_years_${n}" class="form-control form-control-sm" placeholder="รายละเอียด"></div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()"><i class="fas fa-times"></i></button></div>`;
+                document.getElementById('speakerRows').appendChild(div);
+            }
+
             function addM3Row() {
                 counters.m3++;
                 const n = counters.m3;
@@ -523,6 +717,27 @@
                 document.getElementById('profM3ResearchRows').appendChild(div);
             }
 
+            function addAssocM3Row() {
+                counters.assocM3++;
+                const n = counters.assocM3;
+                const div = document.createElement('div');
+                div.className = 'border rounded p-2 mb-2 bg-light';
+                div.innerHTML = `<div class="row g-2">
+                    <div class="col-1"><input type="text" name="assoc_method3_research_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-5"><input type="text" name="assoc_method3_research_${n}" class="form-control form-control-sm" placeholder="ชื่องานวิจัย"></div>
+                    <div class="col-3">
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="assoc_m3_q1_${n}" value="☑"><label class="form-check-label" style="font-size:0.8em">Q1</label></div>
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="assoc_m3_q2_${n}" value="☑"><label class="form-check-label" style="font-size:0.8em">Q2</label></div>
+                    </div>
+                    <div class="col-2">
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="assoc_m3_first_${n}" value="☑"><label class="form-check-label" style="font-size:0.8em">First</label></div>
+                        <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="assoc_m3_corresp_${n}" value="☑"><label class="form-check-label" style="font-size:0.8em">Corresp</label></div>
+                    </div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                </div>`;
+                document.getElementById('assocM3ResearchRows').appendChild(div);
+            }
+
             function addPIRow() {
                 counters.pi++;
                 const n = counters.pi;
@@ -535,6 +750,20 @@
                     <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
                 </div>`;
                 document.getElementById('profPIRows').appendChild(div);
+            }
+
+            function addAssocPIRow() {
+                counters.assocPi++;
+                const n = counters.assocPi;
+                const div = document.createElement('div');
+                div.className = 'border rounded p-2 mb-2 bg-light';
+                div.innerHTML = `<div class="row g-2">
+                    <div class="col-1"><input type="text" name="assoc_pi_project_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-5"><input type="text" name="assoc_pi_project_${n}" class="form-control form-control-sm" placeholder="ชื่อโครงการ"></div>
+                    <div class="col-4"><input type="text" name="assoc_pi_source_${n}" class="form-control form-control-sm" placeholder="แหล่งทุน"></div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                </div>`;
+                document.getElementById('assocPIRows').appendChild(div);
             }
 
             // Show/hide position-specific sections

@@ -17,6 +17,12 @@ class DocPreviewEngine {
         this.init();
     }
 
+    /** อ่านค่า XSRF-TOKEN จาก cookie (ตั้งโดย CookieCsrfTokenRepository) */
+    getCsrfToken() {
+        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
+        return match ? decodeURIComponent(match[1]) : '';
+    }
+
     init() {
         this.loadLibrary().then(() => {
             this.createOverlay();
@@ -39,7 +45,7 @@ class DocPreviewEngine {
                 await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
             }
             if (!window.docx) {
-                await loadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js');
+                await loadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.3.7/dist/docx-preview.min.js');
             }
         })();
     }
@@ -167,7 +173,10 @@ class DocPreviewEngine {
 
             const response = await fetch(`${this.previewBasePath}/${this.docType}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': this.getCsrfToken()
+                },
                 body: JSON.stringify(formData)
             });
 
@@ -193,7 +202,8 @@ class DocPreviewEngine {
                 renderHeaders: true,
                 renderFooters: true,
                 renderFootnotes: true,
-                renderEndnotes: true
+                renderEndnotes: true,
+                renderDrawing: true
             });
 
             if (badge) {
@@ -260,7 +270,10 @@ class DocPreviewEngine {
         try {
             const response = await fetch(`${this.previewBasePath}/${this.docType}`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': this.getCsrfToken()
+                },
                 body: JSON.stringify(formData)
             });
             if (!response.ok) throw new Error('Server error: ' + response.status);
