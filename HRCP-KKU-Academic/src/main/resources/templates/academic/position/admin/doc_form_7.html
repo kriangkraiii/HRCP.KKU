@@ -400,7 +400,7 @@
                                 <label class="form-label">ชื่อคณบดี</label>
                                 <select name="dean_name" class="form-select">
                                     <option value="">-- เลือก --</option>
-                                    <option th:each="dean : ${deans}" th:value="${dean.name}" th:text="${dean.name}"></option>
+                                    <option th:each="dean : ${deans}" th:value="${dean.fullName}" th:text="${dean.fullName}"></option>
                                 </select>
                             </div>
                             <div class="col-md-6">
