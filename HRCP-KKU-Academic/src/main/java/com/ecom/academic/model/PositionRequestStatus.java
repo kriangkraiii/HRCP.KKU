@@ -6,6 +6,7 @@ public enum PositionRequestStatus {
     DOCUMENT_VERIFICATION("ตรวจสอบความถูกต้อง/ครบถ้วน", "fa-search", "#0277bd"),
     SCREENING_COMMITTEE("เสนอวาระกลั่นกรองฯ", "fa-users-cog", "#e65100"),
     REVISION_REQUESTED("ส่งแก้ไข", "fa-exclamation-circle", "#f57f17"),
+    REJECTED("ไม่รับคำร้อง", "fa-times-circle", "#c62828"),
     SCREENING_APPROVED("รับรองมติกลั่นกรองฯ", "fa-check-double", "#2e7d32"),
     COLLEGE_COMMITTEE("เสนอวาระคณะกรรมการวิทยาลัยฯ", "fa-landmark", "#7b1fa2"),
     COLLEGE_APPROVED("รับรองมติคณะกรรมการวิทยาลัยฯ", "fa-certificate", "#1b5e20"),
@@ -40,6 +41,8 @@ public enum PositionRequestStatus {
                 return "secondary";
             case REVISION_REQUESTED:
                 return "warning";
+            case REJECTED:
+                return "danger";
             case SENT_TO_HR:
                 return "dark";
             default:
@@ -62,7 +65,7 @@ public enum PositionRequestStatus {
 
     /** Terminal status — process is finished */
     public boolean isTerminal() {
-        return this == SENT_TO_HR;
+        return this == SENT_TO_HR || this == REJECTED;
     }
 
     /** Draft — not yet submitted */

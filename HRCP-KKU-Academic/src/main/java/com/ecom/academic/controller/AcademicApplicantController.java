@@ -128,6 +128,13 @@ public class AcademicApplicantController {
         return "academic/applicant/dashboard";
     }
 
+    // ================== Document Library ==================
+
+    @GetMapping("/documents")
+    public String documentsLibrary() {
+        return "academic/applicant/documents";
+    }
+
     @GetMapping("/history")
     public String history(Principal principal, Model model) {
         UserDtls user = getUser(principal);
