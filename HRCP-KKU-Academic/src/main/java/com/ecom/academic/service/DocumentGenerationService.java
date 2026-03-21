@@ -477,16 +477,21 @@ public class DocumentGenerationService {
         }
 
         if (maxPaper > 0) {
-            StringBuilder paperList = new StringBuilder();
-            for (int i = 1; i <= maxPaper; i++) {
+            // Item 1: use template's own positioning via {{index1}} and {{research_title1}}
+            String firstVal = placeholders.get("paper_title_1");
+            StringBuilder titleValue = new StringBuilder();
+            if (firstVal != null && !firstVal.isEmpty()) {
+                titleValue.append(firstVal);
+            }
+            // Items 2+: append with line breaks after item 1
+            for (int i = 2; i <= maxPaper; i++) {
                 String val = placeholders.get("paper_title_" + i);
                 if (val != null && !val.isEmpty()) {
-                    if (paperList.length() > 0) paperList.append("\n");
-                    paperList.append(i).append(". ").append(val);
+                    titleValue.append("\n").append(i).append(". ").append(val);
                 }
             }
-            placeholders.put("index1", "");
-            placeholders.put("research_title1", paperList.toString());
+            placeholders.put("index1", "1. ");
+            placeholders.put("research_title1", titleValue.toString());
         }
 
         // Section 2: Research
@@ -502,16 +507,21 @@ public class DocumentGenerationService {
         }
 
         if (maxResearch > 0) {
-            StringBuilder resList = new StringBuilder();
-            for (int i = 1; i <= maxResearch; i++) {
+            // Item 1: use template's own positioning via {{index}} and {{research_title}}
+            String firstVal = placeholders.get("research_title_1");
+            StringBuilder titleValue = new StringBuilder();
+            if (firstVal != null && !firstVal.isEmpty()) {
+                titleValue.append(firstVal);
+            }
+            // Items 2+: append with line breaks after item 1
+            for (int i = 2; i <= maxResearch; i++) {
                 String val = placeholders.get("research_title_" + i);
                 if (val != null && !val.isEmpty()) {
-                    if (resList.length() > 0) resList.append("\n");
-                    resList.append(i).append(". ").append(val);
+                    titleValue.append("\n").append(i).append(". ").append(val);
                 }
             }
-            placeholders.put("index", "");
-            placeholders.put("research_title", resList.toString());
+            placeholders.put("index", "1. ");
+            placeholders.put("research_title", titleValue.toString());
         }
     }
 
