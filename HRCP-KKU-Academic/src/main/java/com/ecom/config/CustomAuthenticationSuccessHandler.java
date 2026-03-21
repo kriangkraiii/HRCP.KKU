@@ -11,6 +11,7 @@ import org.springframework.security.web.authentication.AuthenticationSuccessHand
 import org.springframework.stereotype.Component;
 
 import com.ecom.model.UserDtls;
+import com.ecom.service.AdminLogService;
 import com.ecom.service.TwoFactorService;
 import com.ecom.service.UserService;
 
@@ -25,13 +26,16 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
     private final BruteForceProtection bruteForceProtection;
     private final UserService userService;
     private final TwoFactorService twoFactorService;
+    private final AdminLogService adminLogService;
 
     public CustomAuthenticationSuccessHandler(BruteForceProtection bruteForceProtection,
                                               UserService userService,
-                                              TwoFactorService twoFactorService) {
+                                              TwoFactorService twoFactorService,
+                                              AdminLogService adminLogService) {
         this.bruteForceProtection = bruteForceProtection;
         this.userService = userService;
         this.twoFactorService = twoFactorService;
+        this.adminLogService = adminLogService;
     }
 
     @Override
@@ -90,6 +94,14 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             response.sendRedirect("/2fa/verify");
             return;
         }
+
+        // Log successful login
+        try {
+            String role = authorities.stream().findFirst().map(GrantedAuthority::getAuthority).orElse("UNKNOWN");
+            adminLogService.logWithDetails(username, user != null ? user.getName() : username,
+                    "LOGIN_SUCCESS", "เข้าสู่ระบบสำเร็จ (" + role + ")",
+                    clientIp, "/signin", request.getHeader("User-Agent"));
+        } catch (Exception ignored) {}
 
         // Regenerate session to prevent session fixation
         request.changeSessionId();

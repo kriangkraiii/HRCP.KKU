@@ -15,10 +15,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ecom.model.UserDtls;
+import com.ecom.service.AdminLogService;
 import com.ecom.service.UserService;
 import com.ecom.util.CommonUtil;
 import com.ecom.util.PasswordValidator;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
 @Controller
@@ -33,6 +35,12 @@ public class UserController {
 
 	@Autowired
 	private PasswordEncoder passwordEncoder;
+
+	@Autowired
+	private AdminLogService adminLogService;
+
+	@Autowired
+	private HttpServletRequest httpRequest;
 
 	@ModelAttribute
 	public void getUserDetails(Principal p, Model m) {
@@ -69,6 +77,13 @@ public class UserController {
 			session.setAttribute("errorMsg", "อัพเดทโปรไฟล์ไม่สำเร็จ");
 		} else {
 			session.setAttribute("succMsg", "อัพเดทโปรไฟล์สำเร็จ");
+			// Log activity
+			try {
+				adminLogService.log(user.getEmail(), user.getName(),
+						"USER_UPDATE_PROFILE",
+						"อัพเดทโปรไฟล์ผู้ใช้ (" + user.getEmail() + ")",
+						getClientIpAddress());
+			} catch (Exception ignored) {}
 		}
 		return "redirect:/user/profile";
 	}
@@ -93,11 +108,26 @@ public class UserController {
 				session.setAttribute("errorMsg", "เปลี่ยนรหัสผ่านไม่สำเร็จ");
 			} else {
 				session.setAttribute("succMsg", "เปลี่ยนรหัสผ่านสำเร็จ");
+				// Log activity
+				try {
+					adminLogService.log(p.getName(), loggedInUserDetails.getName(),
+							"USER_CHANGE_PASSWORD",
+							"ผู้ใช้เปลี่ยนรหัสผ่าน (" + p.getName() + ")",
+							getClientIpAddress());
+				} catch (Exception ignored) {}
 			}
 		} else {
 			session.setAttribute("errorMsg", "รหัสผ่านปัจจุบันไม่ถูกต้อง");
 		}
 
 		return "redirect:/user/profile";
+	}
+
+	private String getClientIpAddress() {
+		String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
+		if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+			return xForwardedFor.split(",")[0];
+		}
+		return httpRequest.getRemoteAddr();
 	}
 }

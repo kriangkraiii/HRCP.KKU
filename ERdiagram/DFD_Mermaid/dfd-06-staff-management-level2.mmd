@@ -1,0 +1,46 @@
+%%{init: {"flowchart": {"curve": "linear"}}}%%
+flowchart LR
+  %% DFD Level 2: Staff Management
+  subgraph L["Entity"]
+    direction TB
+    E3["E3 Admin / ผู้ดูแลระบบ"]
+  end
+
+  subgraph C["Processes"]
+    direction TB
+    P61(("P6.1 Create Staff\nสร้างข้อมูลบุคลากร"))
+    P62(("P6.2 Edit Staff\nแก้ไขข้อมูลบุคลากร"))
+    P63(("P6.3 Disable Staff\nปิดการใช้งานบุคลากร"))
+    P64(("P6.4 Search Staff\nค้นหาบุคลากร"))
+    P65(("P6.5 Audit Log Action\nบันทึกประวัติการจัดการ"))
+  end
+
+  subgraph R["Data Stores"]
+    direction TB
+    D5[["D5 staff_member"]]
+    D6[["D6 admin_logs"]]
+  end
+
+  E3 --> P61
+  E3 --> P62
+  E3 --> P63
+  E3 --> P64
+
+  P61 --> D5
+  P62 --> D5
+  P63 --> D5
+  P64 --> D5
+  P64 -->|"staff result / ผลการค้นหา"| E3
+
+  P61 --> P65
+  P62 --> P65
+  P63 --> P65
+  P64 --> P65
+  P65 --> D6
+
+  classDef ext fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  classDef proc fill:#fff,stroke:#000,stroke-width:1.8px,color:#000;
+  classDef store fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  class E3 ext;
+  class P61,P62,P63,P64,P65 proc;
+  class D5,D6 store;

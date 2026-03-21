@@ -1,0 +1,58 @@
+%%{init: {"flowchart": {"curve": "linear"}}}%%
+flowchart LR
+  %% DFD Level 2: Academic Request / คำร้องวิชาการ
+  subgraph L["Entities"]
+    direction TB
+    E2["E2 Applicant / ผู้ยื่นคำร้อง"]
+    E3["E3 Admin / ผู้ดูแลระบบ"]
+  end
+
+  subgraph C["Processes"]
+    direction TB
+    P21(("P2.1 Create Draft\nสร้างฉบับร่าง"))
+    P22(("P2.2 Fill Docs 0-1\nกรอกเอกสาร 0-1"))
+    P23(("P2.3 Submit Request\nส่งคำร้อง"))
+    P24(("P2.4 Admin Review\nตรวจสอบคำร้อง"))
+    P25(("P2.5 Update Status\nอัปเดตสถานะ"))
+    P26(("P2.6 Admin Docs 2-8\nกรอกเอกสารผู้ดูแล 2-8"))
+    P27(("P2.7 Generate/Download\nสร้างและดาวน์โหลดเอกสาร"))
+  end
+
+  subgraph R["Data Stores"]
+    direction TB
+    D2[["D2 academic_request"]]
+    D21[["D2.1 academic_document"]]
+    D22[["D2.2 academic_attachment"]]
+    D23[["D2.3 request_status_history"]]
+  end
+
+  E2 --> P21 --> D2
+  E2 --> P22 --> D21
+  E2 -->|"attachments / ไฟล์แนบ"| D22
+  E2 --> P23
+  P23 -->|"submit + status=RECEIVED"| D2
+  P23 --> D23
+
+  E3 --> P24
+  P24 --> D2
+  P24 --> D21
+  P24 --> D22
+
+  E3 --> P25
+  P25 --> D2
+  P25 --> D23
+
+  E3 --> P26 --> D21
+
+  E2 --> P27
+  E3 --> P27
+  P27 --> D21
+  P27 -->|"documents / เอกสาร"| E2
+  P27 -->|"documents / เอกสาร"| E3
+
+  classDef ext fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  classDef proc fill:#fff,stroke:#000,stroke-width:1.8px,color:#000;
+  classDef store fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  class E2,E3 ext;
+  class P21,P22,P23,P24,P25,P26,P27 proc;
+  class D2,D21,D22,D23 store;

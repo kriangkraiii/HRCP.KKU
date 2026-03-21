@@ -1,0 +1,45 @@
+%%{init: {"flowchart": {"curve": "linear"}}}%%
+flowchart LR
+  %% DFD Level 1B: Admin Domain (P5-P8)
+  subgraph L["External Entity"]
+    direction TB
+    AD["Admin\nผู้ดูแลระบบ"]
+  end
+
+  subgraph C["Admin Processes"]
+    direction TB
+    P5(("P5 Staff Management\nจัดการบุคลากร"))
+    P6(("P6 File Management\nจัดการไฟล์"))
+    P7(("P7 User Management\nจัดการผู้ใช้"))
+    P8(("P8 Settings & Notifications\nตั้งค่าและแจ้งเตือน"))
+  end
+
+  subgraph R["Stores"]
+    direction TB
+    D1[["user_dtls"]]
+    D2[["academic_request group"]]
+    D3[["position_request group"]]
+    D4[["petitions group"]]
+    D5[["staff_member"]]
+    D6[["admin_logs + notifications"]]
+  end
+
+  AD --> P5
+  AD --> P6
+  AD --> P7
+  AD --> P8
+
+  P5 <--> D5
+  P6 --> D2
+  P6 --> D3
+  P6 --> D4
+  P7 <--> D1
+  P8 <--> D1
+  P8 <--> D6
+
+  classDef ext fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  classDef proc fill:#fff,stroke:#000,stroke-width:2px,color:#000;
+  classDef store fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  class AD ext;
+  class P5,P6,P7,P8 proc;
+  class D1,D2,D3,D4,D5,D6 store;

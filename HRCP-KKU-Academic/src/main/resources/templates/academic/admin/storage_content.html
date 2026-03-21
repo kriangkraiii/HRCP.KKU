@@ -1,0 +1,152 @@
+<!-- Storage Tab Content Fragment - included in file_manager.html -->
+<!-- Breadcrumb -->
+<nav th:if="${viewMode == 'storage'}" aria-label="breadcrumb" class="mb-3">
+    <ol class="breadcrumb mb-0 p-2 bg-light" style="border-radius: 10px;">
+        <li class="breadcrumb-item">
+            <a href="/admin/file-manager/storage" class="text-decoration-none">
+                <i class="fas fa-home me-1"></i>Root
+            </a>
+        </li>
+        <li th:each="bc : ${breadcrumb}" class="breadcrumb-item"
+            th:classappend="${bcStat.last} ? 'active' : ''">
+            <a th:unless="${bcStat.last}" th:href="'/admin/file-manager/storage?folderId=' + ${bc.id}"
+               th:text="${bc.name}" class="text-decoration-none"></a>
+            <span th:if="${bcStat.last}" th:text="${bc.name}"></span>
+        </li>
+    </ol>
+</nav>
+
+<!-- Toolbar -->
+<div th:if="${viewMode == 'storage'}" class="d-flex gap-2 mb-3 flex-wrap">
+    <button class="btn btn-primary" style="border-radius: 10px;" onclick="showCreateFolderModal()">
+        <i class="fas fa-folder-plus me-1"></i> สร้างโฟลเดอร์
+    </button>
+    <button class="btn btn-success" style="border-radius: 10px;" onclick="document.getElementById('fileUploadInput').click()">
+        <i class="fas fa-cloud-upload-alt me-1"></i> อัปโหลดไฟล์
+    </button>
+    <form id="uploadForm" style="display:none;">
+        <input type="file" id="fileUploadInput" multiple onchange="uploadFiles(this.files)">
+    </form>
+</div>
+
+<!-- Drop Zone -->
+<div th:if="${viewMode == 'storage'}" id="dropZone" class="card border-2 border-dashed mb-4 text-center py-4"
+     style="border-radius: 12px; border-color: #ccc; display: none; background: rgba(13,71,161,0.03);">
+    <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
+    <p class="text-muted mb-0">วางไฟล์ที่นี่เพื่ออัปโหลด</p>
+</div>
+
+<!-- Folders Grid -->
+<div th:if="${viewMode == 'storage' && subFolders != null && !subFolders.isEmpty()}" class="mb-4">
+    <h6 class="text-muted mb-3"><i class="fas fa-folder me-1"></i> โฟลเดอร์</h6>
+    <div class="row g-3">
+        <div th:each="folder : ${subFolders}" class="col-6 col-md-4 col-lg-3 col-xl-2">
+            <div class="card border-0 shadow-sm h-100 folder-card" style="border-radius: 12px; cursor: pointer;"
+                 th:data-id="${folder.id}" th:data-name="${folder.name}">
+                <div class="card-body text-center py-3 position-relative">
+                    <div class="dropdown position-absolute" style="top: 8px; right: 8px;">
+                        <button class="btn btn-sm btn-light p-1" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
+                            <i class="fas fa-ellipsis-v"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); renameFolderPrompt(this.closest('.folder-card'))">
+                                <i class="fas fa-edit me-2"></i>เปลี่ยนชื่อ</a></li>
+                            <li><a class="dropdown-item text-danger" href="#" onclick="event.preventDefault(); deleteFolderPrompt(this.closest('.folder-card'))">
+                                <i class="fas fa-trash me-2"></i>ลบ</a></li>
+                        </ul>
+                    </div>
+                    <a th:href="'/admin/file-manager/storage?folderId=' + ${folder.id}" class="text-decoration-none text-dark d-block">
+                        <i class="fas fa-folder fa-3x mb-2" style="color: #f9a825;"></i>
+                        <div class="fw-semibold text-truncate" th:text="${folder.name}" th:title="${folder.name}"></div>
+                        <small class="text-muted" th:text="${#temporals.format(folder.createdAt, 'dd/MM/yyyy')}"></small>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Files Grid -->
+<div th:if="${viewMode == 'storage'}">
+    <h6 class="text-muted mb-3"><i class="fas fa-file me-1"></i> ไฟล์</h6>
+    <div th:if="${storageFiles == null || storageFiles.isEmpty()}" class="text-center py-4">
+        <i class="fas fa-file-alt fa-2x text-muted mb-2 d-block"></i>
+        <p class="text-muted mb-0">ไม่มีไฟล์ในโฟลเดอร์นี้</p>
+    </div>
+    <div class="table-responsive" th:if="${storageFiles != null && !storageFiles.isEmpty()}">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr>
+                    <th style="width:40px">#</th>
+                    <th>ชื่อไฟล์</th>
+                    <th>ขนาด</th>
+                    <th>ประเภท</th>
+                    <th>อัปโหลดโดย</th>
+                    <th>วันที่</th>
+                    <th style="width:140px">การดำเนินการ</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr th:each="f, iter : ${storageFiles}" th:id="'sfile-' + ${f.id}">
+                    <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
+                    <td>
+                        <div class="d-flex align-items-center gap-2">
+                            <i th:switch="${f.fileExtension}"
+                               th:class="${f.fileExtension == 'PDF'} ? 'fas fa-file-pdf text-danger' :
+                                          ${f.fileExtension == 'DOCX'} ? 'fas fa-file-word text-primary' :
+                                          ${f.fileExtension == 'JPG' || f.fileExtension == 'PNG'} ? 'fas fa-file-image text-success' :
+                                          'fas fa-file text-secondary'"
+                               style="font-size:1.2rem;"></i>
+                            <span class="fw-semibold text-truncate" style="max-width:200px;" th:text="${f.originalFilename}" th:title="${f.originalFilename}"></span>
+                        </div>
+                    </td>
+                    <td><small th:text="${f.formattedSize}"></small></td>
+                    <td><span class="badge bg-secondary" th:text="${f.fileExtension}"></span></td>
+                    <td><small th:text="${f.createdBy}"></small></td>
+                    <td><small th:text="${f.createdAt != null ? #temporals.format(f.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></small></td>
+                    <td>
+                        <div class="btn-group">
+                            <a th:href="'/admin/file-manager/storage/download/' + ${f.id}"
+                               class="btn btn-sm btn-outline-primary" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
+                            <button class="btn btn-sm btn-outline-warning" title="เปลี่ยนชื่อ"
+                                    th:data-id="${f.id}" th:data-name="${f.originalFilename}"
+                                    onclick="renameFilePrompt(this)"><i class="fas fa-edit"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" title="ลบ"
+                                    th:data-id="${f.id}" th:data-name="${f.originalFilename}"
+                                    onclick="deleteFilePrompt(this)"><i class="fas fa-trash-alt"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Storage Trash View -->
+<div th:if="${viewMode == 'storage-trash'}">
+    <div th:if="${storageTrashFiles == null || storageTrashFiles.isEmpty()}" class="text-center py-5">
+        <i class="fas fa-trash-alt fa-3x text-muted mb-3 d-block"></i>
+        <p class="text-muted mb-0">ถังขยะว่างเปล่า</p>
+    </div>
+    <div class="table-responsive" th:if="${storageTrashFiles != null && !storageTrashFiles.isEmpty()}">
+        <table class="table table-hover align-middle mb-0">
+            <thead class="table-light">
+                <tr><th>#</th><th>ชื่อไฟล์</th><th>ขนาด</th><th>วันที่ลบ</th><th style="width:120px">การดำเนินการ</th></tr>
+            </thead>
+            <tbody>
+                <tr th:each="f, iter : ${storageTrashFiles}" th:id="'strash-' + ${f.id}">
+                    <td><small th:text="${iter.index + 1}"></small></td>
+                    <td><span th:text="${f.originalFilename}"></span></td>
+                    <td><small th:text="${f.formattedSize}"></small></td>
+                    <td><small th:text="${f.deletedAt != null ? #temporals.format(f.deletedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small></td>
+                    <td>
+                        <div class="btn-group">
+                            <button class="btn btn-sm btn-outline-success" th:data-id="${f.id}" onclick="restoreStorageFile(this)"><i class="fas fa-undo"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" th:data-id="${f.id}" th:data-name="${f.originalFilename}" onclick="permanentDeleteStorageFile(this)"><i class="fas fa-times"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

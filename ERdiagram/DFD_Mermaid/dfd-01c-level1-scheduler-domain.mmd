@@ -1,0 +1,39 @@
+%%{init: {"flowchart": {"curve": "linear"}}}%%
+flowchart LR
+  %% DFD Level 1C: Scheduler Domain (P9)
+  subgraph L["External Entity"]
+    direction TB
+    SC["Scheduler\nตัวตั้งเวลา"]
+    AD["Admin\nผู้ดูแลระบบ"]
+  end
+
+  subgraph C["Scheduler Process"]
+    direction TB
+    P9(("P9 Expiry Scheduler\nงานตรวจหมดอายุ"))
+  end
+
+  subgraph R["Stores & Service"]
+    direction TB
+    D1[["user_dtls"]]
+    D2[["academic_request group"]]
+    D3[["position_request group"]]
+    D4[["petitions group"]]
+    D6[["admin_logs + notifications"]]
+    ES["Email Service\nบริการอีเมล"]
+  end
+
+  SC --> P9
+  P9 --> D1
+  P9 --> D2
+  P9 --> D3
+  P9 --> D4
+  P9 --> D6
+  P9 -->|"Expiry Alerts / แจ้งเตือนหมดอายุ"| ES
+  P9 -->|"Summary / สรุปผล"| AD
+
+  classDef ext fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  classDef proc fill:#fff,stroke:#000,stroke-width:2px,color:#000;
+  classDef store fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  class SC,AD,ES ext;
+  class P9 proc;
+  class D1,D2,D3,D4,D6 store;

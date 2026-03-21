@@ -224,33 +224,40 @@ public class AdminController {
 	}
 
 	@PostMapping("/delete-user")
-	public String deleteUser(@RequestParam Integer id, @RequestParam Integer type, HttpSession session, Principal p) {
+	public String deleteUser(@RequestParam Integer id, @RequestParam Integer type,
+			@RequestParam(value = "confirmEmail", required = false) String confirmEmail,
+			HttpSession session, Principal p) {
 		try {
-			// Get current user's email
 			String currentUserEmail = p.getName();
 
-			// Get user details before deletion for logging
 			UserDtls userToDelete = userService.getUserById(id);
 			if (userToDelete == null) {
 				session.setAttribute("errorMsg", "ไม่พบบัญชีที่ระบุ");
 				return "redirect:/admin/users?type=" + type;
 			}
 
-			// Check if deletion is allowed
+			// Verify email confirmation
+			if (confirmEmail == null || !confirmEmail.equals(userToDelete.getEmail())) {
+				session.setAttribute("errorMsg", "อีเมลที่กรอกไม่ตรงกับบัญชีที่ต้องการลบ");
+				return "redirect:/admin/users?type=" + type;
+			}
+
+			// Check for existing academic requests
+			if (userService.hasAcademicRequests(id)) {
+				session.setAttribute("errorMsg", "ไม่สามารถลบบัญชีนี้ได้ เนื่องจากมีคำร้องที่ยื่นไปแล้ว");
+				return "redirect:/admin/users?type=" + type;
+			}
+
 			Boolean canDelete = userService.canDeleteUser(id, currentUserEmail);
 			if (!canDelete) {
 				session.setAttribute("errorMsg", "ไม่สามารถลบบัญชีนี้ได้");
 				return "redirect:/admin/users?type=" + type;
 			}
 
-			// Store email for logging before deletion
 			String deletedEmail = userToDelete.getEmail();
-
-			// Delete the user
 			Boolean deleted = userService.deleteUserById(id);
 
 			if (deleted) {
-				// Log the action
 				UserDtls admin = userService.getUserByEmail(currentUserEmail);
 				adminLogService.log(
 						currentUserEmail,
@@ -271,33 +278,34 @@ public class AdminController {
 	}
 
 	@PostMapping("/delete-admin")
-	public String deleteAdmin(@RequestParam Integer id, @RequestParam Integer type, HttpSession session, Principal p) {
+	public String deleteAdmin(@RequestParam Integer id, @RequestParam Integer type,
+			@RequestParam(value = "confirmEmail", required = false) String confirmEmail,
+			HttpSession session, Principal p) {
 		try {
-			// Get current user's email
 			String currentUserEmail = p.getName();
 
-			// Get admin details before deletion for logging
 			UserDtls adminToDelete = userService.getUserById(id);
 			if (adminToDelete == null) {
 				session.setAttribute("errorMsg", "ไม่พบบัญชีที่ระบุ");
 				return "redirect:/admin/users?type=" + type;
 			}
 
-			// Check if deletion is allowed (prevent self-deletion)
+			// Verify email confirmation
+			if (confirmEmail == null || !confirmEmail.equals(adminToDelete.getEmail())) {
+				session.setAttribute("errorMsg", "อีเมลที่กรอกไม่ตรงกับบัญชีที่ต้องการลบ");
+				return "redirect:/admin/users?type=" + type;
+			}
+
 			Boolean canDelete = userService.canDeleteUser(id, currentUserEmail);
 			if (!canDelete) {
 				session.setAttribute("errorMsg", "ไม่สามารถลบบัญชีของตัวเองได้");
 				return "redirect:/admin/users?type=" + type;
 			}
 
-			// Store email for logging before deletion
 			String deletedEmail = adminToDelete.getEmail();
-
-			// Delete the admin
 			Boolean deleted = userService.deleteUserById(id);
 
 			if (deleted) {
-				// Log the action
 				UserDtls admin = userService.getUserByEmail(currentUserEmail);
 				adminLogService.log(
 						currentUserEmail,

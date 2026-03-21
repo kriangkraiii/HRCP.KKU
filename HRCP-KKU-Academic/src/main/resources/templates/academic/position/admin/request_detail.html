@@ -68,6 +68,64 @@
                 </div>
             </div>
 
+            <!-- ผลการประเมินผลการสอน (เอกสารที่ 8 จากคำร้องประเมินฯ) -->
+            <div th:if="${evalDoc8Data != null}" class="card mb-4" style="border-left: 4px solid #1565c0; border-radius: 8px;">
+                <div class="card-body py-3">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        <h6 class="mb-0"><i class="fas fa-clipboard-check text-primary me-1"></i> ผลการประเมินผลการสอน (เอกสารที่ 8)</h6>
+                        <div>
+                            <a th:if="${linkedEvalRequest != null}" 
+                               th:href="@{/admin/academic/request/{rid}/document/8(rid=${linkedEvalRequest.id})}" 
+                               class="btn btn-sm btn-outline-primary" target="_blank">
+                                <i class="fas fa-external-link-alt"></i> ดูคำร้องต้นทาง
+                            </a>
+                            <a th:if="${evalDoc8GeneratedFile != null}" 
+                               th:href="@{/admin/academic/document/download(path=${evalDoc8GeneratedFile})}" 
+                               class="btn btn-sm btn-outline-success ms-1" target="_blank">
+                                <i class="fas fa-file-pdf"></i> ดาวน์โหลดเอกสาร
+                            </a>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <small class="text-muted">ระดับผลการประเมิน</small>
+                            <div>
+                                <span class="badge fs-6 mt-1"
+                                    th:classappend="${evalDoc8Data.getOrDefault('result_level', '') == 'ไม่ผ่าน' ? 'bg-danger' : 'bg-success'}"
+                                    th:text="${evalDoc8Data.getOrDefault('result_level', '-')}">-</span>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">คุณภาพ</small>
+                            <div class="fw-bold" th:text="${evalDoc8Data.getOrDefault('is_qualified', '-')}"></div>
+                        </div>
+                        <div class="col-md-3">
+                            <small class="text-muted">วิชา</small>
+                            <div th:text="${evalDoc8Data.getOrDefault('course_name', '-') + ' (' + evalDoc8Data.getOrDefault('course_code', '') + ')'}"></div>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">ภาค/ปี</small>
+                            <div th:text="${evalDoc8Data.getOrDefault('semester', '-')}"></div>
+                        </div>
+                        <div class="col-md-2">
+                            <small class="text-muted">วันหมดอายุ</small>
+                            <div class="fw-bold text-danger" th:text="${evalDoc8Data.getOrDefault('expiration_date', '-')}"></div>
+                        </div>
+                    </div>
+                    <div th:if="${linkedEvalRequest != null}" class="mt-2">
+                        <small class="text-muted">
+                            <i class="fas fa-link"></i> อ้างอิงจากคำร้อง: 
+                            <span th:text="${linkedEvalRequest.requestCode}"></span>
+                            <span class="badge" th:style="'background:' + ${linkedEvalRequest.currentStatus.color} + ';color:#fff;margin-left:4px'"
+                                  th:text="${linkedEvalRequest.currentStatus.thaiLabel}"></span>
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <div th:if="${evalDoc8Data == null}" class="alert alert-warning mb-4">
+                <i class="fas fa-exclamation-triangle me-1"></i> <strong>ยังไม่มีผลการประเมินผลการสอน</strong> — ผู้ยื่นยังไม่มีเอกสารที่ 8 จากคำร้องประเมินผลการสอน หรือแอดมินยังไม่ได้กรอกข้อมูล
+            </div>
+
             <!-- Progress Tracker -->
             <div class="card card-academic mb-4">
                 <div class="card-body p-3">

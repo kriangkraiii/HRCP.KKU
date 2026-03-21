@@ -1,0 +1,66 @@
+%%{init: {"flowchart": {"curve": "linear"}}}%%
+flowchart LR
+  %% DFD Level 2: File Management
+  subgraph L["Entity"]
+    direction TB
+    E3["E3 Admin / ผู้ดูแลระบบ"]
+  end
+
+  subgraph C["Processes"]
+    direction TB
+    P71(("P7.1 View File List\nดูรายการไฟล์"))
+    P72(("P7.2 Soft Delete\nลบชั่วคราว"))
+    P73(("P7.3 Restore File\nกู้คืนไฟล์"))
+    P74(("P7.4 Permanent Delete\nลบถาวร"))
+    P75(("P7.5 Download File\nดาวน์โหลดไฟล์"))
+    P76(("P7.6 Log File Action\nบันทึกการจัดการไฟล์"))
+  end
+
+  subgraph R["Data Stores"]
+    direction TB
+    D2[["D2 academic_document / academic_attachment"]]
+    D3[["D3 position_document / position_attachment"]]
+    D4[["D4 petition_attachment"]]
+    D6[["D6 admin_logs"]]
+  end
+
+  E3 --> P71
+  E3 --> P72
+  E3 --> P73
+  E3 --> P74
+  E3 --> P75
+
+  P71 --> D2
+  P71 --> D3
+  P71 --> D4
+  P71 -->|"file list / รายการไฟล์"| E3
+
+  P72 --> D2
+  P72 --> D3
+  P72 --> D4
+
+  P73 --> D2
+  P73 --> D3
+  P73 --> D4
+
+  P74 --> D2
+  P74 --> D3
+  P74 --> D4
+
+  P75 --> D2
+  P75 --> D3
+  P75 --> D4
+  P75 -->|"file data / ข้อมูลไฟล์"| E3
+
+  P72 --> P76
+  P73 --> P76
+  P74 --> P76
+  P75 --> P76
+  P76 --> D6
+
+  classDef ext fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  classDef proc fill:#fff,stroke:#000,stroke-width:1.8px,color:#000;
+  classDef store fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  class E3 ext;
+  class P71,P72,P73,P74,P75,P76 proc;
+  class D2,D3,D4,D6 store;

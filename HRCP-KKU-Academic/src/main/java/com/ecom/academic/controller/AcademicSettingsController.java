@@ -15,7 +15,10 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.ecom.service.AdminLogService;
 import com.ecom.service.TwoFactorService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 public class AcademicSettingsController {
@@ -25,6 +28,12 @@ public class AcademicSettingsController {
 
     @Autowired
     private TwoFactorService twoFactorService;
+
+    @Autowired
+    private AdminLogService adminLogService;
+
+    @Autowired
+    private HttpServletRequest httpRequest;
 
     /** User settings page */
     @GetMapping("/user/academic/settings")
@@ -132,6 +141,15 @@ public class AcademicSettingsController {
 
         user.setTwoFactorEnabled(enabled);
         userRepository.save(user);
+
+        // Log activity
+        try {
+            adminLogService.log(principal.getName(), user.getName(),
+                    "TOGGLE_2FA",
+                    (enabled ? "เปิดใช้งาน" : "ปิดใช้งาน") + " 2FA",
+                    getClientIpAddress());
+        } catch (Exception ignored) {}
+
         return ResponseEntity.ok(Map.of("success", true,
                 "message", enabled ? "เปิดใช้งาน 2FA แล้ว" : "ปิดใช้งาน 2FA แล้ว"));
     }
@@ -152,6 +170,15 @@ public class AcademicSettingsController {
             user.setExpiryAlert1m(expiryAlert1m != null);
             user.setExpiryAlert1w(expiryAlert1w != null);
             userRepository.save(user);
+
+            // Log activity
+            try {
+                adminLogService.log(principal.getName(), user.getName(),
+                        "UPDATE_SETTINGS",
+                        "อัพเดทการตั้งค่างาน",
+                        getClientIpAddress());
+            } catch (Exception ignored) {}
+
             redirect.addFlashAttribute("success", "บันทึกการตั้งค่าสำเร็จ");
         } catch (Exception e) {
             redirect.addFlashAttribute("error", "บันทึกไม่สำเร็จ: " + e.getMessage());
@@ -194,5 +221,12 @@ public class AcademicSettingsController {
             return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "เกิดข้อผิดพลาด: " + e.getMessage()));
         }
     }
-}
 
+    private String getClientIpAddress() {
+        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0];
+        }
+        return httpRequest.getRemoteAddr();
+    }
+}

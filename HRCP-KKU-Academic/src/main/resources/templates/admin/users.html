@@ -83,7 +83,10 @@
 											<i class="fa-solid fa-pen-to-square"></i> Edit
 										</a>
 										<a href="javascript:void(0)" 
-											th:onclick="'confirmDelete(' + ${u.id} + ', ' + ${userType} + ')'" 
+											th:data-id="${u.id}" 
+											th:data-type="${userType}" 
+											th:data-email="${u.email}"
+											onclick="openDeleteModal(this)"
 											class="btn btn-sm btn-danger">
 											<i class="fa-solid fa-trash"></i> Delete
 										</a>
@@ -98,10 +101,37 @@
 			</div>
 		</div>
 
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+	<div class="modal-dialog modal-dialog-centered">
+		<div class="modal-content">
+			<div class="modal-header bg-danger text-white">
+				<h5 class="modal-title" id="deleteModalLabel"><i class="fas fa-exclamation-triangle me-2"></i>ยืนยันการลบบัญชี</h5>
+				<button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+			</div>
+			<div class="modal-body">
+				<p class="mb-2">กรุณากรอกอีเมลของบัญชีที่ต้องการลบเพื่อยืนยัน:</p>
+				<p class="fw-bold text-danger mb-3" id="deleteTargetEmail"></p>
+				<input type="email" id="confirmEmailInput" class="form-control" placeholder="กรอกอีเมลเพื่อยืนยัน" autocomplete="off">
+				<div id="emailMismatch" class="text-danger mt-2 d-none"><i class="fas fa-times-circle"></i> อีเมลไม่ตรง</div>
+			</div>
+			<div class="modal-footer">
+				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+				<button type="button" id="confirmDeleteBtn" class="btn btn-danger" disabled onclick="executeDelete()">
+					<i class="fas fa-trash"></i> ลบบัญชี
+				</button>
+			</div>
+		</div>
+	</div>
+</div>
+
 		<script th:inline="javascript">
 			// Use Thymeleaf-rendered CSRF token (most reliable for Spring Security 6)
 			var csrfToken = /*[[${_csrf.token}]]*/ '';
 			var csrfParamName = /*[[${_csrf.parameterName}]]*/ '_csrf';
+			var deleteUserId = null;
+			var deleteUserType = null;
+			var deleteUserEmail = null;
 
 			function postForm(url) {
 				const form = document.createElement('form');
@@ -131,19 +161,31 @@
 				postForm('/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type);
 			}
 
+			function openDeleteModal(el) {
+				deleteUserId = el.dataset.id;
+				deleteUserType = el.dataset.type;
+				deleteUserEmail = el.dataset.email;
+				document.getElementById('deleteTargetEmail').textContent = deleteUserEmail;
+				document.getElementById('confirmEmailInput').value = '';
+				document.getElementById('confirmDeleteBtn').disabled = true;
+				document.getElementById('emailMismatch').classList.add('d-none');
+				new bootstrap.Modal(document.getElementById('deleteModal')).show();
+			}
 
+			document.getElementById('confirmEmailInput').addEventListener('input', function() {
+				const match = this.value === deleteUserEmail;
+				document.getElementById('confirmDeleteBtn').disabled = !match;
+				document.getElementById('emailMismatch').classList.toggle('d-none', match || this.value === '');
+			});
 
-			function confirmDelete(userId, userType) {
-				const message = userType === 1 
-					? 'Are you sure you want to delete this user account? This action cannot be undone.' 
-					: 'Are you sure you want to delete this admin account? This action cannot be undone.';
-				
-				if (confirm(message)) {
-					const deleteUrl = userType === 1 
-						? '/admin/delete-user?id=' + userId + '&type=' + userType
-						: '/admin/delete-admin?id=' + userId + '&type=' + userType;
-					postForm(deleteUrl);
-				}
+			function executeDelete() {
+				const email = document.getElementById('confirmEmailInput').value;
+				if (email !== deleteUserEmail) return;
+
+				const url = (parseInt(deleteUserType) === 1)
+					? '/admin/delete-user?id=' + deleteUserId + '&type=' + deleteUserType + '&confirmEmail=' + encodeURIComponent(email)
+					: '/admin/delete-admin?id=' + deleteUserId + '&type=' + deleteUserType + '&confirmEmail=' + encodeURIComponent(email);
+				postForm(url);
 			}
 		</script>
 

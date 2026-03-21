@@ -123,7 +123,7 @@ public class AdminControllerDeleteUserTest {
         String userEmail = testUser.getEmail();
 
         // When: Admin deletes the user
-        String result = adminController.deleteUser(userId, 1, session, mockPrincipal);
+        String result = adminController.deleteUser(userId, 1, "user@example.com", session, mockPrincipal);
 
         // Then: User should be deleted and action logged
         assertThat(result).isEqualTo("redirect:/admin/users?type=1");
@@ -156,7 +156,7 @@ public class AdminControllerDeleteUserTest {
         Integer nonExistentId = 999;
 
         // When: Admin tries to delete non-existent user
-        String result = adminController.deleteUser(nonExistentId, 1, session, mockPrincipal);
+        String result = adminController.deleteUser(nonExistentId, 1, "nonexistent@example.com", session, mockPrincipal);
 
         // Then: Should return error message
         assertThat(result).isEqualTo("redirect:/admin/users?type=1");
@@ -177,7 +177,7 @@ public class AdminControllerDeleteUserTest {
         Integer adminId = testAdmin.getId();
 
         // When: Admin tries to delete their own account
-        String result = adminController.deleteUser(adminId, 2, session, mockPrincipal);
+        String result = adminController.deleteUser(adminId, 2, "admin@example.com", session, mockPrincipal);
 
         // Then: Should return error message
         assertThat(result).isEqualTo("redirect:/admin/users?type=2");
@@ -204,7 +204,7 @@ public class AdminControllerDeleteUserTest {
         String userEmail = testUser.getEmail();
 
         // When: Admin deletes the user
-        adminController.deleteUser(userId, 1, session, mockPrincipal);
+        adminController.deleteUser(userId, 1, "user@example.com", session, mockPrincipal);
 
         // Then: Audit log contains all required information
         List<AdminLog> logs = adminLogRepository.findAll();
@@ -246,8 +246,8 @@ public class AdminControllerDeleteUserTest {
         user2 = userRepository.save(user2);
 
         // When: Admin deletes both users
-        adminController.deleteUser(testUser.getId(), 1, session, mockPrincipal);
-        adminController.deleteUser(user2.getId(), 1, session, mockPrincipal);
+        adminController.deleteUser(testUser.getId(), 1, "user@example.com", session, mockPrincipal);
+        adminController.deleteUser(user2.getId(), 1, "user2@example.com", session, mockPrincipal);
 
         // Then: Both users should be deleted
         assertThat(userService.getUserById(testUser.getId())).isNull();

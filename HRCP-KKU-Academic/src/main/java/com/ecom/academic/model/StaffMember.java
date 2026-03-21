@@ -19,8 +19,11 @@ public class StaffMember {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "full_name", nullable = false)
-    private String fullName;
+    @Column(name = "first_name", nullable = false)
+    private String firstName;
+
+    @Column(name = "last_name", nullable = false)
+    private String lastName;
 
     @Column(name = "academic_title")
     private String academicTitle;
@@ -54,11 +57,17 @@ public class StaffMember {
         updatedAt = LocalDateTime.now();
     }
 
+    public String getFullName() {
+        String fn = (firstName != null ? firstName : "");
+        String ln = (lastName != null ? lastName : "");
+        return (fn + " " + ln).trim();
+    }
+
     public String getDisplayName() {
         if (academicTitle != null && !academicTitle.isEmpty()) {
-            return academicTitle + fullName;
+            return academicTitle + getFullName();
         }
-        return fullName;
+        return getFullName();
     }
 
     // Getters and Setters
@@ -70,12 +79,20 @@ public class StaffMember {
         this.id = id;
     }
 
-    public String getFullName() {
-        return fullName;
+    public String getFirstName() {
+        return firstName;
     }
 
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
+    public void setFirstName(String firstName) {
+        this.firstName = firstName;
+    }
+
+    public String getLastName() {
+        return lastName;
+    }
+
+    public void setLastName(String lastName) {
+        this.lastName = lastName;
     }
 
     public String getAcademicTitle() {

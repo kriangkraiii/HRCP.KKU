@@ -20,7 +20,7 @@
 
         <!-- Summary Cards -->
         <div class="row mb-4">
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <div class="card border-0 shadow-sm" style="border-radius: 12px;">
                     <div class="card-body d-flex align-items-center gap-3">
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
@@ -34,7 +34,7 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
+            <div class="col-md-3 mb-3">
                 <div class="card border-0 shadow-sm" style="border-radius: 12px;">
                     <div class="card-body d-flex align-items-center gap-3">
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
@@ -48,7 +48,21 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-4 mb-3">
+            <div th:if="${totalFolders != null}" class="col-md-3 mb-3">
+                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                    <div class="card-body d-flex align-items-center gap-3">
+                        <div class="rounded-circle d-flex align-items-center justify-content-center"
+                             style="width: 50px; height: 50px; background: rgba(255,143,0,0.1); color: #ff8f00;">
+                            <i class="fas fa-folder fa-lg"></i>
+                        </div>
+                        <div>
+                            <h5 class="mb-0 fw-bold" th:text="${totalFolders}">0</h5>
+                            <small class="text-muted">โฟลเดอร์</small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 mb-3">
                 <div class="card border-0 shadow-sm" style="border-radius: 12px;">
                     <div class="card-body d-flex align-items-center gap-3">
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
@@ -65,30 +79,42 @@
         </div>
 
         <!-- Tab Buttons -->
-        <div class="d-flex gap-2 mb-4">
-            <a href="/admin/file-manager"
-               class="btn"
-               th:classappend="${viewMode == 'files'} ? 'btn-primary' : 'btn-outline-secondary'"
-               style="border-radius: 10px;">
-                <i class="fas fa-folder me-1"></i> ไฟล์ทั้งหมด
-            </a>
-            <a href="/admin/file-manager/trash"
-               class="btn"
-               th:classappend="${viewMode == 'trash'} ? 'btn-danger' : 'btn-outline-secondary'"
-               style="border-radius: 10px;">
-                <i class="fas fa-trash me-1"></i> ถังขยะ
-                <span class="badge bg-white text-danger ms-1" th:if="${trashCount > 0}" th:text="${trashCount}"></span>
-            </a>
-            <button th:if="${viewMode == 'trash' && trashCount > 0}"
-                    class="btn btn-outline-danger ms-auto"
-                    style="border-radius: 10px;"
-                    onclick="emptyTrash()">
-                <i class="fas fa-dumpster-fire me-1"></i> ล้างถังขยะทั้งหมด
+        <div class="d-flex gap-2 mb-4 flex-wrap">
+            <div class="btn-group" role="group">
+                <a href="/admin/file-manager" class="btn"
+                   th:classappend="${viewMode == 'files'} ? 'btn-primary' : 'btn-outline-secondary'"
+                   style="border-radius: 10px 0 0 10px;">
+                    <i class="fas fa-file-alt me-1"></i> เอกสารระบบ
+                </a>
+                <a href="/admin/file-manager/trash" class="btn"
+                   th:classappend="${viewMode == 'trash'} ? 'btn-danger' : 'btn-outline-secondary'">
+                    <i class="fas fa-trash me-1"></i> ถังขยะ
+                </a>
+            </div>
+            <div class="vr mx-1"></div>
+            <div class="btn-group" role="group">
+                <a href="/admin/file-manager/storage" class="btn"
+                   th:classappend="${viewMode == 'storage'} ? 'btn-success' : 'btn-outline-secondary'"
+                   style="border-radius: 10px 0 0 10px;">
+                    <i class="fas fa-cloud me-1"></i> ที่เก็บไฟล์
+                </a>
+                <a href="/admin/file-manager/storage/trash" class="btn"
+                   th:classappend="${viewMode == 'storage-trash'} ? 'btn-danger' : 'btn-outline-secondary'"
+                   style="border-radius: 0 10px 10px 0;">
+                    <i class="fas fa-trash me-1"></i> ถังขยะ
+                    <span class="badge bg-white text-danger ms-1" th:if="${trashCount > 0 && (viewMode == 'storage' || viewMode == 'storage-trash')}" th:text="${trashCount}"></span>
+                </a>
+            </div>
+            <button th:if="${viewMode == 'trash'}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" onclick="emptyTrash()">
+                <i class="fas fa-dumpster-fire me-1"></i> ล้างถังขยะ
+            </button>
+            <button th:if="${viewMode == 'storage-trash' && trashCount > 0}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" onclick="emptyStorageTrash()">
+                <i class="fas fa-dumpster-fire me-1"></i> ล้างถังขยะ
             </button>
         </div>
 
-        <!-- Search & Filter -->
-        <div class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+        <!-- Search & Filter (Document tabs only) -->
+        <div th:if="${viewMode == 'files' || viewMode == 'trash'}" class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
             <div class="card-body py-3">
                 <div class="row g-2 align-items-center">
                     <div class="col-md-5">
@@ -117,8 +143,8 @@
             </div>
         </div>
 
-        <!-- File Table -->
-        <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+        <!-- File Table (Document tabs only) -->
+        <div th:if="${viewMode == 'files' || viewMode == 'trash'}" class="card border-0 shadow-sm" style="border-radius: 12px;">
             <div class="card-body p-0">
                 <div th:if="${files == null || files.isEmpty()}" class="text-center py-5">
                     <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
@@ -252,6 +278,11 @@
             </div>
         </div>
     </div>
+
+        <!-- Storage Content -->
+        <div th:if="${viewMode == 'storage' || viewMode == 'storage-trash'}">
+            <th:block th:include="academic/admin/storage_content"></th:block>
+        </div>
 
     <!-- Confirm Modal -->
     <div class="modal fade" id="confirmModal" tabindex="-1">
@@ -485,6 +516,12 @@
             });
             modal.show();
         }
+    </script>
+    <script th:if="${viewMode == 'storage' || viewMode == 'storage-trash'}" src="/js/admin-storage.js"></script>
+    <script th:if="${viewMode == 'storage'}" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function() {
+            initStorage(/*[[${currentFolderId}]]*/ null);
+        });
     </script>
 </section>
 </body>

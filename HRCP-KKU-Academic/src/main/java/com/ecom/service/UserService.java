@@ -60,6 +60,8 @@ public interface UserService {
 
 	public Boolean canDeleteUser(Integer id, String currentUserEmail);
 
+	public Boolean hasAcademicRequests(Integer userId);
+
 	public java.util.Map<String, String> updateProfileImageOnly(Integer id, MultipartFile img);
 
 	public Boolean updateEmailNotification(Integer id, Boolean enabled);
