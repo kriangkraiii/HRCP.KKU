@@ -15,6 +15,11 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.ecom.academic.model.StaffMember;
 import com.ecom.academic.service.StaffMemberService;
+import com.ecom.model.UserDtls;
+import com.ecom.repository.UserRepository;
+import com.ecom.service.AdminLogService;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 @RequestMapping("/admin/academic/staff")
@@ -22,6 +27,15 @@ public class StaffMemberController {
 
     @Autowired
     private StaffMemberService staffMemberService;
+
+    @Autowired
+    private AdminLogService adminLogService;
+
+    @Autowired
+    private UserRepository userRepository;
+
+    @Autowired
+    private HttpServletRequest httpRequest;
 
     @GetMapping("")
     public String listStaff(Model model) {
@@ -36,19 +50,33 @@ public class StaffMemberController {
     }
 
     @PostMapping("/add")
-    public String addStaff(@RequestParam("fullName") String fullName,
+    public String addStaff(@RequestParam("firstName") String firstName,
+            @RequestParam("lastName") String lastName,
             @RequestParam("academicTitle") String academicTitle,
             @RequestParam("staffType") String staffType,
             @RequestParam(value = "department", required = false) String department,
-            @RequestParam("staffRole") String staffRole) {
+            @RequestParam("staffRole") String staffRole,
+            java.security.Principal principal) {
         StaffMember staff = new StaffMember();
-        staff.setFullName(fullName);
+        staff.setFirstName(firstName);
+        staff.setLastName(lastName);
         staff.setAcademicTitle(academicTitle);
         staff.setStaffType(staffType);
         staff.setDepartment(department);
         staff.setStaffRole(staffRole);
         staff.setIsActive(true);
         staffMemberService.save(staff);
+
+        // Log activity
+        try {
+            UserDtls admin = userRepository.findByEmail(principal.getName());
+            adminLogService.log(principal.getName(),
+                    admin != null ? admin.getName() : principal.getName(),
+                    "ADD_STAFF",
+                    "เพิ่มบุคลากร: " + academicTitle + firstName + " " + lastName + " (ตำแหน่ง: " + staffRole + ")",
+                    getClientIpAddress());
+        } catch (Exception ignored) {}
+
         return "redirect:/admin/academic/staff?success=added";
     }
 
@@ -62,24 +90,50 @@ public class StaffMemberController {
 
     @PostMapping("/edit/{id}")
     public String editStaff(@PathVariable Long id,
-            @RequestParam("fullName") String fullName,
+            @RequestParam("firstName") String firstName,
+            @RequestParam("lastName") String lastName,
             @RequestParam("academicTitle") String academicTitle,
             @RequestParam("staffType") String staffType,
             @RequestParam(value = "department", required = false) String department,
-            @RequestParam("staffRole") String staffRole) {
+            @RequestParam("staffRole") String staffRole,
+            java.security.Principal principal) {
         StaffMember staff = staffMemberService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
-        staff.setFullName(fullName);
+        staff.setFirstName(firstName);
+        staff.setLastName(lastName);
         staff.setAcademicTitle(academicTitle);
         staff.setStaffType(staffType);
         staff.setDepartment(department);
         staff.setStaffRole(staffRole);
         staffMemberService.save(staff);
+
+        // Log activity
+        try {
+            UserDtls admin = userRepository.findByEmail(principal.getName());
+            adminLogService.log(principal.getName(),
+                    admin != null ? admin.getName() : principal.getName(),
+                    "EDIT_STAFF",
+                    "แก้ไขบุคลากร ID:" + id + " (" + firstName + " " + lastName + ")",
+                    getClientIpAddress());
+        } catch (Exception ignored) {}
+
         return "redirect:/admin/academic/staff?success=updated";
     }
 
     @PostMapping("/delete/{id}")
-    public String deleteStaff(@PathVariable Long id) {
+    public String deleteStaff(@PathVariable Long id, java.security.Principal principal) {
+        // Log before deletion
+        try {
+            StaffMember staff = staffMemberService.findById(id).orElse(null);
+            UserDtls admin = userRepository.findByEmail(principal.getName());
+            adminLogService.log(principal.getName(),
+                    admin != null ? admin.getName() : principal.getName(),
+                    "DELETE_STAFF",
+                    "ลบบุคลากร ID:" + id
+                            + (staff != null ? " (" + staff.getFirstName() + " " + staff.getLastName() + ")" : ""),
+                    getClientIpAddress());
+        } catch (Exception ignored) {}
+
         staffMemberService.softDelete(id);
         return "redirect:/admin/academic/staff?success=deleted";
     }
@@ -88,5 +142,13 @@ public class StaffMemberController {
     @ResponseBody
     public ResponseEntity<List<StaffMember>> getByRole(@RequestParam("role") String role) {
         return ResponseEntity.ok(staffMemberService.findByRole(role));
+    }
+
+    private String getClientIpAddress() {
+        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0];
+        }
+        return httpRequest.getRemoteAddr();
     }
 }

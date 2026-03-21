@@ -46,6 +46,12 @@ public class UserServiceImpl implements UserService {
 	@Lazy
 	private CommonUtil commonUtil;
 
+	@Autowired
+	private com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository;
+
+	@Autowired
+	private com.ecom.academic.repository.PositionRequestRepository positionRequestRepository;
+
 	@Override
 	public Integer getUsersCount() {
 		return (int) userRepository.count();
@@ -389,6 +395,19 @@ public class UserServiceImpl implements UserService {
 		}
 
 		return true;
+	}
+
+	@Override
+	public Boolean hasAcademicRequests(Integer userId) {
+		List<com.ecom.academic.model.AcademicRequest> acRequests = academicRequestRepository.findByApplicantIdOrderByCreatedAtDesc(userId);
+		if (acRequests != null && !acRequests.isEmpty()) {
+			return true;
+		}
+		List<com.ecom.academic.model.PositionRequest> posRequests = positionRequestRepository.findByApplicantId(userId);
+		if (posRequests != null && !posRequests.isEmpty()) {
+			return true;
+		}
+		return false;
 	}
 
 	@Override

@@ -17,6 +17,7 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.LockedException;
 
 import com.ecom.model.UserDtls;
+import com.ecom.service.AdminLogService;
 import com.ecom.service.UserService;
 
 import java.util.Date;
@@ -31,6 +32,8 @@ class AuthFailureHandlerTest {
     private UserService userService;
     @Mock
     private ApplicationEventPublisher eventPublisher;
+    @Mock
+    private AdminLogService adminLogService;
 
     private AuthFailureHandlerImpl handler;
     private MockHttpServletRequest request;
@@ -38,7 +41,7 @@ class AuthFailureHandlerTest {
 
     @BeforeEach
     void setUp() {
-        handler = new AuthFailureHandlerImpl(bruteForceProtection, userService, eventPublisher);
+        handler = new AuthFailureHandlerImpl(bruteForceProtection, userService, eventPublisher, adminLogService);
         request = new MockHttpServletRequest();
         request.setSession(new MockHttpSession());
         response = new MockHttpServletResponse();

@@ -35,7 +35,10 @@ import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
+import com.ecom.service.AdminLogService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 @RequestMapping("/admin/position")
@@ -52,6 +55,18 @@ public class PositionAdminController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AdminLogService adminLogService;
+
+    @Autowired
+    private HttpServletRequest httpRequest;
+
+    @Autowired
+    private com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository;
+
+    @Autowired
+    private com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -126,6 +141,24 @@ public class PositionAdminController {
             } catch (Exception e) { /* ignore */ }
         }
 
+        // ดึงเอกสารที่ 8 (ผลประเมินการสอน) จากคำร้องประเมินผลการสอน (AcademicRequest) ของผู้ยื่นคนเดียวกัน
+        Integer applicantId = request.getApplicant().getId();
+        List<com.ecom.academic.model.AcademicRequest> evalRequests = academicRequestRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId);
+        for (com.ecom.academic.model.AcademicRequest evalReq : evalRequests) {
+            List<com.ecom.academic.model.AcademicDocument> evalDoc8List = academicDocumentRepository.findByRequestIdAndDocumentType(evalReq.getId(), 8);
+            if (!evalDoc8List.isEmpty() && evalDoc8List.get(0).getJsonData() != null) {
+                try {
+                    java.util.Map<String, String> evalDoc8Data = objectMapper.readValue(
+                            evalDoc8List.get(0).getJsonData(),
+                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
+                    model.addAttribute("evalDoc8Data", evalDoc8Data);
+                    model.addAttribute("linkedEvalRequest", evalReq);
+                    model.addAttribute("evalDoc8GeneratedFile", evalDoc8List.get(0).getGeneratedFilePath());
+                    break;
+                } catch (Exception e) { /* ignore parse error */ }
+            }
+        }
+
         return "academic/position/admin/request_detail";
     }
 
@@ -156,6 +189,15 @@ public class PositionAdminController {
 
             PositionRequestStatus newStatus = PositionRequestStatus.valueOf(statusStr);
             positionService.updateStatus(id, newStatus, admin, note);
+
+            // Log activity
+            try {
+                adminLogService.log(principal.getName(), admin.getName(),
+                        "UPDATE_POSITION_STATUS",
+                        "อัพเดทสถานะคำร้องตำแหน่ง #" + id + " เป็น " + newStatus.name()
+                                + (note != null ? " (" + note + ")" : ""),
+                        getClientIpAddress());
+            } catch (Exception logEx) { /* ignore */ }
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorDetail", e.getClass().getSimpleName() + ": " + e.getMessage());
             return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
@@ -227,6 +269,15 @@ public class PositionAdminController {
             UserDtls admin = getUser(principal);
             positionService.logDocumentEdit(request, type, label, admin,
                     isNew ? PositionDocumentEditLog.EditAction.CREATED : PositionDocumentEditLog.EditAction.UPDATED);
+
+            // Log activity
+            try {
+                adminLogService.log(principal.getName(),
+                        admin != null ? admin.getName() : principal.getName(),
+                        "GENERATE_POSITION_DOCUMENT",
+                        "สร้างเอกสารที่ " + type + " (" + label + ") สำหรับคำร้องตำแหน่ง #" + id,
+                        getClientIpAddress());
+            } catch (Exception logEx) { /* ignore */ }
 
             return "redirect:/admin/position/request/" + id + "?success=doc_generated";
         } catch (Exception e) {
@@ -379,6 +430,16 @@ public class PositionAdminController {
             attachment.setFileSize(file.getSize());
             positionService.saveAttachment(attachment);
 
+            // Log activity
+            try {
+                adminLogService.log(
+                        redirectAttributes != null ? "admin" : "admin",
+                        "Admin",
+                        "UPLOAD_POSITION_ATTACHMENT",
+                        "อัปโหลดเอกสารเพิ่มเติม \"" + originalFilename + "\" สำหรับคำร้องตำแหน่ง #" + id,
+                        getClientIpAddress());
+            } catch (Exception logEx) { /* ignore */ }
+
             return "redirect:/admin/position/request/" + id + "?success=attachment_uploaded";
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorDetail", e.getMessage());
@@ -408,7 +469,18 @@ public class PositionAdminController {
     }
 
     @PostMapping("/request/{id}/attachment/{attachmentId}/delete")
-    public String deleteAttachment(@PathVariable Long id, @PathVariable Long attachmentId) {
+    public String deleteAttachment(@PathVariable Long id, @PathVariable Long attachmentId, Principal principal) {
+        // Log activity before deleting
+        try {
+            PositionAttachment att = positionService.findAttachmentById(attachmentId).orElse(null);
+            UserDtls admin = getUser(principal);
+            adminLogService.log(principal.getName(),
+                    admin != null ? admin.getName() : principal.getName(),
+                    "DELETE_POSITION_ATTACHMENT",
+                    "ลบเอกสารเพิ่มเติม" + (att != null ? " \"" + att.getOriginalFilename() + "\"" : "") + " จากคำร้องตำแหน่ง #" + id,
+                    getClientIpAddress());
+        } catch (Exception logEx) { /* ignore */ }
+
         positionService.deleteAttachment(attachmentId);
         return "redirect:/admin/position/request/" + id + "?success=attachment_deleted";
     }
@@ -417,6 +489,14 @@ public class PositionAdminController {
 
     private UserDtls getUser(Principal principal) {
         return userRepository.findByEmail(principal.getName());
+    }
+
+    private String getClientIpAddress() {
+        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0];
+        }
+        return httpRequest.getRemoteAddr();
     }
 
     @SuppressWarnings("unchecked")

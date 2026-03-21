@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import com.ecom.model.UserDtls;
+import com.ecom.service.AdminLogService;
 import com.ecom.service.UserService;
 import com.ecom.util.CommonUtil;
 import com.ecom.util.PasswordValidator;
@@ -34,6 +35,9 @@ public class HomeController {
 
 	@Autowired
 	private BCryptPasswordEncoder passwordEncoder;
+
+	@Autowired
+	private AdminLogService adminLogService;
 
 	@ModelAttribute
 	public void getUserDetails(Principal p, Model m) {
@@ -137,6 +141,14 @@ public class HomeController {
 
 		userService.activateAccount(email, password);
 
+		// Log activity
+		try {
+			adminLogService.logWithDetails(email, email,
+					"FIRST_LOGIN_SET_PASSWORD",
+					"ตั้งรหัสผ่านครั้งแรกสำเร็จ (" + email + ")",
+					null, "/first-login/set-password", null);
+		} catch (Exception ignored) {}
+
 		// Clear session OTP data
 		session.removeAttribute("otpEmail");
 		session.removeAttribute("otpVerified");
@@ -207,6 +219,15 @@ public class HomeController {
 		userByToken.setPassword(passwordEncoder.encode(password));
 		userByToken.setResetToken(null);
 		userService.updateUser(userByToken);
+
+		// Log activity
+		try {
+			adminLogService.logWithDetails(userByToken.getEmail(), userByToken.getName(),
+					"RESET_PASSWORD",
+					"รีเซ็ตรหัสผ่านสำเร็จ (" + userByToken.getEmail() + ")",
+					null, "/reset-password", null);
+		} catch (Exception ignored) {}
+
 		session.setAttribute("succMsg", "รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่");
 		return "redirect:/signin";
 	}

@@ -36,6 +36,7 @@ import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.ecom.service.AdminLogService;
 import com.ecom.util.FileUtils;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -60,6 +61,12 @@ public class AcademicApplicantController {
 
     @Autowired
     private PositionRequestService positionRequestService;
+
+    @Autowired
+    private AdminLogService adminLogService;
+
+    @Autowired
+    private jakarta.servlet.http.HttpServletRequest httpRequest;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -322,6 +329,14 @@ public class AcademicApplicantController {
         // เปลี่ยนสถานะ DRAFT → RECEIVED
         requestService.submitDraftRequest(request);
 
+        // Log activity
+        try {
+            adminLogService.log(principal.getName(), user.getName(),
+                    "SUBMIT_REQUEST",
+                    "ส่งคำร้องประเมินผลการสอน #" + id,
+                    getClientIpAddress());
+        } catch (Exception ignored) {}
+
         // ส่งอีเมลแจ้งเตือนแอดมิน
         emailService.sendNewRequestNotificationToAdmins(request);
 
@@ -396,6 +411,15 @@ public class AcademicApplicantController {
         file.transferTo(Path.of(filePath));
 
         requestService.setRevisionFile(id, filePath);
+
+        // Log activity
+        try {
+            adminLogService.log(principal.getName(), user.getName(),
+                    "UPLOAD_REVISION",
+                    "อัปโหลดเอกสารแก้ไขสำหรับคำร้อง #" + id + " (" + file.getOriginalFilename() + ")",
+                    getClientIpAddress());
+        } catch (Exception ignored) {}
+
         return "redirect:/user/academic/request/" + id + "?success=uploaded";
     }
 
@@ -498,5 +522,13 @@ public class AcademicApplicantController {
                     }
                 })
                 .orElse(false);
+    }
+
+    private String getClientIpAddress() {
+        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0];
+        }
+        return httpRequest.getRemoteAddr();
     }
 }

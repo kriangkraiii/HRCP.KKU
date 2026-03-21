@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.SimpleUrlAuthenticationFa
 import org.springframework.stereotype.Component;
 
 import com.ecom.model.UserDtls;
+import com.ecom.service.AdminLogService;
 import com.ecom.service.UserService;
 
 import jakarta.servlet.ServletException;
@@ -30,13 +31,16 @@ public class AuthFailureHandlerImpl extends SimpleUrlAuthenticationFailureHandle
     private final UserService userService;
     @SuppressWarnings("unused") // wired for future AuthenticationFailureEvent publishing
     private final ApplicationEventPublisher eventPublisher;
+    private final AdminLogService adminLogService;
 
     public AuthFailureHandlerImpl(BruteForceProtection bruteForceProtection,
                                    @Lazy UserService userService,
-                                   ApplicationEventPublisher eventPublisher) {
+                                   ApplicationEventPublisher eventPublisher,
+                                   AdminLogService adminLogService) {
         this.bruteForceProtection = bruteForceProtection;
         this.userService = userService;
         this.eventPublisher = eventPublisher;
+        this.adminLogService = adminLogService;
     }
 
     @Override
@@ -155,8 +159,15 @@ public class AuthFailureHandlerImpl extends SimpleUrlAuthenticationFailureHandle
     private void publishFailureEvent(String clientIp, String email, String errorMessage) {
         log.debug("Auth failure: ip={}, email={}, reason={}", clientIp,
                 email != null ? email : "N/A", errorMessage);
-        // eventPublisher available for future AuthenticationFailureEvent publishing
-        // e.g. eventPublisher.publishEvent(new CustomAuthFailureEvent(...));
+        // Log to AdminLog for activity tracking
+        try {
+            adminLogService.logWithDetails(
+                    email != null ? email : "Unknown",
+                    "ผู้พยายามเข้าสู่ระบบ",
+                    "LOGIN_FAILED",
+                    "เข้าสู่ระบบไม่สำเร็จ: " + errorMessage,
+                    clientIp, "/signin", null);
+        } catch (Exception ignored) {}
     }
 
     /**

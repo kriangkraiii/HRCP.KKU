@@ -20,6 +20,7 @@ import com.ecom.academic.service.PetitionService;
 import com.ecom.exception.ActivePetitionExistsException;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.ecom.service.AdminLogService;
 
 import jakarta.validation.Valid;
 
@@ -36,6 +37,12 @@ public class PetitionController {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private AdminLogService adminLogService;
+
+    @Autowired
+    private jakarta.servlet.http.HttpServletRequest httpRequest;
 
     /**
      * Show new petition form.
@@ -80,6 +87,15 @@ public class PetitionController {
                 form.getTitle(),
                 form.getDescription()
             );
+
+            // Log activity
+            try {
+                adminLogService.log(principal.getName(), user.getName(),
+                        "CREATE_PETITION",
+                        "สร้างคำร้องทั่วไป: " + form.getTitle(),
+                        getClientIpAddress());
+            } catch (Exception ignored) {}
+
             redirectAttributes.addFlashAttribute("success", "ยื่นคำร้องสำเร็จ");
             return "redirect:/petitions/" + petition.getId();
         } catch (ActivePetitionExistsException e) {
@@ -122,5 +138,13 @@ public class PetitionController {
      */
     private UserDtls getUser(Principal principal) {
         return userRepository.findByEmail(principal.getName());
+    }
+
+    private String getClientIpAddress() {
+        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
+        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
+            return xForwardedFor.split(",")[0];
+        }
+        return httpRequest.getRemoteAddr();
     }
 }

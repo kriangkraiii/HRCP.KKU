@@ -1056,3 +1056,66 @@ body,
 [data-theme="dark"] .shadow-sm {
     box-shadow: 0 2px 12px rgba(0,0,0,0.4) !important;
 }
+
+/* ======================================
+   ALERT-LIGHT — Dark Mode
+   ====================================== */
+[data-theme="dark"] .alert-light {
+    background: var(--bg-card-header) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+/* ======================================
+   FORM CONTROLS — Small / Textarea / Dark
+   ====================================== */
+[data-theme="dark"] .form-control-sm,
+[data-theme="dark"] .form-select-sm {
+    background-color: var(--bg-input) !important;
+    border-color: var(--border-input) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] textarea.form-control {
+    background-color: var(--bg-input) !important;
+    border-color: var(--border-input) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .form-check-input {
+    background-color: var(--bg-input) !important;
+    border-color: var(--border-input) !important;
+}
+
+[data-theme="dark"] .form-check-input:checked {
+    background-color: #42a5f5 !important;
+    border-color: #42a5f5 !important;
+}
+
+/* fw-bold inside card-header for doc forms */
+[data-theme="dark"] .card-header h5,
+[data-theme="dark"] .card-header h6 {
+    color: var(--text-heading) !important;
+}
+
+/* Section labels fw-bold */
+[data-theme="dark"] .fw-bold {
+    color: var(--text-heading) !important;
+}
+
+/* Rounded borders inside forms (dynamic row containers) */
+[data-theme="dark"] .border.rounded {
+    border-color: var(--border-color) !important;
+    background-color: var(--bg-card) !important;
+}
+
+[data-theme="dark"] .border.rounded.bg-light {
+    background-color: var(--bg-card-header) !important;
+}
+
+/* Select option text */
+[data-theme="dark"] option {
+    background-color: var(--bg-card) !important;
+    color: var(--text-primary) !important;
+}
+

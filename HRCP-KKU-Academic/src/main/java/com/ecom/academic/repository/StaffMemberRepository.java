@@ -8,9 +8,9 @@ import com.ecom.academic.model.StaffMember;
 
 public interface StaffMemberRepository extends JpaRepository<StaffMember, Long> {
 
-    List<StaffMember> findByIsActiveTrueOrderByFullNameAsc();
+    List<StaffMember> findByIsActiveTrueOrderByFirstNameAscLastNameAsc();
 
-    List<StaffMember> findByStaffRoleAndIsActiveTrueOrderByFullNameAsc(String staffRole);
+    List<StaffMember> findByStaffRoleAndIsActiveTrueOrderByFirstNameAscLastNameAsc(String staffRole);
 
     List<StaffMember> findByStaffRole(String staffRole);
 }

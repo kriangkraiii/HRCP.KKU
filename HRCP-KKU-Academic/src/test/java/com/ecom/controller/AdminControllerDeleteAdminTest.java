@@ -126,7 +126,7 @@ public class AdminControllerDeleteAdminTest {
         String adminEmail = testAdmin2.getEmail();
 
         // When: Admin deletes another admin
-        String result = adminController.deleteAdmin(adminId, 2, session, mockPrincipal);
+        String result = adminController.deleteAdmin(adminId, 2, "admin2@example.com", session, mockPrincipal);
 
         // Then: Admin should be deleted and action logged
         assertThat(result).isEqualTo("redirect:/admin/users?type=2");
@@ -159,7 +159,7 @@ public class AdminControllerDeleteAdminTest {
         Integer adminId = testAdmin1.getId();
 
         // When: Admin tries to delete their own account
-        String result = adminController.deleteAdmin(adminId, 2, session, mockPrincipal);
+        String result = adminController.deleteAdmin(adminId, 2, "admin1@example.com", session, mockPrincipal);
 
         // Then: Should return error message
         assertThat(result).isEqualTo("redirect:/admin/users?type=2");
@@ -185,7 +185,7 @@ public class AdminControllerDeleteAdminTest {
         Integer nonExistentId = 999;
 
         // When: Admin tries to delete non-existent admin
-        String result = adminController.deleteAdmin(nonExistentId, 2, session, mockPrincipal);
+        String result = adminController.deleteAdmin(nonExistentId, 2, "nonexistent@example.com", session, mockPrincipal);
 
         // Then: Should return error message
         assertThat(result).isEqualTo("redirect:/admin/users?type=2");
@@ -207,7 +207,7 @@ public class AdminControllerDeleteAdminTest {
         String adminEmail = testAdmin2.getEmail();
 
         // When: Admin deletes another admin
-        adminController.deleteAdmin(adminId, 2, session, mockPrincipal);
+        adminController.deleteAdmin(adminId, 2, "admin2@example.com", session, mockPrincipal);
 
         // Then: Audit log contains all required information
         List<AdminLog> logs = adminLogRepository.findAll();
@@ -249,8 +249,8 @@ public class AdminControllerDeleteAdminTest {
         admin3 = userRepository.save(admin3);
 
         // When: Admin deletes both other admins
-        adminController.deleteAdmin(testAdmin2.getId(), 2, session, mockPrincipal);
-        adminController.deleteAdmin(admin3.getId(), 2, session, mockPrincipal);
+        adminController.deleteAdmin(testAdmin2.getId(), 2, "admin2@example.com", session, mockPrincipal);
+        adminController.deleteAdmin(admin3.getId(), 2, "admin3@example.com", session, mockPrincipal);
 
         // Then: Both admins should be deleted
         assertThat(userService.getUserById(testAdmin2.getId())).isNull();
@@ -275,7 +275,7 @@ public class AdminControllerDeleteAdminTest {
         Integer adminId = testAdmin1.getId();
 
         // When: Admin tries self-deletion
-        adminController.deleteAdmin(adminId, 2, session, mockPrincipal);
+        adminController.deleteAdmin(adminId, 2, "admin1@example.com", session, mockPrincipal);
 
         // Then: Error message should specifically mention self-deletion
         String errorMsg = (String) session.getAttribute("errorMsg");

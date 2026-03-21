@@ -1,0 +1,48 @@
+%%{init: {"flowchart": {"curve": "linear"}}}%%
+flowchart LR
+  %% DFD Level 2: Petition / คำร้องอุทธรณ์
+  subgraph L["Entities"]
+    direction TB
+    E2["E2 Applicant / ผู้ยื่นคำร้อง"]
+    E3["E3 Admin / ผู้ดูแลระบบ"]
+  end
+
+  subgraph C["Processes"]
+    direction TB
+    P41(("P4.1 Submit Petition\nยื่นคำร้องอุทธรณ์"))
+    P42(("P4.2 Validate Active Petition\nตรวจสอบคำร้องที่ยังเปิดอยู่"))
+    P43(("P4.3 Assign + Review\nมอบหมายและพิจารณา"))
+    P44(("P4.4 Update Status\nอัปเดตสถานะ"))
+    P45(("P4.5 Notify Result\nแจ้งผล"))
+  end
+
+  subgraph R["Data Stores"]
+    direction TB
+    D4[["D4 petitions"]]
+    D41[["D4.1 petition_statuses"]]
+  end
+
+  E2 --> P41
+  P41 --> D4
+
+  P41 --> P42
+  P42 --> D4
+  P42 -->|"valid / ผ่าน"| P43
+  P42 -->|"duplicate active / มีคำร้องที่ยังไม่ปิด"| E2
+
+  E3 --> P43
+  P43 --> D4
+  P43 --> P44
+
+  P44 --> D4
+  P44 --> D41
+  P44 --> P45
+
+  P45 -->|"result / ผลพิจารณา"| E2
+
+  classDef ext fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  classDef proc fill:#fff,stroke:#000,stroke-width:1.8px,color:#000;
+  classDef store fill:#fff,stroke:#000,stroke-width:1px,color:#000;
+  class E2,E3 ext;
+  class P41,P42,P43,P44,P45 proc;
+  class D4,D41 store;

@@ -16,7 +16,7 @@ public class StaffMemberService {
     private StaffMemberRepository staffMemberRepository;
 
     public List<StaffMember> findAll() {
-        return staffMemberRepository.findByIsActiveTrueOrderByFullNameAsc();
+        return staffMemberRepository.findByIsActiveTrueOrderByFirstNameAscLastNameAsc();
     }
 
     public Optional<StaffMember> findById(Long id) {
@@ -24,7 +24,7 @@ public class StaffMemberService {
     }
 
     public List<StaffMember> findByRole(String role) {
-        return staffMemberRepository.findByStaffRoleAndIsActiveTrueOrderByFullNameAsc(role);
+        return staffMemberRepository.findByStaffRoleAndIsActiveTrueOrderByFirstNameAscLastNameAsc(role);
     }
 
     public StaffMember save(StaffMember staffMember) {
