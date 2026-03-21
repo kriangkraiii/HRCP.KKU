@@ -10,7 +10,8 @@
 
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 7: แบบฟอร์มตรวจสอบคุณสมบัติและเอกสารประกอบ</h3>
 
-            <form th:action="'/user/position/request/' + ${request.id} + '/document/7'" method="post" id="doc7Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/7'">
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/7'" method="post" id="doc7Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/7'"
+                  onsubmit="document.querySelectorAll('#doc7Form input[type=checkbox]').forEach(c=>{if(!c.checked){let h=document.createElement('input');h.type='hidden';h.name=c.name;h.value='☐';c.parentNode.appendChild(h);}})">
 
                 <!-- ========== ส่วนที่ 1: ข้อมูลผู้ขอ ========== -->
                 <div class="card card-academic mb-4">

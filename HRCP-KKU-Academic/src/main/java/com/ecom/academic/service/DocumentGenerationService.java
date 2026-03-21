@@ -60,7 +60,12 @@ public class DocumentGenerationService {
                 : "doc_" + documentType + ".docx";
         String outputPath = outputDir + outputFileName;
 
-        byte[] result = processTemplate(resource.getInputStream(), placeholders);
+        // Doc 4: remap form field names to template placeholder names
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
 
         try (FileOutputStream fos = new FileOutputStream(outputPath)) {
             fos.write(result);
@@ -97,7 +102,12 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        return processTemplate(resource.getInputStream(), placeholders);
+        // Doc 4: remap form field names to template placeholder names
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        return processTemplate(resource.getInputStream(), placeholders, documentType);
     }
 
     public byte[] generatePreviewDocxForCopy(int documentType, String jsonData,
@@ -132,7 +142,12 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        return processTemplate(resource.getInputStream(), placeholders);
+        // Doc 4: remap form field names to template placeholder names
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        return processTemplate(resource.getInputStream(), placeholders, documentType);
     }
 
     public String generateP2Document(com.ecom.academic.model.PositionRequest request,
@@ -149,7 +164,12 @@ public class DocumentGenerationService {
 
         String outputPath = outputDir + "p2doc_" + documentType + ".docx";
 
-        byte[] result = processTemplate(resource.getInputStream(), placeholders);
+        // Doc 4: remap form field names to template placeholder names
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
 
         try (FileOutputStream fos = new FileOutputStream(outputPath)) {
             fos.write(result);
@@ -162,7 +182,7 @@ public class DocumentGenerationService {
     // Core: Pure ZIP/XML Processing (format-preserving)
     // =====================================================================
 
-    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders) throws IOException {
+    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType) throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
 
         try (ZipInputStream zis = new ZipInputStream(templateStream);
@@ -181,6 +201,9 @@ public class DocumentGenerationService {
                         // Step 1.5: Dynamic row cloning - เพิ่มแถวตารางสำหรับนวิจัยที่เกิน 5 รายการ
                         xml = expandDynamicRows(xml, placeholders);
 
+                        // Step 1.6: Co-author signature cloning - เพิ่มลายเซ็นผู้ร่วมงานในเอกสารที่ 9
+                        xml = expandCoauthorSignatures(xml, placeholders);
+
                         // Step 2: Simple replace - แทนค่า {{placeholder}} ทั้งหมด
                         for (Map.Entry<String, String> ph : placeholders.entrySet()) {
                             String token = "{{" + ph.getKey() + "}}";
@@ -190,8 +213,19 @@ public class DocumentGenerationService {
                             }
                         }
 
-                        // Step 3: Checkbox rendering - ☑/☐ → MS Gothic font runs
-                        xml = renderCheckboxes(xml);
+                        // Step 2.5: Cleanup - ลบ {{...}} ที่เหลือซึ่งไม่มีค่าจากฟอร์ม
+                        xml = xml.replaceAll("\\{\\{[^}]+\\}\\}", "");
+
+                        // Step 3: Checkbox rendering
+                        if (docType == 4) {
+                            // Doc 4: ใช้ ✔ เฉยๆ ไม่มีกรอบ — แปลงค่าเก่า ☑→✔, ☐→ว่าง
+                            xml = xml.replace("\u2611\uFE0E", "\u2714");
+                            xml = xml.replace("\u2611", "\u2714");
+                            xml = xml.replace("\u2610", "");
+                        } else {
+                            // เอกสารอื่น: ☑/☐ → MS Gothic font runs (กล่อง)
+                            xml = renderCheckboxes(xml);
+                        }
 
                         data = xml.getBytes(StandardCharsets.UTF_8);
                     }
@@ -475,6 +509,200 @@ public class DocumentGenerationService {
     }
 
     // =====================================================================
+    // Doc 4: Field Name Remapping & Dynamic List Expansion
+    // =====================================================================
+
+    /**
+     * เอกสารที่ 4: Remap form field names → DOCX template placeholder names
+     * 
+     * form: paper_title_1, paper_title_2 → template: research_title1, research_title2
+     * form: research_title_1, research_title_2 → template: research_title, research_title_2
+     * auto-generate: index1, index2... and index, index_2...
+     */
+    private void preprocessDoc4Placeholders(Map<String, String> placeholders) {
+        // Section 1: Academic Papers
+        // Template: {{index1}}{{research_title1}} — รวมทุกบทความเป็น text เดียว
+        // เพราะ Word fragment placeholder ทำให้จับคู่ไม่ได้ถ้าแยกทีละรายการ
+        int maxPaper = 0;
+        for (String key : placeholders.keySet()) {
+            if (key.startsWith("paper_title_")) {
+                try {
+                    int n = Integer.parseInt(key.substring("paper_title_".length()));
+                    if (n > maxPaper) maxPaper = n;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        if (maxPaper > 0) {
+            StringBuilder paperList = new StringBuilder();
+            for (int i = 1; i <= maxPaper; i++) {
+                String val = placeholders.get("paper_title_" + i);
+                if (val != null && !val.isEmpty()) {
+                    if (paperList.length() > 0) paperList.append("\n");
+                    paperList.append(i).append(". ").append(val);
+                }
+            }
+            placeholders.put("index1", "");
+            placeholders.put("research_title1", paperList.toString());
+        }
+
+        // Section 2: Research
+        // Template: {{index}}{{research_title}} — รวมทุกวิจัยเป็น text เดียว
+        int maxResearch = 0;
+        for (String key : placeholders.keySet()) {
+            if (key.startsWith("research_title_")) {
+                try {
+                    int n = Integer.parseInt(key.substring("research_title_".length()));
+                    if (n > maxResearch) maxResearch = n;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+
+        if (maxResearch > 0) {
+            StringBuilder resList = new StringBuilder();
+            for (int i = 1; i <= maxResearch; i++) {
+                String val = placeholders.get("research_title_" + i);
+                if (val != null && !val.isEmpty()) {
+                    if (resList.length() > 0) resList.append("\n");
+                    resList.append(i).append(". ").append(val);
+                }
+            }
+            placeholders.put("index", "");
+            placeholders.put("research_title", resList.toString());
+        }
+    }
+
+    // =====================================================================
+    // Step 1.6: Co-author Signature Expansion (Doc 9)
+    // =====================================================================
+
+    /**
+     * เอกสารที่ 9: ถ้ามี coauthor_count > 0 จะ clone paragraph group ลายเซ็น
+     * ของ {{corres_name}} สำหรับผู้ร่วมงานแต่ละคน
+     * 
+     * โครงสร้าง DOCX signature block (3 paragraphs):
+     * <w:p>...ลงชื่อ..................... </w:p>
+     * <w:p>...({{corres_name}})</w:p>
+     * <w:p>...ผู้ประพันธ์บรรณกิจ (Corresponding author)</w:p>
+     */
+    private String expandCoauthorSignatures(String xml, Map<String, String> placeholders) {
+        String countStr = placeholders.get("coauthor_count");
+        if (countStr == null || countStr.isEmpty()) {
+            return xml;
+        }
+        int count;
+        try {
+            count = Integer.parseInt(countStr);
+        } catch (NumberFormatException e) {
+            return xml;
+        }
+        if (count <= 0 || !xml.contains("{{corres_name}}")) {
+            return xml;
+        }
+
+        // หา paragraph ที่มี {{corres_name}} ตัวแรก
+        int corresIdx = xml.indexOf("{{corres_name}}");
+        if (corresIdx == -1) return xml;
+
+        // หา <w:p> ที่ครอบ {{corres_name}} (paragraph ชื่อ)
+        int pNameStart = xml.lastIndexOf("<w:p ", corresIdx);
+        if (pNameStart == -1) pNameStart = xml.lastIndexOf("<w:p>", corresIdx);
+        if (pNameStart == -1) return xml;
+
+        int pNameEnd = xml.indexOf("</w:p>", corresIdx);
+        if (pNameEnd == -1) return xml;
+        pNameEnd += "</w:p>".length();
+
+        // หา paragraph ถัดไป (role paragraph เช่น "ผู้ประพันธ์บรรณกิจ")
+        int pRoleStart = xml.indexOf("<w:p ", pNameEnd);
+        if (pRoleStart == -1) pRoleStart = xml.indexOf("<w:p>", pNameEnd);
+        if (pRoleStart == -1) return xml;
+
+        int pRoleEnd = xml.indexOf("</w:p>", pRoleStart);
+        if (pRoleEnd == -1) return xml;
+        pRoleEnd += "</w:p>".length();
+
+        // หา paragraph ก่อนหน้า ("ลงชื่อ..." paragraph)
+        int scanBack = pNameStart - 1;
+        int pSignStart = xml.lastIndexOf("<w:p ", scanBack);
+        if (pSignStart == -1) pSignStart = xml.lastIndexOf("<w:p>", scanBack);
+        if (pSignStart == -1) return xml;
+
+        int pSignEnd = xml.indexOf("</w:p>", pSignStart);
+        if (pSignEnd == -1) return xml;
+        pSignEnd += "</w:p>".length();
+
+        String fullBlock;
+        int insertAfter;
+
+        if (pSignEnd <= pNameStart) {
+            // 3 paragraphs ต่อเนื่อง: ลงชื่อ + ชื่อ + ตำแหน่ง
+            fullBlock = xml.substring(pSignStart, pRoleEnd);
+            insertAfter = pRoleEnd;
+        } else {
+            // ใช้ 2 paragraphs (ชื่อ + ตำแหน่ง)
+            fullBlock = xml.substring(pNameStart, pRoleEnd);
+            insertAfter = pRoleEnd;
+        }
+
+        // สร้าง signature blocks สำหรับ co-authors
+        StringBuilder coauthorBlocks = new StringBuilder();
+        for (int i = 1; i <= count; i++) {
+            String coName = placeholders.getOrDefault("coauthor_name_" + i, "");
+            if (coName.isEmpty()) continue;
+
+            String block = fullBlock;
+            // แทนชื่อ: {{corres_name}} → {{coauthor_name_N}}
+            block = block.replace("{{corres_name}}", "{{coauthor_name_" + i + "}}");
+            // แทนตำแหน่ง: "Corresponding author" → "Co-author"
+            block = block.replace("Corresponding author", "Co-author");
+            // แทนตำแหน่งภาษาไทย: "ผู้ประพันธ์บรรณกิจ" → "ผู้ร่วมประพันธ์"
+            block = block.replace("\u0E1C\u0E39\u0E49\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E1A\u0E23\u0E23\u0E13\u0E01\u0E34\u0E08",
+                    "\u0E1C\u0E39\u0E49\u0E23\u0E48\u0E27\u0E21\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C");
+            coauthorBlocks.append(block);
+        }
+
+        if (coauthorBlocks.length() > 0) {
+            xml = xml.substring(0, insertAfter) + coauthorBlocks.toString() + xml.substring(insertAfter);
+        }
+
+        // ลบ signature block ของ {{corres_name}} ที่ซ้ำ (ตัวที่ 2 ขึ้นไป)
+        // หลัง expand แล้ว ถ้ายังมี {{corres_name}} เหลืออีก ให้ลบ 3-paragraph group ทิ้ง
+        while (true) {
+            int nextCorres = xml.indexOf("{{corres_name}}", insertAfter);
+            if (nextCorres == -1) break;
+
+            // หา <w:p> ที่ครอบ
+            int np = xml.lastIndexOf("<w:p ", nextCorres);
+            if (np == -1) np = xml.lastIndexOf("<w:p>", nextCorres);
+            if (np == -1) break;
+
+            // หา paragraph ก่อนหน้า (ลงชื่อ...)
+            int npPrev = xml.lastIndexOf("<w:p ", np - 1);
+            if (npPrev == -1) npPrev = xml.lastIndexOf("<w:p>", np - 1);
+
+            // หา </w:p> ของ paragraph ชื่อ
+            int npEnd = xml.indexOf("</w:p>", nextCorres);
+            if (npEnd == -1) break;
+            npEnd += "</w:p>".length();
+
+            // หา paragraph ถัดไป (ตำแหน่ง)
+            int npRole = xml.indexOf("<w:p ", npEnd);
+            if (npRole == -1) npRole = xml.indexOf("<w:p>", npEnd);
+            if (npRole == -1) break;
+            int npRoleEnd = xml.indexOf("</w:p>", npRole);
+            if (npRoleEnd == -1) break;
+            npRoleEnd += "</w:p>".length();
+
+            // ลบ 3 paragraphs (ลงชื่อ + ชื่อ + ตำแหน่ง) หรือ 2 paragraphs
+            int removeStart = (npPrev != -1 && npPrev < np) ? npPrev : np;
+            xml = xml.substring(0, removeStart) + xml.substring(npRoleEnd);
+        }
+
+        return xml;
+    }
+
+    // =====================================================================
     // Step 3: Checkbox Rendering (MS Gothic font)
     // =====================================================================
 
@@ -592,11 +820,16 @@ public class DocumentGenerationService {
     private String escapeXml(String s) {
         if (s == null)
             return "";
-        return s.replace("&", "&amp;")
+        s = s.replace("&", "&amp;")
                 .replace("<", "&lt;")
                 .replace(">", "&gt;")
                 .replace("\"", "&quot;")
                 .replace("'", "&apos;");
+        // \n → DOCX line break: stay in same <w:r> to preserve font (TH Sarabun New)
+        if (s.contains("\n")) {
+            s = s.replace("\n", "</w:t><w:br/><w:t xml:space=\"preserve\">");
+        }
+        return s;
     }
 
     @SuppressWarnings("unchecked")

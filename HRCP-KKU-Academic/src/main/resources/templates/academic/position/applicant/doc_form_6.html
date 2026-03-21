@@ -10,7 +10,8 @@
 
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 6: บันทึกข้อความจริยธรรมการวิจัยในมนุษย์ (Exemption)</h3>
 
-            <form th:action="'/user/position/request/' + ${request.id} + '/document/6'" method="post" id="doc6Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/6'">
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/6'" method="post" id="doc6Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/6'"
+                  onsubmit="document.querySelectorAll('#doc6Form input[type=checkbox]').forEach(c=>{if(!c.checked){let h=document.createElement('input');h.type='hidden';h.name=c.name;h.value='☐';c.parentNode.appendChild(h);}})">
 
                 <!-- หัวบันทึก -->
                 <div class="card card-academic mb-4">
@@ -96,31 +97,6 @@
                     </div>
                 </div>
 
-                <!-- ลงชื่อ -->
-                <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">ผู้ลงนาม</h5></div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">ชื่อผู้ขอกำหนดตำแหน่ง (ลงนาม)</label>
-                                <input type="text" name="applicant_signature_name" class="form-control"
-                                       placeholder="เช่น ผศ.ดร.สมชาย ใจดี">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">ชื่อหัวหน้าส่วนงาน</label>
-                                <input type="text" name="dean_signature_name" class="form-control" list="deanList6"
-                                       placeholder="พิมพ์หรือเลือกชื่อหัวหน้าส่วนงาน">
-                                <datalist id="deanList6">
-                                    <option th:each="dean : ${deans}" th:value="${dean.name}"></option>
-                                </datalist>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" name="position_title" class="form-control" placeholder="เช่น คณบดีวิทยาลัยการคอมพิวเตอร์">
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
                 <div class="d-flex gap-2">
                     <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">

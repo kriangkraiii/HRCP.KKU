@@ -153,6 +153,15 @@ class DocPreviewEngine {
             data[rb.name] = rb.value;
         });
 
+        // ดึงค่า checkbox — checked = ☑ (or its value), unchecked = ☐
+        this.form.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            if (cb.checked) {
+                data[cb.name] = cb.value || '☑';
+            } else if (!data[cb.name]) {
+                data[cb.name] = '☐';
+            }
+        });
+
         // ส่ง committee_index เมื่อมี tabs
         if (this.tabs) {
             data['committee_index'] = this.tabs[this.activeTab].index.toString();
