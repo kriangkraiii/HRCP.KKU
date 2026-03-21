@@ -57,7 +57,7 @@
 
                         <h6 class="fw-bold mb-2">กลุ่มที่ ๒ — ผลงานทางวิชาการในลักษณะอื่น</h6>
                         <div class="row">
-                            <div class="col-md-6" th:each="item, stat : ${{'ผลงานวิชาการเพื่ออุตสาหกรรม','กรณีศึกษา (Case Study)','ผลงานวิชาการเพื่อพัฒนาการเรียนการสอนฯ','งานแปล','ผลงานวิชาการเพื่อพัฒนานโยบายสาธารณะ','สิทธิบัตร','ผลงานสร้างสรรค์ด้านวิทยาศาสตร์ฯ','ซอฟต์แวร์','พจนานุกรม สารานุกรม นามานุกรมฯ','ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ','ผลงานนวัตกรรม','ผลงานรับใช้ท้องถิ่นและสังคม'}}">
+                            <div class="col-md-6" th:each="item, stat : ${ {'ผลงานวิชาการเพื่ออุตสาหกรรม','กรณีศึกษา (Case Study)','ผลงานวิชาการเพื่อพัฒนาการเรียนการสอนฯ','งานแปล','ผลงานวิชาการเพื่อพัฒนานโยบายสาธารณะ','สิทธิบัตร','ผลงานสร้างสรรค์ด้านวิทยาศาสตร์ฯ','ซอฟต์แวร์','พจนานุกรม สารานุกรม นามานุกรมฯ','ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ','ผลงานนวัตกรรม','ผลงานรับใช้ท้องถิ่นและสังคม'} }">
                                 <div class="form-check mb-1">
                                     <input class="form-check-input" type="checkbox"
                                         th:name="'chkgroup2_' + ${stat.count}" value="☑"
@@ -143,14 +143,23 @@
                             <label class="form-label fw-bold">จ. ประวัติการได้รับทุนวิจัยที่เกี่ยวข้อง</label>
                             <textarea name="des_scholarship" class="form-control" rows="2"></textarea>
                         </div>
-                    </div>
+                        <div>
+                            <label class="form-label fw-bold">ฉ. Licensing Fees — ค่าธรรมเนียมใบอนุญาตรวมเท่าใด (โปรดแสดงหลักฐานสัญญา)</label>
+                            <textarea name="des_researchdd" class="form-control" rows="2"></textarea>
+                        </div>
                 </div>
 
-                <!-- ลงชื่อ -->
+                <!-- ลงชื่อ + ผู้ร่วมงาน (dynamic) -->
                 <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">ผู้ลงนาม</h5></div>
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">ผู้ลงนาม / ผู้ร่วมงาน</h5>
+                        <button type="button" class="btn btn-success btn-sm" id="btnAddCoauthor">
+                            <i class="fas fa-plus-circle"></i> เพิ่มผู้ร่วมงาน
+                        </button>
+                    </div>
                     <div class="card-body">
-                        <div class="row g-3">
+                        <!-- Fixed signers -->
+                        <div class="row g-3 mb-3">
                             <div class="col-md-4">
                                 <label class="form-label">ผู้ขอกำหนดตำแหน่ง</label>
                                 <input type="text" name="applicant_name" class="form-control" required>
@@ -164,6 +173,9 @@
                                 <input type="text" name="corres_name" class="form-control">
                             </div>
                         </div>
+                        <!-- Dynamic co-authors -->
+                        <div id="coauthorBlocks"></div>
+                        <input type="hidden" name="coauthor_count" id="coauthorCountField" value="0">
                     </div>
                 </div>
 
@@ -182,12 +194,75 @@
         </div>
 
         <script th:inline="javascript">
+            let coauthorCount = 0;
+
+            function addCoauthorRow(nameVal, roleVal) {
+                coauthorCount++;
+                const n = coauthorCount;
+                const div = document.createElement('div');
+                div.className = 'row g-2 mb-2 align-items-end coauthor-row';
+                div.setAttribute('data-idx', n);
+                div.innerHTML = `
+                    <div class="col-md-1 text-center"><span class="badge bg-secondary">${n}</span></div>
+                    <div class="col-md-4">
+                        <input type="text" name="coauthor_name_${n}" class="form-control form-control-sm"
+                               placeholder="ชื่อ-นามสกุล" value="${escHtml(nameVal || '')}">
+                    </div>
+                    <div class="col-md-5">
+                        <input type="text" name="coauthor_role_${n}" class="form-control form-control-sm"
+                               placeholder="บทบาท เช่น ผู้ร่วมวิจัย, ที่ปรึกษา" value="${escHtml(roleVal || '')}">
+                    </div>
+                    <div class="col-md-2">
+                        <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCoauthor(this)">
+                            <i class="fas fa-trash-alt"></i> ลบ
+                        </button>
+                    </div>`;
+                document.getElementById('coauthorBlocks').appendChild(div);
+                document.getElementById('coauthorCountField').value = coauthorCount;
+            }
+
+            function removeCoauthor(btn) {
+                btn.closest('.coauthor-row').remove();
+                renumberCoauthors();
+            }
+
+            function renumberCoauthors() {
+                const rows = document.querySelectorAll('#coauthorBlocks .coauthor-row');
+                coauthorCount = rows.length;
+                rows.forEach((row, i) => {
+                    const num = i + 1;
+                    row.setAttribute('data-idx', num);
+                    row.querySelector('.badge').textContent = num;
+                    row.querySelectorAll('input').forEach(input => {
+                        input.name = input.name.replace(/_\d+$/, '_' + num);
+                    });
+                });
+                document.getElementById('coauthorCountField').value = coauthorCount;
+            }
+
+            function escHtml(s) { return s ? s.replace(/"/g, '&quot;').replace(/</g, '&lt;') : ''; }
+
             document.addEventListener('DOMContentLoaded', function() {
+                document.getElementById('btnAddCoauthor').addEventListener('click', () => addCoauthorRow());
+
                 const existingData = /*[[${existingData}]]*/ null;
                 if (existingData) {
                     try {
                         const data = JSON.parse(existingData);
+
+                        // Restore co-authors
+                        let maxCo = 0;
+                        for (const key of Object.keys(data)) {
+                            const m = key.match(/^coauthor_name_(\d+)$/);
+                            if (m) maxCo = Math.max(maxCo, parseInt(m[1]));
+                        }
+                        for (let i = 1; i <= maxCo; i++) {
+                            addCoauthorRow(data[`coauthor_name_${i}`], data[`coauthor_role_${i}`]);
+                        }
+
+                        // Restore other fields
                         for (const [key, value] of Object.entries(data)) {
+                            if (key.startsWith('coauthor_')) continue;
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
                                 if (el.type === 'checkbox') { el.checked = (value === '☑'); }

@@ -64,7 +64,6 @@ public class PositionRequestService {
 
     private static final Map<Integer, String> DOC_LABELS = new LinkedHashMap<>();
     static {
-        DOC_LABELS.put(0, "บันทึกข้อความ ขอรับการประเมินผลการสอน");
         DOC_LABELS.put(1, "แบบ ก.พ.ว. มข. 03 (ประวัติและผลงาน)");
         DOC_LABELS.put(2, "หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูล");
         DOC_LABELS.put(3, "แบบรับรองจริยธรรมและจรรยาบรรณ");
@@ -80,7 +79,7 @@ public class PositionRequestService {
     public static final List<Integer> APPLICANT_DOCS = Arrays.asList(1, 2, 3, 4, 6, 7, 9);
 
     // Admin fills these (hidden from applicant)
-    public static final List<Integer> ADMIN_DOCS = Arrays.asList(0, 5, 8);
+    public static final List<Integer> ADMIN_DOCS = Arrays.asList(5, 8);
 
     public Map<Integer, String> getDocLabels() {
         return DOC_LABELS;
