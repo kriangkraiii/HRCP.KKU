@@ -441,6 +441,25 @@
 /* -- Doc Cards -- */
 [data-theme="dark"] .doc-card {
     background: var(--bg-card) !important;
+    border-left: 4px solid #42a5f5;
+}
+
+[data-theme="dark"] .doc-card.generated {
+    border-left: 4px solid #4caf50;
+}
+
+/* Doc card list borders in admin request_detail */
+[data-theme="dark"] .card.border-start.border-success {
+    border-left: 4px solid #4caf50 !important;
+}
+
+[data-theme="dark"] .card-body > .card.mb-2 {
+    border: 1px solid var(--border-color) !important;
+}
+
+[data-theme="dark"] .card-body > .card.mb-2.border-start.border-success {
+    border: 1px solid var(--border-color) !important;
+    border-left: 4px solid #4caf50 !important;
 }
 
 /* === Theme Switcher UI (Settings) === */
