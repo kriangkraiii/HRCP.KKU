@@ -204,13 +204,9 @@
                 div.setAttribute('data-idx', n);
                 div.innerHTML = `
                     <div class="col-md-1 text-center"><span class="badge bg-secondary">${n}</span></div>
-                    <div class="col-md-4">
+                    <div class="col-md-9">
                         <input type="text" name="coauthor_name_${n}" class="form-control form-control-sm"
                                placeholder="ชื่อ-นามสกุล" value="${escHtml(nameVal || '')}">
-                    </div>
-                    <div class="col-md-5">
-                        <input type="text" name="coauthor_role_${n}" class="form-control form-control-sm"
-                               placeholder="บทบาท เช่น ผู้ร่วมวิจัย, ที่ปรึกษา" value="${escHtml(roleVal || '')}">
                     </div>
                     <div class="col-md-2">
                         <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeCoauthor(this)">

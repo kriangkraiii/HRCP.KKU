@@ -180,6 +180,9 @@ public class DocumentGenerationService {
                         // Step 1.5: Dynamic row cloning - เพิ่มแถวตารางสำหรับนวิจัยที่เกิน 5 รายการ
                         xml = expandDynamicRows(xml, placeholders);
 
+                        // Step 1.6: Co-author signature cloning - เพิ่มลายเซ็นผู้ร่วมงานในเอกสารที่ 9
+                        xml = expandCoauthorSignatures(xml, placeholders);
+
                         // Step 2: Simple replace - แทนค่า {{placeholder}} ทั้งหมด
                         for (Map.Entry<String, String> ph : placeholders.entrySet()) {
                             String token = "{{" + ph.getKey() + "}}";
@@ -188,6 +191,9 @@ public class DocumentGenerationService {
                                 xml = xml.replace(token, value);
                             }
                         }
+
+                        // Step 2.5: Cleanup - ลบ {{...}} ที่เหลือซึ่งไม่มีค่าจากฟอร์ม
+                        xml = xml.replaceAll("\\{\\{[^}]+\\}\\}", "");
 
                         // Step 3: Checkbox rendering - ☑/☐ → MS Gothic font runs
                         xml = renderCheckboxes(xml);
@@ -412,6 +418,113 @@ public class DocumentGenerationService {
                 break;
             }
             searchFrom = trEnd;
+        }
+
+        return xml;
+    }
+
+    // =====================================================================
+    // Step 1.6: Co-author Signature Expansion (Doc 9)
+    // =====================================================================
+
+    /**
+     * เอกสารที่ 9: ถ้ามี coauthor_count > 0 จะ clone paragraph group ลายเซ็น
+     * ของ {{corres_name}} สำหรับผู้ร่วมงานแต่ละคน
+     * 
+     * โครงสร้าง DOCX signature block (3 paragraphs):
+     * <w:p>...ลงชื่อ..................... </w:p>
+     * <w:p>...({{corres_name}})</w:p>
+     * <w:p>...ผู้ประพันธ์บรรณกิจ (Corresponding author)</w:p>
+     */
+    private String expandCoauthorSignatures(String xml, Map<String, String> placeholders) {
+        String countStr = placeholders.get("coauthor_count");
+        if (countStr == null || countStr.isEmpty()) {
+            return xml;
+        }
+        int count;
+        try {
+            count = Integer.parseInt(countStr);
+        } catch (NumberFormatException e) {
+            return xml;
+        }
+        if (count <= 0 || !xml.contains("{{corres_name}}")) {
+            return xml;
+        }
+
+        // หา paragraph ที่มี {{corres_name}}
+        int corresIdx = xml.indexOf("{{corres_name}}");
+        if (corresIdx == -1) return xml;
+
+        // หา <w:p> ที่ครอบ {{corres_name}} (paragraph ชื่อ)
+        int pNameStart = xml.lastIndexOf("<w:p ", corresIdx);
+        if (pNameStart == -1) pNameStart = xml.lastIndexOf("<w:p>", corresIdx);
+        if (pNameStart == -1) return xml;
+
+        int pNameEnd = xml.indexOf("</w:p>", corresIdx);
+        if (pNameEnd == -1) return xml;
+        pNameEnd += "</w:p>".length();
+
+        // หา paragraph ถัดไป (role paragraph เช่น "ผู้ประพันธ์บรรณกิจ")
+        int pRoleStart = xml.indexOf("<w:p ", pNameEnd);
+        if (pRoleStart == -1) pRoleStart = xml.indexOf("<w:p>", pNameEnd);
+        if (pRoleStart == -1) return xml;
+
+        int pRoleEnd = xml.indexOf("</w:p>", pRoleStart);
+        if (pRoleEnd == -1) return xml;
+        pRoleEnd += "</w:p>".length();
+
+        // หา paragraph ก่อนหน้า ("ลงชื่อ..." paragraph)
+        int scanBack = pNameStart - 1;
+        int pSignStart = xml.lastIndexOf("<w:p ", scanBack);
+        if (pSignStart == -1) pSignStart = xml.lastIndexOf("<w:p>", scanBack);
+        if (pSignStart == -1) return xml;
+
+        int pSignEnd = xml.indexOf("</w:p>", pSignStart);
+        if (pSignEnd == -1) return xml;
+        pSignEnd += "</w:p>".length();
+
+        // ตรวจว่า pSignEnd == pNameStart (ต่อเนื่องกัน)
+        // ถ้าไม่ใช่: ลองใช้ pNameStart เป็น pSignStart
+        // เพื่อ clone เฉพาะ 2 paragraphs (ชื่อ + ตำแหน่ง)
+        String signBlock, nameBlock, roleBlock;
+        String fullBlock; // 3 paragraphs: ลงชื่อ + ชื่อ + ตำแหน่ง
+        int insertAfter;
+
+        if (pSignEnd <= pNameStart) {
+            // 3 paragraphs ต่อเนื่อง
+            signBlock = xml.substring(pSignStart, pSignEnd);
+            nameBlock = xml.substring(pNameStart, pNameEnd);
+            roleBlock = xml.substring(pRoleStart, pRoleEnd);
+            fullBlock = signBlock + nameBlock + roleBlock;
+            insertAfter = pRoleEnd;
+        } else {
+            // ใช้ 2 paragraphs (ชื่อ + ตำแหน่ง)
+            nameBlock = xml.substring(pNameStart, pNameEnd);
+            roleBlock = xml.substring(pRoleStart, pRoleEnd);
+            signBlock = null;
+            fullBlock = nameBlock + roleBlock;
+            insertAfter = pRoleEnd;
+        }
+
+        // สร้าง signature blocks สำหรับ co-authors
+        StringBuilder coauthorBlocks = new StringBuilder();
+        for (int i = 1; i <= count; i++) {
+            String coName = placeholders.getOrDefault("coauthor_name_" + i, "");
+            String coRole = placeholders.getOrDefault("coauthor_role_" + i, "ผู้ร่วมประพันธ์");
+            if (coName.isEmpty()) continue;
+
+            String block = fullBlock;
+            // แทนชื่อ: {{corres_name}} → coauthor name
+            block = block.replace("{{corres_name}}", "{{coauthor_name_" + i + "}}");
+            // แทนตำแหน่ง: หาข้อความ "ผู้ประพันธ์บรรณกิจ (Corresponding author)" แล้วเปลี่ยน
+            block = block.replace("Corresponding author", coRole.isEmpty() ? "ผู้ร่วมประพันธ์" : escapeXml(coRole));
+            block = block.replace("\u0E1C\u0E39\u0E49\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E1A\u0E23\u0E23\u0E13\u0E01\u0E34\u0E08", 
+                    coRole.isEmpty() ? "\u0E1C\u0E39\u0E49\u0E23\u0E48\u0E27\u0E21\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C" : escapeXml(coRole));
+            coauthorBlocks.append(block);
+        }
+
+        if (coauthorBlocks.length() > 0) {
+            xml = xml.substring(0, insertAfter) + coauthorBlocks.toString() + xml.substring(insertAfter);
         }
 
         return xml;
