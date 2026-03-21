@@ -20,4 +20,7 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
     List<AcademicRequest> findByApplicantIdAndCurrentStatus(Integer applicantId, RequestStatus status);
 
     List<AcademicRequest> findByApplicantNameContainingIgnoreCaseOrderByCreatedAtDesc(String name);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM AcademicRequest r WHERE (LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
+    List<AcademicRequest> searchByNameOrEmail(@org.springframework.data.repository.query.Param("keyword") String keyword);
 }

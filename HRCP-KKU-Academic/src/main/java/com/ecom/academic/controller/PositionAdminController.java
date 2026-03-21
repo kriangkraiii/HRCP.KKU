@@ -1,10 +1,20 @@
 package com.ecom.academic.controller;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -12,8 +22,11 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.multipart.MultipartFile;
 
+import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
+import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.service.DocumentGenerationService;
@@ -53,7 +66,6 @@ public class PositionAdminController {
         model.addAttribute("requests", requests);
         model.addAttribute("statuses", PositionRequestStatus.values());
 
-        // ดึงข้อมูลตำแหน่งจาก doc_2 สำหรับทุกคำร้อง
         java.util.Map<Long, java.util.Map<String, String>> doc2DataMap = new java.util.HashMap<>();
         for (PositionRequest req : requests) {
             List<PositionDocument> doc2List = positionService.getDocumentsByType(req.getId(), 2);
@@ -86,9 +98,14 @@ public class PositionAdminController {
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
         model.addAttribute("statuses", PositionRequestStatus.values());
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
+        model.addAttribute("editHistory", positionService.getEditHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
 
-        // Calculate progress percentage for the line
+        // Attachments
+        model.addAttribute("attachments", positionService.getAttachments(id));
+        model.addAttribute("attachmentCount", positionService.countAttachments(id));
+
+        // Progress percentage
         PositionRequestStatus[] steps = PositionRequestStatus.getProgressSteps();
         int currentIdx = 0;
         for (int i = 0; i < steps.length; i++) {
@@ -124,7 +141,6 @@ public class PositionAdminController {
             PositionRequest request = positionService.findById(id)
                     .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
-            // Block status update for draft requests
             if (request.getCurrentStatus().isDraft()) {
                 redirectAttributes.addFlashAttribute("errorDetail",
                         "ไม่สามารถอัพเดทสถานะได้ คำร้องยังเป็นแบบร่าง");
@@ -148,14 +164,13 @@ public class PositionAdminController {
         return "redirect:/admin/position/request/" + id + "?success=status_updated";
     }
 
-    // ================== Document Forms (Admin fills docs 5, 8) ==================
+    // ================== Document Forms ==================
 
     @GetMapping("/request/{id}/document/{type}")
     public String documentForm(@PathVariable Long id, @PathVariable int type, Model model) {
         PositionRequest request = positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
-        // Block document editing for draft requests
         if (request.getCurrentStatus().isDraft()) {
             return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
         }
@@ -169,25 +184,21 @@ public class PositionAdminController {
         model.addAttribute("existingData", existingData);
         model.addAttribute("deans", staffMemberService.findAll());
 
-        // For doc 8: also load doc 6 (applicant research) data for auto-population
         if (type == 8) {
             List<PositionDocument> doc6List = positionService.getDocumentsByType(id, 6);
             String doc6Data = doc6List.isEmpty() ? null : doc6List.get(0).getJsonData();
             model.addAttribute("doc6Data", doc6Data);
         }
 
-        // All document types have dedicated admin forms
         return "academic/position/admin/doc_form_" + type;
     }
 
     @PostMapping("/request/{id}/document/{type}")
     public String saveDocument(@PathVariable Long id, @PathVariable int type,
-            @RequestParam Map<String, String> formData,
-            Principal principal) {
+            @RequestParam Map<String, String> formData, Principal principal) {
         PositionRequest request = positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
-        // Block document saving for draft requests
         if (request.getCurrentStatus().isDraft()) {
             return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
         }
@@ -195,8 +206,6 @@ public class PositionAdminController {
         formData.remove("_csrf");
 
         try {
-            // For doc 7: merge admin data with existing applicant data
-            // to prevent overwriting applicant's sections when admin only fills section 3
             if (type == 7) {
                 formData = mergeWithExistingData(request, type, formData);
             }
@@ -204,7 +213,6 @@ public class PositionAdminController {
             String jsonData = objectMapper.writeValueAsString(formData);
             String label = positionService.getDocLabel(type);
 
-            // Generate DOCX
             String filePath = null;
             try {
                 filePath = documentService.generateP2Document(request, type, jsonData);
@@ -212,7 +220,13 @@ public class PositionAdminController {
                 System.err.println("Phase2 doc generation failed for type " + type + ": " + e.getMessage());
             }
 
+            boolean isNew = positionService.getDocumentsByType(id, type).isEmpty();
             positionService.saveDocument(request, type, jsonData, filePath, label, null, "ADMIN");
+
+            // Log document edit
+            UserDtls admin = getUser(principal);
+            positionService.logDocumentEdit(request, type, label, admin,
+                    isNew ? PositionDocumentEditLog.EditAction.CREATED : PositionDocumentEditLog.EditAction.UPDATED);
 
             return "redirect:/admin/position/request/" + id + "?success=doc_generated";
         } catch (Exception e) {
@@ -220,15 +234,191 @@ public class PositionAdminController {
         }
     }
 
+    // ================== Document Download ==================
+
+    @GetMapping("/request/{id}/document/{type}/download")
+    public ResponseEntity<ByteArrayResource> downloadDocument(@PathVariable Long id,
+            @PathVariable int type) throws IOException {
+        PositionRequest request = positionService.findById(id)
+                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+
+        List<PositionDocument> docs = positionService.getDocumentsByType(id, type);
+        if (docs.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        PositionDocument doc = docs.get(0);
+        byte[] data = null;
+        String label = doc.getDocumentLabel() != null ? doc.getDocumentLabel() : "document";
+
+        // Try using existing generated file first
+        if (doc.getGeneratedFilePath() != null) {
+            Path filePath = Path.of(doc.getGeneratedFilePath());
+            if (Files.exists(filePath)) {
+                data = Files.readAllBytes(filePath);
+            }
+        }
+
+        // If no file exists, generate on-the-fly from jsonData + template
+        if (data == null && doc.getJsonData() != null) {
+            try {
+                String generatedPath = documentService.generateP2Document(request, type, doc.getJsonData());
+                if (generatedPath != null) {
+                    Path filePath = Path.of(generatedPath);
+                    if (Files.exists(filePath)) {
+                        data = Files.readAllBytes(filePath);
+                        // Save the path for future downloads
+                        doc.setGeneratedFilePath(generatedPath);
+                        positionService.saveDocument(request, type, doc.getJsonData(),
+                                generatedPath, label, doc.getCopyNumber(), doc.getFilledBy());
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("On-the-fly DOCX generation failed for doc " + type + ": " + e.getMessage());
+            }
+        }
+
+        if (data == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String filename = label + ".docx";
+        String safeFilename = java.net.URLEncoder.encode(filename, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safeFilename)
+                .body(new ByteArrayResource(data));
+    }
+
+    @GetMapping("/request/{id}/download-all")
+    public ResponseEntity<ByteArrayResource> downloadAll(@PathVariable Long id) throws IOException {
+        PositionRequest request = positionService.findById(id)
+                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+
+        List<PositionDocument> documents = positionService.getDocuments(id);
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            for (PositionDocument doc : documents) {
+                byte[] docBytes = null;
+
+                // Try existing file
+                if (doc.getGeneratedFilePath() != null) {
+                    Path filePath = Path.of(doc.getGeneratedFilePath());
+                    if (Files.exists(filePath)) {
+                        docBytes = Files.readAllBytes(filePath);
+                    }
+                }
+
+                // Generate on-the-fly if needed
+                if (docBytes == null && doc.getJsonData() != null) {
+                    try {
+                        String generatedPath = documentService.generateP2Document(
+                                request, doc.getDocumentType(), doc.getJsonData());
+                        if (generatedPath != null) {
+                            Path filePath = Path.of(generatedPath);
+                            if (Files.exists(filePath)) {
+                                docBytes = Files.readAllBytes(filePath);
+                            }
+                        }
+                    } catch (Exception e) {
+                        System.err.println("ZIP: doc gen failed for type " + doc.getDocumentType() + ": " + e.getMessage());
+                    }
+                }
+
+                if (docBytes != null) {
+                    String entryName = "doc_" + doc.getDocumentType() + "_" +
+                            (doc.getDocumentLabel() != null ? doc.getDocumentLabel() : "document") + ".docx";
+                    zos.putNextEntry(new ZipEntry(entryName));
+                    zos.write(docBytes);
+                    zos.closeEntry();
+                }
+            }
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType("application/zip"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"position_request_" + id + "_documents.zip\"")
+                .body(new ByteArrayResource(baos.toByteArray()));
+    }
+
+    // ================== Attachment Management ==================
+
+    @PostMapping("/request/{id}/upload-attachment")
+    public String uploadAttachment(@PathVariable Long id,
+            @RequestParam("file") MultipartFile file,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+        try {
+            PositionRequest request = positionService.findById(id)
+                    .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+
+            if (positionService.countAttachments(id) >= 10) {
+                return "redirect:/admin/position/request/" + id + "?error=max_attachments";
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null || (!originalFilename.toLowerCase().endsWith(".pdf")
+                    && !originalFilename.toLowerCase().endsWith(".docx"))) {
+                return "redirect:/admin/position/request/" + id + "?error=invalid_file_type";
+            }
+
+            String uploadDir = "uploads/position/" + id + "/attachments/";
+            Files.createDirectories(Path.of(uploadDir));
+            String storedName = System.currentTimeMillis() + "_" + originalFilename;
+            Path storedPath = Path.of(uploadDir, storedName);
+            file.transferTo(storedPath.toFile());
+
+            PositionAttachment attachment = new PositionAttachment();
+            attachment.setRequest(request);
+            attachment.setOriginalFilename(originalFilename);
+            attachment.setStoredFilePath(storedPath.toString());
+            attachment.setFileType(originalFilename.toLowerCase().endsWith(".pdf") ? "PDF" : "DOCX");
+            attachment.setFileSize(file.getSize());
+            positionService.saveAttachment(attachment);
+
+            return "redirect:/admin/position/request/" + id + "?success=attachment_uploaded";
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorDetail", e.getMessage());
+            return "redirect:/admin/position/request/" + id + "?error=upload_failed";
+        }
+    }
+
+    @GetMapping("/request/{id}/attachment/{attachmentId}/download")
+    public ResponseEntity<ByteArrayResource> downloadAttachment(@PathVariable Long id,
+            @PathVariable Long attachmentId) throws IOException {
+        PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
+                .orElseThrow(() -> new RuntimeException("ไม่พบเอกสาร"));
+
+        byte[] data = Files.readAllBytes(Path.of(attachment.getStoredFilePath()));
+
+        String contentType = attachment.getFileType().equalsIgnoreCase("PDF")
+                ? "application/pdf"
+                : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+
+        String safeFilename = java.net.URLEncoder.encode(attachment.getOriginalFilename(),
+                java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safeFilename)
+                .body(new ByteArrayResource(data));
+    }
+
+    @PostMapping("/request/{id}/attachment/{attachmentId}/delete")
+    public String deleteAttachment(@PathVariable Long id, @PathVariable Long attachmentId) {
+        positionService.deleteAttachment(attachmentId);
+        return "redirect:/admin/position/request/" + id + "?success=attachment_deleted";
+    }
+
+    // ================== Utility ==================
+
     private UserDtls getUser(Principal principal) {
         return userRepository.findByEmail(principal.getName());
     }
 
-    /**
-     * Merge form data with existing saved document data.
-     * Existing data (e.g., from applicant) is loaded first,
-     * then admin's form data is laid on top (non-empty values override).
-     */
     @SuppressWarnings("unchecked")
     private Map<String, String> mergeWithExistingData(PositionRequest request, int type,
             Map<String, String> formData) {
@@ -238,7 +428,6 @@ public class PositionAdminController {
                 String existingJson = existing.get(0).getJsonData();
                 if (existingJson != null && !existingJson.isEmpty()) {
                     Map<String, String> existingData = objectMapper.readValue(existingJson, Map.class);
-                    // Overlay form data on top of existing data
                     for (Map.Entry<String, String> entry : formData.entrySet()) {
                         existingData.put(entry.getKey(), entry.getValue());
                     }

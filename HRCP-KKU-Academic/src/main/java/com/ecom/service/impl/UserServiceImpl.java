@@ -189,7 +189,8 @@ public class UserServiceImpl implements UserService {
 
 		if (!ObjectUtils.isEmpty(dbUser)) {
 			dbUser.setTitle(user.getTitle());
-			dbUser.setName(user.getName());
+			dbUser.setFirstName(user.getFirstName());
+			dbUser.setLastName(user.getLastName());
 			dbUser.setMobileNumber(user.getMobileNumber());
 			dbUser.setAcademicPosition(user.getAcademicPosition());
 			dbUser = userRepository.save(dbUser);
@@ -324,11 +325,13 @@ public class UserServiceImpl implements UserService {
 				if (existingUser != null && !existingUser.getId().equals(user.getId())) {
 					throw new RuntimeException("อีเมลนี้มีในระบบแล้ว");
 				}
+				// Reset email verification — user must re-verify the new email
+				dbUser.setEmailVerified(false);
 			}
 
-			// Update fields (preserve password, role, security fields)
 			dbUser.setTitle(user.getTitle());
-			dbUser.setName(user.getName());
+			dbUser.setFirstName(user.getFirstName());
+			dbUser.setLastName(user.getLastName());
 			dbUser.setEmail(user.getEmail());
 			dbUser.setMobileNumber(user.getMobileNumber());
 			dbUser.setAcademicPosition(user.getAcademicPosition());

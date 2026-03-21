@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.PositionRequestService;
@@ -49,6 +50,8 @@ public class AutoDraftApiController {
             String label = "เอกสารที่ " + docType;
             academicService.saveDraft(request, docType, jsonData, label, null);
 
+            // Log is not needed for academic (Phase 1) auto-draft — edit history is only for Position (Phase 2)
+
             return ResponseEntity.ok(Map.of("status", "saved", "type", "academic"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
@@ -74,6 +77,10 @@ public class AutoDraftApiController {
             String label = positionService.getDocLabel(docType);
             String filledBy = "ROLE_ADMIN".equals(user.getRole()) ? "ADMIN" : "APPLICANT";
             positionService.saveDraft(request, docType, jsonData, label, filledBy);
+
+            // Log every document edit
+            positionService.logDocumentEdit(request, docType, label, user,
+                    PositionDocumentEditLog.EditAction.DRAFT_SAVED);
 
             return ResponseEntity.ok(Map.of("status", "saved", "type", "position"));
         } catch (Exception e) {

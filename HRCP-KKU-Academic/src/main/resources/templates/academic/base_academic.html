@@ -9,6 +9,16 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
         rel="stylesheet">
     <link rel="icon" type="image/png" href="/img/cphr_new.png">
+    <meta name="_csrf" th:content="${_csrf.token}">
+    <meta name="_csrf_header" th:content="${_csrf.headerName}">
+    <link rel="stylesheet" href="/css/dark-theme.css">
+    <script th:inline="javascript">
+        // Anti-flash: apply user's server-side theme BEFORE paint
+        (function(){var t=/*[[${user != null && user.themePreference != null ? user.themePreference : 'light'}]]*/ 'light';
+        window.USER_THEME_PREFERENCE=t;
+        if(t==='system'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
+        if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();
+    </script>
     <style>
         :root {
             --sidebar-width: 260px;
@@ -195,6 +205,17 @@
             padding: 12px 20px 6px;
             font-weight: 600;
         }
+
+        /* Sidebar dropdown */
+        .sidebar-dropdown-toggle:hover { color: rgba(255,255,255,.55); }
+        .sidebar-dropdown-toggle .fa-chevron-down { transition: transform .25s ease; }
+        .sidebar-dropdown-toggle.open .fa-chevron-down { transform: rotate(180deg); }
+        .sidebar-dropdown-menu {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .3s ease;
+        }
+        .sidebar-dropdown-menu.show { max-height: 200px; }
 
         .sidebar-link {
             display: flex;
@@ -564,16 +585,21 @@
                     <i class="fas fa-university"></i> คำร้องขอตำแหน่งทางวิชาการ
                 </a>
 
-                <div class="sidebar-section-title">จัดการผู้ใช้</div>
-                <a href="/admin/add-admin" class="sidebar-link" id="nav-add-user">
-                    <i class="fas fa-user-plus"></i> เพิ่มผู้ใช้
-                </a>
-                <a href="/admin/users?type=1" class="sidebar-link" id="nav-users">
-                    <i class="fas fa-users"></i> จัดการผู้ใช้
-                </a>
-                <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins">
-                    <i class="fas fa-user-shield"></i> จัดการแอดมิน
-                </a>
+                <div class="sidebar-section-title sidebar-dropdown-toggle" onclick="this.classList.toggle('open');this.nextElementSibling.classList.toggle('show')" style="cursor:pointer;display:flex;justify-content:space-between;align-items:center;user-select:none">
+                    <span>จัดการผู้ใช้</span>
+                    <i class="fas fa-chevron-down" style="font-size:0.55rem;transition:transform .25s ease"></i>
+                </div>
+                <div class="sidebar-dropdown-menu">
+                    <a href="/admin/add-admin" class="sidebar-link" id="nav-add-user">
+                        <i class="fas fa-user-plus"></i> เพิ่มผู้ใช้
+                    </a>
+                    <a href="/admin/users?type=1" class="sidebar-link" id="nav-users">
+                        <i class="fas fa-users"></i> จัดการผู้ใช้
+                    </a>
+                    <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins">
+                        <i class="fas fa-user-shield"></i> จัดการแอดมิน
+                    </a>
+                </div>
 
                 <div class="sidebar-section-title">ระบบ</div>
                 <a href="/admin/activity-logs" class="sidebar-link" id="nav-logs">
@@ -583,10 +609,6 @@
                     <i class="fas fa-folder-open"></i> จัดการไฟล์
                 </a>
 
-                <div class="sidebar-section-title">บัญชีของฉัน</div>
-                <a href="/admin/profile" class="sidebar-link" id="nav-profile">
-                    <i class="fas fa-id-card"></i> โปรไฟล์
-                </a>
             </th:block>
 
             <!-- USER Navigation -->
@@ -609,10 +631,11 @@
                     <i class="fas fa-university"></i> ยื่นขอตำแหน่ง
                 </a>
 
-                <div class="sidebar-section-title">บัญชีของฉัน</div>
-                <a href="/user/profile" class="sidebar-link" id="nav-profile">
-                    <i class="fas fa-id-card"></i> โปรไฟล์
+                <div class="sidebar-section-title">เอกสารอ้างอิง</div>
+                <a href="/user/academic/documents" class="sidebar-link" id="nav-documents">
+                    <i class="fas fa-book-open"></i> เอกสาร/ข้อบังคับ
                 </a>
+
             </th:block>
 
             <!-- Settings Link (shared) -->
@@ -799,14 +822,21 @@
 
         <!-- Sidebar Footer: User Info -->
         <div class="sidebar-footer" th:if="${user != null}">
-            <div class="sidebar-user">
-                <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
+            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user" style="text-decoration:none;">
+                <div class="user-avatar" style="overflow:hidden;">
+                    <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
+                         th:src="'/img/profile_img/' + ${user.profileImage}"
+                         style="width:100%;height:100%;object-fit:cover;border-radius:50%;"
+                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                    <i class="fa-solid fa-user" th:if="${user.profileImage == null or user.profileImage == 'default.png'}"></i>
+                    <i class="fa-solid fa-user" style="display:none;"></i>
+                </div>
                 <div class="user-info">
                     <div class="user-name" th:text="${user.name}"></div>
                     <div class="user-role" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : 'ผู้ยื่นคำร้อง'">
                     </div>
                 </div>
-            </div>
+            </a>
             <form method="post" action="/logout" style="margin:0;padding:0;">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <button type="submit" class="sidebar-logout" style="border:none;width:100%;cursor:pointer;background:inherit;font:inherit;color:inherit;text-align:left;">
@@ -846,7 +876,17 @@
                 link.classList.add('active');
             }
         });
+
+        // Auto-open sidebar dropdowns if a child link is active
+        document.querySelectorAll('.sidebar-dropdown-menu').forEach(menu => {
+            if (menu.querySelector('.sidebar-link.active')) {
+                menu.classList.add('show');
+                var toggle = menu.previousElementSibling;
+                if (toggle) toggle.classList.add('open');
+            }
+        });
     </script>
+<script src="/js/theme-switcher.js"></script>
 </body>
 
 </html>

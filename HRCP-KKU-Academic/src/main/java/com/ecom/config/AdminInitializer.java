@@ -29,7 +29,8 @@ public class AdminInitializer implements CommandLineRunner {
 
         if (!userRepository.existsByEmail(adminEmail)) {
             UserDtls admin = new UserDtls();
-            admin.setName("Admin");
+            admin.setFirstName("Admin");
+            admin.setLastName("System");
             admin.setEmail(adminEmail);
             admin.setPassword(passwordEncoder.encode("admin"));
             admin.setRole("ROLE_ADMIN");

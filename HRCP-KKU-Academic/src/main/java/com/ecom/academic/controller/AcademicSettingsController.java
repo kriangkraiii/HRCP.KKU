@@ -165,21 +165,29 @@ public class AcademicSettingsController {
     @ResponseBody
     public ResponseEntity<?> toggleSetting(
             @RequestParam String key,
-            @RequestParam boolean value,
+            @RequestParam String value,
             Principal principal) {
         try {
             UserDtls user = userRepository.findByEmail(principal.getName());
             switch (key) {
-                case "autoDraftEnabled" -> user.setAutoDraftEnabled(value);
-                case "emailNotificationEnabled" -> user.setEmailNotificationEnabled(value);
-                case "expiryAlert6m" -> user.setExpiryAlert6m(value);
-                case "expiryAlert3m" -> user.setExpiryAlert3m(value);
-                case "expiryAlert1m" -> user.setExpiryAlert1m(value);
-                case "expiryAlert1w" -> user.setExpiryAlert1w(value);
+                case "autoDraftEnabled" -> user.setAutoDraftEnabled(Boolean.parseBoolean(value));
+                case "emailNotificationEnabled" -> user.setEmailNotificationEnabled(Boolean.parseBoolean(value));
+                case "expiryAlert6m" -> user.setExpiryAlert6m(Boolean.parseBoolean(value));
+                case "expiryAlert3m" -> user.setExpiryAlert3m(Boolean.parseBoolean(value));
+                case "expiryAlert1m" -> user.setExpiryAlert1m(Boolean.parseBoolean(value));
+                case "expiryAlert1w" -> user.setExpiryAlert1w(Boolean.parseBoolean(value));
+                case "themePreference" -> {
+                    if ("light".equals(value) || "dark".equals(value) || "system".equals(value)) {
+                        user.setThemePreference(value);
+                    } else {
+                        return ResponseEntity.badRequest().body(Map.of("success", false, "message", "Invalid theme value"));
+                    }
+                }
                 default -> {
                     return ResponseEntity.badRequest().body(Map.of("success", false, "message", "ไม่รู้จักการตั้งค่า: " + key));
                 }
             }
+
             userRepository.save(user);
             return ResponseEntity.ok(Map.of("success", true, "message", "บันทึกแล้ว"));
         } catch (Exception e) {

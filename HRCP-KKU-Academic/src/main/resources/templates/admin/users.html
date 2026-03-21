@@ -33,10 +33,12 @@
 								<th scope="col">Sl No.</th>
 								<th scope="col" th:if="${userType==1}">Applicant ID</th>
 								<th scope="col">Profile</th>
-								<th scope="col">Name</th>
+								<th scope="col">ชื่อ</th>
+								<th scope="col">นามสกุล</th>
 								<th scope="col">Email</th>
 								<th scope="col">Mobile No</th>
-								<th scope="col">ตำแหน่งทางวิชาการ</th>							<th scope="col" th:if="${userType==2}">แจ้งเตือนคำร้อง</th>								<th scope="col">Status</th>
+								<th scope="col">ตำแหน่งทางวิชาการ</th>
+								<th scope="col">Status</th>
 								<th scope="col">Actions</th>
 							</tr>
 						</thead>
@@ -50,22 +52,12 @@
 										style="object-fit: cover; border-radius: 50%;"
 										onerror="this.src='/img/profile_img/default.png'"></td>
 
-								<td>[[${u.name}]]</td>
+								<td>[[${u.firstName}]]</td>
+								<td>[[${u.lastName}]]</td>
 								<td>[[${u.email}]]</td>
 								<td>[[${u.mobileNumber}]]</td>
-								<td>[[${u.academicPosition != null ? u.academicPosition : '-'}]]</td>							<td th:if="${userType==2}">
-								<div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
-									<input class="form-check-input" type="checkbox" role="switch"
-										th:checked="${u.emailNotificationEnabled != null && u.emailNotificationEnabled}"
-										th:data-id="${u.id}"
-										th:data-type="${userType}"
-										style="width: 3em; height: 1.5em; cursor: pointer;"
-										onchange="toggleNotification(this)">
-									<label class="form-check-label fw-semibold"
-										th:classappend="${u.emailNotificationEnabled != null && u.emailNotificationEnabled} ? 'text-success' : 'text-secondary'"
-										th:text="${u.emailNotificationEnabled != null && u.emailNotificationEnabled} ? 'เปิด' : 'ปิด'"></label>
-								</div>
-							</td>								<td>
+								<td>[[${u.academicPosition != null ? u.academicPosition : '-'}]]</td>
+								<td>
 									<div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
 										<input class="form-check-input status-toggle" type="checkbox" role="switch"
 											th:checked="${u.isEnable}"
@@ -139,12 +131,7 @@
 				postForm('/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type);
 			}
 
-			function toggleNotification(el) {
-				const id = el.dataset.id;
-				const type = el.dataset.type;
-				const newEnabled = el.checked;
-				postForm('/admin/updateEmailNotification?enabled=' + newEnabled + '&id=' + id + '&type=' + type);
-			}
+
 
 			function confirmDelete(userId, userType) {
 				const message = userType === 1 

@@ -8,12 +8,17 @@
                 <i class="fas fa-check-circle"></i>
                 <span th:if="${param.success[0] == 'status_updated'}">อัพเดทสถานะสำเร็จ</span>
                 <span th:if="${param.success[0] == 'doc_generated'}">บันทึกเอกสารสำเร็จ</span>
+                <span th:if="${param.success[0] == 'attachment_uploaded'}">อัปโหลดเอกสารเพิ่มเติมสำเร็จ</span>
+                <span th:if="${param.success[0] == 'attachment_deleted'}">ลบเอกสารเพิ่มเติมสำเร็จ</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
                 <i class="fas fa-exclamation-circle"></i>
                 <span th:if="${param.error[0] == 'status_update_failed'}">ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง</span>
                 <span th:if="${param.error[0] == 'doc_save_failed'}">ไม่สามารถบันทึกเอกสารได้</span>
+                <span th:if="${param.error[0] == 'invalid_file_type'}">รองรับเฉพาะไฟล์ .pdf และ .docx เท่านั้น</span>
+                <span th:if="${param.error[0] == 'max_attachments'}">ถึงจำนวนเอกสารเพิ่มเติมสูงสุดแล้ว (10 ไฟล์)</span>
+                <span th:if="${param.error[0] == 'upload_failed'}">อัปโหลดเอกสารไม่สำเร็จ</span>
                 <small th:if="${errorDetail != null}" class="d-block mt-1 text-danger" th:text="'รายละเอียด: ' + ${errorDetail}"></small>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -67,11 +72,8 @@
             <div class="card card-academic mb-4">
                 <div class="card-body p-3">
                     <div style="position:relative;padding:0 40px;">
-                        <!-- Background line -->
                         <div style="position:absolute;top:18px;left:60px;right:60px;height:3px;background:#e0e0e0;z-index:0;border-radius:2px;"></div>
-                        <!-- Active line overlay -->
                         <div th:style="'position:absolute;top:18px;left:60px;height:3px;background:linear-gradient(90deg,#2e7d32,#43a047);z-index:1;border-radius:2px;transition:width 0.5s ease;width:' + ${progressPercent != null ? progressPercent : 0} + '%'"></div>
-                        <!-- Steps -->
                         <div class="d-flex justify-content-between" style="position:relative;z-index:2;">
                             <th:block th:each="step, iterStat : ${progressSteps}">
                                 <div class="text-center" style="min-width:80px;flex:1;">
@@ -101,7 +103,7 @@
             </div>
 
             <div class="row">
-                <!-- Left Column: Status + History -->
+                <!-- Left Column: Status + History + Archive -->
                 <div class="col-md-5">
                     <!-- Status Update -->
                     <div class="card card-academic mb-4">
@@ -109,12 +111,10 @@
                             <h5 class="mb-0"><i class="fas fa-exchange-alt" style="color:#2e7d32"></i> อัพเดทสถานะ</h5>
                         </div>
                         <div class="card-body">
-                            <!-- Draft: disabled -->
                             <div th:if="${request.currentStatus.isDraft()}" class="text-center text-muted py-3">
                                 <i class="fas fa-lock fa-2x mb-2" style="color:#ccc"></i>
                                 <p class="mb-0">ไม่สามารถอัพเดทสถานะได้<br><small>รอผู้ยื่นคำร้องยื่นก่อน</small></p>
                             </div>
-                            <!-- Not draft: normal form -->
                             <form th:unless="${request.currentStatus.isDraft()}" th:action="'/admin/position/request/' + ${request.id} + '/status'" method="post">
                                 <div class="mb-3">
                                     <label class="form-label">สถานะใหม่</label>
@@ -138,46 +138,167 @@
                         </div>
                     </div>
 
-                    <!-- Status History -->
+                    <!-- Document Archive (คลังเอกสารเพิ่มเติม) -->
                     <div class="card card-academic mb-4">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0"><i class="fas fa-history"></i> ประวัติสถานะ</h5>
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-folder-open"></i> คลังเอกสารเพิ่มเติม</h5>
+                            <span class="badge bg-secondary" th:text="${attachmentCount} + ' / 10 ไฟล์'"></span>
                         </div>
-                        <div class="card-body" style="max-height: 350px; overflow-y: auto;">
-                            <div th:each="h : ${statusHistory}" class="border-bottom py-2">
-                                <span class="badge" th:style="'background:' + ${h.newStatus.color} + ';color:#fff'"
-                                    th:text="${h.newStatus.thaiLabel}"></span>
-                                <small class="text-muted ms-2"
-                                    th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
-                                <small th:if="${h.changedBy != null}" class="text-muted d-block">
-                                    โดย: [[${h.changedBy.name}]]
-                                </small>
-                                <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
+                        <div class="card-body">
+                            <!-- Upload Form -->
+                            <form th:action="'/admin/position/request/' + ${request.id} + '/upload-attachment'"
+                                method="post" enctype="multipart/form-data" th:if="${attachmentCount < 10}">
+                                <div class="input-group mb-3">
+                                    <input type="file" name="file" class="form-control" accept=".pdf,.docx" required>
+                                    <button type="submit" class="btn btn-success"><i class="fas fa-upload"></i> อัปโหลด</button>
+                                </div>
+                                <small class="text-muted"><i class="fas fa-info-circle"></i> รองรับไฟล์ .pdf และ .docx (สูงสุด 10 ไฟล์)</small>
+                            </form>
+                            <div th:if="${attachmentCount >= 10}" class="alert alert-warning mb-3">
+                                <i class="fas fa-exclamation-triangle"></i> ถึงจำนวนเอกสารสูงสุดแล้ว (10 ไฟล์)
                             </div>
-                            <div th:if="${statusHistory.isEmpty()}" class="text-muted text-center py-2">
-                                ยังไม่มีประวัติสถานะ
+
+                            <!-- Attachment List -->
+                            <div th:if="${#lists.isEmpty(attachments)}" class="text-muted text-center py-3">
+                                <i class="fas fa-inbox fa-2x mb-2 d-block"></i>
+                                ยังไม่มีเอกสารเพิ่มเติม
+                            </div>
+                            <div th:unless="${#lists.isEmpty(attachments)}">
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width:5%">#</th>
+                                                <th>ชื่อไฟล์</th>
+                                                <th style="width:10%">ประเภท</th>
+                                                <th style="width:15%">ขนาด</th>
+                                                <th style="width:18%">อัปโหลดเมื่อ</th>
+                                                <th style="width:15%" class="text-center">จัดการ</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="att, iterStat : ${attachments}">
+                                                <td th:text="${iterStat.count}"></td>
+                                                <td>
+                                                    <i class="fas fa-file-pdf text-danger" th:if="${att.fileType == 'PDF'}"></i>
+                                                    <i class="fas fa-file-word text-primary" th:if="${att.fileType == 'DOCX'}"></i>
+                                                    <span th:text="${att.originalFilename}"></span>
+                                                </td>
+                                                <td><span class="badge" th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : 'bg-primary'}" th:text="${att.fileType}"></span></td>
+                                                <td th:text="${att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-'}"></td>
+                                                <td th:text="${#temporals.format(att.uploadedAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                                <td class="text-center">
+                                                    <div class="btn-group btn-group-sm">
+                                                        <a th:href="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
+                                                            class="btn btn-outline-primary" title="ดาวน์โหลด">
+                                                            <i class="fas fa-download"></i>
+                                                        </a>
+                                                        <form th:action="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
+                                                            method="post" style="display:inline" onsubmit="return confirm('ต้องการลบเอกสารนี้หรือไม่?')">
+                                                            <button type="submit" class="btn btn-outline-danger" title="ลบ">
+                                                                <i class="fas fa-trash"></i>
+                                                            </button>
+                                                        </form>
+                                                    </div>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Request Info -->
+                    <!-- History (Status + Edit) — Tabbed -->
                     <div class="card card-academic mb-4">
-                        <div class="card-header bg-white">
-                            <h5 class="mb-0"><i class="fas fa-info-circle"></i> ข้อมูลคำร้อง</h5>
+                        <div class="card-header bg-white px-3 py-2">
+                            <ul class="nav nav-pills nav-fill" role="tablist" style="gap:6px">
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link active py-1 px-3" id="statusHistTab" data-bs-toggle="pill"
+                                        data-bs-target="#statusHistPane" type="button" role="tab"
+                                        style="font-weight:600;font-size:0.8rem;border-radius:20px">
+                                        <i class="fas fa-history me-1"></i>ประวัติสถานะ
+                                        <span class="badge bg-white text-primary ms-1" style="font-size:0.7rem" th:text="${statusHistory.size()}">0</span>
+                                    </button>
+                                </li>
+                                <li class="nav-item" role="presentation">
+                                    <button class="nav-link py-1 px-3" id="editHistTab" data-bs-toggle="pill"
+                                        data-bs-target="#editHistPane" type="button" role="tab"
+                                        style="font-weight:600;font-size:0.8rem;border-radius:20px">
+                                        <i class="fas fa-edit me-1"></i>ประวัติการแก้ไข
+                                        <span class="badge bg-secondary ms-1" style="font-size:0.7rem" th:text="${editHistory.size()}">0</span>
+                                    </button>
+                                </li>
+                            </ul>
                         </div>
-                        <div class="card-body">
-                            <dl class="mb-0">
-                                <dt>ตำแหน่งที่ขอ</dt>
-                                <dd th:text="${request.targetPosition ?: '-'}"></dd>
-                                <dt>สาขาวิชา</dt>
-                                <dd th:text="${request.major ?: '-'}"></dd>
-                                <dt>วิธีการ</dt>
-                                <dd th:text="${request.evaluationMethod ?: '-'}"></dd>
-                                <dt>สร้างเมื่อ</dt>
-                                <dd th:text="${#temporals.format(request.createdAt, 'dd/MM/yyyy HH:mm')}"></dd>
-                            </dl>
+                        <div class="card-body tab-content" style="max-height: 400px; overflow-y: auto;">
+                            <!-- Tab 1: Status History -->
+                            <div class="tab-pane fade show active" id="statusHistPane" role="tabpanel">
+                                <div th:each="h : ${statusHistory}" class="border-bottom py-2">
+                                    <span class="badge" th:style="'background:' + ${h.newStatus.color} + ';color:#fff'"
+                                        th:text="${h.newStatus.thaiLabel}"></span>
+                                    <small class="text-muted ms-2"
+                                        th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                                    <small th:if="${h.changedBy != null}" class="text-muted d-block">
+                                        โดย: [[${h.changedBy.name}]]
+                                    </small>
+                                    <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
+                                </div>
+                                <div th:if="${statusHistory.isEmpty()}" class="text-muted text-center py-3">
+                                    <i class="fas fa-inbox d-block mb-2" style="font-size:1.5rem;opacity:0.4"></i>
+                                    ยังไม่มีประวัติสถานะ
+                                </div>
+                            </div>
+                            <!-- Tab 2: Edit History -->
+                            <div class="tab-pane fade" id="editHistPane" role="tabpanel">
+                                <!-- Document filter -->
+                                <div class="mb-3">
+                                    <select id="editHistFilter" class="form-select form-select-sm"
+                                        style="max-width:280px;font-size:0.85rem">
+                                        <option value="all">ทุกเอกสาร</option>
+                                        <option th:each="entry : ${docLabels}"
+                                            th:value="${entry.key}"
+                                            th:text="'เอกสารที่ ' + ${entry.key} + ' — ' + ${entry.value}">
+                                        </option>
+                                    </select>
+                                </div>
+                                <!-- Log entries -->
+                                <div id="editHistEntries">
+                                    <div th:each="log : ${editHistory}" class="border-bottom py-2 edit-log-entry"
+                                        th:attr="data-doc-type=${log.documentType}">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge"
+                                                th:style="'background:' + ${log.action.color} + ';color:#fff'">
+                                                <i class="fas" th:classappend="${log.action.icon}"></i>
+                                                [[${log.action.thaiLabel}]]
+                                            </span>
+                                            <strong style="font-size:0.85rem">เอกสารที่ [[${log.documentType}]]</strong>
+                                        </div>
+                                        <small class="text-muted d-block mt-1"
+                                            th:text="${log.documentLabel}"></small>
+                                        <small class="text-muted">
+                                            <i class="fas fa-clock me-1"></i>
+                                            [[${#temporals.format(log.editedAt, 'dd/MM/yyyy HH:mm:ss')}]]
+                                        </small>
+                                        <small th:if="${log.editedBy != null}" class="text-muted d-block">
+                                            <i class="fas fa-user me-1"></i> โดย: [[${log.editedBy.name}]]
+                                        </small>
+                                    </div>
+                                </div>
+                                <div id="editHistEmpty" th:if="${editHistory.isEmpty()}" class="text-muted text-center py-3">
+                                    <i class="fas fa-inbox d-block mb-2" style="font-size:1.5rem;opacity:0.4"></i>
+                                    ยังไม่มีประวัติการแก้ไขเอกสาร
+                                </div>
+                                <div id="editHistNoMatch" class="text-muted text-center py-3" style="display:none">
+                                    <i class="fas fa-search d-block mb-2" style="font-size:1.5rem;opacity:0.4"></i>
+                                    ไม่มีประวัติการแก้ไขสำหรับเอกสารที่เลือก
+                                </div>
+                            </div>
+
                         </div>
                     </div>
+
+
                 </div>
 
                 <!-- Right Column: Document Management -->
@@ -185,72 +306,177 @@
                     <div class="card card-academic mb-4">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="fas fa-file-word" style="color:#2e7d32"></i> จัดการเอกสาร (9 แบบฟอร์ม)</h5>
+                            <a th:href="'/admin/position/request/' + ${request.id} + '/download-all'"
+                                class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-file-archive"></i> ดาวน์โหลดทั้งหมด (ZIP)
+                            </a>
                         </div>
                         <div class="card-body">
-                            <table class="table table-sm align-middle">
-                                <thead>
-                                    <tr>
-                                        <th>เอกสาร</th>
-                                        <th>สถานะ</th>
-                                        <th>กรอกโดย</th>
-                                        <th>จัดการ</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <tr th:each="entry : ${docLabels}">
-                                        <td>
-                                            <strong>ที่ [[${entry.key}]]</strong>: [[${entry.value}]]
-                                        </td>
-                                        <td>
-                                            <span th:if="${completedDocs.contains(entry.key)}" class="badge bg-success">
-                                                <i class="fas fa-check"></i> กรอกแล้ว
+                            <div th:each="entry : ${docLabels}" class="card mb-2 p-3"
+                                th:classappend="${completedDocs.contains(entry.key)} ? 'border-start border-success border-3' : ''">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>เอกสารที่ [[${entry.key}]]</strong>: [[${entry.value}]]
+                                        <span th:if="${completedDocs.contains(entry.key)}" class="badge bg-success ms-2">
+                                            <i class="fas fa-check"></i> กรอกแล้ว
+                                        </span>
+                                        <span th:unless="${completedDocs.contains(entry.key)}" class="badge bg-warning text-dark ms-2">
+                                            <i class="fas fa-clock"></i> รอกรอก
+                                        </span>
+                                    </div>
+                                    <div class="d-flex gap-1">
+                                        <!-- Draft: disabled -->
+                                        <th:block th:if="${request.currentStatus.isDraft()}">
+                                            <span class="btn btn-sm btn-outline-secondary disabled" style="opacity:0.5;cursor:not-allowed;">
+                                                <i class="fas fa-lock"></i> รอยื่น
                                             </span>
-                                            <span th:unless="${completedDocs.contains(entry.key)}" class="badge bg-warning text-dark">
-                                                <i class="fas fa-clock"></i> รอกรอก
-                                            </span>
-                                        </td>
-                                        <td>
-                                            <th:block th:each="doc : ${documents}" th:if="${doc.documentType == entry.key}">
-                                                <small th:text="${doc.filledBy ?: '-'}"></small>
+                                        </th:block>
+                                        <!-- Not draft: buttons -->
+                                        <th:block th:unless="${request.currentStatus.isDraft()}">
+                                            <a th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key}"
+                                                class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-edit"></i>
+                                                [[${completedDocs.contains(entry.key)} ? 'แก้ไข' : 'กรอก']]
+                                            </a>
+                                            <!-- DOCX Download -->
+                                            <th:block th:if="${completedDocs.contains(entry.key)}">
+                                                <a th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download'"
+                                                    class="btn btn-sm btn-outline-success" title="ดาวน์โหลด DOCX">
+                                                    <i class="fas fa-file-word"></i> DOCX
+                                                </a>
+                                                <button type="button"
+                                                    class="btn btn-sm btn-outline-danger btn-pdf-print"
+                                                    th:attr="data-request-id=${request.id},data-doc-type=${entry.key},data-doc-label=${docLabels.get(entry.key)}"
+                                                    title="พิมพ์/บันทึก PDF">
+                                                    <i class="fas fa-file-pdf"></i> PDF
+                                                </button>
                                             </th:block>
-                                        </td>
-                                        <td>
-                                            <div class="d-flex gap-1">
-                                                <!-- Draft: disabled button -->
-                                                <th:block th:if="${request.currentStatus.isDraft()}">
-                                                    <span class="btn btn-sm btn-outline-secondary disabled" style="opacity:0.5;cursor:not-allowed;">
-                                                        <i class="fas fa-lock"></i> รอยื่น
-                                                    </span>
-                                                </th:block>
-                                                <!-- Not draft: normal buttons -->
-                                                <th:block th:unless="${request.currentStatus.isDraft()}">
-                                                    <a th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key}"
-                                                        class="btn btn-sm btn-outline-primary">
-                                                        <i class="fas fa-edit"></i>
-                                                        [[${completedDocs.contains(entry.key)} ? 'แก้ไข' : 'กรอก']]
-                                                    </a>
-                                                    <!-- DOCX Download -->
-                                                    <th:block th:each="doc : ${documents}" th:if="${doc.documentType == entry.key && doc.generatedFilePath != null}">
-                                                        <a th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download'"
-                                                            class="btn btn-sm btn-outline-success" title="ดาวน์โหลด DOCX">
-                                                            <i class="fas fa-download"></i>
-                                                        </a>
-                                                    </th:block>
-                                                </th:block>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                        </th:block>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <a href="/admin/position/requests" class="btn btn-outline-secondary">
+            <a href="/admin/position/requests?type=position" class="btn btn-outline-secondary">
                 <i class="fas fa-arrow-left"></i> กลับรายการคำร้อง
             </a>
         </div>
+
+        <!-- Hidden container for PDF rendering -->
+        <div id="docx-hidden-container" style="position:absolute;left:-9999px;top:-9999px;width:794px;"></div>
+
+        <script>
+            // PDF generation: fetch DOCX → render via docx-preview → capture as PDF
+            const libs = [
+                { key: 'html2canvas', src: 'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js' },
+                { key: 'docx',       src: 'https://cdn.jsdelivr.net/npm/docx-preview@0.3.5/dist/docx-preview.min.js' },
+                { key: 'jspdf',      src: 'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js' }
+            ];
+
+            function loadLibs(list) {
+                return Promise.all(list.map(lib => {
+                    if (window[lib.key]) return Promise.resolve();
+                    return new Promise((resolve, reject) => {
+                        const s = document.createElement('script');
+                        s.src = lib.src;
+                        s.onload = resolve;
+                        s.onerror = reject;
+                        document.head.appendChild(s);
+                    });
+                }));
+            }
+
+            document.querySelectorAll('.btn-pdf-print').forEach(btn => {
+                btn.addEventListener('click', async function () {
+                    const requestId = this.dataset.requestId;
+                    const docType   = this.dataset.docType;
+                    const docLabel  = this.dataset.docLabel || 'document';
+                    const oldHtml   = this.innerHTML;
+
+                    this.disabled = true;
+                    this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังสร้าง PDF...';
+
+                    try {
+                        await loadLibs(libs);
+
+                        const container = document.getElementById('docx-hidden-container');
+                        container.innerHTML = '';
+
+                        const resp = await fetch(
+                            `/admin/position/request/${requestId}/document/${docType}/download`,
+                            { credentials: 'same-origin' }
+                        );
+                        const blob = await resp.blob();
+
+                        await window.docx.renderAsync(blob, container, null, {
+                            className: 'docx-content',
+                            inWrapper: true,
+                            ignoreWidth: false,
+                            ignoreHeight: false
+                        });
+
+                        await new Promise(r => setTimeout(r, 500));
+
+                        const pages = container.querySelectorAll('.docx-wrapper > section');
+                        const PAGE_W_MM = 210;
+
+                        const { jsPDF } = window.jspdf;
+                        let pdf = null;
+
+                        for (let i = 0; i < pages.length; i++) {
+                            const canvas = await html2canvas(pages[i], { scale: 2, useCORS: true });
+                            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                            const pageH = (canvas.height / canvas.width) * PAGE_W_MM;
+
+                            if (pdf === null) {
+                                pdf = new jsPDF({ unit: 'mm', format: [PAGE_W_MM, pageH] });
+                            } else {
+                                pdf.addPage([PAGE_W_MM, pageH], 'p');
+                            }
+                            pdf.addImage(imgData, 'JPEG', 0, 0, PAGE_W_MM, pageH);
+                        }
+
+                        if (pdf) {
+                            const filename = docLabel.replace(/[/\\:*?"<>|]/g, '_') + '.pdf';
+                            pdf.save(filename);
+                        }
+                    } catch (e) {
+                        console.error('PDF generation error:', e);
+                        alert('ไม่สามารถสร้าง PDF ได้: ' + e.message);
+                    } finally {
+                        this.disabled = false;
+                        this.innerHTML = oldHtml;
+                    }
+                });
+            });
+
+            // Edit history document filter
+            const editFilter = document.getElementById('editHistFilter');
+            if (editFilter) {
+                editFilter.addEventListener('change', function() {
+                    const val = this.value;
+                    const entries = document.querySelectorAll('.edit-log-entry');
+                    const noMatch = document.getElementById('editHistNoMatch');
+                    let visibleCount = 0;
+
+                    entries.forEach(el => {
+                        if (val === 'all' || el.dataset.docType === val) {
+                            el.style.display = '';
+                            visibleCount++;
+                        } else {
+                            el.style.display = 'none';
+                        }
+                    });
+
+                    if (noMatch) {
+                        noMatch.style.display = (entries.length > 0 && visibleCount === 0) ? '' : 'none';
+                    }
+                });
+            }
+        </script>
     </section>
 </body>
 </html>

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
+import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.service.AcademicRequestService;
@@ -223,9 +224,14 @@ public class PositionApplicantController {
 
             if ("draft".equals(action)) {
                 positionService.saveDraft(request, type, jsonData, label, "APPLICANT");
+                positionService.logDocumentEdit(request, type, label, user,
+                        PositionDocumentEditLog.EditAction.DRAFT_SAVED);
                 return "redirect:/user/position/request/" + id + "/document/" + type + "?saved";
             } else {
+                boolean isNew = positionService.getDocumentsByType(id, type).isEmpty();
                 positionService.saveDocument(request, type, jsonData, null, label, null, "APPLICANT");
+                positionService.logDocumentEdit(request, type, label, user,
+                        isNew ? PositionDocumentEditLog.EditAction.CREATED : PositionDocumentEditLog.EditAction.UPDATED);
                 return "redirect:/user/position/request/" + id + "?success=doc_saved";
             }
         } catch (Exception e) {

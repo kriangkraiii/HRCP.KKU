@@ -19,7 +19,14 @@ public class UserDtls {
 	private Integer id;
 
 	private String title;
-	private String name;
+
+	@Column(name = "first_name")
+	private String firstName;
+
+	@Column(name = "last_name")
+	private String lastName;
+
+	private String name; // legacy field, kept for backward compat
 	private String mobileNumber;
 	private String email;
 	private String academicPosition;
@@ -49,6 +56,9 @@ public class UserDtls {
 
 	@Column(name = "auto_draft_enabled")
 	private Boolean autoDraftEnabled = true;
+
+	@Column(name = "theme_preference")
+	private String themePreference = "light";
 
 	@Column(name = "expiry_alert_6m")
 	private Boolean expiryAlert6m = true;
@@ -117,7 +127,30 @@ public class UserDtls {
 		this.title = title;
 	}
 
+	public String getFirstName() {
+		return firstName;
+	}
+
+	public void setFirstName(String firstName) {
+		this.firstName = firstName;
+	}
+
+	public String getLastName() {
+		return lastName;
+	}
+
+	public void setLastName(String lastName) {
+		this.lastName = lastName;
+	}
+
+	/**
+	 * Returns full name: firstName + " " + lastName.
+	 * Falls back to legacy 'name' field if firstName/lastName not set.
+	 */
 	public String getName() {
+		if (firstName != null || lastName != null) {
+			return ((firstName != null ? firstName : "") + " " + (lastName != null ? lastName : "")).trim();
+		}
 		return name;
 	}
 
@@ -259,6 +292,14 @@ public class UserDtls {
 
 	public void setAutoDraftEnabled(Boolean autoDraftEnabled) {
 		this.autoDraftEnabled = autoDraftEnabled;
+	}
+
+	public String getThemePreference() {
+		return themePreference;
+	}
+
+	public void setThemePreference(String themePreference) {
+		this.themePreference = themePreference;
 	}
 
 	public Boolean getExpiryAlert6m() {

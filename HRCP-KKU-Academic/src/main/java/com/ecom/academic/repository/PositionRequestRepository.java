@@ -33,4 +33,7 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
 
     @Query("SELECT MAX(r.id) FROM PositionRequest r")
     Optional<Long> findMaxId();
+
+    @Query("SELECT r FROM PositionRequest r WHERE (LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
+    List<PositionRequest> searchByNameOrEmail(@Param("keyword") String keyword);
 }
