@@ -11,7 +11,8 @@
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 6: บันทึกข้อความจริยธรรมการวิจัยในมนุษย์ (Exemption)</h3>
             <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>ผู้ยื่นคำร้อง</strong> — แอดมินสามารถดูและแก้ไขได้</div>
 
-            <form th:action="'/admin/position/request/' + ${request.id} + '/document/6'" method="post" id="doc6Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/6'">
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/6'" method="post" id="doc6Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/6'"
+                  onsubmit="document.querySelectorAll('#doc6Form input[type=checkbox]').forEach(c=>{if(!c.checked){let h=document.createElement('input');h.type='hidden';h.name=c.name;h.value='☐';c.parentNode.appendChild(h);}})">
 
                 <!-- หัวบันทึก -->
                 <div class="card card-academic mb-4">

@@ -10,7 +10,8 @@
 
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 9: แบบแสดงหลักฐานการมีส่วนร่วมในผลงานทางวิชาการ</h3>
 
-            <form th:action="'/user/position/request/' + ${request.id} + '/document/9'" method="post" id="doc9Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/9'">
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/9'" method="post" id="doc9Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/9'"
+                  onsubmit="document.querySelectorAll('#doc9Form input[type=checkbox]').forEach(c=>{if(!c.checked){let h=document.createElement('input');h.type='hidden';h.name=c.name;h.value='☐';c.parentNode.appendChild(h);}})">
 
                 <!-- ข้อมูลผลงาน -->
                 <div class="card card-academic mb-4">
