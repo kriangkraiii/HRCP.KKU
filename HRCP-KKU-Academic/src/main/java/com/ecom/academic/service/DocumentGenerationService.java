@@ -138,6 +138,7 @@ public class DocumentGenerationService {
         });
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
+        mapMethod3Fields(placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
@@ -305,7 +306,7 @@ public class DocumentGenerationService {
                 List<int[]> subsequentTexts = new ArrayList<>();
                 int scanPos = tBlockEnd;
 
-                while (!hasCompleteTokens(accumulated.toString()) && scanPos < xml.length()) {
+                while ((!hasCompleteTokens(accumulated.toString()) || accumulated.toString().endsWith("{")) && scanPos < xml.length()) {
                     // หา <w:t> ถัดไปในขอบเขตที่สมเหตุสมผล (ไม่ข้าม paragraph)
                     int nextP = xml.indexOf("</w:p>", scanPos);
                     int nextT = xml.indexOf("<w:t", scanPos);
@@ -417,6 +418,37 @@ public class DocumentGenerationService {
         placeholders.putAll(toAdd);
     }
 
+    private void mapMethod3Fields(Map<String, String> placeholders) {
+        for (String prefix : new String[]{"assoc", "prof"}) {
+            // Quartile radio: {prefix}_m3_quartile_N → {prefix}_m3_q1 / {prefix}_m3_q2
+            for (int n = 1; n <= 10; n++) {
+                String radioKey = prefix + "_m3_quartile_" + n;
+                String val = placeholders.get(radioKey);
+                if (val != null || n == 1) {
+                    boolean q1 = "Q1".equals(val);
+                    boolean q2 = "Q2".equals(val);
+                    if (n == 1) {
+                        placeholders.put(prefix + "_m3_q1", q1 ? "☑" : "☐");
+                        placeholders.put(prefix + "_m3_q2", q2 ? "☑" : "☐");
+                    }
+                    placeholders.put(prefix + "_m3_q1_" + n, q1 ? "☑" : "☐");
+                    placeholders.put(prefix + "_m3_q2_" + n, q2 ? "☑" : "☐");
+                    if (val == null) break;
+                }
+            }
+            // First / Corresp checkboxes: alias _1 → no suffix, default ☐
+            for (String field : new String[]{"m3_first", "m3_corresp"}) {
+                String v = placeholders.getOrDefault(prefix + "_" + field + "_1", "☐");
+                placeholders.put(prefix + "_" + field, v);
+            }
+            // PI fields: alias _1 → no suffix
+            for (String field : new String[]{"pi_project_no", "pi_project", "pi_source"}) {
+                String v = placeholders.get(prefix + "_" + field + "_1");
+                if (v != null) placeholders.put(prefix + "_" + field, v);
+            }
+        }
+    }
+
     private String expandDynamicRows(String xml, Map<String, String> placeholders) {
         // Block A: เอกสารที่ 6 — research rows (des_research)
         if (xml.contains("{{des_research5}}")) {
@@ -505,7 +537,148 @@ public class DocumentGenerationService {
             }
         }
 
+        // Block C: เอกสารที่ 1 — work section rows (paragraph-based)
+        // Each logical "row" = 3 consecutive <w:p>: title row, not-used checkbox, used checkbox+year+level
+        String[][][] workSections = {
+            // ASST (DOCX has typo "reseach" for research)
+            {{"asst_research_working_1"}, {"asst_research_working_no_1", "asst_research_working_1",
+                "asst_not_used_reseach_1", "asst_is_used_reseach_1",
+                "asst_used_research_year_1", "asst_used_research_level_1"}},
+            {{"asst_other_working_1"}, {"asst_other_working_no_1", "asst_other_working_1",
+                "asst_not_used_other_1", "asst_is_used_other_1",
+                "asst_used_other_year_1", "asst_used_other_level_1"}},
+            {{"asst_book_working_1"}, {"asst_book_working_no_1", "asst_book_working_1",
+                "asst_not_used_book_1", "asst_is_used_book_1",
+                "asst_used_book_year_1", "asst_used_book_level_1"}},
+            // ASSOC
+            {{"assoc_research_working_1"}, {"assoc_research_working_no_1", "assoc_research_working_1",
+                "assoc_not_used_research_1", "assoc_is_used_research_1",
+                "assoc_used_research_year_1", "assoc_used_research_level_1"}},
+            {{"assoc_other_working_1"}, {"assoc_other_working_no_1", "assoc_other_working_1",
+                "assoc_not_used_other_1", "assoc_is_used_other_1",
+                "assoc_used_other_year_1", "assoc_used_other_level_1"}},
+            {{"assoc_book_working_1"}, {"assoc_book_working_no_1", "assoc_book_working_1",
+                "assoc_not_used_book_1", "assoc_is_used_book_1",
+                "assoc_used_book_year_1", "assoc_used_book_level_1"}},
+            // PROF
+            {{"prof_research_working_1"}, {"prof_research_working_no_1", "prof_research_working_1",
+                "prof_not_used_research_1", "prof_is_used_research_1",
+                "prof_used_research_year_1", "prof_used_research_level_1"}},
+            {{"prof_other_working_1"}, {"prof_other_working_no_1", "prof_other_working_1",
+                "prof_not_used_other_1", "prof_is_used_other_1",
+                "prof_used_other_year_1", "prof_used_other_level_1"}},
+            {{"prof_book_working_1"}, {"prof_book_working_no_1", "prof_book_working_1",
+                "prof_not_used_book_1", "prof_is_used_book_1",
+                "prof_used_book_year_1", "prof_used_book_level_1"}},
+            // International speaker & Other positions
+            {{"international_speaker_last_5_years_1"},
+                {"international_speaker_last_5_years_no_1", "international_speaker_last_5_years_1"}},
+            {{"other_position_1"}, {"other_position_no_1", "other_position_1"}},
+        };
+        for (String[][] section : workSections) {
+            xml = expandParagraphRows(xml, placeholders, section[0][0], section[1]);
+        }
+
+        // Block D: เอกสารที่ 1 — teaching rows (table-based <w:tr>)
+        if (xml.contains("{{teaching_subject_1}}")) {
+            int maxTeach = 1;
+            for (String key : placeholders.keySet()) {
+                if (key.startsWith("teaching_subject_")) {
+                    try {
+                        int n = Integer.parseInt(key.substring("teaching_subject_".length()));
+                        if (n > maxTeach) maxTeach = n;
+                    } catch (NumberFormatException ignored) {}
+                }
+            }
+            if (maxTeach > 1) {
+                int searchFrom = 0;
+                while (true) {
+                    int trIdx = xml.indexOf("<w:tr ", searchFrom);
+                    if (trIdx == -1) trIdx = xml.indexOf("<w:tr>", searchFrom);
+                    if (trIdx == -1) break;
+                    int trEnd = xml.indexOf("</w:tr>", trIdx);
+                    if (trEnd == -1) break;
+                    trEnd += "</w:tr>".length();
+                    String rowXml = xml.substring(trIdx, trEnd);
+                    if (rowXml.contains("{{teaching_subject_1}}")) {
+                        StringBuilder newRows = new StringBuilder();
+                        for (int n = 2; n <= maxTeach; n++) {
+                            String cloned = rowXml
+                                .replace("{{teaching_subject_1}}", "{{teaching_subject_" + n + "}}")
+                                .replace("{{teaching_level_1}}", "{{teaching_level_" + n + "}}")
+                                .replace("{{teaching_semester_1}}", "{{teaching_semester_" + n + "}}")
+                                .replace("{{teaching_hours_per_week_1}}", "{{teaching_hours_per_week_" + n + "}}");
+                            newRows.append(cloned);
+                        }
+                        xml = xml.substring(0, trEnd) + newRows + xml.substring(trEnd);
+                        break;
+                    }
+                    searchFrom = trEnd;
+                }
+            }
+        }
+
         return xml;
+    }
+
+    /**
+     * Clone <w:p> paragraphs for a work section that uses row-_1 placeholders.
+     * Finds all paragraphs containing any of fields1, then inserts copies for rows 2..maxN.
+     */
+    private String expandParagraphRows(String xml, Map<String, String> placeholders,
+                                        String anchorKey1, String[] fields1) {
+        if (!xml.contains("{{" + anchorKey1 + "}}")) return xml;
+
+        // Find max row number from placeholders (using anchor field base)
+        String anchorBase = anchorKey1.substring(0, anchorKey1.lastIndexOf('_')); // strip trailing _1
+        int maxN = 1;
+        for (String key : placeholders.keySet()) {
+            if (key.startsWith(anchorBase + "_")) {
+                try {
+                    int n = Integer.parseInt(key.substring(anchorBase.length() + 1));
+                    if (n > maxN) maxN = n;
+                } catch (NumberFormatException ignored) {}
+            }
+        }
+        if (maxN <= 1) return xml;
+
+        // Collect all <w:p> elements that contain any _1 field placeholder
+        List<int[]> paraRanges = new ArrayList<>();
+        int pos = 0;
+        while (pos < xml.length()) {
+            int pA = xml.indexOf("<w:p ", pos);
+            int pB = xml.indexOf("<w:p>", pos);
+            int pStart = (pA == -1) ? pB : (pB == -1) ? pA : Math.min(pA, pB);
+            if (pStart == -1) break;
+            int pEnd = xml.indexOf("</w:p>", pStart);
+            if (pEnd == -1) break;
+            pEnd += "</w:p>".length();
+            String paraXml = xml.substring(pStart, pEnd);
+            for (String f : fields1) {
+                if (paraXml.contains("{{" + f + "}}")) {
+                    paraRanges.add(new int[]{pStart, pEnd});
+                    break;
+                }
+            }
+            pos = pEnd;
+        }
+        if (paraRanges.isEmpty()) return xml;
+
+        // Insert clones after the last matched paragraph
+        int insertAt = paraRanges.get(paraRanges.size() - 1)[1];
+        StringBuilder cloned = new StringBuilder();
+        for (int n = 2; n <= maxN; n++) {
+            for (int[] range : paraRanges) {
+                String paraXml = xml.substring(range[0], range[1]);
+                for (String f : fields1) {
+                    // Replace {{field_1}} → {{field_N}} by stripping trailing _1
+                    String base = f.substring(0, f.lastIndexOf('_')); // e.g. "assoc_research_working_no"
+                    paraXml = paraXml.replace("{{" + f + "}}", "{{" + base + "_" + n + "}}");
+                }
+                cloned.append(paraXml);
+            }
+        }
+        return xml.substring(0, insertAt) + cloned + xml.substring(insertAt);
     }
 
     // =====================================================================
