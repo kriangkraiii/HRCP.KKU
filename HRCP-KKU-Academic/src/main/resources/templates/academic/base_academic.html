@@ -894,6 +894,109 @@
 <script src="/js/select_to_datalist.js"></script>
 <script src="/js/thai_date_autofill.js"></script>
 <script src="/js/theme-switcher.js"></script>
+
+<!-- ===== Floating Buttons สำหรับทุกหน้าฟอร์มเอกสาร ===== -->
+<style>
+    .floating-doc-btn {
+        position: fixed;
+        bottom: 20px;
+        z-index: 1040;
+        border-radius: 50px !important;
+        padding: 10px 20px !important;
+        font-size: 0.88rem !important;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .floating-doc-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+    }
+    .floating-doc-btn-back {
+        left: calc(var(--sidebar-width) + 20px);
+    }
+    .floating-doc-btn-preview {
+        right: 20px;
+    }
+    @media (max-width: 991px) {
+        .floating-doc-btn-back { left: 20px; }
+    }
+</style>
+<script>
+    // Auto-create floating buttons for doc form pages
+    (function() {
+        function findButtons() {
+            var previewBtn = null, backBtn = null;
+
+            document.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
+                var txt = el.textContent || '';
+                if (!previewBtn && txt.indexOf('ดูตัวอย่าง') !== -1 && el.querySelector('.fa-eye')) {
+                    previewBtn = el;
+                }
+                if (!backBtn && txt.indexOf('กลับ') !== -1 && el.querySelector('.fa-arrow-left')) {
+                    backBtn = el;
+                }
+            });
+
+            return { preview: previewBtn, back: backBtn };
+        }
+
+        function createFloatingButtons(previewBtn, backBtn) {
+            // ลบปุ่มลอยเก่าถ้ามี
+            document.querySelectorAll('.floating-doc-btn').forEach(function(el) { el.remove(); });
+
+            if (backBtn) {
+                var floatBack = document.createElement('a');
+                floatBack.className = 'btn btn-outline-secondary floating-doc-btn floating-doc-btn-back';
+                floatBack.innerHTML = '<i class="fas fa-arrow-left"></i> กลับ';
+                if (backBtn.tagName === 'A' && backBtn.href) {
+                    floatBack.href = backBtn.href;
+                } else {
+                    floatBack.href = '#';
+                    floatBack.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        backBtn.click();
+                    });
+                }
+                document.body.appendChild(floatBack);
+            }
+
+            if (previewBtn) {
+                var floatPreview = document.createElement('button');
+                floatPreview.type = 'button';
+                floatPreview.className = 'btn btn-outline-primary floating-doc-btn floating-doc-btn-preview';
+                floatPreview.innerHTML = '<i class="fas fa-eye"></i> ดูตัวอย่าง';
+                floatPreview.addEventListener('click', function() {
+                    previewBtn.click();
+                });
+                document.body.appendChild(floatPreview);
+            }
+
+            // ซ่อนปุ่มต้นฉบับ (เก็บไว้ใน DOM เพื่อให้ .click() ยังทำงานได้)
+            [previewBtn, backBtn].forEach(function(btn) {
+                if (btn) {
+                    btn.style.cssText = 'position:absolute !important;visibility:hidden !important;height:0 !important;overflow:hidden !important;pointer-events:none !important;';
+                }
+            });
+        }
+
+        function init() {
+            var btns = findButtons();
+            if (btns.preview || btns.back) {
+                createFloatingButtons(btns.preview, btns.back);
+                return true;
+            }
+            return false;
+        }
+
+        if (!init()) {
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', init);
+            } else {
+                setTimeout(init, 500);
+            }
+        }
+    })();
+</script>
 </body>
 
 </html>
