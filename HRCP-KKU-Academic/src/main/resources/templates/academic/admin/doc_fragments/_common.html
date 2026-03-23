@@ -58,6 +58,10 @@
 
             if (submitBtn) {
                 submitBtn.addEventListener('click', function() {
+                    // ตรวจสอบ required fields ก่อน submit
+                    const form = document.getElementById('docForm');
+                    if (form && !form.reportValidity()) return;
+
                     if (notifyDocTypes.includes(currentDocType) && modalEl) {
                         const modal = new bootstrap.Modal(modalEl);
                         modal.show();
@@ -94,6 +98,49 @@
                 actionInput.value = 'submit';
                 form.submit();
             }
+
+            // ==================== Disable submit button เมื่อ required fields ยังไม่ครบ ====================
+            function updateSubmitBtnState() {
+                if (!submitBtn) return;
+                const form = document.getElementById('docForm');
+                if (!form) return;
+
+                const requiredFields = form.querySelectorAll('[required]');
+                let allFilled = true;
+                requiredFields.forEach(function(el) {
+                    if (el.type === 'radio') {
+                        // Radio: ต้องมีอย่างน้อย 1 ใน group ที่ checked
+                        const radios = form.querySelectorAll('input[type="radio"][name="' + el.name + '"]');
+                        const anyChecked = Array.from(radios).some(r => r.checked);
+                        if (!anyChecked) allFilled = false;
+                    } else if (el.tagName === 'SELECT') {
+                        if (!el.value) allFilled = false;
+                    } else {
+                        if (!el.value || !el.value.trim()) allFilled = false;
+                    }
+                });
+
+                if (allFilled) {
+                    submitBtn.disabled = false;
+                    submitBtn.style.opacity = '1';
+                    submitBtn.title = '';
+                } else {
+                    submitBtn.disabled = true;
+                    submitBtn.style.opacity = '0.5';
+                    submitBtn.title = 'กรุณากรอกข้อมูลที่จำเป็นให้ครบก่อนบันทึก';
+                }
+            }
+
+            // ตรวจสอบทุกครั้งที่ input เปลี่ยนค่า — เรียกทันที (script อยู่ท้ายหน้า DOM พร้อมแล้ว)
+            (function initSubmitBtnWatch() {
+                const form = document.getElementById('docForm');
+                if (form) {
+                    form.addEventListener('input', updateSubmitBtnState);
+                    form.addEventListener('change', updateSubmitBtnState);
+                    // ตรวจครั้งแรก
+                    updateSubmitBtnState();
+                }
+            })();
         })();
 
         // ==================== ติ๊กได้แค่อันเดียว (chk1, chk2, chk3) ====================

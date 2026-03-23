@@ -80,6 +80,42 @@ public class PositionApplicantController {
         }
         model.addAttribute("doc2DataMap", doc2DataMap);
 
+        // ดึงข้อมูลรายวิชาและผลประเมินจากเอกสารที่ 8 (Phase 1) ผ่าน linkedEvaluation
+        java.util.Map<Long, java.util.Map<String, String>> evalDoc8DataMap = new java.util.HashMap<>();
+        java.util.Map<Long, String> evalRequestCodeMap = new java.util.HashMap<>();
+        for (PositionRequest req : requests) {
+            if (req.getLinkedEvaluation() != null) {
+                evalRequestCodeMap.put(req.getId(), req.getLinkedEvaluation().getRequestCode());
+                try {
+                    List<com.ecom.academic.model.AcademicDocument> doc8List = academicService
+                            .getDocumentsByType(req.getLinkedEvaluation().getId(), 8);
+                    if (!doc8List.isEmpty() && doc8List.get(0).getJsonData() != null) {
+                        java.util.Map<String, String> doc8Data = objectMapper.readValue(
+                                doc8List.get(0).getJsonData(),
+                                new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
+                        evalDoc8DataMap.put(req.getId(), doc8Data);
+                    }
+                } catch (Exception e) { /* ignore */ }
+            }
+        }
+        // Also check draft request
+        if (draftRequest.isPresent() && draftRequest.get().getLinkedEvaluation() != null) {
+            evalRequestCodeMap.put(draftRequest.get().getId(),
+                    draftRequest.get().getLinkedEvaluation().getRequestCode());
+            try {
+                List<com.ecom.academic.model.AcademicDocument> doc8List = academicService
+                        .getDocumentsByType(draftRequest.get().getLinkedEvaluation().getId(), 8);
+                if (!doc8List.isEmpty() && doc8List.get(0).getJsonData() != null) {
+                    java.util.Map<String, String> doc8Data = objectMapper.readValue(
+                            doc8List.get(0).getJsonData(),
+                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
+                    evalDoc8DataMap.put(draftRequest.get().getId(), doc8Data);
+                }
+            } catch (Exception e) { /* ignore */ }
+        }
+        model.addAttribute("evalDoc8DataMap", evalDoc8DataMap);
+        model.addAttribute("evalRequestCodeMap", evalRequestCodeMap);
+
         return "academic/position/applicant/dashboard";
     }
 

@@ -18,10 +18,11 @@
                 </th:block>
             </div>
 
-            <!-- Evaluation Expiry Countdown -->
+            <!-- Evaluation Expiry Countdown + ข้อมูลรายวิชาและผลการประเมิน (รวมการ์ดเดียว) -->
             <div th:if="${evaluationExpiryDate != null}" class="card mb-4" id="expiryCountdownCard"
                 style="border-left: 5px solid #4caf50; border-radius: 12px; overflow: hidden;">
                 <div class="card-body py-3">
+                    <!-- ส่วนที่ 1: Countdown -->
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="mb-0"><i class="fas fa-hourglass-half"></i> ผลประเมินการสอนคงเหลือ</h6>
                         <small class="text-muted" id="expiryDateLabel"></small>
@@ -34,6 +35,52 @@
                         </div>
                     </div>
                     <small class="text-muted mt-1 d-block" id="expiryWarning"></small>
+
+                    <!-- ส่วนที่ 2: ข้อมูลรายวิชาและผลการประเมินจากเอกสารที่ 8 -->
+                    <th:block th:if="${evalDoc8DataMap != null && !evalDoc8DataMap.isEmpty()}">
+                        <div th:each="entry : ${evalDoc8DataMap}">
+                            <hr class="my-3">
+                            <div class="d-flex justify-content-between align-items-center mb-3">
+                                <h6 class="mb-0"><i class="fas fa-graduation-cap text-primary"></i> ข้อมูลรายวิชา</h6>
+                                <small th:if="${evalRequestCodeMap != null && evalRequestCodeMap.containsKey(entry.key)}" class="text-muted">
+                                    <i class="fas fa-file-alt"></i> คำร้องประเมิน: <strong th:text="${evalRequestCodeMap.get(entry.key)}">-</strong>
+                                </small>
+                            </div>
+                            <div class="row g-2 mb-3">
+                                <div class="col-md-3">
+                                    <small class="text-muted d-block">รหัสวิชา</small>
+                                    <strong th:text="${entry.value.getOrDefault('course_code', '-')}">-</strong>
+                                </div>
+                                <div class="col-md-5">
+                                    <small class="text-muted d-block">รายวิชา</small>
+                                    <strong th:text="${entry.value.getOrDefault('course_name', '-')}">-</strong>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block">ปีการศึกษา</small>
+                                    <strong th:text="${entry.value.getOrDefault('semester', '-')}">-</strong>
+                                </div>
+                            </div>
+                            <h6 class="mb-2"><i class="fas fa-chart-bar text-success"></i> ผลการประเมิน</h6>
+                            <div class="row g-2">
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block">ระดับ</small>
+                                    <span class="badge fs-6"
+                                        th:classappend="${entry.value.getOrDefault('result_level', '') == 'เชี่ยวชาญ'} ? 'bg-success' : (${entry.value.getOrDefault('result_level', '') == 'ชำนาญพิเศษ'} ? 'bg-primary' : (${entry.value.getOrDefault('result_level', '') == 'ชำนาญ'} ? 'bg-info' : 'bg-secondary'))"
+                                        th:text="${entry.value.getOrDefault('result_level', '-')}">-</span>
+                                </div>
+                                <div class="col-md-4">
+                                    <small class="text-muted d-block">คุณภาพ</small>
+                                    <span class="badge fs-6"
+                                        th:classappend="${entry.value.getOrDefault('is_qualified', '') == 'มี'} ? 'bg-success' : 'bg-danger'"
+                                        th:text="${entry.value.getOrDefault('is_qualified', '-')}">-</span>
+                                </div>
+                                <div class="col-md-4" th:if="${entry.value.getOrDefault('evaluation_date', '') != ''}">
+                                    <small class="text-muted d-block">วันที่ประเมิน</small>
+                                    <strong th:text="${entry.value.getOrDefault('evaluation_date', '-')}">-</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </th:block>
                 </div>
             </div>
 
