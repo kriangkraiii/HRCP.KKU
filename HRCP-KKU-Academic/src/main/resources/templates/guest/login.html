@@ -5,10 +5,11 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>เข้าสู่ระบบ - ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ</title>
-	<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap"
+	<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap"
 		rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 	<link rel="icon" type="image/png" href="/img/cphr_new.png">
+<link rel="stylesheet" href="/css/guest.css">
 	<style>
 		* {
 			margin: 0;
@@ -326,6 +327,7 @@
 	<div class="login-container">
 		<div class="login-header">
 			<div> <img class="logo-icon"  src="/img/cphr_new.png" width="100" height="100" alt="Logo" style="object-fit:contain;background:#fff;border-radius:16px;padding:8px;"> </div>
+<link rel="stylesheet" href="/css/guest.css">
 			<h1>ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ</h1>
 		</div>
 
@@ -358,21 +360,21 @@
 
 			<form th:action="@{/login}" method="post">
 				<div class="form-group">
-					<label>อีเมล</label>
+					<label for="emailInput">อีเมล</label>
 					<div class="input-wrapper">
-						<i class="fas fa-envelope"></i>
-						<input type="email" name="email" placeholder="กรอกอีเมลของคุณ" required>
+						<i class="fas fa-envelope" aria-hidden="true"></i>
+						<input type="email" id="emailInput" name="email" placeholder="กรอกอีเมลของคุณ" required autocomplete="email">
 					</div>
 				</div>
 				<div class="form-group">
-					<label>รหัสผ่าน</label>
+					<label for="passwordInput">รหัสผ่าน</label>
 					<div class="input-wrapper">
-						<i class="fas fa-lock"></i>
-						<input type="password" name="password" placeholder="กรอกรหัสผ่าน" required>
+						<i class="fas fa-lock" aria-hidden="true"></i>
+						<input type="password" id="passwordInput" name="password" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
 					</div>
 				</div>
 				<button type="submit" class="btn-primary">
-					<i class="fas fa-sign-in-alt"></i> เข้าสู่ระบบ
+					<i class="fas fa-sign-in-alt" aria-hidden="true"></i> เข้าสู่ระบบ
 				</button>
 			</form>
 

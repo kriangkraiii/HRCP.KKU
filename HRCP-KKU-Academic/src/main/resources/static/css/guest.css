@@ -1,0 +1,265 @@
+/* =============================================
+   GUEST PAGES — Shared Styles
+   (login, first_login, forgot_password, reset_password,
+    set_password, verify_otp, verify_2fa)
+   ============================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Sarabun', sans-serif;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0d1b3e 0%, #1a237e 30%, #0d47a1 60%, #1565c0 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+/* ===== Container ===== */
+.guest-container,
+.login-container,
+.container {
+    width: 100%;
+    max-width: 440px;
+}
+
+/* ===== Header / Branding ===== */
+.guest-header,
+.login-header,
+.header {
+    text-align: center;
+    margin-bottom: 30px;
+    color: #fff;
+}
+
+.guest-header .logo-icon,
+.login-header .logo-icon,
+.header .logo-icon {
+    width: 70px;
+    height: 70px;
+    border-radius: 16px;
+    display: block;
+    margin: 0 auto 15px;
+    object-fit: contain;
+    background: #fff;
+    padding: 8px;
+}
+
+.guest-header h1,
+.login-header h1,
+.header h1 {
+    font-size: 22px;
+    font-weight: 700;
+    margin-bottom: 5px;
+}
+
+.guest-header p,
+.login-header p,
+.header p {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* ===== Card ===== */
+.guest-card,
+.login-card,
+.card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 35px 30px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+}
+
+.guest-card h2,
+.login-card h2,
+.card h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a237e;
+    text-align: center;
+    margin-bottom: 8px;
+}
+
+.guest-card .subtitle,
+.login-card .subtitle,
+.card .subtitle {
+    text-align: center;
+    color: #666;
+    font-size: 14px;
+    margin-bottom: 25px;
+}
+
+/* ===== Form Elements ===== */
+.form-group {
+    margin-bottom: 18px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 6px;
+}
+
+.form-group .input-wrapper {
+    position: relative;
+}
+
+.form-group .input-wrapper i {
+    position: absolute;
+    left: 14px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #999;
+    font-size: 16px;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px 14px 12px 42px;
+    border: 2px solid #e0e0e0;
+    border-radius: 10px;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    transition: border-color 0.3s, box-shadow 0.3s;
+    outline: none;
+}
+
+.form-group input:focus {
+    border-color: #1a237e;
+    box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
+}
+
+/* ===== Buttons ===== */
+.btn-primary {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #1a237e, #0d47a1);
+    color: #fff;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    margin-top: 5px;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 20px rgba(13, 71, 161, 0.4);
+}
+
+.btn-secondary {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #1a237e;
+    border-radius: 10px;
+    background: transparent;
+    color: #1a237e;
+    font-family: 'Sarabun', sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.btn-secondary:hover {
+    background: #1a237e;
+    color: #fff;
+}
+
+/* ===== Divider ===== */
+.divider {
+    text-align: center;
+    margin: 20px 0;
+    position: relative;
+}
+
+.divider::before,
+.divider::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    width: 40%;
+    height: 1px;
+    background: #e0e0e0;
+}
+
+.divider::before { left: 0; }
+.divider::after { right: 0; }
+
+.divider span {
+    background: #fff;
+    padding: 0 12px;
+    color: #999;
+    font-size: 13px;
+}
+
+/* ===== Alerts ===== */
+.alert {
+    padding: 12px 15px;
+    border-radius: 10px;
+    margin-bottom: 18px;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.alert-success {
+    background: #e8f5e9;
+    color: #2e7d32;
+    border: 1px solid #a5d6a7;
+}
+
+.alert-danger {
+    background: #ffebee;
+    color: #c62828;
+    border: 1px solid #ef9a9a;
+}
+
+.alert-warning {
+    background: #fff3e0;
+    color: #e65100;
+    border: 1px solid #ffcc80;
+}
+
+/* ===== Links ===== */
+.forgot-link,
+.back-link {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.forgot-link a,
+.back-link a {
+    color: #0d47a1;
+    text-decoration: none;
+    font-size: 14px;
+}
+
+.forgot-link a:hover,
+.back-link a:hover {
+    text-decoration: underline;
+}
+
+/* ===== Footer ===== */
+.footer-text {
+    text-align: center;
+    margin-top: 25px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 13px;
+}

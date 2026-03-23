@@ -4,29 +4,29 @@
 
 /* === Light Theme (Default) === */
 :root {
-    --bg-body: #f0f2f5;
+    --bg-body: #eef1f6;
     --bg-card: #ffffff;
-    --bg-card-header: #ffffff;
+    --bg-card-header: #f8f9fc;
     --bg-input: #ffffff;
     --bg-modal: #ffffff;
     --bg-dropdown: #ffffff;
-    --bg-table-stripe: rgba(0, 0, 0, 0.02);
-    --bg-hover: rgba(0, 0, 0, 0.04);
+    --bg-table-stripe: rgba(13, 71, 161, 0.03);
+    --bg-hover: rgba(13, 71, 161, 0.05);
 
     --text-primary: #212529;
-    --text-secondary: #6c757d;
-    --text-muted: #999999;
+    --text-secondary: #5a6370;
+    --text-muted: #737980;
     --text-heading: #333333;
 
-    --border-color: #dee2e6;
+    --border-color: #d5dae2;
     --border-input: #ced4da;
     --border-card: rgba(0, 0, 0, 0.08);
 
     --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.06);
     --shadow-dropdown: 0 4px 16px rgba(0, 0, 0, 0.1);
 
-    --footer-bg: #ffffff;
-    --footer-border: #e0e0e0;
+    --footer-bg: #f5f7fa;
+    --footer-border: #d5dae2;
 }
 
 /* === Dark Theme === */
@@ -54,6 +54,28 @@
 
     --footer-bg: #1a1d26;
     --footer-border: #2d3041;
+
+    /* Semantic Colors — Dark Variants */
+    --color-primary: #5c6bc0;
+    --color-primary-light: #42a5f5;
+    --color-primary-medium: #64b5f6;
+    --color-success: #66bb6a;
+    --color-success-dark: #4caf50;
+    --color-warning: #ffa726;
+    --color-danger: #ef5350;
+    --color-danger-light: #e57373;
+    --color-danger-hover: #ff5252;
+    --color-info: #ba68c8;
+    --color-orange: #ff9800;
+
+    /* Status Badge Backgrounds — Dark */
+    --status-received-bg: rgba(100, 181, 246, 0.15);
+    --status-appointed-bg: rgba(255, 152, 0, 0.15);
+    --status-meeting-bg: rgba(186, 104, 200, 0.15);
+    --status-pass-bg: rgba(102, 187, 106, 0.15);
+    --status-revise-bg: rgba(255, 167, 38, 0.15);
+    --status-rejected-bg: rgba(239, 83, 80, 0.15);
+    --status-completed-bg: rgba(76, 175, 80, 0.15);
 }
 
 /* ===============================
@@ -79,10 +101,6 @@
 [data-theme="dark"] .card-header.bg-white {
     background: var(--bg-card-header) !important;
     border-bottom-color: var(--border-color) !important;
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] .card-body {
     color: var(--text-primary) !important;
 }
 
@@ -118,13 +136,7 @@
     color: var(--text-heading) !important;
 }
 
-[data-theme="dark"] p,
-[data-theme="dark"] span,
-[data-theme="dark"] label,
-[data-theme="dark"] small,
-[data-theme="dark"] div {
-    color: inherit;
-}
+
 
 /* -- Forms -- */
 [data-theme="dark"] .form-control,
@@ -290,12 +302,7 @@
     color: var(--text-muted) !important;
 }
 
-/* -- Footer -- */
-[data-theme="dark"] .main-footer {
-    background: var(--footer-bg) !important;
-    border-top-color: var(--footer-border) !important;
-    color: var(--text-muted) !important;
-}
+
 
 /* -- Badges (keep colored, slight tweak) -- */
 [data-theme="dark"] .badge.bg-light {
@@ -376,27 +383,7 @@
     background: rgba(76, 175, 80, 0.1) !important;
 }
 
-/* -- Progress Tracker Steps -- */
-/* Only darken INACTIVE step icons — keep colors for active/completed/revise/rejected */
-[data-theme="dark"] .progress-step:not(.active):not(.completed):not(.revise):not(.rejected):not(.completed-final) .step-icon {
-    background: var(--bg-card-header) !important;
-    border-color: var(--border-color) !important;
-    color: var(--text-muted) !important;
-}
 
-[data-theme="dark"] .progress-tracker::before {
-    background: var(--border-color) !important;
-}
-
-/* Active/completed step labels stay visible */
-[data-theme="dark"] .progress-step:not(.active):not(.completed) .step-label {
-    color: var(--text-muted) !important;
-}
-
-[data-theme="dark"] .progress-step.active .step-label,
-[data-theme="dark"] .progress-step.completed .step-label {
-    color: var(--text-heading) !important;
-}
 
 /* -- Status Badges — Dark Palette (pastel → transparent tint) -- */
 [data-theme="dark"] .status-badge {
@@ -727,10 +714,7 @@ body,
     background: var(--bg-card-header) !important;
 }
 
-/* Border-bottom separators */
-[data-theme="dark"] .border-bottom {
-    border-bottom-color: var(--border-color) !important;
-}
+
 
 /* Tooltip / Popover */
 [data-theme="dark"] .tooltip-inner {
@@ -929,11 +913,7 @@ body,
     background: rgba(255,255,255,0.9) !important;
 }
 
-/* Content area background */
-[data-theme="dark"] .content-wrapper,
-[data-theme="dark"] .main-content {
-    background: var(--bg-body) !important;
-}
+
 
 /* Error page */
 [data-theme="dark"] .error-page {
@@ -982,60 +962,15 @@ body,
 }
 
 /* ======================================
-   BOOTSTRAP bg-white / bg-light — Global
+   BOOTSTRAP TEXT UTILITIES — Dark
    ====================================== */
-[data-theme="dark"] .bg-white {
-    background-color: var(--bg-card) !important;
-}
-
-[data-theme="dark"] .bg-light {
-    background-color: var(--bg-card-header) !important;
-}
-
-[data-theme="dark"] .card-header.bg-white {
-    background: var(--bg-card-header) !important;
-    border-bottom-color: var(--border-color) !important;
-}
-
-[data-theme="dark"] .text-dark {
-    color: var(--text-primary) !important;
-}
-
-[data-theme="dark"] .text-muted {
-    color: var(--text-muted) !important;
-}
-
 [data-theme="dark"] .text-body {
     color: var(--text-primary) !important;
 }
 
 /* ======================================
-   ALERT VARIANTS — Dark Mode
+   ALERT — primary variant (not in main block)
    ====================================== */
-[data-theme="dark"] .alert-success {
-    background: rgba(46, 125, 50, 0.15) !important;
-    color: #a5d6a7 !important;
-    border-color: rgba(46, 125, 50, 0.3) !important;
-}
-
-[data-theme="dark"] .alert-info {
-    background: rgba(21, 101, 192, 0.15) !important;
-    color: #90caf9 !important;
-    border-color: rgba(21, 101, 192, 0.3) !important;
-}
-
-[data-theme="dark"] .alert-warning {
-    background: rgba(245, 127, 23, 0.15) !important;
-    color: #ffcc80 !important;
-    border-color: rgba(245, 127, 23, 0.3) !important;
-}
-
-[data-theme="dark"] .alert-danger {
-    background: rgba(198, 40, 40, 0.15) !important;
-    color: #ef9a9a !important;
-    border-color: rgba(198, 40, 40, 0.3) !important;
-}
-
 [data-theme="dark"] .alert-primary {
     background: rgba(21, 101, 192, 0.15) !important;
     color: #90caf9 !important;
@@ -1050,16 +985,8 @@ body,
 }
 
 /* ======================================
-   BORDER UTILITIES — Dark
+   BORDER UTILITIES — Dark (additional)
    ====================================== */
-[data-theme="dark"] .border {
-    border-color: var(--border-color) !important;
-}
-
-[data-theme="dark"] .border-top {
-    border-top-color: var(--border-color) !important;
-}
-
 [data-theme="dark"] .border-start {
     border-left-color: var(--border-color) !important;
 }

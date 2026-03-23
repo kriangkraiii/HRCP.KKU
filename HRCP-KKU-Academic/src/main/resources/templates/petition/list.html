@@ -70,15 +70,50 @@
                 </div>
             </div>
 
-            <!-- Empty State -->
-            <div th:if="${petitions == null || petitions.isEmpty()}" class="text-center py-5">
-                <div class="empty-state">
-                    <i class="fas fa-inbox fa-5x text-muted mb-3"></i>
-                    <h4 class="text-muted">ยังไม่มีคำร้อง</h4>
-                    <p class="text-muted mb-4">คุณยังไม่มีคำร้องในระบบ เริ่มต้นโดยการยื่นคำร้องใหม่</p>
-                    <a href="/petitions/new" class="btn btn-primary">
-                        <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
-                    </a>
+            <!-- Empty State — Onboarding -->
+            <div th:if="${petitions == null || petitions.isEmpty()}" class="py-4">
+                <div class="empty-state-card">
+                    <div class="empty-state-header">
+                        <div class="empty-icon">
+                            <i class="fas fa-file-signature" aria-hidden="true"></i>
+                        </div>
+                        <h4>ยินดีต้อนรับสู่ระบบคำร้อง</h4>
+                        <p>ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ</p>
+                    </div>
+                    <div class="empty-state-body">
+                        <!-- Process Overview -->
+                        <div class="onboard-steps">
+                            <div class="onboard-step">
+                                <div class="onboard-step-icon">
+                                    <i class="fas fa-pen-to-square" aria-hidden="true"></i>
+                                </div>
+                                <div class="onboard-step-label">ยื่นคำร้อง</div>
+                            </div>
+                            <div class="onboard-step">
+                                <div class="onboard-step-icon">
+                                    <i class="fas fa-clipboard-check" aria-hidden="true"></i>
+                                </div>
+                                <div class="onboard-step-label">ตรวจสอบ</div>
+                            </div>
+                            <div class="onboard-step">
+                                <div class="onboard-step-icon">
+                                    <i class="fas fa-check-circle" aria-hidden="true"></i>
+                                </div>
+                                <div class="onboard-step-label">ผลลัพธ์</div>
+                            </div>
+                        </div>
+
+                        <!-- CTA -->
+                        <div class="empty-state-cta">
+                            <a href="/petitions/new" class="btn btn-primary">
+                                <i class="fas fa-plus-circle"></i> เริ่มยื่นคำร้องแรกของคุณ
+                            </a>
+                        </div>
+                        <div class="empty-state-hint">
+                            <i class="fas fa-question-circle" aria-hidden="true"></i>
+                            ยังไม่แน่ใจ? ติดต่อผู้ดูแลระบบเพื่อขอคำแนะนำ
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
