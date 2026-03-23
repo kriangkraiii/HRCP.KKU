@@ -38,7 +38,7 @@
                         <div class="col-md-4"><strong>ผู้ยื่น:</strong> [[${request.applicant.name}]]</div>
                         <div class="col-md-4"><strong>อีเมล:</strong> [[${request.applicant.email}]]</div>
                         <div class="col-md-4"><strong>วันที่ยื่น:</strong> <span
-                                th:text="${#temporals.format(request.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></div>
+                                th:text="${@thaiDateUtil.format(request.submissionDate)}"></span></div>
                     </div>
                 </div>
             </div>
@@ -160,7 +160,7 @@
                                                 </td>
                                                 <td><span class="badge" th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : 'bg-primary'}" th:text="${att.fileType}"></span></td>
                                                 <td th:text="${att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-'}"></td>
-                                                <td th:text="${#temporals.format(att.uploadedAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                                <td th:text="${@thaiDateUtil.format(att.uploadedAt)}"></td>
                                                 <td class="text-center">
                                                     <div class="btn-group btn-group-sm">
                                                         <a th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
@@ -193,7 +193,7 @@
                                 <span class="status-badge" th:classappend="'status-' + ${h.newStatus.name()}"
                                     th:text="${h.newStatus.thaiLabel}"></span>
                                 <small class="text-muted ms-2"
-                                    th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                                    th:text="${@thaiDateUtil.format(h.changedAt)}"></small>
                                 <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
                             </div>
                         </div>

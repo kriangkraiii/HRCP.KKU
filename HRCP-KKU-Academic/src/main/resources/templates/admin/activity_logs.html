@@ -101,12 +101,14 @@
                             </select>
                         </div>
                         <div class="col-md-2">
-                            <input type="date" name="dateFrom" class="form-control form-control-sm"
+                            <input type="date" name="dateFrom" id="dateFrom" class="form-control form-control-sm"
                                 th:value="${dateFrom}" placeholder="จากวันที่">
+                            <small class="text-muted" id="dateFromThai"></small>
                         </div>
                         <div class="col-md-2">
-                            <input type="date" name="dateTo" class="form-control form-control-sm"
+                            <input type="date" name="dateTo" id="dateTo" class="form-control form-control-sm"
                                 th:value="${dateTo}" placeholder="ถึงวันที่">
+                            <small class="text-muted" id="dateToThai"></small>
                         </div>
                         <div class="col-md-3 d-flex gap-1">
                             <button type="submit" class="btn btn-primary btn-sm"><i class="fas fa-search"></i> ค้นหา</button>
@@ -134,7 +136,7 @@
                                     <td><small class="text-muted" th:text="${logs.totalElements - (currentPage * 20) - iter.index}"></small></td>
                                     <td>
                                         <small
-                                            th:text="${#temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm')}"></small>
+                                            th:text="${@thaiDateUtil.format(log.timestamp)}"></small>
                                     </td>
                                     <td>
                                         <div class="fw-semibold" th:text="${log.adminName}"></div>
@@ -197,6 +199,28 @@
             </div>
         </div>
     </section>
+<script>
+(function() {
+    function showThaiDateLabel(inputId, labelId) {
+        var input = document.getElementById(inputId);
+        var label = document.getElementById(labelId);
+        if (!input || !label) return;
+        function update() {
+            if (input.value) {
+                var parts = input.value.split('-');
+                var y = parseInt(parts[0]), m = parseInt(parts[1]), d = parseInt(parts[2]);
+                label.textContent = d + '/' + m + '/' + (y + 543) + ' (พ.ศ.)';
+            } else {
+                label.textContent = '';
+            }
+        }
+        input.addEventListener('change', update);
+        update();
+    }
+    showThaiDateLabel('dateFrom', 'dateFromThai');
+    showThaiDateLabel('dateTo', 'dateToThai');
+})();
+</script>
 </body>
 
 </html>

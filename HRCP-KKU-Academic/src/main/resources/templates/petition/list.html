@@ -43,7 +43,7 @@
                                         </p>
                                         <small class="text-muted">
                                             <i class="fas fa-calendar"></i> ยื่นเมื่อ:
-                                            <span th:text="${#temporals.format(petition.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                            <span th:text="${@thaiDateUtil.format(petition.createdAt)}">
                                                 วันที่
                                             </span>
                                         </small>

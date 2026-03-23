@@ -148,7 +148,7 @@
                                 <a th:href="'/user/academic/storage?folderId=' + ${folder.id}" class="text-decoration-none text-dark d-block">
                                     <i class="fas fa-folder fa-3x mb-2" style="color: #f9a825;"></i>
                                     <div class="fw-semibold text-truncate" th:text="${folder.name}"></div>
-                                    <small class="text-muted" th:text="${#temporals.format(folder.createdAt, 'dd/MM/yyyy')}"></small>
+                                    <small class="text-muted" th:text="${@thaiDateUtil.formatDateOnly(folder.createdAt)}"></small>
                                 </a>
                             </div>
                         </div>
@@ -180,7 +180,7 @@
                                 </td>
                                 <td><small th:text="${f.formattedSize}"></small></td>
                                 <td><span class="badge bg-secondary" th:text="${f.fileExtension}"></span></td>
-                                <td><small th:text="${f.createdAt != null ? #temporals.format(f.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></small></td>
+                                <td><small th:text="${@thaiDateUtil.format(f.createdAt)}"></small></td>
                                 <td>
                                     <div class="btn-group">
                                         <a th:href="'/user/academic/storage/download/' + ${f.id}" class="btn btn-sm btn-outline-primary" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
@@ -211,7 +211,7 @@
                             <td><small th:text="${iter.index + 1}"></small></td>
                             <td><span th:text="${f.originalFilename}"></span></td>
                             <td><small th:text="${f.formattedSize}"></small></td>
-                            <td><small th:text="${f.deletedAt != null ? #temporals.format(f.deletedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small></td>
+                            <td><small th:text="${@thaiDateUtil.format(f.deletedAt)}"></small></td>
                             <td>
                                 <div class="btn-group">
                                     <button class="btn btn-sm btn-outline-success" th:data-id="${f.id}" onclick="restoreStorageFile(this)"><i class="fas fa-undo"></i></button>

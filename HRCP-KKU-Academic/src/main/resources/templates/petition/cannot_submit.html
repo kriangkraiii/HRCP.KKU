@@ -51,7 +51,7 @@
                                 <div class="col-md-6">
                                     <small class="text-muted">
                                         <i class="fas fa-calendar"></i> วันที่ยื่น:
-                                        <span th:text="${#temporals.format(activePetition.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                        <span th:text="${@thaiDateUtil.format(activePetition.createdAt)}">
                                             วันที่
                                         </span>
                                     </small>

@@ -225,10 +225,10 @@
                                     <small th:text="${file.documentLabel}"></small>
                                 </td>
                                 <td th:if="${viewMode == 'files'}">
-                                    <small th:text="${file.createdAt != null ? #temporals.format(file.createdAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                    <small th:text="${@thaiDateUtil.format(file.createdAt)}"></small>
                                 </td>
                                 <td th:if="${viewMode == 'trash'}">
-                                    <small th:text="${file.deletedAt != null ? #temporals.format(file.deletedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                    <small th:text="${@thaiDateUtil.format(file.deletedAt)}"></small>
                                 </td>
                                 <td>
                                     <!-- Active file actions -->

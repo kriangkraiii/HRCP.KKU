@@ -34,7 +34,7 @@
                         </div>
                         <div class="col-md-6">
                             <strong>วันที่ยื่น:</strong>
-                            <span th:text="${#temporals.format(petition.createdAt, 'dd/MM/yyyy HH:mm')}">
+                            <span th:text="${@thaiDateUtil.format(petition.createdAt)}">
                                 วันที่
                             </span>
                         </div>
@@ -61,7 +61,7 @@
                                 <span th:text="${status.statusType.displayName}">สถานะ</span>
                             </span>
                             <span class="status-date"
-                                  th:text="${#temporals.format(status.createdAt, 'dd/MM/yyyy HH:mm')}">
+                                  th:text="${@thaiDateUtil.format(status.createdAt)}">
                                 วันที่
                             </span>
                             <p th:if="${status.note != null && !status.note.isEmpty()}"

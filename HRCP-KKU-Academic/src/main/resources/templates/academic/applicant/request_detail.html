@@ -18,7 +18,7 @@
                 <div class="card-body">
                     <div class="row mb-3">
                         <div class="col-md-4"><strong>วันที่ยื่น:</strong> <span
-                                th:text="${#temporals.format(request.submissionDate, 'dd/MM/yyyy HH:mm')}"></span></div>
+                                th:text="${@thaiDateUtil.format(request.submissionDate)}"></span></div>
                     </div>
 
                     <!-- ข้อมูลรายวิชา จากเอกสารที่ 0 -->
@@ -107,7 +107,7 @@
                     <div th:if="${request.meetingDate != null}" class="alert alert-info">
                         <i class="fas fa-calendar-alt me-2"></i>
                         <strong>วันประชุม:</strong> <span
-                            th:text="${#temporals.format(request.meetingDate, 'dd/MM/yyyy HH:mm')}"></span>
+                            th:text="${@thaiDateUtil.format(request.meetingDate)}"></span>
                         <span th:if="${request.meetingLocation != null}"> | <strong>สถานที่:</strong>
                             [[${request.meetingLocation}]]</span>
                     </div>
@@ -161,7 +161,7 @@
                                 <div>
                                     <strong th:text="${doc.documentLabel}"></strong>
                                     <br><small class="text-muted">สร้างเมื่อ: <span
-                                            th:text="${#temporals.format(doc.createdAt, 'dd/MM/yyyy HH:mm')}"></span></small>
+                                            th:text="${@thaiDateUtil.format(doc.createdAt)}"></span></small>
                                 </div>
                                 <div class="btn-group">
                                     <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=docx'"

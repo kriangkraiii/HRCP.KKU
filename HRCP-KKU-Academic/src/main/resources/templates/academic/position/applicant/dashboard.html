@@ -152,7 +152,7 @@
                                 </span>
                                 <span class="badge bg-light text-dark border">
                                     <i class="fas fa-calendar me-1"></i> วันที่ยื่น:
-                                    <span th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></span>
+                                    <span th:text="${@thaiDateUtil.format(req.submissionDate)}"></span>
                                 </span>
                                 <span class="badge fs-6" th:classappend="'bg-' + ${req.currentStatus.badgeClass}"
                                     th:text="${req.currentStatus.thaiLabel}"></span>

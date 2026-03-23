@@ -50,7 +50,7 @@
                          'bg-secondary'}">
 											[[${log.action}]] </span></td>
 									<td>[[${log.details}]]</td>
-<td><small>[[${#temporals.format(log.timestamp, 'dd/MM/yyyy HH:mm:ss', 'Asia/Bangkok')}]]</small></td>
+<td><small>[[${@thaiDateUtil.formatWithSeconds(log.timestamp)}]]</small></td>
 
 								</tr>
 							</tbody>

@@ -36,7 +36,7 @@
                         <div class="col-md-3"><strong>อีเมล:</strong> [[${request.applicant.email}]]</div>
                         <div class="col-md-3"><strong>ตำแหน่งที่ขอ:</strong> [[${request.targetPosition ?: '-'}]]</div>
                         <div class="col-md-3"><strong>วันที่ยื่น:</strong>
-                            <span th:if="${request.submissionDate != null}" th:text="${#temporals.format(request.submissionDate, 'dd/MM/yyyy HH:mm')}"></span>
+                            <span th:if="${request.submissionDate != null}" th:text="${@thaiDateUtil.format(request.submissionDate)}"></span>
                             <span th:if="${request.submissionDate == null}">-</span>
                         </div>
                     </div>
@@ -244,7 +244,7 @@
                                                 </td>
                                                 <td><span class="badge" th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : 'bg-primary'}" th:text="${att.fileType}"></span></td>
                                                 <td th:text="${att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-'}"></td>
-                                                <td th:text="${#temporals.format(att.uploadedAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                                <td th:text="${@thaiDateUtil.format(att.uploadedAt)}"></td>
                                                 <td class="text-center">
                                                     <div class="btn-group btn-group-sm">
                                                         <a th:href="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
@@ -296,7 +296,7 @@
                                     <span class="badge" th:style="'background:' + ${h.newStatus.color} + ';color:#fff'"
                                         th:text="${h.newStatus.thaiLabel}"></span>
                                     <small class="text-muted ms-2"
-                                        th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                                        th:text="${@thaiDateUtil.format(h.changedAt)}"></small>
                                     <small th:if="${h.changedBy != null}" class="text-muted d-block">
                                         โดย: [[${h.changedBy.name}]]
                                     </small>
@@ -336,7 +336,7 @@
                                             th:text="${log.documentLabel}"></small>
                                         <small class="text-muted">
                                             <i class="fas fa-clock me-1"></i>
-                                            [[${#temporals.format(log.editedAt, 'dd/MM/yyyy HH:mm:ss')}]]
+                                            [[${@thaiDateUtil.formatWithSeconds(log.editedAt)}]]
                                         </small>
                                         <small th:if="${log.editedBy != null}" class="text-muted d-block">
                                             <i class="fas fa-user me-1"></i> โดย: [[${log.editedBy.name}]]

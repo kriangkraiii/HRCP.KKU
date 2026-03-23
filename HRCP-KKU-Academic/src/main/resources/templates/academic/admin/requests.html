@@ -159,10 +159,10 @@
                                                 </td>
                                                 <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                                 <td>
-                                                    <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                                    <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate)}"></small>
                                                 </td>
                                                 <td>
-                                                    <small th:text="${req.updatedAt != null ? #temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                                    <small th:text="${@thaiDateUtil.format(req.updatedAt)}"></small>
                                                 </td>
                                                 <td>
                                                     <span class="badge rounded-pill"
@@ -238,10 +238,10 @@
                                                 </td>
                                                 <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                                 <td>
-                                                    <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                                    <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate)}"></small>
                                                 </td>
                                                 <td>
-                                                    <small th:text="${req.updatedAt != null ? #temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                                    <small th:text="${@thaiDateUtil.format(req.updatedAt)}"></small>
                                                 </td>
                                                 <td>
                                                     <span class="badge rounded-pill"
@@ -401,10 +401,10 @@
                                             <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                             <td><span th:text="${req.targetPosition} ?: '-'"></span></td>
                                             <td>
-                                                <small th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                                <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate)}"></small>
                                             </td>
                                             <td>
-                                                <small th:text="${req.updatedAt != null ? #temporals.format(req.updatedAt, 'dd/MM/yyyy HH:mm') : '-'}"></small>
+                                                <small th:text="${@thaiDateUtil.format(req.updatedAt)}"></small>
                                             </td>
                                             <td>
                                                 <span class="badge rounded-pill"

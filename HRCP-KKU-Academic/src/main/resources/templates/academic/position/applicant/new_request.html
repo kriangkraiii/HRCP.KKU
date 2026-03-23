@@ -30,7 +30,7 @@
                                     คำร้อง [[${eval.requestCode}]]
                                 </h5>
                                 <small class="text-muted">
-                                    วันที่ยื่น: <span th:text="${#temporals.format(eval.submissionDate, 'dd/MM/yyyy')}"></span>
+                                    วันที่ยื่น: <span th:text="${@thaiDateUtil.formatDateOnly(eval.submissionDate)}"></span>
                                     | สถานะ: <span class="badge bg-success">เสร็จสิ้น</span>
                                 </small>
                             </div>

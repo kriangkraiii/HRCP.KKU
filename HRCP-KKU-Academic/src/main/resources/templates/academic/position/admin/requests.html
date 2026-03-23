@@ -30,7 +30,7 @@
                             <td th:text="${req.applicant.name}"></td>
                             <td><span class="badge" style="background:#2e7d32"><i class="fas fa-university me-1"></i> ขอตำแหน่ง</span></td>
                             <td th:text="${req.targetPosition ?: '-'}"></td>
-                            <td th:text="${req.submissionDate != null ? #temporals.format(req.submissionDate, 'dd/MM/yyyy') : '-'}"></td>
+                            <td th:text="${@thaiDateUtil.formatDateOnly(req.submissionDate)}"></td>
                             <td>
                                 <span class="badge" th:classappend="'bg-' + ${req.currentStatus.badgeClass}"
                                     th:text="${req.currentStatus.thaiLabel}"></span>

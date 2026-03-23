@@ -122,7 +122,7 @@
                         <span class="badge" th:classappend="'bg-' + ${h.newStatus.badgeClass}"
                             th:text="${h.newStatus.thaiLabel}"></span>
                         <small class="text-muted ms-2"
-                            th:text="${#temporals.format(h.changedAt, 'dd/MM/yyyy HH:mm')}"></small>
+                            th:text="${@thaiDateUtil.format(h.changedAt)}"></small>
                         <div th:if="${h.note != null}" class="text-muted small mt-1" th:text="${h.note}"></div>
                     </div>
                 </div>

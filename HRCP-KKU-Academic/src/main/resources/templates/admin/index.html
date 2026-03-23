@@ -299,7 +299,7 @@
 												<span th:if="${tx.status.name() == 'FAILED'}" class="badge bg-danger">Failed</span>
 											</td>
 											<td th:text="${tx.description != null ? tx.description : '-'}">-</td>
-											<td th:text="${tx.createdAt != null ? #temporals.format(tx.createdAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+											<td th:text="${@thaiDateUtil.format(tx.createdAt)}">-</td>
 										</tr>
 										<tr th:if="${recentTransactions == null or #lists.isEmpty(recentTransactions)}">
 											<td colspan="7" class="text-center text-muted">No transactions found</td>
