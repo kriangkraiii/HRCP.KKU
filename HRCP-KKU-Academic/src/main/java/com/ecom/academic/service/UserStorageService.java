@@ -44,7 +44,7 @@ public class UserStorageService {
         return folderRepo.findById(id).filter(f -> f.getOwnerId().equals(ownerId)).orElse(null);
     }
 
-    @CacheEvict(value = "storageStats", key = "#ownerId")
+    @CacheEvict(value = "storageStats", allEntries = true)
     public UserFolder createFolder(String name, Long parentId, Integer ownerId) {
         UserFolder folder = new UserFolder();
         folder.setName(name.trim());
@@ -61,7 +61,7 @@ public class UserStorageService {
         if (f != null) { f.setName(newName.trim()); folderRepo.save(f); }
     }
 
-    @CacheEvict(value = "storageStats", key = "#ownerId")
+    @CacheEvict(value = "storageStats", allEntries = true)
     public void deleteFolder(Long id, Integer ownerId) {
         UserFolder f = getFolder(id, ownerId);
         if (f != null) { deleteFolderRecursive(f); }
@@ -80,7 +80,7 @@ public class UserStorageService {
         return fileRepo.findByOwnerIdAndFolderIdAndIsDeletedFalseOrderByOriginalFilenameAsc(ownerId, folderId);
     }
 
-    @CacheEvict(value = "storageStats", key = "#ownerId")
+    @CacheEvict(value = "storageStats", allEntries = true)
     public UserFile uploadFile(MultipartFile multipartFile, Long folderId, Integer ownerId) throws IOException {
         long currentUsage = getTotalSize(ownerId);
         long incoming = multipartFile.getSize();
@@ -110,6 +110,22 @@ public class UserStorageService {
         return fileRepo.save(file);
     }
 
+    /**
+     * Save a file that was already assembled from chunks (used by ChunkedUploadController).
+     */
+    @CacheEvict(value = "storageStats", allEntries = true)
+    public UserFile saveUploadedFile(String filename, String storedPath, long fileSize,
+                                      String contentType, Long folderId, Integer ownerId) {
+        UserFile file = new UserFile();
+        file.setOriginalFilename(filename);
+        file.setStoredFilePath(storedPath);
+        file.setFileSize(fileSize);
+        file.setContentType(contentType);
+        file.setOwnerId(ownerId);
+        if (folderId != null) file.setFolder(getFolder(folderId, ownerId));
+        return fileRepo.save(file);
+    }
+
     public UserFile getFile(Long id, Integer ownerId) {
         return fileRepo.findById(id).filter(f -> f.getOwnerId().equals(ownerId)).orElse(null);
     }
@@ -119,19 +135,19 @@ public class UserStorageService {
         if (f != null) { f.setOriginalFilename(newName.trim()); fileRepo.save(f); }
     }
 
-    @CacheEvict(value = "storageStats", key = "#ownerId")
+    @CacheEvict(value = "storageStats", allEntries = true)
     public void softDeleteFile(Long id, Integer ownerId) {
         UserFile f = getFile(id, ownerId);
         if (f != null) { f.setIsDeleted(true); f.setDeletedAt(LocalDateTime.now()); fileRepo.save(f); }
     }
 
-    @CacheEvict(value = "storageStats", key = "#ownerId")
+    @CacheEvict(value = "storageStats", allEntries = true)
     public void restoreFile(Long id, Integer ownerId) {
         UserFile f = getFile(id, ownerId);
         if (f != null) { f.setIsDeleted(false); f.setDeletedAt(null); fileRepo.save(f); }
     }
 
-    @CacheEvict(value = "storageStats", key = "#ownerId")
+    @CacheEvict(value = "storageStats", allEntries = true)
     public void permanentDeleteFile(Long id, Integer ownerId) {
         UserFile f = getFile(id, ownerId);
         if (f != null) { deleteFileFromDisk(f.getStoredFilePath()); fileRepo.delete(f); }

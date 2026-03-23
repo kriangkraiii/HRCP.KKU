@@ -251,10 +251,109 @@
         </div>
     </div>
 
+    <!-- ==================== Upload Modal ==================== -->
+    <div id="uploadModal" class="upload-modal-overlay" style="display:none;">
+        <div class="upload-modal-content">
+            <div class="upload-modal-header">
+                <div class="d-flex align-items-center gap-2">
+                    <i class="fas fa-cloud-upload-alt" style="font-size:1.3rem;color:#2e7d32;"></i>
+                    <h5 class="mb-0 fw-bold">อัปโหลดไฟล์</h5>
+                </div>
+                <button type="button" class="btn-close" onclick="closeUploadModal()" id="uploadModalCloseBtn"></button>
+            </div>
+            <div class="upload-modal-body" id="uploadFileList">
+                <!-- File items will be added here dynamically -->
+            </div>
+            <div class="upload-modal-footer">
+                <div class="d-flex justify-content-between align-items-center w-100">
+                    <small class="text-muted" id="uploadSummary"></small>
+                    <button class="btn btn-sm btn-outline-danger px-3" onclick="cancelAllUploads()" id="cancelAllBtn" style="border-radius:8px;display:none;">
+                        <i class="fas fa-times me-1"></i>ยกเลิกทั้งหมด
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+        .upload-modal-overlay {
+            position: fixed; inset: 0; z-index: 10500;
+            background: rgba(0,0,0,0.45);
+            backdrop-filter: blur(6px);
+            display: flex; align-items: center; justify-content: center;
+            animation: fadeIn 0.25s ease;
+        }
+        .upload-modal-content {
+            background: rgba(255,255,255,0.92);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255,255,255,0.6);
+            border-radius: 20px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.15), 0 0 0 1px rgba(255,255,255,0.3) inset;
+            width: 90%; max-width: 520px; max-height: 80vh;
+            display: flex; flex-direction: column;
+            animation: slideUp 0.3s ease;
+        }
+        .upload-modal-header {
+            padding: 20px 24px 16px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+        }
+        .upload-modal-body {
+            padding: 16px 24px; overflow-y: auto; flex: 1;
+            max-height: 400px;
+        }
+        .upload-modal-footer {
+            padding: 14px 24px;
+            border-top: 1px solid rgba(0,0,0,0.06);
+        }
+        .upload-file-item {
+            padding: 14px 0;
+            border-bottom: 1px solid rgba(0,0,0,0.04);
+        }
+        .upload-file-item:last-child { border-bottom: none; }
+        .upload-file-icon {
+            width: 42px; height: 42px; border-radius: 12px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem; flex-shrink: 0;
+        }
+        .upload-progress-bar {
+            height: 6px; border-radius: 3px; background: #e9ecef;
+            overflow: hidden; margin-top: 8px;
+        }
+        .upload-progress-fill {
+            height: 100%; border-radius: 3px;
+            background: linear-gradient(90deg, #43a047, #66bb6a);
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        .upload-progress-fill.error { background: linear-gradient(90deg, #e53935, #ef5350); }
+        .upload-progress-fill::after {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            animation: shimmer 1.5s infinite;
+        }
+        .upload-file-status {
+            font-size: 0.78rem; color: #757575; margin-top: 4px;
+        }
+        .upload-file-status .speed { color: #2e7d32; font-weight: 600; }
+        .upload-file-status .eta { color: #1565c0; }
+        .upload-file-status .done { color: #2e7d32; font-weight: 600; }
+        .upload-file-status .fail { color: #c62828; font-weight: 600; }
+
+        @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+        @keyframes slideUp { from{opacity:0;transform:translateY(24px)} to{opacity:1;transform:translateY(0)} }
+        @keyframes shimmer { from{transform:translateX(-100%)} to{transform:translateX(100%)} }
+    </style>
+
     <script th:inline="javascript">
         var csrfToken = [[${_csrf.token}]];
         var csrfHeaderName = [[${_csrf.headerName}]];
         var currentFolderId = [[${currentFolderId}]];
+
+        var CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
+        var activeUploads = {}; // uploadId -> {aborted: false}
+        var uploadQueue = [];
+        var isProcessing = false;
 
         function getCsrfHeaders() {
             var h = {'Content-Type': 'application/x-www-form-urlencoded'};
@@ -279,25 +378,266 @@
             new bootstrap.Modal(document.getElementById('confirmModal')).show();
         }
 
+        // ==================== File Type Icon Helper ====================
+        function getFileIcon(filename) {
+            var ext = (filename.split('.').pop() || '').toLowerCase();
+            var icons = {
+                'pdf': {icon:'fa-file-pdf', color:'#c62828', bg:'rgba(198,40,40,0.08)'},
+                'doc': {icon:'fa-file-word', color:'#1565c0', bg:'rgba(21,101,192,0.08)'},
+                'docx': {icon:'fa-file-word', color:'#1565c0', bg:'rgba(21,101,192,0.08)'},
+                'xls': {icon:'fa-file-excel', color:'#2e7d32', bg:'rgba(46,125,50,0.08)'},
+                'xlsx': {icon:'fa-file-excel', color:'#2e7d32', bg:'rgba(46,125,50,0.08)'},
+                'ppt': {icon:'fa-file-powerpoint', color:'#d84315', bg:'rgba(216,67,21,0.08)'},
+                'pptx': {icon:'fa-file-powerpoint', color:'#d84315', bg:'rgba(216,67,21,0.08)'},
+                'jpg': {icon:'fa-file-image', color:'#6a1b9a', bg:'rgba(106,27,154,0.08)'},
+                'jpeg': {icon:'fa-file-image', color:'#6a1b9a', bg:'rgba(106,27,154,0.08)'},
+                'png': {icon:'fa-file-image', color:'#6a1b9a', bg:'rgba(106,27,154,0.08)'},
+                'gif': {icon:'fa-file-image', color:'#6a1b9a', bg:'rgba(106,27,154,0.08)'},
+                'mp4': {icon:'fa-file-video', color:'#ad1457', bg:'rgba(173,20,87,0.08)'},
+                'mp3': {icon:'fa-file-audio', color:'#00838f', bg:'rgba(0,131,143,0.08)'},
+                'zip': {icon:'fa-file-archive', color:'#f9a825', bg:'rgba(249,168,37,0.08)'},
+                'rar': {icon:'fa-file-archive', color:'#f9a825', bg:'rgba(249,168,37,0.08)'},
+                'txt': {icon:'fa-file-alt', color:'#546e7a', bg:'rgba(84,110,122,0.08)'},
+                'csv': {icon:'fa-file-csv', color:'#2e7d32', bg:'rgba(46,125,50,0.08)'}
+            };
+            return icons[ext] || {icon:'fa-file', color:'#757575', bg:'rgba(117,117,117,0.08)'};
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1024*1024) return (bytes/1024).toFixed(1) + ' KB';
+            if (bytes < 1024*1024*1024) return (bytes/(1024*1024)).toFixed(1) + ' MB';
+            return (bytes/(1024*1024*1024)).toFixed(2) + ' GB';
+        }
+
+        function formatTime(seconds) {
+            if (seconds < 60) return Math.ceil(seconds) + ' วินาที';
+            if (seconds < 3600) return Math.ceil(seconds/60) + ' นาที';
+            return (seconds/3600).toFixed(1) + ' ชั่วโมง';
+        }
+
+        // ==================== Upload Modal ====================
+        function openUploadModal() {
+            document.getElementById('uploadModal').style.display = 'flex';
+        }
+        function closeUploadModal() {
+            if (Object.keys(activeUploads).length === 0) {
+                document.getElementById('uploadModal').style.display = 'none';
+                document.getElementById('uploadFileList').innerHTML = '';
+            }
+        }
+
+        function addFileToModal(file, fileIndex) {
+            var icon = getFileIcon(file.name);
+            var html = '<div class="upload-file-item d-flex align-items-start gap-3" id="upload-item-' + fileIndex + '">'
+                + '<div class="upload-file-icon" style="background:' + icon.bg + ';color:' + icon.color + ';"><i class="fas ' + icon.icon + '"></i></div>'
+                + '<div class="flex-grow-1 overflow-hidden">'
+                + '<div class="d-flex justify-content-between align-items-center">'
+                + '<span class="fw-semibold text-truncate" style="max-width:280px;" title="' + file.name + '">' + file.name + '</span>'
+                + '<small class="text-muted ms-2 text-nowrap">' + formatFileSize(file.size) + '</small>'
+                + '</div>'
+                + '<div class="upload-progress-bar"><div class="upload-progress-fill" id="progress-' + fileIndex + '" style="width:0%"></div></div>'
+                + '<div class="upload-file-status" id="status-' + fileIndex + '">รอคิว...</div>'
+                + '</div></div>';
+            document.getElementById('uploadFileList').insertAdjacentHTML('beforeend', html);
+        }
+
+        function updateProgress(fileIndex, percent, speed, eta) {
+            var bar = document.getElementById('progress-' + fileIndex);
+            var status = document.getElementById('status-' + fileIndex);
+            if (bar) bar.style.width = percent + '%';
+            if (status) {
+                var parts = [];
+                parts.push(Math.round(percent) + '%');
+                if (speed > 0) parts.push('<span class="speed">' + formatFileSize(speed) + '/s</span>');
+                if (eta > 0 && percent < 100) parts.push('<span class="eta">เหลือ ~' + formatTime(eta) + '</span>');
+                status.innerHTML = parts.join(' • ');
+            }
+        }
+
+        function markDone(fileIndex) {
+            var bar = document.getElementById('progress-' + fileIndex);
+            var status = document.getElementById('status-' + fileIndex);
+            if (bar) bar.style.width = '100%';
+            if (status) status.innerHTML = '<span class="done"><i class="fas fa-check-circle me-1"></i>เสร็จสิ้น</span>';
+        }
+
+        function markError(fileIndex, msg) {
+            var bar = document.getElementById('progress-' + fileIndex);
+            var status = document.getElementById('status-' + fileIndex);
+            if (bar) { bar.style.width = '100%'; bar.classList.add('error'); }
+            if (status) status.innerHTML = '<span class="fail"><i class="fas fa-times-circle me-1"></i>' + (msg || 'ผิดพลาด') + '</span>';
+        }
+
+        function updateSummary() {
+            var items = document.querySelectorAll('.upload-file-item');
+            var doneCount = 0;
+            items.forEach(function(item) {
+                var st = item.querySelector('.upload-file-status');
+                if (st && st.querySelector('.done')) doneCount++;
+            });
+            var el = document.getElementById('uploadSummary');
+            if (el) el.textContent = doneCount + '/' + items.length + ' ไฟล์เสร็จแล้ว';
+        }
+
+        // ==================== Chunked Upload Engine ====================
+        function uploadFiles(files) {
+            openUploadModal();
+            document.getElementById('cancelAllBtn').style.display = '';
+
+            var startIndex = uploadQueue.length;
+            for (var i = 0; i < files.length; i++) {
+                var fileIndex = startIndex + i;
+                uploadQueue.push({file: files[i], index: fileIndex});
+                addFileToModal(files[i], fileIndex);
+            }
+            updateSummary();
+
+            if (!isProcessing) processQueue();
+            document.getElementById('fileUploadInput').value = '';
+        }
+
+        function processQueue() {
+            if (uploadQueue.length === 0) {
+                isProcessing = false;
+                document.getElementById('cancelAllBtn').style.display = 'none';
+                // Reload after all done
+                setTimeout(function(){ location.reload(); }, 1500);
+                return;
+            }
+            isProcessing = true;
+            var item = uploadQueue.shift();
+            chunkedUpload(item.file, item.index).then(function(){ processQueue(); });
+        }
+
+        async function chunkedUpload(file, fileIndex) {
+            var totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+            if (totalChunks === 0) totalChunks = 1;
+
+            // Step 1: Init
+            updateProgress(fileIndex, 0, 0, 0);
+            var statusEl = document.getElementById('status-' + fileIndex);
+            if (statusEl) statusEl.innerHTML = 'กำลังเตรียม...';
+
+            var initFd = new FormData();
+            initFd.append('filename', file.name);
+            initFd.append('fileSize', file.size);
+            initFd.append('totalChunks', totalChunks);
+            if (currentFolderId) initFd.append('folderId', currentFolderId);
+            initFd.append('storageType', 'user');
+            initFd.append('_csrf', csrfToken);
+
+            var initRes;
+            try {
+                var r = await fetch('/api/upload/init', {method: 'POST', body: initFd});
+                initRes = await r.json();
+            } catch (e) {
+                markError(fileIndex, 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์');
+                updateSummary();
+                return;
+            }
+
+            if (!initRes.success) {
+                markError(fileIndex, initRes.message);
+                updateSummary();
+                return;
+            }
+
+            var uploadId = initRes.uploadId;
+            activeUploads[uploadId] = {aborted: false};
+
+            // Step 2: Send chunks
+            var startTime = Date.now();
+            var bytesSent = 0;
+
+            for (var i = 0; i < totalChunks; i++) {
+                if (activeUploads[uploadId] && activeUploads[uploadId].aborted) {
+                    // Abort
+                    var abortFd = new FormData();
+                    abortFd.append('uploadId', uploadId);
+                    abortFd.append('_csrf', csrfToken);
+                    fetch('/api/upload/abort', {method: 'POST', body: abortFd}).catch(function(){});
+                    markError(fileIndex, 'ยกเลิกแล้ว');
+                    delete activeUploads[uploadId];
+                    updateSummary();
+                    return;
+                }
+
+                var start = i * CHUNK_SIZE;
+                var end = Math.min(start + CHUNK_SIZE, file.size);
+                var chunkBlob = file.slice(start, end);
+
+                var chunkFd = new FormData();
+                chunkFd.append('uploadId', uploadId);
+                chunkFd.append('chunkIndex', i);
+                chunkFd.append('chunk', chunkBlob, 'chunk_' + i);
+                chunkFd.append('_csrf', csrfToken);
+
+                try {
+                    var cr = await fetch('/api/upload/chunk', {method: 'POST', body: chunkFd});
+                    var cd = await cr.json();
+                    if (!cd.success) {
+                        markError(fileIndex, cd.message);
+                        delete activeUploads[uploadId];
+                        updateSummary();
+                        return;
+                    }
+                } catch (e) {
+                    markError(fileIndex, 'การส่งข้อมูลล้มเหลว');
+                    delete activeUploads[uploadId];
+                    updateSummary();
+                    return;
+                }
+
+                bytesSent += (end - start);
+                var elapsed = (Date.now() - startTime) / 1000;
+                var speed = elapsed > 0 ? bytesSent / elapsed : 0;
+                var remaining = file.size - bytesSent;
+                var eta = speed > 0 ? remaining / speed : 0;
+                var percent = (bytesSent / file.size) * 100;
+
+                updateProgress(fileIndex, percent, speed, eta);
+            }
+
+            // Step 3: Complete
+            if (statusEl) statusEl.innerHTML = 'กำลังรวมไฟล์...';
+
+            var completeFd = new FormData();
+            completeFd.append('uploadId', uploadId);
+            completeFd.append('_csrf', csrfToken);
+
+            try {
+                var completeR = await fetch('/api/upload/complete', {method: 'POST', body: completeFd});
+                var completeD = await completeR.json();
+                if (completeD.success) {
+                    markDone(fileIndex);
+                } else {
+                    markError(fileIndex, completeD.message);
+                }
+            } catch (e) {
+                markError(fileIndex, 'รวมไฟล์ไม่สำเร็จ');
+            }
+
+            delete activeUploads[uploadId];
+            updateSummary();
+        }
+
+        function cancelAllUploads() {
+            // Mark all active uploads as aborted
+            for (var uid in activeUploads) {
+                activeUploads[uid].aborted = true;
+            }
+            uploadQueue = [];
+        }
+
+        // ==================== Drag & Drop ====================
         function initDragDrop() {
             document.body.addEventListener('dragover', function(e) { e.preventDefault(); var dz = document.getElementById('dropZone'); if(dz) dz.style.display='block'; });
             document.body.addEventListener('dragleave', function(e) { if(!e.relatedTarget||e.relatedTarget===document.documentElement){var dz=document.getElementById('dropZone');if(dz)dz.style.display='none';} });
             document.body.addEventListener('drop', function(e) { e.preventDefault(); var dz=document.getElementById('dropZone'); if(dz)dz.style.display='none'; if(e.dataTransfer.files.length>0) uploadFiles(e.dataTransfer.files); });
         }
 
-        function uploadFiles(files) {
-            for (var i = 0; i < files.length; i++) {
-                var fd = new FormData();
-                fd.append('file', files[i]);
-                if (currentFolderId) fd.append('folderId', currentFolderId);
-                fd.append('_csrf', csrfToken);
-                fetch('/user/academic/storage/upload', {method:'POST', body:fd})
-                    .then(function(r){return r.json();})
-                    .then(function(d){showToast(d.message,d.success);if(d.success)setTimeout(function(){location.reload();},800);});
-            }
-            document.getElementById('fileUploadInput').value='';
-        }
-
+        // ==================== Other Operations ====================
         function showCreateFolderModal() {
             var name = prompt('ชื่อโฟลเดอร์ใหม่:');
             if (!name||!name.trim()) return;
@@ -373,3 +713,4 @@
 </section>
 </body>
 </html>
+

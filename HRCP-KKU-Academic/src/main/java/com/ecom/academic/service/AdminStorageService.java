@@ -120,6 +120,24 @@ public class AdminStorageService {
         return fileRepository.save(file);
     }
 
+    /**
+     * Save a file that was already assembled from chunks (used by ChunkedUploadController).
+     */
+    public AdminFile saveUploadedFile(String filename, String storedPath, long fileSize,
+                                       String contentType, Long folderId, String uploadedBy) {
+        AdminFile file = new AdminFile();
+        file.setOriginalFilename(filename);
+        file.setStoredFilePath(storedPath);
+        file.setFileSize(fileSize);
+        file.setContentType(contentType);
+        file.setCreatedBy(uploadedBy);
+        if (folderId != null) {
+            AdminFolder folder = folderRepository.findById(folderId).orElse(null);
+            file.setFolder(folder);
+        }
+        return fileRepository.save(file);
+    }
+
     public AdminFile getFile(Long id) {
         return fileRepository.findById(id).orElse(null);
     }
