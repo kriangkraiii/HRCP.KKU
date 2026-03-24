@@ -159,7 +159,7 @@
                                                 </td>
                                                 <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                                 <td>
-                                                    <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate)}"></small>
+                                                    <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate) : ''}"></small>
                                                 </td>
                                                 <td>
                                                     <small th:text="${@thaiDateUtil.format(req.updatedAt)}"></small>
@@ -238,7 +238,7 @@
                                                 </td>
                                                 <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                                 <td>
-                                                    <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate)}"></small>
+                                                    <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate) : ''}"></small>
                                                 </td>
                                                 <td>
                                                     <small th:text="${@thaiDateUtil.format(req.updatedAt)}"></small>
@@ -401,7 +401,7 @@
                                             <td><small class="text-muted" th:text="${req.applicant.email}"></small></td>
                                             <td><span th:text="${req.targetPosition} ?: '-'"></span></td>
                                             <td>
-                                                <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate)}"></small>
+                                                <small th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate) : ''}"></small>
                                             </td>
                                             <td>
                                                 <small th:text="${@thaiDateUtil.format(req.updatedAt)}"></small>
