@@ -16,7 +16,6 @@
 - Navy palette (#0d1b3e → #1a237e → #0d47a1), open to evolution.
 - Typography: Sarabun (Thai academic typeface).
 - Light mode primary, dark mode supported.
-- Anti-reference: Anything hard to use or unpleasant.
 
 ### Design Principles
 1. **Clarity over decoration** — Every element must serve a purpose.
@@ -24,3 +23,9 @@
 3. **Institutional trust** — Professional, not consumer-app.
 4. **Effortless efficiency** — Minimize clicks for tech-savvy users.
 5. **Accessible formality** — Formal but not cold.
+
+### Conventions
+- Use `var()` tokens for all colors/spacing — no hard-coded values
+- Font weights: `400`, `600`, `700` only (500 is NOT loaded)
+- Transitions: use `--duration-fast/normal/slow` + `--ease-out-quart`
+- Dark mode: token overrides in `[data-theme="dark"]`, no new `!important`

@@ -305,24 +305,28 @@
 <p class="text-muted">ไม่พบเอกสารที่ค้นหา</p>
 </div>
 
-<!-- PDF Preview Modal -->
-<div class="modal fade" id="pdfModal" tabindex="-1">
-<div class="modal-dialog modal-fullscreen">
-<div class="modal-content">
-<div class="modal-header py-2">
-<h6 class="modal-title" id="pdfModalTitle"><i class="fas fa-file-pdf text-danger me-2"></i>กำลังโหลดเอกสาร...</h6>
-<a id="pdfNewTab" href="#" target="_blank" class="btn btn-sm btn-outline-primary me-2"><i class="fas fa-external-link-alt me-1"></i>เปิดแท็บใหม่</a>
-<button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-</div>
-<div class="modal-body p-0 position-relative">
-<div id="pdfSpinner" class="position-absolute top-50 start-50 translate-middle text-center">
-<div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
-<p class="text-muted">กำลังโหลดเอกสาร PDF...</p>
-</div>
-<iframe id="pdfFrame" style="width:100%;height:100%;border:none;display:none;"></iframe>
-</div>
-</div>
-</div>
+<!-- PDF Preview Overlay (pure CSS/JS, NO Bootstrap modal) -->
+<div id="pdfOverlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.7);">
+    <div style="position:absolute; inset:0; display:flex; flex-direction:column; background:var(--bg-primary, #fff);">
+        <!-- Header -->
+        <div style="display:flex; align-items:center; padding:8px 16px; border-bottom:1px solid rgba(0,0,0,.1); background:var(--bg-primary, #fff); min-height:48px;">
+            <h6 id="pdfOverlayTitle" style="margin:0; flex:1; font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
+                <i class="fas fa-file-pdf text-danger me-2"></i>กำลังโหลดเอกสาร...
+            </h6>
+            <a id="pdfOverlayNewTab" href="#" target="_blank" class="btn btn-sm btn-outline-primary me-2">
+                <i class="fas fa-external-link-alt me-1"></i>เปิดแท็บใหม่
+            </a>
+            <button type="button" id="pdfOverlayClose" class="btn-close"></button>
+        </div>
+        <!-- Body -->
+        <div style="flex:1; position:relative; overflow:hidden;">
+            <div id="pdfOverlaySpinner" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
+                <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
+                <p class="text-muted">กำลังโหลดเอกสาร PDF...</p>
+            </div>
+            <iframe id="pdfOverlayFrame" style="width:100%; height:100%; border:none; display:none;"></iframe>
+        </div>
+    </div>
 </div>
 
 <style>
@@ -340,7 +344,6 @@
 [data-bs-theme="dark"] .doc-item:hover { background: rgba(56,189,248,.08); }
 [data-bs-theme="dark"] .doc-item { border-bottom-color: rgba(255,255,255,.06); }
 .doc-item.d-none { display: none !important; }
-#pdfModal .modal-body { height: calc(100vh - 56px); }
 </style>
 
 <script>
@@ -360,31 +363,52 @@ document.getElementById('docSearch').addEventListener('input', function() {
     document.getElementById('noResults').classList.toggle('d-none', visible > 0);
 });
 
-// PDF Preview in modal
+// ===== Pure CSS/JS PDF Overlay (no Bootstrap) =====
+var overlay = document.getElementById('pdfOverlay');
+var overlayFrame = document.getElementById('pdfOverlayFrame');
+var overlaySpinner = document.getElementById('pdfOverlaySpinner');
+
+function openPdfOverlay(url, name) {
+    document.getElementById('pdfOverlayTitle').innerHTML = '<i class="fas fa-file-pdf text-danger me-2"></i>' + name;
+    document.getElementById('pdfOverlayNewTab').href = url;
+    overlayFrame.style.display = 'none';
+    overlaySpinner.style.display = 'block';
+    overlayFrame.src = url;
+    overlayFrame.onload = function() {
+        overlaySpinner.style.display = 'none';
+        overlayFrame.style.display = 'block';
+    };
+    // Fallback: if Google Docs takes >15s, hide spinner anyway
+    setTimeout(function() {
+        overlaySpinner.style.display = 'none';
+        overlayFrame.style.display = 'block';
+    }, 15000);
+    overlay.style.display = 'block';
+}
+
+function closePdfOverlay() {
+    overlay.style.display = 'none';
+    overlayFrame.src = '';
+}
+
+// Close button
+document.getElementById('pdfOverlayClose').addEventListener('click', closePdfOverlay);
+
+// Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && overlay.style.display === 'block') {
+        closePdfOverlay();
+    }
+});
+
+// Open on doc-item click
 document.querySelectorAll('.doc-item').forEach(function(link) {
     link.addEventListener('click', function(e) {
         e.preventDefault();
         var url = this.getAttribute('href');
         var name = this.querySelector('.doc-name').textContent;
-        document.getElementById('pdfModalTitle').innerHTML = '<i class="fas fa-file-pdf text-danger me-2"></i>' + name;
-        document.getElementById('pdfNewTab').href = url;
-        var frame = document.getElementById('pdfFrame');
-        var spinner = document.getElementById('pdfSpinner');
-        frame.style.display = 'none';
-        spinner.style.display = 'block';
-        frame.src = url;
-        frame.onload = function() {
-            spinner.style.display = 'none';
-            frame.style.display = 'block';
-        };
-        var modal = new bootstrap.Modal(document.getElementById('pdfModal'));
-        modal.show();
+        openPdfOverlay(url, name);
     });
-});
-
-// Cleanup iframe on modal close
-document.getElementById('pdfModal').addEventListener('hidden.bs.modal', function() {
-    document.getElementById('pdfFrame').src = '';
 });
 </script>
 

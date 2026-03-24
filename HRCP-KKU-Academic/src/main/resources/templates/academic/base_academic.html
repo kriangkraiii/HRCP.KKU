@@ -545,6 +545,42 @@
         }
     })();
 </script>
+
+<!-- Global: bulletproof fix for stuck gray screen after modal close -->
+<script>
+(function() {
+    function forceUnlockScreen() {
+        document.querySelectorAll('.modal-backdrop').forEach(function(el) { el.remove(); });
+        document.body.classList.remove('modal-open', 'antigravity-scroll-lock');
+        document.body.style.overflow = '';
+        document.body.style.paddingRight = '';
+        document.body.removeAttribute('data-bs-overflow');
+        document.body.removeAttribute('data-bs-padding-right');
+    }
+    
+    // Method 1: When modal STARTS closing, schedule cleanup
+    document.addEventListener('hide.bs.modal', function() {
+        setTimeout(function() {
+            if (!document.querySelector('.modal.show')) {
+                forceUnlockScreen();
+            }
+        }, 500);
+    });
+
+    // Method 2: Poll every second — if body is locked but no modal is open, unlock
+    setInterval(function() {
+        var hasOpenModal = document.querySelector('.modal.show');
+        if (hasOpenModal) return; // modal is legitimately open, do nothing
+        
+        var isLocked = window.getComputedStyle(document.body).overflow === 'hidden';
+        var hasBackdrop = document.querySelector('.modal-backdrop');
+        
+        if (isLocked || hasBackdrop) {
+            forceUnlockScreen();
+        }
+    }, 1000);
+})();
+</script>
 </body>
 
 </html>
