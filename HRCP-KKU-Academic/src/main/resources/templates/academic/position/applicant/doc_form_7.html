@@ -483,6 +483,35 @@
                 if (existingData) {
                     try {
                         const data = JSON.parse(existingData);
+
+                        // ---- Step 1: Detect max indices for each dynamic block group ----
+                        const blockGroups = {
+                            'research_working_title': { max: 1, addFn: addResearchBlock },
+                            'other_working_title': { max: 1, addFn: addOtherBlock },
+                            'social_working_title': { max: 1, addFn: addSocialBlock },
+                            'book_working_title': { max: 1, addFn: addBookBlock },
+                            'article_title': { max: 1, addFn: addArticleBlock }
+                        };
+
+                        for (const key of Object.keys(data)) {
+                            for (const prefix of Object.keys(blockGroups)) {
+                                const regex = new RegExp('^' + prefix + '_(\\d+)$');
+                                const match = key.match(regex);
+                                if (match) {
+                                    const idx = parseInt(match[1]);
+                                    if (idx > blockGroups[prefix].max) blockGroups[prefix].max = idx;
+                                }
+                            }
+                        }
+
+                        // ---- Step 2: Create dynamic blocks ----
+                        for (const [prefix, info] of Object.entries(blockGroups)) {
+                            for (let i = 2; i <= info.max; i++) {
+                                info.addFn();
+                            }
+                        }
+
+                        // ---- Step 3: Fill values into all inputs (including dynamic ones) ----
                         for (const [key, value] of Object.entries(data)) {
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
@@ -490,7 +519,7 @@
                                 else { el.value = value; }
                             }
                         }
-                    } catch(e) {}
+                    } catch(e) { console.error('Draft restore error:', e); }
                 }
             });
         </script>
