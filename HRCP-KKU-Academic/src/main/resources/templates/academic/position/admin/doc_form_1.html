@@ -700,7 +700,7 @@
                 counters.edu++;
                 const n = counters.edu;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm" value="๑.๓.${toThaiDigits(n)}"></td>
+                row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm" value="๑.๓.${toThaiNum(n)}"></td>
                     <td><input type="text" name="education_degree_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_major_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_institution_${n}" class="form-control form-control-sm"></td>
@@ -865,7 +865,7 @@
                 document.getElementById('sectionProf').style.display = (val === 'ศาสตราจารย์') ? '' : 'none';
             });
 
-            // Load existing data
+            // Load existing data — including dynamic rows
             document.addEventListener('DOMContentLoaded', function() {
                 // Trigger section visibility
                 document.getElementById('targetPos').dispatchEvent(new Event('change'));
@@ -875,6 +875,47 @@
                     try {
                         const data = JSON.parse(existingData);
 
+                        // ---- Step 1: Detect max indices for each dynamic row group ----
+                        const rowGroups = {
+                            'education_degree': { max: 1, addFn: addEduRow },
+                            'teaching_subject': { max: 1, addFn: addTeachRow },
+                            'other_position': { max: 1, addFn: addOtherPosRow },
+                            'international_speaker_last_5_years': { max: 1, addFn: addSpeakerRow },
+                            'asst_research_working': { max: 1, addFn: function() { addWorkRow('asstResearchRows','asst_research_working','asst_used_research'); } },
+                            'asst_other_working': { max: 1, addFn: function() { addWorkRow('asstOtherRows','asst_other_working','asst_used_other'); } },
+                            'asst_book_working': { max: 1, addFn: function() { addWorkRow('asstBookRows','asst_book_working','asst_used_book'); } },
+                            'assoc_research_working': { max: 1, addFn: function() { addWorkRow('assocResearchRows','assoc_research_working','assoc_used_research'); } },
+                            'assoc_other_working': { max: 1, addFn: function() { addWorkRow('assocOtherRows','assoc_other_working','assoc_used_other'); } },
+                            'assoc_book_working': { max: 1, addFn: function() { addWorkRow('assocBookRows','assoc_book_working','assoc_used_book'); } },
+                            'assoc_method3_research': { max: 1, addFn: addAssocM3Row },
+                            'assoc_pi_project': { max: 1, addFn: addAssocPIRow },
+                            'prof_research_working': { max: 1, addFn: function() { addWorkRow('profResearchRows','prof_research_working','prof_used_research'); } },
+                            'prof_other_working': { max: 1, addFn: function() { addWorkRow('profOtherRows','prof_other_working','prof_used_other'); } },
+                            'prof_book_working': { max: 1, addFn: function() { addWorkRow('profBookRows','prof_book_working','prof_used_book'); } },
+                            'prof_method3_research': { max: 1, addFn: addM3Row },
+                            'prof_pi_project': { max: 1, addFn: addPIRow }
+                        };
+
+                        // Scan keys to find max index per group
+                        for (const key of Object.keys(data)) {
+                            for (const prefix of Object.keys(rowGroups)) {
+                                const regex = new RegExp('^' + prefix + '_(\\d+)$');
+                                const match = key.match(regex);
+                                if (match) {
+                                    const idx = parseInt(match[1]);
+                                    if (idx > rowGroups[prefix].max) rowGroups[prefix].max = idx;
+                                }
+                            }
+                        }
+
+                        // ---- Step 2: Create dynamic rows ----
+                        for (const [prefix, info] of Object.entries(rowGroups)) {
+                            for (let i = 2; i <= info.max; i++) {
+                                info.addFn();
+                            }
+                        }
+
+                        // ---- Step 3: Fill values into all inputs (including dynamic ones) ----
                         for (const [key, value] of Object.entries(data)) {
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
@@ -885,9 +926,13 @@
                                 } else { el.value = value; }
                             }
                         }
-                        // Re-trigger visibility after data load
+
+                        // Re-trigger visibility and radio change events
                         document.getElementById('targetPos').dispatchEvent(new Event('change'));
-                    } catch(e) {}
+                        document.querySelectorAll('input[type="radio"]:checked').forEach(function(r) {
+                            r.dispatchEvent(new Event('change', {bubbles:true}));
+                        });
+                    } catch(e) { console.error('Draft restore error:', e); }
                 }
             });
         </script>

@@ -639,7 +639,7 @@
                 counters.edu++;
                 const n = counters.edu;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm" value="๑.๓.${toThaiDigits(n)}"></td>
+                row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm" value="๑.๓.${toThaiNum(n)}"></td>
                     <td><input type="text" name="education_degree_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_major_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_institution_${n}" class="form-control form-control-sm"></td>
@@ -787,6 +787,65 @@
                     try {
                         const data = JSON.parse(existingData);
 
+                        // ---- Step 1: Detect max indices for each dynamic row group ----
+                        const rowGroups = {
+                            'education_degree': { max: 1, addFn: addEduRow },
+                            'teaching_subject': { max: 1, addFn: addTeachRow },
+                            'other_position': { max: 1, addFn: addOtherPosRow },
+                            'international_speaker_last_5_years': { max: 1, addFn: addSpeakerRow },
+                            'prof_method3_research': { max: 1, addFn: addM3Row },
+                            'assoc_method3_research': { max: 1, addFn: addAssocM3Row },
+                            'prof_pi_project': { max: 1, addFn: addPIRow },
+                            'assoc_pi_project': { max: 1, addFn: addAssocPIRow }
+                        };
+
+                        // addWorkRow-based groups: containerId → { namePrefix, usedPrefix }
+                        const workGroups = {
+                            'asstResearchRows': { namePrefix: 'asst_research_working', usedPrefix: 'asst_used_research', max: 1 },
+                            'asstOtherRows': { namePrefix: 'asst_other_working', usedPrefix: 'asst_used_other', max: 1 },
+                            'asstBookRows': { namePrefix: 'asst_book_working', usedPrefix: 'asst_used_book', max: 1 },
+                            'assocResearchRows': { namePrefix: 'assoc_research_working', usedPrefix: 'assoc_used_research', max: 1 },
+                            'assocOtherRows': { namePrefix: 'assoc_other_working', usedPrefix: 'assoc_used_other', max: 1 },
+                            'assocBookRows': { namePrefix: 'assoc_book_working', usedPrefix: 'assoc_used_book', max: 1 },
+                            'profResearchRows': { namePrefix: 'prof_research_working', usedPrefix: 'prof_used_research', max: 1 },
+                            'profOtherRows': { namePrefix: 'prof_other_working', usedPrefix: 'prof_used_other', max: 1 },
+                            'profBookRows': { namePrefix: 'prof_book_working', usedPrefix: 'prof_used_book', max: 1 }
+                        };
+
+                        for (const key of Object.keys(data)) {
+                            // Check simple row groups
+                            for (const prefix of Object.keys(rowGroups)) {
+                                const regex = new RegExp('^' + prefix + '_(\\d+)$');
+                                const match = key.match(regex);
+                                if (match) {
+                                    const idx = parseInt(match[1]);
+                                    if (idx > rowGroups[prefix].max) rowGroups[prefix].max = idx;
+                                }
+                            }
+                            // Check addWorkRow-based groups
+                            for (const [containerId, wg] of Object.entries(workGroups)) {
+                                const regex = new RegExp('^' + wg.namePrefix + '_(\\d+)$');
+                                const match = key.match(regex);
+                                if (match) {
+                                    const idx = parseInt(match[1]);
+                                    if (idx > wg.max) wg.max = idx;
+                                }
+                            }
+                        }
+
+                        // ---- Step 2: Create dynamic rows ----
+                        for (const [prefix, info] of Object.entries(rowGroups)) {
+                            for (let i = 2; i <= info.max; i++) {
+                                info.addFn();
+                            }
+                        }
+                        for (const [containerId, wg] of Object.entries(workGroups)) {
+                            for (let i = 2; i <= wg.max; i++) {
+                                addWorkRow(containerId, wg.namePrefix, wg.usedPrefix);
+                            }
+                        }
+
+                        // ---- Step 3: Fill values into all inputs (including dynamic ones) ----
                         for (const [key, value] of Object.entries(data)) {
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
@@ -799,7 +858,7 @@
                         }
                         // Re-trigger visibility after data load
                         document.getElementById('targetPos').dispatchEvent(new Event('change'));
-                    } catch(e) {}
+                    } catch(e) { console.error('Draft restore error:', e); }
                 }
             });
         </script>

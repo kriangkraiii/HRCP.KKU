@@ -2,13 +2,13 @@
  * Thai Date Auto-fill Script
  * 
  * ใส่ค่าเริ่มต้นวันที่ปัจจุบัน (รูปแบบไทย พ.ศ.) ให้กับ input ที่ชื่อมี date
- * ไม่รวม birth_date, appointment_date, publish_date ฯลฯ (วันเฉพาะที่ต้องกรอกเอง)
+ * field ที่อยู่ใน NO_AUTOFILL จะได้ date picker แต่ไม่ auto-fill วันปัจจุบัน
  * 
  * รันทันที (IIFE) เพราะ script โหลดท้าย body — DOM พร้อมแล้ว
  */
 (function () {
-    // ชื่อ field ที่ไม่ควรใส่วันปัจจุบัน (เป็นวันเฉพาะ)
-    const EXCLUDE_NAMES = [
+    // ชื่อ field ที่ได้ picker แต่ไม่ auto-fill วันปัจจุบัน (เป็นวันเฉพาะที่ต้องเลือกเอง)
+    const NO_AUTOFILL = [
         'birth_date',
         'lecturer_appointment_date',
         'assistant_appointment_date',
@@ -37,14 +37,13 @@
         return `วันที่ ${day} ${month} พ.ศ. ${year}`;
     }
 
-    function isExcluded(name) {
-        return EXCLUDE_NAMES.some(ex => name.includes(ex));
+    function shouldSkipAutofill(name) {
+        return NO_AUTOFILL.some(ex => name.includes(ex));
     }
 
     function isDateField(input) {
         const name = input.name || '';
         if (!name.match(/date/i)) return false;
-        if (isExcluded(name)) return false;
         return true;
     }
 
@@ -62,8 +61,10 @@
         inputs.forEach(function (input) {
             if (!isDateField(input)) return;
 
-            // ถ้ายังไม่มีค่า (ยังไม่เคยกรอก) → ใส่วันปัจจุบัน
-            if (!input.value || input.value.trim() === '') {
+            const skipAutoFill = shouldSkipAutofill(input.name);
+
+            // ถ้าไม่อยู่ใน NO_AUTOFILL → ใส่วันปัจจุบัน (ถ้ายังว่าง)
+            if (!skipAutoFill && (!input.value || input.value.trim() === '')) {
                 input.value = todayThai;
             }
 
@@ -76,7 +77,7 @@
             picker.className = 'form-control form-control-sm';
             picker.style.cssText = 'width:auto;display:inline-block;max-width:180px;margin-left:8px;vertical-align:middle;';
             picker.title = 'เลือกวันที่';
-            picker.value = isoToday;
+            if (!skipAutoFill) picker.value = isoToday;
 
             picker.addEventListener('change', function () {
                 if (this.value) {

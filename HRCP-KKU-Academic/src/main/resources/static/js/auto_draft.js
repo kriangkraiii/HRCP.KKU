@@ -74,6 +74,19 @@
     var self = this;
     this.form.addEventListener("input", function () { self._onChange(); }, true);
     this.form.addEventListener("change", function () { self._onChange(); }, true);
+
+    /* Watch for DOM changes (dynamic rows added/removed via buttons) */
+    if (window.MutationObserver) {
+      var observer = new MutationObserver(function (mutations) {
+        for (var i = 0; i < mutations.length; i++) {
+          if (mutations[i].addedNodes.length || mutations[i].removedNodes.length) {
+            self._onChange();
+            return;
+          }
+        }
+      });
+      observer.observe(this.form, { childList: true, subtree: true });
+    }
   };
 
   Engine.prototype._show = function (state, extra) {
@@ -127,11 +140,11 @@
       var n = el.name;
       if (!n || n === "_csrf" || n === "action") return;
       if (el.type === "checkbox") {
-        if (el.checked) d[n] = el.value || "on";
+        d[n] = el.checked ? (el.value || "on") : "☐";
       } else if (el.type === "radio") {
         if (el.checked) d[n] = el.value;
-      } else if (el.value) {
-        d[n] = el.value;
+      } else {
+        d[n] = el.value || "";
       }
     });
     return d;
