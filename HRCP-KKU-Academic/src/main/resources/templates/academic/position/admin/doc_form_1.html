@@ -452,7 +452,7 @@
                             <div id="assocM3ResearchRows">
                                 <div class="border rounded p-2 mb-2 bg-light">
                                     <div class="row g-2">
-                                        <div class="col-1"><input type="text" name="assoc_method3_research_no_1" class="form-control form-control-sm"></div>
+                                        <div class="col-1"><input type="text" name="assoc_method3_research_no_1" class="form-control form-control-sm" value="๑"></div>
                                         <div class="col-5"><input type="text" name="assoc_method3_research_1" class="form-control form-control-sm" placeholder="ชื่องานวิจัย"></div>
                                         <div class="col-3">
                                             <div class="form-check form-check-inline">
@@ -501,7 +501,7 @@
                         <div id="assocPIRows">
                             <div class="border rounded p-2 mb-2 bg-light">
                                 <div class="row g-2">
-                                    <div class="col-1"><input type="text" name="assoc_pi_project_no_1" class="form-control form-control-sm"></div>
+                                    <div class="col-1"><input type="text" name="assoc_pi_project_no_1" class="form-control form-control-sm" value="๑"></div>
                                     <div class="col-5"><input type="text" name="assoc_pi_project_1" class="form-control form-control-sm" placeholder="ชื่อโครงการวิจัย"></div>
                                     <div class="col-4"><input type="text" name="assoc_pi_source_1" class="form-control form-control-sm" placeholder="แหล่งทุน"></div>
                                 </div>
@@ -599,7 +599,7 @@
                             <div id="profM3ResearchRows">
                                 <div class="border rounded p-2 mb-2 bg-light">
                                     <div class="row g-2">
-                                        <div class="col-1"><input type="text" name="prof_method3_research_no_1" class="form-control form-control-sm"></div>
+                                        <div class="col-1"><input type="text" name="prof_method3_research_no_1" class="form-control form-control-sm" value="๑"></div>
                                         <div class="col-5"><input type="text" name="prof_method3_research_1" class="form-control form-control-sm" placeholder="ชื่องานวิจัย"></div>
                                         <div class="col-3">
                                             <div class="form-check form-check-inline">
@@ -648,7 +648,7 @@
                         <div id="profPIRows">
                             <div class="border rounded p-2 mb-2 bg-light">
                                 <div class="row g-2">
-                                    <div class="col-1"><input type="text" name="prof_pi_project_no_1" class="form-control form-control-sm"></div>
+                                    <div class="col-1"><input type="text" name="prof_pi_project_no_1" class="form-control form-control-sm" value="๑"></div>
                                     <div class="col-5"><input type="text" name="prof_pi_project_1" class="form-control form-control-sm" placeholder="ชื่อโครงการวิจัย"></div>
                                     <div class="col-4"><input type="text" name="prof_pi_source_1" class="form-control form-control-sm" placeholder="แหล่งทุน"></div>
                                 </div>
@@ -692,6 +692,10 @@
             const counters = { edu: 1, teach: 1, m3: 1, pi: 1, otherPos: 1, speaker: 1, assocM3: 1, assocPi: 1 };
             const workCounters = {};
 
+                        function toThaiNum(n) {
+                return String(n).replace(/[0-9]/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+            }
+
             function addEduRow() {
                 counters.edu++;
                 const n = counters.edu;
@@ -725,7 +729,7 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-2';
                 div.innerHTML = `<div class="row g-2">
-                    <div class="col-1"><input type="text" name="${namePrefix}_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-1"><input type="text" name="${namePrefix}_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-7"><input type="text" name="${namePrefix}_${n}" class="form-control form-control-sm" placeholder="ชื่อผลงาน"></div>
                     <div class="col-4">
                         <div class="form-check form-check-inline">
@@ -766,7 +770,7 @@
                 const n = counters.otherPos;
                 const div = document.createElement('div');
                 div.className = 'row g-2 mb-2';
-                div.innerHTML = `<div class="col-1"><input type="text" name="other_position_no_${n}" class="form-control form-control-sm"></div>
+                div.innerHTML = `<div class="col-1"><input type="text" name="other_position_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-10"><input type="text" name="other_position_${n}" class="form-control form-control-sm" placeholder="ตำแหน่ง สังกัด วัน เดือน ปี"></div>
                     <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()"><i class="fas fa-times"></i></button></div>`;
                 document.getElementById('otherPosRows').appendChild(div);
@@ -777,7 +781,7 @@
                 const n = counters.speaker;
                 const div = document.createElement('div');
                 div.className = 'row g-2 mb-2';
-                div.innerHTML = `<div class="col-1"><input type="text" name="international_speaker_last_5_years_no_${n}" class="form-control form-control-sm"></div>
+                div.innerHTML = `<div class="col-1"><input type="text" name="international_speaker_last_5_years_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-10"><input type="text" name="international_speaker_last_5_years_${n}" class="form-control form-control-sm" placeholder="รายละเอียด"></div>
                     <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()"><i class="fas fa-times"></i></button></div>`;
                 document.getElementById('speakerRows').appendChild(div);
@@ -789,7 +793,7 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-2 mb-2 bg-light';
                 div.innerHTML = `<div class="row g-2">
-                    <div class="col-1"><input type="text" name="prof_method3_research_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-1"><input type="text" name="prof_method3_research_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-5"><input type="text" name="prof_method3_research_${n}" class="form-control form-control-sm" placeholder="ชื่องานวิจัย"></div>
                     <div class="col-3">
                         <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="prof_m3_quartile_${n}" value="Q1"><label class="form-check-label" style="font-size:0.8em">Q1</label></div>
@@ -810,7 +814,7 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-2 mb-2 bg-light';
                 div.innerHTML = `<div class="row g-2">
-                    <div class="col-1"><input type="text" name="assoc_method3_research_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-1"><input type="text" name="assoc_method3_research_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-5"><input type="text" name="assoc_method3_research_${n}" class="form-control form-control-sm" placeholder="ชื่องานวิจัย"></div>
                     <div class="col-3">
                         <div class="form-check form-check-inline"><input class="form-check-input" type="radio" name="assoc_m3_quartile_${n}" value="Q1"><label class="form-check-label" style="font-size:0.8em">Q1</label></div>
@@ -831,7 +835,7 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-2 mb-2 bg-light';
                 div.innerHTML = `<div class="row g-2">
-                    <div class="col-1"><input type="text" name="prof_pi_project_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-1"><input type="text" name="prof_pi_project_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-5"><input type="text" name="prof_pi_project_${n}" class="form-control form-control-sm" placeholder="ชื่อโครงการ"></div>
                     <div class="col-4"><input type="text" name="prof_pi_source_${n}" class="form-control form-control-sm" placeholder="แหล่งทุน"></div>
                     <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
@@ -845,7 +849,7 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-2 mb-2 bg-light';
                 div.innerHTML = `<div class="row g-2">
-                    <div class="col-1"><input type="text" name="assoc_pi_project_no_${n}" class="form-control form-control-sm"></div>
+                    <div class="col-1"><input type="text" name="assoc_pi_project_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-5"><input type="text" name="assoc_pi_project_${n}" class="form-control form-control-sm" placeholder="ชื่อโครงการ"></div>
                     <div class="col-4"><input type="text" name="assoc_pi_source_${n}" class="form-control form-control-sm" placeholder="แหล่งทุน"></div>
                     <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
@@ -870,6 +874,7 @@
                 if (existingData) {
                     try {
                         const data = JSON.parse(existingData);
+
                         for (const [key, value] of Object.entries(data)) {
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
