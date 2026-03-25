@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+<body>
+    <section>
+        <div class="container py-4">
+            <!-- Header -->
+            <div class="guide-hero" style="background:linear-gradient(135deg,#004d40 0%,#00897b 100%);">
+                <div class="guide-hero-icon"><i class="fas fa-book-reader"></i></div>
+                <div>
+                    <h3 class="guide-hero-title">คู่มือการใช้งานระบบ — ผู้ยื่นคำร้อง</h3>
+                    <p class="guide-hero-sub">คำแนะนำทีละขั้นตอน ตั้งแต่ยื่นคำร้องจนถึงดาวน์โหลดเอกสาร</p>
+                </div>
+            </div>
+
+            <!-- Quick Nav -->
+            <div class="guide-quicknav">
+                <a href="#sec-dashboard" class="guide-qn-item"><i class="fas fa-tachometer-alt"></i> แดชบอร์ด</a>
+                <a href="#sec-eval" class="guide-qn-item"><i class="fas fa-clipboard-check"></i> ประเมินผล</a>
+                <a href="#sec-position" class="guide-qn-item"><i class="fas fa-university"></i> ขอตำแหน่ง</a>
+                <a href="#sec-docs" class="guide-qn-item"><i class="fas fa-book-open"></i> เอกสารอ้างอิง</a>
+                <a href="#sec-storage" class="guide-qn-item"><i class="fas fa-cloud"></i> ที่เก็บไฟล์</a>
+                <a href="#sec-settings" class="guide-qn-item"><i class="fas fa-cog"></i> ตั้งค่า</a>
+            </div>
+
+            <!-- ===== 1. แดชบอร์ด ===== -->
+            <div class="guide-section" id="sec-dashboard">
+                <button type="button" class="guide-section-header" aria-expanded="true">
+                    <span><i class="fas fa-tachometer-alt guide-sec-icon" style="color:#00897b"></i> 1. แดชบอร์ด</span>
+                    <i class="fas fa-chevron-down guide-chevron"></i>
+                </button>
+                <div class="guide-section-body show">
+                    <p class="guide-desc">แดชบอร์ดเป็นหน้าแรกหลังล็อกอิน แสดงสถานะคำร้องของท่านทั้งหมด แยกเป็น 2 ประเภท: ประเมินผลการสอน และ ขอตำแหน่ง</p>
+
+                    <h6 class="guide-subtitle"><i class="fas fa-th-large"></i> สิ่งที่แสดงในแดชบอร์ด</h6>
+                    <div class="guide-feature-list">
+                        <div class="guide-feature">
+                            <div class="guide-feature-icon" style="background:#e0f2f1;color:#00897b"><i class="fas fa-chart-pie"></i></div>
+                            <div>
+                                <strong>สรุปสถานะคำร้อง</strong>
+                                <p>แสดงจำนวนคำร้องแยกตามสถานะ: แบบร่าง, รอดำเนินการ, กำลังดำเนินการ, อนุมัติ</p>
+                            </div>
+                        </div>
+                        <div class="guide-feature">
+                            <div class="guide-feature-icon" style="background:#e8f5e9;color:#2e7d32"><i class="fas fa-tasks"></i></div>
+                            <div>
+                                <strong>Progress Tracker</strong>
+                                <p>แสดงความคืบหน้าของคำร้องแต่ละรายการ ด้วย step icons ตั้งแต่ยื่นจนถึงอนุมัติ</p>
+                            </div>
+                        </div>
+                        <div class="guide-feature">
+                            <div class="guide-feature-icon" style="background:#e3f2fd;color:#1565c0"><i class="fas fa-exchange-alt"></i></div>
+                            <div>
+                                <strong>สลับระหว่างแท็บ</strong>
+                                <p>ใช้แท็บด้านบนเพื่อสลับระหว่าง "คำร้องประเมินผลการสอน" และ "คำร้องขอตำแหน่ง"</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 2. ยื่นคำร้องประเมินผลการสอน ===== -->
+            <div class="guide-section" id="sec-eval">
+                <button type="button" class="guide-section-header" aria-expanded="false">
+                    <span><i class="fas fa-clipboard-check guide-sec-icon" style="color:#0d47a1"></i> 2. ยื่นคำร้องขอประเมินผลการสอน</span>
+                    <i class="fas fa-chevron-down guide-chevron"></i>
+                </button>
+                <div class="guide-section-body">
+                    <p class="guide-desc">ขั้นตอนการยื่นคำร้องขอประเมินผลการสอน ตั้งแต่สร้างคำร้องใหม่จนถึงดาวน์โหลดเอกสาร</p>
+
+                    <h6 class="guide-subtitle"><i class="fas fa-route"></i> ขั้นตอนทั้งหมด</h6>
+                    <div class="guide-steps">
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0d47a1">1</div>
+                            <div class="guide-step-content">
+                                <strong>สร้างคำร้องใหม่</strong>
+                                <p>คลิก <span class="guide-menu-ref"><i class="fas fa-clipboard-check"></i> ยื่นคำร้องขอประเมิน</span> ที่ sidebar → กรอกข้อมูลเบื้องต้น: ตำแหน่ง, สาขาวิชา, วิชาที่สอน, ภาคการเรียน → กดสร้างคำร้อง</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0d47a1">2</div>
+                            <div class="guide-step-content">
+                                <strong>กรอกเอกสาร ก.พ.ว. (เอกสารที่ 0)</strong>
+                                <p>หลังสร้างคำร้อง → ระบบจะนำไปหน้ากรอกเอกสารที่ 0 (ประวัติส่วนตัว) กรอกข้อมูล: ชื่อ-สกุล, วุฒิการศึกษา, ผลงาน ฯลฯ</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0d47a1">3</div>
+                            <div class="guide-step-content">
+                                <strong>กรอกเอกสารที่ 1 (รายงานจริยธรรม)</strong>
+                                <p>คลิก "กรอก" ที่เอกสารที่ 1 → กรอกข้อมูล → บันทึก</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0d47a1">4</div>
+                            <div class="guide-step-content">
+                                <strong>ยื่นคำร้อง</strong>
+                                <p>เมื่อกรอกเอกสารครบแล้ว คลิกปุ่ม <span class="guide-btn-ref bg-success text-white"><i class="fas fa-paper-plane"></i> ยื่นคำร้อง</span> คำร้องจะเปลี่ยนสถานะจาก "แบบร่าง" เป็น "รอดำเนินการ"</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0d47a1">5</div>
+                            <div class="guide-step-content">
+                                <strong>ติดตามสถานะ</strong>
+                                <p>กลับมาที่แดชบอร์ดเพื่อดูสถานะคำร้อง แอดมินจะดำเนินการเอกสารที่เหลือ (เอกสาร 2-8)</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0d47a1">6</div>
+                            <div class="guide-step-content">
+                                <strong>ดาวน์โหลดเอกสาร</strong>
+                                <p>เมื่อแอดมินกรอกเอกสารเสร็จ สามารถดาวน์โหลดเป็น:</p>
+                                <ul>
+                                    <li><span class="guide-btn-ref"><i class="fas fa-file-word"></i> DOCX</span> — ไฟล์ Word สำหรับแก้ไข</li>
+                                    <li><span class="guide-btn-ref bg-danger text-white"><i class="fas fa-file-pdf"></i> PDF</span> — ไฟล์ PDF สำหรับพิมพ์</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-tip">
+                        <i class="fas fa-lightbulb"></i>
+                        <div><strong>เคล็ดลับ:</strong> ระบบมีฟีเจอร์ "บันทึกร่างอัตโนมัติ" หากเปิดใช้ในการตั้งค่า ระบบจะบันทึกข้อมูลที่กรอกค้างไว้ทุก 30 วินาที ไม่ต้องกังวลว่าข้อมูลจะหาย</div>
+                    </div>
+
+                    <div class="guide-info">
+                        <i class="fas fa-info-circle"></i>
+                        <div><strong>หมายเหตุ:</strong> หลังยื่นคำร้องแล้ว จะไม่สามารถแก้ไขเอกสารที่ 0 และ 1 ได้ หากต้องการแก้ไข กรุณาติดต่อแอดมิน</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 3. ยื่นขอตำแหน่งทางวิชาการ ===== -->
+            <div class="guide-section" id="sec-position">
+                <button type="button" class="guide-section-header" aria-expanded="false">
+                    <span><i class="fas fa-university guide-sec-icon" style="color:#2e7d32"></i> 3. ยื่นขอตำแหน่งทางวิชาการ</span>
+                    <i class="fas fa-chevron-down guide-chevron"></i>
+                </button>
+                <div class="guide-section-body">
+                    <p class="guide-desc">ขอตำแหน่งทางวิชาการ (ผศ., รศ., ศ.) ระบบจะดึงผลประเมินผลการสอนมาใช้ประกอบอัตโนมัติ</p>
+
+                    <div class="guide-steps">
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#2e7d32">1</div>
+                            <div class="guide-step-content">
+                                <strong>สร้างคำร้อง</strong>
+                                <p>คลิก <span class="guide-menu-ref"><i class="fas fa-university"></i> ยื่นขอตำแหน่ง</span> → กรอกข้อมูล: ตำแหน่งที่ขอ (ผศ./รศ./ศ.), สาขาวิชา → คลิก "สร้างคำร้อง"</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#2e7d32">2</div>
+                            <div class="guide-step-content">
+                                <strong>กรอกเอกสารเบื้องต้น</strong>
+                                <p>กรอกเอกสารที่ผู้ยื่นต้องกรอกเอง (ถ้ามี) ข้อมูลบางส่วนจะถูกเติมอัตโนมัติจากข้อมูลบัญชี</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#2e7d32">3</div>
+                            <div class="guide-step-content">
+                                <strong>ยื่นคำร้อง</strong>
+                                <p>ตรวจสอบข้อมูลให้ครบถ้วน แล้วกด <span class="guide-btn-ref bg-success text-white"><i class="fas fa-paper-plane"></i> ยื่นคำร้อง</span></p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#2e7d32">4</div>
+                            <div class="guide-step-content">
+                                <strong>ติดตามสถานะ</strong>
+                                <p>ดู progress tracker ที่แดชบอร์ด แอดมินจะดำเนินการเอกสาร Phase 2 ทั้ง 9 ฉบับ และสามารถอัปเดตสถานะให้ท่านทราบ</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-info">
+                        <i class="fas fa-info-circle"></i>
+                        <div><strong>ข้อกำหนด:</strong> ท่านควรมีผลประเมินผลการสอนผ่าน (จากคำร้องประเมินผลการสอน) ก่อนยื่นขอตำแหน่ง ระบบจะเชื่อมโยงผลประเมินอัตโนมัติ</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 4. เอกสาร/ข้อบังคับ ===== -->
+            <div class="guide-section" id="sec-docs">
+                <button type="button" class="guide-section-header" aria-expanded="false">
+                    <span><i class="fas fa-book-open guide-sec-icon" style="color:#5d4037"></i> 4. เอกสาร/ข้อบังคับ</span>
+                    <i class="fas fa-chevron-down guide-chevron"></i>
+                </button>
+                <div class="guide-section-body">
+                    <p class="guide-desc">คลังเอกสารอ้างอิงเกี่ยวกับข้อบังคับ ประกาศ และแนวปฏิบัติ สำหรับการขอตำแหน่งทางวิชาการ</p>
+
+                    <div class="guide-steps">
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#5d4037">1</div>
+                            <div class="guide-step-content">
+                                <strong>เข้าสู่หน้าเอกสาร</strong>
+                                <p>คลิก <span class="guide-menu-ref"><i class="fas fa-book-open"></i> เอกสาร/ข้อบังคับ</span> ที่ sidebar</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#5d4037">2</div>
+                            <div class="guide-step-content">
+                                <strong>ดาวน์โหลดเอกสาร</strong>
+                                <p>คลิกที่ลิงก์เอกสารเพื่อดาวน์โหลด ไฟล์จะเป็น PDF ที่สามารถเปิดอ่านได้ทันที</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-tip">
+                        <i class="fas fa-lightbulb"></i>
+                        <div><strong>แนะนำ:</strong> ศึกษาข้อบังคับก่อนยื่นคำร้อง เพื่อเตรียมข้อมูลให้ครบถ้วนตั้งแต่แรก จะทำให้กระบวนการดำเนินไปรวดเร็วขึ้น</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 5. ที่เก็บไฟล์ ===== -->
+            <div class="guide-section" id="sec-storage">
+                <button type="button" class="guide-section-header" aria-expanded="false">
+                    <span><i class="fas fa-cloud guide-sec-icon" style="color:#0288d1"></i> 5. ที่เก็บไฟล์ของฉัน</span>
+                    <i class="fas fa-chevron-down guide-chevron"></i>
+                </button>
+                <div class="guide-section-body">
+                    <p class="guide-desc">พื้นที่จัดเก็บไฟล์ส่วนตัว สำหรับเก็บเอกสาร, รูปภาพ หรือไฟล์อื่นที่เกี่ยวข้องกับการยื่นคำร้อง</p>
+
+                    <div class="guide-steps">
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0288d1">1</div>
+                            <div class="guide-step-content">
+                                <strong>อัปโหลดไฟล์</strong>
+                                <p>คลิก <span class="guide-btn-ref"><i class="fas fa-upload"></i> อัปโหลด</span> เลือกไฟล์จากเครื่อง ระบบรองรับไฟล์หลากหลายประเภท (PDF, DOCX, รูปภาพ ฯลฯ)</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0288d1">2</div>
+                            <div class="guide-step-content">
+                                <strong>ดาวน์โหลด</strong>
+                                <p>คลิกปุ่ม <i class="fas fa-download text-primary"></i> ที่ไฟล์ที่ต้องการดาวน์โหลด</p>
+                            </div>
+                        </div>
+                        <div class="guide-step">
+                            <div class="guide-step-num" style="background:#0288d1">3</div>
+                            <div class="guide-step-content">
+                                <strong>ลบไฟล์</strong>
+                                <p>คลิก <i class="fas fa-trash text-danger"></i> แล้วยืนยัน ไฟล์ที่ลบไปแล้วไม่สามารถกู้คืนได้</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-info">
+                        <i class="fas fa-info-circle"></i>
+                        <div><strong>หมายเหตุ:</strong> ที่เก็บไฟล์นี้เป็นพื้นที่ส่วนตัว แอดมินและผู้ใช้อื่นไม่สามารถเห็นไฟล์ของท่าน ระบบรองรับการ chunked upload สำหรับไฟล์ขนาดใหญ่</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ===== 6. ตั้งค่า ===== -->
+            <div class="guide-section" id="sec-settings">
+                <button type="button" class="guide-section-header" aria-expanded="false">
+                    <span><i class="fas fa-cog guide-sec-icon" style="color:#546e7a"></i> 6. ตั้งค่า</span>
+                    <i class="fas fa-chevron-down guide-chevron"></i>
+                </button>
+                <div class="guide-section-body">
+                    <p class="guide-desc">ปรับแต่งการทำงานของระบบตามความต้องการ</p>
+
+                    <div class="guide-feature-list">
+                        <div class="guide-feature">
+                            <div class="guide-feature-icon" style="background:#e1f5fe;color:#0277bd"><i class="fas fa-palette"></i></div>
+                            <div>
+                                <strong>ธีมหน้าจอ</strong>
+                                <p>เลือกระหว่าง:</p>
+                                <ul style="margin:4px 0 0;padding-left:20px;color:var(--text-secondary,#666);font-size:.9rem;">
+                                    <li><strong>Light</strong> — สว่าง เหมาะสำหรับใช้งานตอนกลางวัน</li>
+                                    <li><strong>Dark</strong> — มืด ลดความเมื่อยตอนกลางคืน</li>
+                                    <li><strong>System</strong> — ตามการตั้งค่าอุปกรณ์</li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="guide-feature">
+                            <div class="guide-feature-icon" style="background:#fce4ec;color:#c62828"><i class="fas fa-shield-alt"></i></div>
+                            <div>
+                                <strong>การยืนยันตัวตน 2 ชั้น (2FA)</strong>
+                                <p>เปิดใช้เพื่อเพิ่มความปลอดภัย เมื่อล็อกอิน ระบบจะส่งรหัส OTP 6 หลัก ไปที่อีเมลที่ลงทะเบียน</p>
+                            </div>
+                        </div>
+                        <div class="guide-feature">
+                            <div class="guide-feature-icon" style="background:#e8eaf6;color:#283593"><i class="fas fa-save"></i></div>
+                            <div>
+                                <strong>บันทึกร่างอัตโนมัติ (Auto-Draft)</strong>
+                                <p>เมื่อเปิดใช้ ระบบจะบันทึกข้อมูลที่กำลังกรอกในฟอร์มอัตโนมัติทุก 30 วินาที หากปิดหน้าจอโดยไม่ได้ตั้งใจ ข้อมูลจะยังอยู่</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="guide-tip">
+                        <i class="fas fa-lightbulb"></i>
+                        <div><strong>แนะนำ:</strong> เปิดใช้ "บันทึกร่างอัตโนมัติ" เสมอ เพื่อป้องกันไม่ให้ข้อมูลหากรณีหน้าเว็บปิดกะทันหัน</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FAQ -->
+            <div class="guide-section" id="sec-faq">
+                <button type="button" class="guide-section-header" aria-expanded="false">
+                    <span><i class="fas fa-question-circle guide-sec-icon" style="color:#7b1fa2"></i> คำถามที่พบบ่อย (FAQ)</span>
+                    <i class="fas fa-chevron-down guide-chevron"></i>
+                </button>
+                <div class="guide-section-body">
+                    <div class="guide-faq">
+                        <div class="guide-faq-item">
+                            <strong>Q: ยื่นคำร้องแล้ว อยากแก้ไขเอกสารได้มั้ย?</strong>
+                            <p>หลังจากยื่นคำร้องแล้ว ผู้ยื่นจะไม่สามารถแก้ไขเอกสารได้ กรุณาติดต่อแอดมินเพื่อทำการแก้ไข</p>
+                        </div>
+                        <div class="guide-faq-item">
+                            <strong>Q: ผลประเมินการสอนหมดอายุแล้ว ต้องทำอย่างไร?</strong>
+                            <p>ยื่นคำร้องขอประเมินผลการสอนใหม่ เมื่อได้ผลประเมินใหม่แล้ว จึงสามารถยื่นขอตำแหน่งได้</p>
+                        </div>
+                        <div class="guide-faq-item">
+                            <strong>Q: ดาวน์โหลด PDF แล้วฟอนต์หาย ทำอย่างไร?</strong>
+                            <p>PDF ที่ generate จากระบบ ใช้ LibreOffice แปลง ฟอนต์ไทยจะสมบูรณ์ 100% หากพบปัญหา กรุณาแจ้งแอดมิน</p>
+                        </div>
+                        <div class="guide-faq-item">
+                            <strong>Q: ลืมรหัสผ่าน ทำอย่างไร?</strong>
+                            <p>คลิก "ลืมรหัสผ่าน" ที่หน้าล็อกอิน ระบบจะส่งลิงก์รีเซ็ตรหัสผ่านไปที่อีเมล</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Guide Page CSS -->
+        <style>
+            .guide-hero{display:flex;align-items:center;gap:20px;color:#fff;padding:32px 36px;border-radius:16px;margin-bottom:24px;}
+            .guide-hero-icon{width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;}
+            .guide-hero-title{margin:0 0 4px;font-size:1.4rem;font-weight:700;}
+            .guide-hero-sub{margin:0;opacity:.85;font-size:.95rem;}
+            .guide-quicknav{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:24px;}
+            .guide-qn-item{display:inline-flex;align-items:center;gap:6px;padding:8px 16px;background:var(--card-bg,#fff);border:1px solid var(--border-color,#e0e0e0);border-radius:10px;color:var(--text-main,#333);text-decoration:none;font-size:.85rem;font-weight:500;transition:all .2s;}
+            .guide-qn-item:hover{border-color:#00897b;color:#00897b;transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,137,123,.12);}
+            .guide-section{background:var(--card-bg,#fff);border:1px solid var(--border-color,#e0e0e0);border-radius:14px;margin-bottom:16px;overflow:hidden;transition:box-shadow .2s;}
+            .guide-section:hover{box-shadow:0 2px 12px rgba(0,0,0,.06);}
+            .guide-section-header{width:100%;display:flex;align-items:center;justify-content:space-between;padding:20px 24px;border:none;background:none;cursor:pointer;font-size:1.05rem;font-weight:600;color:var(--text-main,#333);text-align:left;font-family:inherit;}
+            .guide-section-header:hover{background:var(--hover-bg,#f5f5f5);}
+            .guide-sec-icon{margin-right:10px;font-size:1.1rem;}
+            .guide-chevron{transition:transform .3s;color:#999;font-size:.85rem;}
+            .guide-section-header[aria-expanded="true"] .guide-chevron{transform:rotate(180deg);}
+            .guide-section-body{max-height:0;overflow:hidden;transition:max-height .4s ease,padding .3s ease;padding:0 24px;}
+            .guide-section-body.show{max-height:3000px;padding:0 24px 24px;}
+            .guide-desc{color:var(--text-secondary,#666);line-height:1.7;margin-bottom:20px;padding-left:4px;border-left:3px solid #e0e0e0;padding:8px 0 8px 16px;}
+            .guide-subtitle{font-weight:600;font-size:.95rem;color:var(--text-main,#333);margin-bottom:12px;display:flex;align-items:center;gap:8px;}
+            .guide-steps{display:flex;flex-direction:column;gap:12px;margin-bottom:16px;}
+            .guide-step{display:flex;gap:16px;align-items:flex-start;}
+            .guide-step-num{width:32px;height:32px;border-radius:50%;background:#00897b;color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.85rem;flex-shrink:0;margin-top:2px;}
+            .guide-step-content{flex:1;}
+            .guide-step-content strong{display:block;margin-bottom:2px;font-size:.95rem;}
+            .guide-step-content p{margin:0;color:var(--text-secondary,#666);font-size:.9rem;line-height:1.6;}
+            .guide-step-content ul{margin:6px 0 0;padding-left:20px;color:var(--text-secondary,#666);font-size:.9rem;}
+            .guide-step-content li{margin-bottom:4px;}
+            .guide-menu-ref{display:inline-flex;align-items:center;gap:4px;background:var(--hover-bg,#f0f0f0);padding:2px 10px;border-radius:6px;font-size:.85rem;font-weight:500;}
+            .guide-btn-ref{display:inline-flex;align-items:center;gap:4px;background:#e0f2f1;color:#00897b;padding:2px 10px;border-radius:6px;font-size:.85rem;font-weight:500;}
+            .guide-tip,.guide-warning,.guide-info{display:flex;gap:12px;padding:14px 18px;border-radius:10px;font-size:.9rem;line-height:1.6;margin-top:12px;}
+            .guide-tip{background:#fff8e1;color:#795548;border:1px solid #ffe082;}
+            .guide-tip i{color:#f9a825;font-size:1.1rem;margin-top:2px;}
+            .guide-warning{background:#fce4ec;color:#b71c1c;border:1px solid #ef9a9a;}
+            .guide-warning i{color:#e53935;font-size:1.1rem;margin-top:2px;}
+            .guide-info{background:#e3f2fd;color:#1a237e;border:1px solid #90caf9;}
+            .guide-info i{color:#1565c0;font-size:1.1rem;margin-top:2px;}
+            .guide-feature-list{display:flex;flex-direction:column;gap:16px;margin-bottom:12px;}
+            .guide-feature{display:flex;gap:16px;align-items:flex-start;}
+            .guide-feature-icon{width:44px;height:44px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;flex-shrink:0;}
+            .guide-feature strong{display:block;margin-bottom:2px;font-size:.95rem;}
+            .guide-feature p{margin:0;color:var(--text-secondary,#666);font-size:.9rem;line-height:1.6;}
+            .guide-faq{display:flex;flex-direction:column;gap:16px;}
+            .guide-faq-item{padding:16px 20px;background:var(--hover-bg,#f8f9fa);border-radius:10px;border:1px solid var(--border-color,#eee);}
+            .guide-faq-item strong{display:block;margin-bottom:6px;color:#7b1fa2;font-size:.95rem;}
+            .guide-faq-item p{margin:0;color:var(--text-secondary,#666);font-size:.9rem;line-height:1.6;}
+            @media(max-width:768px){
+                .guide-hero{flex-direction:column;align-items:flex-start;gap:12px;padding:24px;text-align:left;}
+                .guide-section-header{padding:16px 18px;font-size:.95rem;}
+                .guide-section-body.show{padding:0 18px 18px;}
+            }
+        </style>
+
+        <!-- Accordion JS -->
+        <script>
+            document.querySelectorAll('.guide-section-header').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var body = this.nextElementSibling;
+                    var isOpen = body.classList.contains('show');
+                    document.querySelectorAll('.guide-section-body').forEach(function(b) { b.classList.remove('show'); });
+                    document.querySelectorAll('.guide-section-header').forEach(function(b) { b.setAttribute('aria-expanded', 'false'); });
+                    if (!isOpen) {
+                        body.classList.add('show');
+                        this.setAttribute('aria-expanded', 'true');
+                    }
+                });
+            });
+        </script>
+    </section>
+</body>
+</html>
