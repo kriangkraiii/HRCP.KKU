@@ -47,7 +47,7 @@
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
-                                <select name="title" class="form-select" required>
+                                <select name="title" class="form-select" id="titleSelect" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย"
                                         th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นาย'}">
@@ -58,12 +58,18 @@
                                     <option value="นางสาว"
                                         th:selected="${(doc0Data?.title ?: request.applicant.title) == 'นางสาว'}">
                                         นางสาว</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์"
+                                        th:selected="${(doc0Data?.title ?: '') == 'ผู้ช่วยศาสตราจารย์'}">
+                                        ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์"
+                                        th:selected="${(doc0Data?.title ?: '') == 'รองศาสตราจารย์'}">
+                                        รองศาสตราจารย์</option>
                                 </select>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล</label>
-                                <input type="text" name="full_name" class="form-control"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}"
+                                <input type="text" name="applicant_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
                                     required placeholder="เช่น สมชาย ใจดี">
                             </div>
                         </div>
@@ -95,13 +101,13 @@
                                 <select name="current_position" class="form-select" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="อาจารย์"
-                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'อาจารย์'}">
+                                        th:selected="${(doc0Data != null ? doc0Data.getOrDefault('current_position', '') : (request.applicant.academicPosition ?: '')) == 'อาจารย์'}">
                                         อาจารย์</option>
                                     <option value="ผู้ช่วยศาสตราจารย์"
-                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'ผู้ช่วยศาสตราจารย์'}">
+                                        th:selected="${(doc0Data != null ? doc0Data.getOrDefault('current_position', '') : (request.applicant.academicPosition ?: '')) == 'ผู้ช่วยศาสตราจารย์'}">
                                         ผู้ช่วยศาสตราจารย์</option>
                                     <option value="รองศาสตราจารย์"
-                                        th:selected="${doc0Data != null && doc0Data.getOrDefault('current_position', '') == 'รองศาสตราจารย์'}">
+                                        th:selected="${(doc0Data != null ? doc0Data.getOrDefault('current_position', '') : (request.applicant.academicPosition ?: '')) == 'รองศาสตราจารย์'}">
                                         รองศาสตราจารย์</option>
                                 </select>
                             </div>
@@ -130,14 +136,26 @@
                             </div>
                         </div>
 
-                        <!-- ชื่อเต็มสำหรับพิมพ์ -->
+                        <!-- ข้อมูลรายวิชา -->
+                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-book"></i> ข้อมูลรายวิชา</h5>
                         <div class="row mb-3">
-                            <div class="col-md-8">
-                                <label class="form-label">ชื่อ-สกุล เต็ม (สำหรับพิมพ์ในเอกสาร)</label>
-                                <input type="text" name="applicant_name_full_print" class="form-control"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name_full_print', '') : ''}"
-                                    placeholder="เช่น ผู้ช่วยศาสตราจารย์ ดร.สมชาย ใจดี" required>
-                                <small class="text-muted">ระบุคำนำหน้า ตำแหน่ง และชื่อเต็ม สำหรับพิมพ์ในลายเซ็น</small>
+                            <div class="col-md-4">
+                                <label class="form-label">รหัสวิชา</label>
+                                <input type="text" name="course_code" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_code', '') : ''}"
+                                    placeholder="เช่น CP 123 456" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">รายวิชา</label>
+                                <input type="text" name="course_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_name', '') : ''}"
+                                    placeholder="เช่น Introduction to Computer Science" required>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label">ปีการศึกษา</label>
+                                <input type="text" name="academic_year" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('academic_year', '') : ''}"
+                                    placeholder="เช่น 2568" required>
                             </div>
                         </div>
 
@@ -245,6 +263,41 @@
                         // Initialize real-time preview for Doc 0
                         initDocPreview('doc0Form', 0);
 
+                        // === Auto-update title based on position ===
+                        (function() {
+                            var posSelect = document.querySelector('[name="current_position"]');
+                            var titleSelect = document.getElementById('titleSelect');
+                            if (!posSelect || !titleSelect) return;
+
+                            var normalTitles = ['นาย', 'นาง', 'นางสาว'];
+                            var academicTitles = ['ผู้ช่วยศาสตราจารย์', 'รองศาสตราจารย์'];
+
+                            function updateTitleOptions() {
+                                var pos = posSelect.value;
+                                if (pos === 'ผู้ช่วยศาสตราจารย์' || pos === 'รองศาสตราจารย์') {
+                                    // ซ่อน option ปกติ แสดง option ตำแหน่ง
+                                    Array.from(titleSelect.options).forEach(function(opt) {
+                                        if (normalTitles.indexOf(opt.value) !== -1) opt.hidden = true;
+                                        if (academicTitles.indexOf(opt.value) !== -1) opt.hidden = false;
+                                    });
+                                    titleSelect.value = pos;
+                                } else {
+                                    // แสดง option ปกติ ซ่อน option ตำแหน่ง
+                                    Array.from(titleSelect.options).forEach(function(opt) {
+                                        if (normalTitles.indexOf(opt.value) !== -1) opt.hidden = false;
+                                        if (academicTitles.indexOf(opt.value) !== -1) opt.hidden = true;
+                                    });
+                                    // ถ้า title ปัจจุบันเป็นตำแหน่งวิชาการ ให้รีเซ็ต
+                                    if (academicTitles.indexOf(titleSelect.value) !== -1) {
+                                        titleSelect.value = '';
+                                    }
+                                }
+                            }
+
+                            posSelect.addEventListener('change', updateTitleOptions);
+                            updateTitleOptions(); // run on page load
+                        })();
+
                         // === Form Validation ===
                         (function() {
                             var form = document.getElementById('doc0Form');
@@ -261,9 +314,8 @@
                                 // Check required fields
                                 var dateField = form.querySelector('[name="date"]');
                                 var titleField = form.querySelector('[name="title"]');
-                                var nameField = form.querySelector('[name="full_name"]');
+                                var nameField = form.querySelector('[name="applicant_name"]');
                                 var posField = form.querySelector('[name="current_position"]');
-                                var printNameField = form.querySelector('[name="applicant_name_full_print"]');
 
                                 if (!dateField || !dateField.value.trim()) errors.push('วันที่เอกสาร');
                                 if (!titleField || !titleField.value) errors.push('คำนำหน้า');
@@ -282,7 +334,13 @@
                                     errors.push('ตำแหน่งที่ขอรับการประเมิน (ต้องเลือกอย่างน้อย 1 ตำแหน่ง)');
                                 }
 
-                                if (!printNameField || !printNameField.value.trim()) errors.push('ชื่อ-สกุลเต็ม (สำหรับพิมพ์)');
+                                // Check course info
+                                var courseCode = form.querySelector('[name="course_code"]');
+                                var courseName = form.querySelector('[name="course_name"]');
+                                var academicYear = form.querySelector('[name="academic_year"]');
+                                if (!courseCode || !courseCode.value.trim()) errors.push('รหัสวิชา');
+                                if (!courseName || !courseName.value.trim()) errors.push('รายวิชา');
+                                if (!academicYear || !academicYear.value.trim()) errors.push('ปีการศึกษา');
 
                                 if (errors.length > 0) {
                                     e.preventDefault();

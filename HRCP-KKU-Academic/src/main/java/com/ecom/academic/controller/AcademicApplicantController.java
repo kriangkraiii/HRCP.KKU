@@ -169,7 +169,7 @@ public class AcademicApplicantController {
 
         // เช็คว่ามี doc 0 และ doc 1 แล้วหรือยัง
         List<AcademicDocument> allDocs = requestService.getDocumentsSorted(draftRequest.getId());
-        boolean hasDoc0 = allDocs.stream().anyMatch(d -> d.getDocumentType() == 0);
+        boolean hasDoc0 = isDoc0Complete(allDocs);
         boolean hasDoc1 = isDoc1Complete(allDocs);
 
         model.addAttribute("user", user);
@@ -371,7 +371,7 @@ public class AcademicApplicantController {
         }
 
         // เช็คว่า doc 0, doc 1 ถูกกรอกแล้วหรือยัง
-        boolean hasDoc0 = allDocuments.stream().anyMatch(d -> d.getDocumentType() == 0);
+        boolean hasDoc0 = isDoc0Complete(allDocuments);
         boolean hasDoc1 = isDoc1Complete(allDocuments);
         model.addAttribute("hasDoc0", hasDoc0);
         model.addAttribute("hasDoc1", hasDoc1);
@@ -522,6 +522,38 @@ public class AcademicApplicantController {
                     }
                 })
                 .orElse(false);
+    }
+
+    /**
+     * เช็คว่าเอกสารที่ 0 สมบูรณ์หรือไม่ (กรอกครบทุกช่องที่จำเป็น)
+     */
+    private boolean isDoc0Complete(List<AcademicDocument> docs) {
+        return docs.stream()
+                .filter(d -> d.getDocumentType() == 0)
+                .findFirst()
+                .map(doc -> {
+                    try {
+                        Map<String, String> data = objectMapper.readValue(doc.getJsonData(),
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                        return hasValue(data, "date")
+                                && hasValue(data, "title")
+                                && hasValue(data, "applicant_name")
+                                && hasValue(data, "employee_type")
+                                && hasValue(data, "current_position")
+                                && ("✓".equals(data.get("chk1")) || "✓".equals(data.get("chk2")))
+                                && hasValue(data, "course_code")
+                                && hasValue(data, "course_name")
+                                && hasValue(data, "academic_year");
+                    } catch (Exception e) {
+                        return false;
+                    }
+                })
+                .orElse(false);
+    }
+
+    private boolean hasValue(Map<String, String> data, String key) {
+        String v = data.get(key);
+        return v != null && !v.trim().isEmpty();
     }
 
     private String getClientIpAddress() {
