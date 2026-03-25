@@ -700,7 +700,7 @@
                 counters.edu++;
                 const n = counters.edu;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm"></td>
+                row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm" value="๑.๓.${toThaiDigits(n)}"></td>
                     <td><input type="text" name="education_degree_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_major_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_institution_${n}" class="form-control form-control-sm"></td>
