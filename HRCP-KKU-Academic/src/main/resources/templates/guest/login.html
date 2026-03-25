@@ -5,308 +5,11 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>เข้าสู่ระบบ - ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ</title>
-	<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap"
-		rel="stylesheet">
+	<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 	<link rel="icon" type="image/png" href="/img/cphr_new.png">
-<link rel="stylesheet" href="/css/guest.css">
-	<style>
-		* {
-			margin: 0;
-			padding: 0;
-			box-sizing: border-box;
-		}
-
-		body {
-			font-family: 'Sarabun', sans-serif;
-			min-height: 100vh;
-			background: linear-gradient(135deg, #0d1b3e 0%, #1a237e 30%, #0d47a1 60%, #1565c0 100%);
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			padding: 20px;
-		}
-
-		.login-container {
-			width: 100%;
-			max-width: 440px;
-		}
-
-		.login-header {
-			text-align: center;
-			margin-bottom: 30px;
-			color: #fff;
-		}
-
-		.login-header .logo-icon {
-			width: 100px;
-			height: 100px;
-			background: rgba(255, 255, 255, 0.15);
-			border-radius: 20px;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			margin: 0 auto 15px;
-			backdrop-filter: blur(10px);
-			border: 1px solid rgba(255, 255, 255, 0.2);
-		}
-
-		.login-header .logo-icon i {
-			font-size: 32px;
-			color: #fff;
-		}
-
-		.login-header h1 {
-			font-size: 22px;
-			font-weight: 700;
-			margin-bottom: 5px;
-		}
-
-		.login-header p {
-			font-size: 14px;
-			opacity: 0.8;
-		}
-
-		.login-card {
-			background: #fff;
-			border-radius: 16px;
-			padding: 35px 30px;
-			box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-		}
-
-		.login-card h2 {
-			font-size: 20px;
-			font-weight: 700;
-			color: #1a237e;
-			text-align: center;
-			margin-bottom: 25px;
-		}
-
-		.form-group {
-			margin-bottom: 18px;
-		}
-
-		.form-group label {
-			display: block;
-			font-size: 14px;
-			font-weight: 600;
-			color: #333;
-			margin-bottom: 6px;
-		}
-
-		.form-group .input-wrapper {
-			position: relative;
-		}
-
-		.form-group .input-wrapper i {
-			position: absolute;
-			left: 14px;
-			top: 50%;
-			transform: translateY(-50%);
-			color: #999;
-			font-size: 16px;
-		}
-
-		.form-group input {
-			width: 100%;
-			padding: 12px 14px 12px 42px;
-			border: 2px solid #e0e0e0;
-			border-radius: 10px;
-			font-family: 'Sarabun', sans-serif;
-			font-size: 15px;
-			transition: border-color 0.3s, box-shadow 0.3s;
-			outline: none;
-		}
-
-		.form-group input:focus {
-			border-color: #1a237e;
-			box-shadow: 0 0 0 3px rgba(26, 35, 126, 0.1);
-		}
-
-		.btn-primary {
-			width: 100%;
-			padding: 13px;
-			border: none;
-			border-radius: 10px;
-			background: linear-gradient(135deg, #1a237e, #0d47a1);
-			color: #fff;
-			font-family: 'Sarabun', sans-serif;
-			font-size: 16px;
-			font-weight: 600;
-			cursor: pointer;
-			transition: all 0.3s;
-			margin-top: 5px;
-		}
-
-		.btn-primary:hover {
-			transform: translateY(-2px);
-			box-shadow: 0 5px 20px rgba(13, 71, 161, 0.4);
-		}
-
-		.divider {
-			text-align: center;
-			margin: 20px 0;
-			position: relative;
-		}
-
-		.divider::before,
-		.divider::after {
-			content: '';
-			position: absolute;
-			top: 50%;
-			width: 40%;
-			height: 1px;
-			background: #e0e0e0;
-		}
-
-		.divider::before {
-			left: 0;
-		}
-
-		.divider::after {
-			right: 0;
-		}
-
-		.divider span {
-			background: #fff;
-			padding: 0 12px;
-			color: #999;
-			font-size: 13px;
-		}
-
-		.btn-secondary {
-			width: 100%;
-			padding: 12px;
-			border: 2px solid #1a237e;
-			border-radius: 10px;
-			background: transparent;
-			color: #1a237e;
-			font-family: 'Sarabun', sans-serif;
-			font-size: 15px;
-			font-weight: 600;
-			cursor: pointer;
-			transition: all 0.3s;
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			gap: 8px;
-			text-decoration: none;
-		}
-
-		.btn-secondary:hover {
-			background: #1a237e;
-			color: #fff;
-		}
-
-		.forgot-link {
-			text-align: center;
-			margin-top: 15px;
-		}
-
-		.forgot-link a {
-			color: #0d47a1;
-			text-decoration: none;
-			font-size: 14px;
-		}
-
-		.forgot-link a:hover {
-			text-decoration: underline;
-		}
-
-		.alert {
-			padding: 12px 15px;
-			border-radius: 10px;
-			margin-bottom: 18px;
-			font-size: 14px;
-			display: flex;
-			align-items: center;
-			gap: 10px;
-		}
-
-		.alert-success {
-			background: #e8f5e9;
-			color: #2e7d32;
-			border: 1px solid #a5d6a7;
-		}
-
-		.alert-danger {
-			background: #ffebee;
-			color: #c62828;
-			border: 1px solid #ef9a9a;
-		}
-
-		.footer-text {
-			text-align: center;
-			margin-top: 25px;
-			color: rgba(255, 255, 255, 0.6);
-			font-size: 13px;
-		}
-
-		/* ===== Google Translate Hidden ===== */
-		.goog-te-banner-frame.skiptranslate { display: none !important; }
-		body { top: 0px !important; }
-		.goog-te-gadget { font-size: 0 !important; }
-		.skiptranslate { display: none !important; }
-		#google_translate_element {
-			position: absolute; top: -9999px; left: -9999px;
-			width: 0; height: 0; overflow: hidden;
-		}
-
-		/* ===== Language Dropdown (Top-Right) ===== */
-		.lang-dropdown {
-			position: fixed;
-			top: 18px;
-			right: 18px;
-			z-index: 1000;
-		}
-		.lang-dropdown-btn {
-			display: flex; align-items: center; gap: 8px;
-			background: rgba(255,255,255,0.15);
-			backdrop-filter: blur(10px);
-			border: 1px solid rgba(255,255,255,0.25);
-			color: #fff;
-			font-size: 0.85rem; font-weight: 600;
-			cursor: pointer; padding: 8px 14px;
-			border-radius: 10px;
-			transition: all 0.2s;
-			font-family: 'Sarabun', sans-serif;
-		}
-		.lang-dropdown-btn:hover {
-			background: rgba(255,255,255,0.25);
-		}
-		.lang-dropdown-btn .lang-icon {
-			font-size: 1.2rem; color: #90caf9;
-		}
-		.lang-dropdown-menu {
-			display: none; position: absolute;
-			top: 100%; right: 0;
-			min-width: 150px;
-			background: #2a2a2a;
-			border-radius: 12px;
-			box-shadow: 0 8px 24px rgba(0,0,0,0.35);
-			padding: 8px 0; margin-top: 6px;
-			overflow: hidden;
-		}
-		.lang-dropdown-menu.show {
-			display: block;
-			animation: langDropIn 0.18s ease-out;
-		}
-		@keyframes langDropIn {
-			from { opacity: 0; transform: translateY(-8px); }
-			to { opacity: 1; transform: translateY(0); }
-		}
-		.lang-dropdown-item {
-			display: block; width: 100%;
-			padding: 10px 20px;
-			background: none; border: none;
-			color: #fff; font-size: 0.95rem;
-			text-align: left; cursor: pointer;
-			transition: background 0.15s;
-			font-family: 'Sarabun', sans-serif;
-		}
-		.lang-dropdown-item:hover { background: rgba(255,255,255,0.08); }
-		.lang-dropdown-item.active { color: #90caf9; font-weight: 600; }
-	</style></head>
+	<link rel="stylesheet" href="/css/guest.css">
+</head>
 
 <body>
 	<!-- Google Translate (hidden) -->
@@ -324,76 +27,80 @@
 		</div>
 	</div>
 
-	<div class="login-container">
-		<div class="login-header">
-			<div> <img class="logo-icon"  src="/img/cphr_new.png" width="100" height="100" alt="Logo" style="object-fit:contain;background:#fff;border-radius:16px;padding:8px;"> </div>
-<link rel="stylesheet" href="/css/guest.css">
-			<h1>ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ</h1>
+	<div class="guest-split">
+		<!-- Brand Panel -->
+		<div class="guest-brand">
+			<img class="guest-brand-logo" src="/img/cphr_new.png" alt="Logo">
+			<div class="guest-brand-title">ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ</div>
+			<div class="guest-brand-sub">วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
+			<div class="guest-footer">© 2569 วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
 		</div>
 
-		<div class="login-card">
-			<h2>เข้าสู่ระบบ</h2>
+		<!-- Form Panel -->
+		<div class="guest-form">
+			<div class="guest-card">
+				<h1 class="guest-card-heading">เข้าสู่ระบบ</h1>
+				<p class="guest-card-sub">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน</p>
 
-			<div th:if="${param.error}" class="alert alert-danger" id="errorAlert"
-				 th:data-blocked-until="${session.blockedUntilMillis}">
-				<i class="fas fa-exclamation-circle"></i>
-				<div>
-					<span th:if="${session.errorMessage}" th:text="${session.errorMessage}"></span>
-					<span th:unless="${session.errorMessage}">อีเมลหรือรหัสผ่านไม่ถูกต้อง</span>
-					<div id="countdownTimer" style="display:none; margin-top:6px; font-weight:700; color:#b71c1c;">
-						⏳ เหลือเวลาอีก <span id="countdownText"></span>
+				<!-- Alerts -->
+				<div th:if="${param.error}" class="alert alert-danger" id="errorAlert"
+					 th:data-blocked-until="${session.blockedUntilMillis}">
+					<i class="fas fa-exclamation-circle"></i>
+					<div>
+						<span th:if="${session.errorMessage}" th:text="${session.errorMessage}"></span>
+						<span th:unless="${session.errorMessage}">อีเมลหรือรหัสผ่านไม่ถูกต้อง</span>
+						<div class="lockout-timer" id="countdownTimer">
+							⏳ เหลือเวลาอีก <span id="countdownText"></span>
+						</div>
 					</div>
 				</div>
-			</div>
-			<div th:if="${param.logout}" class="alert alert-success">
-				<i class="fas fa-check-circle"></i>
-				<span>ออกจากระบบสำเร็จ</span>
-			</div>
-			<div th:if="${succMsg}" class="alert alert-success">
-				<i class="fas fa-check-circle"></i>
-				<span th:text="${succMsg}"></span>
-			</div>
-			<div th:if="${errorMsg}" class="alert alert-danger">
-				<i class="fas fa-exclamation-circle"></i>
-				<span th:text="${errorMsg}"></span>
-			</div>
-
-			<form th:action="@{/login}" method="post">
-				<div class="form-group">
-					<label for="emailInput">อีเมล</label>
-					<div class="input-wrapper">
-						<i class="fas fa-envelope" aria-hidden="true"></i>
-						<input type="email" id="emailInput" name="email" placeholder="กรอกอีเมลของคุณ" required autocomplete="email">
-					</div>
+				<div th:if="${param.logout}" class="alert alert-success">
+					<i class="fas fa-check-circle"></i>
+					<span>ออกจากระบบสำเร็จ</span>
 				</div>
-				<div class="form-group">
-					<label for="passwordInput">รหัสผ่าน</label>
-					<div class="input-wrapper">
-						<i class="fas fa-lock" aria-hidden="true"></i>
-						<input type="password" id="passwordInput" name="password" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
-					</div>
+				<div th:if="${succMsg}" class="alert alert-success">
+					<i class="fas fa-check-circle"></i>
+					<span th:text="${succMsg}"></span>
 				</div>
-				<button type="submit" class="btn-primary">
-					<i class="fas fa-sign-in-alt" aria-hidden="true"></i> เข้าสู่ระบบ
-				</button>
-			</form>
+				<div th:if="${errorMsg}" class="alert alert-danger">
+					<i class="fas fa-exclamation-circle"></i>
+					<span th:text="${errorMsg}"></span>
+				</div>
 
-			<div class="divider"><span>หรือ</span></div>
+				<!-- Login Form -->
+				<form th:action="@{/login}" method="post">
+					<div class="form-group">
+						<label for="emailInput">อีเมล</label>
+						<div class="input-wrapper">
+							<i class="fas fa-envelope" aria-hidden="true"></i>
+							<input type="email" id="emailInput" name="email" placeholder="กรอกอีเมลของคุณ" required autocomplete="email">
+						</div>
+					</div>
+					<div class="form-group">
+						<label for="passwordInput">รหัสผ่าน</label>
+						<div class="input-wrapper">
+							<i class="fas fa-lock" aria-hidden="true"></i>
+							<input type="password" id="passwordInput" name="password" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
+						</div>
+					</div>
+					<button type="submit" class="btn-guest-primary">
+						<i class="fas fa-sign-in-alt" aria-hidden="true"></i> เข้าสู่ระบบ
+					</button>
+				</form>
 
-			<a th:href="@{/first-login}" class="btn-secondary">
-				<i class="fas fa-user-plus"></i>
-				เข้าสู่ระบบครั้งแรก
-			</a>
+				<div class="guest-divider"><span>หรือ</span></div>
 
-			<div class="forgot-link">
-				<a th:href="@{/forgot-password}">
-					<i class="fas fa-key"></i> ลืมรหัสผ่าน?
+				<a th:href="@{/first-login}" class="btn-guest-secondary">
+					<i class="fas fa-user-plus"></i> เข้าสู่ระบบครั้งแรก
 				</a>
+
+				<div class="guest-link">
+					<a th:href="@{/forgot-password}"><i class="fas fa-key"></i> ลืมรหัสผ่าน?</a>
+				</div>
 			</div>
 		</div>
-
-		<div class="footer-text">© 2569 วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
 	</div>
+
 	<script type="text/javascript">
 		var _gtTranslateReady = false;
 		function googleTranslateElementInit() {
@@ -505,6 +212,7 @@
 			}
 			update();
 		})();
-	</script></body>
+	</script>
+</body>
 
 </html>

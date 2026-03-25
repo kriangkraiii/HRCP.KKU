@@ -358,13 +358,12 @@
                 </div>
                 <div class="user-info">
                     <div class="user-name" th:text="${user.name}"></div>
-                    <div class="user-role" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : 'ผู้ยื่นคำร้อง'">
-                    </div>
+                    <div class="user-role" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : 'ผู้ยื่นคำร้อง'"></div>
                 </div>
             </a>
-            <form method="post" action="/logout" style="margin:0;padding:0;">
+            <form method="post" action="/logout">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                <button type="submit" class="sidebar-logout" style="border:none;width:100%;cursor:pointer;background:inherit;font:inherit;color:inherit;text-align:left;">
+                <button type="submit" class="sidebar-logout">
                     <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
                 </button>
             </form>
@@ -444,31 +443,6 @@
 <script src="/js/theme-switcher.js"></script>
 
 <!-- ===== Floating Buttons สำหรับทุกหน้าฟอร์มเอกสาร ===== -->
-<style>
-    .floating-doc-btn {
-        position: fixed;
-        bottom: 20px;
-        z-index: 1040;
-        border-radius: 50px !important;
-        padding: 10px 20px !important;
-        font-size: 0.88rem !important;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-        transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .floating-doc-btn:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
-    }
-    .floating-doc-btn-back {
-        left: calc(var(--sidebar-width) + 20px);
-    }
-    .floating-doc-btn-preview {
-        right: 20px;
-    }
-    @media (max-width: 991px) {
-        .floating-doc-btn-back { left: 20px; }
-    }
-</style>
 <script>
     // Auto-create floating buttons for doc form pages
     (function() {

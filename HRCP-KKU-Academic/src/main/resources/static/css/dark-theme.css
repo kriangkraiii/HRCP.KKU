@@ -1138,3 +1138,134 @@ body,
     color: var(--text-primary) !important;
 }
 
+/* ======================================
+   REDESIGN v2 — Dark Mode Overrides
+   ====================================== */
+
+/* Dashboard tabs */
+[data-theme="dark"] .dashboard-tabs {
+    border-bottom-color: var(--border-color);
+}
+
+[data-theme="dark"] .dashboard-tabs .nav-link.active {
+    color: #64b5f6 !important;
+    border-bottom-color: #64b5f6 !important;
+}
+
+[data-theme="dark"] .dashboard-tabs .tab-accent-green.active {
+    color: #81c784 !important;
+    border-bottom-color: #81c784 !important;
+}
+
+/* Request card v2 */
+[data-theme="dark"] .request-card-v2 {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .request-card-v2:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Timeline v2 inactive steps */
+[data-theme="dark"] .timeline-v2::before {
+    background: var(--border-color);
+}
+
+[data-theme="dark"] .timeline-v2-icon {
+    background: var(--bg-card-header);
+    border-color: var(--border-color);
+}
+
+/* Doc items v2 */
+[data-theme="dark"] .doc-item-v2:hover {
+    background: rgba(255, 255, 255, 0.04);
+}
+
+/* Section card */
+[data-theme="dark"] .section-card {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .section-card-header {
+    border-bottom-color: var(--border-color);
+}
+
+/* Step progress */
+[data-theme="dark"] .step-progress-item {
+    background: var(--bg-card-header);
+}
+
+/* Doc checklist */
+[data-theme="dark"] .doc-checklist-item {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+/* Submit section */
+[data-theme="dark"] .submit-section {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+/* ===== Admin Dashboard v2 — Dark Mode ===== */
+[data-theme="dark"] .admin-tab-btn.active {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .status-card {
+    background: var(--bg-card);
+    border-color: var(--border-card);
+}
+
+[data-theme="dark"] .status-card:hover {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .filter-chip {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .admin-table .course-detail-row td {
+    background: rgba(21, 101, 192, 0.06);
+}
+
+[data-theme="dark"] .admin-search-result {
+    background: rgba(21, 101, 192, 0.12);
+}
+
+[data-theme="dark"] .ac-item .ac-text mark {
+    background: #854d0e;
+    color: #fef08a;
+}
+
+/* ===== Detail Page v2 — Dark Mode ===== */
+[data-theme="dark"] .detail-info-card::before {
+    opacity: 0.8;
+}
+
+[data-theme="dark"] .draft-banner {
+    background: rgba(245, 127, 23, 0.1);
+    border-color: rgba(245, 127, 23, 0.2);
+    color: #fbbf24;
+}
+
+[data-theme="dark"] .doc-grid-item {
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .doc-grid-item:hover {
+    border-color: rgba(21, 101, 192, 0.4);
+}
+
+[data-theme="dark"] .detail-progress-dot {
+    background: var(--bg-card);
+    border-color: var(--border-color);
+}
+
+[data-theme="dark"] .history-tabs {
+    background: var(--bg-card-header);
+}
+
