@@ -183,7 +183,8 @@ public class DocumentGenerationService {
     // Core: Pure ZIP/XML Processing (format-preserving)
     // =====================================================================
 
-    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType) throws IOException {
+    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType)
+            throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
 
         try (ZipInputStream zis = new ZipInputStream(templateStream);
@@ -195,6 +196,12 @@ public class DocumentGenerationService {
 
                 if (entry.getName().endsWith(".xml") || entry.getName().endsWith(".xml.rels")) {
                     String xml = new String(data, StandardCharsets.UTF_8);
+
+                    // Step 0: ลบ descr URL ใน drawing และ w:bdr frame — ป้องกัน LibreOffice
+                    // แสดงกรอบสี่เหลี่ยมรอบรูปภาพใน PDF
+                    xml = xml.replaceAll(" descr=\"https://[^\"]*\"", "");
+                    xml = xml.replaceAll("<w:bdr[^>]*w:frame=\"1\"[^/]*/>", "");
+
                     if (xml.contains("{{")) {
                         // Step 1: Defragment - รวม placeholder ที่ Word แยกข้าม <w:t> กลับเป็นชิ้นเดียว
                         xml = defragmentPlaceholders(xml);
@@ -227,9 +234,9 @@ public class DocumentGenerationService {
                             // เอกสารอื่น: ☑/☐ → MS Gothic font runs (กล่อง)
                             xml = renderCheckboxes(xml);
                         }
-
-                        data = xml.getBytes(StandardCharsets.UTF_8);
                     }
+
+                    data = xml.getBytes(StandardCharsets.UTF_8);
                 }
 
                 ZipEntry newEntry = new ZipEntry(entry.getName());
@@ -306,7 +313,8 @@ public class DocumentGenerationService {
                 List<int[]> subsequentTexts = new ArrayList<>();
                 int scanPos = tBlockEnd;
 
-                while ((!hasCompleteTokens(accumulated.toString()) || accumulated.toString().endsWith("{")) && scanPos < xml.length()) {
+                while ((!hasCompleteTokens(accumulated.toString()) || accumulated.toString().endsWith("{"))
+                        && scanPos < xml.length()) {
                     // หา <w:t> ถัดไปในขอบเขตที่สมเหตุสมผล (ไม่ข้าม paragraph)
                     int nextP = xml.indexOf("</w:p>", scanPos);
                     int nextT = xml.indexOf("<w:t", scanPos);
@@ -405,13 +413,13 @@ public class DocumentGenerationService {
                 if ("research".equals(type)) {
                     // Generate both spellings — DOCX template is inconsistent:
                     // ASST section uses typo "reseach", ASSOC/PROF use correct "research"
-                    toAdd.put(prefix + "_not_used_reseach_" + n,  notUsed ? "☑" : "☐");
-                    toAdd.put(prefix + "_is_used_reseach_" + n,   notUsed ? "☐" : "☑");
+                    toAdd.put(prefix + "_not_used_reseach_" + n, notUsed ? "☑" : "☐");
+                    toAdd.put(prefix + "_is_used_reseach_" + n, notUsed ? "☐" : "☑");
                     toAdd.put(prefix + "_not_used_research_" + n, notUsed ? "☑" : "☐");
-                    toAdd.put(prefix + "_is_used_research_" + n,  notUsed ? "☐" : "☑");
+                    toAdd.put(prefix + "_is_used_research_" + n, notUsed ? "☐" : "☑");
                 } else {
                     toAdd.put(prefix + "_not_used_" + type + "_" + n, notUsed ? "☑" : "☐");
-                    toAdd.put(prefix + "_is_used_" + type + "_" + n,  notUsed ? "☐" : "☑");
+                    toAdd.put(prefix + "_is_used_" + type + "_" + n, notUsed ? "☐" : "☑");
                 }
             }
         }
@@ -419,7 +427,7 @@ public class DocumentGenerationService {
     }
 
     private void mapMethod3Fields(Map<String, String> placeholders) {
-        for (String prefix : new String[]{"assoc", "prof"}) {
+        for (String prefix : new String[] { "assoc", "prof" }) {
             // Quartile radio: {prefix}_m3_quartile_N → {prefix}_m3_q1 / {prefix}_m3_q2
             for (int n = 1; n <= 10; n++) {
                 String radioKey = prefix + "_m3_quartile_" + n;
@@ -433,18 +441,20 @@ public class DocumentGenerationService {
                     }
                     placeholders.put(prefix + "_m3_q1_" + n, q1 ? "☑" : "☐");
                     placeholders.put(prefix + "_m3_q2_" + n, q2 ? "☑" : "☐");
-                    if (val == null) break;
+                    if (val == null)
+                        break;
                 }
             }
             // First / Corresp checkboxes: alias _1 → no suffix, default ☐
-            for (String field : new String[]{"m3_first", "m3_corresp"}) {
+            for (String field : new String[] { "m3_first", "m3_corresp" }) {
                 String v = placeholders.getOrDefault(prefix + "_" + field + "_1", "☐");
                 placeholders.put(prefix + "_" + field, v);
             }
             // PI fields: alias _1 → no suffix
-            for (String field : new String[]{"pi_project_no", "pi_project", "pi_source"}) {
+            for (String field : new String[] { "pi_project_no", "pi_project", "pi_source" }) {
                 String v = placeholders.get(prefix + "_" + field + "_1");
-                if (v != null) placeholders.put(prefix + "_" + field, v);
+                if (v != null)
+                    placeholders.put(prefix + "_" + field, v);
             }
         }
     }
@@ -458,7 +468,8 @@ public class DocumentGenerationService {
                 java.util.regex.Matcher m = java.util.regex.Pattern.compile("^des_research(\\d+)$").matcher(key);
                 if (m.matches()) {
                     int n = Integer.parseInt(m.group(1));
-                    if (n > maxRow) maxRow = n;
+                    if (n > maxRow)
+                        maxRow = n;
                 }
             }
 
@@ -466,11 +477,14 @@ public class DocumentGenerationService {
                 int searchFrom = 0;
                 while (true) {
                     int trIdx = xml.indexOf("<w:tr ", searchFrom);
-                    if (trIdx == -1) trIdx = xml.indexOf("<w:tr>", searchFrom);
-                    if (trIdx == -1) break;
+                    if (trIdx == -1)
+                        trIdx = xml.indexOf("<w:tr>", searchFrom);
+                    if (trIdx == -1)
+                        break;
 
                     int trEnd = xml.indexOf("</w:tr>", trIdx);
-                    if (trEnd == -1) break;
+                    if (trEnd == -1)
+                        break;
                     trEnd += "</w:tr>".length();
 
                     String rowXml = xml.substring(trIdx, trEnd);
@@ -485,7 +499,7 @@ public class DocumentGenerationService {
                                     .replace("impactfacttor5", "impactfacttor" + n)
                                     .replace("data5", "data" + n);
                             cloned = cloned.replaceFirst(">5\\.<", ">" + n + ".<")
-                                           .replaceFirst(">5<", ">" + n + "<");
+                                    .replaceFirst(">5<", ">" + n + "<");
                             newRows.append(cloned);
                         }
                         xml = xml.substring(0, trEnd) + newRows.toString() + xml.substring(trEnd);
@@ -500,33 +514,36 @@ public class DocumentGenerationService {
         if (xml.contains("{{education_degree_1}}")) {
             int maxEduRow = 1;
             for (String key : placeholders.keySet()) {
-                java.util.regex.Matcher m =
-                    java.util.regex.Pattern.compile("^education_degree_(\\d+)$").matcher(key);
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("^education_degree_(\\d+)$").matcher(key);
                 if (m.matches()) {
                     int n = Integer.parseInt(m.group(1));
-                    if (n > maxEduRow) maxEduRow = n;
+                    if (n > maxEduRow)
+                        maxEduRow = n;
                 }
             }
             if (maxEduRow > 1) {
                 int eduSearchFrom = 0;
                 while (true) {
                     int trIdx = xml.indexOf("<w:tr ", eduSearchFrom);
-                    if (trIdx == -1) trIdx = xml.indexOf("<w:tr>", eduSearchFrom);
-                    if (trIdx == -1) break;
+                    if (trIdx == -1)
+                        trIdx = xml.indexOf("<w:tr>", eduSearchFrom);
+                    if (trIdx == -1)
+                        break;
                     int trEnd = xml.indexOf("</w:tr>", trIdx);
-                    if (trEnd == -1) break;
+                    if (trEnd == -1)
+                        break;
                     trEnd += "</w:tr>".length();
                     String rowXml = xml.substring(trIdx, trEnd);
                     if (rowXml.contains("education_degree_1")) {
                         StringBuilder newRows = new StringBuilder();
                         for (int n = 2; n <= maxEduRow; n++) {
                             String cloned = rowXml
-                                .replace("education_no_1",          "education_no_"          + n)
-                                .replace("education_degree_1",      "education_degree_"      + n)
-                                .replace("education_major_1",       "education_major_"       + n)
-                                .replace("education_institution_1", "education_institution_" + n)
-                                .replace("education_country_1",     "education_country_"     + n)
-                                .replace("education_year_1",        "education_year_"        + n);
+                                    .replace("education_no_1", "education_no_" + n)
+                                    .replace("education_degree_1", "education_degree_" + n)
+                                    .replace("education_major_1", "education_major_" + n)
+                                    .replace("education_institution_1", "education_institution_" + n)
+                                    .replace("education_country_1", "education_country_" + n)
+                                    .replace("education_year_1", "education_year_" + n);
                             newRows.append(cloned);
                         }
                         xml = xml.substring(0, trEnd) + newRows.toString() + xml.substring(trEnd);
@@ -538,42 +555,43 @@ public class DocumentGenerationService {
         }
 
         // Block C: เอกสารที่ 1 — work section rows (paragraph-based)
-        // Each logical "row" = 3 consecutive <w:p>: title row, not-used checkbox, used checkbox+year+level
+        // Each logical "row" = 3 consecutive <w:p>: title row, not-used checkbox, used
+        // checkbox+year+level
         String[][][] workSections = {
-            // ASST (DOCX has typo "reseach" for research)
-            {{"asst_research_working_1"}, {"asst_research_working_no_1", "asst_research_working_1",
-                "asst_not_used_reseach_1", "asst_is_used_reseach_1",
-                "asst_used_research_year_1", "asst_used_research_level_1"}},
-            {{"asst_other_working_1"}, {"asst_other_working_no_1", "asst_other_working_1",
-                "asst_not_used_other_1", "asst_is_used_other_1",
-                "asst_used_other_year_1", "asst_used_other_level_1"}},
-            {{"asst_book_working_1"}, {"asst_book_working_no_1", "asst_book_working_1",
-                "asst_not_used_book_1", "asst_is_used_book_1",
-                "asst_used_book_year_1", "asst_used_book_level_1"}},
-            // ASSOC
-            {{"assoc_research_working_1"}, {"assoc_research_working_no_1", "assoc_research_working_1",
-                "assoc_not_used_research_1", "assoc_is_used_research_1",
-                "assoc_used_research_year_1", "assoc_used_research_level_1"}},
-            {{"assoc_other_working_1"}, {"assoc_other_working_no_1", "assoc_other_working_1",
-                "assoc_not_used_other_1", "assoc_is_used_other_1",
-                "assoc_used_other_year_1", "assoc_used_other_level_1"}},
-            {{"assoc_book_working_1"}, {"assoc_book_working_no_1", "assoc_book_working_1",
-                "assoc_not_used_book_1", "assoc_is_used_book_1",
-                "assoc_used_book_year_1", "assoc_used_book_level_1"}},
-            // PROF
-            {{"prof_research_working_1"}, {"prof_research_working_no_1", "prof_research_working_1",
-                "prof_not_used_research_1", "prof_is_used_research_1",
-                "prof_used_research_year_1", "prof_used_research_level_1"}},
-            {{"prof_other_working_1"}, {"prof_other_working_no_1", "prof_other_working_1",
-                "prof_not_used_other_1", "prof_is_used_other_1",
-                "prof_used_other_year_1", "prof_used_other_level_1"}},
-            {{"prof_book_working_1"}, {"prof_book_working_no_1", "prof_book_working_1",
-                "prof_not_used_book_1", "prof_is_used_book_1",
-                "prof_used_book_year_1", "prof_used_book_level_1"}},
-            // International speaker & Other positions
-            {{"international_speaker_last_5_years_1"},
-                {"international_speaker_last_5_years_no_1", "international_speaker_last_5_years_1"}},
-            {{"other_position_1"}, {"other_position_no_1", "other_position_1"}},
+                // ASST (DOCX has typo "reseach" for research)
+                { { "asst_research_working_1" }, { "asst_research_working_no_1", "asst_research_working_1",
+                        "asst_not_used_reseach_1", "asst_is_used_reseach_1",
+                        "asst_used_research_year_1", "asst_used_research_level_1" } },
+                { { "asst_other_working_1" }, { "asst_other_working_no_1", "asst_other_working_1",
+                        "asst_not_used_other_1", "asst_is_used_other_1",
+                        "asst_used_other_year_1", "asst_used_other_level_1" } },
+                { { "asst_book_working_1" }, { "asst_book_working_no_1", "asst_book_working_1",
+                        "asst_not_used_book_1", "asst_is_used_book_1",
+                        "asst_used_book_year_1", "asst_used_book_level_1" } },
+                // ASSOC
+                { { "assoc_research_working_1" }, { "assoc_research_working_no_1", "assoc_research_working_1",
+                        "assoc_not_used_research_1", "assoc_is_used_research_1",
+                        "assoc_used_research_year_1", "assoc_used_research_level_1" } },
+                { { "assoc_other_working_1" }, { "assoc_other_working_no_1", "assoc_other_working_1",
+                        "assoc_not_used_other_1", "assoc_is_used_other_1",
+                        "assoc_used_other_year_1", "assoc_used_other_level_1" } },
+                { { "assoc_book_working_1" }, { "assoc_book_working_no_1", "assoc_book_working_1",
+                        "assoc_not_used_book_1", "assoc_is_used_book_1",
+                        "assoc_used_book_year_1", "assoc_used_book_level_1" } },
+                // PROF
+                { { "prof_research_working_1" }, { "prof_research_working_no_1", "prof_research_working_1",
+                        "prof_not_used_research_1", "prof_is_used_research_1",
+                        "prof_used_research_year_1", "prof_used_research_level_1" } },
+                { { "prof_other_working_1" }, { "prof_other_working_no_1", "prof_other_working_1",
+                        "prof_not_used_other_1", "prof_is_used_other_1",
+                        "prof_used_other_year_1", "prof_used_other_level_1" } },
+                { { "prof_book_working_1" }, { "prof_book_working_no_1", "prof_book_working_1",
+                        "prof_not_used_book_1", "prof_is_used_book_1",
+                        "prof_used_book_year_1", "prof_used_book_level_1" } },
+                // International speaker & Other positions
+                { { "international_speaker_last_5_years_1" },
+                        { "international_speaker_last_5_years_no_1", "international_speaker_last_5_years_1" } },
+                { { "other_position_1" }, { "other_position_no_1", "other_position_1" } },
         };
         for (String[][] section : workSections) {
             xml = expandParagraphRows(xml, placeholders, section[0][0], section[1]);
@@ -586,28 +604,33 @@ public class DocumentGenerationService {
                 if (key.startsWith("teaching_subject_")) {
                     try {
                         int n = Integer.parseInt(key.substring("teaching_subject_".length()));
-                        if (n > maxTeach) maxTeach = n;
-                    } catch (NumberFormatException ignored) {}
+                        if (n > maxTeach)
+                            maxTeach = n;
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
             }
             if (maxTeach > 1) {
                 int searchFrom = 0;
                 while (true) {
                     int trIdx = xml.indexOf("<w:tr ", searchFrom);
-                    if (trIdx == -1) trIdx = xml.indexOf("<w:tr>", searchFrom);
-                    if (trIdx == -1) break;
+                    if (trIdx == -1)
+                        trIdx = xml.indexOf("<w:tr>", searchFrom);
+                    if (trIdx == -1)
+                        break;
                     int trEnd = xml.indexOf("</w:tr>", trIdx);
-                    if (trEnd == -1) break;
+                    if (trEnd == -1)
+                        break;
                     trEnd += "</w:tr>".length();
                     String rowXml = xml.substring(trIdx, trEnd);
                     if (rowXml.contains("{{teaching_subject_1}}")) {
                         StringBuilder newRows = new StringBuilder();
                         for (int n = 2; n <= maxTeach; n++) {
                             String cloned = rowXml
-                                .replace("{{teaching_subject_1}}", "{{teaching_subject_" + n + "}}")
-                                .replace("{{teaching_level_1}}", "{{teaching_level_" + n + "}}")
-                                .replace("{{teaching_semester_1}}", "{{teaching_semester_" + n + "}}")
-                                .replace("{{teaching_hours_per_week_1}}", "{{teaching_hours_per_week_" + n + "}}");
+                                    .replace("{{teaching_subject_1}}", "{{teaching_subject_" + n + "}}")
+                                    .replace("{{teaching_level_1}}", "{{teaching_level_" + n + "}}")
+                                    .replace("{{teaching_semester_1}}", "{{teaching_semester_" + n + "}}")
+                                    .replace("{{teaching_hours_per_week_1}}", "{{teaching_hours_per_week_" + n + "}}");
                             newRows.append(cloned);
                         }
                         xml = xml.substring(0, trEnd) + newRows + xml.substring(trEnd);
@@ -623,11 +646,13 @@ public class DocumentGenerationService {
 
     /**
      * Clone <w:p> paragraphs for a work section that uses row-_1 placeholders.
-     * Finds all paragraphs containing any of fields1, then inserts copies for rows 2..maxN.
+     * Finds all paragraphs containing any of fields1, then inserts copies for rows
+     * 2..maxN.
      */
     private String expandParagraphRows(String xml, Map<String, String> placeholders,
-                                        String anchorKey1, String[] fields1) {
-        if (!xml.contains("{{" + anchorKey1 + "}}")) return xml;
+            String anchorKey1, String[] fields1) {
+        if (!xml.contains("{{" + anchorKey1 + "}}"))
+            return xml;
 
         // Find max row number from placeholders (using anchor field base)
         String anchorBase = anchorKey1.substring(0, anchorKey1.lastIndexOf('_')); // strip trailing _1
@@ -636,11 +661,14 @@ public class DocumentGenerationService {
             if (key.startsWith(anchorBase + "_")) {
                 try {
                     int n = Integer.parseInt(key.substring(anchorBase.length() + 1));
-                    if (n > maxN) maxN = n;
-                } catch (NumberFormatException ignored) {}
+                    if (n > maxN)
+                        maxN = n;
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
-        if (maxN <= 1) return xml;
+        if (maxN <= 1)
+            return xml;
 
         // Collect all <w:p> elements that contain any _1 field placeholder
         List<int[]> paraRanges = new ArrayList<>();
@@ -649,20 +677,23 @@ public class DocumentGenerationService {
             int pA = xml.indexOf("<w:p ", pos);
             int pB = xml.indexOf("<w:p>", pos);
             int pStart = (pA == -1) ? pB : (pB == -1) ? pA : Math.min(pA, pB);
-            if (pStart == -1) break;
+            if (pStart == -1)
+                break;
             int pEnd = xml.indexOf("</w:p>", pStart);
-            if (pEnd == -1) break;
+            if (pEnd == -1)
+                break;
             pEnd += "</w:p>".length();
             String paraXml = xml.substring(pStart, pEnd);
             for (String f : fields1) {
                 if (paraXml.contains("{{" + f + "}}")) {
-                    paraRanges.add(new int[]{pStart, pEnd});
+                    paraRanges.add(new int[] { pStart, pEnd });
                     break;
                 }
             }
             pos = pEnd;
         }
-        if (paraRanges.isEmpty()) return xml;
+        if (paraRanges.isEmpty())
+            return xml;
 
         // Insert clones after the last matched paragraph
         int insertAt = paraRanges.get(paraRanges.size() - 1)[1];
@@ -688,8 +719,10 @@ public class DocumentGenerationService {
     /**
      * เอกสารที่ 4: Remap form field names → DOCX template placeholder names
      * 
-     * form: paper_title_1, paper_title_2 → template: research_title1, research_title2
-     * form: research_title_1, research_title_2 → template: research_title, research_title_2
+     * form: paper_title_1, paper_title_2 → template: research_title1,
+     * research_title2
+     * form: research_title_1, research_title_2 → template: research_title,
+     * research_title_2
      * auto-generate: index1, index2... and index, index_2...
      */
     private void preprocessDoc4Placeholders(Map<String, String> placeholders) {
@@ -701,8 +734,10 @@ public class DocumentGenerationService {
             if (key.startsWith("paper_title_")) {
                 try {
                     int n = Integer.parseInt(key.substring("paper_title_".length()));
-                    if (n > maxPaper) maxPaper = n;
-                } catch (NumberFormatException ignored) {}
+                    if (n > maxPaper)
+                        maxPaper = n;
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
 
@@ -731,8 +766,10 @@ public class DocumentGenerationService {
             if (key.startsWith("research_title_")) {
                 try {
                     int n = Integer.parseInt(key.substring("research_title_".length()));
-                    if (n > maxResearch) maxResearch = n;
-                } catch (NumberFormatException ignored) {}
+                    if (n > maxResearch)
+                        maxResearch = n;
+                } catch (NumberFormatException ignored) {
+                }
             }
         }
 
@@ -785,34 +822,44 @@ public class DocumentGenerationService {
 
         // หา paragraph ที่มี {{corres_name}} ตัวแรก
         int corresIdx = xml.indexOf("{{corres_name}}");
-        if (corresIdx == -1) return xml;
+        if (corresIdx == -1)
+            return xml;
 
         // หา <w:p> ที่ครอบ {{corres_name}} (paragraph ชื่อ)
         int pNameStart = xml.lastIndexOf("<w:p ", corresIdx);
-        if (pNameStart == -1) pNameStart = xml.lastIndexOf("<w:p>", corresIdx);
-        if (pNameStart == -1) return xml;
+        if (pNameStart == -1)
+            pNameStart = xml.lastIndexOf("<w:p>", corresIdx);
+        if (pNameStart == -1)
+            return xml;
 
         int pNameEnd = xml.indexOf("</w:p>", corresIdx);
-        if (pNameEnd == -1) return xml;
+        if (pNameEnd == -1)
+            return xml;
         pNameEnd += "</w:p>".length();
 
         // หา paragraph ถัดไป (role paragraph เช่น "ผู้ประพันธ์บรรณกิจ")
         int pRoleStart = xml.indexOf("<w:p ", pNameEnd);
-        if (pRoleStart == -1) pRoleStart = xml.indexOf("<w:p>", pNameEnd);
-        if (pRoleStart == -1) return xml;
+        if (pRoleStart == -1)
+            pRoleStart = xml.indexOf("<w:p>", pNameEnd);
+        if (pRoleStart == -1)
+            return xml;
 
         int pRoleEnd = xml.indexOf("</w:p>", pRoleStart);
-        if (pRoleEnd == -1) return xml;
+        if (pRoleEnd == -1)
+            return xml;
         pRoleEnd += "</w:p>".length();
 
         // หา paragraph ก่อนหน้า ("ลงชื่อ..." paragraph)
         int scanBack = pNameStart - 1;
         int pSignStart = xml.lastIndexOf("<w:p ", scanBack);
-        if (pSignStart == -1) pSignStart = xml.lastIndexOf("<w:p>", scanBack);
-        if (pSignStart == -1) return xml;
+        if (pSignStart == -1)
+            pSignStart = xml.lastIndexOf("<w:p>", scanBack);
+        if (pSignStart == -1)
+            return xml;
 
         int pSignEnd = xml.indexOf("</w:p>", pSignStart);
-        if (pSignEnd == -1) return xml;
+        if (pSignEnd == -1)
+            return xml;
         pSignEnd += "</w:p>".length();
 
         String fullBlock;
@@ -832,7 +879,8 @@ public class DocumentGenerationService {
         StringBuilder coauthorBlocks = new StringBuilder();
         for (int i = 1; i <= count; i++) {
             String coName = placeholders.getOrDefault("coauthor_name_" + i, "");
-            if (coName.isEmpty()) continue;
+            if (coName.isEmpty())
+                continue;
 
             String block = fullBlock;
             // แทนชื่อ: {{corres_name}} → {{coauthor_name_N}}
@@ -840,7 +888,8 @@ public class DocumentGenerationService {
             // แทนตำแหน่ง: "Corresponding author" → "Co-author"
             block = block.replace("Corresponding author", "Co-author");
             // แทนตำแหน่งภาษาไทย: "ผู้ประพันธ์บรรณกิจ" → "ผู้ร่วมประพันธ์"
-            block = block.replace("\u0E1C\u0E39\u0E49\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E1A\u0E23\u0E23\u0E13\u0E01\u0E34\u0E08",
+            block = block.replace(
+                    "\u0E1C\u0E39\u0E49\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E1A\u0E23\u0E23\u0E13\u0E01\u0E34\u0E08",
                     "\u0E1C\u0E39\u0E49\u0E23\u0E48\u0E27\u0E21\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C");
             coauthorBlocks.append(block);
         }
@@ -850,31 +899,40 @@ public class DocumentGenerationService {
         }
 
         // ลบ signature block ของ {{corres_name}} ที่ซ้ำ (ตัวที่ 2 ขึ้นไป)
-        // หลัง expand แล้ว ถ้ายังมี {{corres_name}} เหลืออีก ให้ลบ 3-paragraph group ทิ้ง
+        // หลัง expand แล้ว ถ้ายังมี {{corres_name}} เหลืออีก ให้ลบ 3-paragraph group
+        // ทิ้ง
         while (true) {
             int nextCorres = xml.indexOf("{{corres_name}}", insertAfter);
-            if (nextCorres == -1) break;
+            if (nextCorres == -1)
+                break;
 
             // หา <w:p> ที่ครอบ
             int np = xml.lastIndexOf("<w:p ", nextCorres);
-            if (np == -1) np = xml.lastIndexOf("<w:p>", nextCorres);
-            if (np == -1) break;
+            if (np == -1)
+                np = xml.lastIndexOf("<w:p>", nextCorres);
+            if (np == -1)
+                break;
 
             // หา paragraph ก่อนหน้า (ลงชื่อ...)
             int npPrev = xml.lastIndexOf("<w:p ", np - 1);
-            if (npPrev == -1) npPrev = xml.lastIndexOf("<w:p>", np - 1);
+            if (npPrev == -1)
+                npPrev = xml.lastIndexOf("<w:p>", np - 1);
 
             // หา </w:p> ของ paragraph ชื่อ
             int npEnd = xml.indexOf("</w:p>", nextCorres);
-            if (npEnd == -1) break;
+            if (npEnd == -1)
+                break;
             npEnd += "</w:p>".length();
 
             // หา paragraph ถัดไป (ตำแหน่ง)
             int npRole = xml.indexOf("<w:p ", npEnd);
-            if (npRole == -1) npRole = xml.indexOf("<w:p>", npEnd);
-            if (npRole == -1) break;
+            if (npRole == -1)
+                npRole = xml.indexOf("<w:p>", npEnd);
+            if (npRole == -1)
+                break;
             int npRoleEnd = xml.indexOf("</w:p>", npRole);
-            if (npRoleEnd == -1) break;
+            if (npRoleEnd == -1)
+                break;
             npRoleEnd += "</w:p>".length();
 
             // ลบ 3 paragraphs (ลงชื่อ + ชื่อ + ตำแหน่ง) หรือ 2 paragraphs

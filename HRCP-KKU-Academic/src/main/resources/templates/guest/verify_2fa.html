@@ -8,160 +8,75 @@
     <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <link rel="icon" type="image/png" href="/img/cphr_new.png">
-<link rel="stylesheet" href="/css/guest.css">
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: 'Sarabun', sans-serif;
-            min-height: 100vh;
-            background: linear-gradient(135deg, #0d1b3e 0%, #1a237e 30%, #0d47a1 60%, #1565c0 100%);
-            display: flex; align-items: center; justify-content: center;
-            padding: 20px;
-        }
-        .otp-container { width: 100%; max-width: 460px; }
-        .otp-header { text-align: center; margin-bottom: 30px; color: #fff; }
-        .otp-header .logo-icon {
-            width: 80px; height: 80px; margin: 0 auto 15px;
-            background: rgba(255,255,255,0.15); border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.2);
-        }
-        .otp-header .logo-icon i { font-size: 32px; color: #90caf9; }
-        .otp-header h1 { font-size: 20px; font-weight: 700; margin-bottom: 5px; }
-        .otp-header p { font-size: 14px; opacity: 0.8; }
-        .otp-card {
-            background: #fff; border-radius: 16px; padding: 35px 30px;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
-        }
-        .otp-card h2 {
-            font-size: 20px; font-weight: 700; color: #1a237e;
-            text-align: center; margin-bottom: 10px;
-        }
-        .otp-card .subtitle {
-            text-align: center; color: #666; font-size: 14px; margin-bottom: 25px;
-        }
-        .otp-card .email-badge {
-            display: inline-block; background: #e3f2fd; color: #0d47a1;
-            padding: 4px 12px; border-radius: 20px; font-weight: 600; font-size: 14px;
-        }
-        .otp-inputs {
-            display: flex; gap: 8px; justify-content: center; margin: 25px 0;
-        }
-        .otp-inputs input {
-            width: 48px; height: 56px; text-align: center;
-            font-size: 22px; font-weight: 700; font-family: 'Sarabun', monospace;
-            border: 2px solid #e0e0e0; border-radius: 12px;
-            outline: none; transition: all 0.2s;
-            color: #1a237e;
-        }
-        .otp-inputs input:focus {
-            border-color: #1a237e;
-            box-shadow: 0 0 0 3px rgba(26,35,126,0.15);
-            transform: scale(1.05);
-        }
-        .otp-inputs input.filled {
-            border-color: #4caf50; background: #f1f8e9;
-        }
-        .btn-verify {
-            width: 100%; padding: 14px; border: none; border-radius: 12px;
-            background: linear-gradient(135deg, #1a237e, #0d47a1);
-            color: #fff; font-family: 'Sarabun'; font-size: 16px; font-weight: 600;
-            cursor: pointer; transition: all 0.3s; margin-top: 5px;
-        }
-        .btn-verify:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(13,71,161,0.4); }
-        .btn-verify:disabled { opacity: 0.6; cursor: not-allowed; transform: none; box-shadow: none; }
-        .resend-section {
-            text-align: center; margin-top: 20px; padding-top: 18px;
-            border-top: 1px solid #eee;
-        }
-        .resend-section p { font-size: 14px; color: #888; margin-bottom: 8px; }
-        .btn-resend {
-            background: none; border: 2px solid #1a237e; border-radius: 10px;
-            color: #1a237e; padding: 10px 20px; font-family: 'Sarabun';
-            font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.3s;
-        }
-        .btn-resend:hover { background: #1a237e; color: #fff; }
-        .btn-resend:disabled { opacity: 0.5; cursor: not-allowed; border-color: #ccc; color: #ccc; }
-        .btn-resend:disabled:hover { background: none; color: #ccc; }
-        .countdown {
-            display: inline-block; background: #fff3e0; color: #e65100;
-            padding: 6px 14px; border-radius: 8px; font-size: 13px; font-weight: 600;
-            margin-top: 10px;
-        }
-        .alert {
-            padding: 12px 15px; border-radius: 10px; margin-bottom: 18px;
-            font-size: 14px; display: flex; align-items: center; gap: 10px;
-        }
-        .alert-success { background: #e8f5e9; color: #2e7d32; border: 1px solid #a5d6a7; }
-        .alert-danger { background: #ffebee; color: #c62828; border: 1px solid #ef9a9a; }
-        .back-link {
-            display: block; text-align: center; margin-top: 15px;
-            color: rgba(255,255,255,0.7); font-size: 14px;
-        }
-        .back-link:hover { color: #fff; }
-    </style></head>
+    <link rel="stylesheet" href="/css/guest.css">
+</head>
 
 <body>
-    <div class="otp-container">
-        <div class="otp-header">
-            <div class="logo-icon"><i class="fas fa-shield-alt"></i></div>
-            <h1>การยืนยันตัวตนสองขั้นตอน</h1>
-            <p>Two-Factor Authentication</p>
+    <div class="guest-split">
+        <div class="guest-brand">
+            <img class="guest-brand-logo" src="/img/cphr_new.png" alt="Logo">
+            <div class="guest-brand-title">การยืนยันตัวตนสองขั้นตอน</div>
+            <div class="guest-brand-sub">Two-Factor Authentication</div>
+            <div class="guest-footer">© 2569 วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
         </div>
 
-        <div class="otp-card">
-            <h2><i class="fas fa-key"></i> กรอกรหัส OTP</h2>
-            <div class="subtitle">
-                ระบบส่งรหัส OTP 8 หลักไปที่อีเมล<br>
-                <span class="email-badge"><i class="fas fa-envelope"></i> [[${maskedEmail}]]</span>
-            </div>
+        <div class="guest-form">
+            <div class="guest-card">
+                <h1 class="guest-card-heading"><i class="fas fa-key" style="margin-right:8px;font-size:1.2rem"></i>กรอกรหัส OTP</h1>
+                <p class="guest-card-sub">
+                    ระบบส่งรหัส OTP 8 หลักไปที่อีเมล<br>
+                    <span class="email-badge"><i class="fas fa-envelope"></i> [[${maskedEmail}]]</span>
+                </p>
 
-            <!-- Alerts -->
-            <div th:if="${success}" class="alert alert-success">
-                <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
-            </div>
-            <div th:if="${error}" class="alert alert-danger">
-                <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
-            </div>
-
-            <form th:action="@{/2fa/verify}" method="post" id="otpForm">
-                <input type="hidden" name="otp" id="otpHidden">
-
-                <div class="otp-inputs" id="otpInputs">
-                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="0">
-                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="1">
-                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="2">
-                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="3">
-                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="4">
-                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="5">
-                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="6">
-                    <input type="text" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="7">
+                <!-- Alerts -->
+                <div th:if="${success}" class="alert alert-success">
+                    <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
+                </div>
+                <div th:if="${error}" class="alert alert-danger">
+                    <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
                 </div>
 
-                <button type="submit" class="btn-verify" id="verifyBtn" disabled>
-                    <i class="fas fa-check-circle"></i> ยืนยัน OTP
-                </button>
-            </form>
+                <form th:action="@{/2fa/verify}" method="post" id="otpForm">
+                    <input type="hidden" name="otp" id="otpHidden">
 
-            <div class="resend-section">
-                <p>ไม่ได้รับรหัส?</p>
-                <form th:action="@{/2fa/resend}" method="post" style="display:inline">
-                    <button type="submit" class="btn-resend" id="resendBtn">
-                        <i class="fas fa-redo"></i> ส่ง OTP อีกครั้ง
+                    <div class="otp-grid" id="otpInputs">
+                        <input type="text" class="otp-cell" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="0">
+                        <input type="text" class="otp-cell" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="1">
+                        <input type="text" class="otp-cell" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="2">
+                        <input type="text" class="otp-cell" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="3">
+                        <input type="text" class="otp-cell" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="4">
+                        <input type="text" class="otp-cell" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="5">
+                        <input type="text" class="otp-cell" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="6">
+                        <input type="text" class="otp-cell" maxlength="1" inputmode="numeric" pattern="[0-9]" autocomplete="off" data-index="7">
+                    </div>
+
+                    <button type="submit" class="btn-guest-primary" id="verifyBtn" disabled>
+                        <i class="fas fa-check-circle"></i> ยืนยัน OTP
                     </button>
                 </form>
-                <div class="countdown" id="expiryCountdown">
-                    <i class="fas fa-clock"></i> OTP หมดอายุใน <span id="expiryTime">5:00</span>
+
+                <div class="resend-section">
+                    <p>ไม่ได้รับรหัส?</p>
+                    <form th:action="@{/2fa/resend}" method="post" style="display:inline">
+                        <button type="submit" class="btn-resend" id="resendBtn">
+                            <i class="fas fa-redo"></i> ส่ง OTP อีกครั้ง
+                        </button>
+                    </form>
+                    <div class="countdown-badge" id="expiryCountdown">
+                        <i class="fas fa-clock"></i> OTP หมดอายุใน <span id="expiryTime">5:00</span>
+                    </div>
+                </div>
+
+                <div class="guest-link">
+                    <a href="/signin"><i class="fas fa-arrow-left"></i> กลับหน้าเข้าสู่ระบบ</a>
                 </div>
             </div>
         </div>
-
-        <a href="/signin" class="back-link"><i class="fas fa-arrow-left"></i> กลับหน้าเข้าสู่ระบบ</a>
     </div>
 
     <script>
         (function() {
-            var inputs = document.querySelectorAll('#otpInputs input');
+            var inputs = document.querySelectorAll('#otpInputs .otp-cell');
             var form = document.getElementById('otpForm');
             var hidden = document.getElementById('otpHidden');
             var verifyBtn = document.getElementById('verifyBtn');
@@ -230,8 +145,8 @@
             function tickExpiry() {
                 if (remaining <= 0) {
                     countdownDiv.innerHTML = '<i class="fas fa-exclamation-triangle"></i> OTP หมดอายุแล้ว กรุณาส่งรหัสใหม่';
-                    countdownDiv.style.background = '#ffebee';
-                    countdownDiv.style.color = '#c62828';
+                    countdownDiv.style.background = '#fef2f2';
+                    countdownDiv.style.color = '#991b1b';
                     return;
                 }
                 remaining--;
@@ -242,6 +157,7 @@
             }
             tickExpiry();
         })();
-    </script></body>
+    </script>
+</body>
 
 </html>

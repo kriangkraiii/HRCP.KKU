@@ -289,7 +289,8 @@ public class PositionAdminController {
 
     @GetMapping("/request/{id}/document/{type}/download")
     public ResponseEntity<ByteArrayResource> downloadDocument(@PathVariable Long id,
-            @PathVariable int type) throws IOException {
+            @PathVariable int type,
+            @RequestParam(value = "format", defaultValue = "docx") String format) throws IOException {
         PositionRequest request = positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
@@ -331,6 +332,19 @@ public class PositionAdminController {
 
         if (data == null) {
             return ResponseEntity.notFound().build();
+        }
+
+        // PDF: แปลง DOCX → PDF ผ่าน LibreOffice (เหมือนฝั่งประเมินผลการสอน)
+        if ("pdf".equalsIgnoreCase(format)) {
+            byte[] pdfData = documentService.convertDocxToPdf(data);
+            String pdfFilename = label + ".pdf";
+            String safePdfFilename = java.net.URLEncoder.encode(pdfFilename, java.nio.charset.StandardCharsets.UTF_8)
+                    .replace("+", "%20");
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safePdfFilename)
+                    .contentLength(pdfData.length)
+                    .body(new ByteArrayResource(pdfData));
         }
 
         String filename = label + ".docx";

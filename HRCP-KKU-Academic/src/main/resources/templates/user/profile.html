@@ -1,221 +1,278 @@
 <!DOCTYPE html>
 <html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic::layout(~{::section})}">
-
-<head>
-	<meta charset="UTF-8">
-	<title>Profile</title>
-</head>
-
 <body>
-	<section>
-		<div class="container-fluid mt-5 p-5 bg-light">
-			<div class="row">
-				<div class="col-md-10 offset-md-1">
+<section>
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-10">
 
-					<p class="fs-3 text-center">My Profile</p>
-					<th:block th:if="${succMsg}">
-						<p class="text-success fw-bold text-center">[[${succMsg}]]</p>
-					</th:block>
+            <!-- Alerts -->
+            <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show" style="border-radius:12px;border:none;">
+                <i class="fas fa-check-circle me-2"></i>[[${succMsg}]]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show" style="border-radius:12px;border:none;">
+                <i class="fas fa-exclamation-circle me-2"></i>[[${errorMsg}]]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
 
-					<th:block th:if="${errorMsg}">
-						<p class="text-danger fw-bold text-center">[[${errorMsg}]]</p>
-					</th:block>
+            <form th:action="@{/user/update-profile}" method="post" enctype="multipart/form-data" id="profileForm">
+                <input type="hidden" th:value="${user.id}" name="id">
 
-					<hr>
+                <div class="row g-4">
+                    <!-- Left: Identity Column -->
+                    <div class="col-md-4">
+                        <div class="profile-identity-card" style="--card-delay:0ms">
+                            <!-- Avatar -->
+                            <div class="profile-avatar-wrap">
+                                <img id="avatarPreview" th:src="@{'/img/profile_img/' + ${user.profileImage}}"
+                                     alt="รูปโปรไฟล์" class="profile-avatar-img"
+                                     onerror="this.src='/img/profile_img/default.png'">
+                                <label for="avatarInput" class="profile-avatar-overlay">
+                                    <i class="fas fa-camera"></i>
+                                    <span>เปลี่ยนรูป</span>
+                                </label>
+                                <input type="file" name="img" id="avatarInput" accept="image/*" style="display:none"
+                                       onchange="previewAvatar(this)">
+                            </div>
 
-					<!-- Profile Image -->
-					<div class="d-flex justify-content-center mb-4">
-						<img th:src="@{'/img/profile_img/' + ${user.profileImage}}" alt="Profile Image" class="border p-2"
-							style="width: 180px; height: 180px; border-radius: 50%; object-fit: cover;"
-							onerror="this.src='/img/profile_img/default.png'">
-					</div>
+                            <!-- Name display -->
+                            <h4 class="profile-name" th:text="${user.name}">ชื่อผู้ใช้</h4>
+                            <p class="profile-position" th:if="${user.academicPosition != null and user.academicPosition != ''}"
+                               th:text="${user.academicPosition}">ตำแหน่ง</p>
+                            <span class="profile-role-badge">
+                                <i class="fas fa-user me-1"></i>ผู้ใช้งาน
+                            </span>
 
-					<!-- Profile Update Form -->
-					<div class="card shadow-sm mb-5">
-						<div class="card-header bg-primary text-white">
-							<h5 class="mb-0">Update Profile Information</h5>
-						</div>
-						<div class="card-body">
-							<form th:action="@{/user/update-profile}" method="post" enctype="multipart/form-data">
-								<div class="row mb-3">
-									<div class="col-md-3">
-										<label class="form-label fw-bold">ชื่อ</label>
-										<input type="text" name="firstName" class="form-control" th:value="${user.firstName}">
-									</div>
-									<div class="col-md-3">
-										<label class="form-label fw-bold">นามสกุล</label>
-										<input type="text" name="lastName" class="form-control" th:value="${user.lastName}">
-									</div>
-									<div class="col-md-6">
-										<label class="form-label fw-bold">Mobile Number</label>
-										<input type="text" name="mobileNumber" class="form-control"
-											th:value="${user.mobileNumber}">
-									</div>
-								</div>
+                            <div class="profile-email-display">
+                                <i class="fas fa-envelope"></i>
+                                <span th:text="${user.email}">email@kku.ac.th</span>
+                            </div>
+                        </div>
 
-								<div class="row mb-3">
-									<div class="col-md-6">
-										<label class="form-label fw-bold">Email</label>
-										<input type="email" class="form-control" readonly th:value="${user.email}">
-									</div>
-									<div class="col-md-6">
-										<label class="form-label fw-bold">ตำแหน่งทางวิชาการ</label>
-										<select name="academicPosition" class="form-select">
-											<option value="" th:selected="${user.academicPosition == null || user.academicPosition == ''}">-- เลือกตำแหน่งทางวิชาการ --</option>
-											<option value="อาจารย์" th:selected="${user.academicPosition == 'อาจารย์'}">อาจารย์</option>
-											<option value="ผู้ช่วยศาสตราจารย์" th:selected="${user.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
-											<option value="รองศาสตราจารย์" th:selected="${user.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
-											<option value="ศาสตราจารย์" th:selected="${user.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
-										</select>
-									</div>
-								</div>
+                        <!-- Change Password -->
+                        <div class="profile-section" style="--card-delay:120ms">
+                            <button type="button" class="profile-pw-btn" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
+                                <i class="fas fa-key"></i>
+                                <span>เปลี่ยนรหัสผ่าน</span>
+                                <i class="fas fa-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                            </button>
+                        </div>
+                    </div>
 
-								<div class="row mb-3">
-									<div class="col-md-6">
-										<label class="form-label fw-bold">คำนำหน้าชื่อ</label>
-										<select name="title" class="form-select">
-											<option value="" th:selected="${user.title == null || user.title == ''}">-- เลือกคำนำหน้า --</option>
-											<option value="นาย" th:selected="${user.title == 'นาย'}">นาย</option>
-											<option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
-											<option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
-											<option value="ดร." th:selected="${user.title == 'ดร.'}">ดร.</option>
-											<option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
-											<option value="รศ.ดร." th:selected="${user.title == 'รศ.ดร.'}">รศ.ดร.</option>
-											<option value="ศ.ดร." th:selected="${user.title == 'ศ.ดร.'}">ศ.ดร.</option>
-										</select>
-									</div>
-								</div>
+                    <!-- Right: Form Column -->
+                    <div class="col-md-8">
+                        <!-- Section: Personal Info -->
+                        <div class="profile-section" style="--card-delay:60ms">
+                            <div class="profile-section-header">
+                                <i class="fas fa-user-circle"></i>
+                                <h5>ข้อมูลส่วนตัว</h5>
+                            </div>
+                            <div class="profile-section-body">
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="profile-label">คำนำหน้าชื่อ</label>
+                                        <select name="title" class="form-select profile-input">
+                                            <option value="" th:selected="${user.title == null || user.title == ''}">-- เลือกคำนำหน้า --</option>
+                                            <option value="นาย" th:selected="${user.title == 'นาย'}">นาย</option>
+                                            <option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
+                                            <option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
+                                            <option value="ดร." th:selected="${user.title == 'ดร.'}">ดร.</option>
+                                            <option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
+                                            <option value="รศ.ดร." th:selected="${user.title == 'รศ.ดร.'}">รศ.ดร.</option>
+                                            <option value="ศ.ดร." th:selected="${user.title == 'ศ.ดร.'}">ศ.ดร.</option>
+                                        </select>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="profile-label">ชื่อ</label>
+                                        <input type="text" name="firstName" class="form-control profile-input"
+                                               th:value="${user.firstName}" placeholder="ชื่อ">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="profile-label">นามสกุล</label>
+                                        <input type="text" name="lastName" class="form-control profile-input"
+                                               th:value="${user.lastName}" placeholder="นามสกุล">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-								<div class="row mb-3">
-									<div class="col-md-6">
-										<label class="form-label fw-bold">Profile Image</label>
-										<input type="file" name="img" class="form-control">
-									</div>
-									
-								</div>
+                        <!-- Section: Contact -->
+                        <div class="profile-section" style="--card-delay:120ms">
+                            <div class="profile-section-header">
+                                <i class="fas fa-address-book"></i>
+                                <h5>ข้อมูลติดต่อ</h5>
+                            </div>
+                            <div class="profile-section-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="profile-label">อีเมล</label>
+                                        <div class="profile-readonly-field">
+                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <span th:text="${user.email}">email</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="profile-label">เบอร์โทรศัพท์</label>
+                                        <input type="text" name="mobileNumber" class="form-control profile-input"
+                                               th:value="${user.mobileNumber}" placeholder="0xx-xxx-xxxx">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-								<input type="hidden" th:value="${user.id}" name="id">
+                        <!-- Section: Academic -->
+                        <div class="profile-section" style="--card-delay:180ms">
+                            <div class="profile-section-header">
+                                <i class="fas fa-graduation-cap"></i>
+                                <h5>ข้อมูลทางวิชาการ</h5>
+                            </div>
+                            <div class="profile-section-body">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <label class="profile-label">ตำแหน่งทางวิชาการ</label>
+                                        <select name="academicPosition" class="form-select profile-input">
+                                            <option value="" th:selected="${user.academicPosition == null || user.academicPosition == ''}">-- เลือกตำแหน่งทางวิชาการ --</option>
+                                            <option value="อาจารย์" th:selected="${user.academicPosition == 'อาจารย์'}">อาจารย์</option>
+                                            <option value="ผู้ช่วยศาสตราจารย์" th:selected="${user.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
+                                            <option value="รองศาสตราจารย์" th:selected="${user.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
+                                            <option value="ศาสตราจารย์" th:selected="${user.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
 
-								<div class="text-center">
-									<button type="submit" class="btn btn-primary px-5">Update Profile</button>
-								</div>
-							</form>
-						</div>
-					</div>
+                        <!-- Save Button -->
+                        <div class="d-flex justify-content-end mt-2" style="animation:cardSlideIn var(--duration-slow) var(--ease-out-quart) both;animation-delay:240ms">
+                            <button type="submit" class="profile-save-btn">
+                                <i class="fas fa-save me-2"></i>บันทึกข้อมูล
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-					<!-- Change Password Button -->
-					<div class="text-center mb-5">
-						<button type="button" class="btn btn-warning px-5" data-bs-toggle="modal"
-							data-bs-target="#changePasswordModal">
-							<i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
-						</button>
-					</div>
+<!-- Change Password Modal -->
+<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content" style="border-radius:20px;border:none;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.15);">
+            <div style="background:linear-gradient(135deg,#0d1b3e 0%,#1a237e 50%,#0d47a1 100%);padding:24px;text-align:center;position:relative;">
+                <div style="width:52px;height:52px;background:rgba(255,255,255,0.12);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;">
+                    <i class="fas fa-key" style="font-size:20px;color:#90caf9;"></i>
+                </div>
+                <h5 style="color:#fff;font-weight:700;margin:0 0 4px;">เปลี่ยนรหัสผ่าน</h5>
+                <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin:0;">กรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่</p>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:0.7;"></button>
+            </div>
+            <form th:action="@{/user/change-password}" method="post" id="userChangePasswordForm">
+                <div class="modal-body" style="padding:24px;">
+                    <div class="mb-3">
+                        <label class="profile-label">รหัสผ่านปัจจุบัน</label>
+                        <input type="password" name="currentPassword" class="form-control profile-input" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="profile-label">รหัสผ่านใหม่</label>
+                        <input type="password" name="newPassword" class="form-control profile-input" required minlength="8" id="userNewPassword">
+                    </div>
+                    <div class="p-3" style="background:var(--bg-input);border-radius:10px;">
+                        <small class="fw-bold" style="color:var(--text-secondary)"><i class="fas fa-info-circle"></i> เงื่อนไขรหัสผ่าน:</small>
+                        <ul class="list-unstyled mb-0 mt-2" style="font-size:0.82rem;">
+                            <li id="uRule1" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> อย่างน้อย 8 ตัวอักษร</li>
+                            <li id="uRule2" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> ตัวพิมพ์ใหญ่ (A-Z)</li>
+                            <li id="uRule3" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> ตัวพิมพ์เล็ก (a-z)</li>
+                            <li id="uRule4" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> ตัวเลข (0-9)</li>
+                            <li id="uRule5" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> อักขระพิเศษ (!@#$%^&*...)</li>
+                            <li id="uRule6" class="text-muted"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> ห้ามมีช่องว่าง</li>
+                        </ul>
+                        <div class="d-flex align-items-center gap-2 mt-3">
+                            <small class="fw-bold" style="color:var(--text-secondary);white-space:nowrap">ความแข็งแรง:</small>
+                            <div style="flex:1;height:4px;background:var(--border-color);border-radius:2px;overflow:hidden">
+                                <div id="uStrBar" style="height:100%;width:0;border-radius:2px;transition:all 0.3s"></div>
+                            </div>
+                            <small id="uStrLabel" class="fw-bold" style="color:#999;white-space:nowrap">—</small>
+                        </div>
+                    </div>
+                    <div class="mb-3 mt-3">
+                        <label class="profile-label">ยืนยันรหัสผ่านใหม่</label>
+                        <input type="password" name="confirmPassword" class="form-control profile-input" required minlength="8" id="userConfirmPassword">
+                        <div class="invalid-feedback">รหัสผ่านไม่ตรงกัน</div>
+                    </div>
+                    <div id="uMatchStatus" class="text-center" style="font-size:0.82rem;height:18px"></div>
+                </div>
+                <div style="padding:0 24px 24px;display:flex;gap:10px;">
+                    <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal" style="border-radius:10px;">ยกเลิก</button>
+                    <button type="submit" class="profile-save-btn flex-fill" id="uSubmitBtn" disabled>
+                        <i class="fas fa-save me-1"></i>เปลี่ยนรหัสผ่าน
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 
-				</div>
-			</div>
-		</div>
+<script>
+function previewAvatar(input) {
+    if (input.files && input.files[0]) {
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('avatarPreview').src = e.target.result;
+        };
+        reader.readAsDataURL(input.files[0]);
+    }
+}
 
-		<!-- Change Password Modal -->
-		<div class="modal fade" id="changePasswordModal" tabindex="-1" aria-labelledby="changePasswordModalLabel"
-		aria-hidden="true">
-		<div class="modal-dialog modal-dialog-centered">
-			<div class="modal-content">
-				<div class="modal-header bg-warning">
-					<h5 class="modal-title" id="changePasswordModalLabel">
-						<i class="fas fa-key me-2"></i>เปลี่ยนรหัสผ่าน
-					</h5>
-					<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-				</div>
-				<form th:action="@{/user/change-password}" method="post" id="userChangePasswordForm">
-					<div class="modal-body">
-						<div class="mb-3">
-							<label class="form-label fw-bold">รหัสผ่านปัจจุบัน</label>
-							<input type="password" name="currentPassword" class="form-control" required>
-						</div>
-						<div class="mb-3">
-							<label class="form-label fw-bold">รหัสผ่านใหม่</label>
-							<input type="password" name="newPassword" class="form-control" required minlength="8" id="userNewPassword">
-						</div>
-						<div class="mb-3 p-2" style="background:#f5f5f5;border-radius:8px">
-							<small class="text-muted fw-bold"><i class="fas fa-info-circle"></i> เงื่อนไขรหัสผ่าน:</small>
-							<ul class="list-unstyled mb-0 mt-1" style="font-size:13px">
-								<li id="uRule1" class="text-muted"><i class="fas fa-circle" style="font-size:8px"></i> อย่างน้อย 8 ตัวอักษร</li>
-								<li id="uRule2" class="text-muted"><i class="fas fa-circle" style="font-size:8px"></i> ตัวพิมพ์ใหญ่ (A-Z)</li>
-								<li id="uRule3" class="text-muted"><i class="fas fa-circle" style="font-size:8px"></i> ตัวพิมพ์เล็ก (a-z)</li>
-								<li id="uRule4" class="text-muted"><i class="fas fa-circle" style="font-size:8px"></i> ตัวเลข (0-9)</li>
-								<li id="uRule5" class="text-muted"><i class="fas fa-circle" style="font-size:8px"></i> อักขระพิเศษ (!@#$%^&*...)</li>
-								<li id="uRule6" class="text-muted"><i class="fas fa-circle" style="font-size:8px"></i> ห้ามมีช่องว่าง</li>
-							</ul>
-							<div class="d-flex align-items-center gap-2 mt-2">
-								<small class="text-muted fw-bold" style="white-space:nowrap">ความแข็งแรง:</small>
-								<div style="flex:1;height:5px;background:#e0e0e0;border-radius:3px;overflow:hidden">
-									<div id="uStrBar" style="height:100%;width:0;border-radius:3px;transition:all 0.3s"></div>
-								</div>
-								<small id="uStrLabel" class="fw-bold" style="color:#999;white-space:nowrap">—</small>
-							</div>
-						</div>
-						<div class="mb-3">
-							<label class="form-label fw-bold">ยืนยันรหัสผ่านใหม่</label>
-							<input type="password" name="confirmPassword" class="form-control" required minlength="8" id="userConfirmPassword">
-							<div class="invalid-feedback">รหัสผ่านไม่ตรงกัน</div>
-						</div>
-						<div id="uMatchStatus" class="text-center" style="font-size:13px;height:18px"></div>
-					</div>
-					<div class="modal-footer">
-						<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-						<button type="submit" class="btn btn-warning" id="uSubmitBtn" disabled>
-							<i class="fas fa-save me-1"></i>เปลี่ยนรหัสผ่าน
-						</button>
-					</div>
-				</form>
-			</div>
-		</div>
-	</div>
+(function() {
+    var np = document.getElementById('userNewPassword');
+    var cp = document.getElementById('userConfirmPassword');
+    var ms = document.getElementById('uMatchStatus');
+    var sb = document.getElementById('uSubmitBtn');
+    var bar = document.getElementById('uStrBar');
+    var lbl = document.getElementById('uStrLabel');
+    var rules = [
+        { id: 'uRule1', test: function(p){return p.length>=8;} },
+        { id: 'uRule2', test: function(p){return /[A-Z]/.test(p);} },
+        { id: 'uRule3', test: function(p){return /[a-z]/.test(p);} },
+        { id: 'uRule4', test: function(p){return /[0-9]/.test(p);} },
+        { id: 'uRule5', test: function(p){return /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(p);} },
+        { id: 'uRule6', test: function(p){return p.length===0||!/\s/.test(p);} }
+    ];
+    var levels = [
+        {min:0,l:'—',c:'#999',w:'0'},{min:1,l:'อ่อนมาก',c:'#c62828',w:'16%'},
+        {min:2,l:'อ่อน',c:'#e65100',w:'33%'},{min:3,l:'ปานกลาง',c:'#f9a825',w:'50%'},
+        {min:4,l:'แข็งแรง',c:'#2e7d32',w:'75%'},{min:6,l:'แข็งแรงมาก',c:'#1b5e20',w:'100%'}
+    ];
+    function validate() {
+        var p=np.value, c=cp.value, passed=0;
+        rules.forEach(function(r){
+            var el=document.getElementById(r.id), ok=r.test(p);
+            if(ok) passed++;
+            el.className=ok?'text-success mb-1':'text-muted mb-1';
+            if(r.id==='uRule6') el.className=ok?'text-success':'text-muted';
+            el.querySelector('i').className='fas fa-'+(ok?'check-circle':'circle');
+            el.querySelector('i').style.fontSize=ok?'':'6px';
+            el.querySelector('i').style.verticalAlign='middle';
+        });
+        if(p.length===0){bar.style.width='0';lbl.textContent='—';lbl.style.color='#999';}
+        else{var lv=levels[0];for(var i=levels.length-1;i>=0;i--){if(passed>=levels[i].min){lv=levels[i];break;}}bar.style.width=lv.w;bar.style.background=lv.c;lbl.textContent=lv.l;lbl.style.color=lv.c;}
+        if(c.length>0){ms.textContent=p===c?'✓ รหัสผ่านตรงกัน':'✗ รหัสผ่านไม่ตรงกัน';ms.style.color=p===c?'#2e7d32':'#c62828';cp.classList.toggle('is-invalid',p!==c);}
+        else{ms.textContent='';cp.classList.remove('is-invalid');}
+        sb.disabled=!(passed===6&&p===c&&c.length>0);
+    }
+    np.addEventListener('input', validate);
+    cp.addEventListener('input', validate);
+    document.getElementById('userChangePasswordForm').addEventListener('submit', function(e){
+        if(np.value!==cp.value){e.preventDefault();cp.classList.add('is-invalid');}
+    });
+})();
 
-	<script>
-		(function() {
-			var np = document.getElementById('userNewPassword');
-			var cp = document.getElementById('userConfirmPassword');
-			var ms = document.getElementById('uMatchStatus');
-			var sb = document.getElementById('uSubmitBtn');
-			var bar = document.getElementById('uStrBar');
-			var lbl = document.getElementById('uStrLabel');
-			var rules = [
-				{ id: 'uRule1', test: function(p){return p.length>=8;} },
-				{ id: 'uRule2', test: function(p){return /[A-Z]/.test(p);} },
-				{ id: 'uRule3', test: function(p){return /[a-z]/.test(p);} },
-				{ id: 'uRule4', test: function(p){return /[0-9]/.test(p);} },
-				{ id: 'uRule5', test: function(p){return /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?`~]/.test(p);} },
-				{ id: 'uRule6', test: function(p){return p.length===0||!/\s/.test(p);} }
-			];
-			var levels = [
-				{min:0,l:'—',c:'#999',w:'0'},{min:1,l:'อ่อนมาก',c:'#c62828',w:'16%'},
-				{min:2,l:'อ่อน',c:'#e65100',w:'33%'},{min:3,l:'ปานกลาง',c:'#f9a825',w:'50%'},
-				{min:4,l:'แข็งแรง',c:'#2e7d32',w:'75%'},{min:6,l:'แข็งแรงมาก',c:'#1b5e20',w:'100%'}
-			];
-			function validate() {
-				var p=np.value, c=cp.value, passed=0;
-				rules.forEach(function(r){
-					var el=document.getElementById(r.id), ok=r.test(p);
-					if(ok) passed++;
-					el.className=ok?'text-success':'text-muted';
-					el.querySelector('i').className='fas fa-'+(ok?'check-circle':'circle');
-					if(ok) el.querySelector('i').style.fontSize=''; else el.querySelector('i').style.fontSize='8px';
-				});
-				if(p.length===0){bar.style.width='0';lbl.textContent='—';lbl.style.color='#999';}
-				else{var lv=levels[0];for(var i=levels.length-1;i>=0;i--){if(passed>=levels[i].min){lv=levels[i];break;}}bar.style.width=lv.w;bar.style.background=lv.c;lbl.textContent=lv.l;lbl.style.color=lv.c;}
-				if(c.length>0){ms.textContent=p===c?'✓ รหัสผ่านตรงกัน':'✗ รหัสผ่านไม่ตรงกัน';ms.style.color=p===c?'#2e7d32':'#c62828';cp.classList.toggle('is-invalid',p!==c);}
-				else{ms.textContent='';cp.classList.remove('is-invalid');}
-				sb.disabled=!(passed===6&&p===c&&c.length>0);
-			}
-			np.addEventListener('input', validate);
-			cp.addEventListener('input', validate);
-			document.getElementById('userChangePasswordForm').addEventListener('submit', function(e){
-				if(np.value!==cp.value){e.preventDefault();cp.classList.add('is-invalid');}
-			});
-		})();
-	</script>
-	</section>
+// Move modal to body to escape animation stacking context
+var pwModal = document.getElementById('changePasswordModal');
+if (pwModal) document.body.appendChild(pwModal);
+</script>
+</section>
 </body>
-
 </html>

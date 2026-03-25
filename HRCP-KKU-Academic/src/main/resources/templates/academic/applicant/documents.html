@@ -8,410 +8,190 @@
 </head>
 <body>
     <section>
+        <div class="container py-4">
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-<div>
-<h4 class="fw-bold mb-1"><i class="fas fa-book-open me-2" style="color:#1565c0;"></i>เอกสารข้อบังคับและประกาศ</h4>
-<p class="text-muted mb-0">เอกสารอ้างอิงจากกองทรัพยากรบุคคล มหาวิทยาลัยขอนแก่น</p>
-</div>
-<a href="https://hr2.kku.ac.th/?page_id=5546" target="_blank" class="btn btn-outline-primary btn-sm">
-<i class="fas fa-external-link-alt me-1"></i> เว็บต้นทาง
-</a>
-</div>
-
-<div class="mb-3">
-<div class="input-group">
-<span class="input-group-text"><i class="fas fa-search"></i></span>
-<input type="text" id="docSearch" class="form-control" placeholder="ค้นหาเอกสาร...">
-</div>
-</div>
-
-<div class="accordion" id="docAccordion">
-<div class="accordion-item">
-<h2 class="accordion-header">
-<button class="accordion-button " type="button" data-bs-toggle="collapse" data-bs-target="#cat0" aria-expanded="true">
-<i class="fas fa-gavel" style="color:#1565c0;margin-right:10px;"></i>
-<strong>ข้อบังคับมหาวิทยาลัยขอนแก่น</strong>
-<span class="badge bg-secondary ms-2">8</span>
-</button>
-</h2>
-<div id="cat0" class="accordion-collapse collapse show" data-bs-parent="#docAccordion">
-<div class="accordion-body p-0">
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%25AF-%25E0%25B8%2595.%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%25B2%25E0%25B8%258A%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-%25E0%25B8%259E.%25E0%25B8%25A8.-2565-1.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ข้อบังคับฯ ต.วิชาการ ข้าราชการ พ.ศ. 2565</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%25AF-%25E0%25B8%2595.%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-%25E0%25B8%259E%25E0%25B8%2599%25E0%25B8%25B1%25E0%25B8%2581%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2-%25E0%25B8%259E.%25E0%25B8%25A8.-2565.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ข้อบังคับฯ ต.วิชาการ พนักงานมหาวิทยาลัย พ.ศ. 2565</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%25AF-%25E0%25B8%2595.%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-%25E0%25B8%259E%25E0%25B8%2599%25E0%25B8%25B1%25E0%25B8%2581%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-2-%25E0%25B8%259E.%25E0%25B8%25A8.-2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ข้อบังคับฯ ต.วิชาการ พนักงานมหาวิทยาลัย (ฉบับที่ 2) พ.ศ. 2566</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%25AF-%25E0%25B8%2595.%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-%25E0%25B8%25A8.-%25E0%25B9%2584%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25A3%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B9%2580%25E0%25B8%2587%25E0%25B8%25B4%25E0%25B8%2599%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2588%25E0%25B8%25B3%25E0%25B8%2595%25E0%25B8%25B3%25E0%25B9%2581%25E0%25B8%25AB%25E0%25B8%2599%25E0%25B9%2588%25E0%25B8%2587%25E0%25B8%25AA%25E0%25B8%25B9%25E0%25B8%2587%25E0%25B8%2582%25E0%25B8%25B6%25E0%25B9%2589%25E0%25B8%2599-%25E0%25B8%259E.%25E0%25B8%25A8.-2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ข้อบังคับฯ ศ. ได้รับเงินประจำตำแหน่งสูงขึ้น พ.ศ. 2566</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%25AF-%25E0%25B8%2595.%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-%25E0%25B8%25A8.-%25E0%25B8%2584%25E0%25B8%25A5%25E0%25B8%25B4%25E0%25B8%2599%25E0%25B8%25B4%25E0%25B8%2581-%25E0%25B8%259E.%25E0%25B8%25A8.-2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ข้อบังคับฯ ศ.คลินิก พ.ศ. 2566</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%25AF-%25E0%25B8%2595.%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-%25E0%25B8%259C%25E0%25B8%25A8.%25E0%25B8%259E%25E0%25B8%25B4%25E0%25B9%2580%25E0%25B8%25A8%25E0%25B8%25A9-%25E0%25B8%25A3%25E0%25B8%25A8.%25E0%25B8%259E%25E0%25B8%25B4%25E0%25B9%2580%25E0%25B8%25A8%25E0%25B8%25A9-%25E0%25B9%2581%25E0%25B8%25A5%25E0%25B8%25B0%25E0%25B8%25A8.%25E0%25B8%259E%25E0%25B8%25B4%25E0%25B9%2580%25E0%25B8%25A8%25E0%25B8%25A9-%25E0%25B8%259E.%25E0%25B8%25A8.-2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ข้อบังคับฯ ผศ.พิเศษ รศ.พิเศษ ศ.พิเศษ พ.ศ. 2566</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%25AF-%25E0%25B8%2595.%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-%25E0%25B8%25A8.%25E0%25B9%2580%25E0%25B8%2581%25E0%25B8%25B5%25E0%25B8%25A2%25E0%25B8%25A3%25E0%25B8%2595%25E0%25B8%25B4%25E0%25B8%2584%25E0%25B8%25B8%25E0%25B8%2593-%25E0%25B8%259E.%25E0%25B8%25A8.-2560.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ข้อบังคับฯ ศ.เกียรติคุณ พ.ศ. 2560</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2582%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%25AF-%25E0%25B8%25A1%25E0%25B8%25B2%25E0%25B8%2595%25E0%25B8%25A3%25E0%25B8%2590%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A0%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599-%25E0%25B8%259E.%25E0%25B8%25A8.-2559.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ข้อบังคับฯ มาตรฐานภาระงาน พ.ศ. 2559</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-</div>
-</div>
-</div>
-<div class="accordion-item">
-<h2 class="accordion-header">
-<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cat1" aria-expanded="false">
-<i class="fas fa-bullhorn" style="color:#e65100;margin-right:10px;"></i>
-<strong>ประกาศมหาวิทยาลัยขอนแก่น</strong>
-<span class="badge bg-secondary ms-2">11</span>
-</button>
-</h2>
-<div id="cat1" class="accordion-collapse collapse " data-bs-parent="#docAccordion">
-<div class="accordion-body p-0">
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-3202_2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 3202/2566 จำนวนเงินทุนจากแหล่งทุนภายนอก</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-3203_2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 3203/2566 หลักเกณฑ์เทียบตำแหน่งทางวิชาการ</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-792_2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 792/2566 กำหนดตำแหน่งทางวิชาการที่เรียกชื่ออย่างอื่น</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-792_2566-%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A3%25E0%25B8%25B2%25E0%25B8%258A%25E0%25B8%2581%25E0%25B8%25B4%25E0%25B8%2588%25E0%25B8%2588%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25B8%25E0%25B9%2580%25E0%25B8%259A%25E0%25B8%2581%25E0%25B8%25A9%25E0%25B8%25B2.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 792/2566 (ราชกิจจานุเบกษา)</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-1607_2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 1607/2566 หลักเกณฑ์ประเมินผลการสอน</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-1661_2566.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 1661/2566 แนวปฏิบัติขอกำหนดตำแหน่งทางวิชาการ</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-439_2564.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 439/2564 เทียบเกณฑ์คุณภาพผลงาน</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-1955_2564.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 1955/2564 คำจำกัดความ รูปแบบ ลักษณะการเผยแพร่</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-1956_2564-.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 1956/2564 ลักษณะการมีส่วนร่วมในผลงาน</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-36_2564-.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 36/2564 แนวปฏิบัติเสนอตำรา/หนังสือ (ฉบับที่ 3)</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%259B%25E0%25B8%25A3%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25A1%25E0%25B8%25AB%25E0%25B8%25B2%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%25A2%25E0%25B8%2582%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%2581%25E0%25B9%2588%25E0%25B8%2599-%25E0%25B8%2589%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%25B5%25E0%25B9%2588-3005_2561.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ประกาศ มข. 3005/2561 แนวปฏิบัติเสนอตำรา/หนังสือ</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-</div>
-</div>
-</div>
-<div class="accordion-item">
-<h2 class="accordion-header">
-<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cat2" aria-expanded="false">
-<i class="fas fa-paperclip" style="color:#2e7d32;margin-right:10px;"></i>
-<strong>เอกสารแนบท้ายข้อบังคับฯ</strong>
-<span class="badge bg-secondary ms-2">2</span>
-</button>
-</h2>
-<div id="cat2" class="accordion-collapse collapse " data-bs-parent="#docAccordion">
-<div class="accordion-body p-0">
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%2581%25E0%25B8%25A9%25E0%25B8%2593%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%25A1%25E0%25B8%25B5%25E0%25B8%25AA%25E0%25B9%2588%25E0%25B8%25A7%25E0%25B8%2599%25E0%25B8%25A3%25E0%25B9%2588%25E0%25B8%25A7%25E0%25B8%25A1%25E0%25B9%2583%25E0%25B8%2599%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%2597%25E0%25B8%25B2%25E0%25B8%2587%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%2597%25E0%25B8%25B1%25E0%25B9%2588%25E0%25B8%25A7%25E0%25B9%2584%25E0%25B8%259B-%25E0%25B8%2584%25E0%25B8%25A5%25E0%25B8%25B4%25E0%25B8%2581-2.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ลักษณะการมีส่วนร่วมในผลงานทางวิชาการทั่วไป</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%2581%25E0%25B8%25A9%25E0%25B8%2593%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%25A1%25E0%25B8%25B5%25E0%25B8%25AA%25E0%25B9%2588%25E0%25B8%25A7%25E0%25B8%2599%25E0%25B8%25A3%25E0%25B9%2588%25E0%25B8%25A7%25E0%25B8%25A1%25E0%25B9%2583%25E0%25B8%2599%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%2597%25E0%25B8%25B2%25E0%25B8%2587%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B9%2580%25E0%25B8%2589%25E0%25B8%259E%25E0%25B8%25B2%25E0%25B8%25B0%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599-%25E0%25B8%2584%25E0%25B8%25A5%25E0%25B8%25B4%25E0%25B8%2581-2.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ลักษณะการมีส่วนร่วมในผลงานทางวิชาการเฉพาะด้าน</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-</div>
-</div>
-</div>
-<div class="accordion-item">
-<h2 class="accordion-header">
-<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cat3" aria-expanded="false">
-<i class="fas fa-flask" style="color:#7b1fa2;margin-right:10px;"></i>
-<strong>คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 1-3)</strong>
-<span class="badge bg-secondary ms-2">15</span>
-</button>
-</h2>
-<div id="cat3" class="accordion-collapse collapse " data-bs-parent="#docAccordion">
-<div class="accordion-body p-0">
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2588%25E0%25B8%25B1%25E0%25B8%25A2-2.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 1: งานวิจัย</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.1-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B9%2580%25E0%25B8%259E%25E0%25B8%25B7%25E0%25B9%2588%25E0%25B8%25AD%25E0%25B8%25AD%25E0%25B8%25B8%25E0%25B8%2595%25E0%25B8%25AA%25E0%25B8%25B2%25E0%25B8%25AB%25E0%25B8%2581%25E0%25B8%25A3%25E0%25B8%25A3%25E0%25B8%25A1-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: ผลงานวิชาการเพื่ออุตสาหกรรม</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.2-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B9%2580%25E0%25B8%259E%25E0%25B8%25B7%25E0%25B9%2588%25E0%25B8%25AD%25E0%25B8%259E%25E0%25B8%25B1%25E0%25B8%2592%25E0%25B8%2599%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B9%2580%25E0%25B8%25A3%25E0%25B8%25B5%25E0%25B8%25A2%25E0%25B8%2599%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%25AA%25E0%25B8%25AD%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%25A5%25E0%25B8%25B0%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B9%2580%25E0%25B8%25A3%25E0%25B8%25B5%25E0%25B8%25A2%25E0%25B8%2599%25E0%25B8%25A3%25E0%25B8%25B9%25E0%25B9%2589-1-2.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: ผลงานวิชาการเพื่อพัฒนาการเรียนการสอน</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.3-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B9%2580%25E0%25B8%259E%25E0%25B8%25B7%25E0%25B9%2588%25E0%25B8%25AD%25E0%25B8%259E%25E0%25B8%25B1%25E0%25B8%2592%25E0%25B8%2599%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B9%2582%25E0%25B8%25A2%25E0%25B8%259A%25E0%25B8%25B2%25E0%25B8%25A2%25E0%25B8%25AA%25E0%25B8%25B2%25E0%25B8%2598%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%2593%25E0%25B8%25B0-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: ผลงานวิชาการเพื่อพัฒนานโยบายสาธารณะ</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.4-%25E0%25B8%2581%25E0%25B8%25A3%25E0%25B8%2593%25E0%25B8%25B5%25E0%25B8%25A8%25E0%25B8%25B6%25E0%25B8%2581%25E0%25B8%25A9%25E0%25B8%25B2-case-study-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: กรณีศึกษา (Case Study)</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.5-%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%259B%25E0%25B8%25A5-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: งานแปล</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.6-%25E0%25B8%259E%25E0%25B8%2588%25E0%25B8%2599%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25B8%25E0%25B8%2581%25E0%25B8%25A3%25E0%25B8%25A1-%25E0%25B8%25AA%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25B8%25E0%25B8%2581%25E0%25B8%25A3%25E0%25B8%25A1-%25E0%25B8%2599%25E0%25B8%25B2%25E0%25B8%25A1%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25B8%25E0%25B8%2581%25E0%25B8%25A3%25E0%25B8%25A1-%25E0%25B9%2581%25E0%25B8%25A5%25E0%25B8%25B0%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%25AD%25E0%25B8%25B7%25E0%25B9%2588%25E0%25B8%2599%25E0%25B9%2583%25E0%25B8%2599%25E0%25B8%25A5%25E0%25B8%25B1%25E0%25B8%2581%25E0%25B8%25A9%25E0%25B8%2593%25E0%25B8%25B0%25E0%25B9%2580%25E0%25B8%2594%25E0%25B8%25B5%25E0%25B8%25A2%25E0%25B8%25A7%25E0%25B8%2581%25E0%25B8%25B1%25E0%25B8%2599-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: พจนานุกรม สารานุกรม นามานุกรม</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.7-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25AA%25E0%25B8%25A3%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2587%25E0%25B8%25AA%25E0%25B8%25A3%25E0%25B8%25A3%25E0%25B8%2584%25E0%25B9%258C%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%25A2%25E0%25B8%25B2%25E0%25B8%25A8%25E0%25B8%25B2%25E0%25B8%25AA%25E0%25B8%2595%25E0%25B8%25A3%25E0%25B9%258C%25E0%25B9%2581%25E0%25B8%25A5%25E0%25B8%25B0%25E0%25B9%2580%25E0%25B8%2597%25E0%25B8%2584%25E0%25B9%2582%25E0%25B8%2599%25E0%25B9%2582%25E0%25B8%25A5%25E0%25B8%25A2%25E0%25B8%25B5-1-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: ผลงานสร้างสรรค์ด้านวิทยาศาสตร์และเทคโนโลยี</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.8-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25AA%25E0%25B8%25A3%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2587%25E0%25B8%25AA%25E0%25B8%25A3%25E0%25B8%25A3%25E0%25B8%2584%25E0%25B9%258C%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25AA%25E0%25B8%25B8%25E0%25B8%2599%25E0%25B8%2597%25E0%25B8%25A3%25E0%25B8%25B5%25E0%25B8%25A2%25E0%25B8%25B0-%25E0%25B8%25A8%25E0%25B8%25B4%25E0%25B8%25A5%25E0%25B8%259B%25E0%25B8%25B0-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.9-%25E0%25B8%25AA%25E0%25B8%25B4%25E0%25B8%2597%25E0%25B8%2598%25E0%25B8%25B4%25E0%25B8%259A%25E0%25B8%25B1%25E0%25B8%2595%25E0%25B8%25A3-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: สิทธิบัตร</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.10-%25E0%25B8%258B%25E0%25B8%25AD%25E0%25B8%259F%25E0%25B8%2595%25E0%25B9%258C%25E0%25B9%2581%25E0%25B8%25A7%25E0%25B8%25A3%25E0%25B9%258C-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: ซอฟต์แวร์</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F2.12-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%2599%25E0%25B8%25A7%25E0%25B8%25B1%25E0%25B8%2595%25E0%25B8%2581%25E0%25B8%25A3%25E0%25B8%25A3%25E0%25B8%25A1-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 2: ผลงานนวัตกรรม</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F3.1-%25E0%25B8%2595%25E0%25B8%25B3%25E0%25B8%25A3%25E0%25B8%25B2-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 3: ตำรา</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F3.2-%25E0%25B8%25AB%25E0%25B8%2599%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%25AA%25E0%25B8%25B7%25E0%25B8%25AD-1-2.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 3: หนังสือ</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F3.3%25E0%25B8%259A%25E0%25B8%2597%25E0%25B8%2584%25E0%25B8%25A7%25E0%25B8%25B2%25E0%25B8%25A1%25E0%25B8%2597%25E0%25B8%25B2%25E0%25B8%2587%25E0%25B8%25A7%25E0%25B8%25B4%25E0%25B8%258A%25E0%25B8%25B2%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">กลุ่ม 3: บทความทางวิชาการ</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-</div>
-</div>
-</div>
-<div class="accordion-item">
-<h2 class="accordion-header">
-<button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#cat4" aria-expanded="false">
-<i class="fas fa-star" style="color:#004d40;margin-right:10px;"></i>
-<strong>คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 4 เฉพาะด้าน)</strong>
-<span class="badge bg-secondary ms-2">5</span>
-</button>
-</h2>
-<div id="cat4" class="accordion-collapse collapse " data-bs-parent="#docAccordion">
-<div class="accordion-body p-0">
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F4.1-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A3%25E0%25B8%25B1%25E0%25B8%259A%25E0%25B9%2583%25E0%25B8%258A%25E0%25B9%2589%25E0%25B8%2597%25E0%25B9%2589%25E0%25B8%25AD%25E0%25B8%2587%25E0%25B8%2596%25E0%25B8%25B4%25E0%25B9%2588%25E0%25B8%2599%25E0%25B9%2581%25E0%25B8%25A5%25E0%25B8%25B0%25E0%25B8%25AA%25E0%25B8%25B1%25E0%25B8%2587%25E0%25B8%2584%25E0%25B8%25A1-%25E0%25B9%2580%25E0%25B8%2589%25E0%25B8%259E%25E0%25B8%25B2%25E0%25B8%25B0%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599-1-2.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ผลงานรับใช้ท้องถิ่นและสังคม (เฉพาะด้าน)</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F4.2-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25AA%25E0%25B8%25A3%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2587%25E0%25B8%25AA%25E0%25B8%25A3%25E0%25B8%25A3%25E0%25B8%2584%25E0%25B9%258C%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25AA%25E0%25B8%25B8%25E0%25B8%2599%25E0%25B8%2597%25E0%25B8%25A3%25E0%25B8%25B5%25E0%25B8%25A2%25E0%25B8%25B0-%25E0%25B8%25A8%25E0%25B8%25B4%25E0%25B8%25A5%25E0%25B8%259B%25E0%25B8%25B0-%25E0%25B9%2580%25E0%25B8%2589%25E0%25B8%259E%25E0%25B8%25B2%25E0%25B8%25B0%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ (เฉพาะด้าน)</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F4.3-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%2581%25E0%25B8%25B2%25E0%25B8%25A3%25E0%25B8%25AA%25E0%25B8%25AD%25E0%25B8%2599-%25E0%25B9%2580%25E0%25B8%2589%25E0%25B8%259E%25E0%25B8%25B2%25E0%25B8%25B0%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ผลงานการสอน (เฉพาะด้าน)</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F4.4-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%2599%25E0%25B8%25A7%25E0%25B8%25B1%25E0%25B8%2595%25E0%25B8%2581%25E0%25B8%25A3%25E0%25B8%25A3%25E0%25B8%25A1-%25E0%25B9%2580%25E0%25B8%2589%25E0%25B8%259E%25E0%25B8%25B2%25E0%25B8%25B0%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599-1.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ผลงานนวัตกรรม (เฉพาะด้าน)</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-<a href="https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F4.5-%25E0%25B8%259C%25E0%25B8%25A5%25E0%25B8%2587%25E0%25B8%25B2%25E0%25B8%2599%25E0%25B8%25A8%25E0%25B8%25B2%25E0%25B8%25AA%25E0%25B8%2599%25E0%25B8%25B2-%25E0%25B9%2580%25E0%25B8%2589%25E0%25B8%259E%25E0%25B8%25B2%25E0%25B8%25B0%25E0%25B8%2594%25E0%25B9%2589%25E0%25B8%25B2%25E0%25B8%2599-3.pdf&embedded=true" target="_blank" rel="noopener" class="doc-item">
-<i class="fas fa-file-pdf doc-icon"></i>
-<span class="doc-name">ผลงานศาสนา (เฉพาะด้าน)</span>
-<i class="fas fa-external-link-alt doc-ext"></i>
-</a>
-</div>
-</div>
-</div>
-
-</div>
-
-<div id="noResults" class="text-center py-4 d-none">
-<i class="fas fa-search fa-2x text-muted mb-2"></i>
-<p class="text-muted">ไม่พบเอกสารที่ค้นหา</p>
-</div>
-
-<!-- PDF Preview Overlay (pure CSS/JS, NO Bootstrap modal) -->
-<div id="pdfOverlay" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,.7);">
-    <div style="position:absolute; inset:0; display:flex; flex-direction:column; background:var(--bg-primary, #fff);">
-        <!-- Header -->
-        <div style="display:flex; align-items:center; padding:8px 16px; border-bottom:1px solid rgba(0,0,0,.1); background:var(--bg-primary, #fff); min-height:48px;">
-            <h6 id="pdfOverlayTitle" style="margin:0; flex:1; font-size:.95rem; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">
-                <i class="fas fa-file-pdf text-danger me-2"></i>กำลังโหลดเอกสาร...
-            </h6>
-            <a id="pdfOverlayNewTab" href="#" target="_blank" class="btn btn-sm btn-outline-primary me-2">
-                <i class="fas fa-external-link-alt me-1"></i>เปิดแท็บใหม่
-            </a>
-            <button type="button" id="pdfOverlayClose" class="btn-close"></button>
-        </div>
-        <!-- Body -->
-        <div style="flex:1; position:relative; overflow:hidden;">
-            <div id="pdfOverlaySpinner" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); text-align:center;">
-                <div class="spinner-border text-primary mb-3" style="width:3rem;height:3rem;"></div>
-                <p class="text-muted">กำลังโหลดเอกสาร PDF...</p>
+            <!-- Page Header -->
+            <div class="page-header">
+                <div class="page-header-text">
+                    <h3 class="page-header-title">เอกสาร / ข้อบังคับ / ประกาศ</h3>
+                    <p class="page-header-sub">เอกสารอ้างอิงจากกองทรัพยากรบุคคล มหาวิทยาลัยขอนแก่น</p>
+                </div>
+                <a href="https://hr2.kku.ac.th/?page_id=5546" target="_blank" class="btn btn-outline-primary btn-sm">
+                    <i class="fas fa-external-link-alt me-1"></i> เว็บต้นทาง
+                </a>
             </div>
-            <iframe id="pdfOverlayFrame" style="width:100%; height:100%; border:none; display:none;"></iframe>
+
+            <!-- Search -->
+            <div class="doc-search-wrap">
+                <i class="fas fa-search"></i>
+                <input type="text" id="docSearchInput" class="doc-search-v2"
+                       placeholder="ค้นหาเอกสาร..." oninput="filterDocs(this.value)">
+            </div>
+
+            <!-- Categories rendered by JS -->
+            <div id="docContainer"></div>
+
         </div>
-    </div>
-</div>
 
-<style>
-.doc-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 12px 16px; text-decoration: none; color: inherit;
-    border-bottom: 1px solid rgba(0,0,0,.06); transition: background .15s; cursor: pointer;
-}
-.doc-item:hover { background: rgba(21,101,192,.06); color: inherit; }
-.doc-item:last-child { border-bottom: none; }
-.doc-icon { color: #c62828; font-size: 1.1rem; flex-shrink: 0; }
-.doc-name { flex: 1; font-size: .9rem; }
-.doc-ext { color: #90a4ae; font-size: .75rem; }
-.accordion-button:not(.collapsed) { background: rgba(21,101,192,.06); }
-[data-bs-theme="dark"] .doc-item:hover { background: rgba(56,189,248,.08); }
-[data-bs-theme="dark"] .doc-item { border-bottom-color: rgba(255,255,255,.06); }
-.doc-item.d-none { display: none !important; }
-</style>
+        <!-- PDF Overlay -->
+        <div id="pdfOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;flex-direction:column;display:flex;opacity:0;pointer-events:none;transition:opacity var(--duration-normal,250ms) cubic-bezier(0.25,1,0.5,1);">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);">
+                <span id="pdfTitle" style="color:#fff;font-weight:600;font-size:0.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%;"></span>
+                <div style="display:flex;gap:8px;">
+                    <a id="pdfDownloadLink" href="#" target="_blank" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-download me-1"></i>ดาวน์โหลด
+                    </a>
+                    <button type="button" onclick="closePdfOverlay()" class="btn btn-sm btn-outline-light">
+                        <i class="fas fa-times me-1"></i>ปิด
+                    </button>
+                </div>
+            </div>
+            <div style="flex:1;position:relative;overflow:hidden;">
+                <div id="pdfSpinner" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;">
+                    <div class="spinner-border text-light mb-3" style="width:3rem;height:3rem;"></div>
+                    <p style="color:#fff;opacity:.8;">กำลังโหลดเอกสาร...</p>
+                </div>
+                <iframe id="pdfFrame" style="width:100%;height:100%;border:none;transition:opacity var(--duration-normal,250ms) cubic-bezier(0.25,1,0.5,1);"></iframe>
+            </div>
+        </div>
 
-<script>
-// Search filter
-document.getElementById('docSearch').addEventListener('input', function() {
-    var q = this.value.toLowerCase();
-    var items = document.querySelectorAll('.doc-item');
-    var visible = 0;
-    items.forEach(function(el) {
-        var match = el.querySelector('.doc-name').textContent.toLowerCase().indexOf(q) !== -1;
-        el.classList.toggle('d-none', !match);
-        if (match) visible++;
-    });
-    if (q) {
-        document.querySelectorAll('.accordion-collapse').forEach(function(c) { c.classList.add('show'); });
-    }
-    document.getElementById('noResults').classList.toggle('d-none', visible > 0);
-});
+        <script>
+        // ===== Document Data =====
+        var B = 'https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F';
+        var S = '&embedded=true';
+        var CATS = [
+          { title:'ข้อบังคับมหาวิทยาลัยขอนแก่น', icon:'fas fa-landmark', color:'var(--color-primary-medium,#1565c0)', docs:[
+            ['ข้อบังคับฯ ต.วิชาการ ข้าราชการ พ.ศ. 2565','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%82%E0%B9%89%E0%B8%B2%E0%B8%A3%E0%B8%B2%E0%B8%8A%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%9E.%E0%B8%A8.-2565-1.pdf'],
+            ['ข้อบังคับฯ ต.วิชาการ พนักงานมหาวิทยาลัย พ.ศ. 2565','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%9E%E0%B8%99%E0%B8%B1%E0%B8%81%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2-%E0%B8%9E.%E0%B8%A8.-2565.pdf'],
+            ['ข้อบังคับฯ ต.วิชาการ พนักงานมหาวิทยาลัย (ฉบับที่ 2) พ.ศ. 2566','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%9E%E0%B8%99%E0%B8%B1%E0%B8%81%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-2-%E0%B8%9E.%E0%B8%A8.-2566.pdf'],
+            ['ข้อบังคับฯ ศ. ได้รับเงินประจำตำแหน่งสูงขึ้น พ.ศ. 2566','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%A8.-%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B9%80%E0%B8%87%E0%B8%B4%E0%B8%99%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%88%E0%B8%B3%E0%B8%95%E0%B8%B3%E0%B9%81%E0%B8%AB%E0%B8%99%E0%B9%88%E0%B8%87%E0%B8%AA%E0%B8%B9%E0%B8%87%E0%B8%82%E0%B8%B6%E0%B9%89%E0%B8%99-%E0%B8%9E.%E0%B8%A8.-2566.pdf'],
+            ['ข้อบังคับฯ ศ.คลินิก พ.ศ. 2566','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%A8.-%E0%B8%84%E0%B8%A5%E0%B8%B4%E0%B8%99%E0%B8%B4%E0%B8%81-%E0%B8%9E.%E0%B8%A8.-2566.pdf'],
+            ['ข้อบังคับฯ ผศ.พิเศษ รศ.พิเศษ ศ.พิเศษ พ.ศ. 2566','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%9C%E0%B8%A8.%E0%B8%9E%E0%B8%B4%E0%B9%80%E0%B8%A8%E0%B8%A9-%E0%B8%A3%E0%B8%A8.%E0%B8%9E%E0%B8%B4%E0%B9%80%E0%B8%A8%E0%B8%A9-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%A8.%E0%B8%9E%E0%B8%B4%E0%B9%80%E0%B8%A8%E0%B8%A9-%E0%B8%9E.%E0%B8%A8.-2566.pdf'],
+            ['ข้อบังคับฯ ศ.เกียรติคุณ พ.ศ. 2560','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%A8.%E0%B9%80%E0%B8%81%E0%B8%B5%E0%B8%A2%E0%B8%A3%E0%B8%95%E0%B8%B4%E0%B8%84%E0%B8%B8%E0%B8%93-%E0%B8%9E.%E0%B8%A8.-2560.pdf'],
+            ['ข้อบังคับฯ มาตรฐานภาระงาน พ.ศ. 2559','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%A1%E0%B8%B2%E0%B8%95%E0%B8%A3%E0%B8%90%E0%B8%B2%E0%B8%99%E0%B8%A0%E0%B8%B2%E0%B8%A3%E0%B8%B0%E0%B8%87%E0%B8%B2%E0%B8%99-%E0%B8%9E.%E0%B8%A8.-2559.pdf']
+          ]},
+          { title:'ประกาศมหาวิทยาลัยขอนแก่น', icon:'fas fa-scroll', color:'#ef6c00', docs:[
+            ['ประกาศ มข. 3202/2566 จำนวนเงินทุนจากแหล่งทุนภายนอก','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-3202_2566.pdf'],
+            ['ประกาศ มข. 3203/2566 หลักเกณฑ์เทียบตำแหน่งทางวิชาการ','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-3203_2566.pdf'],
+            ['ประกาศ มข. 792/2566 กำหนดตำแหน่งทางวิชาการที่เรียกชื่ออย่างอื่น','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-792_2566.pdf'],
+            ['ประกาศ มข. 792/2566 (ราชกิจจานุเบกษา)','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-792_2566-%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A3%E0%B8%B2%E0%B8%8A%E0%B8%81%E0%B8%B4%E0%B8%88%E0%B8%88%E0%B8%B2%E0%B8%99%E0%B8%B8%E0%B9%80%E0%B8%9A%E0%B8%81%E0%B8%A9%E0%B8%B2.pdf'],
+            ['ประกาศ มข. 1607/2566 หลักเกณฑ์ประเมินผลการสอน','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-1607_2566.pdf'],
+            ['ประกาศ มข. 1661/2566 แนวปฏิบัติขอกำหนดตำแหน่งทางวิชาการ','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-1661_2566.pdf'],
+            ['ประกาศ มข. 439/2564 เทียบเกณฑ์คุณภาพผลงาน','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-439_2564.pdf'],
+            ['ประกาศ มข. 1955/2564 คำจำกัดความ รูปแบบ ลักษณะการเผยแพร่','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-1955_2564.pdf'],
+            ['ประกาศ มข. 1956/2564 ลักษณะการมีส่วนร่วมในผลงาน','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-1956_2564-.pdf'],
+            ['ประกาศ มข. 36/2564 แนวปฏิบัติเสนอตำรา/หนังสือ (ฉบับที่ 3)','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-36_2564-.pdf'],
+            ['ประกาศ มข. 3005/2561 แนวปฏิบัติเสนอตำรา/หนังสือ','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-3005_2561.pdf']
+          ]},
+          { title:'เอกสารแนบท้ายข้อบังคับฯ', icon:'fas fa-paperclip', color:'#2e7d32', docs:[
+            ['ลักษณะการมีส่วนร่วมในผลงานทางวิชาการทั่วไป','%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%A9%E0%B8%93%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%A1%E0%B8%B5%E0%B8%AA%E0%B9%88%E0%B8%A7%E0%B8%99%E0%B8%A3%E0%B9%88%E0%B8%A7%E0%B8%A1%E0%B9%83%E0%B8%99%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%97%E0%B8%B2%E0%B8%87%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%97%E0%B8%B1%E0%B9%88%E0%B8%A7%E0%B9%84%E0%B8%9B-%E0%B8%84%E0%B8%A5%E0%B8%B4%E0%B8%81-2.pdf'],
+            ['ลักษณะการมีส่วนร่วมในผลงานทางวิชาการเฉพาะด้าน','%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%A9%E0%B8%93%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%A1%E0%B8%B5%E0%B8%AA%E0%B9%88%E0%B8%A7%E0%B8%99%E0%B8%A3%E0%B9%88%E0%B8%A7%E0%B8%A1%E0%B9%83%E0%B8%99%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%97%E0%B8%B2%E0%B8%87%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-%E0%B8%84%E0%B8%A5%E0%B8%B4%E0%B8%81-2.pdf']
+          ]},
+          { title:'คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 1-3)', icon:'fas fa-flask', color:'#7b1fa2', docs:[
+            ['กลุ่ม 1: งานวิจัย','%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%88%E0%B8%B1%E0%B8%A2-2.pdf'],
+            ['กลุ่ม 2: ผลงานวิชาการเพื่ออุตสาหกรรม','2.1-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%AD%E0%B8%B8%E0%B8%95%E0%B8%AA%E0%B8%B2%E0%B8%AB%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1-3.pdf'],
+            ['กลุ่ม 2: ผลงานวิชาการเพื่อพัฒนาการเรียนการสอน','2.2-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%9E%E0%B8%B1%E0%B8%92%E0%B8%99%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%99%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%AA%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%99%E0%B8%A3%E0%B8%B9%E0%B9%89-1-2.pdf'],
+            ['กลุ่ม 2: ผลงานวิชาการเพื่อพัฒนานโยบายสาธารณะ','2.3-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%9E%E0%B8%B1%E0%B8%92%E0%B8%99%E0%B8%B2%E0%B8%99%E0%B9%82%E0%B8%A2%E0%B8%9A%E0%B8%B2%E0%B8%A2%E0%B8%AA%E0%B8%B2%E0%B8%98%E0%B8%B2%E0%B8%A3%E0%B8%93%E0%B8%B0-3.pdf'],
+            ['กลุ่ม 2: กรณีศึกษา (Case Study)','2.4-%E0%B8%81%E0%B8%A3%E0%B8%93%E0%B8%B5%E0%B8%A8%E0%B8%B6%E0%B8%81%E0%B8%A9%E0%B8%B2-case-study-3.pdf'],
+            ['กลุ่ม 2: งานแปล','2.5-%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B9%81%E0%B8%9B%E0%B8%A5-3.pdf'],
+            ['กลุ่ม 2: พจนานุกรม สารานุกรม นามานุกรม','2.6-%E0%B8%9E%E0%B8%88%E0%B8%99%E0%B8%B2%E0%B8%99%E0%B8%B8%E0%B8%81%E0%B8%A3%E0%B8%A1-%E0%B8%AA%E0%B8%B2%E0%B8%A3%E0%B8%B2%E0%B8%99%E0%B8%B8%E0%B8%81%E0%B8%A3%E0%B8%A1-%E0%B8%99%E0%B8%B2%E0%B8%A1%E0%B8%B2%E0%B8%99%E0%B8%B8%E0%B8%81%E0%B8%A3%E0%B8%A1-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%AD%E0%B8%B7%E0%B9%88%E0%B8%99%E0%B9%83%E0%B8%99%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%A9%E0%B8%93%E0%B8%B0%E0%B9%80%E0%B8%94%E0%B8%B5%E0%B8%A2%E0%B8%A7%E0%B8%81%E0%B8%B1%E0%B8%99-3.pdf'],
+            ['กลุ่ม 2: ผลงานสร้างสรรค์ด้านวิทยาศาสตร์และเทคโนโลยี','2.7-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B8%AA%E0%B8%A3%E0%B8%A3%E0%B8%84%E0%B9%8C%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B9%8C%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B9%80%E0%B8%97%E0%B8%84%E0%B9%82%E0%B8%99%E0%B9%82%E0%B8%A5%E0%B8%A2%E0%B8%B5-1-3.pdf'],
+            ['กลุ่ม 2: ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ','2.8-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B8%AA%E0%B8%A3%E0%B8%A3%E0%B8%84%E0%B9%8C%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%B8%E0%B8%99%E0%B8%97%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%B0-%E0%B8%A8%E0%B8%B4%E0%B8%A5%E0%B8%9B%E0%B8%B0-3.pdf'],
+            ['กลุ่ม 2: สิทธิบัตร','2.9-%E0%B8%AA%E0%B8%B4%E0%B8%97%E0%B8%98%E0%B8%B4%E0%B8%9A%E0%B8%B1%E0%B8%95%E0%B8%A3-3.pdf'],
+            ['กลุ่ม 2: ซอฟต์แวร์','2.10-%E0%B8%8B%E0%B8%AD%E0%B8%9F%E0%B8%95%E0%B9%8C%E0%B9%81%E0%B8%A7%E0%B8%A3%E0%B9%8C-3.pdf'],
+            ['กลุ่ม 2: ผลงานนวัตกรรม','2.12-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%99%E0%B8%A7%E0%B8%B1%E0%B8%95%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1-3.pdf'],
+            ['กลุ่ม 3: ตำรา','3.1-%E0%B8%95%E0%B8%B3%E0%B8%A3%E0%B8%B2-3.pdf'],
+            ['กลุ่ม 3: หนังสือ','3.2-%E0%B8%AB%E0%B8%99%E0%B8%B1%E0%B8%87%E0%B8%AA%E0%B8%B7%E0%B8%AD-1-2.pdf'],
+            ['กลุ่ม 3: บทความทางวิชาการ','3.3%E0%B8%9A%E0%B8%97%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%97%E0%B8%B2%E0%B8%87%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-3.pdf']
+          ]},
+          { title:'คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 4 เฉพาะด้าน)', icon:'fas fa-star', color:'#004d40', docs:[
+            ['ผลงานรับใช้ท้องถิ่นและสังคม (เฉพาะด้าน)','4.1-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%97%E0%B9%89%E0%B8%AD%E0%B8%87%E0%B8%96%E0%B8%B4%E0%B9%88%E0%B8%99%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%AA%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%A1-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-1-2.pdf'],
+            ['ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ (เฉพาะด้าน)','4.2-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B8%AA%E0%B8%A3%E0%B8%A3%E0%B8%84%E0%B9%8C%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%B8%E0%B8%99%E0%B8%97%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%B0-%E0%B8%A8%E0%B8%B4%E0%B8%A5%E0%B8%9B%E0%B8%B0-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-3.pdf'],
+            ['ผลงานการสอน (เฉพาะด้าน)','4.3-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%AA%E0%B8%AD%E0%B8%99-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-3.pdf'],
+            ['ผลงานนวัตกรรม (เฉพาะด้าน)','4.4-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%99%E0%B8%A7%E0%B8%B1%E0%B8%95%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-1.pdf'],
+            ['ผลงานศาสนา (เฉพาะด้าน)','4.5-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%99%E0%B8%B2-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-3.pdf']
+          ]}
+        ];
 
-// ===== Pure CSS/JS PDF Overlay (no Bootstrap) =====
-var overlay = document.getElementById('pdfOverlay');
-var overlayFrame = document.getElementById('pdfOverlayFrame');
-var overlaySpinner = document.getElementById('pdfOverlaySpinner');
+        // ===== Render categories =====
+        (function(){
+            var container = document.getElementById('docContainer');
+            CATS.forEach(function(cat, ci){
+                var open = ci === 0 ? ' is-open' : '';
+                var delay = ci * 80;
+                var html = '<div class="doc-category'+open+'" data-cat="'+ci+'" style="--cat-delay:'+delay+'ms">'
+                  + '<div class="doc-category-header" onclick="toggleCat(this)">'
+                  + '<i class="'+cat.icon+' cat-icon" style="color:'+cat.color+'"></i>'
+                  + '<strong>'+cat.title+'</strong>'
+                  + '<span class="cat-count">'+cat.docs.length+' รายการ</span>'
+                  + '<i class="fas fa-chevron-down cat-chevron"></i>'
+                  + '</div><div class="doc-category-body">';
+                cat.docs.forEach(function(d){
+                    var url = B + d[1] + S;
+                    html += '<a class="doc-item-v2 doc-searchable" data-name="'+d[0]+'" href="javascript:void(0)" onclick="openPdfOverlay(\''+url+'\',\''+d[0].replace(/'/g,"\\'")+'\')">'
+                      + '<i class="fas fa-file-pdf di-icon"></i>'
+                      + '<span class="di-name">'+d[0]+'</span>'
+                      + '<span class="di-ext">PDF</span></a>';
+                });
+                html += '</div></div>';
+                container.insertAdjacentHTML('beforeend', html);
+            });
+        })();
 
-function openPdfOverlay(url, name) {
-    document.getElementById('pdfOverlayTitle').innerHTML = '<i class="fas fa-file-pdf text-danger me-2"></i>' + name;
-    document.getElementById('pdfOverlayNewTab').href = url;
-    overlayFrame.style.display = 'none';
-    overlaySpinner.style.display = 'block';
-    overlayFrame.src = url;
-    overlayFrame.onload = function() {
-        overlaySpinner.style.display = 'none';
-        overlayFrame.style.display = 'block';
-    };
-    // Fallback: if Google Docs takes >15s, hide spinner anyway
-    setTimeout(function() {
-        overlaySpinner.style.display = 'none';
-        overlayFrame.style.display = 'block';
-    }, 15000);
-    overlay.style.display = 'block';
-}
+        // Toggle categories
+        function toggleCat(header){header.closest('.doc-category').classList.toggle('is-open');}
 
-function closePdfOverlay() {
-    overlay.style.display = 'none';
-    overlayFrame.src = '';
-}
+        // Search
+        function filterDocs(query){
+            query=query.toLowerCase().trim();
+            document.querySelectorAll('.doc-searchable').forEach(function(item){
+                var name=(item.getAttribute('data-name')||'').toLowerCase();
+                item.style.display=(!query||name.includes(query))?'':'none';
+            });
+            document.querySelectorAll('.doc-category').forEach(function(cat){
+                var vis=cat.querySelectorAll('.doc-searchable:not([style*="display: none"])');
+                if(query){
+                    cat.style.display=vis.length>0?'':'none';
+                    if(vis.length>0&&!cat.classList.contains('is-open'))cat.classList.add('is-open');
+                }else{cat.style.display='';}
+            });
+        }
 
-// Close button
-document.getElementById('pdfOverlayClose').addEventListener('click', closePdfOverlay);
-
-// Escape key
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape' && overlay.style.display === 'block') {
-        closePdfOverlay();
-    }
-});
-
-// Open on doc-item click
-document.querySelectorAll('.doc-item').forEach(function(link) {
-    link.addEventListener('click', function(e) {
-        e.preventDefault();
-        var url = this.getAttribute('href');
-        var name = this.querySelector('.doc-name').textContent;
-        openPdfOverlay(url, name);
-    });
-});
-</script>
-
+        // PDF Overlay
+        var _pdfTimeout;
+        function openPdfOverlay(url,title){
+            document.getElementById('pdfTitle').textContent=title;
+            var spinner=document.getElementById('pdfSpinner');
+            var frame=document.getElementById('pdfFrame');
+            var overlay=document.getElementById('pdfOverlay');
+            spinner.style.display='block';
+            frame.style.opacity='0';
+            frame.src=url;
+            frame.onload=function(){
+                spinner.style.display='none';
+                frame.style.opacity='1';
+            };
+            clearTimeout(_pdfTimeout);
+            _pdfTimeout=setTimeout(function(){spinner.style.display='none';frame.style.opacity='1';},15000);
+            document.getElementById('pdfDownloadLink').href=url;
+            overlay.style.opacity='1';
+            overlay.style.pointerEvents='auto';
+            document.body.style.overflow='hidden';
+        }
+        function closePdfOverlay(){
+            var overlay=document.getElementById('pdfOverlay');
+            overlay.style.opacity='0';
+            overlay.style.pointerEvents='none';
+            var frame=document.getElementById('pdfFrame');
+            setTimeout(function(){frame.src='';},300);
+            frame.onload=null;
+            clearTimeout(_pdfTimeout);
+            document.body.style.overflow='';
+        }
+        document.addEventListener('keydown',function(e){
+            if(e.key==='Escape'&&document.getElementById('pdfOverlay').style.opacity==='1')closePdfOverlay();
+        });
+        </script>
     </section>
 </body>
 </html>
