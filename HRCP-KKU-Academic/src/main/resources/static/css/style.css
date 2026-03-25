@@ -555,11 +555,23 @@ body {
     box-shadow: var(--shadow-card);
     transition: transform var(--duration-normal) var(--ease-out-quart),
                 box-shadow var(--duration-normal) var(--ease-out-quart);
+    animation: cardSlideIn var(--duration-slow) var(--ease-out-quart) both;
+    animation-delay: var(--card-delay, 0ms);
+}
+
+@keyframes cardSlideIn {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
 }
 
 .card-academic:hover {
     transform: translateY(-3px);
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+}
+
+.card-academic:active {
+    transform: translateY(-1px);
+    transition-duration: var(--duration-fast);
 }
 
 /* ===== Status Badges ===== */
@@ -698,6 +710,73 @@ body {
 
 .doc-card:hover {
     transform: translateY(-2px);
+}
+
+/* ===== Folder Card Animations ===== */
+.folder-card {
+    transition: transform var(--duration-normal) var(--ease-out-quart),
+                box-shadow var(--duration-normal) var(--ease-out-quart);
+    animation: cardSlideIn var(--duration-slow) var(--ease-out-quart) both;
+}
+
+.folder-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1) !important;
+}
+
+.folder-card:active {
+    transform: translateY(-1px) scale(0.98);
+}
+
+/* ===== Progress Bar Animation ===== */
+.progress-bar {
+    transition: width var(--duration-slow) var(--ease-out-quart);
+}
+
+/* ===== Form Switch Micro-interaction ===== */
+.form-check-input[type="checkbox"] {
+    transition: background-color var(--duration-normal) var(--ease-out-quart),
+                border-color var(--duration-normal) var(--ease-out-quart),
+                box-shadow var(--duration-fast) var(--ease-out-quart);
+}
+
+.form-check-input[type="checkbox"]:checked {
+    animation: switchPop var(--duration-fast) var(--ease-out-quart);
+}
+
+@keyframes switchPop {
+    0%   { transform: scale(1); }
+    50%  { transform: scale(1.1); }
+    100% { transform: scale(1); }
+}
+
+/* ===== Table Row Entrance ===== */
+.table-hover tbody tr {
+    transition: background-color var(--duration-fast) var(--ease-out-quart),
+                opacity var(--duration-normal) var(--ease-out-quart);
+}
+
+/* ===== Settings Card Stagger ===== */
+#settingsContainer > .card {
+    animation: cardSlideIn var(--duration-slow) var(--ease-out-quart) both;
+}
+#settingsContainer > .card:nth-child(1) { animation-delay: 0ms; }
+#settingsContainer > .card:nth-child(2) { animation-delay: 80ms; }
+#settingsContainer > .card:nth-child(3) { animation-delay: 160ms; }
+
+/* ===== Theme Option Button Transition ===== */
+.theme-option {
+    transition: transform var(--duration-fast) var(--ease-out-quart),
+                box-shadow var(--duration-fast) var(--ease-out-quart),
+                border-color var(--duration-fast);
+}
+
+.theme-option:hover {
+    transform: translateY(-2px);
+}
+
+.theme-option:active {
+    transform: scale(0.96);
 }
 
 .doc-card.generated {
@@ -1444,7 +1523,8 @@ body {
     background: var(--bg-input);
     color: var(--text-primary);
     font-size: 0.92rem;
-    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+    transition: border-color var(--duration-normal) var(--ease-out-quart),
+                box-shadow var(--duration-normal) var(--ease-out-quart);
 }
 
 .doc-search-v2:focus {
@@ -1470,6 +1550,26 @@ body {
 
 .doc-category {
     margin-bottom: var(--space-lg);
+    animation: docCatIn var(--duration-slow) var(--ease-out-quart) both;
+    animation-delay: var(--cat-delay, 0ms);
+}
+
+@keyframes docCatIn {
+    from { opacity: 0; transform: translateY(12px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.doc-category-body {
+    overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transition: max-height var(--duration-slow) var(--ease-out-quart),
+                opacity var(--duration-normal) var(--ease-out-quart);
+}
+
+.doc-category.is-open .doc-category-body {
+    max-height: 3000px;
+    opacity: 1;
 }
 
 .doc-category-header {
@@ -1504,7 +1604,15 @@ body {
 .doc-category-header .cat-chevron {
     font-size: 0.7rem;
     color: var(--text-muted);
-    transition: transform var(--duration-fast);
+    transition: transform var(--duration-normal) var(--ease-out-quart);
+}
+
+.doc-category-header:hover .cat-chevron {
+    color: var(--text-secondary);
+}
+
+.doc-category-header:hover strong {
+    color: var(--color-primary-medium);
 }
 
 .doc-category.is-open .cat-chevron {
@@ -1519,13 +1627,27 @@ body {
     text-decoration: none;
     color: inherit;
     border-bottom: 1px solid color-mix(in srgb, var(--border-color) 50%, transparent);
-    transition: background var(--duration-fast);
+    transition: background var(--duration-fast) var(--ease-out-quart),
+                transform var(--duration-fast) var(--ease-out-quart);
     cursor: pointer;
 }
 
 .doc-item-v2:hover {
     background: var(--bg-hover);
     color: inherit;
+    transform: translateX(4px);
+}
+
+.doc-item-v2:active {
+    transform: translateX(2px) scale(0.995);
+}
+
+.doc-item-v2:hover .di-icon {
+    transform: scale(1.15);
+}
+
+.doc-item-v2 .di-icon {
+    transition: transform var(--duration-fast) var(--ease-out-quart);
 }
 
 .doc-item-v2:last-child {
@@ -1640,6 +1762,29 @@ body {
 .stagger-in {
     animation: contentFadeIn var(--duration-slow) var(--ease-out-quart) both;
     animation-delay: var(--stagger, 0ms);
+}
+
+/* ===== Reduced Motion ===== */
+@media (prefers-reduced-motion: reduce) {
+    .doc-category,
+    .stagger-in,
+    .card-academic,
+    .folder-card,
+    #settingsContainer > .card,
+    .form-check-input[type="checkbox"]:checked {
+        animation: none !important;
+        opacity: 1 !important;
+        transform: none !important;
+    }
+    .doc-category-body,
+    .progress-bar {
+        transition: none !important;
+    }
+    .doc-item-v2:hover,
+    .folder-card:hover,
+    .theme-option:hover {
+        transform: none;
+    }
 }
 
 /* ===== Section Card (generic container) ===== */
@@ -2778,5 +2923,274 @@ body {
         flex-direction: column;
         align-items: flex-start;
         gap: var(--space-sm);
+    }
+}
+
+/* ===== Profile Page Components ===== */
+.profile-identity-card {
+    background: var(--bg-card);
+    border-radius: 16px;
+    box-shadow: var(--shadow-card);
+    padding: var(--space-xl) var(--space-lg);
+    text-align: center;
+    margin-bottom: var(--space-md);
+    animation: cardSlideIn var(--duration-slow) var(--ease-out-quart) both;
+    animation-delay: var(--card-delay, 0ms);
+}
+
+.profile-avatar-wrap {
+    position: relative;
+    width: 140px;
+    height: 140px;
+    margin: 0 auto var(--space-lg);
+}
+
+.profile-avatar-img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--bg-card);
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+    transition: filter var(--duration-normal) var(--ease-out-quart);
+}
+
+.profile-avatar-overlay {
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: rgba(13,27,62,0.65);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 600;
+    opacity: 0;
+    cursor: pointer;
+    transition: opacity var(--duration-normal) var(--ease-out-quart);
+}
+
+.profile-avatar-overlay i {
+    font-size: 1.4rem;
+    margin-bottom: 4px;
+}
+
+.profile-avatar-wrap:hover .profile-avatar-overlay {
+    opacity: 1;
+}
+
+.profile-avatar-wrap:hover .profile-avatar-img {
+    filter: brightness(0.85);
+}
+
+.profile-name {
+    font-weight: 700;
+    color: var(--text-heading);
+    margin: 0 0 4px;
+    font-size: 1.15rem;
+}
+
+.profile-position {
+    color: var(--text-secondary);
+    font-size: 0.88rem;
+    margin: 0 0 var(--space-sm);
+}
+
+.profile-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 14px;
+    border-radius: 20px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    background: color-mix(in srgb, var(--color-primary-medium) 12%, transparent);
+    color: var(--color-primary-medium);
+}
+
+.profile-role-badge.profile-role-admin {
+    background: color-mix(in srgb, var(--color-danger) 10%, transparent);
+    color: var(--color-danger);
+}
+
+.profile-email-display {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-color);
+    font-size: 0.85rem;
+    color: var(--text-secondary);
+    word-break: break-all;
+}
+
+.profile-email-display i {
+    opacity: 0.4;
+    flex-shrink: 0;
+}
+
+.profile-admin-meta {
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--border-color);
+}
+
+.profile-meta-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-xs) 0;
+}
+
+.profile-meta-item small {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.profile-section {
+    background: var(--bg-card);
+    border-radius: 14px;
+    box-shadow: var(--shadow-card);
+    margin-bottom: var(--space-md);
+    overflow: hidden;
+    animation: cardSlideIn var(--duration-slow) var(--ease-out-quart) both;
+    animation-delay: var(--card-delay, 0ms);
+}
+
+.profile-section-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--border-color);
+    border-left: 3px solid var(--color-primary-medium);
+}
+
+.profile-section-header i {
+    color: var(--color-primary-medium);
+    font-size: 1rem;
+}
+
+.profile-section-header h5 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--text-heading);
+}
+
+.profile-section-body {
+    padding: var(--space-lg);
+}
+
+.profile-label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 6px;
+    letter-spacing: 0.01em;
+}
+
+.profile-input {
+    border-radius: 10px !important;
+    border: 1.5px solid var(--border-input) !important;
+    background: var(--bg-input) !important;
+    padding: 10px 14px !important;
+    font-size: 0.9rem !important;
+    transition: border-color var(--duration-normal) var(--ease-out-quart),
+                box-shadow var(--duration-normal) var(--ease-out-quart) !important;
+}
+
+.profile-input:focus {
+    border-color: var(--color-primary-medium) !important;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary-medium) 12%, transparent) !important;
+}
+
+.profile-readonly-field {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    border-radius: 10px;
+    background: color-mix(in srgb, var(--bg-input) 60%, var(--border-color) 40%);
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+    border: 1.5px solid var(--border-color);
+}
+
+.profile-pw-btn {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: var(--space-md) var(--space-lg);
+    background: none;
+    border: none;
+    color: var(--text-heading);
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background var(--duration-fast) var(--ease-out-quart),
+                padding-left var(--duration-normal) var(--ease-out-quart);
+}
+
+.profile-pw-btn:hover {
+    background: var(--bg-hover);
+    padding-left: calc(var(--space-lg) + 4px);
+}
+
+.profile-pw-btn i:first-child {
+    color: var(--color-warning);
+}
+
+.profile-save-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 11px 32px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #0d47a1, #1565c0);
+    color: #fff;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: transform var(--duration-fast) var(--ease-out-quart),
+                box-shadow var(--duration-fast) var(--ease-out-quart);
+}
+
+.profile-save-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(13,71,161,0.3);
+    color: #fff;
+}
+
+.profile-save-btn:active {
+    transform: translateY(0) scale(0.98);
+}
+
+.profile-save-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* ===== Profile Responsive ===== */
+@media (max-width: 767px) {
+    .profile-avatar-wrap {
+        width: 110px;
+        height: 110px;
+    }
+    .profile-section-body {
+        padding: var(--space-md);
+    }
+    .profile-identity-card {
+        padding: var(--space-lg);
     }
 }
