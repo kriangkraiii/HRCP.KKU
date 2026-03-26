@@ -325,18 +325,19 @@ public class PositionRequestService {
                 request.getId(), documentType);
 
         PositionDocument doc;
-        boolean isExistingSubmitted = false;
         if (existing.isPresent()) {
             doc = existing.get();
         } else {
             List<PositionDocument> docs = documentRepository.findByRequestIdAndDocType(
                     request.getId(), documentType);
-            if (!docs.isEmpty()) {
+            if (!docs.isEmpty() && !docs.get(0).getIsDraft()) {
+                // Submitted doc exists — create a new draft, never touch the submitted one
+                doc = new PositionDocument();
+                doc.setRequest(request);
+                doc.setDocumentType(documentType);
+                doc.setCopyNumber(0);
+            } else if (!docs.isEmpty()) {
                 doc = docs.get(0);
-                // If this doc was already submitted (isDraft=false), don't revert to draft
-                if (!doc.getIsDraft()) {
-                    isExistingSubmitted = true;
-                }
             } else {
                 doc = new PositionDocument();
                 doc.setRequest(request);
@@ -346,10 +347,7 @@ public class PositionRequestService {
         }
         doc.setJsonData(jsonData);
         doc.setDocumentLabel(label);
-        // Only set isDraft=true for truly new drafts, not for already-submitted docs
-        if (!isExistingSubmitted) {
-            doc.setIsDraft(true);
-        }
+        doc.setIsDraft(true);
         doc.setFilledBy(filledBy);
         PositionDocument saved = documentRepository.save(doc);
 
