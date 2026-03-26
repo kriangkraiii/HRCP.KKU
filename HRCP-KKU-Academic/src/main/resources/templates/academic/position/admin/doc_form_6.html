@@ -62,7 +62,7 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">จำนวนงานวิจัย</label>
-                                <input type="number" name="research_count" class="form-control" min="1" max="5" value="1">
+                                <input type="number" name="research_count" class="form-control" min="1" value="1">
                             </div>
                         </div>
                     </div>
@@ -204,7 +204,35 @@
             }
 
             document.addEventListener('DOMContentLoaded', function() {
-                document.getElementById('btnAddResearch').addEventListener('click', addResearchRow);
+                document.getElementById('btnAddResearch').addEventListener('click', function() {
+                    addResearchRow();
+                    syncCountInput();
+                });
+
+                // Sync research_count input → auto add/remove rows
+                const countInput = document.querySelector('input[name="research_count"]:not([type="hidden"])');
+                if (countInput) {
+                    countInput.addEventListener('change', syncRowsToCount);
+                    countInput.addEventListener('input', syncRowsToCount);
+                }
+
+                function syncCountInput() {
+                    if (countInput) countInput.value = researchRowCount;
+                }
+
+                function syncRowsToCount() {
+                    const target = Math.max(1, parseInt(countInput.value) || 1);
+                    const tbody = document.getElementById('researchBody');
+                    while (researchRowCount < target) {
+                        addResearchRow();
+                    }
+                    while (researchRowCount > target) {
+                        const lastRow = tbody.querySelector('tr:last-child');
+                        if (lastRow) lastRow.remove();
+                        researchRowCount--;
+                    }
+                    document.getElementById('researchCountField').value = researchRowCount;
+                }
 
                 const existingData = /*[[${existingData}]]*/ null;
                 if (existingData) {
@@ -225,9 +253,11 @@
                                 else { el.value = value; }
                             }
                         }
-                    } catch(e) { addResearchRow(); }
+                        syncCountInput();
+                    } catch(e) { addResearchRow(); syncCountInput(); }
                 } else {
                     addResearchRow();
+                    syncCountInput();
                 }
             });
         </script>
