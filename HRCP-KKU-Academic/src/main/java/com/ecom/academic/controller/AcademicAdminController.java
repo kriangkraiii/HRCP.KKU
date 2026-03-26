@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ecom.academic.model.AcademicDocument;
@@ -83,7 +84,7 @@ public class AcademicAdminController {
         DOC_LABELS.put(2, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ");
         DOC_LABELS.put(3, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน");
         DOC_LABELS.put(4, "บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ");
-        DOC_LABELS.put(5, "ประชุมกรรมการประเมินผลการสอน");
+        DOC_LABELS.put(5, "ข้อเสนอแนะจากคณะอนุกรรมการ");
         DOC_LABELS.put(6, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66");
         DOC_LABELS.put(7, "ส่วนที่ 3 แบบประเมินผลการสอน");
         DOC_LABELS.put(8, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
@@ -694,7 +695,8 @@ public class AcademicAdminController {
     }
 
     @PostMapping("/request/{id}/document/5/send-suggestion")
-    public String sendSuggestionEmail(@PathVariable Long id, Principal principal) {
+    public String sendSuggestionEmail(@PathVariable Long id, Principal principal,
+            RedirectAttributes redirectAttributes) {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         UserDtls admin = getUser(principal);
@@ -717,8 +719,10 @@ public class AcademicAdminController {
         requestService.updateStatus(id, RequestStatus.COMPLETED_REVISE, admin,
                 "ส่งข้อเสนอแนะเพื่อแก้ไขเอกสาร", true);
 
-        // ส่งอีเมลข้อเสนอแนะ
+        // ส่งอีเมลข้อเสนอแนะ (async - non-blocking)
         requestService.sendSuggestionEmail(request, suggestionsText);
+        redirectAttributes.addFlashAttribute("successMsg",
+                "ส่งข้อเสนอแนะแล้ว กำลังส่งอีเมลถึงผู้ยื่น: " + request.getApplicant().getEmail());
 
         // Log activity
         adminLogService.log(principal.getName(),
@@ -727,7 +731,7 @@ public class AcademicAdminController {
                 "ส่งข้อเสนอแนะถึงผู้ยื่นคำร้อง #" + id + " เพื่อแก้ไขเอกสาร",
                 getClientIpAddress());
 
-        return "redirect:/admin/academic/request/" + id + "?success=suggestion_sent";
+        return "redirect:/admin/academic/request/" + id + "/document/5?success";
     }
 
     @GetMapping("/request/{id}/download/{docId}")
