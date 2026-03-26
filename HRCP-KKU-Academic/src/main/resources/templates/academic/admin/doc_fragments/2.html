@@ -107,6 +107,25 @@
                             </div>
                         </div>
 
+                        <!-- รายชื่อกรรมการ -->
+                        <h5 class="border-bottom pb-2 mb-3">รายชื่อกรรมการ (3 ท่าน)</h5>
+                        <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
+                            <div class="col-md-6">
+                                <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+                                <div class="combo-input">
+                                    <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control" th:list="'committeeList2_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                                    <datalist th:id="'committeeList2_' + ${i}">
+                                        <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
+                                    </datalist>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">ตำแหน่ง</label>
+                                <input type="text" th:name="'committee_' + ${i} + '_role'" class="form-control" readonly
+                                    th:value="${i == 1 ? 'ประธานอนุกรรมการ (ภายใน)' : (i == 3 ? 'อนุกรรมการและเลขานุการ (ภายใน)' : 'อนุกรรมการ (ภายนอก)')}">
+                            </div>
+                        </div>
+
                         <!-- ส่วนที่ (5) ความเห็นคณบดี -->
                         <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (5) ความเห็นคณบดี</h5>
                         <div class="row mb-3">
@@ -126,22 +145,20 @@
                             </div>
                         </div>
 
-                        <!-- รายชื่อกรรมการ -->
-                        <h5 class="border-bottom pb-2 mb-3">รายชื่อกรรมการ (3 ท่าน)</h5>
-                        <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
+                        <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+                                <label class="form-label">ชื่อคณบดี</label>
                                 <div class="combo-input">
-                                    <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control" th:list="'committeeList2_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist th:id="'committeeList2_' + ${i}">
-                                        <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
+                                    <input type="text" name="dean_name" class="form-control" list="deanList" placeholder="เลือกหรือพิมพ์ชื่อ...">
+                                    <datalist id="deanList">
+                                        <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
                                     </datalist>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" th:name="'committee_' + ${i} + '_role'" class="form-control" readonly
-                                    th:value="${i == 1 ? 'ประธานอนุกรรมการ (ภายใน)' : (i == 3 ? 'อนุกรรมการและเลขานุการ (ภายใน)' : 'อนุกรรมการ (ภายนอก)')}">
+                                <input type="text" name="dropdownDean" class="form-control"
+                                    value="คณบดีวิทยาลัยการคอมพิวเตอร์">
                             </div>
                         </div>
 
