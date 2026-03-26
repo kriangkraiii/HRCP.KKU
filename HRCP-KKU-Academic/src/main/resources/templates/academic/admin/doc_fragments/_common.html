@@ -308,14 +308,6 @@
 
         // โหลดข้อมูลเดิม (ถ้ามี) สำหรับ checkbox และ doc6 scores
         document.addEventListener('DOMContentLoaded', function () {
-            document.querySelectorAll('.chk-toggle').forEach(cb => {
-                const targetId = cb.getAttribute('data-target');
-                const hiddenInput = document.getElementById(targetId);
-                if (hiddenInput && hiddenInput.value === '✓') {
-                    cb.checked = true;
-                }
-            });
-
             var existingJson = document.getElementById('existingDataHolder') ? document.getElementById('existingDataHolder').value : null;
             var currentDocType = parseInt(document.getElementById('currentDocType').value) || 0;
             if (existingJson) {
@@ -336,6 +328,24 @@
                 } catch (e) {
                     console.warn('Failed to load existing data:', e);
                 }
+            }
+
+            // Sync checkboxes AFTER loading existing data into hidden inputs
+            document.querySelectorAll('.chk-toggle').forEach(cb => {
+                const targetId = cb.getAttribute('data-target');
+                const hiddenInput = document.getElementById(targetId);
+                if (hiddenInput && hiddenInput.value === '✓') {
+                    cb.checked = true;
+                }
+            });
+
+            // Special case: chk_dean_sign3 has no chk-toggle class, handle manually
+            var sign3hidden = document.getElementById('chk_dean_sign3');
+            var sign3cb = document.getElementById('chk_dean_sign3_cb');
+            if (sign3hidden && sign3cb && sign3hidden.value === '✓') {
+                sign3cb.checked = true;
+                var wrapper = document.getElementById('dean_comment_wrapper');
+                if (wrapper) wrapper.style.display = 'block';
             }
 
             initDocPreview('docForm', currentDocType);
