@@ -113,14 +113,6 @@
                                 <label class="form-label">วันที่</label>
                                 <input type="text" name="dept_date" class="form-control">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">เดือน</label>
-                                <input type="text" name="dept_month" class="form-control">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">พ.ศ.</label>
-                                <input type="text" name="dept_year" class="form-control">
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -160,14 +152,6 @@
                                 <label class="form-label">วันที่</label>
                                 <input type="text" name="dean_date" class="form-control">
                             </div>
-                            <div class="col-md-3">
-                                <label class="form-label">เดือน</label>
-                                <input type="text" name="dean_month" class="form-control">
-                            </div>
-                            <div class="col-md-3">
-                                <label class="form-label">พ.ศ.</label>
-                                <input type="text" name="dean_year" class="form-control">
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -189,6 +173,11 @@
         <script th:inline="javascript">
             document.addEventListener('DOMContentLoaded', function() {
                 const existingData = /*[[${existingData}]]*/ null;
+                const doc1Raw = /*[[${doc1Data}]]*/ null;
+                const applicantTitle = /*[[${request.applicant != null ? request.applicant.title : ''}]]*/ '';
+                const applicantName = /*[[${request.applicant != null ? request.applicant.name : ''}]]*/ '';
+                const applicantAcademicPosition = /*[[${request.applicant != null ? request.applicant.academicPosition : ''}]]*/ '';
+
                 if (existingData) {
                     try {
                         const data = JSON.parse(existingData);
@@ -197,6 +186,42 @@
                             if (el) el.value = value;
                         }
                     } catch(e) {}
+                } else {
+                    function fillIfEmpty(name, value) {
+                        const el = document.querySelector(`[name="${name}"]`);
+                        if (!el || !value) return;
+                        if (el.tagName === 'SELECT') {
+                            el.value = value;
+                        } else if (!el.value) {
+                            el.value = value;
+                        }
+                    }
+
+                    const academicRanks = ['ผู้ช่วยศาสตราจารย์', 'รองศาสตราจารย์', 'ศาสตราจารย์'];
+                    const checkedTitle = academicRanks.includes(applicantAcademicPosition)
+                        ? applicantAcademicPosition
+                        : applicantTitle;
+
+                    fillIfEmpty('applicant_title', applicantTitle);
+                    fillIfEmpty('applicant_name', applicantName);
+                    fillIfEmpty('checked_applicant_title', checkedTitle);
+                    fillIfEmpty('checked_applicant_name', applicantName);
+                    fillIfEmpty('dean_checked_applicant_title', checkedTitle);
+                    fillIfEmpty('dean_checked_applicant_name', applicantName);
+
+                    if (doc1Raw) {
+                        try {
+                            const doc1 = JSON.parse(doc1Raw);
+                            fillIfEmpty('target_position', doc1.target_position);
+                            fillIfEmpty('checked_position', doc1.target_position);
+                            fillIfEmpty('major', doc1.major);
+                            fillIfEmpty('major_code', doc1.major_code);
+                            fillIfEmpty('sub_major', doc1.sub_major);
+                            fillIfEmpty('sub_major_code', doc1.sub_major_code);
+                            fillIfEmpty('department', doc1.department);
+                            fillIfEmpty('dean_target_position', doc1.target_position);
+                        } catch(e) {}
+                    }
                 }
             });
         </script>

@@ -226,6 +226,12 @@ public class PositionAdminController {
         model.addAttribute("existingData", existingData);
         model.addAttribute("deans", staffMemberService.findAll());
 
+        if (type == 5) {
+            List<PositionDocument> doc1List = positionService.getDocumentsByType(id, 1);
+            String doc1Data = doc1List.isEmpty() ? null : doc1List.get(0).getJsonData();
+            model.addAttribute("doc1Data", doc1Data);
+        }
+
         if (type == 8) {
             List<PositionDocument> doc6List = positionService.getDocumentsByType(id, 6);
             String doc6Data = doc6List.isEmpty() ? null : doc6List.get(0).getJsonData();
