@@ -241,6 +241,12 @@
                                 <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="report_eval_letter_1" value="☑"><label class="form-check-label">ประเมินรายงาน</label></div></div>
                                 <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="report_wide_dist_letter_1" value="☑"><label class="form-check-label">เผยแพร่กว้างขวาง</label></div></div>
                             </div>
+                            <div class="row g-2 mt-2">
+                                <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">จริยธรรมการวิจัยในคน / สัตว์</label></div>
+                                <div class="col-md-2"><div class="form-check"><input class="form-check-input" type="radio" name="ethics_status_1" value="have"><label class="form-check-label">มี</label></div></div>
+                                <div class="col-md-2"><div class="form-check"><input class="form-check-input" type="radio" name="ethics_status_1" value="not_have"><label class="form-check-label">ไม่มี</label></div></div>
+                                <div class="col-md-8"><input type="text" name="reason_e_1" class="form-control form-control-sm" placeholder="เนื่องจาก... (กรณีไม่มี)"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -267,6 +273,84 @@
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_creative_art_1" value="☑"><label class="form-check-label" style="font-size:0.85em">สร้างสรรค์ ศิลปะ</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_patent_1" value="☑"><label class="form-check-label" style="font-size:0.85em">สิทธิบัตร</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_software_1" value="☑"><label class="form-check-label" style="font-size:0.85em">ซอฟต์แวร์</label></div></div>
+                            </div>
+                            <!-- ===== การเผยแพร่ตามประเภท (conditional) ===== -->
+                            <div class="other-type-panel mt-2 border-top pt-2" data-for="is_industry">
+                                <label class="form-label fw-bold text-primary" style="font-size:0.85em">1. อุตสาหกรรม — การเผยแพร่</label>
+                                <div class="row g-1">
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_proceedings_1" value="☑"><label class="form-check-label" style="font-size:0.82em">Proceedings</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_full_report_1" value="☑"><label class="form-check-label" style="font-size:0.82em">รายงานฉบับสมบูรณ์</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_eval_letter_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_ip_doc_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ทรัพย์สินทางปัญญา</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_confidential_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ไม่เปิดเผย</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_confidential_cert_1" value="☑"><label class="form-check-label" style="font-size:0.82em">รับรองใช้ประโยชน์</label></div></div>
+                                    <div class="col-md-6"><input type="text" name="ind_pub_confidential_reason_1" class="form-control form-control-sm" placeholder="เหตุผลที่ไม่เปิดเผย"></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_external_eval_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินภายนอก</label></div></div>
+                                </div>
+                            </div>
+                            <div class="other-type-panel mt-2 border-top pt-2" data-for="is_learning_dev">
+                                <label class="form-label fw-bold text-primary" style="font-size:0.85em">2. พัฒนาเรียนรู้ — การเผยแพร่</label>
+                                <div class="row g-1">
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_full_report_1" value="☑"><label class="form-check-label" style="font-size:0.82em">รายงานฉบับสมบูรณ์</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_wide_dist_letter_1" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่กว้างขวาง</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_eval_letter_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_article_collection_1" value="☑"><label class="form-check-label" style="font-size:0.82em">รวมบทความ</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_journal_kpo_1" value="☑"><label class="form-check-label" style="font-size:0.82em">วารสาร ก.พ.อ.</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_journal_inter_1" value="☑"><label class="form-check-label" style="font-size:0.82em">วารสาร นานาชาติ</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_e_learning_1" value="☑"><label class="form-check-label" style="font-size:0.82em">e-Learning</label></div></div>
+                                </div>
+                            </div>
+                            <div class="other-type-panel mt-2 border-top pt-2" data-for="is_public_policy">
+                                <label class="form-label fw-bold text-primary" style="font-size:0.85em">3. นโยบายสาธารณะ — การเผยแพร่</label>
+                                <div class="row g-1">
+                                    <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="policy_present_1" value="☑"><label class="form-check-label" style="font-size:0.82em">นำเสนอนโยบาย/กฎหมาย/แผน</label></div></div>
+                                    <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="policy_disseminate_1" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่ไปยังผู้เกี่ยวข้อง</label></div></div>
+                                </div>
+                            </div>
+                            <div class="other-type-panel mt-2 border-top pt-2" data-for="is_case_study">
+                                <label class="form-label fw-bold text-primary" style="font-size:0.85em">4. กรณีศึกษา — การเผยแพร่</label>
+                                <div class="row g-1">
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="case_pub_1" value="☑"><label class="form-check-label" style="font-size:0.82em">สิ่งตีพิมพ์</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="case_eval_letter_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ผู้ทรงคุณวุฒิ</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="case_book_1" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่ในหนังสือ</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="case_collection_1" value="☑"><label class="form-check-label" style="font-size:0.82em">แหล่งรวบรวม</label></div></div>
+                                </div>
+                            </div>
+                            <div class="other-type-panel mt-2 border-top pt-2" data-for="is_translation">
+                                <label class="form-label fw-bold text-primary" style="font-size:0.85em">5. งานแปล — การเผยแพร่</label>
+                                <div class="row g-1">
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="trans_print_1" value="☑"><label class="form-check-label" style="font-size:0.82em">วิธีการพิมพ์</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="trans_elec_1" value="☑"><label class="form-check-label" style="font-size:0.82em">อิเล็กทรอนิกส์</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="trans_eval_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="trans_cert_1" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่กว้างขวาง</label></div></div>
+                                </div>
+                            </div>
+                            <div class="other-type-panel mt-2 border-top pt-2" data-for="is_dictionary">
+                                <label class="form-label fw-bold text-primary" style="font-size:0.85em">6. พจนานุกรม/สารานุกรม — การเผยแพร่</label>
+                                <div class="row g-1">
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="dict_print_1" value="☑"><label class="form-check-label" style="font-size:0.82em">วิธีการพิมพ์</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="dict_elec_1" value="☑"><label class="form-check-label" style="font-size:0.82em">อิเล็กทรอนิกส์</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="dict_eval_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="dict_cert_1" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่กว้างขวาง</label></div></div>
+                                    <div class="col-md-6"><input type="text" name="elect_descr_1" class="form-control form-control-sm" placeholder="รายละเอียดสื่ออิเล็กทรอนิกส์"></div>
+                                </div>
+                            </div>
+                            <div class="other-type-panel mt-2 border-top pt-2" data-for="is_creative_sci">
+                                <label class="form-label fw-bold text-primary" style="font-size:0.85em">7. สร้างสรรค์ วิทย์ฯ — การเผยแพร่</label>
+                                <div class="row g-1">
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="sci_exhibit_1" value="☑"><label class="form-check-label" style="font-size:0.82em">จัดนิทรรศการ/แสดง</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="sci_doc_1" value="☑"><label class="form-check-label" style="font-size:0.82em">เอกสารประกอบ</label></div></div>
+                                    <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="sci_eval_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                                </div>
+                            </div>
+                            <div class="other-type-panel mt-2 border-top pt-2" data-for="is_creative_art">
+                                <label class="form-label fw-bold text-primary" style="font-size:0.85em">8. สร้างสรรค์ ศิลปะ — การเผยแพร่</label>
+                                <div class="row g-1">
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="art_doc_1" value="☑"><label class="form-check-label" style="font-size:0.82em">วรรณกรรม/เอกสาร</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="art_exhibit_1" value="☑"><label class="form-check-label" style="font-size:0.82em">จัดนิทรรศการ</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="art_eval_1" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                                    <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="art_cert_1" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่กว้างขวาง</label></div></div>
+                                </div>
                             </div>
                             <div class="row g-2 mt-2">
                                 <div class="col-md-6"><input type="text" name="patent_evidence_1" class="form-control form-control-sm" placeholder="หลักฐานสิทธิบัตร (ถ้ามี)"></div>
@@ -433,17 +517,125 @@
         <script th:inline="javascript">
             let blockCounters = { research: 1, other: 1, social: 1, book: 1, article: 1 };
 
+            /* ===== Helper: generate other-type conditional panels ===== */
+            function otherTypePanelsHtml(n) {
+                return `
+                <div class="other-type-panel mt-2 border-top pt-2" data-for="is_industry">
+                    <label class="form-label fw-bold text-primary" style="font-size:0.85em">1. อุตสาหกรรม — การเผยแพร่</label>
+                    <div class="row g-1">
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_proceedings_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">Proceedings</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_full_report_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">รายงานฉบับสมบูรณ์</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_eval_letter_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_ip_doc_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ทรัพย์สินทางปัญญา</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_confidential_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ไม่เปิดเผย</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_confidential_cert_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">รับรองใช้ประโยชน์</label></div></div>
+                        <div class="col-md-6"><input type="text" name="ind_pub_confidential_reason_${n}" class="form-control form-control-sm" placeholder="เหตุผลที่ไม่เปิดเผย"></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="ind_pub_external_eval_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินภายนอก</label></div></div>
+                    </div>
+                </div>
+                <div class="other-type-panel mt-2 border-top pt-2" data-for="is_learning_dev">
+                    <label class="form-label fw-bold text-primary" style="font-size:0.85em">2. พัฒนาเรียนรู้ — การเผยแพร่</label>
+                    <div class="row g-1">
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_full_report_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">รายงานฉบับสมบูรณ์</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_wide_dist_letter_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่กว้างขวาง</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_eval_letter_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_article_collection_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">รวมบทความ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_journal_kpo_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">วารสาร ก.พ.อ.</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_journal_inter_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">วารสาร นานาชาติ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="learn_e_learning_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">e-Learning</label></div></div>
+                    </div>
+                </div>
+                <div class="other-type-panel mt-2 border-top pt-2" data-for="is_public_policy">
+                    <label class="form-label fw-bold text-primary" style="font-size:0.85em">3. นโยบายสาธารณะ — การเผยแพร่</label>
+                    <div class="row g-1">
+                        <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="policy_present_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">นำเสนอนโยบาย/กฎหมาย/แผน</label></div></div>
+                        <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="policy_disseminate_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่ไปยังผู้เกี่ยวข้อง</label></div></div>
+                    </div>
+                </div>
+                <div class="other-type-panel mt-2 border-top pt-2" data-for="is_case_study">
+                    <label class="form-label fw-bold text-primary" style="font-size:0.85em">4. กรณีศึกษา — การเผยแพร่</label>
+                    <div class="row g-1">
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="case_pub_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">สิ่งตีพิมพ์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="case_eval_letter_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ผู้ทรงคุณวุฒิ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="case_book_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่ในหนังสือ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="case_collection_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">แหล่งรวบรวม</label></div></div>
+                    </div>
+                </div>
+                <div class="other-type-panel mt-2 border-top pt-2" data-for="is_translation">
+                    <label class="form-label fw-bold text-primary" style="font-size:0.85em">5. งานแปล — การเผยแพร่</label>
+                    <div class="row g-1">
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="trans_print_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">วิธีการพิมพ์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="trans_elec_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">อิเล็กทรอนิกส์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="trans_eval_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="trans_cert_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่กว้างขวาง</label></div></div>
+                    </div>
+                </div>
+                <div class="other-type-panel mt-2 border-top pt-2" data-for="is_dictionary">
+                    <label class="form-label fw-bold text-primary" style="font-size:0.85em">6. พจนานุกรม/สารานุกรม — การเผยแพร่</label>
+                    <div class="row g-1">
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="dict_print_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">วิธีการพิมพ์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="dict_elec_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">อิเล็กทรอนิกส์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="dict_eval_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="dict_cert_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่กว้างขวาง</label></div></div>
+                        <div class="col-md-6"><input type="text" name="elect_descr_${n}" class="form-control form-control-sm" placeholder="รายละเอียดสื่ออิเล็กทรอนิกส์"></div>
+                    </div>
+                </div>
+                <div class="other-type-panel mt-2 border-top pt-2" data-for="is_creative_sci">
+                    <label class="form-label fw-bold text-primary" style="font-size:0.85em">7. สร้างสรรค์ วิทย์ฯ — การเผยแพร่</label>
+                    <div class="row g-1">
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="sci_exhibit_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">จัดนิทรรศการ/แสดง</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="sci_doc_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">เอกสารประกอบ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="sci_eval_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                    </div>
+                </div>
+                <div class="other-type-panel mt-2 border-top pt-2" data-for="is_creative_art">
+                    <label class="form-label fw-bold text-primary" style="font-size:0.85em">8. สร้างสรรค์ ศิลปะ — การเผยแพร่</label>
+                    <div class="row g-1">
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="art_doc_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">วรรณกรรม/เอกสาร</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="art_exhibit_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">จัดนิทรรศการ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="art_eval_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">ประเมินคุณภาพ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="art_cert_${n}" value="☑"><label class="form-check-label" style="font-size:0.82em">เผยแพร่กว้างขวาง</label></div></div>
+                    </div>
+                </div>`;
+            }
+
+            /* ===== Toggle conditional panels when type checkbox changes ===== */
+
             function addResearchBlock() {
                 blockCounters.research++;
                 const n = blockCounters.research;
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
                 div.innerHTML = `<div class="d-flex justify-content-between"><strong>งานวิจัย #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
-                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="research_working_title_${n}" class="form-control" placeholder="ชื่อผลงาน"></div></div>
+                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="research_working_title_${n}" class="form-control" placeholder="ชื่อผลงานวิจัย"></div></div>
                     <div class="row g-2 mt-2">
-                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_published_${n}" value="☑"><label class="form-check-label">ตีพิมพ์</label></div></div>
-                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="pending_letter_${n}" value="☑"><label class="form-check-label">ตอบรับ</label></div></div>
-                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="content_certified_${n}" value="☑"><label class="form-check-label">รับรอง</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_published_${n}" value="☑"><label class="form-check-label">ตีพิมพ์แล้ว</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="pending_letter_${n}" value="☑"><label class="form-check-label">หนังสือตอบรับ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="content_certified_${n}" value="☑"><label class="form-check-label">รับรองเนื้อหา</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">การเผยแพร่</label></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="diss_journal_${n}" value="☑"><label class="form-check-label">วารสาร</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="diss_proceeding_${n}" value="☑"><label class="form-check-label">Proceeding</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="diss_monograph_${n}" value="☑"><label class="form-check-label">Monograph</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="diss_book_${n}" value="☑"><label class="form-check-label">หนังสือ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="diss_report_${n}" value="☑"><label class="form-check-label">รายงาน</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">หลักฐาน</label></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="pub_eval_letter_${n}" value="☑"><label class="form-check-label">ประเมินคุณภาพ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="pub_full_report_${n}" value="☑"><label class="form-check-label">รายงานฉบับเต็ม</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="pub_proceedings_${n}" value="☑"><label class="form-check-label">Proceedings</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="pub_external_eval_${n}" value="☑"><label class="form-check-label">ผู้ทรงคุณวุฒิภายนอก</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="pub_ip_doc_${n}" value="☑"><label class="form-check-label">เอกสาร IP</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="report_eval_letter_${n}" value="☑"><label class="form-check-label">ประเมินรายงาน</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="report_wide_dist_letter_${n}" value="☑"><label class="form-check-label">เผยแพร่กว้างขวาง</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">จริยธรรมการวิจัยในคน / สัตว์</label></div>
+                        <div class="col-md-2"><div class="form-check"><input class="form-check-input" type="radio" name="ethics_status_${n}" value="have"><label class="form-check-label">มี</label></div></div>
+                        <div class="col-md-2"><div class="form-check"><input class="form-check-input" type="radio" name="ethics_status_${n}" value="not_have"><label class="form-check-label">ไม่มี</label></div></div>
+                        <div class="col-md-8"><input type="text" name="reason_e_${n}" class="form-control form-control-sm" placeholder="เนื่องจาก... (กรณีไม่มี)"></div>
                     </div>`;
                 document.getElementById('researchBlocks').appendChild(div);
             }
@@ -454,7 +646,24 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
                 div.innerHTML = `<div class="d-flex justify-content-between"><strong>ผลงานอื่น #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
-                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="other_working_title_${n}" class="form-control" placeholder="ชื่อผลงาน"></div></div>`;
+                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="other_working_title_${n}" class="form-control" placeholder="ชื่อผลงาน"></div></div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_industry_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">อุตสาหกรรม</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_learning_dev_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">พัฒนาเรียนรู้</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_public_policy_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">นโยบายสาธารณะ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_case_study_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">กรณีศึกษา</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_translation_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">งานแปล</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_dictionary_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">พจนานุกรมฯ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_creative_sci_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">สร้างสรรค์ วิทย์ฯ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_creative_art_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">สร้างสรรค์ ศิลปะ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_patent_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">สิทธิบัตร</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_software_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">ซอฟต์แวร์</label></div></div>
+                    </div>
+                    ${otherTypePanelsHtml(n)}
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-6"><input type="text" name="patent_evidence_${n}" class="form-control form-control-sm" placeholder="หลักฐานสิทธิบัตร (ถ้ามี)"></div>
+                        <div class="col-md-6"><input type="text" name="software_evidence_${n}" class="form-control form-control-sm" placeholder="หลักฐานซอฟต์แวร์ (ถ้ามี)"></div>
+                    </div>`;
                 document.getElementById('otherBlocks').appendChild(div);
             }
 
@@ -464,7 +673,24 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
                 div.innerHTML = `<div class="d-flex justify-content-between"><strong>ผลงานสังคม #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
-                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="social_working_title_${n}" class="form-control" placeholder="ชื่อผลงาน"></div></div>`;
+                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="social_working_title_${n}" class="form-control" placeholder="ชื่อผลงาน"></div></div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">เอกสารหลักฐาน</label></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="social_desc_doc_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">เอกสารอธิบาย</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="social_other_evidence_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">หลักฐานอื่น</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="soc_evid_appoint_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">คำสั่งแต่งตั้ง</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="soc_evid_cert_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">รับรองการใช้ประโยชน์</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="soc_evid_media_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">สื่อ (ภาพ/วีดีโอ)</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="soc_evid_profit_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">ยืนยันผลกำไร</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="soc_evid_support_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">หน่วยงานสนับสนุน</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">การเผยแพร่</label></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="social_visit_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">เปิดเยี่ยมชม</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="soc_visit_wide_pub_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">เผยแพร่สาธารณชน</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="soc_visit_record_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">บันทึกเอกสาร</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="social_forum_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">เวทีนำเสนอ</label></div></div>
+                    </div>`;
                 document.getElementById('socialBlocks').appendChild(div);
             }
 
@@ -474,7 +700,32 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
                 div.innerHTML = `<div class="d-flex justify-content-between"><strong>ตำรา/หนังสือ #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
-                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="book_working_title_${n}" class="form-control" placeholder="ชื่อตำรา/หนังสือ"></div></div>`;
+                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="book_working_title_${n}" class="form-control" placeholder="ชื่อตำรา/หนังสือ"></div></div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_is_published_${n}" value="☑"><label class="form-check-label">ตีพิมพ์แล้ว</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_is_pending_${n}" value="☑"><label class="form-check-label">รอตีพิมพ์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_accept_letter_${n}" value="☑"><label class="form-check-label">หนังสือตอบรับ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_cert_content_${n}" value="☑"><label class="form-check-label">รับรองเนื้อหา</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-4"><input type="text" name="book_publish_date_${n}" class="form-control form-control-sm" placeholder="เดือน/ปีที่พิมพ์"></div>
+                        <div class="col-md-4"><input type="text" name="book_publish_index_${n}" class="form-control form-control-sm" placeholder="ดัชนีการตีพิมพ์"></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_textbook_${n}" value="☑"><label class="form-check-label">ตำรา</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_book_${n}" value="☑"><label class="form-check-label">หนังสือ</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">การเผยแพร่</label></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_pub_print_${n}" value="☑"><label class="form-check-label">พิมพ์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_pub_electronic_${n}" value="☑"><label class="form-check-label">อิเล็กทรอนิกส์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_pub_ebook_${n}" value="☑"><label class="form-check-label">e-book</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">หลักฐาน</label></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_eval_letter_${n}" value="☑"><label class="form-check-label">ประเมินคุณภาพ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_wide_dist_letter_${n}" value="☑"><label class="form-check-label">เผยแพร่กว้างขวาง</label></div></div>
+                    </div>`;
                 document.getElementById('bookBlocks').appendChild(div);
             }
 
@@ -484,11 +735,27 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
                 div.innerHTML = `<div class="d-flex justify-content-between"><strong>บทความ #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
-                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="article_title_${n}" class="form-control" placeholder="ชื่อบทความ"></div></div>`;
+                    <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="article_title_${n}" class="form-control" placeholder="ชื่อบทความ"></div></div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="article_is_published_${n}" value="☑"><label class="form-check-label">ตีพิมพ์แล้ว</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="article_is_pending_${n}" value="☑"><label class="form-check-label">รอตีพิมพ์</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="article_accept_letter_${n}" value="☑"><label class="form-check-label">หนังสือตอบรับ</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="article_cert_content_${n}" value="☑"><label class="form-check-label">รับรองเนื้อหา</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">การเผยแพร่</label></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="article_pub_journal_${n}" value="☑"><label class="form-check-label">วารสารวิชาการ</label></div></div>
+                        <div class="col-md-4"><div class="form-check"><input class="form-check-input" type="checkbox" name="article_pub_book_${n}" value="☑"><label class="form-check-label">หนังสือรวมบทความ</label></div></div>
+                    </div>
+                    <div class="row g-2 mt-2">
+                        <div class="col-md-6"><div class="form-check"><input class="form-check-input" type="checkbox" name="article_eval_letter_${n}" value="☑"><label class="form-check-label">ประเมินคุณภาพโดยผู้ทรงคุณวุฒิ</label></div></div>
+                    </div>`;
                 document.getElementById('articleBlocks').appendChild(div);
             }
 
             document.addEventListener('DOMContentLoaded', function() {
+                /* --- Bind conditional panels for initial block #1 --- */
+                /* --- Restore existing draft data --- */
                 const existingData = /*[[${existingData}]]*/ null;
                 if (existingData) {
                     try {
@@ -523,12 +790,20 @@
 
                         // ---- Step 3: Fill values into all inputs (including dynamic ones) ----
                         for (const [key, value] of Object.entries(data)) {
+                            // Handle radio buttons
+                            const radios = document.querySelectorAll(`input[type="radio"][name="${key}"]`);
+                            if (radios.length > 0) {
+                                radios.forEach(function(r) { r.checked = (r.value === value); });
+                                continue;
+                            }
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
                                 if (el.type === 'checkbox') { el.checked = (value === '☑'); }
                                 else { el.value = value; }
                             }
                         }
+
+
                     } catch(e) { console.error('Draft restore error:', e); }
                 }
             });
