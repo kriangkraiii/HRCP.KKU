@@ -40,17 +40,19 @@
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
-                                <select name="title" class="form-select" required>
+                                <select name="title" class="form-select" id="titleSelect" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย"     th:selected="${(doc0Data != null ? doc0Data.getOrDefault('title', '') : request.applicant.title) == 'นาย'}">นาย</option>
                                     <option value="นาง"     th:selected="${(doc0Data != null ? doc0Data.getOrDefault('title', '') : request.applicant.title) == 'นาง'}">นาง</option>
                                     <option value="นางสาว" th:selected="${(doc0Data != null ? doc0Data.getOrDefault('title', '') : request.applicant.title) == 'นางสาว'}">นางสาว</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('title', '') == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์" th:selected="${doc0Data != null && doc0Data.getOrDefault('title', '') == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
                                 </select>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล</label>
-                                <input type="text" name="full_name" class="form-control"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}"
+                                <input type="text" name="applicant_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
                                     required placeholder="เช่น สมชาย ใจดี">
                             </div>
                         </div>
