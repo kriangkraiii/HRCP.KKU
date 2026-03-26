@@ -1269,3 +1269,195 @@ body,
     background: var(--bg-card-header);
 }
 
+/* ======================================
+   GUIDE PAGES — Dark Mode Overrides
+   ====================================== */
+
+/* Hero banner — keep gradient but darken */
+[data-theme="dark"] .guide-hero {
+    box-shadow: 0 2px 16px rgba(0,0,0,.4);
+}
+
+/* Quick nav chips */
+[data-theme="dark"] .guide-qn-item {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-secondary) !important;
+}
+
+[data-theme="dark"] .guide-qn-item:hover {
+    border-color: #26a69a !important;
+    color: #4db6ac !important;
+    background: rgba(38,166,154,.1) !important;
+    box-shadow: 0 2px 8px rgba(38,166,154,.15);
+}
+
+/* Section cards */
+[data-theme="dark"] .guide-section {
+    background: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .guide-section:hover {
+    box-shadow: 0 2px 12px rgba(0,0,0,.25);
+}
+
+/* Section headers */
+[data-theme="dark"] .guide-section-header {
+    color: var(--text-heading) !important;
+}
+
+[data-theme="dark"] .guide-section-header:hover {
+    background: var(--bg-hover) !important;
+}
+
+[data-theme="dark"] .guide-chevron {
+    color: var(--text-muted) !important;
+}
+
+/* Description blocks */
+[data-theme="dark"] .guide-desc {
+    color: var(--text-secondary) !important;
+    border-left-color: var(--border-color) !important;
+}
+
+/* Subtitles */
+[data-theme="dark"] .guide-subtitle {
+    color: var(--text-heading) !important;
+}
+
+/* Step content */
+[data-theme="dark"] .guide-step-content strong {
+    color: var(--text-heading) !important;
+}
+
+[data-theme="dark"] .guide-step-content p,
+[data-theme="dark"] .guide-step-content ul,
+[data-theme="dark"] .guide-step-content li {
+    color: var(--text-secondary) !important;
+}
+
+/* Menu references & button references */
+[data-theme="dark"] .guide-menu-ref {
+    background: var(--bg-card-header) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .guide-btn-ref {
+    background: rgba(0,137,123,.15) !important;
+    color: #4db6ac !important;
+}
+
+[data-theme="dark"] .guide-btn-ref.bg-success {
+    background: rgba(46,125,50,.2) !important;
+    color: #81c784 !important;
+}
+
+[data-theme="dark"] .guide-btn-ref.bg-danger {
+    background: rgba(198,40,40,.2) !important;
+    color: #ef9a9a !important;
+}
+
+/* Tip callout */
+[data-theme="dark"] .guide-tip {
+    background: rgba(249,168,37,.08) !important;
+    border-color: rgba(249,168,37,.25) !important;
+    color: #ffd54f !important;
+}
+
+[data-theme="dark"] .guide-tip i {
+    color: #ffd54f !important;
+}
+
+[data-theme="dark"] .guide-tip strong {
+    color: #ffe082 !important;
+}
+
+/* Warning callout */
+[data-theme="dark"] .guide-warning {
+    background: rgba(229,57,53,.08) !important;
+    border-color: rgba(229,57,53,.25) !important;
+    color: #ef9a9a !important;
+}
+
+[data-theme="dark"] .guide-warning i {
+    color: #ef5350 !important;
+}
+
+[data-theme="dark"] .guide-warning strong {
+    color: #ef9a9a !important;
+}
+
+/* Info callout */
+[data-theme="dark"] .guide-info {
+    background: rgba(21,101,192,.1) !important;
+    border-color: rgba(21,101,192,.25) !important;
+    color: #90caf9 !important;
+}
+
+[data-theme="dark"] .guide-info i {
+    color: #64b5f6 !important;
+}
+
+[data-theme="dark"] .guide-info strong {
+    color: #90caf9 !important;
+}
+
+/* Feature icons */
+[data-theme="dark"] .guide-feature-icon {
+    opacity: .85;
+}
+
+[data-theme="dark"] .guide-feature strong {
+    color: var(--text-heading) !important;
+}
+
+[data-theme="dark"] .guide-feature p {
+    color: var(--text-secondary) !important;
+}
+
+/* FAQ items */
+[data-theme="dark"] .guide-faq-item {
+    background: var(--bg-card-header) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .guide-faq-item strong {
+    color: #ce93d8 !important;
+}
+
+[data-theme="dark"] .guide-faq-item p {
+    color: var(--text-secondary) !important;
+}
+
+/* Feature list sublists (settings section) */
+[data-theme="dark"] .guide-feature ul,
+[data-theme="dark"] .guide-feature li {
+    color: var(--text-secondary) !important;
+}
+
+/* Document grid cards */
+[data-theme="dark"] .guide-doc-card {
+    background: var(--bg-card-header) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .guide-doc-card span:not(.guide-doc-num) {
+    color: var(--text-secondary) !important;
+}
+
+/* Smooth transition for guide elements */
+.guide-section,
+.guide-qn-item,
+.guide-section-header,
+.guide-tip,
+.guide-warning,
+.guide-info,
+.guide-faq-item,
+.guide-menu-ref,
+.guide-btn-ref,
+.guide-doc-card {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
+}
+

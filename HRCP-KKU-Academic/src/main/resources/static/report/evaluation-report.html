@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>รายงานสรุปผลประเมินการใช้งานระบบ HRCP-KKU Academic</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;600;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--primary:#1a56db;--primary-light:#e8eefb;--accent:#0ea5e9;--green:#10b981;--amber:#f59e0b;--red:#ef4444;--gray-50:#f9fafb;--gray-100:#f3f4f6;--gray-200:#e5e7eb;--gray-600:#4b5563;--gray-700:#374151;--gray-800:#1f2937;--gray-900:#111827;--radius:12px;--shadow:0 1px 3px rgba(0,0,0,.1),0 1px 2px rgba(0,0,0,.06);--shadow-lg:0 10px 15px -3px rgba(0,0,0,.1),0 4px 6px -2px rgba(0,0,0,.05)}
+body{font-family:'Sarabun','Inter',sans-serif;background:var(--gray-50);color:var(--gray-800);line-height:1.6}
+.container{max-width:1100px;margin:0 auto;padding:40px 24px}
+.report-header{text-align:center;margin-bottom:48px;padding:48px 32px;background:linear-gradient(135deg,#1e3a8a 0%,#1a56db 50%,#0ea5e9 100%);border-radius:var(--radius);color:#fff;position:relative;overflow:hidden}
+.report-header::before{content:'';position:absolute;top:-50%;right:-20%;width:400px;height:400px;background:radial-gradient(circle,rgba(255,255,255,.08) 0%,transparent 70%);border-radius:50%}
+.report-header h1{font-size:28px;font-weight:700;margin-bottom:8px;position:relative}
+.report-header p{font-size:16px;opacity:.9;position:relative}
+.report-header .subtitle{font-size:14px;opacity:.7;margin-top:16px;position:relative}
+.section{margin-bottom:40px}
+.section-title{font-size:20px;font-weight:700;color:var(--gray-900);margin-bottom:20px;padding-bottom:12px;border-bottom:3px solid var(--primary);display:inline-block}
+.card{background:#fff;border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:24px}
+.card-title{font-size:16px;font-weight:600;color:var(--gray-700);margin-bottom:16px}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:32px}
+.stat-card{background:#fff;border-radius:var(--radius);padding:20px;box-shadow:var(--shadow);text-align:center;border-top:4px solid var(--primary)}
+.stat-card.green{border-top-color:var(--green)}
+.stat-card.accent{border-top-color:var(--accent)}
+.stat-card.amber{border-top-color:var(--amber)}
+.stat-value{font-size:36px;font-weight:700;color:var(--gray-900)}
+.stat-label{font-size:13px;color:var(--gray-600);margin-top:4px}
+.chart-grid{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.chart-grid.single{grid-template-columns:1fr}
+@media(max-width:768px){.chart-grid{grid-template-columns:1fr}}
+.chart-container{position:relative;height:320px}
+.chart-container.tall{height:420px}
+.respondent-info{display:grid;grid-template-columns:1fr 1fr;gap:12px 24px}
+.info-item{display:flex;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-100)}
+.info-label{font-weight:600;color:var(--gray-600);min-width:140px;font-size:14px}
+.info-value{color:var(--gray-900);font-size:14px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{background:var(--primary);color:#fff;padding:10px 12px;text-align:left;font-weight:600}
+td{padding:10px 12px;border-bottom:1px solid var(--gray-200)}
+tr:nth-child(even){background:var(--gray-50)}
+.score-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 10px;border-radius:20px;font-weight:600;font-size:13px}
+.score-5{background:#d1fae5;color:#065f46}
+.score-4{background:#fef3c7;color:#92400e}
+.suggestion-list{list-style:none;padding:0}
+.suggestion-list li{padding:12px 16px;margin-bottom:8px;background:var(--primary-light);border-radius:8px;border-left:4px solid var(--primary);font-size:14px}
+.highlight-box{background:linear-gradient(135deg,#ecfdf5,#d1fae5);border:1px solid #a7f3d0;border-radius:var(--radius);padding:20px;text-align:center;margin:24px 0}
+.highlight-box .big{font-size:24px;font-weight:700;color:#065f46}
+.footer{text-align:center;padding:24px;color:var(--gray-600);font-size:13px;border-top:1px solid var(--gray-200);margin-top:40px}
+@media print{body{background:#fff}.container{padding:20px}.report-header{padding:32px}.card{box-shadow:none;border:1px solid var(--gray-200)}}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div class="report-header">
+<h1>📊 รายงานสรุปผลประเมินการใช้งานระบบ</h1>
+<p>ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ (HRCP-KKU Academic)</p>
+<div class="subtitle">วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น | ประเมิน ณ วันที่ 26 มีนาคม 2569</div>
+</div>
+
+<!-- Summary Stats -->
+<div class="stats-grid">
+<div class="stat-card"><div class="stat-value">1</div><div class="stat-label">จำนวนผู้ประเมิน</div></div>
+<div class="stat-card green"><div class="stat-value">4.93</div><div class="stat-label">คะแนนเฉลี่ยรวม (เต็ม 5)</div></div>
+<div class="stat-card accent"><div class="stat-value">96.4%</div><div class="stat-label">ดีมาก (5 คะแนน)</div></div>
+<div class="stat-card amber"><div class="stat-value">100%</div><div class="stat-label">แนะนำระบบ</div></div>
+</div>
+
+<!-- Respondent Info -->
+<div class="section">
+<h2 class="section-title">ตอนที่ 1: ข้อมูลทั่วไปของผู้ประเมิน</h2>
+<div class="card">
+<div class="respondent-info">
+<div class="info-item"><span class="info-label">วันที่ประเมิน</span><span class="info-value">26 มีนาคม 2569 เวลา 16:48:44 น.</span></div>
+<div class="info-item"><span class="info-label">อีเมล</span><span class="info-value">jiraho@kku.ac.th</span></div>
+<div class="info-item"><span class="info-label">สถานะผู้ประเมิน</span><span class="info-value">เจ้าหน้าที่ทรัพยากรบุคคล / ผู้ดูแลระบบ</span></div>
+<div class="info-item"><span class="info-label">บทบาทที่ทดลอง</span><span class="info-value">ทดลองทั้งสองบทบาท (ผู้ยื่นคำขอ + ผู้ดูแลระบบ)</span></div>
+<div class="info-item"><span class="info-label">ประสบการณ์</span><span class="info-value">เคย (ในฐานะเจ้าหน้าที่ผู้ดำเนินการ)</span></div>
+<div class="info-item"><span class="info-label">ความเร็วระบบ</span><span class="info-value">5 คะแนน (เร็วมาก)</span></div>
+</div>
+</div>
+</div>
+
+<!-- Section 2.1 Applicant -->
+<div class="section">
+<h2 class="section-title">ตอนที่ 2.1: ผลประเมินบทบาท "ผู้ยื่นคำขอ" (Applicant)</h2>
+<div class="card">
+<table>
+<thead><tr><th style="width:50px">ข้อ</th><th>หัวข้อประเมิน</th><th style="width:100px;text-align:center">คะแนน</th></tr></thead>
+<tbody>
+<tr><td>1.1</td><td>การออกแบบหน้าจอมีความเหมาะสม จัดวางองค์ประกอบชัดเจนและใช้งานง่าย</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>1.2</td><td>การเลือกใช้สี ฟอนต์ และไอคอน มีความสอดคล้องและเป็นเอกภาพ</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>1.3</td><td>ภาษาและข้อความมีความชัดเจน สื่อความหมายได้ดี</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>1.4</td><td>การแสดงข้อมูลคำร้องและเอกสาร มีความชัดเจนเพียงพอ</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.1</td><td>ขั้นตอนการเข้าสู่ระบบ (Login) และยืนยันตัวตน (OTP) สะดวกและปลอดภัย</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.2</td><td>ขั้นตอนการสร้างคำร้องและกรอกแบบฟอร์ม สะดวก ไม่ซับซ้อน</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.3</td><td>ระบบบันทึกฉบับร่างอัตโนมัติ (Auto Draft Save) ป้องกันข้อมูลสูญหาย</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.4</td><td>การติดตามสถานะแบบ Real-time มีความชัดเจนและเข้าใจง่าย</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.5</td><td>การแจ้งเตือนทางอีเมลเมื่อสถานะเปลี่ยนแปลง มีประโยชน์</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.6</td><td>การอัปโหลดเอกสารประกอบ สะดวกและรองรับประเภทไฟล์เหมาะสม</td><td style="text-align:center"><span class="score-badge score-4">4 ดี</span></td></tr>
+<tr><td>3.1</td><td>ระบบยืนยันตัวตน (รหัสผ่าน, OTP) สร้างความมั่นใจในความปลอดภัย</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>3.2</td><td>การจำกัดสิทธิ์การเข้าถึงข้อมูลตามบทบาทเหมาะสม</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>4.1</td><td>ระบบช่วยลดความยุ่งยากในกระบวนการยื่นขอกำหนดตำแหน่ง</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>4.2</td><td>ระบบช่วยลดความคลาดเคลื่อนในการกรอกข้อมูลและจัดเตรียมเอกสาร</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+</tbody>
+</table>
+<div class="highlight-box" style="margin-top:20px">
+<div class="big">คะแนนเฉลี่ย: 4.93 / 5.00 (ดีมาก)</div>
+<div style="margin-top:4px;color:#065f46">✅ เลือกใช้ระบบอิเล็กทรอนิกส์ | ✅ มีประโยชน์มากและจะแนะนำ</div>
+</div>
+</div>
+<div class="chart-grid">
+<div class="card"><div class="card-title">📊 คะแนนรายข้อ — บทบาทผู้ยื่นคำขอ</div><div class="chart-container tall"><canvas id="chartApplicantBar"></canvas></div></div>
+<div class="card"><div class="card-title">🕸️ Radar — ผู้ยื่นคำขอ (ตามหมวด)</div><div class="chart-container tall"><canvas id="chartApplicantRadar"></canvas></div></div>
+</div>
+</div>
+
+<!-- Section 2.2 Admin -->
+<div class="section">
+<h2 class="section-title">ตอนที่ 2.2: ผลประเมินบทบาท "ผู้ดูแลระบบ" (Admin/Staff)</h2>
+<div class="card">
+<table>
+<thead><tr><th style="width:50px">ข้อ</th><th>หัวข้อประเมิน</th><th style="width:100px;text-align:center">คะแนน</th></tr></thead>
+<tbody>
+<tr><td>1.1</td><td>การออกแบบหน้าจอผู้ดูแลระบบมีความเหมาะสม</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>1.2</td><td>การเลือกใช้สี ฟอนต์ และไอคอน สอดคล้องเป็นเอกภาพ</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>1.3</td><td>ภาษาและข้อความชัดเจน สื่อความหมายดี</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>1.4</td><td>Dashboard และสถิติชัดเจนเพียงพอต่อการบริหารจัดการ</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.1</td><td>การตรวจสอบและอัพเดทสถานะคำร้อง สะดวก ไม่ซับซ้อน</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.2</td><td>ระบบสร้างเอกสาร DOCX อัตโนมัติ ลดภาระงานได้มีประสิทธิภาพ</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.3</td><td>Auto-Fill ข้อมูลข้ามเอกสาร มีความสะดวก</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.4</td><td>การจัดการไฟล์เอกสาร (อัปโหลด, ดาวน์โหลด, ZIP) สะดวกครบถ้วน</td><td style="text-align:center"><span class="score-badge score-4">4 ดี</span></td></tr>
+<tr><td>2.5</td><td>ระบบแจ้งเตือนอีเมลอัตโนมัติ ช่วยสื่อสารมีประสิทธิภาพ</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>2.6</td><td>ระบบจัดการบุคลากร/กรรมการ สะดวกและตอบสนองความต้องการ</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>3.1</td><td>ระบบจัดการผู้ใช้งาน (สร้าง, แก้ไข, เปิด/ปิดบัญชี) สะดวกครบถ้วน</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>3.2</td><td>บันทึกประวัติการดำเนินงาน (Admin Log) ช่วยตรวจสอบย้อนหลังได้ดี</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+<tr><td>4.1</td><td>ระบบช่วยเพิ่มประสิทธิภาพการบริหารจัดการกระบวนการ</td><td style="text-align:center"><span class="score-badge score-5">5 ดีมาก</span></td></tr>
+</tbody>
+</table>
+<div class="highlight-box" style="margin-top:20px">
+<div class="big">คะแนนเฉลี่ย: 4.92 / 5.00 (ดีมาก)</div>
+<div style="margin-top:4px;color:#065f46">✅ มีประโยชน์มากและจะแนะนำให้หน่วยงานอื่นนำไปประยุกต์ใช้</div>
+</div>
+</div>
+<div class="chart-grid">
+<div class="card"><div class="card-title">📊 คะแนนรายข้อ — บทบาทผู้ดูแลระบบ</div><div class="chart-container tall"><canvas id="chartAdminBar"></canvas></div></div>
+<div class="card"><div class="card-title">🕸️ Radar — ผู้ดูแลระบบ (ตามหมวด)</div><div class="chart-container tall"><canvas id="chartAdminRadar"></canvas></div></div>
+</div>
+</div>
+
+<!-- Comparison -->
+<div class="section">
+<h2 class="section-title">เปรียบเทียบคะแนนเฉลี่ยตามหมวด</h2>
+<div class="chart-grid single">
+<div class="card"><div class="card-title">📈 เปรียบเทียบคะแนนเฉลี่ยตามหมวดระหว่างสองบทบาท</div><div class="chart-container"><canvas id="chartComparison"></canvas></div></div>
+</div>
+</div>
+
+<!-- Score Distribution -->
+<div class="section">
+<h2 class="section-title">การกระจายคะแนน (ทั้ง 27 ข้อ)</h2>
+<div class="chart-grid">
+<div class="card"><div class="card-title">🍩 สัดส่วนคะแนน</div><div class="chart-container"><canvas id="chartDoughnut"></canvas></div></div>
+<div class="card" style="display:flex;flex-direction:column;justify-content:center">
+<div class="card-title">📋 สรุปการกระจายคะแนน</div>
+<table>
+<thead><tr><th>ระดับ</th><th style="text-align:center">จำนวน (ข้อ)</th><th style="text-align:center">สัดส่วน</th></tr></thead>
+<tbody>
+<tr><td><span class="score-badge score-5">5 ดีมาก</span></td><td style="text-align:center">25</td><td style="text-align:center">92.6%</td></tr>
+<tr><td><span class="score-badge score-4">4 ดี</span></td><td style="text-align:center">2</td><td style="text-align:center">7.4%</td></tr>
+</tbody>
+</table>
+<div class="highlight-box" style="margin-top:16px">
+<div class="big">คะแนนเฉลี่ยรวมทั้งระบบ: 4.93 / 5.00</div>
+<div style="margin-top:4px;color:#065f46">ระดับคุณภาพ: ดีมาก (98.5%)</div>
+</div>
+</div>
+</div>
+</div>
+
+<!-- Suggestions -->
+<div class="section">
+<h2 class="section-title">ข้อเสนอแนะและฟังก์ชันที่ต้องการเพิ่มเติม</h2>
+<div class="card">
+<div class="card-title">🔧 ฟังก์ชันที่ผู้ประเมินต้องการให้เพิ่มเติม</div>
+<ul class="suggestion-list">
+<li>📋 ระบบตรวจสอบความครบถ้วนของเอกสารก่อนการยื่น (Checklist)</li>
+<li>📖 คู่มือ/วิดีโอแนะนำการใช้งานในระบบ (User Guide / Tutorial Video)</li>
+<li>💬 ระบบสอบถาม/แชทกับเจ้าหน้าที่ (Live Chat)</li>
+<li>🔍 ฟังก์ชันการเปรียบเทียบเอกสารฉบับร่าง/ฉบับจริง (Document Comparison)</li>
+</ul>
+</div>
+<div class="card">
+<div class="card-title">💡 ข้อเสนอแนะเพิ่มเติม</div>
+<ul class="suggestion-list">
+<li>ควรเพิ่มเช็คลิสต์ก่อนการกรอกข้อมูลผลงานฯ (ขอตำแหน่งทางวิชาการ)</li>
+<li>มีบางแบบฟอร์มที่ข้อมูลไม่ลิงก์มาข้ามเอกสาร</li>
+<li>การอัปโหลดผลงานยังไม่มี (ต้องเพิ่มฟังก์ชันรองรับ)</li>
+</ul>
+</div>
+</div>
+
+<div class="footer">
+รายงานนี้จัดทำโดยระบบ HRCP-KKU Academic | วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น<br>
+วันที่จัดทำรายงาน: 26 มีนาคม 2569
+</div>
+</div>
+
+<script>
+Chart.register(ChartDataLabels);
+const COLORS={primary:'#1a56db',accent:'#0ea5e9',green:'#10b981',amber:'#f59e0b',primaryBg:'rgba(26,86,219,.15)',accentBg:'rgba(14,165,233,.15)',greenBg:'rgba(16,185,129,.15)'};
+
+// Applicant Bar Chart
+new Chart(document.getElementById('chartApplicantBar'),{
+type:'bar',
+data:{
+labels:['1.1','1.2','1.3','1.4','2.1','2.2','2.3','2.4','2.5','2.6','3.1','3.2','4.1','4.2'],
+datasets:[{label:'คะแนน',data:[5,5,5,5,5,5,5,5,5,4,5,5,5,5],
+backgroundColor:function(ctx){return ctx.raw===5?COLORS.primary:COLORS.amber},
+borderRadius:6,barPercentage:.7}]
+},
+options:{
+responsive:true,maintainAspectRatio:false,
+plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',font:{weight:'bold',size:13},color:function(ctx){return ctx.dataset.data[ctx.dataIndex]===5?COLORS.primary:COLORS.amber}}},
+scales:{y:{min:0,max:5.5,ticks:{stepSize:1}},x:{grid:{display:false}}}
+}
+});
+
+// Applicant Radar
+new Chart(document.getElementById('chartApplicantRadar'),{
+type:'radar',
+data:{
+labels:['ด้านการออกแบบ UI','ด้านฟังก์ชันการใช้งาน','ด้านความปลอดภัย','ด้านประสิทธิผล'],
+datasets:[{label:'คะแนนเฉลี่ย',data:[5.00,4.83,5.00,5.00],
+backgroundColor:COLORS.primaryBg,borderColor:COLORS.primary,borderWidth:2,pointBackgroundColor:COLORS.primary,pointRadius:5}]
+},
+options:{
+responsive:true,maintainAspectRatio:false,
+plugins:{datalabels:{font:{weight:'bold',size:14},color:COLORS.primary,formatter:v=>v.toFixed(2)}},
+scales:{r:{min:0,max:5,ticks:{stepSize:1,backdropColor:'transparent'}}}
+}
+});
+
+// Admin Bar Chart
+new Chart(document.getElementById('chartAdminBar'),{
+type:'bar',
+data:{
+labels:['1.1','1.2','1.3','1.4','2.1','2.2','2.3','2.4','2.5','2.6','3.1','3.2','4.1'],
+datasets:[{label:'คะแนน',data:[5,5,5,5,5,5,5,4,5,5,5,5,5],
+backgroundColor:function(ctx){return ctx.raw===5?COLORS.accent:COLORS.amber},
+borderRadius:6,barPercentage:.7}]
+},
+options:{
+responsive:true,maintainAspectRatio:false,
+plugins:{legend:{display:false},datalabels:{anchor:'end',align:'top',font:{weight:'bold',size:13},color:function(ctx){return ctx.dataset.data[ctx.dataIndex]===5?COLORS.accent:COLORS.amber}}},
+scales:{y:{min:0,max:5.5,ticks:{stepSize:1}},x:{grid:{display:false}}}
+}
+});
+
+// Admin Radar
+new Chart(document.getElementById('chartAdminRadar'),{
+type:'radar',
+data:{
+labels:['ด้านการออกแบบ UI','ด้านฟังก์ชันการใช้งาน','ด้านการจัดการระบบ','ด้านประสิทธิผล'],
+datasets:[{label:'คะแนนเฉลี่ย',data:[5.00,4.83,5.00,5.00],
+backgroundColor:COLORS.accentBg,borderColor:COLORS.accent,borderWidth:2,pointBackgroundColor:COLORS.accent,pointRadius:5}]
+},
+options:{
+responsive:true,maintainAspectRatio:false,
+plugins:{datalabels:{font:{weight:'bold',size:14},color:COLORS.accent,formatter:v=>v.toFixed(2)}},
+scales:{r:{min:0,max:5,ticks:{stepSize:1,backdropColor:'transparent'}}}
+}
+});
+
+// Comparison Chart
+new Chart(document.getElementById('chartComparison'),{
+type:'bar',
+data:{
+labels:['ด้านการออกแบบ UI','ด้านฟังก์ชันการใช้งาน','ด้านความปลอดภัย/จัดการ','ด้านประสิทธิผล','เฉลี่ยรวม'],
+datasets:[
+{label:'ผู้ยื่นคำขอ (Applicant)',data:[5.00,4.83,5.00,5.00,4.93],backgroundColor:COLORS.primary,borderRadius:6,barPercentage:.35},
+{label:'ผู้ดูแลระบบ (Admin)',data:[5.00,4.83,5.00,5.00,4.92],backgroundColor:COLORS.accent,borderRadius:6,barPercentage:.35}
+]
+},
+options:{
+responsive:true,maintainAspectRatio:false,
+plugins:{datalabels:{anchor:'end',align:'top',font:{weight:'bold',size:12},formatter:v=>v.toFixed(2)}},
+scales:{y:{min:4,max:5.2,ticks:{stepSize:.2}},x:{grid:{display:false}}}
+}
+});
+
+// Doughnut
+new Chart(document.getElementById('chartDoughnut'),{
+type:'doughnut',
+data:{
+labels:['5 คะแนน (ดีมาก)','4 คะแนน (ดี)'],
+datasets:[{data:[25,2],backgroundColor:[COLORS.primary,COLORS.amber],borderWidth:3,borderColor:'#fff'}]
+},
+options:{
+responsive:true,maintainAspectRatio:false,
+plugins:{datalabels:{font:{weight:'bold',size:16},color:'#fff',formatter:(v,ctx)=>{const t=ctx.dataset.data.reduce((a,b)=>a+b,0);return(v/t*100).toFixed(1)+'%'}}}
+}
+});
+</script>
+</body>
+</html>
