@@ -32,7 +32,7 @@ function uploadFiles(files) {
         var fd = new FormData();
         fd.append('file', files[i]);
         if (currentFolderId) fd.append('folderId', currentFolderId);
-        fd.append(csrfHeaderName === 'X-CSRF-TOKEN' ? '_csrf' : csrfHeaderName, csrfToken);
+        fd.append('_csrf', csrfToken);
 
         fetch('/admin/file-manager/storage/upload', { method: 'POST', body: fd })
             .then(function(r) { return r.json(); })
@@ -51,7 +51,7 @@ function showCreateFolderModal() {
     var fd = new FormData();
     fd.append('name', name.trim());
     if (currentFolderId) fd.append('parentId', currentFolderId);
-    fd.append(csrfHeaderName === 'X-CSRF-TOKEN' ? '_csrf' : csrfHeaderName, csrfToken);
+    fd.append('_csrf', csrfToken);
 
     fetch('/admin/file-manager/storage/folder/create', { method: 'POST', body: fd })
         .then(function(r) { return r.json(); })
@@ -69,7 +69,7 @@ function renameFolderPrompt(card) {
     var fd = new FormData();
     fd.append('id', id);
     fd.append('name', name.trim());
-    fd.append(csrfHeaderName === 'X-CSRF-TOKEN' ? '_csrf' : csrfHeaderName, csrfToken);
+    fd.append('_csrf', csrfToken);
 
     fetch('/admin/file-manager/storage/folder/rename', { method: 'POST', body: fd })
         .then(function(r) { return r.json(); })
@@ -87,7 +87,7 @@ function deleteFolderPrompt(card) {
         function() {
             var fd = new FormData();
             fd.append('id', id);
-            fd.append(csrfHeaderName === 'X-CSRF-TOKEN' ? '_csrf' : csrfHeaderName, csrfToken);
+            fd.append('_csrf', csrfToken);
             fetch('/admin/file-manager/storage/folder/delete', { method: 'POST', body: fd })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
@@ -105,7 +105,7 @@ function renameFilePrompt(btn) {
     var fd = new FormData();
     fd.append('id', id);
     fd.append('name', name.trim());
-    fd.append(csrfHeaderName === 'X-CSRF-TOKEN' ? '_csrf' : csrfHeaderName, csrfToken);
+    fd.append('_csrf', csrfToken);
 
     fetch('/admin/file-manager/storage/file/rename', { method: 'POST', body: fd })
         .then(function(r) { return r.json(); })
@@ -123,7 +123,7 @@ function deleteFilePrompt(btn) {
         function() {
             var fd = new FormData();
             fd.append('id', id);
-            fd.append(csrfHeaderName === 'X-CSRF-TOKEN' ? '_csrf' : csrfHeaderName, csrfToken);
+            fd.append('_csrf', csrfToken);
             fetch('/admin/file-manager/storage/file/delete', { method: 'POST', body: fd })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
@@ -140,7 +140,7 @@ function restoreStorageFile(btn) {
     var id = btn.getAttribute('data-id');
     var fd = new FormData();
     fd.append('id', id);
-    fd.append(csrfHeaderName === 'X-CSRF-TOKEN' ? '_csrf' : csrfHeaderName, csrfToken);
+    fd.append('_csrf', csrfToken);
     fetch('/admin/file-manager/storage/file/restore', { method: 'POST', body: fd })
         .then(function(r) { return r.json(); })
         .then(function(data) {
@@ -160,7 +160,7 @@ function permanentDeleteStorageFile(btn) {
         function() {
             var fd = new FormData();
             fd.append('id', id);
-            fd.append(csrfHeaderName === 'X-CSRF-TOKEN' ? '_csrf' : csrfHeaderName, csrfToken);
+            fd.append('_csrf', csrfToken);
             fetch('/admin/file-manager/storage/file/permanent-delete', { method: 'POST', body: fd })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
