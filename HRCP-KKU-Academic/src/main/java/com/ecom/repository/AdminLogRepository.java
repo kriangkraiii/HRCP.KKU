@@ -6,12 +6,13 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.ecom.model.AdminLog;
 
-public interface AdminLogRepository extends JpaRepository<AdminLog, Long> {
+public interface AdminLogRepository extends JpaRepository<AdminLog, Long>, JpaSpecificationExecutor<AdminLog> {
 
 	Page<AdminLog> findAllByOrderByTimestampDesc(Pageable pageable);
 
@@ -25,31 +26,4 @@ public interface AdminLogRepository extends JpaRepository<AdminLog, Long> {
 	List<AdminLog> findByActionContaining(@Param("action") String action);
 
 	long countByAction(String action);
-
-	@Query("SELECT a FROM AdminLog a WHERE " +
-			"(:search IS NULL OR (LOWER(a.adminName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-			"OR LOWER(a.adminEmail) LIKE LOWER(CONCAT('%', :search, '%')) " +
-			"OR LOWER(a.details) LIKE LOWER(CONCAT('%', :search, '%')))) " +
-			"AND (:action IS NULL OR a.action = :action) " +
-			"AND (:startDate IS NULL OR a.timestamp >= :startDate) " +
-			"AND (:endDate IS NULL OR a.timestamp <= :endDate) " +
-			"ORDER BY a.timestamp DESC")
-	Page<AdminLog> findByFilters(@Param("search") String search,
-			@Param("action") String action,
-			@Param("startDate") LocalDateTime startDate,
-			@Param("endDate") LocalDateTime endDate,
-			Pageable pageable);
-
-	@Query("SELECT a FROM AdminLog a WHERE " +
-			"(:search IS NULL OR (LOWER(a.adminName) LIKE LOWER(CONCAT('%', :search, '%')) " +
-			"OR LOWER(a.adminEmail) LIKE LOWER(CONCAT('%', :search, '%')) " +
-			"OR LOWER(a.details) LIKE LOWER(CONCAT('%', :search, '%')))) " +
-			"AND (:action IS NULL OR a.action = :action) " +
-			"AND (:startDate IS NULL OR a.timestamp >= :startDate) " +
-			"AND (:endDate IS NULL OR a.timestamp <= :endDate) " +
-			"ORDER BY a.timestamp DESC")
-	List<AdminLog> findByFiltersForExport(@Param("search") String search,
-			@Param("action") String action,
-			@Param("startDate") LocalDateTime startDate,
-			@Param("endDate") LocalDateTime endDate);
 }

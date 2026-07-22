@@ -13,6 +13,12 @@ import org.springframework.stereotype.Service;
 import com.ecom.model.AdminLog;
 import com.ecom.repository.AdminLogRepository;
 
+import java.util.ArrayList;
+
+import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.Predicate;
+
 @Service
 public class AdminLogService {
 
@@ -31,30 +37,14 @@ public class AdminLogService {
     }
 
     public Page<AdminLog> getAllLogs(int page, int size) {
-        Pageable pageable = PageRequest.of(page, size);
-        return adminLogRepository.findAllByOrderByTimestampDesc(pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
+        return adminLogRepository.findAll(pageable);
     }
 
     public Page<AdminLog> getAllLogs(int page, int size, String search, String action, String dateFrom, String dateTo) {
-        Pageable pageable = PageRequest.of(page, size);
-
-        // Parse dates
-        LocalDateTime startDate = null;
-        LocalDateTime endDate = null;
-        if (dateFrom != null && !dateFrom.isEmpty()) {
-            startDate = LocalDate.parse(dateFrom).atStartOfDay();
-        }
-        if (dateTo != null && !dateTo.isEmpty()) {
-            endDate = LocalDate.parse(dateTo).atTime(23, 59, 59);
-        }
-
-        // Normalize empty strings to null
-        if (search != null && search.trim().isEmpty())
-            search = null;
-        if (action != null && action.trim().isEmpty())
-            action = null;
-
-        return adminLogRepository.findByFilters(search, action, startDate, endDate, pageable);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "timestamp"));
+        Specification<AdminLog> spec = createFilterSpecification(search, action, dateFrom, dateTo);
+        return adminLogRepository.findAll(spec, pageable);
     }
 
     public List<AdminLog> getLogsByAdmin(String adminEmail) {
@@ -70,19 +60,37 @@ public class AdminLogService {
     }
 
     public List<AdminLog> getAllLogsForExport(String search, String action, String dateFrom, String dateTo) {
-        LocalDateTime startDate = null;
-        LocalDateTime endDate = null;
-        if (dateFrom != null && !dateFrom.isEmpty()) {
-            startDate = LocalDate.parse(dateFrom).atStartOfDay();
-        }
-        if (dateTo != null && !dateTo.isEmpty()) {
-            endDate = LocalDate.parse(dateTo).atTime(23, 59, 59);
-        }
-        if (search != null && search.trim().isEmpty())
-            search = null;
-        if (action != null && action.trim().isEmpty())
-            action = null;
+        Specification<AdminLog> spec = createFilterSpecification(search, action, dateFrom, dateTo);
+        return adminLogRepository.findAll(spec, Sort.by(Sort.Direction.DESC, "timestamp"));
+    }
 
-        return adminLogRepository.findByFiltersForExport(search, action, startDate, endDate);
+    private Specification<AdminLog> createFilterSpecification(String search, String action, String dateFrom, String dateTo) {
+        return (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+
+            if (search != null && !search.trim().isEmpty()) {
+                String keyword = "%" + search.trim().toLowerCase() + "%";
+                Predicate nameLike = cb.like(cb.lower(root.get("adminName")), keyword);
+                Predicate emailLike = cb.like(cb.lower(root.get("adminEmail")), keyword);
+                Predicate detailsLike = cb.like(cb.lower(root.get("details")), keyword);
+                predicates.add(cb.or(nameLike, emailLike, detailsLike));
+            }
+
+            if (action != null && !action.trim().isEmpty()) {
+                predicates.add(cb.equal(root.get("action"), action.trim()));
+            }
+
+            if (dateFrom != null && !dateFrom.isEmpty()) {
+                LocalDateTime startDate = LocalDate.parse(dateFrom).atStartOfDay();
+                predicates.add(cb.greaterThanOrEqualTo(root.get("timestamp"), startDate));
+            }
+
+            if (dateTo != null && !dateTo.isEmpty()) {
+                LocalDateTime endDate = LocalDate.parse(dateTo).atTime(23, 59, 59);
+                predicates.add(cb.lessThanOrEqualTo(root.get("timestamp"), endDate));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
     }
 }
