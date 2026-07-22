@@ -13,6 +13,8 @@ import org.springframework.stereotype.Component;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
+import org.springframework.beans.factory.annotation.Value;
+
 @Component
 public class AdminInitializer implements CommandLineRunner {
 
@@ -22,17 +24,21 @@ public class AdminInitializer implements CommandLineRunner {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Value("${app.admin.email:kriangkrai.p@kkumail.com}")
+    private String adminEmail;
+
+    @Value("${app.admin.password:admin123}")
+    private String adminPassword;
+
     @Override
     public void run(String... args) {
         // 1. Create default admin if not exists
-        String adminEmail = "admin@admin.com";
-
         if (!userRepository.existsByEmail(adminEmail)) {
             UserDtls admin = new UserDtls();
-            admin.setFirstName("Admin");
-            admin.setLastName("System");
+            admin.setFirstName("Kriangkrai");
+            admin.setLastName("Admin");
             admin.setEmail(adminEmail);
-            admin.setPassword(passwordEncoder.encode("admin"));
+            admin.setPassword(passwordEncoder.encode(adminPassword));
             admin.setRole("ROLE_ADMIN");
             admin.setIsEnable(true);
             admin.setAccountNonLocked(true);
@@ -42,7 +48,7 @@ public class AdminInitializer implements CommandLineRunner {
             admin.setEmailNotificationEnabled(true);
 
             userRepository.save(admin);
-            System.out.println("=== Default admin created: " + adminEmail + " / admin ===");
+            System.out.println("=== Default admin created: " + adminEmail + " / " + adminPassword + " ===");
         }
 
         // 2. Backfill applicant IDs for existing ROLE_USER without one
