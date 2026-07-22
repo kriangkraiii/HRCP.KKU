@@ -1,6 +1,6 @@
 services:
   app:
-    build: .
+    image: hrcp-academic:latest
     restart: unless-stopped
     ports:
       - "8080:8080"

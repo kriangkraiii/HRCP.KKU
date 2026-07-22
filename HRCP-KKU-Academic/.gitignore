@@ -33,6 +33,7 @@ build/
 .vscode/
 .
 *.properties
+!.mvn/wrapper/maven-wrapper.properties
 
 # Eclipse / STS junk files
 .metadata/
