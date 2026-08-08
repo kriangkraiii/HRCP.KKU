@@ -288,7 +288,12 @@ public class UserServiceImpl implements UserService {
 		userRepository.save(user);
 
 		// Send OTP email
-		commonUtil.sendOtpEmail(email, otp);
+		try {
+			commonUtil.sendOtpEmail(email, otp);
+		} catch (Exception e) {
+			logger.error("Failed to send OTP email to {}: {}", email, e.getMessage(), e);
+			throw new Exception("ไม่สามารถส่งอีเมล OTP ได้เนื่องจากเกิดข้อผิดพลาดในการเชื่อมต่อระบบส่งอีเมล (Authentication failed)");
+		}
 	}
 
 	@Override
