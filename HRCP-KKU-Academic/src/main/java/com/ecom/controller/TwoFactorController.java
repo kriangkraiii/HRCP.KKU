@@ -1,6 +1,5 @@
 package com.ecom.controller;
 
-
 import java.util.Collection;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -27,10 +26,10 @@ import jakarta.servlet.http.HttpSession;
 @RequestMapping("/2fa")
 public class TwoFactorController {
 
+    private static final int MAX_OTP_ATTEMPTS = 5;
+
     private final TwoFactorService twoFactorService;
-
     private final UserRepository userRepository;
-
     private final UserDetailsService userDetailsService;
 
     public TwoFactorController(
@@ -65,6 +64,23 @@ public class TwoFactorController {
         UserDtls user = userRepository.findByEmail(email);
         if (user == null) {
             session.removeAttribute("2FA_USER_EMAIL");
+            session.removeAttribute("2FA_FAILED_ATTEMPTS");
+            return "redirect:/signin";
+        }
+
+        Integer attempts = (Integer) session.getAttribute("2FA_FAILED_ATTEMPTS");
+        if (attempts == null) {
+            attempts = 0;
+        }
+
+        // Check if user has already exceeded max attempts
+        if (attempts >= MAX_OTP_ATTEMPTS) {
+            twoFactorService.clearOtp(user);
+            session.removeAttribute("2FA_USER_EMAIL");
+            session.removeAttribute("2FA_FAILED_ATTEMPTS");
+            session.removeAttribute("2FA_REDIRECT");
+            session.removeAttribute("2FA_RESEND_COOLDOWN");
+            redirect.addFlashAttribute("error", "คุณกรอกรหัส OTP ไม่ถูกต้องเกินจำนวนครั้งที่กำหนด กรุณาเข้าสู่ระบบใหม่");
             return "redirect:/signin";
         }
 
@@ -75,6 +91,9 @@ public class TwoFactorController {
 
         switch (result) {
             case "OK":
+                // Reset failed attempts on success
+                session.removeAttribute("2FA_FAILED_ATTEMPTS");
+
                 // Grant authentication
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
                 UsernamePasswordAuthenticationToken auth =
@@ -101,7 +120,21 @@ public class TwoFactorController {
                 return "redirect:/2fa/verify";
 
             default:
-                redirect.addFlashAttribute("error", "รหัส OTP ไม่ถูกต้อง กรุณาลองใหม่");
+                attempts++;
+                session.setAttribute("2FA_FAILED_ATTEMPTS", attempts);
+                int remaining = MAX_OTP_ATTEMPTS - attempts;
+
+                if (remaining <= 0) {
+                    twoFactorService.clearOtp(user);
+                    session.removeAttribute("2FA_USER_EMAIL");
+                    session.removeAttribute("2FA_FAILED_ATTEMPTS");
+                    session.removeAttribute("2FA_REDIRECT");
+                    session.removeAttribute("2FA_RESEND_COOLDOWN");
+                    redirect.addFlashAttribute("error", "คุณกรอกรหัส OTP ไม่ถูกต้องเกิน 5 ครั้ง กรุณาเข้าสู่ระบบใหม่");
+                    return "redirect:/signin";
+                }
+
+                redirect.addFlashAttribute("error", "รหัส OTP ไม่ถูกต้อง (เหลือโอกาสอีก " + remaining + " ครั้ง)");
                 return "redirect:/2fa/verify";
         }
     }
@@ -125,6 +158,8 @@ public class TwoFactorController {
             twoFactorService.generateOtp(user);
             twoFactorService.sendOtpEmail(user, "LOGIN");
             session.setAttribute("2FA_RESEND_COOLDOWN", System.currentTimeMillis());
+            // Reset failed attempt counter on fresh OTP generation
+            session.removeAttribute("2FA_FAILED_ATTEMPTS");
         }
 
         redirect.addFlashAttribute("success", "ส่งรหัส OTP ใหม่แล้ว กรุณาตรวจสอบอีเมล");

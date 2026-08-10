@@ -218,7 +218,7 @@ public class UserServiceImpl implements UserService {
 				Files.copy(img.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("Error saving profile image for user {}: {}", dbUser.getEmail(), e.getMessage(), e);
 		}
 		return dbUser;
 	}

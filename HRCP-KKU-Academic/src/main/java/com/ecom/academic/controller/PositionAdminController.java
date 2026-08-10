@@ -10,6 +10,8 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -42,6 +44,8 @@ import jakarta.servlet.http.HttpServletRequest;
 @Controller
 @RequestMapping("/admin/position")
 public class PositionAdminController {
+
+    private static final Logger logger = LoggerFactory.getLogger(PositionAdminController.class);
 
     private final PositionRequestService positionService;
 
@@ -275,7 +279,7 @@ public class PositionAdminController {
             try {
                 filePath = documentService.generateP2Document(request, type, jsonData);
             } catch (Exception e) {
-                System.err.println("Phase2 doc generation failed for type " + type + ": " + e.getMessage());
+                logger.warn("Phase2 doc generation failed for type {}: {}", type, e.getMessage());
             }
 
             boolean isNew = positionService.getDocumentsByType(id, type).isEmpty();
@@ -342,7 +346,7 @@ public class PositionAdminController {
                     }
                 }
             } catch (Exception e) {
-                System.err.println("On-the-fly DOCX generation failed for doc " + type + ": " + e.getMessage());
+                logger.warn("On-the-fly DOCX generation failed for doc {}: {}", type, e.getMessage());
             }
         }
 
@@ -405,7 +409,7 @@ public class PositionAdminController {
                             }
                         }
                     } catch (Exception e) {
-                        System.err.println("ZIP: doc gen failed for type " + doc.getDocumentType() + ": " + e.getMessage());
+                        logger.warn("ZIP: doc gen failed for type {}: {}", doc.getDocumentType(), e.getMessage());
                     }
                 }
 
@@ -545,7 +549,7 @@ public class PositionAdminController {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Merge failed for doc " + type + ": " + e.getMessage());
+            logger.warn("Merge failed for doc {}: {}", type, e.getMessage());
         }
         return formData;
     }

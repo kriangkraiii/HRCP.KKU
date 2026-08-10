@@ -72,8 +72,16 @@ public class ChunkedUploadController {
             return ResponseEntity.ok(result);
         }
 
-        // Check user storage quota (only for user storage)
+        // Validate file type and storage quota (only for user storage)
         if ("user".equals(storageType)) {
+            try {
+                userStorageService.validateFileType(filename);
+            } catch (IllegalArgumentException e) {
+                result.put("success", false);
+                result.put("message", e.getMessage());
+                return ResponseEntity.ok(result);
+            }
+
             long remaining = userStorageService.getRemainingBytes(user.getId());
             if (fileSize > remaining) {
                 result.put("success", false);
