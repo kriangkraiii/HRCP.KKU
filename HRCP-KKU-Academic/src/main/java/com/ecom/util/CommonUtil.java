@@ -8,7 +8,7 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
 
 import com.ecom.model.UserDtls;
-import com.ecom.service.UserService;
+import com.ecom.repository.UserRepository;
 
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -18,12 +18,11 @@ import jakarta.servlet.http.HttpServletRequest;
 public class CommonUtil {
 
 	private final JavaMailSender mailSender;
+	private final UserRepository userRepository;
 
-	private final UserService userService;
-
-	public CommonUtil(JavaMailSender mailSender, UserService userService) {
+	public CommonUtil(JavaMailSender mailSender, UserRepository userRepository) {
 		this.mailSender = mailSender;
-		this.userService = userService;
+		this.userRepository = userRepository;
 	}
 
 	public Boolean sendMail(String url, String reciepentEmail) throws UnsupportedEncodingException, MessagingException {
@@ -95,6 +94,6 @@ public class CommonUtil {
 
 	public UserDtls getLoggedInUserDetails(Principal p) {
 		String email = p.getName();
-		return userService.getUserByEmail(email);
+		return userRepository.findByEmail(email);
 	}
 }
