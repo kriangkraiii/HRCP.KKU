@@ -229,6 +229,9 @@ public class UserServiceImpl implements UserService {
 		user.setFailedAttempt(0);
 		user.setIsFirstLogin(true);
 		user.setCreatedDate(new Date());
+		if ("ROLE_USER".equals(user.getRole())) {
+			user.setApplicantId(generateApplicantId());
+		}
 		if (user.getProfileImage() == null || user.getProfileImage().isEmpty()) {
 			user.setProfileImage("default.png");
 		}
