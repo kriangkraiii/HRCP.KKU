@@ -58,7 +58,8 @@ public class SecurityHeadersFilter implements Filter {
                                                 + "font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com https://cdn.jsdelivr.net; "
                                                 + "img-src 'self' data: blob: https://translate.google.com https://www.google.com https://*.gstatic.com; "
                                                 + "connect-src 'self' https://translate.googleapis.com https://translate-pa.googleapis.com; "
-                                                + "frame-src 'self' https://translate.google.com https://docs.google.com https://hr2.kku.ac.th; "
+                                                // blob: จำเป็นสำหรับ iframe ที่แสดง PDF preview (doc_preview.js)
+                                                + "frame-src 'self' blob: https://translate.google.com https://docs.google.com https://hr2.kku.ac.th; "
                                                 + "frame-ancestors 'self'");
 
                 // Force HTTPS (will be active when behind HTTPS proxy)
