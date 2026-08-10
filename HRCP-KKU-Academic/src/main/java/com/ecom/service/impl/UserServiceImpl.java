@@ -16,8 +16,6 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,21 +34,28 @@ public class UserServiceImpl implements UserService {
 
 	private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
-	@Autowired
-	private UserRepository userRepository;
+	private final UserRepository userRepository;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+	private final PasswordEncoder passwordEncoder;
 
-	@Autowired
-	@Lazy
-	private CommonUtil commonUtil;
+	private final CommonUtil commonUtil;
 
-	@Autowired
-	private com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository;
+	private final com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository;
 
-	@Autowired
-	private com.ecom.academic.repository.PositionRequestRepository positionRequestRepository;
+	private final com.ecom.academic.repository.PositionRequestRepository positionRequestRepository;
+
+	public UserServiceImpl(
+			UserRepository userRepository,
+			PasswordEncoder passwordEncoder,
+			CommonUtil commonUtil,
+			com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository,
+			com.ecom.academic.repository.PositionRequestRepository positionRequestRepository) {
+		this.userRepository = userRepository;
+		this.passwordEncoder = passwordEncoder;
+		this.commonUtil = commonUtil;
+		this.academicRequestRepository = academicRequestRepository;
+		this.positionRequestRepository = positionRequestRepository;
+	}
 
 	@Override
 	public Integer getUsersCount() {

@@ -3,7 +3,6 @@ package com.ecom.academic.controller;
 import java.security.Principal;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,17 +22,24 @@ import jakarta.servlet.http.HttpServletRequest;
 @Controller
 public class AcademicSettingsController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private TwoFactorService twoFactorService;
+    private final TwoFactorService twoFactorService;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private HttpServletRequest httpRequest;
+    private final HttpServletRequest httpRequest;
+
+    public AcademicSettingsController(
+            UserRepository userRepository,
+            TwoFactorService twoFactorService,
+            AdminLogService adminLogService,
+            HttpServletRequest httpRequest) {
+        this.userRepository = userRepository;
+        this.twoFactorService = twoFactorService;
+        this.adminLogService = adminLogService;
+        this.httpRequest = httpRequest;
+    }
 
     /** User settings page */
     @GetMapping("/user/academic/settings")

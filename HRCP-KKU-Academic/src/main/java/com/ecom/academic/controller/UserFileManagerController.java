@@ -7,7 +7,6 @@ import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -27,11 +26,14 @@ import com.ecom.repository.UserRepository;
 @RequestMapping("/user/academic/storage")
 public class UserFileManagerController {
 
-    @Autowired
-    private UserStorageService storageService;
+    private final UserStorageService storageService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public UserFileManagerController(UserStorageService storageService, UserRepository userRepository) {
+        this.storageService = storageService;
+        this.userRepository = userRepository;
+    }
 
     private UserDtls getUser(Principal principal) {
         return principal != null ? userRepository.findByEmail(principal.getName()) : null;

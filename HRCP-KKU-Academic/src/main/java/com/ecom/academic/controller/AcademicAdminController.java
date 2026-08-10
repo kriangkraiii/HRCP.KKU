@@ -14,7 +14,6 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 
@@ -52,26 +51,36 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/admin/academic")
 public class AcademicAdminController {
 
-    @Autowired
-    private AcademicRequestService requestService;
+    private final AcademicRequestService requestService;
 
-    @Autowired
-    private DocumentGenerationService documentService;
+    private final DocumentGenerationService documentService;
 
-    @Autowired
-    private StaffMemberService staffMemberService;
+    private final StaffMemberService staffMemberService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private PositionRequestService positionRequestService;
+    private final PositionRequestService positionRequestService;
 
-    @Autowired
-    private HttpServletRequest httpRequest;
+    private final HttpServletRequest httpRequest;
+
+    public AcademicAdminController(
+            AcademicRequestService requestService,
+            DocumentGenerationService documentService,
+            StaffMemberService staffMemberService,
+            UserRepository userRepository,
+            AdminLogService adminLogService,
+            PositionRequestService positionRequestService,
+            HttpServletRequest httpRequest) {
+        this.requestService = requestService;
+        this.documentService = documentService;
+        this.staffMemberService = staffMemberService;
+        this.userRepository = userRepository;
+        this.adminLogService = adminLogService;
+        this.positionRequestService = positionRequestService;
+        this.httpRequest = httpRequest;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

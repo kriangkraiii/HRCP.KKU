@@ -2,7 +2,6 @@ package com.ecom.controller;
 
 import java.security.Principal;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,20 +26,28 @@ import jakarta.servlet.http.HttpSession;
 @RequestMapping("/user")
 public class UserController {
 
-	@Autowired
-	private UserService userService;
+	private final UserService userService;
 
-	@Autowired
-	private CommonUtil commonUtil;
+	private final CommonUtil commonUtil;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+	private final PasswordEncoder passwordEncoder;
 
-	@Autowired
-	private AdminLogService adminLogService;
+	private final AdminLogService adminLogService;
 
-	@Autowired
-	private HttpServletRequest httpRequest;
+	private final HttpServletRequest httpRequest;
+
+	public UserController(
+			UserService userService,
+			CommonUtil commonUtil,
+			PasswordEncoder passwordEncoder,
+			AdminLogService adminLogService,
+			HttpServletRequest httpRequest) {
+		this.userService = userService;
+		this.commonUtil = commonUtil;
+		this.passwordEncoder = passwordEncoder;
+		this.adminLogService = adminLogService;
+		this.httpRequest = httpRequest;
+	}
 
 	@ModelAttribute
 	public void getUserDetails(Principal p, Model m) {

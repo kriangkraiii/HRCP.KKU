@@ -5,7 +5,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,14 +29,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequestMapping("/user/position")
 public class PositionApplicantController {
 
-    @Autowired
-    private PositionRequestService positionService;
+    private final PositionRequestService positionService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private AcademicRequestService academicService;
+    private final AcademicRequestService academicService;
+
+    public PositionApplicantController(
+            PositionRequestService positionService,
+            UserRepository userRepository,
+            AcademicRequestService academicService) {
+        this.positionService = positionService;
+        this.userRepository = userRepository;
+        this.academicService = academicService;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

@@ -10,7 +10,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,20 +42,28 @@ import jakarta.servlet.http.HttpSession;
 @RequestMapping("/admin")
 public class AdminController {
 
-	@Autowired
-	private HttpServletRequest request;
+	private final HttpServletRequest request;
 
-	@Autowired
-	private UserService userService;
+	private final UserService userService;
 
-	@Autowired
-	private CommonUtil commonUtil;
+	private final CommonUtil commonUtil;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+	private final PasswordEncoder passwordEncoder;
 
-	@Autowired
-	private AdminLogService adminLogService;
+	private final AdminLogService adminLogService;
+
+	public AdminController(
+			HttpServletRequest request,
+			UserService userService,
+			CommonUtil commonUtil,
+			PasswordEncoder passwordEncoder,
+			AdminLogService adminLogService) {
+		this.request = request;
+		this.userService = userService;
+		this.commonUtil = commonUtil;
+		this.passwordEncoder = passwordEncoder;
+		this.adminLogService = adminLogService;
+	}
 
 	@ModelAttribute
 	public void getUserDetails(Principal p, Model m) {

@@ -1,9 +1,7 @@
 package com.ecom.config;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.context.annotation.Primary;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -20,12 +18,20 @@ import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 @EnableWebSecurity
 public class SecurityConfig {
 
-        @Autowired
-        private RateLimitFilter rateLimitFilter;
+        private final RateLimitFilter rateLimitFilter;
+        private final CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
+        private final AuthFailureHandlerImpl authenticationFailureHandler;
+        private final UserDetailsServiceImpl userDetailsServiceImpl;
 
-        @Autowired
-        @Lazy
-        private CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler;
+        public SecurityConfig(RateLimitFilter rateLimitFilter,
+                        CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
+                        AuthFailureHandlerImpl authenticationFailureHandler,
+                        UserDetailsServiceImpl userDetailsServiceImpl) {
+                this.rateLimitFilter = rateLimitFilter;
+                this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
+                this.authenticationFailureHandler = authenticationFailureHandler;
+                this.userDetailsServiceImpl = userDetailsServiceImpl;
+        }
 
         @Bean
         @Primary
@@ -33,18 +39,10 @@ public class SecurityConfig {
                 return customAuthenticationSuccessHandler;
         }
 
-        @Autowired
-        @Lazy
-        private AuthFailureHandlerImpl authenticationFailureHandler;
-
         @Bean
         public PasswordEncoder passwordEncoder() {
                 return new BCryptPasswordEncoder();
         }
-
-        @Autowired
-        @Lazy
-        private UserDetailsServiceImpl userDetailsServiceImpl;
 
         @Bean
         public UserDetailsService userDetailsService() {

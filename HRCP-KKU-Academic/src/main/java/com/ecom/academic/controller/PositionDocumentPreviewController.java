@@ -3,7 +3,6 @@ package com.ecom.academic.controller;
 import java.io.IOException;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -24,8 +23,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequestMapping("/api/position/preview")
 public class PositionDocumentPreviewController {
 
-    @Autowired
-    private DocumentGenerationService documentService;
+    private final DocumentGenerationService documentService;
+
+    public PositionDocumentPreviewController(DocumentGenerationService documentService) {
+        this.documentService = documentService;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

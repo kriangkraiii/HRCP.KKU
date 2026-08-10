@@ -5,7 +5,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,14 +25,20 @@ import com.ecom.repository.UserRepository;
 @Service
 public class PetitionService {
 
-    @Autowired
-    private PetitionRepository petitionRepository;
+    private final PetitionRepository petitionRepository;
 
-    @Autowired
-    private PetitionStatusRepository petitionStatusRepository;
+    private final PetitionStatusRepository petitionStatusRepository;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public PetitionService(
+            PetitionRepository petitionRepository,
+            PetitionStatusRepository petitionStatusRepository,
+            UserRepository userRepository) {
+        this.petitionRepository = petitionRepository;
+        this.petitionStatusRepository = petitionStatusRepository;
+        this.userRepository = userRepository;
+    }
 
     /**
      * Check if a user can submit a new petition.

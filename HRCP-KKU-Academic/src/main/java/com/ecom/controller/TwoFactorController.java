@@ -3,7 +3,6 @@ package com.ecom.controller;
 
 import java.util.Collection;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,14 +27,20 @@ import jakarta.servlet.http.HttpSession;
 @RequestMapping("/2fa")
 public class TwoFactorController {
 
-    @Autowired
-    private TwoFactorService twoFactorService;
+    private final TwoFactorService twoFactorService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private UserDetailsService userDetailsService;
+    private final UserDetailsService userDetailsService;
+
+    public TwoFactorController(
+            TwoFactorService twoFactorService,
+            UserRepository userRepository,
+            UserDetailsService userDetailsService) {
+        this.twoFactorService = twoFactorService;
+        this.userRepository = userRepository;
+        this.userDetailsService = userDetailsService;
+    }
 
     @GetMapping("/verify")
     public String showVerifyPage(HttpSession session, Model model) {

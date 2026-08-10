@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -44,29 +43,40 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequestMapping("/user/academic")
 public class AcademicApplicantController {
 
-    @Autowired
-    private AcademicRequestService requestService;
+    private final AcademicRequestService requestService;
 
-    @Autowired
-    private DocumentGenerationService documentService;
+    private final DocumentGenerationService documentService;
 
-    @Autowired
-    private StaffMemberService staffMemberService;
+    private final StaffMemberService staffMemberService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private AcademicEmailService emailService;
+    private final AcademicEmailService emailService;
 
-    @Autowired
-    private PositionRequestService positionRequestService;
+    private final PositionRequestService positionRequestService;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private jakarta.servlet.http.HttpServletRequest httpRequest;
+    private final jakarta.servlet.http.HttpServletRequest httpRequest;
+
+    public AcademicApplicantController(
+            AcademicRequestService requestService,
+            DocumentGenerationService documentService,
+            StaffMemberService staffMemberService,
+            UserRepository userRepository,
+            AcademicEmailService emailService,
+            PositionRequestService positionRequestService,
+            AdminLogService adminLogService,
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
+        this.requestService = requestService;
+        this.documentService = documentService;
+        this.staffMemberService = staffMemberService;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.positionRequestService = positionRequestService;
+        this.adminLogService = adminLogService;
+        this.httpRequest = httpRequest;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

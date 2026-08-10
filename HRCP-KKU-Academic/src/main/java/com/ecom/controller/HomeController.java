@@ -4,7 +4,6 @@ import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -27,17 +26,24 @@ import jakarta.servlet.http.HttpSession;
 @Controller
 public class HomeController {
 
-	@Autowired
-	private UserService userService;
+	private final UserService userService;
 
-	@Autowired
-	private CommonUtil commonUtil;
+	private final CommonUtil commonUtil;
 
-	@Autowired
-	private BCryptPasswordEncoder passwordEncoder;
+	private final BCryptPasswordEncoder passwordEncoder;
 
-	@Autowired
-	private AdminLogService adminLogService;
+	private final AdminLogService adminLogService;
+
+	public HomeController(
+			UserService userService,
+			CommonUtil commonUtil,
+			BCryptPasswordEncoder passwordEncoder,
+			AdminLogService adminLogService) {
+		this.userService = userService;
+		this.commonUtil = commonUtil;
+		this.passwordEncoder = passwordEncoder;
+		this.adminLogService = adminLogService;
+	}
 
 	@ModelAttribute
 	public void getUserDetails(Principal p, Model m) {

@@ -2,7 +2,6 @@ package com.ecom.academic.controller;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -25,17 +24,24 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/admin/academic/staff")
 public class StaffMemberController {
 
-    @Autowired
-    private StaffMemberService staffMemberService;
+    private final StaffMemberService staffMemberService;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private HttpServletRequest httpRequest;
+    private final HttpServletRequest httpRequest;
+
+    public StaffMemberController(
+            StaffMemberService staffMemberService,
+            AdminLogService adminLogService,
+            UserRepository userRepository,
+            HttpServletRequest httpRequest) {
+        this.staffMemberService = staffMemberService;
+        this.adminLogService = adminLogService;
+        this.userRepository = userRepository;
+        this.httpRequest = httpRequest;
+    }
 
     @GetMapping("")
     public String listStaff(Model model) {

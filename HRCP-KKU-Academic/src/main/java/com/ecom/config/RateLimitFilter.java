@@ -1,11 +1,13 @@
 package com.ecom.config;
 
 import java.io.IOException;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.springframework.stereotype.Component;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
@@ -18,7 +20,10 @@ import jakarta.servlet.http.HttpServletResponse;
 /**
  * IP-based rate limiter to protect against DDoS and brute-force attacks.
  * - General requests: 100 req/min per IP
- * - Login attempts: 5 req/min per IP (stricter)
+ * - Login attempts: 20 req/min per IP (stricter)
+ *
+ * Uses Caffeine cache to auto-evict stale entries and prevent memory exhaustion.
+ * Relies on server.forward-headers-strategy=native for trusted proxy IP resolution.
  */
 @Component
 public class RateLimitFilter implements Filter {
@@ -27,8 +32,15 @@ public class RateLimitFilter implements Filter {
     private static final int LOGIN_LIMIT = 20;
     private static final long WINDOW_MS = 60_000; // 1 minute
 
-    private final Map<String, RateBucket> generalBuckets = new ConcurrentHashMap<>();
-    private final Map<String, RateBucket> loginBuckets = new ConcurrentHashMap<>();
+    private final Cache<String, RateBucket> generalBuckets = Caffeine.newBuilder()
+            .maximumSize(50_000)
+            .expireAfterWrite(Duration.ofMinutes(5))
+            .build();
+
+    private final Cache<String, RateBucket> loginBuckets = Caffeine.newBuilder()
+            .maximumSize(50_000)
+            .expireAfterWrite(Duration.ofMinutes(5))
+            .build();
 
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
@@ -36,12 +48,19 @@ public class RateLimitFilter implements Filter {
 
         HttpServletRequest httpReq = (HttpServletRequest) request;
         HttpServletResponse httpRes = (HttpServletResponse) response;
-        String clientIp = getClientIp(httpReq);
         String uri = httpReq.getRequestURI();
+
+        // Skip rate limiting for static resources (checked first for performance)
+        if (isStaticResource(uri)) {
+            chain.doFilter(request, response);
+            return;
+        }
+
+        String clientIp = httpReq.getRemoteAddr();
 
         // Login endpoint: stricter limit
         if ("/login".equals(uri) && "POST".equalsIgnoreCase(httpReq.getMethod())) {
-            RateBucket bucket = loginBuckets.computeIfAbsent(clientIp, k -> new RateBucket());
+            RateBucket bucket = loginBuckets.get(clientIp, k -> new RateBucket());
             if (!bucket.tryConsume(LOGIN_LIMIT)) {
                 httpReq.getSession().setAttribute("errorMessage",
                         "คุณพยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอ 1 นาที แล้วลองใหม่อีกครั้ง");
@@ -50,16 +69,8 @@ public class RateLimitFilter implements Filter {
             }
         }
 
-        // Skip rate limiting for static resources
-        if (uri.startsWith("/css/") || uri.startsWith("/js/") || uri.startsWith("/img/")
-                || uri.startsWith("/static/") || uri.startsWith("/admin/css/")
-                || uri.startsWith("/admin/js/") || uri.startsWith("/admin/img/")) {
-            chain.doFilter(request, response);
-            return;
-        }
-
         // General rate limit
-        RateBucket bucket = generalBuckets.computeIfAbsent(clientIp, k -> new RateBucket());
+        RateBucket bucket = generalBuckets.get(clientIp, k -> new RateBucket());
         if (!bucket.tryConsume(GENERAL_LIMIT)) {
             httpRes.setStatus(429);
             httpRes.setContentType("text/html;charset=UTF-8");
@@ -72,36 +83,29 @@ public class RateLimitFilter implements Filter {
         chain.doFilter(request, response);
     }
 
-    private String getClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isEmpty()) {
-            return xff.split(",")[0].trim();
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isEmpty()) {
-            return realIp;
-        }
-        return request.getRemoteAddr();
+    private boolean isStaticResource(String uri) {
+        return uri.startsWith("/css/") || uri.startsWith("/js/") || uri.startsWith("/img/")
+                || uri.startsWith("/static/") || uri.startsWith("/admin/css/")
+                || uri.startsWith("/admin/js/") || uri.startsWith("/admin/img/");
     }
 
     /**
-     * Simple sliding-window rate bucket.
+     * Thread-safe sliding-window rate bucket.
+     * All state mutations are synchronized to prevent race conditions
+     * between window reset and counter increment.
      */
     private static class RateBucket {
-        private final AtomicInteger count = new AtomicInteger(0);
-        private volatile long windowStart = System.currentTimeMillis();
+        private int count = 0;
+        private long windowStart = System.currentTimeMillis();
 
-        boolean tryConsume(int limit) {
+        synchronized boolean tryConsume(int limit) {
             long now = System.currentTimeMillis();
             if (now - windowStart > WINDOW_MS) {
-                synchronized (this) {
-                    if (now - windowStart > WINDOW_MS) {
-                        count.set(0);
-                        windowStart = now;
-                    }
-                }
+                count = 0;
+                windowStart = now;
             }
-            return count.incrementAndGet() <= limit;
+            count++;
+            return count <= limit;
         }
     }
 }

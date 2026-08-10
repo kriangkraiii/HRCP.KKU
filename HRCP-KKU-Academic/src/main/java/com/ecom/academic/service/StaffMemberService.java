@@ -3,7 +3,6 @@ package com.ecom.academic.service;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import com.ecom.academic.model.StaffMember;
@@ -12,8 +11,11 @@ import com.ecom.academic.repository.StaffMemberRepository;
 @Service
 public class StaffMemberService {
 
-    @Autowired
-    private StaffMemberRepository staffMemberRepository;
+    private final StaffMemberRepository staffMemberRepository;
+
+    public StaffMemberService(StaffMemberRepository staffMemberRepository) {
+        this.staffMemberRepository = staffMemberRepository;
+    }
 
     public List<StaffMember> findAll() {
         return staffMemberRepository.findByIsActiveTrueOrderByFirstNameAscLastNameAsc();

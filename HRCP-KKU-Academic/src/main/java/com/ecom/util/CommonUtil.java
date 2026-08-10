@@ -3,7 +3,6 @@ package com.ecom.util;
 import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
@@ -18,11 +17,14 @@ import jakarta.servlet.http.HttpServletRequest;
 @Component
 public class CommonUtil {
 
-	@Autowired
-	private JavaMailSender mailSender;
+	private final JavaMailSender mailSender;
 
-	@Autowired
-	private UserService userService;
+	private final UserService userService;
+
+	public CommonUtil(JavaMailSender mailSender, UserService userService) {
+		this.mailSender = mailSender;
+		this.userService = userService;
+	}
 
 	public Boolean sendMail(String url, String reciepentEmail) throws UnsupportedEncodingException, MessagingException {
 		MimeMessage message = mailSender.createMimeMessage();
