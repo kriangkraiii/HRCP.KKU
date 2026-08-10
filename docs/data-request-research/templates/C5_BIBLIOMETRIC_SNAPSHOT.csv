@@ -1,0 +1,2 @@
+﻿researcher_id,as_of_date,source,document_count,citation_count,h_index,q1_count,q2_count,q3_count,q4_count
+รหัสนักวิจัย (เชื่อม A1) [M],วันที่นับข้อมูล YYYY-MM-DD [M],Scopus/SciVal/Web of Science/Google Scholar [M],จำนวนผลงานในฐานข้อมูล [M],จำนวนการอ้างอิงรวม [M],h-index [M],จำนวนผลงานในวารสาร Q1 [R],จำนวนผลงานในวารสาร Q2 [R],จำนวนผลงานในวารสาร Q3 [O],จำนวนผลงานในวารสาร Q4 [O]

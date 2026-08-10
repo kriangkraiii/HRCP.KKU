@@ -1,0 +1,2 @@
+﻿output_id,researcher_id,is_part_of_thesis,degree_level,thesis_title,institution,graduation_year_be,remark
+รหัสผลงาน (เชื่อม B1) [M],รหัสนักวิจัย (เชื่อม A1) [M],เป็นส่วนหนึ่งของวิทยานิพนธ์หรือไม่ Y/N [M],ปริญญาโท/ปริญญาเอก [M],ชื่อวิทยานิพนธ์ [M],สถาบันที่สำเร็จการศึกษา [R],ปีที่สำเร็จการศึกษา พ.ศ. [R],รายละเอียดเพิ่มเติม [O]

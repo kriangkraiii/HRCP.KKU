@@ -9,7 +9,6 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.Lob;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -33,7 +32,9 @@ public class PositionDocument {
     @Column(name = "document_label")
     private String documentLabel;
 
-    @Lob
+    // ห้ามใส่ @Lob: บน PostgreSQL จะทำให้ Hibernate อ่านค่าแบบ LOB stream (OID)
+    // ซึ่งต้องมี transaction เปิดค้างไว้ตอนอ่าน -> "Unable to access lob stream"
+    // คอลัมน์เป็น TEXT อยู่แล้ว เก็บข้อความยาวได้โดยไม่ต้องใช้ LOB
     @Column(name = "json_data", columnDefinition = "TEXT")
     private String jsonData;
 
