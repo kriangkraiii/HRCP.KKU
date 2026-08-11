@@ -4,32 +4,25 @@ import jakarta.servlet.http.HttpServletRequest;
 
 /**
  * Shared utility for resolving client IP addresses consistently
- * across authentication handlers. Checks proxy headers in order:
- * X-Forwarded-For → X-Real-IP → getRemoteAddr().
+ * across authentication handlers.
+ *
+ * <p>Proxy headers are deliberately <em>not</em> read here. {@code X-Forwarded-For}
+ * and {@code X-Real-IP} are attacker-controlled on any request that does not
+ * pass through a proxy we own, and this value keys the brute-force counters —
+ * trusting it let an attacker reset their counter on every attempt by rotating
+ * the header.
+ *
+ * <p>Behind a reverse proxy, set {@code server.forward-headers-strategy=native}
+ * (see application.properties) and configure Tomcat's trusted proxy list.
+ * Tomcat then validates the headers and rewrites {@code getRemoteAddr()} itself,
+ * so this method returns the real client IP without trusting anything the
+ * client sent.
  */
 public final class ClientIpUtils {
-
-    private static final java.util.regex.Pattern IP_PATTERN =
-            java.util.regex.Pattern.compile("^[0-9a-fA-F.:]+$");
 
     private ClientIpUtils() {}
 
     public static String resolveClientIp(HttpServletRequest request) {
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isEmpty()) {
-            String firstIp = xff.split(",")[0].trim();
-            if (isValidIpFormat(firstIp)) {
-                return firstIp;
-            }
-        }
-        String realIp = request.getHeader("X-Real-IP");
-        if (realIp != null && !realIp.isEmpty() && isValidIpFormat(realIp.trim())) {
-            return realIp.trim();
-        }
         return request.getRemoteAddr();
-    }
-
-    private static boolean isValidIpFormat(String ip) {
-        return ip != null && ip.length() <= 45 && IP_PATTERN.matcher(ip).matches();
     }
 }

@@ -167,17 +167,46 @@ public class AuthFailureHandlerImpl extends SimpleUrlAuthenticationFailureHandle
                     "LOGIN_FAILED",
                     "เข้าสู่ระบบไม่สำเร็จ: " + errorMessage,
                     clientIp, "/signin", null);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
     }
 
     /**
      * Sanitize email to prevent log injection (CRLF) and strip whitespace.
      * Returns null if input is blank.
+     *
+     * <p>The value is cut at the first CR/LF/tab rather than having those
+     * characters deleted: an address ends there, and splicing the remainder onto
+     * it produced a bogus value that was then used as the brute-force counter key
+     * and as the account lookup.
      */
     static String sanitizeEmail(String raw) {
         if (raw == null || raw.isBlank()) return null;
-        return raw.strip()
-                .replaceAll("[\\r\\n\\t]", "")
-                .toLowerCase();
+
+        String value = raw.strip();
+        int cut = indexOfFirst(value, '\r', '\n', '\t');
+        if (cut >= 0) {
+            value = value.substring(0, cut);
+        }
+
+        value = value.strip().toLowerCase();
+        return value.isEmpty() ? null : value;
+    }
+
+    private static int indexOfFirst(String value, char... chars) {
+        int found = -1;
+        for (char c : chars) {
+            int i = value.indexOf(c);
+            if (i >= 0 && (found < 0 || i < found)) {
+                found = i;
+            }
+        }
+        return found;
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        log.warn("Failed to write audit log: {}", e.toString());
     }
 }

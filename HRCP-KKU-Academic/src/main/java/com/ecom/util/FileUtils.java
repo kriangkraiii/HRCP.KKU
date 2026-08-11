@@ -40,4 +40,29 @@ public final class FileUtils {
         String shortUuid = UUID.randomUUID().toString().substring(0, 8);
         return shortUuid + "_" + baseName;
     }
+
+    /**
+     * Build a Content-Disposition header for a download.
+     *
+     * <p>Stored filenames come from the upload request, so they are neither
+     * trusted in the quoted-string form nor assumed to be ASCII. Quotes,
+     * backslashes and control characters are stripped from the plain
+     * {@code filename}, and the exact name is carried in the RFC 5987
+     * {@code filename*} parameter so Thai names still arrive intact.
+     */
+    public static String contentDisposition(String originalFilename) {
+        String name = (originalFilename == null || originalFilename.isBlank())
+                ? "download"
+                : originalFilename;
+
+        String ascii = name.replaceAll("[\\p{Cntrl}\"\\\\]", "").trim();
+        if (ascii.isEmpty()) {
+            ascii = "download";
+        }
+
+        String encoded = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+
+        return "attachment; filename=\"" + ascii + "\"; filename*=UTF-8''" + encoded;
+    }
 }

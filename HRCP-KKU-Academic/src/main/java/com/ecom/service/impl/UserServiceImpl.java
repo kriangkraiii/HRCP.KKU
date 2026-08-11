@@ -44,17 +44,21 @@ public class UserServiceImpl implements UserService {
 
 	private final com.ecom.academic.repository.PositionRequestRepository positionRequestRepository;
 
+	private final com.ecom.service.ProfileImageStorage profileImageStorage;
+
 	public UserServiceImpl(
 			UserRepository userRepository,
 			PasswordEncoder passwordEncoder,
 			CommonUtil commonUtil,
 			com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository,
-			com.ecom.academic.repository.PositionRequestRepository positionRequestRepository) {
+			com.ecom.academic.repository.PositionRequestRepository positionRequestRepository,
+			com.ecom.service.ProfileImageStorage profileImageStorage) {
 		this.userRepository = userRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.commonUtil = commonUtil;
 		this.academicRequestRepository = academicRequestRepository;
 		this.positionRequestRepository = positionRequestRepository;
+		this.profileImageStorage = profileImageStorage;
 	}
 
 	@Override
@@ -191,36 +195,27 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
-	public UserDtls updateUserProfile(UserDtls user, MultipartFile img) {
-		UserDtls dbUser = userRepository.findById(user.getId()).get();
-
-		if (user.getProfileImage() != null && !user.getProfileImage().isEmpty()) {
-			dbUser.setProfileImage(user.getProfileImage());
+	public UserDtls updateUserProfile(UserDtls user, MultipartFile img, String authenticatedEmail) {
+		// The account to write is derived from the session, never from the form.
+		UserDtls dbUser = userRepository.findByEmail(authenticatedEmail);
+		if (dbUser == null) {
+			logger.warn("Profile update for unknown account {}", authenticatedEmail);
+			return null;
 		}
 
-		if (!ObjectUtils.isEmpty(dbUser)) {
-			dbUser.setTitle(user.getTitle());
-			dbUser.setFirstName(user.getFirstName());
-			dbUser.setLastName(user.getLastName());
-			dbUser.setMobileNumber(user.getMobileNumber());
-			dbUser.setAcademicPosition(user.getAcademicPosition());
-			dbUser = userRepository.save(dbUser);
+		dbUser.setTitle(user.getTitle());
+		dbUser.setFirstName(user.getFirstName());
+		dbUser.setLastName(user.getLastName());
+		dbUser.setMobileNumber(user.getMobileNumber());
+		dbUser.setAcademicPosition(user.getAcademicPosition());
+
+		// Only a file we validated and wrote ourselves may name the profile image.
+		String storedImage = profileImageStorage.store(img);
+		if (storedImage != null) {
+			dbUser.setProfileImage(storedImage);
 		}
 
-		try {
-			if (!img.isEmpty()) {
-				String uploadDir = System.getProperty("user.dir") + "/uploads/profile_img/";
-				File uploadFolder = new File(uploadDir);
-				if (!uploadFolder.exists()) {
-					uploadFolder.mkdirs();
-				}
-				Path filePath = Path.of(uploadDir, img.getOriginalFilename());
-				Files.copy(img.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-			}
-		} catch (Exception e) {
-			logger.error("Error saving profile image for user {}: {}", dbUser.getEmail(), e.getMessage(), e);
-		}
-		return dbUser;
+		return userRepository.save(dbUser);
 	}
 
 	@Override
@@ -357,13 +352,11 @@ public class UserServiceImpl implements UserService {
 
 			// Handle profile image if provided
 			if (img != null && !img.isEmpty()) {
-				try {
-					String imageName = saveProfileImage(img);
-					dbUser.setProfileImage(imageName);
-				} catch (Exception e) {
-					logger.error("Failed to save profile image for user ID: " + user.getId(), e);
-					throw new RuntimeException("Failed to save profile image: " + e.getMessage());
+				String imageName = profileImageStorage.store(img);
+				if (imageName == null) {
+					throw new IllegalArgumentException("ไฟล์รูปภาพไม่ถูกต้อง");
 				}
+				dbUser.setProfileImage(imageName);
 			}
 
 			// Save and return
@@ -431,8 +424,13 @@ public class UserServiceImpl implements UserService {
 			UserDtls user = userRepository.findById(id)
 					.orElseThrow(() -> new RuntimeException("User not found"));
 
-			// Save image file
-			String imageName = saveProfileImage(img);
+			// Save image file — rejects traversal, oversized and non-image uploads
+			String imageName = profileImageStorage.store(img);
+			if (imageName == null) {
+				result.put("success", "false");
+				result.put("error", "ไฟล์รูปภาพไม่ถูกต้อง");
+				return result;
+			}
 			user.setProfileImage(imageName);
 			userRepository.save(user);
 
@@ -455,17 +453,4 @@ public class UserServiceImpl implements UserService {
 		return result;
 	}
 
-	private String saveProfileImage(MultipartFile img) throws Exception {
-		String uploadDir = System.getProperty("user.dir") + "/uploads/profile_img/";
-		File uploadFolder = new File(uploadDir);
-		if (!uploadFolder.exists()) {
-			uploadFolder.mkdirs();
-		}
-
-		String imageName = img.getOriginalFilename();
-		Path filePath = Path.of(uploadDir, imageName);
-		Files.copy(img.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-		return imageName;
-	}
 }

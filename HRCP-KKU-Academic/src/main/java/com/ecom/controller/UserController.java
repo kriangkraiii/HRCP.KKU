@@ -2,6 +2,8 @@ package com.ecom.controller;
 
 import java.security.Principal;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.ecom.config.ClientIpUtils;
 import com.ecom.model.UserDtls;
 import com.ecom.service.AdminLogService;
 import com.ecom.service.UserService;
@@ -25,6 +28,8 @@ import jakarta.servlet.http.HttpSession;
 @Controller
 @RequestMapping("/user")
 public class UserController {
+
+	private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
 	private final UserService userService;
 
@@ -75,22 +80,28 @@ public class UserController {
 	}
 
 	@PostMapping("/update-profile")
-	public String updateProfile(@ModelAttribute UserDtls user, @RequestParam MultipartFile img, HttpSession session) {
-		if (img != null && !img.isEmpty()) {
-			user.setProfileImage(img.getOriginalFilename());
+	public String updateProfile(@ModelAttribute UserDtls user, @RequestParam MultipartFile img, Principal p,
+			HttpSession session) {
+		if (p == null) {
+			return "redirect:/signin";
 		}
-		UserDtls updateUserProfile = userService.updateUserProfile(user, img);
-		if (ObjectUtils.isEmpty(updateUserProfile)) {
+
+		// The target account comes from the session — an id in the form is ignored.
+		UserDtls updated = userService.updateUserProfile(user, img, p.getName());
+		if (ObjectUtils.isEmpty(updated)) {
 			session.setAttribute("errorMsg", "อัพเดทโปรไฟล์ไม่สำเร็จ");
 		} else {
 			session.setAttribute("succMsg", "อัพเดทโปรไฟล์สำเร็จ");
 			// Log activity
 			try {
-				adminLogService.log(user.getEmail(), user.getName(),
+				adminLogService.log(updated.getEmail(), updated.getName(),
 						"USER_UPDATE_PROFILE",
-						"อัพเดทโปรไฟล์ผู้ใช้ (" + user.getEmail() + ")",
+						"อัพเดทโปรไฟล์ผู้ใช้ (" + updated.getEmail() + ")",
 						getClientIpAddress());
-			} catch (Exception ignored) {}
+			} catch (Exception e) {
+				logger.warn("Failed to write audit log for profile update of {}: {}",
+						updated.getEmail(), e.getMessage());
+			}
 		}
 		return "redirect:/user/profile";
 	}
@@ -121,7 +132,10 @@ public class UserController {
 							"USER_CHANGE_PASSWORD",
 							"ผู้ใช้เปลี่ยนรหัสผ่าน (" + p.getName() + ")",
 							getClientIpAddress());
-				} catch (Exception ignored) {}
+				} catch (Exception e) {
+					logger.warn("Failed to write audit log for password change of {}: {}",
+							p.getName(), e.toString());
+				}
 			}
 		} else {
 			session.setAttribute("errorMsg", "รหัสผ่านปัจจุบันไม่ถูกต้อง");
@@ -131,10 +145,6 @@ public class UserController {
 	}
 
 	private String getClientIpAddress() {
-		String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
-		if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-			return xForwardedFor.split(",")[0];
-		}
-		return httpRequest.getRemoteAddr();
+		return ClientIpUtils.resolveClientIp(httpRequest);
 	}
 }

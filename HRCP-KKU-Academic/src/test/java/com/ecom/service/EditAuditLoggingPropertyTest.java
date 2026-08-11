@@ -39,7 +39,8 @@ import net.jqwik.api.Combinators;
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.jpa.show-sql=false"
+    "spring.jpa.show-sql=false",
+    "app.audit-log.async=false"
 })
 public class EditAuditLoggingPropertyTest {
 
@@ -97,7 +98,8 @@ public class EditAuditLoggingPropertyTest {
             Integer userId = user.getId();
             
             // Record the time before edit for timestamp validation
-            LocalDateTime beforeEdit = LocalDateTime.now();
+            // widened by 1ms: the timestamp column rounds to microseconds
+            LocalDateTime beforeEdit = LocalDateTime.now().minus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // When: Administrator edits the user account
             user.setName(data.getNewName());
@@ -118,7 +120,7 @@ public class EditAuditLoggingPropertyTest {
                 data.getIpAddress()
             );
             
-            LocalDateTime afterEdit = LocalDateTime.now();
+            LocalDateTime afterEdit = LocalDateTime.now().plus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // Then: An audit log entry should be created
             List<AdminLog> logs = adminLogRepository.findByAdminEmailOrderByTimestampDesc(admin.getEmail());
@@ -174,7 +176,8 @@ public class EditAuditLoggingPropertyTest {
             Integer adminId = adminToEdit.getId();
             
             // Record the time before edit for timestamp validation
-            LocalDateTime beforeEdit = LocalDateTime.now();
+            // widened by 1ms: the timestamp column rounds to microseconds
+            LocalDateTime beforeEdit = LocalDateTime.now().minus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // When: Administrator edits the admin account
             adminToEdit.setName(data.getNewName());
@@ -195,7 +198,7 @@ public class EditAuditLoggingPropertyTest {
                 data.getIpAddress()
             );
             
-            LocalDateTime afterEdit = LocalDateTime.now();
+            LocalDateTime afterEdit = LocalDateTime.now().plus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // Then: An audit log entry should be created
             List<AdminLog> logs = adminLogRepository.findByAdminEmailOrderByTimestampDesc(performingAdmin.getEmail());
@@ -350,11 +353,15 @@ public class EditAuditLoggingPropertyTest {
      * Provides arbitrary valid edit data for property testing
      */
     private Arbitrary<EditData> validEditData() {
-        Arbitrary<String> names = Arbitraries.strings()
+        // A valid name has a non-blank first and last part, which is what the
+        // application validates. Generating bare strings (" ", "abc") produced
+        // data the app is supposed to reject.
+        Arbitrary<String> nameParts = Arbitraries.strings()
             .alpha()
-            .withChars(' ')
-            .ofMinLength(3)
-            .ofMaxLength(50);
+            .ofMinLength(2)
+            .ofMaxLength(20);
+        Arbitrary<String> names = Combinators.combine(nameParts, nameParts)
+            .as((first, last) -> first + " " + last);
         
         Arbitrary<String> emailPrefixes = Arbitraries.strings()
             .alpha()

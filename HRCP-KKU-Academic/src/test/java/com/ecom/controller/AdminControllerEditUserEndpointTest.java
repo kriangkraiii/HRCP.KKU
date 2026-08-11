@@ -39,7 +39,8 @@ import java.util.List;
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.jpa.show-sql=false"
+    "spring.jpa.show-sql=false",
+    "app.audit-log.async=false"
 })
 public class AdminControllerEditUserEndpointTest {
 
@@ -131,8 +132,8 @@ public class AdminControllerEditUserEndpointTest {
         assertThat(viewName).isEqualTo("admin/edit_user");
         
         // Verify user was added to model
-        assertThat(model.containsAttribute("user")).isTrue();
-        UserDtls modelUser = (UserDtls) model.getAttribute("user");
+        assertThat(model.containsAttribute("editUser")).isTrue();
+        UserDtls modelUser = (UserDtls) model.getAttribute("editUser");
         assertThat(modelUser).isNotNull();
         assertThat(modelUser.getId()).isEqualTo(testUser.getId());
         assertThat(modelUser.getEmail()).isEqualTo(testUser.getEmail());
@@ -248,7 +249,7 @@ public class AdminControllerEditUserEndpointTest {
 
         // Then: Redirects with error message
         assertThat(result).isEqualTo("redirect:/admin/edit-user?id=" + testUser.getId());
-        assertThat(session.getAttribute("errorMsg")).isEqualTo("กรุณากรอกชื่อ");
+        assertThat(session.getAttribute("errorMsg")).isEqualTo("กรุณากรอกชื่อและนามสกุล");
     }
 
     /**

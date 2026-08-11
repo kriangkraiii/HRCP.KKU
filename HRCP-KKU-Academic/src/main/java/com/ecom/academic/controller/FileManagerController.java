@@ -8,7 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.core.io.ByteArrayResource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +23,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.ecom.util.FileUtils;
+import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.dto.FileItemDTO;
 import com.ecom.academic.model.AdminFile;
 import com.ecom.academic.model.AdminFolder;
@@ -36,6 +39,8 @@ import jakarta.servlet.http.HttpServletRequest;
 @Controller
 @RequestMapping("/admin/file-manager")
 public class FileManagerController {
+
+    private static final Logger log = LoggerFactory.getLogger(FileManagerController.class);
 
     private final FileManagementService fileManagementService;
 
@@ -173,16 +178,15 @@ public class FileManagerController {
                 return ResponseEntity.notFound().build();
             }
 
-            byte[] fileBytes = Files.readAllBytes(filePath);
             String contentType = Files.probeContentType(filePath);
             if (contentType == null) contentType = "application/octet-stream";
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + fileItem.getFileName() + "\"")
+                            FileUtils.contentDisposition(fileItem.getFileName()))
                     .contentType(MediaType.parseMediaType(contentType))
-                    .contentLength(fileBytes.length)
-                    .body(new ByteArrayResource(fileBytes));
+                    .contentLength(Files.size(filePath))
+                    .body(new org.springframework.core.io.FileSystemResource(filePath));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
@@ -366,16 +370,15 @@ public class FileManagerController {
                 return ResponseEntity.notFound().build();
             }
 
-            byte[] fileBytes = Files.readAllBytes(filePath);
             String contentType = file.getContentType();
             if (contentType == null) contentType = "application/octet-stream";
 
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + file.getOriginalFilename() + "\"")
+                            FileUtils.contentDisposition(file.getOriginalFilename()))
                     .contentType(MediaType.parseMediaType(contentType))
-                    .contentLength(fileBytes.length)
-                    .body(new ByteArrayResource(fileBytes));
+                    .contentLength(Files.size(filePath))
+                    .body(new org.springframework.core.io.FileSystemResource(filePath));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }
@@ -436,14 +439,17 @@ public class FileManagerController {
             String name = user != null ? user.getName() : email;
             String ip = getClientIpAddress();
             adminLogService.log(email, name, action, details, ip);
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
     }
 
     private String getClientIpAddress() {
-        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0];
-        }
-        return httpRequest.getRemoteAddr();
+        return ClientIpUtils.resolveClientIp(httpRequest);
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        log.warn("Failed to write audit log: {}", e.toString());
     }
 }

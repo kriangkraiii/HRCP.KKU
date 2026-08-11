@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,6 +24,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
@@ -43,6 +48,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Controller
 @RequestMapping("/user/academic")
 public class AcademicApplicantController {
+
+    private static final Logger log = LoggerFactory.getLogger(AcademicApplicantController.class);
 
     private final AcademicRequestService requestService;
 
@@ -350,7 +357,9 @@ public class AcademicApplicantController {
                     "SUBMIT_REQUEST",
                     "ส่งคำร้องประเมินผลการสอน #" + id,
                     getClientIpAddress());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
         // ส่งอีเมลแจ้งเตือนแอดมิน
         emailService.sendNewRequestNotificationToAdmins(request);
@@ -440,7 +449,9 @@ public class AcademicApplicantController {
                     "UPLOAD_REVISION",
                     "อัปโหลดเอกสารแก้ไขสำหรับคำร้อง #" + id + " (" + file.getOriginalFilename() + ")",
                     getClientIpAddress());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
         return "redirect:/user/academic/request/" + id + "?success=uploaded";
     }
@@ -496,7 +507,7 @@ public class AcademicApplicantController {
     }
 
     @GetMapping("/download-result/{id}")
-    public ResponseEntity<ByteArrayResource> downloadResult(@PathVariable Long id, Principal principal)
+    public ResponseEntity<Resource> downloadResult(@PathVariable Long id, Principal principal)
             throws IOException {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
@@ -511,17 +522,13 @@ public class AcademicApplicantController {
         }
 
         Path path = Path.of(request.getResultFilePath());
-        byte[] data = Files.readAllBytes(path);
-        ByteArrayResource resource = new ByteArrayResource(data);
-        String safeFilename = java.net.URLEncoder.encode(path.getFileName().toString(), java.nio.charset.StandardCharsets.UTF_8)
-                .replace("+", "%20");
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename*=UTF-8''" + safeFilename)
+                        FileUtils.contentDisposition(path.getFileName().toString()))
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(data.length)
-                .body(resource);
+                .contentLength(Files.size(path))
+                .body(new FileSystemResource(path));
     }
 
     private UserDtls getUser(Principal principal) {
@@ -584,10 +591,11 @@ public class AcademicApplicantController {
     }
 
     private String getClientIpAddress() {
-        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0];
-        }
-        return httpRequest.getRemoteAddr();
+        return ClientIpUtils.resolveClientIp(httpRequest);
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        log.warn("Failed to write audit log: {}", e.toString());
     }
 }

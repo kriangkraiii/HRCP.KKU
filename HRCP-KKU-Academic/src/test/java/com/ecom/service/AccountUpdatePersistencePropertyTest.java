@@ -117,12 +117,15 @@ public class AccountUpdatePersistencePropertyTest {
             "นาย", "นาง", "นางสาว", "ดร.", "ศ.ดร.", "รศ.ดร.", "ผศ.ดร."
         );
         
-        Arbitrary<String> names = Arbitraries.strings()
+        // A valid name has a non-blank first and last part, which is what the
+        // application validates. Generating bare strings (" ", "abc") produced
+        // data the app is supposed to reject.
+        Arbitrary<String> nameParts = Arbitraries.strings()
             .alpha()
-            .numeric()
-            .withChars(' ')
-            .ofMinLength(1)
-            .ofMaxLength(100);
+            .ofMinLength(2)
+            .ofMaxLength(20);
+        Arbitrary<String> names = Combinators.combine(nameParts, nameParts)
+            .as((first, last) -> first + " " + last);
         
         Arbitrary<String> emails = Arbitraries.strings()
             .alpha()

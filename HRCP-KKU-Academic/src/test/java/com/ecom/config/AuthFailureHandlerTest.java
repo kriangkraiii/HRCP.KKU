@@ -140,6 +140,9 @@ class AuthFailureHandlerTest {
         when(bruteForceProtection.getBlockDurationMinutes("ip:127.0.0.1")).thenReturn(15L);
         long until = System.currentTimeMillis() + 15 * 60_000;
         when(bruteForceProtection.getBlockedUntilMillis("ip:127.0.0.1")).thenReturn(until);
+        // the account is already at MAX_ATTEMPTS, so the handler also asks for
+        // the per-user block duration on its way through syncFailedAttemptToDb
+        when(bruteForceProtection.getBlockDurationMinutes("user:test@kku.ac.th")).thenReturn(15L);
 
         handler.onAuthenticationFailure(request, response,
                 new BadCredentialsException("Bad credentials"));

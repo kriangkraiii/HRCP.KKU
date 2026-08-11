@@ -30,6 +30,9 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionRequest;
@@ -268,7 +271,9 @@ public class AcademicAdminController {
                     if (pr.getApplicant().getEmail() != null) suggestionsSet.add(pr.getApplicant().getEmail());
                 }
             }
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
         try {
             String suggestionsJson = objectMapper.writeValueAsString(new java.util.ArrayList<>(suggestionsSet));
             model.addAttribute("searchSuggestionsJson", suggestionsJson);
@@ -858,27 +863,23 @@ public class AcademicAdminController {
     }
 
     @GetMapping("/request/{id}/attachment/{attachmentId}/download")
-    public ResponseEntity<ByteArrayResource> downloadAttachment(@PathVariable Long id,
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id,
             @PathVariable Long attachmentId) throws IOException {
         com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("Attachment not found"));
 
-        byte[] data = Files.readAllBytes(Path.of(attachment.getStoredFilePath()));
-        ByteArrayResource resource = new ByteArrayResource(data);
+        Path path = Path.of(attachment.getStoredFilePath());
 
         String contentType = attachment.getFileType().equalsIgnoreCase("PDF")
                 ? "application/pdf"
                 : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-        String safeFilename = java.net.URLEncoder.encode(attachment.getOriginalFilename(), java.nio.charset.StandardCharsets.UTF_8)
-                .replace("+", "%20");
-
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename*=UTF-8''" + safeFilename)
+                        FileUtils.contentDisposition(attachment.getOriginalFilename()))
                 .contentType(MediaType.parseMediaType(contentType))
-                .contentLength(data.length)
-                .body(resource);
+                .contentLength(Files.size(path))
+                .body(new FileSystemResource(path));
     }
 
     @PostMapping("/request/{id}/attachment/{attachmentId}/delete")
@@ -924,10 +925,11 @@ public class AcademicAdminController {
     }
 
     private String getClientIpAddress() {
-        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0];
-        }
-        return httpRequest.getRemoteAddr();
+        return ClientIpUtils.resolveClientIp(httpRequest);
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        logger.warn("Failed to write audit log: {}", e.toString());
     }
 }

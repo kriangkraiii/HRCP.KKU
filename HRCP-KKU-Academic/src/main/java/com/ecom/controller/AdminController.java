@@ -29,6 +29,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.ecom.config.ClientIpUtils;
 import com.ecom.model.AdminLog;
 import com.ecom.model.UserDtls;
 import com.ecom.service.AdminLogService;
@@ -79,11 +80,7 @@ public class AdminController {
 	}
 
 	private String getClientIpAddress(HttpServletRequest request) {
-		String xForwardedFor = request.getHeader("X-Forwarded-For");
-		if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-			return xForwardedFor.split(",")[0];
-		}
-		return request.getRemoteAddr();
+		return ClientIpUtils.resolveClientIp(request);
 	}
 
 	/**
@@ -387,11 +384,16 @@ public class AdminController {
 						SecurityContextHolder.getContext().setAuthentication(newAuth);
 					}
 
-					// Log with the correct (possibly new) email
+					// Log the admin who performed the edit, not the one who was
+					// edited — on a self-edit those are the same account, and the
+					// updated name is the more accurate one.
 					String logEmail = isSelfEdit ? updatedAdmin.getEmail() : oldEmail;
+					String logName = isSelfEdit
+							? updatedAdmin.getName()
+							: (currentAdmin != null ? currentAdmin.getName() : oldEmail);
 					adminLogService.log(
 							logEmail,
-							updatedAdmin.getName(),
+							logName,
 							"EDIT_ADMIN_ACCOUNT",
 							"แก้ไขบัญชีแอดมิน ID:" + user.getId() + " (" + user.getEmail() + ")",
 							getClientIpAddress(request));
@@ -537,12 +539,15 @@ public class AdminController {
 	}
 
 	@PostMapping("/update-profile")
-	public String updateProfile(@ModelAttribute UserDtls user, @RequestParam MultipartFile img, HttpSession session) {
-		if (img != null && !img.isEmpty()) {
-			user.setProfileImage(img.getOriginalFilename());
+	public String updateProfile(@ModelAttribute UserDtls user, @RequestParam MultipartFile img, Principal p,
+			HttpSession session) {
+		if (p == null) {
+			return "redirect:/signin";
 		}
-		UserDtls updateUserProfile = userService.updateUserProfile(user, img);
-		if (ObjectUtils.isEmpty(updateUserProfile)) {
+
+		// The target account comes from the session — an id in the form is ignored.
+		UserDtls updated = userService.updateUserProfile(user, img, p.getName());
+		if (ObjectUtils.isEmpty(updated)) {
 			session.setAttribute("errorMsg", "อัพเดทโปรไฟล์ไม่สำเร็จ");
 		} else {
 			session.setAttribute("succMsg", "อัพเดทโปรไฟล์สำเร็จ");
@@ -640,8 +645,6 @@ public class AdminController {
 	}
 
 	private String escapeCsv(String value) {
-		if (value == null)
-			return "";
-		return value.replace("\"", "\"\"");
+		return CsvExportUtils.escapeCsv(value);
 	}
 }

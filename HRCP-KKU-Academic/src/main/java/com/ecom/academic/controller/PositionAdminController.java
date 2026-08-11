@@ -25,6 +25,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
+import org.springframework.core.io.FileSystemResource;
+import org.springframework.core.io.Resource;
+import com.ecom.util.FileUtils;
+import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionDocumentEditLog;
@@ -482,24 +486,23 @@ public class PositionAdminController {
     }
 
     @GetMapping("/request/{id}/attachment/{attachmentId}/download")
-    public ResponseEntity<ByteArrayResource> downloadAttachment(@PathVariable Long id,
+    public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id,
             @PathVariable Long attachmentId) throws IOException {
         PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("ไม่พบเอกสาร"));
 
-        byte[] data = Files.readAllBytes(Path.of(attachment.getStoredFilePath()));
+        Path path = Path.of(attachment.getStoredFilePath());
 
         String contentType = attachment.getFileType().equalsIgnoreCase("PDF")
                 ? "application/pdf"
                 : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-        String safeFilename = java.net.URLEncoder.encode(attachment.getOriginalFilename(),
-                java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
-
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safeFilename)
-                .body(new ByteArrayResource(data));
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        FileUtils.contentDisposition(attachment.getOriginalFilename()))
+                .contentLength(Files.size(path))
+                .body(new FileSystemResource(path));
     }
 
     @PostMapping("/request/{id}/attachment/{attachmentId}/delete")
@@ -526,11 +529,7 @@ public class PositionAdminController {
     }
 
     private String getClientIpAddress() {
-        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0];
-        }
-        return httpRequest.getRemoteAddr();
+        return ClientIpUtils.resolveClientIp(httpRequest);
     }
 
     @SuppressWarnings("unchecked")

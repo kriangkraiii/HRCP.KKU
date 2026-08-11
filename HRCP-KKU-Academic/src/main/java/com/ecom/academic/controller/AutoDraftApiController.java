@@ -3,6 +3,8 @@ package com.ecom.academic.controller;
 import java.security.Principal;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -21,6 +23,9 @@ import com.ecom.repository.UserRepository;
 @RestController
 @RequestMapping("/api")
 public class AutoDraftApiController {
+
+    private static final Logger log = LoggerFactory.getLogger(AutoDraftApiController.class);
+    private static final String ROLE_ADMIN = "ROLE_ADMIN";
 
     private final AcademicRequestService academicService;
 
@@ -52,6 +57,9 @@ public class AutoDraftApiController {
             if (request == null)
                 return ResponseEntity.notFound().build();
 
+            if (!mayEdit(user, request.getApplicant()))
+                return ResponseEntity.status(403).build();
+
             String label = "เอกสารที่ " + docType;
             academicService.saveDraft(request, docType, jsonData, label, null);
 
@@ -59,7 +67,7 @@ public class AutoDraftApiController {
 
             return ResponseEntity.ok(Map.of("status", "saved", "type", "academic"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return internalError("academic draft", requestId, e);
         }
     }
 
@@ -79,8 +87,11 @@ public class AutoDraftApiController {
             if (request == null)
                 return ResponseEntity.notFound().build();
 
+            if (!mayEdit(user, request.getApplicant()))
+                return ResponseEntity.status(403).build();
+
             String label = positionService.getDocLabel(docType);
-            String filledBy = "ROLE_ADMIN".equals(user.getRole()) ? "ADMIN" : "APPLICANT";
+            String filledBy = ROLE_ADMIN.equals(user.getRole()) ? "ADMIN" : "APPLICANT";
             positionService.saveDraft(request, docType, jsonData, label, filledBy);
 
             // Log every document edit
@@ -89,7 +100,7 @@ public class AutoDraftApiController {
 
             return ResponseEntity.ok(Map.of("status", "saved", "type", "position"));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return internalError("position draft", requestId, e);
         }
     }
 
@@ -108,7 +119,7 @@ public class AutoDraftApiController {
 
             return ResponseEntity.ok(Map.of("enabled", newVal));
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(Map.of("error", e.getMessage()));
+            return internalError("auto-draft toggle", null, e);
         }
     }
 
@@ -116,5 +127,23 @@ public class AutoDraftApiController {
         if (principal == null)
             return null;
         return userRepository.findByEmail(principal.getName());
+    }
+
+    /** Admins may edit any request; everyone else only their own. */
+    private boolean mayEdit(UserDtls user, UserDtls applicant) {
+        if (ROLE_ADMIN.equals(user.getRole()))
+            return true;
+        return applicant != null && applicant.getId() != null
+                && applicant.getId().equals(user.getId());
+    }
+
+    /**
+     * Logs the real cause server-side and returns an opaque body — exception
+     * text has leaked database hosts and filesystem paths to callers before.
+     */
+    private ResponseEntity<Map<String, String>> internalError(String operation, Long requestId, Exception e) {
+        log.error("Auto-draft {} failed for request {}: {}", operation, requestId, e.toString(), e);
+        return ResponseEntity.internalServerError()
+                .body(Map.of("error", "ไม่สามารถบันทึกร่างเอกสารได้"));
     }
 }

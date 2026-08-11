@@ -38,6 +38,9 @@ import com.ecom.repository.UserRepository;
  * - GET /petitions/{id} shows petition details correctly
  */
 @SpringBootTest
+// Called without a web request, so nothing else keeps the persistence
+// context open for lazily-loaded associations.
+@org.springframework.transaction.annotation.Transactional
 @TestPropertySource(properties = {
     "spring.datasource.url=jdbc:h2:mem:testdb",
     "spring.datasource.driver-class-name=org.h2.Driver",
@@ -61,6 +64,19 @@ public class PetitionControllerTest {
 
     @Autowired
     private PetitionStatusRepository petitionStatusRepository;
+
+    @jakarta.persistence.PersistenceContext
+    private jakarta.persistence.EntityManager entityManager;
+
+    /**
+     * The service writes statuses through their own repository, so a parent
+     * entity already in the persistence context keeps a stale collection.
+     * Flush and detach everything to force a real read.
+     */
+    private void reloadFromDatabase() {
+        entityManager.flush();
+        entityManager.clear();
+    }
 
     private UserDtls testUser;
     private MockPrincipal mockPrincipal;
@@ -173,6 +189,7 @@ public class PetitionControllerTest {
         assertThat(redirectAttributes.getFlashAttributes()).containsKey("success");
         
         // Verify petition was created in database
+        reloadFromDatabase();
         List<Petition> petitions = petitionRepository.findAll();
         assertThat(petitions).hasSize(1);
         
@@ -257,7 +274,8 @@ public class PetitionControllerTest {
         Petition petition = petitionService.createPetition(
             testUser.getId(), "Test Petition", "Test Description"
         );
-        
+        reloadFromDatabase();
+
         Model model = new ExtendedModelMap();
 
         // When: User views petition

@@ -23,6 +23,14 @@ import com.ecom.repository.AdminLogRepository;
  * - DELETE_ADMIN_ACCOUNT
  */
 @SpringBootTest
+@org.springframework.test.context.TestPropertySource(properties = {
+    "spring.datasource.url=jdbc:h2:mem:adminlogdb",
+    "spring.datasource.driver-class-name=org.h2.Driver",
+    "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+    "spring.jpa.hibernate.ddl-auto=create-drop",
+    "spring.jpa.show-sql=false",
+    "app.audit-log.async=false"
+})
 @Transactional
 public class AdminLogServiceNewActionTypesTest {
 

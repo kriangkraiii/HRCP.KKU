@@ -7,12 +7,8 @@ import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,6 +17,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecom.academic.service.DocumentGenerationService;
+import com.ecom.model.UserDtls;
+import com.ecom.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
@@ -37,8 +35,12 @@ public class DocumentPreviewController {
 
     private final DocumentGenerationService documentService;
 
-    public DocumentPreviewController(DocumentGenerationService documentService) {
+    private final UserRepository userRepository;
+
+    public DocumentPreviewController(DocumentGenerationService documentService,
+            UserRepository userRepository) {
         this.documentService = documentService;
+        this.userRepository = userRepository;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -46,12 +48,28 @@ public class DocumentPreviewController {
     /**
      * POST /api/academic/preview/{docType}
      * รับ form data เป็น JSON, สร้าง docx จาก template, ส่ง DOCX กลับ
+     *
+     * Applicants may only render their own document types; the rest belong to
+     * the admin side of the workflow.
      */
     @PostMapping("/{docType}")
     public ResponseEntity<byte[]> previewDocument(
             @PathVariable int docType,
             @RequestParam(value = "format", defaultValue = "docx") String format,
-            @RequestBody Map<String, String> formData) {
+            @RequestBody Map<String, String> formData,
+            Principal principal) {
+
+        if (principal == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        UserDtls user = userRepository.findByEmail(principal.getName());
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+        if (!"ROLE_ADMIN".equals(user.getRole()) && !APPLICANT_ALLOWED_DOCS.contains(docType)) {
+            logger.warn("Applicant {} attempted to preview admin document type {}", user.getEmail(), docType);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         try {
             // ============ Document 6: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============

@@ -154,8 +154,31 @@ public class UserDtls {
 		return name;
 	}
 
+	/**
+	 * Legacy setter kept for callers that still deal in a single full name.
+	 *
+	 * It also splits into firstName/lastName because those are the fields
+	 * {@link #getName()} and every validation path actually read — writing only
+	 * the legacy column made the name silently disappear.
+	 */
 	public void setName(String name) {
 		this.name = name;
+
+		if (name == null || name.isBlank()) {
+			this.firstName = null;
+			this.lastName = null;
+			return;
+		}
+
+		String trimmed = name.trim();
+		int lastSpace = trimmed.lastIndexOf(' ');
+		if (lastSpace < 0) {
+			this.firstName = trimmed;
+			this.lastName = null;
+		} else {
+			this.firstName = trimmed.substring(0, lastSpace).trim();
+			this.lastName = trimmed.substring(lastSpace + 1).trim();
+		}
 	}
 
 	public String getMobileNumber() {

@@ -4,13 +4,20 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.Principal;
+import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicLong;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -30,11 +37,28 @@ import com.ecom.repository.UserRepository;
 @Controller
 public class ChunkedUploadController {
 
+    private static final Logger log = LoggerFactory.getLogger(ChunkedUploadController.class);
+
     private static final long CHUNK_SIZE = 5L * 1024 * 1024; // 5MB
     private static final String TEMP_DIR = "uploads/chunks";
+    private static final String ADMIN_STORAGE = "admin";
+    private static final int MAX_CHUNKS = 200_000; // 200k * 5MB ≈ 1TB, well past any real upload
+    private static final Duration SESSION_TTL = Duration.ofHours(6);
 
-    // Track active uploads: uploadId -> metadata
-    private final ConcurrentHashMap<String, UploadSession> activeSessions = new ConcurrentHashMap<>();
+    /**
+     * Track active uploads: uploadId -> metadata.
+     * Entries expire so that abandoned uploads (browser closed before /complete
+     * or /abort) cannot accumulate in memory or leave chunk directories behind.
+     */
+    private final Cache<String, UploadSession> activeSessions = Caffeine.newBuilder()
+            .expireAfterAccess(SESSION_TTL)
+            .maximumSize(10_000)
+            .<String, UploadSession>removalListener((id, session, cause) -> {
+                if (session != null && cause.wasEvicted()) {
+                    cleanupChunks(session);
+                }
+            })
+            .build();
 
     private final UserStorageService userStorageService;
 
@@ -72,8 +96,22 @@ public class ChunkedUploadController {
             return ResponseEntity.ok(result);
         }
 
+        // Admin storage is not something a request parameter may opt into.
+        boolean wantsAdminStorage = ADMIN_STORAGE.equals(storageType);
+        if (wantsAdminStorage && !"ROLE_ADMIN".equals(user.getRole())) {
+            result.put("success", false);
+            result.put("message", "ไม่มีสิทธิ์อัปโหลดไปยังพื้นที่เก็บข้อมูลของผู้ดูแลระบบ");
+            return ResponseEntity.ok(result);
+        }
+
+        if (fileSize <= 0 || totalChunks <= 0 || totalChunks > MAX_CHUNKS) {
+            result.put("success", false);
+            result.put("message", "ข้อมูลการอัปโหลดไม่ถูกต้อง");
+            return ResponseEntity.ok(result);
+        }
+
         // Validate file type and storage quota (only for user storage)
-        if ("user".equals(storageType)) {
+        if (!wantsAdminStorage) {
             try {
                 userStorageService.validateFileType(filename);
             } catch (IllegalArgumentException e) {
@@ -103,11 +141,9 @@ public class ChunkedUploadController {
         }
 
         UploadSession session = new UploadSession();
-        session.uploadId = uploadId;
         session.filename = filename;
         session.fileSize = fileSize;
         session.totalChunks = totalChunks;
-        session.receivedChunks = 0;
         session.folderId = folderId;
         session.ownerId = user.getId();
         session.ownerEmail = user.getEmail();
@@ -133,24 +169,42 @@ public class ChunkedUploadController {
 
         Map<String, Object> result = new HashMap<>();
 
-        UploadSession session = activeSessions.get(uploadId);
+        UploadSession session = activeSessions.getIfPresent(uploadId);
         if (session == null) {
             result.put("success", false);
             result.put("message", "Upload session ไม่พบหรือหมดอายุ");
             return ResponseEntity.ok(result);
         }
 
+        if (chunkIndex < 0 || chunkIndex >= session.totalChunks) {
+            result.put("success", false);
+            result.put("message", "ลำดับ chunk ไม่ถูกต้อง");
+            return ResponseEntity.ok(result);
+        }
+
+        // Enforce the declared size against what is actually being sent, so the
+        // quota check performed at init cannot be sidestepped.
+        long afterThisChunk = session.bytesReceived.addAndGet(chunk.getSize());
+        if (afterThisChunk > session.fileSize) {
+            session.bytesReceived.addAndGet(-chunk.getSize());
+            result.put("success", false);
+            result.put("message", "ขนาดไฟล์ที่อัปโหลดเกินกว่าที่แจ้งไว้");
+            return ResponseEntity.ok(result);
+        }
+
         try {
             Path chunkFile = session.chunkDir.resolve("chunk_" + String.format("%06d", chunkIndex));
-            Files.copy(chunk.getInputStream(), chunkFile);
-            session.receivedChunks++;
+            Files.copy(chunk.getInputStream(), chunkFile, StandardCopyOption.REPLACE_EXISTING);
+            int received = session.receivedChunks.incrementAndGet();
 
             result.put("success", true);
-            result.put("received", session.receivedChunks);
+            result.put("received", received);
             result.put("total", session.totalChunks);
         } catch (IOException e) {
+            session.bytesReceived.addAndGet(-chunk.getSize());
+            log.error("Failed to persist chunk {} of upload {}: {}", chunkIndex, uploadId, e.getMessage(), e);
             result.put("success", false);
-            result.put("message", "บันทึก chunk ไม่สำเร็จ: " + e.getMessage());
+            result.put("message", "บันทึก chunk ไม่สำเร็จ");
         }
 
         return ResponseEntity.ok(result);
@@ -164,7 +218,7 @@ public class ChunkedUploadController {
 
         Map<String, Object> result = new HashMap<>();
 
-        UploadSession session = activeSessions.get(uploadId);
+        UploadSession session = activeSessions.getIfPresent(uploadId);
         if (session == null) {
             result.put("success", false);
             result.put("message", "Upload session ไม่พบ");
@@ -174,7 +228,7 @@ public class ChunkedUploadController {
         try {
             // Determine storage directory
             String storageRoot;
-            if ("admin".equals(session.storageType)) {
+            if (ADMIN_STORAGE.equals(session.storageType)) {
                 storageRoot = "uploads/admin-storage";
             } else {
                 storageRoot = "uploads/user-storage/" + session.ownerId;
@@ -200,32 +254,36 @@ public class ChunkedUploadController {
                 }
             }
 
+            // Record what was actually written, not what the client claimed at init.
+            long actualSize = Files.size(finalPath);
+
             // Save to DB
             String savedName;
-            if ("admin".equals(session.storageType)) {
+            if (ADMIN_STORAGE.equals(session.storageType)) {
                 AdminFile saved = adminStorageService.saveUploadedFile(
-                        session.filename, finalPath.toString(), session.fileSize,
+                        session.filename, finalPath.toString(), actualSize,
                         detectContentType(session.filename), session.folderId, session.ownerEmail);
                 savedName = saved.getOriginalFilename();
             } else {
                 UserFile saved = userStorageService.saveUploadedFile(
-                        session.filename, finalPath.toString(), session.fileSize,
+                        session.filename, finalPath.toString(), actualSize,
                         detectContentType(session.filename), session.folderId, session.ownerId);
                 savedName = saved.getOriginalFilename();
             }
 
             // Cleanup chunks
             cleanupChunks(session);
-            activeSessions.remove(uploadId);
+            activeSessions.invalidate(uploadId);
 
             result.put("success", true);
             result.put("message", "อัปโหลด '" + savedName + "' สำเร็จ");
 
         } catch (Exception e) {
             cleanupChunks(session);
-            activeSessions.remove(uploadId);
+            activeSessions.invalidate(uploadId);
+            log.error("Failed to assemble upload {}: {}", uploadId, e.getMessage(), e);
             result.put("success", false);
-            result.put("message", "รวมไฟล์ไม่สำเร็จ: " + e.getMessage());
+            result.put("message", "รวมไฟล์ไม่สำเร็จ");
         }
 
         return ResponseEntity.ok(result);
@@ -238,8 +296,9 @@ public class ChunkedUploadController {
     public ResponseEntity<Map<String, Object>> abortUpload(@RequestParam String uploadId) {
         Map<String, Object> result = new HashMap<>();
 
-        UploadSession session = activeSessions.remove(uploadId);
+        UploadSession session = activeSessions.getIfPresent(uploadId);
         if (session != null) {
+            activeSessions.invalidate(uploadId);
             cleanupChunks(session);
         }
 
@@ -257,12 +316,16 @@ public class ChunkedUploadController {
     private void cleanupChunks(UploadSession session) {
         try {
             if (session.chunkDir != null && Files.exists(session.chunkDir)) {
-                Files.walk(session.chunkDir)
-                        .sorted(java.util.Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(java.io.File::delete);
+                try (java.util.stream.Stream<Path> paths = Files.walk(session.chunkDir)) {
+                    paths.sorted(java.util.Comparator.reverseOrder())
+                            .map(Path::toFile)
+                            .forEach(java.io.File::delete);
+                }
             }
-        } catch (IOException ignored) {}
+        } catch (IOException e) {
+            // Leaves a temp directory behind; worth knowing about when disk fills.
+            log.warn("Failed to clean up chunk directory {}: {}", session.chunkDir, e.toString());
+        }
     }
 
     private String detectContentType(String filename) {
@@ -289,11 +352,12 @@ public class ChunkedUploadController {
 
     // Inner class for session tracking
     private static class UploadSession {
-        String uploadId;
         String filename;
         long fileSize;
         int totalChunks;
-        int receivedChunks;
+        final AtomicLong bytesReceived = new AtomicLong();
+        final java.util.concurrent.atomic.AtomicInteger receivedChunks =
+                new java.util.concurrent.atomic.AtomicInteger();
         Long folderId;
         Integer ownerId;
         String ownerEmail;

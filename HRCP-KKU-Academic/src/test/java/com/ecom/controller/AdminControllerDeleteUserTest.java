@@ -35,7 +35,8 @@ import com.ecom.service.UserService;
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.jpa.show-sql=false"
+    "spring.jpa.show-sql=false",
+    "app.audit-log.async=false"
 })
 public class AdminControllerDeleteUserTest {
 

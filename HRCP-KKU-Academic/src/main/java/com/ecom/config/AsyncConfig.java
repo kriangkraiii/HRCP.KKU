@@ -17,8 +17,19 @@ import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 @EnableAsync
 public class AsyncConfig {
 
+    /**
+     * @param async when false, audit-log writes run on the calling thread. Tests
+     *              rely on this so they can assert on the row straight after the
+     *              call instead of racing the pool; it also lets an operator make
+     *              audit logging synchronous if losing an entry is unacceptable.
+     */
     @Bean("auditLogExecutor")
-    public Executor auditLogExecutor() {
+    public Executor auditLogExecutor(
+            @org.springframework.beans.factory.annotation.Value("${app.audit-log.async:true}") boolean async) {
+        if (!async) {
+            return Runnable::run;
+        }
+
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
         executor.setCorePoolSize(2);
         executor.setMaxPoolSize(5);

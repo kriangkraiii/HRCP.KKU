@@ -1,7 +1,6 @@
 package com.ecom.service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.List;
 
 import org.springframework.data.domain.Page;
@@ -85,17 +84,30 @@ public class AdminLogService {
                 predicates.add(cb.equal(root.get("action"), action.trim()));
             }
 
-            if (dateFrom != null && !dateFrom.isEmpty()) {
-                LocalDateTime startDate = LocalDate.parse(dateFrom).atStartOfDay();
-                predicates.add(cb.greaterThanOrEqualTo(root.get("timestamp"), startDate));
+            // Dates arrive as raw query parameters; a malformed one must narrow
+            // nothing rather than blow up the whole page with a 500.
+            LocalDate from = parseDateOrNull(dateFrom);
+            if (from != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("timestamp"), from.atStartOfDay()));
             }
 
-            if (dateTo != null && !dateTo.isEmpty()) {
-                LocalDateTime endDate = LocalDate.parse(dateTo).atTime(23, 59, 59);
-                predicates.add(cb.lessThanOrEqualTo(root.get("timestamp"), endDate));
+            LocalDate to = parseDateOrNull(dateTo);
+            if (to != null) {
+                predicates.add(cb.lessThanOrEqualTo(root.get("timestamp"), to.atTime(23, 59, 59)));
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };
+    }
+
+    private static LocalDate parseDateOrNull(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return LocalDate.parse(value);
+        } catch (java.time.format.DateTimeParseException e) {
+            return null;
+        }
     }
 }

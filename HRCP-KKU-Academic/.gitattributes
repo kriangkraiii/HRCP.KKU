@@ -1,0 +1,6 @@
+# สคริปต์ที่รันใน container ต้องเป็น LF เสมอ ถึงจะ checkout บน Windows
+# ไม่งั้น bash ใน container เจอ \r แล้วพัง ("bad interpreter", "command not found")
+*.sh text eol=lf
+mvnw text eol=lf
+Dockerfile text eol=lf
+docker-compose.yml text eol=lf

@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,6 +34,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 @Service
 public class PositionRequestService {
+
+    private static final Logger log = LoggerFactory.getLogger(PositionRequestService.class);
 
     private final PositionRequestRepository requestRepository;
 
@@ -251,7 +255,8 @@ public class PositionRequestService {
         try {
             emailService.sendStatusChangeEmail(request, old, newStatus);
         } catch (Exception e) {
-            System.err.println("Email notification failed on status update: " + e.getMessage());
+            log.error("Email notification failed on status update for request {}: {}",
+                    requestId, e.getMessage(), e);
         }
 
         return request;
@@ -268,8 +273,9 @@ public class PositionRequestService {
         statusHistoryRepository.save(h);
     }
 
+    /** @return status changes, most recent first */
     public List<PositionStatusHistory> getStatusHistory(Long requestId) {
-        return statusHistoryRepository.findByRequestId(requestId);
+        return statusHistoryRepository.findByRequestIdOrderByChangedAtDesc(requestId);
     }
 
     // ================== Document Edit Logging ==================

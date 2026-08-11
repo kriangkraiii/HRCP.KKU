@@ -1,5 +1,9 @@
 HELP.md
 target/
+
+# ความลับของ server — ห้าม commit (.env.example คือตัวอย่างที่ commit ได้)
+.env
+!.env.example
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/

@@ -168,7 +168,9 @@ public class HomeController {
 					"FIRST_LOGIN_SET_PASSWORD",
 					"ตั้งรหัสผ่านครั้งแรกสำเร็จ (" + email + ")",
 					null, "/first-login/set-password", null);
-		} catch (Exception ignored) {}
+		} catch (Exception e) {
+            auditLogFailed(e);
+        }
 
 		// Clear session OTP data
 		session.removeAttribute("otpEmail");
@@ -247,9 +249,16 @@ public class HomeController {
 					"RESET_PASSWORD",
 					"รีเซ็ตรหัสผ่านสำเร็จ (" + userByToken.getEmail() + ")",
 					null, "/reset-password", null);
-		} catch (Exception ignored) {}
+		} catch (Exception e) {
+            auditLogFailed(e);
+        }
 
 		session.setAttribute("succMsg", "รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบใหม่");
 		return "redirect:/signin";
+	}
+
+	/** Audit logging must never break the user's action, but it must leave a trace. */
+	private void auditLogFailed(Exception e) {
+		logger.warn("Failed to write audit log: {}", e.toString());
 	}
 }

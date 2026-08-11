@@ -65,11 +65,11 @@ public class SecurityConfig {
                                         // Force eager loading so the XSRF-TOKEN cookie is always set.
                                         var handler = new org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler();
                                         handler.setCsrfRequestAttributeName(null); // force eager token resolution
+                                        // No exemptions: /admin/toggle-image-mode has no handler at
+                                        // all, and /admin/activity-logs/export is a GET, which CSRF
+                                        // does not guard anyway. Listing them only obscured the policy.
                                         csrf.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
-                                                        .csrfTokenRequestHandler(handler)
-                                                        .ignoringRequestMatchers(
-                                                                        "/admin/toggle-image-mode",
-                                                                        "/admin/activity-logs/export");
+                                                        .csrfTokenRequestHandler(handler);
                                 })
                                 // Session management
                                 .sessionManagement(session -> session
@@ -87,7 +87,11 @@ public class SecurityConfig {
                                                                 "/2fa/**",
                                                                 "/favicon.ico", "/error")
                                                 .permitAll()
-                                                // Lock down Actuator endpoints
+                                                // Container health probes are unauthenticated by
+                                                // nature; everything else on actuator stays locked.
+                                                .requestMatchers("/actuator/health", "/actuator/health/**")
+                                                .permitAll()
+                                                // Lock down remaining Actuator endpoints
                                                 .requestMatchers("/actuator/**").hasRole("ADMIN")
                                                 .requestMatchers("/admin/**").hasRole("ADMIN")
                                                 .requestMatchers("/user/**").hasRole("USER")

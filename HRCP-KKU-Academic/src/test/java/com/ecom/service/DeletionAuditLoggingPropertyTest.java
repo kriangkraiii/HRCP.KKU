@@ -38,7 +38,8 @@ import net.jqwik.api.Combinators;
     "spring.datasource.driver-class-name=org.h2.Driver",
     "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
     "spring.jpa.hibernate.ddl-auto=create-drop",
-    "spring.jpa.show-sql=false"
+    "spring.jpa.show-sql=false",
+    "app.audit-log.async=false"
 })
 public class DeletionAuditLoggingPropertyTest {
 
@@ -97,7 +98,8 @@ public class DeletionAuditLoggingPropertyTest {
             String userEmail = user.getEmail();
             
             // Record the time before deletion for timestamp validation
-            LocalDateTime beforeDeletion = LocalDateTime.now();
+            // widened by 1ms: the timestamp column rounds to microseconds
+            LocalDateTime beforeDeletion = LocalDateTime.now().minus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // When: Administrator deletes the user account
             Boolean deleted = userService.deleteUserById(userId);
@@ -112,7 +114,7 @@ public class DeletionAuditLoggingPropertyTest {
                 data.getIpAddress()
             );
             
-            LocalDateTime afterDeletion = LocalDateTime.now();
+            LocalDateTime afterDeletion = LocalDateTime.now().plus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // Then: An audit log entry should be created
             List<AdminLog> logs = adminLogRepository.findByAdminEmailOrderByTimestampDesc(admin.getEmail());
@@ -169,7 +171,8 @@ public class DeletionAuditLoggingPropertyTest {
             String adminEmail = adminToDelete.getEmail();
             
             // Record the time before deletion for timestamp validation
-            LocalDateTime beforeDeletion = LocalDateTime.now();
+            // widened by 1ms: the timestamp column rounds to microseconds
+            LocalDateTime beforeDeletion = LocalDateTime.now().minus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // When: Administrator deletes the admin account
             Boolean deleted = userService.deleteUserById(adminId);
@@ -184,7 +187,7 @@ public class DeletionAuditLoggingPropertyTest {
                 data.getIpAddress()
             );
             
-            LocalDateTime afterDeletion = LocalDateTime.now();
+            LocalDateTime afterDeletion = LocalDateTime.now().plus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // Then: An audit log entry should be created
             List<AdminLog> logs = adminLogRepository.findByAdminEmailOrderByTimestampDesc(performingAdmin.getEmail());
@@ -333,11 +336,15 @@ public class DeletionAuditLoggingPropertyTest {
      * Provides arbitrary valid admin and user data for property testing
      */
     private Arbitrary<AdminUserData> validAdminUserData() {
-        Arbitrary<String> names = Arbitraries.strings()
+        // A valid name has a non-blank first and last part, which is what the
+        // application validates. Generating bare strings (" ", "abc") produced
+        // data the app is supposed to reject.
+        Arbitrary<String> nameParts = Arbitraries.strings()
             .alpha()
-            .withChars(' ')
-            .ofMinLength(3)
-            .ofMaxLength(50);
+            .ofMinLength(2)
+            .ofMaxLength(20);
+        Arbitrary<String> names = Combinators.combine(nameParts, nameParts)
+            .as((first, last) -> first + " " + last);
         
         Arbitrary<String> emailPrefixes = Arbitraries.strings()
             .alpha()

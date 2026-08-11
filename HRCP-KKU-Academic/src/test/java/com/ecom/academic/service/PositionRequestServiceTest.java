@@ -211,10 +211,11 @@ public class PositionRequestServiceTest {
             positionService.updateStatus(request.getId(), PositionRequestStatus.DOCUMENT_VERIFICATION,
                     testAdmin, "โดยแอดมิน");
 
+            // getStatusHistory returns most-recent-first
             List<PositionStatusHistory> history = positionService.getStatusHistory(request.getId());
-            PositionStatusHistory lastEntry = history.get(history.size() - 1);
-            assertThat(lastEntry.getChangedBy()).isNotNull();
-            assertThat(lastEntry.getChangedBy().getId()).isEqualTo(testAdmin.getId());
+            PositionStatusHistory latestEntry = history.get(0);
+            assertThat(latestEntry.getChangedBy()).isNotNull();
+            assertThat(latestEntry.getChangedBy().getId()).isEqualTo(testAdmin.getId());
         }
 
         @Test

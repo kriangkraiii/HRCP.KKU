@@ -3,6 +3,8 @@ package com.ecom.academic.controller;
 import java.security.Principal;
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.dto.PetitionForm;
 import com.ecom.academic.model.Petition;
 import com.ecom.academic.service.PetitionService;
@@ -30,6 +33,8 @@ import jakarta.validation.Valid;
 @Controller
 @RequestMapping("/petitions")
 public class PetitionController {
+
+    private static final Logger log = LoggerFactory.getLogger(PetitionController.class);
 
     private final PetitionService petitionService;
 
@@ -100,7 +105,9 @@ public class PetitionController {
                         "CREATE_PETITION",
                         "สร้างคำร้องทั่วไป: " + form.getTitle(),
                         getClientIpAddress());
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
             redirectAttributes.addFlashAttribute("success", "ยื่นคำร้องสำเร็จ");
             return "redirect:/petitions/" + petition.getId();
@@ -147,10 +154,11 @@ public class PetitionController {
     }
 
     private String getClientIpAddress() {
-        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0];
-        }
-        return httpRequest.getRemoteAddr();
+        return ClientIpUtils.resolveClientIp(httpRequest);
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        log.warn("Failed to write audit log: {}", e.toString());
     }
 }

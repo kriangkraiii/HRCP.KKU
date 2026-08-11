@@ -99,7 +99,8 @@ public class StatusAdditionTimestampPropertyTest {
             );
             
             // Record the time before adding status
-            LocalDateTime beforeAddStatus = LocalDateTime.now();
+            // widened by 1ms: the timestamp column rounds to microseconds
+            LocalDateTime beforeAddStatus = LocalDateTime.now().minus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // When: A new status is added to the petition
             PetitionStatus addedStatus = petitionService.addStatus(
@@ -108,7 +109,7 @@ public class StatusAdditionTimestampPropertyTest {
                 "Test note for " + statusType.getDisplayName()
             );
             
-            LocalDateTime afterAddStatus = LocalDateTime.now();
+            LocalDateTime afterAddStatus = LocalDateTime.now().plus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // Then: The created PetitionStatus should have a non-null timestamp
             assertThat(addedStatus).isNotNull();
@@ -123,7 +124,11 @@ public class StatusAdditionTimestampPropertyTest {
             PetitionStatus retrievedStatus = petitionStatusRepository.findById(addedStatus.getId())
                 .orElseThrow();
             assertThat(retrievedStatus.getCreatedAt()).isNotNull();
-            assertThat(retrievedStatus.getCreatedAt()).isEqualTo(addedStatus.getCreatedAt());
+            // the timestamp column rounds to microseconds, so the reloaded value can
+            // differ from the in-memory one by a fraction of a millisecond
+            assertThat(retrievedStatus.getCreatedAt())
+                .isCloseTo(addedStatus.getCreatedAt(),
+                    org.assertj.core.api.Assertions.within(2, java.time.temporal.ChronoUnit.MILLIS));
             
             // Clean up
             petitionStatusRepository.deleteAll();
@@ -167,7 +172,8 @@ public class StatusAdditionTimestampPropertyTest {
             
             // When: Multiple statuses are added in sequence
             for (int j = 0; j < statusSequence.length; j++) {
-                LocalDateTime beforeAdd = LocalDateTime.now();
+                // widened by 1ms: the timestamp column rounds to microseconds
+            LocalDateTime beforeAdd = LocalDateTime.now().minus(1, java.time.temporal.ChronoUnit.MILLIS);
                 
                 PetitionStatus addedStatus = petitionService.addStatus(
                     petition.getId(),
@@ -175,7 +181,7 @@ public class StatusAdditionTimestampPropertyTest {
                     "Status update " + j
                 );
                 
-                LocalDateTime afterAdd = LocalDateTime.now();
+                LocalDateTime afterAdd = LocalDateTime.now().plus(1, java.time.temporal.ChronoUnit.MILLIS);
                 
                 // Then: Each status should have a non-null timestamp
                 assertThat(addedStatus.getCreatedAt()).isNotNull();
@@ -224,7 +230,8 @@ public class StatusAdditionTimestampPropertyTest {
             UserDtls user = createTestUser(i);
             
             // Record the time before creating petition
-            LocalDateTime beforeCreate = LocalDateTime.now();
+            // widened by 1ms: the timestamp column rounds to microseconds
+            LocalDateTime beforeCreate = LocalDateTime.now().minus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // When: A new petition is created
             Petition petition = petitionService.createPetition(
@@ -233,7 +240,7 @@ public class StatusAdditionTimestampPropertyTest {
                 "Description for test petition"
             );
             
-            LocalDateTime afterCreate = LocalDateTime.now();
+            LocalDateTime afterCreate = LocalDateTime.now().plus(1, java.time.temporal.ChronoUnit.MILLIS);
             
             // Fetch the status history directly from repository
             List<PetitionStatus> statusHistory = petitionStatusRepository

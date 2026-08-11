@@ -3,6 +3,8 @@ package com.ecom.academic.controller;
 import java.security.Principal;
 import java.util.Map;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.ecom.config.ClientIpUtils;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
@@ -21,6 +24,8 @@ import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
 public class AcademicSettingsController {
+
+    private static final Logger log = LoggerFactory.getLogger(AcademicSettingsController.class);
 
     private final UserRepository userRepository;
 
@@ -154,7 +159,9 @@ public class AcademicSettingsController {
                     "TOGGLE_2FA",
                     (enabled ? "เปิดใช้งาน" : "ปิดใช้งาน") + " 2FA",
                     getClientIpAddress());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
         return ResponseEntity.ok(Map.of("success", true,
                 "message", enabled ? "เปิดใช้งาน 2FA แล้ว" : "ปิดใช้งาน 2FA แล้ว"));
@@ -183,7 +190,9 @@ public class AcademicSettingsController {
                         "UPDATE_SETTINGS",
                         "อัพเดทการตั้งค่างาน",
                         getClientIpAddress());
-            } catch (Exception ignored) {}
+            } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
             redirect.addFlashAttribute("success", "บันทึกการตั้งค่าสำเร็จ");
         } catch (Exception e) {
@@ -229,10 +238,11 @@ public class AcademicSettingsController {
     }
 
     private String getClientIpAddress() {
-        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0];
-        }
-        return httpRequest.getRemoteAddr();
+        return ClientIpUtils.resolveClientIp(httpRequest);
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        log.warn("Failed to write audit log: {}", e.toString());
     }
 }

@@ -76,7 +76,7 @@ public class AdminControllerUpdateProfileImageTest {
             "img", 
             "new-profile.jpg", 
             "image/jpeg", 
-            "test image content".getBytes()
+            jpegBytes()
         );
 
         // When: Admin uploads the image
@@ -91,13 +91,16 @@ public class AdminControllerUpdateProfileImageTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("success")).isEqualTo("true");
         assertThat(response.getBody().get("imageUrl")).isNotNull();
-        assertThat(response.getBody().get("imageUrl")).contains("/uploads/profile_img/new-profile.jpg");
-        assertThat(response.getBody().get("imageName")).isEqualTo("new-profile.jpg");
+        assertThat(response.getBody().get("imageUrl")).contains("/img/profile_img/");
+        // the server names the file; the client's name is only kept as a suffix
+        assertThat(response.getBody().get("imageName")).endsWith("new-profile.jpg");
+        assertThat(response.getBody().get("imageName")).isNotEqualTo("new-profile.jpg");
         
         // Verify database was updated
         UserDtls updatedUser = userRepository.findById(testUser.getId()).orElse(null);
         assertThat(updatedUser).isNotNull();
-        assertThat(updatedUser.getProfileImage()).isEqualTo("new-profile.jpg");
+        assertThat(updatedUser.getProfileImage()).endsWith("new-profile.jpg");
+        assertThat(updatedUser.getProfileImage()).isEqualTo(response.getBody().get("imageName"));
     }
 
     /**
@@ -139,7 +142,7 @@ public class AdminControllerUpdateProfileImageTest {
             "img", 
             "profile.jpg", 
             "image/jpeg", 
-            "test content".getBytes()
+            jpegBytes()
         );
 
         // When: Admin uploads the image
@@ -189,5 +192,18 @@ public class AdminControllerUpdateProfileImageTest {
         UserDtls unchangedUser = userRepository.findById(testUser.getId()).orElse(null);
         assertThat(unchangedUser).isNotNull();
         assertThat(unchangedUser.getProfileImage()).isEqualTo("old-image.jpg");
+    }
+
+    /** ProfileImageStorage decodes uploads, so a valid one needs real bytes. */
+    private static byte[] jpegBytes() {
+        try {
+            java.awt.image.BufferedImage img =
+                    new java.awt.image.BufferedImage(4, 4, java.awt.image.BufferedImage.TYPE_INT_RGB);
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            javax.imageio.ImageIO.write(img, "jpg", out);
+            return out.toByteArray();
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException("could not encode a test jpeg", e);
+        }
     }
 }

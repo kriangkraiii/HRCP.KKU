@@ -2,6 +2,8 @@ package com.ecom.academic.controller;
 
 import java.util.List;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.model.StaffMember;
 import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
@@ -23,6 +26,8 @@ import jakarta.servlet.http.HttpServletRequest;
 @Controller
 @RequestMapping("/admin/academic/staff")
 public class StaffMemberController {
+
+    private static final Logger log = LoggerFactory.getLogger(StaffMemberController.class);
 
     private final StaffMemberService staffMemberService;
 
@@ -81,7 +86,9 @@ public class StaffMemberController {
                     "ADD_STAFF",
                     "เพิ่มบุคลากร: " + academicTitle + firstName + " " + lastName + " (ตำแหน่ง: " + staffRole + ")",
                     getClientIpAddress());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
         return "redirect:/admin/academic/staff?success=added";
     }
@@ -121,7 +128,9 @@ public class StaffMemberController {
                     "EDIT_STAFF",
                     "แก้ไขบุคลากร ID:" + id + " (" + firstName + " " + lastName + ")",
                     getClientIpAddress());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
         return "redirect:/admin/academic/staff?success=updated";
     }
@@ -138,7 +147,9 @@ public class StaffMemberController {
                     "ลบบุคลากร ID:" + id
                             + (staff != null ? " (" + staff.getFirstName() + " " + staff.getLastName() + ")" : ""),
                     getClientIpAddress());
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
         staffMemberService.softDelete(id);
         return "redirect:/admin/academic/staff?success=deleted";
@@ -151,10 +162,11 @@ public class StaffMemberController {
     }
 
     private String getClientIpAddress() {
-        String xForwardedFor = httpRequest.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            return xForwardedFor.split(",")[0];
-        }
-        return httpRequest.getRemoteAddr();
+        return ClientIpUtils.resolveClientIp(httpRequest);
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        log.warn("Failed to write audit log: {}", e.toString());
     }
 }

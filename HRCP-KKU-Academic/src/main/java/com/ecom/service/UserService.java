@@ -30,7 +30,14 @@ public interface UserService {
 
 	public UserDtls updateUser(UserDtls user);
 
-	public UserDtls updateUserProfile(UserDtls user, MultipartFile img);
+	/**
+	 * Applies profile edits to the account identified by {@code authenticatedEmail}.
+	 * Any id carried on {@code user} is ignored — callers must never let the
+	 * submitted form decide which account is written to.
+	 *
+	 * @return the updated account, or null if no account matches the email
+	 */
+	public UserDtls updateUserProfile(UserDtls user, MultipartFile img, String authenticatedEmail);
 
 	public UserDtls saveAdmin(UserDtls user);
 

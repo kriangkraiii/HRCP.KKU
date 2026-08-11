@@ -4,6 +4,8 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Collection;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,6 +24,8 @@ import jakarta.servlet.http.HttpSession;
 
 @Component
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(CustomAuthenticationSuccessHandler.class);
 
     private final BruteForceProtection bruteForceProtection;
     private final UserService userService;
@@ -101,11 +105,18 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
             adminLogService.logWithDetails(username, user != null ? user.getName() : username,
                     "LOGIN_SUCCESS", "เข้าสู่ระบบสำเร็จ (" + role + ")",
                     clientIp, "/signin", request.getHeader("User-Agent"));
-        } catch (Exception ignored) {}
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
         // Regenerate session to prevent session fixation
         request.changeSessionId();
         response.sendRedirect(redirectUrl);
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        log.warn("Failed to write audit log: {}", e.toString());
     }
 }
 

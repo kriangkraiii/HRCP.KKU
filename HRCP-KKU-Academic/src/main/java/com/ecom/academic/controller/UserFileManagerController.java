@@ -7,7 +7,6 @@ import java.security.Principal;
 import java.util.HashMap;
 import java.util.Map;
 
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +18,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.ecom.academic.model.UserFile;
 import com.ecom.academic.model.UserFolder;
 import com.ecom.academic.service.UserStorageService;
+import com.ecom.util.FileUtils;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -147,14 +147,16 @@ public class UserFileManagerController {
             Path filePath = Path.of(file.getStoredFilePath());
             if (!Files.exists(filePath)) return ResponseEntity.notFound().build();
 
-            byte[] bytes = Files.readAllBytes(filePath);
             String ct = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
 
+            // Streamed rather than read into a byte[]: uploads are chunked and
+            // may be far larger than the heap.
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getOriginalFilename() + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            FileUtils.contentDisposition(file.getOriginalFilename()))
                     .contentType(MediaType.parseMediaType(ct))
-                    .contentLength(bytes.length)
-                    .body(new ByteArrayResource(bytes));
+                    .contentLength(Files.size(filePath))
+                    .body(new org.springframework.core.io.FileSystemResource(filePath));
         } catch (IOException e) {
             return ResponseEntity.internalServerError().build();
         }

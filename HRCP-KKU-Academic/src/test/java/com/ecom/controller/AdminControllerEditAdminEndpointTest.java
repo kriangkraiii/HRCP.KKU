@@ -38,7 +38,8 @@ import java.util.List;
         "spring.datasource.driver-class-name=org.h2.Driver",
         "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
         "spring.jpa.hibernate.ddl-auto=create-drop",
-        "spring.jpa.show-sql=false"
+        "spring.jpa.show-sql=false",
+    "app.audit-log.async=false"
 })
 public class AdminControllerEditAdminEndpointTest {
 
@@ -308,7 +309,7 @@ public class AdminControllerEditAdminEndpointTest {
 
         // Then: Redirects with error message
         assertThat(result).isEqualTo("redirect:/admin/edit-admin?id=" + testAdmin.getId());
-        assertThat(session.getAttribute("errorMsg")).isEqualTo("กรุณากรอกชื่อ");
+        assertThat(session.getAttribute("errorMsg")).isEqualTo("กรุณากรอกชื่อและนามสกุล");
     }
 
     /**
