@@ -996,6 +996,59 @@ body,
     border-color: var(--bg-card, #1e293b) !important;
 }
 
+[data-theme="dark"] .topbar-avatar {
+    background: rgba(96, 165, 250, 0.15) !important;
+    border-color: rgba(96, 165, 250, 0.3) !important;
+}
+
+[data-theme="dark"] .topbar-avatar i.fa-user {
+    color: var(--accent-light, #60a5fa) !important;
+}
+
+[data-theme="dark"] .global-search-input-group {
+    background: #0f172a !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .global-search-input-group input {
+    background: #0f172a !important;
+    color: var(--text-primary, #f8fafc) !important;
+}
+
+[data-theme="dark"] .global-search-input-group .input-group-text {
+    background: #0f172a !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .global-search-input-group kbd {
+    background: #1e293b !important;
+    color: #94a3b8 !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .global-search-dropdown {
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+[data-theme="dark"] .global-search-dropdown .search-result-item {
+    background: #1e293b !important;
+    border-bottom-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+[data-theme="dark"] .global-search-dropdown .search-result-item .text-dark {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .global-search-dropdown .search-result-item:hover,
+[data-theme="dark"] .global-search-dropdown .search-result-item.active {
+    background-color: rgba(96, 165, 250, 0.15) !important;
+}
+
+[data-theme="dark"] #topbar-breadcrumb .breadcrumb-item.active {
+    color: #f1f5f9 !important;
+}
+
 /* Error page */
 [data-theme="dark"] .error-page {
     background: var(--bg-body) !important;

@@ -16,4 +16,7 @@ public interface AdminFileRepository extends JpaRepository<AdminFile, Long> {
     long countByIsDeletedTrue();
 
     List<AdminFile> findByIsDeletedFalse();
+
+    @org.springframework.data.jpa.repository.Query("SELECT f FROM AdminFile f WHERE f.isDeleted = false AND LOWER(f.originalFilename) LIKE LOWER(CONCAT('%', :keyword, '%')) ORDER BY f.originalFilename ASC")
+    List<AdminFile> searchAdminFiles(@org.springframework.data.repository.query.Param("keyword") String keyword);
 }

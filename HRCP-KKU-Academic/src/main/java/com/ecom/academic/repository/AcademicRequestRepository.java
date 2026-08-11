@@ -23,4 +23,10 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
 
     @org.springframework.data.jpa.repository.Query("SELECT r FROM AcademicRequest r WHERE (LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
     List<AcademicRequest> searchByNameOrEmail(@org.springframework.data.repository.query.Param("keyword") String keyword);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM AcademicRequest r WHERE r.applicant.id = :userId AND (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
+    List<AcademicRequest> searchByApplicant(@org.springframework.data.repository.query.Param("userId") Integer userId, @org.springframework.data.repository.query.Param("keyword") String keyword);
+
+    @org.springframework.data.jpa.repository.Query("SELECT r FROM AcademicRequest r WHERE (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
+    List<AcademicRequest> searchForAdmin(@org.springframework.data.repository.query.Param("keyword") String keyword);
 }

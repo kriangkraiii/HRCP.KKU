@@ -36,4 +36,10 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
 
     @Query("SELECT r FROM PositionRequest r WHERE (LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
     List<PositionRequest> searchByNameOrEmail(@Param("keyword") String keyword);
+
+    @Query("SELECT r FROM PositionRequest r WHERE r.applicant.id = :userId AND (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.targetPosition) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.major) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
+    List<PositionRequest> searchByApplicant(@Param("userId") Integer userId, @Param("keyword") String keyword);
+
+    @Query("SELECT r FROM PositionRequest r WHERE (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.targetPosition) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.major) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
+    List<PositionRequest> searchForAdmin(@Param("keyword") String keyword);
 }
