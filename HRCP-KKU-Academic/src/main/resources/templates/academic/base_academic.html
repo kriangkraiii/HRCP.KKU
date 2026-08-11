@@ -49,99 +49,73 @@
         <nav class="sidebar-nav">
             <!-- ADMIN Navigation -->
             <th:block th:if="${user != null && user.role == 'ROLE_ADMIN'}">
-                <div class="sidebar-section-title">จัดการระบบ</div>
+                <div class="sidebar-section-title">งานวิชาการ & คำร้อง</div>
                 <a href="/admin/academic/requests" class="sidebar-link" id="nav-dashboard">
                     <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
                 </a>
-
-                <div class="sidebar-section-title">จัดการบุคลากร</div>
                 <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff">
                     <i class="fas fa-users-cog"></i> จัดการบุคลากร
                 </a>
-
-                <div class="sidebar-section-title">ประเมินผลการสอน</div>
                 <a href="/admin/academic/requests?type=evaluation" class="sidebar-link" id="nav-eval">
-                    <i class="fas fa-clipboard-check"></i> คำร้องประเมินผลทางวิชาการ
+                    <i class="fas fa-clipboard-check"></i> คำร้องประเมินผลการสอน
                 </a>
-
-                <div class="sidebar-section-title">ขอตำแหน่งทางวิชาการ</div>
                 <a href="/admin/academic/requests?type=position" class="sidebar-link" id="nav-position">
                     <i class="fas fa-university"></i> คำร้องขอตำแหน่งทางวิชาการ
                 </a>
 
-                <div class="sidebar-section-title sidebar-dropdown-toggle" id="userMgmtToggle" role="button" tabindex="0" aria-expanded="false" aria-controls="userMgmtMenu">
-                    <span>จัดการผู้ใช้</span>
-                    <i class="fas fa-chevron-down" aria-hidden="true"></i>
-                </div>
-                <div class="sidebar-dropdown-menu" id="userMgmtMenu" role="region" aria-labelledby="userMgmtToggle">
-                    <a href="/admin/add-admin" class="sidebar-link" id="nav-add-user">
-                        <i class="fas fa-user-plus" aria-hidden="true"></i> เพิ่มผู้ใช้
-                    </a>
-                    <a href="/admin/users?type=1" class="sidebar-link" id="nav-users">
-                        <i class="fas fa-users" aria-hidden="true"></i> จัดการผู้ใช้
-                    </a>
-                    <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins">
-                        <i class="fas fa-user-shield" aria-hidden="true"></i> จัดการแอดมิน
-                    </a>
-                </div>
+                <div class="sidebar-section-title">จัดการผู้ใช้งาน</div>
+                <a href="/admin/users?type=1" class="sidebar-link" id="nav-users">
+                    <i class="fas fa-users"></i> ผู้ใช้งานทั่วไป
+                </a>
+                <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins">
+                    <i class="fas fa-user-shield"></i> ผู้ดูแลระบบ (Admin)
+                </a>
+                <a href="/admin/add-admin" class="sidebar-link" id="nav-add-user">
+                    <i class="fas fa-user-plus"></i> เพิ่มผู้ใช้ / แอดมิน
+                </a>
 
-                <div class="sidebar-section-title">ระบบ</div>
+                <div class="sidebar-section-title">ระบบ & การตั้งค่า</div>
                 <a href="/admin/activity-logs" class="sidebar-link" id="nav-logs">
                     <i class="fas fa-history"></i> ประวัติกิจกรรม
                 </a>
                 <a href="/admin/file-manager" class="sidebar-link" id="nav-files">
                     <i class="fas fa-folder-open"></i> จัดการไฟล์
                 </a>
-
-                <div class="sidebar-section-title">ช่วยเหลือ</div>
                 <a href="/admin/academic/guide" class="sidebar-link" id="nav-guide">
                     <i class="fas fa-book"></i> คู่มือการใช้งาน
                 </a>
-
+                <a href="/admin/academic/settings" class="sidebar-link" id="nav-settings">
+                    <i class="fas fa-cog"></i> การตั้งค่า
+                </a>
             </th:block>
 
             <!-- USER Navigation -->
             <th:block th:if="${user != null && user.role == 'ROLE_USER'}">
-                <div class="sidebar-section-title">หน้าหลัก</div>
+                <div class="sidebar-section-title">งานวิชาการ</div>
                 <a href="/user/academic/dashboard" class="sidebar-link" id="nav-dashboard">
                     <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
                 </a>
                 <a href="/user/academic/history" class="sidebar-link" id="nav-history">
                     <i class="fas fa-history"></i> ประวัติการยื่นคำร้อง
                 </a>
-
-                <div class="sidebar-section-title">ประเมินผลการสอน</div>
                 <a href="/user/academic/new-request" class="sidebar-link" id="nav-new">
                     <i class="fas fa-clipboard-check"></i> ยื่นคำร้องขอประเมิน
                 </a>
-
-                <div class="sidebar-section-title">ขอตำแหน่งทางวิชาการ</div>
                 <a href="/user/position/dashboard" class="sidebar-link" id="nav-position">
                     <i class="fas fa-university"></i> ยื่นขอตำแหน่ง
                 </a>
 
-                <div class="sidebar-section-title">เอกสารอ้างอิง</div>
+                <div class="sidebar-section-title">ทรัพยากร & การตั้งค่า</div>
                 <a href="/user/academic/documents" class="sidebar-link" id="nav-documents">
                     <i class="fas fa-book-open"></i> เอกสาร/ข้อบังคับ
                 </a>
-
-                <div class="sidebar-section-title">จัดเก็บไฟล์</div>
                 <a href="/user/academic/storage" class="sidebar-link" id="nav-storage">
                     <i class="fas fa-cloud"></i> ที่เก็บไฟล์ของฉัน
                 </a>
-
-                <div class="sidebar-section-title">ช่วยเหลือ</div>
                 <a href="/user/academic/guide" class="sidebar-link" id="nav-guide">
                     <i class="fas fa-book"></i> คู่มือการใช้งาน
                 </a>
-
-            </th:block>
-
-            <!-- Settings Link (shared) -->
-            <th:block th:if="${user != null}">
-                <div class="sidebar-section-title">ตั้งค่า</div>
-                <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/academic/settings' : '/user/academic/settings'}"
-                   class="sidebar-link" id="nav-settings">
+                <a href="/user/academic/settings" class="sidebar-link" id="nav-settings">
                     <i class="fas fa-cog"></i> การตั้งค่า
                 </a>
             </th:block>

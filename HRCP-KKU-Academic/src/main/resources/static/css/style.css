@@ -1386,15 +1386,17 @@ body {
     align-items: center;
     gap: var(--space-md);
     padding: var(--space-md) var(--space-lg);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--bg-card);
-    border: 1px solid var(--border-card);
-    transition: border-color var(--duration-fast), box-shadow var(--duration-fast);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07);
+    transition: border-color var(--duration-fast), box-shadow var(--duration-fast), transform var(--duration-fast);
 }
 
 .doc-checklist-item:hover {
     border-color: var(--color-primary-medium);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+    transform: translateY(-2px);
 }
 
 .doc-checklist-item.dci-done {
@@ -1448,7 +1450,8 @@ body {
     padding: var(--space-lg);
     border-radius: 12px;
     background: var(--bg-card);
-    border: 1px solid var(--border-card);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.07);
     margin-bottom: var(--space-lg);
 }
 
