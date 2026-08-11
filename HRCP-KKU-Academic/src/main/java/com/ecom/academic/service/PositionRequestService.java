@@ -225,9 +225,22 @@ public class PositionRequestService {
         if (opt.isPresent()) {
             PositionRequest req = opt.get();
             if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == PositionRequestStatus.DRAFT) {
+                // Delete attachments
                 List<PositionAttachment> attachments = attachmentRepository.findActiveByRequestId(requestId);
                 if (!attachments.isEmpty()) {
                     attachmentRepository.deleteAll(attachments);
+                }
+                // Delete document edit logs
+                List<PositionDocumentEditLog> editLogs = editLogRepository.findByRequestOrderByEditedAtDesc(req);
+                if (!editLogs.isEmpty()) {
+                    editLogRepository.deleteAll(editLogs);
+                }
+                // Delete child collections
+                if (req.getStatusHistory() != null && !req.getStatusHistory().isEmpty()) {
+                    statusHistoryRepository.deleteAll(req.getStatusHistory());
+                }
+                if (req.getDocuments() != null && !req.getDocuments().isEmpty()) {
+                    documentRepository.deleteAll(req.getDocuments());
                 }
                 requestRepository.delete(req);
                 return true;

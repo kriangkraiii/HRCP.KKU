@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -463,7 +464,8 @@ public class PositionAdminController {
     @PostMapping("/request/{id}/upload-attachment")
     public String uploadAttachment(@PathVariable Long id,
             @RequestParam("file") MultipartFile file,
-            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+            RedirectAttributes redirectAttributes,
+            Principal principal) {
         try {
             PositionRequest request = positionService.findById(id)
                     .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
@@ -494,9 +496,10 @@ public class PositionAdminController {
 
             // Log activity
             try {
+                UserDtls admin = principal != null ? getUser(principal) : null;
                 adminLogService.log(
-                        redirectAttributes != null ? "admin" : "admin",
-                        "Admin",
+                        principal != null ? principal.getName() : "admin",
+                        admin != null ? admin.getName() : "Admin",
                         "UPLOAD_POSITION_ATTACHMENT",
                         "อัปโหลดเอกสารเพิ่มเติม \"" + originalFilename + "\" สำหรับคำร้องตำแหน่ง #" + id,
                         getClientIpAddress());
@@ -504,7 +507,9 @@ public class PositionAdminController {
 
             return "redirect:/admin/position/request/" + id + "?success=attachment_uploaded";
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorDetail", e.getMessage());
+            if (redirectAttributes != null) {
+                redirectAttributes.addFlashAttribute("errorDetail", e.getMessage());
+            }
             return "redirect:/admin/position/request/" + id + "?error=upload_failed";
         }
     }
@@ -516,6 +521,11 @@ public class PositionAdminController {
                 .orElseThrow(() -> new RuntimeException("ไม่พบเอกสาร"));
 
         Path path = Path.of(attachment.getStoredFilePath());
+        if (!Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        Resource resource = new FileSystemResource(path);
 
         String contentType = attachment.getFileType().equalsIgnoreCase("PDF")
                 ? "application/pdf"
@@ -529,7 +539,8 @@ public class PositionAdminController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
-                .body(new ByteArrayResource(data));
+                .contentLength(Files.size(path))
+                .body(resource);
     }
 
     @PostMapping("/request/{id}/attachment/{attachmentId}/delete")

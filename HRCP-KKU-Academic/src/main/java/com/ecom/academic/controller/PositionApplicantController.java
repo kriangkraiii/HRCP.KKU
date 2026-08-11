@@ -166,13 +166,18 @@ public class PositionApplicantController {
      * ยกเลิกแบบร่างคำร้องขอตำแหน่งทางวิชาการ
      */
     @PostMapping("/request/{id}/cancel-draft")
-    public String cancelDraftRequest(@PathVariable Long id, Principal principal, org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+    public String cancelDraftRequest(@PathVariable Long id, Principal principal,
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes,
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Referer", required = false) String referer) {
         UserDtls user = getUser(principal);
         boolean deleted = positionService.deleteDraftRequest(id, user.getId());
         if (deleted) {
             redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องขอตำแหน่งเรียบร้อยแล้ว");
         } else {
             redirectAttributes.addFlashAttribute("errorMsg", "ไม่สามารถยกเลิกแบบร่างได้ หรือคำร้องไม่ได้อยู่ในสถานะแบบร่าง");
+        }
+        if (referer != null && referer.contains("/user/academic/dashboard")) {
+            return "redirect:/user/academic/dashboard";
         }
         return "redirect:/user/position/dashboard";
     }
