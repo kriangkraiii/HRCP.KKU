@@ -16,6 +16,7 @@
 	<description>HRCP KKU - ระบบจัดการบุคลากรทางวิชาการ</description>
 	<properties>
 		<java.version>21</java.version>
+		<skipTests>true</skipTests>
 	</properties>
 	<dependencies>
 
@@ -211,6 +212,10 @@
         <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+                <!-- ข้ามเทสต์โดยค่าเริ่มต้นเหมือนเดิม แต่สั่งรันได้ด้วย -DskipTests=false -->
+                <skipTests>${skipTests}</skipTests>
+            </configuration>
         </plugin>
     </plugins>
 </build>

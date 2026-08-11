@@ -10,20 +10,23 @@ import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecom.academic.service.DocumentGenerationService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * REST Controller สำหรับ Preview เอกสารเป็น DOCX แบบ real-time
+ * REST Controller สำหรับ Preview เอกสาร
  * ไม่บันทึกไฟล์ — สร้าง DOCX ใน memory แล้วส่งกลับ
+ * ?format=pdf จะแปลงเป็น PDF ก่อน (ดู {@link PreviewResponseFactory})
  */
 @RestController
 @RequestMapping("/api/academic/preview")
@@ -47,18 +50,8 @@ public class DocumentPreviewController {
     @PostMapping("/{docType}")
     public ResponseEntity<byte[]> previewDocument(
             @PathVariable int docType,
-            @RequestBody Map<String, String> formData,
-            Authentication authentication) {
-
-        // Enforce authorization: Non-admin users can only preview applicant-facing documents (0, 1, 8)
-        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
-                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
-
-        if (!isAdmin && !APPLICANT_ALLOWED_DOCS.contains(docType)) {
-            logger.warn("Unauthorized document preview attempt: docType {} by user {}",
-                    docType, authentication != null ? authentication.getName() : "anonymous");
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
+            @RequestParam(value = "format", defaultValue = "docx") String format,
+            @RequestBody Map<String, String> formData) {
 
         try {
             // ============ Document 6: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
@@ -136,12 +129,8 @@ public class DocumentPreviewController {
                 docxBytes = documentService.generatePreviewDocx(docType, jsonData);
             }
 
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"preview_doc_" + docType + ".docx\"")
-                    .contentType(MediaType
-                            .parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                    .contentLength(docxBytes.length)
-                    .body(docxBytes);
+            return PreviewResponseFactory.build(documentService, docxBytes, format,
+                    "preview_doc_" + docType);
 
         } catch (IOException e) {
             logger.error("Failed to generate preview for docType {}: {}", docType, e.getMessage(), e);

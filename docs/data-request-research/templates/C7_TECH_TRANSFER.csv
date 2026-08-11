@@ -1,0 +1,2 @@
+﻿transfer_id,output_id,user_organization,usage_description,transfer_date,evidence_url
+รหัสรายการ [M],รหัสผลงาน (เชื่อม B1) [M],หน่วยงาน/กลุ่มผู้นำไปใช้ประโยชน์ [M],ลักษณะการนำไปใช้ [M],วันที่ถ่ายทอด/เริ่มใช้ YYYY-MM-DD [R],ลิงก์หลักฐาน [R]

@@ -1,0 +1,2 @@
+﻿output_id,book_kind,isbn,publisher,edition,print_run,media_type,publish_date,page_count,distribution_scope,used_in_course_code
+รหัสผลงาน (เชื่อม B1) [M],ตำรา/หนังสือ/บทความทางวิชาการ/พจนานุกรม/งานแปล [M],ISBN [R],สำนักพิมพ์ [M],ครั้งที่พิมพ์ [R],จำนวนพิมพ์ (เล่ม) [O],สิ่งพิมพ์/อิเล็กทรอนิกส์/e-book [M],วันที่จัดพิมพ์เผยแพร่ YYYY-MM-DD [M],จำนวนหน้า [R],ขอบเขตการเผยแพร่ [R],รหัสรายวิชาที่ใช้ประกอบการสอน [R]

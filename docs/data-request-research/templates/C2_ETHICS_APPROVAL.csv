@@ -1,0 +1,2 @@
+﻿ethics_id,output_id,project_id,researcher_id,ethics_category,certificate_no,committee_name,approval_date,expiry_date,exemption_reason,status,certificate_url
+รหัสใบรับรอง [M],รหัสผลงานที่เกี่ยวข้อง [M ถ้าไม่มี project_id],รหัสโครงการที่เกี่ยวข้อง [M ถ้าไม่มี output_id],รหัสนักวิจัยผู้ขอรับรอง [M],วิจัยในมนุษย์/สัตว์ทดลอง/ชีวภาพ/GMO/ได้รับการยกเว้น/ไม่เข้าข่าย [M],เลขที่ใบรับรอง [M],ชื่อคณะกรรมการที่รับรอง [R],วันที่รับรอง YYYY-MM-DD [M],วันที่สิ้นอายุการรับรอง YYYY-MM-DD [R],เหตุผลการยกเว้น [M],รับรองแล้ว/รอพิจารณา/ยกเว้น/ไม่เข้าข่าย [M],ลิงก์ไฟล์ใบรับรอง [R]
