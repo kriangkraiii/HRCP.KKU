@@ -4,6 +4,10 @@ import java.io.UnsupportedEncodingException;
 import java.security.Principal;
 import java.util.UUID;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.mail.MailException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -26,7 +30,13 @@ import jakarta.servlet.http.HttpSession;
 @Controller
 public class HomeController {
 
-	private final UserService userService;
+	private static final Logger logger = LoggerFactory.getLogger(HomeController.class);
+
+	/** ข้อความกลางสำหรับกรณีส่งอีเมลไม่สำเร็จ (ห้ามเผยรายละเอียดของ SMTP ให้ผู้ใช้เห็น) */
+	private static final String MAIL_ERROR_MSG = "ไม่สามารถส่งอีเมลได้ในขณะนี้ กรุณาติดต่อผู้ดูแลระบบ";
+
+	@Autowired
+	private UserService userService;
 
 	private final CommonUtil commonUtil;
 
@@ -78,7 +88,12 @@ public class HomeController {
 			session.setAttribute("otpEmail", email);
 			session.setAttribute("succMsg", "ส่งรหัส OTP ไปที่อีเมลของคุณแล้ว");
 			return "redirect:/first-login/verify-otp";
+		} catch (MailException | MessagingException | UnsupportedEncodingException e) {
+			logger.error("ส่ง OTP ไปยัง {} ไม่สำเร็จ", email, e);
+			session.setAttribute("errorMsg", MAIL_ERROR_MSG);
+			return "redirect:/first-login";
 		} catch (Exception e) {
+			// business error (ไม่พบอีเมล / ตั้งรหัสผ่านแล้ว) — ข้อความเป็นภาษาไทยอยู่แล้ว
 			session.setAttribute("errorMsg", e.getMessage());
 			return "redirect:/first-login";
 		}
@@ -171,8 +186,7 @@ public class HomeController {
 	}
 
 	@PostMapping("/forgot-password")
-	public String processForgotPassword(@RequestParam String email, HttpSession session, HttpServletRequest request)
-			throws UnsupportedEncodingException, MessagingException {
+	public String processForgotPassword(@RequestParam String email, HttpSession session, HttpServletRequest request) {
 		UserDtls userByEmail = userService.getUserByEmail(email);
 		if (ObjectUtils.isEmpty(userByEmail)) {
 			session.setAttribute("errorMsg", "ไม่พบอีเมลนี้ในระบบ");
@@ -180,11 +194,12 @@ public class HomeController {
 			String resetToken = UUID.randomUUID().toString();
 			userService.updateUserResetToken(email, resetToken);
 			String url = CommonUtil.generateUrl(request) + "/reset-password?token=" + resetToken;
-			Boolean sendMail = commonUtil.sendMail(url, email);
-			if (sendMail) {
+			try {
+				commonUtil.sendMail(url, email);
 				session.setAttribute("succMsg", "กรุณาตรวจสอบอีเมลของคุณ ลิงก์รีเซ็ตรหัสผ่านถูกส่งแล้ว");
-			} else {
-				session.setAttribute("errorMsg", "เกิดข้อผิดพลาด ไม่สามารถส่งอีเมลได้");
+			} catch (MailException | MessagingException | UnsupportedEncodingException e) {
+				logger.error("ส่งลิงก์รีเซ็ตรหัสผ่านไปยัง {} ไม่สำเร็จ", email, e);
+				session.setAttribute("errorMsg", MAIL_ERROR_MSG);
 			}
 		}
 		return "redirect:/forgot-password";

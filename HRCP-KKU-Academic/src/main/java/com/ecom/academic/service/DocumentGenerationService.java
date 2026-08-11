@@ -5,12 +5,21 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.MessageDigest;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
+import java.util.HexFormat;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Semaphore;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -977,46 +986,146 @@ public class DocumentGenerationService {
     // PDF Conversion (LibreOffice CLI)
     // =====================================================================
 
+    /** จำกัดจำนวน soffice ที่รันพร้อมกัน — แต่ละ process กิน RAM/CPU สูง */
+    private static final Semaphore PDF_SLOTS = new Semaphore(2);
+
+    /** timeout ต่อการแปลง 1 ครั้ง — กัน process ค้างถาวรจนกิน slot ทั้งหมด */
+    private static final long PDF_TIMEOUT_SECONDS = 60;
+
+    /** cache ผลการค้นหา soffice: null = ยังไม่เคยหา, "" = หาแล้วไม่เจอ */
+    private volatile String cachedSofficePath = null;
+
+    /** LRU cache ของ PDF ที่แปลงแล้ว — preview เดิมซ้ำ ๆ จะไม่เรียก LibreOffice ใหม่ */
+    private static final int PDF_CACHE_SIZE = 50;
+    private final Map<String, byte[]> pdfCache = Collections.synchronizedMap(
+            new LinkedHashMap<>(16, 0.75f, true) {
+                @Override
+                protected boolean removeEldestEntry(Map.Entry<String, byte[]> eldest) {
+                    return size() > PDF_CACHE_SIZE;
+                }
+            });
+
+    /** LibreOffice พร้อมใช้งานหรือไม่ — ใช้ตัดสินใจว่าจะ preview เป็น PDF ได้ไหม */
+    public boolean isPdfConversionAvailable() {
+        return !resolveLibreOffice().isEmpty();
+    }
+
+    /** แปลง DOCX → PDF โดยใช้ cache (สำหรับ preview ที่กดซ้ำบ่อย) */
+    public byte[] convertDocxToPdfCached(byte[] docxBytes) throws IOException {
+        String key = sha256(docxBytes);
+        byte[] cached = pdfCache.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        byte[] pdf = convertDocxToPdf(docxBytes);
+        pdfCache.put(key, pdf);
+        return pdf;
+    }
+
     public byte[] convertDocxToPdf(byte[] docxBytes) throws IOException {
+        String soffice = resolveLibreOffice();
+        if (soffice.isEmpty()) {
+            throw new IOException("LibreOffice not found. " +
+                    "Windows: https://www.libreoffice.org/download | " +
+                    "Mac: brew install --cask libreoffice | " +
+                    "Linux: sudo apt install libreoffice-writer");
+        }
+
+        try {
+            PDF_SLOTS.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("PDF conversion interrupted while waiting for a slot", e);
+        }
+
         Path tempDir = Files.createTempDirectory("docx-to-pdf-");
         Path tempDocx = tempDir.resolve("input.docx");
         Path tempPdf = tempDir.resolve("input.pdf");
+        Path profileDir = tempDir.resolve("lo-profile");
         Files.write(tempDocx, docxBytes);
 
+        Process process = null;
         try {
-            String soffice = findLibreOffice();
+            // UserInstallation แยกต่อการเรียกแต่ละครั้ง — ถ้าใช้ profile ร่วมกัน
+            // soffice หลาย process จะชนกันแล้ว hang เมื่อมีผู้ใช้พร้อมกัน
             ProcessBuilder pb = new ProcessBuilder(
-                    soffice, "--headless", "--convert-to", "pdf",
+                    soffice,
+                    "-env:UserInstallation=" + profileDir.toUri(),
+                    "--headless", "--norestore", "--nolockcheck", "--nodefault",
+                    "--convert-to", "pdf",
                     "--outdir", tempDir.toString(), tempDocx.toString());
+            // เขียน output ลงไฟล์แทนการ read stream — ถ้า read ก่อน waitFor
+            // จะบล็อกจนกว่า process จบ ทำให้ timeout ไม่มีผล
+            Path logFile = tempDir.resolve("soffice.log");
             pb.redirectErrorStream(true);
+            pb.redirectOutput(logFile.toFile());
 
-            Process process = pb.start();
-            String output = new String(process.getInputStream().readAllBytes());
+            process = pb.start();
 
-            int exitCode;
-            try {
-                exitCode = process.waitFor();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-                throw new IOException("LibreOffice conversion interrupted", e);
+            if (!process.waitFor(PDF_TIMEOUT_SECONDS, TimeUnit.SECONDS)) {
+                process.destroyForcibly();
+                throw new IOException("LibreOffice conversion timed out after " + PDF_TIMEOUT_SECONDS + "s");
             }
 
+            String output = Files.exists(logFile)
+                    ? new String(Files.readAllBytes(logFile), StandardCharsets.UTF_8).trim()
+                    : "";
+            int exitCode = process.exitValue();
             if (exitCode != 0) {
                 throw new IOException("LibreOffice conversion failed (exit " + exitCode + "): " + output);
             }
 
             if (!Files.exists(tempPdf)) {
-                throw new IOException("PDF conversion produced no output");
+                throw new IOException("PDF conversion produced no output: " + output);
             }
             return Files.readAllBytes(tempPdf);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("LibreOffice conversion interrupted", e);
         } finally {
-            try {
-                Files.deleteIfExists(tempPdf);
-                Files.deleteIfExists(tempDocx);
-                Files.deleteIfExists(tempDir);
-            } catch (Exception ignored) {
+            if (process != null && process.isAlive()) {
+                process.destroyForcibly();
             }
+            PDF_SLOTS.release();
+            deleteRecursively(tempDir);
         }
+    }
+
+    private static String sha256(byte[] data) {
+        try {
+            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(data));
+        } catch (java.security.NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
+    }
+
+    /** ลบทั้ง temp dir — profile ของ LibreOffice มีไฟล์ย่อยจำนวนมาก */
+    private static void deleteRecursively(Path root) {
+        try (Stream<Path> paths = Files.walk(root)) {
+            paths.sorted(Comparator.reverseOrder()).forEach(p -> {
+                try {
+                    Files.deleteIfExists(p);
+                } catch (IOException ignored) {
+                }
+            });
+        } catch (IOException | UncheckedIOException ignored) {
+        }
+    }
+
+    /** หา soffice แล้ว cache ผลไว้ (ทั้งกรณีเจอและไม่เจอ); "" = ไม่เจอ */
+    private String resolveLibreOffice() {
+        String cached = cachedSofficePath;
+        if (cached != null) {
+            return cached;
+        }
+        String found;
+        try {
+            found = findLibreOffice();
+        } catch (IOException e) {
+            found = "";
+        }
+        cachedSofficePath = found;
+        return found;
     }
 
     private String findLibreOffice() throws IOException {

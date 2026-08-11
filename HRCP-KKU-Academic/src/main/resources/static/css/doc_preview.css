@@ -20,8 +20,8 @@
 .docx-preview-container {
     display: flex;
     flex-direction: column;
-    width: 90%;
-    max-width: 1000px;
+    width: 95%;
+    max-width: 1400px;
     margin: 20px auto;
     height: calc(100vh - 40px);
     border-radius: 12px;
@@ -86,8 +86,18 @@
     background: rgba(239, 83, 80, 0.5);
 }
 
-/* LIVE badge */
-.docx-live-badge {
+/* ปุ่มอัปเดตตัวอย่าง — เน้นให้เห็นชัดเพราะเป็นตัวสั่งสร้างเอกสารใหม่ */
+.docx-btn-update {
+    background: rgba(76, 175, 80, 0.35);
+    border-color: rgba(76, 175, 80, 0.5);
+}
+
+.docx-btn-update:hover {
+    background: rgba(76, 175, 80, 0.55);
+}
+
+/* Status badge */
+.docx-status-badge {
     background: #4caf50;
     color: #fff;
     font-size: 0.68rem;
@@ -95,17 +105,20 @@
     padding: 2px 10px;
     border-radius: 10px;
     letter-spacing: 0.5px;
-    animation: docx-pulse-live 2s infinite;
+    white-space: nowrap;
 }
 
-.docx-live-badge.waiting {
+.docx-status-badge.stale {
     background: #ff9800;
-    animation: none;
 }
 
-.docx-live-badge.error {
+.docx-status-badge.loading {
+    background: #2196f3;
+    animation: docx-pulse-live 1.2s infinite;
+}
+
+.docx-status-badge.error {
     background: #f44336;
-    animation: none;
 }
 
 @keyframes docx-pulse-live {
@@ -113,12 +126,41 @@
     50% { opacity: 0.6; }
 }
 
+/* แบนเนอร์เตือนโหมด fallback (เซิร์ฟเวอร์ไม่มี LibreOffice) */
+.docx-fallback-banner {
+    display: none;
+    align-items: center;
+    gap: 10px;
+    background: #fff3cd;
+    color: #7a5b00;
+    border-bottom: 1px solid #ffe08a;
+    padding: 8px 20px;
+    font-size: 0.82rem;
+    flex-shrink: 0;
+}
+
+.docx-fallback-banner i {
+    color: #e0a800;
+    flex-shrink: 0;
+}
+
 /* Body area */
 .docx-preview-body {
     flex: 1;
     position: relative;
     background: #e0e0e0;
-    overflow-y: auto;
+    /* ต้องเลื่อนได้ทั้ง 2 แกนสำหรับโหมด fallback ที่เอกสารแนวนอนกว้างกว่ากล่อง
+       (โหมด PDF ใช้ iframe เต็มพื้นที่ ไม่มีอะไรล้น) */
+    overflow: auto;
+}
+
+/* PDF viewer ในตัวเบราว์เซอร์ — โหมดหลัก */
+.docx-preview-iframe {
+    display: none;
+    width: 100%;
+    height: 100%;
+    border: 0;
+    background: #e0e0e0;
 }
 
 /* Loading spinner */
@@ -149,19 +191,24 @@
     to { transform: rotate(360deg); }
 }
 
-/* DOCX render area – docx-preview renders pages inside this */
+/* DOCX render area – ใช้เฉพาะโหมด fallback (docx-preview render หน้าไว้ในนี้) */
 .docx-render-area {
+    display: none;
     padding: 20px 0;
-    display: flex;
     flex-direction: column;
     align-items: center;
     min-height: 100%;
+    /* กันหน้ากระดาษที่กว้างกว่ากล่องถูกตัดขอบ — align-items:center จะดันส่วนเกินออกนอกกรอบ */
+    min-width: max-content;
 }
 
 /* Style the rendered docx-preview wrapper (docx-preview creates wrapper divs) */
 .docx-render-area .docx-wrapper {
     background: #e0e0e0 !important;
     padding: 20px 0 !important;
+    /* ย่อหน้ากระดาษให้พอดีความกว้าง ตั้งค่าโดย fitFallbackToWidth() */
+    transform: scale(var(--docx-zoom, 1));
+    transform-origin: top center;
 }
 
 .docx-render-area .docx-wrapper > section.docx {

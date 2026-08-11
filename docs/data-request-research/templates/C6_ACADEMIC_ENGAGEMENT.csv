@@ -1,0 +1,2 @@
+﻿engagement_id,researcher_id,engagement_type,event_name,event_date,country,is_international,organizer
+รหัสรายการ [M],รหัสนักวิจัย (เชื่อม A1) [M],keynote/invited speaker/session chair/กรรมการวิชาการ [M],ชื่อการประชุม/กิจกรรม [M],วันที่จัด YYYY-MM-DD [M],ประเทศที่จัด [R],เป็นระดับนานาชาติหรือไม่ Y/N [M],หน่วยงานผู้จัด [R]
