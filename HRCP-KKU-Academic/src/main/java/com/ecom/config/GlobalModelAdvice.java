@@ -15,9 +15,11 @@ import jakarta.servlet.http.HttpSession;
 public class GlobalModelAdvice {
 
     private final UserService userService;
+    private final com.ecom.service.NotificationService notificationService;
 
-    public GlobalModelAdvice(UserService userService) {
+    public GlobalModelAdvice(UserService userService, com.ecom.service.NotificationService notificationService) {
         this.userService = userService;
+        this.notificationService = notificationService;
     }
 
     @ModelAttribute
@@ -27,6 +29,7 @@ public class GlobalModelAdvice {
             UserDtls user = userService.getUserByEmail(principal.getName());
             if (user != null) {
                 model.addAttribute("user", user);
+                model.addAttribute("unreadNotificationCount", notificationService.getUnreadCount(user));
             }
         }
 

@@ -18,17 +18,31 @@ import jakarta.mail.internet.MimeMessage;
 public class AcademicEmailService {
 
     private final JavaMailSender mailSender;
-
     private final UserRepository userRepository;
+    private final com.ecom.service.NotificationService notificationService;
 
-    public AcademicEmailService(JavaMailSender mailSender, UserRepository userRepository) {
+    public AcademicEmailService(JavaMailSender mailSender, UserRepository userRepository, com.ecom.service.NotificationService notificationService) {
         this.mailSender = mailSender;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Async
     public void sendStatusChangeEmail(AcademicRequest request, RequestStatus oldStatus, RequestStatus newStatus) {
         try {
+            // 1. Create in-app notification for applicant
+            if (request != null && request.getApplicant() != null) {
+                boolean isImportant = newStatus == RequestStatus.REVISION_REQUESTED 
+                        || newStatus == RequestStatus.COMPLETED_PASS 
+                        || newStatus == RequestStatus.COMPLETED_FAIL 
+                        || newStatus == RequestStatus.REJECTED;
+                String notifTitle = "อัปเดตสถานะการประเมิน: " + newStatus.getThaiLabel();
+                String notifMsg = "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel();
+                String notifLink = "/user/academic/dashboard";
+                notificationService.sendNotification(request.getApplicant(), null, notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.ACADEMIC_STATUS_UPDATE, isImportant);
+            }
+
+            // 2. Send email notification
             String applicantEmail = request.getApplicant().getEmail();
             if (applicantEmail == null || applicantEmail.isEmpty())
                 return;
@@ -48,14 +62,22 @@ public class AcademicEmailService {
     }
 
     /**
-     * ส่งอีเมลแจ้งเตือนแอดมินทุกคนที่เปิดการแจ้งเตือนไว้ เมื่อมีคำร้องใหม่
+     * ส่งการแจ้งเตือนและอีเมลแจ้งแอดมินทุกคนเมื่อมีคำร้องใหม่
      */
     @Async
     public void sendNewRequestNotificationToAdmins(AcademicRequest request) {
         try {
+            // 1. Create in-app notification for all admins
+            if (request != null && request.getApplicant() != null) {
+                String notifTitle = "คำร้องขอรับการประเมินใหม่";
+                String notifMsg = "มีคำร้องขอประเมินผลการสอนใหม่ (#" + request.getId() + ") ยื่นโดย " + request.getApplicant().getName();
+                String notifLink = "/admin/academic/requests?type=evaluation";
+                notificationService.notifyAdmins(request.getApplicant(), notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.ACADEMIC_NEW_REQUEST, false);
+            }
+
+            // 2. Send email to admins who opted-in
             List<UserDtls> admins = userRepository.findByRole("ROLE_ADMIN");
             for (UserDtls admin : admins) {
-                // ตรวจสอบว่าแอดมินเปิดการแจ้งเตือนหรือไม่ (default = false/ปิด)
                 if (admin.getEmailNotificationEnabled() != null && admin.getEmailNotificationEnabled()) {
                     sendAdminNotification(admin, request);
                 }

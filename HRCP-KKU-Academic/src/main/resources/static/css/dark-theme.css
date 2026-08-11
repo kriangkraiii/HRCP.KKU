@@ -977,6 +977,25 @@ body,
     background: var(--bg-body) !important;
 }
 
+/* Top Navbar Dark Mode */
+[data-theme="dark"] .top-navbar {
+    background: var(--bg-card, #1e293b) !important;
+    border-bottom-color: var(--border-color, rgba(255, 255, 255, 0.08)) !important;
+}
+
+[data-theme="dark"] .topbar-icon-btn {
+    color: var(--text-secondary, #94a3b8) !important;
+}
+
+[data-theme="dark"] .topbar-icon-btn:hover {
+    color: var(--accent-light, #60a5fa) !important;
+    background: rgba(96, 165, 250, 0.12) !important;
+}
+
+[data-theme="dark"] .topbar-badge-dot {
+    border-color: var(--bg-card, #1e293b) !important;
+}
+
 /* Error page */
 [data-theme="dark"] .error-page {
     background: var(--bg-body) !important;

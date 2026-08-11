@@ -213,8 +213,15 @@ public class FileManagerController {
         model.addAttribute("currentFolderId", folderId);
         model.addAttribute("viewMode", "storage");
 
+        long currentUsage = adminStorageService.getTotalSize();
+        long maxBytes = adminStorageService.getMaxStorageBytes();
+        int usagePercent = maxBytes > 0 ? (int) Math.min(100, (currentUsage * 100) / maxBytes) : 0;
+
         model.addAttribute("totalFiles", adminStorageService.getTotalFileCount());
-        model.addAttribute("totalSize", adminStorageService.formatSize(adminStorageService.getTotalSize()));
+        model.addAttribute("totalSize", adminStorageService.formatSize(currentUsage));
+        model.addAttribute("maxStorageSize", adminStorageService.formatSize(maxBytes));
+        model.addAttribute("remainingSize", adminStorageService.formatSize(adminStorageService.getRemainingBytes()));
+        model.addAttribute("usagePercent", usagePercent);
         model.addAttribute("totalFolders", adminStorageService.getTotalFolderCount());
         model.addAttribute("trashCount", adminStorageService.getTrashCount());
 
@@ -288,6 +295,9 @@ public class FileManagerController {
             result.put("success", true);
             result.put("message", "อัปโหลด '" + saved.getOriginalFilename() + "' สำเร็จ");
             logFileAction(principal, "UPLOAD_FILE", "อัปโหลดไฟล์ '" + saved.getOriginalFilename() + "'");
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
         } catch (IOException e) {
             result.put("success", false);
             result.put("message", "อัปโหลดไม่สำเร็จ: " + e.getMessage());

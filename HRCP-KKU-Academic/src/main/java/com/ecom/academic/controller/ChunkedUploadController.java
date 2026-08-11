@@ -110,8 +110,25 @@ public class ChunkedUploadController {
             return ResponseEntity.ok(result);
         }
 
-        // Validate file type and storage quota (only for user storage)
-        if (!wantsAdminStorage) {
+        // Validate file type and storage quota
+        if (wantsAdminStorage) {
+            try {
+                adminStorageService.validateFileType(filename);
+            } catch (IllegalArgumentException e) {
+                result.put("success", false);
+                result.put("message", e.getMessage());
+                return ResponseEntity.ok(result);
+            }
+
+            long remaining = adminStorageService.getRemainingBytes();
+            if (fileSize > remaining) {
+                result.put("success", false);
+                result.put("message", "พื้นที่เก็บข้อมูลของผู้ดูแลระบบเต็ม (เหลือ " + adminStorageService.formatSize(remaining)
+                        + " จากทั้งหมด " + adminStorageService.formatSize(adminStorageService.getMaxStorageBytes())
+                        + ") ไม่สามารถอัปโหลดไฟล์ขนาด " + adminStorageService.formatSize(fileSize) + " ได้");
+                return ResponseEntity.ok(result);
+            }
+        } else {
             try {
                 userStorageService.validateFileType(filename);
             } catch (IllegalArgumentException e) {

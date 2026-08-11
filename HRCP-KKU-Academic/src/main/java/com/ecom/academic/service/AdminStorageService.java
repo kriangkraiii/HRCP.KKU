@@ -6,9 +6,13 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -22,12 +26,74 @@ public class AdminStorageService {
 
     private static final String STORAGE_ROOT = "uploads/admin-storage";
 
+    private final long maxStorageBytes;
+    private final Set<String> allowedExtensions;
     private final AdminFolderRepository folderRepository;
     private final AdminFileRepository fileRepository;
 
-    public AdminStorageService(AdminFolderRepository folderRepository, AdminFileRepository fileRepository) {
+    public AdminStorageService(
+            AdminFolderRepository folderRepository,
+            AdminFileRepository fileRepository,
+            @Value("${app.storage.admin.max-bytes:10737418240}") long maxStorageBytes,
+            @Value("${app.storage.admin.allowed-extensions:pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,rtf,odt,ods}") String allowedExtensionsStr) {
         this.folderRepository = folderRepository;
         this.fileRepository = fileRepository;
+        this.maxStorageBytes = maxStorageBytes;
+        this.allowedExtensions = Arrays.stream(allowedExtensionsStr.split(","))
+                .map(ext -> ext.trim().toLowerCase())
+                .collect(Collectors.toSet());
+    }
+
+    // ==================== File Type & Quota Validation ====================
+
+    /**
+     * Validates that the filename has an allowed document extension.
+     * Throws IllegalArgumentException if the file type is not permitted.
+     */
+    public void validateFileType(String filename) {
+        if (filename == null || filename.isBlank()) {
+            throw new IllegalArgumentException("ชื่อไฟล์ไม่ถูกต้อง");
+        }
+
+        String ext = extractExtension(filename);
+        if (ext.isEmpty() || !allowedExtensions.contains(ext)) {
+            String allowed = String.join(", ", allowedExtensions.stream().sorted().map(e -> "." + e).toList());
+            throw new IllegalArgumentException(
+                    "ไม่อนุญาตให้อัปโหลดไฟล์ประเภท ." + (ext.isEmpty() ? "(ไม่มีนามสกุล)" : ext)
+                    + " — อนุญาตเฉพาะไฟล์เอกสาร: " + allowed);
+        }
+    }
+
+    /**
+     * Validates storage quota — throws if adding the given size would exceed the limit (10 GB).
+     */
+    public void validateStorageQuota(long incomingBytes) {
+        long currentUsage = getTotalSize();
+        if (currentUsage + incomingBytes > maxStorageBytes) {
+            throw new IllegalStateException(
+                    "พื้นที่เก็บข้อมูลของผู้ดูแลระบบเต็ม (ใช้ไป " + formatSize(currentUsage)
+                    + " / " + formatSize(maxStorageBytes)
+                    + ") ไม่สามารถอัปโหลดไฟล์ขนาด " + formatSize(incomingBytes) + " ได้");
+        }
+    }
+
+    public long getRemainingBytes() {
+        long used = getTotalSize();
+        return Math.max(0, maxStorageBytes - used);
+    }
+
+    public long getMaxStorageBytes() {
+        return maxStorageBytes;
+    }
+
+    public Set<String> getAllowedExtensions() {
+        return allowedExtensions;
+    }
+
+    private String extractExtension(String filename) {
+        int dotIdx = filename.lastIndexOf('.');
+        if (dotIdx < 0 || dotIdx == filename.length() - 1) return "";
+        return filename.substring(dotIdx + 1).toLowerCase();
     }
 
     // ==================== Folder Operations ====================
@@ -91,11 +157,14 @@ public class AdminStorageService {
     // ==================== File Operations ====================
 
     public AdminFile uploadFile(MultipartFile multipartFile, Long folderId, String uploadedBy) throws IOException {
+        String originalFilename = multipartFile.getOriginalFilename();
+        validateFileType(originalFilename);
+        validateStorageQuota(multipartFile.getSize());
+
         Path storageDir = Path.of(STORAGE_ROOT);
         Files.createDirectories(storageDir);
 
         // Generate unique stored filename
-        String originalFilename = multipartFile.getOriginalFilename();
         String ext = "";
         if (originalFilename != null && originalFilename.contains(".")) {
             ext = originalFilename.substring(originalFilename.lastIndexOf('.'));
@@ -125,6 +194,9 @@ public class AdminStorageService {
      */
     public AdminFile saveUploadedFile(String filename, String storedPath, long fileSize,
                                        String contentType, Long folderId, String uploadedBy) {
+        validateFileType(filename);
+        validateStorageQuota(fileSize);
+
         AdminFile file = new AdminFile();
         file.setOriginalFilename(filename);
         file.setStoredFilePath(storedPath);

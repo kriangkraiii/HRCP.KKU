@@ -27,10 +27,19 @@ function initDragDrop() {
     });
 }
 
+var ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'ods'];
+
 function uploadFiles(files) {
     for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var ext = file.name.split('.').pop().toLowerCase();
+        if (!ALLOWED_EXTENSIONS.includes(ext)) {
+            showToast('ไม่อนุญาตให้อัปโหลดไฟล์ .' + ext + ' (อนุญาตเฉพาะ: ' + ALLOWED_EXTENSIONS.join(', ') + ')', false);
+            continue;
+        }
+
         var fd = new FormData();
-        fd.append('file', files[i]);
+        fd.append('file', file);
         if (currentFolderId) fd.append('folderId', currentFolderId);
         fd.append('_csrf', csrfToken);
 

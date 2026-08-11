@@ -18,18 +18,33 @@ import jakarta.mail.internet.MimeMessage;
 public class PositionEmailService {
 
     private final JavaMailSender mailSender;
-
     private final UserRepository userRepository;
+    private final com.ecom.service.NotificationService notificationService;
 
-    public PositionEmailService(JavaMailSender mailSender, UserRepository userRepository) {
+    public PositionEmailService(JavaMailSender mailSender, UserRepository userRepository, com.ecom.service.NotificationService notificationService) {
         this.mailSender = mailSender;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
     }
 
     @Async
     public void sendStatusChangeEmail(PositionRequest request,
             PositionRequestStatus oldStatus, PositionRequestStatus newStatus) {
         try {
+            // 1. Create in-app notification for applicant
+            if (request != null && request.getApplicant() != null) {
+                boolean isImportant = newStatus == PositionRequestStatus.REVISION_REQUESTED
+                        || newStatus == PositionRequestStatus.REJECTED
+                        || newStatus == PositionRequestStatus.SCREENING_APPROVED
+                        || newStatus == PositionRequestStatus.COLLEGE_APPROVED
+                        || newStatus == PositionRequestStatus.SENT_TO_HR;
+                String notifTitle = "อัปเดตสถานะขอตำแหน่ง: " + newStatus.getThaiLabel();
+                String notifMsg = "คำร้องขอตำแหน่งทางวิชาการ (" + request.getRequestCode() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel();
+                String notifLink = "/user/position/request/" + request.getId();
+                notificationService.sendNotification(request.getApplicant(), null, notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.POSITION_STATUS_UPDATE, isImportant);
+            }
+
+            // 2. Send email notification
             String applicantEmail = request.getApplicant().getEmail();
             if (applicantEmail == null || applicantEmail.isEmpty())
                 return;
@@ -51,6 +66,15 @@ public class PositionEmailService {
     @Async
     public void sendNewRequestNotificationToAdmins(PositionRequest request) {
         try {
+            // 1. Create in-app notification for all admins
+            if (request != null && request.getApplicant() != null) {
+                String notifTitle = "คำร้องขอตำแหน่งทางวิชาการใหม่";
+                String notifMsg = "มีคำร้องขอตำแหน่งใหม่ (" + request.getRequestCode() + ") ยื่นโดย " + request.getApplicant().getName();
+                String notifLink = "/admin/academic/requests?type=position";
+                notificationService.notifyAdmins(request.getApplicant(), notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.POSITION_NEW_REQUEST, false);
+            }
+
+            // 2. Send email to admins who opted-in
             List<UserDtls> admins = userRepository.findByRole("ROLE_ADMIN");
             for (UserDtls admin : admins) {
                 if (admin.getEmailNotificationEnabled() != null && admin.getEmailNotificationEnabled()) {

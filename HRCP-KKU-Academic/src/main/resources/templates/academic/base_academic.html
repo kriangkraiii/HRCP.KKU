@@ -75,6 +75,12 @@
                 </a>
 
                 <div class="sidebar-section-title">ระบบ & การตั้งค่า</div>
+                <a href="/admin/notifications" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-notifications">
+                    <span><i class="fas fa-bell me-2"></i>การแจ้งเตือน</span>
+                    <span class="badge bg-danger rounded-pill notification-sidebar-badge"
+                          th:if="${unreadNotificationCount != null && unreadNotificationCount > 0}"
+                          th:text="${unreadNotificationCount}">0</span>
+                </a>
                 <a href="/admin/activity-logs" class="sidebar-link" id="nav-logs">
                     <i class="fas fa-history"></i> ประวัติกิจกรรม
                 </a>
@@ -106,6 +112,12 @@
                 </a>
 
                 <div class="sidebar-section-title">ทรัพยากร & การตั้งค่า</div>
+                <a href="/user/notifications" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-notifications">
+                    <span><i class="fas fa-bell me-2"></i>การแจ้งเตือน</span>
+                    <span class="badge bg-danger rounded-pill notification-sidebar-badge"
+                          th:if="${unreadNotificationCount != null && unreadNotificationCount > 0}"
+                          th:text="${unreadNotificationCount}">0</span>
+                </a>
                 <a href="/user/academic/documents" class="sidebar-link" id="nav-documents">
                     <i class="fas fa-book-open"></i> เอกสาร/ข้อบังคับ
                 </a>
@@ -356,6 +368,52 @@
 
     <!-- ===== Main Content ===== -->
     <div class="main-content" role="main">
+        <!-- Top Navbar Header -->
+        <header class="top-navbar d-flex justify-content-end align-items-center px-4 py-2" th:if="${user != null}">
+            <div class="d-flex align-items-center gap-3">
+                <!-- Notifications Bell Icon -->
+                <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/notifications' : '/user/notifications'}"
+                   class="topbar-icon-btn position-relative"
+                   title="การแจ้งเตือน"
+                   aria-label="การแจ้งเตือน">
+                    <i class="far fa-bell fa-lg"></i>
+                    <span class="position-absolute topbar-badge-dot rounded-circle bg-danger"
+                          th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
+                          th:title="${unreadNotificationCount} + ' รายการที่ยังไม่ได้อ่าน'"></span>
+                </a>
+
+                <!-- Help / User Guide Icon -->
+                <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/academic/guide' : '/user/academic/guide'}"
+                   class="topbar-icon-btn"
+                   title="คู่มือการใช้งาน"
+                   aria-label="คู่มือการใช้งาน">
+                    <i class="far fa-question-circle fa-lg"></i>
+                </a>
+
+                <!-- Profile Avatar -->
+                <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}"
+                   class="topbar-avatar-link"
+                   th:title="${user.name}">
+                    <div class="topbar-avatar rounded-circle overflow-hidden shadow-sm">
+                        <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
+                             th:src="'/img/profile_img/' + ${user.profileImage}"
+                             th:alt="${user.name}"
+                             style="width: 100%; height: 100%; object-fit: cover;"
+                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                        <div th:if="${user.profileImage == null or user.profileImage == 'default.png'}"
+                             class="w-100 h-100 d-flex align-items-center justify-content-center bg-primary text-white"
+                             style="font-size: 0.85rem; font-weight: 600;">
+                            <span th:text="${user.name != null and !user.name.isEmpty() ? user.name.substring(0,1) : 'U'}">U</span>
+                        </div>
+                        <div class="w-100 h-100 align-items-center justify-content-center bg-primary text-white"
+                             style="display: none; font-size: 0.85rem; font-weight: 600;">
+                            <span th:text="${user.name != null and !user.name.isEmpty() ? user.name.substring(0,1) : 'U'}">U</span>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </header>
+
         <div class="content-wrapper" id="main-content" th:replace="${content}"></div>
         <footer class="main-footer" role="contentinfo">
             © <span th:text="${T(java.time.Year).now().getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น — ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ

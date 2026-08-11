@@ -27,18 +27,19 @@ public class EvaluationExpiryScheduler {
     private static final Logger log = LoggerFactory.getLogger(EvaluationExpiryScheduler.class);
 
     private final AcademicRequestRepository requestRepository;
-
     private final AcademicRequestService academicService;
-
     private final JavaMailSender mailSender;
+    private final com.ecom.service.NotificationService notificationService;
 
     public EvaluationExpiryScheduler(
             AcademicRequestRepository requestRepository,
             AcademicRequestService academicService,
-            JavaMailSender mailSender) {
+            JavaMailSender mailSender,
+            com.ecom.service.NotificationService notificationService) {
         this.requestRepository = requestRepository;
         this.academicService = academicService;
         this.mailSender = mailSender;
+        this.notificationService = notificationService;
     }
 
     /** Run daily at 8:00 AM */
@@ -137,6 +138,12 @@ public class EvaluationExpiryScheduler {
             helper.setText(body, true);
             mailSender.send(message);
             log.info("Sent expiry alert to {} ({}d left)", user.getEmail(), daysLeft);
+
+            // Create In-App Notification (marked as important)
+            String notifTitle = "⚠️ ผลประเมินการสอนจะหมดอายุภายใน " + alertLabel;
+            String notifMsg = "ผลการประเมินการสอน (" + request.getRequestCode() + ") ของท่านจะหมดอายุในอีก " + daysLeft + " วัน (วันที่ " + formattedDate + ") กรุณาดำเนินการยื่นขอตำแหน่งก่อนหมดอายุ";
+            String notifLink = "/user/position/dashboard";
+            notificationService.sendNotification(user, null, notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.EXPIRY_WARNING, true);
         } catch (Exception e) {
             log.error("Failed to send expiry email to {}: {}", user.getEmail(), e.getMessage());
         }
