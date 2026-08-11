@@ -177,9 +177,13 @@ public class FileManagerController {
             String contentType = Files.probeContentType(filePath);
             if (contentType == null) contentType = "application/octet-stream";
 
+            String rawFilename = fileItem.getFileName() != null ? fileItem.getFileName() : "file";
+            String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+            String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + fileItem.getFileName() + "\"")
+                            "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                     .contentType(MediaType.parseMediaType(contentType))
                     .contentLength(fileBytes.length)
                     .body(new ByteArrayResource(fileBytes));
@@ -370,9 +374,13 @@ public class FileManagerController {
             String contentType = file.getContentType();
             if (contentType == null) contentType = "application/octet-stream";
 
+            String rawFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+            String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+            String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + file.getOriginalFilename() + "\"")
+                            "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                     .contentType(MediaType.parseMediaType(contentType))
                     .contentLength(fileBytes.length)
                     .body(new ByteArrayResource(fileBytes));

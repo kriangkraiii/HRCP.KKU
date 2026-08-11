@@ -150,8 +150,12 @@ public class UserFileManagerController {
             byte[] bytes = Files.readAllBytes(filePath);
             String ct = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
 
+            String rawFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+            String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+            String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + file.getOriginalFilename() + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                     .contentType(MediaType.parseMediaType(ct))
                     .contentLength(bytes.length)
                     .body(new ByteArrayResource(bytes));

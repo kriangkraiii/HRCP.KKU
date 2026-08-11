@@ -43,6 +43,22 @@ public class DocumentPreviewController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    public static final Map<Integer, String> DOC_TITLES = Map.of(
+            0, "บันทึกข้อความ_ขอรับการประเมินผลการสอน",
+            1, "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน",
+            2, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ",
+            3, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน",
+            4, "บันทึกข้อความ_ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ",
+            5, "ข้อเสนอแนะจากคณะอนุกรรมการ",
+            6, "แบบฟอร์มประเมินการสอน_ตามประกาศ_มข_1607-66",
+            7, "ส่วนที่_3_แบบประเมินผลการสอน",
+            8, "บันทึกข้อความ_แจ้งผลการประเมินผลการสอน"
+    );
+
+    public static String getDocTitle(int docType) {
+        return DOC_TITLES.getOrDefault(docType, "เอกสาร");
+    }
+
     /**
      * POST /api/academic/preview/{docType}
      * รับ form data เป็น JSON, สร้าง docx จาก template, ส่ง DOCX กลับ
@@ -119,18 +135,21 @@ public class DocumentPreviewController {
             String jsonData = objectMapper.writeValueAsString(formData);
 
             byte[] docxBytes;
+            String baseFilename = "เอกสารที่_" + docType + "_" + getDocTitle(docType);
             if (docType == 4) {
                 String committeeIdx = formData.getOrDefault("committee_index", "1");
                 String committeeName = formData.getOrDefault("committee_name_" + committeeIdx, "");
                 String committeePosition = formData.getOrDefault("committee_position_" + committeeIdx, "");
                 docxBytes = documentService.generatePreviewDocxForCopy(docType, jsonData, committeeName,
                         committeePosition);
+                if (!committeeName.isBlank()) {
+                    baseFilename += "_" + committeeName.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+                }
             } else {
                 docxBytes = documentService.generatePreviewDocx(docType, jsonData);
             }
 
-            return PreviewResponseFactory.build(documentService, docxBytes, format,
-                    "preview_doc_" + docType);
+            return PreviewResponseFactory.build(documentService, docxBytes, format, baseFilename);
 
         } catch (IOException e) {
             logger.error("Failed to generate preview for docType {}: {}", docType, e.getMessage(), e);

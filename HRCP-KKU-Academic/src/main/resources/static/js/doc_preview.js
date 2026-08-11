@@ -29,6 +29,43 @@ class DocPreviewEngine {
         this.init();
     }
 
+    /** ดึงชื่อเอกสารตามประเภทเอกสาร */
+    getDocTitle() {
+        const isPosition = this.previewBasePath && this.previewBasePath.includes('position');
+        if (isPosition) {
+            const posTitles = {
+                0: 'บันทึกข้อความ ขอรับการประเมินผลการสอน',
+                1: 'แบบ ก.พ.ว. มข. 03 (ประวัติและผลงาน)',
+                2: 'หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูล',
+                3: 'แบบรับรองจริยธรรมและจรรยาบรรณ',
+                4: 'บันทึกรับรองผลงานทางวิชาการ (วิทยานิพนธ์)',
+                5: 'แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา',
+                6: 'บันทึกข้อความจริยธรรมการวิจัย (Exemption)',
+                7: 'แบบฟอร์มตรวจสอบคุณสมบัติ (Checklist)',
+                8: 'แบบสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ',
+                9: 'ลักษณะการมีส่วนร่วมในผลงาน'
+            };
+            return posTitles[this.docType] || '';
+        } else {
+            const acadTitles = {
+                0: 'บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน',
+                1: 'แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน',
+                2: 'การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ',
+                3: 'คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน',
+                4: 'บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ',
+                5: 'ข้อเสนอแนะจากคณะอนุกรรมการ',
+                6: 'แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66',
+                7: 'ส่วนที่ 3 แบบประเมินผลการสอน',
+                8: 'บันทึกข้อความ แจ้งผลการประเมินผลการสอน'
+            };
+            return acadTitles[this.docType] || '';
+        }
+    }
+
+    getCleanDocTitle() {
+        return this.getDocTitle().replace(/[\/\\:*?"<>|\s]+/g, '_');
+    }
+
     /** อ่านค่า XSRF-TOKEN จาก cookie (ตั้งโดย CookieCsrfTokenRepository) */
     getCsrfToken() {
         const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
@@ -72,12 +109,15 @@ class DocPreviewEngine {
         this.overlay.className = 'docx-preview-overlay';
         this.overlay.id = 'docxPreviewOverlay';
 
+        const docTitle = this.getDocTitle();
+        const displayTitle = docTitle ? `ตัวอย่างเอกสารที่ ${this.docType}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${this.docType}`;
+
         this.overlay.innerHTML = `
             <div class="docx-preview-container">
                 <div class="docx-preview-toolbar">
                     <div class="docx-toolbar-left">
                         <i class="fas fa-file-word"></i>
-                        <span>ตัวอย่างเอกสารที่ ${this.docType}</span>
+                        <span id="docxTitleText">${displayTitle}</span>
                         <span class="docx-status-badge" id="docxStatusBadge">ล่าสุด</span>
                     </div>
                     <div class="docx-toolbar-right">
@@ -416,9 +456,13 @@ class DocPreviewEngine {
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            let filename = 'doc_' + this.docType;
+            
+            const isPosition = this.previewBasePath && this.previewBasePath.includes('position');
+            const prefix = isPosition ? 'เอกสารตำแหน่งที่_' : 'เอกสารที่_';
+            const cleanTitle = this.getCleanDocTitle();
+            let filename = prefix + this.docType + (cleanTitle ? '_' + cleanTitle : '');
             if (this.tabs) {
-                filename += '_' + this.tabs[this.activeTab].label;
+                filename += '_' + this.tabs[this.activeTab].label.replace(/[\/\\:*?"<>|\s]+/g, '_');
             }
             a.download = filename + '.' + actualFormat;
             document.body.appendChild(a);

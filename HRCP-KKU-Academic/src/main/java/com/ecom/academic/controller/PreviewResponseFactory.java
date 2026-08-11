@@ -1,6 +1,8 @@
 package com.ecom.academic.controller;
 
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,12 +34,16 @@ final class PreviewResponseFactory {
     static ResponseEntity<byte[]> build(DocumentGenerationService service, byte[] docxBytes,
             String format, String baseFilename) {
 
+        String safeBase = (baseFilename == null || baseFilename.isBlank()) ? "document" : baseFilename;
+        String encodedFilename = URLEncoder.encode(safeBase, StandardCharsets.UTF_8).replace("+", "%20");
+        String asciiFilename = safeBase.replaceAll("[^a-zA-Z0-9._-]", "_");
+
         if ("pdf".equalsIgnoreCase(format) && service.isPdfConversionAvailable()) {
             try {
                 byte[] pdfBytes = service.convertDocxToPdfCached(docxBytes);
                 return ResponseEntity.ok()
                         .header(HttpHeaders.CONTENT_DISPOSITION,
-                                "inline; filename=\"" + baseFilename + ".pdf\"")
+                                "inline; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + encodedFilename + ".pdf")
                         .header(FORMAT_HEADER, "pdf")
                         .contentType(MediaType.APPLICATION_PDF)
                         .contentLength(pdfBytes.length)
@@ -51,7 +57,7 @@ final class PreviewResponseFactory {
         String formatHeader = "pdf".equalsIgnoreCase(format) ? "docx-fallback" : "docx";
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "inline; filename=\"" + baseFilename + ".docx\"")
+                        "inline; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + encodedFilename + ".docx")
                 .header(FORMAT_HEADER, formatHeader)
                 .contentType(MediaType.parseMediaType(DOCX_MIME))
                 .contentLength(docxBytes.length)

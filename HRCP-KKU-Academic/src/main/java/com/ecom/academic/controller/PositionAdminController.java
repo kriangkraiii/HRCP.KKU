@@ -321,7 +321,9 @@ public class PositionAdminController {
 
         PositionDocument doc = docs.get(0);
         byte[] data = null;
-        String label = doc.getDocumentLabel() != null ? doc.getDocumentLabel() : "document";
+        String label = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
+                ? doc.getDocumentLabel()
+                : positionService.getDocLabel(type);
 
         // Try using existing generated file first
         if (doc.getGeneratedFilePath() != null) {
@@ -354,27 +356,29 @@ public class PositionAdminController {
             return ResponseEntity.notFound().build();
         }
 
+        String cleanDocName = label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+        String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + type + "_" + cleanDocName;
+
+        String safeFilename = java.net.URLEncoder.encode(baseName, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+
         // PDF: แปลง DOCX → PDF ผ่าน LibreOffice (เหมือนฝั่งประเมินผลการสอน)
         if ("pdf".equalsIgnoreCase(format)) {
             byte[] pdfData = documentService.convertDocxToPdf(data);
-            String pdfFilename = label + ".pdf";
-            String safePdfFilename = java.net.URLEncoder.encode(pdfFilename, java.nio.charset.StandardCharsets.UTF_8)
-                    .replace("+", "%20");
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safePdfFilename)
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
                     .contentLength(pdfData.length)
                     .body(new ByteArrayResource(pdfData));
         }
 
-        String filename = label + ".docx";
-        String safeFilename = java.net.URLEncoder.encode(filename, java.nio.charset.StandardCharsets.UTF_8)
-                .replace("+", "%20");
-
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safeFilename)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + safeFilename + ".docx")
                 .body(new ByteArrayResource(data));
     }
 
@@ -414,8 +418,11 @@ public class PositionAdminController {
                 }
 
                 if (docBytes != null) {
-                    String entryName = "doc_" + doc.getDocumentType() + "_" +
-                            (doc.getDocumentLabel() != null ? doc.getDocumentLabel() : "document") + ".docx";
+                    String docLabel = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
+                            ? doc.getDocumentLabel()
+                            : positionService.getDocLabel(doc.getDocumentType());
+                    String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+                    String entryName = "เอกสารตำแหน่งที่_" + doc.getDocumentType() + "_" + cleanDocName + ".docx";
                     zos.putNextEntry(new ZipEntry(entryName));
                     zos.write(docBytes);
                     zos.closeEntry();
@@ -423,10 +430,14 @@ public class PositionAdminController {
             }
         }
 
+        String zipBaseName = request.getRequestCode() + "_เอกสารขอกำหนดตำแหน่งทั้งหมด.zip";
+        String encodedZip = java.net.URLEncoder.encode(zipBaseName, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+        String asciiZip = request.getRequestCode() + "_position_documents.zip";
+
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType("application/zip"))
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"position_request_" + id + "_documents.zip\"")
+                        "attachment; filename=\"" + asciiZip + "\"; filename*=UTF-8''" + encodedZip)
                 .body(new ByteArrayResource(baos.toByteArray()));
     }
 
@@ -493,12 +504,14 @@ public class PositionAdminController {
                 ? "application/pdf"
                 : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
-        String safeFilename = java.net.URLEncoder.encode(attachment.getOriginalFilename(),
+        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
+        String safeFilename = java.net.URLEncoder.encode(rawFilename,
                 java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+        String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
 
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safeFilename)
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                 .body(new ByteArrayResource(data));
     }
 
