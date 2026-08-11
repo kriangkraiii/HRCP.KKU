@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
@@ -356,6 +357,27 @@ public class AcademicApplicantController {
         emailService.sendNewRequestNotificationToAdmins(request);
 
         return "redirect:/user/academic/request/" + id + "?success=submitted";
+    }
+
+    /**
+     * ยกเลิกแบบร่างคำร้องประเมินผลการสอน
+     */
+    @PostMapping("/request/{id}/cancel-draft")
+    public String cancelDraftRequest(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
+        UserDtls user = getUser(principal);
+        boolean deleted = requestService.deleteDraftRequest(id, user.getId());
+        if (deleted) {
+            try {
+                adminLogService.log(principal.getName(), user.getName(),
+                        "CANCEL_DRAFT",
+                        "ยกเลิกแบบร่างคำร้องประเมินผลการสอน #" + id,
+                        getClientIpAddress());
+            } catch (Exception ignored) {}
+            redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องเรียบร้อยแล้ว");
+        } else {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่สามารถยกเลิกแบบร่างได้ หรือคำร้องไม่ได้อยู่ในสถานะแบบร่าง");
+        }
+        return "redirect:/user/academic/dashboard";
     }
 
     @GetMapping("/request/{id}")

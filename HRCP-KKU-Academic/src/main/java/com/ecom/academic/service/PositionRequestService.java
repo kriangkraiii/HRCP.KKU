@@ -210,6 +210,26 @@ public class PositionRequestService {
         return requestRepository.findDraftByApplicantId(userId);
     }
 
+    /**
+     * ยกเลิก/ลบ draft position request
+     */
+    @Transactional
+    public boolean deleteDraftRequest(Long requestId, Integer applicantId) {
+        Optional<PositionRequest> opt = requestRepository.findById(requestId);
+        if (opt.isPresent()) {
+            PositionRequest req = opt.get();
+            if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == PositionRequestStatus.DRAFT) {
+                List<PositionAttachment> attachments = attachmentRepository.findActiveByRequestId(requestId);
+                if (!attachments.isEmpty()) {
+                    attachmentRepository.deleteAll(attachments);
+                }
+                requestRepository.delete(req);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean hasActiveRequest(Integer userId) {
         List<PositionRequestStatus> terminal = Arrays.asList(
                 PositionRequestStatus.SENT_TO_HR);
