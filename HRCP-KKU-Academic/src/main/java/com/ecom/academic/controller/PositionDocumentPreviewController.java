@@ -40,6 +40,23 @@ public class PositionDocumentPreviewController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    public static final Map<Integer, String> POSITION_DOC_TITLES = Map.of(
+            0, "บันทึกข้อความ_ขอรับการประเมินผลการสอน",
+            1, "แบบ_ก.พ.ว._มข._03_ประวัติและผลงาน",
+            2, "หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูล",
+            3, "แบบรับรองจริยธรรมและจรรยาบรรณ",
+            4, "บันทึกรับรองผลงานทางวิชาการ_วิทยานิพนธ์",
+            5, "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา",
+            6, "บันทึกข้อความจริยธรรมการวิจัย_Exemption",
+            7, "แบบฟอร์มตรวจสอบคุณสมบัติ_Checklist",
+            8, "แบบสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ",
+            9, "ลักษณะการมีส่วนร่วมในผลงาน"
+    );
+
+    public static String getPositionDocTitle(int docType) {
+        return POSITION_DOC_TITLES.getOrDefault(docType, "เอกสาร");
+    }
+
     @PostMapping("/{docType}")
     public ResponseEntity<byte[]> previewDocument(
             @PathVariable int docType,
@@ -49,8 +66,8 @@ public class PositionDocumentPreviewController {
             String jsonData = objectMapper.writeValueAsString(formData);
             byte[] docxBytes = documentService.generateP2PreviewDocx(docType, jsonData);
 
-            return PreviewResponseFactory.build(documentService, docxBytes, format,
-                    "preview_p2doc_" + docType);
+            String baseFilename = "เอกสารตำแหน่งที่_" + docType + "_" + getPositionDocTitle(docType);
+            return PreviewResponseFactory.build(documentService, docxBytes, format, baseFilename);
         } catch (IOException e) {
             logger.error("Failed to generate position preview for docType {}: {}", docType, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();

@@ -467,37 +467,79 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: 8px;
     padding: 10px 18px;
-    border: 2px solid var(--border-color);
-    border-radius: 12px;
+    border: 1.5px solid #cbd5e1 !important;
+    border-radius: 10px;
     cursor: pointer;
-    transition: all 0.25s ease;
-    font-size: 0.88rem;
-    font-weight: 500;
-    color: var(--text-secondary);
-    background: var(--bg-input);
+    transition: all 0.2s ease;
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: #1e293b !important;
+    background: #ffffff !important;
     flex: 1;
     text-align: center;
 }
 
+.theme-option i {
+    font-size: 1rem;
+    color: #475569 !important;
+    transition: color 0.2s ease;
+}
+
 .theme-option:hover {
-    border-color: #42a5f5;
-    color: #42a5f5;
-    background: rgba(66, 165, 245, 0.06);
+    border-color: #1a237e !important;
+    color: #1a237e !important;
+    background: rgba(26, 35, 126, 0.04) !important;
+}
+
+.theme-option:hover i {
+    color: #1a237e !important;
 }
 
 .theme-option.active {
-    border-color: #1a237e;
-    background: rgba(26, 35, 126, 0.1);
-    color: #1a237e;
-    font-weight: 600;
+    border-color: #1a237e !important;
+    border-width: 2px !important;
+    background: rgba(26, 35, 126, 0.08) !important;
+    color: #1a237e !important;
+    font-weight: 700;
+}
+
+.theme-option.active i {
+    color: #1a237e !important;
+}
+
+/* Dark Mode Overrides */
+[data-theme="dark"] .theme-option {
+    border-color: #475569 !important;
+    background: #1e293b !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .theme-option i {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .theme-option:hover {
+    border-color: #60a5fa !important;
+    color: #60a5fa !important;
+    background: rgba(96, 165, 250, 0.12) !important;
+}
+
+[data-theme="dark"] .theme-option:hover i {
+    color: #60a5fa !important;
 }
 
 [data-theme="dark"] .theme-option.active {
-    border-color: #42a5f5;
-    background: rgba(66, 165, 245, 0.15);
-    color: #90caf9;
+    border-color: #60a5fa !important;
+    border-width: 2px !important;
+    background: rgba(96, 165, 250, 0.2) !important;
+    color: #ffffff !important;
+    font-weight: 700;
+}
+
+[data-theme="dark"] .theme-option.active i {
+    color: #60a5fa !important;
 }
 
 /* -- Transition for smooth theme switch -- */
@@ -1201,12 +1243,18 @@ body,
 [data-theme="dark"] .doc-checklist-item {
     background: var(--bg-card);
     border-color: var(--border-color);
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .doc-checklist-item:hover {
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
 }
 
 /* Submit section */
 [data-theme="dark"] .submit-section {
     background: var(--bg-card);
     border-color: var(--border-color);
+    box-shadow: 0 3px 14px rgba(0, 0, 0, 0.4);
 }
 
 /* ===== Admin Dashboard v2 — Dark Mode ===== */

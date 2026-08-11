@@ -811,7 +811,11 @@
 
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
-        <script>initDocPreview('doc7Form', 7, '/api/position/preview');</script>
+        <script src="/js/position_notify_confirm.js"></script>
+        <script>
+            initDocPreview('doc7Form', 7, '/api/position/preview');
+            initPositionNotifyConfirm('doc7Form', 7);
+        </script>
     </section>
 </body>
 </html>

@@ -752,6 +752,8 @@ public class AcademicAdminController {
     public ResponseEntity<ByteArrayResource> downloadDocument(@PathVariable Long id,
             @PathVariable Long docId,
             @RequestParam(value = "format", defaultValue = "docx") String format) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
         List<AcademicDocument> docs = requestService.getDocuments(id);
         AcademicDocument doc = docs.stream()
                 .filter(d -> d.getId().equals(docId))
@@ -760,30 +762,40 @@ public class AcademicAdminController {
 
         byte[] data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
 
+        String docLabel = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
+                ? doc.getDocumentLabel()
+                : DOC_LABELS.getOrDefault(doc.getDocumentType(), "เอกสารที่ " + doc.getDocumentType());
+        String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+        String baseName = request.getRequestCode() + "_เอกสารที่_" + doc.getDocumentType() + "_" + cleanDocName;
+
+        String safeFilename = java.net.URLEncoder.encode(baseName, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+
         if ("pdf".equalsIgnoreCase(format)) {
             byte[] pdfData = documentService.convertDocxToPdf(data);
             ByteArrayResource resource = new ByteArrayResource(pdfData);
-            String filename = Path.of(doc.getGeneratedFilePath()).getFileName().toString()
-                    .replace(".docx", ".pdf");
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .contentLength(pdfData.length)
                     .body(resource);
         }
 
         ByteArrayResource resource = new ByteArrayResource(data);
-        String filename = Path.of(doc.getGeneratedFilePath()).getFileName().toString();
-
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + safeFilename + ".docx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
                 .contentLength(data.length)
                 .body(resource);
     }
 
     @GetMapping("/request/{id}/download-all")
     public ResponseEntity<ByteArrayResource> downloadAll(@PathVariable Long id) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
         List<AcademicDocument> docs = requestService.getDocuments(id);
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -795,7 +807,12 @@ public class AcademicAdminController {
                 if (!Files.exists(filePath))
                     continue;
 
-                String entryName = filePath.getFileName().toString();
+                String docLabel = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
+                        ? doc.getDocumentLabel()
+                        : DOC_LABELS.getOrDefault(doc.getDocumentType(), "เอกสารที่ " + doc.getDocumentType());
+                String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+                String entryName = "เอกสารที่_" + doc.getDocumentType() + "_" + cleanDocName + ".docx";
+
                 zos.putNextEntry(new ZipEntry(entryName));
                 zos.write(Files.readAllBytes(filePath));
                 zos.closeEntry();
@@ -805,8 +822,12 @@ public class AcademicAdminController {
         byte[] zipBytes = baos.toByteArray();
         ByteArrayResource resource = new ByteArrayResource(zipBytes);
 
+        String zipBaseName = request.getRequestCode() + "_เอกสารทั้งหมด.zip";
+        String encodedZip = java.net.URLEncoder.encode(zipBaseName, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+        String asciiZip = request.getRequestCode() + "_documents.zip";
+
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"request_" + id + "_documents.zip\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + asciiZip + "\"; filename*=UTF-8''" + encodedZip)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)
                 .contentLength(zipBytes.length)
                 .body(resource);
@@ -874,9 +895,14 @@ public class AcademicAdminController {
                 ? "application/pdf"
                 : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
+        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
+        String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        FileUtils.contentDisposition(attachment.getOriginalFilename()))
+                        "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                 .contentType(MediaType.parseMediaType(contentType))
                 .contentLength(Files.size(path))
                 .body(new FileSystemResource(path));

@@ -23,13 +23,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
-import com.ecom.util.FileUtils;
-import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.dto.FileItemDTO;
 import com.ecom.academic.model.AdminFile;
 import com.ecom.academic.model.AdminFolder;
 import com.ecom.academic.service.AdminStorageService;
 import com.ecom.academic.service.FileManagementService;
+import com.ecom.config.ClientIpUtils;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
@@ -181,9 +180,13 @@ public class FileManagerController {
             String contentType = Files.probeContentType(filePath);
             if (contentType == null) contentType = "application/octet-stream";
 
+            String rawFilename = fileItem.getFileName() != null ? fileItem.getFileName() : "file";
+            String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+            String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            FileUtils.contentDisposition(fileItem.getFileName()))
+                            "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                     .contentType(MediaType.parseMediaType(contentType))
                     .contentLength(Files.size(filePath))
                     .body(new org.springframework.core.io.FileSystemResource(filePath));
@@ -373,9 +376,13 @@ public class FileManagerController {
             String contentType = file.getContentType();
             if (contentType == null) contentType = "application/octet-stream";
 
+            String rawFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+            String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+            String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            FileUtils.contentDisposition(file.getOriginalFilename()))
+                            "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                     .contentType(MediaType.parseMediaType(contentType))
                     .contentLength(Files.size(filePath))
                     .body(new org.springframework.core.io.FileSystemResource(filePath));

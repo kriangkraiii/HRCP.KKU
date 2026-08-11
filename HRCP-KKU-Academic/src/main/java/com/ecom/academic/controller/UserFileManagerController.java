@@ -12,13 +12,17 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ecom.academic.model.UserFile;
 import com.ecom.academic.model.UserFolder;
 import com.ecom.academic.service.UserStorageService;
-import com.ecom.util.FileUtils;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -149,11 +153,12 @@ public class UserFileManagerController {
 
             String ct = file.getContentType() != null ? file.getContentType() : "application/octet-stream";
 
-            // Streamed rather than read into a byte[]: uploads are chunked and
-            // may be far larger than the heap.
+            String rawFilename = file.getOriginalFilename() != null ? file.getOriginalFilename() : "file";
+            String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+            String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            FileUtils.contentDisposition(file.getOriginalFilename()))
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                     .contentType(MediaType.parseMediaType(ct))
                     .contentLength(Files.size(filePath))
                     .body(new org.springframework.core.io.FileSystemResource(filePath));

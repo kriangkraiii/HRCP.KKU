@@ -15,6 +15,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
@@ -23,6 +24,7 @@ import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
+import com.ecom.academic.repository.PositionAttachmentRepository;
 import com.ecom.academic.repository.PositionDocumentEditLogRepository;
 import com.ecom.academic.repository.PositionDocumentRepository;
 import com.ecom.academic.repository.PositionRequestRepository;
@@ -51,7 +53,7 @@ public class PositionRequestService {
 
     private final PositionEmailService emailService;
 
-    private final com.ecom.academic.repository.PositionAttachmentRepository attachmentRepository;
+    private final PositionAttachmentRepository attachmentRepository;
 
     public PositionRequestService(
             PositionRequestRepository requestRepository,
@@ -61,7 +63,7 @@ public class PositionRequestService {
             AcademicRequestRepository academicRequestRepository,
             AcademicDocumentRepository academicDocumentRepository,
             PositionEmailService emailService,
-            com.ecom.academic.repository.PositionAttachmentRepository attachmentRepository) {
+            PositionAttachmentRepository attachmentRepository) {
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.statusHistoryRepository = statusHistoryRepository;
@@ -214,6 +216,26 @@ public class PositionRequestService {
         return requestRepository.findDraftByApplicantId(userId);
     }
 
+    /**
+     * ยกเลิก/ลบ draft position request
+     */
+    @Transactional
+    public boolean deleteDraftRequest(Long requestId, Integer applicantId) {
+        Optional<PositionRequest> opt = requestRepository.findById(requestId);
+        if (opt.isPresent()) {
+            PositionRequest req = opt.get();
+            if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == PositionRequestStatus.DRAFT) {
+                List<PositionAttachment> attachments = attachmentRepository.findActiveByRequestId(requestId);
+                if (!attachments.isEmpty()) {
+                    attachmentRepository.deleteAll(attachments);
+                }
+                requestRepository.delete(req);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public boolean hasActiveRequest(Integer userId) {
         List<PositionRequestStatus> terminal = Arrays.asList(
                 PositionRequestStatus.SENT_TO_HR);
@@ -242,6 +264,12 @@ public class PositionRequestService {
     @Transactional
     public PositionRequest updateStatus(Long requestId, PositionRequestStatus newStatus,
             UserDtls changedBy, String note) {
+        return updateStatus(requestId, newStatus, changedBy, note, true);
+    }
+
+    @Transactional
+    public PositionRequest updateStatus(Long requestId, PositionRequestStatus newStatus,
+            UserDtls changedBy, String note, boolean sendNotify) {
         PositionRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + requestId));
 
@@ -251,15 +279,38 @@ public class PositionRequestService {
 
         addStatusHistory(request, old, newStatus, changedBy, note);
 
-        // Send email notification to applicant
-        try {
-            emailService.sendStatusChangeEmail(request, old, newStatus);
-        } catch (Exception e) {
-            log.error("Email notification failed on status update for request {}: {}",
-                    requestId, e.getMessage(), e);
+        // Send email notification to applicant if requested
+        if (sendNotify) {
+            try {
+                emailService.sendStatusChangeEmail(request, old, newStatus);
+            } catch (Exception e) {
+                System.err.println("Email notification failed on status update: " + e.getMessage());
+            }
         }
 
         return request;
+    }
+
+    @Transactional
+    public void autoUpdateStatusByDocument(Long requestId, int documentType, UserDtls changedBy, String jsonData,
+            boolean sendNotify) {
+        PositionRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + requestId));
+
+        switch (documentType) {
+            case 5, 7, 0 -> {
+                if (request.getCurrentStatus() == PositionRequestStatus.DOCUMENT_RECEIVED) {
+                    updateStatus(requestId, PositionRequestStatus.DOCUMENT_VERIFICATION, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึก" + getDocLabel(documentType), sendNotify);
+                }
+            }
+            case 8 -> {
+                if (request.getCurrentStatus().ordinal() < PositionRequestStatus.SCREENING_COMMITTEE.ordinal()) {
+                    updateStatus(requestId, PositionRequestStatus.SCREENING_COMMITTEE, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึกเอกสารสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ", sendNotify);
+                }
+            }
+        }
     }
 
     private void addStatusHistory(PositionRequest request, PositionRequestStatus oldStatus,

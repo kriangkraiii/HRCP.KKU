@@ -14,6 +14,16 @@
             </div>
 
             <!-- Alert -->
+            <div th:if="${succMsg != null}" class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="fas fa-check-circle me-2"></i>
+                <span th:text="${succMsg}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+            <div th:if="${errorMsg != null}" class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="fas fa-exclamation-circle me-2"></i>
+                <span th:text="${errorMsg}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <strong>ไม่สามารถยื่นคำร้องได้</strong> คุณมีคำร้องที่กำลังดำเนินการอยู่
@@ -69,9 +79,16 @@
                             <strong><i class="fas fa-edit text-warning me-2"></i>คำร้องฉบับร่าง</strong>
                             <span>กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง</span>
                         </div>
-                        <a th:href="'/user/academic/request/' + ${draftRequest.id}" class="btn btn-warning btn-sm">
-                            <i class="fas fa-arrow-right me-1"></i> ดำเนินการต่อ
-                        </a>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#cancelEvalDraftModal"
+                                    th:attr="data-request-id=${draftRequest.id}">
+                                <i class="fas fa-trash-alt me-1"></i> ยกเลิกแบบร่าง
+                            </button>
+                            <a th:href="'/user/academic/request/' + ${draftRequest.id}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-arrow-right me-1"></i> ดำเนินการต่อ
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Empty State -->
@@ -247,9 +264,16 @@
                             <strong><i class="fas fa-edit text-warning me-2"></i>คำร้องตำแหน่ง (ฉบับร่าง)</strong>
                             <span>กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง</span>
                         </div>
-                        <a th:href="'/user/position/request/' + ${positionDraft.id}" class="btn btn-warning btn-sm">
-                            <i class="fas fa-arrow-right me-1"></i> ดำเนินการต่อ
-                        </a>
+                        <div class="d-flex align-items-center gap-2">
+                            <button type="button" class="btn btn-outline-danger btn-sm"
+                                    data-bs-toggle="modal" data-bs-target="#cancelPosDraftModal"
+                                    th:attr="data-request-id=${positionDraft.id}">
+                                <i class="fas fa-trash-alt me-1"></i> ยกเลิกแบบร่าง
+                            </button>
+                            <a th:href="'/user/position/request/' + ${positionDraft.id}" class="btn btn-warning btn-sm">
+                                <i class="fas fa-arrow-right me-1"></i> ดำเนินการต่อ
+                            </a>
+                        </div>
                     </div>
 
                     <!-- Empty -->
@@ -320,8 +344,102 @@
                 </div>
             </div>
 
-            <!-- Pagination Script -->
+            <!-- Modal Confirm Cancel Evaluation Draft -->
+            <div class="modal fade" id="cancelEvalDraftModal" tabindex="-1" aria-labelledby="cancelEvalDraftModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="cancelEvalDraftModalLabel">
+                                <i class="fas fa-exclamation-triangle me-2"></i> ยืนยันการยกเลิกแบบร่าง
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4 text-center">
+                            <div class="mb-3 text-danger">
+                                <i class="fas fa-trash-alt fa-3x"></i>
+                            </div>
+                            <h5 class="fw-bold mb-2">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกแบบร่างนี้?</h5>
+                            <p class="text-muted mb-0">ข้อมูลเอกสารที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมด และไม่สามารถกู้คืนได้</p>
+                        </div>
+                        <div class="modal-footer bg-light d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i> ไม่ยกเลิก
+                            </button>
+                            <form id="cancelEvalDraftForm" method="post" th:action="@{/user/academic/request/0/cancel-draft}">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash-alt me-1"></i> ยืนยันการยกเลิก
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal Confirm Cancel Position Draft -->
+            <div class="modal fade" id="cancelPosDraftModal" tabindex="-1" aria-labelledby="cancelPosDraftModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
+                        <div class="modal-header bg-danger text-white">
+                            <h5 class="modal-title" id="cancelPosDraftModalLabel">
+                                <i class="fas fa-exclamation-triangle me-2"></i> ยืนยันการยกเลิกแบบร่าง
+                            </h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4 text-center">
+                            <div class="mb-3 text-danger">
+                                <i class="fas fa-trash-alt fa-3x"></i>
+                            </div>
+                            <h5 class="fw-bold mb-2">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกแบบร่างคำร้องขอตำแหน่ง?</h5>
+                            <p class="text-muted mb-0">ข้อมูลเอกสารที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมด และไม่สามารถกู้คืนได้</p>
+                        </div>
+                        <div class="modal-footer bg-light d-flex justify-content-end gap-2">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                <i class="fas fa-times me-1"></i> ไม่ยกเลิก
+                            </button>
+                            <form id="cancelPosDraftForm" method="post" th:action="@{/user/position/request/0/cancel-draft}">
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                <button type="submit" class="btn btn-danger">
+                                    <i class="fas fa-trash-alt me-1"></i> ยืนยันการยกเลิก
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Scripts -->
             <script>
+                // Dynamic Modal Action URL Binding
+                var cancelEvalModal = document.getElementById('cancelEvalDraftModal');
+                if (cancelEvalModal) {
+                    cancelEvalModal.addEventListener('show.bs.modal', function (event) {
+                        var button = event.relatedTarget;
+                        if (button) {
+                            var reqId = button.getAttribute('data-request-id');
+                            var form = document.getElementById('cancelEvalDraftForm');
+                            if (form && reqId) {
+                                form.action = '/user/academic/request/' + reqId + '/cancel-draft';
+                            }
+                        }
+                    });
+                }
+
+                var cancelPosModal = document.getElementById('cancelPosDraftModal');
+                if (cancelPosModal) {
+                    cancelPosModal.addEventListener('show.bs.modal', function (event) {
+                        var button = event.relatedTarget;
+                        if (button) {
+                            var reqId = button.getAttribute('data-request-id');
+                            var form = document.getElementById('cancelPosDraftForm');
+                            if (form && reqId) {
+                                form.action = '/user/position/request/' + reqId + '/cancel-draft';
+                            }
+                        }
+                    });
+                }
+
+                // Pagination Script
                 (function() {
                     const ITEMS_PER_PAGE = 5;
                     const cards = document.querySelectorAll('.request-card-v2[data-index]');

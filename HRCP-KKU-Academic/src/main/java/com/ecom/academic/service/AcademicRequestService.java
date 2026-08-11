@@ -243,6 +243,26 @@ public class AcademicRequestService {
         return requestRepository.save(draftRequest);
     }
 
+    /**
+     * ยกเลิก/ลบ draft request
+     */
+    @Transactional
+    public boolean deleteDraftRequest(Long requestId, Integer applicantId) {
+        Optional<AcademicRequest> opt = requestRepository.findById(requestId);
+        if (opt.isPresent()) {
+            AcademicRequest req = opt.get();
+            if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == RequestStatus.DRAFT) {
+                List<AcademicAttachment> attachments = attachmentRepository.findByRequestIdOrderByUploadedAtDesc(requestId);
+                if (!attachments.isEmpty()) {
+                    attachmentRepository.deleteAll(attachments);
+                }
+                requestRepository.delete(req);
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ==================== Attachment Methods ====================
 
     public AcademicAttachment saveAttachment(AcademicAttachment attachment) {

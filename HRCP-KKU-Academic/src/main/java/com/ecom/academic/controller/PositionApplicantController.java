@@ -162,6 +162,21 @@ public class PositionApplicantController {
         return "redirect:/user/position/request/" + request.getId();
     }
 
+    /**
+     * ยกเลิกแบบร่างคำร้องขอตำแหน่งทางวิชาการ
+     */
+    @PostMapping("/request/{id}/cancel-draft")
+    public String cancelDraftRequest(@PathVariable Long id, Principal principal, org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
+        UserDtls user = getUser(principal);
+        boolean deleted = positionService.deleteDraftRequest(id, user.getId());
+        if (deleted) {
+            redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องขอตำแหน่งเรียบร้อยแล้ว");
+        } else {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่สามารถยกเลิกแบบร่างได้ หรือคำร้องไม่ได้อยู่ในสถานะแบบร่าง");
+        }
+        return "redirect:/user/position/dashboard";
+    }
+
     // ================== Request Detail ==================
 
     @GetMapping("/request/{id}")

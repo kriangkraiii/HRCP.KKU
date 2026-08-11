@@ -29,6 +29,12 @@
             // ---- Create panel dynamically and append to BODY (escapes .card CSS) ----
             var panel = document.getElementById('notifyConfirmPanel');
             if (!panel && notifyDocTypes.includes(currentDocType)) {
+                var statusInfo = '';
+                if (currentDocType === 3) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>แต่งตั้งคณะอนุกรรมการแล้ว</strong>';
+                else if (currentDocType === 4) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>กำหนดวันประชุมแล้ว</strong>';
+                else if (currentDocType === 6) statusInfo = 'สถานะคำร้องจะเปลี่ยนตามผลประเมิน: <strong>ผลการประเมิน (ผ่าน/ไม่ผ่าน)</strong>';
+                else if (currentDocType === 8) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>เสร็จสิ้น (COMPLETED)</strong>';
+
                 panel = document.createElement('div');
                 panel.id = 'notifyConfirmPanel';
                 panel.style.cssText = 'display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;';
@@ -36,16 +42,17 @@
                     '<div id="notifyBackdrop" style="position:absolute;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.4);"></div>' +
                     '<div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.2);width:90%;max-width:480px;padding:20px;border:0 none;outline:none;">' +
                         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">' +
-                            '<h5 style="margin:0;font-size:1.1rem;border:none;"><i class="fas fa-bell text-warning"></i> แจ้งเตือนผู้ยื่นคำร้อง</h5>' +
+                            '<h5 style="margin:0;font-size:1.1rem;border:none;"><i class="fas fa-bell text-warning"></i> อัปเดตสถานะและแจ้งเตือนผู้ยื่นคำร้อง</h5>' +
                             '<button type="button" id="notifyCloseX" style="background:none;border:none;font-size:1.3rem;cursor:pointer;padding:4px 8px;line-height:1;">&times;</button>' +
                         '</div>' +
-                        '<p style="margin:0 0 12px;">ต้องการ<strong>แจ้งเตือนผู้ยื่นคำร้อง</strong>ทางอีเมลเกี่ยวกับการอัพเดตนี้หรือไม่?</p>' +
+                        '<p style="margin:0 0 10px;">ต้องการ<strong>อัปเดตสถานะคำร้อง</strong>และ<strong>ส่งอีเมลแจ้งเตือนผู้ยื่น</strong>หรือไม่?</p>' +
+                        (statusInfo ? '<div style="padding:8px 12px;background:#f0fdf4;border:1px solid #bbf7d0;border-radius:8px;font-size:0.88rem;color:#166534;margin-bottom:12px;"><i class="fas fa-arrow-circle-right me-1"></i> ' + statusInfo + '</div>' : '') +
                         '<div style="padding:10px 14px;background:#e3f2fd;border-radius:8px;font-size:0.88rem;margin-bottom:16px;border:none;">' +
-                            '<i class="fas fa-info-circle me-1"></i> หากเอกสารยังไม่เรียบร้อย สามารถเลือก <strong>"ไม่แจ้งเตือน"</strong> เพื่อบันทึกก่อนได้' +
+                            '<i class="fas fa-info-circle me-1"></i> หากเอกสารยังไม่เรียบร้อย สามารถเลือก <strong>"ไม่แจ้งเตือน"</strong> เพื่อบันทึกไฟล์โดยยังไม่อัปเดตสถานะได้' +
                         '</div>' +
                         '<div style="display:flex;justify-content:flex-end;gap:8px;">' +
                             '<button type="button" id="btnNoNotify" class="btn btn-outline-secondary"><i class="fas fa-bell-slash"></i> ไม่แจ้งเตือน (บันทึกอย่างเดียว)</button>' +
-                            '<button type="button" id="btnYesNotify" class="btn btn-primary"><i class="fas fa-bell"></i> แจ้งเตือนผู้ยื่น</button>' +
+                            '<button type="button" id="btnYesNotify" class="btn btn-primary"><i class="fas fa-check-circle"></i> แจ้งเตือนผู้ยื่นและอัปเดตสถานะ</button>' +
                         '</div>' +
                     '</div>';
                 document.body.appendChild(panel);

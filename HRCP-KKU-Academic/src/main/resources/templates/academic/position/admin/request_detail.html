@@ -22,6 +22,11 @@
                 <small th:if="${errorDetail != null}" class="d-block mt-1 text-danger" th:text="'รายละเอียด: ' + ${errorDetail}"></small>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
+            <div th:if="${param.warn != null}" class="alert alert-warning alert-dismissible fade show">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span th:if="${param.warn[0] == 'notify_failed'}">เอกสารถูกสร้างสำเร็จ แต่การอัพเดตสถานะ/แจ้งเตือนผู้ยื่นล้มเหลว — กรุณาลองอัพเดตสถานะด้วยตนเอง</span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
 
             <!-- Hero Header -->
             <div class="detail-hero">

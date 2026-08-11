@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
@@ -367,6 +368,27 @@ public class AcademicApplicantController {
         return "redirect:/user/academic/request/" + id + "?success=submitted";
     }
 
+    /**
+     * ยกเลิกแบบร่างคำร้องประเมินผลการสอน
+     */
+    @PostMapping("/request/{id}/cancel-draft")
+    public String cancelDraftRequest(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
+        UserDtls user = getUser(principal);
+        boolean deleted = requestService.deleteDraftRequest(id, user.getId());
+        if (deleted) {
+            try {
+                adminLogService.log(principal.getName(), user.getName(),
+                        "CANCEL_DRAFT",
+                        "ยกเลิกแบบร่างคำร้องประเมินผลการสอน #" + id,
+                        getClientIpAddress());
+            } catch (Exception ignored) {}
+            redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องเรียบร้อยแล้ว");
+        } else {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่สามารถยกเลิกแบบร่างได้ หรือคำร้องไม่ได้อยู่ในสถานะแบบร่าง");
+        }
+        return "redirect:/user/academic/dashboard";
+    }
+
     @GetMapping("/request/{id}")
     public String viewRequest(@PathVariable Long id, Principal principal, Model model) {
         AcademicRequest request = requestService.findById(id)
@@ -482,26 +504,32 @@ public class AcademicApplicantController {
 
         byte[] data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
 
+        String docLabel = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
+                ? doc.getDocumentLabel()
+                : DocumentPreviewController.getDocTitle(doc.getDocumentType());
+        String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+        String baseName = request.getRequestCode() + "_เอกสารที่_" + doc.getDocumentType() + "_" + cleanDocName;
+
+        String safeFilename = java.net.URLEncoder.encode(baseName, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+
         if ("pdf".equalsIgnoreCase(format)) {
             byte[] pdfData = documentService.convertDocxToPdf(data);
             ByteArrayResource resource = new ByteArrayResource(pdfData);
-            String filename = Path.of(doc.getGeneratedFilePath()).getFileName().toString()
-                    .replace(".docx", ".pdf");
             return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "attachment; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .contentLength(pdfData.length)
                     .body(resource);
         }
 
         ByteArrayResource resource = new ByteArrayResource(data);
-        String rawFilename = Path.of(doc.getGeneratedFilePath()).getFileName().toString();
-        String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
-                .replace("+", "%20");
-
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + safeFilename)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + safeFilename + ".docx")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
                 .contentLength(data.length)
                 .body(resource);
     }
@@ -522,13 +550,23 @@ public class AcademicApplicantController {
         }
 
         Path path = Path.of(request.getResultFilePath());
+        byte[] data = Files.readAllBytes(path);
+        ByteArrayResource resource = new ByteArrayResource(data);
+        String ext = path.getFileName().toString().toLowerCase().endsWith(".pdf") ? ".pdf" : ".docx";
+        String baseName = request.getRequestCode() + "_ผลการประเมินผลการสอน" + ext;
+        String safeFilename = java.net.URLEncoder.encode(baseName, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        String contentType = ext.equals(".pdf") ? "application/pdf"
+                : "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        FileUtils.contentDisposition(path.getFileName().toString()))
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .contentLength(Files.size(path))
-                .body(new FileSystemResource(path));
+                        "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(data.length)
+                .body(resource);
     }
 
     private UserDtls getUser(Principal principal) {
