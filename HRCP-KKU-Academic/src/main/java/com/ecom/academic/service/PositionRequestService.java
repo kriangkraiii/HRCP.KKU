@@ -260,6 +260,12 @@ public class PositionRequestService {
     @Transactional
     public PositionRequest updateStatus(Long requestId, PositionRequestStatus newStatus,
             UserDtls changedBy, String note) {
+        return updateStatus(requestId, newStatus, changedBy, note, true);
+    }
+
+    @Transactional
+    public PositionRequest updateStatus(Long requestId, PositionRequestStatus newStatus,
+            UserDtls changedBy, String note, boolean sendNotify) {
         PositionRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + requestId));
 
@@ -269,14 +275,38 @@ public class PositionRequestService {
 
         addStatusHistory(request, old, newStatus, changedBy, note);
 
-        // Send email notification to applicant
-        try {
-            emailService.sendStatusChangeEmail(request, old, newStatus);
-        } catch (Exception e) {
-            System.err.println("Email notification failed on status update: " + e.getMessage());
+        // Send email notification to applicant if requested
+        if (sendNotify) {
+            try {
+                emailService.sendStatusChangeEmail(request, old, newStatus);
+            } catch (Exception e) {
+                System.err.println("Email notification failed on status update: " + e.getMessage());
+            }
         }
 
         return request;
+    }
+
+    @Transactional
+    public void autoUpdateStatusByDocument(Long requestId, int documentType, UserDtls changedBy, String jsonData,
+            boolean sendNotify) {
+        PositionRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + requestId));
+
+        switch (documentType) {
+            case 5, 7, 0 -> {
+                if (request.getCurrentStatus() == PositionRequestStatus.DOCUMENT_RECEIVED) {
+                    updateStatus(requestId, PositionRequestStatus.DOCUMENT_VERIFICATION, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึก" + getDocLabel(documentType), sendNotify);
+                }
+            }
+            case 8 -> {
+                if (request.getCurrentStatus().ordinal() < PositionRequestStatus.SCREENING_COMMITTEE.ordinal()) {
+                    updateStatus(requestId, PositionRequestStatus.SCREENING_COMMITTEE, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึกเอกสารสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ", sendNotify);
+                }
+            }
+        }
     }
 
     private void addStatusHistory(PositionRequest request, PositionRequestStatus oldStatus,

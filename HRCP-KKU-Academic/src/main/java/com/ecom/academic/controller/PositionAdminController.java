@@ -265,7 +265,10 @@ public class PositionAdminController {
             return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
         }
 
+        boolean sendNotify = "true".equals(formData.getOrDefault("sendNotify", "false"));
         formData.remove("_csrf");
+        formData.remove("sendNotify");
+        formData.remove("action");
 
         try {
             if (type == 7) {
@@ -298,6 +301,16 @@ public class PositionAdminController {
                         "สร้างเอกสารที่ " + type + " (" + label + ") สำหรับคำร้องตำแหน่ง #" + id,
                         getClientIpAddress());
             } catch (Exception logEx) { /* ignore */ }
+
+            // Auto-update status + notify if admin chose to
+            if (sendNotify) {
+                try {
+                    positionService.autoUpdateStatusByDocument(id, type, admin, jsonData, true);
+                } catch (Exception e) {
+                    logger.warn("Phase2 auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
+                    return "redirect:/admin/position/request/" + id + "?success=doc_generated&warn=notify_failed";
+                }
+            }
 
             return "redirect:/admin/position/request/" + id + "?success=doc_generated";
         } catch (Exception e) {
