@@ -5,7 +5,6 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -27,14 +26,20 @@ public class EvaluationExpiryScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(EvaluationExpiryScheduler.class);
 
-    @Autowired
-    private AcademicRequestRepository requestRepository;
+    private final AcademicRequestRepository requestRepository;
 
-    @Autowired
-    private AcademicRequestService academicService;
+    private final AcademicRequestService academicService;
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
+
+    public EvaluationExpiryScheduler(
+            AcademicRequestRepository requestRepository,
+            AcademicRequestService academicService,
+            JavaMailSender mailSender) {
+        this.requestRepository = requestRepository;
+        this.academicService = academicService;
+        this.mailSender = mailSender;
+    }
 
     /** Run daily at 8:00 AM */
     @Scheduled(cron = "0 0 8 * * *")

@@ -6,9 +6,13 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -23,14 +27,23 @@ import com.ecom.academic.repository.UserFolderRepository;
 public class UserStorageService {
 
     private static final String STORAGE_ROOT = "uploads/user-storage";
-    private static final long MAX_STORAGE_BYTES = 10L * 1024 * 1024 * 1024; // 10 GB per user
 
+    private final long maxStorageBytes;
+    private final Set<String> allowedExtensions;
     private final UserFolderRepository folderRepo;
     private final UserFileRepository fileRepo;
 
-    public UserStorageService(UserFolderRepository folderRepo, UserFileRepository fileRepo) {
+    public UserStorageService(
+            UserFolderRepository folderRepo,
+            UserFileRepository fileRepo,
+            @Value("${app.storage.user.max-bytes:1073741824}") long maxStorageBytes,
+            @Value("${app.storage.user.allowed-extensions:pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,rtf,odt,ods}") String allowedExtensionsStr) {
         this.folderRepo = folderRepo;
         this.fileRepo = fileRepo;
+        this.maxStorageBytes = maxStorageBytes;
+        this.allowedExtensions = Arrays.stream(allowedExtensionsStr.split(","))
+                .map(ext -> ext.trim().toLowerCase())
+                .collect(Collectors.toSet());
     }
 
     // ==================== Folder ====================
@@ -73,6 +86,49 @@ public class UserStorageService {
         folderRepo.delete(folder);
     }
 
+    // ==================== File Type Validation ====================
+
+    /**
+     * Validates that the filename has an allowed document extension.
+     * Throws IllegalArgumentException if the file type is not permitted.
+     */
+    public void validateFileType(String filename) {
+        if (filename == null || filename.isBlank()) {
+            throw new IllegalArgumentException("ชื่อไฟล์ไม่ถูกต้อง");
+        }
+
+        String ext = extractExtension(filename);
+        if (ext.isEmpty() || !allowedExtensions.contains(ext)) {
+            String allowed = String.join(", ", allowedExtensions.stream().sorted().map(e -> "." + e).toList());
+            throw new IllegalArgumentException(
+                    "ไม่อนุญาตให้อัปโหลดไฟล์ประเภท ." + (ext.isEmpty() ? "(ไม่มีนามสกุล)" : ext)
+                    + " — อนุญาตเฉพาะไฟล์เอกสาร: " + allowed);
+        }
+    }
+
+    /**
+     * Validates storage quota — throws if adding the given size would exceed the limit.
+     */
+    public void validateStorageQuota(long incomingBytes, Integer ownerId) {
+        long currentUsage = getTotalSize(ownerId);
+        if (currentUsage + incomingBytes > maxStorageBytes) {
+            throw new IllegalStateException(
+                    "พื้นที่เก็บข้อมูลเต็ม (ใช้ไป " + formatSize(currentUsage)
+                    + " / " + formatSize(maxStorageBytes)
+                    + ") ไม่สามารถอัปโหลดไฟล์ขนาด " + formatSize(incomingBytes) + " ได้");
+        }
+    }
+
+    private String extractExtension(String filename) {
+        int dotIdx = filename.lastIndexOf('.');
+        if (dotIdx < 0 || dotIdx == filename.length() - 1) return "";
+        return filename.substring(dotIdx + 1).toLowerCase();
+    }
+
+    public Set<String> getAllowedExtensions() {
+        return allowedExtensions;
+    }
+
     // ==================== File ====================
 
     public List<UserFile> listFiles(Integer ownerId, Long folderId) {
@@ -82,12 +138,11 @@ public class UserStorageService {
 
     @CacheEvict(value = "storageStats", allEntries = true)
     public UserFile uploadFile(MultipartFile multipartFile, Long folderId, Integer ownerId) throws IOException {
-        long currentUsage = getTotalSize(ownerId);
-        long incoming = multipartFile.getSize();
-        if (currentUsage + incoming > MAX_STORAGE_BYTES) {
-            throw new IllegalStateException("พื้นที่เก็บข้อมูลเต็ม (ใช้ไป " + formatSize(currentUsage)
-                    + " / " + formatSize(MAX_STORAGE_BYTES) + ") ไม่สามารถอัปโหลดไฟล์ขนาด " + formatSize(incoming) + " ได้");
-        }
+        // Validate file type
+        validateFileType(multipartFile.getOriginalFilename());
+
+        // Validate storage quota
+        validateStorageQuota(multipartFile.getSize(), ownerId);
 
         Path storageDir = Path.of(STORAGE_ROOT, String.valueOf(ownerId));
         Files.createDirectories(storageDir);
@@ -185,14 +240,14 @@ public class UserStorageService {
              + folderRepo.count(); // approximate
     }
 
-    public long getMaxStorageBytes() { return MAX_STORAGE_BYTES; }
+    public long getMaxStorageBytes() { return maxStorageBytes; }
 
     public double getUsagePercentage(Integer ownerId) {
-        return Math.min(100.0, (getTotalSize(ownerId) * 100.0) / MAX_STORAGE_BYTES);
+        return Math.min(100.0, (getTotalSize(ownerId) * 100.0) / maxStorageBytes);
     }
 
     public long getRemainingBytes(Integer ownerId) {
-        return Math.max(0, MAX_STORAGE_BYTES - getTotalSize(ownerId));
+        return Math.max(0, maxStorageBytes - getTotalSize(ownerId));
     }
 
     public String formatSize(long bytes) {

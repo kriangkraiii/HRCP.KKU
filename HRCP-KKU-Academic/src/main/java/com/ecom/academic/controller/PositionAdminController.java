@@ -10,7 +10,8 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -44,29 +45,42 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/admin/position")
 public class PositionAdminController {
 
-    @Autowired
-    private PositionRequestService positionService;
+    private static final Logger logger = LoggerFactory.getLogger(PositionAdminController.class);
 
-    @Autowired
-    private DocumentGenerationService documentService;
+    private final PositionRequestService positionService;
 
-    @Autowired
-    private StaffMemberService staffMemberService;
+    private final DocumentGenerationService documentService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final StaffMemberService staffMemberService;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private HttpServletRequest httpRequest;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository;
+    private final HttpServletRequest httpRequest;
 
-    @Autowired
-    private com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository;
+    private final com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository;
+
+    private final com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository;
+
+    public PositionAdminController(
+            PositionRequestService positionService,
+            DocumentGenerationService documentService,
+            StaffMemberService staffMemberService,
+            UserRepository userRepository,
+            AdminLogService adminLogService,
+            HttpServletRequest httpRequest,
+            com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository,
+            com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository) {
+        this.positionService = positionService;
+        this.documentService = documentService;
+        this.staffMemberService = staffMemberService;
+        this.userRepository = userRepository;
+        this.adminLogService = adminLogService;
+        this.httpRequest = httpRequest;
+        this.academicRequestRepository = academicRequestRepository;
+        this.academicDocumentRepository = academicDocumentRepository;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -265,7 +279,7 @@ public class PositionAdminController {
             try {
                 filePath = documentService.generateP2Document(request, type, jsonData);
             } catch (Exception e) {
-                System.err.println("Phase2 doc generation failed for type " + type + ": " + e.getMessage());
+                logger.warn("Phase2 doc generation failed for type {}: {}", type, e.getMessage());
             }
 
             boolean isNew = positionService.getDocumentsByType(id, type).isEmpty();
@@ -332,7 +346,7 @@ public class PositionAdminController {
                     }
                 }
             } catch (Exception e) {
-                System.err.println("On-the-fly DOCX generation failed for doc " + type + ": " + e.getMessage());
+                logger.warn("On-the-fly DOCX generation failed for doc {}: {}", type, e.getMessage());
             }
         }
 
@@ -395,7 +409,7 @@ public class PositionAdminController {
                             }
                         }
                     } catch (Exception e) {
-                        System.err.println("ZIP: doc gen failed for type " + doc.getDocumentType() + ": " + e.getMessage());
+                        logger.warn("ZIP: doc gen failed for type {}: {}", doc.getDocumentType(), e.getMessage());
                     }
                 }
 
@@ -535,7 +549,7 @@ public class PositionAdminController {
                 }
             }
         } catch (Exception e) {
-            System.err.println("Merge failed for doc " + type + ": " + e.getMessage());
+            logger.warn("Merge failed for doc {}: {}", type, e.getMessage());
         }
         return formData;
     }

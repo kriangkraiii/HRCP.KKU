@@ -11,6 +11,7 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -32,7 +33,9 @@ public class SecurityHeadersFilter implements Filter {
         public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
                         throws IOException, ServletException {
 
+                HttpServletRequest httpReq = (HttpServletRequest) request;
                 HttpServletResponse httpRes = (HttpServletResponse) response;
+                String uri = httpReq.getRequestURI();
 
                 // Prevent MIME type sniffing
                 httpRes.setHeader("X-Content-Type-Options", "nosniff");
@@ -65,9 +68,15 @@ public class SecurityHeadersFilter implements Filter {
                 httpRes.setHeader("Strict-Transport-Security",
                                 "max-age=31536000; includeSubDomains");
 
-                // Prevent caching of sensitive pages
-                httpRes.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
-                httpRes.setHeader("Pragma", "no-cache");
+                // Prevent caching of sensitive pages (skip for static resources)
+                boolean isStaticResource = uri.startsWith("/css/") || uri.startsWith("/js/")
+                                || uri.startsWith("/img/") || uri.startsWith("/static/")
+                                || uri.startsWith("/admin/css/") || uri.startsWith("/admin/js/")
+                                || uri.startsWith("/admin/img/");
+                if (!isStaticResource) {
+                        httpRes.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+                        httpRes.setHeader("Pragma", "no-cache");
+                }
 
                 chain.doFilter(request, response);
         }

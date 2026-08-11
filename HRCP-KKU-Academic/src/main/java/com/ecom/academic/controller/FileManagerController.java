@@ -8,7 +8,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -38,20 +37,28 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/admin/file-manager")
 public class FileManagerController {
 
-    @Autowired
-    private FileManagementService fileManagementService;
+    private final FileManagementService fileManagementService;
 
-    @Autowired
-    private AdminStorageService adminStorageService;
+    private final AdminStorageService adminStorageService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private HttpServletRequest httpRequest;
+    private final HttpServletRequest httpRequest;
+
+    public FileManagerController(
+            FileManagementService fileManagementService,
+            AdminStorageService adminStorageService,
+            UserRepository userRepository,
+            AdminLogService adminLogService,
+            HttpServletRequest httpRequest) {
+        this.fileManagementService = fileManagementService;
+        this.adminStorageService = adminStorageService;
+        this.userRepository = userRepository;
+        this.adminLogService = adminLogService;
+        this.httpRequest = httpRequest;
+    }
 
     // ================== Original Document File Manager ==================
 

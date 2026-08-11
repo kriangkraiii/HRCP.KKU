@@ -4,10 +4,10 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.ecom.model.AdminLog;
@@ -22,14 +22,19 @@ import jakarta.persistence.criteria.Predicate;
 @Service
 public class AdminLogService {
 
-    @Autowired
-    private AdminLogRepository adminLogRepository;
+    private final AdminLogRepository adminLogRepository;
 
+    public AdminLogService(AdminLogRepository adminLogRepository) {
+        this.adminLogRepository = adminLogRepository;
+    }
+
+    @Async("auditLogExecutor")
     public void log(String adminEmail, String adminName, String action, String details, String ipAddress) {
         AdminLog log = new AdminLog(adminEmail, adminName, action, details, ipAddress);
         adminLogRepository.save(log);
     }
 
+    @Async("auditLogExecutor")
     public void logWithDetails(String email, String name, String action, String details, String ip, String resource,
             String userAgent) {
         AdminLog log = new AdminLog(email, name, action, details, ip, resource, userAgent);

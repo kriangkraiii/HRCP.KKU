@@ -14,11 +14,10 @@ import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
-
-import com.ecom.util.FileUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -52,26 +51,38 @@ import jakarta.servlet.http.HttpServletRequest;
 @RequestMapping("/admin/academic")
 public class AcademicAdminController {
 
-    @Autowired
-    private AcademicRequestService requestService;
+    private static final Logger logger = LoggerFactory.getLogger(AcademicAdminController.class);
 
-    @Autowired
-    private DocumentGenerationService documentService;
+    private final AcademicRequestService requestService;
 
-    @Autowired
-    private StaffMemberService staffMemberService;
+    private final DocumentGenerationService documentService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final StaffMemberService staffMemberService;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private PositionRequestService positionRequestService;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private HttpServletRequest httpRequest;
+    private final PositionRequestService positionRequestService;
+
+    private final HttpServletRequest httpRequest;
+
+    public AcademicAdminController(
+            AcademicRequestService requestService,
+            DocumentGenerationService documentService,
+            StaffMemberService staffMemberService,
+            UserRepository userRepository,
+            AdminLogService adminLogService,
+            PositionRequestService positionRequestService,
+            HttpServletRequest httpRequest) {
+        this.requestService = requestService;
+        this.documentService = documentService;
+        this.staffMemberService = staffMemberService;
+        this.userRepository = userRepository;
+        this.adminLogService = adminLogService;
+        this.positionRequestService = positionRequestService;
+        this.httpRequest = httpRequest;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -333,13 +344,12 @@ public class AcademicAdminController {
                                 + (note != null ? " (" + note + ")" : ""),
                         getClientIpAddress());
             } catch (Exception logEx) {
-                System.err.println("Admin log failed: " + logEx.getMessage());
+                logger.warn("Admin log failed for request #{}: {}", id, logEx.getMessage());
             }
 
             return "redirect:/admin/academic/request/" + id + "?success=status_updated";
         } catch (Exception e) {
-            System.err.println("Status update failed for request #" + id + ": " + e.getMessage());
-            e.printStackTrace();
+            logger.error("Status update failed for request #{}: {}", id, e.getMessage(), e);
             redirectAttributes.addFlashAttribute("errorDetail", e.getClass().getSimpleName() + ": " + e.getMessage());
             return "redirect:/admin/academic/request/" + id + "?error=status_update_failed";
         }
@@ -685,8 +695,7 @@ public class AcademicAdminController {
             try {
                 requestService.autoUpdateStatusByDocument(id, type, admin, jsonData);
             } catch (Exception e) {
-                System.err.println(
-                        "Auto status update failed for request #" + id + ", doc type " + type + ": " + e.getMessage());
+                logger.warn("Auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
                 return "redirect:/admin/academic/request/" + id + "?success=doc_generated&warn=notify_failed";
             }
         }

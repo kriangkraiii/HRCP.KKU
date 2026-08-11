@@ -2,7 +2,6 @@ package com.ecom.config;
 
 import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -18,8 +17,11 @@ public class RequestLoggingInterceptor implements HandlerInterceptor {
             "/css/", "/js/", "/img/", "/uploads/", "/admin/css/", "/admin/js/",
             "/favicon.ico", "/error", "/webjars/");
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
+
+    public RequestLoggingInterceptor(AdminLogService adminLogService) {
+        this.adminLogService = adminLogService;
+    }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {

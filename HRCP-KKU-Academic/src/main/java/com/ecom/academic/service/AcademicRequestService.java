@@ -5,7 +5,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,20 +22,28 @@ import com.ecom.model.UserDtls;
 @Service
 public class AcademicRequestService {
 
-    @Autowired
-    private AcademicRequestRepository requestRepository;
+    private final AcademicRequestRepository requestRepository;
 
-    @Autowired
-    private AcademicDocumentRepository documentRepository;
+    private final AcademicDocumentRepository documentRepository;
 
-    @Autowired
-    private AcademicAttachmentRepository attachmentRepository;
+    private final AcademicAttachmentRepository attachmentRepository;
 
-    @Autowired
-    private RequestStatusHistoryRepository historyRepository;
+    private final RequestStatusHistoryRepository historyRepository;
 
-    @Autowired
-    private AcademicEmailService emailService;
+    private final AcademicEmailService emailService;
+
+    public AcademicRequestService(
+            AcademicRequestRepository requestRepository,
+            AcademicDocumentRepository documentRepository,
+            AcademicAttachmentRepository attachmentRepository,
+            RequestStatusHistoryRepository historyRepository,
+            AcademicEmailService emailService) {
+        this.requestRepository = requestRepository;
+        this.documentRepository = documentRepository;
+        this.attachmentRepository = attachmentRepository;
+        this.historyRepository = historyRepository;
+        this.emailService = emailService;
+    }
 
     public AcademicRequest createRequest(UserDtls applicant) {
         AcademicRequest request = new AcademicRequest();

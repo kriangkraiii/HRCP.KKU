@@ -3,7 +3,6 @@ package com.ecom.academic.controller;
 import java.security.Principal;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -23,14 +22,20 @@ import com.ecom.repository.UserRepository;
 @RequestMapping("/api")
 public class AutoDraftApiController {
 
-    @Autowired
-    private AcademicRequestService academicService;
+    private final AcademicRequestService academicService;
 
-    @Autowired
-    private PositionRequestService positionService;
+    private final PositionRequestService positionService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public AutoDraftApiController(
+            AcademicRequestService academicService,
+            PositionRequestService positionService,
+            UserRepository userRepository) {
+        this.academicService = academicService;
+        this.positionService = positionService;
+        this.userRepository = userRepository;
+    }
 
     /** Auto-draft for Phase 1 (Teaching Evaluation) */
     @PostMapping("/draft/academic/{requestId}/{docType}")

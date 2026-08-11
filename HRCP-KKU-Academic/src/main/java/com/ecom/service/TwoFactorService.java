@@ -3,7 +3,8 @@ package com.ecom.service;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -17,15 +18,19 @@ import jakarta.mail.internet.MimeMessage;
 @Service
 public class TwoFactorService {
 
+    private static final Logger logger = LoggerFactory.getLogger(TwoFactorService.class);
     private static final int OTP_LENGTH = 8;
     private static final int OTP_EXPIRY_MINUTES = 5;
     private final SecureRandom random = new SecureRandom();
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private JavaMailSender mailSender;
+    private final JavaMailSender mailSender;
+
+    public TwoFactorService(UserRepository userRepository, JavaMailSender mailSender) {
+        this.userRepository = userRepository;
+        this.mailSender = mailSender;
+    }
 
     /**
      * Generate an 8-digit OTP, save to user, and return it.
@@ -71,7 +76,7 @@ public class TwoFactorService {
             helper.setText(body, true);
             mailSender.send(message);
         } catch (Exception e) {
-            System.err.println("OTP email failed: " + e.getMessage());
+            logger.error("OTP email failed for user {}: {}", user.getEmail(), e.getMessage(), e);
         }
     }
 

@@ -3,7 +3,6 @@ package com.ecom.academic.controller;
 import java.security.Principal;
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -32,17 +31,24 @@ import jakarta.validation.Valid;
 @RequestMapping("/petitions")
 public class PetitionController {
 
-    @Autowired
-    private PetitionService petitionService;
+    private final PetitionService petitionService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private jakarta.servlet.http.HttpServletRequest httpRequest;
+    private final jakarta.servlet.http.HttpServletRequest httpRequest;
+
+    public PetitionController(
+            PetitionService petitionService,
+            UserRepository userRepository,
+            AdminLogService adminLogService,
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
+        this.petitionService = petitionService;
+        this.userRepository = userRepository;
+        this.adminLogService = adminLogService;
+        this.httpRequest = httpRequest;
+    }
 
     /**
      * Show new petition form.

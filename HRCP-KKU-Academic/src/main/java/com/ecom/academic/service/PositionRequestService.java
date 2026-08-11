@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,29 +33,40 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @Service
 public class PositionRequestService {
 
-    @Autowired
-    private PositionRequestRepository requestRepository;
+    private final PositionRequestRepository requestRepository;
 
-    @Autowired
-    private PositionDocumentRepository documentRepository;
+    private final PositionDocumentRepository documentRepository;
 
-    @Autowired
-    private PositionStatusHistoryRepository statusHistoryRepository;
+    private final PositionStatusHistoryRepository statusHistoryRepository;
 
-    @Autowired
-    private PositionDocumentEditLogRepository editLogRepository;
+    private final PositionDocumentEditLogRepository editLogRepository;
 
-    @Autowired
-    private AcademicRequestRepository academicRequestRepository;
+    private final AcademicRequestRepository academicRequestRepository;
 
-    @Autowired
-    private AcademicDocumentRepository academicDocumentRepository;
+    private final AcademicDocumentRepository academicDocumentRepository;
 
-    @Autowired
-    private PositionEmailService emailService;
+    private final PositionEmailService emailService;
 
-    @Autowired
-    private com.ecom.academic.repository.PositionAttachmentRepository attachmentRepository;
+    private final com.ecom.academic.repository.PositionAttachmentRepository attachmentRepository;
+
+    public PositionRequestService(
+            PositionRequestRepository requestRepository,
+            PositionDocumentRepository documentRepository,
+            PositionStatusHistoryRepository statusHistoryRepository,
+            PositionDocumentEditLogRepository editLogRepository,
+            AcademicRequestRepository academicRequestRepository,
+            AcademicDocumentRepository academicDocumentRepository,
+            PositionEmailService emailService,
+            com.ecom.academic.repository.PositionAttachmentRepository attachmentRepository) {
+        this.requestRepository = requestRepository;
+        this.documentRepository = documentRepository;
+        this.statusHistoryRepository = statusHistoryRepository;
+        this.editLogRepository = editLogRepository;
+        this.academicRequestRepository = academicRequestRepository;
+        this.academicDocumentRepository = academicDocumentRepository;
+        this.emailService = emailService;
+        this.attachmentRepository = attachmentRepository;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 

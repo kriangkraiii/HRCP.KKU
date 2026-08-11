@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
@@ -37,14 +36,20 @@ public class ChunkedUploadController {
     // Track active uploads: uploadId -> metadata
     private final ConcurrentHashMap<String, UploadSession> activeSessions = new ConcurrentHashMap<>();
 
-    @Autowired
-    private UserStorageService userStorageService;
+    private final UserStorageService userStorageService;
 
-    @Autowired
-    private AdminStorageService adminStorageService;
+    private final AdminStorageService adminStorageService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
+
+    public ChunkedUploadController(
+            UserStorageService userStorageService,
+            AdminStorageService adminStorageService,
+            UserRepository userRepository) {
+        this.userStorageService = userStorageService;
+        this.adminStorageService = adminStorageService;
+        this.userRepository = userRepository;
+    }
 
     // ==================== Init Upload ====================
 
@@ -67,8 +72,16 @@ public class ChunkedUploadController {
             return ResponseEntity.ok(result);
         }
 
-        // Check user storage quota (only for user storage)
+        // Validate file type and storage quota (only for user storage)
         if ("user".equals(storageType)) {
+            try {
+                userStorageService.validateFileType(filename);
+            } catch (IllegalArgumentException e) {
+                result.put("success", false);
+                result.put("message", e.getMessage());
+                return ResponseEntity.ok(result);
+            }
+
             long remaining = userStorageService.getRemainingBytes(user.getId());
             if (fileSize > remaining) {
                 result.put("success", false);

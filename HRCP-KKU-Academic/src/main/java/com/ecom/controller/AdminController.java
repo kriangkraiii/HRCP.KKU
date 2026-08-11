@@ -10,7 +10,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -43,20 +44,30 @@ import jakarta.servlet.http.HttpSession;
 @RequestMapping("/admin")
 public class AdminController {
 
-	@Autowired
-	private HttpServletRequest request;
+	private static final Logger logger = LoggerFactory.getLogger(AdminController.class);
 
-	@Autowired
-	private UserService userService;
+	private final HttpServletRequest request;
 
-	@Autowired
-	private CommonUtil commonUtil;
+	private final UserService userService;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+	private final CommonUtil commonUtil;
 
-	@Autowired
-	private AdminLogService adminLogService;
+	private final PasswordEncoder passwordEncoder;
+
+	private final AdminLogService adminLogService;
+
+	public AdminController(
+			HttpServletRequest request,
+			UserService userService,
+			CommonUtil commonUtil,
+			PasswordEncoder passwordEncoder,
+			AdminLogService adminLogService) {
+		this.request = request;
+		this.userService = userService;
+		this.commonUtil = commonUtil;
+		this.passwordEncoder = passwordEncoder;
+		this.adminLogService = adminLogService;
+	}
 
 	@ModelAttribute
 	public void getUserDetails(Principal p, Model m) {
@@ -122,7 +133,7 @@ public class AdminController {
 			List<UserDtls> recentUsers = userService.getRecentUsers(5);
 			m.addAttribute("recentUsers", recentUsers);
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("Error loading admin dashboard stats: {}", e.getMessage(), e);
 			m.addAttribute("totalUsers", 0);
 			m.addAttribute("newUsersToday", 0);
 		}
@@ -216,9 +227,9 @@ public class AdminController {
 				return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 			}
 		} catch (Exception e) {
+			logger.error("Error updating profile image for user ID {}: {}", id, e.getMessage(), e);
 			response.put("success", "false");
 			response.put("error", "เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ");
-			e.printStackTrace();
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 		}
 	}
@@ -270,8 +281,8 @@ public class AdminController {
 				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการลบบัญชี");
 			}
 		} catch (Exception e) {
+			logger.error("Error deleting user ID {}: {}", id, e.getMessage(), e);
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการลบบัญชี");
-			e.printStackTrace();
 		}
 
 		return "redirect:/admin/users?type=" + type;
@@ -318,8 +329,8 @@ public class AdminController {
 				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการลบบัญชี");
 			}
 		} catch (Exception e) {
+			logger.error("Error deleting admin ID {}: {}", id, e.getMessage(), e);
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการลบบัญชี");
-			e.printStackTrace();
 		}
 
 		return "redirect:/admin/users?type=" + type;
@@ -390,8 +401,8 @@ public class AdminController {
 				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
 			}
 		} catch (Exception e) {
+			logger.error("Error updating admin ID {}: {}", user.getId(), e.getMessage(), e);
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
-			e.printStackTrace();
 		}
 
 		return "redirect:/admin/users?type=" + type;
@@ -464,8 +475,8 @@ public class AdminController {
 				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
 			}
 		} catch (Exception e) {
+			logger.error("Error updating user ID {}: {}", user.getId(), e.getMessage(), e);
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
-			e.printStackTrace();
 		}
 
 		return "redirect:/admin/users?type=" + type;

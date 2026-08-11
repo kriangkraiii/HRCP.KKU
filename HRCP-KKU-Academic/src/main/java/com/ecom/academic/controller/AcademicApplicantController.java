@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -34,6 +33,7 @@ import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
+import com.ecom.academic.service.UserStorageService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
@@ -44,29 +44,44 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequestMapping("/user/academic")
 public class AcademicApplicantController {
 
-    @Autowired
-    private AcademicRequestService requestService;
+    private final AcademicRequestService requestService;
 
-    @Autowired
-    private DocumentGenerationService documentService;
+    private final DocumentGenerationService documentService;
 
-    @Autowired
-    private StaffMemberService staffMemberService;
+    private final StaffMemberService staffMemberService;
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserRepository userRepository;
 
-    @Autowired
-    private AcademicEmailService emailService;
+    private final AcademicEmailService emailService;
 
-    @Autowired
-    private PositionRequestService positionRequestService;
+    private final PositionRequestService positionRequestService;
 
-    @Autowired
-    private AdminLogService adminLogService;
+    private final AdminLogService adminLogService;
 
-    @Autowired
-    private jakarta.servlet.http.HttpServletRequest httpRequest;
+    private final jakarta.servlet.http.HttpServletRequest httpRequest;
+
+    private final UserStorageService userStorageService;
+
+    public AcademicApplicantController(
+            AcademicRequestService requestService,
+            DocumentGenerationService documentService,
+            StaffMemberService staffMemberService,
+            UserRepository userRepository,
+            AcademicEmailService emailService,
+            PositionRequestService positionRequestService,
+            AdminLogService adminLogService,
+            jakarta.servlet.http.HttpServletRequest httpRequest,
+            UserStorageService userStorageService) {
+        this.requestService = requestService;
+        this.documentService = documentService;
+        this.staffMemberService = staffMemberService;
+        this.userRepository = userRepository;
+        this.emailService = emailService;
+        this.positionRequestService = positionRequestService;
+        this.adminLogService = adminLogService;
+        this.httpRequest = httpRequest;
+        this.userStorageService = userStorageService;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -404,6 +419,13 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
+        // Validate file type (document-only)
+        try {
+            userStorageService.validateFileType(file.getOriginalFilename());
+        } catch (IllegalArgumentException e) {
+            return "redirect:/user/academic/request/" + id + "?error=" + java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
+        }
+
         String uploadDir = "uploads/academic/" + id + "/revisions/";
         Files.createDirectories(Path.of(uploadDir));
         String safeFilename = FileUtils.sanitizeFilename(file.getOriginalFilename());
@@ -441,6 +463,11 @@ public class AcademicApplicantController {
                 .filter(d -> d.getId().equals(docId))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Document not found"));
+
+        // Enforce document visibility for applicant (only doc types 0, 1, 8 allowed)
+        if (!APPLICANT_VISIBLE_DOC_TYPES.contains(doc.getDocumentType())) {
+            return ResponseEntity.status(403).build();
+        }
 
         byte[] data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
 

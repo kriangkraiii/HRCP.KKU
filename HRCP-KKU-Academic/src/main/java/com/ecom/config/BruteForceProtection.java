@@ -1,9 +1,11 @@
 package com.ecom.config;
 
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.time.Duration;
 
 import org.springframework.stereotype.Component;
+
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 /**
  * In-memory brute-force protection with progressive lockout.
@@ -19,13 +21,16 @@ public class BruteForceProtection {
     private static final long BASE_BLOCK_MINUTES = 15;
     private static final long WINDOW_MS = 10 * 60 * 1000; // 10 minute window
 
-    private final Map<String, AttemptInfo> attempts = new ConcurrentHashMap<>();
+    private final Cache<String, AttemptInfo> attempts = Caffeine.newBuilder()
+            .maximumSize(100_000)
+            .expireAfterWrite(Duration.ofHours(3))
+            .build();
 
     /**
      * Record a failed login attempt.
      */
     public void recordFailure(String key) {
-        attempts.compute(key, (k, info) -> {
+        attempts.asMap().compute(key, (k, info) -> {
             if (info == null) {
                 return new AttemptInfo();
             }
@@ -60,13 +65,13 @@ public class BruteForceProtection {
      * Check if the key (IP or username) is currently blocked.
      */
     public boolean isBlocked(String key) {
-        AttemptInfo info = attempts.get(key);
+        AttemptInfo info = attempts.getIfPresent(key);
         if (info == null) return false;
         if (info.isCurrentlyBlocked()) return true;
         // Only clean up entries that have NEVER been locked (lockCount=0)
         // Entries with lockCount > 0 must be preserved for escalation
         if (info.isWindowExpired() && !info.isCurrentlyBlocked() && info.lockCount == 0) {
-            attempts.remove(key);
+            attempts.invalidate(key);
         }
         return false;
     }
@@ -75,14 +80,14 @@ public class BruteForceProtection {
      * Clear attempts on successful login.
      */
     public void resetAttempts(String key) {
-        attempts.remove(key);
+        attempts.invalidate(key);
     }
 
     /**
      * Get remaining block time in minutes.
      */
     public long getBlockMinutesRemaining(String key) {
-        AttemptInfo info = attempts.get(key);
+        AttemptInfo info = attempts.getIfPresent(key);
         if (info == null || info.blockedUntil <= 0) return 0;
         long remaining = info.blockedUntil - System.currentTimeMillis();
         return remaining > 0 ? (remaining / 60_000) + 1 : 0;
@@ -92,7 +97,7 @@ public class BruteForceProtection {
      * Get the epoch millis when the block expires (for real-time countdown).
      */
     public long getBlockedUntilMillis(String key) {
-        AttemptInfo info = attempts.get(key);
+        AttemptInfo info = attempts.getIfPresent(key);
         if (info == null) return 0;
         return info.blockedUntil;
     }
@@ -101,7 +106,7 @@ public class BruteForceProtection {
      * Get remaining attempts before lockout.
      */
     public int getRemainingAttempts(String key) {
-        AttemptInfo info = attempts.get(key);
+        AttemptInfo info = attempts.getIfPresent(key);
         if (info == null) return MAX_ATTEMPTS;
         if (info.isCurrentlyBlocked()) return 0;
         if (info.isWindowExpired()) return MAX_ATTEMPTS;
@@ -112,7 +117,7 @@ public class BruteForceProtection {
      * Get the current block duration in minutes (for the most recent lock).
      */
     public long getBlockDurationMinutes(String key) {
-        AttemptInfo info = attempts.get(key);
+        AttemptInfo info = attempts.getIfPresent(key);
         if (info == null) return 0;
         return info.lastBlockMinutes;
     }

@@ -16,8 +16,6 @@ import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,21 +34,28 @@ public class UserServiceImpl implements UserService {
 
 	private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
 
-	@Autowired
-	private UserRepository userRepository;
+	private final UserRepository userRepository;
 
-	@Autowired
-	private PasswordEncoder passwordEncoder;
+	private final PasswordEncoder passwordEncoder;
 
-	@Autowired
-	@Lazy
-	private CommonUtil commonUtil;
+	private final CommonUtil commonUtil;
 
-	@Autowired
-	private com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository;
+	private final com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository;
 
-	@Autowired
-	private com.ecom.academic.repository.PositionRequestRepository positionRequestRepository;
+	private final com.ecom.academic.repository.PositionRequestRepository positionRequestRepository;
+
+	public UserServiceImpl(
+			UserRepository userRepository,
+			PasswordEncoder passwordEncoder,
+			CommonUtil commonUtil,
+			com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository,
+			com.ecom.academic.repository.PositionRequestRepository positionRequestRepository) {
+		this.userRepository = userRepository;
+		this.passwordEncoder = passwordEncoder;
+		this.commonUtil = commonUtil;
+		this.academicRequestRepository = academicRequestRepository;
+		this.positionRequestRepository = positionRequestRepository;
+	}
 
 	@Override
 	public Integer getUsersCount() {
@@ -213,7 +218,7 @@ public class UserServiceImpl implements UserService {
 				Files.copy(img.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 			}
 		} catch (Exception e) {
-			e.printStackTrace();
+			logger.error("Error saving profile image for user {}: {}", dbUser.getEmail(), e.getMessage(), e);
 		}
 		return dbUser;
 	}
@@ -288,7 +293,12 @@ public class UserServiceImpl implements UserService {
 		userRepository.save(user);
 
 		// Send OTP email
-		commonUtil.sendOtpEmail(email, otp);
+		try {
+			commonUtil.sendOtpEmail(email, otp);
+		} catch (Exception e) {
+			logger.error("Failed to send OTP email to {}: {}", email, e.getMessage(), e);
+			throw new Exception("ไม่สามารถส่งอีเมล OTP ได้เนื่องจากเกิดข้อผิดพลาดในการเชื่อมต่อระบบส่งอีเมล (Authentication failed)");
+		}
 	}
 
 	@Override

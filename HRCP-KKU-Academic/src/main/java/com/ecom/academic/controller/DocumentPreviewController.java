@@ -1,12 +1,17 @@
 package com.ecom.academic.controller;
 
 import java.io.IOException;
+import java.security.Principal;
 import java.util.Map;
+import java.util.Set;
 
-import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -24,8 +29,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @RequestMapping("/api/academic/preview")
 public class DocumentPreviewController {
 
-    @Autowired
-    private DocumentGenerationService documentService;
+    private static final Logger logger = LoggerFactory.getLogger(DocumentPreviewController.class);
+    private static final Set<Integer> APPLICANT_ALLOWED_DOCS = Set.of(0, 1, 8);
+
+    private final DocumentGenerationService documentService;
+
+    public DocumentPreviewController(DocumentGenerationService documentService) {
+        this.documentService = documentService;
+    }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -36,7 +47,18 @@ public class DocumentPreviewController {
     @PostMapping("/{docType}")
     public ResponseEntity<byte[]> previewDocument(
             @PathVariable int docType,
-            @RequestBody Map<String, String> formData) {
+            @RequestBody Map<String, String> formData,
+            Authentication authentication) {
+
+        // Enforce authorization: Non-admin users can only preview applicant-facing documents (0, 1, 8)
+        boolean isAdmin = authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(a -> "ROLE_ADMIN".equals(a.getAuthority()));
+
+        if (!isAdmin && !APPLICANT_ALLOWED_DOCS.contains(docType)) {
+            logger.warn("Unauthorized document preview attempt: docType {} by user {}",
+                    docType, authentication != null ? authentication.getName() : "anonymous");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
 
         try {
             // ============ Document 6: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
@@ -122,6 +144,7 @@ public class DocumentPreviewController {
                     .body(docxBytes);
 
         } catch (IOException e) {
+            logger.error("Failed to generate preview for docType {}: {}", docType, e.getMessage(), e);
             return ResponseEntity.internalServerError().build();
         }
     }

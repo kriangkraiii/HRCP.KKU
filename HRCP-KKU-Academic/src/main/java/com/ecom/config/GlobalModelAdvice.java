@@ -2,7 +2,6 @@ package com.ecom.config;
 
 import java.security.Principal;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
@@ -15,8 +14,11 @@ import jakarta.servlet.http.HttpSession;
 @ControllerAdvice
 public class GlobalModelAdvice {
 
-    @Autowired
-    private UserService userService;
+    private final UserService userService;
+
+    public GlobalModelAdvice(UserService userService) {
+        this.userService = userService;
+    }
 
     @ModelAttribute
     public void addGlobalAttributes(Principal principal, HttpSession session, Model model) {
