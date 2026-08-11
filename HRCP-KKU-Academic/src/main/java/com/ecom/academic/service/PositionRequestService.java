@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
@@ -21,6 +22,7 @@ import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
+import com.ecom.academic.repository.PositionAttachmentRepository;
 import com.ecom.academic.repository.PositionDocumentEditLogRepository;
 import com.ecom.academic.repository.PositionDocumentRepository;
 import com.ecom.academic.repository.PositionRequestRepository;
@@ -47,7 +49,7 @@ public class PositionRequestService {
 
     private final PositionEmailService emailService;
 
-    private final com.ecom.academic.repository.PositionAttachmentRepository attachmentRepository;
+    private final PositionAttachmentRepository attachmentRepository;
 
     public PositionRequestService(
             PositionRequestRepository requestRepository,
@@ -57,7 +59,7 @@ public class PositionRequestService {
             AcademicRequestRepository academicRequestRepository,
             AcademicDocumentRepository academicDocumentRepository,
             PositionEmailService emailService,
-            com.ecom.academic.repository.PositionAttachmentRepository attachmentRepository) {
+            PositionAttachmentRepository attachmentRepository) {
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.statusHistoryRepository = statusHistoryRepository;
