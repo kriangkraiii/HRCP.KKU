@@ -32,7 +32,7 @@ public class AcademicEmailService {
         try {
             // 1. Create in-app notification for applicant
             if (request != null && request.getApplicant() != null) {
-                boolean isImportant = newStatus == RequestStatus.REVISION_REQUESTED 
+                boolean isImportant = newStatus == RequestStatus.COMPLETED_REVISE 
                         || newStatus == RequestStatus.COMPLETED_PASS 
                         || newStatus == RequestStatus.COMPLETED_FAIL 
                         || newStatus == RequestStatus.REJECTED;
