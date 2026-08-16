@@ -1,0 +1,54 @@
+name: Deploy to Windows Server
+
+# ทำงานเฉพาะเมื่อมีการ push หรือ merge (PR ที่ถูก merge ก็คือ push) เข้า branch "deploy" เท่านั้น
+on:
+  push:
+    branches:
+      - deploy
+
+jobs:
+  build-and-deploy:
+    # รันบน self-hosted runner ที่ติดตั้งไว้บน Windows Server ของเราเอง (ไม่ใช้ GitHub-hosted runner)
+    runs-on: self-hosted
+
+    # กำหนด path ของโปรเจกต์ (pom.xml) และไฟล์ปลายทางไว้เป็นตัวแปรกลาง แก้ที่เดียวพอ
+    env:
+      PROJECT_DIR: HRCP-KKU-Academic
+      SERVICE_NAME: MyWebApp
+      DEPLOY_PATH: C:\apps\myspringboot\app.jar
+
+    steps:
+      # 1) ดึงโค้ดล่าสุดจาก branch ที่ถูก push (deploy) ลงมาบน runner
+      - name: Checkout source code
+        uses: actions/checkout@v4
+
+      # 2) Build โปรเจกต์ด้วย Maven ให้ได้ไฟล์ .jar ในโฟลเดอร์ target
+      #    -DskipTests เพื่อให้ build เร็วขึ้น หากต้องการรัน test ด้วยให้ลบ flag นี้ออก
+      - name: Build with Maven
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: mvn clean package -DskipTests
+
+      # 3) หยุด Windows Service "MyWebApp" ก่อน เพื่อปลดล็อกไฟล์ app.jar ที่กำลังถูกใช้งานอยู่
+      #    -ErrorAction SilentlyContinue กันพังกรณี service ยังไม่เคยรัน/ไม่พบ service
+      - name: Stop MyWebApp service
+        shell: powershell
+        run: |
+          Write-Host "Stopping service $env:SERVICE_NAME ..."
+          Stop-Service -Name $env:SERVICE_NAME -Force -ErrorAction SilentlyContinue
+          Write-Host "Service stopped (or was not running)."
+
+      # 4) คัดลอกไฟล์ .jar ที่ build ได้ ไปทับไฟล์ปลายทางเดิม (บังคับทับด้วย -Force)
+      - name: Copy new jar to deployment path
+        shell: powershell
+        run: |
+          $jarFile = Get-ChildItem -Path "${{ env.PROJECT_DIR }}\target" -Filter "*.jar" | Select-Object -First 1
+          Write-Host "Copying $($jarFile.FullName) -> $env:DEPLOY_PATH"
+          Copy-Item -Path $jarFile.FullName -Destination $env:DEPLOY_PATH -Force
+
+      # 5) สั่งรัน Windows Service "MyWebApp" กลับขึ้นมาใหม่ด้วยไฟล์ .jar ตัวล่าสุด
+      - name: Start MyWebApp service
+        shell: powershell
+        run: |
+          Write-Host "Starting service $env:SERVICE_NAME ..."
+          Start-Service -Name $env:SERVICE_NAME
+          Write-Host "Service started."
