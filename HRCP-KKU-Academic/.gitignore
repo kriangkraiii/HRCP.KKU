@@ -4,6 +4,12 @@ target/
 # ความลับของ server — ห้าม commit (.env.example คือตัวอย่างที่ commit ได้)
 .env
 !.env.example
+
+# SSL keystores (self-signed certs / private keys — ห้าม commit)
+*.p12
+*.jks
+*.pfx
+*.keystore
 !.mvn/wrapper/maven-wrapper.jar
 !**/src/main/**/target/
 !**/src/test/**/target/
