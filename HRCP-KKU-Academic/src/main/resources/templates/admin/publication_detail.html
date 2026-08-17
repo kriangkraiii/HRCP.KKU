@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+    <meta charset="UTF-8">
+    <title>รายละเอียดงานวิจัย</title>
+</head>
+
+<body>
+<section>
+    <div class="container py-4" th:with="p=${row.publication}">
+
+        <a href="/admin/publications" class="btn btn-sm btn-outline-secondary mb-3">
+            <i class="fas fa-arrow-left"></i> กลับไปรายการงานวิจัย
+        </a>
+
+        <div class="card card-academic mb-4">
+            <div class="card-body">
+                <h4 class="mb-2" th:text="${p.title}">ชื่อผลงาน</h4>
+
+                <p class="text-muted mb-3">
+                    <span th:if="${p.publicationName}" th:text="${p.publicationName}"></span>
+                    <span th:if="${p.year}" th:text="' (' + ${p.year} + ')'"></span>
+                    <span th:if="${p.volume}" th:text="' ปีที่ ' + ${p.volume}"></span>
+                    <span th:if="${p.issue}" th:text="' ฉบับที่ ' + ${p.issue}"></span>
+                    <span th:if="${p.pages}" th:text="' หน้า ' + ${p.pages}"></span>
+                </p>
+
+                <div class="d-flex flex-wrap gap-2 mb-3">
+                    <span class="badge bg-primary" th:if="${p.type}" th:text="${p.type}">ประเภท</span>
+                    <span class="badge bg-secondary" th:if="${p.quartile}"
+                          th:text="'Quartile ' + ${p.quartile}">Q</span>
+                    <span class="badge bg-info text-dark" th:if="${p.percentile}"
+                          th:text="'Percentile ' + ${p.percentile}">P</span>
+                    <span class="badge bg-dark" th:text="'อ้างอิง ' + ${p.citedBy != null ? p.citedBy : 0} + ' ครั้ง'">อ้างอิง</span>
+                    <span class="badge bg-success" th:if="${p.openAccess}">
+                        <i class="fas fa-lock-open"></i> Open Access
+                    </span>
+                </div>
+
+                <div class="d-flex flex-wrap gap-2">
+                    <!-- DOI คือทางไปอ่านฉบับเต็มที่สำนักพิมพ์ ส่วน Scopus ให้หน้าบรรณานุกรม -->
+                    <a th:if="${p.doi}" th:href="'https://doi.org/' + ${p.doi}"
+                       target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
+                        <i class="fas fa-file-lines"></i> อ่านฉบับเต็ม (DOI)
+                    </a>
+                    <a th:if="${p.url}" th:href="${p.url}" target="_blank" rel="noopener noreferrer"
+                       class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-arrow-up-right-from-square"></i> เปิดใน Scopus
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- บทคัดย่อ -->
+        <div class="card card-academic mb-4">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-align-left"></i> บทคัดย่อ</h6>
+            </div>
+            <div class="card-body">
+                <p th:if="${row.hasAbstract()}" style="white-space:pre-line;line-height:1.8"
+                   th:text="${row.abstractText}">บทคัดย่อ</p>
+                <p th:unless="${row.hasAbstract()}" class="text-muted mb-0">
+                    ต้นทางไม่ได้ให้บทคัดย่อของผลงานนี้มา — กด "อ่านฉบับเต็ม" เพื่อไปที่สำนักพิมพ์
+                </p>
+            </div>
+        </div>
+
+        <!-- คำสำคัญ -->
+        <div class="card card-academic mb-4" th:if="${!row.keywords.isEmpty()}">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-tags"></i> คำสำคัญ</h6>
+            </div>
+            <div class="card-body">
+                <span class="badge bg-light text-dark border me-1 mb-1"
+                      th:each="k : ${row.keywords}" th:text="${k}">คำสำคัญ</span>
+            </div>
+        </div>
+
+        <!-- ข้อมูลบรรณานุกรม -->
+        <div class="card card-academic">
+            <div class="card-header bg-white">
+                <h6 class="mb-0"><i class="fas fa-circle-info"></i> ข้อมูลอ้างอิง</h6>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-0 small">
+                    <dt class="col-sm-3">เจ้าของผลงานในระบบ</dt>
+                    <dd class="col-sm-9" th:text="${ownerName}">-</dd>
+
+                    <dt class="col-sm-3">ผู้แต่งทั้งหมด</dt>
+                    <dd class="col-sm-9" th:text="${p.authorNames != null ? p.authorNames : '-'}">-</dd>
+
+                    <dt class="col-sm-3">DOI</dt>
+                    <dd class="col-sm-9" th:text="${p.doi != null ? p.doi : '-'}">-</dd>
+
+                    <dt class="col-sm-3" th:if="${raw != null and raw.issn != null}">ISSN</dt>
+                    <dd class="col-sm-9" th:if="${raw != null and raw.issn != null}" th:text="${raw.issn}">-</dd>
+
+                    <dt class="col-sm-3" th:if="${raw != null and raw.fundSponsor != null}">แหล่งทุน</dt>
+                    <dd class="col-sm-9" th:if="${raw != null and raw.fundSponsor != null}"
+                        th:text="${raw.fundSponsor}">-</dd>
+
+                    <dt class="col-sm-3">Scopus EID</dt>
+                    <dd class="col-sm-9" th:text="${p.eid}">-</dd>
+                </dl>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

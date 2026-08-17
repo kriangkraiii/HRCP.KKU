@@ -195,11 +195,11 @@ class ScopusQueryServiceTest {
     @Test
     @DisplayName("adminSearch ต้องเป็นเมธอดแยก ไม่ปนกับเส้นทางของอาจารย์")
     void adminSearchIsSeparateFromOwnerScopedReads() {
-        when(publicationRepo.adminSearch(any(), any(), any(Pageable.class)))
+        when(publicationRepo.adminSearch(any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         service.adminSearch(null, "x", 0, 10);
 
-        verify(publicationRepo).adminSearch(eq(null), eq("x"), any(Pageable.class));
+        verify(publicationRepo).adminSearch(eq(null), eq(null), eq(null), eq("x"), any(Pageable.class));
     }
 }

@@ -12,6 +12,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import com.ecom.academic.service.StaffDirectorySync;
+import com.ecom.service.SystemAlertService;
 import com.ecom.service.UserDirectorySync;
 import com.ecom.external.config.FsApiProperties;
 import com.ecom.external.model.FsFaculty;
@@ -60,6 +61,7 @@ public class FsSyncService {
     private final FsSyncStateRepository syncStateRepo;
     private final StaffDirectorySync staffDirectorySync;
     private final UserDirectorySync userDirectorySync;
+    private final SystemAlertService alerts;
 
     private final AtomicBoolean usersRunning = new AtomicBoolean(false);
     private final AtomicBoolean scopusRunning = new AtomicBoolean(false);
@@ -70,7 +72,8 @@ public class FsSyncService {
             FsFacultyRepository facultyRepo,
             FsSyncStateRepository syncStateRepo,
             StaffDirectorySync staffDirectorySync,
-            UserDirectorySync userDirectorySync) {
+            UserDirectorySync userDirectorySync,
+            SystemAlertService alerts) {
         this.api = api;
         this.props = props;
         this.writer = writer;
@@ -78,6 +81,7 @@ public class FsSyncService {
         this.syncStateRepo = syncStateRepo;
         this.staffDirectorySync = staffDirectorySync;
         this.userDirectorySync = userDirectorySync;
+        this.alerts = alerts;
     }
 
     // ------------------------------------------------------------------
@@ -124,6 +128,11 @@ public class FsSyncService {
 
         long startedAt = System.currentTimeMillis();
         api.resetRequestCount();
+
+        // Read before markRunning overwrites it: telling a failure from a
+        // continuing failure, and a recovery from a routine success, needs to know
+        // how the job stood a moment ago.
+        String previousStatus = statusBefore(FsSyncState.TYPE_USERS);
         writer.markRunning(FsSyncState.TYPE_USERS);
 
         try {
@@ -148,11 +157,16 @@ public class FsSyncService {
 
             log.info("Faculty sync finished: {} row(s) written in {} request(s), {} ms",
                     written, api.getRequestCount(), elapsed);
+            announceSuccess("ดึงข้อมูลอาจารย์จากระบบ Fund Management", previousStatus,
+                    "ดึงมา " + rows.size() + " รายการ บันทึก " + written + " รายการ"
+                            + (staffSummary == null ? "" : " — " + staffSummary));
             return SyncResult.ok(written, api.getRequestCount(), elapsed);
 
         } catch (Exception e) {
             log.error("Faculty sync failed: {}", e.toString(), e);
             writer.recordFailure(FsSyncState.TYPE_USERS, e);
+            alerts.failure("ดึงข้อมูลอาจารย์จากระบบ Fund Management",
+                    "งานที่ตั้งเวลาไว้ทำงานไม่สำเร็จ: " + e.getMessage());
             return SyncResult.failed(e.getMessage());
         } finally {
             usersRunning.set(false);
@@ -220,6 +234,7 @@ public class FsSyncService {
 
         long startedAt = System.currentTimeMillis();
         api.resetRequestCount();
+        String previousStatus = statusBefore(FsSyncState.TYPE_SCOPUS);
         writer.markRunning(FsSyncState.TYPE_SCOPUS);
 
         try {
@@ -252,11 +267,15 @@ public class FsSyncService {
 
             log.info("Publication sync finished: {} row(s) upserted for {} faculty in {} request(s), {} ms",
                     written, ids.size(), api.getRequestCount(), elapsed);
+            announceSuccess("ดึงผลงานวิจัยจาก Scopus", previousStatus,
+                    "บันทึกผลงาน " + written + " รายการ จากอาจารย์ " + ids.size() + " คน");
             return SyncResult.ok(written, api.getRequestCount(), elapsed);
 
         } catch (Exception e) {
             log.error("Publication sync failed: {}", e.toString(), e);
             writer.recordFailure(FsSyncState.TYPE_SCOPUS, e);
+            alerts.failure("ดึงผลงานวิจัยจาก Scopus",
+                    "งานที่ตั้งเวลาไว้ทำงานไม่สำเร็จ: " + e.getMessage());
             return SyncResult.failed(e.getMessage());
         } finally {
             scopusRunning.set(false);
@@ -264,6 +283,28 @@ public class FsSyncService {
     }
 
     // ------------------------------------------------------------------
+    // Alerting
+    // ------------------------------------------------------------------
+
+    /** How the job stood before this run started, or null if it has never run. */
+    private String statusBefore(String type) {
+        return syncStateRepo.findById(type).map(FsSyncState::getLastStatus).orElse(null);
+    }
+
+    /**
+     * Reports a successful run, but only when that is news.
+     *
+     * <p>A job that failed last night and works tonight is worth an interruption.
+     * A job that has worked every night for a year is not, and saying so anyway is
+     * how the message that matters ends up in a folder nobody reads.
+     */
+    private void announceSuccess(String source, String previousStatus, String detail) {
+        if (FsSyncState.STATUS_FAILED.equals(previousStatus)) {
+            alerts.recovery(source, detail);
+        } else {
+            alerts.success(source, detail);
+        }
+    }
 
     public Map<String, FsSyncState> currentState() {
         Map<String, FsSyncState> byType = new HashMap<>();

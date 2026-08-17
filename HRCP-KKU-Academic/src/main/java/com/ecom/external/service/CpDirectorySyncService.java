@@ -19,6 +19,7 @@ import com.ecom.external.service.CpWebClient.CpPerson;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.ProfileImageStorage;
+import com.ecom.service.SystemAlertService;
 
 /**
  * Fills in what the college website knows and the HR feed does not — chiefly
@@ -40,6 +41,9 @@ public class CpDirectorySyncService {
 
     static final String SCHEDULE_ZONE = "Asia/Bangkok";
 
+    /** What an alert about this job calls it. */
+    private static final String SOURCE = "ดึงรูปและข้อมูลจากเว็บไซต์คณะ";
+
     /** The avatar shown when an account has no photo of its own. */
     private static final String PLACEHOLDER_IMAGE = "default.png";
 
@@ -49,6 +53,7 @@ public class CpDirectorySyncService {
     private final UserRepository userRepo;
     private final StaffMemberRepository staffRepo;
     private final ProfileImageStorage imageStorage;
+    private final SystemAlertService alerts;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -57,13 +62,15 @@ public class CpDirectorySyncService {
             FsFacultyRepository facultyRepo,
             UserRepository userRepo,
             StaffMemberRepository staffRepo,
-            ProfileImageStorage imageStorage) {
+            ProfileImageStorage imageStorage,
+            SystemAlertService alerts) {
         this.props = props;
         this.client = client;
         this.facultyRepo = facultyRepo;
         this.userRepo = userRepo;
         this.staffRepo = staffRepo;
         this.imageStorage = imageStorage;
+        this.alerts = alerts;
     }
 
     /**
@@ -114,10 +121,12 @@ public class CpDirectorySyncService {
 
             Result result = new Result(people.size(), photos, details, unmatched, null);
             log.info("College directory sync finished: {}", result);
+            alerts.success(SOURCE, result.describe());
             return result;
 
         } catch (Exception e) {
             log.error("College directory sync failed: {}", e.toString(), e);
+            alerts.failure(SOURCE, "อ่านข้อมูลจากเว็บไซต์คณะไม่สำเร็จ: " + e.getMessage());
             return Result.failed(e.getMessage());
         } finally {
             running.set(false);

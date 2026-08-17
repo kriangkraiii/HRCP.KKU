@@ -17,6 +17,8 @@ import com.ecom.external.model.ScopusPublication;
 import com.ecom.external.repository.FsFacultyRepository;
 import com.ecom.external.repository.ScopusPublicationRepository;
 import com.ecom.model.UserDtls;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * Read side of the publication mirror, with ownership enforced in one place.
@@ -162,9 +164,103 @@ public class ScopusQueryService {
      * path is an obvious mistake in review rather than a subtle one.
      */
     public Page<PublicationDto> adminSearch(Long fsUserId, String query, int page, int size) {
+        return adminSearch(fsUserId, null, null, query, page, size);
+    }
+
+    /** As above, narrowed to a publication-year window. */
+    public Page<PublicationDto> adminSearch(Long fsUserId, Integer yearFrom, Integer yearTo,
+            String query, int page, int size) {
         String q = (query == null || query.isBlank()) ? null : query.trim();
-        return publicationRepo.adminSearch(fsUserId, q, PageRequest.of(Math.max(page, 0), clampSize(size)))
+        return publicationRepo
+                .adminSearch(fsUserId, yearFrom, yearTo, q,
+                        PageRequest.of(Math.max(page, 0), clampSize(size)))
                 .map(PublicationDto::from);
+    }
+
+    /**
+     * The same search, paired with the id of the professor each row belongs to.
+     *
+     * <p>{@link PublicationDto} deliberately does not carry that id — it is an
+     * internal key and the DTO is what goes to applicants' browsers. An
+     * administrator listing everyone's work does need to know whose is whose, so
+     * the two are paired here in a type whose name says who it is for.
+     */
+    public Page<AdminPublication> adminSearchWithOwner(Long fsUserId, Integer yearFrom, Integer yearTo,
+            String query, int page, int size) {
+        String q = (query == null || query.isBlank()) ? null : query.trim();
+        return publicationRepo
+                .adminSearch(fsUserId, yearFrom, yearTo, q,
+                        PageRequest.of(Math.max(page, 0), clampSize(size)))
+                .map(AdminPublication::from);
+    }
+
+    /**
+     * One publication for the admin reading view, by id and with no owner check.
+     *
+     * <p>The owner-scoped {@link #findOwn} exists for the applicant side; this is
+     * the deliberate counterpart for a reviewer who has to read across the faculty.
+     */
+    public Optional<AdminPublication> findForAdmin(Long publicationId) {
+        return publicationRepo.findById(publicationId).map(AdminPublication::from);
+    }
+
+    /** The full record behind the reading view, for the fields the DTO omits. */
+    public Optional<ScopusPublication> rawById(Long publicationId) {
+        return publicationRepo.findById(publicationId);
+    }
+
+    /**
+     * One row of the faculty-wide publication view.
+     *
+     * <p>Admin-only by construction: nothing on an applicant path should ever
+     * build or return one.
+     *
+     * <p>Carries the abstract and keywords, which {@link PublicationDto}
+     * deliberately leaves out. The applicant's picker lists dozens of papers at a
+     * time and only needs enough to recognise each one; abstracts average well over
+     * a kilobyte apiece, so shipping them there would multiply the response for
+     * text nothing on that screen displays. A reviewer reading through someone's
+     * work is the case that actually wants them.
+     */
+    public record AdminPublication(PublicationDto publication,
+            Long fsUserId,
+            String abstractText,
+            List<String> keywords) {
+
+        public static AdminPublication from(ScopusPublication p) {
+            return new AdminPublication(
+                    PublicationDto.from(p),
+                    p.getFsUserId(),
+                    p.getAbstractText(),
+                    parseKeywords(p.getAuthKeywords()));
+        }
+
+        public boolean hasAbstract() {
+            return abstractText != null && !abstractText.isBlank();
+        }
+
+        /**
+         * Keywords arrive as a JSON array in a string.
+         *
+         * <p>Parsed rather than printed raw so the page shows words instead of
+         * {@code ["a","b"]}. Anything unparseable yields no keywords, which is a
+         * better outcome on screen than punctuation.
+         */
+        private static List<String> parseKeywords(String raw) {
+            if (raw == null || raw.isBlank()) {
+                return List.of();
+            }
+            try {
+                List<String> parsed = new ObjectMapper().readValue(raw, new TypeReference<List<String>>() {
+                });
+                return parsed.stream()
+                        .filter(k -> k != null && !k.isBlank())
+                        .map(String::trim)
+                        .toList();
+            } catch (Exception e) {
+                return List.of();
+            }
+        }
     }
 
     public List<ScopusPublication> rawForFaculty(Long fsUserId) {

@@ -67,10 +67,16 @@ function initPositionNotifyConfirm(formId, docType) {
         if (e.target.closest('#btnPosNoNotify')) {
             sendNotifyField.value = 'false';
             hidePanel();
+            if (window.setButtonLoading) {
+                submitBtns.forEach(btn => window.setButtonLoading(btn, 'กำลังบันทึกเอกสาร...'));
+            }
             form.submit();
         } else if (e.target.closest('#btnPosYesNotify')) {
             sendNotifyField.value = 'true';
             hidePanel();
+            if (window.setButtonLoading) {
+                submitBtns.forEach(btn => window.setButtonLoading(btn, 'กำลังบันทึกเอกสาร...'));
+            }
             form.submit();
         } else if (e.target.closest('#posNotifyCloseX') || e.target.id === 'posNotifyBackdrop') {
             hidePanel();

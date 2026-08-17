@@ -93,6 +93,9 @@
             function submitFormAsSubmit() {
                 const form = document.getElementById('docForm');
                 if (!form) return;
+                if (window.setButtonLoading && submitBtn) {
+                    window.setButtonLoading(submitBtn, 'กำลังบันทึกเอกสาร...');
+                }
                 let actionInput = form.querySelector('input[name="action"][type="hidden"]');
                 if (!actionInput) {
                     actionInput = document.createElement('input');

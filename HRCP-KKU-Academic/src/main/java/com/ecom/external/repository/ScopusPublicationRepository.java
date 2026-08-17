@@ -70,13 +70,43 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
     @Query("""
             SELECT p FROM ScopusPublication p
             WHERE (:fsUserId IS NULL OR p.fsUserId = :fsUserId)
+              AND (:yearFrom IS NULL OR p.publicationYear >= :yearFrom)
+              AND (:yearTo   IS NULL OR p.publicationYear <= :yearTo)
               AND (:q IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%'))
-                              OR LOWER(p.authorNames) LIKE LOWER(CONCAT('%', :q, '%')))
+                              OR LOWER(p.authorNames) LIKE LOWER(CONCAT('%', :q, '%'))
+                              OR LOWER(p.publicationName) LIKE LOWER(CONCAT('%', :q, '%'))
+                              OR LOWER(p.abstractText) LIKE LOWER(CONCAT('%', :q, '%'))
+                              OR LOWER(p.authKeywords) LIKE LOWER(CONCAT('%', :q, '%')))
             ORDER BY p.publicationYear DESC, p.citedBy DESC
             """)
     Page<ScopusPublication> adminSearch(@Param("fsUserId") Long fsUserId,
+            @Param("yearFrom") Integer yearFrom,
+            @Param("yearTo") Integer yearTo,
             @Param("q") String q,
             Pageable pageable);
 
     long countByFsUserId(Long fsUserId);
+
+    // ---- Faculty-wide totals for the admin overview ----
+
+    @Query("SELECT COALESCE(SUM(p.citedBy), 0) FROM ScopusPublication p")
+    long sumAllCitations();
+
+    /** How many professors have at least one publication on record. */
+    @Query("SELECT COUNT(DISTINCT p.fsUserId) FROM ScopusPublication p")
+    long countAuthorsWithPublications();
+
+    /**
+     * Who to offer in the "filter by professor" list.
+     *
+     * <p>Only people who actually have publications: a dropdown of every name in
+     * the directory would be mostly dead ends.
+     */
+    @Query("SELECT DISTINCT p.fsUserId FROM ScopusPublication p")
+    List<Long> findDistinctAuthorIds();
+
+    /** Years that have any publication, newest first — populates the year filter. */
+    @Query("SELECT DISTINCT p.publicationYear FROM ScopusPublication p "
+            + "WHERE p.publicationYear IS NOT NULL ORDER BY p.publicationYear DESC")
+    List<Integer> findDistinctYears();
 }

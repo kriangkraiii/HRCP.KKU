@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+    <meta charset="UTF-8">
+    <title>งานวิจัยและผลงานตีพิมพ์</title>
+</head>
+
+<body>
+<section>
+    <div class="container-fluid py-4">
+
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h3 class="mb-1"><i class="fas fa-flask"></i> งานวิจัยและผลงานตีพิมพ์</h3>
+                <small class="text-muted">ข้อมูลจาก Scopus ของอาจารย์ทั้งคณะ — อ่านอย่างเดียว</small>
+            </div>
+            <a href="/admin/external-sync" class="btn btn-outline-secondary btn-sm">
+                <i class="fas fa-rotate"></i> ไปหน้าดึงข้อมูล
+            </a>
+        </div>
+
+        <!-- ภาพรวม -->
+        <div class="row g-3 mb-4">
+            <div class="col-md-4">
+                <div class="card card-academic h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small">ผลงานทั้งหมด</div>
+                        <div class="fs-3 fw-bold" th:text="${totalPublications}">0</div>
+                        <div class="text-muted small">รายการ</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-academic h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small">การอ้างอิงรวม</div>
+                        <div class="fs-3 fw-bold" th:text="${totalCitations}">0</div>
+                        <div class="text-muted small">ครั้ง</div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card card-academic h-100">
+                    <div class="card-body text-center">
+                        <div class="text-muted small">อาจารย์ที่มีผลงาน</div>
+                        <div class="fs-3 fw-bold" th:text="${authorsWithPublications}">0</div>
+                        <div class="text-muted small">คน</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ตัวกรอง -->
+        <div class="card card-academic mb-4">
+            <div class="card-body">
+                <form method="get" action="/admin/publications" class="row g-2 align-items-end">
+                    <div class="col-md-5">
+                        <label class="form-label small text-muted mb-1">ค้นหา</label>
+                        <input type="text" name="q" class="form-control" th:value="${q}"
+                               placeholder="ชื่อผลงาน ผู้แต่ง หรือชื่อวารสาร">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label small text-muted mb-1">เจ้าของผลงาน</label>
+                        <select name="fsUserId" class="form-select">
+                            <option value="">— ทุกคน —</option>
+                            <option th:each="a : ${authorOptions}"
+                                    th:value="${a.key}"
+                                    th:text="${a.value}"
+                                    th:selected="${selectedFsUserId != null and selectedFsUserId == a.key}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted mb-1">ปีที่ตีพิมพ์</label>
+                        <select name="year" class="form-select">
+                            <option value="">— ทุกปี —</option>
+                            <option th:each="y : ${years}" th:value="${y}" th:text="${y}"
+                                    th:selected="${selectedYear != null and selectedYear == y}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-1 d-grid">
+                        <button type="submit" class="btn btn-academic">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ผลลัพธ์ -->
+        <div class="card card-academic">
+            <div class="card-body">
+
+                <div th:if="${publications.totalElements == 0}" class="text-center py-5 text-muted">
+                    <i class="fas fa-folder-open fa-3x mb-3"></i>
+                    <p class="mb-1">ไม่พบผลงานตามเงื่อนไขที่เลือก</p>
+                    <p class="small mb-0" th:if="${totalPublications == 0}">
+                        ยังไม่เคยดึงข้อมูล — ไปที่หน้า "ดึงข้อมูลจากระบบภายนอก" แล้วกดดึงผลงาน Scopus
+                    </p>
+                </div>
+
+                <div th:if="${publications.totalElements > 0}">
+                    <p class="text-muted small mb-3">
+                        พบ <strong th:text="${publications.totalElements}">0</strong> รายการ
+                        — แสดงหน้า <span th:text="${publications.number + 1}">1</span>
+                        จาก <span th:text="${publications.totalPages}">1</span>
+                    </p>
+
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                            <tr>
+                                <th style="width:5rem">ปี</th>
+                                <th>ชื่อผลงาน</th>
+                                <th style="width:14rem">เจ้าของผลงาน</th>
+                                <th style="width:7rem">ประเภท</th>
+                                <th style="width:5rem" class="text-center">Q</th>
+                                <th style="width:6rem" class="text-end">อ้างอิง</th>
+                                <th style="width:4rem"></th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="row, st : ${publications.content}" th:with="p=${row.publication}">
+                                <td th:text="${p.year != null ? p.year : '-'}">-</td>
+                                <td>
+                                    <a class="fw-semibold text-decoration-none"
+                                       th:href="@{'/admin/publications/' + ${p.id}}"
+                                       th:text="${p.title}">ชื่อผลงาน</a>
+                                    <div class="small text-muted">
+                                        <span th:if="${p.publicationName}" th:text="${p.publicationName}"></span>
+                                        <span th:if="${p.volume}" th:text="' ปีที่ ' + ${p.volume}"></span>
+                                        <span th:if="${p.issue}" th:text="' ฉบับที่ ' + ${p.issue}"></span>
+                                        <span th:if="${p.pages}" th:text="' หน้า ' + ${p.pages}"></span>
+                                    </div>
+                                    <div class="small text-muted text-truncate" style="max-width:48rem"
+                                         th:if="${p.authorNames}" th:text="${p.authorNames}"></div>
+
+                                    <!-- บทคัดย่อยาวเฉลี่ยพันกว่าตัวอักษร กางไว้ทุกแถวจะอ่านตารางไม่ออก
+                                         จึงซ่อนไว้หลังปุ่ม ให้กดดูเฉพาะเรื่องที่สนใจ -->
+                                    <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
+                                        <button th:if="${row.hasAbstract()}" type="button"
+                                                class="btn btn-sm btn-outline-secondary py-0"
+                                                data-bs-toggle="collapse"
+                                                th:attr="data-bs-target='#abs-' + ${st.index}">
+                                            <i class="fas fa-align-left"></i> บทคัดย่อ
+                                        </button>
+                                        <a th:if="${p.doi}" th:href="'https://doi.org/' + ${p.doi}"
+                                           target="_blank" rel="noopener noreferrer"
+                                           class="btn btn-sm btn-outline-secondary py-0"
+                                           th:title="'DOI: ' + ${p.doi}">
+                                            <i class="fas fa-file-lines"></i> อ่านฉบับเต็ม
+                                        </a>
+                                        <span th:if="${p.openAccess}" class="badge bg-success">
+                                            <i class="fas fa-lock-open"></i> Open Access
+                                        </span>
+                                    </div>
+
+                                    <div class="collapse mt-2" th:id="'abs-' + ${st.index}">
+                                        <div class="border-start border-3 ps-3 py-1">
+                                            <p class="small mb-2" style="white-space:pre-line"
+                                               th:text="${row.abstractText}">บทคัดย่อ</p>
+                                            <div th:if="${!row.keywords.isEmpty()}">
+                                                <span class="badge bg-light text-dark border me-1"
+                                                      th:each="k : ${row.keywords}" th:text="${k}">คำสำคัญ</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <!-- ผลงานเก็บแค่รหัสเจ้าของ เลยต้องเทียบชื่อจากรายชื่ออาจารย์
+                                     ถ้าเทียบไม่ได้ (เพิ่งลาออกจากต้นทาง) แสดงรหัสไว้ ดีกว่าเว้นว่าง -->
+                                <td class="small"
+                                    th:text="${authorNames.get(row.fsUserId) != null
+                                              ? authorNames.get(row.fsUserId)
+                                              : 'รหัส ' + row.fsUserId}">-</td>
+                                <td class="small" th:text="${p.type != null ? p.type : '-'}">-</td>
+                                <td class="text-center">
+                                    <span th:if="${p.quartile}" class="badge bg-secondary"
+                                          th:text="${p.quartile}"></span>
+                                    <span th:unless="${p.quartile}" class="text-muted">-</span>
+                                </td>
+                                <td class="text-end fw-semibold"
+                                    th:text="${p.citedBy != null ? p.citedBy : 0}">0</td>
+                                <td class="text-center">
+                                    <a th:href="@{'/admin/publications/' + ${p.id}}"
+                                       class="btn btn-sm btn-outline-primary" title="อ่านรายละเอียด">
+                                        <i class="fas fa-book-open"></i>
+                                    </a>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- แบ่งหน้า — ต้องพาตัวกรองไปด้วย ไม่งั้นหน้า 2 จะกลายเป็นผลลัพธ์คนละชุด -->
+                    <nav th:if="${publications.totalPages > 1}" class="mt-3">
+                        <ul class="pagination pagination-sm mb-0 justify-content-center">
+                            <li class="page-item" th:classappend="${publications.first} ? 'disabled'">
+                                <a class="page-link"
+                                   th:href="@{'/admin/publications?page=' + ${publications.number - 1} + ${filterQuery}}">
+                                    ก่อนหน้า
+                                </a>
+                            </li>
+                            <li class="page-item disabled">
+                                <span class="page-link"
+                                      th:text="${publications.number + 1} + ' / ' + ${publications.totalPages}">1</span>
+                            </li>
+                            <li class="page-item" th:classappend="${publications.last} ? 'disabled'">
+                                <a class="page-link"
+                                   th:href="@{'/admin/publications?page=' + ${publications.number + 1} + ${filterQuery}}">
+                                    ถัดไป
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

@@ -24,6 +24,7 @@ import com.ecom.external.service.CpWebClient.CpPerson;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.ProfileImageStorage;
+import com.ecom.service.SystemAlertService;
 
 /**
  * The college website is a public page maintained by hand; the HR feed is the
@@ -41,9 +42,10 @@ class CpDirectorySyncServiceTest {
     private final UserRepository userRepo = mock(UserRepository.class);
     private final StaffMemberRepository staffRepo = mock(StaffMemberRepository.class);
     private final ProfileImageStorage imageStorage = mock(ProfileImageStorage.class);
+    private final SystemAlertService alerts = mock(SystemAlertService.class);
 
     private final CpDirectorySyncService sync = new CpDirectorySyncService(
-            props, client, facultyRepo, userRepo, staffRepo, imageStorage);
+            props, client, facultyRepo, userRepo, staffRepo, imageStorage, alerts);
 
     @BeforeEach
     void setUp() {
