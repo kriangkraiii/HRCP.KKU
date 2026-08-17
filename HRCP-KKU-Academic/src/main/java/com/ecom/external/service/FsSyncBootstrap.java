@@ -34,21 +34,27 @@ public class FsSyncBootstrap implements ApplicationRunner {
     private static final Logger log = LoggerFactory.getLogger(FsSyncBootstrap.class);
 
     private final FsSyncService syncService;
+    private final CpDirectorySyncService cpSyncService;
     private final FsFacultyRepository facultyRepo;
     private final ScopusPublicationRepository publicationRepo;
     private final boolean enabled;
     private final boolean force;
+    private final boolean cpSyncOnStartup;
 
     public FsSyncBootstrap(FsSyncService syncService,
+            CpDirectorySyncService cpSyncService,
             FsFacultyRepository facultyRepo,
             ScopusPublicationRepository publicationRepo,
             @Value("${fs.sync.on-startup:true}") boolean enabled,
-            @Value("${fs.sync.force-on-startup:false}") boolean force) {
+            @Value("${fs.sync.force-on-startup:false}") boolean force,
+            @Value("${cp.sync.on-startup:true}") boolean cpSyncOnStartup) {
         this.syncService = syncService;
+        this.cpSyncService = cpSyncService;
         this.facultyRepo = facultyRepo;
         this.publicationRepo = publicationRepo;
         this.enabled = enabled;
         this.force = force;
+        this.cpSyncOnStartup = cpSyncOnStartup;
     }
 
     @Override
@@ -90,6 +96,17 @@ public class FsSyncBootstrap implements ApplicationRunner {
                     result.success() ? "ok" : result.message());
         } else {
             log.debug("Publication mirror already holds {} row(s) — no first-run pull needed", publications);
+        }
+
+        // Check and sync faculty photographs/directory on startup if enabled
+        if (cpSyncOnStartup) {
+            try {
+                log.info("Checking faculty profile photos from college directory on startup...");
+                CpDirectorySyncService.Result cpResult = cpSyncService.sync();
+                log.info("College directory startup check completed: {}", cpResult.describe());
+            } catch (Exception e) {
+                log.warn("College directory startup sync encountered an issue: {}", e.getMessage());
+            }
         }
     }
 }

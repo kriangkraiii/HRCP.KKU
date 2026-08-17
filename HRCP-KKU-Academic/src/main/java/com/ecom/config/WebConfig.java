@@ -14,6 +14,9 @@ public class WebConfig implements WebMvcConfigurer {
 
 	private final RequestLoggingInterceptor requestLoggingInterceptor;
 
+	@org.springframework.beans.factory.annotation.Value("${app.upload.dir:${user.dir}/uploads/}")
+	private String uploadBaseDir;
+
 	public WebConfig(RequestLoggingInterceptor requestLoggingInterceptor) {
 		this.requestLoggingInterceptor = requestLoggingInterceptor;
 	}
@@ -46,28 +49,32 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/");
 		registry.addResourceHandler("/img/**").addResourceLocations("classpath:/static/img/").setCachePeriod(3600);
 
+		// Normalize upload base directory
+		String base = uploadBaseDir.replace('\\', '/');
+		if (!base.endsWith("/")) {
+			base += "/";
+		}
+
 		// Profile images - serve from both external uploads and static directory
-		String profileUploadPath = System.getProperty("user.dir") + "/uploads/profile_img/";
+		String profileUploadPath = base + "profile_img/";
 		registry.addResourceHandler("/img/profile_img/**")
 				.addResourceLocations("file:" + profileUploadPath, "classpath:/static/img/profile_img/")
 				.setCachePeriod(0);
 
 		// Category images from external uploads directory
-		String categoryUploadPath = System.getProperty("user.dir") + "/uploads/category_img/";
+		String categoryUploadPath = base + "category_img/";
 		registry.addResourceHandler("/img/category_img/**")
 				.addResourceLocations("file:" + categoryUploadPath, "classpath:/static/img/category_img/")
 				.setCachePeriod(3600);
 
 		// Product images from external uploads directory
-		String productUploadPath = System.getProperty("user.dir") + "/uploads/product_img/";
+		String productUploadPath = base + "product_img/";
 		registry.addResourceHandler("/img/product_img/**")
 				.addResourceLocations("file:" + productUploadPath, "classpath:/static/img/product_img/")
 				.setCachePeriod(3600);
 
 		// Serve uploaded files from external directory
-		String uploadDir = System.getProperty("user.dir") + "/uploads/";
-
-		registry.addResourceHandler("/uploads/**").addResourceLocations("file:" + uploadDir);
+		registry.addResourceHandler("/uploads/**").addResourceLocations("file:" + base);
 	}
 
 	@PostConstruct

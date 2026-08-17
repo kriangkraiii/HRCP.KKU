@@ -186,9 +186,10 @@ public class CpDirectorySyncService {
             return false;
         }
         String current = user.getProfileImage();
-        boolean hasOwnPhoto = current != null && !current.isBlank()
-                && !PLACEHOLDER_IMAGE.equalsIgnoreCase(current);
-        if (hasOwnPhoto) {
+        boolean hasValidPhotoOnDisk = current != null && !current.isBlank()
+                && !PLACEHOLDER_IMAGE.equalsIgnoreCase(current)
+                && imageStorage.exists(current);
+        if (hasValidPhotoOnDisk) {
             return false;
         }
 

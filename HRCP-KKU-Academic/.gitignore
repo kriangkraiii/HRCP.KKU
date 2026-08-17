@@ -1,5 +1,6 @@
 HELP.md
 target/
+uploads/
 
 # ความลับของ server — ห้าม commit (.env.example คือตัวอย่างที่ commit ได้)
 .env

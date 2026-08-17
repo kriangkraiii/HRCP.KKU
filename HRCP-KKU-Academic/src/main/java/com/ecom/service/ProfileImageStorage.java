@@ -33,8 +33,26 @@ public class ProfileImageStorage {
     private final Path baseDir;
 
     public ProfileImageStorage(
-            @Value("${app.upload.profile-image-dir:${user.dir}/uploads/profile_img}") String baseDir) {
+            @Value("${app.upload.profile-image-dir:${app.upload.dir:${user.dir}/uploads/}profile_img}") String baseDir) {
         this.baseDir = Path.of(baseDir).toAbsolutePath().normalize();
+    }
+
+    /**
+     * Checks if a profile image file physically exists in the storage directory.
+     *
+     * @param filename the stored filename to check
+     * @return true if the file exists on disk, false otherwise
+     */
+    public boolean exists(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return false;
+        }
+        Path target = baseDir.resolve(FileUtils.sanitizeFilename(filename)).normalize();
+        return target.startsWith(baseDir) && Files.isRegularFile(target);
+    }
+
+    public Path getBaseDir() {
+        return baseDir;
     }
 
     /**
