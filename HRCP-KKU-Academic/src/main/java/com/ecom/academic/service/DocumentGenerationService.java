@@ -148,6 +148,7 @@ public class DocumentGenerationService {
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
         mapMethod3Fields(placeholders);
+        aliasFirstRowFields(placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
@@ -165,6 +166,11 @@ public class DocumentGenerationService {
         Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
         });
         Map<String, String> placeholders = flattenMap(dataMap, "");
+        // ต้องประมวลผลชุดเดียวกับ generateP2PreviewDocx มิฉะนั้นเอกสารที่บันทึกจริง
+        // จะไม่ตรงกับที่ผู้ใช้เห็นในหน้า "ดูตัวอย่างเอกสาร"
+        mapUsedCheckboxes(placeholders);
+        mapMethod3Fields(placeholders);
+        aliasFirstRowFields(placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
@@ -408,6 +414,34 @@ public class DocumentGenerationService {
      * Template มี 5 แถวตายตั้ง (des_research1-5)
      * ถ้า research_count > 5 จะ clone แถวที่ 5 แล้วเปลี่ยนหมายเลข placeholder
      */
+    /**
+     * เทมเพลตบางฉบับ (เช่น p2doc_7) วาง placeholder ไว้ในบล็อกที่ตั้งใจให้ซ้ำได้
+     * ({{?research_working_list}} … {{/research_working_list}}) จึงตั้งชื่อแบบ
+     * ไม่มีเลขต่อท้าย เช่น {{is_published}} {{diss_journal}} แต่ฟอร์มส่งชื่อของ
+     * รายการแรกมาเป็น is_published_1 / diss_journal_1 เสมอ
+     *
+     * ยังไม่มีการ implement การซ้ำบล็อก ดังนั้นเอกสารจึงแสดงได้แค่รายการแรก —
+     * method นี้ทำหน้าที่เชื่อมชื่อของรายการแรกเข้ากับ placeholder ฐาน มิฉะนั้น
+     * placeholder จะถูกลบทิ้งใน step 2.5 และช่องติ๊กจะหายไปทั้งกล่อง
+     * (ไม่ขึ้นทั้ง ☑ และ ☐)
+     *
+     * เขียนทับเฉพาะกรณีที่ยังไม่มีค่าของชื่อฐานอยู่แล้ว เพื่อไม่ไปรบกวนเอกสาร
+     * ที่ใช้ชื่อฐานเป็นฟิลด์จริงของตัวเอง
+     */
+    private void aliasFirstRowFields(Map<String, String> placeholders) {
+        Map<String, String> toAdd = new java.util.LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : placeholders.entrySet()) {
+            String key = entry.getKey();
+            if (!key.endsWith("_1"))
+                continue;
+            String base = key.substring(0, key.length() - 2);
+            if (base.isEmpty() || placeholders.containsKey(base))
+                continue;
+            toAdd.putIfAbsent(base, entry.getValue());
+        }
+        placeholders.putAll(toAdd);
+    }
+
     private void mapUsedCheckboxes(Map<String, String> placeholders) {
         java.util.regex.Pattern p = java.util.regex.Pattern.compile(
                 "^(asst|assoc|prof)_used_(research|other|book)_(\\d+)$");

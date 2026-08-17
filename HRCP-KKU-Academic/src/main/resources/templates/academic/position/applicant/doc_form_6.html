@@ -10,8 +10,7 @@
 
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 6: บันทึกข้อความจริยธรรมการวิจัยในมนุษย์ (Exemption)</h3>
 
-            <form th:action="'/user/position/request/' + ${request.id} + '/document/6'" method="post" id="doc6Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/6'"
-                  onsubmit="document.querySelectorAll('#doc6Form input[type=checkbox]').forEach(c=>{if(!c.checked){let h=document.createElement('input');h.type='hidden';h.name=c.name;h.value='☐';c.parentNode.appendChild(h);}})">
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/6'" method="post" id="doc6Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/6'">
 
                 <!-- หัวบันทึก -->
                 <div class="card card-academic mb-4">
@@ -93,8 +92,7 @@
                                 </tbody>
                             </table>
                         </div>
-                        <!-- ตัวนับแถวภายใน (ไม่ถูก POST) — ค่าที่ส่งจริงคือช่อง "จำนวนงานวิจัย" ด้านบน ซึ่ง syncCountInput() ทำให้ตรงกันเสมอ -->
-                        <input type="hidden" id="researchCountField" value="1">
+                        <input type="hidden" name="research_count" id="researchCountField" value="1">
                     </div>
                 </div>
 

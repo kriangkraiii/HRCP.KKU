@@ -1,10 +1,14 @@
 /**
  * Position Document Form Validation
- * Prevents saving if any visible required fields are empty.
- * Only validates fields inside visible sections (display !== 'none').
- * 
- * Excludes: hidden fields, checkboxes, radio buttons, and fields
- * inside hidden position-specific sections (sectionAsst/sectionAssoc/sectionProf).
+ *
+ * Blocks saving only when a field that is genuinely mandatory is left empty.
+ * "Mandatory" means the element carries the `required` attribute — fields
+ * without it are optional and may be submitted blank, which is the normal case
+ * for these forms (ผู้ยื่นมักไม่มีข้อมูลครบทุกช่องในเอกสารเดียว).
+ *
+ * Skipped: fields without `required`, disabled fields (e.g. ส่วนของเจ้าหน้าที่),
+ * hidden inputs, checkboxes/radios, and anything inside a hidden section
+ * (sectionAsst/sectionAssoc/sectionProf).
  */
 (function() {
     'use strict';
@@ -24,20 +28,20 @@
 
             var emptyFields = [];
 
-            // Get all input/select/textarea in the form
-            var fields = form.querySelectorAll('input[type="text"], input[type="email"], input[type="tel"], input[type="number"], input[type="date"], select, textarea');
+            // Only fields explicitly marked required are checked
+            var fields = form.querySelectorAll(
+                'input[required], select[required], textarea[required]');
 
             fields.forEach(function(field) {
-                // Skip hidden fields, checkboxes, radio
+                // Disabled fields are never submitted, so never validate them
+                if (field.disabled) return;
+
+                // Checkbox/radio requiredness is left to the browser
                 if (field.type === 'hidden' || field.type === 'checkbox' || field.type === 'radio') return;
 
                 // Skip fields inside hidden sections (display:none parents)
                 if (!isVisible(field)) return;
 
-                // Skip fields with specific names that are optional
-                if (field.name === '_csrf' || field.name === 'action') return;
-
-                // Check if empty
                 var val = (field.value || '').trim();
                 if (!val || val === '-- เลือก --') {
                     emptyFields.push(field);
@@ -65,7 +69,7 @@
                 alert.className = 'alert alert-danger alert-dismissible fade show';
                 alert.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);z-index:9999;min-width:400px;box-shadow:0 4px 20px rgba(0,0,0,0.15);border-radius:12px;';
                 alert.innerHTML = '<i class="fas fa-exclamation-triangle me-2"></i>' +
-                    '<strong>กรุณากรอกข้อมูลให้ครบทุกช่อง</strong> — ยังมี ' + emptyFields.length + ' ช่องที่ยังไม่ได้กรอก' +
+                    '<strong>กรุณากรอกข้อมูลในช่องที่จำเป็น</strong> — ยังมี ' + emptyFields.length + ' ช่องที่ต้องกรอก' +
                     '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
                 document.body.appendChild(alert);
 
