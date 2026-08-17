@@ -8,10 +8,10 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 @SpringBootApplication
 @EnableAsync
 @EnableScheduling
-public class ShoppingCartApplication {
+public class HrcpKkuApplication {
 
 	public static void main(String[] args) {
-		SpringApplication.run(ShoppingCartApplication.class, args);
+		SpringApplication.run(HrcpKkuApplication.class, args);
 	}
 
 }

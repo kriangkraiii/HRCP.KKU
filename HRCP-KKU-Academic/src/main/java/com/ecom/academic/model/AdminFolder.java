@@ -7,7 +7,9 @@ import java.util.List;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "admin_folder")
+@Table(name = "admin_folder", indexes = {
+        @Index(name = "idx_adminfolder_parent", columnList = "parent_id")
+})
 public class AdminFolder {
 
     @Id

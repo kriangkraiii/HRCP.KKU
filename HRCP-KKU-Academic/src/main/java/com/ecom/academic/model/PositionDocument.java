@@ -8,6 +8,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
@@ -15,7 +16,10 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "position_document")
+@Table(name = "position_document", indexes = {
+        @Index(name = "idx_pos_doc_req_type", columnList = "request_id, document_type"),
+        @Index(name = "idx_pos_doc_req_draft", columnList = "request_id, is_draft, is_deleted")
+})
 public class PositionDocument {
 
     @Id

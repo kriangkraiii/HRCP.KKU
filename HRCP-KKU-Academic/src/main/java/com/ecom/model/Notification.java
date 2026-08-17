@@ -12,13 +12,19 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "notifications")
+@Table(name = "notifications", indexes = {
+		@Index(name = "idx_notif_recipient_active", columnList = "recipient_id, isDeleted, isRead"),
+		@Index(name = "idx_notif_recipient_created", columnList = "recipient_id, createdAt DESC"),
+		@Index(name = "idx_notif_recipient_starred", columnList = "recipient_id, isDeleted, isStarred"),
+		@Index(name = "idx_notif_recipient_important", columnList = "recipient_id, isDeleted, isImportant")
+})
 public class Notification {
 
 	@Id

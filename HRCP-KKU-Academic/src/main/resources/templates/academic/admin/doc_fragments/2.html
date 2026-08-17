@@ -136,7 +136,7 @@
                                 </div>
                                 <div class="form-check mt-1">
                                     <input type="checkbox" class="form-check-input" id="chk_dean_sign3_cb" data-target="chk_dean_sign3"
-                                        onchange="document.getElementById('dean_comment_wrapper').style.display = this.checked ? 'block' : 'none'; if(!this.checked){ document.getElementById('dean_comment_input').value=''; document.getElementById('chk_dean_sign3').value=''; } else { document.getElementById('chk_dean_sign3').value='✓'; }">
+                                        data-call-change="toggleDeanComment" data-call-arg="checked">
                                     <label class="form-check-label" for="chk_dean_sign3_cb">ความเห็นคณบดี</label>
                                 </div>
                                 <div id="dean_comment_wrapper" class="mt-2 ms-4" style="display:none;">
@@ -177,6 +177,20 @@
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
+        <script>
+            // Was a long onchange="..." body on the checkbox above; CSP refuses
+            // inline handler attributes, so it lives here and is reached via
+            // data-call-change (see csp_fallbacks.js).
+            function toggleDeanComment(checked) {
+                document.getElementById('dean_comment_wrapper').style.display = checked ? 'block' : 'none';
+                if (!checked) {
+                    document.getElementById('dean_comment_input').value = '';
+                    document.getElementById('chk_dean_sign3').value = '';
+                } else {
+                    document.getElementById('chk_dean_sign3').value = '\u2713';
+                }
+            }
+        </script>
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
     </section>
 </body>

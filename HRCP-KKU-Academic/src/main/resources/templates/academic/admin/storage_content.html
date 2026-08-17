@@ -19,16 +19,16 @@
 <!-- Toolbar -->
 <div th:if="${viewMode == 'storage'}" class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div class="d-flex gap-2 flex-wrap align-items-center">
-        <button class="btn btn-primary" style="border-radius: 10px;" onclick="showCreateFolderModal()">
+        <button class="btn btn-primary" style="border-radius: 10px;" data-call="showCreateFolderModal">
             <i class="fas fa-folder-plus me-1"></i> สร้างโฟลเดอร์
         </button>
-        <button class="btn btn-success" style="border-radius: 10px;" onclick="document.getElementById('fileUploadInput').click()">
+        <button class="btn btn-success" style="border-radius: 10px;" data-click-target="#fileUploadInput">
             <i class="fas fa-cloud-upload-alt me-1"></i> อัปโหลดไฟล์
         </button>
         <form id="uploadForm" style="display:none;">
             <input type="file" id="fileUploadInput" multiple
                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.rtf,.odt,.ods"
-                   onchange="uploadFiles(this.files)">
+                   data-call-change="uploadFiles" data-call-arg="files">
         </form>
     </div>
     <div class="text-muted small">
@@ -53,13 +53,13 @@
                  th:data-id="${folder.id}" th:data-name="${folder.name}">
                 <div class="card-body text-center py-3 position-relative">
                     <div class="dropdown position-absolute" style="top: 8px; right: 8px;">
-                        <button class="btn btn-sm btn-light p-1" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
+                        <button class="btn btn-sm btn-light p-1" data-bs-toggle="dropdown" data-stop-propagation="1">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
                         <ul class="dropdown-menu dropdown-menu-end">
-                            <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); renameFolderPrompt(this.closest('.folder-card'))">
+                            <li><a class="dropdown-item" href="#" data-call="renameFolderPrompt" data-call-arg="closest:.folder-card">
                                 <i class="fas fa-edit me-2"></i>เปลี่ยนชื่อ</a></li>
-                            <li><a class="dropdown-item text-danger" href="#" onclick="event.preventDefault(); deleteFolderPrompt(this.closest('.folder-card'))">
+                            <li><a class="dropdown-item text-danger" href="#" data-call="deleteFolderPrompt" data-call-arg="closest:.folder-card">
                                 <i class="fas fa-trash me-2"></i>ลบ</a></li>
                         </ul>
                     </div>
@@ -118,10 +118,10 @@
                                class="btn btn-sm btn-outline-primary" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
                             <button class="btn btn-sm btn-outline-warning" title="เปลี่ยนชื่อ"
                                     th:data-id="${f.id}" th:data-name="${f.originalFilename}"
-                                    onclick="renameFilePrompt(this)"><i class="fas fa-edit"></i></button>
+                                    data-call="renameFilePrompt" data-call-arg="self"><i class="fas fa-edit"></i></button>
                             <button class="btn btn-sm btn-outline-danger" title="ลบ"
                                     th:data-id="${f.id}" th:data-name="${f.originalFilename}"
-                                    onclick="deleteFilePrompt(this)"><i class="fas fa-trash-alt"></i></button>
+                                    data-call="deleteFilePrompt" data-call-arg="self"><i class="fas fa-trash-alt"></i></button>
                         </div>
                     </td>
                 </tr>
@@ -149,8 +149,8 @@
                     <td><small th:text="${@thaiDateUtil.format(f.deletedAt)}"></small></td>
                     <td>
                         <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-success" th:data-id="${f.id}" onclick="restoreStorageFile(this)"><i class="fas fa-undo"></i></button>
-                            <button class="btn btn-sm btn-outline-danger" th:data-id="${f.id}" th:data-name="${f.originalFilename}" onclick="permanentDeleteStorageFile(this)"><i class="fas fa-times"></i></button>
+                            <button class="btn btn-sm btn-outline-success" th:data-id="${f.id}" data-call="restoreStorageFile" data-call-arg="self"><i class="fas fa-undo"></i></button>
+                            <button class="btn btn-sm btn-outline-danger" th:data-id="${f.id}" th:data-name="${f.originalFilename}" data-call="permanentDeleteStorageFile" data-call-arg="self"><i class="fas fa-times"></i></button>
                         </div>
                     </td>
                 </tr>

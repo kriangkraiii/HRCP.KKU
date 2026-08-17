@@ -11,7 +11,8 @@
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 7: แบบฟอร์มตรวจสอบคุณสมบัติและเอกสารประกอบ</h3>
             <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>ผู้ยื่นคำร้อง</strong> — แอดมินสามารถดูและแก้ไขได้</div>
 
-            <form th:action="'/admin/position/request/' + ${request.id} + '/document/7'" method="post" id="doc7Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/7'">
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/7'" method="post" id="doc7Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/7'"
+>
 
                 <!-- ========== ส่วนที่ 1: ข้อมูลผู้ขอ ========== -->
                 <div class="card card-academic mb-4">
@@ -212,7 +213,7 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">รายละเอียดงานวิจัย</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addResearchBlock()"><i class="fas fa-plus"></i> เพิ่ม</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addResearchBlock"><i class="fas fa-plus"></i> เพิ่ม</button>
                     </div>
                     <div class="card-body" id="researchBlocks">
                         <div class="border rounded p-3 mb-3">
@@ -254,7 +255,7 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">ผลงานทางวิชาการในลักษณะอื่น</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addOtherBlock()"><i class="fas fa-plus"></i> เพิ่ม</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addOtherBlock"><i class="fas fa-plus"></i> เพิ่ม</button>
                     </div>
                     <div class="card-body" id="otherBlocks">
                         <div class="border rounded p-3 mb-3">
@@ -363,7 +364,7 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">ผลงานรับใช้ท้องถิ่นและสังคม</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addSocialBlock()"><i class="fas fa-plus"></i> เพิ่ม</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addSocialBlock"><i class="fas fa-plus"></i> เพิ่ม</button>
                     </div>
                     <div class="card-body" id="socialBlocks">
                         <div class="border rounded p-3 mb-3">
@@ -395,7 +396,7 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">ตำรา / หนังสือ</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addBookBlock()"><i class="fas fa-plus"></i> เพิ่ม</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addBookBlock"><i class="fas fa-plus"></i> เพิ่ม</button>
                     </div>
                     <div class="card-body" id="bookBlocks">
                         <div class="border rounded p-3 mb-3">
@@ -435,7 +436,7 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">บทความทางวิชาการ (สังคม/มนุษยศาสตร์)</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addArticleBlock()"><i class="fas fa-plus"></i> เพิ่ม</button>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addArticleBlock"><i class="fas fa-plus"></i> เพิ่ม</button>
                     </div>
                     <div class="card-body" id="articleBlocks">
                         <div class="border rounded p-3 mb-3">
@@ -503,7 +504,7 @@
                     <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">
                         <i class="fas fa-save"></i> บันทึก
                     </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                    <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
                     <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
@@ -605,7 +606,7 @@
                 const n = blockCounters.research;
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
-                div.innerHTML = `<div class="d-flex justify-content-between"><strong>งานวิจัย #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                div.innerHTML = `<div class="d-flex justify-content-between"><strong>งานวิจัย #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                     <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="research_working_title_${n}" class="form-control" placeholder="ชื่อผลงานวิจัย"></div></div>
                     <div class="row g-2 mt-2">
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_published_${n}" value="☑"><label class="form-check-label">ตีพิมพ์แล้ว</label></div></div>
@@ -644,7 +645,7 @@
                 const n = blockCounters.other;
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
-                div.innerHTML = `<div class="d-flex justify-content-between"><strong>ผลงานอื่น #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                div.innerHTML = `<div class="d-flex justify-content-between"><strong>ผลงานอื่น #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                     <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="other_working_title_${n}" class="form-control" placeholder="ชื่อผลงาน"></div></div>
                     <div class="row g-2 mt-2">
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_industry_${n}" value="☑"><label class="form-check-label" style="font-size:0.85em">อุตสาหกรรม</label></div></div>
@@ -671,7 +672,7 @@
                 const n = blockCounters.social;
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
-                div.innerHTML = `<div class="d-flex justify-content-between"><strong>ผลงานสังคม #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                div.innerHTML = `<div class="d-flex justify-content-between"><strong>ผลงานสังคม #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                     <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="social_working_title_${n}" class="form-control" placeholder="ชื่อผลงาน"></div></div>
                     <div class="row g-2 mt-2">
                         <div class="col-12"><label class="form-label fw-bold" style="font-size:0.85em">เอกสารหลักฐาน</label></div>
@@ -698,7 +699,7 @@
                 const n = blockCounters.book;
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
-                div.innerHTML = `<div class="d-flex justify-content-between"><strong>ตำรา/หนังสือ #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                div.innerHTML = `<div class="d-flex justify-content-between"><strong>ตำรา/หนังสือ #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                     <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="book_working_title_${n}" class="form-control" placeholder="ชื่อตำรา/หนังสือ"></div></div>
                     <div class="row g-2 mt-2">
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="book_is_published_${n}" value="☑"><label class="form-check-label">ตีพิมพ์แล้ว</label></div></div>
@@ -733,7 +734,7 @@
                 const n = blockCounters.article;
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-3';
-                div.innerHTML = `<div class="d-flex justify-content-between"><strong>บทความ #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                div.innerHTML = `<div class="d-flex justify-content-between"><strong>บทความ #${n}</strong><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                     <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="article_title_${n}" class="form-control" placeholder="ชื่อบทความ"></div></div>
                     <div class="row g-2 mt-2">
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="article_is_published_${n}" value="☑"><label class="form-check-label">ตีพิมพ์แล้ว</label></div></div>

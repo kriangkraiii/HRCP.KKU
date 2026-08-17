@@ -135,7 +135,7 @@
 													 class="rounded-circle" width="40" height="40" 
 													 style="object-fit: cover;"
 													 alt="รูปโปรไฟล์"
-													 onerror="this.src='/img/profile_img/default.png'">
+													 data-fallback="/img/profile_img/default.png">
 											</td>
 											<td th:text="${user.name}">-</td>
 											<td th:text="${user.email}">-</td>

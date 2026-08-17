@@ -11,7 +11,8 @@
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 6: บันทึกข้อความจริยธรรมการวิจัยในมนุษย์ (Exemption)</h3>
             <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>ผู้ยื่นคำร้อง</strong> — แอดมินสามารถดูและแก้ไขได้</div>
 
-            <form th:action="'/admin/position/request/' + ${request.id} + '/document/6'" method="post" id="doc6Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/6'">
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/6'" method="post" id="doc6Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/6'"
+>
 
                 <!-- หัวบันทึก -->
                 <div class="card card-academic mb-4">
@@ -127,7 +128,7 @@
                     <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">
                         <i class="fas fa-save"></i> บันทึก
                     </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                    <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
                     <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">

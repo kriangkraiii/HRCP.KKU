@@ -123,7 +123,7 @@
                                         <input type="text" name="paper_title_1" class="form-control" placeholder="ชื่อบทความ">
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPaperRow()">
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-call="addPaperRow">
                                     <i class="fas fa-plus"></i> เพิ่มบทความ
                                 </button>
                             </div>
@@ -163,7 +163,7 @@
                                         <input type="text" name="research_title_1" class="form-control" placeholder="ชื่อผลงานวิจัย">
                                     </div>
                                 </div>
-                                <button type="button" class="btn btn-sm btn-outline-primary" onclick="addResearchRow()">
+                                <button type="button" class="btn btn-sm btn-outline-primary" data-call="addResearchRow">
                                     <i class="fas fa-plus"></i> เพิ่มผลงานวิจัย
                                 </button>
                             </div>
@@ -197,7 +197,7 @@
                     <button type="submit" class="btn btn-academic btn-lg">
                         <i class="fas fa-save"></i> บันทึกและสร้างเอกสาร
                     </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                    <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
                     <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
@@ -246,7 +246,7 @@
                 row.className = 'input-group mb-2';
                 row.innerHTML = `<span class="input-group-text">${paperCount}.</span>
                     <input type="text" name="paper_title_${paperCount}" class="form-control" placeholder="ชื่อบทความ" value="${value || ''}">
-                    <button type="button" class="btn btn-outline-danger" onclick="removePaperRow(this)"><i class="fas fa-times"></i></button>`;
+                    <button type="button" class="btn btn-outline-danger" data-call="removePaperRow" data-call-arg="self"><i class="fas fa-times"></i></button>`;
                 document.getElementById('paperRows').appendChild(row);
                 updatePaperCount();
             }
@@ -257,7 +257,7 @@
                 row.className = 'input-group mb-2';
                 row.innerHTML = `<span class="input-group-text">${researchCount}.</span>
                     <input type="text" name="research_title_${researchCount}" class="form-control" placeholder="ชื่อผลงานวิจัย" value="${value || ''}">
-                    <button type="button" class="btn btn-outline-danger" onclick="removeResearchRow(this)"><i class="fas fa-times"></i></button>`;
+                    <button type="button" class="btn btn-outline-danger" data-call="removeResearchRow" data-call-arg="self"><i class="fas fa-times"></i></button>`;
                 document.getElementById('researchRows').appendChild(row);
                 updateResearchCount();
             }

@@ -296,3 +296,48 @@ function emptyTrash() {
         }
     });
 }
+
+/*
+ * Wiring for the notification list.
+ *
+ * The rows and dropdown items used to carry th:onclick="'toggleStar(' + ${n.id} + ...)"
+ * and friends. CSP refuses inline handler attributes, so the template now emits
+ * data-notif-action / data-notif-id / data-notif-duration and the routing lives
+ * here. Delegated from the document, so it survives re-renders.
+ */
+document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-notif-action]');
+    if (el) {
+        var action = el.dataset.notifAction;
+        // Every one of these sat on an <a href="#"> or a button inside a row that
+        // is itself clickable, so swallow the default and stop the row navigating.
+        e.preventDefault();
+        e.stopPropagation();
+
+        var id = parseInt(el.dataset.notifId || '0', 10);
+        switch (action) {
+            case 'star':            toggleStar(id, el); break;
+            case 'important':       toggleImportant(id, el); break;
+            case 'markRead':        markAsRead(id); break;
+            case 'snooze':          snoozeNotification(id, el.dataset.notifDuration); break;
+            case 'unsnooze':        unsnoozeNotification(id); break;
+            case 'delete':          deleteNotification(id); break;
+            case 'restore':         restoreNotification(id); break;
+            case 'permanentDelete': permanentDeleteNotification(id); break;
+            case 'clearSearch':
+                var tab = document.querySelector('[name=tab]');
+                window.location.href = '?tab=' + (tab ? tab.value : '');
+                break;
+            default:
+                console.error('[notification] unknown data-notif-action: ' + action);
+        }
+        return;
+    }
+
+    // Row click -> open the notification. handleRowClick already ignores clicks
+    // that came from a button, link or dropdown.
+    var row = e.target.closest('[data-notif-id]:not([data-notif-action])');
+    if (row) {
+        handleRowClick(e, parseInt(row.dataset.notifId || '0', 10), null);
+    }
+});

@@ -5,7 +5,10 @@ import java.time.LocalDateTime;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "user_file")
+@Table(name = "user_file", indexes = {
+        @Index(name = "idx_userfile_owner_folder_del", columnList = "owner_id, folder_id, is_deleted"),
+        @Index(name = "idx_userfile_owner_del", columnList = "owner_id, is_deleted")
+})
 public class UserFile {
 
     @Id

@@ -25,7 +25,7 @@
             <div class="doc-search-wrap">
                 <i class="fas fa-search"></i>
                 <input type="text" id="docSearchInput" class="doc-search-v2"
-                       placeholder="ค้นหาเอกสาร..." oninput="filterDocs(this.value)">
+                       placeholder="ค้นหาเอกสาร..." data-call-input="filterDocs" data-call-arg="value">
             </div>
 
             <!-- Categories rendered by JS -->
@@ -41,7 +41,7 @@
                     <a id="pdfDownloadLink" href="#" target="_blank" class="btn btn-sm btn-outline-light">
                         <i class="fas fa-download me-1"></i>ดาวน์โหลด
                     </a>
-                    <button type="button" onclick="closePdfOverlay()" class="btn btn-sm btn-outline-light">
+                    <button type="button" data-call="closePdfOverlay" class="btn btn-sm btn-outline-light">
                         <i class="fas fa-times me-1"></i>ปิด
                     </button>
                 </div>
@@ -120,7 +120,7 @@
                 var open = ci === 0 ? ' is-open' : '';
                 var delay = ci * 80;
                 var html = '<div class="doc-category'+open+'" data-cat="'+ci+'" style="--cat-delay:'+delay+'ms">'
-                  + '<div class="doc-category-header" onclick="toggleCat(this)">'
+                  + '<div class="doc-category-header" data-call="toggleCat" data-call-arg="self">'
                   + '<i class="'+cat.icon+' cat-icon" style="color:'+cat.color+'"></i>'
                   + '<strong>'+cat.title+'</strong>'
                   + '<span class="cat-count">'+cat.docs.length+' รายการ</span>'
@@ -128,7 +128,7 @@
                   + '</div><div class="doc-category-body">';
                 cat.docs.forEach(function(d){
                     var url = B + d[1] + S;
-                    html += '<a class="doc-item-v2 doc-searchable" data-name="'+d[0]+'" href="javascript:void(0)" onclick="openPdfOverlay(\''+url+'\',\''+d[0].replace(/'/g,"\\'")+'\')">'
+                    html += '<a class="doc-item-v2 doc-searchable" data-name="'+d[0]+'" href="#" data-pdf-url="'+url+'" data-pdf-name="'+d[0]+'">'
                       + '<i class="fas fa-file-pdf di-icon"></i>'
                       + '<span class="di-name">'+d[0]+'</span>'
                       + '<span class="di-ext">PDF</span></a>';
@@ -140,6 +140,17 @@
 
         // Toggle categories
         function toggleCat(header){header.closest('.doc-category').classList.toggle('is-open');}
+
+        // The document links are built as an HTML string above. They used to carry
+        // onclick="openPdfOverlay('<url>','<name>')", which meant escaping quotes
+        // into the attribute by hand; CSP refuses inline handlers anyway. The link
+        // now carries data-pdf-url / data-pdf-name and is routed here.
+        document.addEventListener('click', function(e){
+            var link = e.target.closest('[data-pdf-url]');
+            if(!link) return;
+            e.preventDefault();
+            openPdfOverlay(link.dataset.pdfUrl, link.dataset.pdfName);
+        });
 
         // Search
         function filterDocs(query){

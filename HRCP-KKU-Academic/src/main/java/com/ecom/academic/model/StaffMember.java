@@ -7,12 +7,16 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "staff_member")
+@Table(name = "staff_member", indexes = {
+        @Index(name = "idx_staff_name", columnList = "first_name, last_name"),
+        @Index(name = "idx_staff_role_active", columnList = "staff_role, is_active")
+})
 public class StaffMember {
 
     @Id

@@ -154,7 +154,7 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">๒.๕ ตำแหน่งอื่นๆ</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addOtherPosRow()">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addOtherPosRow">
                             <i class="fas fa-plus"></i> เพิ่มแถว
                         </button>
                     </div>
@@ -167,7 +167,7 @@
                         </div>
                         <hr>
                         <h6 class="fw-bold">๒.๖ การได้รับเชิญเป็นวิทยากร / ได้รับการยกย่องระดับนานาชาติ (ย้อนหลัง ๕ ปี)</h6>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-2" onclick="addSpeakerRow()">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-2" data-call="addSpeakerRow">
                             <i class="fas fa-plus"></i> เพิ่มแถว
                         </button>
                         <div id="speakerRows">
@@ -205,7 +205,7 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">๑.๓ ประวัติการศึกษา</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addEduRow()">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addEduRow">
                             <i class="fas fa-plus"></i> เพิ่มแถว
                         </button>
                     </div>
@@ -243,7 +243,7 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">๒. ประสบการณ์ด้านการสอน</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addTeachRow()">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addTeachRow">
                             <i class="fas fa-plus"></i> เพิ่มแถว
                         </button>
                     </div>
@@ -302,7 +302,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('asstResearchRows','asst_research_working','asst_used_research')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["asstResearchRows", "asst_research_working", "asst_used_research"]'>
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
                         </button>
 
@@ -331,7 +331,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('asstOtherRows','asst_other_working','asst_used_other')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["asstOtherRows", "asst_other_working", "asst_used_other"]'>
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
 
@@ -360,7 +360,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addWorkRow('asstBookRows','asst_book_working','asst_used_book')">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addWorkRow" data-call-args='["asstBookRows", "asst_book_working", "asst_used_book"]'>
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
                         </button>
                     </div>
@@ -391,7 +391,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('assocResearchRows','assoc_research_working','assoc_used_research')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["assocResearchRows", "assoc_research_working", "assoc_used_research"]'>
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
                         </button>
 
@@ -416,7 +416,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('assocOtherRows','assoc_other_working','assoc_used_other')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["assocOtherRows", "assoc_other_working", "assoc_used_other"]'>
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
 
@@ -441,7 +441,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('assocBookRows','assoc_book_working','assoc_used_book')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["assocBookRows", "assoc_book_working", "assoc_used_book"]'>
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
                         </button>
 
@@ -477,7 +477,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addAssocM3Row()">
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addAssocM3Row">
                                 <i class="fas fa-plus"></i> เพิ่ม
                             </button>
                         </div>
@@ -507,7 +507,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addAssocPIRow()">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addAssocPIRow">
                             <i class="fas fa-plus"></i> เพิ่มโครงการ
                         </button>
                     </div>
@@ -538,7 +538,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('profResearchRows','prof_research_working','prof_used_research')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["profResearchRows", "prof_research_working", "prof_used_research"]'>
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
                         </button>
 
@@ -563,7 +563,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('profOtherRows','prof_other_working','prof_used_other')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["profOtherRows", "prof_other_working", "prof_used_other"]'>
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
 
@@ -588,7 +588,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('profBookRows','prof_book_working','prof_used_book')">
+                        <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["profBookRows", "prof_book_working", "prof_used_book"]'>
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
                         </button>
 
@@ -624,7 +624,7 @@
                                     </div>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addM3Row()">
+                            <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addM3Row">
                                 <i class="fas fa-plus"></i> เพิ่ม
                             </button>
                         </div>
@@ -654,7 +654,7 @@
                                 </div>
                             </div>
                         </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addPIRow()">
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addPIRow">
                             <i class="fas fa-plus"></i> เพิ่มโครงการ
                         </button>
                     </div>
@@ -677,7 +677,7 @@
                     <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">
                         <i class="fas fa-save"></i> บันทึก
                     </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                    <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
                     <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
@@ -706,7 +706,7 @@
                     <td><input type="text" name="education_institution_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_country_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_year_${n}" class="form-control form-control-sm"></td>
-                    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button></td>`;
+                    <td><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest="tr"><i class="fas fa-times"></i></button></td>`;
                 document.getElementById('eduRows').appendChild(row);
             }
 
@@ -718,7 +718,7 @@
                     <td><input type="text" name="teaching_level_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="teaching_semester_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="teaching_hours_per_week_${n}" class="form-control form-control-sm"></td>
-                    <td><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('tr').remove()"><i class="fas fa-times"></i></button></td>`;
+                    <td><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest="tr"><i class="fas fa-times"></i></button></td>`;
                 document.getElementById('teachRows').appendChild(row);
             }
 
@@ -743,7 +743,7 @@
                     </div>
                     <div class="col-md-4 ms-auto year-level-group"><input type="text" name="${usedPrefix}_year_${n}" class="form-control form-control-sm" placeholder="ปี"></div>
                     <div class="col-md-4 year-level-group"><input type="text" name="${usedPrefix}_level_${n}" class="form-control form-control-sm" placeholder="ระดับ"></div>
-                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                 </div>`;
                 document.getElementById(containerId).appendChild(div);
             }
@@ -772,7 +772,7 @@
                 div.className = 'row g-2 mb-2';
                 div.innerHTML = `<div class="col-1"><input type="text" name="other_position_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-10"><input type="text" name="other_position_${n}" class="form-control form-control-sm" placeholder="ตำแหน่ง สังกัด วัน เดือน ปี"></div>
-                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()"><i class="fas fa-times"></i></button></div>`;
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".row"><i class="fas fa-times"></i></button></div>`;
                 document.getElementById('otherPosRows').appendChild(div);
             }
 
@@ -783,7 +783,7 @@
                 div.className = 'row g-2 mb-2';
                 div.innerHTML = `<div class="col-1"><input type="text" name="international_speaker_last_5_years_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-10"><input type="text" name="international_speaker_last_5_years_${n}" class="form-control form-control-sm" placeholder="รายละเอียด"></div>
-                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.row').remove()"><i class="fas fa-times"></i></button></div>`;
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".row"><i class="fas fa-times"></i></button></div>`;
                 document.getElementById('speakerRows').appendChild(div);
             }
 
@@ -803,7 +803,7 @@
                         <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="prof_m3_first_${n}" value="☑"><label class="form-check-label" style="font-size:0.8em">First</label></div>
                         <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="prof_m3_corresp_${n}" value="☑"><label class="form-check-label" style="font-size:0.8em">Corresp</label></div>
                     </div>
-                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                 </div>`;
                 document.getElementById('profM3ResearchRows').appendChild(div);
             }
@@ -824,7 +824,7 @@
                         <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="assoc_m3_first_${n}" value="☑"><label class="form-check-label" style="font-size:0.8em">First</label></div>
                         <div class="form-check form-check-inline"><input class="form-check-input" type="checkbox" name="assoc_m3_corresp_${n}" value="☑"><label class="form-check-label" style="font-size:0.8em">Corresp</label></div>
                     </div>
-                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                 </div>`;
                 document.getElementById('assocM3ResearchRows').appendChild(div);
             }
@@ -838,7 +838,7 @@
                     <div class="col-1"><input type="text" name="prof_pi_project_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-5"><input type="text" name="prof_pi_project_${n}" class="form-control form-control-sm" placeholder="ชื่อโครงการ"></div>
                     <div class="col-4"><input type="text" name="prof_pi_source_${n}" class="form-control form-control-sm" placeholder="แหล่งทุน"></div>
-                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                 </div>`;
                 document.getElementById('profPIRows').appendChild(div);
             }
@@ -852,7 +852,7 @@
                     <div class="col-1"><input type="text" name="assoc_pi_project_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
                     <div class="col-5"><input type="text" name="assoc_pi_project_${n}" class="form-control form-control-sm" placeholder="ชื่อโครงการ"></div>
                     <div class="col-4"><input type="text" name="assoc_pi_source_${n}" class="form-control form-control-sm" placeholder="แหล่งทุน"></div>
-                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" onclick="this.closest('.border').remove()"><i class="fas fa-times"></i></button></div>
+                    <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".border"><i class="fas fa-times"></i></button></div>
                 </div>`;
                 document.getElementById('assocPIRows').appendChild(div);
             }

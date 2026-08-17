@@ -46,7 +46,7 @@
 
                     <form th:action="@{/admin/faculty-changes/approve-all}" method="post"
                           th:if="${pendingCount > 0}"
-                          onsubmit="return confirm('ยืนยันอนุมัติการเปลี่ยนแปลงทั้งหมด ' + [[${pendingCount}]] + ' รายการ?');">
+                          th:data-confirm="'ยืนยันอนุมัติการเปลี่ยนแปลงทั้งหมด ' + ${pendingCount} + ' รายการ?'">
                         <button type="submit" class="btn btn-success btn-sm">
                             <i class="fas fa-check-double"></i> อนุมัติทั้งหมด
                         </button>

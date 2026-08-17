@@ -83,7 +83,7 @@
                     <span class="badge bg-white text-danger ms-1" th:if="${trashCount > 0}" th:text="${trashCount}"></span>
                 </a>
             </div>
-            <button th:if="${viewMode == 'storage-trash' && trashCount > 0}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" onclick="emptyStorageTrash()">
+            <button th:if="${viewMode == 'storage-trash' && trashCount > 0}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" data-call="emptyStorageTrash">
                 <i class="fas fa-dumpster-fire me-1"></i> ล้างถังขยะ
             </button>
         </div>
@@ -108,14 +108,14 @@
 
             <!-- Toolbar -->
             <div class="d-flex gap-2 mb-3 flex-wrap">
-                <button class="btn btn-primary" style="border-radius: 10px;" onclick="showCreateFolderModal()">
+                <button class="btn btn-primary" style="border-radius: 10px;" data-call="showCreateFolderModal">
                     <i class="fas fa-folder-plus me-1"></i> สร้างโฟลเดอร์
                 </button>
-                <button class="btn btn-success" style="border-radius: 10px;" onclick="document.getElementById('fileUploadInput').click()">
+                <button class="btn btn-success" style="border-radius: 10px;" data-click-target="#fileUploadInput">
                     <i class="fas fa-cloud-upload-alt me-1"></i> อัปโหลดไฟล์
                 </button>
                 <form id="uploadForm" style="display:none;">
-                    <input type="file" id="fileUploadInput" multiple onchange="uploadFiles(this.files)">
+                    <input type="file" id="fileUploadInput" multiple data-call-change="uploadFiles" data-call-arg="files">
                 </form>
             </div>
 
@@ -135,13 +135,13 @@
                              th:data-id="${folder.id}" th:data-name="${folder.name}">
                             <div class="card-body text-center py-3 position-relative">
                                 <div class="dropdown position-absolute" style="top: 8px; right: 8px;">
-                                    <button class="btn btn-sm btn-light p-1" data-bs-toggle="dropdown" onclick="event.stopPropagation();">
+                                    <button class="btn btn-sm btn-light p-1" data-bs-toggle="dropdown" data-stop-propagation="1">
                                         <i class="fas fa-ellipsis-v"></i>
                                     </button>
                                     <ul class="dropdown-menu dropdown-menu-end">
-                                        <li><a class="dropdown-item" href="#" onclick="event.preventDefault(); renameFolderPrompt(this.closest('.folder-card'))">
+                                        <li><a class="dropdown-item" href="#" data-call="renameFolderPrompt" data-call-arg="closest:.folder-card">
                                             <i class="fas fa-edit me-2"></i>เปลี่ยนชื่อ</a></li>
-                                        <li><a class="dropdown-item text-danger" href="#" onclick="event.preventDefault(); deleteFolderPrompt(this.closest('.folder-card'))">
+                                        <li><a class="dropdown-item text-danger" href="#" data-call="deleteFolderPrompt" data-call-arg="closest:.folder-card">
                                             <i class="fas fa-trash me-2"></i>ลบ</a></li>
                                     </ul>
                                 </div>
@@ -184,8 +184,8 @@
                                 <td>
                                     <div class="btn-group">
                                         <a th:href="'/user/academic/storage/download/' + ${f.id}" class="btn btn-sm btn-outline-primary" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
-                                        <button class="btn btn-sm btn-outline-warning" th:data-id="${f.id}" th:data-name="${f.originalFilename}" onclick="renameFilePrompt(this)"><i class="fas fa-edit"></i></button>
-                                        <button class="btn btn-sm btn-outline-danger" th:data-id="${f.id}" th:data-name="${f.originalFilename}" onclick="deleteFilePrompt(this)"><i class="fas fa-trash-alt"></i></button>
+                                        <button class="btn btn-sm btn-outline-warning" th:data-id="${f.id}" th:data-name="${f.originalFilename}" data-call="renameFilePrompt" data-call-arg="self"><i class="fas fa-edit"></i></button>
+                                        <button class="btn btn-sm btn-outline-danger" th:data-id="${f.id}" th:data-name="${f.originalFilename}" data-call="deleteFilePrompt" data-call-arg="self"><i class="fas fa-trash-alt"></i></button>
                                     </div>
                                 </td>
                             </tr>
@@ -214,8 +214,8 @@
                             <td><small th:text="${@thaiDateUtil.format(f.deletedAt)}"></small></td>
                             <td>
                                 <div class="btn-group">
-                                    <button class="btn btn-sm btn-outline-success" th:data-id="${f.id}" onclick="restoreStorageFile(this)"><i class="fas fa-undo"></i></button>
-                                    <button class="btn btn-sm btn-outline-danger" th:data-id="${f.id}" th:data-name="${f.originalFilename}" onclick="permanentDeleteStorageFile(this)"><i class="fas fa-times"></i></button>
+                                    <button class="btn btn-sm btn-outline-success" th:data-id="${f.id}" data-call="restoreStorageFile" data-call-arg="self"><i class="fas fa-undo"></i></button>
+                                    <button class="btn btn-sm btn-outline-danger" th:data-id="${f.id}" th:data-name="${f.originalFilename}" data-call="permanentDeleteStorageFile" data-call-arg="self"><i class="fas fa-times"></i></button>
                                 </div>
                             </td>
                         </tr>
@@ -259,7 +259,7 @@
                     <i class="fas fa-cloud-upload-alt" style="font-size:1.3rem;color:#2e7d32;"></i>
                     <h5 class="mb-0 fw-bold">อัปโหลดไฟล์</h5>
                 </div>
-                <button type="button" class="btn-close" onclick="closeUploadModal()" id="uploadModalCloseBtn"></button>
+                <button type="button" class="btn-close" data-call="closeUploadModal" id="uploadModalCloseBtn"></button>
             </div>
             <div class="upload-modal-body" id="uploadFileList">
                 <!-- File items will be added here dynamically -->
@@ -267,7 +267,7 @@
             <div class="upload-modal-footer">
                 <div class="d-flex justify-content-between align-items-center w-100">
                     <small class="text-muted" id="uploadSummary"></small>
-                    <button class="btn btn-sm btn-outline-danger px-3" onclick="cancelAllUploads()" id="cancelAllBtn" style="border-radius:8px;display:none;">
+                    <button class="btn btn-sm btn-outline-danger px-3" data-call="cancelAllUploads" id="cancelAllBtn" style="border-radius:8px;display:none;">
                         <i class="fas fa-times me-1"></i>ยกเลิกทั้งหมด
                     </button>
                 </div>

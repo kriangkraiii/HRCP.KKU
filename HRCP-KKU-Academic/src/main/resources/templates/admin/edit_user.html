@@ -115,7 +115,7 @@
 										<img th:src="@{'/img/profile_img/' + ${editUser.profileImage}}" alt="Current Profile" 
 											th:data-user-id="${editUser.id}"
 											class="border" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;"
-											onerror="this.src='/img/profile_img/default.png'">
+											data-fallback="/img/profile_img/default.png">
 										<div class="flex-grow-1">
 											<input type="file" name="img" class="form-control" accept="image/*" id="profileImageInput">
 											<small class="text-muted">ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเดิม (รองรับ JPG, PNG, GIF สูงสุด 5MB)</small>

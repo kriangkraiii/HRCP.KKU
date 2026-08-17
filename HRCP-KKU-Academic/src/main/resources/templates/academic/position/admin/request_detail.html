@@ -249,7 +249,7 @@
                                                         <i class="fas fa-download"></i>
                                                     </a>
                                                     <form th:action="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
-                                                        method="post" style="display:inline" onsubmit="return confirm('ต้องการลบเอกสารนี้หรือไม่?')">
+                                                        method="post" style="display:inline" data-confirm="ต้องการลบเอกสารนี้หรือไม่?">
                                                         <button type="submit" class="btn btn-outline-danger btn-sm" title="ลบ">
                                                             <i class="fas fa-trash"></i>
                                                         </button>

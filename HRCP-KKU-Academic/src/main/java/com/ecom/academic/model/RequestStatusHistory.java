@@ -12,13 +12,16 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "request_status_history")
+@Table(name = "request_status_history", indexes = {
+        @Index(name = "idx_req_hist_req_date", columnList = "request_id, changed_at DESC")
+})
 public class RequestStatusHistory {
 
     @Id

@@ -17,7 +17,7 @@
                 <small class="text-muted">ตรวจสอบและจัดการข้อความแจ้งเตือนทั้งหมดในระบบ</small>
             </div>
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" onclick="markAllAsRead()">
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3" data-call="markAllAsRead">
                     <i class="fas fa-check-double me-1"></i> ทำเครื่องหมายอ่านทั้งหมด
                 </button>
             </div>
@@ -107,7 +107,7 @@
                                 <input type="text" name="search" th:value="${search}" class="form-control bg-light border-0"
                                        placeholder="ค้นหาข้อความแจ้งเตือน...">
                                 <button th:if="${search != null and !search.isEmpty()}" type="button" class="btn btn-light border-0"
-                                        onclick="window.location.href='?tab=' + document.querySelector('[name=tab]').value">
+                                        data-notif-action="clearSearch">
                                     <i class="fas fa-times text-muted"></i>
                                 </button>
                                 <button class="btn btn-primary" type="submit">ค้นหา</button>
@@ -115,7 +115,7 @@
 
                             <div class="d-flex gap-2 align-items-center">
                                 <button th:if="${currentTab == 'trash' and tabCounts['trash'] > 0}" type="button"
-                                        class="btn btn-sm btn-outline-danger" onclick="emptyTrash()">
+                                        class="btn btn-sm btn-outline-danger" data-call="emptyTrash">
                                     <i class="fas fa-trash me-1"></i> ล้างถังขยะ
                                 </button>
                             </div>
@@ -143,22 +143,22 @@
                                  th:id="'notif-row-' + ${n.id}"
                                  th:classappend="${!n.isRead} ? 'bg-light bg-opacity-50 fw-semibold unread-row' : ''"
                                  style="transition: background-color 0.2s; cursor: pointer;"
-                                 th:onclick="'handleRowClick(event, ' + ${n.id} + ', \'' + @{${n.link != null ? n.link : ''}} + '\')'">
+                                 th:data-notif-id="${n.id}">
 
                                 <div class="d-flex align-items-start gap-3">
                                     <!-- Star & Important Quick Actions -->
-                                    <div class="d-flex flex-column align-items-center gap-2 pt-1" onclick="event.stopPropagation();">
+                                    <div class="d-flex flex-column align-items-center gap-2 pt-1" data-stop-propagation="1">
                                         <!-- Star Button -->
                                         <button type="button" class="btn btn-link p-0 text-decoration-none star-btn"
                                                 th:title="${n.isStarred} ? 'ยกเลิกติดดาว' : 'ติดดาว'"
-                                                th:onclick="'toggleStar(' + ${n.id} + ', this)'">
+                                                data-notif-action="star" th:data-notif-id="${n.id}">
                                             <i class="fa-star" th:classappend="${n.isStarred} ? 'fas text-warning' : 'far text-muted'"></i>
                                         </button>
 
                                         <!-- Important Button -->
                                         <button type="button" class="btn btn-link p-0 text-decoration-none important-btn"
                                                 th:title="${n.isImportant} ? 'ยกเลิกสำคัญ' : 'ทำเครื่องหมายว่าสำคัญ'"
-                                                th:onclick="'toggleImportant(' + ${n.id} + ', this)'">
+                                                data-notif-action="important" th:data-notif-id="${n.id}">
                                             <i class="fa-tag" th:classappend="${n.isImportant} ? 'fas text-danger' : 'far text-muted'"></i>
                                         </button>
                                     </div>
@@ -188,14 +188,14 @@
                                     </div>
 
                                     <!-- Actions Dropdown -->
-                                    <div class="dropdown flex-shrink-0" onclick="event.stopPropagation();">
+                                    <div class="dropdown flex-shrink-0" data-stop-propagation="1">
                                         <button class="btn btn-sm btn-light rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
                                             <i class="fas fa-ellipsis-v text-muted"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="border-radius: 12px;">
                                             <!-- Mark as Read / Unread -->
                                             <li th:if="${!n.isRead}">
-                                                <a class="dropdown-item" href="#" th:onclick="'markAsRead(' + ${n.id} + '); return false;'">
+                                                <a class="dropdown-item" href="#" data-notif-action="markRead" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-envelope-open me-2 text-primary"></i>ทำเครื่องหมายอ่านแล้ว
                                                 </a>
                                             </li>
@@ -205,27 +205,27 @@
                                                 <h6 class="dropdown-header">⏰ เลื่อนการแจ้งเตือน</h6>
                                             </li>
                                             <li th:if="${!n.isDeleted and !n.isSnoozed()}">
-                                                <a class="dropdown-item" href="#" th:onclick="'snoozeNotification(' + ${n.id} + ', \'1h\'); return false;'">
+                                                <a class="dropdown-item" href="#" data-notif-action="snooze" data-notif-duration="1h" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-hourglass-half me-2"></i>1 ชั่วโมง
                                                 </a>
                                             </li>
                                             <li th:if="${!n.isDeleted and !n.isSnoozed()}">
-                                                <a class="dropdown-item" href="#" th:onclick="'snoozeNotification(' + ${n.id} + ', \'tomorrow\'); return false;'">
+                                                <a class="dropdown-item" href="#" data-notif-action="snooze" data-notif-duration="tomorrow" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-sun me-2"></i>พรุ่งนี้เช้า (09:00)
                                                 </a>
                                             </li>
                                             <li th:if="${!n.isDeleted and !n.isSnoozed()}">
-                                                <a class="dropdown-item" href="#" th:onclick="'snoozeNotification(' + ${n.id} + ', \'3d\'); return false;'">
+                                                <a class="dropdown-item" href="#" data-notif-action="snooze" data-notif-duration="3d" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-calendar-day me-2"></i>3 วัน
                                                 </a>
                                             </li>
                                             <li th:if="${!n.isDeleted and !n.isSnoozed()}">
-                                                <a class="dropdown-item" href="#" th:onclick="'snoozeNotification(' + ${n.id} + ', \'1w\'); return false;'">
+                                                <a class="dropdown-item" href="#" data-notif-action="snooze" data-notif-duration="1w" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-calendar-week me-2"></i>1 สัปดาห์
                                                 </a>
                                             </li>
                                             <li th:if="${!n.isDeleted and n.isSnoozed()}">
-                                                <a class="dropdown-item" href="#" th:onclick="'unsnoozeNotification(' + ${n.id} + '); return false;'">
+                                                <a class="dropdown-item" href="#" data-notif-action="unsnooze" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-bell me-2 text-success"></i>ยกเลิกการเลื่อนเตือน
                                                 </a>
                                             </li>
@@ -234,17 +234,17 @@
 
                                             <!-- Soft Delete / Restore / Permanent Delete -->
                                             <li th:if="${!n.isDeleted}">
-                                                <a class="dropdown-item text-danger" href="#" th:onclick="'deleteNotification(' + ${n.id} + '); return false;'">
+                                                <a class="dropdown-item text-danger" href="#" data-notif-action="delete" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-trash-alt me-2"></i>ลบการแจ้งเตือน
                                                 </a>
                                             </li>
                                             <li th:if="${n.isDeleted}">
-                                                <a class="dropdown-item text-success" href="#" th:onclick="'restoreNotification(' + ${n.id} + '); return false;'">
+                                                <a class="dropdown-item text-success" href="#" data-notif-action="restore" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-undo me-2"></i>กู้คืนการแจ้งเตือน
                                                 </a>
                                             </li>
                                             <li th:if="${n.isDeleted}">
-                                                <a class="dropdown-item text-danger" href="#" th:onclick="'permanentDeleteNotification(' + ${n.id} + '); return false;'">
+                                                <a class="dropdown-item text-danger" href="#" data-notif-action="permanentDelete" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-times-circle me-2"></i>ลบถาวร
                                                 </a>
                                             </li>

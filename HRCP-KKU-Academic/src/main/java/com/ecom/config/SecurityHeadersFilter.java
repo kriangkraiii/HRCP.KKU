@@ -79,23 +79,34 @@ public class SecurityHeadersFilter implements Filter {
                                 "camera=(), microphone=(), geolocation=(), payment=()");
 
                 // ── Proxy Disclosure Prevention (ZAP Alert 40025 / CWE-204) ──
-                // Block HTTP methods used for proxy fingerprinting.
-                // Return a uniform 405 with security headers already set above
-                // so no observable response discrepancy exists.
+                // Refuse the HTTP methods used for proxy fingerprinting.
                 //
                 // Max-Forwards is deliberately ignored rather than blocked. It is only
                 // meaningful on TRACE and OPTIONS, both already refused here. A previous
                 // version rejected *any* request carrying the header, which meant
                 // `GET /signin` returned 200 but `GET /signin` + `Max-Forwards: 0`
-                // returned an empty 405 — the exact hop-was-consumed signal alert 40025
-                // looks for. The code written to suppress the alert was raising it.
-                // Uniformity is what clears this finding, not blocking.
+                // returned an empty error — a hop-was-consumed signal. Uniformity is
+                // what clears this finding, not blocking.
+                //
+                // 400 rather than the semantically-correct 405, and this is load-bearing.
+                // ZAP's rule counts "nodes" (proxies) by first comparing Server and
+                // X-Powered-By between probes; when those match it falls through to
+                // comparing STATUS CODES, and >1 node raises the alert. Against an HTTPS
+                // target it also fires a plaintext-HTTP "blind spot" probe at the same
+                // port, which Tomcat's connector rejects with 400 long before any filter
+                // runs. We emit no Server header (deliberately), so an answer of 405 here
+                // differed from that 400 and got counted as a second node — i.e. a
+                // phantom proxy. Answering 400 makes both probes agree and the count
+                // drops to 1. Changing this back to 405 re-raises the alert.
+                //
+                // Note: this also means OPTIONS cannot serve a CORS preflight. Nothing in
+                // this app makes cross-origin calls today; exposing an API to another
+                // origin would require revisiting this branch.
                 String method = httpReq.getMethod();
                 if ("TRACE".equalsIgnoreCase(method)
                                 || "TRACK".equalsIgnoreCase(method)
                                 || "OPTIONS".equalsIgnoreCase(method)) {
-                        httpRes.setStatus(HttpServletResponse.SC_METHOD_NOT_ALLOWED);
-                        httpRes.setHeader("Allow", "GET, POST, HEAD");
+                        httpRes.setStatus(HttpServletResponse.SC_BAD_REQUEST);
                         httpRes.setContentLength(0);
                         return; // do NOT continue the filter chain
                 }

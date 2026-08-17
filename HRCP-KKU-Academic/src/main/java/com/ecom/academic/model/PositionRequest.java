@@ -15,6 +15,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
@@ -24,7 +25,12 @@ import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "position_request")
+@Table(name = "position_request", indexes = {
+        @Index(name = "idx_pos_req_applicant", columnList = "applicant_id"),
+        @Index(name = "idx_pos_req_app_status", columnList = "applicant_id, current_status"),
+        @Index(name = "idx_pos_req_status", columnList = "current_status"),
+        @Index(name = "idx_pos_req_created", columnList = "created_at DESC")
+})
 public class PositionRequest {
 
     @Id

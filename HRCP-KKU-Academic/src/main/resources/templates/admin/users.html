@@ -59,7 +59,7 @@
 										th:data-user-id="${u.id}"
 										width="70px" height="70px"
 										style="object-fit: cover; border-radius: 50%;"
-										onerror="this.src='/img/profile_img/default.png'"></td>
+										data-fallback="/img/profile_img/default.png"></td>
 
 								<td>[[${u.firstName}]]</td>
 								<td>[[${u.lastName}]]</td>
@@ -73,7 +73,7 @@
 											th:data-id="${u.id}"
 											th:data-type="${userType}"
 											style="width: 3em; height: 1.5em; cursor: pointer;"
-											onchange="toggleStatus(this)">
+											data-call-change="toggleStatus" data-call-arg="self">
 										<label class="form-check-label fw-semibold"
 											th:classappend="${u.isEnable} ? 'text-success' : 'text-danger'"
 											th:text="${u.isEnable} ? 'Active' : 'Inactive'"></label>
@@ -94,20 +94,20 @@
 										<!-- Only for accounts that actually have 2FA on — the way back
 										     in for someone who cannot open their OTP mailbox anymore. -->
 										<a th:if="${u.twoFactorEnabled != null && u.twoFactorEnabled}"
-											href="javascript:void(0)"
+											href="#"
 											th:data-id="${u.id}"
 											th:data-type="${userType}"
 											th:data-email="${u.email}"
-											onclick="resetTwoFactor(this)"
+											data-call="resetTwoFactor" data-call-arg="self"
 											class="btn btn-sm btn-warning"
 											title="ปิด 2FA ให้บัญชีนี้ ใช้เมื่อผู้ใช้เข้าอีเมลรับ OTP ไม่ได้">
 											<i class="fa-solid fa-shield-halved"></i> รีเซ็ต 2FA
 										</a>
-										<a href="javascript:void(0)"
+										<a href="#"
 											th:data-id="${u.id}"
 											th:data-type="${userType}"
 											th:data-email="${u.email}"
-											onclick="openDeleteModal(this)"
+											data-call="openDeleteModal" data-call-arg="self"
 											class="btn btn-sm btn-danger">
 											<i class="fa-solid fa-trash"></i> Delete
 										</a>
@@ -138,7 +138,7 @@
 			</div>
 			<div class="modal-footer">
 				<button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-				<button type="button" id="confirmDeleteBtn" class="btn btn-danger" disabled onclick="executeDelete()">
+				<button type="button" id="confirmDeleteBtn" class="btn btn-danger" disabled data-call="executeDelete">
 					<i class="fas fa-trash"></i> ลบบัญชี
 				</button>
 			</div>

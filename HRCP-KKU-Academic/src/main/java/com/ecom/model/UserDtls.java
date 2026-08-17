@@ -8,10 +8,18 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 
 @Entity
+@Table(name = "user_dtls", indexes = {
+		@Index(name = "idx_user_email", columnList = "email"),
+		@Index(name = "idx_user_reset_token", columnList = "resetToken"),
+		@Index(name = "idx_user_role", columnList = "role"),
+		@Index(name = "idx_user_applicant_id", columnList = "applicant_id")
+})
 public class UserDtls {
 
 	@Id

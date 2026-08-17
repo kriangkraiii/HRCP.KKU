@@ -8,13 +8,17 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "position_attachment")
+@Table(name = "position_attachment", indexes = {
+        @Index(name = "idx_pos_att_req_del", columnList = "request_id, is_deleted"),
+        @Index(name = "idx_pos_att_req_upload", columnList = "request_id, uploaded_at DESC")
+})
 public class PositionAttachment {
 
     @Id

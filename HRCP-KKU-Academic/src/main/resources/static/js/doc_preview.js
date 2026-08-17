@@ -502,3 +502,18 @@ let docPreview = null;
 function initDocPreview(formId, docType, previewBasePath) {
     docPreview = new DocPreviewEngine(formId, docType, previewBasePath);
 }
+
+/*
+ * Opens the preview from any `data-action="docPreviewShow"` element.
+ *
+ * Every document form used to carry onclick="docPreview.show()" on its preview
+ * button, which CSP refuses (inline handler attributes cannot take a nonce).
+ * Delegating from the document here covers all ~14 form templates at once, so
+ * none of them needs its own listener.
+ */
+document.addEventListener('click', function (e) {
+    var btn = e.target.closest('[data-action="docPreviewShow"]');
+    if (!btn) return;
+    e.preventDefault();
+    if (docPreview) docPreview.show();
+});

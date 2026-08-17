@@ -77,7 +77,7 @@
                                 แต่จะพักไว้ให้ยืนยันที่หน้าตรวจสอบก่อน — กดได้ทุกเมื่อ ปลอดภัย
                             </p>
                             <form th:action="@{/admin/external-sync/users}" method="post"
-                                  onsubmit="return lockButton(this);">
+                                  data-lock-button="1">
                                 <button type="submit" class="btn btn-primary w-100"
                                         th:disabled="${!apiEnabled or usersCooldown > 0}"
                                         th:attr="data-cooldown=${usersCooldown}">
@@ -100,7 +100,7 @@
                                 เพราะเว้นจังหวะไม่ให้เกินโควตาของต้นทาง
                             </p>
                             <form th:action="@{/admin/external-sync/scopus}" method="post"
-                                  onsubmit="return lockButton(this);">
+                                  data-lock-button="1">
                                 <button type="submit" class="btn btn-success w-100"
                                         th:disabled="${!apiEnabled or scopusCooldown > 0}"
                                         th:attr="data-cooldown=${scopusCooldown}">
@@ -123,7 +123,7 @@
                                 — ทำอัตโนมัติทุกวันอาทิตย์อยู่แล้ว
                             </p>
                             <form th:action="@{/admin/external-sync/college-web}" method="post"
-                                  onsubmit="return lockButton(this);">
+                                  data-lock-button="1">
                                 <button type="submit" class="btn btn-outline-primary w-100">
                                     <i class="fas fa-image"></i> ดึงรูปและข้อมูลจากเว็บคณะ
                                 </button>
@@ -203,13 +203,20 @@
          * enforces the real cooldown; this only removes the temptation and
          * makes the wait visible.
          */
-        function lockButton(form) {
+        // Delegated instead of onsubmit="return lockButton(this)" — CSP refuses
+        // inline handler attributes. Forms opt in with data-lock-button.
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (!form.dataset || form.dataset.lockButton !== '1') return;
             var btn = form.querySelector('button');
-            if (btn.disabled) return false;
+            if (!btn) return;
+            if (btn.disabled) {
+                e.preventDefault();
+                return;
+            }
             btn.disabled = true;
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังดึงข้อมูล…';
-            return true;
-        }
+        });
 
         // Re-enable each button by itself once its cooldown has elapsed, so the
         // admin does not have to guess when to reload the page.

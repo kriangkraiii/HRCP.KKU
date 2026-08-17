@@ -71,7 +71,7 @@
                                             <a th:href="'/admin/academic/staff/edit/' + ${s.id}"
                                                 class="btn btn-sm btn-outline-primary"><i class="fas fa-edit"></i></a>
                                             <form th:action="'/admin/academic/staff/delete/' + ${s.id}" method="post"
-                                                onsubmit="return confirm('ยืนยันการลบ?')">
+                                                data-confirm="ยืนยันการลบ?">
                                                 <button type="submit" class="btn btn-sm btn-outline-danger"><i
                                                         class="fas fa-trash"></i></button>
                                             </form>

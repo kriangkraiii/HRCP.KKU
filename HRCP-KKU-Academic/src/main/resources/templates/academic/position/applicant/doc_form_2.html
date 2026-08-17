@@ -65,14 +65,14 @@
                         <input type="hidden" name="not_wish_to_know_committee_names" id="notWish" value="☐">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="radio" name="wish_to_know_committee_names"
-                                value="☑" id="intent1" onchange="document.getElementById('notWish').value='☐'">
+                                value="☑" id="intent1" data-set-value-target="#notWish" data-set-value="☐">
                             <label class="form-check-label" for="intent1">
                                 ประสงค์จะทราบรายชื่อกรรมการประเมินผลงานทางวิชาการ
                             </label>
                         </div>
                         <div class="form-check">
                             <input class="form-check-input" type="radio" name="wish_to_know_committee_names"
-                                value="☐" id="intent2" onchange="document.getElementById('notWish').value='☑'">
+                                value="☐" id="intent2" data-set-value-target="#notWish" data-set-value="☑">
                             <label class="form-check-label" for="intent2">
                                 ไม่ประสงค์จะทราบรายชื่อกรรมการประเมินผลงานทางวิชาการ ไม่ว่ากรณีใด ๆ
                             </label>
@@ -84,7 +84,7 @@
                     <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">
                         <i class="fas fa-save"></i> บันทึก
                     </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                    <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
                     <a th:href="'/user/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">

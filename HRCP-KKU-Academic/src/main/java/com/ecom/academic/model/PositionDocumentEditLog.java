@@ -12,13 +12,16 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "position_document_edit_log")
+@Table(name = "position_document_edit_log", indexes = {
+        @Index(name = "idx_pos_doc_log_req_date", columnList = "request_id, edited_at DESC")
+})
 public class PositionDocumentEditLog {
 
     public enum EditAction {

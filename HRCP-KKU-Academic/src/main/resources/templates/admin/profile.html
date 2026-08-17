@@ -27,13 +27,13 @@
                             <div class="profile-avatar-wrap">
                                 <img id="avatarPreview" th:src="@{'/img/profile_img/' + ${user.profileImage}}"
                                      alt="รูปโปรไฟล์" class="profile-avatar-img"
-                                     onerror="this.src='/img/profile_img/default.png'">
+                                     data-fallback="/img/profile_img/default.png">
                                 <label for="avatarInput" class="profile-avatar-overlay">
                                     <i class="fas fa-camera"></i>
                                     <span>เปลี่ยนรูป</span>
                                 </label>
                                 <input type="file" name="img" id="avatarInput" accept="image/*" style="display:none"
-                                       onchange="previewAvatar(this)">
+                                       data-call-change="previewAvatar" data-call-arg="self">
                             </div>
 
                             <!-- Name display -->

@@ -75,7 +75,7 @@
                         <!-- รายวิชาที่ 1 -->
                         <div class="border rounded p-3 mb-3">
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="chkCourse1" onchange="toggleCourse(1, this.checked)">
+                                <input class="form-check-input" type="checkbox" id="chkCourse1" data-call-change="toggleCourse" data-call-args="[1]" data-call-arg="checked">
                                 <input type="hidden" name="chk1" value="☐">
                                 <label class="form-check-label fw-bold" for="chkCourse1">รายวิชาที่ 1</label>
                             </div>
@@ -98,7 +98,7 @@
                         <!-- รายวิชาที่ 2 -->
                         <div class="border rounded p-3 mb-3">
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="chkCourse2" onchange="toggleCourse(2, this.checked)">
+                                <input class="form-check-input" type="checkbox" id="chkCourse2" data-call-change="toggleCourse" data-call-args="[2]" data-call-arg="checked">
                                 <input type="hidden" name="chk2" value="☐">
                                 <label class="form-check-label fw-bold" for="chkCourse2">รายวิชาที่ 2</label>
                             </div>
@@ -121,7 +121,7 @@
                         <!-- รายวิชาที่ 3 -->
                         <div class="border rounded p-3 mb-3">
                             <div class="form-check mb-2">
-                                <input class="form-check-input" type="checkbox" id="chkCourse3" onchange="toggleCourse(3, this.checked)">
+                                <input class="form-check-input" type="checkbox" id="chkCourse3" data-call-change="toggleCourse" data-call-args="[3]" data-call-arg="checked">
                                 <input type="hidden" name="chk3" value="☐">
                                 <label class="form-check-label fw-bold" for="chkCourse3">รายวิชาที่ 3</label>
                             </div>
@@ -147,7 +147,7 @@
                     <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">
                         <i class="fas fa-save"></i> บันทึก
                     </button>
-                    <button type="button" class="btn btn-outline-primary" onclick="docPreview.show()">
+                    <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
                     <a th:href="'/user/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">

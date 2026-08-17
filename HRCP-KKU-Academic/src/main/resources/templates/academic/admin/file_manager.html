@@ -111,10 +111,10 @@
                     <span class="badge bg-white text-danger ms-1" th:if="${trashCount > 0 && (viewMode == 'storage' || viewMode == 'storage-trash')}" th:text="${trashCount}"></span>
                 </a>
             </div>
-            <button th:if="${viewMode == 'trash'}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" onclick="emptyTrash()">
+            <button th:if="${viewMode == 'trash'}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" data-call="emptyTrash">
                 <i class="fas fa-dumpster-fire me-1"></i> ล้างถังขยะ
             </button>
-            <button th:if="${viewMode == 'storage-trash' && trashCount > 0}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" onclick="emptyStorageTrash()">
+            <button th:if="${viewMode == 'storage-trash' && trashCount > 0}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" data-call="emptyStorageTrash">
                 <i class="fas fa-dumpster-fire me-1"></i> ล้างถังขยะ
             </button>
         </div>
@@ -127,11 +127,11 @@
                         <div class="input-group">
                             <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
                             <input type="text" class="form-control border-start-0" id="searchInput"
-                                   placeholder="ค้นหาชื่อไฟล์, ผู้ยื่น..." onkeyup="filterTable()">
+                                   placeholder="ค้นหาชื่อไฟล์, ผู้ยื่น..." data-call-input="filterTable">
                         </div>
                     </div>
                     <div class="col-md-3">
-                        <select class="form-select" id="typeFilter" onchange="filterTable()">
+                        <select class="form-select" id="typeFilter" data-call-change="filterTable">
                             <option value="">ทุกประเภท</option>
                             <option value="DOCX">DOCX</option>
                             <option value="PDF">PDF</option>
@@ -141,7 +141,7 @@
                         </select>
                     </div>
                     <div class="col-md-4">
-                        <select class="form-select" id="requestFilter" onchange="filterTable()">
+                        <select class="form-select" id="requestFilter" data-call-change="filterTable">
                             <option value="">ทุกคำร้อง</option>
                         </select>
                     </div>
@@ -252,7 +252,7 @@
                                             <button class="btn btn-sm btn-outline-danger"
                                                     th:data-fileid="${file.fileId}"
                                                     th:data-filename="${file.fileName}"
-                                                    onclick="softDelete(this)"
+                                                    data-call="softDelete" data-call-arg="self"
                                                     title="ย้ายไปถังขยะ">
                                                 <i class="fas fa-trash-alt"></i>
                                             </button>
@@ -263,14 +263,14 @@
                                         <div class="btn-group">
                                             <button class="btn btn-sm btn-outline-success"
                                                     th:data-fileid="${file.fileId}"
-                                                    onclick="restoreFile(this)"
+                                                    data-call="restoreFile" data-call-arg="self"
                                                     title="กู้คืน">
                                                 <i class="fas fa-undo"></i>
                                             </button>
                                             <button class="btn btn-sm btn-outline-danger"
                                                     th:data-fileid="${file.fileId}"
                                                     th:data-filename="${file.fileName}"
-                                                    onclick="permanentDeleteFile(this)"
+                                                    data-call="permanentDeleteFile" data-call-arg="self"
                                                     title="ลบถาวร">
                                                 <i class="fas fa-times"></i>
                                             </button>
