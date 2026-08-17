@@ -72,4 +72,16 @@ public interface UserService {
 	public java.util.Map<String, String> updateProfileImageOnly(Integer id, MultipartFile img);
 
 	public Boolean updateEmailNotification(Integer id, Boolean enabled);
+
+	/**
+	 * Switches 2FA off for an account and drops any code still outstanding.
+	 *
+	 * <p>The way back in for someone locked out of their own OTP mailbox — a
+	 * bounced address, a changed one, a person who has left. 2FA is otherwise the
+	 * user's own switch, and without this the only remedy is editing the database
+	 * by hand.
+	 *
+	 * @return false when no account has that id
+	 */
+	public Boolean disableTwoFactor(Integer id);
 }

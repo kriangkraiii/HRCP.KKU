@@ -145,6 +145,23 @@ public class UserServiceImpl implements UserService {
 	}
 
 	@Override
+	public Boolean disableTwoFactor(Integer id) {
+		Optional<UserDtls> findByuser = userRepository.findById(id);
+		if (findByuser.isPresent()) {
+			UserDtls userDtls = findByuser.get();
+			userDtls.setTwoFactorEnabled(false);
+			// The outstanding code goes too. Leaving one alive would keep a valid
+			// second factor floating around for an account that no longer asks for
+			// one, in a mailbox the owner may no longer control.
+			userDtls.setOtpCode(null);
+			userDtls.setOtpExpiry(null);
+			userRepository.save(userDtls);
+			return true;
+		}
+		return false;
+	}
+
+	@Override
 	public void increaseFailedAttempt(UserDtls user) {
 		int attempt = user.getFailedAttempt() + 1;
 		user.setFailedAttempt(attempt);

@@ -82,9 +82,21 @@
 											class="btn btn-sm btn-primary">
 											<i class="fa-solid fa-pen-to-square"></i> Edit
 										</a>
-										<a href="javascript:void(0)" 
-											th:data-id="${u.id}" 
-											th:data-type="${userType}" 
+										<!-- Only for accounts that actually have 2FA on — the way back
+										     in for someone who cannot open their OTP mailbox anymore. -->
+										<a th:if="${u.twoFactorEnabled != null && u.twoFactorEnabled}"
+											href="javascript:void(0)"
+											th:data-id="${u.id}"
+											th:data-type="${userType}"
+											th:data-email="${u.email}"
+											onclick="resetTwoFactor(this)"
+											class="btn btn-sm btn-warning"
+											title="ปิด 2FA ให้บัญชีนี้ ใช้เมื่อผู้ใช้เข้าอีเมลรับ OTP ไม่ได้">
+											<i class="fa-solid fa-shield-halved"></i> รีเซ็ต 2FA
+										</a>
+										<a href="javascript:void(0)"
+											th:data-id="${u.id}"
+											th:data-type="${userType}"
 											th:data-email="${u.email}"
 											onclick="openDeleteModal(this)"
 											class="btn btn-sm btn-danger">
@@ -159,6 +171,16 @@
 				}
 
 				postForm('/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type);
+			}
+
+			function resetTwoFactor(el) {
+				const email = el.dataset.email;
+				if (!confirm('ปิดการยืนยันตัวตนสองขั้นตอน (2FA) ของ ' + email + ' ใช่หรือไม่?\n\n'
+						+ 'หลังจากนี้บัญชีนี้จะเข้าระบบได้โดยไม่ต้องกรอก OTP\n'
+						+ 'ควรแจ้งเจ้าตัวให้เปิดใหม่เองเมื่อเข้าอีเมลได้แล้ว')) {
+					return;
+				}
+				postForm('/admin/reset-2fa?id=' + el.dataset.id + '&type=' + el.dataset.type);
 			}
 
 			function openDeleteModal(el) {

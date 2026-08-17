@@ -183,6 +183,38 @@ public class AdminController {
 		return "redirect:/admin/users?type=" + type;
 	}
 
+	/**
+	 * Switches a user's 2FA off.
+	 *
+	 * <p>2FA is the user's own choice everywhere else, and this does not change
+	 * that — it exists for the one situation the user cannot get themselves out
+	 * of: the OTP goes to a mailbox they can no longer open, so they can never
+	 * complete a sign-in and never reach the settings page to turn it back off.
+	 *
+	 * <p>It is a way past someone's second factor, so it is written to the audit
+	 * log naming both the admin and the account.
+	 */
+	@PostMapping("/reset-2fa")
+	public String resetTwoFactor(@RequestParam Integer id, @RequestParam Integer type, HttpSession session) {
+		UserDtls target = userService.getUserById(id);
+		Boolean done = userService.disableTwoFactor(id);
+
+		if (Boolean.TRUE.equals(done)) {
+			session.setAttribute("succMsg", "ปิด 2FA ให้บัญชีนี้แล้ว ผู้ใช้เข้าระบบได้โดยไม่ต้องใช้ OTP");
+			Principal p = request.getUserPrincipal();
+			if (p != null) {
+				UserDtls admin = userService.getUserByEmail(p.getName());
+				adminLogService.log(p.getName(), admin != null ? admin.getName() : p.getName(),
+						"RESET_2FA",
+						"ปิด 2FA ของบัญชี " + (target != null ? target.getEmail() : "ID:" + id),
+						getClientIpAddress(request));
+			}
+		} else {
+			session.setAttribute("errorMsg", "ไม่พบบัญชีนี้");
+		}
+		return "redirect:/admin/users?type=" + type;
+	}
+
 	// ====== AJAX Profile Image Update ======
 
 	@PostMapping("/update-profile-image")

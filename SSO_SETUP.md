@@ -22,17 +22,62 @@ app.auth.mode=${APP_AUTH_MODE:dev}
 
 ## 2. ค่าที่ต้องกรอก
 
-ขอจากสำนักเทคโนโลยีดิจิทัล มข. (ติดต่อ: teerpo@kku.ac.th) แล้วใส่เป็น environment variable
+ขอจากสำนักเทคโนโลยีดิจิทัล มข. (ติดต่อ: teerpo@kku.ac.th)
 
-```bash
-export APP_AUTH_MODE=production
-export KKU_SSO_STAGE=uat            # uat ตอนทดสอบ, prod ตอนใช้จริง
-export KKU_SSO_APP_ID=...
-export KKU_SSO_CLIENT_ID=...
-export KKU_SSO_CLIENT_SECRET=...
-export KKU_SSO_REDIRECT_LOGIN_URL=https://hrd.computing.kku.ac.th/auth/callback/login
-export KKU_SSO_REDIRECT_LOGOUT_URL=https://hrd.computing.kku.ac.th/auth/callback/logout
+ระบบ deploy เป็น **Windows Service `MyWebApp`** รัน `C:\apps\myspringboot\app.jar`
+(`.github/workflows/deploy.yml` build แล้วทับไฟล์ jar เมื่อ push เข้า branch `deploy`)
+ทุกค่าใน `application.properties` เป็นรูป `${ENV_VAR:default}` จึงตั้งทับได้ 2 ทาง
+
+### วิธีที่ 1 — ไฟล์ properties ข้างนอก jar (แนะนำ)
+
+ค่าไม่ปนอยู่ใน jar ที่ถูกทับทุกครั้งที่ deploy และตั้ง permission เฉพาะไฟล์นี้ได้
+
+สร้าง `C:\apps\myspringboot\config\application.properties` (ตั้งค่า **property** ตรง ๆ ไม่ใช่ชื่อ env)
+
+```properties
+app.auth.mode=production
+app.auth.sso.allowed-emails=admin@kku.ac.th,support@kku.ac.th
+kku.sso.stage=uat
+kku.sso.app-id=...
+kku.sso.client-id=...
+kku.sso.client-secret=...
+kku.sso.redirect-login-url=https://hrd.computing.kku.ac.th/auth/callback/login
+kku.sso.redirect-logout-url=https://hrd.computing.kku.ac.th/auth/callback/logout
 ```
+
+Spring Boot อ่านโฟลเดอร์ `config\` **เทียบจาก working directory ของโปรเซส** ซึ่ง Windows Service
+มักตั้งเป็น `C:\Windows\System32` ถ้าไม่ได้กำหนด — ถ้าไม่แน่ใจให้ระบุตรง ๆ ไปเลยที่ argument ของ service
+
+```
+-Dspring.config.additional-location=file:///C:/apps/myspringboot/config/
+```
+
+จำกัดสิทธิ์ไฟล์ (มี client secret อยู่ข้างใน):
+
+```powershell
+icacls C:\apps\myspringboot\config\application.properties /inheritance:r
+icacls C:\apps\myspringboot\config\application.properties /grant "SYSTEM:(R)" "Administrators:(F)"
+```
+
+### วิธีที่ 2 — environment variable ระดับเครื่อง
+
+ใช้ได้ไม่ว่า service จะถูกสร้างด้วยอะไร เพราะ service รับ environment ของเครื่องตอน start
+
+```powershell
+[Environment]::SetEnvironmentVariable('APP_AUTH_MODE','production','Machine')
+[Environment]::SetEnvironmentVariable('SSO_ALLOWED_EMAILS','admin@kku.ac.th,support@kku.ac.th','Machine')
+[Environment]::SetEnvironmentVariable('KKU_SSO_STAGE','uat','Machine')
+[Environment]::SetEnvironmentVariable('KKU_SSO_APP_ID','...','Machine')
+[Environment]::SetEnvironmentVariable('KKU_SSO_CLIENT_ID','...','Machine')
+[Environment]::SetEnvironmentVariable('KKU_SSO_CLIENT_SECRET','...','Machine')
+Restart-Service MyWebApp
+```
+
+`Machine` เท่านั้น — ตั้งแบบ `User` service มองไม่เห็น เพราะรันคนละ account
+
+**ทั้งสองวิธีต้อง `Restart-Service MyWebApp`** ค่าถูกอ่านตอน start ครั้งเดียว
+เช็คว่าเข้าจริงไหม: ดู log ตอน start ถ้า SSO ตั้งไม่ครบ `SsoAuthController` จะ log
+`SSO login attempted but configuration is incomplete: <ชื่อค่าที่ขาด>` ตอนมีคนกดปุ่ม
 
 > `KKU_SSO_REDIRECT_LOGIN_URL` **ต้องตรงกับที่กรอกในแบบฟอร์มขอใช้บริการ** เพราะระบบส่งค่านี้ไปให้ SSO ตรวจซ้ำตอนแลก token
 
@@ -49,11 +94,27 @@ KKU SSO ยืนยันตัวตนคนทั้งมหาวิทย
 2. หรืออยู่ใน allowlist ที่ตั้งเพิ่ม สำหรับแอดมินที่ไม่ใช่อาจารย์
 
 ```properties
-app.auth.sso.allowed-emails=${SSO_ALLOWED_EMAILS:}   # คั่นด้วย , เช่น admin@kku.ac.th,support@kku.ac.th
+# คั่นด้วย , เว้นวรรคได้ (ระบบ trim ให้) และไม่สนตัวพิมพ์เล็กใหญ่
+app.auth.sso.allowed-emails=admin@kku.ac.th,support@kku.ac.th
 ```
 
 ถ้าไม่เข้าเงื่อนไข → ปฏิเสธ ไม่สร้างบัญชีให้
-บัญชีใหม่ที่ผ่านเงื่อนไขจะถูกสร้างอัตโนมัติ (role `ROLE_USER`) โดยดึงชื่อ/ตำแหน่งจาก `fs_faculty`
+บัญชีที่ถูก**ปิดใช้งาน** (`isEnable=false`) ก็เข้าไม่ได้ แม้จะยังอยู่ในรายชื่ออาจารย์หรือใน allowlist
+
+### จุดที่พลาดกันบ่อย: อยู่ใน allowlist ไม่ได้แปลว่าเป็นแอดมิน
+
+บัญชีใหม่ที่ระบบสร้างให้อัตโนมัติได้ role `ROLE_USER` **เสมอ** — `SSO_ALLOWED_EMAILS` แค่บอกว่า
+"เข้าได้" ไม่ได้บอกว่า "เป็นแอดมิน" ถ้าแอดมินล็อกอิน SSO ครั้งแรกโดยที่ยังไม่มีบัญชีในระบบ
+จะได้หน้าผู้ใช้ธรรมดา และไม่มีใครกดเลื่อนสิทธิ์ให้ได้เลย (ไก่กับไข่)
+
+ทำอย่างใดอย่างหนึ่ง **ก่อน** เปิดโหมด production:
+
+1. ตั้ง `app.admin.email` (env `ADMIN_EMAIL`) เป็นอีเมล @kku.ac.th ที่จะใช้ล็อกอิน SSO จริง
+   → ตอน start `AdminInitializer` สร้างบัญชี `ROLE_ADMIN` ให้ แล้วล็อกอิน SSO ทับบัญชีเดิมนั้น
+   (การล็อกอิน SSO ไม่เปลี่ยน role ของบัญชีที่มีอยู่แล้ว — role เป็นการตัดสินใจฝั่งเรา)
+2. หรือเลื่อนสิทธิ์บัญชีนั้นเป็นแอดมินจากหน้าจัดการผู้ใช้ ตอนที่ยังล็อกอินด้วยรหัสผ่านได้อยู่
+
+แล้วค่อยใส่อีเมลเดียวกันนั้นใน allowlist (ถ้าไม่ใช่อาจารย์ที่มีใน `fs_faculty`)
 
 **ก่อนเปิดใช้จริงต้องรัน sync อาจารย์ก่อน** ไม่งั้น `fs_faculty` ว่าง แล้วจะไม่มีใครเข้าได้เลย
 (ดูที่หน้า `/admin/external-sync`)
@@ -83,6 +144,11 @@ app.auth.sso.allowed-emails=${SSO_ALLOWED_EMAILS:}   # คั่นด้วย 
 
 การล็อกอินที่ มข. คือ**ปัจจัยแรก** เท่านั้น ถ้าผู้ใช้เปิด 2FA ไว้ในหน้าตั้งค่า ระบบยังถาม OTP ต่อ
 ไม่ว่าจะเข้ามาทางรหัสผ่านหรือ SSO — สวิตช์เดียวกัน หน้าจอเดียวกัน (`/2fa/verify`)
+
+**ถ้าผู้ใช้เข้าอีเมลรับ OTP ไม่ได้** (เมลเด้ง / เปลี่ยนอีเมล / ลาออก) เขาจะเข้าระบบไม่ได้เลย
+และไปปิดสวิตช์เองก็ไม่ได้เพราะต้องล็อกอินก่อน — แอดมินกดปิดให้ได้ที่หน้า `/admin/users`
+ปุ่ม **"รีเซ็ต 2FA"** (ขึ้นเฉพาะบัญชีที่เปิด 2FA ไว้) ระบบล้างรหัส OTP ที่ค้างอยู่ให้ด้วย
+และเขียน `RESET_2FA` ลง activity log ว่าแอดมินคนไหนกดให้ใคร
 
 **2FA เป็น opt-in — ผู้ใช้เปิดเอง ระบบไม่เปิดให้**
 บัญชีใหม่ (รวมบัญชีที่สร้างอัตโนมัติจาก SSO) ค่าเริ่มต้นคือปิด
@@ -130,6 +196,8 @@ SSO callback → ผ่าน allowlist → บัญชีเปิด 2FA?
 - [ ] `KKU_SSO_STAGE=prod` (ตอนเลิกทดสอบ UAT แล้ว)
 - [ ] redirect URL ตรงกับที่ลงทะเบียนไว้
 - [ ] รัน sync อาจารย์แล้ว (`fs_faculty` ต้องมีข้อมูล)
-- [ ] ตั้ง `SSO_ALLOWED_EMAILS` สำหรับแอดมิน
+- [ ] ตั้ง allowlist สำหรับแอดมิน **และ** บัญชีนั้นเป็น `ROLE_ADMIN` แล้วจริง ๆ (ดูหัวข้อ 3)
+- [ ] `Restart-Service MyWebApp` หลังแก้ค่า แล้วลองกดปุ่ม SSO ดูว่าไม่ขึ้น "ยังไม่ได้ตั้งค่าให้สมบูรณ์"
+- [ ] SMTP ใช้งานได้จริง (ถ้ามีคนเปิด 2FA ไว้ OTP ส่งทางอีเมลทางเดียว ส่งไม่ออก = เข้าระบบไม่ได้)
 - [ ] รันบน HTTPS จริง (cookie ตั้ง `Secure` ไว้ ถ้าเป็น HTTP เบราว์เซอร์จะไม่ส่ง cookie กลับมา)
 - [ ] เปลี่ยนรหัส keystore จากค่า default
