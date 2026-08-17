@@ -94,7 +94,9 @@ public class AutoDraftApiController {
             String filledBy = ROLE_ADMIN.equals(user.getRole()) ? "ADMIN" : "APPLICANT";
             // Applicants may neither forge nor erase staff-filled fields (e.g. doc 7)
             if (!ROLE_ADMIN.equals(user.getRole())) {
-                jsonData = positionService.preserveStaffOnlyFieldsInJson(requestId, docType, jsonData);
+                String sanitized = positionService.preserveStaffOnlyFieldsInJson(requestId, docType, jsonData);
+                if (sanitized != null)
+                    jsonData = sanitized;
             }
             positionService.saveDraft(request, docType, jsonData, label, filledBy);
 
