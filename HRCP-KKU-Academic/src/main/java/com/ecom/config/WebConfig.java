@@ -50,32 +50,42 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addResourceHandler("/img/**").addResourceLocations("classpath:/static/img/")
 				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
 
-		// Normalize upload base directory
-		String base = uploadBaseDir.replace('\\', '/');
-		if (!base.endsWith("/")) {
-			base += "/";
+		// Normalize upload base directory to proper URI (safely encodes spaces like 'Spring pj' on Mac)
+		java.nio.file.Path basePath = java.nio.file.Path.of(uploadBaseDir).toAbsolutePath().normalize();
+		String baseUri = basePath.toUri().toString();
+		if (!baseUri.endsWith("/")) {
+			baseUri += "/";
 		}
 
 		// Profile images - serve from both external uploads and static directory with browser HTTP caching (7 days)
-		String profileUploadPath = base + "profile_img/";
+		String profileUploadUri = basePath.resolve("profile_img").toUri().toString();
+		if (!profileUploadUri.endsWith("/")) {
+			profileUploadUri += "/";
+		}
 		registry.addResourceHandler("/img/profile_img/**")
-				.addResourceLocations("file:" + profileUploadPath, "classpath:/static/img/profile_img/")
+				.addResourceLocations(profileUploadUri, "file:uploads/profile_img/", "classpath:/static/img/profile_img/")
 				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic().mustRevalidate());
 
 		// Category images from external uploads directory
-		String categoryUploadPath = base + "category_img/";
+		String categoryUploadUri = basePath.resolve("category_img").toUri().toString();
+		if (!categoryUploadUri.endsWith("/")) {
+			categoryUploadUri += "/";
+		}
 		registry.addResourceHandler("/img/category_img/**")
-				.addResourceLocations("file:" + categoryUploadPath, "classpath:/static/img/category_img/")
+				.addResourceLocations(categoryUploadUri, "file:uploads/category_img/", "classpath:/static/img/category_img/")
 				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
 
 		// Product images from external uploads directory
-		String productUploadPath = base + "product_img/";
+		String productUploadUri = basePath.resolve("product_img").toUri().toString();
+		if (!productUploadUri.endsWith("/")) {
+			productUploadUri += "/";
+		}
 		registry.addResourceHandler("/img/product_img/**")
-				.addResourceLocations("file:" + productUploadPath, "classpath:/static/img/product_img/")
+				.addResourceLocations(productUploadUri, "file:uploads/product_img/", "classpath:/static/img/product_img/")
 				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
 
 		// Serve uploaded files from external directory with caching
-		registry.addResourceHandler("/uploads/**").addResourceLocations("file:" + base)
+		registry.addResourceHandler("/uploads/**").addResourceLocations(baseUri, "file:uploads/")
 				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
 	}
 
