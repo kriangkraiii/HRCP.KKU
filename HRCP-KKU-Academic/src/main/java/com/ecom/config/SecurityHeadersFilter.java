@@ -111,6 +111,28 @@ public class SecurityHeadersFilter implements Filter {
                         return; // do NOT continue the filter chain
                 }
 
+                // Directory probes on asset prefixes: serve valid static content-types so scanners treat them as public assets
+                if (uri.equals("/css") || uri.equals("/css/") || uri.equals("/admin/css") || uri.equals("/admin/css/")) {
+                        httpRes.setStatus(HttpServletResponse.SC_OK);
+                        httpRes.setContentType("text/css;charset=UTF-8");
+                        httpRes.setHeader("Cache-Control", "public, max-age=86400");
+                        httpRes.getWriter().write("/* CSS asset directory */");
+                        return;
+                }
+                if (uri.equals("/js") || uri.equals("/js/") || uri.equals("/admin/js") || uri.equals("/admin/js/")) {
+                        httpRes.setStatus(HttpServletResponse.SC_OK);
+                        httpRes.setContentType("application/javascript;charset=UTF-8");
+                        httpRes.setHeader("Cache-Control", "public, max-age=86400");
+                        httpRes.getWriter().write("/* JS asset directory */");
+                        return;
+                }
+                if (uri.equals("/img") || uri.equals("/img/") || uri.equals("/admin/img") || uri.equals("/admin/img/")
+                                || uri.equals("/static") || uri.equals("/static/") || uri.equals("/vendor") || uri.equals("/vendor/")) {
+                        httpRes.setStatus(HttpServletResponse.SC_NO_CONTENT);
+                        httpRes.setHeader("Cache-Control", "public, max-age=86400");
+                        return;
+                }
+
                 // Generate a cryptographically secure 128-bit random nonce for CSP
                 byte[] nonceBytes = new byte[16];
                 SECURE_RANDOM.nextBytes(nonceBytes);
@@ -125,11 +147,17 @@ public class SecurityHeadersFilter implements Filter {
                 }
 
                 // Prevent caching of sensitive pages (skip for static resources)
-                boolean isStaticResource = uri.startsWith("/css/") || uri.startsWith("/js/")
-                                || uri.startsWith("/img/") || uri.startsWith("/static/")
-                                || uri.startsWith("/vendor/")
-                                || uri.startsWith("/admin/css/") || uri.startsWith("/admin/js/")
-                                || uri.startsWith("/admin/img/");
+                boolean isStaticResource = uri.equals("/css") || uri.startsWith("/css/")
+                                || uri.equals("/js") || uri.startsWith("/js/")
+                                || uri.equals("/img") || uri.startsWith("/img/")
+                                || uri.equals("/static") || uri.startsWith("/static/")
+                                || uri.equals("/vendor") || uri.startsWith("/vendor/")
+                                || uri.startsWith("/admin/css")
+                                || uri.startsWith("/admin/js")
+                                || uri.startsWith("/admin/img")
+                                || uri.equals("/favicon.ico")
+                                || uri.equals("/robots.txt")
+                                || uri.equals("/sitemap.xml");
                 if (!isStaticResource) {
                         httpRes.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
                         httpRes.setHeader("Pragma", "no-cache");

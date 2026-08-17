@@ -7,6 +7,7 @@ import org.springframework.security.authentication.dao.DaoAuthenticationProvider
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
@@ -121,9 +122,11 @@ public class SecurityConfig {
                                                         .secure(true)
                                                         .path("/"));
 
-                                        // No exemptions: /admin/toggle-image-mode has no handler at
-                                        // all, and /admin/activity-logs/export is a GET, which CSRF
-                                        // does not guard anyway. Listing them only obscured the policy.
+                                        csrf.ignoringRequestMatchers(
+                                                        "/static/**", "/css/**", "/js/**", "/img/**", "/vendor/**",
+                                                        "/admin/css/**", "/admin/js/**", "/admin/img/**",
+                                                        "/favicon.ico", "/robots.txt", "/sitemap.xml",
+                                                        "/css", "/js", "/img", "/static", "/vendor");
                                         csrf.csrfTokenRepository(repository)
                                                         .csrfTokenRequestHandler(handler);
                                 })
@@ -140,9 +143,7 @@ public class SecurityConfig {
 
                                 // Session management
                                 .sessionManagement(session -> session
-                                                // On by default, but stated explicitly so that a later
-                                                // edit to this block has to disable it on purpose
-                                                // rather than by omission.
+                                                .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                                                 .sessionFixation(fixation -> fixation.changeSessionId())
                                                 .invalidSessionUrl("/signin?expired=true")
                                                 .maximumSessions(1)

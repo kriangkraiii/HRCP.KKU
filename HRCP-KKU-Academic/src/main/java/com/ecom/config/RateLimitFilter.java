@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -19,8 +20,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * IP-based rate limiter to protect against DDoS and brute-force attacks.
- * - General requests: 100 req/min per IP
- * - Login attempts: 20 req/min per IP (stricter)
+ * - General requests: configurable per IP (default 200 req/min)
+ * - Login attempts: configurable per IP (default 30 req/min)
  *
  * Uses Caffeine cache to auto-evict stale entries and prevent memory exhaustion.
  * Relies on server.forward-headers-strategy=native for trusted proxy IP resolution.
@@ -28,8 +29,12 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class RateLimitFilter implements Filter {
 
-    private static final int GENERAL_LIMIT = 100;
-    private static final int LOGIN_LIMIT = 20;
+    @Value("${app.rate-limit.general:200}")
+    private int generalLimit = 200;
+
+    @Value("${app.rate-limit.login:30}")
+    private int loginLimit = 30;
+
     private static final long WINDOW_MS = 60_000; // 1 minute
 
     private final Cache<String, RateBucket> generalBuckets = Caffeine.newBuilder()
@@ -63,34 +68,26 @@ public class RateLimitFilter implements Filter {
         // there is a credential like any other.
         if (isCredentialSubmission(uri, httpReq.getMethod())) {
             RateBucket bucket = loginBuckets.get(clientIp, k -> new RateBucket());
-            if (!bucket.tryConsume(LOGIN_LIMIT)) {
-                String tooMany = "คุณพยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอ 1 นาที แล้วลองใหม่อีกครั้ง";
-                if (uri.startsWith("/2fa/")) {
-                    // Back to the screen they were on. Bouncing an OTP attempt to
-                    // /signin would look like the sign-in had been thrown away, when
-                    // the pending challenge is in fact still waiting.
-                    httpReq.getSession().setAttribute("errorMsg", tooMany);
-                    httpRes.sendRedirect("/2fa/verify");
-                    return;
-                }
-                httpReq.getSession().setAttribute("errorMessage", tooMany);
-                httpRes.sendRedirect("/signin?error");
+            if (!bucket.tryConsume(loginLimit)) {
+                sendRateLimitResponse(httpRes, "เข้าสู่ระบบบ่อยเกินไป กรุณารอ 1 นาทีแล้วลองใหม่อีกครั้ง");
+                return;
+            }
+        } else {
+            RateBucket bucket = generalBuckets.get(clientIp, k -> new RateBucket());
+            if (!bucket.tryConsume(generalLimit)) {
+                sendRateLimitResponse(httpRes, "คุณส่งคำขอมากเกินไป กรุณารอสักครู่");
                 return;
             }
         }
 
-        // General rate limit
-        RateBucket bucket = generalBuckets.get(clientIp, k -> new RateBucket());
-        if (!bucket.tryConsume(GENERAL_LIMIT)) {
-            httpRes.setStatus(429);
-            httpRes.setContentType("text/html;charset=UTF-8");
-            httpRes.getWriter().write(
-                    "<html><body><h2>Too Many Requests</h2>"
-                            + "<p>คุณส่งคำขอมากเกินไป กรุณารอสักครู่</p></body></html>");
-            return;
-        }
-
         chain.doFilter(request, response);
+    }
+
+    private void sendRateLimitResponse(HttpServletResponse response, String message) throws IOException {
+        response.setStatus(429);
+        response.setContentType("text/html;charset=UTF-8");
+        response.getWriter().write(
+                "<html><body><h2>Too Many Requests</h2><p>" + message + "</p></body></html>");
     }
 
     private boolean isCredentialSubmission(String uri, String method) {
@@ -103,9 +100,17 @@ public class RateLimitFilter implements Filter {
     }
 
     private boolean isStaticResource(String uri) {
-        return uri.startsWith("/css/") || uri.startsWith("/js/") || uri.startsWith("/img/")
-                || uri.startsWith("/static/") || uri.startsWith("/admin/css/")
-                || uri.startsWith("/admin/js/") || uri.startsWith("/admin/img/");
+        return uri.equals("/css") || uri.startsWith("/css/")
+                || uri.equals("/js") || uri.startsWith("/js/")
+                || uri.equals("/img") || uri.startsWith("/img/")
+                || uri.equals("/static") || uri.startsWith("/static/")
+                || uri.equals("/vendor") || uri.startsWith("/vendor/")
+                || uri.startsWith("/admin/css")
+                || uri.startsWith("/admin/js")
+                || uri.startsWith("/admin/img")
+                || uri.equals("/favicon.ico")
+                || uri.equals("/robots.txt")
+                || uri.equals("/sitemap.xml");
     }
 
     /**

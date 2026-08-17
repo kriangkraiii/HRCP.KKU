@@ -27,7 +27,7 @@ public class GlobalModelAdvice {
     }
 
     @ModelAttribute
-    public void addGlobalAttributes(jakarta.servlet.http.HttpServletRequest request, Principal principal, HttpSession session, Model model) {
+    public void addGlobalAttributes(jakarta.servlet.http.HttpServletRequest request, Principal principal, Model model) {
         // Drives which sign-in controls the login page renders.
         model.addAttribute("ssoMode", authProperties.isSsoMode());
 
@@ -48,17 +48,22 @@ public class GlobalModelAdvice {
             }
         }
 
-        // Transfer session messages to model and clear them
-        String succMsg = (String) session.getAttribute("succMsg");
-        String errorMsg = (String) session.getAttribute("errorMsg");
+        // Transfer session messages to model and clear them only if a session exists
+        if (request != null) {
+            HttpSession session = request.getSession(false);
+            if (session != null) {
+                String succMsg = (String) session.getAttribute("succMsg");
+                String errorMsg = (String) session.getAttribute("errorMsg");
 
-        if (succMsg != null) {
-            model.addAttribute("succMsg", succMsg);
-            session.removeAttribute("succMsg");
-        }
-        if (errorMsg != null) {
-            model.addAttribute("errorMsg", errorMsg);
-            session.removeAttribute("errorMsg");
+                if (succMsg != null) {
+                    model.addAttribute("succMsg", succMsg);
+                    session.removeAttribute("succMsg");
+                }
+                if (errorMsg != null) {
+                    model.addAttribute("errorMsg", errorMsg);
+                    session.removeAttribute("errorMsg");
+                }
+            }
         }
     }
 }

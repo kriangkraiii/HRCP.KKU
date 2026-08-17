@@ -19,6 +19,16 @@
       "projectName": "HRCP-KKU-Academic",
       "args": "",
       "envFile": "${workspaceFolder}/.env"
+    },
+    {
+      "type": "java",
+      "name": "Spring Boot-ShoppingCartApplication<HRCP_KKU>",
+      "request": "launch",
+      "cwd": "${workspaceFolder}",
+      "mainClass": "com.ecom.ShoppingCartApplication",
+      "projectName": "HRCP_KKU",
+      "args": "",
+      "envFile": "${workspaceFolder}/.env"
     }
   ]
 }
