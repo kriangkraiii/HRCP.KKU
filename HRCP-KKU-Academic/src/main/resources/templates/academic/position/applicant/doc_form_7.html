@@ -461,30 +461,44 @@
                 </div>
 
 
-                <!-- ========== ส่วนที่ 3: ผลการตรวจสอบ ========== -->
+                <!-- ========== ส่วนที่ 3: ผลการตรวจสอบ (เจ้าหน้าที่กรอกเท่านั้น) ========== -->
+                <hr class="my-4 border-2 border-warning">
+                <div class="alert alert-warning d-flex align-items-center mb-4">
+                    <i class="fas fa-user-shield me-2 fa-lg"></i>
+                    <div><strong>ส่วนของเจ้าหน้าที่</strong> — ข้อมูลด้านล่างนี้กรอกโดยเจ้าหน้าที่/แอดมินเท่านั้น
+                        แสดงไว้เพื่อให้ท่านติดตามสถานะการตรวจสอบ ไม่สามารถแก้ไขได้</div>
+                </div>
+
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ส่วนที่ 3: ผลการตรวจสอบของหน่วยงานต้นสังกัด</h5></div>
                     <div class="card-body">
                         <div class="row g-3">
+                            <!-- disabled → ไม่ถูก POST และฝั่ง server ก็คงค่าเดิมไว้เสมอ
+                                 (PositionRequestService.preserveStaffOnlyFields) -->
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อเจ้าหน้าที่ผู้ตรวจสอบ</label>
-                                <input type="text" name="hr_officer_name" class="form-control"
-                                       placeholder="พิมพ์ชื่อเจ้าหน้าที่">
+                                <input type="text" data-staff-field="hr_officer_name" class="form-control"
+                                       disabled placeholder="รอเจ้าหน้าที่ตรวจสอบ">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" name="hr_officer_position" class="form-control"
-                                       placeholder="เช่น นักวิชาการศึกษา">
+                                <input type="text" data-staff-field="hr_officer_position" class="form-control"
+                                       disabled placeholder="รอเจ้าหน้าที่ตรวจสอบ">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อคณบดี/หัวหน้าส่วนงาน</label>
-                                <input type="text" name="dean_name" class="form-control"
-                                       placeholder="พิมพ์ชื่อคณบดี">
+                                <input type="text" data-staff-field="dean_name" class="form-control"
+                                       disabled placeholder="รอเจ้าหน้าที่ตรวจสอบ">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" name="dean_position" class="form-control"
-                                       placeholder="เช่น คณบดีวิทยาลัยการคอมพิวเตอร์">
+                                <input type="text" data-staff-field="dean_position" class="form-control"
+                                       disabled placeholder="รอเจ้าหน้าที่ตรวจสอบ">
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">หมายเหตุจากเจ้าหน้าที่ (กรณีเอกสารไม่ครบ)</label>
+                                <textarea data-staff-field="reason_if_none" class="form-control" rows="2"
+                                          disabled placeholder="รอเจ้าหน้าที่ตรวจสอบ"></textarea>
                             </div>
                         </div>
                     </div>
@@ -782,7 +796,11 @@
                             if (el) {
                                 if (el.type === 'checkbox') { el.checked = (value === '☑'); }
                                 else { el.value = value; }
+                                continue;
                             }
+                            // ส่วนของเจ้าหน้าที่: แสดงผลอย่างเดียว (ไม่มี name จึงไม่ถูก POST)
+                            const staffEl = document.querySelector(`[data-staff-field="${key}"]`);
+                            if (staffEl) staffEl.value = value;
                         }
 
                     } catch(e) { console.error('Draft restore error:', e); }

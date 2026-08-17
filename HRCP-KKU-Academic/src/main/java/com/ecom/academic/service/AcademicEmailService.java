@@ -32,9 +32,11 @@ public class AcademicEmailService {
         try {
             // 1. Create in-app notification for applicant
             if (request != null && request.getApplicant() != null) {
-                boolean isImportant = newStatus == RequestStatus.COMPLETED_REVISE 
-                        || newStatus == RequestStatus.COMPLETED_PASS 
-                        || newStatus == RequestStatus.COMPLETED_FAIL 
+                // COMPLETED_REVISE is this workflow's "needs revision" outcome;
+                // REVISION_REQUESTED only exists on PositionRequestStatus.
+                boolean isImportant = newStatus == RequestStatus.COMPLETED_REVISE
+                        || newStatus == RequestStatus.COMPLETED_PASS
+                        || newStatus == RequestStatus.COMPLETED_FAIL
                         || newStatus == RequestStatus.REJECTED;
                 String notifTitle = "อัปเดตสถานะการประเมิน: " + newStatus.getThaiLabel();
                 String notifMsg = "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel();

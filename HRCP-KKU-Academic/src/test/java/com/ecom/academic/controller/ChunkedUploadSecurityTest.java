@@ -73,6 +73,9 @@ class ChunkedUploadSecurityTest {
         when(userRepository.findByEmail("admin@test.com")).thenReturn(admin);
         when(userStorageService.getRemainingBytes(anyInt())).thenReturn(100L * 1024 * 1024);
         when(userStorageService.formatSize(anyLong())).thenReturn("100 MB");
+        // Admin storage has its own quota and file-type checks
+        when(adminStorageService.getRemainingBytes()).thenReturn(100L * 1024 * 1024);
+        when(adminStorageService.formatSize(anyLong())).thenReturn("100 MB");
     }
 
     @SuppressWarnings("unchecked")

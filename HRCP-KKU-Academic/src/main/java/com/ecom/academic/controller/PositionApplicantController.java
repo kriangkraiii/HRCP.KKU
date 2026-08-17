@@ -279,6 +279,11 @@ public class PositionApplicantController {
         formData.remove("_csrf");
         formData.remove("action");
 
+        // Staff-only fields (e.g. doc 7 verification result) must survive an
+        // applicant save untouched — the applicant may neither forge nor erase them.
+        positionService.preserveStaffOnlyFields(type, formData,
+                positionService.getLatestDocumentData(id, type));
+
         try {
             String jsonData = objectMapper.writeValueAsString(formData);
             String label = positionService.getDocLabel(type);

@@ -7,6 +7,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -96,6 +97,71 @@ public class PositionRequestService {
 
     // Admin fills these (hidden from applicant)
     public static final List<Integer> ADMIN_DOCS = Arrays.asList(5, 8);
+
+    // Fields inside an applicant-facing document that only staff/admin may fill.
+    // Applicant submissions must never create or overwrite these — see
+    // preserveStaffOnlyFields(). Keyed by document type.
+    private static final Map<Integer, Set<String>> STAFF_ONLY_FIELDS = Map.of(
+            7, Set.of("hr_officer_name", "hr_officer_position",
+                    "dean_name", "dean_position", "reason_if_none"));
+
+    /**
+     * Strips staff-only fields from an applicant-submitted payload and restores
+     * whatever staff previously recorded, so an applicant can neither forge the
+     * verification result nor wipe it by re-saving the document.
+     *
+     * @param submitted parsed form data posted by the applicant (mutated in place)
+     * @param existing  the currently stored data for this document, may be null
+     */
+    public void preserveStaffOnlyFields(int documentType, Map<String, String> submitted,
+            Map<String, String> existing) {
+        Set<String> protectedKeys = STAFF_ONLY_FIELDS.get(documentType);
+        if (protectedKeys == null)
+            return;
+        for (String key : protectedKeys) {
+            submitted.remove(key);
+            if (existing != null) {
+                String previous = existing.get(key);
+                if (previous != null)
+                    submitted.put(key, previous);
+            }
+        }
+    }
+
+    /**
+     * JSON-in/JSON-out variant of {@link #preserveStaffOnlyFields} for the
+     * auto-draft endpoint, which receives a raw request body. Returns the
+     * original JSON unchanged when the document has no staff-only fields or the
+     * payload cannot be parsed.
+     */
+    public String preserveStaffOnlyFieldsInJson(Long requestId, int documentType, String jsonData) {
+        if (!STAFF_ONLY_FIELDS.containsKey(documentType) || jsonData == null)
+            return jsonData;
+        try {
+            Map<String, String> submitted = objectMapper.readValue(jsonData,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+            preserveStaffOnlyFields(documentType, submitted, getLatestDocumentData(requestId, documentType));
+            return objectMapper.writeValueAsString(submitted);
+        } catch (Exception e) {
+            return jsonData;
+        }
+    }
+
+    /** Latest stored form data for a document type, or null when nothing saved yet. */
+    public Map<String, String> getLatestDocumentData(Long requestId, int documentType) {
+        List<PositionDocument> docs = getDocumentsByType(requestId, documentType);
+        if (docs.isEmpty())
+            return null;
+        String json = docs.get(docs.size() - 1).getJsonData();
+        if (json == null || json.isBlank())
+            return null;
+        try {
+            return objectMapper.readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+        } catch (Exception e) {
+            return null;
+        }
+    }
 
     public Map<Integer, String> getDocLabels() {
         return DOC_LABELS;
