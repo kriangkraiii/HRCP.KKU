@@ -16,6 +16,15 @@ import com.ecom.external.model.ScopusPublication;
  * {@code fsUserId}, so there is no method a controller could call that returns
  * another professor's publications by accident. Admin-wide views go through the
  * explicitly named {@code adminSearch} method instead.
+ *
+ * <p>The free-text searches take a ready-made {@code pattern} — {@code %term%},
+ * already lower-cased — rather than building it in the query with
+ * {@code CONCAT('%', :q, '%')}. That form looks tidier and is a trap on
+ * PostgreSQL: with no search term the parameter is null, both operands of
+ * {@code ||} are then untyped, and the server resolves the concatenation to
+ * {@code bytea}, failing with "function lower(bytea) does not exist" the moment
+ * anyone opens the screen without typing anything. Comparing against a column
+ * gives the parameter a type and the ambiguity disappears.
  */
 public interface ScopusPublicationRepository extends JpaRepository<ScopusPublication, Long> {
 
@@ -32,17 +41,17 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
     @Query("""
             SELECT p FROM ScopusPublication p
             WHERE p.fsUserId = :fsUserId
+              AND (:pattern IS NULL OR LOWER(p.title) LIKE :pattern
+                                    OR LOWER(p.publicationName) LIKE :pattern
+                                    OR LOWER(p.doi) LIKE :pattern)
               AND (:yearFrom IS NULL OR p.publicationYear >= :yearFrom)
               AND (:yearTo   IS NULL OR p.publicationYear <= :yearTo)
-              AND (:q IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%'))
-                              OR LOWER(p.publicationName) LIKE LOWER(CONCAT('%', :q, '%'))
-                              OR LOWER(p.doi) LIKE LOWER(CONCAT('%', :q, '%')))
             ORDER BY p.publicationYear DESC, p.citedBy DESC
             """)
     Page<ScopusPublication> findOwnedBy(@Param("fsUserId") Long fsUserId,
             @Param("yearFrom") Integer yearFrom,
             @Param("yearTo") Integer yearTo,
-            @Param("q") String q,
+            @Param("pattern") String pattern,
             Pageable pageable);
 
     /**
@@ -70,19 +79,19 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
     @Query("""
             SELECT p FROM ScopusPublication p
             WHERE (:fsUserId IS NULL OR p.fsUserId = :fsUserId)
+              AND (:pattern IS NULL OR LOWER(p.title) LIKE :pattern
+                                    OR LOWER(p.authorNames) LIKE :pattern
+                                    OR LOWER(p.publicationName) LIKE :pattern
+                                    OR LOWER(p.abstractText) LIKE :pattern
+                                    OR LOWER(p.authKeywords) LIKE :pattern)
               AND (:yearFrom IS NULL OR p.publicationYear >= :yearFrom)
               AND (:yearTo   IS NULL OR p.publicationYear <= :yearTo)
-              AND (:q IS NULL OR LOWER(p.title) LIKE LOWER(CONCAT('%', :q, '%'))
-                              OR LOWER(p.authorNames) LIKE LOWER(CONCAT('%', :q, '%'))
-                              OR LOWER(p.publicationName) LIKE LOWER(CONCAT('%', :q, '%'))
-                              OR LOWER(p.abstractText) LIKE LOWER(CONCAT('%', :q, '%'))
-                              OR LOWER(p.authKeywords) LIKE LOWER(CONCAT('%', :q, '%')))
             ORDER BY p.publicationYear DESC, p.citedBy DESC
             """)
     Page<ScopusPublication> adminSearch(@Param("fsUserId") Long fsUserId,
             @Param("yearFrom") Integer yearFrom,
             @Param("yearTo") Integer yearTo,
-            @Param("q") String q,
+            @Param("pattern") String pattern,
             Pageable pageable);
 
     long countByFsUserId(Long fsUserId);

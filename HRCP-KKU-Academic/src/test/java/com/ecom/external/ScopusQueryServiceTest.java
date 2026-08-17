@@ -200,6 +200,6 @@ class ScopusQueryServiceTest {
 
         service.adminSearch(null, "x", 0, 10);
 
-        verify(publicationRepo).adminSearch(eq(null), eq(null), eq(null), eq("x"), any(Pageable.class));
+        verify(publicationRepo).adminSearch(eq(null), eq(null), eq(null), eq("%x%"), any(Pageable.class));
     }
 }

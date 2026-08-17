@@ -85,10 +85,10 @@ public class ScopusQueryService {
             return Page.empty();
         }
 
-        String q = (query == null || query.isBlank()) ? null : query.trim();
+        String pattern = likePattern(query);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), clampSize(size));
 
-        return publicationRepo.findOwnedBy(fsUserId.get(), yearFrom, yearTo, q, pageable)
+        return publicationRepo.findOwnedBy(fsUserId.get(), yearFrom, yearTo, pattern, pageable)
                 .map(PublicationDto::from);
     }
 
@@ -170,9 +170,9 @@ public class ScopusQueryService {
     /** As above, narrowed to a publication-year window. */
     public Page<PublicationDto> adminSearch(Long fsUserId, Integer yearFrom, Integer yearTo,
             String query, int page, int size) {
-        String q = (query == null || query.isBlank()) ? null : query.trim();
+        String pattern = likePattern(query);
         return publicationRepo
-                .adminSearch(fsUserId, yearFrom, yearTo, q,
+                .adminSearch(fsUserId, yearFrom, yearTo, pattern,
                         PageRequest.of(Math.max(page, 0), clampSize(size)))
                 .map(PublicationDto::from);
     }
@@ -187,9 +187,9 @@ public class ScopusQueryService {
      */
     public Page<AdminPublication> adminSearchWithOwner(Long fsUserId, Integer yearFrom, Integer yearTo,
             String query, int page, int size) {
-        String q = (query == null || query.isBlank()) ? null : query.trim();
+        String pattern = likePattern(query);
         return publicationRepo
-                .adminSearch(fsUserId, yearFrom, yearTo, q,
+                .adminSearch(fsUserId, yearFrom, yearTo, pattern,
                         PageRequest.of(Math.max(page, 0), clampSize(size)))
                 .map(AdminPublication::from);
     }
@@ -265,6 +265,20 @@ public class ScopusQueryService {
 
     public List<ScopusPublication> rawForFaculty(Long fsUserId) {
         return publicationRepo.findByFsUserIdOrderByPublicationYearDescCitedByDesc(fsUserId);
+    }
+
+    /**
+     * Turns a typed search term into a LIKE pattern, or null for "no filter".
+     *
+     * <p>Built here rather than in the query on purpose — see the note on
+     * {@link ScopusPublicationRepository}. Lower-cased here too, so the column
+     * side is the only thing the database has to fold.
+     */
+    private String likePattern(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return "%" + query.trim().toLowerCase() + "%";
     }
 
     private int clampSize(int size) {
