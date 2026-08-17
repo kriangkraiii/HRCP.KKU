@@ -54,6 +54,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
+			<!-- Without this devtools is a compile-scope dependency and gets
+			     packaged into the fat jar, leaving restart/livereload active
+			     in a production `java -jar` run. -->
+			<optional>true</optional>
+			<scope>runtime</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

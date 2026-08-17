@@ -18,10 +18,14 @@
                 <a href="/" class="btn btn-primary btn-lg">
                     <i class="fas fa-home me-2"></i>หน้าหลัก
                 </a>
-                <button onclick="history.back()" class="btn btn-outline-secondary btn-lg">
+                <button type="button" id="backBtn" class="btn btn-outline-secondary btn-lg">
                     <i class="fas fa-arrow-left me-2"></i>ย้อนกลับ
                 </button>
             </div>
         </div>
-    </div></body>
+    </div>
+    <!-- ไฟล์ภายนอก ไม่ใช่ inline: หน้า error ถูก render บน ERROR dispatch ซึ่ง
+         SecurityHeadersFilter ไม่ทำงาน จึงไม่มี nonce ให้ inline script ใช้ -->
+    <script src="/js/error_actions.js"></script>
+</body>
 </html>

@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.mail.MailException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Controller;
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import com.ecom.model.UserDtls;
 import com.ecom.service.AdminLogService;
@@ -72,6 +74,17 @@ public class HomeController {
 	@GetMapping("/signin")
 	public String login() {
 		return "guest/login";
+	}
+
+	/**
+	 * Target of SecurityConfig's accessDeniedPage. Spring Security already sets
+	 * 403 before forwarding here; the annotation repeats it so that reaching the
+	 * page directly reports 403 as well instead of a misleading 200.
+	 */
+	@GetMapping("/403")
+	@ResponseStatus(HttpStatus.FORBIDDEN)
+	public String accessDenied() {
+		return "error/403";
 	}
 
 	// ====== First-Time Login Flow ======

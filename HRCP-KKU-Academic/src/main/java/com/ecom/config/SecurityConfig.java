@@ -48,7 +48,8 @@ public class SecurityConfig {
          * Screens that exist only to serve local password login. They stay open in
          * dev mode and are refused outright once SSO is the only way in.
          *
-         * <p>{@code /2fa/**} is not one of them. The one-time code is the second
+         * <p>
+         * {@code /2fa/**} is not one of them. The one-time code is the second
          * factor for <em>both</em> ways in, so closing it under SSO would turn the
          * user's own 2FA switch into a lockout.
          */
@@ -65,7 +66,6 @@ public class SecurityConfig {
                 return customAuthenticationSuccessHandler;
         }
 
-
         @Bean
         public UserDetailsService userDetailsService() {
                 return userDetailsServiceImpl;
@@ -77,6 +77,20 @@ public class SecurityConfig {
                 DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
                 provider.setPasswordEncoder(passwordEncoder);
                 return provider;
+        }
+
+        @Bean
+        public org.springframework.security.web.firewall.HttpFirewall httpFirewall() {
+                // Allow all methods through the firewall so SecurityHeadersFilter
+                // (which runs at HIGHEST_PRECEDENCE, before Spring Security)
+                // can uniformly reject TRACE/TRACK/OPTIONS with identical 405 responses.
+                // If the firewall blocks them, it produces a DIFFERENT error response
+                // (JSON body + Allow header listing all methods + JSESSIONID cookie),
+                // creating the observable response discrepancy ZAP detects as Proxy Disclosure.
+                org.springframework.security.web.firewall.StrictHttpFirewall firewall =
+                                new org.springframework.security.web.firewall.StrictHttpFirewall();
+                firewall.setUnsafeAllowAnyHttpMethod(true);
+                return firewall;
         }
 
         @Bean
@@ -113,8 +127,24 @@ public class SecurityConfig {
                                         csrf.csrfTokenRepository(repository)
                                                         .csrfTokenRequestHandler(handler);
                                 })
+                                // X-Frame-Options is NOT dropped — SecurityHeadersFilter sets it
+                                // to SAMEORIGIN on every response. Spring Security's writer is
+                                // switched off here so there is exactly one owner. Two owners
+                                // meant two values (this one's default DENY overwrote the
+                                // filter's SAMEORIGIN on normal requests, but not on the
+                                // filter's 405 short-circuit, which Spring Security never sees).
+                                // The filter wins the job because it covers both paths and its
+                                // SAMEORIGIN agrees with the frame-ancestors 'self' in its CSP.
+                                .headers(headers -> headers
+                                                .frameOptions(frame -> frame.disable()))
+
                                 // Session management
                                 .sessionManagement(session -> session
+                                                // On by default, but stated explicitly so that a later
+                                                // edit to this block has to disable it on purpose
+                                                // rather than by omission.
+                                                .sessionFixation(fixation -> fixation.changeSessionId())
+                                                .invalidSessionUrl("/signin?expired=true")
                                                 .maximumSessions(1)
                                                 .maxSessionsPreventsLogin(false))
 
@@ -125,7 +155,7 @@ public class SecurityConfig {
                                                                 "/vendor/**",
                                                                 "/img/profile_img/**",
                                                                 "/admin/css/**", "/admin/js/**", "/admin/img/**",
-                                                                "/favicon.ico", "/error")
+                                                                "/favicon.ico", "/error", "/403")
                                                 .permitAll()
                                                 // SSO entry and the provider's callbacks must be
                                                 // reachable before a session exists.
@@ -180,14 +210,19 @@ public class SecurityConfig {
                                 .exceptionHandling(ex -> ex
                                                 .authenticationEntryPoint((request, response, authException) -> {
                                                         response.sendRedirect("/signin?expired=true");
-                                                }));
+                                                })
+                                                // Without this a signed-in user whose role falls short
+                                                // dropped through to the container's error page, which
+                                                // is both unstyled and a fingerprinting surface.
+                                                .accessDeniedPage("/403"));
                 return http.build();
         }
 
         /**
          * Where a logout lands.
          *
-         * <p>Under SSO it has to reach the provider. Dropping only our own cookie
+         * <p>
+         * Under SSO it has to reach the provider. Dropping only our own cookie
          * would leave the university's session live, so the next press of "sign in"
          * would walk straight back in without a prompt — which is not what anyone
          * clicking "ออกจากระบบ" on a shared machine is asking for. Handling it here

@@ -57,7 +57,7 @@
                 ลิงก์อาจถูกย้ายหรือลบออกแล้ว ลองย้อนกลับไปหน้าก่อนหน้า หรือเริ่มใหม่จากหน้าหลัก
             </p>
             <div class="error-actions">
-                <button onclick="history.back()" class="btn btn-outline-secondary">
+                <button type="button" id="backBtn" class="btn btn-outline-secondary">
                     <i class="fas fa-arrow-left"></i> ย้อนกลับ
                 </button>
                 <a href="/" class="btn btn-primary">
@@ -66,5 +66,8 @@
             </div>
         </div>
     </div>
+    <!-- ไฟล์ภายนอก ไม่ใช่ inline: หน้า error ถูก render บน ERROR dispatch ซึ่ง
+         SecurityHeadersFilter ไม่ทำงาน จึงไม่มี nonce ให้ inline script ใช้ -->
+    <script src="/js/error_actions.js"></script>
 </body>
 </html>

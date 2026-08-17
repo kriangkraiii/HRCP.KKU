@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกิดข้อผิดพลาด - 500</title>
+    <title>ไม่มีสิทธิ์เข้าถึง - 403</title>
     <link rel="stylesheet" href="/vendor/bootstrap/bootstrap.min.css">
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="icon" type="image/png" href="/img/cphr_new.png">
@@ -26,7 +26,7 @@
         .error-code {
             font-size: 6rem;
             font-weight: bold;
-            color: #ffc107;
+            color: #dc3545;
             margin-bottom: 1rem;
         }
         .error-title {
@@ -51,23 +51,17 @@
 <body>
     <div class="error-container">
         <div class="error-card">
-            <div class="error-code">500</div>
-            <h1 class="error-title" th:text="${errorTitle} ?: 'เกิดข้อผิดพลาดในระบบ'">เกิดข้อผิดพลาดในระบบ</h1>
-            <p class="error-message" th:text="${error} ?: 'เกิดข้อผิดพลาดขณะประมวลผลคำขอ ลองโหลดหน้าใหม่อีกครั้ง หากปัญหายังคงอยู่ กรุณาติดต่อผู้ดูแลระบบ'">
-                เกิดข้อผิดพลาดขณะประมวลผลคำขอ ลองโหลดหน้าใหม่อีกครั้ง หากปัญหายังคงอยู่ กรุณาติดต่อผู้ดูแลระบบ
+            <div class="error-code">403</div>
+            <h1 class="error-title" th:text="${errorTitle} ?: 'ไม่มีสิทธิ์เข้าถึง'">ไม่มีสิทธิ์เข้าถึง</h1>
+            <p class="error-message" th:text="${error} ?: 'บัญชีของคุณไม่มีสิทธิ์เข้าถึงหน้านี้ หากคิดว่าเป็นข้อผิดพลาด กรุณาติดต่อผู้ดูแลระบบ'">
+                บัญชีของคุณไม่มีสิทธิ์เข้าถึงหน้านี้ หากคิดว่าเป็นข้อผิดพลาด กรุณาติดต่อผู้ดูแลระบบ
             </p>
             <div class="error-actions">
-                <button type="button" id="retryBtn" class="btn btn-outline-warning">
-                    <i class="fas fa-rotate-right"></i> ลองใหม่อีกครั้ง
-                </button>
                 <a href="/" class="btn btn-primary">
                     <i class="fas fa-home"></i> กลับสู่หน้าหลัก
                 </a>
             </div>
         </div>
     </div>
-    <!-- ไฟล์ภายนอก ไม่ใช่ inline: หน้า error ถูก render บน ERROR dispatch ซึ่ง
-         SecurityHeadersFilter ไม่ทำงาน จึงไม่มี nonce ให้ inline script ใช้ -->
-    <script src="/js/error_actions.js"></script>
 </body>
 </html>

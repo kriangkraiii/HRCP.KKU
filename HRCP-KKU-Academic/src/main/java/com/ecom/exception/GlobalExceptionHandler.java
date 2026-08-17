@@ -1,8 +1,10 @@
 package com.ecom.exception;
 
+import org.springframework.http.HttpStatus;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 /**
  * Global exception handler for petition-related exceptions.
@@ -20,6 +22,7 @@ public class GlobalExceptionHandler {
      * @return the error view name
      */
     @ExceptionHandler(PetitionNotFoundException.class)
+    @ResponseStatus(HttpStatus.NOT_FOUND)
     public String handlePetitionNotFound(PetitionNotFoundException ex, Model model) {
         model.addAttribute("error", ex.getMessage());
         model.addAttribute("errorTitle", "ไม่พบคำร้อง");
@@ -35,6 +38,7 @@ public class GlobalExceptionHandler {
      * @return the error view name
      */
     @ExceptionHandler(UserNotFoundException.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public String handleUserNotFound(UserNotFoundException ex, Model model) {
         model.addAttribute("error", "เกิดข้อผิดพลาดในการระบุตัวตนผู้ใช้");
         model.addAttribute("errorTitle", "ข้อผิดพลาดระบบ");

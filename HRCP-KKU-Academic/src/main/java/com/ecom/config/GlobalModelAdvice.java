@@ -27,9 +27,17 @@ public class GlobalModelAdvice {
     }
 
     @ModelAttribute
-    public void addGlobalAttributes(Principal principal, HttpSession session, Model model) {
+    public void addGlobalAttributes(jakarta.servlet.http.HttpServletRequest request, Principal principal, HttpSession session, Model model) {
         // Drives which sign-in controls the login page renders.
         model.addAttribute("ssoMode", authProperties.isSsoMode());
+
+        // Expose CSP Nonce for templates
+        if (request != null) {
+            String nonce = (String) request.getAttribute("cspNonce");
+            if (nonce != null) {
+                model.addAttribute("cspNonce", nonce);
+            }
+        }
 
         // Add logged-in user to model for ALL controllers
         if (principal != null) {
