@@ -67,7 +67,34 @@ public class StaffMemberController {
             @RequestParam("staffType") String staffType,
             @RequestParam(value = "department", required = false) String department,
             @RequestParam("staffRole") String staffRole,
+            @RequestParam(value = "confirmDuplicate", required = false) Boolean confirmDuplicate,
+            Model model,
             java.security.Principal principal) {
+
+        // Two real people can share a name, so this asks rather than refuses —
+        // but it asks, because the usual cause is the same person being entered
+        // twice and every duplicate becomes an ambiguous choice in every document
+        // dropdown from then on.
+        if (!Boolean.TRUE.equals(confirmDuplicate)) {
+            List<StaffMember> sameName = staffMemberService.findByName(firstName, lastName);
+            if (!sameName.isEmpty()) {
+                StaffMember staff = new StaffMember();
+                staff.setFirstName(firstName);
+                staff.setLastName(lastName);
+                staff.setAcademicTitle(academicTitle);
+                staff.setStaffType(staffType);
+                staff.setDepartment(department);
+                staff.setStaffRole(staffRole);
+
+                model.addAttribute("staff", staff);
+                model.addAttribute("duplicates", sameName);
+                model.addAttribute("duplicateWarning",
+                        "มีบุคลากรชื่อ \"" + firstName + " " + lastName + "\" อยู่แล้ว "
+                                + sameName.size() + " รายการ ตรวจสอบก่อนว่าไม่ใช่คนเดียวกัน");
+                return "academic/admin/staff_form";
+            }
+        }
+
         StaffMember staff = new StaffMember();
         staff.setFirstName(firstName);
         staff.setLastName(lastName);

@@ -28,6 +28,23 @@ public class UserDtls {
 
 	private String name; // legacy field, kept for backward compat
 	private String mobileNumber;
+
+	/**
+	 * The account's identity for signing in, and unique because of it.
+	 *
+	 * <p>Application code checks for a clash before creating an account, but a
+	 * check-then-insert cannot hold on its own: two requests can both look, both
+	 * see nothing, and both write. The constraint is the part that cannot lose a
+	 * race, and it also catches rows arriving from outside the application —
+	 * an import, a fix applied straight to the database.
+	 *
+	 * <p>The damage it prevents is out of proportion to the mistake:
+	 * {@code findByEmail} returns a single row, so a duplicate makes Spring Data
+	 * throw on every lookup. That breaks sign-in for the address permanently, and
+	 * because {@code GlobalModelAdvice} looks the user up on every request, it
+	 * turns every page into a 500 for that person.
+	 */
+	@Column(unique = true)
 	private String email;
 	private String academicPosition;
 	private String password;

@@ -239,6 +239,23 @@ body {
     box-shadow: none;
 }
 
+.btn-guest-primary.is-loading,
+.btn-guest-secondary.is-loading,
+.btn-resend.is-loading {
+    position: relative;
+    opacity: 0.85;
+    pointer-events: none;
+    cursor: wait !important;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.btn-guest-primary.is-loading i.fa-spin,
+.btn-guest-secondary.is-loading i.fa-spin,
+.btn-resend.is-loading i.fa-spin {
+    margin-right: 6px;
+}
+
 .btn-guest-secondary {
     width: 100%;
     padding: 12px;

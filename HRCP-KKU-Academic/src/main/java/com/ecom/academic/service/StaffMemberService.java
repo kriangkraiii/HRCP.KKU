@@ -33,6 +33,21 @@ public class StaffMemberService {
         return staffMemberRepository.save(staffMember);
     }
 
+    /**
+     * Everyone already recorded under this name, active or not.
+     *
+     * <p>Used to warn before adding what is probably the same person again.
+     * Inactive rows count: re-adding someone who was retired is exactly the case
+     * worth catching, since the old row is still named in past documents.
+     */
+    public List<StaffMember> findByName(String firstName, String lastName) {
+        if (firstName == null || lastName == null) {
+            return List.of();
+        }
+        return staffMemberRepository.findByFirstNameIgnoreCaseAndLastNameIgnoreCase(
+                firstName.trim(), lastName.trim());
+    }
+
     public void softDelete(Long id) {
         staffMemberRepository.findById(id).ifPresent(staff -> {
             staff.setIsActive(false);

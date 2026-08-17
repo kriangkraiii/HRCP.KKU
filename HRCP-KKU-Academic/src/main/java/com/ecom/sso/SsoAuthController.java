@@ -2,12 +2,14 @@ package com.ecom.sso;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import com.ecom.external.model.FsFaculty;
 import com.ecom.model.UserDtls;
 import com.ecom.service.SignInService;
 
@@ -103,7 +105,10 @@ public class SsoAuthController {
             return denied(redirect, decision.reason());
         }
 
-        UserDtls user = provisioner.provision(ssoToken, decision.faculty());
+        UserDtls user = provisionAllowingForARace(ssoToken, decision.faculty());
+        if (user == null) {
+            return denied(redirect, "เกิดข้อผิดพลาดในการเตรียมบัญชีผู้ใช้ กรุณาลองใหม่อีกครั้ง");
+        }
 
         if (signInService.requiresTwoFactor(user)) {
             // No session yet — the token is stashed for the challenge only, and
@@ -144,6 +149,36 @@ public class SsoAuthController {
             return "redirect:/signin?logout=true";
         }
         return "redirect:" + props.logoutUrl();
+    }
+
+    /**
+     * Provisions the account, tolerating a concurrent sign-in for the same person.
+     *
+     * <p>Two callbacks for one address — a double-clicked button, a retried
+     * request — can both find no local row and both try to insert one. The unique
+     * constraint on the e-mail refuses the second, and the right answer is not to
+     * fail the login but to use the row the first one created: a second call finds
+     * it and refreshes it.
+     *
+     * <p>The retry sits here rather than inside the provisioner because the
+     * violation is raised when its transaction commits, by which point the method
+     * has returned; calling it again is the only way to get a fresh transaction.
+     *
+     * @return the account, or null if it could not be provisioned even on retry
+     */
+    private UserDtls provisionAllowingForARace(KkuSsoClient.SsoToken token, FsFaculty faculty) {
+        try {
+            return provisioner.provision(token, faculty);
+        } catch (DataIntegrityViolationException firstAttempt) {
+            log.info("Concurrent SSO sign-in for the same account; reusing the row that won");
+            try {
+                return provisioner.provision(token, faculty);
+            } catch (DataIntegrityViolationException secondAttempt) {
+                // Twice means it is not a race, it is data that will not fit.
+                log.error("Provisioning failed twice on a constraint: {}", secondAttempt.getMessage());
+                return null;
+            }
+        }
     }
 
     private void endLocalSession(HttpServletRequest request) {

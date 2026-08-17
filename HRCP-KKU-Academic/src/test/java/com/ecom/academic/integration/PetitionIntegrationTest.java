@@ -68,7 +68,7 @@ public class PetitionIntegrationTest {
         testUser = new UserDtls();
         testUser.setTitle("นาย");
         testUser.setName("สมชาย ใจดี");
-        testUser.setEmail("somchai" + System.currentTimeMillis() + "@test.com");
+        testUser.setEmail("somchai" + java.util.UUID.randomUUID() + "@test.com");
         testUser.setMobileNumber("0812345678");
         testUser.setPassword("password");
         testUser.setRole("ROLE_USER");
@@ -544,7 +544,7 @@ public class PetitionIntegrationTest {
         UserDtls secondUser = new UserDtls();
         secondUser.setTitle("นาง");
         secondUser.setName("สมหญิง ดีมาก");
-        secondUser.setEmail("somying" + System.currentTimeMillis() + "@test.com");
+        secondUser.setEmail("somying" + java.util.UUID.randomUUID() + "@test.com");
         secondUser.setMobileNumber("0823456789");
         secondUser.setPassword("password");
         secondUser.setRole("ROLE_USER");

@@ -100,6 +100,64 @@ public class ProfileImageStorage {
         return null;
     }
 
+    /**
+     * Stores image bytes that did not arrive as an upload — currently a photo
+     * fetched from the college website.
+     *
+     * <p>The checks are the same ones an upload gets. The bytes come from another
+     * server rather than a browser, which makes them less trustworthy, not more:
+     * whatever that server returns ends up inside our upload directory and is then
+     * served back to every user.
+     *
+     * @param content   the downloaded bytes
+     * @param baseName  a name to build the file from; the extension decides the type
+     * @return the stored filename, or null if the bytes were rejected
+     */
+    public String storeFromBytes(byte[] content, String baseName) {
+        if (content == null || content.length == 0) {
+            return null;
+        }
+        if (content.length > MAX_SIZE_BYTES) {
+            log.warn("Rejected fetched profile image: exceeds 5MB");
+            return null;
+        }
+
+        String extension = extractExtension(baseName);
+        if (!ALLOWED_EXTENSIONS.contains(extension)) {
+            log.warn("Rejected fetched profile image: extension '{}' is not allowed", extension);
+            return null;
+        }
+
+        if (!decodesAsImage(content)) {
+            log.warn("Rejected fetched profile image: content is not a decodable image");
+            return null;
+        }
+
+        String safeName = FileUtils.sanitizeFilename(baseName);
+        Path target = baseDir.resolve(safeName).normalize();
+        if (!target.startsWith(baseDir)) {
+            log.warn("Rejected fetched profile image: resolved path escapes the upload directory");
+            return null;
+        }
+
+        try {
+            Files.createDirectories(baseDir);
+            Files.write(target, content);
+            return safeName;
+        } catch (IOException e) {
+            log.error("Failed to store fetched profile image {}: {}", safeName, e.getMessage(), e);
+            return null;
+        }
+    }
+
+    private boolean decodesAsImage(byte[] content) {
+        try (java.io.InputStream in = new java.io.ByteArrayInputStream(content)) {
+            return javax.imageio.ImageIO.read(in) != null;
+        } catch (IOException | RuntimeException e) {
+            return false;
+        }
+    }
+
     private boolean decodesAsImage(MultipartFile file) {
         try (java.io.InputStream in = file.getInputStream()) {
             return javax.imageio.ImageIO.read(in) != null;

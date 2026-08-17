@@ -54,7 +54,7 @@
                     <span th:text="${errorMsg}"></span>
                 </div>
 
-                <form th:action="@{/first-login/verify-otp}" method="post">
+                <form th:action="@{/first-login/verify-otp}" method="post" id="verifyOtpForm">
                     <div class="form-group">
                         <label>รหัส OTP</label>
                         <input type="text" name="otp" class="otp-input-single" maxlength="8" pattern="[0-9]{8}"
@@ -64,7 +64,7 @@
                         <i class="fas fa-clock"></i>
                         <span>รหัส OTP มีอายุ 5 นาที</span>
                     </div>
-                    <button type="submit" class="btn-guest-primary">
+                    <button type="submit" class="btn-guest-primary" id="submitBtn">
                         <i class="fas fa-check-circle"></i> ยืนยัน OTP
                     </button>
                 </form>
@@ -75,6 +75,16 @@
             </div>
         </div>
     </div>
+
+    <script>
+        document.getElementById('verifyOtpForm').addEventListener('submit', function () {
+            var btn = document.getElementById('submitBtn');
+            if (btn) {
+                btn.classList.add('is-loading');
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังตรวจสอบ OTP...';
+            }
+        });
+    </script>
 </body>
 
 </html>

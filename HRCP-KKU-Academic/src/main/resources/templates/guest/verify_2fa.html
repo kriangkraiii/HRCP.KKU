@@ -66,7 +66,7 @@
 
                 <div class="resend-section">
                     <p>ไม่ได้รับรหัส?</p>
-                    <form th:action="@{/2fa/resend}" method="post" style="display:inline">
+                    <form th:action="@{/2fa/resend}" method="post" style="display:inline" id="resendForm">
                         <button type="submit" class="btn-resend" id="resendBtn">
                             <i class="fas fa-redo"></i> ส่ง OTP อีกครั้ง
                         </button>
@@ -89,6 +89,8 @@
             var form = document.getElementById('otpForm');
             var hidden = document.getElementById('otpHidden');
             var verifyBtn = document.getElementById('verifyBtn');
+            var resendForm = document.getElementById('resendForm');
+            var resendBtn = document.getElementById('resendBtn');
 
             function collectOtp() {
                 var otp = '';
@@ -145,7 +147,18 @@
             // Submit on enter when all filled
             form.addEventListener('submit', function() {
                 hidden.value = collectOtp();
+                if (verifyBtn && !verifyBtn.disabled) {
+                    verifyBtn.classList.add('is-loading');
+                    verifyBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังยืนยัน OTP...';
+                }
             });
+
+            if (resendForm && resendBtn) {
+                resendForm.addEventListener('submit', function() {
+                    resendBtn.classList.add('is-loading');
+                    resendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังส่งรหัสใหม่...';
+                });
+            }
 
             // Expiry countdown (5 minutes)
             var remaining = 5 * 60;

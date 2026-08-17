@@ -65,8 +65,8 @@ public class PositionRequestServiceTest {
         documentRepository.deleteAll();
         requestRepository.deleteAll();
 
-        testUser = createUser("testuser" + System.currentTimeMillis() + "@test.com", "ROLE_USER");
-        testAdmin = createUser("admin" + System.currentTimeMillis() + "@test.com", "ROLE_ADMIN");
+        testUser = createUser("testuser" + java.util.UUID.randomUUID() + "@test.com", "ROLE_USER");
+        testAdmin = createUser("admin" + java.util.UUID.randomUUID() + "@test.com", "ROLE_ADMIN");
     }
 
     @AfterEach

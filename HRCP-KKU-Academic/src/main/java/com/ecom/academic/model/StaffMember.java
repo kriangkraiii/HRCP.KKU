@@ -40,6 +40,18 @@ public class StaffMember {
     @Column(name = "is_active")
     private Boolean isActive = true;
 
+    /**
+     * The {@code fs_faculty} record this row mirrors, or null for a row someone
+     * typed in by hand.
+     *
+     * <p>Without it there is no way to tell "the same person, re-synced" from "a
+     * second person with the same name", so every sync would pile up duplicates.
+     * Rows with a null value are never touched by the sync — hand-entered
+     * committee members and externals stay exactly as they were entered.
+     */
+    @Column(name = "fs_user_id", unique = true)
+    private Long fsUserId;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -133,6 +145,19 @@ public class StaffMember {
 
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+
+    public Long getFsUserId() {
+        return fsUserId;
+    }
+
+    public void setFsUserId(Long fsUserId) {
+        this.fsUserId = fsUserId;
+    }
+
+    /** True when this row is kept in step with the faculty directory. */
+    public boolean isFromDirectory() {
+        return fsUserId != null;
     }
 
     public LocalDateTime getCreatedAt() {

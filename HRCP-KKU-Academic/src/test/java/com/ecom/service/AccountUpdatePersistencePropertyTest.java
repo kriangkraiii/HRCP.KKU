@@ -158,7 +158,7 @@ public class AccountUpdatePersistencePropertyTest {
         UserDtls user = new UserDtls();
         user.setTitle("นาย");
         user.setName("Test User");
-        user.setEmail("test" + System.currentTimeMillis() + System.nanoTime() + "@test.com");
+        user.setEmail("test" + java.util.UUID.randomUUID() + "@test.com");
         user.setMobileNumber("0812345678");
         user.setAcademicPosition("อาจารย์");
         user.setPassword("encodedPassword123");

@@ -134,7 +134,10 @@ public class ProfileImageUploadFailurePropertyTest {
     private UserDtls createTestAccount() {
         UserDtls user = new UserDtls();
         user.setName("Test User");
-        user.setEmail("test" + System.currentTimeMillis() + "@example.com");
+        // A clock in milliseconds is not a unique key: this is a property test and
+        // several accounts are created inside the same millisecond, which the
+        // unique constraint on the column rightly refuses.
+        user.setEmail("test-" + java.util.UUID.randomUUID() + "@example.com");
         user.setMobileNumber("1234567890");
         user.setPassword("password");
         user.setRole("ROLE_USER");

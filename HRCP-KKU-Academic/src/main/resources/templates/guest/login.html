@@ -81,7 +81,7 @@
 
 				<!-- Development mode: the original email/password login -->
 				<th:block th:unless="${ssoMode}">
-					<form th:action="@{/login}" method="post">
+					<form th:action="@{/login}" method="post" id="loginForm">
 						<div class="form-group">
 							<label for="emailInput">อีเมล</label>
 							<div class="input-wrapper">
@@ -96,7 +96,7 @@
 								<input type="password" id="passwordInput" name="password" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
 							</div>
 						</div>
-						<button type="submit" class="btn-guest-primary">
+						<button type="submit" class="btn-guest-primary" id="loginBtn">
 							<i class="fas fa-sign-in-alt" aria-hidden="true"></i> เข้าสู่ระบบ
 						</button>
 					</form>
@@ -226,6 +226,18 @@
 			}
 			update();
 		})();
+	</script>
+	<script>
+		var loginForm = document.getElementById('loginForm');
+		if (loginForm) {
+			loginForm.addEventListener('submit', function () {
+				var btn = document.getElementById('loginBtn');
+				if (btn) {
+					btn.classList.add('is-loading');
+					btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังเข้าสู่ระบบ...';
+				}
+			});
+		}
 	</script>
 </body>
 

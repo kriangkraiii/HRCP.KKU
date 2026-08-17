@@ -330,7 +330,7 @@ public class ProfileImageUploadPropertyTest {
         UserDtls user = new UserDtls();
         user.setTitle("นาย");
         user.setName("Test User " + iteration);
-        user.setEmail("test" + iteration + System.currentTimeMillis() + "@test.com");
+        user.setEmail("test" + iteration + java.util.UUID.randomUUID() + "@test.com");
         user.setMobileNumber("08" + String.format("%08d", iteration));
         user.setAcademicPosition("อาจารย์");
         user.setPassword("encodedPassword123");
@@ -350,7 +350,7 @@ public class ProfileImageUploadPropertyTest {
         UserDtls admin = new UserDtls();
         admin.setTitle("ดร.");
         admin.setName("Test Admin " + iteration);
-        admin.setEmail("admin" + iteration + System.currentTimeMillis() + "@test.com");
+        admin.setEmail("admin" + iteration + java.util.UUID.randomUUID() + "@test.com");
         admin.setMobileNumber("09" + String.format("%08d", iteration));
         admin.setAcademicPosition("ผู้ช่วยศาสตราจารย์");
         admin.setPassword("encodedPassword123");

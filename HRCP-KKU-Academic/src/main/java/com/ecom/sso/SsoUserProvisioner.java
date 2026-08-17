@@ -39,6 +39,16 @@ public class SsoUserProvisioner {
         this.passwordEncoder = passwordEncoder;
     }
 
+    /**
+     * Maps the SSO identity onto a local account, creating one if needed.
+     *
+     * <p><b>May throw {@link org.springframework.dao.DataIntegrityViolationException}</b>
+     * when a concurrent sign-in for the same address inserted the row first — the
+     * unique constraint on the e-mail is what stops both from landing. Calling
+     * this again resolves it: the second pass finds the row and refreshes it.
+     * The retry belongs to the caller because the violation surfaces when this
+     * transaction commits, which is after the method has already returned.
+     */
     @Transactional
     public UserDtls provision(KkuSsoClient.SsoToken token, FsFaculty faculty) {
         String email = token.email().trim().toLowerCase();

@@ -35,12 +35,13 @@
                                     <th>ประเภท</th>
                                     <th>หน่วยงาน</th>
                                     <th>บทบาท</th>
+                                    <th>ที่มา</th>
                                     <th>จัดการ</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="s : ${staffMembers}">
-                                    <td th:text="${s.id}"></td>
+                                <tr th:each="s, stat : ${staffMembers}">
+                                    <td th:text="${stat.count}"></td>
                                     <td th:text="${s.academicTitle}"></td>
                                     <td th:text="${s.firstName}"></td>
                                     <td th:text="${s.lastName}"></td>
@@ -52,6 +53,18 @@
                                                    (${s.staffRole == 'COMMITTEE'} ? 'bg-success' : 
                                                    (${s.staffRole == 'HR'} ? 'bg-warning' : 'bg-secondary')))"
                                             th:text="${s.staffRole}"></span>
+                                    </td>
+                                    <!-- ชื่อ/ตำแหน่งของแถวที่มาจากต้นทาง จะถูกอัปเดตทับทุกครั้งที่ sync
+                                         ต้องบอกไว้ ไม่งั้นแอดมินแก้แล้วงงว่าทำไมคืนค่าเดิม -->
+                                    <td>
+                                        <span th:if="${s.fsUserId != null}" class="badge bg-info text-dark"
+                                              title="ซิงก์อัตโนมัติจากระบบ Fund Management — ชื่อและตำแหน่งวิชาการจะอัปเดตตามต้นทาง (บทบาทและประเภทตั้งเองได้ ไม่ถูกทับ)">
+                                            <i class="fas fa-cloud-arrow-down"></i> ต้นทาง
+                                        </span>
+                                        <span th:if="${s.fsUserId == null}" class="badge bg-light text-muted border"
+                                              title="เพิ่มเอง ระบบ sync จะไม่แตะแถวนี้">
+                                            <i class="fas fa-pen"></i> เพิ่มเอง
+                                        </span>
                                     </td>
                                     <td>
                                         <div class="d-flex gap-1">

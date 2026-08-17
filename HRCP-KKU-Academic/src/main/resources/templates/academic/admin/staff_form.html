@@ -14,9 +14,34 @@
                     </h4>
                 </div>
                 <div class="card-body">
+
+                    <!-- ชื่อซ้ำไม่ได้แปลว่าผิดเสมอไป (คนชื่อเหมือนกันมีจริง) จึงถามแทนที่จะห้าม
+                         แต่ต้องถาม เพราะทุกแถวที่ซ้ำจะกลายเป็นตัวเลือกกำกวมในเอกสารทุกใบ -->
+                    <div th:if="${duplicateWarning}" class="alert alert-warning">
+                        <h6 class="fw-bold mb-2">
+                            <i class="fas fa-triangle-exclamation"></i> <span th:text="${duplicateWarning}"></span>
+                        </h6>
+                        <ul class="mb-2 ps-4">
+                            <li th:each="d : ${duplicates}">
+                                <span th:text="${d.displayName}">ชื่อ</span>
+                                <span class="text-muted" th:if="${d.department != null && d.department != ''}"
+                                      th:text="' — ' + ${d.department}"></span>
+                                <span class="badge bg-secondary" th:text="${d.staffRole}"></span>
+                                <span class="badge bg-info text-dark" th:if="${d.fsUserId != null}">ต้นทาง</span>
+                                <span class="badge bg-danger" th:unless="${d.isActive}">ปิดใช้งานอยู่</span>
+                            </li>
+                        </ul>
+                        <p class="mb-0 small">
+                            ถ้าเป็นคนเดียวกัน ให้กลับไปแก้ไขรายการเดิมแทนการเพิ่มใหม่
+                            — ถ้าเป็นคนละคนจริง กดยืนยันด้านล่างเพื่อเพิ่มต่อ
+                        </p>
+                    </div>
+
                     <form
                         th:action="${staff.id != null} ? '/admin/academic/staff/edit/' + ${staff.id} : '/admin/academic/staff/add'"
                         method="post">
+                        <!-- ติดมากับฟอร์มเฉพาะรอบที่ผู้ใช้เห็นคำเตือนแล้วเท่านั้น -->
+                        <input type="hidden" name="confirmDuplicate" value="true" th:if="${duplicateWarning}">
                         <div class="mb-3">
                             <label class="form-label">ตำแหน่งทางวิชาการ</label>
                             <select name="academicTitle" class="form-select" required>
@@ -91,7 +116,12 @@
                             </select>
                         </div>
                         <div class="d-flex gap-2">
-                            <button type="submit" class="btn btn-academic"><i class="fas fa-save"></i> บันทึก</button>
+                            <button type="submit" class="btn btn-academic" th:unless="${duplicateWarning}">
+                                <i class="fas fa-save"></i> บันทึก
+                            </button>
+                            <button type="submit" class="btn btn-warning" th:if="${duplicateWarning}">
+                                <i class="fas fa-user-plus"></i> ยืนยันว่าเป็นคนละคน เพิ่มต่อ
+                            </button>
                             <a href="/admin/academic/staff" class="btn btn-outline-secondary"><i
                                     class="fas fa-arrow-left"></i> กลับ</a>
                         </div>

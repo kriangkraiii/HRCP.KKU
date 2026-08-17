@@ -11,6 +11,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import com.ecom.academic.service.StaffDirectorySync;
+import com.ecom.service.UserDirectorySync;
 import com.ecom.external.config.FsApiProperties;
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.model.FsSyncState;
@@ -56,6 +58,8 @@ public class FsSyncService {
     private final FsSyncWriter writer;
     private final FsFacultyRepository facultyRepo;
     private final FsSyncStateRepository syncStateRepo;
+    private final StaffDirectorySync staffDirectorySync;
+    private final UserDirectorySync userDirectorySync;
 
     private final AtomicBoolean usersRunning = new AtomicBoolean(false);
     private final AtomicBoolean scopusRunning = new AtomicBoolean(false);
@@ -64,12 +68,16 @@ public class FsSyncService {
             FsApiProperties props,
             FsSyncWriter writer,
             FsFacultyRepository facultyRepo,
-            FsSyncStateRepository syncStateRepo) {
+            FsSyncStateRepository syncStateRepo,
+            StaffDirectorySync staffDirectorySync,
+            UserDirectorySync userDirectorySync) {
         this.api = api;
         this.props = props;
         this.writer = writer;
         this.facultyRepo = facultyRepo;
         this.syncStateRepo = syncStateRepo;
+        this.staffDirectorySync = staffDirectorySync;
+        this.userDirectorySync = userDirectorySync;
     }
 
     // ------------------------------------------------------------------
@@ -127,10 +135,16 @@ public class FsSyncService {
                 written += writer.writeFacultyBatch(batch);
             }
 
+            // Pulling the directory is only half the job: the staff list the
+            // documents actually read from has to follow, or an administrator ends
+            // up retyping names the system just downloaded.
+            String staffSummary = importIntoStaffList();
+
             long elapsed = System.currentTimeMillis() - startedAt;
             writer.recordSuccess(FsSyncState.TYPE_USERS, written, api.getRequestCount(), elapsed,
                     facultyRepo.findMaxSourceUpdatedAt(),
-                    (full ? "full" : "incremental") + " pull, " + rows.size() + " row(s) received");
+                    (full ? "full" : "incremental") + " pull, " + rows.size() + " row(s) received"
+                            + (staffSummary == null ? "" : " — " + staffSummary));
 
             log.info("Faculty sync finished: {} row(s) written in {} request(s), {} ms",
                     written, api.getRequestCount(), elapsed);
@@ -143,6 +157,36 @@ public class FsSyncService {
         } finally {
             usersRunning.set(false);
         }
+    }
+
+    /**
+     * Mirrors the freshly pulled directory into the staff list.
+     *
+     * <p>Failure here is reported but not raised: the faculty data is already
+     * written and correct, and losing that over a follow-up step would be a worse
+     * outcome than a staff list that is one run out of date.
+     *
+     * @return a short summary for the sync record, or null if the step failed
+     */
+    private String importIntoStaffList() {
+        StringBuilder summary = new StringBuilder();
+
+        try {
+            summary.append(staffDirectorySync.importFromDirectory().describe());
+        } catch (Exception e) {
+            log.error("Faculty pull succeeded but the staff list import failed: {}", e.toString(), e);
+        }
+
+        try {
+            if (!summary.isEmpty()) {
+                summary.append(" — ");
+            }
+            summary.append(userDirectorySync.createMissingAccounts().describe());
+        } catch (Exception e) {
+            log.error("Faculty pull succeeded but the account import failed: {}", e.toString(), e);
+        }
+
+        return summary.isEmpty() ? null : summary.toString();
     }
 
     // ------------------------------------------------------------------

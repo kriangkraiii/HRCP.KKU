@@ -20,6 +20,7 @@ import com.ecom.external.model.FsSyncState;
 import com.ecom.external.repository.FsFacultyRepository;
 import com.ecom.external.repository.ScopusPublicationRepository;
 import com.ecom.external.service.FacultyChangeReviewService;
+import com.ecom.external.service.CpDirectorySyncService;
 import com.ecom.external.service.FsSyncService;
 import com.ecom.external.service.ManualSyncGuard;
 
@@ -46,6 +47,7 @@ public class ExternalSyncPageController {
     private final FsFacultyRepository facultyRepo;
     private final ScopusPublicationRepository publicationRepo;
     private final FsApiProperties props;
+    private final CpDirectorySyncService cpSyncService;
 
     private final String usersCron;
     private final String usersFullCron;
@@ -57,6 +59,7 @@ public class ExternalSyncPageController {
             FsFacultyRepository facultyRepo,
             ScopusPublicationRepository publicationRepo,
             FsApiProperties props,
+            CpDirectorySyncService cpSyncService,
             @Value("${fs.sync.users.cron:0 30 1 * * *}") String usersCron,
             @Value("${fs.sync.users.full-cron:0 0 3 * * SUN}") String usersFullCron,
             @Value("${fs.sync.scopus.cron:0 0 2 * * *}") String scopusCron) {
@@ -66,6 +69,7 @@ public class ExternalSyncPageController {
         this.facultyRepo = facultyRepo;
         this.publicationRepo = publicationRepo;
         this.props = props;
+        this.cpSyncService = cpSyncService;
         this.usersCron = usersCron;
         this.usersFullCron = usersFullCron;
         this.scopusCron = scopusCron;
@@ -144,6 +148,25 @@ public class ExternalSyncPageController {
         } else {
             guard.release(FsSyncState.TYPE_USERS);
             redirect.addFlashAttribute("errorMsg", "ดึงข้อมูลอาจารย์ไม่สำเร็จ: " + result.message());
+        }
+        return REDIRECT;
+    }
+
+    /**
+     * Reads the college website and fills in what it knows.
+     *
+     * <p>No cooldown of its own: it talks to a different server than the HR feed,
+     * so it spends none of that request budget, and it only ever fills blanks —
+     * pressing it twice changes nothing the second time.
+     */
+    @PostMapping("/college-web")
+    public String syncCollegeWeb(RedirectAttributes redirect) {
+        CpDirectorySyncService.Result result = cpSyncService.sync();
+
+        if (result.success()) {
+            redirect.addFlashAttribute("succMsg", result.describe());
+        } else {
+            redirect.addFlashAttribute("warnMsg", "ดึงข้อมูลจากเว็บไซต์คณะไม่สำเร็จ: " + result.describe());
         }
         return REDIRECT;
     }

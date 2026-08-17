@@ -64,7 +64,7 @@ public class PetitionServiceTest {
         testUser = new UserDtls();
         testUser.setTitle("นาย");
         testUser.setName("Test User");
-        testUser.setEmail("test" + System.currentTimeMillis() + "@test.com");
+        testUser.setEmail("test" + java.util.UUID.randomUUID() + "@test.com");
         testUser.setMobileNumber("0812345678");
         testUser.setPassword("password");
         testUser.setRole("ROLE_USER");
