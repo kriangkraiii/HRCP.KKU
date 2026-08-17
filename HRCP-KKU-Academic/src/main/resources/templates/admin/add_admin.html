@@ -12,9 +12,12 @@
 			<div class="row justify-content-center">
 				<div class="col-lg-8 col-md-10">
 					<div class="card shadow-sm border-0" style="border-radius: 16px;">
-						<div class="card-header bg-primary text-white"
+						<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
 							style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #1a237e, #0d47a1) !important;">
 							<h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>เพิ่มบัญชีผู้ใช้งาน</h5>
+							<a th:href="${param.type != null ? '/admin/users?type=' + param.type[0] : '/admin/users?type=1'}" class="btn btn-outline-light btn-sm">
+								<i class="fas fa-arrow-left me-1"></i> กลับหน้ารายชื่อ
+							</a>
 						</div>
 						<div class="card-body p-4">
 
@@ -100,8 +103,8 @@
 										<label class="form-label fw-bold">บทบาท <span
 												class="text-danger">*</span></label>
 										<select name="role" class="form-select" required>
-											<option value="ROLE_USER">ผู้ใช้งาน</option>
-											<option value="ROLE_ADMIN">ผู้ดูแลระบบ</option>
+											<option value="ROLE_USER" th:selected="${param.type == null || param.type[0] == '1'}">ผู้ใช้งาน</option>
+											<option value="ROLE_ADMIN" th:selected="${param.type != null && param.type[0] == '2'}">ผู้ดูแลระบบ</option>
 										</select>
 									</div>
 								</div>

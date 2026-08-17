@@ -8,31 +8,40 @@
 
 <body>
 	<section>
-		<div class="container-fluid mt-5 p-5">
-			<!-- Back Button -->
+		<div class="container-fluid py-4 px-4">
+			<div class="d-flex justify-content-between align-items-center mb-4">
+				<h3 class="mb-0">
+					<i class="fas fa-users text-primary me-2" th:if="${userType==1}"></i>
+					<i class="fas fa-user-shield text-primary me-2" th:if="${userType==2}"></i>
+					<span th:if="${userType==1}">จัดการผู้ใช้งานทั่วไป</span>
+					<span th:if="${userType==2}">จัดการผู้ดูแลระบบ (Admin)</span>
+				</h3>
+				<a th:href="@{/admin/add-admin(type=${userType})}" class="btn btn-academic">
+					<i class="fas fa-plus me-1"></i>
+					<span th:if="${userType==1}">เพิ่มผู้ใช้งาน</span>
+					<span th:if="${userType==2}">เพิ่มผู้ดูแลระบบ</span>
+				</a>
+			</div>
 
-			<div class="card card-sh">
-				<div class="card-header text-center">
-					<p class="fs-4" th:if="${userType==1}">Users</p>
-					<p class="fs-4" th:if="${userType==2}">Admin</p>
-					
+			<div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show" role="alert">
+				<i class="fas fa-check-circle me-2"></i>[[${succMsg}]]
+				<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+			</div>
 
-					<th:block th:if="${succMsg}">
-						<p class="text-success fw-bold">[[${succMsg}]]</p>
-					</th:block>
+			<div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show" role="alert">
+				<i class="fas fa-exclamation-circle me-2"></i>[[${errorMsg}]]
+				<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+			</div>
 
-					<th:block th:if="${errorMsg}">
-						<p class="text-danger fw-bold">[[${errorMsg}]]</p>
-					</th:block>
-				</div>
-
-				<div class="card-body">
-					<table class="table">
-						<thead>
-							<tr>
-								<th scope="col">Sl No.</th>
-								<th scope="col" th:if="${userType==1}">Applicant ID</th>
-								<th scope="col">Profile</th>
+			<div class="card card-academic shadow-sm">
+				<div class="card-body p-0">
+					<div class="table-responsive">
+						<table class="table table-hover align-middle mb-0">
+							<thead class="table-light">
+								<tr>
+									<th scope="col">#</th>
+									<th scope="col" th:if="${userType==1}">Applicant ID</th>
+									<th scope="col">Profile</th>
 								<th scope="col">ชื่อ</th>
 								<th scope="col">นามสกุล</th>
 								<th scope="col">Email</th>
