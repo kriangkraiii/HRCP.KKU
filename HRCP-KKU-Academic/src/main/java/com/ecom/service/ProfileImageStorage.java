@@ -6,6 +6,7 @@ import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.Locale;
 import java.util.Set;
+import java.util.UUID;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -72,7 +73,8 @@ public class ProfileImageStorage {
             return null;
         }
 
-        String safeName = FileUtils.sanitizeFilename(file.getOriginalFilename());
+        String extension = extractExtension(file.getOriginalFilename());
+        String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + FileUtils.sanitizeFilename(file.getOriginalFilename());
         Path target = baseDir.resolve(safeName).normalize();
 
         // Defence in depth: sanitizeFilename already strips directory components,
@@ -84,7 +86,8 @@ public class ProfileImageStorage {
 
         try {
             Files.createDirectories(baseDir);
-            Files.copy(file.getInputStream(), target, StandardCopyOption.REPLACE_EXISTING);
+            byte[] optimized = optimizeImage(file.getBytes(), extension);
+            Files.write(target, optimized);
             return safeName;
         } catch (IOException e) {
             log.error("Failed to store profile image {}: {}", safeName, e.getMessage(), e);
@@ -193,5 +196,57 @@ public class ProfileImageStorage {
             return "";
         }
         return filename.substring(dot + 1).toLowerCase(Locale.ROOT);
+    }
+
+    /**
+     * Resizes and compresses an image to max 512x512 with high quality scaling.
+     * Dramatically reduces disk space and page load time.
+     */
+    private byte[] optimizeImage(byte[] rawBytes, String extension) {
+        if (rawBytes == null || rawBytes.length == 0) {
+            return rawBytes;
+        }
+        try (var in = new java.io.ByteArrayInputStream(rawBytes)) {
+            var original = javax.imageio.ImageIO.read(in);
+            if (original == null) {
+                return rawBytes;
+            }
+
+            int origWidth = original.getWidth();
+            int origHeight = original.getHeight();
+            int maxDim = 512;
+
+            if (origWidth <= maxDim && origHeight <= maxDim && rawBytes.length < 200_000) {
+                return rawBytes; // Already compact
+            }
+
+            double scale = Math.min((double) maxDim / origWidth, (double) maxDim / origHeight);
+            if (scale > 1.0) scale = 1.0;
+            int newWidth = Math.max(1, (int) Math.round(origWidth * scale));
+            int newHeight = Math.max(1, (int) Math.round(origHeight * scale));
+
+            int imageType = (original.getTransparency() == java.awt.Transparency.OPAQUE)
+                    ? java.awt.image.BufferedImage.TYPE_INT_RGB
+                    : java.awt.image.BufferedImage.TYPE_INT_ARGB;
+
+            var resized = new java.awt.image.BufferedImage(newWidth, newHeight, imageType);
+            var g2d = resized.createGraphics();
+            g2d.setRenderingHint(java.awt.RenderingHints.KEY_INTERPOLATION, java.awt.RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+            g2d.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, java.awt.RenderingHints.VALUE_RENDER_QUALITY);
+            g2d.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g2d.drawImage(original, 0, 0, newWidth, newHeight, null);
+            g2d.dispose();
+
+            var out = new java.io.ByteArrayOutputStream();
+            String format = ("png".equalsIgnoreCase(extension) || "gif".equalsIgnoreCase(extension)) ? extension : "jpg";
+            if ("jpg".equalsIgnoreCase(format) && imageType == java.awt.image.BufferedImage.TYPE_INT_ARGB) {
+                format = "png";
+            }
+            javax.imageio.ImageIO.write(resized, format, out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            log.warn("Image optimization fallback to raw bytes: {}", e.getMessage());
+            return rawBytes;
+        }
     }
 }

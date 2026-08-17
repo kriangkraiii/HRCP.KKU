@@ -112,10 +112,12 @@
 
 								<div class="mb-3">
 									<div class="d-flex align-items-center gap-3 mb-2">
-										<img th:src="@{'/img/profile_img/' + ${editUser.profileImage}}" alt="Current Profile" 
-											th:data-user-id="${editUser.id}"
-											class="border" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;"
-											data-fallback="/img/profile_img/default.png">
+										<div style="width: 80px; height: 80px; min-width: 80px; max-width: 80px; flex-shrink: 0; border-radius: 50%; overflow: hidden; border: 2px solid #dee2e6; background: #f8f9fa;">
+											<img th:src="@{'/img/profile_img/' + ${editUser.profileImage}}" alt="Current Profile" 
+												th:data-user-id="${editUser.id}"
+												style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center top; display: block;"
+												data-fallback="/img/profile_img/default.png">
+										</div>
 										<div class="flex-grow-1">
 											<input type="file" name="img" class="form-control" accept="image/*" id="profileImageInput">
 											<small class="text-muted">ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเดิม (รองรับ JPG, PNG, GIF สูงสุด 5MB)</small>

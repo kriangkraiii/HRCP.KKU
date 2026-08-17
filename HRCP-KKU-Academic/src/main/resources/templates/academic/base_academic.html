@@ -349,15 +349,16 @@
         <!-- Sidebar Footer: User Info -->
         <div class="sidebar-footer" th:if="${user != null}">
             <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user" style="text-decoration:none;">
-                <div class="user-avatar" style="width:34px;height:34px;min-width:34px;max-width:34px;flex-shrink:0;overflow:hidden;border-radius:50%;">
+                <div class="user-avatar" style="width:34px;height:34px;min-width:34px;max-width:34px;flex-shrink:0;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
                     <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
                          th:src="'/img/profile_img/' + ${user.profileImage}"
                          class="sidebar-user-avatar-img"
-                         style="width:34px;height:34px;object-fit:cover;border-radius:50%;display:block;"
+                         style="width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:50%;display:block;"
                          alt="Avatar"
-                         data-fallback-mode="hide-show-next">
-                    <i class="fa-solid fa-user" th:if="${user.profileImage == null or user.profileImage == 'default.png'}"></i>
-                    <i class="fa-solid fa-user" style="display:none;"></i>
+                         data-fallback="/img/profile_img/default.png">
+                    <i class="fa-solid fa-user"
+                       style="color: var(--accent-color, #ffca28); font-size: 0.95rem;"
+                       th:if="${user.profileImage == null or user.profileImage == 'default.png'}"></i>
                 </div>
                 <div class="user-info">
                     <div class="user-name" th:text="${user.name}"></div>
@@ -441,17 +442,15 @@
                    class="topbar-avatar-link"
                    th:title="${user.name}">
                     <div class="topbar-avatar rounded-circle overflow-hidden shadow-sm d-flex align-items-center justify-content-center"
-                         style="background: rgba(13, 71, 161, 0.08);">
+                         style="background: rgba(13, 71, 161, 0.08); width: 36px; height: 36px; min-width: 36px; max-width: 36px; flex-shrink: 0;">
                         <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
                              th:src="'/img/profile_img/' + ${user.profileImage}"
                              th:alt="${user.name}"
-                             style="width: 100%; height: 100%; object-fit: cover; object-position: center top;"
-                             data-fallback-mode="hide-show-next">
+                             style="width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block;"
+                             data-fallback="/img/profile_img/default.png">
                         <i class="fa-solid fa-user"
                            style="color: var(--color-primary, #0d47a1); font-size: 0.95rem;"
                            th:if="${user.profileImage == null or user.profileImage == 'default.png'}"></i>
-                        <i class="fa-solid fa-user"
-                           style="display: none; color: var(--color-primary, #0d47a1); font-size: 0.95rem;"></i>
                     </div>
                 </a>
             </div>

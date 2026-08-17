@@ -131,9 +131,11 @@
 									<tbody>
 										<tr th:each="user : ${recentUsers}" th:if="${recentUsers}">
 											<td>
-												<img th:src="${user.profileImage}" 
+												<img th:src="@{'/img/profile_img/' + ${user.profileImage}}" 
 													 class="rounded-circle" width="40" height="40" 
-													 style="object-fit: cover;"
+													 loading="lazy"
+													 decoding="async"
+													 style="width: 40px; height: 40px; min-width: 40px; max-width: 40px; object-fit: cover; object-position: center top; display: block;"
 													 alt="รูปโปรไฟล์"
 													 data-fallback="/img/profile_img/default.png">
 											</td>

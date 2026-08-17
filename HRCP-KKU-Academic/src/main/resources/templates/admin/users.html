@@ -55,10 +55,12 @@
 							<tr th:each="u,c:${users}">
 								<th scope="row">[[${c.count}]]</th>
 								<td th:if="${userType==1}"><span class="badge bg-secondary">[[${u.applicantId != null ? u.applicantId : '-'}]]</span></td>
-								<td><img th:src="@{'/img/profile_img/' + ${u.profileImage} + '?t=' + ${#dates.createNow().time}}" 
+								<td><img th:src="@{'/img/profile_img/' + ${u.profileImage}}" 
 										th:data-user-id="${u.id}"
-										width="70px" height="70px"
-										style="object-fit: cover; border-radius: 50%;"
+										width="70" height="70"
+										loading="lazy"
+										decoding="async"
+										style="width: 70px; height: 70px; min-width: 70px; max-width: 70px; object-fit: cover; object-position: center top; border-radius: 50%; display: block;"
 										data-fallback="/img/profile_img/default.png"></td>
 
 								<td>[[${u.firstName}]]</td>
