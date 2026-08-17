@@ -5,8 +5,8 @@
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>เข้าสู่ระบบ - ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ</title>
-	<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+	<link href="/vendor/fonts/sarabun.css" rel="stylesheet">
+	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
 	<link rel="icon" type="image/png" href="/img/cphr_new.png">
 	<link rel="stylesheet" href="/css/guest.css">
 </head>
@@ -40,7 +40,8 @@
 		<div class="guest-form">
 			<div class="guest-card">
 				<h1 class="guest-card-heading">เข้าสู่ระบบ</h1>
-				<p class="guest-card-sub">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน</p>
+				<p class="guest-card-sub" th:if="${ssoMode}">เข้าใช้งานด้วยบัญชี KKU ของมหาวิทยาลัยขอนแก่น</p>
+				<p class="guest-card-sub" th:unless="${ssoMode}">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน</p>
 
 				<!-- Alerts -->
 				<div th:if="${param.error}" class="alert alert-danger" id="errorAlert"
@@ -67,36 +68,49 @@
 					<span th:text="${errorMsg}"></span>
 				</div>
 
-				<!-- Login Form -->
-				<form th:action="@{/login}" method="post">
-					<div class="form-group">
-						<label for="emailInput">อีเมล</label>
-						<div class="input-wrapper">
-							<i class="fas fa-envelope" aria-hidden="true"></i>
-							<input type="email" id="emailInput" name="email" placeholder="กรอกอีเมลของคุณ" required autocomplete="email">
+				<!-- SSO mode: a single button, no local credential entry at all -->
+				<th:block th:if="${ssoMode}">
+					<a th:href="@{/auth/sso/login}" class="btn-guest-primary">
+						<i class="fas fa-university" aria-hidden="true"></i> เข้าสู่ระบบด้วย KKU SSO
+					</a>
+					<p class="guest-card-sub" style="margin-top:1rem;font-size:0.9em">
+						ระบบนี้เปิดให้เฉพาะบุคลากรที่ได้รับสิทธิ์เท่านั้น
+						หากเข้าใช้งานไม่ได้ กรุณาติดต่อผู้ดูแลระบบ
+					</p>
+				</th:block>
+
+				<!-- Development mode: the original email/password login -->
+				<th:block th:unless="${ssoMode}">
+					<form th:action="@{/login}" method="post">
+						<div class="form-group">
+							<label for="emailInput">อีเมล</label>
+							<div class="input-wrapper">
+								<i class="fas fa-envelope" aria-hidden="true"></i>
+								<input type="email" id="emailInput" name="email" placeholder="กรอกอีเมลของคุณ" required autocomplete="email">
+							</div>
 						</div>
-					</div>
-					<div class="form-group">
-						<label for="passwordInput">รหัสผ่าน</label>
-						<div class="input-wrapper">
-							<i class="fas fa-lock" aria-hidden="true"></i>
-							<input type="password" id="passwordInput" name="password" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
+						<div class="form-group">
+							<label for="passwordInput">รหัสผ่าน</label>
+							<div class="input-wrapper">
+								<i class="fas fa-lock" aria-hidden="true"></i>
+								<input type="password" id="passwordInput" name="password" placeholder="กรอกรหัสผ่าน" required autocomplete="current-password">
+							</div>
 						</div>
+						<button type="submit" class="btn-guest-primary">
+							<i class="fas fa-sign-in-alt" aria-hidden="true"></i> เข้าสู่ระบบ
+						</button>
+					</form>
+
+					<div class="guest-divider"><span>หรือ</span></div>
+
+					<a th:href="@{/first-login}" class="btn-guest-secondary">
+						<i class="fas fa-user-plus"></i> เข้าสู่ระบบครั้งแรก
+					</a>
+
+					<div class="guest-link">
+						<a th:href="@{/forgot-password}"><i class="fas fa-key"></i> ลืมรหัสผ่าน?</a>
 					</div>
-					<button type="submit" class="btn-guest-primary">
-						<i class="fas fa-sign-in-alt" aria-hidden="true"></i> เข้าสู่ระบบ
-					</button>
-				</form>
-
-				<div class="guest-divider"><span>หรือ</span></div>
-
-				<a th:href="@{/first-login}" class="btn-guest-secondary">
-					<i class="fas fa-user-plus"></i> เข้าสู่ระบบครั้งแรก
-				</a>
-
-				<div class="guest-link">
-					<a th:href="@{/forgot-password}"><i class="fas fa-key"></i> ลืมรหัสผ่าน?</a>
-				</div>
+				</th:block>
 			</div>
 		</div>
 	</div>

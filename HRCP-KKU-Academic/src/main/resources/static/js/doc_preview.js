@@ -66,10 +66,15 @@ class DocPreviewEngine {
         return this.getDocTitle().replace(/[\/\\:*?"<>|\s]+/g, '_');
     }
 
-    /** อ่านค่า XSRF-TOKEN จาก cookie (ตั้งโดย CookieCsrfTokenRepository) */
+    /**
+     * อ่าน CSRF token จาก <meta name="_csrf"> ที่เซิร์ฟเวอร์ render มา
+     * (cookie เป็น HttpOnly แล้ว JS อ่านไม่ได้ — ตั้งใจ เพื่อไม่ให้ XSS ขโมย token ไปได้)
+     */
     getCsrfToken() {
-        const match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-        return match ? decodeURIComponent(match[1]) : '';
+        const meta = document.querySelector('meta[name="_csrf"]');
+        if (meta && meta.content) return meta.content;
+        const input = document.querySelector('input[name="_csrf"]');
+        return input ? input.value : '';
     }
 
     init() {

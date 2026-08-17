@@ -58,12 +58,22 @@ public class RateLimitFilter implements Filter {
 
         String clientIp = httpReq.getRemoteAddr();
 
-        // Login endpoint: stricter limit
-        if ("/login".equals(uri) && "POST".equalsIgnoreCase(httpReq.getMethod())) {
+        // Credential entry: stricter limit. The OTP screen counts — it is the
+        // second factor for both password login and KKU SSO, and a code submitted
+        // there is a credential like any other.
+        if (isCredentialSubmission(uri, httpReq.getMethod())) {
             RateBucket bucket = loginBuckets.get(clientIp, k -> new RateBucket());
             if (!bucket.tryConsume(LOGIN_LIMIT)) {
-                httpReq.getSession().setAttribute("errorMessage",
-                        "คุณพยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอ 1 นาที แล้วลองใหม่อีกครั้ง");
+                String tooMany = "คุณพยายามเข้าสู่ระบบบ่อยเกินไป กรุณารอ 1 นาที แล้วลองใหม่อีกครั้ง";
+                if (uri.startsWith("/2fa/")) {
+                    // Back to the screen they were on. Bouncing an OTP attempt to
+                    // /signin would look like the sign-in had been thrown away, when
+                    // the pending challenge is in fact still waiting.
+                    httpReq.getSession().setAttribute("errorMsg", tooMany);
+                    httpRes.sendRedirect("/2fa/verify");
+                    return;
+                }
+                httpReq.getSession().setAttribute("errorMessage", tooMany);
                 httpRes.sendRedirect("/signin?error");
                 return;
             }
@@ -81,6 +91,15 @@ public class RateLimitFilter implements Filter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    private boolean isCredentialSubmission(String uri, String method) {
+        if (!"POST".equalsIgnoreCase(method)) {
+            return false;
+        }
+        return "/login".equals(uri)
+                || "/2fa/verify".equals(uri)
+                || "/2fa/resend".equals(uri);
     }
 
     private boolean isStaticResource(String uri) {

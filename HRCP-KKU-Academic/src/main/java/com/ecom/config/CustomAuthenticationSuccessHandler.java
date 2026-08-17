@@ -2,44 +2,42 @@ package com.ecom.config;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
-import java.util.Collection;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.stereotype.Component;
 
 import com.ecom.model.UserDtls;
-import com.ecom.service.AdminLogService;
-import com.ecom.service.TwoFactorService;
+import com.ecom.service.SignInService;
 import com.ecom.service.UserService;
 
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 
+/**
+ * Runs after a password has been accepted.
+ *
+ * <p>Only the parts specific to password login live here — clearing brute-force
+ * counters and the lock state that only password attempts can set. Deciding
+ * about a second factor, establishing the session and writing the audit entry
+ * are common to every way in and belong to {@link SignInService}, so that an
+ * account with 2FA enabled is treated the same whether the person arrived here
+ * or through KKU SSO.
+ */
 @Component
 public class CustomAuthenticationSuccessHandler implements AuthenticationSuccessHandler {
 
-    private static final Logger log = LoggerFactory.getLogger(CustomAuthenticationSuccessHandler.class);
-
     private final BruteForceProtection bruteForceProtection;
     private final UserService userService;
-    private final TwoFactorService twoFactorService;
-    private final AdminLogService adminLogService;
+    private final SignInService signInService;
 
     public CustomAuthenticationSuccessHandler(BruteForceProtection bruteForceProtection,
                                               UserService userService,
-                                              TwoFactorService twoFactorService,
-                                              AdminLogService adminLogService) {
+                                              SignInService signInService) {
         this.bruteForceProtection = bruteForceProtection;
         this.userService = userService;
-        this.twoFactorService = twoFactorService;
-        this.adminLogService = adminLogService;
+        this.signInService = signInService;
     }
 
     @Override
@@ -57,66 +55,34 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         // Reset DB failed attempt counter
         String username = authentication.getName();
         UserDtls user = userService.getUserByEmail(username);
-        if (user != null) {
-            if (user.getFailedAttempt() != null && user.getFailedAttempt() > 0) {
-                user.setFailedAttempt(0);
-                user.setAccountNonLocked(true);
-                user.setLockTime(null);
-                userService.updateUser(user);
-            }
-            // Update last login date
-            user.setLastLoginDate(LocalDateTime.now());
-            userService.updateUser(user);
-        }
-
-        // Determine redirect URL
-        Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
-        String redirectUrl = "/signin";
-        for (GrantedAuthority authority : authorities) {
-            if (authority.getAuthority().equals("ROLE_ADMIN")) {
-                redirectUrl = "/admin/academic/requests";
-                break;
-            } else if (authority.getAuthority().equals("ROLE_USER")) {
-                redirectUrl = "/user/academic/dashboard";
-                break;
-            }
-        }
-
-        // === 2FA CHECK ===
-        if (user != null && Boolean.TRUE.equals(user.getTwoFactorEnabled())) {
-            HttpSession session = request.getSession();
-            session.setAttribute("2FA_USER_EMAIL", user.getEmail());
-            session.setAttribute("2FA_REDIRECT", redirectUrl);
-
-            // Generate and send OTP
-            twoFactorService.generateOtp(user);
-            twoFactorService.sendOtpEmail(user, "LOGIN");
-
-            // Clear security context — user is not fully authenticated yet
-            SecurityContextHolder.clearContext();
-
-            response.sendRedirect("/2fa/verify");
+        if (user == null) {
+            // The row backing the credential disappeared mid-request. Everything
+            // downstream reads that row, so there is no session to hand out.
+            response.sendRedirect("/signin?expired=true");
             return;
         }
 
-        // Log successful login
-        try {
-            String role = authorities.stream().findFirst().map(GrantedAuthority::getAuthority).orElse("UNKNOWN");
-            adminLogService.logWithDetails(username, user != null ? user.getName() : username,
-                    "LOGIN_SUCCESS", "เข้าสู่ระบบสำเร็จ (" + role + ")",
-                    clientIp, "/signin", request.getHeader("User-Agent"));
-        } catch (Exception e) {
-            auditLogFailed(e);
+        if (user.getFailedAttempt() != null && user.getFailedAttempt() > 0) {
+            user.setFailedAttempt(0);
+            user.setAccountNonLocked(true);
+            user.setLockTime(null);
+            userService.updateUser(user);
+        }
+        // Update last login date
+        user.setLastLoginDate(LocalDateTime.now());
+        userService.updateUser(user);
+
+        // === 2FA CHECK ===
+        if (signInService.requiresTwoFactor(user)) {
+            signInService.startTwoFactor(request, user, SignInService.Method.PASSWORD, null);
+            response.sendRedirect(SignInService.VERIFY_PATH);
+            return;
         }
 
-        // Regenerate session to prevent session fixation
+        // The password filter chain already produced the authentication; all that
+        // is left is the session rotation, the audit entry and the destination.
         request.changeSessionId();
-        response.sendRedirect(redirectUrl);
-    }
-
-    /** Audit logging must never break the user's action, but it must leave a trace. */
-    private void auditLogFailed(Exception e) {
-        log.warn("Failed to write audit log: {}", e.toString());
+        signInService.recordSignIn(request, user, SignInService.Method.PASSWORD);
+        response.sendRedirect(signInService.landingPageFor(user));
     }
 }
-

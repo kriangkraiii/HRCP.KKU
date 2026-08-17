@@ -204,6 +204,9 @@
                                 <div>
                                     <h6 class="mb-1"><i class="fas fa-lock text-primary"></i> การยืนยันตัวตนสองขั้นตอน (2FA)</h6>
                                     <small class="text-muted">เมื่อเปิดใช้งาน ระบบจะส่งรหัส OTP 8 หลักไปที่อีเมลทุกครั้งที่เข้าสู่ระบบ</small>
+                                    <div th:if="${ssoMode}" class="mt-1">
+                                        <small class="text-muted"><i class="fas fa-university"></i> ใช้กับการเข้าสู่ระบบด้วย KKU SSO ด้วย</small>
+                                    </div>
                                     <div th:if="${user.emailVerified == null || !user.emailVerified}" class="mt-1">
                                         <small class="text-danger"><i class="fas fa-info-circle"></i> ต้องยืนยันอีเมลก่อนจึงจะเปิด 2FA ได้</small>
                                     </div>

@@ -44,10 +44,6 @@
         var token = '';
         if (csrfMeta) token = csrfMeta.content || '';
         else if (csrfInput) token = csrfInput.value || '';
-        if (!token) {
-            var match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-            if (match) token = decodeURIComponent(match[1]);
-        }
 
         fetch(basePath + '/toggle-setting', {
             method: 'POST',

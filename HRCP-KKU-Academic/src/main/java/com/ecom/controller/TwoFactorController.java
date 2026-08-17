@@ -1,12 +1,5 @@
 package com.ecom.controller;
 
-import java.util.Collection;
-
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,71 +10,78 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.ecom.service.SignInService;
 import com.ecom.service.TwoFactorService;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
+/**
+ * The one-time-code screen, shared by both ways into the system.
+ *
+ * <p>It knows nothing about how the first factor was proved — a password form or
+ * KKU SSO — only that {@link SignInService} parked a sign-in in the session. On
+ * success the sign-in is resumed through the same service, so an SSO login keeps
+ * its provider token and lands exactly where it would have without the detour.
+ */
 @Controller
 @RequestMapping("/2fa")
 public class TwoFactorController {
 
     private static final int MAX_OTP_ATTEMPTS = 5;
+    private static final long RESEND_COOLDOWN_MILLIS = 60_000;
 
     private final TwoFactorService twoFactorService;
+    private final SignInService signInService;
     private final UserRepository userRepository;
-    private final UserDetailsService userDetailsService;
 
     public TwoFactorController(
             TwoFactorService twoFactorService,
-            UserRepository userRepository,
-            UserDetailsService userDetailsService) {
+            SignInService signInService,
+            UserRepository userRepository) {
         this.twoFactorService = twoFactorService;
+        this.signInService = signInService;
         this.userRepository = userRepository;
-        this.userDetailsService = userDetailsService;
     }
 
     @GetMapping("/verify")
     public String showVerifyPage(HttpSession session, Model model) {
-        String email = (String) session.getAttribute("2FA_USER_EMAIL");
+        String email = pendingEmail(session);
         if (email == null) {
             return "redirect:/signin";
         }
         model.addAttribute("maskedEmail", twoFactorService.maskEmail(email));
+        model.addAttribute("loginMethod", signInService.pendingMethod(session).name());
         return "guest/verify_2fa";
     }
 
     @PostMapping("/verify")
     public String verifyOtp(@RequestParam("otp") String otp,
                             HttpServletRequest request,
+                            HttpServletResponse response,
                             HttpSession session,
                             RedirectAttributes redirect) {
-        String email = (String) session.getAttribute("2FA_USER_EMAIL");
+        String email = pendingEmail(session);
         if (email == null) {
             return "redirect:/signin";
         }
 
         UserDtls user = userRepository.findByEmail(email);
         if (user == null) {
-            session.removeAttribute("2FA_USER_EMAIL");
-            session.removeAttribute("2FA_FAILED_ATTEMPTS");
+            signInService.abandonTwoFactor(session);
             return "redirect:/signin";
         }
 
-        Integer attempts = (Integer) session.getAttribute("2FA_FAILED_ATTEMPTS");
+        Integer attempts = (Integer) session.getAttribute(SignInService.SESSION_ATTEMPTS);
         if (attempts == null) {
             attempts = 0;
         }
 
         // Check if user has already exceeded max attempts
         if (attempts >= MAX_OTP_ATTEMPTS) {
-            twoFactorService.clearOtp(user);
-            session.removeAttribute("2FA_USER_EMAIL");
-            session.removeAttribute("2FA_FAILED_ATTEMPTS");
-            session.removeAttribute("2FA_REDIRECT");
-            session.removeAttribute("2FA_RESEND_COOLDOWN");
-            redirect.addFlashAttribute("error", "คุณกรอกรหัส OTP ไม่ถูกต้องเกินจำนวนครั้งที่กำหนด กรุณาเข้าสู่ระบบใหม่");
-            return "redirect:/signin";
+            return startOver(user, session, redirect,
+                    "คุณกรอกรหัส OTP ไม่ถูกต้องเกินจำนวนครั้งที่กำหนด กรุณาเข้าสู่ระบบใหม่");
         }
 
         // Remove all spaces/dashes from OTP input
@@ -91,87 +91,82 @@ public class TwoFactorController {
 
         switch (result) {
             case "OK":
-                // Reset failed attempts on success
-                session.removeAttribute("2FA_FAILED_ATTEMPTS");
-
-                // Grant authentication
-                UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-                UsernamePasswordAuthenticationToken auth =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails, null, userDetails.getAuthorities());
-                SecurityContextHolder.getContext().setAuthentication(auth);
-
-                // Regenerate session
-                request.changeSessionId();
-
-                // Determine redirect URL
-                String redirectUrl = (String) session.getAttribute("2FA_REDIRECT");
-                session.removeAttribute("2FA_USER_EMAIL");
-                session.removeAttribute("2FA_REDIRECT");
-                session.removeAttribute("2FA_RESEND_COOLDOWN");
-
-                if (redirectUrl == null) {
-                    redirectUrl = getDefaultRedirect(userDetails.getAuthorities());
+                // The account could have been deactivated or locked while the code
+                // was in transit; the password chain re-checks on every attempt and
+                // this path has to as well.
+                if (!signInService.isLocallyUsable(user)) {
+                    return startOver(user, session, redirect,
+                            "บัญชีนี้ถูกปิดการใช้งาน กรุณาติดต่อผู้ดูแลระบบ");
                 }
-                return "redirect:" + redirectUrl;
+
+                SignInService.Method method = signInService.pendingMethod(session);
+                String ssoToken = signInService.pendingSsoToken(session);
+
+                String landing = signInService.completeSignIn(request, response, user, method, ssoToken);
+                return "redirect:" + landing;
 
             case "EXPIRED":
                 redirect.addFlashAttribute("error", "รหัส OTP หมดอายุแล้ว กรุณากดส่งรหัสใหม่");
-                return "redirect:/2fa/verify";
+                return "redirect:" + SignInService.VERIFY_PATH;
 
             default:
                 attempts++;
-                session.setAttribute("2FA_FAILED_ATTEMPTS", attempts);
+                session.setAttribute(SignInService.SESSION_ATTEMPTS, attempts);
                 int remaining = MAX_OTP_ATTEMPTS - attempts;
 
                 if (remaining <= 0) {
-                    twoFactorService.clearOtp(user);
-                    session.removeAttribute("2FA_USER_EMAIL");
-                    session.removeAttribute("2FA_FAILED_ATTEMPTS");
-                    session.removeAttribute("2FA_REDIRECT");
-                    session.removeAttribute("2FA_RESEND_COOLDOWN");
-                    redirect.addFlashAttribute("error", "คุณกรอกรหัส OTP ไม่ถูกต้องเกิน 5 ครั้ง กรุณาเข้าสู่ระบบใหม่");
-                    return "redirect:/signin";
+                    return startOver(user, session, redirect,
+                            "คุณกรอกรหัส OTP ไม่ถูกต้องเกิน " + MAX_OTP_ATTEMPTS + " ครั้ง กรุณาเข้าสู่ระบบใหม่");
                 }
 
                 redirect.addFlashAttribute("error", "รหัส OTP ไม่ถูกต้อง (เหลือโอกาสอีก " + remaining + " ครั้ง)");
-                return "redirect:/2fa/verify";
+                return "redirect:" + SignInService.VERIFY_PATH;
         }
     }
 
     @PostMapping("/resend")
-    public String resendOtp(HttpSession session, RedirectAttributes redirect) {
-        String email = (String) session.getAttribute("2FA_USER_EMAIL");
+    public String resendOtp(HttpServletRequest request, HttpSession session, RedirectAttributes redirect) {
+        String email = pendingEmail(session);
         if (email == null) {
             return "redirect:/signin";
         }
 
-        // Rate limit: 60 seconds
-        Long lastSent = (Long) session.getAttribute("2FA_RESEND_COOLDOWN");
-        if (lastSent != null && System.currentTimeMillis() - lastSent < 60_000) {
+        Long lastSent = (Long) session.getAttribute(SignInService.SESSION_RESEND_COOLDOWN);
+        if (lastSent != null && System.currentTimeMillis() - lastSent < RESEND_COOLDOWN_MILLIS) {
             redirect.addFlashAttribute("error", "กรุณารอ 60 วินาทีก่อนส่ง OTP อีกครั้ง");
-            return "redirect:/2fa/verify";
+            return "redirect:" + SignInService.VERIFY_PATH;
         }
 
         UserDtls user = userRepository.findByEmail(email);
         if (user != null) {
             twoFactorService.generateOtp(user);
             twoFactorService.sendOtpEmail(user, "LOGIN");
-            session.setAttribute("2FA_RESEND_COOLDOWN", System.currentTimeMillis());
+            session.setAttribute(SignInService.SESSION_RESEND_COOLDOWN, System.currentTimeMillis());
             // Reset failed attempt counter on fresh OTP generation
-            session.removeAttribute("2FA_FAILED_ATTEMPTS");
+            session.removeAttribute(SignInService.SESSION_ATTEMPTS);
         }
 
         redirect.addFlashAttribute("success", "ส่งรหัส OTP ใหม่แล้ว กรุณาตรวจสอบอีเมล");
-        return "redirect:/2fa/verify";
+        return "redirect:" + SignInService.VERIFY_PATH;
     }
 
-    private String getDefaultRedirect(Collection<? extends GrantedAuthority> authorities) {
-        for (GrantedAuthority auth : authorities) {
-            if ("ROLE_ADMIN".equals(auth.getAuthority())) {
-                return "/admin/academic/requests";
-            }
-        }
-        return "/user/academic/dashboard";
+    private String pendingEmail(HttpSession session) {
+        return (String) session.getAttribute(SignInService.SESSION_PENDING_EMAIL);
+    }
+
+    /**
+     * Abandons the challenge and sends the person back to the start.
+     *
+     * <p>The stored code is cleared as well: leaving a live OTP behind would let a
+     * fresh attempt reuse the one that just ran out of tries.
+     */
+    private String startOver(UserDtls user, HttpSession session,
+            RedirectAttributes redirect, String message) {
+        twoFactorService.clearOtp(user);
+        signInService.abandonTwoFactor(session);
+        // The sign-in page renders "errorMsg"; a flash named "error" would be
+        // dropped silently and leave the person guessing why they are back here.
+        redirect.addFlashAttribute("errorMsg", message);
+        return "redirect:/signin";
     }
 }

@@ -2,7 +2,16 @@
  * Position Document Auto-fill
  * Auto-fills applicant info from user profile + cross-document data (doc 1).
  * Only fills EMPTY fields — never overwrites existing/saved data.
- * 
+ *
+ * Three sources, in increasing order of authority:
+ *   1. the faculty directory synced from the Fund Management platform
+ *      (/api/my/profile — the caller's own record only)
+ *   2. the local user profile        — window.AUTOFILL_USER
+ *   3. what was already typed in doc 1 — window.AUTOFILL_DOC1
+ *
+ * Because every write goes through fillInput/fillSelect, which skip non-empty
+ * fields, an applicant can always correct anything that was filled in for them.
+ *
  * Usage: Include this script after Thymeleaf inline vars:
  *   window.AUTOFILL_USER = { title, name, academicPosition, email, mobileNumber };
  *   window.AUTOFILL_DOC1 = { ...doc1 JSON data };
@@ -13,7 +22,48 @@
     document.addEventListener('DOMContentLoaded', function() {
         // Wait a tick so existingData restore runs first
         setTimeout(runAutofill, 50);
+        // The directory lookup is a network call, so it lands after the local
+        // sources. That ordering is intentional: anything already present wins.
+        setTimeout(fillFromDirectory, 60);
     });
+
+    /**
+     * Pulls this professor's own record from the synced faculty directory and
+     * fills the personal details the request forms ask for.
+     *
+     * A missing or unlinked record is not an error — the form simply stays as
+     * the local profile left it.
+     */
+    function fillFromDirectory() {
+        fetch('/api/my/profile', {
+            headers: { 'Accept': 'application/json' },
+            credentials: 'same-origin'
+        })
+            .then(function(r) { return r.ok ? r.json() : null; })
+            .then(function(p) {
+                if (!p || !p.linked) return;
+
+                if (p.prefix) fillSelect('title', p.prefix);
+                if (p.displayName) fillInput('applicant_name', fullName(p));
+                if (p.positionTitle) fillInput('current_position', p.positionTitle);
+                if (p.email) fillInput('email', p.email);
+                if (p.tel) fillInput('phone_mobile', p.tel);
+                if (p.firstName) fillInput('applicant_firstname', p.firstName);
+                if (p.lastName) fillInput('applicant_lastname', p.lastName);
+                if (p.prefix && p.firstName) {
+                    fillInput('title_name', p.prefix + ' ' + fullName(p));
+                }
+                if (p.positionEn) fillInput('current_position_en', p.positionEn);
+                if (p.nameEn) fillInput('applicant_name_en', p.nameEn);
+            })
+            .catch(function(e) {
+                console.debug('Directory autofill unavailable:', e);
+            });
+    }
+
+    function fullName(p) {
+        return [p.firstName, p.lastName].filter(Boolean).join(' ');
+    }
 
     function runAutofill() {
         var user = window.AUTOFILL_USER || {};

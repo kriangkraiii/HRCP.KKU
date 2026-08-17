@@ -33,6 +33,14 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addResourceHandler("/admin/css/**").addResourceLocations("classpath:/static/admin/css/")
 				.setCachePeriod(0);
 
+		// Third-party assets (Bootstrap, Font Awesome, Sarabun) served from our
+		// own origin instead of a CDN: the app runs on an internal network where
+		// outbound access is not guaranteed, and self-hosting removes the
+		// subresource-integrity and third-party-script exposure entirely.
+		registry.addResourceHandler("/vendor/**")
+				.addResourceLocations("classpath:/static/vendor/")
+				.setCachePeriod(86400);
+
 		// General static resources
 		registry.addResourceHandler("/css/**").addResourceLocations("classpath:/static/css/");
 		registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/");

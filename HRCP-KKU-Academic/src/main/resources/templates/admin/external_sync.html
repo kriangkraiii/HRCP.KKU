@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ดึงข้อมูลจากระบบภายนอก</title>
+</head>
+
+<body>
+<section>
+    <div class="container-fluid mt-5 p-4">
+
+        <div class="card card-sh mb-4">
+            <div class="card-header">
+                <h4 class="mb-1">ดึงข้อมูลจากระบบ Fund Management</h4>
+                <small class="text-muted" th:text="${apiBaseUrl}">-</small>
+
+                <th:block th:if="${succMsg}">
+                    <p class="text-success fw-bold mt-3 mb-0">[[${succMsg}]]</p>
+                </th:block>
+                <div th:if="${warnMsg}" class="alert alert-warning mt-3 mb-0">
+                    <i class="fas fa-clock"></i> [[${warnMsg}]]
+                </div>
+                <th:block th:if="${errorMsg}">
+                    <p class="text-danger fw-bold mt-3 mb-0">[[${errorMsg}]]</p>
+                </th:block>
+                <div th:unless="${apiEnabled}" class="alert alert-danger mt-3 mb-0">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    การเชื่อมต่อถูกปิดอยู่ หรือยังไม่ได้ตั้งค่า API key — ปุ่มด้านล่างจะยังไม่ทำงาน
+                </div>
+            </div>
+
+            <div class="card-body">
+                <!-- Current contents -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center h-100">
+                            <div class="fs-3 fw-bold" th:text="${facultyCount}">0</div>
+                            <div class="text-muted small">อาจารย์ในระบบ</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center h-100">
+                            <div class="fs-3 fw-bold" th:text="${publicationCount}">0</div>
+                            <div class="text-muted small">ผลงาน Scopus</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center h-100">
+                            <div class="fs-3 fw-bold" th:text="${facultyWithScopus}">0</div>
+                            <div class="text-muted small">อาจารย์ที่มี Scopus ID</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="border rounded p-3 text-center h-100"
+                             th:classappend="${pendingCount > 0} ? 'border-warning' : ''">
+                            <div class="fs-3 fw-bold"
+                                 th:classappend="${pendingCount > 0} ? 'text-warning' : ''"
+                                 th:text="${pendingCount}">0</div>
+                            <div class="text-muted small">รอการยืนยัน</div>
+                            <a th:if="${pendingCount > 0}" th:href="@{/admin/faculty-changes}"
+                               class="btn btn-sm btn-warning mt-2">ไปตรวจสอบ</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Manual triggers -->
+                <h5 class="mb-3">ดึงข้อมูลตอนนี้</h5>
+                <div class="row g-3 mb-4">
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100 d-flex flex-column">
+                            <h6 class="fw-bold">ข้อมูลอาจารย์</h6>
+                            <p class="text-muted small flex-grow-1 mb-3">
+                                อ่านข้อมูลอาจารย์จากต้นทางมาเทียบกับของเรา
+                                <strong>ถ้ามีอะไรเปลี่ยน จะยังไม่แก้ทันที</strong>
+                                แต่จะพักไว้ให้ยืนยันที่หน้าตรวจสอบก่อน — กดได้ทุกเมื่อ ปลอดภัย
+                            </p>
+                            <form th:action="@{/admin/external-sync/users}" method="post"
+                                  onsubmit="return lockButton(this);">
+                                <button type="submit" class="btn btn-primary w-100"
+                                        th:disabled="${!apiEnabled or usersCooldown > 0}"
+                                        th:attr="data-cooldown=${usersCooldown}">
+                                    <i class="fas fa-users"></i>
+                                    <span th:if="${usersCooldown > 0}"
+                                          th:text="'รออีก ' + ${usersCooldown} + ' วินาที'">รอ</span>
+                                    <span th:unless="${usersCooldown > 0}">ตรวจข้อมูลอาจารย์</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <div class="border rounded p-3 h-100 d-flex flex-column">
+                            <h6 class="fw-bold">ผลงาน Scopus</h6>
+                            <p class="text-muted small flex-grow-1 mb-3">
+                                ดึงผลงานของอาจารย์ทุกคนมาอัปเดต
+                                ผลงานที่หายจากต้นทางจะไม่ถูกลบ
+                                <strong>ใช้เวลาประมาณ 30–60 วินาที</strong>
+                                เพราะเว้นจังหวะไม่ให้เกินโควตาของต้นทาง
+                            </p>
+                            <form th:action="@{/admin/external-sync/scopus}" method="post"
+                                  onsubmit="return lockButton(this);">
+                                <button type="submit" class="btn btn-success w-100"
+                                        th:disabled="${!apiEnabled or scopusCooldown > 0}"
+                                        th:attr="data-cooldown=${scopusCooldown}">
+                                    <i class="fas fa-book"></i>
+                                    <span th:if="${scopusCooldown > 0}"
+                                          th:text="'รออีก ' + ${scopusCooldown} + ' วินาที'">รอ</span>
+                                    <span th:unless="${scopusCooldown > 0}">ดึงผลงาน Scopus</span>
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Last run -->
+                <h5 class="mb-3">ผลการทำงานล่าสุด</h5>
+                <div class="table-responsive mb-4">
+                    <table class="table table-sm align-middle">
+                        <thead class="table-light">
+                        <tr>
+                            <th>งาน</th>
+                            <th>สถานะ</th>
+                            <th>สำเร็จล่าสุด</th>
+                            <th>จำนวนแถว</th>
+                            <th>คำขอ</th>
+                            <th>ใช้เวลา</th>
+                            <th>หมายเหตุ</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="job : ${ {usersJob, scopusJob} }" th:if="${job != null}">
+                            <td th:text="${job.syncType == 'users'} ? 'ข้อมูลอาจารย์' : 'ผลงาน Scopus'">-</td>
+                            <td>
+                                <span class="badge bg-success" th:if="${job.lastStatus == 'OK'}">สำเร็จ</span>
+                                <span class="badge bg-danger" th:if="${job.lastStatus == 'FAILED'}">ล้มเหลว</span>
+                                <span class="badge bg-info" th:if="${job.lastStatus == 'RUNNING'}">กำลังทำงาน</span>
+                            </td>
+                            <td th:text="${job.lastSuccessAt != null
+                                        ? #temporals.format(job.lastSuccessAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                            <td th:text="${job.rowsProcessed}">-</td>
+                            <td th:text="${job.requestsMade}">-</td>
+                            <td th:text="${job.durationMs != null ? job.durationMs + ' ms' : '-'}">-</td>
+                            <td class="small text-muted" th:text="${job.message}">-</td>
+                        </tr>
+                        <tr th:if="${usersJob == null and scopusJob == null}">
+                            <td colspan="7" class="text-center text-muted">ยังไม่เคยมีการดึงข้อมูล</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Schedule -->
+                <h5 class="mb-3">ตารางเวลาอัตโนมัติ <small class="text-muted fs-6">(เวลาไทย)</small></h5>
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <tbody>
+                        <tr th:each="entry : ${schedule}">
+                            <td style="width:30%" th:text="${entry.key}">งาน</td>
+                            <td class="text-muted small font-monospace" th:text="${entry.value}">cron</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="alert alert-info mt-3 mb-0 small">
+                    <i class="fas fa-info-circle"></i>
+                    ระบบจะดึงข้อมูลให้อัตโนมัติตามเวลาข้างต้นทุกวัน
+                    และจะดึงให้ทันทีตอนเปิดระบบครั้งแรกถ้ายังไม่มีข้อมูลเลย
+                    ปุ่มด้านบนมีไว้สำหรับกรณีที่ต้องการข้อมูลล่าสุดทันทีโดยไม่รอรอบถัดไป
+                    <br>
+                    <i class="fas fa-shield-alt"></i>
+                    หลังกดแล้วจะกดซ้ำไม่ได้ทันที เพื่อไม่ให้จำนวนคำขอเกินโควตาของระบบต้นทาง
+                    ซึ่งจะทำให้การดึงอัตโนมัติตอนกลางคืนพลอยใช้ไม่ได้ไปด้วย
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        /**
+         * Stops a double click from sending the request twice. The server
+         * enforces the real cooldown; this only removes the temptation and
+         * makes the wait visible.
+         */
+        function lockButton(form) {
+            var btn = form.querySelector('button');
+            if (btn.disabled) return false;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังดึงข้อมูล…';
+            return true;
+        }
+
+        // Re-enable each button by itself once its cooldown has elapsed, so the
+        // admin does not have to guess when to reload the page.
+        document.querySelectorAll('button[data-cooldown]').forEach(function (btn) {
+            var left = parseInt(btn.getAttribute('data-cooldown') || '0', 10);
+            if (!left) return;
+
+            var label = btn.querySelector('span');
+            var timer = setInterval(function () {
+                left--;
+                if (left <= 0) {
+                    clearInterval(timer);
+                    location.reload();
+                    return;
+                }
+                if (label) label.textContent = 'รออีก ' + left + ' วินาที';
+            }, 1000);
+        });
+    </script>
+</section>
+</body>
+</html>

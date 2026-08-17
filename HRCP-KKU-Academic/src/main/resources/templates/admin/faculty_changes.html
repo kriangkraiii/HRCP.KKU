@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ตรวจสอบการเปลี่ยนแปลงข้อมูลอาจารย์</title>
+</head>
+
+<body>
+<section>
+    <div class="container-fluid mt-5 p-4">
+
+        <div class="card card-sh mb-4">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div>
+                        <h4 class="mb-1">ตรวจสอบการเปลี่ยนแปลงข้อมูลอาจารย์</h4>
+                        <small class="text-muted">
+                            ข้อมูลจากระบบ Fund Management ที่เปลี่ยนไป จะรอการยืนยันที่นี่ก่อน
+                            จึงจะถูกนำไปใช้ในระบบ
+                        </small>
+                    </div>
+                    <div class="text-end">
+                        <span class="badge bg-warning text-dark fs-6">
+                            รอตรวจสอบ [[${pendingCount}]] รายการ
+                        </span>
+                    </div>
+                </div>
+
+                <th:block th:if="${succMsg}">
+                    <p class="text-success fw-bold mt-3 mb-0">[[${succMsg}]]</p>
+                </th:block>
+                <th:block th:if="${errorMsg}">
+                    <p class="text-danger fw-bold mt-3 mb-0">[[${errorMsg}]]</p>
+                </th:block>
+            </div>
+
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+                    <form th:action="@{/admin/faculty-changes/sync}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-outline-primary btn-sm">
+                            <i class="fas fa-sync"></i> ตรวจหาการเปลี่ยนแปลงตอนนี้
+                        </button>
+                    </form>
+
+                    <form th:action="@{/admin/faculty-changes/approve-all}" method="post"
+                          th:if="${pendingCount > 0}"
+                          onsubmit="return confirm('ยืนยันอนุมัติการเปลี่ยนแปลงทั้งหมด ' + [[${pendingCount}]] + ' รายการ?');">
+                        <button type="submit" class="btn btn-success btn-sm">
+                            <i class="fas fa-check-double"></i> อนุมัติทั้งหมด
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Nothing waiting -->
+                <div th:if="${#lists.isEmpty(changes)}" class="alert alert-success mb-0">
+                    <i class="fas fa-check-circle"></i>
+                    ไม่มีรายการรอตรวจสอบ — ข้อมูลอาจารย์ในระบบตรงกับต้นทางแล้ว
+                </div>
+
+                <!-- One card per pending change -->
+                <div th:each="change : ${changes}" class="card mb-3 border-warning">
+                    <div class="card-header bg-light d-flex justify-content-between align-items-center flex-wrap gap-2">
+                        <div>
+                            <strong th:text="${change.displayName}">ชื่ออาจารย์</strong>
+                            <span class="text-muted small ms-2">
+                                (รหัสต้นทาง [[${change.fsUserId}]])
+                            </span>
+                        </div>
+                        <div class="text-muted small">
+                            เปลี่ยน [[${change.fieldCount}]] ช่อง ·
+                            พบเมื่อ
+                            <span th:text="${#temporals.format(change.detectedAt, 'dd/MM/yyyy HH:mm')}">-</span>
+                        </div>
+                    </div>
+
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th style="width:25%">ข้อมูล</th>
+                                    <th style="width:35%">ค่าเดิม (ในระบบเรา)</th>
+                                    <th style="width:35%">ค่าใหม่ (จากต้นทาง)</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="entry : ${diffs.get(change.id)}">
+                                    <td class="fw-semibold" th:text="${entry.key}">ช่อง</td>
+                                    <td>
+                                        <span class="text-danger"
+                                              th:text="${entry.value.get('old')} ?: '(ว่าง)'">เดิม</span>
+                                    </td>
+                                    <td>
+                                        <span class="text-success fw-semibold"
+                                              th:text="${entry.value.get('new')} ?: '(ว่าง)'">ใหม่</span>
+                                    </td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-white">
+                        <div class="row g-2 align-items-center">
+                            <div class="col-md-6">
+                                <form th:action="@{/admin/faculty-changes/{id}/approve(id=${change.id})}"
+                                      method="post" class="d-flex gap-2">
+                                    <input type="text" name="note" class="form-control form-control-sm"
+                                           placeholder="หมายเหตุ (ไม่บังคับ)">
+                                    <button type="submit" class="btn btn-success btn-sm text-nowrap">
+                                        <i class="fas fa-check"></i> อนุมัติ
+                                    </button>
+                                </form>
+                            </div>
+                            <div class="col-md-6">
+                                <form th:action="@{/admin/faculty-changes/{id}/reject(id=${change.id})}"
+                                      method="post" class="d-flex gap-2">
+                                    <input type="text" name="note" class="form-control form-control-sm"
+                                           placeholder="เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)">
+                                    <button type="submit" class="btn btn-outline-danger btn-sm text-nowrap">
+                                        <i class="fas fa-times"></i> ไม่อนุมัติ
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                        <small class="text-muted d-block mt-2">
+                            ไม่อนุมัติ = เก็บค่าเดิมไว้ ข้อมูลในระบบจะไม่ถูกแก้
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Decision history -->
+        <div class="card card-sh" th:if="${!#lists.isEmpty(recent)}">
+            <div class="card-header">
+                <h5 class="mb-0">ประวัติการตรวจสอบล่าสุด</h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead class="table-light">
+                        <tr>
+                            <th>อาจารย์</th>
+                            <th>ผลการตรวจ</th>
+                            <th>ผู้ตรวจ</th>
+                            <th>เมื่อ</th>
+                            <th>หมายเหตุ</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="r : ${recent}">
+                            <td th:text="${r.displayName}">ชื่อ</td>
+                            <td>
+                                <span class="badge bg-success"
+                                      th:if="${r.status == 'APPROVED'}">อนุมัติ</span>
+                                <span class="badge bg-secondary"
+                                      th:if="${r.status == 'REJECTED'}">ไม่อนุมัติ</span>
+                            </td>
+                            <td th:text="${r.reviewedBy}">-</td>
+                            <td th:text="${r.reviewedAt != null
+                                        ? #temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                            <td th:text="${r.reviewNote}">-</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</section>
+</body>
+</html>

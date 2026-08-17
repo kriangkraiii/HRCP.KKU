@@ -159,15 +159,13 @@
     this._show("saving");
 
     var self = this;
-    // Read CSRF token: try form hidden input → meta tag → XSRF-TOKEN cookie
+    // Read CSRF token from the form input or the <meta name="_csrf"> tag.
+    // The cookie is HttpOnly on purpose, so script cannot (and must not) read it.
     var csrfEl = this.form.querySelector('input[name="_csrf"]') ||
                  document.querySelector('input[name="_csrf"]') ||
                  document.querySelector('meta[name="_csrf"]');
     var token = csrfEl ? (csrfEl.value || csrfEl.content || "") : "";
     if (!token) {
-      // Read from XSRF-TOKEN cookie (set by CookieCsrfTokenRepository)
-      var match = document.cookie.match(/XSRF-TOKEN=([^;]+)/);
-      if (match) token = decodeURIComponent(match[1]);
     }
 
     fetch(this.endpoint, {

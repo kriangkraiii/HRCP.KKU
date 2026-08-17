@@ -394,6 +394,14 @@
                         <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('assocResearchRows','assoc_research_working','assoc_used_research')">
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
                         </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" onclick="ScopusPicker.open({
+                                container: 'assocResearchRows',
+                                titlePrefix: 'assoc_research_working',
+                                yearPrefix: 'assoc_used_research_year',
+                                addRow: function() { addWorkRow('assocResearchRows','assoc_research_working','assoc_used_research'); }
+                            })">
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                        </button>
 
                         <h6 class="fw-bold">๔.๒.๒ ผลงานทางวิชาการในลักษณะอื่น</h6>
                         <div id="assocOtherRows">
@@ -480,6 +488,14 @@
                             <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addAssocM3Row()">
                                 <i class="fas fa-plus"></i> เพิ่ม
                             </button>
+                            <button type="button" class="btn btn-sm btn-success mb-3" onclick="ScopusPicker.open({
+                                    container: 'assocM3ResearchRows',
+                                    titlePrefix: 'assoc_method3_research',
+                                    quartilePrefix: 'assoc_m3_quartile',
+                                    addRow: addAssocM3Row
+                                })">
+                                <i class="fas fa-book"></i> เลือกจาก Scopus
+                            </button>
                         </div>
 
                         <div class="row g-3">
@@ -494,6 +510,12 @@
                             <div class="col-md-3">
                                 <label class="form-label">h-index (Scopus)</label>
                                 <input type="text" name="assoc_h_index" class="form-control">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-sm btn-success"
+                                        onclick="ScopusPicker.fillMetrics('assoc')">
+                                    <i class="fas fa-calculator"></i> เติมตัวเลขอัตโนมัติ
+                                </button>
                             </div>
                         </div>
 
@@ -540,6 +562,14 @@
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary mb-3" onclick="addWorkRow('profResearchRows','prof_research_working','prof_used_research')">
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" onclick="ScopusPicker.open({
+                                container: 'profResearchRows',
+                                titlePrefix: 'prof_research_working',
+                                yearPrefix: 'prof_used_research_year',
+                                addRow: function() { addWorkRow('profResearchRows','prof_research_working','prof_used_research'); }
+                            })">
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
                         </button>
 
                         <h6 class="fw-bold">๔.๓.๒ ผลงานทางวิชาการในลักษณะอื่น</h6>
@@ -641,6 +671,12 @@
                             <div class="col-md-3">
                                 <label class="form-label">h-index (Scopus)</label>
                                 <input type="text" name="prof_h_index" class="form-control">
+                            </div>
+                            <div class="col-md-3 d-flex align-items-end">
+                                <button type="button" class="btn btn-sm btn-success"
+                                        onclick="ScopusPicker.fillMetrics('prof')">
+                                    <i class="fas fa-calculator"></i> เติมตัวเลขอัตโนมัติ
+                                </button>
                             </div>
                         </div>
 
@@ -944,6 +980,7 @@
             };
         </script>
         <script src="/js/position_autofill.js"></script>
+        <script src="/js/scopus_picker.js"></script>
         <script src="/js/position_form_validate.js"></script>
 
         <link rel="stylesheet" href="/css/doc_preview.css">
