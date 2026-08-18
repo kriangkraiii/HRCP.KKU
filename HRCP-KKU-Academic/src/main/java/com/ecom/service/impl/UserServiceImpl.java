@@ -225,6 +225,12 @@ public class UserServiceImpl implements UserService {
 		dbUser.setLastName(user.getLastName());
 		dbUser.setMobileNumber(user.getMobileNumber());
 		dbUser.setAcademicPosition(user.getAcademicPosition());
+		// English name and position are seeded from the directory by splitting its
+		// combined name_en, which guesses wrong on multi-word family names — so
+		// they stay editable here rather than being sync-only.
+		dbUser.setFirstNameEn(user.getFirstNameEn());
+		dbUser.setLastNameEn(user.getLastNameEn());
+		dbUser.setAcademicPositionEn(user.getAcademicPositionEn());
 
 		// Only a file we validated and wrote ourselves may name the profile image.
 		String storedImage = profileImageStorage.store(img);
@@ -366,6 +372,11 @@ public class UserServiceImpl implements UserService {
 			dbUser.setEmail(user.getEmail());
 			dbUser.setMobileNumber(user.getMobileNumber());
 			dbUser.setAcademicPosition(user.getAcademicPosition());
+			// Seeded by splitting the directory's combined name_en, which guesses
+			// wrong on multi-word family names — kept editable here.
+			dbUser.setFirstNameEn(user.getFirstNameEn());
+			dbUser.setLastNameEn(user.getLastNameEn());
+			dbUser.setAcademicPositionEn(user.getAcademicPositionEn());
 
 			// Handle profile image if provided
 			if (img != null && !img.isEmpty()) {

@@ -7,6 +7,7 @@ import org.springframework.stereotype.Service;
 
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.repository.FsFacultyRepository;
+import com.ecom.external.service.EnglishNameSplitter;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -136,8 +137,25 @@ public class UserDirectorySync {
             user.setAcademicPosition(faculty.getPositionTitle().trim());
             changed = true;
         }
+        if (isBlank(user.getAcademicPositionEn()) && !isBlank(faculty.getPositionEn())) {
+            user.setAcademicPositionEn(faculty.getPositionEn().trim());
+            changed = true;
+        }
         if (isBlank(user.getMobileNumber()) && !isBlank(faculty.getTel())) {
             user.setMobileNumber(faculty.getTel().trim());
+            changed = true;
+        }
+
+        // The directory has no separate English given/family name, only the
+        // combined name_en, so the split is derived. Still fill-blank only: a
+        // correction someone made by hand outranks a heuristic.
+        EnglishNameSplitter.Parts english = EnglishNameSplitter.split(faculty.getNameEn());
+        if (isBlank(user.getFirstNameEn()) && !isBlank(english.firstName())) {
+            user.setFirstNameEn(english.firstName());
+            changed = true;
+        }
+        if (isBlank(user.getLastNameEn()) && !isBlank(english.lastName())) {
+            user.setLastNameEn(english.lastName());
             changed = true;
         }
 
@@ -157,8 +175,21 @@ public class UserDirectorySync {
         if (!isBlank(faculty.getPositionTitle())) {
             user.setAcademicPosition(faculty.getPositionTitle().trim());
         }
+        if (!isBlank(faculty.getPositionEn())) {
+            user.setAcademicPositionEn(faculty.getPositionEn().trim());
+        }
         if (!isBlank(faculty.getTel())) {
             user.setMobileNumber(faculty.getTel().trim());
+        }
+
+        // Derived from the combined name_en — the directory carries no split
+        // English name of its own.
+        EnglishNameSplitter.Parts english = EnglishNameSplitter.split(faculty.getNameEn());
+        if (!isBlank(english.firstName())) {
+            user.setFirstNameEn(english.firstName());
+        }
+        if (!isBlank(english.lastName())) {
+            user.setLastNameEn(english.lastName());
         }
     }
 

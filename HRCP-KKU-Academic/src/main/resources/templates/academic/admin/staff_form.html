@@ -82,6 +82,26 @@
                                     required placeholder="เช่น ใจดี">
                             </div>
                         </div>
+                        <!-- ชื่ออังกฤษมาจากการแยก name_en ของระบบต้นทางโดยอัตโนมัติ ซึ่งเดาผิดได้
+                             กับนามสกุลหลายคำ จึงเปิดให้แก้มือ แต่ถ้าแถวนี้มาจากต้นทาง การ sync
+                             รอบถัดไปจะเขียนทับเหมือนชื่อไทยและตำแหน่ง -->
+                        <div class="row mb-3">
+                            <div class="col-6">
+                                <label class="form-label">ชื่อ (อังกฤษ)</label>
+                                <input type="text" name="firstNameEn" class="form-control"
+                                    th:value="${staff.firstNameEn}" placeholder="เช่น Somchai">
+                            </div>
+                            <div class="col-6">
+                                <label class="form-label">นามสกุล (อังกฤษ)</label>
+                                <input type="text" name="lastNameEn" class="form-control"
+                                    th:value="${staff.lastNameEn}" placeholder="เช่น Jaidee">
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">ตำแหน่งวิชาการ (อังกฤษ)</label>
+                            <input type="text" name="academicTitleEn" class="form-control"
+                                th:value="${staff.academicTitleEn}" placeholder="เช่น Assistant Professor">
+                        </div>
                         <div class="mb-3">
                             <label class="form-label">ประเภทบุคลากร</label>
                             <select name="staffType" class="form-select" required>

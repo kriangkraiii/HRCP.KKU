@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.external.model.FsFaculty;
+import com.ecom.external.service.EnglishNameSplitter;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -106,8 +107,21 @@ public class SsoUserProvisioner {
             if (faculty.getPositionTitle() != null) {
                 user.setAcademicPosition(faculty.getPositionTitle());
             }
+            if (faculty.getPositionEn() != null) {
+                user.setAcademicPositionEn(faculty.getPositionEn());
+            }
             if (faculty.getTel() != null && user.getMobileNumber() == null) {
                 user.setMobileNumber(faculty.getTel());
+            }
+
+            // The directory only carries a combined name_en, so the split is
+            // derived the same way UserDirectorySync does it.
+            EnglishNameSplitter.Parts english = EnglishNameSplitter.split(faculty.getNameEn());
+            if (english.firstName() != null) {
+                user.setFirstNameEn(english.firstName());
+            }
+            if (english.lastName() != null) {
+                user.setLastNameEn(english.lastName());
             }
             return;
         }

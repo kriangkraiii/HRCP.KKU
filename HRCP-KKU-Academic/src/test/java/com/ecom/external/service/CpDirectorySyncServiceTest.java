@@ -57,7 +57,9 @@ class CpDirectorySyncServiceTest {
 
     private CpPerson person() {
         return new CpPerson(EMAIL, "สมชาย", "ใจดี",
-                "ผู้ช่วยศาสตราจารย์ดร.", "ผศ.ดร.", "หลักสูตรวิทยาการคอมพิวเตอร์",
+                "ผู้ช่วยศาสตราจารย์ดร.", "ผศ.ดร.",
+                "Somchai", "Jaidee", "Assistant ProfessorPh.D.", "Asst. Prof.Ph.D.",
+                "หลักสูตรวิทยาการคอมพิวเตอร์",
                 "/storage/images/somchai.png", "somchai.jaidee", true);
     }
 
@@ -94,6 +96,22 @@ class CpDirectorySyncServiceTest {
 
         assertThat(u.getProfileImage()).isEqualTo("my-own-photo.jpg");
         // Nor is anyone else's server asked for a file we would only throw away.
+        verify(client, never()).fetchImage(anyString());
+    }
+
+    @Test
+    @DisplayName("ถ้ามีไฟล์รูปภาพอยู่บนดิสก์แล้ว ต้องนำมาใช้งานทันทีโดยไม่ยิงเน็ตไปโหลดซ้ำ")
+    void existingPhotoOnDiskIsReusedWithoutNetworkCall() {
+        UserDtls u = user();
+        u.setProfileImage("default.png");
+        when(userRepo.findByEmail(EMAIL)).thenReturn(u);
+        when(client.fetchAll()).thenReturn(List.of(person()));
+        when(imageStorage.exists("cp-somchai.jaidee.png")).thenReturn(true);
+
+        CpDirectorySyncService.Result result = sync.sync();
+
+        assertThat(result.photos()).isEqualTo(1);
+        assertThat(u.getProfileImage()).isEqualTo("cp-somchai.jaidee.png");
         verify(client, never()).fetchImage(anyString());
     }
 

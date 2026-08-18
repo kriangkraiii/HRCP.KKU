@@ -64,6 +64,9 @@ public class StaffMemberController {
     public String addStaff(@RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
             @RequestParam("academicTitle") String academicTitle,
+            @RequestParam(value = "firstNameEn", required = false) String firstNameEn,
+            @RequestParam(value = "lastNameEn", required = false) String lastNameEn,
+            @RequestParam(value = "academicTitleEn", required = false) String academicTitleEn,
             @RequestParam("staffType") String staffType,
             @RequestParam(value = "department", required = false) String department,
             @RequestParam("staffRole") String staffRole,
@@ -82,6 +85,9 @@ public class StaffMemberController {
                 staff.setFirstName(firstName);
                 staff.setLastName(lastName);
                 staff.setAcademicTitle(academicTitle);
+                staff.setFirstNameEn(firstNameEn);
+                staff.setLastNameEn(lastNameEn);
+                staff.setAcademicTitleEn(academicTitleEn);
                 staff.setStaffType(staffType);
                 staff.setDepartment(department);
                 staff.setStaffRole(staffRole);
@@ -99,6 +105,9 @@ public class StaffMemberController {
         staff.setFirstName(firstName);
         staff.setLastName(lastName);
         staff.setAcademicTitle(academicTitle);
+        staff.setFirstNameEn(firstNameEn);
+        staff.setLastNameEn(lastNameEn);
+        staff.setAcademicTitleEn(academicTitleEn);
         staff.setStaffType(staffType);
         staff.setDepartment(department);
         staff.setStaffRole(staffRole);
@@ -133,6 +142,9 @@ public class StaffMemberController {
             @RequestParam("firstName") String firstName,
             @RequestParam("lastName") String lastName,
             @RequestParam("academicTitle") String academicTitle,
+            @RequestParam(value = "firstNameEn", required = false) String firstNameEn,
+            @RequestParam(value = "lastNameEn", required = false) String lastNameEn,
+            @RequestParam(value = "academicTitleEn", required = false) String academicTitleEn,
             @RequestParam("staffType") String staffType,
             @RequestParam(value = "department", required = false) String department,
             @RequestParam("staffRole") String staffRole,
@@ -142,6 +154,9 @@ public class StaffMemberController {
         staff.setFirstName(firstName);
         staff.setLastName(lastName);
         staff.setAcademicTitle(academicTitle);
+        staff.setFirstNameEn(firstNameEn);
+        staff.setLastNameEn(lastNameEn);
+        staff.setAcademicTitleEn(academicTitleEn);
         staff.setStaffType(staffType);
         staff.setDepartment(department);
         staff.setStaffRole(staffRole);

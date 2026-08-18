@@ -94,6 +94,25 @@
                                                th:value="${user.lastName}" placeholder="นามสกุล">
                                     </div>
                                 </div>
+                                <!-- ชื่ออังกฤษถูกเติมอัตโนมัติจากระบบต้นทาง โดยแยกจากชื่อเต็มก้อนเดียว
+                                     ซึ่งเดาผิดได้กับนามสกุลหลายคำ จึงให้แก้เองได้ -->
+                                <div class="row g-3 mt-1">
+                                    <div class="col-md-4">
+                                        <label class="profile-label">ชื่อ (อังกฤษ)</label>
+                                        <input type="text" name="firstNameEn" class="form-control profile-input"
+                                               th:value="${user.firstNameEn}" placeholder="เช่น Somchai">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="profile-label">นามสกุล (อังกฤษ)</label>
+                                        <input type="text" name="lastNameEn" class="form-control profile-input"
+                                               th:value="${user.lastNameEn}" placeholder="เช่น Jaidee">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="profile-label">ตำแหน่งวิชาการ (อังกฤษ)</label>
+                                        <input type="text" name="academicPositionEn" class="form-control profile-input"
+                                               th:value="${user.academicPositionEn}" placeholder="เช่น Assistant Professor">
+                                    </div>
+                                </div>
                             </div>
                         </div>
 

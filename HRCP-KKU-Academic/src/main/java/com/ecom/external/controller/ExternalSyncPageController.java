@@ -156,8 +156,14 @@ public class ExternalSyncPageController {
      * Reads the college website and fills in what it knows.
      *
      * <p>No cooldown of its own: it talks to a different server than the HR feed,
-     * so it spends none of that request budget, and it only ever fills blanks —
-     * pressing it twice changes nothing the second time.
+     * so it spends none of that request budget.
+     *
+     * <p>Thai names, the rank and the photo only ever fill blanks, so pressing
+     * this twice changes nothing. The English name and rank are the exception —
+     * the website is the only source that separates an English given and family
+     * name, so those are written over whatever is there, including the value the
+     * HR feed's name-splitting guess produced. A hand edit to the English fields
+     * therefore does not survive the next press.
      */
     @PostMapping("/college-web")
     public String syncCollegeWeb(RedirectAttributes redirect) {

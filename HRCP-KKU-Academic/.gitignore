@@ -53,3 +53,10 @@ build/
 .project
 bin/
 *.prefs
+
+# Logs & Windows-path fallbacks
+logs/
+*.log
+*.log.gz
+C:/
+/C:/

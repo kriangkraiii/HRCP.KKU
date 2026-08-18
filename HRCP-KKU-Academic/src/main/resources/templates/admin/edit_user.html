@@ -76,6 +76,21 @@
 									</div>
 								</div>
 
+								<!-- ชื่ออังกฤษถูกเติมอัตโนมัติจากระบบต้นทาง โดยแยกจากชื่อเต็มก้อนเดียว
+									 ซึ่งเดาผิดได้กับนามสกุลหลายคำ จึงให้แก้เองได้ -->
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">ชื่อ (อังกฤษ)</label>
+										<input type="text" name="firstNameEn" class="form-control"
+											placeholder="เช่น Somchai" th:value="${editUser.firstNameEn}">
+									</div>
+									<div class="col-md-6">
+										<label class="form-label fw-bold">นามสกุล (อังกฤษ)</label>
+										<input type="text" name="lastNameEn" class="form-control"
+											placeholder="เช่น Jaidee" th:value="${editUser.lastNameEn}">
+									</div>
+								</div>
+
 								<div class="row mb-3">
 									<div class="col-md-6">
 										<label class="form-label fw-bold">ตำแหน่งทางวิชาการ</label>
@@ -91,6 +106,15 @@
 										<label class="form-label fw-bold">เบอร์โทรศัพท์</label>
 										<input type="tel" name="mobileNumber" class="form-control"
 											placeholder="0XX-XXX-XXXX" th:value="${editUser.mobileNumber}">
+									</div>
+								</div>
+
+								<div class="row mb-3">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">ตำแหน่งทางวิชาการ (อังกฤษ)</label>
+										<input type="text" name="academicPositionEn" class="form-control"
+											placeholder="เช่น Assistant Professor"
+											th:value="${editUser.academicPositionEn}">
 									</div>
 								</div>
 

@@ -24,12 +24,19 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * {@code /api/v1/user/list}, so that endpoint is what is read here. It needs no
  * credentials — the same data any visitor sees.
  *
- * <p>Only what this application has a use for is kept: the address, the Thai
- * name, and the photo. Everything else the endpoint returns (biographies,
- * publication lists, teaching history) is left where it is.
+ * <p>Only what this application has a use for is kept: the address, the Thai and
+ * English name and rank, and the photo. Everything else the endpoint returns
+ * (biographies, publication lists, teaching history) is left where it is.
  */
 @Service
 public class CpWebClient {
+
+    /**
+     * {@code userLocalized} carries one entry per language, tagged by
+     * {@code languageId}. These are the two the directory publishes.
+     */
+    private static final int LANGUAGE_ID_THAI = 1;
+    private static final int LANGUAGE_ID_ENGLISH = 2;
 
     private static final Logger log = LoggerFactory.getLogger(CpWebClient.class);
 
@@ -114,20 +121,56 @@ public class CpWebClient {
             return Optional.empty();
         }
 
-        JsonNode localized = item.path("userLocalized").path(0);
+        JsonNode localizedList = item.path("userLocalized");
+        JsonNode thai = localeFor(localizedList, LANGUAGE_ID_THAI);
+        JsonNode english = localeFor(localizedList, LANGUAGE_ID_ENGLISH);
 
         return Optional.of(new CpPerson(
                 email.trim().toLowerCase(),
-                text(localized, "firstname"),
-                text(localized, "lastname"),
-                academicRank(localized, "name"),
-                academicRank(localized, "shortName"),
+                text(thai, "firstname"),
+                text(thai, "lastname"),
+                academicRank(thai, "name"),
+                academicRank(thai, "shortName"),
+                text(english, "firstname"),
+                text(english, "lastname"),
+                academicRank(english, "name"),
+                // The English entries disagree with themselves about what the
+                // abbreviation is called: some carry "shortPrefix", others
+                // "shortName". Try both rather than lose half of them.
+                academicRank(english, "shortName", "shortPrefix"),
                 // Named "academicPosition" upstream, but it holds the degree
                 // programme the person belongs to — a department, not a rank.
-                text(localized, "academicPosition"),
+                text(thai, "academicPosition"),
                 text(item.path("image"), "url"),
                 text(item, "slug"),
                 item.path("isActived").asBoolean(false)));
+    }
+
+    /**
+     * Picks one language out of {@code userLocalized}.
+     *
+     * <p>
+     * This used to read index 0 and nothing else, which silently discarded the
+     * English half of every record. The directory carries one entry per language,
+     * and the English one holds a properly separated English given and family
+     * name — something no other feed we have provides, since the FS directory
+     * only sends a single combined string.
+     *
+     * <p>
+     * Thai falls back to the first entry when no entry declares a language, so a
+     * record missing the marker still yields a name instead of nothing. English
+     * has no such fallback: guessing that an unlabelled entry is English would put
+     * Thai text into the English columns.
+     */
+    private JsonNode localeFor(JsonNode localizedList, int languageId) {
+        for (JsonNode entry : localizedList) {
+            if (entry.path("languageId").asInt(-1) == languageId) {
+                return entry;
+            }
+        }
+        return languageId == LANGUAGE_ID_THAI
+                ? localizedList.path(0)
+                : localizedList.path(-1); // missing node
     }
 
     /**
@@ -137,9 +180,12 @@ public class CpWebClient {
      * per component — {@code ผู้ช่วยศาสตราจารย์} and {@code ดร.} are separate — so
      * they are joined back into the single label people actually write.
      *
-     * @param field {@code name} for the full form, {@code shortName} for ผศ./รศ.
+     * @param fields the key to read, in order of preference. {@code name} gives
+     *               the full form and {@code shortName} the ผศ./รศ. form; the
+     *               English entries sometimes name the latter
+     *               {@code shortPrefix} instead, so more than one may be tried.
      */
-    private String academicRank(JsonNode localized, String field) {
+    private String academicRank(JsonNode localized, String... fields) {
         String raw = text(localized, "prefix");
         if (raw == null) {
             return null;
@@ -148,9 +194,12 @@ public class CpWebClient {
             JsonNode parts = mapper.readTree(raw);
             StringBuilder sb = new StringBuilder();
             for (JsonNode part : parts) {
-                String value = text(part, field);
-                if (value != null) {
-                    sb.append(value);
+                for (String field : fields) {
+                    String value = text(part, field);
+                    if (value != null) {
+                        sb.append(value);
+                        break;
+                    }
                 }
             }
             return sb.isEmpty() ? null : sb.toString();
@@ -195,6 +244,10 @@ public class CpWebClient {
             String lastName,
             String academicRank,
             String academicRankShort,
+            String firstNameEn,
+            String lastNameEn,
+            String academicRankEn,
+            String academicRankShortEn,
             String programme,
             String imagePath,
             String slug,

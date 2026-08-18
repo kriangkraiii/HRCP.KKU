@@ -25,11 +25,19 @@ import com.ecom.service.SystemAlertService;
  * Fills in what the college website knows and the HR feed does not — chiefly
  * photographs, which no other source carries at all.
  *
- * <p><b>The Fund Management feed stays the authority.</b> It is the official HR
- * record; the website is a public page that is updated when someone remembers to.
- * So this only ever fills blanks: an empty department, a missing rank, an account
- * still on the placeholder avatar. Nothing already filled in is overwritten, and
- * nothing here creates a person — only the HR feed does that.
+ * <p><b>The Fund Management feed stays the authority</b> for the Thai record. It
+ * is the official HR record; the website is a public page that is updated when
+ * someone remembers to. So for those fields this only fills blanks: an empty
+ * department, a missing rank, an account still on the placeholder avatar. Nothing
+ * already filled in is overwritten, and nothing here creates a person — only the
+ * HR feed does that.
+ *
+ * <p><b>English names and rank are the exception, and here the website is the
+ * authority.</b> It is the only source that publishes a genuinely separated
+ * English given and family name; the HR feed sends one combined string that
+ * {@link EnglishNameSplitter} can only guess at. Those fields are therefore
+ * written over what is already there, so that this run can correct the guess. The
+ * cost is that a hand edit to them lasts until the next sync.
  *
  * <p>Matching is by e-mail address. It is the one field both sides carry for
  * everyone, and unlike a name it does not go stale on marriage or promotion.
@@ -186,11 +194,20 @@ public class CpDirectorySyncService {
             return false;
         }
         String current = user.getProfileImage();
-        boolean hasValidPhotoOnDisk = current != null && !current.isBlank()
-                && !PLACEHOLDER_IMAGE.equalsIgnoreCase(current)
-                && imageStorage.exists(current);
-        if (hasValidPhotoOnDisk) {
+        boolean hasCustomPhoto = current != null && !current.isBlank()
+                && !PLACEHOLDER_IMAGE.equalsIgnoreCase(current);
+        if (hasCustomPhoto) {
             return false;
+        }
+
+        String targetFileName = fileNameFor(person);
+
+        // Smart Disk Cache: If the photo already exists on disk from a previous sync or upload,
+        // reuse it immediately without issuing an unnecessary network HTTP request.
+        if (imageStorage.exists(targetFileName)) {
+            log.debug("Reusing existing cached photo on disk for {}: {}", user.getEmail(), targetFileName);
+            user.setProfileImage(targetFileName);
+            return true;
         }
 
         String url = props.imageUrl(person.imagePath());
@@ -199,7 +216,7 @@ public class CpDirectorySyncService {
             return false;
         }
 
-        String stored = imageStorage.storeFromBytes(bytes.get(), fileNameFor(person));
+        String stored = imageStorage.storeFromBytes(bytes.get(), targetFileName);
         if (stored == null) {
             return false;
         }
@@ -230,20 +247,69 @@ public class CpDirectorySyncService {
             changed = true;
         }
 
+        // The English fields overwrite rather than fill gaps, unlike everything
+        // above. They are the only authoritative English name we have: the
+        // college directory publishes a genuinely separated given and family
+        // name, while the FS feed only sends one combined string that
+        // EnglishNameSplitter has to guess at. If this filled gaps only, that
+        // guess would be permanent and this sync would never correct it.
+        // The cost is that a hand correction here is replaced on the next run.
+        if (!isBlank(person.firstNameEn()) && !person.firstNameEn().equals(user.getFirstNameEn())) {
+            user.setFirstNameEn(person.firstNameEn());
+            changed = true;
+        }
+        if (!isBlank(person.lastNameEn()) && !person.lastNameEn().equals(user.getLastNameEn())) {
+            user.setLastNameEn(person.lastNameEn());
+            changed = true;
+        }
+        if (!isBlank(person.academicRankEn())
+                && !person.academicRankEn().equals(user.getAcademicPositionEn())) {
+            user.setAcademicPositionEn(person.academicRankEn());
+            changed = true;
+        }
+
         return changed;
     }
 
     private boolean applyToStaffList(Long fsUserId, CpPerson person) {
-        if (fsUserId == null || isBlank(person.programme())) {
+        if (fsUserId == null) {
             return false;
         }
-        Optional<StaffMember> staff = staffRepo.findByFsUserId(fsUserId);
-        if (staff.isEmpty() || !isBlank(staff.get().getDepartment())) {
+        Optional<StaffMember> found = staffRepo.findByFsUserId(fsUserId);
+        if (found.isEmpty()) {
             return false;
         }
-        staff.get().setDepartment(person.programme());
-        staffRepo.save(staff.get());
-        return true;
+        StaffMember staff = found.get();
+        boolean changed = false;
+
+        // The programme still only fills a blank — an administrator may have put
+        // a more accurate department here than the website's programme label.
+        if (!isBlank(person.programme()) && isBlank(staff.getDepartment())) {
+            staff.setDepartment(person.programme());
+            changed = true;
+        }
+
+        // English name and rank overwrite, for the same reason as on the account:
+        // this is the authoritative source and it must be able to correct the
+        // value the FS name-splitting heuristic guessed.
+        if (!isBlank(person.firstNameEn()) && !person.firstNameEn().equals(staff.getFirstNameEn())) {
+            staff.setFirstNameEn(person.firstNameEn());
+            changed = true;
+        }
+        if (!isBlank(person.lastNameEn()) && !person.lastNameEn().equals(staff.getLastNameEn())) {
+            staff.setLastNameEn(person.lastNameEn());
+            changed = true;
+        }
+        if (!isBlank(person.academicRankEn())
+                && !person.academicRankEn().equals(staff.getAcademicTitleEn())) {
+            staff.setAcademicTitleEn(person.academicRankEn());
+            changed = true;
+        }
+
+        if (changed) {
+            staffRepo.save(staff);
+        }
+        return changed;
     }
 
     /**

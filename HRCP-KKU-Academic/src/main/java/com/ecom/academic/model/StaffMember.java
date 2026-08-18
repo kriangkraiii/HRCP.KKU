@@ -32,6 +32,22 @@ public class StaffMember {
     @Column(name = "academic_title")
     private String academicTitle;
 
+    /**
+     * English names, derived from the directory's combined {@code name_en} by
+     * {@link com.ecom.external.service.EnglishNameSplitter}. Like the Thai name
+     * and academic title above, the directory sync rewrites these on every run,
+     * so a hand edit only survives until the next sync.
+     */
+    @Column(name = "first_name_en")
+    private String firstNameEn;
+
+    @Column(name = "last_name_en")
+    private String lastNameEn;
+
+    /** English academic title, straight from the directory's position_en. */
+    @Column(name = "academic_title_en")
+    private String academicTitleEn;
+
     @Column(name = "staff_type")
     private String staffType;
 
@@ -117,6 +133,41 @@ public class StaffMember {
 
     public void setAcademicTitle(String academicTitle) {
         this.academicTitle = academicTitle;
+    }
+
+    public String getFirstNameEn() {
+        return firstNameEn;
+    }
+
+    public void setFirstNameEn(String firstNameEn) {
+        this.firstNameEn = firstNameEn;
+    }
+
+    public String getLastNameEn() {
+        return lastNameEn;
+    }
+
+    public void setLastNameEn(String lastNameEn) {
+        this.lastNameEn = lastNameEn;
+    }
+
+    public String getAcademicTitleEn() {
+        return academicTitleEn;
+    }
+
+    public void setAcademicTitleEn(String academicTitleEn) {
+        this.academicTitleEn = academicTitleEn;
+    }
+
+    /**
+     * English counterpart of {@link #getFullName()}, or {@code null} when the
+     * directory gave us no English name for this person.
+     */
+    public String getFullNameEn() {
+        String first = firstNameEn != null ? firstNameEn.trim() : "";
+        String last = lastNameEn != null ? lastNameEn.trim() : "";
+        String combined = (first + " " + last).trim();
+        return combined.isEmpty() ? null : combined;
     }
 
     public String getStaffType() {

@@ -49,7 +49,9 @@ class StaffMemberDuplicateTest {
     }
 
     private String add(Boolean confirmDuplicate) {
-        return controller.addStaff("สมชาย", "ใจดี", "อาจารย์ ดร.", "พนักงานมหาวิทยาลัย",
+        return controller.addStaff("สมชาย", "ใจดี", "อาจารย์ ดร.",
+                "Somchai", "Jaidee", "Lecturer",
+                "พนักงานมหาวิทยาลัย",
                 "วิทยาการคอมพิวเตอร์", "COMMITTEE", confirmDuplicate, model, admin);
     }
 

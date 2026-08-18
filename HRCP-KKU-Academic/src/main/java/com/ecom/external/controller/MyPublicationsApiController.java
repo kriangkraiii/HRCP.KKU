@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.ecom.external.dto.PublicationDto;
 import com.ecom.external.model.FsFaculty;
+import com.ecom.external.service.EnglishNameSplitter;
 import com.ecom.external.service.ScopusQueryService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
@@ -151,7 +152,12 @@ public class MyPublicationsApiController {
                 body.put("firstName", user.getFirstName() != null ? user.getFirstName() : "ทดสอบ");
                 body.put("lastName", user.getLastName() != null ? user.getLastName() : "ผู้ใช้งาน");
                 body.put("displayName", user.getName());
-                body.put("nameEn", "Test User");
+                body.put("nameEn", user.getNameEn() != null ? user.getNameEn() : "Test User");
+                body.put("firstNameEn", user.getFirstNameEn() != null ? user.getFirstNameEn() : "Test");
+                body.put("lastNameEn", user.getLastNameEn() != null ? user.getLastNameEn() : "User");
+                body.put("positionEn", user.getAcademicPositionEn() != null
+                        ? user.getAcademicPositionEn()
+                        : "Lecturer");
                 body.put("positionTitle", user.getAcademicPosition() != null ? user.getAcademicPosition() : "อาจารย์");
                 body.put("email", user.getEmail());
                 body.put("tel", user.getMobileNumber() != null ? user.getMobileNumber() : "0812345678");
@@ -168,6 +174,11 @@ public class MyPublicationsApiController {
         body.put("lastName", f.getLastName());
         body.put("displayName", f.getDisplayName());
         body.put("nameEn", f.getNameEn());
+        // The directory has no split English name; these are derived so forms can
+        // fill a given-name and family-name box separately.
+        EnglishNameSplitter.Parts english = EnglishNameSplitter.split(f.getNameEn());
+        body.put("firstNameEn", english.firstName());
+        body.put("lastNameEn", english.lastName());
         body.put("suffixEn", f.getSuffixEn());
         body.put("positionTitle", f.getPositionTitle());
         body.put("positionEn", f.getPositionEn());

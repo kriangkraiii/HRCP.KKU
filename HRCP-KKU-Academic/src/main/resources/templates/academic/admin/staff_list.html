@@ -32,6 +32,7 @@
                                     <th>ชื่อ-ตำแหน่งวิชาการ</th>
                                     <th>ชื่อ</th>
                                     <th>นามสกุล</th>
+                                    <th>ชื่อ-สกุล (อังกฤษ)</th>
                                     <th>ประเภท</th>
                                     <th>หน่วยงาน</th>
                                     <th>บทบาท</th>
@@ -45,6 +46,10 @@
                                     <td th:text="${s.academicTitle}"></td>
                                     <td th:text="${s.firstName}"></td>
                                     <td th:text="${s.lastName}"></td>
+                                    <td>
+                                        <span th:if="${s.fullNameEn}" th:text="${s.fullNameEn}"></span>
+                                        <span th:unless="${s.fullNameEn}" class="text-muted">—</span>
+                                    </td>
                                     <td th:text="${s.staffType}"></td>
                                     <td th:text="${s.department}"></td>
                                     <td>

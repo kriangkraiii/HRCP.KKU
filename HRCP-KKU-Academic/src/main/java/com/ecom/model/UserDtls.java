@@ -34,6 +34,17 @@ public class UserDtls {
 	@Column(name = "last_name")
 	private String lastName;
 
+	/**
+	 * English names, derived from the directory's combined {@code name_en} by
+	 * {@link com.ecom.external.service.EnglishNameSplitter}. The split is a
+	 * heuristic, so these are editable rather than read-only.
+	 */
+	@Column(name = "first_name_en")
+	private String firstNameEn;
+
+	@Column(name = "last_name_en")
+	private String lastNameEn;
+
 	private String name; // legacy field, kept for backward compat
 	private String mobileNumber;
 
@@ -55,6 +66,11 @@ public class UserDtls {
 	@Column(unique = true)
 	private String email;
 	private String academicPosition;
+
+	/** English academic position, straight from the directory's position_en. */
+	@Column(name = "academic_position_en")
+	private String academicPositionEn;
+
 	private String password;
 	private String profileImage;
 	private String role;
@@ -228,6 +244,41 @@ public class UserDtls {
 
 	public void setAcademicPosition(String academicPosition) {
 		this.academicPosition = academicPosition;
+	}
+
+	public String getFirstNameEn() {
+		return firstNameEn;
+	}
+
+	public void setFirstNameEn(String firstNameEn) {
+		this.firstNameEn = firstNameEn;
+	}
+
+	public String getLastNameEn() {
+		return lastNameEn;
+	}
+
+	public void setLastNameEn(String lastNameEn) {
+		this.lastNameEn = lastNameEn;
+	}
+
+	public String getAcademicPositionEn() {
+		return academicPositionEn;
+	}
+
+	public void setAcademicPositionEn(String academicPositionEn) {
+		this.academicPositionEn = academicPositionEn;
+	}
+
+	/**
+	 * Full English name for display, or {@code null} when neither part is known.
+	 * Mirrors {@link #getName()} for the Thai side.
+	 */
+	public String getNameEn() {
+		String first = firstNameEn != null ? firstNameEn.trim() : "";
+		String last = lastNameEn != null ? lastNameEn.trim() : "";
+		String combined = (first + " " + last).trim();
+		return combined.isEmpty() ? null : combined;
 	}
 
 	public String getPassword() {

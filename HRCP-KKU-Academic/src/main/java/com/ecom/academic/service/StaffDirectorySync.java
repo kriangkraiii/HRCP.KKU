@@ -12,6 +12,7 @@ import com.ecom.academic.model.StaffMember;
 import com.ecom.academic.repository.StaffMemberRepository;
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.repository.FsFacultyRepository;
+import com.ecom.external.service.EnglishNameSplitter;
 
 /**
  * Keeps the staff list used by documents in step with the synced faculty
@@ -175,6 +176,23 @@ public class StaffDirectorySync {
         }
         if (notBlankAndDiffers(staff.getAcademicTitle(), faculty.getPositionTitle())) {
             staff.setAcademicTitle(faculty.getPositionTitle().trim());
+            changed = true;
+        }
+        if (notBlankAndDiffers(staff.getAcademicTitleEn(), faculty.getPositionEn())) {
+            staff.setAcademicTitleEn(faculty.getPositionEn().trim());
+            changed = true;
+        }
+
+        // The upstream record has no split English name, only the combined
+        // name_en, so it is derived. Rewritten on every run like the Thai name
+        // above — a hand edit here does not survive the next sync.
+        EnglishNameSplitter.Parts english = EnglishNameSplitter.split(faculty.getNameEn());
+        if (notBlankAndDiffers(staff.getFirstNameEn(), english.firstName())) {
+            staff.setFirstNameEn(english.firstName());
+            changed = true;
+        }
+        if (notBlankAndDiffers(staff.getLastNameEn(), english.lastName())) {
+            staff.setLastNameEn(english.lastName());
             changed = true;
         }
         // The upstream record has no department as such; the lab is the closest

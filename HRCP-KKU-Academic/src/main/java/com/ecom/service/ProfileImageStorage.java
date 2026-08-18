@@ -163,7 +163,8 @@ public class ProfileImageStorage {
 
         try {
             Files.createDirectories(baseDir);
-            Files.write(target, content);
+            byte[] optimized = optimizeImage(content, extension);
+            Files.write(target, optimized);
             return safeName;
         } catch (IOException e) {
             log.error("Failed to store fetched profile image {}: {}", safeName, e.getMessage(), e);

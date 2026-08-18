@@ -44,6 +44,7 @@
 									<th scope="col">Profile</th>
 								<th scope="col">ชื่อ</th>
 								<th scope="col">นามสกุล</th>
+								<th scope="col">ชื่อ-สกุล (อังกฤษ)</th>
 								<th scope="col">Email</th>
 								<th scope="col">Mobile No</th>
 								<th scope="col">ตำแหน่งทางวิชาการ</th>
@@ -65,9 +66,14 @@
 
 								<td>[[${u.firstName}]]</td>
 								<td>[[${u.lastName}]]</td>
+								<td th:text="${u.nameEn} ?: '-'">-</td>
 								<td>[[${u.email}]]</td>
 								<td>[[${u.mobileNumber}]]</td>
-								<td>[[${u.academicPosition != null ? u.academicPosition : '-'}]]</td>
+								<td>
+									[[${u.academicPosition != null ? u.academicPosition : '-'}]]
+									<div class="small text-muted" th:if="${u.academicPositionEn}"
+										 th:text="${u.academicPositionEn}"></div>
+								</td>
 								<td>
 									<div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
 										<input class="form-check-input status-toggle" type="checkbox" role="switch"
