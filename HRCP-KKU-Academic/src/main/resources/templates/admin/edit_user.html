@@ -57,9 +57,14 @@
 											<option value="นาง" th:selected="${editUser.title == 'นาง'}">นาง</option>
 											<option value="นางสาว" th:selected="${editUser.title == 'นางสาว'}">นางสาว</option>
 											<option value="ดร." th:selected="${editUser.title == 'ดร.'}">ดร.</option>
-											<option value="ผศ.ดร." th:selected="${editUser.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
-											<option value="รศ.ดร." th:selected="${editUser.title == 'รศ.ดร.'}">รศ.ดร.</option>
-											<option value="ศ.ดร." th:selected="${editUser.title == 'ศ.ดร.'}">ศ.ดร.</option>
+											<option value="อาจารย์" th:selected="${editUser.title == 'อาจารย์' or editUser.title == 'อ.'}">อาจารย์ (อ.)</option>
+											<option value="อ.ดร." th:selected="${editUser.title == 'อ.ดร.' or editUser.title == 'อาจารย์ ดร.'}">อาจารย์ ดร. (อ.ดร.)</option>
+											<option value="ผศ." th:selected="${editUser.title == 'ผศ.' or editUser.title == 'ผู้ช่วยศาสตราจารย์'}">ผศ.</option>
+											<option value="ผศ.ดร." th:selected="${editUser.title == 'ผศ.ดร.' or editUser.title == 'ผู้ช่วยศาสตราจารย์ ดร.' or editUser.title == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผศ.ดร.</option>
+											<option value="รศ." th:selected="${editUser.title == 'รศ.' or editUser.title == 'รองศาสตราจารย์'}">รศ.</option>
+											<option value="รศ.ดร." th:selected="${editUser.title == 'รศ.ดร.' or editUser.title == 'รองศาสตราจารย์ ดร.' or editUser.title == 'รองศาสตราจารย์ดร.'}">รศ.ดร.</option>
+											<option value="ศ." th:selected="${editUser.title == 'ศ.' or editUser.title == 'ศาสตราจารย์'}">ศ.</option>
+											<option value="ศ.ดร." th:selected="${editUser.title == 'ศ.ดร.' or editUser.title == 'ศาสตราจารย์ ดร.' or editUser.title == 'ศาสตราจารย์ดร.'}">ศ.ดร.</option>
 										</select>
 									</div>
 									<div class="col-md-4">
@@ -134,17 +139,47 @@
 								<h6 class="text-muted mb-3 mt-4"><i class="fas fa-camera me-1"></i> รูปโปรไฟล์</h6>
 								<hr class="mt-0">
 
-								<div class="mb-3">
-									<div class="d-flex align-items-center gap-3 mb-2">
-										<div style="width: 80px; height: 80px; min-width: 80px; max-width: 80px; flex-shrink: 0; border-radius: 50%; overflow: hidden; border: 2px solid #dee2e6; background: #f8f9fa;">
-											<img th:src="@{'/img/profile_img/' + ${editUser.profileImage}}" alt="Current Profile" 
+								<style>
+									.avatar-preview-box {
+										width: 110px !important;
+										height: 110px !important;
+										min-width: 110px !important;
+										max-width: 110px !important;
+										min-height: 110px !important;
+										max-height: 110px !important;
+										border-radius: 50% !important;
+										overflow: hidden !important;
+										border: 3px solid #fff !important;
+										box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+										background: #e9ecef !important;
+										flex-shrink: 0 !important;
+									}
+									.avatar-preview-box img {
+										width: 100% !important;
+										height: 100% !important;
+										max-width: 110px !important;
+										max-height: 110px !important;
+										object-fit: cover !important;
+										object-position: center top !important;
+										display: block !important;
+									}
+								</style>
+
+								<div class="mb-4">
+									<div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-center gap-3">
+										<div class="avatar-preview-box position-relative">
+											<img id="userProfilePreview"
+												th:src="@{'/img/profile_img/' + ${editUser.profileImage}}" 
+												alt="Current Profile" 
 												th:data-user-id="${editUser.id}"
-												style="width: 100%; height: 100%; border-radius: 50%; object-fit: cover; object-position: center top; display: block;"
 												data-fallback="/img/profile_img/default.png">
 										</div>
-										<div class="flex-grow-1">
-											<input type="file" name="img" class="form-control" accept="image/*" id="profileImageInput">
-											<small class="text-muted">ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเดิม (รองรับ JPG, PNG, GIF สูงสุด 5MB)</small>
+										<div class="flex-grow-1 text-center text-sm-start">
+											<label for="profileImageInput" class="form-label fw-bold mb-1">เลือกไฟล์รูปภาพใหม่</label>
+											<input type="file" name="img" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp" id="profileImageInput">
+											<div class="form-text text-muted mt-1">
+												<i class="fas fa-info-circle me-1"></i>ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเดิม (รองรับ JPG, PNG, GIF, WEBP สูงสุด 5MB)
+											</div>
 										</div>
 									</div>
 								</div>
@@ -186,7 +221,7 @@
 				this.classList.remove('is-invalid');
 			});
 
-			// File size validation (5MB max)
+			// Instant preview & File validation (5MB max)
 			document.getElementById('profileImageInput').addEventListener('change', function(e) {
 				const file = e.target.files[0];
 				if (file) {
@@ -198,14 +233,24 @@
 					}
 
 					// File type validation
-					const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif'];
+					const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'image/webp'];
 					if (!allowedTypes.includes(file.type)) {
-						alert('รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, GIF)');
+						alert('รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, GIF, WEBP)');
 						this.value = '';
 						return;
 					}
 
-					// Trigger real-time profile image update
+					// 1. Instant local preview via FileReader
+					const reader = new FileReader();
+					reader.onload = function(event) {
+						const previewImg = document.getElementById('userProfilePreview');
+						if (previewImg) {
+							previewImg.src = event.target.result;
+						}
+					};
+					reader.readAsDataURL(file);
+
+					// 2. Real-time background sync
 					const userId = document.querySelector('input[name="id"]').value;
 					updateProfileImage(userId, this);
 				}
@@ -230,19 +275,10 @@
 				.then(response => response.json())
 				.then(data => {
 					if (data.success === 'true') {
-						// Update all instances of this user's profile image on the page
 						const imgElements = document.querySelectorAll(`img[data-user-id="${userId}"]`);
 						imgElements.forEach(img => {
 							img.src = data.imageUrl;
 						});
-
-						// Update the preview image on this form
-						const previewImg = document.querySelector('img[alt="Current Profile"]');
-						if (previewImg) {
-							previewImg.src = data.imageUrl;
-						}
-
-						// Show success message
 						showSuccessMessage('อัพเดทรูปโปรไฟล์สำเร็จ');
 					} else {
 						showErrorMessage('เกิดข้อผิดพลาด: ' + data.error);

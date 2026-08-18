@@ -89,15 +89,27 @@ public class AdminInitializer implements CommandLineRunner {
         userRepository.save(user);
         System.out.println("=== Default test user initialized/updated: " + userEmail + " (Applicant ID: " + user.getApplicantId() + ") ===");
 
-        // 3. Backfill applicant IDs for existing ROLE_USER without one
-        List<UserDtls> usersWithoutId = userRepository.findByRoleAndApplicantIdIsNull("ROLE_USER");
-        if (!usersWithoutId.isEmpty()) {
-            System.out.println("=== Backfilling applicant IDs for " + usersWithoutId.size() + " user(s) ===");
-            for (UserDtls u : usersWithoutId) {
+        // 3. Backfill applicant IDs and missing Titles for existing users
+        List<UserDtls> allUsers = userRepository.findAll();
+        for (UserDtls u : allUsers) {
+            boolean updated = false;
+            if ("ROLE_USER".equals(u.getRole()) && u.getApplicantId() == null) {
                 u.setApplicantId(generateApplicantId());
+                updated = true;
+            }
+            if (u.getTitle() == null || u.getTitle().isBlank()) {
+                String resolved = com.ecom.util.AcademicTitleResolver.resolveShortTitle(
+                        u.getTitle(),
+                        u.getAcademicPosition(),
+                        u.getAcademicPositionEn());
+                if (resolved != null && !resolved.isBlank()) {
+                    u.setTitle(resolved);
+                    updated = true;
+                }
+            }
+            if (updated) {
                 userRepository.save(u);
             }
-            System.out.println("=== Backfill complete ===");
         }
     }
 

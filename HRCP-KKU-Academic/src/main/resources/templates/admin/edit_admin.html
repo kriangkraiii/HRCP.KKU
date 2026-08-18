@@ -79,48 +79,18 @@
                       >
                       <select name="title" class="form-select" required>
                         <option value="">-- เลือก --</option>
-                        <option
-                          value="นาย"
-                          th:selected="${admin.title == 'นาย'}"
-                        >
-                          นาย
-                        </option>
-                        <option
-                          value="นาง"
-                          th:selected="${admin.title == 'นาง'}"
-                        >
-                          นาง
-                        </option>
-                        <option
-                          value="นางสาว"
-                          th:selected="${admin.title == 'นางสาว'}"
-                        >
-                          นางสาว
-                        </option>
-                        <option
-                          value="ดร."
-                          th:selected="${admin.title == 'ดร.'}"
-                        >
-                          ดร.
-                        </option>
-                        <option
-                          value="ผศ.ดร."
-                          th:selected="${admin.title == 'ผศ.ดร.'}"
-                        >
-                          ผศ.ดร.
-                        </option>
-                        <option
-                          value="รศ.ดร."
-                          th:selected="${admin.title == 'รศ.ดร.'}"
-                        >
-                          รศ.ดร.
-                        </option>
-                        <option
-                          value="ศ.ดร."
-                          th:selected="${admin.title == 'ศ.ดร.'}"
-                        >
-                          ศ.ดร.
-                        </option>
+                        <option value="นาย" th:selected="${admin.title == 'นาย'}">นาย</option>
+                        <option value="นาง" th:selected="${admin.title == 'นาง'}">นาง</option>
+                        <option value="นางสาว" th:selected="${admin.title == 'นางสาว'}">นางสาว</option>
+                        <option value="ดร." th:selected="${admin.title == 'ดร.'}">ดร.</option>
+                        <option value="อาจารย์" th:selected="${admin.title == 'อาจารย์' or admin.title == 'อ.'}">อาจารย์ (อ.)</option>
+                        <option value="อ.ดร." th:selected="${admin.title == 'อ.ดร.' or admin.title == 'อาจารย์ ดร.'}">อาจารย์ ดร. (อ.ดร.)</option>
+                        <option value="ผศ." th:selected="${admin.title == 'ผศ.' or admin.title == 'ผู้ช่วยศาสตราจารย์'}">ผศ.</option>
+                        <option value="ผศ.ดร." th:selected="${admin.title == 'ผศ.ดร.' or admin.title == 'ผู้ช่วยศาสตราจารย์ ดร.' or admin.title == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผศ.ดร.</option>
+                        <option value="รศ." th:selected="${admin.title == 'รศ.' or admin.title == 'รองศาสตราจารย์'}">รศ.</option>
+                        <option value="รศ.ดร." th:selected="${admin.title == 'รศ.ดร.' or admin.title == 'รองศาสตราจารย์ ดร.' or admin.title == 'รองศาสตราจารย์ดร.'}">รศ.ดร.</option>
+                        <option value="ศ." th:selected="${admin.title == 'ศ.' or admin.title == 'ศาสตราจารย์'}">ศ.</option>
+                        <option value="ศ.ดร." th:selected="${admin.title == 'ศ.ดร.' or admin.title == 'ศาสตราจารย์ ดร.' or admin.title == 'ศาสตราจารย์ดร.'}">ศ.ดร.</option>
                       </select>
                     </div>
                     <div class="col-md-4">
@@ -231,36 +201,55 @@
                   </h6>
                   <hr class="mt-0" />
 
-                  <div class="mb-3">
-                    <div class="d-flex align-items-center gap-3 mb-2">
-                      <div style="width: 80px; height: 80px; min-width: 80px; max-width: 80px; flex-shrink: 0; border-radius: 50%; overflow: hidden; border: 2px solid #dee2e6; background: #f8f9fa;">
+                  <style>
+                    .avatar-preview-box {
+                      width: 110px !important;
+                      height: 110px !important;
+                      min-width: 110px !important;
+                      max-width: 110px !important;
+                      min-height: 110px !important;
+                      max-height: 110px !important;
+                      border-radius: 50% !important;
+                      overflow: hidden !important;
+                      border: 3px solid #fff !important;
+                      box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
+                      background: #e9ecef !important;
+                      flex-shrink: 0 !important;
+                    }
+                    .avatar-preview-box img {
+                      width: 100% !important;
+                      height: 100% !important;
+                      max-width: 110px !important;
+                      max-height: 110px !important;
+                      object-fit: cover !important;
+                      object-position: center top !important;
+                      display: block !important;
+                    }
+                  </style>
+
+                  <div class="mb-4">
+                    <div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-center gap-3">
+                      <div class="avatar-preview-box position-relative">
                         <img
+                          id="adminProfilePreview"
                           th:src="@{'/img/profile_img/' + ${admin.profileImage}}"
                           alt="Current Profile"
                           th:data-user-id="${admin.id}"
-                          style="
-                            width: 100%;
-                            height: 100%;
-                            border-radius: 50%;
-                            object-fit: cover;
-                            object-position: center top;
-                            display: block;
-                          "
                           data-fallback="/img/profile_img/default.png"
                         />
                       </div>
-                      <div class="flex-grow-1">
+                      <div class="flex-grow-1 text-center text-sm-start">
+                        <label for="profileImageInput" class="form-label fw-bold mb-1">เลือกไฟล์รูปภาพใหม่</label>
                         <input
                           type="file"
                           name="img"
                           class="form-control"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/gif,image/webp"
                           id="profileImageInput"
                         />
-                        <small class="text-muted"
-                          >ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเดิม (รองรับ JPG,
-                          PNG, GIF สูงสุด 5MB)</small
-                        >
+                        <div class="form-text text-muted mt-1">
+                          <i class="fas fa-info-circle me-1"></i>ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเดิม (รองรับ JPG, PNG, GIF, WEBP สูงสุด 5MB)
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -317,7 +306,7 @@
             this.classList.remove("is-invalid");
           });
 
-        // File size validation (5MB max)
+        // Instant preview & File size validation (5MB max)
         document
           .getElementById("profileImageInput")
           .addEventListener("change", function (e) {
@@ -336,14 +325,25 @@
                 "image/jpg",
                 "image/png",
                 "image/gif",
+                "image/webp"
               ];
               if (!allowedTypes.includes(file.type)) {
-                alert("รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, GIF)");
+                alert("รองรับเฉพาะไฟล์รูปภาพ (JPG, PNG, GIF, WEBP)");
                 this.value = "";
                 return;
               }
 
-              // Trigger real-time profile image update
+              // 1. Instant local preview via FileReader
+              const reader = new FileReader();
+              reader.onload = function(event) {
+                const previewImg = document.getElementById("adminProfilePreview");
+                if (previewImg) {
+                  previewImg.src = event.target.result;
+                }
+              };
+              reader.readAsDataURL(file);
+
+              // 2. Real-time background sync
               const userId = document.querySelector('input[name="id"]').value;
               updateProfileImage(userId, this);
             }

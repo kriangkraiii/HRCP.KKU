@@ -50,13 +50,19 @@
                             </div>
                         </div>
 
-                        <!-- Change Password -->
-                        <div class="profile-section" style="--card-delay:120ms">
+                        <!-- Change Password (Dev Mode only — In Production/SSO mode, passwords are authenticated centrally via KKU SSO) -->
+                        <div class="profile-section" style="--card-delay:120ms" th:if="${!ssoMode}">
                             <button type="button" class="profile-pw-btn" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                                 <i class="fas fa-key"></i>
                                 <span>เปลี่ยนรหัสผ่าน</span>
                                 <i class="fas fa-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                             </button>
+                        </div>
+                        <div class="profile-section p-3 text-center" style="--card-delay:120ms; background: rgba(13,110,253,0.04); border: 1px dashed rgba(13,110,253,0.25); border-radius: 12px;" th:if="${ssoMode}">
+                            <div class="small text-muted">
+                                <i class="fas fa-shield-alt text-primary me-1"></i> เข้าสู่ระบบด้วย <strong>KKU SSO</strong>
+                                <div class="mt-1 text-secondary" style="font-size: 0.78rem;">จัดการรหัสผ่านผ่านระบบส่วนกลาง มข. (SSONext)</div>
+                            </div>
                         </div>
                     </div>
 
@@ -78,9 +84,14 @@
                                             <option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
                                             <option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
                                             <option value="ดร." th:selected="${user.title == 'ดร.'}">ดร.</option>
-                                            <option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
-                                            <option value="รศ.ดร." th:selected="${user.title == 'รศ.ดร.'}">รศ.ดร.</option>
-                                            <option value="ศ.ดร." th:selected="${user.title == 'ศ.ดร.'}">ศ.ดร.</option>
+                                            <option value="อาจารย์" th:selected="${user.title == 'อาจารย์' or user.title == 'อ.'}">อาจารย์ (อ.)</option>
+                                            <option value="อ.ดร." th:selected="${user.title == 'อ.ดร.' or user.title == 'อาจารย์ ดร.'}">อาจารย์ ดร. (อ.ดร.)</option>
+                                            <option value="ผศ." th:selected="${user.title == 'ผศ.' or user.title == 'ผู้ช่วยศาสตราจารย์'}">ผศ.</option>
+                                            <option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.' or user.title == 'ผู้ช่วยศาสตราจารย์ ดร.' or user.title == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผศ.ดร.</option>
+                                            <option value="รศ." th:selected="${user.title == 'รศ.' or user.title == 'รองศาสตราจารย์'}">รศ.</option>
+                                            <option value="รศ.ดร." th:selected="${user.title == 'รศ.ดร.' or user.title == 'รองศาสตราจารย์ ดร.' or user.title == 'รองศาสตราจารย์ดร.'}">รศ.ดร.</option>
+                                            <option value="ศ." th:selected="${user.title == 'ศ.' or user.title == 'ศาสตราจารย์'}">ศ.</option>
+                                            <option value="ศ.ดร." th:selected="${user.title == 'ศ.ดร.' or user.title == 'ศาสตราจารย์ ดร.' or user.title == 'ศาสตราจารย์ดร.'}">ศ.ดร.</option>
                                         </select>
                                     </div>
                                     <div class="col-md-4">

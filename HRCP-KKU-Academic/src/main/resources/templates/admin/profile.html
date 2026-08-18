@@ -60,13 +60,19 @@
                             </div>
                         </div>
 
-                        <!-- Change Password -->
-                        <div class="profile-section" style="--card-delay:120ms">
+                        <!-- Change Password (Dev Mode only — In Production/SSO mode, passwords are authenticated centrally via KKU SSO) -->
+                        <div class="profile-section" style="--card-delay:120ms" th:if="${!ssoMode}">
                             <button type="button" class="profile-pw-btn" data-bs-toggle="modal" data-bs-target="#adminChangePasswordModal">
                                 <i class="fas fa-key"></i>
                                 <span>เปลี่ยนรหัสผ่าน</span>
                                 <i class="fas fa-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
                             </button>
+                        </div>
+                        <div class="profile-section p-3 text-center" style="--card-delay:120ms; background: rgba(13,110,253,0.04); border: 1px dashed rgba(13,110,253,0.25); border-radius: 12px;" th:if="${ssoMode}">
+                            <div class="small text-muted">
+                                <i class="fas fa-shield-alt text-primary me-1"></i> เข้าสู่ระบบด้วย <strong>KKU SSO</strong>
+                                <div class="mt-1 text-secondary" style="font-size: 0.78rem;">จัดการรหัสผ่านผ่านระบบส่วนกลาง มข. (SSONext)</div>
+                            </div>
                         </div>
                     </div>
 

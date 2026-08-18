@@ -237,13 +237,25 @@ public class CpDirectorySyncService {
             user.setLastName(person.lastName());
             changed = true;
         }
-        // Short form for the name badge — "ผศ.ดร." rather than the full words.
-        if (isBlank(user.getTitle()) && !isBlank(person.academicRankShort())) {
-            user.setTitle(person.academicRankShort());
+
+        // Resolve clean Title from Thai short name, full rank, or English rank
+        String resolvedTitle = com.ecom.util.AcademicTitleResolver.resolveShortTitle(
+                person.academicRankShort(),
+                person.academicRank(),
+                person.academicRankEn(),
+                user.getTitle());
+        if (!isBlank(resolvedTitle) && !resolvedTitle.equals(user.getTitle())) {
+            user.setTitle(resolvedTitle);
             changed = true;
         }
-        if (isBlank(user.getAcademicPosition()) && !isBlank(person.academicRank())) {
-            user.setAcademicPosition(person.academicRank());
+
+        // Resolve Thai academic position
+        String resolvedPosition = com.ecom.util.AcademicTitleResolver.resolveThaiAcademicPosition(
+                person.academicRank(),
+                person.academicRankEn(),
+                user.getAcademicPosition());
+        if (!isBlank(resolvedPosition) && !resolvedPosition.equals(user.getAcademicPosition())) {
+            user.setAcademicPosition(resolvedPosition);
             changed = true;
         }
 

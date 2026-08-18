@@ -197,12 +197,15 @@ public class CpWebClient {
                 for (String field : fields) {
                     String value = text(part, field);
                     if (value != null) {
+                        if (sb.length() > 0 && !value.startsWith(".")) {
+                            sb.append(" ");
+                        }
                         sb.append(value);
                         break;
                     }
                 }
             }
-            return sb.isEmpty() ? null : sb.toString();
+            return sb.isEmpty() ? null : sb.toString().trim();
         } catch (Exception e) {
             log.debug("Could not read a prefix value from the directory: {}", e.toString());
             return null;

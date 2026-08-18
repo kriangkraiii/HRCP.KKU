@@ -412,6 +412,25 @@ body {
     gap: 10px;
     color: var(--sidebar-text);
     font-size: 0.82rem;
+    text-decoration: none !important;
+    padding: 6px 8px;
+    border-radius: 10px;
+    transition: background var(--duration-fast), color var(--duration-fast);
+}
+
+.sidebar-user:hover,
+.sidebar-user:focus,
+.sidebar-user:active,
+.sidebar-user:visited {
+    text-decoration: none !important;
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-user *,
+.sidebar-user:hover *,
+.sidebar-user .user-name,
+.sidebar-user .user-role {
+    text-decoration: none !important;
 }
 
 .sidebar-user .user-avatar {
@@ -436,6 +455,7 @@ body {
 .sidebar-user .user-info {
     flex: 1;
     overflow: hidden;
+    text-decoration: none !important;
 }
 
 .sidebar-user .user-name {
@@ -445,11 +465,13 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    text-decoration: none !important;
 }
 
 .sidebar-user .user-role {
     font-size: 0.7rem;
     color: var(--sidebar-text-faint);
+    text-decoration: none !important;
 }
 
 .sidebar-user-avatar-img,

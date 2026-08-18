@@ -129,10 +129,17 @@ public class UserDirectorySync {
             user.setLastName(faculty.getLastName().trim());
             changed = true;
         }
-        if (isBlank(user.getTitle()) && !isBlank(faculty.getPrefix())) {
-            user.setTitle(faculty.getPrefix().trim());
+
+        String resolvedTitle = com.ecom.util.AcademicTitleResolver.resolveShortTitle(
+                user.getTitle(),
+                faculty.getPrefix(),
+                faculty.getPositionTitle(),
+                faculty.getPositionEn());
+        if (isBlank(user.getTitle()) && !isBlank(resolvedTitle)) {
+            user.setTitle(resolvedTitle);
             changed = true;
         }
+
         if (isBlank(user.getAcademicPosition()) && !isBlank(faculty.getPositionTitle())) {
             user.setAcademicPosition(faculty.getPositionTitle().trim());
             changed = true;

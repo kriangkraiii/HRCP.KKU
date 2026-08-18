@@ -348,7 +348,7 @@
 
         <!-- Sidebar Footer: User Info -->
         <div class="sidebar-footer" th:if="${user != null}">
-            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user" style="text-decoration:none;">
+            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user text-decoration-none" style="text-decoration:none !important;">
                 <div class="user-avatar" style="width:34px;height:34px;min-width:34px;max-width:34px;flex-shrink:0;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
                     <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
                          th:src="'/img/profile_img/' + ${user.profileImage}"
@@ -360,9 +360,9 @@
                        style="color: var(--accent-color, #ffca28); font-size: 0.95rem;"
                        th:if="${user.profileImage == null or user.profileImage == 'default.png'}"></i>
                 </div>
-                <div class="user-info">
-                    <div class="user-name" th:text="${user.name}"></div>
-                    <div class="user-role" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : 'ผู้ยื่นคำร้อง'"></div>
+                <div class="user-info text-decoration-none" style="text-decoration:none !important;">
+                    <div class="user-name text-decoration-none" th:text="${user.name}" style="text-decoration:none !important;"></div>
+                    <div class="user-role text-decoration-none" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : 'ผู้ยื่นคำร้อง'" style="text-decoration:none !important;"></div>
                 </div>
             </a>
             <form method="post" action="/logout">
