@@ -25,7 +25,7 @@
         <button class="btn btn-success" style="border-radius: 10px;" data-click-target="#fileUploadInput">
             <i class="fas fa-cloud-upload-alt me-1"></i> อัปโหลดไฟล์
         </button>
-        <form id="uploadForm" style="display:none;">
+        <form id="uploadForm" class="js-hidden">
             <input type="file" id="fileUploadInput" multiple
                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.rtf,.odt,.ods"
                    data-call-change="uploadFiles" data-call-arg="files">
@@ -38,8 +38,7 @@
 </div>
 
 <!-- Drop Zone -->
-<div th:if="${viewMode == 'storage'}" id="dropZone" class="card border-2 border-dashed mb-4 text-center py-4"
-     style="border-radius: 12px; border-color: #ccc; display: none; background: rgba(13,71,161,0.03);">
+<div th:if="${viewMode == 'storage'}" id="dropZone" class="card border-2 border-dashed mb-4 text-center py-4 storage-dropzone js-hidden">
     <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
     <p class="text-muted mb-0">วางไฟล์ที่นี่เพื่ออัปโหลด (.pdf, .docx, .xlsx, ฯลฯ)</p>
 </div>

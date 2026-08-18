@@ -3343,3 +3343,40 @@ body {
         padding: var(--space-lg);
     }
 }
+
+/* ===== Thai date picker =====
+   ตัวเลือกวันที่แบบ native ถูกซ่อนไว้ ให้ผู้ใช้กดผ่านปุ่มปฏิทิน (.thai-date-btn) แทน
+   ต้องอยู่ในไฟล์ CSS ไม่ใช่ style="..." ใน HTML เพราะ CSP ของระบบเป็น
+   style-src 'self' 'nonce-...' ซึ่งไม่มี 'unsafe-inline' → inline style attribute
+   ถูกบล็อกทั้งหมด (nonce ใช้กับ attribute ไม่ได้) ทำให้ picker โผล่ขึ้นมาซ้อน
+   กับช่องกรอกวันที่ */
+.thai-date-picker {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+    pointer-events: none;
+}
+
+/* ===== สถานะซ่อนเริ่มต้นสำหรับ element ที่ JS เป็นคนสลับ =====
+   ใช้แทน style="display:none" ใน HTML ซึ่งถูก CSP บล็อก (ดูหมายเหตุที่
+   .thai-date-picker) จงใจไม่ใส่ !important เพื่อให้ JS ที่สั่ง
+   el.style.display = 'block' ยังเขียนทับได้ตามปกติ (inline ชนะ class)
+   หมายเหตุ: ถ้า JS แสดง element ด้วย el.style.display = '' ต้องใช้
+   classList.remove('js-hidden') แทน เพราะการล้าง inline style จะทำให้
+   ตกกลับมาใช้ค่าจาก class นี้ */
+.js-hidden {
+    display: none;
+}
+
+/* กล่องลากไฟล์มาวางในหน้าคลังไฟล์ — ย้ายจาก inline style ด้วยเหตุผลเดียวกัน */
+.storage-dropzone {
+    border-radius: 12px;
+    border-color: #ccc;
+    background: rgba(13, 71, 161, 0.03);
+}
+
+/* ปุ่มยกเลิกการอัปโหลดทั้งหมด — ย้ายจาก inline style */
+.cancel-all-btn {
+    border-radius: 8px;
+}

@@ -85,7 +85,7 @@
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">ผลงานวิจัยที่ยื่นเสนอ</h5>
                         <div>
-                            <span class="badge bg-info me-2" id="doc6Badge" style="display:none">
+                            <span class="badge bg-info me-2 js-hidden" id="doc6Badge">
                                 <i class="fas fa-sync"></i> ดึงจากเอกสารที่ 6 ของผู้ยื่น
                             </span>
                             <button type="button" class="btn btn-sm btn-outline-success" data-call="addResearchRow">
@@ -347,7 +347,7 @@
                     }
                 } else if (doc6) {
                     // Auto-populate from doc 6 (applicant's research data)
-                    document.getElementById('doc6Badge').style.display = '';
+                    document.getElementById('doc6Badge').classList.remove('js-hidden');
                     let maxIdx = 0;
                     for (const key of Object.keys(doc6)) {
                         const m = key.match(/^des_research(\d+)$/);

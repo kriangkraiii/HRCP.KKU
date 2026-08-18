@@ -89,7 +89,7 @@
                                             th:selected="${s.name() == request.currentStatus.name()}"></option>
                                     </select>
                                 </div>
-                                <div class="mb-3" id="meetingFields" style="display: none;">
+                                <div class="mb-3 js-hidden" id="meetingFields">
                                     <label class="form-label">วันเวลาประชุม</label>
                                     <input type="datetime-local" name="meetingDate" class="form-control"
                                         th:value="${request.meetingDate}">

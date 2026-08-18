@@ -24,7 +24,7 @@
                             <div class="col-md-4"><label class="form-label">วันที่เอกสาร</label>
                                 <div class="input-group">
                                     <input type="text" name="date" class="form-control thai-full-date">
-                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <input type="date" class="thai-date-picker">
                                     <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
@@ -57,7 +57,7 @@
                             <div class="col-md-6"><label class="form-label">วันที่หนังสืออ้างอิง</label>
                                 <div class="input-group">
                                     <input type="text" name="ref_memo_date" class="form-control thai-full-date">
-                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <input type="date" class="thai-date-picker">
                                     <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
@@ -92,7 +92,7 @@
                                 <div class="input-group">
                                     <input type="text" name="evaluation_date" class="form-control thai-full-date"
                                         th:value="${doc7Data != null ? doc7Data.getOrDefault('meeting_date', '') : ''}">
-                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <input type="date" class="thai-date-picker">
                                     <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
@@ -103,7 +103,7 @@
                                 <div class="input-group">
                                     <input type="text" name="faculty_board_meeting_date" class="form-control thai-full-date"
                                         th:value="${doc7Data != null ? doc7Data.getOrDefault('meeting_date', '') : ''}">
-                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <input type="date" class="thai-date-picker">
                                     <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
@@ -133,7 +133,7 @@
                             <div class="col-md-4"><label class="form-label">วันหมดอายุ</label>
                                 <div class="input-group">
                                     <input type="text" name="expiration_date" class="form-control thai-full-date">
-                                    <input type="date" class="thai-date-picker" style="position:absolute;opacity:0;width:0;height:0;pointer-events:none;">
+                                    <input type="date" class="thai-date-picker">
                                     <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>

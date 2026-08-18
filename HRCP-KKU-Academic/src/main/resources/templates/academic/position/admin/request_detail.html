@@ -296,7 +296,7 @@
                                 </div>
                             </div>
                             <!-- Edit History -->
-                            <div id="editHistPane" style="display:none">
+                            <div id="editHistPane" class="js-hidden">
                                 <div class="mb-3">
                                     <select id="editHistFilter" class="form-select form-select-sm" style="max-width:260px;font-size:0.85rem">
                                         <option value="all">ทุกเอกสาร</option>
@@ -332,7 +332,7 @@
                                     <i class="fas fa-inbox"></i>
                                     <p>ยังไม่มีประวัติการแก้ไขเอกสาร</p>
                                 </div>
-                                <div id="editHistNoMatch" class="admin-table-empty" style="display:none">
+                                <div id="editHistNoMatch" class="admin-table-empty js-hidden">
                                     <i class="fas fa-search"></i>
                                     <p>ไม่มีประวัติการแก้ไขสำหรับเอกสารที่เลือก</p>
                                 </div>
@@ -412,7 +412,7 @@
                     btn.classList.add('active');
                     var target = btn.getAttribute('data-target');
                     document.getElementById('statusHistPane').style.display = target === 'statusHistPane' ? '' : 'none';
-                    document.getElementById('editHistPane').style.display = target === 'editHistPane' ? '' : 'none';
+                    document.getElementById('editHistPane').classList.toggle('js-hidden', target !== 'editHistPane');
                 });
             });
 
@@ -444,7 +444,7 @@
                     });
 
                     if (noMatch) {
-                        noMatch.style.display = (entries.length > 0 && visibleCount === 0) ? '' : 'none';
+                        noMatch.classList.toggle('js-hidden', !(entries.length > 0 && visibleCount === 0));
                     }
                 });
             }

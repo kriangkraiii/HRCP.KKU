@@ -62,11 +62,23 @@
     var todayThai = formatThaiDate(today);
     var isoToday = today.toISOString().split('T')[0];
 
+    /**
+     * บางเทมเพลตมีชุดเลือกวันที่ของตัวเองอยู่แล้ว คือ .thai-date-picker (ซ่อนไว้)
+     * คู่กับปุ่มปฏิทิน .thai-date-btn ภายใน .input-group เดียวกัน
+     * ถ้าเจอชุดนั้นต้องไม่ฉีด picker เพิ่ม มิฉะนั้นช่องวันที่ช่องเดียวจะมีตัวเลือก
+     * วันที่ซ้อนกันสองอัน และช่องกรอกจะถูกบีบจนอ่านค่าไม่ออก
+     */
+    function hasOwnPicker(input) {
+        var group = input.closest('.input-group');
+        return !!(group && group.querySelector('.thai-date-picker'));
+    }
+
     forms.forEach(function (form) {
         // หา input ที่เป็นวันที่
         var inputs = form.querySelectorAll('input[type="text"]');
         inputs.forEach(function (input) {
             if (!isDateField(input)) return;
+            if (hasOwnPicker(input)) return;
 
             var skipAutoFill = shouldSkipAutofill(input.name);
 
@@ -82,7 +94,11 @@
             var picker = document.createElement('input');
             picker.type = 'date';
             picker.className = 'form-control form-control-sm';
-            picker.style.cssText = 'width:auto;display:inline-block;max-width:180px;margin-left:8px;vertical-align:middle;';
+            // ใน .input-group ของ Bootstrap ลูกทุกตัวเป็น flex item — margin-left
+            // กับ display:inline-block จะทำให้ช่องกรอกถูกบีบจนแสดงค่าไม่ครบ
+            picker.style.cssText = input.closest('.input-group')
+                ? 'flex:0 0 auto;width:auto;max-width:180px;'
+                : 'width:auto;display:inline-block;max-width:180px;margin-left:8px;vertical-align:middle;';
             picker.title = 'เลือกวันที่';
             if (!skipAutoFill) picker.value = isoToday;
 
