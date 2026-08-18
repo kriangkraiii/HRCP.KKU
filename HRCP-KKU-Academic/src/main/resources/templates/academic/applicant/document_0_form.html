@@ -28,7 +28,7 @@
                             <input type="hidden" name="memo_no"
                                 th:value="${doc0Data != null ? doc0Data.getOrDefault('memo_no', '') : ''}">
                             <div class="col-md-4">
-                                <label class="form-label">วันที่เอกสาร</label>
+                                <label class="form-label">วันที่เอกสาร <span class="text-danger">*</span></label>
                                 <div class="input-group">
                                     <input type="text" name="date" class="form-control thai-full-date"
                                         th:value="${doc0Data != null ? doc0Data.getOrDefault('date', '') : ''}"
@@ -46,7 +46,7 @@
                         </h5>
                         <div class="row mb-3">
                             <div class="col-md-3">
-                                <label class="form-label">คำนำหน้า</label>
+                                <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
                                 <select name="title" class="form-select" id="titleSelect" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย"
@@ -67,7 +67,7 @@
                                 </select>
                             </div>
                             <div class="col-md-5">
-                                <label class="form-label">ชื่อ-นามสกุล</label>
+                                <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
                                 <input type="text" name="applicant_name" class="form-control"
                                     th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
                                     required placeholder="เช่น สมชาย ใจดี">
@@ -76,7 +76,7 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">ประเภทบุคลากร</label>
+                                <label class="form-label">ประเภทบุคลากร <span class="text-danger">*</span></label>
                                 <div class="d-flex gap-4 mt-1">
                                     <div class="form-check">
                                         <input class="form-check-input" type="radio" name="employee_type"
@@ -97,7 +97,7 @@
 
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">ตำแหน่งทางวิชาการปัจจุบัน</label>
+                                <label class="form-label">ตำแหน่งทางวิชาการปัจจุบัน <span class="text-danger">*</span></label>
                                 <select name="current_position" class="form-select" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="อาจารย์"
@@ -140,19 +140,19 @@
                         <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-book"></i> ข้อมูลรายวิชา</h5>
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label">รหัสวิชา</label>
+                                <label class="form-label">รหัสวิชา <span class="text-danger">*</span></label>
                                 <input type="text" name="course_code" class="form-control"
                                     th:value="${doc0Data != null ? doc0Data.getOrDefault('course_code', '') : ''}"
                                     placeholder="เช่น CP 123 456" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">รายวิชา</label>
+                                <label class="form-label">รายวิชา <span class="text-danger">*</span></label>
                                 <input type="text" name="course_name" class="form-control"
                                     th:value="${doc0Data != null ? doc0Data.getOrDefault('course_name', '') : ''}"
                                     placeholder="เช่น Introduction to Computer Science" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">ปีการศึกษา</label>
+                                <label class="form-label">ปีการศึกษา <span class="text-danger">*</span></label>
                                 <input type="text" name="academic_year" class="form-control"
                                     th:value="${doc0Data != null ? doc0Data.getOrDefault('academic_year', '') : ''}"
                                     placeholder="เช่น 2568" required>

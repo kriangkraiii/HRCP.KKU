@@ -18,8 +18,8 @@
                                 <input type="text" name="memo_no" class="form-control" placeholder="เช่น ๑๒๓/๒๕๖๙">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">วันที่</label>
-                                <input type="text" name="date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙">
+                                <label class="form-label">วันที่ <span class="text-danger">*</span></label>
+                                <input type="text" name="date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙" required>
                             </div>
                         </div>
                     </div>
@@ -54,8 +54,8 @@
                                 <input type="text" name="affiliation" class="form-control" value="วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">ขอกำหนดตำแหน่ง</label>
-                                <select name="request_position" class="form-select">
+                                <label class="form-label">ขอกำหนดตำแหน่ง <span class="text-danger">*</span></label>
+                                <select name="request_position" class="form-select" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
                                     <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
