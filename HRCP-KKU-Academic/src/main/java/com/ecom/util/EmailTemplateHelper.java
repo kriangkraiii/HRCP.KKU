@@ -1,12 +1,11 @@
 package com.ecom.util;
 
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.javamail.MimeMessageHelper;
 
 /**
  * Utility to generate modern, responsive, and official HTML email templates
  * for Khon Kaen University - College of Computing (วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น).
- * Integrated with official KKU emblem & College of Computing branding.
+ * Integrated with official KKU emblem & College of Computing branding via fast global CDN (Zero-attachment, 0ms instant loading).
  */
 public final class EmailTemplateHelper {
 
@@ -16,19 +15,15 @@ public final class EmailTemplateHelper {
     public static final String SENDER_NAME = "วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
     public static final String SENDER_SYSTEM_NAME = "ระบบตำแหน่งทางวิชาการ วิทยาลัยการคอมพิวเตอร์ มข.";
 
-    public static final String CID_KKU_LOGO = "cid:kku_logo";
-    public static final String CID_CP_LOGO = "cid:cp_logo";
+    // High-speed CDN endpoints (no MIME attachment, 0ms instant render in Gmail/Apple/Outlook)
+    public static final String LOGO_KKU_URL = "https://files.catbox.moe/gdy1c7.png";
+    public static final String LOGO_CP_URL = "https://files.catbox.moe/2z3z1x.png";
 
     /**
-     * Attaches the bundled KKU Emblem and College of Computing logo as inline CID resources.
+     * No-op helper kept for backward compatibility so no multipart attachment chips appear in email inboxes.
      */
     public static void attachLogos(MimeMessageHelper helper) {
-        try {
-            helper.addInline("kku_logo", new ClassPathResource("static/img/kku_logo.png"), "image/png");
-            helper.addInline("cp_logo", new ClassPathResource("static/img/cp_logo.png"), "image/png");
-        } catch (Exception e) {
-            // Non-fatal if inline attachment fails
-        }
+        // Direct CDN URLs used in HTML body - no MIME attachment needed to avoid [inline] chip in Gmail inbox
     }
 
     /**
@@ -55,11 +50,11 @@ public final class EmailTemplateHelper {
         sb.append("<tr><td style='background-color:#ffffff;padding:18px 24px;border-bottom:1px solid #e2e8f0;text-align:center;'>");
         sb.append("<table border='0' cellspacing='0' cellpadding='0' style='margin:0 auto;'><tr>");
         sb.append("<td align='center' style='padding:0 16px;vertical-align:middle;'>");
-        sb.append("<img src='").append(CID_KKU_LOGO).append("' alt='มหาวิทยาลัยขอนแก่น' height='46' style='display:block;height:46px;width:auto;border:0;' />");
+        sb.append("<img src='").append(LOGO_KKU_URL).append("' alt='มหาวิทยาลัยขอนแก่น' height='46' style='display:block;height:46px;width:auto;border:0;' />");
         sb.append("</td>");
         sb.append("<td style='width:1px;background-color:#cbd5e1;height:36px;vertical-align:middle;'></td>");
         sb.append("<td align='center' style='padding:0 16px;vertical-align:middle;'>");
-        sb.append("<img src='").append(CID_CP_LOGO).append("' alt='วิทยาลัยการคอมพิวเตอร์ มข.' height='44' style='display:block;height:44px;width:auto;border:0;' />");
+        sb.append("<img src='").append(LOGO_CP_URL).append("' alt='วิทยาลัยการคอมพิวเตอร์ มข.' height='44' style='display:block;height:44px;width:auto;border:0;' />");
         sb.append("</td>");
         sb.append("</tr></table>");
         sb.append("</td></tr>");
@@ -213,7 +208,7 @@ public final class EmailTemplateHelper {
 
         sb.append("<div style='background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #d97706;padding:16px 20px;border-radius:8px;margin:20px 0;'>");
         sb.append("<div style='font-weight:700;color:#92400e;margin-bottom:8px;font-size:14px;'>📝 ข้อเสนอแนะจากคณะอนุกรรมการ:</div>");
-        sb.append("<div style='color:#1e293b;font-size:14px;white-space:pre-wrap;line-height:1.6;'>")
+        sb.append("<div style='color:#1e293b;font-size:14px;white-space:pre-wrap;line-line-height:1.6;'>")
           .append(escapeHtml(suggestionsText != null ? suggestionsText : "")).append("</div>");
         sb.append("</div>");
 

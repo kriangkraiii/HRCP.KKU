@@ -8,13 +8,13 @@ import org.junit.jupiter.api.Test;
 class EmailTemplateHelperTest {
 
     @Test
-    @DisplayName("Email template ต้องมีชื่อทางการและโลโก้ของมหาวิทยาลัยและวิทยาลัยครบถ้วน")
+    @DisplayName("Email template ต้องมีชื่อทางการและโลโก้ CDN ครบถ้วน")
     void containsOfficialUniversityAndCollegeIdentity() {
         String html = EmailTemplateHelper.wrapLayout("ทดสอบหัวเรื่อง", "ป้ายกำกับ", "<p>เนื้อหาทดสอบ</p>");
 
         assertThat(html)
-                .contains(EmailTemplateHelper.CID_KKU_LOGO)
-                .contains(EmailTemplateHelper.CID_CP_LOGO)
+                .contains(EmailTemplateHelper.LOGO_KKU_URL)
+                .contains(EmailTemplateHelper.LOGO_CP_URL)
                 .contains("วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น")
                 .contains("College of Computing, Khon Kaen University")
                 .contains("ระบบบริหารจัดการตำแหน่งทางวิชาการ (HRCP.KKU)")
@@ -30,8 +30,8 @@ class EmailTemplateHelperTest {
         String html = EmailTemplateHelper.buildOtpEmail("ดร.สมชาย ใจดี", "12345678", "เข้าสู่ระบบ", 5);
 
         assertThat(html)
-                .contains(EmailTemplateHelper.CID_KKU_LOGO)
-                .contains(EmailTemplateHelper.CID_CP_LOGO)
+                .contains(EmailTemplateHelper.LOGO_KKU_URL)
+                .contains(EmailTemplateHelper.LOGO_CP_URL)
                 .contains("12345678")
                 .contains("ดร.สมชาย ใจดี")
                 .contains("เข้าสู่ระบบ")
@@ -46,8 +46,8 @@ class EmailTemplateHelperTest {
         String html = EmailTemplateHelper.buildPasswordResetEmail(resetUrl);
 
         assertThat(html)
-                .contains(EmailTemplateHelper.CID_KKU_LOGO)
-                .contains(EmailTemplateHelper.CID_CP_LOGO)
+                .contains(EmailTemplateHelper.LOGO_KKU_URL)
+                .contains(EmailTemplateHelper.LOGO_CP_URL)
                 .contains(resetUrl)
                 .contains("ตั้งรหัสผ่านใหม่")
                 .contains("วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น");
@@ -66,8 +66,8 @@ class EmailTemplateHelperTest {
                 "<div>รายละเอียดเพิ่มเติม</div>");
 
         assertThat(html)
-                .contains(EmailTemplateHelper.CID_KKU_LOGO)
-                .contains(EmailTemplateHelper.CID_CP_LOGO)
+                .contains(EmailTemplateHelper.LOGO_KKU_URL)
+                .contains(EmailTemplateHelper.LOGO_CP_URL)
                 .contains("ผศ.ดร.สมศรี มีสุข")
                 .contains("POS-2026-001")
                 .contains("รับคำร้องแล้ว")
