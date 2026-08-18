@@ -31,6 +31,9 @@ public class EvaluationExpiryScheduler {
     private final JavaMailSender mailSender;
     private final com.ecom.service.NotificationService notificationService;
 
+    @org.springframework.beans.factory.annotation.Value("${spring.mail.username:noreply@kku.ac.th}")
+    private String senderEmail;
+
     public EvaluationExpiryScheduler(
             AcademicRequestRepository requestRepository,
             AcademicRequestService academicService,
@@ -57,22 +60,25 @@ public class EvaluationExpiryScheduler {
             }
 
             UserDtls user = request.getApplicant();
-            if (user == null || user.getEmail() == null)
+            if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
                 continue;
-            if (user.getEmailNotificationEnabled() == null || !user.getEmailNotificationEnabled())
+            }
+            if (user.getEmailNotificationEnabled() == null || !user.getEmailNotificationEnabled()) {
                 continue;
+            }
 
-            // Compute or retrieve expiry
             LocalDateTime expiry = request.getEvaluationExpiryDate();
             if (expiry == null) {
                 expiry = academicService.getLatestEvaluationExpiry(user.getId());
-                if (expiry == null)
+                if (expiry == null) {
                     continue;
+                }
             }
 
             long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(now, expiry);
-            if (daysLeft < 0)
+            if (daysLeft < 0) {
                 continue; // Already expired
+            }
 
             // Check which alerts are enabled and match the interval
             boolean shouldAlert = false;
@@ -103,45 +109,35 @@ public class EvaluationExpiryScheduler {
     private void sendExpiryEmail(UserDtls user, AcademicRequest request,
             long daysLeft, String alertLabel, LocalDateTime expiryDate) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setTo(user.getEmail());
-            helper.setSubject("⚠️ แจ้งเตือน: ผลประเมินการสอนจะหมดอายุภายใน " + alertLabel);
-
             int beYear = expiryDate.getYear() + 543;
             String[] thaiMonths = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
                     "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
             String formattedDate = expiryDate.getDayOfMonth() + " " +
                     thaiMonths[expiryDate.getMonthValue() - 1] + " " + beYear;
 
-            String body = """
-                    <div style="font-family:'Sarabun',sans-serif; max-width:600px; margin:0 auto; padding:20px;">
-                        <div style="background:linear-gradient(135deg,#1a237e,#283593); color:white; padding:20px; border-radius:12px 12px 0 0;">
-                            <h2 style="margin:0;">⏰ แจ้งเตือนผลประเมินการสอน</h2>
-                        </div>
-                        <div style="background:white; padding:20px; border:1px solid #e0e0e0; border-radius:0 0 12px 12px;">
-                            <p>เรียน คุณ%s,</p>
-                            <div style="background:#fff3e0; padding:15px; border-radius:8px; border-left:4px solid #ff9800; margin:15px 0;">
-                                <p style="margin:0;font-weight:bold;">ผลประเมินการสอนของท่านจะหมดอายุภายใน %s</p>
-                                <p style="margin:5px 0 0;">คงเหลือ: <strong>%d วัน</strong></p>
-                                <p style="margin:5px 0 0;">วันหมดอายุ: <strong>%s</strong></p>
-                                <p style="margin:5px 0 0;">คำร้อง: <strong>%s</strong></p>
-                            </div>
-                            <p>หากท่านต้องการยื่นขอตำแหน่งทางวิชาการ กรุณาดำเนินการก่อนผลประเมินหมดอายุ</p>
-                            <p style="color:#999;font-size:0.85rem;">ท่านสามารถปรับตั้งค่าการแจ้งเตือนได้ที่หน้า "การตั้งค่า" ในระบบ</p>
-                        </div>
-                    </div>
-                    """
-                    .formatted(user.getName(), alertLabel, daysLeft, formattedDate, request.getRequestCode());
+            String requestCode = request.getRequestCode() != null ? request.getRequestCode() : String.valueOf(request.getId());
 
+            String subject = "แจ้งเตือน: ผลประเมินการสอน (" + requestCode + ") จะหมดอายุภายใน " + alertLabel + " - HRCP.KKU";
+            String body = com.ecom.util.EmailTemplateHelper.buildEvaluationExpiryEmail(
+                    user.getName(),
+                    requestCode,
+                    alertLabel,
+                    daysLeft,
+                    formattedDate);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
+            helper.setTo(user.getEmail());
+            helper.setSubject(subject);
             helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);
             log.info("Sent expiry alert to {} ({}d left)", user.getEmail(), daysLeft);
 
             // Create In-App Notification (marked as important)
             String notifTitle = "⚠️ ผลประเมินการสอนจะหมดอายุภายใน " + alertLabel;
-            String notifMsg = "ผลการประเมินการสอน (" + request.getRequestCode() + ") ของท่านจะหมดอายุในอีก " + daysLeft + " วัน (วันที่ " + formattedDate + ") กรุณาดำเนินการยื่นขอตำแหน่งก่อนหมดอายุ";
+            String notifMsg = "ผลการประเมินการสอน (" + requestCode + ") ของท่านจะหมดอายุในอีก " + daysLeft + " วัน (วันที่ " + formattedDate + ") กรุณาดำเนินการยื่นขอตำแหน่งก่อนหมดอายุ";
             String notifLink = "/user/position/dashboard";
             notificationService.sendNotification(user, null, notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.EXPIRY_WARNING, true);
         } catch (Exception e) {

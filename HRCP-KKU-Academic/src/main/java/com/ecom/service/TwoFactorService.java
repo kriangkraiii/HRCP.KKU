@@ -47,6 +47,9 @@ public class TwoFactorService {
         return otp;
     }
 
+    @org.springframework.beans.factory.annotation.Value("${spring.mail.username:noreply@kku.ac.th}")
+    private String senderEmail;
+
     /**
      * Send OTP email to user.
      * @param purpose "LOGIN" or "EMAIL_VERIFY"
@@ -60,20 +63,22 @@ public class TwoFactorService {
             String subject;
             String purposeText;
             if ("LOGIN".equals(purpose)) {
-                subject = "รหัส OTP สำหรับเข้าสู่ระบบ - HRCP.KKU";
+                subject = "รหัส OTP สำหรับเข้าสู่ระบบ - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
                 purposeText = "เข้าสู่ระบบ";
             } else {
-                subject = "รหัส OTP สำหรับยืนยันอีเมล - HRCP.KKU";
+                subject = "รหัส OTP สำหรับยืนยันอีเมล - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
                 purposeText = "ยืนยันอีเมล";
             }
 
-            String body = buildOtpEmailBody(user.getName(), otp, purposeText);
+            String body = com.ecom.util.EmailTemplateHelper.buildOtpEmail(user.getName(), otp, purposeText, OTP_EXPIRY_MINUTES);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(user.getEmail());
             helper.setSubject(subject);
             helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);
         } catch (Exception e) {
             logger.error("OTP email failed for user {}: {}", user.getEmail(), e.getMessage(), e);
@@ -117,39 +122,5 @@ public class TwoFactorService {
         String local = parts[0];
         if (local.length() <= 1) return local + "***@" + parts[1];
         return local.charAt(0) + "***@" + parts[1];
-    }
-
-    private String buildOtpEmailBody(String name, String otp, String purpose) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<html><body style='font-family:Sarabun,sans-serif;margin:0;padding:0;background:#f5f5f5;'>");
-        sb.append("<div style='max-width:500px;margin:30px auto;background:#fff;border-radius:16px;overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,0.1);'>");
-
-        // Header
-        sb.append("<div style='background:linear-gradient(135deg,#1a237e,#0d47a1);padding:30px;text-align:center;'>");
-        sb.append("<h1 style='color:#fff;margin:0;font-size:22px;'>🔐 รหัส OTP สำหรับ").append(purpose).append("</h1>");
-        sb.append("</div>");
-
-        // Body
-        sb.append("<div style='padding:30px;'>");
-        sb.append("<p style='font-size:16px;color:#333;'>เรียน ").append(name != null ? name : "ผู้ใช้").append("</p>");
-        sb.append("<p style='font-size:15px;color:#555;'>รหัส OTP ของคุณคือ:</p>");
-
-        // OTP Display
-        sb.append("<div style='text-align:center;margin:25px 0;'>");
-        sb.append("<div style='display:inline-block;background:#f0f4ff;border:2px dashed #1a237e;border-radius:12px;padding:18px 35px;'>");
-        sb.append("<span style='font-size:36px;font-weight:700;color:#1a237e;letter-spacing:8px;font-family:monospace;'>").append(otp).append("</span>");
-        sb.append("</div>");
-        sb.append("</div>");
-
-        sb.append("<p style='font-size:14px;color:#888;text-align:center;'>⏱ รหัสนี้จะหมดอายุใน <strong>").append(OTP_EXPIRY_MINUTES).append(" นาที</strong></p>");
-
-        sb.append("<hr style='border:none;border-top:1px solid #eee;margin:20px 0;'>");
-        sb.append("<p style='font-size:13px;color:#aaa;'>หากคุณไม่ได้ทำรายการนี้ กรุณาเพิกเฉยอีเมลนี้</p>");
-        sb.append("<p style='font-size:13px;color:#aaa;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</p>");
-        sb.append("</div>");
-
-        sb.append("</div>");
-        sb.append("</body></html>");
-        return sb.toString();
     }
 }

@@ -229,13 +229,14 @@ body {
 }
 
 .sidebar-brand-logo {
-    width: 50px;
-    height: 50px;
-    border-radius: 14px;
+    width: auto;
+    max-width: 140px;
+    height: 46px;
     margin-bottom: 10px;
     object-fit: contain;
-    background: #fff;
-    padding: 4px;
+    background: transparent;
+    padding: 0;
+    box-shadow: none;
 }
 
 .sidebar-brand .brand-icon {

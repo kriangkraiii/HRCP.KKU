@@ -166,6 +166,9 @@ public class SystemAlertService {
                 .toList();
     }
 
+    @Value("${spring.mail.username:noreply@kku.ac.th}")
+    private String senderEmail;
+
     /**
      * One message.
      *
@@ -177,9 +180,11 @@ public class SystemAlertService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(admin.getEmail());
             helper.setSubject("[HRCP.KKU] " + level.prefix + " " + source);
             helper.setText(body(admin, level, source, detail, stamp), true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);
         } catch (Exception e) {
             log.warn("System alert e-mail to an administrator failed: {}", e.toString());
@@ -187,38 +192,14 @@ public class SystemAlertService {
     }
 
     private String body(UserDtls admin, Level level, String source, String detail, String stamp) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<html><body style='font-family:Sarabun,sans-serif;background:#f5f5f5;margin:0;padding:0;'>");
-        sb.append("<div style='max-width:560px;margin:24px auto;background:#fff;border-radius:14px;overflow:hidden;")
-                .append("box-shadow:0 4px 18px rgba(0,0,0,0.08);'>");
-
-        sb.append("<div style='background:").append(level.colour).append(";padding:22px 26px;'>")
-                .append("<div style='color:#fff;font-size:18px;font-weight:700;'>")
-                .append(level.icon).append(" ").append(escape(level.heading)).append("</div>")
-                .append("<div style='color:rgba(255,255,255,0.85);font-size:14px;margin-top:4px;'>")
-                .append(escape(source)).append("</div></div>");
-
-        sb.append("<div style='padding:24px 26px;'>");
-        sb.append("<p style='font-size:15px;color:#333;margin:0 0 14px;'>เรียน ")
-                .append(escape(admin.getName() != null ? admin.getName() : "ผู้ดูแลระบบ")).append("</p>");
-        sb.append("<div style='background:#f7f8fa;border-left:4px solid ").append(level.colour)
-                .append(";padding:12px 16px;border-radius:6px;font-size:14px;color:#333;line-height:1.7;'>")
-                .append(escape(detail)).append("</div>");
-        sb.append("<p style='font-size:13px;color:#888;margin:16px 0 0;'>เวลา ").append(escape(stamp)).append("</p>");
-
-        if (level == Level.FAILURE) {
-            sb.append("<p style='font-size:14px;color:#333;margin:16px 0 0;'>")
-                    .append("ตรวจสอบรายละเอียดได้ที่หน้า <strong>ดึงข้อมูลจากระบบภายนอก</strong> ")
-                    .append("ในระบบ แล้วกดดึงข้อมูลใหม่อีกครั้งได้</p>");
-        }
-
-        sb.append("<hr style='border:none;border-top:1px solid #eee;margin:20px 0;'>");
-        sb.append("<p style='font-size:12px;color:#aaa;margin:0;'>")
-                .append("อีเมลนี้ส่งอัตโนมัติจากระบบ ปิดการแจ้งเตือนได้ที่หน้าตั้งค่าของท่าน</p>");
-        sb.append("<p style='font-size:12px;color:#aaa;margin:6px 0 0;'>")
-                .append("วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</p>");
-        sb.append("</div></div></body></html>");
-        return sb.toString();
+        return com.ecom.util.EmailTemplateHelper.buildSystemAlertEmail(
+                admin.getName() != null ? admin.getName() : "ผู้ดูแลระบบ",
+                level.heading,
+                level.colour,
+                level.icon,
+                source,
+                detail,
+                stamp);
     }
 
     /**

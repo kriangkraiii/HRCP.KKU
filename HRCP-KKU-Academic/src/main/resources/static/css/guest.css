@@ -78,14 +78,14 @@ body {
 }
 
 .guest-brand-logo {
-    width: 88px;
-    height: 88px;
-    border-radius: 20px;
+    width: auto;
+    max-width: 220px;
+    height: 80px;
     object-fit: contain;
-    background: var(--g-card);
-    padding: 10px;
+    background: transparent;
+    padding: 0;
     margin-bottom: 24px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+    box-shadow: none;
     position: relative;
     z-index: 1;
 }
@@ -827,9 +827,13 @@ body { top: 0px !important; }
     }
 
     .guest-brand-logo {
-        width: 64px;
-        height: 64px;
+        width: auto;
+        max-width: 160px;
+        height: 56px;
+        background: transparent;
+        padding: 0;
         margin-bottom: 14px;
+        box-shadow: none;
     }
 
     .guest-brand-title {

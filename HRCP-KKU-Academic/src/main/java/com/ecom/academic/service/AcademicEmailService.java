@@ -21,6 +21,9 @@ public class AcademicEmailService {
     private final UserRepository userRepository;
     private final com.ecom.service.NotificationService notificationService;
 
+    @org.springframework.beans.factory.annotation.Value("${spring.mail.username:noreply@kku.ac.th}")
+    private String senderEmail;
+
     public AcademicEmailService(JavaMailSender mailSender, UserRepository userRepository, com.ecom.service.NotificationService notificationService) {
         this.mailSender = mailSender;
         this.userRepository = userRepository;
@@ -32,8 +35,6 @@ public class AcademicEmailService {
         try {
             // 1. Create in-app notification for applicant
             if (request != null && request.getApplicant() != null) {
-                // COMPLETED_REVISE is this workflow's "needs revision" outcome;
-                // REVISION_REQUESTED only exists on PositionRequestStatus.
                 boolean isImportant = newStatus == RequestStatus.COMPLETED_REVISE
                         || newStatus == RequestStatus.COMPLETED_PASS
                         || newStatus == RequestStatus.COMPLETED_FAIL
@@ -49,14 +50,16 @@ public class AcademicEmailService {
             if (applicantEmail == null || applicantEmail.isEmpty())
                 return;
 
-            String subject = "อัปเดตสถานะคำร้องขอตำแหน่งทางวิชาการ - " + newStatus.getThaiLabel();
+            String subject = "อัปเดตสถานะคำร้องขอประเมินผลการสอน (#" + request.getId() + ") - " + newStatus.getThaiLabel();
             String body = buildEmailBody(request, oldStatus, newStatus);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(applicantEmail);
             helper.setSubject(subject);
             helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Email sending failed: " + e.getMessage());
@@ -91,31 +94,22 @@ public class AcademicEmailService {
 
     private void sendAdminNotification(UserDtls admin, AcademicRequest request) {
         try {
-            String subject = "แจ้งเตือน: มีคำร้องใหม่จาก " + request.getApplicant().getName();
-            StringBuilder sb = new StringBuilder();
-            sb.append("<html><body style='font-family: Sarabun, sans-serif;'>");
-            sb.append("<h2 style='color:#1a237e;'>🔔 แจ้งเตือนคำร้องใหม่</h2>");
-            sb.append("<p>เรียน ").append(admin.getName()).append("</p>");
-            sb.append("<p>มีคำร้องใหม่เข้ามาในระบบ:</p>");
-            sb.append("<table style='border-collapse:collapse;'>");
-            sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>ผู้ยื่น:</td><td>")
-                    .append(request.getApplicant().getName()).append("</td></tr>");
-            sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>อีเมล:</td><td>")
-                    .append(request.getApplicant().getEmail()).append("</td></tr>");
-            sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>คำร้องหมายเลข:</td><td>#")
-                    .append(request.getId()).append("</td></tr>");
-            sb.append("</table>");
-            sb.append("<hr>");
-            sb.append("<p>กรุณาเข้าสู่ระบบเพื่อจัดการคำร้อง</p>");
-            sb.append("<p style='color:#888;font-size:0.85em;'>หากต้องการปิดการแจ้งเตือน ");
-            sb.append("สามารถตั้งค่าได้ที่โปรไฟล์ของท่าน</p>");
-            sb.append("</body></html>");
+            String subject = "แจ้งเตือนคำร้องขอรับการประเมินใหม่ (#" + request.getId() + ") - " + request.getApplicant().getName();
+            String body = com.ecom.util.EmailTemplateHelper.buildAdminNewRequestEmail(
+                    admin.getName(),
+                    request.getApplicant().getName(),
+                    request.getApplicant().getEmail(),
+                    "คำร้องขอรับการประเมินผลการสอน",
+                    String.valueOf(request.getId()),
+                    null);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(admin.getEmail());
             helper.setSubject(subject);
-            helper.setText(sb.toString(), true);
+            helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Failed to send admin notification to " + admin.getEmail() + ": " + e.getMessage());
@@ -123,37 +117,31 @@ public class AcademicEmailService {
     }
 
     private String buildEmailBody(AcademicRequest request, RequestStatus oldStatus, RequestStatus newStatus) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<html><body style='font-family: Sarabun, sans-serif;'>");
-        sb.append("<h2>แจ้งเตือนอัปเดตสถานะคำร้อง</h2>");
-        sb.append("<p>เรียน ").append(request.getApplicant().getName()).append("</p>");
-        sb.append("<p>คำร้องหมายเลข: <strong>#").append(request.getId()).append("</strong></p>");
-        sb.append("<p>สถานะเปลี่ยนจาก: <strong>").append(oldStatus != null ? oldStatus.getThaiLabel() : "-")
-                .append("</strong></p>");
-        sb.append("<p>สถานะใหม่: <strong style='color: ");
+        String statusColor = switch (newStatus) {
+            case COMPLETED_PASS, COMPLETED -> "#16a34a";
+            case COMPLETED_REVISE -> "#d97706";
+            case COMPLETED_FAIL, REJECTED -> "#dc2626";
+            case RECEIVED -> "#2563eb";
+            default -> newStatus.getColor() != null ? newStatus.getColor() : "#1e3a8a";
+        };
 
-        switch (newStatus) {
-            case COMPLETED_PASS -> sb.append("green");
-            case COMPLETED_REVISE -> sb.append("#FFA500");
-            case COMPLETED_FAIL -> sb.append("red");
-            case REJECTED -> sb.append("red");
-            default -> sb.append("#333");
-        }
-
-        sb.append(";'>").append(newStatus.getThaiLabel()).append("</strong></p>");
-
+        String extraDetails = "";
         if (newStatus == RequestStatus.MEETING_SCHEDULED && request.getMeetingDate() != null) {
-            sb.append("<p>วันประชุม: <strong>").append(request.getMeetingDate()).append("</strong></p>");
-            if (request.getMeetingLocation() != null) {
-                sb.append("<p>สถานที่: ").append(request.getMeetingLocation()).append("</p>");
-            }
+            extraDetails = "<div style='background:#f1f5f9;border:1px solid #cbd5e1;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
+                    + "<div style='font-weight:600;color:#1e293b;margin-bottom:4px;'>📅 รายละเอียดการนัดหมาย:</div>"
+                    + "<div>วันประชุม: <strong>" + request.getMeetingDate() + "</strong></div>"
+                    + (request.getMeetingLocation() != null ? "<div>สถานที่: " + request.getMeetingLocation() + "</div>" : "")
+                    + "</div>";
         }
 
-        sb.append("<hr>");
-        sb.append("<p>กรุณาเข้าสู่ระบบเพื่อตรวจสอบรายละเอียดเพิ่มเติม</p>");
-        sb.append("<p>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</p>");
-        sb.append("</body></html>");
-        return sb.toString();
+        return com.ecom.util.EmailTemplateHelper.buildStatusChangeEmail(
+                request.getApplicant().getName(),
+                "คำร้องขอประเมินผลการสอน",
+                String.valueOf(request.getId()),
+                oldStatus != null ? oldStatus.getThaiLabel() : "-",
+                newStatus.getThaiLabel(),
+                statusColor,
+                extraDetails);
     }
 
     /**
@@ -166,28 +154,19 @@ public class AcademicEmailService {
             if (applicantEmail == null || applicantEmail.isEmpty())
                 return;
 
-            String subject = "ข้อเสนอแนะจากคณะอนุกรรมการ - กรุณาแก้ไขเอกสาร";
-            StringBuilder sb = new StringBuilder();
-            sb.append("<html><body style='font-family: Sarabun, sans-serif;'>");
-            sb.append("<h2 style='color:#e65100;'>ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน</h2>");
-            sb.append("<p>เรียน ").append(request.getApplicant().getName()).append("</p>");
-            sb.append("<p>คำร้องหมายเลข: <strong>#").append(request.getId()).append("</strong></p>");
-            sb.append("<hr>");
-            sb.append("<h3 style='color:#1a237e;'>ข้อเสนอแนะ:</h3>");
-            sb.append("<div style='background:#fff3e0;padding:15px;border-radius:8px;border-left:4px solid #e65100;'>");
-            sb.append("<p style='white-space:pre-wrap;'>").append(suggestionsText != null ? suggestionsText.replace("<", "&lt;").replace(">", "&gt;") : "").append("</p>");
-            sb.append("</div>");
-            sb.append("<hr>");
-            sb.append("<p><strong style='color:#c62828;'>กรุณาดำเนินการแก้ไขเอกสารตามข้อเสนอแนะข้างต้น</strong></p>");
-            sb.append("<p>กรุณาเข้าสู่ระบบเพื่อดำเนินการแก้ไข</p>");
-            sb.append("<p>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</p>");
-            sb.append("</body></html>");
+            String subject = "ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน (#" + request.getId() + ") - กรุณาแก้ไขเอกสาร";
+            String body = com.ecom.util.EmailTemplateHelper.buildSuggestionEmail(
+                    request.getApplicant().getName(),
+                    String.valueOf(request.getId()),
+                    suggestionsText);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(applicantEmail);
             helper.setSubject(subject);
-            helper.setText(sb.toString(), true);
+            helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Suggestion email sending failed: " + e.getMessage());

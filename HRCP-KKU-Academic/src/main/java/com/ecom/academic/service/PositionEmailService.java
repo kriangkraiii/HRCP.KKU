@@ -21,6 +21,9 @@ public class PositionEmailService {
     private final UserRepository userRepository;
     private final com.ecom.service.NotificationService notificationService;
 
+    @org.springframework.beans.factory.annotation.Value("${spring.mail.username:noreply@kku.ac.th}")
+    private String senderEmail;
+
     public PositionEmailService(JavaMailSender mailSender, UserRepository userRepository, com.ecom.service.NotificationService notificationService) {
         this.mailSender = mailSender;
         this.userRepository = userRepository;
@@ -49,14 +52,16 @@ public class PositionEmailService {
             if (applicantEmail == null || applicantEmail.isEmpty())
                 return;
 
-            String subject = "อัปเดตสถานะคำร้องขอตำแหน่งทางวิชาการ - " + newStatus.getThaiLabel();
+            String subject = "อัปเดตสถานะคำร้องขอตำแหน่งทางวิชาการ (" + request.getRequestCode() + ") - " + newStatus.getThaiLabel();
             String body = buildStatusEmailBody(request, oldStatus, newStatus);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(applicantEmail);
             helper.setSubject(subject);
             helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Position email sending failed: " + e.getMessage());
@@ -88,33 +93,22 @@ public class PositionEmailService {
 
     private void sendAdminNotification(UserDtls admin, PositionRequest request) {
         try {
-            String subject = "แจ้งเตือน: คำร้องขอตำแหน่งใหม่จาก " + request.getApplicant().getName();
-            StringBuilder sb = new StringBuilder();
-            sb.append("<html><body style='font-family: Sarabun, sans-serif;'>");
-            sb.append("<h2 style='color:#1a237e;'>🔔 คำร้องขอตำแหน่งทางวิชาการใหม่</h2>");
-            sb.append("<p>เรียน ").append(admin.getName()).append("</p>");
-            sb.append("<p>มีคำร้องขอตำแหน่งทางวิชาการใหม่เข้ามาในระบบ:</p>");
-            sb.append("<table style='border-collapse:collapse;'>");
-            sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>ผู้ยื่น:</td><td>")
-                    .append(request.getApplicant().getName()).append("</td></tr>");
-            sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>รหัสคำร้อง:</td><td>")
-                    .append(request.getRequestCode()).append("</td></tr>");
-            if (request.getTargetPosition() != null) {
-                sb.append("<tr><td style='padding:5px 15px;font-weight:bold;'>ตำแหน่งที่ขอ:</td><td>")
-                        .append(request.getTargetPosition()).append("</td></tr>");
-            }
-            sb.append("</table>");
-            sb.append("<hr>");
-            sb.append("<p>กรุณาเข้าสู่ระบบเพื่อจัดการคำร้อง</p>");
-            sb.append("<p style='color:#888;font-size:0.85em;'>หากต้องการปิดการแจ้งเตือน ");
-            sb.append("สามารถตั้งค่าได้ที่โปรไฟล์ของท่าน</p>");
-            sb.append("</body></html>");
+            String subject = "แจ้งเตือนคำร้องขอตำแหน่งทางวิชาการใหม่ (" + request.getRequestCode() + ") - " + request.getApplicant().getName();
+            String body = com.ecom.util.EmailTemplateHelper.buildAdminNewRequestEmail(
+                    admin.getName(),
+                    request.getApplicant().getName(),
+                    request.getApplicant().getEmail(),
+                    "คำร้องขอตำแหน่งทางวิชาการ",
+                    request.getRequestCode(),
+                    request.getTargetPosition());
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(admin.getEmail());
             helper.setSubject(subject);
-            helper.setText(sb.toString(), true);
+            helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);
         } catch (Exception e) {
             System.err.println("Failed to send position admin notification to " + admin.getEmail()
@@ -124,32 +118,29 @@ public class PositionEmailService {
 
     private String buildStatusEmailBody(PositionRequest request,
             PositionRequestStatus oldStatus, PositionRequestStatus newStatus) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<html><body style='font-family: Sarabun, sans-serif;'>");
-        sb.append("<h2>แจ้งเตือนอัปเดตสถานะคำร้องขอตำแหน่งทางวิชาการ</h2>");
-        sb.append("<p>เรียน ").append(request.getApplicant().getName()).append("</p>");
-        sb.append("<p>คำร้อง: <strong>").append(request.getRequestCode()).append("</strong></p>");
-        sb.append("<p>สถานะเปลี่ยนจาก: <strong>")
-                .append(oldStatus != null ? oldStatus.getThaiLabel() : "-").append("</strong></p>");
-        sb.append("<p>สถานะใหม่: <strong style='color: ");
+        String statusColor = switch (newStatus) {
+            case SCREENING_APPROVED, COLLEGE_APPROVED -> "#16a34a";
+            case REVISION_REQUESTED -> "#d97706";
+            case SENT_TO_HR -> "#0d9488";
+            case REJECTED -> "#dc2626";
+            case DRAFT -> "#64748b";
+            default -> newStatus.getColor() != null ? newStatus.getColor() : "#1e3a8a";
+        };
 
-        switch (newStatus) {
-            case SCREENING_APPROVED, COLLEGE_APPROVED -> sb.append("green");
-            case REVISION_REQUESTED -> sb.append("#f57f17");
-            case SENT_TO_HR -> sb.append("#004d40");
-            default -> sb.append(newStatus.getColor());
+        String extraDetails = "";
+        if (request.getTargetPosition() != null && !request.getTargetPosition().isBlank()) {
+            extraDetails = "<div style='background:#f1f5f9;border:1px solid #cbd5e1;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
+                    + "ตำแหน่งทางวิชาการที่ยื่นขอ: <strong style='color:#1e293b;'>" + request.getTargetPosition() + "</strong>"
+                    + "</div>";
         }
 
-        sb.append(";'>").append(newStatus.getThaiLabel()).append("</strong></p>");
-
-        if (request.getTargetPosition() != null) {
-            sb.append("<p>ตำแหน่งที่ขอ: <strong>").append(request.getTargetPosition()).append("</strong></p>");
-        }
-
-        sb.append("<hr>");
-        sb.append("<p>กรุณาเข้าสู่ระบบเพื่อตรวจสอบรายละเอียดเพิ่มเติม</p>");
-        sb.append("<p>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</p>");
-        sb.append("</body></html>");
-        return sb.toString();
+        return com.ecom.util.EmailTemplateHelper.buildStatusChangeEmail(
+                request.getApplicant().getName(),
+                "คำร้องขอตำแหน่งทางวิชาการ",
+                request.getRequestCode(),
+                oldStatus != null ? oldStatus.getThaiLabel() : "-",
+                newStatus.getThaiLabel(),
+                statusColor,
+                extraDetails);
     }
 }
