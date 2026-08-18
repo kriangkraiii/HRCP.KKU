@@ -68,6 +68,8 @@ public class PositionAdminController {
 
     private final com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository;
 
+    private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
+
     public PositionAdminController(
             PositionRequestService positionService,
             DocumentGenerationService documentService,
@@ -76,7 +78,8 @@ public class PositionAdminController {
             AdminLogService adminLogService,
             HttpServletRequest httpRequest,
             com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository,
-            com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository) {
+            com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository,
+            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
         this.positionService = positionService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -85,6 +88,7 @@ public class PositionAdminController {
         this.httpRequest = httpRequest;
         this.academicRequestRepository = academicRequestRepository;
         this.academicDocumentRepository = academicDocumentRepository;
+        this.autoFillHelper = autoFillHelper;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -238,11 +242,14 @@ public class PositionAdminController {
 
         List<PositionDocument> existing = positionService.getDocumentsByType(id, type);
         String existingData = existing.isEmpty() ? null : existing.get(0).getJsonData();
+        Map<String, String> autoFilledData = autoFillHelper.getPreFilledPositionDocData(request, type, existingData);
 
         model.addAttribute("request", request);
         model.addAttribute("documentType", type);
         model.addAttribute("documentLabel", positionService.getDocLabel(type));
         model.addAttribute("existingData", existingData);
+        model.addAttribute("autoFilledData", autoFilledData);
+        model.addAttribute("docData", autoFilledData);
         model.addAttribute("deans", staffMemberService.findAll());
 
         if (type == 5) {

@@ -230,15 +230,24 @@ public class UserServiceImpl implements UserService {
 		// they stay editable here rather than being sync-only.
 		dbUser.setFirstNameEn(user.getFirstNameEn());
 		dbUser.setLastNameEn(user.getLastNameEn());
-		dbUser.setAcademicPositionEn(user.getAcademicPositionEn());
-
+		String oldImage = dbUser.getProfileImage();
 		// Only a file we validated and wrote ourselves may name the profile image.
 		String storedImage = profileImageStorage.store(img);
 		if (storedImage != null) {
 			dbUser.setProfileImage(storedImage);
 		}
 
-		return userRepository.save(dbUser);
+		UserDtls savedUser = userRepository.save(dbUser);
+
+		// Clean up old replaced image if not default, not protected, and not shared
+		if (storedImage != null && oldImage != null && !oldImage.equals(storedImage)) {
+			long count = userRepository.countByProfileImage(oldImage);
+			if (count == 0) {
+				profileImageStorage.deleteIfPresent(oldImage);
+			}
+		}
+
+		return savedUser;
 	}
 
 	@Override
@@ -405,8 +414,16 @@ public class UserServiceImpl implements UserService {
 		try {
 			Optional<UserDtls> user = userRepository.findById(id);
 			if (user.isPresent()) {
+				String imageToDelete = user.get().getProfileImage();
 				userRepository.deleteById(id);
 				logger.info("Successfully deleted user with ID: " + id);
+
+				if (imageToDelete != null) {
+					long count = userRepository.countByProfileImage(imageToDelete);
+					if (count == 0) {
+						profileImageStorage.deleteIfPresent(imageToDelete);
+					}
+				}
 				return true;
 			}
 			logger.warn("User not found with ID: " + id);
@@ -452,6 +469,8 @@ public class UserServiceImpl implements UserService {
 			UserDtls user = userRepository.findById(id)
 					.orElseThrow(() -> new RuntimeException("User not found"));
 
+			String oldImage = user.getProfileImage();
+
 			// Save image file — rejects traversal, oversized and non-image uploads
 			String imageName = profileImageStorage.store(img);
 			if (imageName == null) {
@@ -461,6 +480,14 @@ public class UserServiceImpl implements UserService {
 			}
 			user.setProfileImage(imageName);
 			userRepository.save(user);
+
+			// Clean up old replaced image if not default, not protected, and not shared
+			if (oldImage != null && !oldImage.equals(imageName)) {
+				long count = userRepository.countByProfileImage(oldImage);
+				if (count == 0) {
+					profileImageStorage.deleteIfPresent(oldImage);
+				}
+			}
 
 			// Return new image URL with timestamp for cache busting
 			long timestamp = System.currentTimeMillis();

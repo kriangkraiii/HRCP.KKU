@@ -25,4 +25,7 @@ public interface UserRepository extends JpaRepository<UserDtls, Integer> {
 
 	@org.springframework.data.jpa.repository.Query("SELECT u FROM UserDtls u WHERE LOWER(u.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(u.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(u.mobileNumber) LIKE LOWER(CONCAT('%', :keyword, '%'))")
 	List<UserDtls> searchUsers(@org.springframework.data.repository.query.Param("keyword") String keyword);
+
+	long countByProfileImage(String profileImage);
+	List<UserDtls> findByProfileImage(String profileImage);
 }

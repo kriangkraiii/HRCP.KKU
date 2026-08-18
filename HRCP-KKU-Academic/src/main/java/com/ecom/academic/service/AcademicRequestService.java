@@ -22,6 +22,8 @@ import com.ecom.model.UserDtls;
 @Service
 public class AcademicRequestService {
 
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AcademicRequestService.class);
+
     private final AcademicRequestRepository requestRepository;
 
     private final AcademicDocumentRepository documentRepository;
@@ -244,7 +246,7 @@ public class AcademicRequestService {
     }
 
     /**
-     * ยกเลิก/ลบ draft request
+     * ยกเลิก/ลบ draft request พร้อมลบไฟล์และโฟลเดอร์บนดิสก์ทั้งหมด
      */
     @Transactional
     public boolean deleteDraftRequest(Long requestId, Integer applicantId) {
@@ -253,9 +255,28 @@ public class AcademicRequestService {
             AcademicRequest req = opt.get();
             if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == RequestStatus.DRAFT) {
                 List<AcademicAttachment> attachments = attachmentRepository.findByRequestIdOrderByUploadedAtDesc(requestId);
+                for (AcademicAttachment att : attachments) {
+                    deletePhysicalFile(att.getStoredFilePath());
+                }
                 if (!attachments.isEmpty()) {
                     attachmentRepository.deleteAll(attachments);
                 }
+
+                // Delete revision file if present
+                if (req.getRevisionFilePath() != null) {
+                    deletePhysicalFile(req.getRevisionFilePath());
+                }
+
+                // Delete entire request folder from disk
+                try {
+                    java.nio.file.Path requestDir = java.nio.file.Path.of("uploads/academic/" + requestId);
+                    if (java.nio.file.Files.exists(requestDir)) {
+                        org.springframework.util.FileSystemUtils.deleteRecursively(requestDir);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not delete request folder for #{}: {}", requestId, e.getMessage());
+                }
+
                 requestRepository.delete(req);
                 return true;
             }
@@ -282,7 +303,20 @@ public class AcademicRequestService {
     }
 
     public void deleteAttachment(Long attachmentId) {
-        attachmentRepository.deleteById(attachmentId);
+        attachmentRepository.findById(attachmentId).ifPresent(att -> {
+            deletePhysicalFile(att.getStoredFilePath());
+            attachmentRepository.delete(att);
+        });
+    }
+
+    private void deletePhysicalFile(String filePath) {
+        if (filePath != null && !filePath.isBlank()) {
+            try {
+                java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(filePath));
+            } catch (Exception e) {
+                log.warn("Failed to delete physical file {}: {}", filePath, e.getMessage());
+            }
+        }
     }
 
     /**

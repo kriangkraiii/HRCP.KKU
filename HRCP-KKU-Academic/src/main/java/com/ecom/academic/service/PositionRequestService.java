@@ -291,11 +291,25 @@ public class PositionRequestService {
         if (opt.isPresent()) {
             PositionRequest req = opt.get();
             if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == PositionRequestStatus.DRAFT) {
-                // Delete attachments
+                // Delete attachments and physical files
                 List<PositionAttachment> attachments = attachmentRepository.findActiveByRequestId(requestId);
+                for (PositionAttachment att : attachments) {
+                    deletePhysicalFile(att.getStoredFilePath());
+                }
                 if (!attachments.isEmpty()) {
                     attachmentRepository.deleteAll(attachments);
                 }
+
+                // Delete entire position request folder from disk
+                try {
+                    java.nio.file.Path requestDir = java.nio.file.Path.of("uploads/position/" + requestId);
+                    if (java.nio.file.Files.exists(requestDir)) {
+                        org.springframework.util.FileSystemUtils.deleteRecursively(requestDir);
+                    }
+                } catch (Exception e) {
+                    log.warn("Could not delete position request folder for #{}: {}", requestId, e.getMessage());
+                }
+
                 // Delete document edit logs
                 List<PositionDocumentEditLog> editLogs = editLogRepository.findByRequestOrderByEditedAtDesc(req);
                 if (!editLogs.isEmpty()) {
@@ -564,8 +578,19 @@ public class PositionRequestService {
 
     public void deleteAttachment(Long id) {
         attachmentRepository.findById(id).ifPresent(att -> {
+            deletePhysicalFile(att.getStoredFilePath());
             att.setIsDeleted(true);
             attachmentRepository.save(att);
         });
+    }
+
+    private void deletePhysicalFile(String filePath) {
+        if (filePath != null && !filePath.isBlank()) {
+            try {
+                java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(filePath));
+            } catch (Exception e) {
+                log.warn("Failed to delete position physical file {}: {}", filePath, e.getMessage());
+            }
+        }
     }
 }

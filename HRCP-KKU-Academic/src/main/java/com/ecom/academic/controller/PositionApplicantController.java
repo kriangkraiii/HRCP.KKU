@@ -35,13 +35,17 @@ public class PositionApplicantController {
 
     private final AcademicRequestService academicService;
 
+    private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
+
     public PositionApplicantController(
             PositionRequestService positionService,
             UserRepository userRepository,
-            AcademicRequestService academicService) {
+            AcademicRequestService academicService,
+            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.academicService = academicService;
+        this.autoFillHelper = autoFillHelper;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -163,16 +167,31 @@ public class PositionApplicantController {
     }
 
     /**
-     * ยกเลิกแบบร่างคำร้องขอตำแหน่งทางวิชาการ
+     * ยกเลิกแบบร่างคำร้องขอตำแหน่งทางวิชาการ (ต้องพิมพ์ยืนยันก่อนลบ)
      */
     @PostMapping("/request/{id}/cancel-draft")
-    public String cancelDraftRequest(@PathVariable Long id, Principal principal,
+    public String cancelDraftRequest(@PathVariable Long id,
+            @RequestParam(value = "confirmCode", required = false) String confirmCode,
+            Principal principal,
             org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes,
             @org.springframework.web.bind.annotation.RequestHeader(value = "Referer", required = false) String referer) {
         UserDtls user = getUser(principal);
+        Optional<PositionRequest> reqOpt = positionService.findById(id);
+        if (reqOpt.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่พบคำร้องที่ระบุ");
+            return referer != null && referer.contains("/user/academic/dashboard") ? "redirect:/user/academic/dashboard" : "redirect:/user/position/dashboard";
+        }
+
+        PositionRequest req = reqOpt.get();
+        String expectedCode = req.getRequestCode() != null ? req.getRequestCode() : String.valueOf(req.getId());
+        if (confirmCode == null || (!confirmCode.trim().equalsIgnoreCase("DELETE") && !confirmCode.trim().equalsIgnoreCase(expectedCode))) {
+            redirectAttributes.addFlashAttribute("errorMsg", "กรุณาพิมพ์ยืนยันด้วย 'DELETE' หรือรหัสคำร้อง '" + expectedCode + "' ให้ถูกต้องก่อนดำเนินการ");
+            return referer != null && referer.contains("/user/academic/dashboard") ? "redirect:/user/academic/dashboard" : "redirect:/user/position/dashboard";
+        }
+
         boolean deleted = positionService.deleteDraftRequest(id, user.getId());
         if (deleted) {
-            redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องขอตำแหน่งเรียบร้อยแล้ว");
+            redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องขอตำแหน่งและลบไฟล์เอกสารเรียบร้อยแล้ว");
         } else {
             redirectAttributes.addFlashAttribute("errorMsg", "ไม่สามารถยกเลิกแบบร่างได้ หรือคำร้องไม่ได้อยู่ในสถานะแบบร่าง");
         }
@@ -241,11 +260,14 @@ public class PositionApplicantController {
         // Load existing data
         List<PositionDocument> existing = positionService.getDocumentsByType(id, type);
         String existingData = existing.isEmpty() ? null : existing.get(0).getJsonData();
+        Map<String, String> preFilledData = autoFillHelper.getPreFilledPositionDocData(request, type, existingData);
 
         model.addAttribute("request", request);
         model.addAttribute("documentType", type);
         model.addAttribute("documentLabel", positionService.getDocLabel(type));
         model.addAttribute("existingData", existingData);
+        model.addAttribute("preFilledData", preFilledData);
+        model.addAttribute("docData", preFilledData);
         model.addAttribute("user", user);
 
         // Load doc 1 data for cross-document auto-fill (for docs other than 1)

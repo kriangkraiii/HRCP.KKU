@@ -33,6 +33,7 @@ import com.ecom.config.ClientIpUtils;
 import com.ecom.model.AdminLog;
 import com.ecom.model.UserDtls;
 import com.ecom.service.AdminLogService;
+import com.ecom.service.ImageSyncAuditService;
 import com.ecom.service.UserService;
 import com.ecom.util.CommonUtil;
 import com.ecom.util.FileUtils;
@@ -57,17 +58,25 @@ public class AdminController {
 
 	private final AdminLogService adminLogService;
 
+	private final ImageSyncAuditService imageSyncAuditService;
+
+	private final com.ecom.service.DataRetentionService dataRetentionService;
+
 	public AdminController(
 			HttpServletRequest request,
 			UserService userService,
 			CommonUtil commonUtil,
 			PasswordEncoder passwordEncoder,
-			AdminLogService adminLogService) {
+			AdminLogService adminLogService,
+			ImageSyncAuditService imageSyncAuditService,
+			com.ecom.service.DataRetentionService dataRetentionService) {
 		this.request = request;
 		this.userService = userService;
 		this.commonUtil = commonUtil;
 		this.passwordEncoder = passwordEncoder;
 		this.adminLogService = adminLogService;
+		this.imageSyncAuditService = imageSyncAuditService;
+		this.dataRetentionService = dataRetentionService;
 	}
 
 	@ModelAttribute
@@ -261,6 +270,55 @@ public class AdminController {
 			response.put("error", "เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ");
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 		}
+	}
+
+	@PostMapping("/system/audit-images")
+	@ResponseBody
+	public ResponseEntity<?> auditAndCleanImages(
+			@RequestParam(defaultValue = "false") boolean purgeOrphans,
+			@RequestParam(defaultValue = "false") boolean healMissing,
+			Principal principal) {
+		if (principal == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "ไม่ได้เข้าสู่ระบบ"));
+		}
+		var report = imageSyncAuditService.auditAndSync(purgeOrphans, healMissing);
+		return ResponseEntity.ok(report);
+	}
+
+	@GetMapping("/system/audit-images")
+	@ResponseBody
+	public ResponseEntity<?> getAuditReport(Principal principal) {
+		if (principal == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "ไม่ได้เข้าสู่ระบบ"));
+		}
+		var report = imageSyncAuditService.auditAndSync(false, false);
+		return ResponseEntity.ok(report);
+	}
+
+	@PostMapping("/system/run-retention")
+	@ResponseBody
+	public ResponseEntity<?> runDataRetention(Principal principal) {
+		if (principal == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "ไม่ได้เข้าสู่ระบบ"));
+		}
+		var report = dataRetentionService.runFullRetentionCycle();
+		return ResponseEntity.ok(report);
+	}
+
+	@GetMapping("/system/retention-status")
+	@ResponseBody
+	public ResponseEntity<?> getRetentionStatus(Principal principal) {
+		if (principal == null) {
+			return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("error", "ไม่ได้เข้าสู่ระบบ"));
+		}
+		Map<String, Object> status = Map.of(
+				"notificationDeletedDays", dataRetentionService.getNotificationDeletedDays(),
+				"notificationAncientDays", dataRetentionService.getNotificationAncientDays(),
+				"adminLogDays", dataRetentionService.getAdminLogDays(),
+				"facultySyncDays", dataRetentionService.getFacultySyncDays(),
+				"storageTrashDays", dataRetentionService.getStorageTrashDays()
+		);
+		return ResponseEntity.ok(status);
 	}
 
 	@PostMapping("/delete-user")

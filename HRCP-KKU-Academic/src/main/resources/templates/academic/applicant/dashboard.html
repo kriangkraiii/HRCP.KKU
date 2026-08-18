@@ -359,17 +359,23 @@
                                 <i class="fas fa-trash-alt fa-3x"></i>
                             </div>
                             <h5 class="fw-bold mb-2">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกแบบร่างนี้?</h5>
-                            <p class="text-muted mb-0">ข้อมูลเอกสารที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมด และไม่สามารถกู้คืนได้</p>
-                        </div>
-                        <div class="modal-footer bg-light d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-1"></i> ไม่ยกเลิก
-                            </button>
+                            <p class="text-muted mb-3">ข้อมูลเอกสารและไฟล์แนบที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมดอย่างถาวร</p>
                             <form id="cancelEvalDraftForm" method="post" th:action="@{/user/academic/request/0/cancel-draft}">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-trash-alt me-1"></i> ยืนยันการยกเลิก
-                                </button>
+                                <div class="bg-light p-3 rounded-3 border text-start mb-3">
+                                    <label class="form-label small fw-bold text-danger mb-1">
+                                        <i class="fas fa-keyboard me-1"></i> กรุณาพิมพ์คำว่า <span class="badge bg-danger">DELETE</span> เพื่อยืนยันการลบ:
+                                    </label>
+                                    <input type="text" id="confirmEvalCodeInput" name="confirmCode" class="form-control text-center fw-bold" placeholder="DELETE" required autocomplete="off" />
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i> ไม่ยกเลิก
+                                    </button>
+                                    <button type="submit" id="btnConfirmEvalDraft" class="btn btn-danger" disabled>
+                                        <i class="fas fa-trash-alt me-1"></i> ยืนยันการลบแบบร่าง
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -382,7 +388,7 @@
                     <div class="modal-content border-0 shadow">
                         <div class="modal-header bg-danger text-white">
                             <h5 class="modal-title" id="cancelPosDraftModalLabel">
-                                <i class="fas fa-exclamation-triangle me-2"></i> ยืนยันการยกเลิกแบบร่าง
+                                <i class="fas fa-exclamation-triangle me-2"></i> ยืนยันการยกเลิกแบบร่างคำร้องขอตำแหน่ง
                             </h5>
                             <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
@@ -391,17 +397,23 @@
                                 <i class="fas fa-trash-alt fa-3x"></i>
                             </div>
                             <h5 class="fw-bold mb-2">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกแบบร่างคำร้องขอตำแหน่ง?</h5>
-                            <p class="text-muted mb-0">ข้อมูลเอกสารที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมด และไม่สามารถกู้คืนได้</p>
-                        </div>
-                        <div class="modal-footer bg-light d-flex justify-content-end gap-2">
-                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
-                                <i class="fas fa-times me-1"></i> ไม่ยกเลิก
-                            </button>
+                            <p class="text-muted mb-3">ข้อมูลเอกสารและไฟล์แนบที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมดอย่างถาวร</p>
                             <form id="cancelPosDraftForm" method="post" th:action="@{/user/position/request/0/cancel-draft}">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                                <button type="submit" class="btn btn-danger">
-                                    <i class="fas fa-trash-alt me-1"></i> ยืนยันการยกเลิก
-                                </button>
+                                <div class="bg-light p-3 rounded-3 border text-start mb-3">
+                                    <label class="form-label small fw-bold text-danger mb-1">
+                                        <i class="fas fa-keyboard me-1"></i> กรุณาพิมพ์คำว่า <span class="badge bg-danger">DELETE</span> เพื่อยืนยันการลบ:
+                                    </label>
+                                    <input type="text" id="confirmPosCodeInput" name="confirmCode" class="form-control text-center fw-bold" placeholder="DELETE" required autocomplete="off" />
+                                </div>
+                                <div class="d-flex justify-content-end gap-2">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                                        <i class="fas fa-times me-1"></i> ไม่ยกเลิก
+                                    </button>
+                                    <button type="submit" id="btnConfirmPosDraft" class="btn btn-danger" disabled>
+                                        <i class="fas fa-trash-alt me-1"></i> ยืนยันการลบแบบร่าง
+                                    </button>
+                                </div>
                             </form>
                         </div>
                     </div>
@@ -410,10 +422,14 @@
 
             <!-- Scripts -->
             <script>
-                // Dynamic Modal Action URL Binding
+                // Dynamic Modal Action URL Binding & Typed Confirmation
                 var cancelEvalModal = document.getElementById('cancelEvalDraftModal');
                 if (cancelEvalModal) {
+                    var evalInput = document.getElementById('confirmEvalCodeInput');
+                    var evalBtn = document.getElementById('btnConfirmEvalDraft');
                     cancelEvalModal.addEventListener('show.bs.modal', function (event) {
+                        if (evalInput) { evalInput.value = ''; }
+                        if (evalBtn) { evalBtn.disabled = true; }
                         var button = event.relatedTarget;
                         if (button) {
                             var reqId = button.getAttribute('data-request-id');
@@ -423,11 +439,20 @@
                             }
                         }
                     });
+                    if (evalInput && evalBtn) {
+                        evalInput.addEventListener('input', function() {
+                            evalBtn.disabled = (this.value.trim().toUpperCase() !== 'DELETE');
+                        });
+                    }
                 }
 
                 var cancelPosModal = document.getElementById('cancelPosDraftModal');
                 if (cancelPosModal) {
+                    var posInput = document.getElementById('confirmPosCodeInput');
+                    var posBtn = document.getElementById('btnConfirmPosDraft');
                     cancelPosModal.addEventListener('show.bs.modal', function (event) {
+                        if (posInput) { posInput.value = ''; }
+                        if (posBtn) { posBtn.disabled = true; }
                         var button = event.relatedTarget;
                         if (button) {
                             var reqId = button.getAttribute('data-request-id');
@@ -437,6 +462,11 @@
                             }
                         }
                     });
+                    if (posInput && posBtn) {
+                        posInput.addEventListener('input', function() {
+                            posBtn.disabled = (this.value.trim().toUpperCase() !== 'DELETE');
+                        });
+                    }
                 }
 
                 // Pagination Script

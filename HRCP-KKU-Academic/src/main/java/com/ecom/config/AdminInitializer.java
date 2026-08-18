@@ -57,18 +57,14 @@ public class AdminInitializer implements CommandLineRunner {
             System.out.println("=== Default admin created: " + adminEmail + " / " + adminPassword + " ===");
         }
 
-        // 2. Create default regular test user if not exists
-        if (!userRepository.existsByEmail(userEmail)) {
-            UserDtls user = new UserDtls();
-            user.setTitle("อาจารย์");
-            user.setFirstName("ทดสอบ");
-            user.setLastName("ผู้ใช้งาน");
+        // 2. Create or enrich default regular test user
+        UserDtls user = userRepository.findByEmail(userEmail);
+        if (user == null) {
+            user = new UserDtls();
             user.setEmail(userEmail);
             user.setPassword(passwordEncoder.encode(userPassword));
             user.setRole("ROLE_USER");
             user.setApplicantId(generateApplicantId());
-            user.setAcademicPosition("อาจารย์");
-            user.setMobileNumber("0812345678");
             user.setIsEnable(true);
             user.setAccountNonLocked(true);
             user.setFailedAttempt(0);
@@ -78,10 +74,20 @@ public class AdminInitializer implements CommandLineRunner {
             user.setAutoDraftEnabled(true);
             user.setTwoFactorEnabled(false);
             user.setEmailVerified(true);
-
-            userRepository.save(user);
-            System.out.println("=== Default test user created: " + userEmail + " / " + userPassword + " (Applicant ID: " + user.getApplicantId() + ") ===");
         }
+
+        // Set realistic Thai academic profile data
+        user.setTitle("ผู้ช่วยศาสตราจารย์");
+        user.setFirstName("สมชาย");
+        user.setLastName("ใจดีวิชาการ");
+        user.setFirstNameEn("Somchai");
+        user.setLastNameEn("Jaideewichakan");
+        user.setAcademicPosition("ผู้ช่วยศาสตราจารย์");
+        user.setAcademicPositionEn("Assistant Professor");
+        user.setMobileNumber("081-234-5678");
+
+        userRepository.save(user);
+        System.out.println("=== Default test user initialized/updated: " + userEmail + " (Applicant ID: " + user.getApplicantId() + ") ===");
 
         // 3. Backfill applicant IDs for existing ROLE_USER without one
         List<UserDtls> usersWithoutId = userRepository.findByRoleAndApplicantIdIsNull("ROLE_USER");

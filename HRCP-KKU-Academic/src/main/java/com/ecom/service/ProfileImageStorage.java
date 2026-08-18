@@ -31,11 +31,90 @@ public class ProfileImageStorage {
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "gif");
     private static final long MAX_SIZE_BYTES = 5L * 1024 * 1024;
 
+    public static final Set<String> PROTECTED_FILENAMES = Set.of(
+            "default.png",
+            "cphr_new.png",
+            "cphr_logo.png",
+            "cp_logo.png",
+            "kku_logo.png",
+            "favicon.png",
+            "favicon.ico",
+            "logo_cphr.jpg",
+            "logo_no_P.png",
+            "logo_transparent_background.png"
+    );
+
     private final Path baseDir;
 
     public ProfileImageStorage(
             @Value("${app.upload.profile-image-dir:${app.upload.dir:${user.dir}/uploads/}profile_img}") String baseDir) {
         this.baseDir = Path.of(baseDir).toAbsolutePath().normalize();
+    }
+
+    private String safeBaseName(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return "";
+        }
+        String name = Path.of(filename).getFileName().toString();
+        return name.replace("\0", "").replace("/", "").replace("\\", "").trim();
+    }
+
+    /**
+     * Returns true if the given filename is a system or default protected asset that must never be deleted.
+     */
+    public boolean isProtected(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return true;
+        }
+        return PROTECTED_FILENAMES.contains(filename.trim().toLowerCase(Locale.ROOT));
+    }
+
+    /**
+     * Safely deletes a stored image file from the upload directory, provided it is not protected.
+     *
+     * @param filename the stored filename to delete
+     * @return true if the file was deleted, false if protected or didn't exist
+     */
+    public boolean deleteIfPresent(String filename) {
+        if (filename == null || filename.isBlank() || isProtected(filename)) {
+            return false;
+        }
+        String safe = safeBaseName(filename);
+        if (safe.isBlank()) {
+            return false;
+        }
+        Path target = baseDir.resolve(safe).normalize();
+        if (!target.startsWith(baseDir)) {
+            log.warn("Refusing to delete file outside upload directory: {}", filename);
+            return false;
+        }
+        try {
+            boolean deleted = Files.deleteIfExists(target);
+            if (deleted) {
+                log.info("Deleted profile image file from disk: {}", safe);
+            }
+            return deleted;
+        } catch (IOException e) {
+            log.error("Failed to delete profile image {}: {}", filename, e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * Lists all regular image filenames currently stored in the upload directory.
+     */
+    public java.util.List<String> listAllStoredImages() {
+        if (!Files.exists(baseDir) || !Files.isDirectory(baseDir)) {
+            return java.util.List.of();
+        }
+        try (var stream = Files.list(baseDir)) {
+            return stream.filter(Files::isRegularFile)
+                    .map(p -> p.getFileName().toString())
+                    .toList();
+        } catch (IOException e) {
+            log.error("Failed to list files in profile image directory: {}", e.getMessage(), e);
+            return java.util.List.of();
+        }
     }
 
     /**
@@ -48,7 +127,11 @@ public class ProfileImageStorage {
         if (filename == null || filename.isBlank()) {
             return false;
         }
-        Path target = baseDir.resolve(FileUtils.sanitizeFilename(filename)).normalize();
+        String safe = safeBaseName(filename);
+        if (safe.isBlank()) {
+            return false;
+        }
+        Path target = baseDir.resolve(safe).normalize();
         return target.startsWith(baseDir) && Files.isRegularFile(target);
     }
 
@@ -74,10 +157,10 @@ public class ProfileImageStorage {
         }
 
         String extension = extractExtension(file.getOriginalFilename());
-        String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + FileUtils.sanitizeFilename(file.getOriginalFilename());
+        String safeName = UUID.randomUUID().toString().substring(0, 8) + "_" + safeBaseName(file.getOriginalFilename());
         Path target = baseDir.resolve(safeName).normalize();
 
-        // Defence in depth: sanitizeFilename already strips directory components,
+        // Defence in depth: safeBaseName already strips directory components,
         // but never write anywhere that is not under baseDir.
         if (!target.startsWith(baseDir)) {
             log.warn("Rejected profile image upload: resolved path escapes the upload directory");

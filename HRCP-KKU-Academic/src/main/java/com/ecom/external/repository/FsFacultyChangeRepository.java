@@ -25,4 +25,8 @@ public interface FsFacultyChangeRepository extends JpaRepository<FsFacultyChange
     Optional<FsFacultyChange> findFirstByFsUserIdAndStatus(Long fsUserId, String status);
 
     long countByStatus(String status);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("DELETE FROM FsFacultyChange f WHERE f.status != 'PENDING' AND f.detectedAt < :cutoff")
+    int deleteProcessedChangesBefore(@org.springframework.data.repository.query.Param("cutoff") java.time.LocalDateTime cutoff);
 }

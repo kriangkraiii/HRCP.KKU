@@ -274,6 +274,22 @@ public class AdminStorageService {
         }
     }
 
+    /**
+     * Purges trashed files that were deleted more than the specified days ago.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public int purgeOldTrash(int olderThanDays) {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(olderThanDays);
+        List<AdminFile> oldTrash = fileRepository.findByIsDeletedTrueAndDeletedAtBefore(cutoff);
+        int count = 0;
+        for (AdminFile f : oldTrash) {
+            deleteFileFromDisk(f.getStoredFilePath());
+            fileRepository.delete(f);
+            count++;
+        }
+        return count;
+    }
+
     // ==================== Breadcrumb ====================
 
     public List<AdminFolder> getBreadcrumb(Long folderId) {

@@ -7,6 +7,7 @@ import java.security.Principal;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
@@ -70,6 +71,8 @@ public class AcademicApplicantController {
 
     private final UserStorageService userStorageService;
 
+    private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
+
     public AcademicApplicantController(
             AcademicRequestService requestService,
             DocumentGenerationService documentService,
@@ -79,7 +82,8 @@ public class AcademicApplicantController {
             PositionRequestService positionRequestService,
             AdminLogService adminLogService,
             jakarta.servlet.http.HttpServletRequest httpRequest,
-            UserStorageService userStorageService) {
+            UserStorageService userStorageService,
+            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -89,6 +93,7 @@ public class AcademicApplicantController {
         this.adminLogService = adminLogService;
         this.httpRequest = httpRequest;
         this.userStorageService = userStorageService;
+        this.autoFillHelper = autoFillHelper;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -219,19 +224,14 @@ public class AcademicApplicantController {
         }
 
         List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 0);
+        String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
+        Map<String, String> doc0Data = autoFillHelper.getPreFilledAcademicDocData(request, 0, existingJson);
+
         model.addAttribute("request", request);
         model.addAttribute("existingDocs", existingDocs);
-        if (!existingDocs.isEmpty()) {
-            String jsonData = existingDocs.get(0).getJsonData();
-            model.addAttribute("existingData", jsonData);
-            try {
-                Map<String, String> doc0Data = objectMapper.readValue(jsonData,
-                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
-                model.addAttribute("doc0Data", doc0Data);
-            } catch (Exception e) {
-                // ignore parse errors – page will render with empty defaults
-            }
-        }
+        model.addAttribute("existingData", existingJson);
+        model.addAttribute("doc0Data", doc0Data);
+
         return "academic/applicant/document_0_form";
     }
 
@@ -283,19 +283,14 @@ public class AcademicApplicantController {
         }
 
         List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 1);
+        String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
+        Map<String, String> doc1Data = autoFillHelper.getPreFilledAcademicDocData(request, 1, existingJson);
+
         model.addAttribute("request", request);
         model.addAttribute("existingDocs", existingDocs);
-        if (!existingDocs.isEmpty()) {
-            String jsonData = existingDocs.get(0).getJsonData();
-            model.addAttribute("existingData", jsonData);
-            try {
-                Map<String, String> doc1Data = objectMapper.readValue(jsonData,
-                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
-                model.addAttribute("doc1Data", doc1Data);
-            } catch (Exception e) {
-                // ignore parse errors
-            }
-        }
+        model.addAttribute("existingData", existingJson);
+        model.addAttribute("doc1Data", doc1Data);
+
         return "academic/applicant/document_1_form";
     }
 
@@ -369,11 +364,26 @@ public class AcademicApplicantController {
     }
 
     /**
-     * ยกเลิกแบบร่างคำร้องประเมินผลการสอน
+     * ยกเลิกแบบร่างคำร้องประเมินผลการสอน (ต้องพิมพ์ยืนยันก่อนลบ)
      */
     @PostMapping("/request/{id}/cancel-draft")
-    public String cancelDraftRequest(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
+    public String cancelDraftRequest(@PathVariable Long id,
+            @RequestParam(value = "confirmCode", required = false) String confirmCode,
+            Principal principal, RedirectAttributes redirectAttributes) {
         UserDtls user = getUser(principal);
+        Optional<AcademicRequest> reqOpt = requestService.findById(id);
+        if (reqOpt.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่พบคำร้องที่ระบุ");
+            return "redirect:/user/academic/dashboard";
+        }
+
+        AcademicRequest req = reqOpt.get();
+        String expectedCode = req.getRequestCode() != null ? req.getRequestCode() : String.valueOf(req.getId());
+        if (confirmCode == null || (!confirmCode.trim().equalsIgnoreCase("DELETE") && !confirmCode.trim().equalsIgnoreCase(expectedCode))) {
+            redirectAttributes.addFlashAttribute("errorMsg", "กรุณาพิมพ์ยืนยันด้วย 'DELETE' หรือรหัสคำร้อง '" + expectedCode + "' ให้ถูกต้องก่อนดำเนินการ");
+            return "redirect:/user/academic/dashboard";
+        }
+
         boolean deleted = requestService.deleteDraftRequest(id, user.getId());
         if (deleted) {
             try {
@@ -382,7 +392,7 @@ public class AcademicApplicantController {
                         "ยกเลิกแบบร่างคำร้องประเมินผลการสอน #" + id,
                         getClientIpAddress());
             } catch (Exception ignored) {}
-            redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องเรียบร้อยแล้ว");
+            redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องและลบไฟล์เอกสารเรียบร้อยแล้ว");
         } else {
             redirectAttributes.addFlashAttribute("errorMsg", "ไม่สามารถยกเลิกแบบร่างได้ หรือคำร้องไม่ได้อยู่ในสถานะแบบร่าง");
         }
@@ -457,6 +467,8 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/request/" + id + "?error=" + java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
         }
 
+        String oldRevisionPath = request.getRevisionFilePath();
+
         String uploadDir = "uploads/academic/" + id + "/revisions/";
         Files.createDirectories(Path.of(uploadDir));
         String safeFilename = FileUtils.sanitizeFilename(file.getOriginalFilename());
@@ -464,6 +476,15 @@ public class AcademicApplicantController {
         file.transferTo(Path.of(filePath));
 
         requestService.setRevisionFile(id, filePath);
+
+        // Delete old revision file from disk
+        if (oldRevisionPath != null && !oldRevisionPath.isBlank() && !oldRevisionPath.equals(filePath)) {
+            try {
+                Files.deleteIfExists(Path.of(oldRevisionPath));
+            } catch (Exception e) {
+                log.warn("Failed to delete previous revision file: {}", e.getMessage());
+            }
+        }
 
         // Log activity
         try {

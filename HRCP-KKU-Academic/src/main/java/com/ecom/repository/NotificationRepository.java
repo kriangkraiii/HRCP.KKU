@@ -92,4 +92,14 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("DELETE FROM Notification n WHERE n.recipient = :recipient AND n.isDeleted = true")
     void emptyTrashByRecipient(@Param("recipient") UserDtls recipient);
+
+    // ================= Data Retention Queries =================
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.isDeleted = true AND n.createdAt < :cutoff")
+    int deleteDeletedNotificationsBefore(@Param("cutoff") LocalDateTime cutoff);
+
+    @Modifying
+    @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff")
+    int deleteAncientNotificationsBefore(@Param("cutoff") LocalDateTime cutoff);
 }

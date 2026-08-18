@@ -70,6 +70,8 @@ public class AcademicAdminController {
 
     private final HttpServletRequest httpRequest;
 
+    private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
+
     public AcademicAdminController(
             AcademicRequestService requestService,
             DocumentGenerationService documentService,
@@ -77,7 +79,8 @@ public class AcademicAdminController {
             UserRepository userRepository,
             AdminLogService adminLogService,
             PositionRequestService positionRequestService,
-            HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest,
+            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -85,6 +88,7 @@ public class AcademicAdminController {
         this.adminLogService = adminLogService;
         this.positionRequestService = positionRequestService;
         this.httpRequest = httpRequest;
+        this.autoFillHelper = autoFillHelper;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -366,20 +370,21 @@ public class AcademicAdminController {
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
         List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, type);
+        String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
+        Map<String, String> autoFilledData = autoFillHelper.getPreFilledAcademicDocData(request, type, existingJson);
+
         model.addAttribute("request", request);
         model.addAttribute("documentType", type);
         model.addAttribute("documentLabel", DOC_LABELS.getOrDefault(type, "Document " + type));
         model.addAttribute("existingDocs", existingDocs);
+        model.addAttribute("existingData", existingJson);
+        model.addAttribute("autoFilledData", autoFilledData);
+        model.addAttribute("docData", autoFilledData);
         model.addAttribute("staffMembers", staffMemberService.findAll());
         model.addAttribute("deans", staffMemberService.findDeans());
         model.addAttribute("heads", staffMemberService.findHeads());
         model.addAttribute("committee", staffMemberService.findCommittee());
         model.addAttribute("hrStaff", staffMemberService.findHR());
-
-        // Load existing JSON data if available
-        if (!existingDocs.isEmpty()) {
-            model.addAttribute("existingData", existingDocs.get(0).getJsonData());
-        }
 
         // ดึงรายชื่อกรรมการ 3 คนจาก doc_2 เพื่อ auto-fill ในเอกสารถัดไป
         if (type != 2) {

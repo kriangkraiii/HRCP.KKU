@@ -217,6 +217,22 @@ public class UserStorageService {
         for (UserFile f : getTrashFiles(ownerId)) { deleteFileFromDisk(f.getStoredFilePath()); fileRepo.delete(f); }
     }
 
+    /**
+     * Purges trashed files that were deleted more than the specified days ago.
+     */
+    @org.springframework.transaction.annotation.Transactional
+    public int purgeOldTrash(int olderThanDays) {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(olderThanDays);
+        List<UserFile> oldTrash = fileRepo.findByIsDeletedTrueAndDeletedAtBefore(cutoff);
+        int count = 0;
+        for (UserFile f : oldTrash) {
+            deleteFileFromDisk(f.getStoredFilePath());
+            fileRepo.delete(f);
+            count++;
+        }
+        return count;
+    }
+
     // ==================== Breadcrumb & Stats ====================
 
     public List<UserFolder> getBreadcrumb(Long folderId, Integer ownerId) {
