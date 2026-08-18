@@ -48,8 +48,8 @@
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> ข้อมูลผู้ยื่นคำร้อง</h5>
                         <div class="row mb-3">
                             <div class="col-md-6">
-                                <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น</label>
-                                <input type="text" name="applicant_name" class="form-control"
+                                <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น <span class="text-danger">*</span></label>
+                                <input type="text" name="applicant_name" class="form-control" required
                                     th:value="${doc1Data != null ? doc1Data.getOrDefault('applicant_name', (request.applicant.academicPosition != null ? request.applicant.academicPosition : (request.applicant.title != null ? request.applicant.title : '')) + request.applicant.name) : (request.applicant.academicPosition != null ? request.applicant.academicPosition : (request.applicant.title != null ? request.applicant.title : '')) + request.applicant.name}">
                             </div>
                         </div>
