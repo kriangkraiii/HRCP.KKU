@@ -69,7 +69,7 @@ public class MyPublicationsApiController {
         body.put("total", result.getTotalElements());
         body.put("page", result.getNumber());
         body.put("size", result.getSize());
-        body.put("linked", scopusQuery.resolveFsUserId(user).isPresent());
+        body.put("linked", scopusQuery.isUniversalAccessUser(user) || scopusQuery.resolveFsUserId(user).isPresent());
         return ResponseEntity.ok(body);
     }
 
@@ -144,6 +144,20 @@ public class MyPublicationsApiController {
 
         FsFaculty f = scopusQuery.resolveFaculty(user.getEmail());
         if (f == null) {
+            if (scopusQuery.isUniversalAccessUser(user)) {
+                Map<String, Object> body = new HashMap<>();
+                body.put("linked", true);
+                body.put("prefix", user.getTitle() != null ? user.getTitle() : "ดร.");
+                body.put("firstName", user.getFirstName() != null ? user.getFirstName() : "ทดสอบ");
+                body.put("lastName", user.getLastName() != null ? user.getLastName() : "ผู้ใช้งาน");
+                body.put("displayName", user.getName());
+                body.put("nameEn", "Test User");
+                body.put("positionTitle", user.getAcademicPosition() != null ? user.getAcademicPosition() : "อาจารย์");
+                body.put("email", user.getEmail());
+                body.put("tel", user.getMobileNumber() != null ? user.getMobileNumber() : "0812345678");
+                body.put("scopusId", "57200000000");
+                return ResponseEntity.ok(body);
+            }
             return ResponseEntity.ok(Map.of("linked", false));
         }
 
