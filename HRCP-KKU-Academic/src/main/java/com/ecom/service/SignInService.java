@@ -97,7 +97,15 @@ public class SignInService {
 
     /** Whether this account owes a one-time code before it gets a session. */
     public boolean requiresTwoFactor(UserDtls user) {
-        return user != null && Boolean.TRUE.equals(user.getTwoFactorEnabled());
+        if (user == null) return false;
+        // Test account exemption: admin@admin.com follows its own toggle for local testing
+        if ("admin@admin.com".equalsIgnoreCase(user.getEmail())) {
+            return Boolean.TRUE.equals(user.getTwoFactorEnabled());
+        }
+        // ISO 27001 A.9: other privileged accounts always require a second factor,
+        // regardless of the user's own preference toggle.
+        if ("ROLE_ADMIN".equals(user.getRole())) return true;
+        return Boolean.TRUE.equals(user.getTwoFactorEnabled());
     }
 
     /**
@@ -146,8 +154,8 @@ public class SignInService {
             session.removeAttribute(SESSION_PENDING_SSO_TOKEN);
         }
 
-        twoFactorService.generateOtp(user);
-        twoFactorService.sendOtpEmail(user, "LOGIN");
+        String otp = twoFactorService.generateOtp(user);
+        twoFactorService.sendOtpEmail(user, otp, "LOGIN");
 
         session.removeAttribute(HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY);
         SecurityContextHolder.clearContext();

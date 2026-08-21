@@ -167,7 +167,7 @@ public class SystemAlertService {
     }
 
     @Value("${spring.mail.username:noreply@kku.ac.th}")
-    private String senderEmail;
+    private String senderEmail = "noreply@kku.ac.th";
 
     /**
      * One message.

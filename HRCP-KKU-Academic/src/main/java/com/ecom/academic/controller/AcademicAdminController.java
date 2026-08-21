@@ -765,7 +765,22 @@ public class AcademicAdminController {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Document not found"));
 
-        byte[] data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
+        byte[] data = null;
+        if (doc.getGeneratedFilePath() != null) {
+            data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
+        }
+
+        if (data == null && doc.getJsonData() != null) {
+            try {
+                data = documentService.generatePreviewDocx(doc.getDocumentType(), doc.getJsonData());
+            } catch (Exception e) {
+                // fallback failed
+            }
+        }
+
+        if (data == null) {
+            return ResponseEntity.notFound().build();
+        }
 
         String docLabel = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
                 ? doc.getDocumentLabel()
@@ -782,7 +797,7 @@ public class AcademicAdminController {
             ByteArrayResource resource = new ByteArrayResource(pdfData);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
+                            "inline; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
                     .contentType(MediaType.APPLICATION_PDF)
                     .contentLength(pdfData.length)
                     .body(resource);

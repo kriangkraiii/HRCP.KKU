@@ -4,207 +4,424 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>ดึงข้อมูลจากระบบภายนอก</title>
+    <title>ดึงข้อมูลและจัดการระบบภายนอก</title>
 </head>
 
 <body>
 <section>
-    <div class="container-fluid mt-5 p-4">
+    <div class="container-fluid py-4 px-4">
 
-        <div class="card card-sh mb-4">
-            <div class="card-header">
-                <h4 class="mb-1">ดึงข้อมูลจากระบบ Fund Management</h4>
-                <small class="text-muted" th:text="${apiBaseUrl}">-</small>
+        <!-- Global Alerts -->
+        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show mb-4 shadow-sm">
+            <i class="fas fa-check-circle me-1"></i> [[${succMsg}]]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${warnMsg}" class="alert alert-warning alert-dismissible fade show mb-4 shadow-sm">
+            <i class="fas fa-clock me-1"></i> [[${warnMsg}]]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm">
+            <i class="fas fa-exclamation-triangle me-1"></i> [[${errorMsg}]]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
 
-                <th:block th:if="${succMsg}">
-                    <p class="text-success fw-bold mt-3 mb-0">[[${succMsg}]]</p>
-                </th:block>
-                <div th:if="${warnMsg}" class="alert alert-warning mt-3 mb-0">
-                    <i class="fas fa-clock"></i> [[${warnMsg}]]
+        <!-- Navigation Tabs -->
+        <ul class="nav nav-pills mb-4 gap-2 bg-white p-2 rounded-3 shadow-sm border" id="syncTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+                <button class="nav-link px-4 py-2 fw-semibold"
+                        th:classappend="${activeTab != 'changes'} ? 'active' : ''"
+                        id="tab-sync-btn"
+                        data-bs-toggle="pill"
+                        data-bs-target="#tab-sync"
+                        type="button"
+                        role="tab">
+                    <i class="fas fa-cloud-arrow-down me-2"></i>ดึงข้อมูลจากระบบภายนอก
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link px-4 py-2 fw-semibold d-flex align-items-center"
+                        th:classappend="${activeTab == 'changes'} ? 'active' : ''"
+                        id="tab-changes-btn"
+                        data-bs-toggle="pill"
+                        data-bs-target="#tab-changes"
+                        type="button"
+                        role="tab">
+                    <i class="fas fa-user-pen me-2"></i>ตรวจสอบข้อมูลอาจารย์ที่เปลี่ยน
+                    <span class="badge rounded-pill bg-warning text-dark ms-2"
+                          th:if="${pendingCount > 0}"
+                          th:text="${pendingCount}">0</span>
+                </button>
+            </li>
+        </ul>
+
+        <div class="tab-content" id="syncTabsContent">
+            <!-- ==================== TAB 1: EXTERNAL SYNC ==================== -->
+            <div class="tab-pane fade"
+                 th:classappend="${activeTab != 'changes'} ? 'show active' : ''"
+                 id="tab-sync"
+                 role="tabpanel">
+
+                <div class="card card-sh mb-4">
+                    <div class="card-header bg-white py-3">
+                        <h4 class="mb-1 fw-bold"><i class="fas fa-sync text-primary me-2"></i>ดึงข้อมูลจากระบบ Fund Management & เว็บไซต์</h4>
+                        <small class="text-muted" th:text="${apiBaseUrl}">-</small>
+
+                        <div th:unless="${apiEnabled}" class="alert alert-danger mt-3 mb-0">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            การเชื่อมต่อถูกปิดอยู่ หรือยังไม่ได้ตั้งค่า API key — ปุ่มด้านล่างจะยังไม่ทำงาน
+                        </div>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <!-- Current contents -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-3">
+                                <div class="border rounded-3 p-3 text-center h-100 bg-light">
+                                    <div class="fs-3 fw-bold text-primary" th:text="${facultyCount}">0</div>
+                                    <div class="text-muted small">อาจารย์ในระบบ</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded-3 p-3 text-center h-100 bg-light">
+                                    <div class="fs-3 fw-bold text-success" th:text="${publicationCount}">0</div>
+                                    <div class="text-muted small">ผลงาน Scopus</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded-3 p-3 text-center h-100 bg-light">
+                                    <div class="fs-3 fw-bold text-info" th:text="${facultyWithScopus}">0</div>
+                                    <div class="text-muted small">อาจารย์ที่มี Scopus ID</div>
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="border rounded-3 p-3 text-center h-100"
+                                     th:classappend="${pendingCount > 0} ? 'border-warning bg-warning bg-opacity-10' : 'bg-light'">
+                                    <div class="fs-3 fw-bold"
+                                         th:classappend="${pendingCount > 0} ? 'text-warning' : ''"
+                                         th:text="${pendingCount}">0</div>
+                                    <div class="text-muted small">รอการยืนยัน</div>
+                                    <button th:if="${pendingCount > 0}"
+                                            type="button"
+                                            class="btn btn-sm btn-warning mt-2 fw-semibold"
+                                            onclick="switchToChangesTab()">
+                                        <i class="fas fa-arrow-right me-1"></i>ไปตรวจสอบ
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Manual triggers -->
+                        <h5 class="mb-3 fw-bold">ดึงข้อมูลตอนนี้</h5>
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-6">
+                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm">
+                                    <h6 class="fw-bold"><i class="fas fa-users text-primary me-1"></i> ข้อมูลอาจารย์</h6>
+                                    <p class="text-muted small flex-grow-1 mb-3">
+                                        อ่านข้อมูลอาจารย์จากต้นทางมาเทียบกับของเรา
+                                        <strong>ถ้ามีอะไรเปลี่ยน จะยังไม่แก้ทันที</strong>
+                                        แต่จะพักไว้ให้ยืนยันที่แท็บ "ตรวจสอบข้อมูลอาจารย์ที่เปลี่ยน" ก่อน — กดได้ทุกเมื่อ ปลอดภัย
+                                    </p>
+                                    <form th:action="@{/admin/external-sync/users}" method="post"
+                                          data-lock-button="1">
+                                        <button type="submit" class="btn btn-primary w-100"
+                                                th:disabled="${!apiEnabled or usersCooldown > 0}"
+                                                th:attr="data-cooldown=${usersCooldown}">
+                                            <i class="fas fa-users"></i>
+                                            <span th:if="${usersCooldown > 0}"
+                                                  th:text="'รออีก ' + ${usersCooldown} + ' วินาที'">รอ</span>
+                                            <span th:unless="${usersCooldown > 0}">ตรวจข้อมูลอาจารย์</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm">
+                                    <h6 class="fw-bold"><i class="fas fa-book text-success me-1"></i> ผลงาน Scopus</h6>
+                                    <p class="text-muted small flex-grow-1 mb-3">
+                                        ดึงผลงานของอาจารย์ทุกคนมาอัปเดต
+                                        ผลงานที่หายจากต้นทางจะไม่ถูกลบ
+                                        <strong>ใช้เวลาประมาณ 30–60 วินาที</strong>
+                                        เพราะเว้นจังหวะไม่ให้เกินโควตาของต้นทาง
+                                    </p>
+                                    <form th:action="@{/admin/external-sync/scopus}" method="post"
+                                          data-lock-button="1">
+                                        <button type="submit" class="btn btn-success w-100"
+                                                th:disabled="${!apiEnabled or scopusCooldown > 0}"
+                                                th:attr="data-cooldown=${scopusCooldown}">
+                                            <i class="fas fa-book"></i>
+                                            <span th:if="${scopusCooldown > 0}"
+                                                  th:text="'รออีก ' + ${scopusCooldown} + ' วินาที'">รอ</span>
+                                            <span th:unless="${scopusCooldown > 0}">ดึงผลงาน Scopus</span>
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="col-md-6">
+                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm">
+                                    <h6 class="fw-bold"><i class="fas fa-image text-info me-1"></i> รูปและข้อมูลจากเว็บไซต์คณะ</h6>
+                                    <p class="text-muted small flex-grow-1 mb-3">
+                                        อ่านจาก <span class="text-nowrap">computing.kku.ac.th/people</span>
+                                        มาเติม <strong>รูปโปรไฟล์</strong> และข้อมูลที่ระบบ Fund Management ไม่มี
+                                        จับคู่กันด้วยอีเมล และ<strong>เติมเฉพาะช่องที่ยังว่าง</strong> ไม่ทับของเดิม
+                                        — ทำอัตโนมัติทุกวันอาทิตย์อยู่แล้ว
+                                    </p>
+                                    <form th:action="@{/admin/external-sync/college-web}" method="post"
+                                          data-lock-button="1">
+                                        <button type="submit" class="btn btn-outline-primary w-100">
+                                            <i class="fas fa-image"></i> ดึงรูปและข้อมูลจากเว็บคณะ
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Last run -->
+                        <h5 class="mb-3 fw-bold">ผลการทำงานล่าสุด</h5>
+                        <div class="table-responsive mb-4">
+                            <table class="table table-sm align-middle border">
+                                <thead class="table-light">
+                                <tr>
+                                    <th>งาน</th>
+                                    <th>สถานะ</th>
+                                    <th>สำเร็จล่าสุด</th>
+                                    <th>จำนวนแถว</th>
+                                    <th>คำขอ</th>
+                                    <th>ใช้เวลา</th>
+                                    <th>หมายเหตุ</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="job : ${ {usersJob, scopusJob} }" th:if="${job != null}">
+                                    <td class="fw-semibold" th:text="${job.syncType == 'users'} ? 'ข้อมูลอาจารย์' : 'ผลงาน Scopus'">-</td>
+                                    <td>
+                                        <span class="badge bg-success" th:if="${job.lastStatus == 'OK'}">สำเร็จ</span>
+                                        <span class="badge bg-danger" th:if="${job.lastStatus == 'FAILED'}">ล้มเหลว</span>
+                                        <span class="badge bg-info" th:if="${job.lastStatus == 'RUNNING'}">กำลังทำงาน</span>
+                                    </td>
+                                    <td th:text="${job.lastSuccessAt != null
+                                                ? #temporals.format(job.lastSuccessAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                                    <td th:text="${job.rowsProcessed}">-</td>
+                                    <td th:text="${job.requestsMade}">-</td>
+                                    <td th:text="${job.durationMs != null ? job.durationMs + ' ms' : '-'}">-</td>
+                                    <td class="small text-muted" th:text="${job.message}">-</td>
+                                </tr>
+                                <tr th:if="${usersJob == null and scopusJob == null}">
+                                    <td colspan="7" class="text-center text-muted">ยังไม่เคยมีการดึงข้อมูล</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Schedule -->
+                        <h5 class="mb-3 fw-bold">ตารางเวลาอัตโนมัติ <small class="text-muted fs-6">(เวลาไทย)</small></h5>
+                        <div class="table-responsive">
+                            <table class="table table-sm border">
+                                <tbody>
+                                <tr th:each="entry : ${schedule}">
+                                    <td style="width:30%" class="fw-medium" th:text="${entry.key}">งาน</td>
+                                    <td class="text-muted small font-monospace" th:text="${entry.value}">cron</td>
+                                </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="alert alert-info mt-3 mb-0 small">
+                            <i class="fas fa-info-circle"></i>
+                            ระบบจะดึงข้อมูลให้อัตโนมัติตามเวลาข้างต้นทุกวัน
+                            และจะดึงให้ทันทีตอนเปิดระบบครั้งแรกถ้ายังไม่มีข้อมูลเลย
+                            ปุ่มด้านบนมีไว้สำหรับกรณีที่ต้องการข้อมูลล่าสุดทันทีโดยไม่รอรอบถัดไป
+                            <br>
+                            <i class="fas fa-shield-alt mt-1"></i>
+                            หลังกดแล้วจะกดซ้ำไม่ได้ทันที เพื่อไม่ให้จำนวนคำขอเกินโควตาของระบบต้นทาง
+                            ซึ่งจะทำให้การดึงอัตโนมัติตอนกลางคืนพลอยใช้ไม่ได้ไปด้วย
+                        </div>
+                    </div>
                 </div>
-                <th:block th:if="${errorMsg}">
-                    <p class="text-danger fw-bold mt-3 mb-0">[[${errorMsg}]]</p>
-                </th:block>
-                <div th:unless="${apiEnabled}" class="alert alert-danger mt-3 mb-0">
-                    <i class="fas fa-exclamation-triangle"></i>
-                    การเชื่อมต่อถูกปิดอยู่ หรือยังไม่ได้ตั้งค่า API key — ปุ่มด้านล่างจะยังไม่ทำงาน
-                </div>
+
             </div>
 
-            <div class="card-body">
-                <!-- Current contents -->
-                <div class="row g-3 mb-4">
-                    <div class="col-md-3">
-                        <div class="border rounded p-3 text-center h-100">
-                            <div class="fs-3 fw-bold" th:text="${facultyCount}">0</div>
-                            <div class="text-muted small">อาจารย์ในระบบ</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="border rounded p-3 text-center h-100">
-                            <div class="fs-3 fw-bold" th:text="${publicationCount}">0</div>
-                            <div class="text-muted small">ผลงาน Scopus</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="border rounded p-3 text-center h-100">
-                            <div class="fs-3 fw-bold" th:text="${facultyWithScopus}">0</div>
-                            <div class="text-muted small">อาจารย์ที่มี Scopus ID</div>
-                        </div>
-                    </div>
-                    <div class="col-md-3">
-                        <div class="border rounded p-3 text-center h-100"
-                             th:classappend="${pendingCount > 0} ? 'border-warning' : ''">
-                            <div class="fs-3 fw-bold"
-                                 th:classappend="${pendingCount > 0} ? 'text-warning' : ''"
-                                 th:text="${pendingCount}">0</div>
-                            <div class="text-muted small">รอการยืนยัน</div>
-                            <a th:if="${pendingCount > 0}" th:href="@{/admin/faculty-changes}"
-                               class="btn btn-sm btn-warning mt-2">ไปตรวจสอบ</a>
-                        </div>
-                    </div>
-                </div>
+            <!-- ==================== TAB 2: FACULTY CHANGES ==================== -->
+            <div class="tab-pane fade"
+                 th:classappend="${activeTab == 'changes'} ? 'show active' : ''"
+                 id="tab-changes"
+                 role="tabpanel">
 
-                <!-- Manual triggers -->
-                <h5 class="mb-3">ดึงข้อมูลตอนนี้</h5>
-                <div class="row g-3 mb-4">
-                    <div class="col-md-6">
-                        <div class="border rounded p-3 h-100 d-flex flex-column">
-                            <h6 class="fw-bold">ข้อมูลอาจารย์</h6>
-                            <p class="text-muted small flex-grow-1 mb-3">
-                                อ่านข้อมูลอาจารย์จากต้นทางมาเทียบกับของเรา
-                                <strong>ถ้ามีอะไรเปลี่ยน จะยังไม่แก้ทันที</strong>
-                                แต่จะพักไว้ให้ยืนยันที่หน้าตรวจสอบก่อน — กดได้ทุกเมื่อ ปลอดภัย
-                            </p>
-                            <form th:action="@{/admin/external-sync/users}" method="post"
-                                  data-lock-button="1">
-                                <button type="submit" class="btn btn-primary w-100"
-                                        th:disabled="${!apiEnabled or usersCooldown > 0}"
-                                        th:attr="data-cooldown=${usersCooldown}">
-                                    <i class="fas fa-users"></i>
-                                    <span th:if="${usersCooldown > 0}"
-                                          th:text="'รออีก ' + ${usersCooldown} + ' วินาที'">รอ</span>
-                                    <span th:unless="${usersCooldown > 0}">ตรวจข้อมูลอาจารย์</span>
+                <div class="card card-sh mb-4">
+                    <div class="card-header bg-white py-3">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                            <div>
+                                <h4 class="mb-1 fw-bold"><i class="fas fa-user-pen text-primary me-2"></i>ตรวจสอบการเปลี่ยนแปลงข้อมูลอาจารย์</h4>
+                                <small class="text-muted">
+                                    ข้อมูลจากระบบ Fund Management ที่เปลี่ยนไป จะรอการยืนยันที่นี่ก่อน จึงจะถูกนำไปใช้ในระบบ
+                                </small>
+                            </div>
+                            <div class="text-end">
+                                <span class="badge bg-warning text-dark fs-6 px-3 py-2 rounded-pill">
+                                    <i class="fas fa-bell me-1"></i> รอตรวจสอบ [[${pendingCount}]] รายการ
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-4">
+                        <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                            <form th:action="@{/admin/faculty-changes/sync}" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-outline-primary btn-sm">
+                                    <i class="fas fa-sync me-1"></i> ตรวจหาการเปลี่ยนแปลงตอนนี้
+                                </button>
+                            </form>
+
+                            <form th:action="@{/admin/faculty-changes/approve-all}" method="post"
+                                  th:if="${pendingCount > 0}"
+                                  th:data-confirm="'ยืนยันอนุมัติการเปลี่ยนแปลงทั้งหมด ' + ${pendingCount} + ' รายการ?'">
+                                <button type="submit" class="btn btn-success btn-sm">
+                                    <i class="fas fa-check-double me-1"></i> อนุมัติทั้งหมด
                                 </button>
                             </form>
                         </div>
-                    </div>
 
-                    <div class="col-md-6">
-                        <div class="border rounded p-3 h-100 d-flex flex-column">
-                            <h6 class="fw-bold">ผลงาน Scopus</h6>
-                            <p class="text-muted small flex-grow-1 mb-3">
-                                ดึงผลงานของอาจารย์ทุกคนมาอัปเดต
-                                ผลงานที่หายจากต้นทางจะไม่ถูกลบ
-                                <strong>ใช้เวลาประมาณ 30–60 วินาที</strong>
-                                เพราะเว้นจังหวะไม่ให้เกินโควตาของต้นทาง
-                            </p>
-                            <form th:action="@{/admin/external-sync/scopus}" method="post"
-                                  data-lock-button="1">
-                                <button type="submit" class="btn btn-success w-100"
-                                        th:disabled="${!apiEnabled or scopusCooldown > 0}"
-                                        th:attr="data-cooldown=${scopusCooldown}">
-                                    <i class="fas fa-book"></i>
-                                    <span th:if="${scopusCooldown > 0}"
-                                          th:text="'รออีก ' + ${scopusCooldown} + ' วินาที'">รอ</span>
-                                    <span th:unless="${scopusCooldown > 0}">ดึงผลงาน Scopus</span>
-                                </button>
-                            </form>
+                        <!-- Nothing waiting -->
+                        <div th:if="${#lists.isEmpty(changes)}" class="alert alert-success mb-0 py-4 text-center">
+                            <i class="fas fa-check-circle fs-3 text-success d-block mb-2"></i>
+                            <h5 class="fw-bold">ไม่มีรายการรอตรวจสอบ</h5>
+                            <p class="text-muted mb-0">ข้อมูลอาจารย์ในระบบตรงกับระบบ Fund Management เรียบร้อยแล้ว</p>
+                        </div>
+
+                        <!-- One card per pending change -->
+                        <div th:each="change : ${changes}" class="card mb-3 border-warning shadow-sm">
+                            <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-2 border-warning">
+                                <div>
+                                    <strong class="text-dark fs-6" th:text="${change.displayName}">ชื่ออาจารย์</strong>
+                                    <span class="text-muted small ms-2">
+                                        (รหัสต้นทาง [[${change.fsUserId}]])
+                                    </span>
+                                </div>
+                                <div class="text-muted small">
+                                    เปลี่ยน <span class="badge bg-warning text-dark">[[${change.fieldCount}]] ช่อง</span> ·
+                                    พบเมื่อ <span th:text="${#temporals.format(change.detectedAt, 'dd/MM/yyyy HH:mm')}">-</span>
+                                </div>
+                            </div>
+
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0">
+                                        <thead class="table-light">
+                                        <tr>
+                                            <th style="width:25%">ข้อมูล</th>
+                                            <th style="width:35%">ค่าเดิม (ในระบบเรา)</th>
+                                            <th style="width:35%">ค่าใหม่ (จากต้นทาง)</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr th:each="entry : ${diffs.get(change.id)}">
+                                            <td class="fw-semibold" th:text="${entry.key}">ช่อง</td>
+                                            <td>
+                                                <span class="text-danger"
+                                                      th:text="${entry.value.get('old')} ?: '(ว่าง)'">เดิม</span>
+                                            </td>
+                                            <td>
+                                                <span class="text-success fw-semibold"
+                                                      th:text="${entry.value.get('new')} ?: '(ว่าง)'">ใหม่</span>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div class="card-footer bg-white border-top">
+                                <div class="row g-2 align-items-center">
+                                    <div class="col-md-6">
+                                        <form th:action="@{/admin/faculty-changes/{id}/approve(id=${change.id})}"
+                                              method="post" class="d-flex gap-2">
+                                            <input type="text" name="note" class="form-control form-control-sm"
+                                                   placeholder="หมายเหตุ (ไม่บังคับ)">
+                                            <button type="submit" class="btn btn-success btn-sm text-nowrap">
+                                                <i class="fas fa-check me-1"></i> อนุมัติ
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <form th:action="@{/admin/faculty-changes/{id}/reject(id=${change.id})}"
+                                              method="post" class="d-flex gap-2">
+                                            <input type="text" name="note" class="form-control form-control-sm"
+                                                   placeholder="เหตุผลที่ไม่อนุมัติ (ไม่บังคับ)">
+                                            <button type="submit" class="btn btn-outline-danger btn-sm text-nowrap">
+                                                <i class="fas fa-times me-1"></i> ไม่อนุมัติ
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                                <small class="text-muted d-block mt-2">
+                                    * ไม่อนุมัติ = เก็บค่าเดิมไว้ ข้อมูลในระบบจะไม่ถูกแก้
+                                </small>
+                            </div>
                         </div>
                     </div>
+                </div>
 
-                    <div class="col-md-6">
-                        <div class="border rounded p-3 h-100 d-flex flex-column">
-                            <h6 class="fw-bold">รูปและข้อมูลจากเว็บไซต์คณะ</h6>
-                            <p class="text-muted small flex-grow-1 mb-3">
-                                อ่านจาก <span class="text-nowrap">computing.kku.ac.th/people</span>
-                                มาเติม <strong>รูปโปรไฟล์</strong> และข้อมูลที่ระบบ Fund Management ไม่มี
-                                จับคู่กันด้วยอีเมล และ<strong>เติมเฉพาะช่องที่ยังว่าง</strong> ไม่ทับของเดิม
-                                — ทำอัตโนมัติทุกวันอาทิตย์อยู่แล้ว
-                            </p>
-                            <form th:action="@{/admin/external-sync/college-web}" method="post"
-                                  data-lock-button="1">
-                                <button type="submit" class="btn btn-outline-primary w-100">
-                                    <i class="fas fa-image"></i> ดึงรูปและข้อมูลจากเว็บคณะ
-                                </button>
-                            </form>
+                <!-- Decision history -->
+                <div class="card card-sh" th:if="${!#lists.isEmpty(recent)}">
+                    <div class="card-header bg-white py-3">
+                        <h5 class="mb-0 fw-bold"><i class="fas fa-history text-secondary me-2"></i>ประวัติการตรวจสอบล่าสุด</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div class="table-responsive">
+                            <table class="table table-sm align-middle mb-0">
+                                <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">อาจารย์</th>
+                                    <th>ผลการตรวจ</th>
+                                    <th>ผู้ตรวจ</th>
+                                    <th>เมื่อ</th>
+                                    <th>หมายเหตุ</th>
+                                </tr>
+                                </thead>
+                                <tbody>
+                                <tr th:each="r : ${recent}">
+                                    <td class="ps-3 fw-medium" th:text="${r.displayName}">ชื่อ</td>
+                                    <td>
+                                        <span class="badge bg-success"
+                                              th:if="${r.status == 'APPROVED'}">อนุมัติ</span>
+                                        <span class="badge bg-secondary"
+                                              th:if="${r.status == 'REJECTED'}">ไม่อนุมัติ</span>
+                                    </td>
+                                    <td th:text="${r.reviewedBy}">-</td>
+                                    <td th:text="${r.reviewedAt != null
+                                                ? #temporals.format(r.reviewedAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
+                                    <td class="text-muted" th:text="${r.reviewNote}">-</td>
+                                </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
-                <!-- Last run -->
-                <h5 class="mb-3">ผลการทำงานล่าสุด</h5>
-                <div class="table-responsive mb-4">
-                    <table class="table table-sm align-middle">
-                        <thead class="table-light">
-                        <tr>
-                            <th>งาน</th>
-                            <th>สถานะ</th>
-                            <th>สำเร็จล่าสุด</th>
-                            <th>จำนวนแถว</th>
-                            <th>คำขอ</th>
-                            <th>ใช้เวลา</th>
-                            <th>หมายเหตุ</th>
-                        </tr>
-                        </thead>
-                        <tbody>
-                        <tr th:each="job : ${ {usersJob, scopusJob} }" th:if="${job != null}">
-                            <td th:text="${job.syncType == 'users'} ? 'ข้อมูลอาจารย์' : 'ผลงาน Scopus'">-</td>
-                            <td>
-                                <span class="badge bg-success" th:if="${job.lastStatus == 'OK'}">สำเร็จ</span>
-                                <span class="badge bg-danger" th:if="${job.lastStatus == 'FAILED'}">ล้มเหลว</span>
-                                <span class="badge bg-info" th:if="${job.lastStatus == 'RUNNING'}">กำลังทำงาน</span>
-                            </td>
-                            <td th:text="${job.lastSuccessAt != null
-                                        ? #temporals.format(job.lastSuccessAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
-                            <td th:text="${job.rowsProcessed}">-</td>
-                            <td th:text="${job.requestsMade}">-</td>
-                            <td th:text="${job.durationMs != null ? job.durationMs + ' ms' : '-'}">-</td>
-                            <td class="small text-muted" th:text="${job.message}">-</td>
-                        </tr>
-                        <tr th:if="${usersJob == null and scopusJob == null}">
-                            <td colspan="7" class="text-center text-muted">ยังไม่เคยมีการดึงข้อมูล</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Schedule -->
-                <h5 class="mb-3">ตารางเวลาอัตโนมัติ <small class="text-muted fs-6">(เวลาไทย)</small></h5>
-                <div class="table-responsive">
-                    <table class="table table-sm">
-                        <tbody>
-                        <tr th:each="entry : ${schedule}">
-                            <td style="width:30%" th:text="${entry.key}">งาน</td>
-                            <td class="text-muted small font-monospace" th:text="${entry.value}">cron</td>
-                        </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <div class="alert alert-info mt-3 mb-0 small">
-                    <i class="fas fa-info-circle"></i>
-                    ระบบจะดึงข้อมูลให้อัตโนมัติตามเวลาข้างต้นทุกวัน
-                    และจะดึงให้ทันทีตอนเปิดระบบครั้งแรกถ้ายังไม่มีข้อมูลเลย
-                    ปุ่มด้านบนมีไว้สำหรับกรณีที่ต้องการข้อมูลล่าสุดทันทีโดยไม่รอรอบถัดไป
-                    <br>
-                    <i class="fas fa-shield-alt"></i>
-                    หลังกดแล้วจะกดซ้ำไม่ได้ทันที เพื่อไม่ให้จำนวนคำขอเกินโควตาของระบบต้นทาง
-                    ซึ่งจะทำให้การดึงอัตโนมัติตอนกลางคืนพลอยใช้ไม่ได้ไปด้วย
-                </div>
             </div>
         </div>
 
     </div>
 
     <script>
-        /**
-         * Stops a double click from sending the request twice. The server
-         * enforces the real cooldown; this only removes the temptation and
-         * makes the wait visible.
-         */
-        // Delegated instead of onsubmit="return lockButton(this)" — CSP refuses
-        // inline handler attributes. Forms opt in with data-lock-button.
+        function switchToChangesTab() {
+            var tabBtn = document.getElementById('tab-changes-btn');
+            if (tabBtn) {
+                var tab = new bootstrap.Tab(tabBtn);
+                tab.show();
+            }
+        }
+
+        // Handle URL hash or param
+        document.addEventListener('DOMContentLoaded', function() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('tab') === 'changes') {
+                switchToChangesTab();
+            }
+        });
+
+        // Submit button locking to prevent double clicks
         document.addEventListener('submit', function (e) {
             var form = e.target;
             if (!form.dataset || form.dataset.lockButton !== '1') return;
@@ -218,8 +435,7 @@
             btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังดึงข้อมูล…';
         });
 
-        // Re-enable each button by itself once its cooldown has elapsed, so the
-        // admin does not have to guess when to reload the page.
+        // Cooldown timer handlers
         document.querySelectorAll('button[data-cooldown]').forEach(function (btn) {
             var left = parseInt(btn.getAttribute('data-cooldown') || '0', 10);
             if (!left) return;

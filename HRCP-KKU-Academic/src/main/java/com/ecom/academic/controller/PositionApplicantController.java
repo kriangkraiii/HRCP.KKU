@@ -13,12 +13,22 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import org.springframework.core.io.ByteArrayResource;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
@@ -35,16 +45,20 @@ public class PositionApplicantController {
 
     private final AcademicRequestService academicService;
 
+    private final DocumentGenerationService documentService;
+
     private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
 
     public PositionApplicantController(
             PositionRequestService positionService,
             UserRepository userRepository,
             AcademicRequestService academicService,
+            DocumentGenerationService documentService,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.academicService = academicService;
+        this.documentService = documentService;
         this.autoFillHelper = autoFillHelper;
     }
 
@@ -352,6 +366,87 @@ public class PositionApplicantController {
 
         positionService.submitRequest(request);
         return "redirect:/user/position/dashboard?success=submitted";
+    }
+
+    // ================== Document Download & Preview ==================
+
+    @GetMapping("/request/{id}/document/{type}/download")
+    public ResponseEntity<ByteArrayResource> downloadDocument(
+            @PathVariable Long id,
+            @PathVariable int type,
+            @RequestParam(value = "format", defaultValue = "docx") String format,
+            Principal principal) throws IOException {
+        UserDtls user = getUser(principal);
+        PositionRequest request = positionService.findById(id)
+                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
+
+        if (!request.getApplicant().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        List<PositionDocument> docs = positionService.getDocumentsByType(id, type);
+        if (docs.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+
+        PositionDocument doc = docs.get(0);
+        byte[] data = null;
+        String label = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
+                ? doc.getDocumentLabel()
+                : positionService.getDocLabel(type);
+
+        if (doc.getGeneratedFilePath() != null) {
+            Path filePath = Path.of(doc.getGeneratedFilePath());
+            if (Files.exists(filePath)) {
+                data = Files.readAllBytes(filePath);
+            }
+        }
+
+        if (data == null && doc.getJsonData() != null) {
+            try {
+                String generatedPath = documentService.generateP2Document(request, type, doc.getJsonData());
+                if (generatedPath != null) {
+                    Path filePath = Path.of(generatedPath);
+                    if (Files.exists(filePath)) {
+                        data = Files.readAllBytes(filePath);
+                        doc.setGeneratedFilePath(generatedPath);
+                        positionService.saveDocument(request, type, doc.getJsonData(),
+                                generatedPath, label, doc.getCopyNumber(), doc.getFilledBy());
+                    }
+                }
+            } catch (Exception e) {
+                // fall through
+            }
+        }
+
+        if (data == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String cleanDocName = label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+        String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + type + "_" + cleanDocName;
+
+        String safeFilename = java.net.URLEncoder.encode(baseName, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        if ("pdf".equalsIgnoreCase(format)) {
+            byte[] pdfData = documentService.convertDocxToPdf(data);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION,
+                            "inline; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
+                    .contentLength(pdfData.length)
+                    .body(new ByteArrayResource(pdfData));
+        }
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + safeFilename + ".docx")
+                .contentLength(data.length)
+                .body(new ByteArrayResource(data));
     }
 
     private UserDtls getUser(Principal principal) {

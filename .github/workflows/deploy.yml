@@ -22,11 +22,16 @@ jobs:
       - name: Checkout source code
         uses: actions/checkout@v4
 
-      # 2) Build โปรเจกต์ด้วย Maven ให้ได้ไฟล์ .jar ในโฟลเดอร์ target
-      #    -DskipTests เพื่อให้ build เร็วขึ้น หากต้องการรัน test ด้วยให้ลบ flag นี้ออก
-      - name: Build with Maven
+      # 2) Build และรัน Automated Tests ด้วย Maven ให้ผ่านก่อน deploy (ISO 27001 A.14)
+      - name: Build and Test with Maven
         working-directory: ${{ env.PROJECT_DIR }}
-        run: mvn clean package -DskipTests
+        run: mvn clean package -DskipTests=false
+
+      # 2.1) ตรวจสอบช่องโหว่ Dependencies (ISO 27001 A.12)
+      - name: OWASP Dependency Check
+        working-directory: ${{ env.PROJECT_DIR }}
+        run: mvn dependency-check:check -DfailBuildOnCVSS=7
+        continue-on-error: true
 
       # 3) หยุด Windows Service "MyWebApp" ก่อน เพื่อปลดล็อกไฟล์ app.jar ที่กำลังถูกใช้งานอยู่
       #    -ErrorAction SilentlyContinue กันพังกรณี service ยังไม่เคยรัน/ไม่พบ service

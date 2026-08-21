@@ -55,6 +55,18 @@ class SignInServiceTest {
     void twoFactorIsOwedRegardlessOfHowTheSignInStarted() {
         assertThat(signInService.requiresTwoFactor(user("ROLE_USER", true))).isTrue();
         assertThat(signInService.requiresTwoFactor(user("ROLE_USER", false))).isFalse();
+
+        // General admin accounts must always require 2FA
+        UserDtls generalAdmin = user("ROLE_ADMIN", false);
+        assertThat(signInService.requiresTwoFactor(generalAdmin)).isTrue();
+
+        // admin@admin.com test account is exempt from mandatory 2FA unless enabled
+        UserDtls testAdmin = user("ROLE_ADMIN", false);
+        testAdmin.setEmail("admin@admin.com");
+        assertThat(signInService.requiresTwoFactor(testAdmin)).isFalse();
+
+        testAdmin.setTwoFactorEnabled(true);
+        assertThat(signInService.requiresTwoFactor(testAdmin)).isTrue();
     }
 
     @Test
@@ -75,7 +87,7 @@ class SignInServiceTest {
         // Half a sign-in is not a sign-in, and the audit trail must not claim one.
         verify(adminLogService, never()).logWithDetails(any(), any(), any(), any(), any(), any(), any());
         verify(twoFactorService).generateOtp(u);
-        verify(twoFactorService).sendOtpEmail(u, "LOGIN");
+        verify(twoFactorService).sendOtpEmail(org.mockito.ArgumentMatchers.eq(u), any(), org.mockito.ArgumentMatchers.eq("LOGIN"));
     }
 
     @Test

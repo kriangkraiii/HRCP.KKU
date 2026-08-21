@@ -2,10 +2,18 @@ package com.ecom.util;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Pattern;
+
+import org.passay.DefaultPasswordValidator;
+import org.passay.PasswordData;
+import org.passay.RuleResultDetail;
+import org.passay.ValidationResult;
+import org.passay.data.EnglishCharacterData;
+import org.passay.rule.CharacterRule;
+import org.passay.rule.LengthRule;
+import org.passay.rule.WhitespaceRule;
 
 /**
- * Password validation utility following international standards (NIST SP 800-63B).
+ * Password validation utility powered by Passay 2.0.0 following international standards (ISO/IEC 27001 / NIST SP 800-63B).
  *
  * Rules:
  * - Minimum 8 characters, maximum 128 characters
@@ -23,15 +31,19 @@ public final class PasswordValidator {
     public static final int MIN_LENGTH = 8;
     public static final int MAX_LENGTH = 128;
 
-    private static final Pattern UPPERCASE = Pattern.compile("[A-Z]");
-    private static final Pattern LOWERCASE = Pattern.compile("[a-z]");
-    private static final Pattern DIGIT = Pattern.compile("[0-9]");
-    private static final Pattern SPECIAL = Pattern.compile("[!@#$%^&*()_+\\-=\\[\\]{};':\"\\\\|,.<>/?`~]");
-    private static final Pattern WHITESPACE = Pattern.compile("\\s");
+    private static final org.passay.PasswordValidator PASSAY_VALIDATOR = new DefaultPasswordValidator(List.of(
+            new LengthRule(MIN_LENGTH, MAX_LENGTH),
+            new WhitespaceRule(),
+            new CharacterRule(EnglishCharacterData.UpperCase, 1),
+            new CharacterRule(EnglishCharacterData.LowerCase, 1),
+            new CharacterRule(EnglishCharacterData.Digit, 1),
+            new CharacterRule(EnglishCharacterData.Special, 1)
+    ));
 
     /**
-     * Validate password strength.
+     * Validate password strength using Passay 2.0.0.
      *
+     * @param password plaintext password
      * @return null if valid, or error message (Thai) if invalid
      */
     public static String validate(String password) {
@@ -39,28 +51,51 @@ public final class PasswordValidator {
             return "กรุณากรอกรหัสผ่าน";
         }
 
-        List<String> errors = new ArrayList<>();
+        ValidationResult result = PASSAY_VALIDATOR.validate(new PasswordData(password));
+        if (result.isValid()) {
+            return null;
+        }
 
-        if (password.length() < MIN_LENGTH) {
-            errors.add("อย่างน้อย " + MIN_LENGTH + " ตัวอักษร");
-        }
-        if (password.length() > MAX_LENGTH) {
-            errors.add("ไม่เกิน " + MAX_LENGTH + " ตัวอักษร");
-        }
-        if (WHITESPACE.matcher(password).find()) {
-            errors.add("ห้ามมีช่องว่าง");
-        }
-        if (!UPPERCASE.matcher(password).find()) {
-            errors.add("ตัวอักษรพิมพ์ใหญ่อย่างน้อย 1 ตัว (A-Z)");
-        }
-        if (!LOWERCASE.matcher(password).find()) {
-            errors.add("ตัวอักษรพิมพ์เล็กอย่างน้อย 1 ตัว (a-z)");
-        }
-        if (!DIGIT.matcher(password).find()) {
-            errors.add("ตัวเลขอย่างน้อย 1 ตัว (0-9)");
-        }
-        if (!SPECIAL.matcher(password).find()) {
-            errors.add("อักขระพิเศษอย่างน้อย 1 ตัว (!@#$%^&*...)");
+        List<String> errors = new ArrayList<>();
+        for (RuleResultDetail detail : result.getDetails()) {
+            String code = detail.getErrorCode();
+            if (code == null) continue;
+
+            if (LengthRule.ERROR_CODE_MIN.equals(code)) {
+                errors.add("อย่างน้อย " + MIN_LENGTH + " ตัวอักษร");
+            } else if (LengthRule.ERROR_CODE_MAX.equals(code)) {
+                errors.add("ไม่เกิน " + MAX_LENGTH + " ตัวอักษร");
+            } else if (WhitespaceRule.ERROR_CODE.equals(code)) {
+                errors.add("ห้ามมีช่องว่าง");
+            } else if (code.startsWith("INSUFFICIENT_") || code.contains("CHARACTER")) {
+                Object ruleType = detail.getParameters().get("characterType");
+                if (ruleType != null) {
+                    String typeStr = ruleType.toString();
+                    if (typeStr.contains("UPPERCASE")) {
+                        errors.add("ตัวอักษรพิมพ์ใหญ่อย่างน้อย 1 ตัว (A-Z)");
+                    } else if (typeStr.contains("LOWERCASE")) {
+                        errors.add("ตัวอักษรพิมพ์เล็กอย่างน้อย 1 ตัว (a-z)");
+                    } else if (typeStr.contains("DIGIT")) {
+                        errors.add("ตัวเลขอย่างน้อย 1 ตัว (0-9)");
+                    } else if (typeStr.contains("SPECIAL")) {
+                        errors.add("อักขระพิเศษอย่างน้อย 1 ตัว (!@#$%^&*...)");
+                    } else {
+                        errors.add(typeStr);
+                    }
+                } else if (code.contains("UPPERCASE")) {
+                    errors.add("ตัวอักษรพิมพ์ใหญ่อย่างน้อย 1 ตัว (A-Z)");
+                } else if (code.contains("LOWERCASE")) {
+                    errors.add("ตัวอักษรพิมพ์เล็กอย่างน้อย 1 ตัว (a-z)");
+                } else if (code.contains("DIGIT")) {
+                    errors.add("ตัวเลขอย่างน้อย 1 ตัว (0-9)");
+                } else if (code.contains("SPECIAL")) {
+                    errors.add("อักขระพิเศษอย่างน้อย 1 ตัว (!@#$%^&*...)");
+                } else {
+                    errors.add("ต้องมีตัวอักษรตามเกณฑ์ที่กำหนด");
+                }
+            } else {
+                errors.add(code);
+            }
         }
 
         if (errors.isEmpty()) {

@@ -1,454 +1,774 @@
-<!DOCTYPE html>
-<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
-<body>
+<!doctype html>
+<html
+  lang="th"
+  xmlns:th="http://www.thymeleaf.org"
+  th:replace="~{academic/base_academic :: layout(~{::section})}"
+>
+  <body>
     <section>
-        <div class="container py-4">
-            <!-- Alerts -->
-            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
-                <i class="fas fa-check-circle"></i>
-                <span th:if="${param.success[0] == 'status_updated'}">อัพเดทสถานะสำเร็จ</span>
-                <span th:if="${param.success[0] == 'doc_generated'}">บันทึกเอกสารสำเร็จ</span>
-                <span th:if="${param.success[0] == 'attachment_uploaded'}">อัปโหลดเอกสารเพิ่มเติมสำเร็จ</span>
-                <span th:if="${param.success[0] == 'attachment_deleted'}">ลบเอกสารเพิ่มเติมสำเร็จ</span>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
-                <i class="fas fa-exclamation-circle"></i>
-                <span th:if="${param.error[0] == 'status_update_failed'}">ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง</span>
-                <span th:if="${param.error[0] == 'doc_save_failed'}">ไม่สามารถบันทึกเอกสารได้</span>
-                <span th:if="${param.error[0] == 'invalid_file_type'}">รองรับเฉพาะไฟล์ .pdf และ .docx เท่านั้น</span>
-                <span th:if="${param.error[0] == 'max_attachments'}">ถึงจำนวนเอกสารเพิ่มเติมสูงสุดแล้ว (10 ไฟล์)</span>
-                <span th:if="${param.error[0] == 'upload_failed'}">อัปโหลดเอกสารไม่สำเร็จ</span>
-                <small th:if="${errorDetail != null}" class="d-block mt-1 text-danger" th:text="'รายละเอียด: ' + ${errorDetail}"></small>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <div th:if="${param.warn != null}" class="alert alert-warning alert-dismissible fade show">
-                <i class="fas fa-exclamation-triangle"></i>
-                <span th:if="${param.warn[0] == 'notify_failed'}">เอกสารถูกสร้างสำเร็จ แต่การอัพเดตสถานะ/แจ้งเตือนผู้ยื่นล้มเหลว — กรุณาลองอัพเดตสถานะด้วยตนเอง</span>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-
-            <!-- Hero Header -->
-            <div class="detail-hero">
-                <div class="detail-hero-info">
-                    <h4><i class="fas fa-university" style="color:#2e7d32"></i> คำร้อง [[${request.requestCode}]] — [[${request.applicant.name}]]</h4>
-                    <div class="detail-hero-meta">
-                        <span><strong>ผู้ยื่น:</strong> [[${request.applicant.name}]]</span>
-                        <span><strong>อีเมล:</strong> [[${request.applicant.email}]]</span>
-                        <span><strong>ตำแหน่งที่ขอ:</strong> [[${request.targetPosition ?: '-'}]]</span>
-                        <span><strong>วันที่ยื่น:</strong>
-                            <span th:if="${request.submissionDate != null}" th:text="${@thaiDateUtil.format(request.submissionDate)}"></span>
-                            <span th:if="${request.submissionDate == null}">-</span>
-                        </span>
-                    </div>
-                </div>
-                <span class="detail-hero-status" th:style="'background-color:' + ${request.currentStatus.color}"
-                    th:text="${request.currentStatus.thaiLabel}"></span>
-            </div>
-
-            <!-- Position Info (from Doc 2) -->
-            <div th:if="${doc2Data != null}" class="detail-info-card" style="--_accent:#2e7d32">
-                <h6><i class="fas fa-user-tie" style="color:#2e7d32"></i> ข้อมูลจากเอกสารที่ 2</h6>
-                <div class="detail-info-row">
-                    <div class="detail-info-item">
-                        <small>ตำแหน่งที่เสนอขอ</small>
-                        <div class="di-value" style="color:#2e7d32" th:text="${doc2Data.getOrDefault('request_position', '-')}"></div>
-                    </div>
-                    <div class="detail-info-item">
-                        <small>ตำแหน่งปัจจุบัน</small>
-                        <div class="di-value" th:text="${doc2Data.getOrDefault('current_position', '-')}"></div>
-                    </div>
-                    <div class="detail-info-item">
-                        <small>สาขาวิชา</small>
-                        <div class="di-value" th:text="${doc2Data.getOrDefault('major', '-')}"></div>
-                    </div>
-                    <div class="detail-info-item">
-                        <small>สถานะ</small>
-                        <div class="di-value" th:text="${doc2Data.getOrDefault('status', '-')}"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Evaluation Results (Doc 8 from eval request) -->
-            <div th:if="${evalDoc8Data != null}" class="detail-info-card" style="--_accent:#1565c0">
-                <h6>
-                    <i class="fas fa-clipboard-check" style="color:var(--color-primary-medium)"></i> ผลการประเมินผลการสอน (เอกสารที่ 8)
-                </h6>
-                <div class="detail-info-row">
-                    <div class="detail-info-item">
-                        <small>ระดับผลการประเมิน</small>
-                        <div>
-                            <span class="badge fs-6 mt-1"
-                                th:classappend="${evalDoc8Data.getOrDefault('result_level', '') == 'ไม่ผ่าน' ? 'bg-danger' : 'bg-success'}"
-                                th:text="${evalDoc8Data.getOrDefault('result_level', '-')}">-</span>
-                        </div>
-                    </div>
-                    <div class="detail-info-item">
-                        <small>คุณภาพ</small>
-                        <div class="di-value" th:text="${evalDoc8Data.getOrDefault('is_qualified', '-')}"></div>
-                    </div>
-                    <div class="detail-info-item" style="flex:1.5">
-                        <small>วิชา</small>
-                        <div class="di-value" th:text="${evalDoc8Data.getOrDefault('course_name', '-') + ' (' + evalDoc8Data.getOrDefault('course_code', '') + ')'}"></div>
-                    </div>
-                    <div class="detail-info-item">
-                        <small>ภาค/ปี</small>
-                        <div class="di-value" th:text="${evalDoc8Data.getOrDefault('semester', '-')}"></div>
-                    </div>
-                    <div class="detail-info-item">
-                        <small>วันหมดอายุ</small>
-                        <div class="di-value" style="color:var(--color-danger)" th:text="${evalDoc8Data.getOrDefault('expiration_date', '-')}"></div>
-                    </div>
-                </div>
-                <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
-                    <a th:if="${linkedEvalRequest != null}"
-                       th:href="@{/admin/academic/request/{rid}(rid=${linkedEvalRequest.id})}"
-                       class="btn btn-sm btn-outline-primary" target="_blank">
-                        <i class="fas fa-external-link-alt"></i> ดูคำร้องต้นทาง
-                    </a>
-                    <a th:if="${evalDoc8GeneratedFile != null}"
-                       th:href="@{/admin/academic/document/download(path=${evalDoc8GeneratedFile})}"
-                       class="btn btn-sm btn-outline-success" target="_blank">
-                        <i class="fas fa-file-pdf"></i> ดาวน์โหลดเอกสาร
-                    </a>
-                    <small th:if="${linkedEvalRequest != null}" style="color:var(--text-muted)">
-                        <i class="fas fa-link"></i> อ้างอิง: <span th:text="${linkedEvalRequest.requestCode}"></span>
-                        <span class="badge" th:style="'background:' + ${linkedEvalRequest.currentStatus.color} + ';color:#fff;margin-left:4px'"
-                              th:text="${linkedEvalRequest.currentStatus.thaiLabel}"></span>
-                    </small>
-                </div>
-            </div>
-            <div th:if="${evalDoc8Data == null}" class="draft-banner" style="border-color:#e3a008;background:#fffbeb;color:#854d0e">
-                <i class="fas fa-exclamation-triangle"></i>
-                <div>
-                    <strong>ยังไม่มีผลการประเมินผลการสอน</strong>
-                    <span class="db-detail">ผู้ยื่นยังไม่มีเอกสารที่ 8 จากคำร้องประเมินผลการสอน หรือแอดมินยังไม่ได้กรอกข้อมูล</span>
-                </div>
-            </div>
-
-            <!-- Progress Tracker -->
-            <div class="detail-progress">
-                <div class="detail-progress-track">
-                    <div class="detail-progress-line"></div>
-                    <div class="detail-progress-fill"
-                         th:style="'width:' + ${progressPercent != null ? progressPercent : 0} + '%;background:linear-gradient(90deg,#2e7d32,#43a047)'"></div>
-                    <div class="detail-progress-steps">
-                        <th:block th:each="step, iterStat : ${progressSteps}">
-                            <div class="detail-progress-step"
-                                 th:classappend="${request.currentStatus.ordinal() >= step.ordinal()} ? 'dp-done'">
-                                <div class="detail-progress-dot"
-                                     th:style="${request.currentStatus.ordinal() >= step.ordinal()
-                                         ? 'background:' + step.color + ';box-shadow:0 2px 6px ' + step.color + '40'
-                                         : ''}">
-                                    <i class="fas" th:classappend="${step.icon}"></i>
-                                </div>
-                                <div class="detail-progress-step-label"
-                                     th:style="${request.currentStatus.ordinal() >= step.ordinal() ? 'color:' + step.color : ''}"
-                                     th:text="${step.thaiLabel}"></div>
-                            </div>
-                        </th:block>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Draft Warning -->
-            <div th:if="${request.currentStatus.isDraft()}" class="draft-banner">
-                <i class="fas fa-info-circle"></i>
-                <div>
-                    <strong>คำร้องนี้ยังเป็นแบบร่าง</strong>
-                    <span class="db-detail">ผู้ยื่นยังไม่ได้ยื่นคำร้อง แอดมินจะจัดการได้หลังจากผู้ยื่นกด "ยื่นคำร้อง" แล้วเท่านั้น</span>
-                </div>
-            </div>
-
-            <div class="row">
-                <!-- Left Column -->
-                <div class="col-md-5">
-                    <!-- Status Update -->
-                    <div class="detail-section">
-                        <div class="detail-section-header">
-                            <h5><i class="fas fa-exchange-alt" style="color:#2e7d32"></i> อัพเดทสถานะ</h5>
-                        </div>
-                        <div class="detail-section-body">
-                            <div th:if="${request.currentStatus.isDraft()}" class="detail-locked">
-                                <i class="fas fa-lock"></i>
-                                <p>ไม่สามารถอัพเดทสถานะได้<br><small>รอผู้ยื่นคำร้องยื่นก่อน</small></p>
-                            </div>
-                            <form th:unless="${request.currentStatus.isDraft()}" th:action="'/admin/position/request/' + ${request.id} + '/status'" method="post">
-                                <div class="mb-3">
-                                    <label class="form-label">สถานะใหม่</label>
-                                    <select name="status" class="form-select" required>
-                                        <option value="">-- เลือก --</option>
-                                        <option th:each="s : ${statuses}" th:if="${!s.isDraft()}"
-                                                th:value="${s.name()}"
-                                                th:text="${s.thaiLabel}"
-                                                th:disabled="${s == request.currentStatus}"
-                                                th:style="'color:' + ${s.color}"></option>
-                                    </select>
-                                </div>
-                                <div class="mb-3">
-                                    <label class="form-label">หมายเหตุ</label>
-                                    <textarea name="note" class="form-control" rows="2" placeholder="ระบุหมายเหตุ (ไม่บังคับ)"></textarea>
-                                </div>
-                                <button type="submit" class="btn-save-status bss-green">
-                                    <i class="fas fa-save"></i> อัพเดทสถานะ
-                                </button>
-                            </form>
-                        </div>
-                    </div>
-
-                    <!-- Document Archive -->
-                    <div class="detail-section">
-                        <div class="detail-section-header">
-                            <h5><i class="fas fa-folder-open"></i> คลังเอกสารเพิ่มเติม</h5>
-                            <span class="badge bg-secondary" th:text="${attachmentCount} + ' / 10 ไฟล์'"></span>
-                        </div>
-                        <div class="detail-section-body">
-                            <form th:action="'/admin/position/request/' + ${request.id} + '/upload-attachment'"
-                                method="post" enctype="multipart/form-data" th:if="${attachmentCount < 10}">
-                                <div class="input-group mb-3">
-                                    <input type="file" name="file" class="form-control" accept=".pdf,.docx" required>
-                                    <button type="submit" class="btn btn-success btn-sm"><i class="fas fa-upload"></i> อัปโหลด</button>
-                                </div>
-                                <small class="text-muted"><i class="fas fa-info-circle"></i> รองรับไฟล์ .pdf และ .docx (สูงสุด 10 ไฟล์)</small>
-                            </form>
-                            <div th:if="${attachmentCount >= 10}" class="alert alert-warning mb-3">
-                                <i class="fas fa-exclamation-triangle"></i> ถึงจำนวนเอกสารสูงสุดแล้ว (10 ไฟล์)
-                            </div>
-
-                            <div th:if="${#lists.isEmpty(attachments)}" class="admin-table-empty">
-                                <i class="fas fa-inbox"></i>
-                                <p>ยังไม่มีเอกสารเพิ่มเติม</p>
-                            </div>
-                            <div th:unless="${#lists.isEmpty(attachments)}" style="overflow-x:auto">
-                                <table class="admin-table">
-                                    <thead>
-                                        <tr>
-                                            <th style="width:36px">#</th>
-                                            <th>ชื่อไฟล์</th>
-                                            <th>ประเภท</th>
-                                            <th>ขนาด</th>
-                                            <th>อัปโหลดเมื่อ</th>
-                                            <th style="width:80px">จัดการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr th:each="att, iterStat : ${attachments}">
-                                            <td class="at-date" th:text="${iterStat.count}"></td>
-                                            <td>
-                                                <i class="fas fa-file-pdf text-danger" th:if="${att.fileType == 'PDF'}"></i>
-                                                <i class="fas fa-file-word text-primary" th:if="${att.fileType == 'DOCX'}"></i>
-                                                <span th:text="${att.originalFilename}"></span>
-                                            </td>
-                                            <td><span class="badge" th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : 'bg-primary'}" th:text="${att.fileType}"></span></td>
-                                            <td class="at-date" th:text="${att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-'}"></td>
-                                            <td class="at-date" th:text="${@thaiDateUtil.format(att.uploadedAt)}"></td>
-                                            <td>
-                                                <div class="d-flex gap-1">
-                                                    <a th:href="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
-                                                        class="btn btn-outline-primary btn-sm" title="ดาวน์โหลด">
-                                                        <i class="fas fa-download"></i>
-                                                    </a>
-                                                    <form th:action="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
-                                                        method="post" style="display:inline" data-confirm="ต้องการลบเอกสารนี้หรือไม่?">
-                                                        <button type="submit" class="btn btn-outline-danger btn-sm" title="ลบ">
-                                                            <i class="fas fa-trash"></i>
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- History (Tabbed: Status + Edit) -->
-                    <div class="detail-section">
-                        <div class="detail-section-header" style="flex-direction:column;align-items:stretch;gap:8px">
-                            <div class="history-tabs" id="historyTabs">
-                                <button type="button" class="history-tab-btn active" data-target="statusHistPane">
-                                    <i class="fas fa-history"></i> ประวัติสถานะ
-                                    <span class="htb-count" th:text="${statusHistory.size()}">0</span>
-                                </button>
-                                <button type="button" class="history-tab-btn" data-target="editHistPane">
-                                    <i class="fas fa-edit"></i> ประวัติการแก้ไข
-                                    <span class="htb-count" th:text="${editHistory.size()}">0</span>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="detail-section-body" style="max-height: 400px; overflow-y: auto;">
-                            <!-- Status History -->
-                            <div id="statusHistPane">
-                                <div th:each="h : ${statusHistory}" class="history-entry">
-                                    <span class="history-entry-badge"
-                                        th:style="'background-color:' + ${h.newStatus.color}"
-                                        th:text="${h.newStatus.thaiLabel}"></span>
-                                    <div class="history-entry-content">
-                                        <div class="history-entry-date" th:text="${@thaiDateUtil.format(h.changedAt)}"></div>
-                                        <div th:if="${h.changedBy != null}" class="history-entry-by">โดย: [[${h.changedBy.name}]]</div>
-                                        <div th:if="${h.note != null}" class="history-entry-note" th:text="${h.note}"></div>
-                                    </div>
-                                </div>
-                                <div th:if="${statusHistory.isEmpty()}" class="admin-table-empty">
-                                    <i class="fas fa-inbox"></i>
-                                    <p>ยังไม่มีประวัติสถานะ</p>
-                                </div>
-                            </div>
-                            <!-- Edit History -->
-                            <div id="editHistPane" class="js-hidden">
-                                <div class="mb-3">
-                                    <select id="editHistFilter" class="form-select form-select-sm" style="max-width:260px;font-size:0.85rem">
-                                        <option value="all">ทุกเอกสาร</option>
-                                        <option th:each="entry : ${docLabels}"
-                                            th:value="${entry.key}"
-                                            th:text="'เอกสารที่ ' + ${entry.key} + ' — ' + ${entry.value}">
-                                        </option>
-                                    </select>
-                                </div>
-                                <div id="editHistEntries">
-                                    <div th:each="log : ${editHistory}" class="history-entry edit-log-entry"
-                                        th:attr="data-doc-type=${log.documentType}">
-                                        <span class="history-entry-badge"
-                                            th:style="'background-color:' + ${log.action.color}">
-                                            <i class="fas" th:classappend="${log.action.icon}"></i>
-                                            [[${log.action.thaiLabel}]]
-                                        </span>
-                                        <div class="history-entry-content">
-                                            <div class="history-entry-date">
-                                                <strong>เอกสารที่ [[${log.documentType}]]</strong>
-                                            </div>
-                                            <div class="history-entry-note" th:text="${log.documentLabel}"></div>
-                                            <div class="history-entry-by">
-                                                <i class="fas fa-clock me-1"></i> [[${@thaiDateUtil.formatWithSeconds(log.editedAt)}]]
-                                            </div>
-                                            <div th:if="${log.editedBy != null}" class="history-entry-by">
-                                                <i class="fas fa-user me-1"></i> โดย: [[${log.editedBy.name}]]
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div id="editHistEmpty" th:if="${editHistory.isEmpty()}" class="admin-table-empty">
-                                    <i class="fas fa-inbox"></i>
-                                    <p>ยังไม่มีประวัติการแก้ไขเอกสาร</p>
-                                </div>
-                                <div id="editHistNoMatch" class="admin-table-empty js-hidden">
-                                    <i class="fas fa-search"></i>
-                                    <p>ไม่มีประวัติการแก้ไขสำหรับเอกสารที่เลือก</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Right Column: Document Management -->
-                <div class="col-md-7">
-                    <div class="detail-section">
-                        <div class="detail-section-header">
-                            <h5><i class="fas fa-file-word" style="color:#2e7d32"></i> จัดการเอกสาร (9 แบบฟอร์ม)</h5>
-                            <a th:href="'/admin/position/request/' + ${request.id} + '/download-all'"
-                                class="btn btn-sm btn-outline-success">
-                                <i class="fas fa-file-archive"></i> ดาวน์โหลดทั้งหมด (ZIP)
-                            </a>
-                        </div>
-                        <div class="detail-section-body">
-                            <div th:each="entry : ${docLabels}" class="doc-grid-item"
-                                th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed'">
-                                <div>
-                                    <span class="doc-grid-item-title">
-                                        เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
-                                    </span>
-                                    <span th:if="${completedDocs.contains(entry.key)}" class="badge bg-success ms-1">
-                                        <i class="fas fa-check"></i> กรอกแล้ว
-                                    </span>
-                                    <span th:unless="${completedDocs.contains(entry.key)}" class="badge bg-warning text-dark ms-1">
-                                        <i class="fas fa-clock"></i> รอกรอก
-                                    </span>
-                                </div>
-                                <div class="doc-grid-item-actions">
-                                    <!-- Draft: disabled -->
-                                    <th:block th:if="${request.currentStatus.isDraft()}">
-                                        <span class="btn btn-sm btn-outline-secondary disabled" style="opacity:0.5;cursor:not-allowed;">
-                                            <i class="fas fa-lock"></i> รอยื่น
-                                        </span>
-                                    </th:block>
-                                    <!-- Not draft: buttons -->
-                                    <th:block th:unless="${request.currentStatus.isDraft()}">
-                                        <a th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key}"
-                                            class="btn btn-sm btn-outline-primary">
-                                            <i class="fas fa-edit"></i>
-                                            [[${completedDocs.contains(entry.key)} ? 'แก้ไข' : 'กรอก']]
-                                        </a>
-                                        <th:block th:if="${completedDocs.contains(entry.key)}">
-                                            <a th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download'"
-                                                class="btn btn-sm btn-outline-success" title="ดาวน์โหลด DOCX">
-                                                <i class="fas fa-file-word"></i> DOCX
-                                            </a>
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-danger btn-pdf-print"
-                                                th:attr="data-request-id=${request.id},data-doc-type=${entry.key},data-doc-label=${docLabels.get(entry.key)}"
-                                                title="พิมพ์/บันทึก PDF">
-                                                <i class="fas fa-file-pdf"></i> PDF
-                                            </button>
-                                        </th:block>
-                                    </th:block>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <a href="/admin/position/requests?type=position" class="btn-back-v2">
-                <i class="fas fa-arrow-left"></i> กลับรายการคำร้อง
-            </a>
+      <div class="container py-4">
+        <!-- Alerts -->
+        <div
+          th:if="${param.success != null}"
+          class="alert alert-success alert-dismissible fade show"
+        >
+          <i class="fas fa-check-circle"></i>
+          <span th:if="${param.success[0] == 'status_updated'}"
+            >อัพเดทสถานะสำเร็จ</span
+          >
+          <span th:if="${param.success[0] == 'doc_generated'}"
+            >บันทึกเอกสารสำเร็จ</span
+          >
+          <span th:if="${param.success[0] == 'attachment_uploaded'}"
+            >อัปโหลดเอกสารเพิ่มเติมสำเร็จ</span
+          >
+          <span th:if="${param.success[0] == 'attachment_deleted'}"
+            >ลบเอกสารเพิ่มเติมสำเร็จ</span
+          >
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+          ></button>
+        </div>
+        <div
+          th:if="${param.error != null}"
+          class="alert alert-danger alert-dismissible fade show"
+        >
+          <i class="fas fa-exclamation-circle"></i>
+          <span th:if="${param.error[0] == 'status_update_failed'}"
+            >ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง</span
+          >
+          <span th:if="${param.error[0] == 'doc_save_failed'}"
+            >ไม่สามารถบันทึกเอกสารได้</span
+          >
+          <span th:if="${param.error[0] == 'invalid_file_type'}"
+            >รองรับเฉพาะไฟล์ .pdf และ .docx เท่านั้น</span
+          >
+          <span th:if="${param.error[0] == 'max_attachments'}"
+            >ถึงจำนวนเอกสารเพิ่มเติมสูงสุดแล้ว (10 ไฟล์)</span
+          >
+          <span th:if="${param.error[0] == 'upload_failed'}"
+            >อัปโหลดเอกสารไม่สำเร็จ</span
+          >
+          <small
+            th:if="${errorDetail != null}"
+            class="d-block mt-1 text-danger"
+            th:text="'รายละเอียด: ' + ${errorDetail}"
+          ></small>
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+          ></button>
+        </div>
+        <div
+          th:if="${param.warn != null}"
+          class="alert alert-warning alert-dismissible fade show"
+        >
+          <i class="fas fa-exclamation-triangle"></i>
+          <span th:if="${param.warn[0] == 'notify_failed'}"
+            >เอกสารถูกสร้างสำเร็จ แต่การอัพเดตสถานะ/แจ้งเตือนผู้ยื่นล้มเหลว —
+            กรุณาลองอัพเดตสถานะด้วยตนเอง</span
+          >
+          <button
+            type="button"
+            class="btn-close"
+            data-bs-dismiss="alert"
+          ></button>
         </div>
 
-        <script>
-            // History tab switching (pure JS, no Bootstrap pills)
-            document.querySelectorAll('#historyTabs .history-tab-btn').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('#historyTabs .history-tab-btn').forEach(function(b) { b.classList.remove('active'); });
-                    btn.classList.add('active');
-                    var target = btn.getAttribute('data-target');
-                    document.getElementById('statusHistPane').style.display = target === 'statusHistPane' ? '' : 'none';
-                    document.getElementById('editHistPane').classList.toggle('js-hidden', target !== 'editHistPane');
+        <!-- Hero Header -->
+        <div class="detail-hero">
+          <div class="detail-hero-info">
+            <h4>
+              <i class="fas fa-university" style="color: #2e7d32"></i> คำร้อง
+              [[${request.requestCode}]] — [[${request.applicant.name}]]
+            </h4>
+            <div class="detail-hero-meta">
+              <span
+                ><strong>ผู้ยื่น:</strong> [[${request.applicant.name}]]</span
+              >
+              <span
+                ><strong>อีเมล:</strong> [[${request.applicant.email}]]</span
+              >
+              <span
+                ><strong>ตำแหน่งที่ขอ:</strong> [[${request.targetPosition ?:
+                '-'}]]</span
+              >
+              <span
+                ><strong>วันที่ยื่น:</strong>
+                <span
+                  th:if="${request.submissionDate != null}"
+                  th:text="${@thaiDateUtil.format(request.submissionDate)}"
+                ></span>
+                <span th:if="${request.submissionDate == null}">-</span>
+              </span>
+            </div>
+          </div>
+          <span
+            class="detail-hero-status"
+            th:style="'background-color:' + ${request.currentStatus.color}"
+            th:text="${request.currentStatus.thaiLabel}"
+          ></span>
+        </div>
+
+        <!-- Position Info (from Doc 2) -->
+        <div
+          th:if="${doc2Data != null}"
+          class="detail-info-card"
+          style="--_accent: #2e7d32"
+        >
+          <h6>
+            <i class="fas fa-user-tie" style="color: #2e7d32"></i>
+            ข้อมูลจากเอกสารที่ 2
+          </h6>
+          <div class="detail-info-row">
+            <div class="detail-info-item">
+              <small>ตำแหน่งที่เสนอขอ</small>
+              <div
+                class="di-value"
+                style="color: #2e7d32"
+                th:text="${doc2Data.getOrDefault('request_position', '-')}"
+              ></div>
+            </div>
+            <div class="detail-info-item">
+              <small>ตำแหน่งปัจจุบัน</small>
+              <div
+                class="di-value"
+                th:text="${doc2Data.getOrDefault('current_position', '-')}"
+              ></div>
+            </div>
+            <div class="detail-info-item">
+              <small>สาขาวิชา</small>
+              <div
+                class="di-value"
+                th:text="${doc2Data.getOrDefault('major', '-')}"
+              ></div>
+            </div>
+            <div class="detail-info-item">
+              <small>สถานะ</small>
+              <div
+                class="di-value"
+                th:text="${doc2Data.getOrDefault('status', '-')}"
+              ></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Evaluation Results (Doc 8 from eval request) -->
+        <div
+          th:if="${evalDoc8Data != null}"
+          class="detail-info-card"
+          style="--_accent: #1565c0"
+        >
+          <h6>
+            <i
+              class="fas fa-clipboard-check"
+              style="color: var(--color-primary-medium)"
+            ></i>
+            ผลการประเมินผลการสอน (เอกสารที่ 8)
+          </h6>
+          <div class="detail-info-row">
+            <div class="detail-info-item">
+              <small>ระดับผลการประเมิน</small>
+              <div>
+                <span
+                  class="badge fs-6 mt-1"
+                  th:classappend="${evalDoc8Data.getOrDefault('result_level', '') == 'ไม่ผ่าน' ? 'bg-danger' : 'bg-success'}"
+                  th:text="${evalDoc8Data.getOrDefault('result_level', '-')}"
+                  >-</span
+                >
+              </div>
+            </div>
+            <div class="detail-info-item">
+              <small>คุณภาพ</small>
+              <div
+                class="di-value"
+                th:text="${evalDoc8Data.getOrDefault('is_qualified', '-')}"
+              ></div>
+            </div>
+            <div class="detail-info-item" style="flex: 1.5">
+              <small>วิชา</small>
+              <div
+                class="di-value"
+                th:text="${evalDoc8Data.getOrDefault('course_name', '-') + ' (' + evalDoc8Data.getOrDefault('course_code', '') + ')'}"
+              ></div>
+            </div>
+            <div class="detail-info-item">
+              <small>ภาค/ปี</small>
+              <div
+                class="di-value"
+                th:text="${evalDoc8Data.getOrDefault('semester', '-')}"
+              ></div>
+            </div>
+            <div class="detail-info-item">
+              <small>วันหมดอายุ</small>
+              <div
+                class="di-value"
+                style="color: var(--color-danger)"
+                th:text="${evalDoc8Data.getOrDefault('expiration_date', '-')}"
+              ></div>
+            </div>
+          </div>
+          <div class="d-flex align-items-center gap-2 mt-2 flex-wrap">
+            <a
+              th:if="${linkedEvalRequest != null}"
+              th:href="@{/admin/academic/request/{rid}(rid=${linkedEvalRequest.id})}"
+              class="btn btn-sm btn-outline-primary"
+              target="_blank"
+            >
+              <i class="fas fa-external-link-alt"></i> ดูคำร้องต้นทาง
+            </a>
+            <a
+              th:if="${evalDoc8GeneratedFile != null}"
+              th:href="@{/admin/academic/document/download(path=${evalDoc8GeneratedFile})}"
+              class="btn btn-sm btn-outline-success"
+              target="_blank"
+            >
+              <i class="fas fa-file-pdf"></i> ดาวน์โหลดเอกสาร
+            </a>
+            <small
+              th:if="${linkedEvalRequest != null}"
+              style="color: var(--text-muted)"
+            >
+              <i class="fas fa-link"></i> อ้างอิง:
+              <span th:text="${linkedEvalRequest.requestCode}"></span>
+              <span
+                class="badge"
+                th:style="'background:' + ${linkedEvalRequest.currentStatus.color} + ';color:#fff;margin-left:4px'"
+                th:text="${linkedEvalRequest.currentStatus.thaiLabel}"
+              ></span>
+            </small>
+          </div>
+        </div>
+        <div
+          th:if="${evalDoc8Data == null}"
+          class="draft-banner"
+          style="border-color: #e3a008; background: #fffbeb; color: #854d0e"
+        >
+          <i class="fas fa-exclamation-triangle"></i>
+          <div>
+            <strong>ยังไม่มีผลการประเมินผลการสอน</strong>
+            <span class="db-detail"
+              >ผู้ยื่นยังไม่มีเอกสารที่ 8 จากคำร้องประเมินผลการสอน
+              หรือแอดมินยังไม่ได้กรอกข้อมูล</span
+            >
+          </div>
+        </div>
+
+        <!-- Progress Tracker -->
+        <div class="detail-progress">
+          <div class="detail-progress-track">
+            <div class="detail-progress-line"></div>
+            <div
+              class="detail-progress-fill"
+              th:style="'width:' + ${progressPercent != null ? progressPercent : 0} + '%;background:linear-gradient(90deg,#2e7d32,#43a047)'"
+            ></div>
+            <div class="detail-progress-steps">
+              <th:block th:each="step, iterStat : ${progressSteps}">
+                <div
+                  class="detail-progress-step"
+                  th:classappend="${request.currentStatus.ordinal() >= step.ordinal()} ? 'dp-done'"
+                >
+                  <div
+                    class="detail-progress-dot"
+                    th:style="${request.currentStatus.ordinal() >= step.ordinal()
+                                         ? 'background:' + step.color + ';box-shadow:0 2px 6px ' + step.color + '40'
+                                         : ''}"
+                  >
+                    <i class="fas" th:classappend="${step.icon}"></i>
+                  </div>
+                  <div
+                    class="detail-progress-step-label"
+                    th:style="${request.currentStatus.ordinal() >= step.ordinal() ? 'color:' + step.color : ''}"
+                    th:text="${step.thaiLabel}"
+                  ></div>
+                </div>
+              </th:block>
+            </div>
+          </div>
+        </div>
+
+        <!-- Draft Warning -->
+        <div th:if="${request.currentStatus.isDraft()}" class="draft-banner">
+          <i class="fas fa-info-circle"></i>
+          <div>
+            <strong>คำร้องนี้ยังเป็นแบบร่าง</strong>
+            <span class="db-detail"
+              >ผู้ยื่นยังไม่ได้ยื่นคำร้อง แอดมินจะจัดการได้หลังจากผู้ยื่นกด
+              "ยื่นคำร้อง" แล้วเท่านั้น</span
+            >
+          </div>
+        </div>
+
+        <div class="row">
+          <!-- Left Column -->
+          <div class="col-md-5">
+            <!-- Status Update -->
+            <div class="detail-section">
+              <div class="detail-section-header">
+                <h5>
+                  <i class="fas fa-exchange-alt" style="color: #2e7d32"></i>
+                  อัพเดทสถานะ
+                </h5>
+              </div>
+              <div class="detail-section-body">
+                <div
+                  th:if="${request.currentStatus.isDraft()}"
+                  class="detail-locked"
+                >
+                  <i class="fas fa-lock"></i>
+                  <p>
+                    ไม่สามารถอัพเดทสถานะได้<br /><small
+                      >รอผู้ยื่นคำร้องยื่นก่อน</small
+                    >
+                  </p>
+                </div>
+                <form
+                  th:unless="${request.currentStatus.isDraft()}"
+                  th:action="'/admin/position/request/' + ${request.id} + '/status'"
+                  method="post"
+                >
+                  <div class="mb-3">
+                    <label class="form-label">สถานะใหม่</label>
+                    <select name="status" class="form-select" required>
+                      <option value="">-- เลือก --</option>
+                      <option
+                        th:each="s : ${statuses}"
+                        th:if="${!s.isDraft()}"
+                        th:value="${s.name()}"
+                        th:text="${s.thaiLabel}"
+                        th:disabled="${s == request.currentStatus}"
+                        th:style="'color:' + ${s.color}"
+                      ></option>
+                    </select>
+                  </div>
+                  <div class="mb-3">
+                    <label class="form-label">หมายเหตุ</label>
+                    <textarea
+                      name="note"
+                      class="form-control"
+                      rows="2"
+                      placeholder="ระบุหมายเหตุ (ไม่บังคับ)"
+                    ></textarea>
+                  </div>
+                  <button type="submit" class="btn-save-status bss-green">
+                    <i class="fas fa-save"></i> อัพเดทสถานะ
+                  </button>
+                </form>
+              </div>
+            </div>
+
+            <!-- Document Archive -->
+            <div class="detail-section">
+              <div class="detail-section-header">
+                <h5><i class="fas fa-folder-open"></i> คลังเอกสารเพิ่มเติม</h5>
+                <span
+                  class="badge bg-secondary"
+                  th:text="${attachmentCount} + ' / 10 ไฟล์'"
+                ></span>
+              </div>
+              <div class="detail-section-body">
+                <form
+                  th:action="'/admin/position/request/' + ${request.id} + '/upload-attachment'"
+                  method="post"
+                  enctype="multipart/form-data"
+                  th:if="${attachmentCount < 10}"
+                >
+                  <div class="input-group mb-3">
+                    <input
+                      type="file"
+                      name="file"
+                      class="form-control"
+                      accept=".pdf,.docx"
+                      required
+                    />
+                    <button type="submit" class="btn btn-success btn-sm">
+                      <i class="fas fa-upload"></i> อัปโหลด
+                    </button>
+                  </div>
+                  <small class="text-muted"
+                    ><i class="fas fa-info-circle"></i> รองรับไฟล์ .pdf และ
+                    .docx (สูงสุด 10 ไฟล์)</small
+                  >
+                </form>
+                <div
+                  th:if="${attachmentCount >= 10}"
+                  class="alert alert-warning mb-3"
+                >
+                  <i class="fas fa-exclamation-triangle"></i>
+                  ถึงจำนวนเอกสารสูงสุดแล้ว (10 ไฟล์)
+                </div>
+
+                <div
+                  th:if="${#lists.isEmpty(attachments)}"
+                  class="admin-table-empty"
+                >
+                  <i class="fas fa-inbox"></i>
+                  <p>ยังไม่มีเอกสารเพิ่มเติม</p>
+                </div>
+                <div
+                  th:unless="${#lists.isEmpty(attachments)}"
+                  style="overflow-x: auto"
+                >
+                  <table class="admin-table">
+                    <thead>
+                      <tr>
+                        <th style="width: 36px">#</th>
+                        <th>ชื่อไฟล์</th>
+                        <th>ประเภท</th>
+                        <th>ขนาด</th>
+                        <th>อัปโหลดเมื่อ</th>
+                        <th style="width: 80px">จัดการ</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <tr th:each="att, iterStat : ${attachments}">
+                        <td class="at-date" th:text="${iterStat.count}"></td>
+                        <td>
+                          <i
+                            class="fas fa-file-pdf text-danger"
+                            th:if="${att.fileType == 'PDF'}"
+                          ></i>
+                          <i
+                            class="fas fa-file-word text-primary"
+                            th:if="${att.fileType == 'DOCX'}"
+                          ></i>
+                          <span th:text="${att.originalFilename}"></span>
+                        </td>
+                        <td>
+                          <span
+                            class="badge"
+                            th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : 'bg-primary'}"
+                            th:text="${att.fileType}"
+                          ></span>
+                        </td>
+                        <td
+                          class="at-date"
+                          th:text="${att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-'}"
+                        ></td>
+                        <td
+                          class="at-date"
+                          th:text="${@thaiDateUtil.format(att.uploadedAt)}"
+                        ></td>
+                        <td>
+                          <div class="d-flex gap-1">
+                            <a
+                              th:href="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
+                              class="btn btn-outline-primary btn-sm"
+                              title="ดาวน์โหลด"
+                            >
+                              <i class="fas fa-download"></i>
+                            </a>
+                            <form
+                              th:action="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
+                              method="post"
+                              style="display: inline"
+                              data-confirm="ต้องการลบเอกสารนี้หรือไม่?"
+                            >
+                              <button
+                                type="submit"
+                                class="btn btn-outline-danger btn-sm"
+                                title="ลบ"
+                              >
+                                <i class="fas fa-trash"></i>
+                              </button>
+                            </form>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <!-- History (Tabbed: Status + Edit) -->
+            <div class="detail-section">
+              <div
+                class="detail-section-header"
+                style="flex-direction: column; align-items: stretch; gap: 8px"
+              >
+                <div class="history-tabs" id="historyTabs">
+                  <button
+                    type="button"
+                    class="history-tab-btn active"
+                    data-target="statusHistPane"
+                  >
+                    <i class="fas fa-history"></i> ประวัติสถานะ
+                    <span class="htb-count" th:text="${statusHistory.size()}"
+                      >0</span
+                    >
+                  </button>
+                  <button
+                    type="button"
+                    class="history-tab-btn"
+                    data-target="editHistPane"
+                  >
+                    <i class="fas fa-edit"></i> ประวัติการแก้ไข
+                    <span class="htb-count" th:text="${editHistory.size()}"
+                      >0</span
+                    >
+                  </button>
+                </div>
+              </div>
+              <div
+                class="detail-section-body"
+                style="max-height: 400px; overflow-y: auto"
+              >
+                <!-- Status History -->
+                <div id="statusHistPane">
+                  <div th:each="h : ${statusHistory}" class="history-entry">
+                    <span
+                      class="history-entry-badge"
+                      th:style="'background-color:' + ${h.newStatus.color}"
+                      th:text="${h.newStatus.thaiLabel}"
+                    ></span>
+                    <div class="history-entry-content">
+                      <div
+                        class="history-entry-date"
+                        th:text="${@thaiDateUtil.format(h.changedAt)}"
+                      ></div>
+                      <div
+                        th:if="${h.changedBy != null}"
+                        class="history-entry-by"
+                      >
+                        โดย: [[${h.changedBy.name}]]
+                      </div>
+                      <div
+                        th:if="${h.note != null}"
+                        class="history-entry-note"
+                        th:text="${h.note}"
+                      ></div>
+                    </div>
+                  </div>
+                  <div
+                    th:if="${statusHistory.isEmpty()}"
+                    class="admin-table-empty"
+                  >
+                    <i class="fas fa-inbox"></i>
+                    <p>ยังไม่มีประวัติสถานะ</p>
+                  </div>
+                </div>
+                <!-- Edit History -->
+                <div id="editHistPane" class="js-hidden">
+                  <div class="mb-3">
+                    <select
+                      id="editHistFilter"
+                      class="form-select form-select-sm"
+                      style="max-width: 260px; font-size: 0.85rem"
+                    >
+                      <option value="all">ทุกเอกสาร</option>
+                      <option
+                        th:each="entry : ${docLabels}"
+                        th:value="${entry.key}"
+                        th:text="'เอกสารที่ ' + ${entry.key} + ' — ' + ${entry.value}"
+                      ></option>
+                    </select>
+                  </div>
+                  <div id="editHistEntries">
+                    <div
+                      th:each="log : ${editHistory}"
+                      class="history-entry edit-log-entry"
+                      th:attr="data-doc-type=${log.documentType}"
+                    >
+                      <span
+                        class="history-entry-badge"
+                        th:style="'background-color:' + ${log.action.color}"
+                      >
+                        <i class="fas" th:classappend="${log.action.icon}"></i>
+                        [[${log.action.thaiLabel}]]
+                      </span>
+                      <div class="history-entry-content">
+                        <div class="history-entry-date">
+                          <strong>เอกสารที่ [[${log.documentType}]]</strong>
+                        </div>
+                        <div
+                          class="history-entry-note"
+                          th:text="${log.documentLabel}"
+                        ></div>
+                        <div class="history-entry-by">
+                          <i class="fas fa-clock me-1"></i>
+                          [[${@thaiDateUtil.formatWithSeconds(log.editedAt)}]]
+                        </div>
+                        <div
+                          th:if="${log.editedBy != null}"
+                          class="history-entry-by"
+                        >
+                          <i class="fas fa-user me-1"></i> โดย:
+                          [[${log.editedBy.name}]]
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div
+                    id="editHistEmpty"
+                    th:if="${editHistory.isEmpty()}"
+                    class="admin-table-empty"
+                  >
+                    <i class="fas fa-inbox"></i>
+                    <p>ยังไม่มีประวัติการแก้ไขเอกสาร</p>
+                  </div>
+                  <div id="editHistNoMatch" class="admin-table-empty js-hidden">
+                    <i class="fas fa-search"></i>
+                    <p>ไม่มีประวัติการแก้ไขสำหรับเอกสารที่เลือก</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Right Column: Document Management -->
+          <div class="col-md-7">
+            <div class="detail-section">
+              <div class="detail-section-header">
+                <h5>
+                  <i class="fas fa-file-word" style="color: #2e7d32"></i>
+                  จัดการเอกสาร (9 แบบฟอร์ม)
+                </h5>
+                <a
+                  th:href="'/admin/position/request/' + ${request.id} + '/download-all'"
+                  class="btn btn-sm btn-outline-success"
+                >
+                  <i class="fas fa-file-archive"></i> ดาวน์โหลดทั้งหมด (ZIP)
+                </a>
+              </div>
+              <div class="detail-section-body">
+                <div
+                  th:each="entry : ${docLabels}"
+                  class="doc-grid-item"
+                  th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed'"
+                >
+                  <div>
+                    <span class="doc-grid-item-title">
+                      เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
+                    </span>
+                    <span
+                      th:if="${completedDocs.contains(entry.key)}"
+                      class="badge bg-success ms-1"
+                    >
+                      <i class="fas fa-check"></i> กรอกแล้ว
+                    </span>
+                    <span
+                      th:unless="${completedDocs.contains(entry.key)}"
+                      class="badge bg-warning text-dark ms-1"
+                    >
+                      <i class="fas fa-clock"></i> รอกรอก
+                    </span>
+                  </div>
+                  <div class="doc-grid-item-actions">
+                    <!-- Draft: disabled -->
+                    <th:block th:if="${request.currentStatus.isDraft()}">
+                      <span
+                        class="btn btn-sm btn-outline-secondary disabled"
+                        style="opacity: 0.5; cursor: not-allowed"
+                      >
+                        <i class="fas fa-lock"></i> รอยื่น
+                      </span>
+                    </th:block>
+                    <!-- Not draft: buttons -->
+                    <th:block th:unless="${request.currentStatus.isDraft()}">
+                      <a
+                        th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key}"
+                        class="btn btn-sm btn-outline-primary"
+                      >
+                        <i class="fas fa-edit"></i>
+                        [[${completedDocs.contains(entry.key)} ? 'แก้ไข' :
+                        'กรอก']]
+                      </a>
+                      <th:block th:if="${completedDocs.contains(entry.key)}">
+                        <a
+                          th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download'"
+                          class="btn btn-sm btn-outline-success"
+                          title="ดาวน์โหลด DOCX"
+                        >
+                          <i class="fas fa-file-word"></i> DOCX
+                        </a>
+                        <button
+                          type="button"
+                          class="btn btn-sm btn-outline-danger btn-pdf-print"
+                          th:attr="data-request-id=${request.id},data-doc-type=${entry.key},data-doc-label=${docLabels.get(entry.key)}"
+                          title="พิมพ์/บันทึก PDF"
+                        >
+                          <i class="fas fa-file-pdf"></i> PDF
+                        </button>
+                      </th:block>
+                    </th:block>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <a href="/admin/position/requests?type=position" class="btn-back-v2">
+          <i class="fas fa-arrow-left"></i> กลับรายการคำร้อง
+        </a>
+      </div>
+
+      <script>
+        // History tab switching (pure JS, no Bootstrap pills)
+        document
+          .querySelectorAll("#historyTabs .history-tab-btn")
+          .forEach(function (btn) {
+            btn.addEventListener("click", function () {
+              document
+                .querySelectorAll("#historyTabs .history-tab-btn")
+                .forEach(function (b) {
+                  b.classList.remove("active");
                 });
+              btn.classList.add("active");
+              var target = btn.getAttribute("data-target");
+              document.getElementById("statusHistPane").style.display =
+                target === "statusHistPane" ? "" : "none";
+              document
+                .getElementById("editHistPane")
+                .classList.toggle("js-hidden", target !== "editHistPane");
+            });
+          });
+
+        // PDF download — ใช้ server-side conversion ผ่าน LibreOffice (เหมือนฝั่งประเมินผลการสอน)
+        document.querySelectorAll(".btn-pdf-print").forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            var requestId = this.dataset.requestId;
+            var docType = this.dataset.docType;
+            window.location.href =
+              "/admin/position/request/" +
+              requestId +
+              "/document/" +
+              docType +
+              "/download?format=pdf";
+          });
+        });
+
+        // Edit history document filter
+        var editFilter = document.getElementById("editHistFilter");
+        if (editFilter) {
+          editFilter.addEventListener("change", function () {
+            var val = this.value;
+            var entries = document.querySelectorAll(".edit-log-entry");
+            var noMatch = document.getElementById("editHistNoMatch");
+            var visibleCount = 0;
+
+            entries.forEach(function (el) {
+              if (val === "all" || el.dataset.docType === val) {
+                el.style.display = "";
+                visibleCount++;
+              } else {
+                el.style.display = "none";
+              }
             });
 
-            // PDF download — ใช้ server-side conversion ผ่าน LibreOffice (เหมือนฝั่งประเมินผลการสอน)
-            document.querySelectorAll('.btn-pdf-print').forEach(function(btn) {
-                btn.addEventListener('click', function() {
-                    var requestId = this.dataset.requestId;
-                    var docType   = this.dataset.docType;
-                    window.location.href = '/admin/position/request/' + requestId + '/document/' + docType + '/download?format=pdf';
-                });
-            });
-
-            // Edit history document filter
-            var editFilter = document.getElementById('editHistFilter');
-            if (editFilter) {
-                editFilter.addEventListener('change', function() {
-                    var val = this.value;
-                    var entries = document.querySelectorAll('.edit-log-entry');
-                    var noMatch = document.getElementById('editHistNoMatch');
-                    var visibleCount = 0;
-
-                    entries.forEach(function(el) {
-                        if (val === 'all' || el.dataset.docType === val) {
-                            el.style.display = '';
-                            visibleCount++;
-                        } else {
-                            el.style.display = 'none';
-                        }
-                    });
-
-                    if (noMatch) {
-                        noMatch.classList.toggle('js-hidden', !(entries.length > 0 && visibleCount === 0));
-                    }
-                });
+            if (noMatch) {
+              noMatch.classList.toggle(
+                "js-hidden",
+                !(entries.length > 0 && visibleCount === 0),
+              );
             }
-        </script>
+          });
+        }
+      </script>
     </section>
-</body>
+  </body>
 </html>

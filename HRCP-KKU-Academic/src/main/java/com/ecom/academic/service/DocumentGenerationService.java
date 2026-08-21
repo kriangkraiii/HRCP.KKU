@@ -1029,7 +1029,9 @@ public class DocumentGenerationService {
     /** cache ผลการค้นหา soffice: null = ยังไม่เคยหา, "" = หาแล้วไม่เจอ */
     private volatile String cachedSofficePath = null;
 
-    /** LRU cache ของ PDF ที่แปลงแล้ว — preview เดิมซ้ำ ๆ จะไม่เรียก LibreOffice ใหม่ */
+    /**
+     * LRU cache ของ PDF ที่แปลงแล้ว — preview เดิมซ้ำ ๆ จะไม่เรียก LibreOffice ใหม่
+     */
     private static final int PDF_CACHE_SIZE = 50;
     private final Map<String, byte[]> pdfCache = Collections.synchronizedMap(
             new LinkedHashMap<>(16, 0.75f, true) {

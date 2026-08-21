@@ -1,7 +1,12 @@
 package com.ecom.service;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.HexFormat;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -12,6 +17,8 @@ import org.springframework.stereotype.Service;
 
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -23,6 +30,16 @@ public class TwoFactorService {
     private static final int OTP_EXPIRY_MINUTES = 5;
     private final SecureRandom random = new SecureRandom();
 
+    /**
+     * In-memory cache for fast OTP verification. Keyed by user ID, stores
+     * the SHA-256 hash of the OTP. TTL is set slightly beyond the OTP expiry
+     * to allow for clock skew while still auto-evicting stale entries.
+     */
+    private final Cache<Integer, String> otpCache = Caffeine.newBuilder()
+            .maximumSize(10_000)
+            .expireAfterWrite(Duration.ofMinutes(OTP_EXPIRY_MINUTES + 1))
+            .build();
+
     private final UserRepository userRepository;
 
     private final JavaMailSender mailSender;
@@ -33,7 +50,8 @@ public class TwoFactorService {
     }
 
     /**
-     * Generate an 8-digit OTP, save to user, and return it.
+     * Generate an 8-digit OTP, hash it, save the hash to DB and cache,
+     * and return the plaintext for email delivery only.
      */
     public String generateOtp(UserDtls user) {
         StringBuilder sb = new StringBuilder();
@@ -41,9 +59,16 @@ public class TwoFactorService {
             sb.append(random.nextInt(10));
         }
         String otp = sb.toString();
-        user.setOtpCode(otp);
+        String hashedOtp = sha256(otp);
+
+        // Store hash only — plaintext never touches persistent storage
+        user.setOtpCode(hashedOtp);
         user.setOtpExpiry(LocalDateTime.now().plusMinutes(OTP_EXPIRY_MINUTES));
         userRepository.save(user);
+
+        // Fast-path for verification (avoids DB round-trip)
+        otpCache.put(user.getId(), hashedOtp);
+
         return otp;
     }
 
@@ -52,12 +77,17 @@ public class TwoFactorService {
 
     /**
      * Send OTP email to user.
+     *
+     * <p>The plaintext OTP is retrieved by re-generating from the caller
+     * (generateOtp returns it). This method receives the user whose DB row
+     * now holds only the hash, so it must be called with the plaintext
+     * already captured.
+     *
      * @param purpose "LOGIN" or "EMAIL_VERIFY"
      */
     @Async
-    public void sendOtpEmail(UserDtls user, String purpose) {
+    public void sendOtpEmail(UserDtls user, String otp, String purpose) {
         try {
-            String otp = user.getOtpCode();
             if (otp == null) return;
 
             String subject;
@@ -86,7 +116,7 @@ public class TwoFactorService {
     }
 
     /**
-     * Verify the OTP input against saved code.
+     * Verify the OTP input against the stored hash.
      * Returns: "OK", "EXPIRED", "INVALID"
      */
     public String verifyOtp(UserDtls user, String inputOtp) {
@@ -97,7 +127,14 @@ public class TwoFactorService {
             clearOtp(user);
             return "EXPIRED";
         }
-        if (!user.getOtpCode().equals(inputOtp)) {
+
+        String inputHash = sha256(inputOtp);
+
+        // Fast path: check in-memory cache first
+        String cachedHash = otpCache.getIfPresent(user.getId());
+        String storedHash = cachedHash != null ? cachedHash : user.getOtpCode();
+
+        if (!inputHash.equals(storedHash)) {
             return "INVALID";
         }
         clearOtp(user);
@@ -105,12 +142,13 @@ public class TwoFactorService {
     }
 
     /**
-     * Clear OTP data from user.
+     * Clear OTP data from user and cache.
      */
     public void clearOtp(UserDtls user) {
         user.setOtpCode(null);
         user.setOtpExpiry(null);
         userRepository.save(user);
+        otpCache.invalidate(user.getId());
     }
 
     /**
@@ -122,5 +160,21 @@ public class TwoFactorService {
         String local = parts[0];
         if (local.length() <= 1) return local + "***@" + parts[1];
         return local.charAt(0) + "***@" + parts[1];
+    }
+
+    /**
+     * One-way SHA-256 hash. OTP is an 8-digit number so it is not
+     * computationally expensive to brute-force, but this still prevents
+     * casual exposure from a database dump or backup.
+     */
+    static String sha256(String input) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            return HexFormat.of().formatHex(hash);
+        } catch (NoSuchAlgorithmException e) {
+            // SHA-256 is mandated by the JVM spec — this cannot happen.
+            throw new IllegalStateException("SHA-256 not available", e);
+        }
     }
 }

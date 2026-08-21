@@ -13,8 +13,13 @@ import org.springframework.stereotype.Component;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Component
 public class AdminInitializer implements CommandLineRunner {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminInitializer.class);
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
@@ -54,7 +59,7 @@ public class AdminInitializer implements CommandLineRunner {
             admin.setEmailNotificationEnabled(true);
 
             userRepository.save(admin);
-            System.out.println("=== Default admin created: " + adminEmail + " / " + adminPassword + " ===");
+            log.info("Default admin account created for: {}", adminEmail);
         }
 
         // 2. Create or enrich default regular test user
@@ -87,7 +92,7 @@ public class AdminInitializer implements CommandLineRunner {
         user.setMobileNumber("081-234-5678");
 
         userRepository.save(user);
-        System.out.println("=== Default test user initialized/updated: " + userEmail + " (Applicant ID: " + user.getApplicantId() + ") ===");
+        log.info("Default test user initialized: {} (Applicant ID: {})", userEmail, user.getApplicantId());
 
         // 3. Backfill applicant IDs and missing Titles for existing users
         List<UserDtls> allUsers = userRepository.findAll();

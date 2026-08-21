@@ -103,8 +103,8 @@ public class AcademicSettingsController {
     public ResponseEntity<Map<String, Object>> sendEmailOtp(Principal principal) {
         try {
             UserDtls user = userRepository.findByEmail(principal.getName());
-            twoFactorService.generateOtp(user);
-            twoFactorService.sendOtpEmail(user, "EMAIL_VERIFY");
+            String otp = twoFactorService.generateOtp(user);
+            twoFactorService.sendOtpEmail(user, otp, "EMAIL_VERIFY");
             return ResponseEntity.ok(Map.of("success", true,
                     "message", "ส่ง OTP ไปที่อีเมลของคุณแล้ว"));
         } catch (Exception e) {

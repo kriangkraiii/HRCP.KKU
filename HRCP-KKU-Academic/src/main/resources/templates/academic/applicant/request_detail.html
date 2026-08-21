@@ -156,7 +156,13 @@
                             <strong th:text="${doc.documentLabel}"></strong>
                             <small>สร้างเมื่อ: <span th:text="${@thaiDateUtil.format(doc.createdAt)}"></span></small>
                         </div>
-                        <div class="doc-list-item-actions">
+                        <div class="doc-list-item-actions d-flex gap-1">
+                            <button type="button"
+                                class="btn btn-sm btn-outline-info btn-doc-preview"
+                                th:attr="data-preview-url=@{'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=pdf'},data-doc-title=${doc.documentLabel}"
+                                title="ดูตัวอย่างเอกสาร (PDF)">
+                                <i class="fas fa-eye me-1"></i> ดูตัวอย่าง
+                            </button>
                             <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=docx'"
                                 class="btn btn-sm btn-outline-primary" title="ดาวน์โหลด DOCX">
                                 <i class="fas fa-file-word me-1"></i> DOCX

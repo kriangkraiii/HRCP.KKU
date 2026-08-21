@@ -164,7 +164,7 @@ class TwoFactorControllerTest {
 
         assertThat(view).isEqualTo("redirect:/2fa/verify");
         verify(twoFactorService, never()).generateOtp(any());
-        verify(twoFactorService, never()).sendOtpEmail(any(), anyString());
+        verify(twoFactorService, never()).sendOtpEmail(any(), any(), any());
     }
 
     @Test
@@ -177,7 +177,7 @@ class TwoFactorControllerTest {
         controller.resendOtp(request, session, redirect);
 
         verify(twoFactorService).generateOtp(user);
-        verify(twoFactorService).sendOtpEmail(user, "LOGIN");
+        verify(twoFactorService).sendOtpEmail(eq(user), any(), eq("LOGIN"));
         assertThat(session.getAttribute(SignInService.SESSION_ATTEMPTS)).isNull();
     }
 }

@@ -31,8 +31,7 @@ import com.ecom.external.service.FsSyncService;
 @PreAuthorize("hasRole('ADMIN')")
 public class FacultyChangeAdminController {
 
-    private static final String VIEW = "admin/faculty_changes";
-    private static final String REDIRECT = "redirect:/admin/faculty-changes";
+    private static final String REDIRECT = "redirect:/admin/external-sync?tab=changes";
 
     private final FacultyChangeReviewService reviewService;
     private final FsFacultyChangeRepository changeRepo;
@@ -47,15 +46,8 @@ public class FacultyChangeAdminController {
     }
 
     @GetMapping
-    public String list(Model model) {
-        List<FsFacultyChange> pending = reviewService.pending();
-
-        model.addAttribute("changes", pending);
-        // Diffs are parsed once here rather than per row in the template.
-        model.addAttribute("diffs", reviewService.readDiffs(pending));
-        model.addAttribute("pendingCount", pending.size());
-        model.addAttribute("recent", recentDecisions());
-        return VIEW;
+    public String list() {
+        return REDIRECT;
     }
 
     /** Last handful of decisions, newest first, across both outcomes. */

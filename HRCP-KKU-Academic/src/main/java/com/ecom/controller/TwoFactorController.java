@@ -139,8 +139,8 @@ public class TwoFactorController {
 
         UserDtls user = userRepository.findByEmail(email);
         if (user != null) {
-            twoFactorService.generateOtp(user);
-            twoFactorService.sendOtpEmail(user, "LOGIN");
+            String otp = twoFactorService.generateOtp(user);
+            twoFactorService.sendOtpEmail(user, otp, "LOGIN");
             session.setAttribute(SignInService.SESSION_RESEND_COOLDOWN, System.currentTimeMillis());
             // Reset failed attempt counter on fresh OTP generation
             session.removeAttribute(SignInService.SESSION_ATTEMPTS);

@@ -249,14 +249,15 @@ public class CpDirectorySyncService {
             changed = true;
         }
 
-        // Resolve Thai academic position
-        String resolvedPosition = com.ecom.util.AcademicTitleResolver.resolveThaiAcademicPosition(
-                person.academicRank(),
-                person.academicRankEn(),
-                user.getAcademicPosition());
-        if (!isBlank(resolvedPosition) && !resolvedPosition.equals(user.getAcademicPosition())) {
-            user.setAcademicPosition(resolvedPosition);
-            changed = true;
+        // Resolve Thai academic position (only fill gaps, do not overwrite existing value from HR)
+        if (isBlank(user.getAcademicPosition())) {
+            String resolvedPosition = com.ecom.util.AcademicTitleResolver.resolveThaiAcademicPosition(
+                    person.academicRank(),
+                    person.academicRankEn());
+            if (!isBlank(resolvedPosition)) {
+                user.setAcademicPosition(resolvedPosition);
+                changed = true;
+            }
         }
 
         // The English fields overwrite rather than fill gaps, unlike everything

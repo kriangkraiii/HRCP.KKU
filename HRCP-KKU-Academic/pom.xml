@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>4.1.0</version>
+		<version>4.1.1</version>
 		<relativePath /> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.ecom</groupId>
@@ -16,7 +16,7 @@
 	<description>HRCP KKU - ระบบจัดการบุคลากรทางวิชาการ</description>
 	<properties>
 		<java.version>21</java.version>
-		<skipTests>true</skipTests>
+		<skipTests>false</skipTests>
 	</properties>
 	<dependencies>
 
@@ -51,6 +51,14 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
 		</dependency>
+
+		<!-- Passay 2.0.0 Password Complexity Library (ISO 27001 A.9) -->
+		<dependency>
+			<groupId>org.passay</groupId>
+			<artifactId>passay</artifactId>
+			<version>2.0.0</version>
+		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-devtools</artifactId>
@@ -101,6 +109,16 @@
 			<groupId>org.postgresql</groupId>
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
+		</dependency>
+
+		<!-- Flyway Schema Migration (ISO 27001 A.14) -->
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-core</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
 
 		<!-- ============================================================ -->
@@ -220,6 +238,17 @@
             <configuration>
                 <!-- ข้ามเทสต์โดยค่าเริ่มต้นเหมือนเดิม แต่สั่งรันได้ด้วย -DskipTests=false -->
                 <skipTests>${skipTests}</skipTests>
+            </configuration>
+        </plugin>
+        <!-- OWASP Dependency-Check — scan for known CVEs in third-party libs (ISO 27001 A.12) -->
+        <plugin>
+            <groupId>org.owasp</groupId>
+            <artifactId>dependency-check-maven</artifactId>
+            <version>12.1.0</version>
+            <configuration>
+                <failBuildOnCVSS>7</failBuildOnCVSS>
+                <formats>HTML,JSON</formats>
+                <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
             </configuration>
         </plugin>
     </plugins>

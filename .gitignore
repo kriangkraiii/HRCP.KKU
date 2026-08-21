@@ -1,3 +1,45 @@
 /.metadata/
 __pycache__/
 *.pyc
+
+# === IDE ===
+.idea/
+*.iml
+.vscode/
+.settings/
+.classpath
+.project
+.factorypath
+.sonarlint/
+
+# === Build artifacts ===
+target/
+*.jar
+*.war
+*.class
+bin/
+
+# === Secrets & certificates ===
+*.p12
+*.jks
+*.pem
+*.key
+*.env
+.env.*
+
+# === Application config with secrets (production-specific) ===
+**/application-prod.properties
+**/application-prod.yml
+
+# === Runtime data ===
+uploads/
+logs/
+*.log
+*.log.gz
+
+# === OS ===
+.DS_Store
+Thumbs.db
+
+# === Python virtual env ===
+.venv/

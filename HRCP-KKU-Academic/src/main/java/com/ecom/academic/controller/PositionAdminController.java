@@ -394,7 +394,7 @@ public class PositionAdminController {
             return ResponseEntity.ok()
                     .contentType(MediaType.APPLICATION_PDF)
                     .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "attachment; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
+                            "inline; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
                     .contentLength(pdfData.length)
                     .body(new ByteArrayResource(pdfData));
         }

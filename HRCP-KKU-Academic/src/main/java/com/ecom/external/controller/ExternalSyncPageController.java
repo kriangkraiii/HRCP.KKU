@@ -15,6 +15,12 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
+import java.util.List;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.web.bind.annotation.RequestParam;
+import com.ecom.external.model.FsFacultyChange;
+import com.ecom.external.repository.FsFacultyChangeRepository;
+
 import com.ecom.external.config.FsApiProperties;
 import com.ecom.external.model.FsSyncState;
 import com.ecom.external.repository.FsFacultyRepository;
@@ -43,6 +49,7 @@ public class ExternalSyncPageController {
 
     private final FsSyncService syncService;
     private final FacultyChangeReviewService reviewService;
+    private final FsFacultyChangeRepository changeRepo;
     private final ManualSyncGuard guard;
     private final FsFacultyRepository facultyRepo;
     private final ScopusPublicationRepository publicationRepo;
@@ -55,6 +62,7 @@ public class ExternalSyncPageController {
 
     public ExternalSyncPageController(FsSyncService syncService,
             FacultyChangeReviewService reviewService,
+            FsFacultyChangeRepository changeRepo,
             ManualSyncGuard guard,
             FsFacultyRepository facultyRepo,
             ScopusPublicationRepository publicationRepo,
@@ -65,6 +73,7 @@ public class ExternalSyncPageController {
             @Value("${fs.sync.scopus.cron:0 0 2 * * *}") String scopusCron) {
         this.syncService = syncService;
         this.reviewService = reviewService;
+        this.changeRepo = changeRepo;
         this.guard = guard;
         this.facultyRepo = facultyRepo;
         this.publicationRepo = publicationRepo;
@@ -76,13 +85,19 @@ public class ExternalSyncPageController {
     }
 
     @GetMapping
-    public String page(Model model) {
+    public String page(@RequestParam(value = "tab", required = false, defaultValue = "sync") String activeTab, Model model) {
         Map<String, FsSyncState> jobs = syncService.currentState();
 
         model.addAttribute("facultyCount", facultyRepo.count());
         model.addAttribute("publicationCount", publicationRepo.count());
         model.addAttribute("facultyWithScopus", facultyRepo.findAllWithScopusId().size());
-        model.addAttribute("pendingCount", reviewService.pendingCount());
+
+        List<FsFacultyChange> pending = reviewService.pending();
+        model.addAttribute("changes", pending);
+        model.addAttribute("diffs", reviewService.readDiffs(pending));
+        model.addAttribute("pendingCount", pending.size());
+        model.addAttribute("recent", recentDecisions());
+        model.addAttribute("activeTab", activeTab);
 
         model.addAttribute("usersJob", jobs.get(FsSyncState.TYPE_USERS));
         model.addAttribute("scopusJob", jobs.get(FsSyncState.TYPE_SCOPUS));
@@ -96,6 +111,24 @@ public class ExternalSyncPageController {
         model.addAttribute("usersCooldown", guard.remaining(FsSyncState.TYPE_USERS).toSeconds());
         model.addAttribute("scopusCooldown", guard.remaining(FsSyncState.TYPE_SCOPUS).toSeconds());
         return VIEW;
+    }
+
+    private List<FsFacultyChange> recentDecisions() {
+        PageRequest topTen = PageRequest.of(0, 10);
+        List<FsFacultyChange> approved = changeRepo
+                .findByStatusOrderByReviewedAtDesc(FsFacultyChange.STATUS_APPROVED, topTen).getContent();
+        List<FsFacultyChange> rejected = changeRepo
+                .findByStatusOrderByReviewedAtDesc(FsFacultyChange.STATUS_REJECTED, topTen).getContent();
+
+        return java.util.stream.Stream.concat(approved.stream(), rejected.stream())
+                .sorted((a, b) -> {
+                    if (a.getReviewedAt() == null || b.getReviewedAt() == null) {
+                        return 0;
+                    }
+                    return b.getReviewedAt().compareTo(a.getReviewedAt());
+                })
+                .limit(10)
+                .toList();
     }
 
     /** Human-readable next-run times, so "did it run?" has an answer on the page. */
