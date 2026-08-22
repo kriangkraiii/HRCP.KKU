@@ -48,6 +48,24 @@
           th:text="${request.currentStatus.thaiLabel}"></span>
       </div>
 
+      <!-- Progress Tracker -->
+      <div class="detail-progress">
+        <div class="detail-progress-steps">
+          <th:block th:each="step, iterStat : ${progressSteps}">
+            <div class="detail-progress-step"
+                 th:classappend="${request.currentStatus.ordinal() > step.ordinal()} ? 'dp-done' : (${request.currentStatus.ordinal() == step.ordinal()} ? 'dp-done dp-active' : '')"
+                 th:style="'--step-c:' + ${step.color}">
+              <div th:if="${!iterStat.last}" class="detail-step-line"
+                   th:classappend="${request.currentStatus.ordinal() > step.ordinal()} ? 'line-done' : ''"></div>
+              <div class="detail-progress-dot">
+                <i class="fas" th:classappend="${step.icon}"></i>
+              </div>
+              <div class="detail-progress-step-label" th:text="${step.thaiLabel}"></div>
+            </div>
+          </th:block>
+        </div>
+      </div>
+
       <!-- Course Info -->
       <div th:if="${doc0Data != null}" class="detail-info-card" style="--_accent: #1976d2">
         <h6>
@@ -205,18 +223,135 @@
             </div>
           </div>
 
-          <!-- Status History -->
+          <!-- History Tabs: Status History & Edit History -->
           <div class="detail-section">
-            <div class="detail-section-header">
-              <h5><i class="fas fa-history"></i> ประวัติสถานะ</h5>
+            <div
+              class="detail-section-header"
+              style="flex-direction: column; align-items: stretch; gap: 8px"
+            >
+              <div class="history-tabs" id="historyTabs">
+                <button
+                  type="button"
+                  class="history-tab-btn active"
+                  data-target="statusHistPane"
+                >
+                  <i class="fas fa-history"></i> ประวัติสถานะ
+                  <span class="htb-count" th:text="${statusHistory.size()}">0</span>
+                </button>
+                <button
+                  type="button"
+                  class="history-tab-btn"
+                  data-target="editHistPane"
+                >
+                  <i class="fas fa-edit"></i> ประวัติการแก้ไข
+                  <span class="htb-count" th:text="${editHistory != null ? editHistory.size() : 0}">0</span>
+                </button>
+              </div>
             </div>
-            <div class="detail-section-body" style="max-height: 300px; overflow-y: auto">
-              <div th:each="h : ${statusHistory}" class="history-entry">
-                <span class="history-entry-badge" th:style="'background-color:' + ${h.newStatus.color}"
-                  th:text="${h.newStatus.thaiLabel}"></span>
-                <div class="history-entry-content">
-                  <div class="history-entry-date" th:text="${@thaiDateUtil.format(h.changedAt)}"></div>
-                  <div th:if="${h.note != null}" class="history-entry-note" th:text="${h.note}"></div>
+            <div
+              class="detail-section-body"
+              style="max-height: 400px; overflow-y: auto"
+            >
+              <!-- Status History Pane -->
+              <div id="statusHistPane">
+                <div th:each="h : ${statusHistory}" class="history-entry">
+                  <span
+                    th:if="${h.newStatus != null}"
+                    class="status-badge"
+                    th:classappend="'status-' + ${h.newStatus.name()}"
+                    th:text="${h.newStatus.thaiLabel}"
+                  ></span>
+                  <span th:if="${h.newStatus == null}" class="status-badge status-DRAFT">ไม่ระบุสถานะ</span>
+                  <div class="history-entry-content">
+                    <div
+                      class="history-entry-date"
+                      th:text="${@thaiDateUtil.format(h.changedAt)}"
+                    ></div>
+                    <div
+                      th:if="${h.changedBy != null}"
+                      class="history-entry-by"
+                      style="font-size: 0.75rem; color: var(--text-muted);"
+                    >
+                      โดย: [[${h.changedBy.name}]]
+                    </div>
+                    <div
+                      th:if="${h.note != null}"
+                      class="history-entry-note"
+                      th:text="${h.note}"
+                    ></div>
+                  </div>
+                </div>
+                <div
+                  th:if="${statusHistory == null or statusHistory.isEmpty()}"
+                  class="admin-table-empty"
+                >
+                  <i class="fas fa-inbox"></i>
+                  <p>ยังไม่มีประวัติสถานะ</p>
+                </div>
+              </div>
+
+              <!-- Edit History Pane -->
+              <div id="editHistPane" class="js-hidden">
+                <div class="mb-3">
+                  <select
+                    id="editHistFilter"
+                    class="form-select form-select-sm"
+                    style="max-width: 260px; font-size: 0.85rem"
+                  >
+                    <option value="all">ทุกเอกสาร</option>
+                    <option
+                      th:each="entry : ${docLabels}"
+                      th:value="${entry.key}"
+                      th:text="'เอกสารที่ ' + ${entry.key} + ' — ' + ${entry.value}"
+                    ></option>
+                  </select>
+                </div>
+                <div id="editHistEntries">
+                  <div
+                    th:each="log : ${editHistory}"
+                    class="history-entry edit-log-entry"
+                    th:attr="data-doc-type=${log.documentType}"
+                  >
+                    <span
+                      class="history-entry-badge"
+                      th:style="'background-color:' + ${log.action.color}"
+                    >
+                      <i class="fas" th:classappend="${log.action.icon}"></i>
+                      [[${log.action.thaiLabel}]]
+                    </span>
+                    <div class="history-entry-content">
+                      <div class="history-entry-date">
+                        <strong>เอกสารที่ [[${log.documentType}]]</strong>
+                      </div>
+                      <div
+                        class="history-entry-note"
+                        th:text="${log.documentLabel}"
+                      ></div>
+                      <div class="history-entry-by">
+                        <i class="fas fa-clock me-1"></i>
+                        [[${@thaiDateUtil.formatWithSeconds(log.editedAt)}]]
+                      </div>
+                      <div
+                        th:if="${log.editedBy != null}"
+                        class="history-entry-by"
+                      >
+                        <i class="fas fa-user me-1"></i> โดย:
+                        [[${log.editedBy.name}]]
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div
+                  id="editHistEmpty"
+                  th:if="${editHistory == null or editHistory.isEmpty()}"
+                  class="admin-table-empty"
+                >
+                  <i class="fas fa-inbox"></i>
+                  <p>ยังไม่มีประวัติการแก้ไขเอกสาร</p>
+                </div>
+                <div id="editHistNoMatch" class="admin-table-empty js-hidden">
+                  <i class="fas fa-search"></i>
+                  <p>ไม่มีประวัติการแก้ไขสำหรับเอกสารที่เลือก</p>
                 </div>
               </div>
             </div>
@@ -275,7 +410,7 @@
         </div>
       </div>
 
-      <a href="/admin/academic/requests" class="btn-back-v2"><i class="fas fa-arrow-left"></i> กลับรายการ</a>
+      <a href="/admin/academic/requests?type=evaluation" class="btn-back-v2" onclick="if(window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1) { history.back(); return false; }"><i class="fas fa-arrow-left"></i> กลับรายการ</a>
     </div>
 
     <script>
@@ -293,6 +428,50 @@
           window.location.href = `/admin/academic/request/${requestId}/download/${docId}?format=pdf`;
         });
       });
+
+      // History tab switching
+      document
+        .querySelectorAll("#historyTabs .history-tab-btn")
+        .forEach(function (btn) {
+          btn.addEventListener("click", function () {
+            document
+              .querySelectorAll("#historyTabs .history-tab-btn")
+              .forEach(function (b) {
+                b.classList.remove("active");
+              });
+            btn.classList.add("active");
+            var target = btn.getAttribute("data-target");
+            document.getElementById("statusHistPane").style.display =
+              target === "statusHistPane" ? "" : "none";
+            document
+              .getElementById("editHistPane")
+              .classList.toggle("js-hidden", target !== "editHistPane");
+          });
+        });
+
+      // Edit history document filter
+      var editFilter = document.getElementById("editHistFilter");
+      if (editFilter) {
+        editFilter.addEventListener("change", function () {
+          var val = this.value;
+          var entries = document.querySelectorAll(".edit-log-entry");
+          var noMatch = document.getElementById("editHistNoMatch");
+          var visibleCount = 0;
+
+          entries.forEach(function (el) {
+            if (val === "all" || el.dataset.docType === val) {
+              el.style.display = "";
+              visibleCount++;
+            } else {
+              el.style.display = "none";
+            }
+          });
+
+          if (noMatch) {
+            noMatch.classList.toggle("js-hidden", visibleCount > 0 || entries.length === 0);
+          }
+        });
+      }
     </script>
   </section>
 </body>

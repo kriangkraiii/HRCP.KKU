@@ -41,6 +41,7 @@ class DatabaseIndexVerificationTest {
             PositionDocument.class,
             RequestStatusHistory.class,
             PositionStatusHistory.class,
+            AcademicDocumentEditLog.class,
             PositionDocumentEditLog.class,
             StaffMember.class,
             Petition.class,

@@ -235,12 +235,20 @@
                         </span>
                     </div>
 
-                    <!-- Progress Tracker -->
+                    <!-- Revision Alert -->
+                    <div th:if="${req.currentStatus.name() == 'REVISION_REQUESTED'}" class="alert alert-warning py-2 mb-3 d-flex align-items-center">
+                        <i class="fas fa-exclamation-triangle fs-5 me-2 text-warning"></i>
+                        <div>
+                            <strong>คำร้องถูกส่งกลับเพื่อแก้ไข:</strong> กรุณาตรวจสอบและแก้ไขเอกสารตามที่ผู้ดูแลระบบแจ้ง
+                        </div>
+                    </div>
+
+                    <!-- Progress Tracker (7 Standard Steps) -->
                     <div class="progress-tracker">
-                        <div th:each="s : ${statuses}" class="progress-step"
-                            th:if="${!s.isTerminal() || s == req.currentStatus}"
+                        <div th:each="s : ${progressSteps}" class="progress-step"
                             th:classappend="${req.currentStatus.ordinal() == s.ordinal()} ? 'active' : 
-                                     (${req.currentStatus.ordinal() > s.ordinal()} ? 'completed' : '')">
+                                     (${req.currentStatus.ordinal() > s.ordinal() && req.currentStatus.name() != 'REJECTED'} ? 'completed' : 
+                                     (${req.currentStatus.name() == 'REVISION_REQUESTED' && s.name() == 'DOCUMENT_VERIFICATION'} ? 'revise' : ''))">
                             <div class="step-icon">
                                 <i th:class="'fas ' + ${s.icon}" style="font-size: 0.8rem;"></i>
                             </div>

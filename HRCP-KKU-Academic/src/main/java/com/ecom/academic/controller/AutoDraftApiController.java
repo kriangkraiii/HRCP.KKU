@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
@@ -60,10 +61,12 @@ public class AutoDraftApiController {
             if (!mayEdit(user, request.getApplicant()))
                 return ResponseEntity.status(403).build();
 
-            String label = "เอกสารที่ " + docType;
+            String label = academicService.getDocLabel(docType);
             academicService.saveDraft(request, docType, jsonData, label, null);
 
-            // Log is not needed for academic (Phase 1) auto-draft — edit history is only for Position (Phase 2)
+            // Log academic document edit
+            academicService.logDocumentEdit(request, docType, label, user,
+                    AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
 
             return ResponseEntity.ok(Map.of("status", "saved", "type", "academic"));
         } catch (Exception e) {

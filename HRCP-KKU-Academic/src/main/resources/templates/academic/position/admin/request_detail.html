@@ -259,34 +259,19 @@
 
         <!-- Progress Tracker -->
         <div class="detail-progress">
-          <div class="detail-progress-track">
-            <div class="detail-progress-line"></div>
-            <div
-              class="detail-progress-fill"
-              th:style="'width:' + ${progressPercent != null ? progressPercent : 0} + '%;background:linear-gradient(90deg,#2e7d32,#43a047)'"
-            ></div>
-            <div class="detail-progress-steps">
-              <th:block th:each="step, iterStat : ${progressSteps}">
-                <div
-                  class="detail-progress-step"
-                  th:classappend="${request.currentStatus.ordinal() >= step.ordinal()} ? 'dp-done'"
-                >
-                  <div
-                    class="detail-progress-dot"
-                    th:style="${request.currentStatus.ordinal() >= step.ordinal()
-                                         ? 'background:' + step.color + ';box-shadow:0 2px 6px ' + step.color + '40'
-                                         : ''}"
-                  >
-                    <i class="fas" th:classappend="${step.icon}"></i>
-                  </div>
-                  <div
-                    class="detail-progress-step-label"
-                    th:style="${request.currentStatus.ordinal() >= step.ordinal() ? 'color:' + step.color : ''}"
-                    th:text="${step.thaiLabel}"
-                  ></div>
+          <div class="detail-progress-steps">
+            <th:block th:each="step, iterStat : ${progressSteps}">
+              <div class="detail-progress-step"
+                   th:classappend="${request.currentStatus.ordinal() > step.ordinal()} ? 'dp-done' : (${request.currentStatus.ordinal() == step.ordinal()} ? 'dp-done dp-active' : '')"
+                   th:style="'--step-c:' + ${step.color}">
+                <div th:if="${!iterStat.last}" class="detail-step-line"
+                     th:classappend="${request.currentStatus.ordinal() > step.ordinal()} ? 'line-done' : ''"></div>
+                <div class="detail-progress-dot">
+                  <i class="fas" th:classappend="${step.icon}"></i>
                 </div>
-              </th:block>
-            </div>
+                <div class="detail-progress-step-label" th:text="${step.thaiLabel}"></div>
+              </div>
+            </th:block>
           </div>
         </div>
 
@@ -521,10 +506,12 @@
                 <div id="statusHistPane">
                   <div th:each="h : ${statusHistory}" class="history-entry">
                     <span
-                      class="history-entry-badge"
-                      th:style="'background-color:' + ${h.newStatus.color}"
+                      th:if="${h.newStatus != null}"
+                      class="status-badge"
+                      th:classappend="'status-' + ${h.newStatus.name()}"
                       th:text="${h.newStatus.thaiLabel}"
                     ></span>
+                    <span th:if="${h.newStatus == null}" class="status-badge status-DRAFT">ไม่ระบุสถานะ</span>
                     <div class="history-entry-content">
                       <div
                         class="history-entry-date"
@@ -544,7 +531,7 @@
                     </div>
                   </div>
                   <div
-                    th:if="${statusHistory.isEmpty()}"
+                    th:if="${statusHistory == null or statusHistory.isEmpty()}"
                     class="admin-table-empty"
                   >
                     <i class="fas fa-inbox"></i>
@@ -702,7 +689,7 @@
           </div>
         </div>
 
-        <a href="/admin/position/requests?type=position" class="btn-back-v2">
+        <a href="/admin/academic/requests?type=position" class="btn-back-v2" onclick="if(window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1) { history.back(); return false; }">
           <i class="fas fa-arrow-left"></i> กลับรายการคำร้อง
         </a>
       </div>

@@ -137,6 +137,7 @@
                                             <td class="at-date" th:text="${@thaiDateUtil.format(req.updatedAt)}"></td>
                                             <td>
                                                 <span class="at-status"
+                                                      th:classappend="'at-status-' + ${#strings.toLowerCase(req.currentStatus.name())}"
                                                       th:style="'background-color:' + ${req.currentStatus.color}">
                                                     <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                     <span th:text="${req.currentStatus.thaiLabel}"></span>
@@ -209,6 +210,7 @@
                                             <td class="at-date" th:text="${@thaiDateUtil.format(req.updatedAt)}"></td>
                                             <td>
                                                 <span class="at-status"
+                                                      th:classappend="'at-status-' + ${#strings.toLowerCase(req.currentStatus.name())}"
                                                       th:style="'background-color:' + ${req.currentStatus.color}">
                                                     <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                     <span th:text="${req.currentStatus.thaiLabel}"></span>
@@ -346,6 +348,7 @@
                                         <td class="at-date" th:text="${@thaiDateUtil.format(req.updatedAt)}"></td>
                                         <td>
                                             <span class="at-status"
+                                                  th:classappend="'at-status-' + ${#strings.toLowerCase(req.currentStatus.name())}"
                                                   th:style="'background-color:' + ${req.currentStatus.color}">
                                                 <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                 <span th:text="${req.currentStatus.thaiLabel}"></span>

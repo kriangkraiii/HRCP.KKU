@@ -88,6 +88,7 @@ public class PositionApplicantController {
         model.addAttribute("draftRequest", draftRequest.orElse(null));
         model.addAttribute("hasActiveRequest", hasActiveRequest);
         model.addAttribute("statuses", PositionRequestStatus.values());
+        model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
 
         // ดึงข้อมูลตำแหน่งจาก doc_2 สำหรับทุกคำร้อง
         java.util.Map<Long, java.util.Map<String, String>> doc2DataMap = new java.util.HashMap<>();

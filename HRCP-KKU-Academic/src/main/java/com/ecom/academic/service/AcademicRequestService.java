@@ -17,12 +17,29 @@ import com.ecom.academic.repository.AcademicAttachmentRepository;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
 import com.ecom.academic.repository.RequestStatusHistoryRepository;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import com.ecom.academic.model.AcademicDocumentEditLog;
+import com.ecom.academic.repository.AcademicDocumentEditLogRepository;
 import com.ecom.model.UserDtls;
 
 @Service
 public class AcademicRequestService {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AcademicRequestService.class);
+
+    private static final Map<Integer, String> DOC_LABELS = new LinkedHashMap<>();
+    static {
+        DOC_LABELS.put(0, "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน");
+        DOC_LABELS.put(1, "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน");
+        DOC_LABELS.put(2, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ");
+        DOC_LABELS.put(3, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน");
+        DOC_LABELS.put(4, "บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ");
+        DOC_LABELS.put(5, "ข้อเสนอแนะจากคณะอนุกรรมการ");
+        DOC_LABELS.put(6, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66");
+        DOC_LABELS.put(7, "ส่วนที่ 3 แบบประเมินผลการสอน");
+        DOC_LABELS.put(8, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
+    }
 
     private final AcademicRequestRepository requestRepository;
 
@@ -32,6 +49,8 @@ public class AcademicRequestService {
 
     private final RequestStatusHistoryRepository historyRepository;
 
+    private final AcademicDocumentEditLogRepository editLogRepository;
+
     private final AcademicEmailService emailService;
 
     public AcademicRequestService(
@@ -39,11 +58,13 @@ public class AcademicRequestService {
             AcademicDocumentRepository documentRepository,
             AcademicAttachmentRepository attachmentRepository,
             RequestStatusHistoryRepository historyRepository,
+            AcademicDocumentEditLogRepository editLogRepository,
             AcademicEmailService emailService) {
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.attachmentRepository = attachmentRepository;
         this.historyRepository = historyRepository;
+        this.editLogRepository = editLogRepository;
         this.emailService = emailService;
     }
 
@@ -193,6 +214,33 @@ public class AcademicRequestService {
 
     public List<RequestStatusHistory> getStatusHistory(Long requestId) {
         return historyRepository.findByRequestIdOrderByChangedAtDesc(requestId);
+    }
+
+    public Map<Integer, String> getDocLabels() {
+        return DOC_LABELS;
+    }
+
+    public String getDocLabel(int type) {
+        return DOC_LABELS.getOrDefault(type, "เอกสารที่ " + type);
+    }
+
+    // ================== Document Edit Logging ==================
+
+    public void logDocumentEdit(AcademicRequest request, int documentType, String label,
+            UserDtls user, AcademicDocumentEditLog.EditAction action) {
+        AcademicDocumentEditLog logEntry = new AcademicDocumentEditLog();
+        logEntry.setRequest(request);
+        logEntry.setDocumentType(documentType);
+        logEntry.setDocumentLabel(label != null ? label : getDocLabel(documentType));
+        logEntry.setEditedBy(user);
+        logEntry.setAction(action);
+        editLogRepository.save(logEntry);
+    }
+
+    public List<AcademicDocumentEditLog> getEditHistory(Long requestId) {
+        AcademicRequest request = requestRepository.findById(requestId).orElse(null);
+        if (request == null) return List.of();
+        return editLogRepository.findByRequestOrderByEditedAtDesc(request);
     }
 
     public AcademicRequest save(AcademicRequest request) {

@@ -30,6 +30,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.model.AcademicDocument;
+import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionRequest;
@@ -252,10 +253,15 @@ public class AcademicApplicantController {
         formData.remove("_csrf");
         String jsonData = objectMapper.writeValueAsString(formData);
 
+        boolean isNew0 = requestService.getDocumentsByType(id, 0).isEmpty();
+
         if ("draft".equals(action)) {
             // บันทึกแบบร่าง
             requestService.saveDraft(request, 0, jsonData,
                     "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", null);
+            requestService.logDocumentEdit(request, 0,
+                    "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", user,
+                    AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
             return "redirect:/user/academic/request/" + id + "/document-0?saved=draft";
         }
 
@@ -263,6 +269,9 @@ public class AcademicApplicantController {
 
         requestService.saveDocument(request, 0, jsonData, filePath,
                 "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", null);
+        requestService.logDocumentEdit(request, 0,
+                "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", user,
+                isNew0 ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
 
         return "redirect:/user/academic/request/" + id + "?success=doc0_submitted";
     }
@@ -311,9 +320,14 @@ public class AcademicApplicantController {
         formData.remove("_csrf");
         String jsonData = objectMapper.writeValueAsString(formData);
 
+        boolean isNew1 = requestService.getDocumentsByType(id, 1).isEmpty();
+
         if ("draft".equals(action)) {
             requestService.saveDraft(request, 1, jsonData,
                     "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", null);
+            requestService.logDocumentEdit(request, 1,
+                    "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", user,
+                    AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
             return "redirect:/user/academic/request/" + id + "/document-1?saved=draft";
         }
 
@@ -321,6 +335,9 @@ public class AcademicApplicantController {
 
         requestService.saveDocument(request, 1, jsonData, filePath,
                 "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", null);
+        requestService.logDocumentEdit(request, 1,
+                "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", user,
+                isNew1 ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
 
         return "redirect:/user/academic/request/" + id + "?success=doc1_submitted";
     }

@@ -1,8 +1,8 @@
 package com.ecom.academic.model;
 
 public enum RequestStatus {
-    DRAFT("แบบร่าง", "fa-pencil-alt", "#9e9e9e"),
-    RECEIVED("รับคำร้อง", "fa-inbox", "#1565c0"),
+    DRAFT("แบบร่าง", "fa-file-pen", "#757575"),
+    RECEIVED("รับคำร้อง", "fa-file-signature", "#1565c0"),
     SUB_COMMITTEE_APPOINTED("แต่งตั้งอนุกรรมการ", "fa-users-cog", "#e65100"),
     MEETING_SCHEDULED("นัดหมายวันประชุม", "fa-calendar-check", "#7b1fa2"),
     COMPLETED_PASS("แจ้งผล - ผ่าน", "fa-check-circle", "#2e7d32"),

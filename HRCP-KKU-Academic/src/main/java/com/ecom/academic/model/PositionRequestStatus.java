@@ -1,16 +1,16 @@
 package com.ecom.academic.model;
 
 public enum PositionRequestStatus {
-    DRAFT("แบบร่าง", "fa-edit", "#9e9e9e"),
-    DOCUMENT_RECEIVED("รับคำร้อง", "fa-inbox", "#1565c0"),
-    DOCUMENT_VERIFICATION("ตรวจสอบความถูกต้อง/ครบถ้วน", "fa-search", "#0277bd"),
+    DRAFT("แบบร่าง", "fa-file-pen", "#757575"),
+    DOCUMENT_RECEIVED("รับคำร้อง", "fa-file-signature", "#1565c0"),
+    DOCUMENT_VERIFICATION("ตรวจสอบความถูกต้อง/ครบถ้วน", "fa-clipboard-check", "#0277bd"),
     SCREENING_COMMITTEE("เสนอวาระกลั่นกรองฯ", "fa-users-cog", "#e65100"),
-    REVISION_REQUESTED("ส่งแก้ไข", "fa-exclamation-circle", "#f57f17"),
-    REJECTED("ไม่รับคำร้อง", "fa-times-circle", "#c62828"),
-    SCREENING_APPROVED("รับรองมติกลั่นกรองฯ", "fa-check-double", "#2e7d32"),
+    REVISION_REQUESTED("ส่งแก้ไข", "fa-circle-exclamation", "#f57f17"),
+    REJECTED("ไม่รับคำร้อง", "fa-circle-xmark", "#c62828"),
+    SCREENING_APPROVED("รับรองมติกลั่นกรองฯ", "fa-stamp", "#2e7d32"),
     COLLEGE_COMMITTEE("เสนอวาระคณะกรรมการวิทยาลัยฯ", "fa-landmark", "#7b1fa2"),
     COLLEGE_APPROVED("รับรองมติคณะกรรมการวิทยาลัยฯ", "fa-certificate", "#1b5e20"),
-    SENT_TO_HR("ส่งออกกองทรัพยากรบุคคล มข.", "fa-flag-checkered", "#004d40");
+    SENT_TO_HR("ส่งออกกองทรัพยากรบุคคล มข.", "fa-paper-plane", "#004d40");
 
     private final String thaiLabel;
     private final String icon;

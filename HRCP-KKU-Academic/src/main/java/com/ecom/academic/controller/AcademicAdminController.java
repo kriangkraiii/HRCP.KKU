@@ -34,6 +34,7 @@ import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import com.ecom.config.ClientIpUtils;
 import com.ecom.academic.model.AcademicDocument;
+import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
@@ -298,7 +299,20 @@ public class AcademicAdminController {
         model.addAttribute("documents", documents);
         model.addAttribute("statuses", RequestStatus.values());
         model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
+
+        // Progress percentage
+        RequestStatus[] steps = RequestStatus.getProgressSteps();
+        int currentIdx = 0;
+        for (int i = 0; i < steps.length; i++) {
+            if (request.getCurrentStatus().ordinal() >= steps[i].ordinal()) {
+                currentIdx = i;
+            }
+        }
+        int progressPercent = steps.length > 1 ? (currentIdx * 100) / (steps.length - 1) : 0;
+        model.addAttribute("progressPercent", progressPercent);
+
         model.addAttribute("statusHistory", requestService.getStatusHistory(id));
+        model.addAttribute("editHistory", requestService.getEditHistory(id));
         model.addAttribute("docLabels", DOC_LABELS);
         model.addAttribute("attachments", requestService.getAttachments(id));
         model.addAttribute("attachmentCount", requestService.countAttachments(id));
@@ -670,6 +684,8 @@ public class AcademicAdminController {
 
         String jsonData = objectMapper.writeValueAsString(formData);
 
+        boolean isNew = requestService.getDocumentsByType(id, type).isEmpty();
+
         if (type == 4) {
             // Document 4: Generate 3 copies for committee members
             List<Map<String, String>> committeeMembers = new ArrayList<>();
@@ -691,8 +707,12 @@ public class AcademicAdminController {
                     DOC_LABELS.getOrDefault(type, "Document " + type), null);
         }
 
-        // Log activity
+        // Log document edit
         UserDtls admin = getUser(principal);
+        requestService.logDocumentEdit(request, type, DOC_LABELS.getOrDefault(type, "Document " + type), admin,
+                isNew ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
+
+        // Log activity
         adminLogService.log(principal.getName(),
                 admin != null ? admin.getName() : principal.getName(),
                 "GENERATE_DOCUMENT",

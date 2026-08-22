@@ -76,6 +76,10 @@ public class AcademicRequest {
     @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<RequestStatusHistory> statusHistory = new ArrayList<>();
 
+    @OneToMany(mappedBy = "request", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @jakarta.persistence.OrderBy("editedAt DESC")
+    private List<AcademicDocumentEditLog> editLogs = new ArrayList<>();
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
@@ -203,6 +207,14 @@ public class AcademicRequest {
 
     public void setStatusHistory(List<RequestStatusHistory> statusHistory) {
         this.statusHistory = statusHistory;
+    }
+
+    public List<AcademicDocumentEditLog> getEditLogs() {
+        return editLogs;
+    }
+
+    public void setEditLogs(List<AcademicDocumentEditLog> editLogs) {
+        this.editLogs = editLogs;
     }
 
     public LocalDateTime getEvaluationExpiryDate() {

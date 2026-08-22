@@ -379,13 +379,21 @@
 /* -- Progress Tracker Steps -- */
 /* Only darken INACTIVE step icons — keep colors for active/completed/revise/rejected */
 [data-theme="dark"] .progress-step:not(.active):not(.completed):not(.revise):not(.rejected):not(.completed-final) .step-icon {
-    background: var(--bg-card-header) !important;
-    border-color: var(--border-color) !important;
-    color: var(--text-muted) !important;
+    background: #1e293b !important;
+    border-color: rgba(255, 255, 255, 0.18) !important;
+    color: #94a3b8 !important;
 }
 
 [data-theme="dark"] .progress-tracker::before {
-    background: var(--border-color) !important;
+    display: none !important;
+}
+
+[data-theme="dark"] .progress-step::after {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .progress-step.completed::after {
+    background: #2e7d32;
 }
 
 /* Active/completed step labels stay visible */
@@ -403,39 +411,66 @@
     border: 1px solid rgba(255,255,255,0.1);
 }
 
-[data-theme="dark"] .status-RECEIVED {
-    background: rgba(21, 101, 192, 0.18) !important;
+[data-theme="dark"] .status-DRAFT {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #adb5bd !important;
+}
+
+[data-theme="dark"] .status-RECEIVED,
+[data-theme="dark"] .status-DOCUMENT_RECEIVED {
+    background: rgba(21, 101, 192, 0.22) !important;
     color: #64b5f6 !important;
 }
 
-[data-theme="dark"] .status-SUB_COMMITTEE_APPOINTED {
-    background: rgba(230, 81, 0, 0.18) !important;
+[data-theme="dark"] .status-DOCUMENT_VERIFICATION {
+    background: rgba(2, 119, 189, 0.22) !important;
+    color: #4fc3f7 !important;
+}
+
+[data-theme="dark"] .status-SUB_COMMITTEE_APPOINTED,
+[data-theme="dark"] .status-SCREENING_COMMITTEE {
+    background: rgba(230, 81, 0, 0.22) !important;
     color: #ffb74d !important;
 }
 
-[data-theme="dark"] .status-MEETING_SCHEDULED {
-    background: rgba(123, 31, 162, 0.18) !important;
+[data-theme="dark"] .status-MEETING_SCHEDULED,
+[data-theme="dark"] .status-COLLEGE_COMMITTEE {
+    background: rgba(123, 31, 162, 0.22) !important;
     color: #ce93d8 !important;
 }
 
-[data-theme="dark"] .status-COMPLETED_PASS {
-    background: rgba(46, 125, 50, 0.18) !important;
+[data-theme="dark"] .status-COMPLETED_PASS,
+[data-theme="dark"] .status-SCREENING_APPROVED {
+    background: rgba(46, 125, 50, 0.22) !important;
     color: #81c784 !important;
 }
 
-[data-theme="dark"] .status-COMPLETED_REVISE {
-    background: rgba(245, 127, 23, 0.18) !important;
+[data-theme="dark"] .status-COMPLETED_REVISE,
+[data-theme="dark"] .status-REVISION_REQUESTED {
+    background: rgba(245, 127, 23, 0.22) !important;
     color: #ffcc80 !important;
 }
 
+[data-theme="dark"] .status-COMPLETED_FAIL,
 [data-theme="dark"] .status-REJECTED {
-    background: rgba(198, 40, 40, 0.18) !important;
+    background: rgba(198, 40, 40, 0.22) !important;
     color: #ef9a9a !important;
 }
 
-[data-theme="dark"] .status-COMPLETED {
-    background: rgba(27, 94, 32, 0.18) !important;
+[data-theme="dark"] .status-COMPLETED,
+[data-theme="dark"] .status-COLLEGE_APPROVED {
+    background: rgba(27, 94, 32, 0.22) !important;
     color: #a5d6a7 !important;
+}
+
+[data-theme="dark"] .status-SENT_TO_HR {
+    background: rgba(0, 77, 64, 0.22) !important;
+    color: #80cbc4 !important;
+}
+
+[data-theme="dark"] .history-entry-badge {
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 /* -- Doc Cards -- */
@@ -1281,14 +1316,30 @@ body,
     box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
 }
 
-/* Timeline v2 inactive steps */
+/* Timeline v2 flex connector */
 [data-theme="dark"] .timeline-v2::before {
-    background: var(--border-color);
+    display: none !important;
+}
+
+[data-theme="dark"] .timeline-v2-step::after {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .timeline-v2-step.t-completed::after,
+[data-theme="dark"] .timeline-v2-step.t-pass::after,
+[data-theme="dark"] .timeline-v2-step.t-final::after {
+    background: #2e7d32;
 }
 
 [data-theme="dark"] .timeline-v2-icon {
-    background: var(--bg-card-header);
-    border-color: var(--border-color);
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #94a3b8;
+}
+
+/* Floating doc buttons */
+[data-theme="dark"] .floating-doc-btn {
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
 /* Doc items v2 */
@@ -1370,6 +1421,10 @@ body,
     background: rgba(245, 127, 23, 0.1);
     border-color: rgba(245, 127, 23, 0.2);
     color: #fbbf24;
+[data-theme="dark"] .admin-table .at-status {
+    color: #fff !important;
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
 [data-theme="dark"] .doc-grid-item {
@@ -1380,9 +1435,22 @@ body,
     border-color: rgba(21, 101, 192, 0.4);
 }
 
+[data-theme="dark"] .detail-step-line {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .detail-step-line.line-done {
+    background: linear-gradient(90deg, #2e7d32, #43a047);
+}
+
 [data-theme="dark"] .detail-progress-dot {
-    background: var(--bg-card);
-    border-color: var(--border-color);
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #94a3b8;
+}
+
+[data-theme="dark"] .detail-progress-step.dp-done .detail-progress-dot {
+    color: #ffffff !important;
 }
 
 [data-theme="dark"] .history-tabs {
@@ -1579,5 +1647,4 @@ body,
 .guide-btn-ref,
 .guide-doc-card {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}
-
+}}
