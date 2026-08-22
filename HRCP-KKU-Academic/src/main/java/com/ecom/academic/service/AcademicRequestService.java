@@ -175,6 +175,10 @@ public class AcademicRequestService {
         }
         doc.setJsonData(jsonData);
         doc.setGeneratedFilePath(filePath);
+        
+        if (label == null || label.isBlank() || label.matches("^(?:เอกสาร|Document)\\s*ที่?\\s*\\d+$")) {
+            label = getDocLabel(documentType);
+        }
         doc.setDocumentLabel(label);
         doc.setIsDraft(false);
         return documentRepository.save(doc);
@@ -216,11 +220,11 @@ public class AcademicRequestService {
         return historyRepository.findByRequestIdOrderByChangedAtDesc(requestId);
     }
 
-    public Map<Integer, String> getDocLabels() {
+    public static Map<Integer, String> getDocLabels() {
         return DOC_LABELS;
     }
 
-    public String getDocLabel(int type) {
+    public static String getDocLabel(int type) {
         return DOC_LABELS.getOrDefault(type, "เอกสารที่ " + type);
     }
 

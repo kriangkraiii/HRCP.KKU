@@ -12,7 +12,8 @@
     <link rel="icon" type="image/png" href="/img/favicon.png">
     <meta name="_csrf" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
-    <link rel="stylesheet" href="/css/dark-theme.css">
+    <link rel="stylesheet" href="/css/dark-theme.css?v=2.0">
+    <link rel="stylesheet" href="/css/doc_preview.css?v=2.0">
     <script th:inline="javascript">
         // Anti-flash: apply user's server-side theme BEFORE paint
         (function(){var t=/*[[${user != null && user.themePreference != null ? user.themePreference : 'light'}]]*/ 'light';
@@ -20,7 +21,7 @@
         if(t==='system'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
         if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();
     </script>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/style.css?v=2.0">
 </head>
 
 <body>
@@ -533,7 +534,8 @@
 
             document.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
                 var txt = el.textContent || '';
-                if (!previewBtn && txt.indexOf('ดูตัวอย่าง') !== -1 && el.querySelector('.fa-eye')) {
+                // ข้ามปุ่ม .btn-doc-preview (ปุ่มดูตัวอย่างในหน้ารายการเอกสาร)
+                if (!previewBtn && txt.indexOf('ดูตัวอย่าง') !== -1 && el.querySelector('.fa-eye') && !el.classList.contains('btn-doc-preview')) {
                     previewBtn = el;
                 }
                 if (!backBtn && txt.indexOf('กลับ') !== -1 && el.querySelector('.fa-arrow-left')) {
@@ -637,6 +639,7 @@
     }, 1000);
 })();
 </script>
+<script src="/js/doc_preview.js?v=2.0"></script>
 <script src="/js/global-search.js"></script>
 <script src="/js/form_loading.js"></script>
 <!-- Replaces inline onerror=/onsubmit=/onclick= attributes, which CSP refuses.

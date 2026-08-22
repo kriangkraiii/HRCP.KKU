@@ -130,7 +130,14 @@ public class DocumentGenerationService {
     }
 
     public byte[] getDocumentBytes(String filePath) throws IOException {
-        return Files.readAllBytes(Path.of(filePath));
+        if (filePath == null || filePath.isBlank()) {
+            return null;
+        }
+        Path path = Path.of(filePath);
+        if (!Files.exists(path)) {
+            return null;
+        }
+        return Files.readAllBytes(path);
     }
 
     public File getDocumentFile(String filePath) {

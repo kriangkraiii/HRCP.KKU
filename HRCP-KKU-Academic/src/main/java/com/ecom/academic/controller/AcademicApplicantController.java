@@ -432,6 +432,14 @@ public class AcademicApplicantController {
                 .filter(d -> APPLICANT_VISIBLE_DOC_TYPES.contains(d.getDocumentType()))
                 .collect(Collectors.toList());
 
+        for (AcademicDocument d : visibleDocuments) {
+            String fullLabel = AcademicRequestService.getDocLabel(d.getDocumentType());
+            if (d.getDocumentLabel() == null || d.getDocumentLabel().isBlank()
+                    || d.getDocumentLabel().matches("^(?:เอกสาร|Document)\\s*ที่?\\s*\\d+$")) {
+                d.setDocumentLabel(fullLabel);
+            }
+        }
+
         model.addAttribute("request", request);
         model.addAttribute("documents", visibleDocuments);
         model.addAttribute("statuses", RequestStatus.values());
@@ -517,7 +525,7 @@ public class AcademicApplicantController {
     }
 
     @GetMapping("/download/{id}/{docId}")
-    public ResponseEntity<ByteArrayResource> downloadDocument(@PathVariable Long id,
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id,
             @PathVariable Long docId,
             @RequestParam(value = "format", defaultValue = "docx") String format,
             Principal principal) throws IOException {
@@ -563,28 +571,19 @@ public class AcademicApplicantController {
         String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
         String baseName = request.getRequestCode() + "_เอกสารที่_" + doc.getDocumentType() + "_" + cleanDocName;
 
-        String safeFilename = java.net.URLEncoder.encode(baseName, java.nio.charset.StandardCharsets.UTF_8)
-                .replace("+", "%20");
-        String asciiFilename = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+        return PreviewResponseFactory.build(documentService, data, format, baseName);
+    }
 
-        if ("pdf".equalsIgnoreCase(format)) {
-            byte[] pdfData = documentService.convertDocxToPdf(data);
-            ByteArrayResource resource = new ByteArrayResource(pdfData);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .contentLength(pdfData.length)
-                    .body(resource);
+    @GetMapping("/request/{id}/document/{type}/download")
+    public ResponseEntity<byte[]> downloadDocumentByType(@PathVariable Long id,
+            @PathVariable int type,
+            @RequestParam(value = "format", defaultValue = "docx") String format,
+            Principal principal) throws IOException {
+        List<AcademicDocument> docs = requestService.getDocumentsByType(id, type);
+        if (docs.isEmpty()) {
+            return ResponseEntity.notFound().build();
         }
-
-        ByteArrayResource resource = new ByteArrayResource(data);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + safeFilename + ".docx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                .contentLength(data.length)
-                .body(resource);
+        return downloadDocument(id, docs.get(0).getId(), format, principal);
     }
 
     @GetMapping("/download-result/{id}")

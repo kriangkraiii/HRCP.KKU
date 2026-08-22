@@ -138,14 +138,24 @@
                 <div class="section-card-header">
                     <h5><i class="fas fa-file-word me-2"></i>เอกสารของฉัน</h5>
                     <div th:unless="${request.currentStatus.name() == 'COMPLETED' or request.currentStatus.name() == 'COMPLETED_PASS' or request.currentStatus.name() == 'COMPLETED_REVISE' or request.currentStatus.name() == 'REJECTED'}">
+                        <th:block th:if="${hasDoc0}">
+                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-0'" class="btn btn-sm btn-outline-primary me-1">
+                                <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 0
+                            </a>
+                        </th:block>
                         <th:block th:unless="${hasDoc0}">
-                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-0'" class="btn btn-sm btn-academic">
-                                <i class="fas fa-plus-circle me-1"></i> เอกสารที่ 0
+                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-0'" class="btn btn-sm btn-academic me-1">
+                                <i class="fas fa-plus-circle me-1"></i> กรอกเอกสารที่ 0
+                            </a>
+                        </th:block>
+                        <th:block th:if="${hasDoc1}">
+                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 1
                             </a>
                         </th:block>
                         <th:block th:unless="${hasDoc1}">
-                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'" class="btn btn-sm btn-academic ms-1">
-                                <i class="fas fa-plus-circle me-1"></i> เอกสารที่ 1
+                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'" class="btn btn-sm btn-academic">
+                                <i class="fas fa-plus-circle me-1"></i> กรอกเอกสารที่ 1
                             </a>
                         </th:block>
                     </div>
@@ -162,7 +172,8 @@
                         <div class="doc-list-item-actions d-flex gap-1">
                             <button type="button"
                                 class="btn btn-sm btn-outline-info btn-doc-preview"
-                                th:attr="data-preview-url=@{'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=pdf'},data-doc-title=${doc.documentLabel}"
+                                th:data-preview-url="|/user/academic/download/${request.id}/${doc.id}?format=pdf|"
+                                th:data-doc-title="|ตัวอย่างเอกสารที่ ${doc.documentType}: ${doc.documentLabel}|"
                                 title="ดูตัวอย่างเอกสาร (PDF)">
                                 <i class="fas fa-eye me-1"></i> ดูตัวอย่าง
                             </button>

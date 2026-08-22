@@ -3210,12 +3210,17 @@ body {
   font-size: 0.88rem;
   font-weight: 600;
   color: var(--text-heading);
+  flex: 1 1 auto;
+  min-width: 0;
+  word-break: break-word;
 }
 
 .doc-grid-item-actions {
   display: flex;
-  gap: 4px;
+  gap: 6px;
   flex-shrink: 0;
+  align-items: center;
+  flex-wrap: nowrap;
 }
 
 .doc-grid-sub {

@@ -466,6 +466,9 @@ public class PositionRequestService {
         }
         doc.setJsonData(jsonData);
         doc.setGeneratedFilePath(filePath);
+        if (label == null || label.isBlank() || label.matches("^(?:เอกสาร|Document)\\s*ที่?\\s*\\d+$")) {
+            label = getDocLabel(documentType);
+        }
         doc.setDocumentLabel(label);
         doc.setIsDraft(false);
         doc.setFilledBy(filledBy);

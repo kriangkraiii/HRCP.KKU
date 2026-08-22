@@ -42,13 +42,16 @@ final class PreviewResponseFactory {
             try {
                 byte[] pdfBytes = service.convertDocxToPdfCached(docxBytes);
                 return ResponseEntity.ok()
+                        .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                        .header(HttpHeaders.PRAGMA, "no-cache")
+                        .header(HttpHeaders.EXPIRES, "0")
                         .header(HttpHeaders.CONTENT_DISPOSITION,
                                 "inline; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + encodedFilename + ".pdf")
                         .header(FORMAT_HEADER, "pdf")
                         .contentType(MediaType.APPLICATION_PDF)
                         .contentLength(pdfBytes.length)
                         .body(pdfBytes);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // แปลงไม่สำเร็จ → ตกไปใช้ DOCX ด้านล่าง
                 log.warn("PDF preview conversion failed, falling back to DOCX: {}", e.getMessage());
             }
@@ -56,6 +59,9 @@ final class PreviewResponseFactory {
 
         String formatHeader = "pdf".equalsIgnoreCase(format) ? "docx-fallback" : "docx";
         return ResponseEntity.ok()
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache, no-store, must-revalidate")
+                .header(HttpHeaders.PRAGMA, "no-cache")
+                .header(HttpHeaders.EXPIRES, "0")
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "inline; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + encodedFilename + ".docx")
                 .header(FORMAT_HEADER, formatHeader)

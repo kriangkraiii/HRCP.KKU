@@ -374,12 +374,19 @@
             <div class="detail-section-body">
               <div th:each="entry : ${docLabels}">
                 <div class="doc-grid-item"
-                  th:classappend="${#lists.isEmpty(documents.?[documentType == __${entry.key}__])} ? '' : 'dgi-completed'">
+                  th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed' : ''">
                   <div class="doc-grid-item-title">
                     เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
                     <span th:if="${entry.key == 4}" class="badge bg-info ms-1">3 สำเนา</span>
                   </div>
                   <div class="doc-grid-item-actions">
+                    <button type="button"
+                      class="btn btn-sm btn-outline-info btn-doc-preview"
+                      th:data-preview-url="|/admin/academic/request/${request.id}/document/${entry.key}/download?format=pdf|"
+                      th:data-doc-title="|ตัวอย่างเอกสารที่ ${entry.key}: ${entry.value}|"
+                      title="ดูตัวอย่างเอกสาร (PDF)">
+                      <i class="fas fa-eye me-1"></i> ดูตัวอย่าง
+                    </button>
                     <a th:href="'/admin/academic/request/' + ${request.id} + '/document/' + ${entry.key}"
                       class="btn btn-sm btn-outline-primary">
                       <i class="fas fa-edit"></i> กรอก/แก้ไข

@@ -75,18 +75,19 @@
                         </span>
                     </div>
                     <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                        <button type="button"
+                            class="btn btn-outline-info btn-doc-preview"
+                            th:data-preview-url="|/user/position/request/${request.id}/document/${entry.key}/download?format=pdf|"
+                            th:data-doc-title="|เอกสารที่ ${iterStat.count}: ${entry.value}|"
+                            title="ดูตัวอย่างเอกสาร (PDF)">
+                            <i class="fas fa-eye me-1"></i> ดูตัวอย่าง
+                        </button>
                         <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${entry.key}"
                             class="btn" th:classappend="${completedDocs.contains(entry.key)} ? 'btn-outline-success' : 'btn-academic'">
                             <i th:class="${completedDocs.contains(entry.key)} ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
                             [[${completedDocs.contains(entry.key)} ? 'แก้ไขเอกสาร' : 'กรอกเอกสาร']]
                         </a>
                         <th:block th:if="${completedDocs.contains(entry.key)}">
-                            <button type="button"
-                                class="btn btn-outline-info btn-doc-preview"
-                                th:attr="data-preview-url=@{'/user/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download?format=pdf'},data-doc-title=${'เอกสารที่ ' + iterStat.count + ': ' + entry.value}"
-                                title="ดูตัวอย่างเอกสาร (PDF)">
-                                <i class="fas fa-eye me-1"></i> ดูตัวอย่าง
-                            </button>
                             <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download'"
                                 class="btn btn-outline-primary" title="ดาวน์โหลด DOCX">
                                 <i class="fas fa-file-word me-1"></i> DOCX

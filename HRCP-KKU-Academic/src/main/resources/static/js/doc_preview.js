@@ -110,12 +110,23 @@ class DocPreviewEngine {
 
     /** สร้าง Preview Overlay */
     createOverlay() {
+        const existing = document.getElementById('docxPreviewOverlay');
+        if (existing) {
+            this.overlay = existing;
+            this.body = document.getElementById('docxPreviewBody');
+            this.frame = document.getElementById('docxPreviewFrame');
+            this.renderContainer = document.getElementById('docxRenderArea');
+            return;
+        }
+
         this.overlay = document.createElement('div');
         this.overlay.className = 'docx-preview-overlay';
         this.overlay.id = 'docxPreviewOverlay';
 
         const docTitle = this.getDocTitle();
-        const displayTitle = docTitle ? `ตัวอย่างเอกสารที่ ${this.docType}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${this.docType}`;
+        const displayTitle = (this.docType !== null && this.docType !== undefined)
+            ? (docTitle ? `ตัวอย่างเอกสารที่ ${this.docType}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${this.docType}`)
+            : (docTitle || 'ตัวอย่างเอกสาร');
 
         this.overlay.innerHTML = `
             <div class="docx-preview-container">
@@ -284,6 +295,44 @@ class DocPreviewEngine {
 
     /** ดึงเอกสารจาก server แล้วแสดงผล — ข้ามถ้าข้อมูลไม่เปลี่ยนจากที่แสดงอยู่ */
     async loadPreview() {
+        if (this.standaloneUrl) {
+            const loading = document.getElementById('docxLoading');
+            if (loading) loading.style.display = 'flex';
+            this.setStatus('loading');
+
+            try {
+                const sep = this.standaloneUrl.indexOf('?') !== -1 ? '&' : '?';
+                const fetchUrl = this.standaloneUrl + sep + '_t=' + Date.now();
+                const response = await fetch(fetchUrl, {
+                    headers: {
+                        'X-XSRF-TOKEN': this.getCsrfToken()
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error('Server error: ' + response.status);
+                }
+
+                const format = response.headers.get('X-Preview-Format') || 
+                               (response.headers.get('Content-Type') && response.headers.get('Content-Type').includes('pdf') ? 'pdf' : 'pdf');
+                const blob = await response.blob();
+
+                if (format === 'pdf' || (blob.type && blob.type.includes('pdf'))) {
+                    this.showPdf(blob);
+                } else {
+                    await this.showDocxFallback(blob);
+                }
+
+                this.setStatus('fresh');
+            } catch (err) {
+                console.error('Preview error:', err);
+                this.showError(err.message);
+                this.setStatus('error');
+            } finally {
+                if (loading) loading.style.display = 'none';
+            }
+            return;
+        }
+
         const hash = this.hashFormData();
         if (hash === this.loadedHash) {
             this.setStatus('fresh');
@@ -291,7 +340,7 @@ class DocPreviewEngine {
         }
 
         const loading = document.getElementById('docxLoading');
-        loading.style.display = 'flex';
+        if (loading) loading.style.display = 'flex';
         this.setStatus('loading');
 
         try {
@@ -316,7 +365,7 @@ class DocPreviewEngine {
             this.showError(err.message);
             this.setStatus('error');
         } finally {
-            loading.style.display = 'none';
+            if (loading) loading.style.display = 'none';
         }
     }
 
@@ -452,6 +501,32 @@ class DocPreviewEngine {
 
     /** ดาวน์โหลดเอกสารปัจจุบัน (docx = ไฟล์ต้นฉบับ, pdf = ที่แปลงแล้ว) */
     async download(format) {
+        if (this.standaloneUrl) {
+            try {
+                let downloadUrl = this.standaloneUrl;
+                if (format === 'docx') {
+                    downloadUrl = downloadUrl.replace(/([?&])format=pdf/, '$1format=docx');
+                    if (downloadUrl.indexOf('format=docx') === -1) {
+                        downloadUrl += (downloadUrl.indexOf('?') !== -1 ? '&' : '?') + 'format=docx';
+                    }
+                } else if (format === 'pdf') {
+                    downloadUrl = downloadUrl.replace(/([?&])format=docx/, '$1format=pdf');
+                    if (downloadUrl.indexOf('format=pdf') === -1) {
+                        downloadUrl += (downloadUrl.indexOf('?') !== -1 ? '&' : '?') + 'format=pdf';
+                    }
+                }
+                const a = document.createElement('a');
+                a.href = downloadUrl;
+                a.target = '_blank';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            } catch (err) {
+                console.error('Download error:', err);
+            }
+            return;
+        }
+
         try {
             const response = await this.fetchPreview(format);
             if (!response.ok) throw new Error('Server error: ' + response.status);
@@ -479,8 +554,31 @@ class DocPreviewEngine {
         }
     }
 
-    /** เปิด preview */
+    /** เปิด preview สำหรับ standalone mode (จากหน้ารายการนอกฟอร์ม) */
+    showStandalone(previewUrl, title) {
+        this.standaloneUrl = previewUrl;
+        this.standaloneTitle = title;
+        
+        if (this.tabs) {
+            const existing = this.overlay.querySelector('.docx-tab-bar');
+            if (existing) existing.remove();
+            this.tabs = null;
+        }
+        
+        const titleEl = document.getElementById('docxTitleText');
+        if (titleEl) {
+            titleEl.textContent = title ? (title.startsWith('ตัวอย่าง') ? title : 'ตัวอย่าง' + title) : 'ตัวอย่างเอกสาร';
+        }
+        
+        this.isVisible = true;
+        this.overlay.classList.add('active');
+        document.body.style.overflow = 'hidden';
+        this.loadPreview();
+    }
+
+    /** เปิด preview จากในฟอร์ม */
     show() {
+        this.standaloneUrl = null;
         this.isVisible = true;
         this.overlay.classList.add('active');
         document.body.style.overflow = 'hidden';
@@ -492,6 +590,16 @@ class DocPreviewEngine {
         this.isVisible = false;
         this.overlay.classList.remove('active');
         document.body.style.overflow = '';
+        this.releaseBlobUrl();
+        if (this.frame) this.frame.src = 'about:blank';
+    }
+
+    /** Helper static method สำหรับเปิด preview จากภายนอก */
+    static previewStandalone(previewUrl, title) {
+        if (!window.docPreview) {
+            window.docPreview = new DocPreviewEngine(null, null, null);
+        }
+        window.docPreview.showStandalone(previewUrl, title);
     }
 }
 
@@ -504,16 +612,32 @@ function initDocPreview(formId, docType, previewBasePath) {
 }
 
 /*
- * Opens the preview from any `data-action="docPreviewShow"` element.
- *
- * Every document form used to carry onclick="docPreview.show()" on its preview
- * button, which CSP refuses (inline handler attributes cannot take a nonce).
- * Delegating from the document here covers all ~14 form templates at once, so
- * none of them needs its own listener.
+ * Global click delegation for all preview buttons:
+ * 1. Inside forms: [data-action="docPreviewShow"]
+ * 2. In list views: .btn-doc-preview
  */
 document.addEventListener('click', function (e) {
-    var btn = e.target.closest('[data-action="docPreviewShow"]');
-    if (!btn) return;
-    e.preventDefault();
-    if (docPreview) docPreview.show();
+    var formBtn = e.target.closest('[data-action="docPreviewShow"]');
+    if (formBtn) {
+        e.preventDefault();
+        if (docPreview) {
+            docPreview.standaloneUrl = null;
+            const docTitle = docPreview.getDocTitle();
+            const displayTitle = docTitle ? `ตัวอย่างเอกสารที่ ${docPreview.docType}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${docPreview.docType}`;
+            const titleEl = document.getElementById('docxTitleText');
+            if (titleEl) titleEl.textContent = displayTitle;
+            docPreview.show();
+        }
+        return;
+    }
+
+    var listBtn = e.target.closest('.btn-doc-preview');
+    if (listBtn) {
+        e.preventDefault();
+        var previewUrl = listBtn.getAttribute('data-preview-url');
+        var title = listBtn.getAttribute('data-doc-title') || listBtn.getAttribute('title') || 'ตัวอย่างเอกสาร';
+        if (previewUrl) {
+            DocPreviewEngine.previewStandalone(previewUrl, title);
+        }
+    }
 });

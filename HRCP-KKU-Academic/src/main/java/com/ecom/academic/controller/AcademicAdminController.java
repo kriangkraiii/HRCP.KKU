@@ -11,6 +11,8 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -295,6 +297,13 @@ public class AcademicAdminController {
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
         List<AcademicDocument> documents = requestService.getDocumentsSorted(id);
+        for (AcademicDocument d : documents) {
+            String fullLabel = DOC_LABELS.get(d.getDocumentType());
+            if (fullLabel != null && (d.getDocumentLabel() == null || d.getDocumentLabel().isBlank()
+                    || d.getDocumentLabel().matches("^(?:เอกสาร|Document)\\s*ที่?\\s*\\d+$"))) {
+                d.setDocumentLabel(fullLabel);
+            }
+        }
         model.addAttribute("request", request);
         model.addAttribute("documents", documents);
         model.addAttribute("statuses", RequestStatus.values());
@@ -316,6 +325,15 @@ public class AcademicAdminController {
         model.addAttribute("docLabels", DOC_LABELS);
         model.addAttribute("attachments", requestService.getAttachments(id));
         model.addAttribute("attachmentCount", requestService.countAttachments(id));
+
+        Set<Integer> completedDocs = documents.stream()
+                .map(AcademicDocument::getDocumentType)
+                .collect(Collectors.toSet());
+        model.addAttribute("completedDocs", completedDocs);
+
+        Map<Integer, Long> docTypeToId = documents.stream()
+                .collect(Collectors.toMap(AcademicDocument::getDocumentType, AcademicDocument::getId, (existing, replacement) -> existing));
+        model.addAttribute("docTypeToId", docTypeToId);
 
         // ดึงข้อมูลจาก doc_0 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
         List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
@@ -774,7 +792,7 @@ public class AcademicAdminController {
     }
 
     @GetMapping("/request/{id}/download/{docId}")
-    public ResponseEntity<ByteArrayResource> downloadDocument(@PathVariable Long id,
+    public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id,
             @PathVariable Long docId,
             @RequestParam(value = "format", defaultValue = "docx") String format) throws IOException {
         AcademicRequest request = requestService.findById(id)
@@ -808,28 +826,26 @@ public class AcademicAdminController {
         String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
         String baseName = request.getRequestCode() + "_เอกสารที่_" + doc.getDocumentType() + "_" + cleanDocName;
 
-        String safeFilename = java.net.URLEncoder.encode(baseName, java.nio.charset.StandardCharsets.UTF_8)
-                .replace("+", "%20");
-        String asciiFilename = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
+        return PreviewResponseFactory.build(documentService, data, format, baseName);
+    }
 
-        if ("pdf".equalsIgnoreCase(format)) {
-            byte[] pdfData = documentService.convertDocxToPdf(data);
-            ByteArrayResource resource = new ByteArrayResource(pdfData);
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .contentLength(pdfData.length)
-                    .body(resource);
+    @GetMapping("/request/{id}/document/{type}/download")
+    public ResponseEntity<byte[]> downloadDocumentByType(@PathVariable Long id,
+            @PathVariable int type,
+            @RequestParam(value = "format", defaultValue = "docx") String format) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        List<AcademicDocument> docs = requestService.getDocumentsByType(id, type);
+        if (!docs.isEmpty()) {
+            return downloadDocument(id, docs.get(0).getId(), format);
         }
-
-        ByteArrayResource resource = new ByteArrayResource(data);
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + safeFilename + ".docx")
-                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                .contentLength(data.length)
-                .body(resource);
+        Map<String, String> autoData = autoFillHelper.getPreFilledAcademicDocData(request, type, null);
+        String jsonData = objectMapper.writeValueAsString(autoData);
+        byte[] data = documentService.generatePreviewDocx(type, jsonData);
+        String docLabel = DOC_LABELS.getOrDefault(type, "เอกสารที่ " + type);
+        String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+        String baseName = request.getRequestCode() + "_เอกสารที่_" + type + "_" + cleanDocName;
+        return PreviewResponseFactory.build(documentService, data, format, baseName);
     }
 
     @GetMapping("/request/{id}/download-all")

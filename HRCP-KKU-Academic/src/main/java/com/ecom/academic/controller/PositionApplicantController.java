@@ -230,6 +230,13 @@ public class PositionApplicantController {
 
         List<Integer> completedDocs = positionService.getCompletedDocTypes(id);
         List<PositionDocument> documents = positionService.getDocuments(id);
+        for (PositionDocument d : documents) {
+            String fullLabel = positionService.getDocLabel(d.getDocumentType());
+            if (fullLabel != null && (d.getDocumentLabel() == null || d.getDocumentLabel().isBlank()
+                    || d.getDocumentLabel().matches("^(?:เอกสาร|Document)\\s*ที่?\\s*\\d+$"))) {
+                d.setDocumentLabel(fullLabel);
+            }
+        }
 
         // For applicant, only show applicant-fillable docs
         Map<Integer, String> docLabels = positionService.getApplicantDocLabels();
@@ -372,7 +379,7 @@ public class PositionApplicantController {
     // ================== Document Download & Preview ==================
 
     @GetMapping("/request/{id}/document/{type}/download")
-    public ResponseEntity<ByteArrayResource> downloadDocument(
+    public ResponseEntity<byte[]> downloadDocument(
             @PathVariable Long id,
             @PathVariable int type,
             @RequestParam(value = "format", defaultValue = "docx") String format,
@@ -387,7 +394,13 @@ public class PositionApplicantController {
 
         List<PositionDocument> docs = positionService.getDocumentsByType(id, type);
         if (docs.isEmpty()) {
-            return ResponseEntity.notFound().build();
+            Map<String, String> autoData = autoFillHelper.getPreFilledPositionDocData(request, type, null);
+            String jsonData = objectMapper.writeValueAsString(autoData);
+            byte[] previewData = documentService.generateP2PreviewDocx(type, jsonData);
+            String label = positionService.getDocLabel(type);
+            String cleanDocName = label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+            String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + type + "_" + cleanDocName;
+            return PreviewResponseFactory.build(documentService, previewData, format, baseName);
         }
 
         PositionDocument doc = docs.get(0);
@@ -427,27 +440,7 @@ public class PositionApplicantController {
         String cleanDocName = label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
         String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + type + "_" + cleanDocName;
 
-        String safeFilename = java.net.URLEncoder.encode(baseName, java.nio.charset.StandardCharsets.UTF_8)
-                .replace("+", "%20");
-        String asciiFilename = baseName.replaceAll("[^a-zA-Z0-9._-]", "_");
-
-        if ("pdf".equalsIgnoreCase(format)) {
-            byte[] pdfData = documentService.convertDocxToPdf(data);
-            return ResponseEntity.ok()
-                    .contentType(MediaType.APPLICATION_PDF)
-                    .header(HttpHeaders.CONTENT_DISPOSITION,
-                            "inline; filename=\"" + asciiFilename + ".pdf\"; filename*=UTF-8''" + safeFilename + ".pdf")
-                    .contentLength(pdfData.length)
-                    .body(new ByteArrayResource(pdfData));
-        }
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"" + asciiFilename + ".docx\"; filename*=UTF-8''" + safeFilename + ".docx")
-                .contentLength(data.length)
-                .body(new ByteArrayResource(data));
+        return PreviewResponseFactory.build(documentService, data, format, baseName);
     }
 
     private UserDtls getUser(Principal principal) {
