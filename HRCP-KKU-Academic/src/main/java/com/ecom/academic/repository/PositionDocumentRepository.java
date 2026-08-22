@@ -22,6 +22,6 @@ public interface PositionDocumentRepository extends JpaRepository<PositionDocume
     Optional<PositionDocument> findDraftByRequestIdAndDocType(@Param("requestId") Long requestId,
             @Param("docType") Integer docType);
 
-    @Query("SELECT DISTINCT d.documentType FROM PositionDocument d WHERE d.request.id = :requestId AND d.isDeleted = false")
+    @Query("SELECT DISTINCT d.documentType FROM PositionDocument d WHERE d.request.id = :requestId AND d.isDraft = false AND d.isDeleted = false")
     List<Integer> findCompletedDocTypes(@Param("requestId") Long requestId);
 }

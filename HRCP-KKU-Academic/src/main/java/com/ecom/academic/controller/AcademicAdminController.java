@@ -75,6 +75,8 @@ public class AcademicAdminController {
 
     private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
 
+    private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
+
     public AcademicAdminController(
             AcademicRequestService requestService,
             DocumentGenerationService documentService,
@@ -83,7 +85,8 @@ public class AcademicAdminController {
             AdminLogService adminLogService,
             PositionRequestService positionRequestService,
             HttpServletRequest httpRequest,
-            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
+            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
+            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -92,6 +95,7 @@ public class AcademicAdminController {
         this.positionRequestService = positionRequestService;
         this.httpRequest = httpRequest;
         this.autoFillHelper = autoFillHelper;
+        this.documentPrewarmService = documentPrewarmService;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -347,6 +351,9 @@ public class AcademicAdminController {
                 // ignore parse errors
             }
         }
+
+        // Background warming for completed docs on view
+        documentPrewarmService.prewarmAllRequestDocuments(id, false);
 
         return "academic/admin/request_detail";
     }
@@ -723,6 +730,7 @@ public class AcademicAdminController {
             String filePath = documentService.generateDocument(id, type, jsonData, null);
             requestService.saveDocument(request, type, jsonData, filePath,
                     DOC_LABELS.getOrDefault(type, "Document " + type), null);
+            documentPrewarmService.prewarmAcademicDocument(id, type, jsonData);
         }
 
         // Log document edit

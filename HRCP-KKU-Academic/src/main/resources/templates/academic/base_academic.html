@@ -12,8 +12,9 @@
     <link rel="icon" type="image/png" href="/img/favicon.png">
     <meta name="_csrf" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
-    <link rel="stylesheet" href="/css/dark-theme.css?v=2.0">
-    <link rel="stylesheet" href="/css/doc_preview.css?v=2.0">
+    <link rel="stylesheet" href="/css/style.css?v=2.6">
+    <link rel="stylesheet" href="/css/dark-theme.css?v=2.6">
+    <link rel="stylesheet" href="/css/doc_preview.css?v=2.6">
     <script th:inline="javascript">
         // Anti-flash: apply user's server-side theme BEFORE paint
         (function(){var t=/*[[${user != null && user.themePreference != null ? user.themePreference : 'light'}]]*/ 'light';
@@ -21,7 +22,6 @@
         if(t==='system'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
         if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();
     </script>
-    <link rel="stylesheet" href="/css/style.css?v=2.0">
 </head>
 
 <body>
@@ -395,6 +395,64 @@
 
             <!-- Center/Right: Global Search & Action Icons -->
             <div class="topbar-right d-flex align-items-center gap-3 flex-grow-1 justify-content-end">
+                <!-- Notifications Bell Dropdown -->
+                <div class="dropdown" id="topbarNotificationContainer">
+                    <button type="button"
+                            class="topbar-icon-btn position-relative dropdown-toggle border-0 bg-transparent p-0"
+                            id="topbarNotifBtn"
+                            data-bs-toggle="dropdown"
+                            data-bs-auto-close="outside"
+                            aria-expanded="false"
+                            title="การแจ้งเตือน"
+                            aria-label="การแจ้งเตือน"
+                            style="cursor: pointer;">
+                        <i class="far fa-bell fa-lg"></i>
+                        <span class="position-absolute topbar-badge-dot rounded-circle bg-danger"
+                              id="topbarNotifBadge"
+                              th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
+                              th:title="${unreadNotificationCount} + ' รายการที่ยังไม่ได้อ่าน'"></span>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-0 rounded-4"
+                         id="topbarNotifMenu"
+                         aria-labelledby="topbarNotifBtn"
+                         style="width: 380px; max-width: 92vw; z-index: 1060; border-radius: 16px; overflow: hidden; background: var(--bg-card, #ffffff);">
+                        <!-- Dropdown Header -->
+                        <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light bg-opacity-50">
+                            <div class="d-flex align-items-center gap-2">
+                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.95rem;">
+                                    <i class="fas fa-bell me-1" style="color: var(--accent-color);"></i>การแจ้งเตือน
+                                </h6>
+                                <span class="badge bg-danger rounded-pill topbar-unread-pill"
+                                      id="topbarUnreadPill"
+                                      th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
+                                      th:text="${unreadNotificationCount}">0</span>
+                            </div>
+                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted"
+                                    id="topbarMarkAllReadBtn"
+                                    title="ทำเครื่องหมายอ่านทั้งหมด"
+                                    style="font-size: 0.8rem;">
+                                <i class="fas fa-check-double me-1"></i>อ่านทั้งหมด
+                            </button>
+                        </div>
+
+                        <!-- Dropdown Items List (Populated via JS) -->
+                        <div class="list-group list-group-flush" id="topbarNotifList" style="max-height: 380px; overflow-y: auto;">
+                            <div class="p-4 text-center text-muted notif-loading-state">
+                                <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
+                                <div class="small">กำลังโหลดการแจ้งเตือน...</div>
+                            </div>
+                        </div>
+
+                        <!-- Dropdown Footer -->
+                        <div class="p-2 text-center border-top bg-light bg-opacity-25">
+                            <a th:href="${user != null and user.role == 'ROLE_ADMIN' ? '/admin/notifications' : '/user/notifications'}"
+                               class="text-decoration-none small fw-semibold text-primary d-block py-1">
+                                ดูการแจ้งเตือนทั้งหมด <i class="fas fa-arrow-right ms-1"></i>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Global Search Input & Dropdown -->
                 <div class="global-search-container position-relative" style="max-width: 320px; width: 100%;">
                     <div class="input-group input-group-sm global-search-input-group">
@@ -417,19 +475,9 @@
                     </div>
                 </div>
 
-                <!-- Notifications Bell Icon -->
-                <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/notifications' : '/user/notifications'}"
-                   class="topbar-icon-btn position-relative"
-                   title="การแจ้งเตือน"
-                   aria-label="การแจ้งเตือน">
-                    <i class="far fa-bell fa-lg"></i>
-                    <span class="position-absolute topbar-badge-dot rounded-circle bg-danger"
-                          th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
-                          th:title="${unreadNotificationCount} + ' รายการที่ยังไม่ได้อ่าน'"></span>
-                </a>
 
                 <!-- Help / User Guide Icon -->
-                <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/academic/guide' : '/user/academic/guide'}"
+                <a th:href="${user != null and user.role == 'ROLE_ADMIN' ? '/admin/academic/guide' : '/user/academic/guide'}"
                    class="topbar-icon-btn"
                    title="คู่มือการใช้งาน"
                    aria-label="คู่มือการใช้งาน">
@@ -437,19 +485,19 @@
                 </a>
 
                 <!-- Profile Avatar -->
-                <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}"
+                <a th:href="${user != null and user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}"
                    class="topbar-avatar-link"
-                   th:title="${user.name}">
+                   th:title="${user != null ? user.name : ''}">
                     <div class="topbar-avatar rounded-circle overflow-hidden shadow-sm d-flex align-items-center justify-content-center"
                          style="background: rgba(13, 71, 161, 0.08); width: 36px; height: 36px; min-width: 36px; max-width: 36px; flex-shrink: 0;">
-                        <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
+                        <img th:if="${user != null and user.profileImage != null and user.profileImage != 'default.png'}"
                              th:src="'/img/profile_img/' + ${user.profileImage}"
-                             th:alt="${user.name}"
+                             th:alt="${user != null ? user.name : ''}"
                              style="width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block;"
                              data-fallback="/img/profile_img/default.png">
                         <i class="fa-solid fa-user"
                            style="color: var(--color-primary, #0d47a1); font-size: 0.95rem;"
-                           th:if="${user.profileImage == null or user.profileImage == 'default.png'}"></i>
+                           th:if="${user == null or user.profileImage == null or user.profileImage == 'default.png'}"></i>
                     </div>
                 </a>
             </div>
@@ -604,6 +652,86 @@
     })();
 </script>
 
+<!-- Global Notification Reader Modal (Email-Style Hub) -->
+<div class="modal fade" id="notifReaderModal" tabindex="-1" aria-labelledby="notifReaderModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered notif-modal-dialog">
+        <div class="modal-content notif-modal-content">
+            <!-- Top Gradient Accent Bar -->
+            <div class="notif-modal-accent-bar"></div>
+
+            <!-- Modal Header -->
+            <div class="modal-header notif-modal-header pb-0">
+                <div class="d-flex align-items-center gap-2 flex-grow-1 min-width-0">
+                    <div id="modalNotifIconWrapper" class="notif-modal-icon-badge">
+                        <i id="modalNotifIcon" class="fas fa-bell"></i>
+                    </div>
+                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                        <span id="modalNotifTypeBadge" class="notif-modal-type-pill">การแจ้งเตือน</span>
+                        <span id="modalNotifImportantBadge" class="badge rounded-pill bg-danger fw-semibold px-2 py-1 d-none notif-modal-important-pill">สำคัญ</span>
+                    </div>
+                    <div class="d-flex align-items-center gap-1 notif-modal-time ms-auto pe-2">
+                        <i class="far fa-clock"></i>
+                        <span id="modalNotifRelativeTime">เมื่อสักครู่</span>
+                    </div>
+                </div>
+                <button type="button" class="btn-close notif-modal-close-icon rounded-circle p-2" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+
+            <!-- Modal Body -->
+            <div class="modal-body px-4 pt-3 pb-3">
+                <!-- Email Subject -->
+                <h5 class="modal-title notif-modal-title" id="notifReaderModalLabel">
+                    หัวข้อการแจ้งเตือน
+                </h5>
+
+                <!-- Sender Info Bar (Email 'From' style) -->
+                <div class="notif-modal-sender-card">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="notif-modal-sender-avatar">
+                            <i class="fas fa-university"></i>
+                        </div>
+                        <span class="notif-modal-sender-name">จาก: <strong id="modalNotifActor">ระบบสารสนเทศ KKU-HRCP</strong></span>
+                    </div>
+                    <div class="text-muted small">
+                        <i class="far fa-calendar-alt me-1"></i><span id="modalNotifFullDate">วันที่ส่ง</span>
+                    </div>
+                </div>
+
+                <!-- Message Body Card -->
+                <div class="notif-modal-body-card">
+                    <p id="modalNotifMessage" class="notif-modal-message-text">
+                        ข้อความแจ้งเตือน
+                    </p>
+                </div>
+                
+                <!-- Action Callout Box (When Link Exists) -->
+                <div id="modalActionCallout" class="notif-modal-action-card d-none">
+                    <div class="notif-modal-action-text">
+                        <i class="fas fa-arrow-circle-right fa-lg"></i>
+                        <span>คลิกเพื่อเปิดดูคำร้อง / ดำเนินการต่อ</span>
+                    </div>
+                    <a href="#" id="modalActionLinkBtn" class="notif-modal-action-btn">
+                        <span>ไปยังคำร้อง / เอกสาร</span>
+                        <i class="fas fa-arrow-right"></i>
+                    </a>
+                </div>
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="modal-footer notif-modal-footer">
+                <button type="button" class="btn notif-modal-btn-unread d-inline-flex align-items-center gap-2"
+                        id="modalMarkUnreadBtn">
+                    <i class="far fa-envelope"></i> ทำเครื่องหมายยังไม่ได้อ่าน
+                </button>
+                <button type="button" class="btn notif-modal-btn-close"
+                        data-bs-dismiss="modal">
+                    ปิด
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Global: bulletproof fix for stuck gray screen after modal close -->
 <script>
 (function() {
@@ -642,6 +770,7 @@
 <script src="/js/doc_preview.js?v=2.0"></script>
 <script src="/js/global-search.js"></script>
 <script src="/js/form_loading.js"></script>
+<script src="/js/notification.js"></script>
 <!-- Replaces inline onerror=/onsubmit=/onclick= attributes, which CSP refuses.
      This layout backs every page, so loading it once covers the whole app. -->
 <script src="/js/csp_fallbacks.js"></script>

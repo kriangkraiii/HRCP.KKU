@@ -39,4 +39,21 @@ public class AsyncConfig {
         executor.initialize();
         return executor;
     }
+
+    /**
+     * Dedicated executor for background PDF pre-generation and cache warming.
+     * Runs at slightly reduced thread priority so user-facing web requests have precedence.
+     */
+    @Bean("docPrewarmExecutor")
+    public Executor docPrewarmExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("doc-prewarm-");
+        executor.setThreadPriority(Thread.NORM_PRIORITY - 1);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardOldestPolicy());
+        executor.initialize();
+        return executor;
+    }
 }

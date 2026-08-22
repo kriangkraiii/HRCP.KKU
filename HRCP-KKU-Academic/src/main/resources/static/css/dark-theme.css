@@ -222,11 +222,37 @@
 }
 
 [data-theme="dark"] .modal-header {
+    background-color: var(--bg-modal) !important;
     border-bottom-color: var(--border-color) !important;
 }
 
+[data-theme="dark"] .modal-body {
+    background-color: var(--bg-modal) !important;
+    color: var(--text-primary) !important;
+}
+
 [data-theme="dark"] .modal-footer {
+    background-color: var(--bg-modal) !important;
     border-top-color: var(--border-color) !important;
+}
+
+/* Notif reader modal: force action-card to dark regardless of Bootstrap specificity */
+[data-theme="dark"] #notifReaderModal .notif-modal-action-card {
+    background: #1a2035 !important;
+    border: 1px solid #2d3f5a !important;
+}
+
+[data-theme="dark"] #notifReaderModal .modal-body {
+    background: #181d28 !important;
+}
+
+[data-theme="dark"] #notifReaderModal .modal-header {
+    background: #141822 !important;
+}
+
+[data-theme="dark"] #notifReaderModal .modal-footer {
+    background: #141822 !important;
+    border-top: 1px solid #232a3b !important;
 }
 
 /* -- Dropdowns -- */
@@ -1647,4 +1673,113 @@ body,
 .guide-btn-ref,
 .guide-doc-card {
     transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease;
-}}
+}
+
+/* ==========================================================================
+   Dark Theme: Notification Reader Modal
+   ========================================================================== */
+[data-theme="dark"] .notif-modal-content {
+    background: #181d28 !important;
+    border-color: #2e384d !important;
+    box-shadow: 0 25px 60px -15px rgba(0, 0, 0, 0.7) !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .notif-modal-header {
+    background: #141822 !important;
+    border-bottom: 1px solid #232a3b !important;
+}
+
+[data-theme="dark"] .notif-modal-close-icon {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+    opacity: 0.7 !important;
+}
+[data-theme="dark"] .notif-modal-close-icon:hover {
+    opacity: 1 !important;
+}
+
+[data-theme="dark"] .notif-modal-title {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .notif-modal-icon-badge {
+    background: rgba(59, 130, 246, 0.15) !important;
+    border-color: rgba(59, 130, 246, 0.3) !important;
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .notif-modal-type-pill {
+    background: rgba(37, 99, 235, 0.22) !important;
+    border-color: rgba(96, 165, 250, 0.4) !important;
+    color: #93c5fd !important;
+}
+
+[data-theme="dark"] .notif-modal-time {
+    background: #1e2533 !important;
+    border-color: #2e384d !important;
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .notif-modal-sender-card {
+    background: #1e2533 !important;
+    border-color: #2e384d !important;
+    color: #e2e8f0 !important;
+}
+
+[data-theme="dark"] .notif-modal-sender-name {
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .notif-modal-sender-name strong {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .notif-modal-body-card {
+    background: #131720 !important;
+    border-color: #2e384d !important;
+    border-left: 4px solid #3b82f6 !important;
+}
+
+[data-theme="dark"] .notif-modal-message-text {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .notif-modal-action-card {
+    background: #1e2638 !important;
+    border: 1px solid #334155 !important;
+}
+
+[data-theme="dark"] .notif-modal-action-text {
+    color: #93c5fd !important;
+}
+
+[data-theme="dark"] .notif-modal-action-btn {
+    background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
+    color: #ffffff !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4) !important;
+}
+
+[data-theme="dark"] .notif-modal-footer {
+    background: #141822 !important;
+    border-top: 1px solid #232a3b !important;
+}
+
+[data-theme="dark"] .notif-modal-btn-unread {
+    background: #1e2533 !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+[data-theme="dark"] .notif-modal-btn-unread:hover {
+    background: #283244 !important;
+    color: #ffffff !important;
+    border-color: #475569 !important;
+}
+
+[data-theme="dark"] .notif-modal-btn-close {
+    background: #1e2533 !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}
+[data-theme="dark"] .notif-modal-btn-close:hover {
+    background: #283244 !important;
+    color: #f1f5f9 !important;
+}

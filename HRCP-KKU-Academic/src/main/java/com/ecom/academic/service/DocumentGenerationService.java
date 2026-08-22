@@ -9,6 +9,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -17,6 +18,8 @@ import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
@@ -24,6 +27,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
@@ -1023,45 +1028,93 @@ public class DocumentGenerationService {
         return xml;
     }
 
+    private static final Logger log = LoggerFactory.getLogger(DocumentGenerationService.class);
+
     // =====================================================================
-    // PDF Conversion (LibreOffice CLI)
+    // PDF Conversion (LibreOffice CLI & Hybrid Two-Tier Cache)
     // =====================================================================
 
-    /** จำกัดจำนวน soffice ที่รันพร้อมกัน — แต่ละ process กิน RAM/CPU สูง */
-    private static final Semaphore PDF_SLOTS = new Semaphore(2);
+    /** จำนวน slot พร้อมกันสำหรับ LibreOffice conversion */
+    private static final int MAX_PDF_SLOTS = 4;
+    private static final BlockingQueue<Integer> SLOT_POOL = new ArrayBlockingQueue<>(MAX_PDF_SLOTS);
+    static {
+        for (int i = 0; i < MAX_PDF_SLOTS; i++) {
+            SLOT_POOL.offer(i);
+        }
+    }
 
-    /** timeout ต่อการแปลง 1 ครั้ง — กัน process ค้างถาวรจนกิน slot ทั้งหมด */
+    /** timeout ต่อการแปลง 1 ครั้ง — กัน process ค้างถาวร */
     private static final long PDF_TIMEOUT_SECONDS = 60;
 
     /** cache ผลการค้นหา soffice: null = ยังไม่เคยหา, "" = หาแล้วไม่เจอ */
     private volatile String cachedSofficePath = null;
 
     /**
-     * LRU cache ของ PDF ที่แปลงแล้ว — preview เดิมซ้ำ ๆ จะไม่เรียก LibreOffice ใหม่
+     * L1 In-Memory LRU cache ของ PDF ที่แปลงแล้ว
      */
-    private static final int PDF_CACHE_SIZE = 50;
+    private static final int PDF_CACHE_SIZE = 100;
     private final Map<String, byte[]> pdfCache = Collections.synchronizedMap(
-            new LinkedHashMap<>(16, 0.75f, true) {
+            new LinkedHashMap<>(32, 0.75f, true) {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<String, byte[]> eldest) {
                     return size() > PDF_CACHE_SIZE;
                 }
             });
 
+    /**
+     * L2 Persistent Disk Cache Directory
+     */
+    private static final Path DISK_CACHE_DIR = Path.of(System.getProperty("java.io.tmpdir"), "hrcp-pdf-cache");
+
+    /**
+     * Persistent Profile Pool Directory (ไม่ต้องสร้าง/ลบโปรไฟล์ใหม่ทุกรอบเพื่อลด cold start I/O)
+     */
+    private static final Path BASE_PROFILE_DIR = Path.of(System.getProperty("java.io.tmpdir"), "hrcp-lo-profiles");
+
     /** LibreOffice พร้อมใช้งานหรือไม่ — ใช้ตัดสินใจว่าจะ preview เป็น PDF ได้ไหม */
     public boolean isPdfConversionAvailable() {
         return !resolveLibreOffice().isEmpty();
     }
 
-    /** แปลง DOCX → PDF โดยใช้ cache (สำหรับ preview ที่กดซ้ำบ่อย) */
+    /**
+     * แปลง DOCX → PDF โดยใช้ Two-Tier Cache (L1 Memory + L2 Disk Cache)
+     */
     public byte[] convertDocxToPdfCached(byte[] docxBytes) throws IOException {
         String key = sha256(docxBytes);
+        
+        // 1. ตรวจสอบ L1 In-Memory Cache (< 1ms)
         byte[] cached = pdfCache.get(key);
         if (cached != null) {
             return cached;
         }
+
+        // 2. ตรวจสอบ L2 Persistent Disk Cache (~2-5ms)
+        Path diskCachedFile = DISK_CACHE_DIR.resolve(key + ".pdf");
+        if (Files.exists(diskCachedFile)) {
+            try {
+                byte[] diskBytes = Files.readAllBytes(diskCachedFile);
+                if (diskBytes.length > 0) {
+                    pdfCache.put(key, diskBytes);
+                    log.debug("L2 Disk Cache hit for PDF key: {}", key);
+                    return diskBytes;
+                }
+            } catch (IOException e) {
+                log.warn("Failed to read from disk cache: {}", e.getMessage());
+            }
+        }
+
+        // 3. Cache miss → แปลงสดด้วย LibreOffice (~300-500ms ด้วย Profile Pool)
         byte[] pdf = convertDocxToPdf(docxBytes);
+        
+        // เก็บลงทั้ง L1 และ L2
         pdfCache.put(key, pdf);
+        try {
+            Files.createDirectories(DISK_CACHE_DIR);
+            Files.write(diskCachedFile, pdf, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException e) {
+            log.warn("Failed to write to disk cache: {}", e.getMessage());
+        }
+
         return pdf;
     }
 
@@ -1074,31 +1127,40 @@ public class DocumentGenerationService {
                     "Linux: sudo apt install libreoffice-writer");
         }
 
+        Integer slot;
         try {
-            PDF_SLOTS.acquire();
+            slot = SLOT_POOL.poll(PDF_TIMEOUT_SECONDS, TimeUnit.SECONDS);
+            if (slot == null) {
+                throw new IOException("PDF conversion timeout waiting for a LibreOffice slot");
+            }
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("PDF conversion interrupted while waiting for a slot", e);
         }
 
-        Path tempDir = Files.createTempDirectory("docx-to-pdf-");
+        long startTime = System.currentTimeMillis();
+        Path tempDir = Files.createTempDirectory("docx-to-pdf-job-");
         Path tempDocx = tempDir.resolve("input.docx");
         Path tempPdf = tempDir.resolve("input.pdf");
-        Path profileDir = tempDir.resolve("lo-profile");
+        
+        // ใช้ Persistent Profile ประจำ Slot เพื่อรักษา Font cache & Registry ให้ไม่ต้อง Rebuild ทุกรอบ
+        Path profileDir = BASE_PROFILE_DIR.resolve("slot-" + slot);
+        try {
+            Files.createDirectories(profileDir);
+        } catch (IOException ignored) {
+        }
+        
         Files.write(tempDocx, docxBytes);
 
         Process process = null;
         try {
-            // UserInstallation แยกต่อการเรียกแต่ละครั้ง — ถ้าใช้ profile ร่วมกัน
-            // soffice หลาย process จะชนกันแล้ว hang เมื่อมีผู้ใช้พร้อมกัน
             ProcessBuilder pb = new ProcessBuilder(
                     soffice,
                     "-env:UserInstallation=" + profileDir.toUri(),
-                    "--headless", "--norestore", "--nolockcheck", "--nodefault",
+                    "--headless", "--norestore", "--nolockcheck", "--nodefault", "--nologo",
                     "--convert-to", "pdf",
                     "--outdir", tempDir.toString(), tempDocx.toString());
-            // เขียน output ลงไฟล์แทนการ read stream — ถ้า read ก่อน waitFor
-            // จะบล็อกจนกว่า process จบ ทำให้ timeout ไม่มีผล
+            
             Path logFile = tempDir.resolve("soffice.log");
             pb.redirectErrorStream(true);
             pb.redirectOutput(logFile.toFile());
@@ -1121,7 +1183,11 @@ public class DocumentGenerationService {
             if (!Files.exists(tempPdf)) {
                 throw new IOException("PDF conversion produced no output: " + output);
             }
-            return Files.readAllBytes(tempPdf);
+
+            byte[] result = Files.readAllBytes(tempPdf);
+            long elapsed = System.currentTimeMillis() - startTime;
+            log.info("LibreOffice converted DOCX to PDF ({} bytes) in {} ms [Slot {}]", result.length, elapsed, slot);
+            return result;
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new IOException("LibreOffice conversion interrupted", e);
@@ -1129,7 +1195,7 @@ public class DocumentGenerationService {
             if (process != null && process.isAlive()) {
                 process.destroyForcibly();
             }
-            PDF_SLOTS.release();
+            SLOT_POOL.offer(slot);
             deleteRecursively(tempDir);
         }
     }

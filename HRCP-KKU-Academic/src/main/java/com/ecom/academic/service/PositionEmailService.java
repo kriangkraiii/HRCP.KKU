@@ -75,7 +75,7 @@ public class PositionEmailService {
             if (request != null && request.getApplicant() != null) {
                 String notifTitle = "คำร้องขอตำแหน่งทางวิชาการใหม่";
                 String notifMsg = "มีคำร้องขอตำแหน่งใหม่ (" + request.getRequestCode() + ") ยื่นโดย " + request.getApplicant().getName();
-                String notifLink = "/admin/academic/requests?type=position";
+                String notifLink = "/admin/position/request/" + request.getId();
                 notificationService.notifyAdmins(request.getApplicant(), notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.POSITION_NEW_REQUEST, false);
             }
 

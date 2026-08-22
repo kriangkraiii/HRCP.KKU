@@ -41,7 +41,7 @@ public class AcademicEmailService {
                         || newStatus == RequestStatus.REJECTED;
                 String notifTitle = "อัปเดตสถานะการประเมิน: " + newStatus.getThaiLabel();
                 String notifMsg = "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel();
-                String notifLink = "/user/academic/dashboard";
+                String notifLink = "/user/academic/request/" + request.getId();
                 notificationService.sendNotification(request.getApplicant(), null, notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.ACADEMIC_STATUS_UPDATE, isImportant);
             }
 
@@ -76,7 +76,7 @@ public class AcademicEmailService {
             if (request != null && request.getApplicant() != null) {
                 String notifTitle = "คำร้องขอรับการประเมินใหม่";
                 String notifMsg = "มีคำร้องขอประเมินผลการสอนใหม่ (#" + request.getId() + ") ยื่นโดย " + request.getApplicant().getName();
-                String notifLink = "/admin/academic/requests?type=evaluation";
+                String notifLink = "/admin/academic/request/" + request.getId();
                 notificationService.notifyAdmins(request.getApplicant(), notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.ACADEMIC_NEW_REQUEST, false);
             }
 

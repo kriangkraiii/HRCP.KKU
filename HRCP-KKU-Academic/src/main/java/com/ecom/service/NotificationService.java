@@ -12,6 +12,7 @@ import java.util.Optional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -110,14 +111,31 @@ public class NotificationService {
         Map<String, Long> counts = new HashMap<>();
         if (user == null) return counts;
 
-        LocalDateTime now = LocalDateTime.now();
-        counts.put("all", notificationRepository.countAllActive(user, now));
-        counts.put("unread", notificationRepository.countUnreadActive(user, now));
-        counts.put("starred", notificationRepository.countStarred(user));
-        counts.put("important", notificationRepository.countImportant(user));
-        counts.put("snoozed", notificationRepository.countSnoozed(user, now));
-        counts.put("trash", notificationRepository.countTrash(user));
+        List<Object[]> res = notificationRepository.getAggregatedTabCounts(user, LocalDateTime.now());
+        if (res != null && !res.isEmpty() && res.get(0) != null) {
+            Object[] row = res.get(0);
+            counts.put("all", row[0] != null ? ((Number) row[0]).longValue() : 0L);
+            counts.put("unread", row[1] != null ? ((Number) row[1]).longValue() : 0L);
+            counts.put("starred", row[2] != null ? ((Number) row[2]).longValue() : 0L);
+            counts.put("important", row[3] != null ? ((Number) row[3]).longValue() : 0L);
+            counts.put("snoozed", row[4] != null ? ((Number) row[4]).longValue() : 0L);
+            counts.put("trash", row[5] != null ? ((Number) row[5]).longValue() : 0L);
+        } else {
+            counts.put("all", 0L);
+            counts.put("unread", 0L);
+            counts.put("starred", 0L);
+            counts.put("important", 0L);
+            counts.put("snoozed", 0L);
+            counts.put("trash", 0L);
+        }
         return counts;
+    }
+
+    @Transactional(readOnly = true)
+    public List<Notification> getRecentNotifications(UserDtls user, int limit) {
+        if (user == null) return List.of();
+        Page<Notification> page = notificationRepository.findAllActive(user, LocalDateTime.now(), PageRequest.of(0, Math.max(1, limit)));
+        return page.getContent();
     }
 
     @Transactional(readOnly = true)
@@ -132,6 +150,17 @@ public class NotificationService {
         if (opt.isPresent()) {
             Notification n = opt.get();
             n.setIsRead(true);
+            notificationRepository.save(n);
+            return true;
+        }
+        return false;
+    }
+
+    public boolean markAsUnread(Long id, UserDtls user) {
+        Optional<Notification> opt = findByIdAndRecipient(id, user);
+        if (opt.isPresent()) {
+            Notification n = opt.get();
+            n.setIsRead(false);
             notificationRepository.save(n);
             return true;
         }

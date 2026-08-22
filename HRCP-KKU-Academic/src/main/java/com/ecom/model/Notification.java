@@ -137,6 +137,11 @@ public class Notification {
 		}
 	}
 
+	public String getFormattedCreatedAt() {
+		if (createdAt == null) return "";
+		return createdAt.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"));
+	}
+
 	public boolean isSnoozed() {
 		return snoozedUntil != null && snoozedUntil.isAfter(LocalDateTime.now());
 	}

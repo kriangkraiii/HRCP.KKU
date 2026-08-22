@@ -1,73 +1,191 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="th" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>เกิดข้อผิดพลาด - 500</title>
+    <title>เกิดข้อผิดพลาดในระบบ - 500 | HRCP-KKU</title>
     <link rel="stylesheet" href="/vendor/bootstrap/bootstrap.min.css">
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="icon" type="image/png" href="/img/favicon.png">
     <style>
-        .error-container {
+        @import url('https://fonts.googleapis.com/css2?family=Prompt:wght@300;400;500;600;700&family=Sarabun:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --color-primary: #0d47a1;
+            --color-primary-hover: #1565c0;
+            --color-danger: #d32f2f;
+            --color-warning: #f57c00;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Prompt', 'Sarabun', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
             min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            background-color: #f8f9fa;
+            padding: 1.5rem;
+            color: #1e293b;
         }
+
         .error-card {
-            max-width: 600px;
-            padding: 2rem;
-            background: white;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            background: #ffffff;
+            width: 100%;
+            max-width: 540px;
+            border-radius: 24px;
+            padding: 3rem 2.5rem;
             text-align: center;
+            box-shadow: 0 25px 50px -12px rgba(13, 71, 161, 0.12), 0 0 1px rgba(0, 0, 0, 0.08);
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(226, 232, 240, 0.8);
         }
+
+        .error-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 6px;
+            background: linear-gradient(90deg, #d32f2f 0%, #f57c00 50%, #ffb300 100%);
+        }
+
+        .error-icon-wrapper {
+            width: 88px;
+            height: 88px;
+            border-radius: 50%;
+            background: rgba(211, 47, 47, 0.08);
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 1.25rem;
+            position: relative;
+        }
+
+        .error-icon-wrapper i {
+            font-size: 2.5rem;
+            color: #d32f2f;
+        }
+
         .error-code {
-            font-size: 6rem;
-            font-weight: bold;
-            color: #ffc107;
-            margin-bottom: 1rem;
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(135deg, #b71c1c 0%, #e65100 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.03em;
         }
+
         .error-title {
-            font-size: 1.5rem;
-            font-weight: 600;
-            margin-bottom: 1rem;
-            color: #333;
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 0.75rem;
+            letter-spacing: -0.01em;
         }
+
         .error-message {
-            color: #666;
-            margin-bottom: 1.5rem;
-            line-height: 1.6;
+            font-size: 0.95rem;
+            color: #64748b;
+            line-height: 1.65;
+            margin-bottom: 2rem;
+            font-weight: 400;
+            padding: 0 0.5rem;
         }
+
         .error-actions {
             display: flex;
             gap: 12px;
             justify-content: center;
             flex-wrap: wrap;
         }
+
+        .btn-custom-primary {
+            background-color: var(--color-primary);
+            color: #ffffff !important;
+            font-weight: 600;
+            font-size: 0.925rem;
+            padding: 0.75rem 1.75rem;
+            border-radius: 50px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: none;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(13, 71, 161, 0.25);
+            cursor: pointer;
+        }
+
+        .btn-custom-primary:hover {
+            background-color: var(--color-primary-hover);
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(13, 71, 161, 0.35);
+        }
+
+        .btn-custom-outline {
+            background-color: transparent;
+            color: #475569;
+            font-weight: 600;
+            font-size: 0.925rem;
+            padding: 0.75rem 1.75rem;
+            border-radius: 50px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border: 1.5px solid #cbd5e1;
+            transition: all 0.2s ease;
+            cursor: pointer;
+        }
+
+        .btn-custom-outline:hover {
+            background-color: #f1f5f9;
+            color: #0f172a;
+            border-color: #94a3b8;
+            transform: translateY(-2px);
+        }
+
+        .error-footer {
+            margin-top: 2rem;
+            padding-top: 1.5rem;
+            border-top: 1px solid #f1f5f9;
+            font-size: 0.825rem;
+            color: #94a3b8;
+        }
     </style>
 </head>
 <body>
-    <div class="error-container">
-        <div class="error-card">
-            <div class="error-code">500</div>
-            <h1 class="error-title" th:text="${errorTitle} ?: 'เกิดข้อผิดพลาดในระบบ'">เกิดข้อผิดพลาดในระบบ</h1>
-            <p class="error-message" th:text="${error} ?: 'เกิดข้อผิดพลาดขณะประมวลผลคำขอ ลองโหลดหน้าใหม่อีกครั้ง หากปัญหายังคงอยู่ กรุณาติดต่อผู้ดูแลระบบ'">
-                เกิดข้อผิดพลาดขณะประมวลผลคำขอ ลองโหลดหน้าใหม่อีกครั้ง หากปัญหายังคงอยู่ กรุณาติดต่อผู้ดูแลระบบ
-            </p>
-            <div class="error-actions">
-                <button type="button" id="retryBtn" class="btn btn-outline-warning">
-                    <i class="fas fa-rotate-right"></i> ลองใหม่อีกครั้ง
-                </button>
-                <a href="/" class="btn btn-primary">
-                    <i class="fas fa-home"></i> กลับสู่หน้าหลัก
-                </a>
-            </div>
+    <div class="error-card">
+        <div class="error-icon-wrapper">
+            <i class="fas fa-triangle-exclamation"></i>
+        </div>
+        <div class="error-code">500</div>
+        <h1 class="error-title" th:text="${errorTitle} ?: 'เกิดข้อผิดพลาดในระบบ'">เกิดข้อผิดพลาดในระบบ</h1>
+        <p class="error-message" th:text="${error} ?: 'เกิดข้อผิดพลาดขณะประมวลผลคำขอ ลองโหลดหน้าใหม่อีกครั้ง หรือกลับสู่หน้าหลักของระบบ'">
+            เกิดข้อผิดพลาดขณะประมวลผลคำขอ ลองโหลดหน้าใหม่อีกครั้ง หรือกลับสู่หน้าหลักของระบบ
+        </p>
+        <div class="error-actions">
+            <button type="button" id="retryBtn" class="btn-custom-outline">
+                <i class="fas fa-rotate-right"></i> ลองใหม่อีกครั้ง
+            </button>
+            <a href="/" class="btn-custom-primary">
+                <i class="fas fa-house"></i> กลับสู่หน้าหลัก
+            </a>
+        </div>
+        <div class="error-footer">
+            วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น (CP KKU)
         </div>
     </div>
-    <!-- ไฟล์ภายนอก ไม่ใช่ inline: หน้า error ถูก render บน ERROR dispatch ซึ่ง
-         SecurityHeadersFilter ไม่ทำงาน จึงไม่มี nonce ให้ inline script ใช้ -->
     <script src="/js/error_actions.js"></script>
 </body>
 </html>

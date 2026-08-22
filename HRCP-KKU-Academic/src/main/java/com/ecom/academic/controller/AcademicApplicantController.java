@@ -74,6 +74,8 @@ public class AcademicApplicantController {
 
     private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
 
+    private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
+
     public AcademicApplicantController(
             AcademicRequestService requestService,
             DocumentGenerationService documentService,
@@ -84,7 +86,8 @@ public class AcademicApplicantController {
             AdminLogService adminLogService,
             jakarta.servlet.http.HttpServletRequest httpRequest,
             UserStorageService userStorageService,
-            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
+            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
+            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -95,6 +98,7 @@ public class AcademicApplicantController {
         this.httpRequest = httpRequest;
         this.userStorageService = userStorageService;
         this.autoFillHelper = autoFillHelper;
+        this.documentPrewarmService = documentPrewarmService;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -273,6 +277,9 @@ public class AcademicApplicantController {
                 "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", user,
                 isNew0 ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
 
+        // Async prewarm PDF to cache
+        documentPrewarmService.prewarmAcademicDocument(id, 0, jsonData);
+
         return "redirect:/user/academic/request/" + id + "?success=doc0_submitted";
     }
 
@@ -338,6 +345,9 @@ public class AcademicApplicantController {
         requestService.logDocumentEdit(request, 1,
                 "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", user,
                 isNew1 ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
+
+        // Async prewarm PDF to cache
+        documentPrewarmService.prewarmAcademicDocument(id, 1, jsonData);
 
         return "redirect:/user/academic/request/" + id + "?success=doc1_submitted";
     }
@@ -469,6 +479,9 @@ public class AcademicApplicantController {
                 // ignore parse errors
             }
         }
+
+        // Background warming for completed docs on view
+        documentPrewarmService.prewarmAllRequestDocuments(id, false);
 
         return "academic/applicant/request_detail";
     }

@@ -70,6 +70,8 @@ public class PositionAdminController {
 
     private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
 
+    private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
+
     public PositionAdminController(
             PositionRequestService positionService,
             DocumentGenerationService documentService,
@@ -79,7 +81,8 @@ public class PositionAdminController {
             HttpServletRequest httpRequest,
             com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository,
             com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository,
-            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
+            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
+            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService) {
         this.positionService = positionService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -89,6 +92,7 @@ public class PositionAdminController {
         this.academicRequestRepository = academicRequestRepository;
         this.academicDocumentRepository = academicDocumentRepository;
         this.autoFillHelper = autoFillHelper;
+        this.documentPrewarmService = documentPrewarmService;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -188,6 +192,9 @@ public class PositionAdminController {
                 } catch (Exception e) { /* ignore parse error */ }
             }
         }
+
+        // Background warming for completed docs on view
+        documentPrewarmService.prewarmAllRequestDocuments(id, true);
 
         return "academic/position/admin/request_detail";
     }
@@ -306,6 +313,7 @@ public class PositionAdminController {
 
             boolean isNew = positionService.getDocumentsByType(id, type).isEmpty();
             positionService.saveDocument(request, type, jsonData, filePath, label, null, "ADMIN");
+            documentPrewarmService.prewarmPositionDocument(id, type, jsonData);
 
             // Log document edit
             UserDtls admin = getUser(principal);

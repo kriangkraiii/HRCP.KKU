@@ -49,17 +49,21 @@ public class PositionApplicantController {
 
     private final com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper;
 
+    private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
+
     public PositionApplicantController(
             PositionRequestService positionService,
             UserRepository userRepository,
             AcademicRequestService academicService,
             DocumentGenerationService documentService,
-            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper) {
+            com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
+            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService) {
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.academicService = academicService;
         this.documentService = documentService;
         this.autoFillHelper = autoFillHelper;
+        this.documentPrewarmService = documentPrewarmService;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -258,6 +262,9 @@ public class PositionApplicantController {
             } catch (Exception e) { /* ignore */ }
         }
 
+        // Background warming for completed docs on view
+        documentPrewarmService.prewarmAllRequestDocuments(id, true);
+
         return "academic/position/applicant/request_detail";
     }
 
@@ -342,6 +349,10 @@ public class PositionApplicantController {
                 positionService.saveDocument(request, type, jsonData, null, label, null, "APPLICANT");
                 positionService.logDocumentEdit(request, type, label, user,
                         isNew ? PositionDocumentEditLog.EditAction.CREATED : PositionDocumentEditLog.EditAction.UPDATED);
+
+                // Async prewarm PDF to cache
+                documentPrewarmService.prewarmPositionDocument(id, type, jsonData);
+
                 return "redirect:/user/position/request/" + id + "?success=doc_saved";
             }
         } catch (Exception e) {
