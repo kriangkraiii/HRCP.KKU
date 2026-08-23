@@ -46,6 +46,9 @@ public class AcademicEmailService {
             }
 
             // 2. Send email notification
+            if (request.getApplicant() == null || Boolean.FALSE.equals(request.getApplicant().getIsEnable())) {
+                return;
+            }
             String applicantEmail = request.getApplicant().getEmail();
             if (applicantEmail == null || applicantEmail.isEmpty())
                 return;
@@ -83,6 +86,9 @@ public class AcademicEmailService {
             // 2. Send email to admins who opted-in
             List<UserDtls> admins = userRepository.findByRole("ROLE_ADMIN");
             for (UserDtls admin : admins) {
+                if (Boolean.FALSE.equals(admin.getIsEnable())) {
+                    continue;
+                }
                 if (admin.getEmailNotificationEnabled() != null && admin.getEmailNotificationEnabled()) {
                     sendAdminNotification(admin, request);
                 }

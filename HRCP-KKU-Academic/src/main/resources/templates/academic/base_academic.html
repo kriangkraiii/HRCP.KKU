@@ -101,9 +101,9 @@
                 <a href="/admin/file-manager" class="sidebar-link" id="nav-files">
                     <i class="fas fa-folder-open"></i> จัดการไฟล์
                 </a>
-                <a href="/admin/academic/guide" class="sidebar-link" id="nav-guide">
+                <!-- <a href="/admin/academic/guide" class="sidebar-link" id="nav-guide">
                     <i class="fas fa-book"></i> คู่มือการใช้งาน
-                </a>
+                </a> -->
                 <a href="/admin/academic/settings" class="sidebar-link" id="nav-settings">
                     <i class="fas fa-cog"></i> การตั้งค่า
                 </a>
@@ -150,9 +150,9 @@
                 <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures">
                     <i class="fas fa-signature"></i> ลายเซ็นของฉัน
                 </a>
-                <a href="/user/academic/guide" class="sidebar-link" id="nav-guide">
+                <!-- <a href="/user/academic/guide" class="sidebar-link" id="nav-guide">
                     <i class="fas fa-book"></i> คู่มือการใช้งาน
-                </a>
+                </a> -->
                 <a href="/user/academic/settings" class="sidebar-link" id="nav-settings">
                     <i class="fas fa-cog"></i> การตั้งค่า
                 </a>
@@ -598,10 +598,10 @@
 
 <!-- ===== Floating Buttons สำหรับทุกหน้าฟอร์มเอกสาร ===== -->
 <script>
-    // Auto-create floating buttons for doc form pages ONLY
+    // Auto-create floating buttons for doc form pages ONLY (Evaluation & Position docs)
     (function() {
         function findButtons() {
-            var docForm = document.querySelector('form[id^="doc_form_"], form[id^="docForm"], .doc-form-wrapper, .card-doc-form');
+            var docForm = document.querySelector('form[id^="doc"], form[id$="Form"], form[data-auto-draft], form[action*="/document"], .doc-form-wrapper, .card-doc-form');
             if (!docForm) {
                 return { preview: null, back: null };
             }
@@ -609,12 +609,14 @@
             var previewBtn = null, backBtn = null;
 
             document.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
-                var txt = el.textContent || '';
-                // ข้ามปุ่ม .btn-doc-preview (ปุ่มดูตัวอย่างในหน้ารายการเอกสาร)
-                if (!previewBtn && txt.indexOf('ดูตัวอย่าง') !== -1 && el.querySelector('.fa-eye') && !el.classList.contains('btn-doc-preview')) {
-                    previewBtn = el;
+                var txt = (el.textContent || '').trim();
+                // ข้ามปุ่ม .btn-doc-preview (ปุ่มดูตัวอย่างในหน้ารายการเอกสาร) และ floating buttons
+                if (!previewBtn && !el.classList.contains('btn-doc-preview') && !el.classList.contains('floating-doc-btn')) {
+                    if (el.getAttribute('data-action') === 'docPreviewShow' || (txt.indexOf('ดูตัวอย่าง') !== -1 && (el.querySelector('.fa-eye') || el.classList.contains('btn-outline-primary')))) {
+                        previewBtn = el;
+                    }
                 }
-                if (!backBtn && txt.indexOf('กลับ') !== -1 && el.querySelector('.fa-arrow-left') && !el.classList.contains('no-floating-back')) {
+                if (!backBtn && txt.indexOf('กลับ') !== -1 && el.querySelector('.fa-arrow-left') && !el.classList.contains('no-floating-back') && !el.classList.contains('floating-doc-btn')) {
                     backBtn = el;
                 }
             });
@@ -628,10 +630,13 @@
 
             if (backBtn) {
                 var floatBack = document.createElement('a');
-                floatBack.className = 'btn btn-outline-secondary floating-doc-btn floating-doc-btn-back';
+                floatBack.className = 'btn-back-pill floating-doc-btn floating-doc-btn-back';
                 floatBack.innerHTML = '<i class="fas fa-arrow-left"></i> กลับ';
                 if (backBtn.tagName === 'A' && backBtn.href) {
                     floatBack.href = backBtn.href;
+                    if (backBtn.getAttribute('onclick')) {
+                        floatBack.setAttribute('onclick', backBtn.getAttribute('onclick'));
+                    }
                 } else {
                     floatBack.href = '#';
                     floatBack.addEventListener('click', function(e) {
@@ -640,6 +645,16 @@
                     });
                 }
                 document.body.appendChild(floatBack);
+
+                // ซ่อนปุ่ม back บนสุดเดิมเพื่อไม่ให้ซ้ำซ้อนกับปุ่มลอย
+                document.querySelectorAll('.container > .mb-3 > .btn-back-pill, .container > .mb-4 > .btn-back-pill, .container > div:first-child > .btn-back-pill').forEach(function(b) {
+                    var parent = b.closest('.mb-3, .mb-4, div');
+                    if (parent && parent.children.length === 1 && !parent.closest('form')) {
+                        parent.style.display = 'none';
+                    } else {
+                        b.style.display = 'none';
+                    }
+                });
             }
 
             if (previewBtn) {
@@ -651,14 +666,10 @@
                     previewBtn.click();
                 });
                 document.body.appendChild(floatPreview);
-            }
 
-            // ซ่อนปุ่มต้นฉบับ (เก็บไว้ใน DOM เพื่อให้ .click() ยังทำงานได้)
-            [previewBtn, backBtn].forEach(function(btn) {
-                if (btn) {
-                    btn.style.cssText = 'position:absolute !important;visibility:hidden !important;height:0 !important;overflow:hidden !important;pointer-events:none !important;';
-                }
-            });
+                // ซ่อนปุ่ม preview ต้นฉบับ (เก็บใน DOM เพื่อให้ click delegation ทำงาน)
+                previewBtn.style.cssText = 'position:absolute !important;visibility:hidden !important;height:0 !important;overflow:hidden !important;pointer-events:none !important;';
+            }
         }
 
         function init() {
@@ -674,7 +685,7 @@
             if (document.readyState === 'loading') {
                 document.addEventListener('DOMContentLoaded', init);
             } else {
-                setTimeout(init, 500);
+                setTimeout(init, 300);
             }
         }
     })();

@@ -63,6 +63,9 @@ public class EvaluationExpiryScheduler {
             if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {
                 continue;
             }
+            if (Boolean.FALSE.equals(user.getIsEnable())) {
+                continue; // Skip inactive/disabled accounts
+            }
             if (user.getEmailNotificationEnabled() == null || !user.getEmailNotificationEnabled()) {
                 continue;
             }
@@ -98,12 +101,37 @@ public class EvaluationExpiryScheduler {
                 alertLabel = "6 เดือน";
             }
 
+            // Check user-configured custom expiry alerts (up to 5)
+            if (!shouldAlert && user.getCustomExpiryAlerts() != null && !user.getCustomExpiryAlerts().isBlank()) {
+                List<com.ecom.model.CustomExpiryAlert> customAlerts = parseCustomAlerts(user.getCustomExpiryAlerts());
+                for (com.ecom.model.CustomExpiryAlert ca : customAlerts) {
+                    if (ca.isEnabled() && daysLeft == ca.getDays()) {
+                        shouldAlert = true;
+                        alertLabel = ca.getLabel();
+                        break;
+                    }
+                }
+            }
+
             if (shouldAlert) {
                 sendExpiryEmail(user, request, daysLeft, alertLabel, expiry);
             }
         }
 
         log.info("Evaluation expiry check completed.");
+    }
+
+    private List<com.ecom.model.CustomExpiryAlert> parseCustomAlerts(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            return mapper.readValue(json, new com.fasterxml.jackson.core.type.TypeReference<List<com.ecom.model.CustomExpiryAlert>>() {});
+        } catch (Exception e) {
+            log.warn("Failed to parse customExpiryAlerts for user: {}", e.getMessage());
+            return List.of();
+        }
     }
 
     private void sendExpiryEmail(UserDtls user, AcademicRequest request,

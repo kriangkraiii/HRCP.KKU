@@ -80,9 +80,12 @@ public class SsoAccessPolicy {
         // hold however the person signs in, and the faculty directory has no
         // knowledge of it. The password path is covered by CustomUser.isEnabled();
         // this branch builds its own Authentication and so has to ask here.
-        UserDtls local = userRepository.findByEmail(normalized);
+        UserDtls local = userRepository.findByEmailIgnoreCase(normalized);
+        if (local == null) {
+            local = userRepository.findByEmail(normalized);
+        }
         if (local != null && !Boolean.TRUE.equals(local.getIsEnable())) {
-            log.warn("SSO login refused — the local account is deactivated");
+            log.warn("SSO login refused — the local account is deactivated: {}", normalized);
             return Decision.deny("บัญชีนี้ถูกปิดการใช้งานในระบบ กรุณาติดต่อผู้ดูแลระบบ");
         }
 

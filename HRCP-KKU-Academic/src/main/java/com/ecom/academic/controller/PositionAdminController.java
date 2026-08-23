@@ -370,6 +370,40 @@ public class PositionAdminController {
         }
     }
 
+    @PostMapping("/request/{id}/document/{type}/request-resign")
+    public String requestDocumentResign(
+            @PathVariable Long id,
+            @PathVariable int type,
+            @RequestParam(value = "reason", required = false) String reason,
+            Principal principal,
+            RedirectAttributes redirectAttributes) {
+        UserDtls admin = getUser(principal);
+        PositionRequest request = positionService.findById(id)
+                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + id));
+
+        var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
+                getClientIpAddress(), httpRequest.getHeader("User-Agent"));
+
+        signatureWorkflow.requestDocumentResign(
+                com.ecom.academic.model.SignatureModule.POSITION,
+                id,
+                type,
+                reason,
+                admin,
+                actorContext);
+
+        try {
+            adminLogService.log(principal.getName(),
+                    admin != null ? admin.getName() : principal.getName(),
+                    "REQUEST_DOC_RESIGN",
+                    "ขอให้แก้ไขและลงนามใหม่ เอกสารที่ " + type + " สำหรับคำร้องตำแหน่ง #" + id + (reason != null && !reason.isBlank() ? " เหตุผล: " + reason : ""),
+                    getClientIpAddress());
+        } catch (Exception logEx) { /* ignore */ }
+
+        redirectAttributes.addFlashAttribute("success", "ส่งคำขอแก้ไขและลงนามใหม่สำหรับเอกสารที่ " + type + " เรียบร้อยแล้ว");
+        return "redirect:/admin/position/request/" + id;
+    }
+
     // ================== Document Download ==================
 
     @GetMapping("/request/{id}/document/{type}/download")

@@ -15,7 +15,7 @@
             th:title="${signingLocked} ? 'เอกสารถูกล็อกระหว่างการเวียนลงนาม' : null">
         <i class="fas fa-save"></i> สร้าง/บันทึกเอกสาร
     </button>
-    <a th:href="'/admin/academic/request/' + ${request.id}" class="btn btn-outline-secondary">
+    <a th:href="'/admin/academic/request/' + ${request.id}" class="btn-back-pill">
         <i class="fas fa-arrow-left"></i> กลับ
     </a>
     <input type="hidden" name="sendNotify" id="sendNotifyField" value="false">

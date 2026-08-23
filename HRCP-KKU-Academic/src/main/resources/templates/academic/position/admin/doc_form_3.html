@@ -3,6 +3,11 @@
 <body>
     <section>
         <div class="container py-4">
+            <div class="mb-3">
+                <a th:href="'/admin/position/request/' + ${request.id}" class="btn-back-pill">
+                    <i class="fas fa-arrow-left"></i> กลับ
+                </a>
+            </div>
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 3: แบบรับรองจริยธรรมและจรรยาบรรณทางวิชาการ</h3>
             <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>ผู้ยื่นคำร้อง</strong> — แอดมินสามารถดูและแก้ไขได้</div>
 
@@ -77,7 +82,7 @@
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
-                    <a th:href="'/admin/position/request/' + ${request.id}" class="btn btn-outline-secondary btn-lg">
+                    <a th:href="'/admin/position/request/' + ${request.id}" class="btn-back-pill">
                         <i class="fas fa-arrow-left"></i> กลับ
                     </a>
                 </div>

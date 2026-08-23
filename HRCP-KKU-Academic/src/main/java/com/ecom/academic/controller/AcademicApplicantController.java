@@ -210,10 +210,20 @@ public class AcademicApplicantController {
         boolean hasDoc0 = isDoc0Complete(allDocs);
         boolean hasDoc1 = isDoc1Complete(allDocs);
 
+        // เช็คการลงนามของผู้ยื่นใน doc 0 และ doc 1
+        boolean doc0Signed = signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 0);
+        boolean doc1Signed = signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 1);
+        List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), List.of(0, 1));
+        boolean applicantSignaturesComplete = unsignedSigDocs.isEmpty();
+
         model.addAttribute("user", user);
         model.addAttribute("request", draftRequest);
         model.addAttribute("hasDoc0", hasDoc0);
         model.addAttribute("hasDoc1", hasDoc1);
+        model.addAttribute("doc0Signed", doc0Signed);
+        model.addAttribute("doc1Signed", doc1Signed);
+        model.addAttribute("unsignedSigDocs", unsignedSigDocs);
+        model.addAttribute("applicantSignaturesComplete", applicantSignaturesComplete);
 
         return "academic/applicant/new_request";
     }
@@ -551,6 +561,15 @@ public class AcademicApplicantController {
         List<AcademicDocument> allDocs = requestService.getDocumentsSorted(id);
         if (!isDoc0Complete(allDocs) || !isDoc1Complete(allDocs)) {
             redirectAttributes.addFlashAttribute("error", "กรุณากรอกเอกสารที่ 0 และแบบตรวจสอบเอกสารที่ 1 ให้ครบถ้วนสมบูรณ์ก่อนส่งคำร้อง");
+            return "redirect:/user/academic/new-request";
+        }
+
+        // ตรวจสอบว่าผู้ยื่นได้ลงนามครบทั้งเอกสาร 0 และ 1 หรือยัง
+        List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
+                com.ecom.academic.model.SignatureModule.ACADEMIC, id, List.of(0, 1));
+        if (!unsignedSigDocs.isEmpty()) {
+            String missingStr = unsignedSigDocs.stream().map(String::valueOf).collect(Collectors.joining(", "));
+            redirectAttributes.addFlashAttribute("error", "กรุณาลงนามอิเล็กทรอนิกส์ในเอกสารที่ " + missingStr + " ให้ครบถ้วนก่อนส่งคำร้อง");
             return "redirect:/user/academic/new-request";
         }
 

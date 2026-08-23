@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.ecom.academic.dto.SignatureNotice;
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
 import com.ecom.model.NotificationType;
 import com.ecom.model.UserDtls;
@@ -139,13 +140,35 @@ public class SignatureNotifier {
         notify(initiator, title, message, link, NotificationType.SIGNATURE_REMINDER, true);
     }
 
+    /** Tells the applicant that admin requested document correction and re-signing. */
+    @Async
+    public void notifyResignRequested(UserDtls applicant, SignatureModule module, Long requestId, int documentType,
+            String documentLabel, String reason) {
+        if (applicant == null) return;
+        String safeDoc = documentLabel != null && !documentLabel.isBlank() ? documentLabel : ("เอกสารที่ " + documentType);
+        String title = "ขอให้แก้ไขและลงนามใหม่: " + safeDoc;
+        String message = "แอดมินแจ้งให้ท่านแก้ไขข้อมูลและลงนามใหม่ในเอกสาร " + safeDoc
+                + (reason != null && !reason.isBlank() ? " (เหตุผล: " + reason + ")" : "");
+        String userLink = module == SignatureModule.POSITION
+                ? "/user/position/request/" + requestId + "/document/" + documentType
+                : "/user/academic/request/" + requestId + "/document/" + documentType;
+
+        notify(applicant, title, message, userLink, NotificationType.SIGNATURE_DECLINED, true);
+
+        String body = EmailTemplateHelper.wrapLayout("แจ้งให้แก้ไขข้อมูลและลงนามใหม่", "ต้องดำเนินการ",
+                "<p>แอดมินได้ตรวจสอบเอกสาร <strong>" + escape(safeDoc) + "</strong> และขอให้ท่านแก้ไขข้อมูลพร้อมลงนามใหม่อีกครั้ง</p>"
+                        + (reason != null && !reason.isBlank() ? "<p><strong>เหตุผลที่ส่งกลับ:</strong> " + escape(reason) + "</p>" : "")
+                        + "<p>ระบบได้ปลดล็อกเอกสารให้ท่านสามารถเข้าสู่ระบบเพื่อแก้ไขและลงนามใหม่ได้ทันที</p>");
+        email(applicant, title, body);
+    }
+
     // =====================================================================
     // Internals
     // =====================================================================
 
     private void notify(UserDtls recipient, String title, String message, String link,
             NotificationType type, boolean important) {
-        if (recipient == null) {
+        if (recipient == null || Boolean.FALSE.equals(recipient.getIsEnable())) {
             return;
         }
         try {
@@ -158,6 +181,9 @@ public class SignatureNotifier {
 
     private void email(UserDtls recipient, String subject, String htmlBody) {
         if (recipient == null || recipient.getEmail() == null || recipient.getEmail().isBlank()) {
+            return;
+        }
+        if (Boolean.FALSE.equals(recipient.getIsEnable())) {
             return;
         }
         // Honours the same per-account switch the rest of the system uses.

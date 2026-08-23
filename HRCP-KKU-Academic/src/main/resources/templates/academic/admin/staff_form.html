@@ -4,6 +4,11 @@
 <body>
     <section>
         <div class="container py-4">
+            <div class="mb-3" style="max-width: 700px; margin: 0 auto;">
+                <a href="/admin/academic/staff" class="btn-back-pill">
+                    <i class="fas fa-arrow-left"></i> กลับ
+                </a>
+            </div>
             <div class="card card-academic" style="max-width: 700px; margin: 0 auto;">
                 <div class="card-header bg-white">
                     <h4 class="mb-0">
@@ -166,8 +171,8 @@
                             <button type="submit" class="btn btn-warning" th:if="${duplicateWarning}">
                                 <i class="fas fa-user-plus"></i> ยืนยันว่าเป็นคนละคน เพิ่มต่อ
                             </button>
-                            <a href="/admin/academic/staff" class="btn btn-outline-secondary"><i
-                                    class="fas fa-arrow-left"></i> กลับ</a>
+                            <a href="/admin/academic/staff" class="btn-back-pill"><i
+                                     class="fas fa-arrow-left"></i> กลับ</a>
                         </div>
                     </form>
                 </div>

@@ -491,4 +491,60 @@ class SignatureWorkflowServiceTest {
         SignatureRequest reloaded = requestRepository.findById(envelope.getId()).orElseThrow();
         assertThat(reloaded.getDueAt()).isNotNull();
     }
+
+    @Test
+    @DisplayName("ตรวจสอบความครบถ้วนของลายเซ็นผู้ยื่นคำร้องก่อนยื่น")
+    void applicantSignatureCompletenessChecks() {
+        // Document 1 in POSITION module requires 'applicant'
+        List<Integer> positionDocs = List.of(1, 2);
+
+        // Before signing: incomplete
+        assertThat(workflow.areApplicantSignaturesComplete(MODULE, REQUEST_ID, positionDocs)).isFalse();
+        assertThat(workflow.getUnsignedApplicantDocTypes(MODULE, REQUEST_ID, positionDocs)).containsExactly(1, 2);
+
+        // Create envelope and sign Doc 1 with applicant
+        Result resDoc1 = workflow.createEnvelope(MODULE, REQUEST_ID, 1, "เอกสาร 1", "{}",
+                List.of(new SignerAssignment("applicant", head.getId())),
+                null, head, ActorContext.none());
+        assertThat(resDoc1.ok()).isTrue();
+
+        // Sign step
+        SignatureStep step1 = stepOf(resDoc1.request(), "applicant");
+        workflow.sign(step1.getId(), head, headSignature.getId(), true, ActorContext.none());
+
+        assertThat(workflow.isApplicantSignatureCompleted(MODULE, REQUEST_ID, 1)).isTrue();
+        assertThat(workflow.getUnsignedApplicantDocTypes(MODULE, REQUEST_ID, positionDocs)).containsExactly(2);
+
+        // Create and sign Doc 2
+        Result resDoc2 = workflow.createEnvelope(MODULE, REQUEST_ID, 2, "เอกสาร 2", "{}",
+                List.of(new SignerAssignment("applicant", head.getId())),
+                null, head, ActorContext.none());
+        SignatureStep step2 = stepOf(resDoc2.request(), "applicant");
+        workflow.sign(step2.getId(), head, headSignature.getId(), true, ActorContext.none());
+
+        assertThat(workflow.areApplicantSignaturesComplete(MODULE, REQUEST_ID, positionDocs)).isTrue();
+        assertThat(workflow.getUnsignedApplicantDocTypes(MODULE, REQUEST_ID, positionDocs)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("แอดมินสามารถส่งกลับให้แก้ไขและลงนามใหม่ได้ (requestDocumentResign)")
+    void adminCanRequestDocumentResign() {
+        // Create completed envelope for Doc 1
+        Result resDoc1 = workflow.createEnvelope(MODULE, REQUEST_ID, 1, "เอกสาร 1", "{}",
+                List.of(new SignerAssignment("applicant", head.getId())),
+                null, head, ActorContext.none());
+        SignatureStep step1 = stepOf(resDoc1.request(), "applicant");
+        workflow.sign(step1.getId(), head, headSignature.getId(), true, ActorContext.none());
+
+        assertThat(workflow.isDocumentLocked(MODULE, REQUEST_ID, 1)).isTrue();
+
+        // Admin requests re-sign
+        Result resignResult = workflow.requestDocumentResign(MODULE, REQUEST_ID, 1,
+                "ลายเซ็นไม่ชัดเจน กรุณาลงนามใหม่", admin, ActorContext.none());
+        assertThat(resignResult.ok()).isTrue();
+
+        // Document is now unlocked for applicant edit & re-sign
+        assertThat(workflow.isDocumentLocked(MODULE, REQUEST_ID, 1)).isFalse();
+        assertThat(workflow.isApplicantSignatureCompleted(MODULE, REQUEST_ID, 1)).isFalse();
+    }
 }

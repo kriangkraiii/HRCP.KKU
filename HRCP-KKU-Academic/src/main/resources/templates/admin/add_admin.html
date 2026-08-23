@@ -15,8 +15,8 @@
 						<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
 							style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #1a237e, #0d47a1) !important;">
 							<h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>เพิ่มบัญชีผู้ใช้งาน</h5>
-							<a th:href="${param.type != null ? '/admin/users?type=' + param.type[0] : '/admin/users?type=1'}" class="btn btn-outline-light btn-sm">
-								<i class="fas fa-arrow-left me-1"></i> กลับหน้ารายชื่อ
+							<a th:href="${param.type != null ? '/admin/users?type=' + param.type[0] : '/admin/users?type=1'}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+								<i class="fas fa-arrow-left me-1"></i> กลับ
 							</a>
 						</div>
 						<div class="card-body p-4">
@@ -34,7 +34,7 @@
 								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
 							</div>
 
-							<div class="alert alert-info border-0" style="background: #e8eaf6;">
+							<div class="alert alert-info border-0">
 								<i class="fas fa-info-circle me-2 text-primary"></i>
 								<strong>หมายเหตุ:</strong> บัญชีที่เพิ่มจะยังไม่มีรหัสผ่าน ผู้ใช้ต้องกด
 								"เข้าสู่ระบบครั้งแรก" เพื่อตั้งรหัสผ่านผ่าน OTP
@@ -114,7 +114,7 @@
 
 								<div class="mb-4">
 									<div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-center gap-3">
-										<div class="position-relative flex-shrink-0" style="width: 110px; height: 110px; min-width: 110px; max-width: 110px; border-radius: 50%; overflow: hidden; border: 3px solid #fff; box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: #e9ecef;">
+										<div class="position-relative flex-shrink-0" style="width: 110px; height: 110px; min-width: 110px; max-width: 110px; border-radius: 50%; overflow: hidden; border: 3px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: var(--bg-hover);">
 											<img id="newAdminAvatarPreview"
 												th:src="@{/img/profile_img/default.png}" 
 												alt="Profile Preview" 

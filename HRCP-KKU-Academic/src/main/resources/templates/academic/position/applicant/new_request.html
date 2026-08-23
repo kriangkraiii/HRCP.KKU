@@ -4,13 +4,18 @@
 <body>
     <section>
         <div class="container py-4">
+            <div class="mb-3">
+                <a href="/user/position/dashboard" class="btn-back-pill">
+                    <i class="fas fa-arrow-left"></i> กลับ
+                </a>
+            </div>
             <h3 class="mb-4"><i class="fas fa-university"></i> การยื่นขอตำแหน่งทางวิชาการ — เลือกผลประเมินการสอน</h3>
 
             <div th:unless="${hasEligible}" class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <strong>ไม่พบผลการประเมินผลการสอนที่ใช้ได้</strong>
                 <p class="mb-0 mt-2">คุณต้องมีผลการประเมินผลการสอนที่ <strong>ผ่านและยังไม่หมดอายุ</strong> จึงจะยื่นขอตำแหน่งทางวิชาการได้</p>
-                <a href="/user/academic/dashboard" class="btn btn-outline-warning mt-3">
+                <a href="/user/academic/dashboard" class="btn-back-pill mt-3">
                     <i class="fas fa-arrow-left"></i> กลับไปยื่นขอประเมินการสอน
                 </a>
             </div>
@@ -44,8 +49,8 @@
                     </div>
                 </div>
 
-                <a href="/user/position/dashboard" class="btn btn-outline-secondary mt-2">
-                    <i class="fas fa-arrow-left"></i> กลับแดชบอร์ด
+                <a href="/user/position/dashboard" class="btn-back-pill mt-2">
+                    <i class="fas fa-arrow-left"></i> กลับ
                 </a>
             </div>
         </div>

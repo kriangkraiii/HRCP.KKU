@@ -781,6 +781,41 @@ public class AcademicAdminController {
         return "redirect:/admin/academic/request/" + id + "?success=doc_generated";
     }
 
+    @PostMapping("/request/{id}/document/{type}/request-resign")
+    public String requestDocumentResign(
+            @PathVariable Long id,
+            @PathVariable int type,
+            @RequestParam(value = "reason", required = false) String reason,
+            Principal principal,
+            RedirectAttributes redirectAttributes) {
+        UserDtls admin = getUser(principal);
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
+                getClientIpAddress(), httpRequest.getHeader("User-Agent"));
+
+        signatureWorkflow.requestDocumentResign(
+                com.ecom.academic.model.SignatureModule.ACADEMIC,
+                id,
+                type,
+                reason,
+                admin,
+                actorContext);
+
+        try {
+            adminLogService.log(principal.getName(), admin.getName(),
+                    "REQUEST_DOC_RESIGN",
+                    "ขอให้แก้ไขและลงนามใหม่ เอกสารที่ " + type + " คำร้อง #" + id + (reason != null && !reason.isBlank() ? " เหตุผล: " + reason : ""),
+                    getClientIpAddress());
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
+
+        redirectAttributes.addFlashAttribute("success", "ส่งคำขอแก้ไขและลงนามใหม่สำหรับเอกสารที่ " + type + " เรียบร้อยแล้ว");
+        return "redirect:/admin/academic/request/" + id;
+    }
+
     @PostMapping("/request/{id}/document/5/send-suggestion")
     public String sendSuggestionEmail(@PathVariable Long id, Principal principal,
             RedirectAttributes redirectAttributes) {

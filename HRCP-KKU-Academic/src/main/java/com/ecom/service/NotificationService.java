@@ -47,6 +47,10 @@ public class NotificationService {
             log.warn("Cannot send notification: recipient is null");
             return null;
         }
+        if (Boolean.FALSE.equals(recipient.getIsEnable())) {
+            log.debug("Skipping notification for inactive user: {}", recipient.getEmail());
+            return null;
+        }
         try {
             Notification notification = new Notification(recipient, actor, title, message, link, type, isImportant);
             return notificationRepository.save(notification);
@@ -63,6 +67,9 @@ public class NotificationService {
         try {
             List<UserDtls> admins = userRepository.findByRole("ROLE_ADMIN");
             for (UserDtls admin : admins) {
+                if (Boolean.FALSE.equals(admin.getIsEnable())) {
+                    continue; // Skip inactive admins
+                }
                 sendNotification(admin, actor, title, message, link, type, isImportant);
             }
         } catch (Exception e) {

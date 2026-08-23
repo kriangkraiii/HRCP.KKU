@@ -400,33 +400,52 @@ body {
 /* ===== Floating Document Buttons ===== */
 .floating-doc-btn {
   position: fixed;
-  top: 70px;
+  top: 75px;
   bottom: auto !important;
   z-index: 1040;
-  border-radius: 50px !important;
-  padding: 10px 20px !important;
+  border-radius: 9999px !important;
+  padding: 8px 18px !important;
   font-size: 0.88rem !important;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.15);
-  transition:
-    transform 0.2s,
-    box-shadow 0.2s;
+  font-weight: 500;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease, background-color 0.2s ease;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 .floating-doc-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
 }
 .floating-doc-btn-back {
-  left: calc(var(--sidebar-width) + 20px);
+  left: calc(var(--sidebar-width, 260px) + 24px);
+  background-color: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  color: #475569;
+}
+.floating-doc-btn-back:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  color: #1e293b;
 }
 .floating-doc-btn-preview {
-  right: 20px;
+  right: 24px;
+  background-color: #ffffff;
+  border: 1.5px solid #0d47a1;
+  color: #0d47a1;
+}
+.floating-doc-btn-preview:hover {
+  background-color: #0d47a1;
+  color: #ffffff;
 }
 @media (max-width: 991px) {
   .floating-doc-btn {
-    top: 65px;
+    top: 68px;
   }
   .floating-doc-btn-back {
-    left: 20px;
+    left: 16px;
+  }
+  .floating-doc-btn-preview {
+    right: 16px;
   }
 }
 
@@ -3331,26 +3350,31 @@ body {
 }
 
 /* ===== Back Button ===== */
+/* ===== Back Button Pill ===== */
+.btn-back-pill,
 .btn-back-v2 {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 18px;
-  border: 1px solid var(--border-color);
-  border-radius: 8px;
-  background: var(--bg-card);
-  color: var(--text-secondary);
+  padding: 6px 18px;
+  border: 1px solid var(--border-color, rgba(0, 0, 0, 0.15));
+  border-radius: 9999px;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-secondary, #475569);
   font-family: "Sarabun", sans-serif;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   font-weight: 600;
   text-decoration: none;
-  transition: all var(--duration-fast);
-  margin-top: var(--space-sm);
+  transition: all 0.2s ease-in-out;
+  cursor: pointer;
 }
 
+.btn-back-pill:hover,
 .btn-back-v2:hover {
-  border-color: var(--color-primary-medium);
-  color: var(--color-primary-medium);
+  border-color: var(--color-primary-medium, #1a237e);
+  color: var(--color-primary-medium, #1a237e);
+  background: var(--bg-hover, rgba(0, 0, 0, 0.04));
+  transform: translateX(-2px);
 }
 
 /* ===== Detail Locked State ===== */

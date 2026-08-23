@@ -113,6 +113,9 @@ public class UserDtls {
 	@Column(name = "expiry_alert_1w")
 	private Boolean expiryAlert1w = true;
 
+	@Column(name = "custom_expiry_alerts", columnDefinition = "TEXT")
+	private String customExpiryAlerts;
+
 	@Column(name = "applicant_id")
 	private String applicantId;
 
@@ -431,6 +434,14 @@ public class UserDtls {
 
 	public void setExpiryAlert1w(Boolean expiryAlert1w) {
 		this.expiryAlert1w = expiryAlert1w;
+	}
+
+	public String getCustomExpiryAlerts() {
+		return customExpiryAlerts;
+	}
+
+	public void setCustomExpiryAlerts(String customExpiryAlerts) {
+		this.customExpiryAlerts = customExpiryAlerts;
 	}
 
 	public String getApplicantId() {

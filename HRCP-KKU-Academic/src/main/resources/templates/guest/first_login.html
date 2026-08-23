@@ -73,7 +73,7 @@
     </div>
 
     <script>
-        document.getElementById('firstLoginForm').addEventListener('submit', function () {
+        document.getElementById('firstLoginForm')?.addEventListener('submit', function () {
             var btn = document.getElementById('submitBtn');
             if (btn) {
                 btn.classList.add('is-loading');

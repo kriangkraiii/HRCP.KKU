@@ -1,6 +1,7 @@
 package com.ecom.academic.controller;
 
 import java.security.Principal;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -249,11 +250,24 @@ public class PositionApplicantController {
         // For applicant, only show applicant-fillable docs
         Map<Integer, String> docLabels = positionService.getApplicantDocLabels();
 
+        // ตรวจสอบลายเซ็นผู้ยื่นในแต่ละเอกสาร
+        Map<Integer, Boolean> docSignedMap = new HashMap<>();
+        for (Integer docType : PositionRequestService.APPLICANT_DOCS) {
+            docSignedMap.put(docType, signatureWorkflow.isApplicantSignatureCompleted(
+                    com.ecom.academic.model.SignatureModule.POSITION, id, docType));
+        }
+        List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
+                com.ecom.academic.model.SignatureModule.POSITION, id, PositionRequestService.APPLICANT_DOCS);
+        boolean applicantSignaturesComplete = unsignedSigDocs.isEmpty();
+
         model.addAttribute("request", request);
         model.addAttribute("completedDocs", completedDocs);
         model.addAttribute("documents", documents);
         model.addAttribute("docLabels", docLabels);
         model.addAttribute("applicantDocs", PositionRequestService.APPLICANT_DOCS);
+        model.addAttribute("docSignedMap", docSignedMap);
+        model.addAttribute("unsignedSigDocs", unsignedSigDocs);
+        model.addAttribute("applicantSignaturesComplete", applicantSignaturesComplete);
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
 
         // ดึงข้อมูลตำแหน่งจาก doc_2
@@ -390,6 +404,13 @@ public class PositionApplicantController {
         boolean allDone = PositionRequestService.APPLICANT_DOCS.stream().allMatch(completed::contains);
         if (!allDone) {
             return "redirect:/user/position/request/" + id + "?error=incomplete_docs";
+        }
+
+        // Check all applicant docs requiring signature are signed
+        List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
+                com.ecom.academic.model.SignatureModule.POSITION, id, PositionRequestService.APPLICANT_DOCS);
+        if (!unsignedSigDocs.isEmpty()) {
+            return "redirect:/user/position/request/" + id + "?error=unsigned_docs";
         }
 
         positionService.submitRequest(request);

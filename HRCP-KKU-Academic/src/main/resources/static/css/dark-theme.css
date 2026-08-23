@@ -27,6 +27,9 @@
 
     --footer-bg: #ffffff;
     --footer-border: #e0e0e0;
+    
+    --card-bg: #ffffff;
+    --text-color: #212529;
 }
 
 /* === Dark Theme === */
@@ -54,6 +57,17 @@
 
     --footer-bg: #1a1d26;
     --footer-border: #2d3041;
+    
+    --card-bg: #1a1d26;
+    --text-color: #e2e4e9;
+
+    --status-received-bg: rgba(21, 101, 192, 0.22);
+    --status-appointed-bg: rgba(230, 81, 0, 0.22);
+    --status-meeting-bg: rgba(123, 31, 162, 0.22);
+    --status-pass-bg: rgba(46, 125, 50, 0.22);
+    --status-revise-bg: rgba(245, 127, 23, 0.22);
+    --status-rejected-bg: rgba(198, 40, 40, 0.22);
+    --status-completed-bg: rgba(46, 125, 50, 0.22);
 }
 
 /* ===============================
@@ -1363,6 +1377,30 @@ body,
     box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
+[data-theme="dark"] .floating-doc-btn-back {
+    background-color: #1e293b;
+    border-color: rgba(255, 255, 255, 0.18);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .floating-doc-btn-back:hover {
+    background-color: #334155;
+    border-color: rgba(255, 255, 255, 0.3);
+    color: #ffffff;
+}
+
+[data-theme="dark"] .floating-doc-btn-preview {
+    background-color: #1e293b;
+    border-color: #3b82f6;
+    color: #60a5fa;
+}
+
+[data-theme="dark"] .floating-doc-btn-preview:hover {
+    background-color: #2563eb;
+    border-color: #2563eb;
+    color: #ffffff;
+}
+
 /* Doc items v2 */
 [data-theme="dark"] .doc-item-v2:hover {
     background: rgba(255, 255, 255, 0.04);
@@ -1803,4 +1841,280 @@ body,
     background-color: #192030 !important;
     border-color: #334155 !important;
     color: #94a3b8 !important;
+}
+
+/* -- DOCX Document Preview in Dark Mode -- */
+[data-theme="dark"] .docx-preview-container {
+    background-color: #1a1d26 !important;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.7) !important;
+}
+
+[data-theme="dark"] .docx-preview-body {
+    background: #12141c !important;
+}
+
+[data-theme="dark"] .docx-preview-iframe {
+    background: #12141c !important;
+}
+
+[data-theme="dark"] .docx-loading {
+    background: rgba(18, 20, 28, 0.95) !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .docx-spinner {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    border-top-color: #60a5fa !important;
+}
+
+[data-theme="dark"] .docx-fallback-banner {
+    background: rgba(245, 158, 11, 0.15) !important;
+    color: #fbbf24 !important;
+    border-bottom-color: rgba(245, 158, 11, 0.3) !important;
+}
+
+/* -- Guide & Help Icons in Dark Mode -- */
+[data-theme="dark"] .guide-feature-icon {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="dark"] .guide-step-num {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+}
+
+[data-theme="dark"] .guide-card {
+    background: #1a1d26 !important;
+    border-color: #2d3041 !important;
+}
+
+/* -- Searchable Select in Dark Mode -- */
+[data-theme="dark"] .searchable-select-btn {
+    background-color: #1e293b !important;
+    color: #e2e8f0 !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .searchable-select-dropdown {
+    background: #1e293b !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .searchable-select-search {
+    background: #1e293b !important;
+    border-bottom-color: #334155 !important;
+}
+
+[data-theme="dark"] .searchable-select-search input {
+    background-color: #0f172a !important;
+    color: #f8fafc !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .searchable-select-item {
+    color: #cbd5e1 !important;
+    border-bottom-color: #334155 !important;
+}
+
+[data-theme="dark"] .searchable-select-item:hover,
+[data-theme="dark"] .searchable-select-item.is-focused {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .searchable-select-item.is-selected {
+    background-color: rgba(37, 99, 235, 0.25) !important;
+    color: #60a5fa !important;
+}
+
+/* -- E-Signature interactive elements in Dark Mode -- */
+[data-theme="dark"] .sig-tabs {
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .sig-tab {
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .sig-tab:hover:not(.active) {
+    background-color: rgba(255, 255, 255, 0.06) !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .sig-tab.active {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+[data-theme="dark"] .sig-preview-box {
+    background-color: #1e2533 !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .sig-card {
+    background-color: #1a1d26 !important;
+    border-color: #334155 !important;
+}
+
+[data-theme="dark"] .esign-viewer-toolbar {
+    background-color: #131722 !important;
+    border-bottom-color: #242c3d !important;
+}
+
+[data-theme="dark"] .esign-viewer-wrapper,
+[data-theme="dark"] .esign-viewer-pages {
+    background-color: #1e2533 !important;
+}
+
+/* ============================================================
+   Petition Status Badges & Timeline in Dark Mode
+   ============================================================ */
+
+[data-theme="dark"] .status-blue {
+    background-color: rgba(21, 101, 192, 0.2) !important;
+    color: #64b5f6 !important;
+    border: 1px solid rgba(100, 181, 246, 0.3) !important;
+}
+
+[data-theme="dark"] .status-orange {
+    background-color: rgba(230, 81, 0, 0.2) !important;
+    color: #ffb74d !important;
+    border: 1px solid rgba(255, 183, 77, 0.3) !important;
+}
+
+[data-theme="dark"] .status-purple {
+    background-color: rgba(123, 31, 162, 0.2) !important;
+    color: #ce93d8 !important;
+    border: 1px solid rgba(206, 147, 216, 0.3) !important;
+}
+
+[data-theme="dark"] .status-green {
+    background-color: rgba(46, 125, 50, 0.2) !important;
+    color: #81c784 !important;
+    border: 1px solid rgba(129, 199, 132, 0.3) !important;
+}
+
+[data-theme="dark"] .status-yellow {
+    background-color: rgba(245, 127, 23, 0.2) !important;
+    color: #ffe082 !important;
+    border: 1px solid rgba(255, 224, 130, 0.3) !important;
+}
+
+[data-theme="dark"] .status-red {
+    background-color: rgba(198, 40, 40, 0.2) !important;
+    color: #ef9a9a !important;
+    border: 1px solid rgba(239, 154, 154, 0.3) !important;
+}
+
+[data-theme="dark"] .status-dark-green {
+    background-color: rgba(27, 94, 32, 0.25) !important;
+    color: #a5d6a7 !important;
+    border: 1px solid rgba(165, 214, 167, 0.3) !important;
+}
+
+[data-theme="dark"] .status-timeline::before {
+    background: #334155 !important;
+}
+
+[data-theme="dark"] .status-item::before {
+    background: #3b82f6 !important;
+    border: 3px solid #1a1d26 !important;
+    box-shadow: 0 0 0 2px #3b82f6 !important;
+}
+
+[data-theme="dark"] .status-date {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .status-note {
+    background: #1e2533 !important;
+    border-left: 3px solid #3b82f6 !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .petition-card {
+    background: #1a1d26 !important;
+    border: 1px solid #2d3041 !important;
+    color: #e2e4e9 !important;
+}
+
+/* ============================================================
+   Notification Center & Action Buttons in Dark Mode
+   ============================================================ */
+
+[data-theme="dark"] .notification-row {
+    background-color: var(--bg-card) !important;
+    border-color: var(--border-color) !important;
+    color: var(--text-primary) !important;
+}
+
+[data-theme="dark"] .notification-row:hover {
+    background-color: rgba(255, 255, 255, 0.04) !important;
+}
+
+[data-theme="dark"] .notification-row.unread-row {
+    background-color: rgba(21, 101, 192, 0.12) !important;
+    border-left: 3px solid #3b82f6 !important;
+}
+
+[data-theme="dark"] .notification-row.unread-row:hover {
+    background-color: rgba(21, 101, 192, 0.18) !important;
+}
+
+[data-theme="dark"] .notification-row .notif-title {
+    color: var(--text-heading, #f0f1f3) !important;
+}
+
+[data-theme="dark"] .notification-row .notif-message {
+    color: var(--text-secondary, #9ca3af) !important;
+}
+
+[data-theme="dark"] .notif-type-badge {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    color: var(--text-primary, #e2e4e9) !important;
+    border-color: var(--border-color, #2d3041) !important;
+}
+
+[data-theme="dark"] .notification-row .btn-light,
+[data-theme="dark"] .notif-kebab-btn {
+    background-color: rgba(255, 255, 255, 0.07) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .notification-row .btn-light:hover,
+[data-theme="dark"] .notif-kebab-btn:hover {
+    background-color: rgba(255, 255, 255, 0.16) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+}
+
+/* Global btn-light Dark Mode */
+[data-theme="dark"] .btn-light {
+    background-color: rgba(255, 255, 255, 0.08) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    color: var(--text-primary, #e2e4e9) !important;
+}
+
+[data-theme="dark"] .btn-light:hover,
+[data-theme="dark"] .btn-light:focus {
+    background-color: rgba(255, 255, 255, 0.16) !important;
+    border-color: rgba(255, 255, 255, 0.25) !important;
+    color: #ffffff !important;
+}
+
+/* Global Back Button Pill Dark Mode */
+[data-theme="dark"] .btn-back-pill,
+[data-theme="dark"] .btn-back-v2 {
+    border-color: rgba(255, 255, 255, 0.15) !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .btn-back-pill:hover,
+[data-theme="dark"] .btn-back-v2:hover {
+    border-color: rgba(255, 255, 255, 0.35) !important;
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+    transform: translateX(-2px);
 }

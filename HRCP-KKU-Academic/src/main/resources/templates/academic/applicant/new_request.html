@@ -27,6 +27,10 @@
                 <span th:if="${param.error[0] == 'incomplete_docs'}">กรุณากรอกเอกสารและแบบตรวจสอบให้ครบถ้วนก่อนส่งคำร้อง</span>
                 <span th:unless="${param.error[0] == 'incomplete_docs'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            <div class="mb-3">
+                <a href="/user/academic/dashboard" class="btn-back-pill">
+                    <i class="fas fa-arrow-left"></i> กลับ
+                </a>
             </div>
 
             <!-- Page Header -->
@@ -72,18 +76,27 @@
                 <!-- เอกสารที่ 0 -->
                 <div class="doc-checklist-item" th:classappend="${hasDoc0} ? 'dci-done' : ''">
                     <div class="doc-checklist-icon">
-                        <i th:if="${hasDoc0}" class="fas fa-check"></i>
+                        <i th:if="${hasDoc0 and doc0Signed}" class="fas fa-check"></i>
+                        <i th:if="${hasDoc0 and !doc0Signed}" class="fas fa-pen-nib text-warning"></i>
                         <i th:unless="${hasDoc0}" class="fas fa-file-signature"></i>
                     </div>
                     <div class="doc-checklist-body">
-                        <h6>เอกสารที่ 0: บันทึกข้อความ ขอรับการประเมินผลการสอน</h6>
-                        <p>บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน</p>
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h6 class="mb-0">เอกสารที่ 0: บันทึกข้อความ ขอรับการประเมินผลการสอน</h6>
+                            <span th:if="${hasDoc0 and doc0Signed}" class="badge bg-success-subtle text-success border border-success-subtle">
+                                <i class="fas fa-check me-1"></i> ลงนามแล้ว
+                            </span>
+                            <span th:if="${hasDoc0 and !doc0Signed}" class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                <i class="fas fa-pen-nib me-1"></i> รอผู้ยื่นลงนาม
+                            </span>
+                        </div>
+                        <p class="mb-0 mt-1">บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน</p>
                     </div>
                     <div class="doc-checklist-action">
                         <a th:href="'/user/academic/request/' + ${request.id} + '/document-0'"
                            class="btn btn-sm" th:classappend="${hasDoc0} ? 'btn-outline-success' : 'btn-academic'">
                             <i th:class="${hasDoc0} ? 'fas fa-edit' : 'fas fa-plus-circle'" class="me-1"></i>
-                            [[${hasDoc0} ? 'แก้ไข' : 'กรอก']]
+                            [[${hasDoc0} ? 'แก้ไข/ลงนาม' : 'กรอก']]
                         </a>
                     </div>
                 </div>
@@ -91,36 +104,59 @@
                 <!-- เอกสารที่ 1 -->
                 <div class="doc-checklist-item" th:classappend="${hasDoc1} ? 'dci-done' : ''">
                     <div class="doc-checklist-icon">
-                        <i th:if="${hasDoc1}" class="fas fa-check"></i>
+                        <i th:if="${hasDoc1 and doc1Signed}" class="fas fa-check"></i>
+                        <i th:if="${hasDoc1 and !doc1Signed}" class="fas fa-pen-nib text-warning"></i>
                         <i th:unless="${hasDoc1}" class="fas fa-clipboard-check"></i>
                     </div>
                     <div class="doc-checklist-body">
-                        <h6>เอกสารที่ 1: แบบตรวจสอบเบื้องต้น</h6>
-                        <p>แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน</p>
+                        <div class="d-flex align-items-center flex-wrap gap-2">
+                            <h6 class="mb-0">เอกสารที่ 1: แบบตรวจสอบเบื้องต้น</h6>
+                            <span th:if="${hasDoc1 and doc1Signed}" class="badge bg-success-subtle text-success border border-success-subtle">
+                                <i class="fas fa-check me-1"></i> ลงนามแล้ว
+                            </span>
+                            <span th:if="${hasDoc1 and !doc1Signed}" class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                <i class="fas fa-pen-nib me-1"></i> รอผู้ยื่นลงนาม
+                            </span>
+                        </div>
+                        <p class="mb-0 mt-1">แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน</p>
                     </div>
                     <div class="doc-checklist-action">
                         <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'"
                            class="btn btn-sm" th:classappend="${hasDoc1} ? 'btn-outline-success' : 'btn-academic'">
                             <i th:class="${hasDoc1} ? 'fas fa-edit' : 'fas fa-plus-circle'" class="me-1"></i>
-                            [[${hasDoc1} ? 'แก้ไข' : 'กรอก']]
+                            [[${hasDoc1} ? 'แก้ไข/ลงนาม' : 'กรอก']]
                         </a>
                     </div>
                 </div>
             </div>
 
             <!-- Submit Section -->
-            <div class="submit-section" th:classappend="${hasDoc0 and hasDoc1} ? 'submit-section-ready' : ''">
-                <th:block th:if="${hasDoc0 and hasDoc1}">
+            <div class="submit-section" th:classappend="${hasDoc0 and hasDoc1 and applicantSignaturesComplete} ? 'submit-section-ready' : ''">
+                <th:block th:if="${hasDoc0 and hasDoc1 and applicantSignaturesComplete}">
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <i class="fas fa-check-circle text-success fs-5"></i>
-                        <span class="fw-600">เอกสารครบถ้วน พร้อมส่งคำร้อง</span>
+                        <span class="fw-600">เอกสารและลายเซ็นครบถ้วน พร้อมส่งคำร้อง</span>
                     </div>
                     <div class="submit-section-actions">
                         <button type="button" class="btn btn-academic btn-lg" data-bs-toggle="modal" data-bs-target="#confirmSubmitModal">
                             <i class="fas fa-paper-plane me-1"></i> ส่งคำร้อง
                         </button>
-                        <a href="/user/academic/dashboard" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-1"></i> กลับแดชบอร์ด
+                        <a href="/user/academic/dashboard" class="btn-back-pill">
+                            <i class="fas fa-arrow-left"></i> กลับ
+                        </a>
+                    </div>
+                </th:block>
+                <th:block th:if="${hasDoc0 and hasDoc1 and !applicantSignaturesComplete}">
+                    <div class="d-flex align-items-center gap-2 mb-3">
+                        <i class="fas fa-exclamation-triangle text-warning fs-5"></i>
+                        <span class="text-dark">กรุณาลงนามอิเล็กทรอนิกส์ในเอกสาร (ที่ระบุว่ารอลงนาม) ให้ครบถ้วนก่อนส่งคำร้อง</span>
+                    </div>
+                    <div class="submit-section-actions">
+                        <button class="btn btn-secondary btn-lg" disabled title="กรุณาลงนามเอกสารให้ครบถ้วนก่อน">
+                            <i class="fas fa-lock me-1"></i> รอดำเนินการลงนาม
+                        </button>
+                        <a href="/user/academic/dashboard" class="btn-back-pill">
+                            <i class="fas fa-arrow-left"></i> กลับ
                         </a>
                     </div>
                 </th:block>
@@ -133,8 +169,8 @@
                         <button class="btn btn-secondary btn-lg" disabled>
                             <i class="fas fa-paper-plane me-1"></i> ส่งคำร้อง
                         </button>
-                        <a href="/user/academic/dashboard" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-1"></i> กลับแดชบอร์ด
+                        <a href="/user/academic/dashboard" class="btn-back-pill">
+                            <i class="fas fa-arrow-left"></i> กลับ
                         </a>
                     </div>
                 </th:block>

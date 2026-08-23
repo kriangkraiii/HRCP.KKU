@@ -92,7 +92,7 @@
                                                 <div>
                                                     <h6 class="mb-0"><i class="fas fa-calendar-check text-success"></i>
                                                         6 เดือนก่อนหมด</h6>
-                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 6 เดือน</small>
+                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 6 เดือน (180 วัน)</small>
                                                 </div>
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input setting-toggle" type="checkbox"
@@ -110,7 +110,7 @@
                                                     <h6 class="mb-0"><i
                                                             class="fas fa-exclamation-triangle text-warning"></i> 3
                                                         เดือนก่อนหมด</h6>
-                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 3 เดือน</small>
+                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 3 เดือน (90 วัน)</small>
                                                 </div>
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input setting-toggle" type="checkbox"
@@ -127,7 +127,7 @@
                                                 <div>
                                                     <h6 class="mb-0"><i class="fas fa-clock text-danger"></i> 1
                                                         เดือนก่อนหมด</h6>
-                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 1 เดือน</small>
+                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 1 เดือน (30 วัน)</small>
                                                 </div>
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input setting-toggle" type="checkbox"
@@ -151,6 +151,61 @@
                                                         data-key="expiryAlert1w"
                                                         th:checked="${user.expiryAlert1w != null && user.expiryAlert1w}"
                                                         style="width:2.5em;height:1.3em;cursor:pointer">
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Custom Expiry Alerts Section (Max 5) -->
+                                <hr class="my-4">
+                                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+                                    <div>
+                                        <h6 class="mb-1 fw-bold">
+                                            <i class="fas fa-sliders-h text-primary me-2"></i>การแจ้งเตือนกำหนดเอง (Custom Alerts)
+                                        </h6>
+                                        <small class="text-muted">เลือกเวลาแจ้งเตือนล่วงหน้าเพิ่มเติมได้เองสูงสุด 5 ครั้ง</small>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
+                                            id="btnAddCustomAlert"
+                                            th:disabled="${customAlerts != null && customAlerts.size() >= 5}"
+                                            data-bs-toggle="modal" data-bs-target="#customAlertModal">
+                                        <i class="fas fa-plus me-1"></i> เพิ่มเวลาแจ้งเตือน
+                                        <span class="badge bg-primary text-white rounded-pill ms-1" id="customAlertCountBadge"
+                                              th:text="${(customAlerts != null ? customAlerts.size() : 0) + ' / 5'}">0 / 5</span>
+                                    </button>
+                                </div>
+
+                                <!-- Custom Alerts Cards -->
+                                <div id="customAlertsContainer" class="row g-3">
+                                    <div th:if="${customAlerts == null || customAlerts.isEmpty()}" id="customAlertEmpty" class="col-12">
+                                        <div class="text-center py-4 px-3 border border-dashed rounded-3" style="background: var(--bg-hover, rgba(0,0,0,0.02));">
+                                            <i class="fas fa-clock fa-2x text-muted mb-2 opacity-50"></i>
+                                            <p class="text-muted small mb-0">ยังไม่มีการแจ้งเตือนกำหนดเอง กดปุ่ม <strong>"เพิ่มเวลาแจ้งเตือน"</strong> เพื่อสร้างการแจ้งเตือนเพิ่มเติม</p>
+                                        </div>
+                                    </div>
+
+                                    <div th:each="ca : ${customAlerts}" class="col-md-6 custom-alert-item" th:id="'custom-alert-' + ${ca.id}">
+                                        <div class="card h-100" style="border-left: 4px solid #0288d1">
+                                            <div class="card-body d-flex justify-content-between align-items-center">
+                                                <div>
+                                                    <h6 class="mb-0 fw-bold">
+                                                        <i class="fas fa-stopwatch text-info me-1"></i>
+                                                        <span th:text="${ca.label}">15 วันก่อนหมด</span>
+                                                    </h6>
+                                                    <small class="text-muted" th:text="'แจ้งเตือนล่วงหน้า ' + ${ca.days} + ' วัน'">แจ้งเตือนล่วงหน้า 15 วัน</small>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <div class="form-check form-switch mb-0">
+                                                        <input class="form-check-input custom-alert-toggle" type="checkbox"
+                                                            th:data-id="${ca.id}"
+                                                            th:checked="${ca.enabled}"
+                                                            style="width:2.5em;height:1.3em;cursor:pointer">
+                                                    </div>
+                                                    <button type="button" class="btn btn-outline-danger btn-sm p-1 px-2 custom-alert-delete-btn rounded-circle"
+                                                            th:data-id="${ca.id}" title="ลบการแจ้งเตือน">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
                                                 </div>
                                             </div>
                                         </div>
@@ -311,6 +366,44 @@
                         #verifyOtpBtn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
                         #resendOtpBtn:hover:not(:disabled) { background: #1a237e; color: #fff; }
                     </style>
+
+                    <!-- Modal: Add Custom Expiry Alert -->
+                    <div class="modal fade" id="customAlertModal" tabindex="-1" aria-labelledby="customAlertModalLabel" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+                            <div class="modal-content border-0 shadow" style="border-radius: 16px; overflow: hidden;">
+                                <div class="modal-header border-0 pb-0">
+                                    <h5 class="modal-title fw-bold" id="customAlertModalLabel">
+                                        <i class="fas fa-bell text-primary me-2"></i>เพิ่มเวลาแจ้งเตือนกำหนดเอง
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body pt-3">
+                                    <div id="customAlertModalError" class="alert alert-danger py-2 mb-3 d-none" style="border-radius: 10px; font-size: 0.9rem;"></div>
+                                    <form id="customAlertForm" onsubmit="event.preventDefault(); saveCustomAlert();">
+                                        <label class="form-label fw-bold mb-2">แจ้งเตือนล่วงหน้า</label>
+                                        <div class="input-group mb-2">
+                                            <input type="number" class="form-control" id="customAlertValue" min="1" max="365" placeholder="ระบุตัวเลข เช่น 15" required>
+                                            <select class="form-select" id="customAlertUnit" style="max-width: 140px;">
+                                                <option value="DAYS">วัน (Days)</option>
+                                                <option value="WEEKS">สัปดาห์ (Weeks)</option>
+                                                <option value="MONTHS">เดือน (Months)</option>
+                                            </select>
+                                            <span class="input-group-text bg-light text-muted">ก่อนหมด</span>
+                                        </div>
+                                        <div class="form-text text-muted mb-0">
+                                            <i class="fas fa-info-circle me-1"></i>ระบบจะส่งแจ้งเตือนทางอีเมลและในระบบเมื่อถึงเวลานี้ (เพิ่มได้สูงสุด 5 รายการ)
+                                        </div>
+                                    </form>
+                                </div>
+                                <div class="modal-footer border-0 pt-0">
+                                    <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">ยกเลิก</button>
+                                    <button type="button" class="btn btn-primary rounded-pill px-4" id="btnSaveCustomAlert" onclick="saveCustomAlert()">
+                                        <i class="fas fa-save me-1"></i> บันทึก
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -611,6 +704,129 @@
                 if (otpTimer) clearInterval(otpTimer);
                 if (resendCooldownTimer) clearInterval(resendCooldownTimer);
             });
+
+            // === Custom Expiry Alerts (Max 5) ===
+            function saveCustomAlert() {
+                var valInput = document.getElementById('customAlertValue');
+                var unitSelect = document.getElementById('customAlertUnit');
+                var errDiv = document.getElementById('customAlertModalError');
+                var saveBtn = document.getElementById('btnSaveCustomAlert');
+
+                var val = parseInt(valInput.value, 10);
+                var unit = unitSelect.value;
+
+                if (!val || val <= 0) {
+                    errDiv.textContent = 'กรุณาระบุตัวเลขที่ถูกต้อง (มากกว่า 0)';
+                    errDiv.classList.remove('d-none');
+                    return;
+                }
+
+                errDiv.classList.add('d-none');
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> กำลังบันทึก...';
+
+                fetch(basePath + '/custom-alert/add', {
+                    method: 'POST',
+                    headers: buildHeaders({'Content-Type': 'application/x-www-form-urlencoded'}),
+                    body: 'value=' + encodeURIComponent(val) + '&unit=' + encodeURIComponent(unit)
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save me-1"></i> บันทึก';
+                    if (data.success) {
+                        var modalEl = document.getElementById('customAlertModal');
+                        var modal = bootstrap.Modal.getInstance(modalEl);
+                        if (modal) modal.hide();
+                        valInput.value = '';
+                        showSaveToast(data.message, '#2e7d32');
+                        setTimeout(function() { window.location.reload(); }, 500);
+                    } else {
+                        errDiv.textContent = data.message;
+                        errDiv.classList.remove('d-none');
+                    }
+                })
+                .catch(function(e) {
+                    saveBtn.disabled = false;
+                    saveBtn.innerHTML = '<i class="fas fa-save me-1"></i> บันทึก';
+                    errDiv.textContent = 'เกิดข้อผิดพลาดในการเชื่อมต่อ';
+                    errDiv.classList.remove('d-none');
+                });
+            }
+
+            // Bind Toggle and Delete events for Custom Alerts
+            (function initCustomAlertEvents() {
+                // Toggle Switch
+                document.querySelectorAll('.custom-alert-toggle').forEach(function(toggle) {
+                    toggle.addEventListener('change', function() {
+                        var id = this.dataset.id;
+                        var enabled = this.checked;
+                        var self = this;
+                        fetch(basePath + '/custom-alert/toggle', {
+                            method: 'POST',
+                            headers: buildHeaders({'Content-Type': 'application/x-www-form-urlencoded'}),
+                            body: 'id=' + encodeURIComponent(id) + '&enabled=' + enabled
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data.success) {
+                                showSaveToast(enabled ? 'เปิดใช้งานแล้ว ✓' : 'ปิดใช้งานแล้ว ✓', '#2e7d32');
+                            } else {
+                                self.checked = !enabled;
+                                showSaveToast(data.message || 'เกิดข้อผิดพลาด', '#c62828');
+                            }
+                        })
+                        .catch(function() {
+                            self.checked = !enabled;
+                            showSaveToast('เกิดข้อผิดพลาด', '#c62828');
+                        });
+                    });
+                });
+
+                // Delete Button
+                document.querySelectorAll('.custom-alert-delete-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var id = this.dataset.id;
+                        if (!confirm('ต้องการลบการแจ้งเตือนนี้ใช่หรือไม่?')) return;
+
+                        var itemEl = document.getElementById('custom-alert-' + id);
+                        fetch(basePath + '/custom-alert/delete', {
+                            method: 'POST',
+                            headers: buildHeaders({'Content-Type': 'application/x-www-form-urlencoded'}),
+                            body: 'id=' + encodeURIComponent(id)
+                        })
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data.success) {
+                                showSaveToast(data.message, '#2e7d32');
+                                if (itemEl) itemEl.remove();
+                                var badge = document.getElementById('customAlertCountBadge');
+                                if (badge && data.count !== undefined) {
+                                    badge.textContent = data.count + ' / 5';
+                                    var addBtn = document.getElementById('btnAddCustomAlert');
+                                    if (addBtn) addBtn.disabled = data.count >= 5;
+                                }
+                                var remaining = document.querySelectorAll('.custom-alert-item');
+                                if (remaining.length === 0) {
+                                    var container = document.getElementById('customAlertsContainer');
+                                    if (container) {
+                                        container.innerHTML = '<div id="customAlertEmpty" class="col-12">' +
+                                            '<div class="text-center py-4 px-3 border border-dashed rounded-3" style="background: var(--bg-hover, rgba(0,0,0,0.02));">' +
+                                            '<i class="fas fa-clock fa-2x text-muted mb-2 opacity-50"></i>' +
+                                            '<p class="text-muted small mb-0">ยังไม่มีการแจ้งเตือนกำหนดเอง กดปุ่ม <strong>"เพิ่มเวลาแจ้งเตือน"</strong> เพื่อสร้างการแจ้งเตือนเพิ่มเติม</p>' +
+                                            '</div></div>';
+                                    }
+                                }
+                            } else {
+                                alert(data.message);
+                            }
+                        })
+                        .catch(function() {
+                            alert('เกิดข้อผิดพลาดในการลบการแจ้งเตือน');
+                        });
+                    });
+                });
+            })();
         </script>
     </section>
 

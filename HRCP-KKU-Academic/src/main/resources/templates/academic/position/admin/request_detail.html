@@ -7,6 +7,12 @@
   <body>
     <section>
       <div class="container py-4">
+        <div class="mb-3">
+          <a href="/admin/academic/requests?type=position" class="btn-back-pill" onclick="if(window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1) { history.back(); return false; }">
+            <i class="fas fa-arrow-left"></i> กลับ
+          </a>
+        </div>
+
         <!-- Alerts -->
         <div
           th:if="${param.success != null}"
@@ -665,6 +671,15 @@
                       >
                         <i class="fas fa-eye me-1"></i> ดูตัวอย่าง
                       </button>
+                      <button th:if="${completedDocs.contains(entry.key) and (entry.key == 1 or entry.key == 2 or entry.key == 3 or entry.key == 4 or entry.key == 9)}"
+                        type="button"
+                        class="btn btn-sm btn-outline-warning btn-request-resign"
+                        th:data-doc-type="${entry.key}"
+                        th:data-doc-title="|เอกสารที่ ${entry.key}: ${entry.value}|"
+                        th:data-action-url="|/admin/position/request/${request.id}/document/${entry.key}/request-resign|"
+                        title="ขอให้ผู้ยื่นแก้ไขและลงนามใหม่">
+                        <i class="fas fa-undo-alt me-1"></i> ขอให้เซ็นใหม่
+                      </button>
                       <a
                         th:href="'/admin/position/request/' + ${request.id} + '/document/' + ${entry.key}"
                         class="btn btn-sm btn-outline-primary"
@@ -697,8 +712,8 @@
           </div>
         </div>
 
-        <a href="/admin/academic/requests?type=position" class="btn-back-v2" onclick="if(window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1) { history.back(); return false; }">
-          <i class="fas fa-arrow-left"></i> กลับรายการคำร้อง
+        <a href="/admin/academic/requests?type=position" class="btn-back-pill" onclick="if(window.history.length > 1 && document.referrer && document.referrer.indexOf(window.location.host) !== -1) { history.back(); return false; }">
+          <i class="fas fa-arrow-left"></i> กลับ
         </a>
       </div>
 
@@ -763,7 +778,62 @@
             }
           });
         }
+
+        // Resign Modal handling
+        document.querySelectorAll('.btn-request-resign').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            var docTitle = this.dataset.docTitle || 'เอกสาร';
+            var actionUrl = this.dataset.actionUrl;
+            document.getElementById('resignDocTitle').textContent = docTitle;
+            document.getElementById('resignForm').action = actionUrl;
+            document.getElementById('resignReasonInput').value = '';
+            var modal = new bootstrap.Modal(document.getElementById('resignModal'));
+            modal.show();
+          });
+        });
+        document.querySelectorAll('.btn-reason-preset').forEach(function (presetBtn) {
+          presetBtn.addEventListener('click', function () {
+            document.getElementById('resignReasonInput').value = this.dataset.reason;
+          });
+        });
       </script>
+
+      <!-- Resign Request Modal -->
+      <div class="modal fade" id="resignModal" tabindex="-1" aria-labelledby="resignModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow">
+            <div class="modal-header bg-warning-subtle text-warning-emphasis border-warning-subtle">
+              <h5 class="modal-title" id="resignModalLabel">
+                <i class="fas fa-undo-alt me-2"></i> ขอให้ผู้ยื่นแก้ไขและลงนามใหม่
+              </h5>
+              <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form id="resignForm" method="post" action="">
+              <div class="modal-body">
+                <p class="mb-2"><strong>เอกสาร:</strong> <span id="resignDocTitle" class="text-primary">-</span></p>
+                <div class="mb-3">
+                  <label class="form-label fw-bold">เหตุผลในการส่งกลับ <span class="text-danger">*</span></label>
+                  <div class="d-flex flex-wrap gap-1 mb-2">
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-reason-preset" data-reason="ลายเซ็นไม่ชัดเจนหรือไม่ถูกต้อง">ลายเซ็นไม่ชัดเจน</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-reason-preset" data-reason="ข้อมูลในแบบฟอร์มไม่ถูกต้อง กรุณาตรวจสอบและแก้ไข">ข้อมูลไม่ถูกต้อง</button>
+                    <button type="button" class="btn btn-sm btn-outline-secondary btn-reason-preset" data-reason="แนบเอกสารหลักฐานหรือระบุรายละเอียดไม่ครบถ้วน">ข้อมูลไม่ครบถ้วน</button>
+                  </div>
+                  <textarea id="resignReasonInput" name="reason" class="form-control" rows="3" placeholder="ระบุเหตุผลที่ต้องการให้ผู้ยื่นแก้ไข..." required></textarea>
+                </div>
+                <div class="alert alert-info py-2 px-3 mb-0 small">
+                  <i class="fas fa-info-circle me-1"></i> ระบบจะปลดล็อกเอกสารนี้เพื่อให้ผู้ยื่นแก้ไขและลงนามใหม่ พร้อมส่งแจ้งเตือนทาง Email และ In-App ทันที
+                </div>
+              </div>
+              <div class="modal-footer border-0">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <button type="submit" class="btn btn-warning text-dark fw-bold">
+                  <i class="fas fa-paper-plane me-1"></i> ส่งกลับให้แก้ไข
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
     </section>
   </body>
 </html>

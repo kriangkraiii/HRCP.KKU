@@ -138,7 +138,7 @@
                                  style="width: 70px; height: 70px; background: rgba(13,71,161,0.08);">
                                 <i class="fas fa-bell-slash fa-2x" style="color: var(--accent-color);"></i>
                             </div>
-                            <h6 class="fw-bold text-dark mb-1">ไม่มีรายการแจ้งเตือน</h6>
+                            <h6 class="fw-bold mb-1">ไม่มีรายการแจ้งเตือน</h6>
                             <p class="text-muted small mb-0">ไม่พบการแจ้งเตือนในหมวดหมู่นี้</p>
                         </div>
 
@@ -191,7 +191,7 @@
                                     <div class="flex-grow-1 min-width-0">
                                         <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
                                             <div class="d-flex align-items-center gap-2">
-                                                <span class="badge bg-light text-dark border" th:text="${n.type != null ? n.type.thaiLabel : 'การแจ้งเตือน'}">ประเภท</span>
+                                                <span class="badge notif-type-badge bg-light text-dark border" th:text="${n.type != null ? n.type.thaiLabel : 'การแจ้งเตือน'}">ประเภท</span>
                                                 <span th:if="${n.isImportant}" class="badge bg-danger">สำคัญ</span>
                                                 <span th:if="${!n.isRead}" class="badge bg-primary">ใหม่</span>
                                                 <span th:if="${n.isSnoozed()}" class="badge bg-secondary">
@@ -201,13 +201,13 @@
                                             <small class="text-muted" th:text="${n.getRelativeTime()}">เวลา</small>
                                         </div>
 
-                                        <h6 class="mb-1 text-dark notif-title" th:text="${n.title}">หัวข้อการแจ้งเตือน</h6>
+                                        <h6 class="mb-1 notif-title" th:text="${n.title}">หัวข้อการแจ้งเตือน</h6>
                                         <p class="mb-1 text-muted small text-break notif-message" th:text="${n.message}">ข้อความแจ้งเตือน</p>
                                     </div>
 
                                     <!-- Actions Dropdown -->
                                     <div class="dropdown flex-shrink-0" data-stop-propagation="1">
-                                        <button class="btn btn-sm btn-light rounded-circle" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
+                                        <button class="btn btn-sm btn-light rounded-circle notif-kebab-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
                                             <i class="fas fa-ellipsis-v text-muted"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="border-radius: 12px;">

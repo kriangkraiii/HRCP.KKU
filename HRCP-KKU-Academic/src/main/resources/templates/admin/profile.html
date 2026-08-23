@@ -6,6 +6,12 @@
     <div class="row justify-content-center">
         <div class="col-lg-10">
 
+            <div class="mb-3">
+                <a href="/admin/academic/requests" class="btn-back-pill" onclick="if(window.history.length > 1 && document.referrer) { history.back(); return false; }">
+                    <i class="fas fa-arrow-left"></i> กลับ
+                </a>
+            </div>
+
             <!-- Alerts -->
             <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show" style="border-radius:12px;border:none;">
                 <i class="fas fa-check-circle me-2"></i>[[${succMsg}]]

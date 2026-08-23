@@ -93,10 +93,10 @@ public class PositionRequestService {
     }
 
     // Applicant fills these (visible to applicant)
-    public static final List<Integer> APPLICANT_DOCS = Arrays.asList(1, 2, 3, 4, 6, 7, 9);
+    public static final List<Integer> APPLICANT_DOCS = Arrays.asList(1, 2, 3, 4, 6, 9);
 
     // Admin fills these (hidden from applicant)
-    public static final List<Integer> ADMIN_DOCS = Arrays.asList(5, 8);
+    public static final List<Integer> ADMIN_DOCS = Arrays.asList(5, 7, 8);
 
     // Fields inside an applicant-facing document that only staff/admin may fill.
     // Applicant submissions must never create or overwrite these — see

@@ -399,10 +399,10 @@ public class PositionRequestServiceTest {
         }
 
         @Test
-        void getApplicantDocLabels_Returns7Documents() {
-            assertThat(positionService.getApplicantDocLabels()).hasSize(7);
+        void getApplicantDocLabels_Returns6Documents() {
+            assertThat(positionService.getApplicantDocLabels()).hasSize(6);
             assertThat(positionService.getApplicantDocLabels().keySet())
-                    .containsExactlyInAnyOrder(1, 2, 3, 4, 6, 7, 9);
+                    .containsExactlyInAnyOrder(1, 2, 3, 4, 6, 9);
         }
 
         @Test

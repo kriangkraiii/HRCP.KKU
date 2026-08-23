@@ -77,11 +77,11 @@
     </div>
 
     <script>
-        document.getElementById('verifyOtpForm').addEventListener('submit', function () {
+        document.getElementById('verifyOtpForm')?.addEventListener('submit', function () {
             var btn = document.getElementById('submitBtn');
             if (btn) {
                 btn.classList.add('is-loading');
-                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังตรวจสอบ OTP...';
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังตรวจสอบ...';
             }
         });
     </script>

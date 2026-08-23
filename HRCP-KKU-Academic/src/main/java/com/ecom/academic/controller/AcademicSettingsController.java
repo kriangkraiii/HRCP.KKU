@@ -1,6 +1,9 @@
 package com.ecom.academic.controller;
 
 import java.security.Principal;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
@@ -15,10 +18,13 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.ecom.config.ClientIpUtils;
+import com.ecom.model.CustomExpiryAlert;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
 import com.ecom.service.TwoFactorService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
 
@@ -51,6 +57,7 @@ public class AcademicSettingsController {
     public String userSettings(Principal principal, Model model) {
         UserDtls user = userRepository.findByEmail(principal.getName());
         model.addAttribute("user", user);
+        model.addAttribute("customAlerts", parseCustomAlerts(user.getCustomExpiryAlerts()));
         model.addAttribute("settingsBasePath", "/user/academic/settings");
         return "academic/settings";
     }
@@ -60,6 +67,7 @@ public class AcademicSettingsController {
     public String adminSettings(Principal principal, Model model) {
         UserDtls user = userRepository.findByEmail(principal.getName());
         model.addAttribute("user", user);
+        model.addAttribute("customAlerts", parseCustomAlerts(user.getCustomExpiryAlerts()));
         model.addAttribute("settingsBasePath", "/admin/academic/settings");
         return "academic/settings";
     }
@@ -234,6 +242,144 @@ public class AcademicSettingsController {
             return ResponseEntity.ok(Map.of("success", true, "message", "บันทึกแล้ว"));
         } catch (Exception e) {
             return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "เกิดข้อผิดพลาด: " + e.getMessage()));
+        }
+    }
+
+    // =================== Custom Expiry Alerts Endpoints (Max 5) ===================
+
+    @PostMapping({"/user/academic/settings/custom-alert/add", "/admin/academic/settings/custom-alert/add"})
+    @ResponseBody
+    public ResponseEntity<?> addCustomAlert(
+            @RequestParam("value") int value,
+            @RequestParam(value = "unit", defaultValue = "DAYS") String unit,
+            Principal principal) {
+        try {
+            if (value <= 0) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "กรุณาระบุตัวเลขที่มากกว่า 0"));
+            }
+
+            String normalizedUnit = unit != null ? unit.toUpperCase().trim() : "DAYS";
+            if (!List.of("DAYS", "WEEKS", "MONTHS").contains(normalizedUnit)) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "หน่วยเวลาไม่ถูกต้อง"));
+            }
+
+            UserDtls user = userRepository.findByEmail(principal.getName());
+            List<CustomExpiryAlert> currentAlerts = new ArrayList<>(parseCustomAlerts(user.getCustomExpiryAlerts()));
+
+            if (currentAlerts.size() >= 5) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "สามารถเพิ่มการแจ้งเตือนกำหนดเองได้สูงสุด 5 รายการ"));
+            }
+
+            CustomExpiryAlert newAlert = CustomExpiryAlert.create(value, normalizedUnit);
+            if (newAlert.getDays() > 1095) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "ไม่สามารถตั้งเวลาเกินอายุผลประเมิน 3 ปี (1,095 วัน)"));
+            }
+
+            // Check duplicate days
+            boolean duplicate = currentAlerts.stream().anyMatch(a -> a.getDays() == newAlert.getDays());
+            if (duplicate) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "มีการตั้งค่าแจ้งเตือนเวลานี้ (" + newAlert.getLabel() + ") อยู่แล้ว"));
+            }
+
+            currentAlerts.add(newAlert);
+            currentAlerts.sort(Comparator.comparingInt(CustomExpiryAlert::getDays).reversed());
+
+            user.setCustomExpiryAlerts(serializeCustomAlerts(currentAlerts));
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "เพิ่มการแจ้งเตือน " + newAlert.getLabel() + " สำเร็จ",
+                    "alert", newAlert,
+                    "count", currentAlerts.size()
+            ));
+        } catch (Exception e) {
+            log.error("Failed to add custom alert: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "เกิดข้อผิดพลาด: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping({"/user/academic/settings/custom-alert/toggle", "/admin/academic/settings/custom-alert/toggle"})
+    @ResponseBody
+    public ResponseEntity<?> toggleCustomAlert(
+            @RequestParam("id") String id,
+            @RequestParam("enabled") boolean enabled,
+            Principal principal) {
+        try {
+            UserDtls user = userRepository.findByEmail(principal.getName());
+            List<CustomExpiryAlert> currentAlerts = new ArrayList<>(parseCustomAlerts(user.getCustomExpiryAlerts()));
+
+            boolean found = false;
+            for (CustomExpiryAlert alert : currentAlerts) {
+                if (alert.getId().equals(id)) {
+                    alert.setEnabled(enabled);
+                    found = true;
+                    break;
+                }
+            }
+
+            if (!found) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "ไม่พบรายการแจ้งเตือนที่ระบุ"));
+            }
+
+            user.setCustomExpiryAlerts(serializeCustomAlerts(currentAlerts));
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of("success", true, "message", "อัปเดตสถานะแล้ว"));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "เกิดข้อผิดพลาด: " + e.getMessage()));
+        }
+    }
+
+    @PostMapping({"/user/academic/settings/custom-alert/delete", "/admin/academic/settings/custom-alert/delete"})
+    @ResponseBody
+    public ResponseEntity<?> deleteCustomAlert(
+            @RequestParam("id") String id,
+            Principal principal) {
+        try {
+            UserDtls user = userRepository.findByEmail(principal.getName());
+            List<CustomExpiryAlert> currentAlerts = new ArrayList<>(parseCustomAlerts(user.getCustomExpiryAlerts()));
+
+            boolean removed = currentAlerts.removeIf(a -> a.getId().equals(id));
+            if (!removed) {
+                return ResponseEntity.badRequest().body(Map.of("success", false, "message", "ไม่พบรายการแจ้งเตือนที่ระบุ"));
+            }
+
+            user.setCustomExpiryAlerts(serializeCustomAlerts(currentAlerts));
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of(
+                    "success", true,
+                    "message", "ลบการแจ้งเตือนแล้ว",
+                    "count", currentAlerts.size()
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.internalServerError().body(Map.of("success", false, "message", "เกิดข้อผิดพลาด: " + e.getMessage()));
+        }
+    }
+
+    // =================== Custom Alert Serialization Helpers ===================
+
+    private List<CustomExpiryAlert> parseCustomAlerts(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.readValue(json, new TypeReference<List<CustomExpiryAlert>>() {});
+        } catch (Exception e) {
+            log.warn("Failed to parse customExpiryAlerts: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private String serializeCustomAlerts(List<CustomExpiryAlert> alerts) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            return mapper.writeValueAsString(alerts);
+        } catch (Exception e) {
+            log.warn("Failed to serialize customExpiryAlerts: {}", e.getMessage());
+            return "[]";
         }
     }
 

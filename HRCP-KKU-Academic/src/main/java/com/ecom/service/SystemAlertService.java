@@ -162,6 +162,7 @@ public class SystemAlertService {
     private List<UserDtls> recipients() {
         return userRepository.findByRole("ROLE_ADMIN").stream()
                 .filter(a -> a.getEmail() != null && !a.getEmail().isBlank())
+                .filter(a -> !Boolean.FALSE.equals(a.getIsEnable()))
                 .filter(a -> Boolean.TRUE.equals(a.getEmailNotificationEnabled()))
                 .toList();
     }

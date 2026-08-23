@@ -12,9 +12,12 @@
 			<div class="row justify-content-center">
 				<div class="col-lg-8 col-md-10">
 					<div class="card shadow-sm border-0" style="border-radius: 16px;">
-						<div class="card-header bg-primary text-white"
+						<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
 							style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #1a237e, #0d47a1) !important;">
 							<h5 class="mb-0"><i class="fas fa-user-edit me-2"></i>แก้ไขข้อมูลผู้ใช้งาน</h5>
+							<a href="/admin/users?type=1" class="btn btn-outline-light btn-sm rounded-pill px-3">
+								<i class="fas fa-arrow-left me-1"></i> กลับ
+							</a>
 						</div>
 						<div class="card-body p-4">
 
@@ -161,9 +164,9 @@
 										max-height: 110px !important;
 										border-radius: 50% !important;
 										overflow: hidden !important;
-										border: 3px solid #fff !important;
+										border: 3px solid var(--border-color) !important;
 										box-shadow: 0 4px 12px rgba(0,0,0,0.1) !important;
-										background: #e9ecef !important;
+										background: var(--bg-hover) !important;
 										flex-shrink: 0 !important;
 									}
 									.avatar-preview-box img {

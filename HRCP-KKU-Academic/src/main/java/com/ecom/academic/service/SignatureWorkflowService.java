@@ -208,7 +208,9 @@ public class SignatureWorkflowService {
             return Result.failed("รายการเวียนลงนามนี้ไม่ได้อยู่ในสถานะเปิด");
         }
 
-        UserDtls initiator = envelope.getInitiatedBy();
+        UserDtls initiator = envelope.getInitiatedBy() != null
+                ? userRepository.findById(envelope.getInitiatedBy().getId()).orElse(null)
+                : null;
         if (initiator != null) {
             notifier.notifyExtensionRequested(initiator, envelope, signer, reason);
         }
@@ -243,6 +245,54 @@ public class SignatureWorkflowService {
     /** With steps loaded, for the verification page. */
     public Optional<SignatureRequest> findByVerificationCodeWithSteps(String code) {
         return requestRepository.findByVerificationCodeWithSteps(code);
+    }
+
+    /**
+     * Checks whether the applicant has completed their signature step for a specific document.
+     */
+    public boolean isApplicantSignatureCompleted(SignatureModule module, Long requestId, int documentType) {
+        List<SignatureRequest> envelopes = requestRepository.findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, documentType);
+        if (envelopes.isEmpty()) {
+            return false;
+        }
+        for (SignatureRequest env : envelopes) {
+            if (env.getStatus() == SignatureRequestStatus.COMPLETED || env.getStatus() == SignatureRequestStatus.IN_PROGRESS) {
+                List<SignatureStep> steps = stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(env.getId());
+                boolean hasCompletedApplicant = steps.stream()
+                        .anyMatch(s -> "applicant".equals(s.getSlotKey()) && (s.getStatus() == SignatureStepStatus.SIGNED || s.getSignedAt() != null));
+                if (hasCompletedApplicant) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Checks whether applicant signatures are completed for all required documents.
+     */
+    public boolean areApplicantSignaturesComplete(SignatureModule module, Long requestId, List<Integer> requiredDocTypes) {
+        for (int docType : requiredDocTypes) {
+            boolean requiresApplicant = anchorRegistry.slot(module, docType, "applicant").isPresent();
+            if (requiresApplicant && !isApplicantSignatureCompleted(module, requestId, docType)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * Returns the list of document types that require applicant signature but are not yet signed.
+     */
+    public List<Integer> getUnsignedApplicantDocTypes(SignatureModule module, Long requestId, List<Integer> docTypes) {
+        List<Integer> unsigned = new ArrayList<>();
+        for (int docType : docTypes) {
+            boolean requiresApplicant = anchorRegistry.slot(module, docType, "applicant").isPresent();
+            if (requiresApplicant && !isApplicantSignatureCompleted(module, requestId, docType)) {
+                unsigned.add(docType);
+            }
+        }
+        return unsigned;
     }
 
     // =====================================================================
@@ -542,6 +592,41 @@ public class SignatureWorkflowService {
                 .toList();
         notifier.notifyCancelled(noticeFor(envelope, null, outstanding));
         return new Result(requestRepository.save(envelope), null);
+    }
+
+    /**
+     * Admin requests document correction and re-signing by the applicant.
+     * Cancels any active/completed blocking envelope, releases the edit lock on the document,
+     * and sends real-time Email + In-App notification to the applicant.
+     */
+    @Transactional
+    public Result requestDocumentResign(SignatureModule module, Long requestId, int documentType,
+            String reason, UserDtls adminUser, ActorContext actor) {
+        List<SignatureRequest> blocking = requestRepository.findBlockingEnvelopes(module, requestId, documentType);
+        String docLabel = snapshotProvider.labelFor(module, documentType);
+
+        for (SignatureRequest envelope : blocking) {
+            envelope.setStatus(SignatureRequestStatus.CANCELLED);
+            envelope.setCancelledAt(LocalDateTime.now());
+            envelope.setCancelReason(truncate(reason != null && !reason.isBlank()
+                    ? "แอดมินส่งกลับให้แก้ไขและลงนามใหม่: " + reason
+                    : "แอดมินส่งกลับให้แก้ไขและลงนามใหม่", 500));
+            envelope.getSteps().forEach(s -> {
+                if (s.getStatus() == SignatureStepStatus.WAITING || s.getStatus() == SignatureStepStatus.ACTIVE) {
+                    s.setStatus(SignatureStepStatus.SKIPPED);
+                }
+            });
+            requestRepository.save(envelope);
+            audit(envelope, null, SignatureAuditEventType.DECLINED, adminUser, actor,
+                    "แอดมินส่งกลับให้แก้ไขและลงนามใหม่: " + (reason != null && !reason.isBlank() ? reason : "-"));
+        }
+
+        UserDtls applicant = snapshotProvider.applicantOf(module, requestId);
+        if (applicant != null) {
+            notifier.notifyResignRequested(applicant, module, requestId, documentType, docLabel, reason);
+        }
+
+        return new Result(blocking.isEmpty() ? null : blocking.get(0), null);
     }
 
     // =====================================================================
