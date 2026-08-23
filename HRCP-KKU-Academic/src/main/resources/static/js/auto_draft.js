@@ -102,7 +102,7 @@
         this.labelEl.innerHTML = 'กำลังบันทึกข้อมูลแบบร่าง<span class="adb__dots"><span>.</span><span>.</span><span>.</span></span>';
         break;
       case "saved":
-        this.iconEl.innerHTML = '<span class="fa-stack" style="font-size:.55em;vertical-align:middle"><i class="fas fa-cloud fa-stack-2x"></i><i class="fas fa-check fa-stack-1x fa-inverse" style="font-size:.7em;margin-top:-2px"></i></span>';
+        this.iconEl.innerHTML = '<i class="fas fa-check-circle"></i>';
         this.labelEl.textContent = "บันทึกฉบับร่างแล้ว — " + (extra || "");
         break;
       case "error":

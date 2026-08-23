@@ -32,12 +32,13 @@ import com.ecom.service.AdminLogService;
 class StaffMemberDuplicateTest {
 
     private final StaffMemberService staffService = mock(StaffMemberService.class);
+    private final com.ecom.academic.service.StaffDirectorySync staffDirectorySync = mock(com.ecom.academic.service.StaffDirectorySync.class);
     private final AdminLogService adminLogService = mock(AdminLogService.class);
     private final UserRepository userRepository = mock(UserRepository.class);
     private final MockHttpServletRequest request = new MockHttpServletRequest();
 
     private final StaffMemberController controller =
-            new StaffMemberController(staffService, adminLogService, userRepository, request);
+            new StaffMemberController(staffService, staffDirectorySync, adminLogService, userRepository, request);
 
     private final Model model = new ExtendedModelMap();
     private final Principal admin = () -> "admin@kku.ac.th";
@@ -49,10 +50,12 @@ class StaffMemberDuplicateTest {
     }
 
     private String add(Boolean confirmDuplicate) {
+        // userId null: these cases are about the duplicate-name prompt, not about
+        // linking a login account.
         return controller.addStaff("สมชาย", "ใจดี", "อาจารย์ ดร.",
                 "Somchai", "Jaidee", "Lecturer",
                 "พนักงานมหาวิทยาลัย",
-                "วิทยาการคอมพิวเตอร์", "COMMITTEE", confirmDuplicate, model, admin);
+                "วิทยาการคอมพิวเตอร์", "COMMITTEE", null, confirmDuplicate, model, admin);
     }
 
     private StaffMember existing() {

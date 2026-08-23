@@ -11,9 +11,17 @@
                 </div>
                 <div class="card-body">
 
-                    <!-- Draft saved alert -->
+                    <!-- Flash alerts -->
+                    <div th:if="${success != null}" class="alert alert-success alert-dismissible fade show">
+                        <i class="fas fa-check-circle me-1"></i> [[${success}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-circle me-1"></i> [[${error}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
                     <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show">
-                        <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
+                        <i class="fas fa-save me-1"></i> บันทึกแบบร่างสำเร็จ
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
 
@@ -132,7 +140,7 @@
 
                         <!-- Validation status -->
                         <div id="doc1ValidationAlert" class="alert alert-warning mt-3" style="border-radius:10px">
-                            <i class="fas fa-exclamation-triangle"></i>
+                            <i class="fas fa-exclamation-triangle me-1"></i>
                             <span id="doc1ValidationMsg">กรุณาติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc1CheckedCount">0</span>/5)</span>
                         </div>
 
@@ -147,6 +155,115 @@
                                 class="btn btn-outline-secondary"><i class="fas fa-arrow-left"></i> กลับ</a>
                         </div>
                     </form>
+
+                    <!-- Multi-File Attachments Section -->
+                    <div class="card card-academic border shadow-sm my-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-semibold text-primary">
+                                <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอน (สามารถแนบได้หลายไฟล์)
+                            </h6>
+                            <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' ไฟล์'}">0 ไฟล์</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">
+                                <i class="fas fa-info-circle me-1"></i> ท่านสามารถแนบไฟล์หลักฐานประกอบ เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา (รองรับไฟล์ PDF, Word, PowerPoint, Excel, Zip)
+                            </p>
+
+                            <!-- Drag and Drop & Multiple Upload Form -->
+                            <form th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments'" 
+                                  method="post" enctype="multipart/form-data" id="attachmentUploadForm">
+                                <label for="multiFileInput" class="upload-dropzone p-4 border border-2 border-dashed rounded-3 text-center mb-3 d-block" id="dropzoneArea" style="cursor: pointer;">
+                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2 d-block"></i>
+                                    <h6 class="fw-bold mb-1">เลือกไฟล์ หรือลากไฟล์มาวางที่นี่</h6>
+                                    <p class="text-muted small mb-3">รองรับไฟล์: .pdf, .docx, .doc, .pptx, .xlsx, .zip, .rar, .png, .jpg (เลือกได้หลายไฟล์พร้อมกัน)</p>
+                                    <input type="file" name="files" id="multiFileInput" multiple class="d-none" accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.zip,.rar,.7z,.png,.jpg,.jpeg">
+                                    <span class="btn btn-primary px-4 rounded-pill shadow-sm" id="btnChooseFiles">
+                                        <i class="fas fa-folder-open me-1"></i> เลือกไฟล์จากเครื่อง
+                                    </span>
+                                </label>
+
+                                <!-- Selected files queue list (before uploading) -->
+                                <div id="selectedFilesQueue" class="mb-3 d-none">
+                                    <h6 class="small fw-bold text-secondary mb-2">
+                                        <i class="fas fa-clock me-1"></i> ไฟล์ที่เลือกพร้อมอัปโหลด:
+                                    </h6>
+                                    <ul class="list-group mb-3" id="filesQueueList"></ul>
+                                    <div class="d-flex gap-2">
+                                        <button type="submit" class="btn btn-academic rounded-pill px-4" id="btnUploadQueue">
+                                            <i class="fas fa-upload me-1"></i> ยืนยันอัปโหลดไฟล์ (<span id="queueCountText">0</span>)
+                                        </button>
+                                        <button type="button" class="btn btn-outline-secondary rounded-pill px-3" id="btnClearQueue">
+                                            ยกเลิก
+                                        </button>
+                                    </div>
+                                </div>
+                            </form>
+
+                            <!-- Uploaded Files Table -->
+                            <div th:if="${attachments != null && !attachments.isEmpty()}" class="table-responsive mt-3">
+                                <table class="table table-hover align-middle border">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th style="width: 50px;" class="text-center">#</th>
+                                            <th>ชื่อไฟล์แนบ</th>
+                                            <th style="width: 120px;" class="text-center">ขนาด</th>
+                                            <th style="width: 180px;" class="text-center">วันที่อัปโหลด</th>
+                                            <th style="width: 120px;" class="text-center">การจัดการ</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr th:each="att, iter : ${attachments}">
+                                            <td class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
+                                            <td>
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span th:if="${att.fileType == 'PDF'}" class="text-danger fs-5"><i class="fas fa-file-pdf"></i></span>
+                                                    <span th:if="${att.fileType == 'DOCX'}" class="text-primary fs-5"><i class="fas fa-file-word"></i></span>
+                                                    <span th:if="${att.fileType == 'PPTX'}" class="text-warning fs-5"><i class="fas fa-file-powerpoint"></i></span>
+                                                    <span th:if="${att.fileType == 'XLSX'}" class="text-success fs-5"><i class="fas fa-file-excel"></i></span>
+                                                    <span th:if="${att.fileType == 'ZIP'}" class="text-secondary fs-5"><i class="fas fa-file-archive"></i></span>
+                                                    <span th:if="${att.fileType == 'IMAGE'}" class="text-info fs-5"><i class="fas fa-file-image"></i></span>
+                                                    <span th:if="${att.fileType == 'OTHER'}" class="text-muted fs-5"><i class="fas fa-file-alt"></i></span>
+                                                    <div>
+                                                        <div class="fw-semibold text-break" th:text="${att.originalFilename}">filename.pdf</div>
+                                                        <small class="badge bg-light text-secondary border" th:text="${att.fileType}">PDF</small>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="text-center text-muted small">
+                                                <span th:if="${att.fileSize != null}" th:text="${#numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB'}">0 MB</span>
+                                                <span th:unless="${att.fileSize != null}">-</span>
+                                            </td>
+                                            <td class="text-center text-muted small" th:text="${att.uploadedAt != null ? #temporals.format(att.uploadedAt, 'dd/MM/yyyy HH:mm') : '-'}">
+                                                01/01/2026 12:00
+                                            </td>
+                                            <td class="text-center">
+                                                <div class="btn-group btn-group-sm">
+                                                    <a th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
+                                                       class="btn btn-outline-primary" title="ดาวน์โหลด">
+                                                        <i class="fas fa-download"></i>
+                                                    </a>
+                                                    <form th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'" 
+                                                          method="post" class="d-inline" onsubmit="return confirm('คุณต้องการลบไฟล์นี้หรือไม่?');">
+                                                        <button type="submit" class="btn btn-outline-danger" title="ลบไฟล์">
+                                                            <i class="fas fa-trash-alt"></i>
+                                                        </button>
+                                                    </form>
+
+            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
+
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <div th:unless="${attachments != null && !attachments.isEmpty()}" class="text-center py-4 text-muted rounded-3 mt-3 empty-attachments-box">
+                                <i class="fas fa-folder-open fa-2x mb-2 d-block text-secondary opacity-50"></i>
+                                <span>ยังไม่มีไฟล์แนบประกอบการประเมิน (สามารถเลือกไฟล์อัปโหลดเพิ่มได้ที่นี่)</span>
+                            </div>
+                        </div>
+                    </div>
 
                     <!-- เอกสารที่สร้างแล้ว -->
                     <div th:if="${existingDocs != null && !existingDocs.isEmpty()}" class="mt-4">
@@ -223,18 +340,18 @@
                             function validateCheckboxes() {
                                 var checked = document.querySelectorAll('.chk-toggle-app:checked').length;
                                 var total = checkboxes.length;
-                                countSpan.textContent = checked;
+                                if (countSpan) countSpan.textContent = checked;
 
                                 if (checked === total) {
                                     submitBtn.disabled = false;
                                     alertBox.classList.remove('alert-warning');
                                     alertBox.classList.add('alert-success');
-                                    alertBox.innerHTML = '<i class="fas fa-check-circle"></i> ตรวจสอบครบทุกข้อแล้ว ✓ พร้อมบันทึก';
+                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบทุกข้อแล้ว ✓ พร้อมบันทึกเอกสาร';
                                 } else {
                                     submitBtn.disabled = true;
                                     alertBox.classList.remove('alert-success');
                                     alertBox.classList.add('alert-warning');
-                                    alertBox.innerHTML = '<i class="fas fa-exclamation-triangle"></i> กรุณาติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc1CheckedCount">' + checked + '</span>/' + total + ')';
+                                    alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> กรุณาติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc1CheckedCount">' + checked + '</span>/' + total + ')';
                                     countSpan = document.getElementById('doc1CheckedCount');
                                 }
                             }
@@ -245,6 +362,82 @@
 
                             // Initial check (for pre-loaded data)
                             validateCheckboxes();
+                        })();
+
+                        // === Multi-File Drag & Drop & Queue Handling ===
+                        (function() {
+                            var dropzone = document.getElementById('dropzoneArea');
+                            var fileInput = document.getElementById('multiFileInput');
+                            var queueContainer = document.getElementById('selectedFilesQueue');
+                            var queueList = document.getElementById('filesQueueList');
+                            var queueCountText = document.getElementById('queueCountText');
+                            var btnClearQueue = document.getElementById('btnClearQueue');
+
+                            if (!dropzone || !fileInput) return;
+
+                            ['dragenter', 'dragover'].forEach(function(eventName) {
+                                dropzone.addEventListener(eventName, function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    dropzone.classList.add('border-primary', 'bg-white');
+                                });
+                            });
+
+                            ['dragleave', 'drop'].forEach(function(eventName) {
+                                dropzone.addEventListener(eventName, function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    dropzone.classList.remove('border-primary', 'bg-white');
+                                });
+                            });
+
+                            dropzone.addEventListener('drop', function(e) {
+                                var dt = e.dataTransfer;
+                                if (dt && dt.files && dt.files.length > 0) {
+                                    fileInput.files = dt.files;
+                                    updateQueueDisplay();
+                                }
+                            });
+
+                            fileInput.addEventListener('change', function() {
+                                updateQueueDisplay();
+                            });
+
+                            if (btnClearQueue) {
+                                btnClearQueue.addEventListener('click', function() {
+                                    fileInput.value = '';
+                                    queueContainer.classList.add('d-none');
+                                    queueList.innerHTML = '';
+                                });
+                            }
+
+                            function updateQueueDisplay() {
+                                if (!fileInput.files || fileInput.files.length === 0) {
+                                    queueContainer.classList.add('d-none');
+                                    queueList.innerHTML = '';
+                                    return;
+                                }
+
+                                queueList.innerHTML = '';
+                                Array.from(fileInput.files).forEach(function(file, idx) {
+                                    var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                    var li = document.createElement('li');
+                                    li.className = 'list-group-item d-flex justify-content-between align-items-center py-2';
+                                    li.innerHTML = '<div class="d-flex align-items-center gap-2">' +
+                                        '<i class="fas fa-file text-primary"></i>' +
+                                        '<span class="fw-semibold text-break">' + escapeHtml(file.name) + '</span>' +
+                                        '</div>' +
+                                        '<span class="badge bg-secondary rounded-pill">' + sizeMB + ' MB</span>';
+                                    queueList.appendChild(li);
+                                });
+
+                                queueCountText.textContent = fileInput.files.length;
+                                queueContainer.classList.remove('d-none');
+                            }
+
+                            function escapeHtml(str) {
+                                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                            }
                         })();
                     </script>
                 </div>

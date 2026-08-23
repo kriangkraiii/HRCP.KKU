@@ -1,0 +1,139 @@
+/* ============================================================
+   E-Signature Document Interactive Viewer
+   ============================================================ */
+
+.esign-viewer-wrapper {
+    display: flex;
+    flex-direction: column;
+    height: 78vh;
+    min-height: 700px;
+    background-color: #4a5056;
+    border-radius: 0 0 8px 8px;
+    overflow: hidden;
+    position: relative;
+}
+
+.esign-viewer-wrapper.fullscreen-mode {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 99999;
+    border-radius: 0;
+}
+
+.esign-viewer-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    background-color: #2b3035;
+    color: #f8f9fa;
+    border-bottom: 1px solid #1e2225;
+    z-index: 10;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.esign-viewer-toolbar .tool-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.esign-viewer-toolbar .btn-tool {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #e9ecef;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    transition: all 0.15s ease-in-out;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.esign-viewer-toolbar .btn-tool:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+    color: #ffffff;
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: translateY(-1px);
+}
+
+.esign-viewer-toolbar .btn-tool:active {
+    transform: translateY(0);
+}
+
+.esign-viewer-toolbar .page-indicator {
+    font-size: 13px;
+    color: #dee2e6;
+    padding: 0 8px;
+    font-weight: 500;
+}
+
+.esign-viewer-pages {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: auto;
+    padding: 24px 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 24px;
+    scroll-behavior: smooth;
+    background-color: #4a5056;
+}
+
+.esign-page-container {
+    position: relative;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+    background-color: #ffffff;
+    border-radius: 3px;
+    transition: width 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    max-width: 100%;
+}
+
+.esign-page-container canvas {
+    display: block;
+    width: 100%;
+    height: auto;
+    border-radius: 3px;
+}
+
+.esign-page-badge {
+    position: absolute;
+    bottom: -24px;
+    right: 4px;
+    color: #adb5bd;
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.esign-viewer-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: #ffffff;
+    gap: 14px;
+    padding: 40px 0;
+}
+
+.esign-viewer-loading .spinner-border {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-width: 0.25em;
+}
+
+.esign-fallback-frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+}

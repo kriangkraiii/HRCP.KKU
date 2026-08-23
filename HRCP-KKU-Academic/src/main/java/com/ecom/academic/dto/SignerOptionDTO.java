@@ -1,0 +1,56 @@
+package com.ecom.academic.dto;
+
+import com.ecom.academic.model.StaffMember;
+
+/**
+ * One choice in a signer picker.
+ *
+ * <p>A DTO rather than the entity because {@code StaffMember.user} is a lazy
+ * association: serialising the entity straight to JSON would either drag the
+ * account into every response or fail on the proxy. It also lets the picker say
+ * <em>why</em> someone cannot be chosen, which the entity alone cannot express.
+ *
+ * @param staffId    the staff record, used when only a printed name is needed
+ * @param userId     the login account that would receive the signing request,
+ *                   or null when this person has none
+ * @param displayName academic title + full name, as it appears in documents
+ * @param department  free-text unit, shown to tell apart people with similar names
+ * @param email       the account's email, so an administrator can confirm they
+ *                    picked the right person before sending
+ * @param signable    whether this person can be assigned a signing step at all
+ */
+public record SignerOptionDTO(
+        Long staffId,
+        Integer userId,
+        String displayName,
+        String department,
+        String email,
+        boolean signable) {
+
+    public static SignerOptionDTO from(StaffMember staff) {
+        boolean signable = staff.isSignable();
+        return new SignerOptionDTO(
+                staff.getId(),
+                signable ? staff.getUser().getId() : null,
+                staff.getDisplayName(),
+                staff.getDepartment(),
+                signable ? staff.getUser().getEmail() : null,
+                signable);
+    }
+
+    /**
+     * A choice built straight from a login account.
+     *
+     * <p>For people who can sign without having a {@code staff_member} row —
+     * administrators in particular, who are often not in the staff directory at
+     * all but still need to sign in their own name.
+     */
+    public static SignerOptionDTO fromUser(com.ecom.model.UserDtls user) {
+        if (user == null) {
+            return null;
+        }
+        String title = user.getAcademicPosition();
+        String name = (title == null || title.isBlank() ? "" : title + " ") + user.getName();
+        return new SignerOptionDTO(null, user.getId(), name.trim(), null, user.getEmail(), true);
+    }
+}

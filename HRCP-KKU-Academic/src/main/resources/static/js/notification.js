@@ -75,6 +75,16 @@ function updateSidebarBadge(count) {
     });
 }
 
+function escapeHtml(str) {
+    if (str == null) return '';
+    return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
 function showNotificationToast(msg, isSuccess) {
     if (typeof showToast === 'function') {
         showToast(msg, isSuccess !== false);
@@ -84,7 +94,7 @@ function showNotificationToast(msg, isSuccess) {
     var toastEl = document.createElement('div');
     toastEl.className = 'toast align-items-center text-white ' + (isSuccess !== false ? 'bg-success' : 'bg-danger') + ' border-0 position-fixed bottom-0 end-0 m-3 shadow';
     toastEl.style.zIndex = '99999';
-    toastEl.innerHTML = '<div class="d-flex"><div class="toast-body">' + msg + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
+    toastEl.innerHTML = '<div class="d-flex"><div class="toast-body">' + escapeHtml(msg) + '</div><button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div>';
     document.body.appendChild(toastEl);
     if (window.bootstrap && bootstrap.Toast) {
         var toast = new bootstrap.Toast(toastEl, { delay: 3000 });
@@ -567,20 +577,20 @@ function loadTopbarNotifications() {
                     var unreadClass = !n.isRead ? 'bg-light bg-opacity-75 fw-semibold' : '';
                     var unreadDot = !n.isRead ? '<span class="badge bg-primary rounded-circle p-1 me-1" style="width: 7px; height: 7px;"> </span>' : '';
                     var impBadge = n.isImportant ? '<span class="badge bg-danger ms-1" style="font-size: 0.65rem;">สำคัญ</span>' : '';
-                    var typeBadge = '<span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">' + (n.typeLabel || 'ทั่วไป') + '</span>';
+                    var typeBadge = '<span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">' + escapeHtml(n.typeLabel || 'ทั่วไป') + '</span>';
                     
                     html += '<div class="list-group-item list-group-item-action p-3 border-0 border-bottom topbar-notif-item ' + unreadClass + '" ' +
                             'data-topbar-notif-idx="' + idx + '" style="cursor: pointer; transition: background-color 0.15s;">' +
                                 '<div class="d-flex align-items-start gap-2">' +
                                     '<div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 32px; height: 32px; background: rgba(13,71,161,0.08);">' +
-                                        '<i class="' + (n.iconClass || 'fas fa-bell text-primary') + '" style="font-size: 0.85rem;"></i>' +
+                                        '<i class="' + escapeHtml(n.iconClass || 'fas fa-bell text-primary') + '" style="font-size: 0.85rem;"></i>' +
                                     '</div>' +
                                     '<div class="flex-grow-1 min-width-0">' +
                                         '<div class="d-flex justify-content-between align-items-center mb-1">' +
-                                            '<div class="d-flex align-items-center">' + unreadDot + '<strong class="text-dark small text-truncate" style="max-width: 170px;">' + n.title + '</strong>' + impBadge + '</div>' +
-                                            '<small class="text-muted" style="font-size: 0.72rem;">' + n.relativeTime + '</small>' +
+                                            '<div class="d-flex align-items-center">' + unreadDot + '<strong class="text-dark small text-truncate" style="max-width: 170px;">' + escapeHtml(n.title) + '</strong>' + impBadge + '</div>' +
+                                            '<small class="text-muted" style="font-size: 0.72rem;">' + escapeHtml(n.relativeTime) + '</small>' +
                                         '</div>' +
-                                        '<p class="mb-0 text-muted small text-truncate" style="font-size: 0.8rem;">' + n.message + '</p>' +
+                                        '<p class="mb-0 text-muted small text-truncate" style="font-size: 0.8rem;">' + escapeHtml(n.message) + '</p>' +
                                     '</div>' +
                                 '</div>' +
                             '</div>';

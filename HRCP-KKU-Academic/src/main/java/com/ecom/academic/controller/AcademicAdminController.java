@@ -41,6 +41,7 @@ import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -77,6 +78,8 @@ public class AcademicAdminController {
 
     private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
 
+    private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+
     public AcademicAdminController(
             AcademicRequestService requestService,
             DocumentGenerationService documentService,
@@ -86,13 +89,15 @@ public class AcademicAdminController {
             PositionRequestService positionRequestService,
             HttpServletRequest httpRequest,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
-            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService) {
+            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
         this.userRepository = userRepository;
         this.adminLogService = adminLogService;
         this.positionRequestService = positionRequestService;
+        this.signatureWorkflow = signatureWorkflow;
         this.httpRequest = httpRequest;
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
@@ -404,7 +409,8 @@ public class AcademicAdminController {
     }
 
     @GetMapping("/request/{id}/document/{type}")
-    public String documentForm(@PathVariable Long id, @PathVariable int type, Model model) {
+    public String documentForm(@PathVariable Long id, @PathVariable int type, Model model,
+            Principal principal) {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
@@ -477,6 +483,10 @@ public class AcademicAdminController {
                 }
             }
         }
+        // แนบรายการไฟล์เอกสารแนบของผู้ยื่น
+        List<com.ecom.academic.model.AcademicAttachment> attachments = requestService.getAttachments(id);
+        model.addAttribute("attachments", attachments);
+        model.addAttribute("attachmentCount", attachments != null ? attachments.size() : 0);
 
         // สำหรับ doc_8: ดึงข้อมูลจาก doc_7 มา auto-fill (meeting_date, meeting_no)
         if (type == 8) {
@@ -542,6 +552,11 @@ public class AcademicAdminController {
             }
         }
 
+        // แผงลงนามอิเล็กทรอนิกส์ (fragment ใช้ร่วมกันทั้งสอง phase)
+        model.addAttribute("signatureModule", SignatureModule.ACADEMIC);
+        model.addAttribute("signaturePanel",
+                signatureWorkflow.buildPanel(SignatureModule.ACADEMIC, id, type, getUser(principal)));
+
         return "academic/admin/doc_fragments/" + type;
     }
 
@@ -552,6 +567,13 @@ public class AcademicAdminController {
 
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        // เอกสารที่กำลังเวียนลงนามอยู่ (หรือลงนามครบแล้ว) ห้ามแก้
+        // มิฉะนั้นลายเซ็นที่ให้ไว้กับเนื้อหาเดิมจะกลายเป็นลายเซ็นบนเนื้อหาใหม่ที่ผู้ลงนามไม่เคยเห็น
+        if (signatureWorkflow.isDocumentLocked(SignatureModule.ACADEMIC, id, type)) {
+            return "redirect:/admin/academic/request/" + id
+                    + "/document/" + type + "?error=document_locked_for_signing";
+        }
 
         // ดึง action (draft / submit) แล้วเอาออกจาก formData
         String action = formData.getOrDefault("action", "submit");

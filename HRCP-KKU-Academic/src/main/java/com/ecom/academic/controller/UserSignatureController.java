@@ -1,0 +1,133 @@
+package com.ecom.academic.controller;
+
+import java.security.Principal;
+
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import com.ecom.academic.model.SignatureKind;
+import com.ecom.academic.service.UserSignatureService;
+import com.ecom.model.UserDtls;
+import com.ecom.repository.UserRepository;
+
+/**
+ * The "ลายเซ็นของฉัน" page: everyone's personal signature library.
+ *
+ * <p>Mapped under {@code /esign/**} rather than {@code /user/**} or
+ * {@code /admin/**} on purpose. Those two prefixes are role-gated in
+ * {@code SecurityConfig} — {@code hasRole("USER")} and {@code hasRole("ADMIN")}
+ * respectively — but a dean who must sign documents is typically an admin while
+ * an applicant is a user, and both need this exact page. {@code /esign/**} falls
+ * through to {@code anyRequest().authenticated()}, so it is protected without
+ * being restricted to one role.
+ */
+@Controller
+@RequestMapping("/esign")
+public class UserSignatureController {
+
+    private final UserSignatureService signatureService;
+    private final UserRepository userRepository;
+
+    public UserSignatureController(UserSignatureService signatureService, UserRepository userRepository) {
+        this.signatureService = signatureService;
+        this.userRepository = userRepository;
+    }
+
+    @GetMapping("/my-signatures")
+    public String mySignatures(Principal principal, Model model,
+            @RequestParam(value = "edit", required = false) Long editId) {
+        UserDtls me = currentUser(principal);
+        model.addAttribute("signatures", signatureService.findMine(me));
+        model.addAttribute("maxSignatures", UserSignatureService.MAX_PER_USER);
+        model.addAttribute("signatureKinds", SignatureKind.values());
+
+        if (editId != null) {
+            signatureService.findMine(editId, me)
+                    .ifPresent(sig -> model.addAttribute("editing", sig));
+        }
+        return "academic/esign/my_signatures";
+    }
+
+    @PostMapping("/my-signatures")
+    public String save(Principal principal,
+            @RequestParam(value = "id", required = false) Long id,
+            @RequestParam(value = "imageData", required = false) String imageData,
+            @RequestParam(value = "kind", required = false) String kind,
+            @RequestParam(value = "name", required = false) String name,
+            @RequestParam(value = "typedText", required = false) String typedText,
+            @RequestParam(value = "typedFont", required = false) String typedFont,
+            @RequestParam(value = "makeDefault", required = false) Boolean makeDefault,
+            RedirectAttributes redirectAttributes) {
+
+        UserDtls me = currentUser(principal);
+        SignatureKind parsedKind = SignatureKind.fromValue(kind);
+        boolean asDefault = Boolean.TRUE.equals(makeDefault);
+
+        UserSignatureService.SaveResult result = (id == null)
+                ? signatureService.create(me, imageData, parsedKind, name, typedText, typedFont, asDefault)
+                : signatureService.update(id, me, imageData, parsedKind, name, typedText, typedFont, asDefault);
+
+        if (!result.ok()) {
+            redirectAttributes.addFlashAttribute("errorMsg", result.error());
+            return "redirect:/esign/my-signatures" + (id == null ? "" : "?edit=" + id);
+        }
+
+        redirectAttributes.addFlashAttribute("succMsg",
+                id == null ? "บันทึกลายเซ็นเรียบร้อยแล้ว" : "แก้ไขลายเซ็นเรียบร้อยแล้ว");
+        return "redirect:/esign/my-signatures";
+    }
+
+    @PostMapping("/my-signatures/{id}/delete")
+    public String delete(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
+        boolean deleted = signatureService.delete(id, currentUser(principal));
+        redirectAttributes.addFlashAttribute(deleted ? "succMsg" : "errorMsg",
+                deleted ? "ลบลายเซ็นเรียบร้อยแล้ว" : "ไม่พบลายเซ็นที่ต้องการลบ");
+        return "redirect:/esign/my-signatures";
+    }
+
+    @PostMapping("/my-signatures/{id}/default")
+    public String makeDefault(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
+        boolean updated = signatureService.makeDefault(id, currentUser(principal));
+        redirectAttributes.addFlashAttribute(updated ? "succMsg" : "errorMsg",
+                updated ? "ตั้งเป็นลายเซ็นหลักเรียบร้อยแล้ว" : "ไม่พบลายเซ็นที่เลือก");
+        return "redirect:/esign/my-signatures";
+    }
+
+    /**
+     * Serves a signature image to its owner only.
+     *
+     * <p>Deliberately not a static resource. {@code WebConfig} maps
+     * {@code /uploads/**} to a handler that serves any file under the upload root
+     * to any authenticated user; a signature is personal data, so it is read back
+     * through the repository with the owner in the query and a 404 — not a 403 —
+     * for anything else, which avoids confirming that an id exists.
+     */
+    @GetMapping("/signature/{id}/image")
+    public ResponseEntity<byte[]> image(@PathVariable Long id, Principal principal) {
+        byte[] png = signatureService.readImage(id, currentUser(principal));
+        if (png == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                // Private: this must never be held in a shared or proxy cache.
+                .cacheControl(CacheControl.maxAge(java.time.Duration.ofHours(1)).cachePrivate())
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
+                .body(png);
+    }
+
+    /** The signed-in account. Never null: every route here requires authentication. */
+    private UserDtls currentUser(Principal principal) {
+        return userRepository.findByEmail(principal.getName());
+    }
+}

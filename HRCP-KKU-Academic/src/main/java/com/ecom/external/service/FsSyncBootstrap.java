@@ -9,6 +9,7 @@ import org.springframework.core.annotation.Order;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
+import com.ecom.academic.service.StaffMemberService;
 import com.ecom.external.repository.FsFacultyRepository;
 import com.ecom.external.repository.ScopusPublicationRepository;
 
@@ -35,6 +36,7 @@ public class FsSyncBootstrap implements ApplicationRunner {
 
     private final FsSyncService syncService;
     private final CpDirectorySyncService cpSyncService;
+    private final StaffMemberService staffMemberService;
     private final FsFacultyRepository facultyRepo;
     private final ScopusPublicationRepository publicationRepo;
     private final boolean enabled;
@@ -43,6 +45,7 @@ public class FsSyncBootstrap implements ApplicationRunner {
 
     public FsSyncBootstrap(FsSyncService syncService,
             CpDirectorySyncService cpSyncService,
+            StaffMemberService staffMemberService,
             FsFacultyRepository facultyRepo,
             ScopusPublicationRepository publicationRepo,
             @Value("${fs.sync.on-startup:true}") boolean enabled,
@@ -50,6 +53,7 @@ public class FsSyncBootstrap implements ApplicationRunner {
             @Value("${cp.sync.on-startup:true}") boolean cpSyncOnStartup) {
         this.syncService = syncService;
         this.cpSyncService = cpSyncService;
+        this.staffMemberService = staffMemberService;
         this.facultyRepo = facultyRepo;
         this.publicationRepo = publicationRepo;
         this.enabled = enabled;
@@ -107,6 +111,17 @@ public class FsSyncBootstrap implements ApplicationRunner {
             } catch (Exception e) {
                 log.warn("College directory startup sync encountered an issue: {}", e.getMessage());
             }
+        }
+
+        // Auto-link any unlinked staff accounts on startup
+        try {
+            log.info("Running staff auto-link and role resolution check on startup...");
+            StaffMemberService.AutoLinkReport linkReport = staffMemberService.autoLinkAllAccounts();
+            if (linkReport.hasChanges()) {
+                log.info("Startup staff auto-link result: {}", linkReport.describe());
+            }
+        } catch (Exception e) {
+            log.warn("Startup staff auto-link check encountered an issue: {}", e.getMessage());
         }
     }
 }

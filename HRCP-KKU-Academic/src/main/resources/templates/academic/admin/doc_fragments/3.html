@@ -138,6 +138,10 @@
 
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
+
+                        <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+        <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
+
                 </div>
             </div>
         </div>

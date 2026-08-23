@@ -34,6 +34,7 @@ import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -72,6 +73,8 @@ public class PositionAdminController {
 
     private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
 
+    private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+
     public PositionAdminController(
             PositionRequestService positionService,
             DocumentGenerationService documentService,
@@ -82,7 +85,8 @@ public class PositionAdminController {
             com.ecom.academic.repository.AcademicRequestRepository academicRequestRepository,
             com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
-            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService) {
+            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow) {
         this.positionService = positionService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -93,6 +97,7 @@ public class PositionAdminController {
         this.academicDocumentRepository = academicDocumentRepository;
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
+        this.signatureWorkflow = signatureWorkflow;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -246,7 +251,8 @@ public class PositionAdminController {
     // ================== Document Forms ==================
 
     @GetMapping("/request/{id}/document/{type}")
-    public String documentForm(@PathVariable Long id, @PathVariable int type, Model model) {
+    public String documentForm(@PathVariable Long id, @PathVariable int type, Model model,
+            Principal principal) {
         PositionRequest request = positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
@@ -264,7 +270,14 @@ public class PositionAdminController {
         model.addAttribute("existingData", existingData);
         model.addAttribute("autoFilledData", autoFilledData);
         model.addAttribute("docData", autoFilledData);
-        model.addAttribute("deans", staffMemberService.findAll());
+        // Role-specific lists so each signer dropdown offers the right people.
+        // These were all one undifferentiated "deans" list, which put the whole
+        // staff into the department-head and HR pickers too.
+        model.addAttribute("staffMembers", staffMemberService.findAll());
+        model.addAttribute("deans", staffMemberService.findByRoleOrAll("DEAN"));
+        model.addAttribute("heads", staffMemberService.findByRoleOrAll("HEAD"));
+        model.addAttribute("committee", staffMemberService.findByRoleOrAll("COMMITTEE"));
+        model.addAttribute("hrStaff", staffMemberService.findByRoleOrAll("HR"));
 
         if (type == 5) {
             List<PositionDocument> doc1List = positionService.getDocumentsByType(id, 1);
@@ -278,6 +291,11 @@ public class PositionAdminController {
             model.addAttribute("doc6Data", doc6Data);
         }
 
+        // แผงลงนามอิเล็กทรอนิกส์ (fragment ใช้ร่วมกันทั้งสอง phase)
+        model.addAttribute("signatureModule", SignatureModule.POSITION);
+        model.addAttribute("signaturePanel",
+                signatureWorkflow.buildPanel(SignatureModule.POSITION, id, type, getUser(principal)));
+
         return "academic/position/admin/doc_form_" + type;
     }
 
@@ -289,6 +307,13 @@ public class PositionAdminController {
 
         if (request.getCurrentStatus().isDraft()) {
             return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
+        }
+
+        // เอกสารที่กำลังเวียนลงนามอยู่ (หรือลงนามครบแล้ว) ห้ามแก้ — ดูเหตุผลใน
+        // AcademicAdminController.generateDocument
+        if (signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type)) {
+            return "redirect:/admin/position/request/" + id
+                    + "/document/" + type + "?error=document_locked_for_signing";
         }
 
         boolean sendNotify = "true".equals(formData.getOrDefault("sendNotify", "false"));

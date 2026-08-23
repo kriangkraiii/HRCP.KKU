@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+<section>
+    <div class="container py-4">
+
+        <h3 class="mb-2"><i class="fas fa-signature"></i> ลายเซ็นของฉัน</h3>
+        <p class="text-secondary mb-4">
+            บันทึกลายเซ็นที่คุณสามารถใช้ซ้ำได้เมื่อลงนาม — วาด อัปโหลดรูปภาพ หรือพิมพ์ชื่อของคุณ
+            เมื่อลงนาม ให้เลือกลายเซ็นที่บันทึกไว้แทนการสร้างใหม่ทุกครั้ง
+            คุณสามารถแก้ไขลายเซ็นได้ทุกเมื่อ (วาดใหม่ อัปโหลดใหม่ เปลี่ยนชื่อ หรือเปลี่ยนประเภท)
+        </p>
+
+        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-circle-check"></i> <span th:text="${succMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-circle-exclamation"></i> <span th:text="${errorMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- ==================== เพิ่ม / แก้ไขลายเซ็น ==================== -->
+        <div class="card card-academic mb-4">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-plus" th:if="${editing == null}"></i>
+                    <i class="fas fa-pen" th:if="${editing != null}"></i>
+                    <span th:text="${editing == null} ? ' เพิ่มลายเซ็น' : ' แก้ไขลายเซ็น'"></span>
+                </h5>
+            </div>
+            <div class="card-body">
+
+                <div th:if="${editing == null && #lists.size(signatures) >= maxSignatures}"
+                     class="alert alert-warning mb-0">
+                    <i class="fas fa-circle-info"></i>
+                    เก็บลายเซ็นได้สูงสุด <span th:text="${maxSignatures}">5</span> รายการ
+                    — ลบรายการที่ไม่ใช้แล้วก่อนเพิ่มใหม่
+                </div>
+
+                <form th:unless="${editing == null && #lists.size(signatures) >= maxSignatures}"
+                      th:action="@{/esign/my-signatures}" method="post"
+                      id="signatureEditor"
+                      th:attr="data-initial-kind=${editing != null} ? ${editing.kind.name()} : 'DRAW'">
+
+                    <input type="hidden" name="id" th:if="${editing != null}" th:value="${editing.id}">
+                    <input type="hidden" name="imageData" id="sigImageData">
+                    <input type="hidden" name="kind" id="sigKind" value="DRAW">
+                    <input type="hidden" name="typedFont" id="sigTypedFont">
+
+                    <!-- แท็บเลือกวิธีสร้างลายเซ็น -->
+                    <div class="sig-tabs mb-3">
+                        <button type="button" class="sig-tab" data-sig-tab="DRAW" aria-selected="true">
+                            วาด
+                        </button>
+                        <button type="button" class="sig-tab" data-sig-tab="UPLOAD" aria-selected="false">
+                            อัปโหลดรูปภาพ
+                        </button>
+                        <button type="button" class="sig-tab" data-sig-tab="TYPE" aria-selected="false">
+                            พิมพ์
+                        </button>
+                    </div>
+
+                    <div class="row g-3">
+                        <!-- ฝั่งซ้าย: พื้นที่สร้างลายเซ็น -->
+                        <div class="col-lg-5">
+
+                            <div id="sigPanelDraw">
+                                <div class="sig-canvas-wrap">
+                                    <canvas id="sigCanvas"></canvas>
+                                </div>
+                                <div class="form-text">ใช้เมาส์ ปากกา หรือนิ้วลากเพื่อวาดลายเซ็น</div>
+                            </div>
+
+                            <div id="sigPanelUpload" class="d-none">
+                                <label class="form-label">เลือกไฟล์รูปลายเซ็น</label>
+                                <input type="file" id="sigUpload" class="form-control" accept="image/*">
+                                <div class="form-text">
+                                    รองรับ PNG / JPG — แนะนำรูปพื้นหลังโปร่งใสหรือพื้นขาว ตัวอักษรสีเข้ม
+                                </div>
+                            </div>
+
+                            <div id="sigPanelType" class="d-none">
+                                <label class="form-label">พิมพ์ชื่อของคุณ</label>
+                                <input type="text" id="sigTypedText" name="typedText" class="form-control"
+                                       maxlength="120"
+                                       th:value="${editing != null} ? ${editing.typedText} : ''"
+                                       placeholder="เช่น เกรียงไกร ประเสริฐ">
+                                <div class="form-text">ระบบจะแปลงข้อความเป็นรูปลายเซ็นให้อัตโนมัติ</div>
+                            </div>
+
+                            <button type="button" id="sigClearBtn" class="btn btn-outline-secondary btn-sm mt-3">
+                                <i class="fas fa-eraser"></i> ล้าง
+                            </button>
+                        </div>
+
+                        <!-- ฝั่งขวา: ตัวอย่างผลลัพธ์จริงที่จะถูกนำไปใช้ในเอกสาร -->
+                        <div class="col-lg-7">
+                            <label class="form-label">ตัวอย่างลายเซ็น</label>
+                            <div class="sig-preview-box">
+                                <img id="sigPreview" class="d-none" alt="ตัวอย่างลายเซ็น">
+                                <span id="sigPreviewEmpty" class="text-secondary">
+                                    ยังไม่มีลายเซ็น — วาด อัปโหลด หรือพิมพ์ชื่อทางด้านซ้าย
+                                </span>
+                            </div>
+                            <div class="form-text">
+                                ลายเซ็นจะถูกตัดขอบว่างและบันทึกเป็นรูปพื้นหลังโปร่งใสอัตโนมัติ
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mt-1">
+                        <div class="col-md-6">
+                            <label class="form-label">ชื่อ</label>
+                            <input type="text" name="name" class="form-control" maxlength="100"
+                                   th:value="${editing != null} ? ${editing.name} : ''"
+                                   placeholder="เช่น ลายเซ็นของฉัน">
+                        </div>
+                        <div class="col-md-6 d-flex align-items-end">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" name="makeDefault"
+                                       id="sigMakeDefault" value="true"
+                                       th:checked="${editing != null && editing.isDefault}">
+                                <label class="form-check-label" for="sigMakeDefault">
+                                    ตั้งเป็นลายเซ็นหลัก (เลือกให้อัตโนมัติเมื่อลงนาม)
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex flex-wrap gap-2 align-items-center mt-4">
+                        <button type="submit" id="sigSaveBtn" class="btn btn-academic" disabled>
+                            <i class="fas fa-save"></i> บันทึกลายเซ็น
+                        </button>
+                        <a th:if="${editing != null}" href="/esign/my-signatures"
+                           class="btn btn-link text-decoration-none">ยกเลิกการแก้ไข</a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ==================== ลายเซ็นที่บันทึกไว้ ==================== -->
+        <div class="card card-academic">
+            <div class="card-header bg-white">
+                <h5 class="mb-0">
+                    ลายเซ็นที่บันทึกไว้
+                    <span class="text-secondary" th:text="'(' + ${#lists.size(signatures)} + ')'">(0)</span>
+                </h5>
+            </div>
+            <div class="card-body">
+
+                <p th:if="${#lists.isEmpty(signatures)}" class="text-secondary mb-0">
+                    ยังไม่มีลายเซ็นที่บันทึกไว้ — สร้างลายเซ็นแรกของคุณด้านบน
+                </p>
+
+                <div class="row g-3" th:unless="${#lists.isEmpty(signatures)}">
+                    <div class="col-md-4 col-sm-6" th:each="sig : ${signatures}">
+                        <div class="sig-card" th:classappend="${sig.isDefault} ? 'is-default' : ''">
+
+                            <div class="sig-card-thumb">
+                                <img th:src="${sig.imageUrl}" th:alt="${sig.displayName}">
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <strong th:text="${sig.displayName}">ชื่อลายเซ็น</strong>
+                                <span class="badge bg-light text-secondary border"
+                                      th:text="${sig.kind.thaiLabel}">ประเภท</span>
+                            </div>
+
+                            <div class="mt-1">
+                                <span th:if="${sig.isDefault}" class="badge bg-success">
+                                    <i class="fas fa-star"></i> ลายเซ็นหลัก
+                                </span>
+                            </div>
+
+                            <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                                <a th:href="@{/esign/my-signatures(edit=${sig.id})}"
+                                   class="btn btn-sm btn-link p-0 text-decoration-none">แก้ไข</a>
+
+                                <form th:unless="${sig.isDefault}"
+                                      th:action="@{'/esign/my-signatures/' + ${sig.id} + '/default'}" method="post"
+                                      class="d-inline">
+                                    <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none">
+                                        ตั้งเป็นหลัก
+                                    </button>
+                                </form>
+
+                                <form th:action="@{'/esign/my-signatures/' + ${sig.id} + '/delete'}" method="post"
+                                      class="d-inline" data-confirm="ยืนยันการลบลายเซ็นนี้?">
+                                    <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none text-danger">
+                                        ลบ
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/signature_pad.js"></script>
+</section>
+</body>
+</html>

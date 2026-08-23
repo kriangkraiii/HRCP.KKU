@@ -28,6 +28,7 @@ public interface AdminLogRepository extends JpaRepository<AdminLog, Long>, JpaSp
 	long countByAction(String action);
 
 	@org.springframework.data.jpa.repository.Modifying
+	@org.springframework.transaction.annotation.Transactional
 	@Query("DELETE FROM AdminLog a WHERE a.timestamp < :cutoff")
 	int deleteLogsBefore(@Param("cutoff") LocalDateTime cutoff);
 }

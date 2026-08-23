@@ -10,6 +10,7 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.model.Notification;
 import com.ecom.model.UserDtls;
@@ -89,24 +90,29 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     // ================= Modifying Queries =================
 
     @Modifying
+    @Transactional
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.recipient = :recipient AND n.isRead = false AND n.isDeleted = false")
     void markAllAsReadByRecipient(@Param("recipient") UserDtls recipient);
 
     @Modifying
+    @Transactional
     @Query("UPDATE Notification n SET n.isRead = true WHERE n.id = :id AND n.recipient = :recipient")
     void markAsRead(@Param("id") Long id, @Param("recipient") UserDtls recipient);
 
     @Modifying
+    @Transactional
     @Query("DELETE FROM Notification n WHERE n.recipient = :recipient AND n.isDeleted = true")
     void emptyTrashByRecipient(@Param("recipient") UserDtls recipient);
 
     // ================= Data Retention Queries =================
 
     @Modifying
+    @Transactional
     @Query("DELETE FROM Notification n WHERE n.isDeleted = true AND n.createdAt < :cutoff")
     int deleteDeletedNotificationsBefore(@Param("cutoff") LocalDateTime cutoff);
 
     @Modifying
+    @Transactional
     @Query("DELETE FROM Notification n WHERE n.createdAt < :cutoff")
     int deleteAncientNotificationsBefore(@Param("cutoff") LocalDateTime cutoff);
 }

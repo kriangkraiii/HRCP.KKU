@@ -15,6 +15,10 @@
                 </div>
                 <div class="card-body">
 
+                    <div th:if="${linkError}" class="alert alert-danger">
+                        <i class="fas fa-link-slash"></i> <span th:text="${linkError}"></span>
+                    </div>
+
                     <!-- ชื่อซ้ำไม่ได้แปลว่าผิดเสมอไป (คนชื่อเหมือนกันมีจริง) จึงถามแทนที่จะห้าม
                          แต่ต้องถาม เพราะทุกแถวที่ซ้ำจะกลายเป็นตัวเลือกกำกวมในเอกสารทุกใบ -->
                     <div th:if="${duplicateWarning}" class="alert alert-warning">
@@ -135,6 +139,26 @@
                                     อาจารย์ทั่วไป</option>
                             </select>
                         </div>
+
+                        <!-- ผูกบัญชีผู้ใช้ — จำเป็นสำหรับการลงนามอิเล็กทรอนิกส์
+                             ชื่อในเอกสารพิมพ์ได้โดยไม่ต้องมีบัญชี แต่ "ให้คนนี้มาเซ็น" ต้องรู้ว่าเป็นบัญชีไหน -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                บัญชีผู้ใช้ในระบบ (สำหรับลงนามอิเล็กทรอนิกส์)
+                            </label>
+                            <select name="userId" class="form-select">
+                                <option value="">— ไม่ผูกบัญชี (ใช้เป็นชื่อในเอกสารเท่านั้น) —</option>
+                                <option th:each="u : ${linkableUsers}"
+                                        th:value="${u.id}"
+                                        th:selected="${staff.user != null && staff.user.id == u.id}"
+                                        th:text="${u.name} + ' — ' + ${u.email}">ชื่อ — อีเมล</option>
+                            </select>
+                            <div class="form-text">
+                                ผูกบัญชีแล้วจึงจะถูกเลือกเป็นผู้ลงนามและได้รับการแจ้งเตือนให้มาเซ็นในระบบได้
+                                ผู้ทรงคุณวุฒิภายนอกที่ไม่มีบัญชี ให้เว้นว่างไว้
+                            </div>
+                        </div>
+
                         <div class="d-flex gap-2">
                             <button type="submit" class="btn btn-academic" th:unless="${duplicateWarning}">
                                 <i class="fas fa-save"></i> บันทึก

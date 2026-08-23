@@ -4,18 +4,46 @@
 <body>
     <section>
         <div class="container py-4">
-            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
-                <i class="fas fa-check-circle"></i>
+            <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show shadow-sm">
+                <i class="fas fa-check-circle me-2"></i>
                 <span th:if="${param.success[0] == 'added'}">เพิ่มบุคลากรสำเร็จ</span>
                 <span th:if="${param.success[0] == 'updated'}">แก้ไขข้อมูลสำเร็จ</span>
                 <span th:if="${param.success[0] == 'deleted'}">ลบข้อมูลสำเร็จ</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3><i class="fas fa-users"></i> จัดการรายชื่อบุคลากร</h3>
-                <a href="/admin/academic/staff/add" class="btn btn-academic"><i class="fas fa-plus"></i>
-                    เพิ่มบุคลากร</a>
+            <div th:if="${infoMessage != null}" class="alert alert-info alert-dismissible fade show shadow-sm">
+                <i class="fas fa-circle-info me-2"></i>
+                <span th:text="${infoMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div th:if="${errorMessage != null}" class="alert alert-danger alert-dismissible fade show shadow-sm">
+                <i class="fas fa-triangle-exclamation me-2"></i>
+                <span th:text="${errorMessage}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+                <div>
+                    <h3 class="mb-1"><i class="fas fa-users text-primary"></i> จัดการรายชื่อบุคลากร</h3>
+                    <p class="text-muted small mb-0">รายชื่อบุคลากรสำหรับใช้ระบุชื่อและส่งคำขอลงนามดิจิทัล (E-Signature)</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <form th:action="@{/admin/academic/staff/auto-link}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-outline-success" title="สแกนและผูกบัญชีผู้ใช้งาน (UserDtls) กับบุคลากรอัตโนมัติ">
+                            <i class="fas fa-bolt me-1"></i> ผูกบัญชีอัตโนมัติ
+                        </button>
+                    </form>
+                    <form th:action="@{/admin/academic/staff/sync}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-outline-primary" title="ดึงข้อมูลล่าสุดจากระบบ Directory ต้นทางและผูกบัญชี">
+                            <i class="fas fa-rotate me-1"></i> ซิงก์ข้อมูลต้นทาง
+                        </button>
+                    </form>
+                    <a href="/admin/academic/staff/add" class="btn btn-academic">
+                        <i class="fas fa-plus me-1"></i> เพิ่มบุคลากร
+                    </a>
+                </div>
             </div>
 
             <div class="card card-academic">
@@ -36,6 +64,7 @@
                                     <th>ประเภท</th>
                                     <th>หน่วยงาน</th>
                                     <th>บทบาท</th>
+                                    <th>บัญชีลงนาม</th>
                                     <th>ที่มา</th>
                                     <th>จัดการ</th>
                                 </tr>
@@ -58,6 +87,18 @@
                                                    (${s.staffRole == 'COMMITTEE'} ? 'bg-success' : 
                                                    (${s.staffRole == 'HR'} ? 'bg-warning' : 'bg-secondary')))"
                                             th:text="${s.staffRole}"></span>
+                                    </td>
+                                    <!-- ผูกบัญชีแล้วหรือยัง — ตัดสินว่าคนนี้ถูกส่งไปลงนามในระบบได้หรือไม่
+                                         คนที่ยังไม่ผูกจะไม่ปรากฏเป็นตัวเลือกผู้ลงนาม จึงต้องเห็นได้จากตารางนี้ -->
+                                    <td>
+                                        <span th:if="${s.signable}" class="badge bg-success"
+                                              th:title="'ผูกกับบัญชี ' + ${s.user.email} + ' — ส่งไปลงนามในระบบได้'">
+                                            <i class="fas fa-circle-check"></i> ผูกแล้ว
+                                        </span>
+                                        <span th:unless="${s.signable}" class="badge bg-light text-muted border"
+                                              title="ยังไม่ผูกบัญชี — ใช้เป็นชื่อในเอกสารได้ แต่เลือกเป็นผู้ลงนามไม่ได้">
+                                            <i class="fas fa-link-slash"></i> ยังไม่ผูก
+                                        </span>
                                     </td>
                                     <!-- ชื่อ/ตำแหน่งของแถวที่มาจากต้นทาง จะถูกอัปเดตทับทุกครั้งที่ sync
                                          ต้องบอกไว้ ไม่งั้นแอดมินแก้แล้วงงว่าทำไมคืนค่าเดิม -->

@@ -129,6 +129,64 @@
                             </table>
                         </div>
 
+                        <!-- Multi-File Attachments Section for Admin -->
+                        <div class="card card-academic border shadow-sm my-4" th:if="${attachments != null && !attachments.isEmpty()}">
+                            <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                <h6 class="mb-0 fw-semibold text-primary">
+                                    <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอนที่ผู้ยื่นอัปโหลด
+                                </h6>
+                                <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' ไฟล์'}">0 ไฟล์</span>
+                            </div>
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-hover align-middle border mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th style="width: 50px;" class="text-center">#</th>
+                                                <th>ชื่อไฟล์แนบ</th>
+                                                <th style="width: 120px;" class="text-center">ขนาด</th>
+                                                <th style="width: 180px;" class="text-center">วันที่อัปโหลด</th>
+                                                <th style="width: 130px;" class="text-center">ดาวน์โหลด</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <tr th:each="att, iter : ${attachments}">
+                                                <td class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
+                                                <td>
+                                                    <div class="d-flex align-items-center gap-2">
+                                                        <span th:if="${att.fileType == 'PDF'}" class="text-danger fs-5"><i class="fas fa-file-pdf"></i></span>
+                                                        <span th:if="${att.fileType == 'DOCX'}" class="text-primary fs-5"><i class="fas fa-file-word"></i></span>
+                                                        <span th:if="${att.fileType == 'PPTX'}" class="text-warning fs-5"><i class="fas fa-file-powerpoint"></i></span>
+                                                        <span th:if="${att.fileType == 'XLSX'}" class="text-success fs-5"><i class="fas fa-file-excel"></i></span>
+                                                        <span th:if="${att.fileType == 'ZIP'}" class="text-secondary fs-5"><i class="fas fa-file-archive"></i></span>
+                                                        <span th:if="${att.fileType == 'IMAGE'}" class="text-info fs-5"><i class="fas fa-file-image"></i></span>
+                                                        <span th:if="${att.fileType == 'OTHER'}" class="text-muted fs-5"><i class="fas fa-file-alt"></i></span>
+                                                        <div>
+                                                            <div class="fw-semibold text-break" th:text="${att.originalFilename}">filename.pdf</div>
+                                                            <small class="badge bg-light text-secondary border" th:text="${att.fileType}">PDF</small>
+                                                        </div>
+                                                    </div>
+                                                </td>
+                                                <td class="text-center text-muted small">
+                                                    <span th:if="${att.fileSize != null}" th:text="${#numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB'}">0 MB</span>
+                                                    <span th:unless="${att.fileSize != null}">-</span>
+                                                </td>
+                                                <td class="text-center text-muted small" th:text="${att.uploadedAt != null ? #temporals.format(att.uploadedAt, 'dd/MM/yyyy HH:mm') : '-'}">
+                                                    01/01/2026 12:00
+                                                </td>
+                                                <td class="text-center">
+                                                    <a th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
+                                                       class="btn btn-sm btn-outline-primary" title="ดาวน์โหลด">
+                                                        <i class="fas fa-download me-1"></i> ดาวน์โหลด
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
                         <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">
                             <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -136,6 +194,10 @@
 
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
+
+                        <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+        <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
+
                 </div>
             </div>
         </div>

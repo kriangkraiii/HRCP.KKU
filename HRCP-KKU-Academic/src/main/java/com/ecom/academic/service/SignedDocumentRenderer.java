@@ -1,0 +1,215 @@
+package com.ecom.academic.service;
+
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+
+import javax.imageio.ImageIO;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.stereotype.Service;
+
+import com.ecom.academic.model.SignatureModule;
+import com.ecom.academic.model.SignatureRequest;
+import com.ecom.academic.model.SignatureRequestStatus;
+import com.ecom.academic.model.SignatureStep;
+import com.ecom.academic.repository.SignatureStepRepository;
+import com.ecom.academic.service.DocumentGenerationService.StampedSignature;
+import com.ecom.service.SignatureImageStorage;
+
+/**
+ * Renders an envelope's document, with whatever has been signed so far.
+ *
+ * <p>Always builds from the envelope's frozen snapshot, never from the live form.
+ * That is the whole point of freezing: what the second signer sees must be
+ * exactly what the first one signed, and the finished document must match both.
+ *
+ * <p>Partially-signed renders are used by the signing page, so a signer can see
+ * the signatures already collected above the space where theirs will go.
+ */
+@Service
+public class SignedDocumentRenderer {
+
+    private static final Logger log = LoggerFactory.getLogger(SignedDocumentRenderer.class);
+
+    /** Where finished, fully-signed copies are archived. */
+    private static final String SIGNED_OUTPUT_DIR = "uploads/academic/signed";
+
+    private final DocumentGenerationService documentGenerationService;
+    private final SignatureStepRepository stepRepository;
+    private final SignatureImageStorage signatureImageStorage;
+    private final QrCodeGenerator qrCodeGenerator;
+
+    /**
+     * Public address of this system, embedded in the verification QR.
+     *
+     * <p>Configurable because the QR is scanned from paper, where a localhost
+     * URL would be useless.
+     */
+    @Value("${app.esign.base-url:https://localhost:8081}")
+    private String baseUrl;
+
+    /**
+     * Warns when the QR would point somewhere unreachable.
+     *
+     * <p>A localhost URL is right for a developer machine and useless on paper:
+     * the code is printed on an official document and scanned by whoever is
+     * holding it. Silently shipping that would produce documents that look
+     * verifiable and are not, so it is said out loud at boot.
+     */
+    @jakarta.annotation.PostConstruct
+    void warnIfBaseUrlIsLocal() {
+        if (baseUrl != null && (baseUrl.contains("localhost") || baseUrl.contains("127.0.0.1"))) {
+            log.warn("app.esign.base-url is {} — QR codes printed on signed documents will point at "
+                    + "this machine and will not resolve for anyone else. Set APP_ESIGN_BASE_URL to the "
+                    + "public address before using signatures in production.", baseUrl);
+        }
+    }
+
+    public SignedDocumentRenderer(DocumentGenerationService documentGenerationService,
+            SignatureStepRepository stepRepository,
+            SignatureImageStorage signatureImageStorage,
+            QrCodeGenerator qrCodeGenerator) {
+        this.documentGenerationService = documentGenerationService;
+        this.stepRepository = stepRepository;
+        this.signatureImageStorage = signatureImageStorage;
+        this.qrCodeGenerator = qrCodeGenerator;
+    }
+
+    /**
+     * The document as it currently stands, including every signature collected.
+     *
+     * <p>Once the chain is complete the verification footer is printed too, so
+     * the finished document carries its own means of being checked. While it is
+     * still circulating the footer is omitted — a code on a half-signed document
+     * would imply more than is true.
+     */
+    public byte[] renderDocx(SignatureRequest envelope) throws IOException {
+        List<StampedSignature> signatures = collectSignatures(envelope);
+        DocumentGenerationService.VerificationStamp verification =
+                envelope.getStatus() == SignatureRequestStatus.COMPLETED
+                        ? verificationStampFor(envelope)
+                        : null;
+
+        return envelope.getModule() == SignatureModule.ACADEMIC
+                ? documentGenerationService.generateSignedDocx(
+                        envelope.getDocumentType(), envelope.getFrozenJson(), signatures, verification)
+                : documentGenerationService.generateSignedP2Docx(
+                        envelope.getDocumentType(), envelope.getFrozenJson(), signatures, verification);
+    }
+
+    /** The footer's caption, code and QR. */
+    private DocumentGenerationService.VerificationStamp verificationStampFor(SignatureRequest envelope) {
+        String url = baseUrl + "/esign/verify/" + envelope.getVerificationCode();
+        return new DocumentGenerationService.VerificationStamp(
+                "รหัสตรวจสอบ: " + envelope.getVerificationCode(),
+                "เอกสารนี้ลงนามด้วยลายมือชื่ออิเล็กทรอนิกส์ ตรวจสอบความถูกต้องได้ที่ระบบ",
+                qrCodeGenerator.pngFor(url));
+    }
+
+    /**
+     * Stores the finished document alongside the request's other files.
+     *
+     * <p>Kept rather than re-generated on demand: a stored copy is what was
+     * actually signed. Re-rendering later would depend on templates and code
+     * that may have moved on since.
+     *
+     * @return the paths written, or null if the document could not be produced
+     */
+    public StoredCopies storeFinalCopies(SignatureRequest envelope) {
+        try {
+            byte[] docx = renderDocx(envelope);
+            Path dir = Path.of(SIGNED_OUTPUT_DIR, String.valueOf(envelope.getRequestId()));
+            Files.createDirectories(dir);
+
+            String base = (envelope.getModule() == SignatureModule.ACADEMIC ? "doc_" : "p2doc_")
+                    + envelope.getDocumentType() + "_signed_" + envelope.getVerificationCode();
+
+            Path docxPath = dir.resolve(base + ".docx");
+            Files.write(docxPath, docx);
+
+            String pdfPath = null;
+            if (documentGenerationService.isPdfConversionAvailable()) {
+                byte[] pdf = documentGenerationService.convertDocxToPdfCached(docx);
+                if (pdf != null && pdf.length > 0) {
+                    Path target = dir.resolve(base + ".pdf");
+                    Files.write(target, pdf);
+                    pdfPath = target.toString();
+                }
+            }
+            return new StoredCopies(docxPath.toString(), pdfPath);
+        } catch (IOException e) {
+            // The signatures themselves are already safe in the database; failing
+            // to archive a copy must not undo them.
+            log.error("Could not store the signed copy of envelope {}: {}", envelope.getId(), e.toString());
+            return null;
+        }
+    }
+
+    /** Where the finished copies were written. */
+    public record StoredCopies(String docxPath, String pdfPath) {
+    }
+
+    /**
+     * The same document as PDF, for on-screen review.
+     *
+     * @return the PDF, or null when LibreOffice is unavailable — callers offer
+     *         the DOCX instead rather than failing the page
+     */
+    public byte[] renderPdf(SignatureRequest envelope) throws IOException {
+        byte[] docx = renderDocx(envelope);
+        if (!documentGenerationService.isPdfConversionAvailable()) {
+            return null;
+        }
+        return documentGenerationService.convertDocxToPdfCached(docx);
+    }
+
+    /**
+     * Loads the image for each signed step.
+     *
+     * <p>Reads {@code imagePathSnapshot} rather than following the link to the
+     * signer's library: someone deleting a signature from their own library must
+     * not blank out a document they already signed.
+     */
+    private List<StampedSignature> collectSignatures(SignatureRequest envelope) {
+        List<StampedSignature> stamped = new ArrayList<>();
+
+        for (SignatureStep step : stepRepository.findSignedSteps(envelope.getId())) {
+            String path = step.getImagePathSnapshot();
+            if (path == null || path.isBlank()) {
+                continue;
+            }
+            byte[] png = signatureImageStorage.read(path);
+            if (png == null) {
+                // Better a document missing one signature, clearly, than a failed
+                // render that hides the rest.
+                log.warn("Signature image {} for step {} is missing; rendering without it",
+                        path, step.getId());
+                continue;
+            }
+
+            // Measure the file rather than trusting the stored dimensions: the
+            // aspect ratio decides the printed size, and the row could be stale.
+            int width = 0;
+            int height = 0;
+            try {
+                BufferedImage image = ImageIO.read(new ByteArrayInputStream(png));
+                if (image != null) {
+                    width = image.getWidth();
+                    height = image.getHeight();
+                }
+            } catch (IOException e) {
+                log.warn("Could not measure signature image {}: {}", path, e.toString());
+            }
+
+            stamped.add(new StampedSignature(step.getAnchorPlaceholder(), png, width, height));
+        }
+        return stamped;
+    }
+}

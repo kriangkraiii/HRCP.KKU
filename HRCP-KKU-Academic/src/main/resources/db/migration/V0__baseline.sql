@@ -1,0 +1,22 @@
+-- =============================================================================
+-- V0__baseline.sql — Flyway Baseline Migration
+--
+-- This migration represents the existing schema that was previously managed
+-- by Hibernate ddl-auto=update. All tables already exist in the database.
+--
+-- Going forward:
+--   • ddl-auto is set to 'validate' (Hibernate checks but never modifies)
+--   • All schema changes MUST be added as new migration files (V4__, V5__, ...)
+--
+-- Numbered V0, not V1: V1__create_petition_statuses_table.sql has existed since
+-- March 2026, and two files sharing a version makes Flyway refuse to start at
+-- all — "Found more than one migration with version 1" — which takes the whole
+-- application down with it. V0 also sits at baseline-version=0, so Flyway treats
+-- this file as already applied and never executes it, which is the intent.
+--
+-- Created: 2026-08-22 as part of ISO/IEC 27001 compliance (A.14)
+-- Renumbered: 2026-08-23 to resolve the version collision described above.
+-- =============================================================================
+
+-- Intentionally empty: the schema already exists.
+-- This file exists solely to establish Flyway's migration history table.

@@ -96,21 +96,30 @@
                             </div>
                         </div>
 
-                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-graduation-cap"></i> ขอรับการประเมินผลการสอนเพื่อขอกำหนดตำแหน่ง</h5>
+                        <h5 class="border-bottom pb-2 mb-3 mt-4">
+                            <i class="fas fa-graduation-cap"></i> ขอรับการประเมินผลการสอนเพื่อขอกำหนดตำแหน่ง <span class="text-danger">*</span>
+                        </h5>
                         <div class="row mb-3">
                             <div class="col-md-12">
                                 <div class="d-flex gap-4">
                                     <div class="form-check">
-                                        <input class="form-check-input chk-position" type="checkbox" name="chk1" id="chk1" value="✓"
-                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk1', '') == '✓'}">
-                                        <label class="form-check-label" for="chk1">ผู้ช่วยศาสตราจารย์ (ผศ.)</label>
+                                        <input class="form-check-input target-pos-radio" type="radio" name="target_position_choice" id="targetPos1"
+                                            value="chk1"
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk1', '') == '✓'}" required>
+                                        <label class="form-check-label fw-semibold" for="targetPos1">ผู้ช่วยศาสตราจารย์ (ผศ.)</label>
                                     </div>
                                     <div class="form-check">
-                                        <input class="form-check-input chk-position" type="checkbox" name="chk2" id="chk2" value="✓"
-                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk2', '') == '✓'}">
-                                        <label class="form-check-label" for="chk2">รองศาสตราจารย์ (รศ.)</label>
+                                        <input class="form-check-input target-pos-radio" type="radio" name="target_position_choice" id="targetPos2"
+                                            value="chk2"
+                                            th:checked="${doc0Data != null && doc0Data.getOrDefault('chk2', '') == '✓'}" required>
+                                        <label class="form-check-label fw-semibold" for="targetPos2">รองศาสตราจารย์ (รศ.)</label>
                                     </div>
                                 </div>
+                                <!-- Hidden inputs for backend binding -->
+                                <input type="hidden" name="chk1" id="chk1"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('chk1', '') : ''}">
+                                <input type="hidden" name="chk2" id="chk2"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('chk2', '') : ''}">
                             </div>
                         </div>
 
@@ -142,6 +151,10 @@
 
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
+
+                        <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+        <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
+
                 </div>
             </div>
         </div>
@@ -150,6 +163,22 @@
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script src="/js/doc_preview.js"></script>
+        <script>
+            function syncAdminTargetPos() {
+                var r1 = document.getElementById('targetPos1');
+                var r2 = document.getElementById('targetPos2');
+                var chk1 = document.getElementById('chk1');
+                var chk2 = document.getElementById('chk2');
+                if (!r1 || !r2 || !chk1 || !chk2) return;
+                if (r1.checked) { chk1.value = '✓'; chk2.value = ''; }
+                else if (r2.checked) { chk1.value = ''; chk2.value = '✓'; }
+                else { chk1.value = ''; chk2.value = ''; }
+            }
+            document.querySelectorAll('.target-pos-radio').forEach(function(radio) {
+                radio.addEventListener('change', syncAdminTargetPos);
+            });
+            syncAdminTargetPos();
+        </script>
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
     </section>
 </body>

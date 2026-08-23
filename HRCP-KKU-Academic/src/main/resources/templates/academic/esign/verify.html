@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+<section>
+    <div class="container py-4" style="max-width: 860px;">
+
+        <h3 class="mb-4"><i class="fas fa-shield-halved"></i> ตรวจสอบเอกสารที่ลงนามอิเล็กทรอนิกส์</h3>
+
+        <!-- ============ ไม่พบรหัส ============ -->
+        <div th:if="${notFoundCode != null}" class="card card-academic">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-circle-question fa-2x text-secondary mb-3"></i>
+                <h5>ไม่พบเอกสารตามรหัสที่ระบุ</h5>
+                <p class="text-secondary mb-0">
+                    รหัส <code th:text="${notFoundCode}">CODE</code> ไม่ตรงกับเอกสารใดในระบบ
+                    — กรุณาตรวจสอบการพิมพ์อีกครั้ง
+                </p>
+            </div>
+        </div>
+
+        <div th:if="${report != null}">
+
+            <!-- ============ สรุปผล ============ -->
+            <div class="alert d-flex align-items-start gap-3"
+                 th:classappend="${report.fullyValid()} ? 'alert-success' : 'alert-warning'">
+                <i class="fa-2x mt-1"
+                   th:classappend="${report.fullyValid()}
+                                   ? 'fas fa-circle-check' : 'fas fa-triangle-exclamation'"></i>
+                <div>
+                    <h5 class="mb-1" th:text="${report.headlineThai()}">ผลการตรวจสอบ</h5>
+                    <div class="small">
+                        รหัสตรวจสอบ:
+                        <code th:text="${report.envelope.verificationCode}">CODE</code>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ รายละเอียดเอกสาร ============ -->
+            <div class="card card-academic mb-3">
+                <div class="card-header bg-white"><i class="fas fa-file-lines"></i> ข้อมูลเอกสาร</div>
+                <div class="card-body">
+                    <dl class="row mb-0">
+                        <dt class="col-sm-4 fw-normal text-secondary">เอกสาร</dt>
+                        <dd class="col-sm-8" th:text="${report.envelope.documentLabel}
+                                                      ?: ('เอกสารที่ ' + ${report.envelope.documentType})">—</dd>
+
+                        <dt class="col-sm-4 fw-normal text-secondary">ประเภทคำร้อง</dt>
+                        <dd class="col-sm-8" th:text="${report.envelope.module.thaiLabel}">—</dd>
+
+                        <dt class="col-sm-4 fw-normal text-secondary">สถานะการลงนาม</dt>
+                        <dd class="col-sm-8">
+                            <span class="badge" th:classappend="'bg-' + ${report.envelope.status.color}"
+                                  th:text="${report.envelope.status.thaiLabel}">สถานะ</span>
+                            <span class="text-secondary ms-1" th:text="${report.envelope.progressLabel}">0/0</span>
+                        </dd>
+
+                        <dt class="col-sm-4 fw-normal text-secondary">ความครบถ้วนของเนื้อหา</dt>
+                        <dd class="col-sm-8">
+                            <span th:if="${report.contentIntact}" class="text-success">
+                                <i class="fas fa-check"></i> ตรงกับฉบับที่ลงนาม
+                            </span>
+                            <span th:unless="${report.contentIntact}" class="text-danger">
+                                <i class="fas fa-xmark"></i> ไม่ตรงกับฉบับที่ลงนาม
+                            </span>
+                        </dd>
+
+                        <dt class="col-sm-4 fw-normal text-secondary" th:if="${report.envelope.completedAt != null}">
+                            ลงนามครบเมื่อ
+                        </dt>
+                        <dd class="col-sm-8" th:if="${report.envelope.completedAt != null}"
+                            th:text="${#temporals.format(report.envelope.completedAt, 'd MMM yyyy HH:mm')}">—</dd>
+                    </dl>
+                </div>
+            </div>
+
+            <!-- ============ ผู้ลงนาม ============ -->
+            <div class="card card-academic mb-3">
+                <div class="card-header bg-white"><i class="fas fa-users"></i> ผู้ลงนาม</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item" th:if="${#lists.isEmpty(report.signers)}">
+                        <span class="text-secondary">ยังไม่มีผู้ลงนาม</span>
+                    </li>
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-2"
+                        th:each="s : ${report.signers}">
+                        <div>
+                            <span class="badge bg-secondary me-1" th:text="${s.order}">1</span>
+                            <strong th:text="${s.signerName}">ชื่อ</strong>
+                            <div class="small text-secondary">
+                                <span th:text="${s.roleLabel}">ตำแหน่ง</span>
+                                <span th:if="${s.signedAt != null}"
+                                      th:text="' · ' + ${#temporals.format(s.signedAt, 'd MMM yyyy HH:mm')}"></span>
+                            </div>
+                        </div>
+                        <!-- ผนึกหลักฐาน: บอกตรง ๆ ว่า "ยังไม่ได้ผนึก" ไม่ใช่ทำเป็นว่าผ่าน -->
+                        <span th:if="${s.sealIntact}" class="badge bg-success">
+                            <i class="fas fa-lock"></i> หลักฐานถูกต้อง
+                        </span>
+                        <span th:if="${s.sealPresent && !s.sealIntact}" class="badge bg-danger">
+                            <i class="fas fa-lock-open"></i> หลักฐานถูกแก้ไข
+                        </span>
+                        <span th:unless="${s.sealPresent}" class="badge bg-secondary">
+                            ไม่ได้ผนึก
+                        </span>
+                    </li>
+                </ul>
+            </div>
+
+            <div th:unless="${report.sealingEnabled}" class="alert alert-secondary small">
+                <i class="fas fa-circle-info"></i>
+                ระบบยังไม่ได้ตั้งค่ากุญแจสำหรับผนึกหลักฐาน (<code>APP_ESIGN_HMAC_SECRET</code>)
+                จึงตรวจสอบการแก้ไขหลักฐานการลงนามไม่ได้ — ตรวจสอบได้เฉพาะความครบถ้วนของเนื้อหาเอกสารเท่านั้น
+            </div>
+
+            <!-- ============ ร่องรอยการดำเนินการ ============ -->
+            <div class="card card-academic">
+                <div class="card-header bg-white"><i class="fas fa-clock-rotate-left"></i> ประวัติการดำเนินการ</div>
+                <ul class="list-group list-group-flush">
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-2"
+                        th:each="e : ${auditTrail}">
+                        <div>
+                            <i th:class="${e.eventType.icon} + ' me-2 text-secondary'"></i>
+                            <span th:text="${e.eventType.thaiLabel}">เหตุการณ์</span>
+                            <div class="small text-secondary" th:if="${e.detail != null}" th:text="${e.detail}"></div>
+                        </div>
+                        <small class="text-secondary text-nowrap"
+                               th:text="${#temporals.format(e.createdAt, 'd MMM yyyy HH:mm')}">เวลา</small>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

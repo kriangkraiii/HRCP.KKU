@@ -34,6 +34,7 @@ import com.ecom.repository.NotificationRepository;
  * </ul>
  */
 @Service
+@Transactional
 public class DataRetentionService {
 
     private static final Logger log = LoggerFactory.getLogger(DataRetentionService.class);

@@ -11,9 +11,11 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Deque;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -124,6 +126,83 @@ public class DocumentGenerationService {
         return processTemplate(resource.getInputStream(), placeholders, documentType);
     }
 
+    /**
+     * Renders a Phase 1 document with signature images stamped in.
+     *
+     * <p>Same pipeline as {@link #generatePreviewDocx}; passing an empty list
+     * produces an identical file, so callers do not have to branch on whether
+     * anything has been signed yet.
+     */
+    public byte[] generateSignedDocx(int documentType, String jsonData,
+            List<StampedSignature> signatures) throws IOException {
+        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, String> placeholders = flattenMap(dataMap, "");
+
+        String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
+        ClassPathResource resource = new ClassPathResource(templateFile);
+
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        return processTemplate(resource.getInputStream(), placeholders, documentType, signatures);
+    }
+
+    /**
+     * As {@link #generateSignedDocx}, additionally printing the verification
+     * footer. Used for the finished, fully-signed copy.
+     */
+    public byte[] generateSignedDocx(int documentType, String jsonData,
+            List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
+        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, String> placeholders = flattenMap(dataMap, "");
+
+        ClassPathResource resource = new ClassPathResource(TEMPLATE_DIR + "doc_" + documentType + ".docx");
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+        return processTemplate(resource.getInputStream(), placeholders, documentType, signatures, verification);
+    }
+
+    /** Phase 2 counterpart of the verification-stamped render. */
+    public byte[] generateSignedP2Docx(int documentType, String jsonData,
+            List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
+        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, String> placeholders = flattenMap(dataMap, "");
+        mapUsedCheckboxes(placeholders);
+        mapMethod3Fields(placeholders);
+        aliasFirstRowFields(placeholders);
+
+        ClassPathResource resource = new ClassPathResource(TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx");
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+        return processTemplate(resource.getInputStream(), placeholders, documentType, signatures, verification);
+    }
+
+    /** Phase 2 counterpart of {@link #generateSignedDocx}. */
+    public byte[] generateSignedP2Docx(int documentType, String jsonData,
+            List<StampedSignature> signatures) throws IOException {
+        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+        });
+        Map<String, String> placeholders = flattenMap(dataMap, "");
+        mapUsedCheckboxes(placeholders);
+        mapMethod3Fields(placeholders);
+        aliasFirstRowFields(placeholders);
+
+        String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
+        ClassPathResource resource = new ClassPathResource(templateFile);
+
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        }
+
+        return processTemplate(resource.getInputStream(), placeholders, documentType, signatures);
+    }
+
     public byte[] generatePreviewDocxForCopy(int documentType, String jsonData,
             String committeeName, String committeePosition) throws IOException {
         Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
@@ -212,7 +291,37 @@ public class DocumentGenerationService {
 
     private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType)
             throws IOException {
+        return processTemplate(templateStream, placeholders, docType, List.of());
+    }
+
+    /**
+     * As above, additionally stamping signature images into the document.
+     *
+     * <p>With an empty signature list this behaves exactly as it always has, so
+     * documents that never enter the signing flow are byte-for-byte unchanged.
+     */
+    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType,
+            List<StampedSignature> signatures) throws IOException {
+        return processTemplate(templateStream, placeholders, docType, signatures, null);
+    }
+
+    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType,
+            List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
+
+        // Relationship ids and media filenames are decided before the zip is
+        // walked: [Content_Types].xml and document.xml.rels are emitted ahead of
+        // document.xml, and all three have to agree on the same names.
+        List<PreparedSignature> prepared = prepareSignatures(signatures);
+
+        // The QR rides the same image plumbing as a signature: one more part,
+        // one more relationship. anchorPlaceholder stays null because it is
+        // placed by position, not by anchor.
+        PreparedSignature qr = prepareVerificationQr(verification, prepared.size());
+        if (qr != null) {
+            prepared = new ArrayList<>(prepared);
+            prepared.add(qr);
+        }
 
         try (ZipInputStream zis = new ZipInputStream(templateStream);
                 ZipOutputStream zos = new ZipOutputStream(result)) {
@@ -220,14 +329,26 @@ public class DocumentGenerationService {
             ZipEntry entry;
             while ((entry = zis.getNextEntry()) != null) {
                 byte[] data = zis.readAllBytes();
+                String entryName = entry.getName();
 
-                if (entry.getName().endsWith(".xml") || entry.getName().endsWith(".xml.rels")) {
+                if (entryName.endsWith(".xml") || entryName.endsWith(".xml.rels")) {
                     String xml = new String(data, StandardCharsets.UTF_8);
 
                     // Step 0: ลบ descr URL ใน drawing และ w:bdr frame — ป้องกัน LibreOffice
                     // แสดงกรอบสี่เหลี่ยมรอบรูปภาพใน PDF
                     xml = xml.replaceAll(" descr=\"https://[^\"]*\"", "");
                     xml = xml.replaceAll("<w:bdr[^>]*w:frame=\"1\"[^/]*/>", "");
+
+                    // Declare the image part and its relationship. Deliberately
+                    // outside the {{ }} branch below: neither of these two parts
+                    // holds placeholders, so they would never be visited there.
+                    if (!prepared.isEmpty()) {
+                        if (entryName.equals("[Content_Types].xml")) {
+                            xml = ensurePngContentType(xml);
+                        } else if (entryName.equals("word/_rels/document.xml.rels")) {
+                            xml = appendImageRelationships(xml, prepared);
+                        }
+                    }
 
                     if (xml.contains("{{")) {
                         // Step 1: Defragment - รวม placeholder ที่ Word แยกข้าม <w:t> กลับเป็นชิ้นเดียว
@@ -238,6 +359,17 @@ public class DocumentGenerationService {
 
                         // Step 1.6: Co-author signature cloning - เพิ่มลายเซ็นผู้ร่วมงานในเอกสารที่ 9
                         xml = expandCoauthorSignatures(xml, placeholders);
+
+                        // Step 1.7: Signature stamping. Must sit between
+                        // defragmentation and replacement: before it, the anchor
+                        // token is split across runs in most templates; after it,
+                        // the token it anchors on no longer exists.
+                        if (!prepared.isEmpty() && entryName.equals("word/document.xml")) {
+                            xml = insertSignatures(xml, prepared);
+                            if (verification != null) {
+                                xml = appendVerificationBlock(xml, verification, qr);
+                            }
+                        }
 
                         // Step 2: Simple replace - แทนค่า {{placeholder}} ทั้งหมด
                         for (Map.Entry<String, String> ph : placeholders.entrySet()) {
@@ -266,14 +398,580 @@ public class DocumentGenerationService {
                     data = xml.getBytes(StandardCharsets.UTF_8);
                 }
 
-                ZipEntry newEntry = new ZipEntry(entry.getName());
+                ZipEntry newEntry = new ZipEntry(entryName);
                 zos.putNextEntry(newEntry);
                 zos.write(data);
+                zos.closeEntry();
+            }
+
+            // Image parts last. Entry order is not significant to Word or
+            // LibreOffice, and appending leaves the template's own entries alone.
+            for (PreparedSignature sig : prepared) {
+                zos.putNextEntry(new ZipEntry(WORD_MEDIA_DIR + sig.mediaName()));
+                zos.write(sig.pngBytes());
                 zos.closeEntry();
             }
         }
 
         return result.toByteArray();
+    }
+
+    // =====================================================================
+    // Step 1.7: Signature Stamping
+    // =====================================================================
+
+    /**
+     * A signature image to place in a document.
+     *
+     * @param anchorPlaceholder the placeholder naming the signer, without braces
+     *                          — e.g. {@code dean_name}. The image is stamped on
+     *                          the signature line belonging to that name.
+     */
+    public record StampedSignature(String anchorPlaceholder, byte[] pngBytes, int widthPx, int heightPx) {
+    }
+
+    /**
+     * The verification footer printed on a fully-signed document.
+     *
+     * <p>Appended at the end of the body rather than anchored to a placeholder,
+     * so it needs no change to any of the {@code .docx} templates — none of them
+     * has anywhere to put this.
+     *
+     * @param code       the verification code, printed for anyone re-typing it
+     * @param caption    the Thai line above the code
+     * @param qrPngBytes the QR image, or null to print the code as text only
+     */
+    public record VerificationStamp(String code, String caption, byte[] qrPngBytes) {
+    }
+
+    /** A {@link StampedSignature} with its assigned part name, id and print size. */
+    private record PreparedSignature(
+            String anchorPlaceholder, byte[] pngBytes,
+            String mediaName, String relationshipId, int drawingId,
+            long widthEmu, long heightEmu) {
+    }
+
+    private static final String WORD_MEDIA_DIR = "word/media/";
+
+    /** EMUs per centimetre. 914400 EMU = 1 inch = 2.54 cm. */
+    private static final long EMU_PER_CM = 360000L;
+
+    /** Printed width of a stamped signature. Fits the dotted line in every template. */
+    private static final long SIGNATURE_WIDTH_EMU = (long) (3.2 * EMU_PER_CM);
+
+    /** Ceiling on printed height, so a tall image cannot push the following line down. */
+    private static final long SIGNATURE_MAX_HEIGHT_EMU = (long) (1.2 * EMU_PER_CM);
+
+    /**
+     * Starting id for {@code docPr}/{@code cNvPr} elements.
+     *
+     * <p>High enough to stay clear of the ids Word already assigned to the logos
+     * and headers in these templates, which count up from 1. Duplicate ids make
+     * Word declare the file corrupt.
+     */
+    private static final int SIGNATURE_DRAWING_ID_BASE = 9001;
+
+    /** Characters used to draw the "sign here" rule; several templates mix them. */
+    private static final String DOT_LEADER_CHARS = ".…ฯ";
+
+    private List<PreparedSignature> prepareSignatures(List<StampedSignature> signatures) {
+        if (signatures == null || signatures.isEmpty()) {
+            return List.of();
+        }
+        List<PreparedSignature> prepared = new ArrayList<>();
+        int index = 0;
+        for (StampedSignature sig : signatures) {
+            if (sig.pngBytes() == null || sig.pngBytes().length == 0 || sig.anchorPlaceholder() == null) {
+                continue;
+            }
+            index++;
+
+            // Scale to a fixed width, then shrink further if that would make the
+            // image taller than a line of text.
+            long width = SIGNATURE_WIDTH_EMU;
+            long height = sig.widthPx() > 0
+                    ? Math.round(width * (double) sig.heightPx() / sig.widthPx())
+                    : SIGNATURE_MAX_HEIGHT_EMU;
+            if (height > SIGNATURE_MAX_HEIGHT_EMU) {
+                width = Math.round(width * (double) SIGNATURE_MAX_HEIGHT_EMU / height);
+                height = SIGNATURE_MAX_HEIGHT_EMU;
+            }
+
+            prepared.add(new PreparedSignature(
+                    sig.anchorPlaceholder(),
+                    sig.pngBytes(),
+                    "hrcpsig" + index + ".png",
+                    "rIdHrcpSig" + index,
+                    SIGNATURE_DRAWING_ID_BASE + index,
+                    width,
+                    Math.max(height, 1)));
+        }
+        return prepared;
+    }
+
+    /**
+     * Prepares the verification QR as one more image part.
+     *
+     * @param usedSlots how many signature images already have names assigned, so
+     *                  the QR does not collide with them
+     * @return the prepared part, or null when there is no QR to print
+     */
+    private PreparedSignature prepareVerificationQr(VerificationStamp verification, int usedSlots) {
+        if (verification == null || verification.qrPngBytes() == null
+                || verification.qrPngBytes().length == 0) {
+            return null;
+        }
+        int index = usedSlots + 1;
+        long side = (long) (2.2 * EMU_PER_CM);
+        return new PreparedSignature(
+                null, // placed at the end of the body, not at an anchor
+                verification.qrPngBytes(),
+                "hrcpsig" + index + ".png",
+                "rIdHrcpSig" + index,
+                SIGNATURE_DRAWING_ID_BASE + index,
+                side, side);
+    }
+
+    /**
+     * Appends the verification footer to the end of the document body.
+     *
+     * <p>Inserted before {@code <w:sectPr>} — the section properties must stay
+     * the last child of {@code <w:body>}, and putting content after them makes
+     * Word treat the file as damaged.
+     */
+    private String appendVerificationBlock(String xml, VerificationStamp verification, PreparedSignature qr) {
+        int bodyEnd = xml.lastIndexOf("</w:body>");
+        if (bodyEnd == -1) {
+            return xml;
+        }
+
+        // Anchor to the final sectPr if the body has one.
+        int insertAt = bodyEnd;
+        int sectPr = xml.lastIndexOf("<w:sectPr", bodyEnd);
+        if (sectPr != -1) {
+            insertAt = sectPr;
+        }
+
+        String small = "<w:rPr><w:rFonts w:ascii=\"TH Sarabun New\" w:hAnsi=\"TH Sarabun New\""
+                + " w:cs=\"TH Sarabun New\"/><w:sz w:val=\"24\"/><w:szCs w:val=\"24\"/><w:cs/></w:rPr>";
+        String centered = "<w:pPr><w:jc w:val=\"center\"/></w:pPr>";
+
+        StringBuilder block = new StringBuilder();
+        // A rule, so the footer reads as system-added rather than part of the form.
+        block.append("<w:p><w:pPr><w:pBdr><w:top w:val=\"single\" w:sz=\"4\" w:space=\"1\" w:color=\"auto\"/>")
+                .append("</w:pBdr><w:jc w:val=\"center\"/></w:pPr></w:p>");
+
+        block.append("<w:p>").append(centered).append("<w:r>").append(small)
+                .append("<w:t xml:space=\"preserve\">").append(escapeXml(verification.caption()))
+                .append("</w:t></w:r></w:p>");
+
+        if (qr != null) {
+            block.append("<w:p>").append(centered).append(signatureDrawingRun(qr)).append("</w:p>");
+        }
+
+        block.append("<w:p>").append(centered).append("<w:r>").append(small)
+                .append("<w:t xml:space=\"preserve\">").append(escapeXml(verification.code()))
+                .append("</w:t></w:r></w:p>");
+
+        return xml.substring(0, insertAt) + block + xml.substring(insertAt);
+    }
+
+    /** Declares the png part type, unless the template already does. */
+    private String ensurePngContentType(String xml) {
+        if (xml.contains("Extension=\"png\"")) {
+            return xml;
+        }
+        int insertAt = xml.indexOf("<Types");
+        if (insertAt == -1) {
+            return xml;
+        }
+        insertAt = xml.indexOf('>', insertAt);
+        if (insertAt == -1) {
+            return xml;
+        }
+        insertAt++;
+        return xml.substring(0, insertAt)
+                + "<Default Extension=\"png\" ContentType=\"image/png\"/>"
+                + xml.substring(insertAt);
+    }
+
+    /** Adds one image relationship per signature to the document's rels part. */
+    private String appendImageRelationships(String xml, List<PreparedSignature> signatures) {
+        int closeAt = xml.lastIndexOf("</Relationships>");
+        if (closeAt == -1) {
+            return xml;
+        }
+        StringBuilder rels = new StringBuilder();
+        for (PreparedSignature sig : signatures) {
+            rels.append("<Relationship Id=\"").append(sig.relationshipId())
+                    .append("\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/image\"")
+                    .append(" Target=\"media/").append(sig.mediaName()).append("\"/>");
+        }
+        return xml.substring(0, closeAt) + rels + xml.substring(closeAt);
+    }
+
+    /**
+     * Builds the run that actually shows the picture.
+     *
+     * <p>The {@code a} and {@code pic} namespaces are declared inline rather than
+     * on the document root — that is what Word itself emits, and it means the
+     * templates need no modification. {@code wp} and {@code r} are already
+     * declared on {@code <w:document>} in every template here.
+     */
+    private String signatureDrawingRun(PreparedSignature sig) {
+        String name = "Signature " + sig.drawingId();
+        return "<w:r><w:drawing>"
+                + "<wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\">"
+                + "<wp:extent cx=\"" + sig.widthEmu() + "\" cy=\"" + sig.heightEmu() + "\"/>"
+                + "<wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>"
+                + "<wp:docPr id=\"" + sig.drawingId() + "\" name=\"" + name + "\"/>"
+                + "<wp:cNvGraphicFramePr>"
+                + "<a:graphicFrameLocks"
+                + " xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" noChangeAspect=\"1\"/>"
+                + "</wp:cNvGraphicFramePr>"
+                + "<a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\">"
+                + "<a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">"
+                + "<pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\">"
+                + "<pic:nvPicPr>"
+                + "<pic:cNvPr id=\"" + sig.drawingId() + "\" name=\"" + name + "\"/>"
+                + "<pic:cNvPicPr/>"
+                + "</pic:nvPicPr>"
+                + "<pic:blipFill>"
+                + "<a:blip r:embed=\"" + sig.relationshipId() + "\"/>"
+                + "<a:stretch><a:fillRect/></a:stretch>"
+                + "</pic:blipFill>"
+                + "<pic:spPr>"
+                + "<a:xfrm><a:off x=\"0\" y=\"0\"/>"
+                + "<a:ext cx=\"" + sig.widthEmu() + "\" cy=\"" + sig.heightEmu() + "\"/></a:xfrm>"
+                + "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>"
+                + "</pic:spPr>"
+                + "</pic:pic>"
+                + "</a:graphicData>"
+                + "</a:graphic>"
+                + "</wp:inline>"
+                + "</w:drawing></w:r>";
+    }
+
+    /**
+     * Places every prepared signature into the document body.
+     *
+     * <p>Works back to front so that inserting text never invalidates the offsets
+     * of signatures still to be placed.
+     */
+    private String insertSignatures(String xml, List<PreparedSignature> signatures) {
+        /** A span of the document to swap for new markup. */
+        record Edit(int start, int end, String markup) {
+        }
+
+        List<Edit> edits = new ArrayList<>();
+        for (PreparedSignature sig : signatures) {
+            // The verification QR shares this list for its image part but is
+            // placed by position, not by anchor.
+            if (sig.anchorPlaceholder() == null) {
+                continue;
+            }
+            int[] namePara = findSignatureNameParagraph(xml, sig.anchorPlaceholder());
+            if (namePara == null) {
+                log.warn("No signature anchor found for placeholder {} — signature not stamped",
+                        sig.anchorPlaceholder());
+                continue;
+            }
+
+            int[] signLine = precedingSignatureLine(xml, namePara[0]);
+            if (signLine != null) {
+                // The template draws a "ลงชื่อ ......" rule: sign on that line and
+                // drop the dot leader, so the image is not pushed off the margin.
+                String rewritten = stampOntoSignatureLine(xml.substring(signLine[0], signLine[1]), sig);
+                edits.add(new Edit(signLine[0], signLine[1], rewritten));
+            } else {
+                // No rule to sign on, so add a line above the name. It reuses the
+                // name paragraph's own properties, which is what keeps the image
+                // aligned with the name underneath it in every template.
+                String pPr = paragraphProperties(xml, namePara[0], namePara[1]);
+                edits.add(new Edit(namePara[0], namePara[0], "<w:p>" + pPr + signatureDrawingRun(sig) + "</w:p>"));
+            }
+        }
+
+        // Apply back to front so that each edit's offsets are still valid when it
+        // is its turn.
+        edits.sort(Comparator.comparingInt(Edit::start).reversed());
+
+        StringBuilder out = new StringBuilder(xml);
+        for (Edit edit : edits) {
+            out.replace(edit.start(), edit.end(), edit.markup());
+        }
+        return out.toString();
+    }
+
+    /**
+     * Finds the paragraph holding the signer's printed name.
+     *
+     * <p>An anchor such as {@code {{applicant_name}}} usually appears more than
+     * once — once in the body prose and once under the signature line. The
+     * signature one is always the parenthesised form, {@code ({{name}})}, which
+     * is what this picks out. Without that test doc_0 and p2doc_1 would be
+     * stamped in the middle of a sentence.
+     *
+     * @return {@code {start, end}} of the paragraph, or null if there is none
+     */
+    private int[] findSignatureNameParagraph(String xml, String placeholderKey) {
+        String token = "{{" + placeholderKey + "}}";
+        int[] fallback = null;
+
+        int from = 0;
+        while (true) {
+            int hit = xml.indexOf(token, from);
+            if (hit == -1) {
+                break;
+            }
+            from = hit + token.length();
+
+            int[] para = enclosingParagraph(xml, hit);
+            if (para == null) {
+                continue;
+            }
+            String text = paragraphText(xml.substring(para[0], para[1])).trim();
+            if (text.startsWith("(") && text.contains(")")) {
+                return para;
+            }
+            fallback = para;
+        }
+        return fallback;
+    }
+
+    /**
+     * The signature rule immediately above a name, if the template draws one.
+     *
+     * <p>Recognised either by the word "ลงชื่อ" or by a run of dot leaders — some
+     * templates (doc_2, p2doc_6) print the rule with no label at all.
+     *
+     * @return {@code {start, end}} of that paragraph, or null when there is none
+     */
+    private int[] precedingSignatureLine(String xml, int nameParagraphStart) {
+        int[] previous = paragraphEndingBefore(xml, nameParagraphStart);
+        if (previous == null) {
+            return null;
+        }
+        String text = paragraphText(xml.substring(previous[0], previous[1]));
+        if (text.contains("ลงชื่อ")) { // ลงชื่อ
+            return previous;
+        }
+        long leaders = text.chars().filter(c -> DOT_LEADER_CHARS.indexOf(c) >= 0).count();
+        return leaders >= 5 ? previous : null;
+    }
+
+    /**
+     * Puts the image on an existing signature rule.
+     *
+     * <p>The dot leader is replaced by the picture rather than pushed aside: a
+     * line reading "ลงชื่อ ....... [signature]" would wrap on the narrower
+     * templates and looks nothing like a signed document.
+     */
+    private String stampOntoSignatureLine(String paragraph, PreparedSignature sig) {
+        String stripped = removeDotLeaders(paragraph);
+
+        // Place the picture after the last run of the label so it sits where the
+        // rule used to be, not before the word "ลงชื่อ".
+        int lastRunEnd = stripped.lastIndexOf("</w:r>");
+        if (lastRunEnd == -1) {
+            int bodyEnd = stripped.lastIndexOf("</w:p>");
+            return bodyEnd == -1
+                    ? stripped
+                    : stripped.substring(0, bodyEnd) + signatureDrawingRun(sig) + stripped.substring(bodyEnd);
+        }
+        lastRunEnd += "</w:r>".length();
+        return stripped.substring(0, lastRunEnd) + signatureDrawingRun(sig) + stripped.substring(lastRunEnd);
+    }
+
+    /** Blanks dot leaders inside {@code <w:t>} text, leaving all markup intact. */
+    private String removeDotLeaders(String paragraph) {
+        StringBuilder out = new StringBuilder(paragraph.length());
+        int pos = 0;
+        while (pos < paragraph.length()) {
+            int open = paragraph.indexOf("<w:t", pos);
+            if (open == -1) {
+                out.append(paragraph, pos, paragraph.length());
+                break;
+            }
+            int tagEnd = paragraph.indexOf('>', open);
+            if (tagEnd == -1 || paragraph.charAt(tagEnd - 1) == '/') {
+                out.append(paragraph, pos, tagEnd == -1 ? paragraph.length() : tagEnd + 1);
+                pos = tagEnd == -1 ? paragraph.length() : tagEnd + 1;
+                continue;
+            }
+            int close = paragraph.indexOf("</w:t>", tagEnd);
+            if (close == -1) {
+                out.append(paragraph, pos, paragraph.length());
+                break;
+            }
+            out.append(paragraph, pos, tagEnd + 1);
+
+            String text = paragraph.substring(tagEnd + 1, close);
+            // Only strip actual leaders — three or more in a row — so ordinary
+            // full stops in a sentence survive.
+            out.append(text.replaceAll("[" + java.util.regex.Pattern.quote(DOT_LEADER_CHARS) + "]{3,}", " "));
+
+            out.append("</w:t>");
+            pos = close + "</w:t>".length();
+        }
+        return out.toString();
+    }
+
+    /** Copies a paragraph's {@code <w:pPr>} block, or empty when it has none. */
+    private String paragraphProperties(String xml, int paragraphStart, int paragraphEnd) {
+        String paragraph = xml.substring(paragraphStart, paragraphEnd);
+        int open = paragraph.indexOf("<w:pPr");
+        if (open == -1) {
+            return "";
+        }
+        int tagEnd = paragraph.indexOf('>', open);
+        if (tagEnd != -1 && paragraph.charAt(tagEnd - 1) == '/') {
+            return paragraph.substring(open, tagEnd + 1);
+        }
+        int close = paragraph.indexOf("</w:pPr>", open);
+        return close == -1 ? "" : paragraph.substring(open, close + "</w:pPr>".length());
+    }
+
+    // =====================================================================
+    // Paragraph scanning helpers
+    // =====================================================================
+
+    /**
+     * Whether {@code <w:p} at this offset opens a paragraph.
+     *
+     * <p>Guards against {@code <w:pPr>} and {@code <w:pStyle>}, which share the
+     * prefix and would otherwise be mistaken for paragraph starts.
+     */
+    private static boolean isParagraphTagAt(String xml, int idx) {
+        int after = idx + 4; // past "<w:p"
+        if (after >= xml.length()) {
+            return false;
+        }
+        char c = xml.charAt(after);
+        return c == '>' || c == '/' || Character.isWhitespace(c);
+    }
+
+    /**
+     * The innermost {@code <w:p>...</w:p>} containing an offset.
+     *
+     * <p>Depth-counted rather than a nearest-tag search: paragraphs really do
+     * nest inside text boxes and {@code mc:AlternateContent} blocks — doc_6 has
+     * exactly that — and a {@code lastIndexOf("<w:p")} would land inside the
+     * wrong one.
+     *
+     * @return {@code {start, end}} where end is past {@code </w:p>}, or null
+     */
+    private int[] enclosingParagraph(String xml, int offset) {
+        Deque<Integer> open = new ArrayDeque<>();
+        int pos = 0;
+        while (pos < xml.length()) {
+            int nextOpen = xml.indexOf("<w:p", pos);
+            while (nextOpen != -1 && !isParagraphTagAt(xml, nextOpen)) {
+                nextOpen = xml.indexOf("<w:p", nextOpen + 4);
+            }
+            int nextClose = xml.indexOf("</w:p>", pos);
+
+            if (nextOpen == -1 && nextClose == -1) {
+                break;
+            }
+
+            if (nextClose == -1 || (nextOpen != -1 && nextOpen < nextClose)) {
+                int tagEnd = xml.indexOf('>', nextOpen);
+                if (tagEnd == -1) {
+                    break;
+                }
+                boolean selfClosing = xml.charAt(tagEnd - 1) == '/';
+                if (!selfClosing) {
+                    open.push(nextOpen);
+                }
+                pos = tagEnd + 1;
+            } else {
+                int end = nextClose + "</w:p>".length();
+                Integer start = open.poll();
+                if (start != null && start <= offset && offset < end) {
+                    return new int[] { start, end };
+                }
+                pos = end;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The paragraph closing immediately before a given offset.
+     *
+     * <p>Skips paragraphs that merely nest around the target — only a sibling
+     * that has already closed counts as "the line above".
+     *
+     * @return {@code {start, end}}, or null when nothing precedes it
+     */
+    private int[] paragraphEndingBefore(String xml, int offset) {
+        int searchFrom = 0;
+        int[] best = null;
+        Deque<Integer> open = new ArrayDeque<>();
+
+        while (searchFrom < xml.length()) {
+            int nextOpen = xml.indexOf("<w:p", searchFrom);
+            while (nextOpen != -1 && !isParagraphTagAt(xml, nextOpen)) {
+                nextOpen = xml.indexOf("<w:p", nextOpen + 4);
+            }
+            int nextClose = xml.indexOf("</w:p>", searchFrom);
+            if (nextOpen == -1 && nextClose == -1) {
+                break;
+            }
+
+            if (nextClose == -1 || (nextOpen != -1 && nextOpen < nextClose)) {
+                if (nextOpen >= offset) {
+                    break;
+                }
+                int tagEnd = xml.indexOf('>', nextOpen);
+                if (tagEnd == -1) {
+                    break;
+                }
+                if (xml.charAt(tagEnd - 1) != '/') {
+                    open.push(nextOpen);
+                }
+                searchFrom = tagEnd + 1;
+            } else {
+                int end = nextClose + "</w:p>".length();
+                if (end > offset) {
+                    break;
+                }
+                Integer start = open.poll();
+                if (start != null) {
+                    best = new int[] { start, end };
+                }
+                searchFrom = end;
+            }
+        }
+        return best;
+    }
+
+    /** The visible text of a paragraph: every {@code <w:t>} body, concatenated. */
+    private String paragraphText(String paragraph) {
+        StringBuilder text = new StringBuilder();
+        int pos = 0;
+        while (true) {
+            int open = paragraph.indexOf("<w:t", pos);
+            if (open == -1) {
+                break;
+            }
+            int tagEnd = paragraph.indexOf('>', open);
+            if (tagEnd == -1) {
+                break;
+            }
+            if (paragraph.charAt(tagEnd - 1) == '/') {
+                pos = tagEnd + 1;
+                continue;
+            }
+            int close = paragraph.indexOf("</w:t>", tagEnd);
+            if (close == -1) {
+                break;
+            }
+            text.append(paragraph, tagEnd + 1, close);
+            pos = close + "</w:t>".length();
+        }
+        return text.toString();
     }
 
     // =====================================================================

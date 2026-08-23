@@ -37,6 +37,10 @@
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
 
+                        <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+        <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
+
+
                     <!-- ปุ่มส่งข้อเสนอแนะ (แสดงหลังบันทึกเอกสารแล้ว) -->
                     <div th:if="${param.success != null || param.saved != null || existingData != null}" class="mt-3 border-top pt-3">
                         <form th:action="'/admin/academic/request/' + ${request.id} + '/document/5/send-suggestion'" method="post" id="suggestionForm">

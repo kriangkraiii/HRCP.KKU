@@ -29,7 +29,8 @@ class StaffDirectorySyncTest {
 
     private final StaffMemberRepository staffRepo = mock(StaffMemberRepository.class);
     private final FsFacultyRepository facultyRepo = mock(FsFacultyRepository.class);
-    private final StaffDirectorySync sync = new StaffDirectorySync(staffRepo, facultyRepo);
+    private final com.ecom.repository.UserRepository userRepo = mock(com.ecom.repository.UserRepository.class);
+    private final StaffDirectorySync sync = new StaffDirectorySync(staffRepo, facultyRepo, userRepo);
 
     @BeforeEach
     void echoSaves() {
@@ -37,6 +38,7 @@ class StaffDirectorySyncTest {
         when(staffRepo.findByFsUserId(any())).thenReturn(Optional.empty());
         when(staffRepo.findByFsUserIdIsNullAndFirstNameIgnoreCaseAndLastNameIgnoreCase(any(), any()))
                 .thenReturn(List.of());
+        when(staffRepo.findByUserIdAndIdNot(any(), any())).thenReturn(Optional.empty());
     }
 
     private FsFaculty faculty(long id, String first, String last, String positionTitle, String active) {
@@ -189,5 +191,67 @@ class StaffDirectorySyncTest {
 
         assertThat(result.touchedAnything()).isFalse();
         verify(staffRepo, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("ตรวจพบอีเมลตรงกับบัญชีผู้ใช้ในระบบ ต้องผูก user_id ให้อัตโนมัติ")
+    void autoLinksMatchingUserByEmail() {
+        FsFaculty f = faculty(1001L, "สิรภัทร", "เชี่ยวชาญวัฒนา", "รองศาสตราจารย์", "A");
+        f.setEmail("sunkra@kku.ac.th");
+        when(facultyRepo.findAll()).thenReturn(List.of(f));
+
+        com.ecom.model.UserDtls user = new com.ecom.model.UserDtls();
+        user.setId(55);
+        user.setEmail("sunkra@kku.ac.th");
+        when(userRepo.findByEmail("sunkra@kku.ac.th")).thenReturn(user);
+
+        StaffDirectorySync.Result result = sync.importFromDirectory();
+
+        assertThat(result.created()).isEqualTo(1);
+        assertThat(result.linked()).isEqualTo(1);
+        StaffMember created = saved();
+        assertThat(created.getUser()).isNotNull();
+        assertThat(created.getUser().getId()).isEqualTo(55);
+    }
+
+    @Test
+    @DisplayName("ตรวจพบตำแหน่งบริหาร คณบดี และ รองคณบดี ต้องตั้งค่าบทบาท DEAN และ HEAD ให้อัตโนมัติ")
+    void autoAssignsExecutiveRolesFromManagePosition() {
+        FsFaculty dean = faculty(1001L, "สิรภัทร", "เชี่ยวชาญวัฒนา", "รองศาสตราจารย์", "A");
+        dean.setManagePosition("คณบดี");
+
+        FsFaculty head = faculty(1002L, "ณกร", "วัฒนกิจ", "ผู้ช่วยศาสตราจารย์", "A");
+        head.setManagePosition("รองคณบดีฝ่ายวิชาการ");
+
+        when(facultyRepo.findAll()).thenReturn(List.of(dean, head));
+
+        StaffDirectorySync.Result result = sync.importFromDirectory();
+
+        assertThat(result.created()).isEqualTo(2);
+        assertThat(result.rolesUpdated()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("กรณีบัญชีผู้ใช้ถูกผูกกับบุคลากรคนอื่นอยู่แล้ว ต้องข้ามการผูกเพื่อป้องกัน Unique Constraint Error")
+    void skipsLinkingIfUserAccountAlreadyClaimed() {
+        FsFaculty f = faculty(1001L, "สมชาย", "ใจดี", "ผู้ช่วยศาสตราจารย์", "A");
+        f.setEmail("somchai@kku.ac.th");
+        when(facultyRepo.findAll()).thenReturn(List.of(f));
+
+        com.ecom.model.UserDtls user = new com.ecom.model.UserDtls();
+        user.setId(77);
+        user.setEmail("somchai@kku.ac.th");
+        when(userRepo.findByEmail("somchai@kku.ac.th")).thenReturn(user);
+
+        StaffMember otherStaff = new StaffMember();
+        otherStaff.setId(99L);
+        otherStaff.setFirstName("คนอื่น");
+        when(staffRepo.findByUserIdAndIdNot(77, -1L)).thenReturn(Optional.of(otherStaff));
+
+        StaffDirectorySync.Result result = sync.importFromDirectory();
+
+        StaffMember created = saved();
+        assertThat(created.getUser()).isNull();
+        assertThat(result.linked()).isZero();
     }
 }

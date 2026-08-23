@@ -2,12 +2,17 @@ package com.ecom.academic.model;
 
 import java.time.LocalDateTime;
 
+import com.ecom.model.UserDtls;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Index;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -71,6 +76,25 @@ public class StaffMember {
      */
     @Column(name = "fs_user_id", unique = true)
     private Long fsUserId;
+
+    /**
+     * The login account this person signs with, or null when they have none.
+     *
+     * <p>Distinct from {@link #fsUserId}, which points at the upstream directory
+     * mirror and only ever supplies a name. This one points at an account that
+     * can log in, be notified, and press "sign" — without it a dean is just text
+     * printed above a dotted line, which is exactly what the signature feature
+     * exists to replace.
+     *
+     * <p>Nullable by design: external committee members are named in documents
+     * but never sign in this system. The directory sync never writes this field —
+     * {@code applyIdentity} touches only name, title and department — so an
+     * administrator's linking decision survives every nightly run, the same way
+     * {@code staffRole} does.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private UserDtls user;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -213,6 +237,25 @@ public class StaffMember {
     /** True when this row is kept in step with the faculty directory. */
     public boolean isFromDirectory() {
         return fsUserId != null;
+    }
+
+    public UserDtls getUser() {
+        return user;
+    }
+
+    public void setUser(UserDtls user) {
+        this.user = user;
+    }
+
+    /**
+     * Whether this person can be asked to sign inside the system.
+     *
+     * <p>Drives the signer picker: someone without an account can still be named
+     * in a document, but selecting them as a signer would create a step nobody
+     * could ever complete.
+     */
+    public boolean isSignable() {
+        return user != null;
     }
 
     public LocalDateTime getCreatedAt() {

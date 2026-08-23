@@ -28,4 +28,7 @@ public interface UserRepository extends JpaRepository<UserDtls, Integer> {
 
 	long countByProfileImage(String profileImage);
 	List<UserDtls> findByProfileImage(String profileImage);
+
+	List<UserDtls> findByFirstNameIgnoreCaseAndLastNameIgnoreCase(String firstName, String lastName);
+	List<UserDtls> findByFirstNameEnIgnoreCaseAndLastNameEnIgnoreCase(String firstNameEn, String lastNameEn);
 }

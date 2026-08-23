@@ -184,9 +184,9 @@
                                 <label class="form-label">ชื่อผู้บังคับบัญชาชั้นต้น</label>
                                 <select name="department_head_name" class="form-select">
                                     <option value="">-- เลือก --</option>
-                                    <option th:each="dean : ${deans}"
-                                            th:value="${dean.fullName}"
-                                            th:text="${dean.fullName}"></option>
+                                    <option th:each="head : ${heads}"
+                                            th:value="${head.fullName}"
+                                            th:text="${head.fullName}"></option>
                                 </select>
                             </div>
                         </div>
@@ -205,6 +205,10 @@
                     </a>
                 </div>
             </form>
+
+            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
+
         </div>
 
         <script th:inline="javascript">

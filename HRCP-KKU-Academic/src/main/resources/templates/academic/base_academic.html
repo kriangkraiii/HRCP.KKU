@@ -12,9 +12,10 @@
     <link rel="icon" type="image/png" href="/img/favicon.png">
     <meta name="_csrf" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
-    <link rel="stylesheet" href="/css/style.css?v=2.6">
-    <link rel="stylesheet" href="/css/dark-theme.css?v=2.6">
-    <link rel="stylesheet" href="/css/doc_preview.css?v=2.6">
+    <link rel="stylesheet" href="/css/style.css?v=2.9">
+    <link rel="stylesheet" href="/css/dark-theme.css?v=2.9">
+    <link rel="stylesheet" href="/css/doc_preview.css?v=2.9">
+    <link rel="stylesheet" href="/css/esign.css?v=2.9">
     <script th:inline="javascript">
         // Anti-flash: apply user's server-side theme BEFORE paint
         (function(){var t=/*[[${user != null && user.themePreference != null ? user.themePreference : 'light'}]]*/ 'light';
@@ -84,6 +85,15 @@
                           th:if="${unreadNotificationCount != null && unreadNotificationCount > 0}"
                           th:text="${unreadNotificationCount}">0</span>
                 </a>
+                <a href="/esign/inbox" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-signing">
+                    <span><i class="fas fa-file-signature me-2"></i>รอลงนาม</span>
+                    <span class="badge bg-warning text-dark rounded-pill"
+                          th:if="${pendingSignatureCount != null && pendingSignatureCount > 0}"
+                          th:text="${pendingSignatureCount}">0</span>
+                </a>
+                <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures">
+                    <i class="fas fa-signature"></i> ลายเซ็นของฉัน
+                </a>
                 <a href="/admin/activity-logs" class="sidebar-link" id="nav-logs">
                     <i class="fas fa-history"></i> ประวัติกิจกรรม
                 </a>
@@ -105,13 +115,13 @@
                     <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
                 </a>
                 <a href="/user/academic/history" class="sidebar-link" id="nav-history">
-                    <i class="fas fa-history"></i> ประวัติการยื่นคำร้อง
+                    <i class="fas fa-history"></i> ประวัติการยื่นคำร้องทั้งหมด
                 </a>
                 <a href="/user/academic/new-request" class="sidebar-link" id="nav-new">
-                    <i class="fas fa-clipboard-check"></i> ยื่นคำร้องขอประเมิน
+                    <i class="fas fa-clipboard-check"></i> ยื่นคำร้องขอประเมินการสอน
                 </a>
                 <a href="/user/position/dashboard" class="sidebar-link" id="nav-position">
-                    <i class="fas fa-university"></i> ยื่นขอตำแหน่ง
+                    <i class="fas fa-university"></i> ยื่นขอตำแหน่งทางวิชาการ
                 </a>
 
                 <div class="sidebar-section-title">ทรัพยากร & การตั้งค่า</div>
@@ -127,6 +137,15 @@
                 <a href="/user/academic/storage" class="sidebar-link" id="nav-storage">
                     <i class="fas fa-cloud"></i> ที่เก็บไฟล์ของฉัน
                 </a>
+                <a href="/esign/inbox" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-signing">
+                    <span><i class="fas fa-file-signature me-2"></i>รอลงนาม</span>
+                    <span class="badge bg-warning text-dark rounded-pill"
+                          th:if="${pendingSignatureCount != null && pendingSignatureCount > 0}"
+                          th:text="${pendingSignatureCount}">0</span>
+                </a>
+                <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures">
+                    <i class="fas fa-signature"></i> ลายเซ็นของฉัน
+                </a>
                 <a href="/user/academic/guide" class="sidebar-link" id="nav-guide">
                     <i class="fas fa-book"></i> คู่มือการใช้งาน
                 </a>
@@ -139,7 +158,7 @@
         <script th:inline="javascript">
             window.AUTO_DRAFT_ENABLED = /*[[${user != null && user.autoDraftEnabled != null ? user.autoDraftEnabled : true}]]*/ true;
         </script>
-        <script src="/js/auto_draft.js"></script>
+        <script src="/js/auto_draft.js?v=2.9"></script>
         <script src="/js/checkbox_defaults.js"></script>
 
         <!-- Custom Language Switcher -->

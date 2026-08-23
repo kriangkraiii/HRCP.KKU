@@ -1,6 +1,7 @@
 package com.ecom.academic.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -13,6 +14,8 @@ import com.ecom.academic.repository.StaffMemberRepository;
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.repository.FsFacultyRepository;
 import com.ecom.external.service.EnglishNameSplitter;
+import com.ecom.model.UserDtls;
+import com.ecom.repository.UserRepository;
 
 /**
  * Keeps the staff list used by documents in step with the synced faculty
@@ -29,10 +32,11 @@ import com.ecom.external.service.EnglishNameSplitter;
  *   <li><b>Identity</b> — name, academic title, department — is refreshed from the
  *       directory on every sync. A promotion from ผศ. to รศ. upstream should reach
  *       the documents without anyone editing anything.</li>
- *   <li><b>{@code staffRole} and {@code staffType} are never written after the row
- *       is created.</b> They are the administrator's answers to questions the
- *       directory cannot answer; overwriting them nightly would silently undo real
- *       decisions.</li>
+ *   <li><b>Auto-linking</b> — ties the staff row to an active {@link UserDtls} login
+ *       account by matching e-mail address (or exact name fallback) so the person can
+ *       immediately participate in e-signature workflows.</li>
+ *   <li><b>Auto-role</b> — maps executive positions (e.g. คณบดี, รองคณบดี) to DEAN / HEAD
+ *       roles automatically if the role hasn't been manually customized.</li>
  *   <li><b>Nothing is ever deleted.</b> Someone who leaves is marked inactive:
  *       documents already issued name these people, and deleting the row would
  *       break records that are supposed to be permanent.</li>
@@ -47,20 +51,21 @@ public class StaffDirectorySync {
     private static final Logger log = LoggerFactory.getLogger(StaffDirectorySync.class);
 
     /**
-     * What an imported person starts as.
-     *
-     * <p>Deliberately the neutral one. The directory cannot tell us who the dean
-     * is — {@code managePosition} upstream is free text — and guessing a role that
-     * decides who signs an official document is worse than leaving it to be set.
+     * What an imported person starts as when no executive position is detected.
      */
-    private static final String DEFAULT_ROLE = "GENERAL";
+    public static final String DEFAULT_ROLE = "GENERAL";
 
     private final StaffMemberRepository staffRepo;
     private final FsFacultyRepository facultyRepo;
+    private final UserRepository userRepo;
 
-    public StaffDirectorySync(StaffMemberRepository staffRepo, FsFacultyRepository facultyRepo) {
+    public StaffDirectorySync(
+            StaffMemberRepository staffRepo,
+            FsFacultyRepository facultyRepo,
+            UserRepository userRepo) {
         this.staffRepo = staffRepo;
         this.facultyRepo = facultyRepo;
+        this.userRepo = userRepo;
     }
 
     /**
@@ -76,6 +81,8 @@ public class StaffDirectorySync {
         int updated = 0;
         int adopted = 0;
         int deactivated = 0;
+        int linked = 0;
+        int rolesUpdated = 0;
 
         for (FsFaculty faculty : facultyRepo.findAll()) {
             if (faculty.getFsUserId() == null) {
@@ -89,6 +96,12 @@ public class StaffDirectorySync {
                 if (adoptable != null) {
                     adoptable.setFsUserId(faculty.getFsUserId());
                     applyIdentity(adoptable, faculty);
+                    if (applyAccountLink(adoptable, faculty)) {
+                        linked++;
+                    }
+                    if (applyRole(adoptable, faculty)) {
+                        rolesUpdated++;
+                    }
                     staffRepo.save(adoptable);
                     adopted++;
                     continue;
@@ -100,12 +113,29 @@ public class StaffDirectorySync {
                     continue;
                 }
 
-                staffRepo.save(createFrom(faculty));
+                StaffMember newStaff = createFrom(faculty);
+                if (newStaff.getUser() != null) {
+                    linked++;
+                }
+                if (!DEFAULT_ROLE.equalsIgnoreCase(newStaff.getStaffRole())) {
+                    rolesUpdated++;
+                }
+                staffRepo.save(newStaff);
                 created++;
                 continue;
             }
 
             boolean changed = applyIdentity(existing, faculty);
+
+            if (applyAccountLink(existing, faculty)) {
+                linked++;
+                changed = true;
+            }
+
+            if (applyRole(existing, faculty)) {
+                rolesUpdated++;
+                changed = true;
+            }
 
             boolean shouldBeActive = faculty.isActive();
             if (Boolean.TRUE.equals(existing.getIsActive()) && !shouldBeActive) {
@@ -124,7 +154,7 @@ public class StaffDirectorySync {
             }
         }
 
-        Result result = new Result(created, updated, adopted, deactivated);
+        Result result = new Result(created, updated, adopted, deactivated, linked, rolesUpdated);
         if (result.touchedAnything()) {
             log.info("Staff list synced from faculty directory: {}", result);
         }
@@ -132,12 +162,110 @@ public class StaffDirectorySync {
     }
 
     /**
+     * Maps management position string (from FS Directory / computing.kku.ac.th) to a StaffRole.
+     */
+    public static String resolveRoleFromPosition(String managePosition) {
+        if (managePosition == null || managePosition.isBlank()) {
+            return DEFAULT_ROLE;
+        }
+        String pos = managePosition.trim();
+        // คณบดี (ที่ไม่ใช่รองคณบดี หรือผู้ช่วยคณบดี)
+        if (pos.contains("คณบดี") && !pos.contains("รอง") && !pos.contains("ผู้ช่วย")) {
+            return "DEAN";
+        }
+        // รองคณบดี, ผู้ช่วยคณบดี, หัวหน้าสาขา, ประธานหลักสูตร, ผู้อำนวยการ
+        if (pos.contains("รองคณบดี") || pos.contains("ผู้ช่วยคณบดี") || pos.contains("หัวหน้า") || pos.contains("ประธาน") || pos.contains("ผู้อำนวยการ")) {
+            return "HEAD";
+        }
+        if (pos.contains("กรรมการ")) {
+            return "COMMITTEE";
+        }
+        if (pos.contains("เจ้าหน้าที่") || pos.contains("HR") || pos.contains("บุคคล")) {
+            return "HR";
+        }
+        return DEFAULT_ROLE;
+    }
+
+    /**
+     * Finds a matching UserDtls account using Email (primary) or Name (fallback).
+     */
+    public UserDtls findMatchingUser(FsFaculty faculty, StaffMember staff) {
+        // 1. Match by email (most authoritative)
+        if (faculty != null && !isBlank(faculty.getEmail())) {
+            String email = faculty.getEmail().trim().toLowerCase();
+            UserDtls byEmail = userRepo.findByEmail(email);
+            if (byEmail != null) {
+                return byEmail;
+            }
+        }
+
+        // 2. Match by Thai Name
+        String fname = staff != null && !isBlank(staff.getFirstName()) ? staff.getFirstName().trim() : (faculty != null ? faculty.getFirstName() : null);
+        String lname = staff != null && !isBlank(staff.getLastName()) ? staff.getLastName().trim() : (faculty != null ? faculty.getLastName() : null);
+        if (!isBlank(fname) && !isBlank(lname)) {
+            List<UserDtls> byName = userRepo.findByFirstNameIgnoreCaseAndLastNameIgnoreCase(fname.trim(), lname.trim());
+            if (byName.size() == 1) {
+                return byName.get(0);
+            }
+        }
+
+        // 3. Match by English Name
+        String fnameEn = staff != null && !isBlank(staff.getFirstNameEn()) ? staff.getFirstNameEn().trim() : null;
+        String lnameEn = staff != null && !isBlank(staff.getLastNameEn()) ? staff.getLastNameEn().trim() : null;
+        if (!isBlank(fnameEn) && !isBlank(lnameEn)) {
+            List<UserDtls> byNameEn = userRepo.findByFirstNameEnIgnoreCaseAndLastNameEnIgnoreCase(fnameEn, lnameEn);
+            if (byNameEn.size() == 1) {
+                return byNameEn.get(0);
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Automatically links staff member to a matching UserDtls account if not already linked.
+     */
+    public boolean applyAccountLink(StaffMember staff, FsFaculty faculty) {
+        if (staff.getUser() != null) {
+            return false; // Already linked, preserve existing link
+        }
+        UserDtls matched = findMatchingUser(faculty, staff);
+        if (matched != null) {
+            // Check if already claimed by another staff row
+            Optional<StaffMember> conflict = staffRepo.findByUserIdAndIdNot(matched.getId(), staff.getId() == null ? -1L : staff.getId());
+            if (conflict.isEmpty()) {
+                staff.setUser(matched);
+                log.info("Auto-linked staff member {} to user account {}", staff.getDisplayName(), matched.getEmail());
+                return true;
+            } else {
+                log.warn("Account {} is already linked to staff member {} (skipping auto-link for {})",
+                        matched.getEmail(), conflict.get().getDisplayName(), staff.getDisplayName());
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Automatically maps executive position to role if not manually set.
+     */
+    public boolean applyRole(StaffMember staff, FsFaculty faculty) {
+        if (faculty == null || isBlank(faculty.getManagePosition())) {
+            return false;
+        }
+        if (staff.getStaffRole() == null || DEFAULT_ROLE.equalsIgnoreCase(staff.getStaffRole())) {
+            String resolvedRole = resolveRoleFromPosition(faculty.getManagePosition());
+            if (!DEFAULT_ROLE.equalsIgnoreCase(resolvedRole) && !resolvedRole.equalsIgnoreCase(staff.getStaffRole())) {
+                staff.setStaffRole(resolvedRole);
+                log.info("Auto-assigned role {} to staff member {} based on position '{}'",
+                        resolvedRole, staff.getDisplayName(), faculty.getManagePosition());
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * A row for the same person that predates the import.
-     *
-     * <p>Matching on a name is too weak to create anything, but it is the only key
-     * available for linking up a list that was typed in before this existed. It
-     * runs once per person — after that the id does the work. An ambiguous match
-     * (two people with the same name) is left alone rather than guessed at.
      */
     private StaffMember findHandEnteredMatch(FsFaculty faculty) {
         if (isBlank(faculty.getFirstName()) || isBlank(faculty.getLastName())) {
@@ -154,6 +282,8 @@ public class StaffDirectorySync {
         staff.setStaffRole(DEFAULT_ROLE);
         staff.setIsActive(true);
         applyIdentity(staff, faculty);
+        applyRole(staff, faculty);
+        applyAccountLink(staff, faculty);
         return staff;
     }
 
@@ -215,16 +345,16 @@ public class StaffDirectorySync {
     }
 
     /** What one run did, for the log and the admin screen. */
-    public record Result(int created, int updated, int adopted, int deactivated) {
+    public record Result(int created, int updated, int adopted, int deactivated, int linked, int rolesUpdated) {
 
         public boolean touchedAnything() {
-            return created > 0 || updated > 0 || adopted > 0 || deactivated > 0;
+            return created > 0 || updated > 0 || adopted > 0 || deactivated > 0 || linked > 0 || rolesUpdated > 0;
         }
 
         /** Thai summary for the sync page. */
         public String describe() {
             if (!touchedAnything()) {
-                return "รายชื่อบุคลากรตรงกับต้นทางอยู่แล้ว";
+                return "รายชื่อบุคลากรตรงกับต้นทางและผูกบัญชีเรียบร้อยแล้ว";
             }
             StringBuilder sb = new StringBuilder("บุคลากร:");
             if (created > 0) {
@@ -233,8 +363,14 @@ public class StaffDirectorySync {
             if (adopted > 0) {
                 sb.append(" เชื่อมกับรายชื่อเดิม ").append(adopted).append(" คน");
             }
+            if (linked > 0) {
+                sb.append(" ผูกบัญชีผู้ใช้ ").append(linked).append(" คน");
+            }
+            if (rolesUpdated > 0) {
+                sb.append(" อัปเดตบทบาทบริหาร ").append(rolesUpdated).append(" คน");
+            }
             if (updated > 0) {
-                sb.append(" อัปเดต ").append(updated).append(" คน");
+                sb.append(" อัปเดตข้อมูล ").append(updated).append(" คน");
             }
             if (deactivated > 0) {
                 sb.append(" ปิดใช้งาน ").append(deactivated).append(" คน");
@@ -245,7 +381,9 @@ public class StaffDirectorySync {
         @Override
         public String toString() {
             return created + " created, " + adopted + " adopted, "
-                    + updated + " updated, " + deactivated + " deactivated";
+                    + updated + " updated, " + deactivated + " deactivated, "
+                    + linked + " linked, " + rolesUpdated + " rolesUpdated";
         }
     }
 }
+

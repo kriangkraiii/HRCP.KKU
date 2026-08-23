@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  ส่งเอกสารไปลงนาม — ใช้ร่วมกันทั้ง Phase 1 และ Phase 2
+  ต้องการ model attributes: signaturePanel, request (มี id), documentType, signatureModule
+-->
+<div th:fragment="panel" th:if="${signaturePanel != null && signaturePanel.signable}"
+     class="card card-academic mt-4">
+
+    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+        <span><i class="fas fa-file-signature"></i> การลงนามอิเล็กทรอนิกส์</span>
+        <span th:if="${signaturePanel.locked}" class="badge"
+              th:classappend="'bg-' + ${signaturePanel.activeEnvelope.status.color}"
+              th:text="${signaturePanel.activeEnvelope.status.thaiLabel}">สถานะ</span>
+    </div>
+
+    <div class="card-body">
+
+        <!-- ============ กำลังเวียนลงนาม / ลงนามครบแล้ว ============ -->
+        <div th:if="${signaturePanel.locked}">
+            <div class="alert alert-warning">
+                <i class="fas fa-lock"></i>
+                เอกสารนี้ถูกล็อกไม่ให้แก้ไข เนื่องจากอยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว
+                <div class="small mt-1">
+                    หากต้องการแก้ไข ต้องยกเลิกการเวียนลงนามก่อน ซึ่งจะทำให้ลายเซ็นที่มีอยู่เป็นโมฆะทั้งหมด
+                </div>
+            </div>
+
+            <ul class="list-group list-group-flush mb-3">
+                <li class="list-group-item d-flex justify-content-between align-items-center gap-2"
+                    th:each="s : ${signaturePanel.activeEnvelope.steps}">
+                    <div>
+                        <span class="badge bg-secondary me-1" th:text="${s.stepOrder}">1</span>
+                        <span th:text="${s.roleLabel}">ตำแหน่ง</span>
+                        <div class="small text-secondary">
+                            <span th:text="${s.signerNameSnapshot}">ชื่อ</span>
+                            <span th:if="${s.signedAt != null}"
+                                  th:text="' · ' + ${#temporals.format(s.signedAt, 'd MMM yyyy HH:mm')}"></span>
+                        </div>
+                        <div class="small text-danger" th:if="${s.declineReason != null}"
+                             th:text="'เหตุผล: ' + ${s.declineReason}"></div>
+                    </div>
+                    <span class="badge" th:classappend="'bg-' + ${s.status.color}"
+                          th:text="${s.status.thaiLabel}">สถานะ</span>
+                </li>
+            </ul>
+
+            <div class="d-flex align-items-center gap-3 flex-wrap">
+                <span class="small text-secondary">
+                    รหัสตรวจสอบ:
+                    <code th:text="${signaturePanel.activeEnvelope.verificationCode}">CODE</code>
+                </span>
+
+                <form th:if="${signaturePanel.activeEnvelope.status.open}"
+                      th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/cancel'}"
+                      method="post" class="d-flex gap-2 align-items-center flex-grow-1"
+                      data-confirm="ยกเลิกการเวียนลงนาม? ลายเซ็นที่ลงไปแล้วจะเป็นโมฆะทั้งหมด">
+                    <input type="text" name="reason" class="form-control form-control-sm"
+                           maxlength="500" placeholder="เหตุผลที่ยกเลิก">
+                    <button type="submit" class="btn btn-sm btn-outline-danger flex-shrink-0">
+                        ยกเลิกการเวียนลงนาม
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- ============ ยังไม่ได้ส่ง — เลือกผู้ลงนาม ============ -->
+        <form th:unless="${signaturePanel.locked}" th:action="@{/esign/envelope/create}" method="post">
+            <input type="hidden" name="module" th:value="${signatureModule}">
+            <input type="hidden" name="requestId" th:value="${request.id}">
+            <input type="hidden" name="documentType" th:value="${documentType}">
+
+            <p class="text-secondary small">
+                เลือกผู้ลงนามแต่ละตำแหน่ง ระบบจะส่งให้ลงนาม<strong>ตามลำดับ</strong>
+                และแจ้งเตือนทีละคนเมื่อถึงคิว — เว้นว่างไว้หากยังไม่ต้องการให้ตำแหน่งนั้นลงนามในรอบนี้
+            </p>
+
+            <div class="row g-3">
+                <div class="col-md-6" th:each="slot, iter : ${signaturePanel.slots}">
+                    <label class="form-label">
+                        <span class="badge bg-secondary" th:text="${iter.count}">1</span>
+                        <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
+                    </label>
+                    <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
+
+                    <select name="signerUserIds" class="form-select">
+                        <option value="">— ไม่ลงนามในรอบนี้ —</option>
+
+                        <!-- ตัวเองก่อน เพื่อให้แอดมินที่ต้องลงนามเองกดได้ทันที -->
+                        <optgroup label="ลงนามเอง" th:if="${signaturePanel.currentUserOption != null}">
+                            <option th:value="${signaturePanel.currentUserOption.userId}"
+                                    th:text="'ฉัน — ' + ${signaturePanel.currentUserOption.displayName}">ฉัน</option>
+                        </optgroup>
+
+                        <optgroup th:label="'ผู้ที่มีบทบาท ' + ${slot.roleLabel}"
+                                  th:if="${!#lists.isEmpty(signaturePanel.optionsFor(slot.slotKey))}">
+                            <option th:each="opt : ${signaturePanel.optionsFor(slot.slotKey)}"
+                                    th:value="${opt.userId}"
+                                    th:disabled="${!opt.signable}"
+                                    th:text="${opt.signable}
+                                             ? (${opt.displayName} + ' (' + ${opt.email} + ')')
+                                             : (${opt.displayName} + ' — ยังไม่ได้ผูกบัญชี')">ชื่อ</option>
+                        </optgroup>
+
+                        <!-- บทบาทใน staff_member เป็นข้อมูลที่ตั้งเอง มักไม่ครบ
+                             จึงต้องเลือกคนอื่นได้ด้วย ไม่งั้นส่งให้คนที่ต้องเซ็นจริงไม่ได้ -->
+                        <optgroup label="บุคลากรอื่นในระบบ"
+                                  th:if="${!#lists.isEmpty(signaturePanel.otherOptionsFor(slot.slotKey))}">
+                            <option th:each="opt : ${signaturePanel.otherOptionsFor(slot.slotKey)}"
+                                    th:value="${opt.userId}"
+                                    th:text="${opt.displayName} + ' (' + ${opt.email} + ')'">ชื่อ</option>
+                        </optgroup>
+                    </select>
+
+                    <!-- ปฏิบัติราชการแทน — เอกสารราชการไทยมีเสมอเมื่อผู้มีอำนาจไม่อยู่
+                         ถ้ากรอกเหตุผล ระบบจะพิมพ์คำว่า "(แทน)" นำหน้าชื่อในเอกสาร -->
+                    <input type="text" name="delegateReasons" class="form-control form-control-sm mt-1"
+                           maxlength="500"
+                           th:placeholder="'ลงนามแทน ' + ${slot.roleLabel} + ' (ระบุเหตุผล — เว้นว่างหากลงนามในตำแหน่งตนเอง)'">
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label">กำหนดลงนามภายใน (ไม่บังคับ)</label>
+                    <input type="datetime-local" name="dueAt" class="form-control">
+                    <div class="form-text">ระบบจะเตือนซ้ำเมื่อใกล้ครบกำหนด</div>
+                </div>
+            </div>
+
+            <div class="alert alert-info small mt-3 mb-3">
+                <i class="fas fa-circle-info"></i>
+                เมื่อกดส่ง ระบบจะ<strong>บันทึกสำเนาเอกสารฉบับปัจจุบันไว้</strong>
+                และล็อกฟอร์มไม่ให้แก้ไข เพื่อให้ทุกคนลงนามบนเนื้อหาเดียวกัน
+                ผู้ที่ไม่มีบัญชีในระบบจะเลือกเป็นผู้ลงนามไม่ได้
+                (ผูกบัญชีได้ที่เมนู <em>จัดการบุคลากร</em>)
+            </div>
+
+            <button type="submit" class="btn btn-academic"
+                    data-confirm="ส่งเอกสารไปลงนาม? ฟอร์มจะถูกล็อกไม่ให้แก้ไขจนกว่าจะลงนามครบหรือยกเลิก">
+                <i class="fas fa-paper-plane"></i> ส่งไปลงนาม
+            </button>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>

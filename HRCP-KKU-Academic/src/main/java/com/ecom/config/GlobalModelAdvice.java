@@ -17,13 +17,16 @@ public class GlobalModelAdvice {
     private final UserService userService;
     private final com.ecom.service.NotificationService notificationService;
     private final AuthModeProperties authProperties;
+    private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflowService;
 
     public GlobalModelAdvice(UserService userService,
             com.ecom.service.NotificationService notificationService,
-            AuthModeProperties authProperties) {
+            AuthModeProperties authProperties,
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflowService) {
         this.userService = userService;
         this.notificationService = notificationService;
         this.authProperties = authProperties;
+        this.signatureWorkflowService = signatureWorkflowService;
     }
 
     @ModelAttribute
@@ -45,6 +48,15 @@ public class GlobalModelAdvice {
             if (user != null) {
                 model.addAttribute("user", user);
                 model.addAttribute("unreadNotificationCount", notificationService.getUnreadCount(user));
+
+                // Drives the "รอลงนาม" sidebar badge. Anyone can be asked to
+                // sign, so this is resolved for every signed-in user rather than
+                // by role. A failure here must not take down an unrelated page.
+                try {
+                    model.addAttribute("pendingSignatureCount", signatureWorkflowService.countPending(user));
+                } catch (Exception e) {
+                    model.addAttribute("pendingSignatureCount", 0L);
+                }
             }
         }
 

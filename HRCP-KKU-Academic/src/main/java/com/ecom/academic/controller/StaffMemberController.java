@@ -15,8 +15,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.ecom.config.ClientIpUtils;
+import com.ecom.academic.dto.SignerOptionDTO;
 import com.ecom.academic.model.StaffMember;
 import com.ecom.academic.service.StaffMemberService;
+import com.ecom.academic.service.StaffDirectorySync;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
@@ -30,19 +32,19 @@ public class StaffMemberController {
     private static final Logger log = LoggerFactory.getLogger(StaffMemberController.class);
 
     private final StaffMemberService staffMemberService;
-
+    private final StaffDirectorySync staffDirectorySync;
     private final AdminLogService adminLogService;
-
     private final UserRepository userRepository;
-
     private final HttpServletRequest httpRequest;
 
     public StaffMemberController(
             StaffMemberService staffMemberService,
+            StaffDirectorySync staffDirectorySync,
             AdminLogService adminLogService,
             UserRepository userRepository,
             HttpServletRequest httpRequest) {
         this.staffMemberService = staffMemberService;
+        this.staffDirectorySync = staffDirectorySync;
         this.adminLogService = adminLogService;
         this.userRepository = userRepository;
         this.httpRequest = httpRequest;
@@ -50,14 +52,79 @@ public class StaffMemberController {
 
     @GetMapping("")
     public String listStaff(Model model) {
-        model.addAttribute("staffMembers", staffMemberService.findAll());
+        model.addAttribute("staffMembers", staffMemberService.findAllWithAccounts());
         return "academic/admin/staff_list";
+    }
+
+    @PostMapping("/auto-link")
+    public String autoLinkStaff(
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes,
+            java.security.Principal principal) {
+        try {
+            StaffMemberService.AutoLinkReport report = staffMemberService.autoLinkAllAccounts();
+            redirectAttributes.addFlashAttribute("infoMessage", report.describe());
+
+            UserDtls admin = principal != null ? userRepository.findByEmail(principal.getName()) : null;
+            adminLogService.log(
+                    principal != null ? principal.getName() : "SYSTEM",
+                    admin != null ? admin.getName() : "Administrator",
+                    "AUTO_LINK_STAFF",
+                    "รันระบบ Auto-Link บุคลากร (" + report.describe() + ")",
+                    getClientIpAddress());
+        } catch (Exception e) {
+            log.error("Failed to auto-link staff members: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "เกิดข้อผิดพลาดในการผูกบัญชีอัตโนมัติ: " + e.getMessage());
+        }
+        return "redirect:/admin/academic/staff";
+    }
+
+    @PostMapping("/sync")
+    public String syncStaffFromDirectory(
+            org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes,
+            java.security.Principal principal) {
+        try {
+            StaffDirectorySync.Result syncResult = staffDirectorySync.importFromDirectory();
+            StaffMemberService.AutoLinkReport linkReport = staffMemberService.autoLinkAllAccounts();
+
+            String combinedMessage = syncResult.describe();
+            if (linkReport.hasChanges()) {
+                combinedMessage += " | " + linkReport.describe();
+            }
+            redirectAttributes.addFlashAttribute("infoMessage", combinedMessage);
+
+            UserDtls admin = principal != null ? userRepository.findByEmail(principal.getName()) : null;
+            adminLogService.log(
+                    principal != null ? principal.getName() : "SYSTEM",
+                    admin != null ? admin.getName() : "Administrator",
+                    "SYNC_STAFF_DIRECTORY",
+                    "ซิงก์ข้อมูลบุคลากรจากต้นทาง (" + combinedMessage + ")",
+                    getClientIpAddress());
+        } catch (Exception e) {
+            log.error("Failed to sync staff directory: {}", e.getMessage(), e);
+            redirectAttributes.addFlashAttribute("errorMessage", "เกิดข้อผิดพลาดในการซิงก์ข้อมูล: " + e.getMessage());
+        }
+        return "redirect:/admin/academic/staff";
     }
 
     @GetMapping("/add")
     public String addStaffForm(Model model) {
         model.addAttribute("staff", new StaffMember());
+        addLinkableUsers(model);
         return "academic/admin/staff_form";
+    }
+
+    /**
+     * Accounts an administrator may link this person to.
+     *
+     * <p>Every account is offered, not just unlinked ones: the form has to be able
+     * to show the account a staff row is *already* linked to as the selected
+     * option, and hiding taken accounts would make an existing link render as
+     * "ไม่ผูกบัญชี" and silently clear itself on the next save.
+     */
+    private void addLinkableUsers(Model model) {
+        model.addAttribute("linkableUsers", userRepository.findAll(
+                org.springframework.data.domain.Sort.by("firstName").ascending()
+                        .and(org.springframework.data.domain.Sort.by("lastName").ascending())));
     }
 
     @PostMapping("/add")
@@ -70,6 +137,7 @@ public class StaffMemberController {
             @RequestParam("staffType") String staffType,
             @RequestParam(value = "department", required = false) String department,
             @RequestParam("staffRole") String staffRole,
+            @RequestParam(value = "userId", required = false) Integer userId,
             @RequestParam(value = "confirmDuplicate", required = false) Boolean confirmDuplicate,
             Model model,
             java.security.Principal principal) {
@@ -92,11 +160,14 @@ public class StaffMemberController {
                 staff.setDepartment(department);
                 staff.setStaffRole(staffRole);
 
+                staff.setUser(resolveUser(userId));
+
                 model.addAttribute("staff", staff);
                 model.addAttribute("duplicates", sameName);
                 model.addAttribute("duplicateWarning",
                         "มีบุคลากรชื่อ \"" + firstName + " " + lastName + "\" อยู่แล้ว "
                                 + sameName.size() + " รายการ ตรวจสอบก่อนว่าไม่ใช่คนเดียวกัน");
+                addLinkableUsers(model);
                 return "academic/admin/staff_form";
             }
         }
@@ -112,6 +183,15 @@ public class StaffMemberController {
         staff.setDepartment(department);
         staff.setStaffRole(staffRole);
         staff.setIsActive(true);
+
+        String linkError = applyAccountLink(staff, userId);
+        if (linkError != null) {
+            model.addAttribute("staff", staff);
+            model.addAttribute("linkError", linkError);
+            addLinkableUsers(model);
+            return "academic/admin/staff_form";
+        }
+
         staffMemberService.save(staff);
 
         // Log activity
@@ -134,6 +214,7 @@ public class StaffMemberController {
         StaffMember staff = staffMemberService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
         model.addAttribute("staff", staff);
+        addLinkableUsers(model);
         return "academic/admin/staff_form";
     }
 
@@ -148,6 +229,8 @@ public class StaffMemberController {
             @RequestParam("staffType") String staffType,
             @RequestParam(value = "department", required = false) String department,
             @RequestParam("staffRole") String staffRole,
+            @RequestParam(value = "userId", required = false) Integer userId,
+            Model model,
             java.security.Principal principal) {
         StaffMember staff = staffMemberService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Staff not found"));
@@ -160,6 +243,15 @@ public class StaffMemberController {
         staff.setStaffType(staffType);
         staff.setDepartment(department);
         staff.setStaffRole(staffRole);
+
+        String linkError = applyAccountLink(staff, userId);
+        if (linkError != null) {
+            model.addAttribute("staff", staff);
+            model.addAttribute("linkError", linkError);
+            addLinkableUsers(model);
+            return "academic/admin/staff_form";
+        }
+
         staffMemberService.save(staff);
 
         // Log activity
@@ -197,10 +289,62 @@ public class StaffMemberController {
         return "redirect:/admin/academic/staff?success=deleted";
     }
 
+    /**
+     * Role holders for a signer picker.
+     *
+     * <p>Returns people who cannot sign as well, flagged {@code signable=false}.
+     * Filtering them out server-side would leave an administrator looking at a
+     * list with someone conspicuously missing and no way to find out why; the
+     * picker shows them greyed out with "ยังไม่ได้ผูกบัญชี" instead.
+     */
     @GetMapping("/api/by-role")
     @ResponseBody
-    public ResponseEntity<List<StaffMember>> getByRole(@RequestParam("role") String role) {
-        return ResponseEntity.ok(staffMemberService.findByRole(role));
+    public ResponseEntity<List<SignerOptionDTO>> getByRole(
+            @RequestParam("role") String role,
+            @RequestParam(value = "signableOnly", defaultValue = "false") boolean signableOnly) {
+        List<StaffMember> staff = signableOnly
+                ? staffMemberService.findSignableByRole(role)
+                : staffMemberService.findByRoleWithAccountStatus(role);
+        return ResponseEntity.ok(staff.stream().map(SignerOptionDTO::from).toList());
+    }
+
+    private UserDtls resolveUser(Integer userId) {
+        return userId == null ? null : userRepository.findById(userId).orElse(null);
+    }
+
+    /**
+     * Applies the chosen account to a staff row.
+     *
+     * @return a Thai message to show the administrator, or null when the link was
+     *         applied cleanly
+     *
+     *         <p>The uniqueness check happens here rather than being left to the
+     *         database constraint so the message can name the person already
+     *         holding the account. Two staff rows sharing one account would make
+     *         "who is the dean" ambiguous at exactly the moment a signature
+     *         request is being addressed.
+     */
+    private String applyAccountLink(StaffMember staff, Integer userId) {
+        if (userId == null) {
+            staff.setUser(null);
+            return null;
+        }
+
+        UserDtls account = resolveUser(userId);
+        if (account == null) {
+            return "ไม่พบบัญชีผู้ใช้ที่เลือก";
+        }
+
+        StaffMember conflict = staffMemberService
+                .findConflictingAccountOwner(userId, staff.getId())
+                .orElse(null);
+        if (conflict != null) {
+            return "บัญชี " + account.getEmail() + " ถูกผูกกับบุคลากร \""
+                    + conflict.getDisplayName() + "\" อยู่แล้ว — หนึ่งบัญชีผูกได้กับบุคลากรคนเดียวเท่านั้น";
+        }
+
+        staff.setUser(account);
+        return null;
     }
 
     private String getClientIpAddress() {

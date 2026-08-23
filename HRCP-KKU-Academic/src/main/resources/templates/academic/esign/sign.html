@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+<section>
+    <div class="container py-4">
+
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+            <div>
+                <h3 class="mb-1">
+                    <i class="fas fa-file-signature"></i>
+                    <span th:text="${envelope.documentLabel} ?: ('เอกสารที่ ' + ${envelope.documentType})">เอกสาร</span>
+                </h3>
+                <p class="text-secondary mb-0">
+                    <span th:text="${envelope.module.thaiLabel}">ประเภท</span>
+                    · ลงนามในตำแหน่ง <strong th:text="${step.roleLabel}">ตำแหน่ง</strong>
+                </p>
+            </div>
+            <a href="/esign/inbox" class="btn btn-outline-secondary">
+                <i class="fas fa-arrow-left"></i> กลับ
+            </a>
+        </div>
+
+        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show">
+            <i class="fas fa-circle-exclamation"></i> <span th:text="${errorMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <div th:unless="${canSign}" class="alert alert-secondary">
+            <i class="fas fa-circle-info"></i>
+            ขั้นตอนนี้ไม่สามารถลงนามได้แล้ว
+            (สถานะ: <span th:text="${step.status.thaiLabel}">—</span>)
+        </div>
+
+        <div class="row g-3">
+
+            <!-- ========== ฝั่งซ้าย: เอกสารตัวจริงที่กำลังจะลงนาม ========== -->
+            <div class="col-lg-7">
+                <div class="card card-academic h-100 shadow-sm">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
+                        <span class="fw-semibold text-primary"><i class="fas fa-file-pdf me-1"></i> เอกสารที่จะลงนาม (ฉบับจริง)</span>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge bg-light text-secondary border">Freeze Snapshot</span>
+                            <a th:href="@{'/esign/sign/' + ${step.id} + '/preview'}" target="_blank"
+                               class="btn btn-sm btn-outline-secondary">
+                                <i class="fas fa-arrow-up-right-from-square"></i> เปิดแท็บใหม่
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        <!-- เนื้อหาที่แสดงคือฉบับที่ถูก freeze ไว้ตอนส่งลงนาม
+                             ไม่ใช่ฟอร์มปัจจุบัน — สิ่งที่เห็นคือสิ่งที่จะถูกลงนามจริง -->
+                        <div id="esign-pdf-container" th:data-pdf-url="@{'/esign/sign/' + ${step.id} + '/preview'}">
+                            <!-- EsignPdfViewer will dynamically mount here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== ฝั่งขวา: ลำดับการลงนาม + ยินยอม + ลงนาม ========== -->
+            <div class="col-lg-5">
+
+                <!-- ลำดับขั้นการลงนาม -->
+                <div class="card card-academic mb-3">
+                    <div class="card-header bg-white">
+                        <i class="fas fa-list-ol"></i> ลำดับการลงนาม
+                        <span class="text-secondary" th:text="'(' + ${envelope.progressLabel} + ')'">(0/0)</span>
+                    </div>
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center gap-2"
+                            th:each="s : ${envelope.steps}"
+                            th:classappend="${s.id == step.id} ? 'bg-body-tertiary' : ''">
+                            <div>
+                                <span class="badge bg-secondary me-1" th:text="${s.stepOrder}">1</span>
+                                <span th:text="${s.roleLabel}">ตำแหน่ง</span>
+                                <div class="small text-secondary" th:text="${s.signerNameSnapshot}">ชื่อ</div>
+                            </div>
+                            <span class="badge"
+                                  th:classappend="'bg-' + ${s.status.color}"
+                                  th:text="${s.status.thaiLabel}">สถานะ</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div th:if="${canSign}">
+
+                    <!-- ไม่มีลายเซ็นเก็บไว้ ต้องไปสร้างก่อน -->
+                    <div th:if="${#lists.isEmpty(mySignatures)}" class="alert alert-warning">
+                        <i class="fas fa-triangle-exclamation"></i>
+                        คุณยังไม่มีลายเซ็นที่บันทึกไว้
+                        <a href="/esign/my-signatures" class="alert-link">สร้างลายเซ็นของคุณก่อน</a>
+                        จึงจะลงนามได้
+                    </div>
+
+                    <form th:unless="${#lists.isEmpty(mySignatures)}"
+                          th:action="@{'/esign/sign/' + ${step.id}}" method="post"
+                          id="signForm">
+                        <div class="card card-academic mb-3">
+                            <div class="card-header bg-white"><i class="fas fa-signature"></i> เลือกลายเซ็น</div>
+                            <div class="card-body">
+
+                                <div class="row g-2">
+                                    <div class="col-6" th:each="sig : ${mySignatures}">
+                                        <input type="radio" class="btn-check" name="userSignatureId"
+                                               th:id="'sig-' + ${sig.id}" th:value="${sig.id}"
+                                               th:checked="${sig.isDefault}" required>
+                                        <label class="btn btn-outline-secondary w-100 p-2"
+                                               th:for="'sig-' + ${sig.id}">
+                                            <span class="sig-card-thumb d-block mb-1" style="height:70px;">
+                                                <img th:src="${sig.imageUrl}" th:alt="${sig.displayName}">
+                                            </span>
+                                            <small th:text="${sig.displayName}">ชื่อ</small>
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="form-text mt-2">
+                                    จัดการลายเซ็นได้ที่ <a href="/esign/my-signatures">ลายเซ็นของฉัน</a>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- ความยินยอม — เป็นสาระสำคัญตาม พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์ ม.9
+                             ระบบบันทึกทั้งข้อความที่แสดง เวลา IP และอุปกรณ์ไว้เป็นหลักฐาน -->
+                        <div class="card card-academic mb-3">
+                            <div class="card-header bg-white">
+                                <i class="fas fa-scale-balanced"></i> ความยินยอมในการลงลายมือชื่อ
+                            </div>
+                            <div class="card-body">
+                                <p class="small text-secondary" th:text="${consentText}">ข้อความยินยอม</p>
+
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="consent"
+                                           id="consentCheck" value="true" required>
+                                    <label class="form-check-label fw-semibold" for="consentCheck">
+                                        ข้าพเจ้าได้อ่านและยินยอมตามข้อความข้างต้น
+                                    </label>
+                                </div>
+
+                                <div class="form-text mt-2">
+                                    ระบบจะบันทึกวันเวลา หมายเลข IP และอุปกรณ์ที่ใช้ลงนามไว้เป็นหลักฐาน
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-academic w-100">
+                            <i class="fas fa-signature"></i> ยืนยันการลงนาม
+                        </button>
+                    </form>
+
+                    <!-- ปฏิเสธการลงนาม — ต้องมีทางเลือกนี้เสมอ ไม่ใช่มีแต่ปุ่มเซ็น -->
+                    <div class="card card-academic mt-3">
+                        <div class="card-header bg-white">
+                            <i class="fas fa-circle-xmark"></i> ปฏิเสธการลงนาม
+                        </div>
+                        <div class="card-body">
+                            <form th:action="@{'/esign/sign/' + ${step.id} + '/decline'}" method="post"
+                                  data-confirm="ยืนยันการปฏิเสธการลงนาม? การเวียนลงนามนี้จะถูกยุติและแจ้งกลับผู้ส่งเอกสาร">
+                                <label class="form-label small">เหตุผล (จำเป็น)</label>
+                                <textarea name="reason" class="form-control mb-2" rows="2" required
+                                          maxlength="500"
+                                          placeholder="เช่น ข้อมูลในเอกสารไม่ถูกต้อง กรุณาแก้ไขแล้วส่งใหม่"></textarea>
+                                <button type="submit" class="btn btn-outline-danger w-100">
+                                    ส่งกลับให้แก้ไข
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Interactive PDF Viewer Assets -->
+    <link rel="stylesheet" href="/css/esign_pdf_viewer.css">
+    <script src="/js/esign_pdf_viewer.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const container = document.getElementById('esign-pdf-container');
+            if (container) {
+                const pdfUrl = container.getAttribute('data-pdf-url');
+                if (pdfUrl && window.initEsignPdfViewer) {
+                    window.initEsignPdfViewer('esign-pdf-container', pdfUrl, { initialFit: 'width' });
+                }
+            }
+        });
+    </script>
+</section>
+</body>
+</html>

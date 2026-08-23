@@ -29,6 +29,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import com.ecom.config.ClientIpUtils;
+import com.ecom.academic.model.AcademicAttachment;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
@@ -76,6 +77,8 @@ public class AcademicApplicantController {
 
     private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
 
+    private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+
     public AcademicApplicantController(
             AcademicRequestService requestService,
             DocumentGenerationService documentService,
@@ -87,7 +90,8 @@ public class AcademicApplicantController {
             jakarta.servlet.http.HttpServletRequest httpRequest,
             UserStorageService userStorageService,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
-            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService) {
+            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -99,6 +103,7 @@ public class AcademicApplicantController {
         this.userStorageService = userStorageService;
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
+        this.signatureWorkflow = signatureWorkflow;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -237,6 +242,11 @@ public class AcademicApplicantController {
         model.addAttribute("existingData", existingJson);
         model.addAttribute("doc0Data", doc0Data);
 
+        // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
+        model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.ACADEMIC);
+        model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
+                com.ecom.academic.model.SignatureModule.ACADEMIC, id, 0, user));
+
         return "academic/applicant/document_0_form";
     }
 
@@ -301,11 +311,19 @@ public class AcademicApplicantController {
         List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 1);
         String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
         Map<String, String> doc1Data = autoFillHelper.getPreFilledAcademicDocData(request, 1, existingJson);
+        List<AcademicAttachment> attachments = requestService.getAttachments(id);
 
         model.addAttribute("request", request);
         model.addAttribute("existingDocs", existingDocs);
         model.addAttribute("existingData", existingJson);
         model.addAttribute("doc1Data", doc1Data);
+        model.addAttribute("attachments", attachments);
+        model.addAttribute("attachmentCount", attachments != null ? attachments.size() : 0);
+
+        // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
+        model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.ACADEMIC);
+        model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
+                com.ecom.academic.model.SignatureModule.ACADEMIC, id, 1, user));
 
         return "academic/applicant/document_1_form";
     }
@@ -352,13 +370,171 @@ public class AcademicApplicantController {
         return "redirect:/user/academic/request/" + id + "?success=doc1_submitted";
     }
 
+    // ==================== แนบไฟล์ประกอบการประเมินผลการสอน (เอกสารที่ 1) ====================
+
+    @PostMapping("/request/{id}/document-1/attachments")
+    public String uploadDocument1Attachments(
+            @PathVariable Long id,
+            @RequestParam("files") MultipartFile[] files,
+            Principal principal,
+            RedirectAttributes redirectAttributes) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        UserDtls user = getUser(principal);
+        if (!request.getApplicant().getId().equals(user.getId())) {
+            return "redirect:/user/academic/dashboard";
+        }
+
+        if (request.getCurrentStatus() != RequestStatus.DRAFT) {
+            redirectAttributes.addFlashAttribute("error", "ไม่สามารถแก้ไขไฟล์แนบได้เนื่องจากส่งคำร้องไปแล้ว");
+            return "redirect:/user/academic/request/" + id + "/document-1";
+        }
+
+        if (files == null || files.length == 0) {
+            return "redirect:/user/academic/request/" + id + "/document-1";
+        }
+
+        long currentCount = requestService.countAttachments(id);
+        int uploadedCount = 0;
+        String uploadDir = "uploads/academic/" + id + "/attachments/";
+        Files.createDirectories(Path.of(uploadDir));
+
+        for (MultipartFile file : files) {
+            if (file.isEmpty()) continue;
+            if (currentCount + uploadedCount >= 20) {
+                redirectAttributes.addFlashAttribute("error", "จำนวนไฟล์แนบเกินขีดจำกัดสูงสุด (20 ไฟล์)");
+                break;
+            }
+
+            String originalFilename = file.getOriginalFilename();
+            if (originalFilename == null || originalFilename.isBlank()) continue;
+
+            String lower = originalFilename.toLowerCase();
+            if (!lower.endsWith(".pdf") && !lower.endsWith(".docx") && !lower.endsWith(".doc")
+                    && !lower.endsWith(".pptx") && !lower.endsWith(".ppt")
+                    && !lower.endsWith(".xlsx") && !lower.endsWith(".xls")
+                    && !lower.endsWith(".zip") && !lower.endsWith(".rar") && !lower.endsWith(".7z")
+                    && !lower.endsWith(".png") && !lower.endsWith(".jpg") && !lower.endsWith(".jpeg")) {
+                redirectAttributes.addFlashAttribute("error", "ไฟล์ " + originalFilename + " มีประเภทไฟล์ที่ไม่รองรับ");
+                continue;
+            }
+
+            String sanitized = FileUtils.sanitizeFilename(originalFilename);
+            String uniquePrefix = System.currentTimeMillis() + "_" + (uploadedCount + 1) + "_";
+            String storedFilename = uniquePrefix + sanitized;
+            String filePath = uploadDir + storedFilename;
+            file.transferTo(Path.of(filePath));
+
+            String fileType = "OTHER";
+            if (lower.endsWith(".pdf")) fileType = "PDF";
+            else if (lower.endsWith(".docx") || lower.endsWith(".doc")) fileType = "DOCX";
+            else if (lower.endsWith(".pptx") || lower.endsWith(".ppt")) fileType = "PPTX";
+            else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) fileType = "XLSX";
+            else if (lower.endsWith(".zip") || lower.endsWith(".rar") || lower.endsWith(".7z")) fileType = "ZIP";
+            else if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")) fileType = "IMAGE";
+
+            AcademicAttachment attachment = new AcademicAttachment();
+            attachment.setRequest(request);
+            attachment.setOriginalFilename(originalFilename);
+            attachment.setStoredFilePath(filePath);
+            attachment.setFileType(fileType);
+            attachment.setFileSize(file.getSize());
+            requestService.saveAttachment(attachment);
+            uploadedCount++;
+        }
+
+        if (uploadedCount > 0) {
+            redirectAttributes.addFlashAttribute("success", "อัปโหลดไฟล์แนบเรียบร้อยแล้ว " + uploadedCount + " ไฟล์");
+        }
+        return "redirect:/user/academic/request/" + id + "/document-1";
+    }
+
+    @GetMapping("/request/{id}/attachment/{attachmentId}/download")
+    public ResponseEntity<Resource> downloadAttachment(
+            @PathVariable Long id,
+            @PathVariable Long attachmentId,
+            Principal principal) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        UserDtls user = getUser(principal);
+        if (!request.getApplicant().getId().equals(user.getId())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+        }
+
+        AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
+                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+
+        Path path = Path.of(attachment.getStoredFilePath());
+        if (!Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String contentType = "application/octet-stream";
+        String ft = attachment.getFileType() != null ? attachment.getFileType().toUpperCase() : "";
+        if ("PDF".equals(ft)) contentType = "application/pdf";
+        else if ("DOCX".equals(ft)) contentType = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+        else if ("PPTX".equals(ft)) contentType = "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+        else if ("XLSX".equals(ft)) contentType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        else if ("ZIP".equals(ft)) contentType = "application/zip";
+        else if ("IMAGE".equals(ft)) {
+            try {
+                contentType = Files.probeContentType(path);
+            } catch (Exception e) {
+                contentType = "image/jpeg";
+            }
+        }
+
+        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
+        String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
+                .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
+                .contentLength(Files.size(path))
+                .body(new FileSystemResource(path));
+    }
+
+    @PostMapping("/request/{id}/attachment/{attachmentId}/delete")
+    public String deleteAttachment(
+            @PathVariable Long id,
+            @PathVariable Long attachmentId,
+            Principal principal,
+            RedirectAttributes redirectAttributes) {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        UserDtls user = getUser(principal);
+        if (!request.getApplicant().getId().equals(user.getId())) {
+            return "redirect:/user/academic/dashboard";
+        }
+        if (request.getCurrentStatus() != RequestStatus.DRAFT) {
+            redirectAttributes.addFlashAttribute("error", "ไม่สามารถลบไฟล์ได้เนื่องจากส่งคำร้องไปแล้ว");
+            return "redirect:/user/academic/request/" + id + "/document-1";
+        }
+
+        AcademicAttachment attachment = requestService.findAttachmentById(attachmentId).orElse(null);
+        if (attachment != null && attachment.getRequest().getId().equals(id)) {
+            try {
+                Files.deleteIfExists(Path.of(attachment.getStoredFilePath()));
+            } catch (IOException e) {
+                log.warn("Failed to delete file on disk: {}", e.getMessage());
+            }
+            requestService.deleteAttachment(attachmentId);
+            redirectAttributes.addFlashAttribute("success", "ลบไฟล์แนบเรียบร้อยแล้ว");
+        }
+        return "redirect:/user/academic/request/" + id + "/document-1";
+    }
+
     // ==================== ส่งคำร้องทั้งหมด ====================
 
     /**
      * ส่งคำร้อง (เปลี่ยนจาก DRAFT → RECEIVED) พร้อมส่งอีเมลแจ้งแอดมิน
      */
     @PostMapping("/request/{id}/submit")
-    public String submitRequest(@PathVariable Long id, Principal principal) {
+    public String submitRequest(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
@@ -369,6 +545,13 @@ public class AcademicApplicantController {
 
         if (request.getCurrentStatus() != RequestStatus.DRAFT) {
             return "redirect:/user/academic/request/" + id + "?error=already_submitted";
+        }
+
+        // ตรวจสอบความครบถ้วนสมบูรณ์ของเอกสารที่ 0 และเอกสารที่ 1
+        List<AcademicDocument> allDocs = requestService.getDocumentsSorted(id);
+        if (!isDoc0Complete(allDocs) || !isDoc1Complete(allDocs)) {
+            redirectAttributes.addFlashAttribute("error", "กรุณากรอกเอกสารที่ 0 และแบบตรวจสอบเอกสารที่ 1 ให้ครบถ้วนสมบูรณ์ก่อนส่งคำร้อง");
+            return "redirect:/user/academic/new-request";
         }
 
         // เปลี่ยนสถานะ DRAFT → RECEIVED

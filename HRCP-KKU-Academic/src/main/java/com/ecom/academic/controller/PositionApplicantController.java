@@ -51,19 +51,23 @@ public class PositionApplicantController {
 
     private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
 
+    private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+
     public PositionApplicantController(
             PositionRequestService positionService,
             UserRepository userRepository,
             AcademicRequestService academicService,
             DocumentGenerationService documentService,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
-            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService) {
+            com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow) {
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.academicService = academicService;
         this.documentService = documentService;
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
+        this.signatureWorkflow = signatureWorkflow;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -305,6 +309,11 @@ public class PositionApplicantController {
             String doc1Data = doc1Docs.isEmpty() ? null : doc1Docs.get(0).getJsonData();
             model.addAttribute("doc1Data", doc1Data);
         }
+
+        // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
+        model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.POSITION);
+        model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
+                com.ecom.academic.model.SignatureModule.POSITION, id, type, user));
 
         return "academic/position/applicant/doc_form_" + type;
     }

@@ -1,0 +1,146 @@
+/* ==========================================================================
+   Electronic signature UI
+   Colours come from the theme variables the rest of the app defines, so these
+   components follow the light/dark switch without a second set of rules.
+   ========================================================================== */
+
+/* --------------------------------------------------------------- tab strip */
+
+.sig-tabs {
+    display: inline-flex;
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: .5rem;
+    overflow: hidden;
+}
+
+.sig-tab {
+    border: 0;
+    background: transparent;
+    padding: .5rem 1.15rem;
+    font-size: .95rem;
+    color: var(--text-color, #212529);
+    cursor: pointer;
+    transition: background-color .15s ease, color .15s ease;
+}
+
+.sig-tab + .sig-tab {
+    border-left: 1px solid var(--border-color, #dee2e6);
+}
+
+.sig-tab:hover:not(.active) {
+    background-color: var(--hover-bg, rgba(0, 0, 0, .04));
+}
+
+.sig-tab.active {
+    background-color: var(--text-color, #212529);
+    color: var(--card-bg, #fff);
+}
+
+/* ------------------------------------------------------------ drawing pad */
+
+/*
+ * The pad is always light with dark ink, in both themes. What is drawn here is
+ * stamped onto a white document — inverting it for dark mode would produce a
+ * signature that is invisible in the PDF, and would mislead about the result.
+ */
+.sig-canvas-wrap {
+    position: relative;
+    background-color: #fff;
+    border: 1px dashed var(--border-color, #adb5bd);
+    border-radius: .5rem;
+    overflow: hidden;
+}
+
+#sigCanvas {
+    display: block;
+    width: 100%;
+    height: 220px;
+    /* Stops the browser panning/zooming the page mid-stroke on a touchscreen. */
+    touch-action: none;
+    cursor: crosshair;
+}
+
+.sig-canvas-hint {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    color: #adb5bd;
+    font-size: .95rem;
+}
+
+/* ---------------------------------------------------------------- preview */
+
+.sig-preview-box {
+    min-height: 220px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    background-color: #fff;
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: .5rem;
+}
+
+.sig-preview-box img {
+    max-width: 100%;
+    max-height: 190px;
+    object-fit: contain;
+}
+
+/* ------------------------------------------------------------ saved cards */
+
+.sig-card {
+    border: 1px solid var(--border-color, #dee2e6);
+    border-radius: .5rem;
+    padding: 1rem;
+    height: 100%;
+    background-color: var(--card-bg, #fff);
+}
+
+.sig-card.is-default {
+    border-color: var(--bs-success, #198754);
+    box-shadow: 0 0 0 1px var(--bs-success, #198754);
+}
+
+.sig-card-thumb {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 110px;
+    margin-bottom: .75rem;
+    padding: .5rem;
+    /* White regardless of theme, for the same reason as the pad. */
+    background-color: #fff;
+    border: 1px solid var(--border-color, #e9ecef);
+    border-radius: .375rem;
+}
+
+.sig-card-thumb img {
+    max-width: 100%;
+    max-height: 95px;
+    object-fit: contain;
+}
+
+/* -------------------------------------------------------------- responsive */
+
+@media (max-width: 767.98px) {
+    #sigCanvas {
+        height: 180px;
+    }
+
+    .sig-preview-box {
+        min-height: 150px;
+    }
+
+    .sig-tabs {
+        width: 100%;
+    }
+
+    .sig-tab {
+        flex: 1;
+        padding: .5rem .5rem;
+    }
+}

@@ -192,6 +192,10 @@
                     </a>
                 </div>
             </form>
+
+            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
+
         </div>
 
         <script th:inline="javascript">

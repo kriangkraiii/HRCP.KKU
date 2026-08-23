@@ -5,14 +5,24 @@
     <section>
         <div class="container py-4">
             <!-- Alert messages -->
+            <div th:if="${success != null}" class="alert alert-success alert-dismissible fade show">
+                <i class="fas fa-check-circle me-1"></i> [[${success}]]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show">
+                <i class="fas fa-exclamation-circle me-1"></i> [[${error}]]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
             <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
-                <i class="fas fa-check-circle"></i>
+                <i class="fas fa-check-circle me-1"></i>
                 <span th:if="${param.success[0] == 'doc_saved'}">บันทึกเอกสารสำเร็จ</span>
+                <span th:unless="${param.success[0] == 'doc_saved'}">ดำเนินการสำเร็จ</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
             <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
-                <i class="fas fa-exclamation-circle"></i>
+                <i class="fas fa-exclamation-circle me-1"></i>
                 <span th:if="${param.error[0] == 'incomplete_docs'}">กรุณากรอกเอกสารให้ครบทุกรายการก่อนส่งคำร้อง</span>
+                <span th:unless="${param.error[0] == 'incomplete_docs'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
