@@ -177,7 +177,7 @@
                   <hr class="mt-0" />
 
                   <div class="row mb-3">
-                    <div class="col-md-12">
+                    <div class="col-md-6">
                       <label class="form-label fw-bold"
                         >อีเมล <span class="text-danger">*</span></label
                       >
@@ -192,6 +192,19 @@
                       />
                       <div class="invalid-feedback">
                         กรุณากรอกอีเมลที่ถูกต้อง
+                      </div>
+                    </div>
+                    <div class="col-md-6">
+                      <label class="form-label fw-bold"
+                        >สิทธิ์การใช้งาน (Role) <span class="text-danger">*</span></label
+                      >
+                      <select name="role" class="form-select" id="roleSelect">
+                        <option value="ROLE_ADMIN" th:selected="${admin.role == 'ROLE_ADMIN'}"> ผู้ดูแลระบบ (Admin)</option>
+                        <option value="ROLE_USER" th:selected="${admin.role == 'ROLE_USER'}"> ผู้ใช้งานทั่วไป (User)</option>
+                      </select>
+                      <div class="form-text text-muted" id="roleNotice">
+                        <span th:if="${admin.role == 'ROLE_ADMIN'}"> บัญชีผู้ดูแลระบบ (Admin) จะไม่มี Applicant ID</span>
+                        <span th:if="${admin.role == 'ROLE_USER'}"> หากเปลี่ยนเป็นผู้ใช้ทั่วไป จะได้รับรหัส Applicant ID อัตโนมัติ</span>
                       </div>
                     </div>
                   </div>

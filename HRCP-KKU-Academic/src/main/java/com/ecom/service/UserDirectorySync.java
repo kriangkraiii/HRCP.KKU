@@ -55,7 +55,10 @@ public class UserDirectorySync {
                 continue;
             }
 
-            UserDtls existing = userRepository.findByEmail(email);
+            UserDtls existing = userRepository.findByEmailIgnoreCase(email);
+            if (existing == null) {
+                existing = userRepository.findByEmail(email);
+            }
             if (existing != null) {
                 if (fillBlanks(existing, faculty)) {
                     userRepository.save(existing);

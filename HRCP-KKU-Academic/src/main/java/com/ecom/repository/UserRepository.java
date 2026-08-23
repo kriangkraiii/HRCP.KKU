@@ -10,6 +10,7 @@ import com.ecom.model.UserDtls;
 public interface UserRepository extends JpaRepository<UserDtls, Integer> {
 
 	public UserDtls findByEmail(String email);
+	public UserDtls findByEmailIgnoreCase(String email);
 
 	public List<UserDtls> findByRole(String role);
 

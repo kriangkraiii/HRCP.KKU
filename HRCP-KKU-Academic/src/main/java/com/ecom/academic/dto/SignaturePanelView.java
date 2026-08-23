@@ -34,6 +34,8 @@ public record SignaturePanelView(
         List<SignatureSlot> slots,
         Map<String, List<SignerOptionDTO>> recommendedOptions,
         List<SignerOptionDTO> otherOptions,
+        Map<String, Integer> defaultSignerUserIds,
+        SignerOptionDTO applicantOption,
         SignerOptionDTO currentUserOption,
         SignatureRequest activeEnvelope,
         boolean signable) {
@@ -51,6 +53,11 @@ public record SignaturePanelView(
     /** Role-matched candidates for one slot, never null. */
     public List<SignerOptionDTO> optionsFor(String slotKey) {
         return recommendedOptions.getOrDefault(slotKey, List.of());
+    }
+
+    /** Default configured signer user ID for a slot, if any. */
+    public Integer defaultSignerFor(String slotKey) {
+        return defaultSignerUserIds != null ? defaultSignerUserIds.get(slotKey) : null;
     }
 
     /**
@@ -74,6 +81,6 @@ public record SignaturePanelView(
 
     /** An empty panel, for documents with no signature block. */
     public static SignaturePanelView unsignable() {
-        return new SignaturePanelView(List.of(), Map.of(), List.of(), null, null, false);
+        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false);
     }
 }

@@ -497,7 +497,8 @@ public class AdminController {
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
 		}
 
-		return "redirect:/admin/users?type=" + type;
+		int targetType = (user.getRole() != null && "ROLE_USER".equals(user.getRole())) ? 1 : 2;
+		return "redirect:/admin/users?type=" + targetType;
 	}
 
 	@GetMapping("/edit-user")
@@ -571,7 +572,8 @@ public class AdminController {
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
 		}
 
-		return "redirect:/admin/users?type=" + type;
+		int targetType = (user.getRole() != null && "ROLE_ADMIN".equals(user.getRole())) ? 2 : 1;
+		return "redirect:/admin/users?type=" + targetType;
 	}
 
 	// ====== Add User/Admin ======

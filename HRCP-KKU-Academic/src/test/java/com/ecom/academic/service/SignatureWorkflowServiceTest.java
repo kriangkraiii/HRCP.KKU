@@ -441,4 +441,54 @@ class SignatureWorkflowServiceTest {
         assertThat(result.request().getSteps()).hasSize(1);
         assertThat(result.request().getSteps().get(0).getSlotKey()).isEqualTo("head");
     }
+
+    @Test
+    @DisplayName("ค้นหาเอกสารถัดไปในคิวของผู้ลงนาม (Continuous Flow)")
+    void findNextPendingStepWorksCorrectlyForContinuousFlow() {
+        // Create 2 envelopes waiting on head
+        SignatureRequest envelope1 = createEnvelope().request();
+        Result result2 = workflow.createEnvelope(MODULE, REQUEST_ID, 4, "เอกสาร 4", FROZEN_JSON,
+                List.of(new SignerAssignment("head", head.getId())),
+                null, admin, ActorContext.none());
+        assertThat(result2.ok()).isTrue();
+        SignatureRequest envelope2 = result2.request();
+
+        Long stepId1 = stepOf(envelope1, "head").getId();
+        Long stepId2 = envelope2.getSteps().get(0).getId();
+
+        assertThat(workflow.findInbox(head)).hasSize(2);
+
+        // When currently viewing step1, next step is step2
+        java.util.Optional<SignatureStep> nextFrom1 = workflow.findNextPendingStep(head, stepId1);
+        assertThat(nextFrom1).isPresent();
+        assertThat(nextFrom1.get().getId()).isEqualTo(stepId2);
+
+        // When currently viewing step2, next step is step1
+        java.util.Optional<SignatureStep> nextFrom2 = workflow.findNextPendingStep(head, stepId2);
+        assertThat(nextFrom2).isPresent();
+        assertThat(nextFrom2.get().getId()).isEqualTo(stepId1);
+    }
+
+    @Test
+    @DisplayName("ผู้ลงนามสามารถขอขยายเวลาลงนามได้")
+    void requestExtensionRecordsAudit() {
+        SignatureRequest envelope = createEnvelope().request();
+        SignatureStep step = stepOf(envelope, "head");
+
+        Result result = workflow.requestExtension(step.getId(), "ติดราชการต่างประเทศ", head, ActorContext.none());
+        assertThat(result.ok()).isTrue();
+    }
+
+    @Test
+    @DisplayName("สามารถขยายกำหนดเวลาลงนามได้")
+    void extendDueDateUpdatesDueAtAndAudits() {
+        SignatureRequest envelope = createEnvelope().request();
+        java.time.LocalDateTime newDue = java.time.LocalDateTime.now().plusDays(10);
+
+        Result result = workflow.extendDueDate(envelope.getId(), newDue, admin, ActorContext.none());
+        assertThat(result.ok()).isTrue();
+
+        SignatureRequest reloaded = requestRepository.findById(envelope.getId()).orElseThrow();
+        assertThat(reloaded.getDueAt()).isNotNull();
+    }
 }

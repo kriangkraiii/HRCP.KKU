@@ -4,73 +4,326 @@
 
 <body>
 <section>
-    <div class="container py-4">
+    <div class="container-fluid py-4">
 
-        <h3 class="mb-2"><i class="fas fa-file-signature"></i> รอลงนาม</h3>
-        <p class="text-secondary mb-4">
-            เอกสารที่รอลายเซ็นของคุณ — จะแสดงเฉพาะเอกสารที่ถึงคิวของคุณแล้วเท่านั้น
-            หากยังไม่ถึงคิว ระบบจะแจ้งเตือนเมื่อผู้ลงนามก่อนหน้าลงนามเรียบร้อย
-        </p>
-
-        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show">
-            <i class="fas fa-circle-check"></i> <span th:text="${succMsg}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show">
-            <i class="fas fa-circle-exclamation"></i> <span th:text="${errorMsg}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
-        <div th:if="${#lists.isEmpty(pendingSteps)}" class="card card-academic">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-mug-hot fa-2x text-secondary mb-3"></i>
-                <p class="text-secondary mb-0">ไม่มีเอกสารรอลงนามในขณะนี้</p>
+        <!-- Top Header & Fast Actions -->
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
+            <div>
+                <h3 class="mb-1 fw-bold">
+                    <i class="fas fa-file-signature text-primary me-2"></i>
+                    กล่องเอกสารรอลงนาม (Signature Inbox)
+                </h3>
+                <p class="text-secondary mb-0">
+                    รายการเอกสารที่ถึงคิวลงนามของคุณ — เมื่อลงนามแล้วระบบจะส่งต่อไปยังผู้ลงนามลำดับถัดไปอัตโนมัติ
+                </p>
+            </div>
+            <div class="d-flex gap-2" th:if="${!#lists.isEmpty(pendingSteps)}">
+                <a th:if="${#lists.size(pendingSteps) > 1}"
+                   th:href="@{'/esign/sign/' + ${pendingSteps[0].id}}"
+                   class="btn btn-primary shadow-sm px-3 d-flex align-items-center gap-2">
+                    <i class="fas fa-bolt"></i>
+                    <span>เริ่มลงนามต่อเนื่อง (<span th:text="${#lists.size(pendingSteps)}">0</span> ฉบับ)</span>
+                </a>
+                <a href="/esign/my-signatures" class="btn btn-outline-secondary">
+                    <i class="fas fa-signature me-1"></i> ลายเซ็นของฉัน
+                </a>
             </div>
         </div>
 
-        <div class="row g-3" th:unless="${#lists.isEmpty(pendingSteps)}">
-            <div class="col-lg-6" th:each="step : ${pendingSteps}">
-                <div class="card card-academic h-100">
-                    <div class="card-body">
+        <!-- Alert Messages -->
+        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-circle-check me-2"></i> <span th:text="${succMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-circle-exclamation me-2"></i> <span th:text="${errorMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
 
-                        <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
-                            <h5 class="mb-0" th:text="${step.signatureRequest.documentLabel}
-                                                      ?: ('เอกสารที่ ' + ${step.signatureRequest.documentType})">
-                                ชื่อเอกสาร
-                            </h5>
-                            <span class="badge bg-warning text-dark">
-                                <i class="fas fa-pen-nib"></i> ถึงคิวลงนาม
-                            </span>
+        <!-- KPI Summary Cards -->
+        <div class="row g-3 mb-4" th:if="${!#lists.isEmpty(pendingSteps)}">
+            <div class="col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm rounded-3 bg-primary bg-opacity-10 h-100">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-secondary small fw-medium">รอลงนามทั้งหมด</span>
+                            <h3 class="mb-0 fw-bold text-primary" id="kpi-total" th:text="${#lists.size(pendingSteps)}">0</h3>
                         </div>
-
-                        <dl class="row mb-3 small">
-                            <dt class="col-5 text-secondary fw-normal">ประเภทคำร้อง</dt>
-                            <dd class="col-7" th:text="${step.signatureRequest.module.thaiLabel}">—</dd>
-
-                            <dt class="col-5 text-secondary fw-normal">ลงนามในตำแหน่ง</dt>
-                            <dd class="col-7 fw-semibold" th:text="${step.roleLabel}">—</dd>
-
-                            <dt class="col-5 text-secondary fw-normal">ความคืบหน้า</dt>
-                            <dd class="col-7" th:text="${step.signatureRequest.progressLabel} + ' ลายเซ็น'">—</dd>
-
-                            <dt class="col-5 text-secondary fw-normal" th:if="${step.signatureRequest.dueAt != null}">
-                                กำหนดลงนามภายใน
-                            </dt>
-                            <dd class="col-7" th:if="${step.signatureRequest.dueAt != null}">
-                                <span th:text="${#temporals.format(step.signatureRequest.dueAt, 'd MMM yyyy HH:mm')}">—</span>
-                                <span class="badge bg-danger ms-1"
-                                      th:if="${step.signatureRequest.overdue}">เลยกำหนด</span>
-                            </dd>
-                        </dl>
-
-                        <a th:href="@{'/esign/sign/' + ${step.id}}" class="btn btn-academic">
-                            <i class="fas fa-signature"></i> ตรวจสอบและลงนาม
-                        </a>
+                        <div class="rounded-circle bg-primary bg-opacity-25 p-3 text-primary">
+                            <i class="fas fa-inbox fa-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm rounded-3 bg-danger bg-opacity-10 h-100">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-secondary small fw-medium">เลยกำหนดลงนาม</span>
+                            <h3 class="mb-0 fw-bold text-danger" id="kpi-overdue">0</h3>
+                        </div>
+                        <div class="rounded-circle bg-danger bg-opacity-25 p-3 text-danger">
+                            <i class="fas fa-triangle-exclamation fa-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="col-sm-6 col-lg-4">
+                <div class="card border-0 shadow-sm rounded-3 bg-success bg-opacity-10 h-100">
+                    <div class="card-body p-3 d-flex align-items-center justify-content-between">
+                        <div>
+                            <span class="text-secondary small fw-medium">อยู่ในกำหนดเวลา</span>
+                            <h3 class="mb-0 fw-bold text-success" id="kpi-normal">0</h3>
+                        </div>
+                        <div class="rounded-circle bg-success bg-opacity-25 p-3 text-success">
+                            <i class="fas fa-clock fa-xl"></i>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="card border-0 shadow-sm rounded-3 mb-4" th:if="${!#lists.isEmpty(pendingSteps)}">
+            <div class="card-body p-3">
+                <div class="row g-3 align-items-center">
+                    <div class="col-md-6 col-lg-7">
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted">
+                                <i class="fas fa-search"></i>
+                            </span>
+                            <input type="text" id="inboxSearchInput" class="form-control border-start-0"
+                                   placeholder="ค้นหาตามชื่อเอกสาร, ประเภทคำร้อง หรือตำแหน่งที่เซ็น...">
+                        </div>
+                    </div>
+                    <div class="col-md-6 col-lg-5">
+                        <div class="btn-group w-100" role="group" id="statusFilterGroup">
+                            <button type="button" class="btn btn-outline-primary active filter-btn" data-filter="all">
+                                ทั้งหมด (<span th:text="${#lists.size(pendingSteps)}">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-outline-danger filter-btn" data-filter="overdue">
+                                เลยกำหนด (<span id="filter-overdue-count">0</span>)
+                            </button>
+                            <button type="button" class="btn btn-outline-success filter-btn" data-filter="normal">
+                                ปกติ (<span id="filter-normal-count">0</span>)
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State -->
+        <div th:if="${#lists.isEmpty(pendingSteps)}" class="card border-0 shadow-sm rounded-4">
+            <div class="card-body text-center py-5">
+                <div class="rounded-circle bg-light d-inline-flex p-4 mb-3">
+                    <i class="fas fa-mug-hot fa-3x text-secondary opacity-75"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-1">ไม่มีเอกสารรอลงนามในขณะนี้</h5>
+                <p class="text-secondary mb-3">
+                    คุณได้ลงนามเอกสารที่ได้รับมอบหมายครบถ้วนเรียบร้อยแล้ว
+                </p>
+                <a href="/admin/academic/requests" class="btn btn-outline-primary">
+                    <i class="fas fa-arrow-left me-1"></i> ไปยังหน้ารายการคำร้อง
+                </a>
+            </div>
+        </div>
+
+        <!-- Document Grid -->
+        <div class="row g-3" id="inboxCardsGrid" th:unless="${#lists.isEmpty(pendingSteps)}">
+            <div class="col-md-6 col-xl-4 inbox-card-item"
+                 th:each="step : ${pendingSteps}"
+                 th:data-overdue="${step.signatureRequest.overdue ? 'true' : 'false'}"
+                 th:data-search="${(step.signatureRequest.documentLabel ?: '') + ' ' + (step.signatureRequest.module.thaiLabel ?: '') + ' ' + (step.roleLabel ?: '')}">
+
+                <div class="card border-0 shadow-sm rounded-4 h-100 transition-hover"
+                     th:classappend="${step.signatureRequest.overdue} ? 'border-start border-danger border-4' : 'border-start border-primary border-4'">
+                    <div class="card-body p-4 d-flex flex-column justify-content-between">
+
+                        <div>
+                            <!-- Header / Badge -->
+                            <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                <span class="badge rounded-pill"
+                                      th:classappend="${step.signatureRequest.module.name() == 'ACADEMIC'} ? 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' : 'bg-purple bg-opacity-10 text-primary border border-primary border-opacity-25'"
+                                      th:text="${step.signatureRequest.module.thaiLabel}">
+                                    ประเภท
+                                </span>
+                                <span th:if="${step.signatureRequest.overdue}" class="badge bg-danger rounded-pill px-2 py-1">
+                                    <i class="fas fa-triangle-exclamation me-1"></i> เลยกำหนด
+                                </span>
+                                <span th:unless="${step.signatureRequest.overdue}" class="badge bg-warning text-dark rounded-pill px-2 py-1">
+                                    <i class="fas fa-pen-nib me-1"></i> ถึงคิวลงนาม
+                                </span>
+                            </div>
+
+                            <!-- Document Title -->
+                            <h5 class="fw-bold text-dark mb-2 line-clamp-2"
+                                th:text="${step.signatureRequest.documentLabel} ?: ('เอกสารที่ ' + ${step.signatureRequest.documentType})">
+                                ชื่อเอกสาร
+                            </h5>
+
+                            <!-- Role Info -->
+                            <div class="bg-light rounded-3 p-2 mb-3 small">
+                                <div class="d-flex justify-content-between text-secondary mb-1">
+                                    <span>ลงนามในตำแหน่ง:</span>
+                                    <strong class="text-dark" th:text="${step.roleLabel}">—</strong>
+                                </div>
+                                <div class="d-flex justify-content-between text-secondary">
+                                    <span>ความคืบหน้า:</span>
+                                    <span class="text-primary fw-semibold" th:text="${step.signatureRequest.progressLabel} + ' ลายเซ็น'">—</span>
+                                </div>
+                            </div>
+
+                            <!-- Due Date -->
+                            <div class="small mb-3" th:if="${step.signatureRequest.dueAt != null}">
+                                <span class="text-secondary"><i class="far fa-calendar-alt me-1"></i> กำหนดลงนาม:</span>
+                                <span class="fw-medium" th:classappend="${step.signatureRequest.overdue} ? 'text-danger fw-bold' : 'text-dark'"
+                                      th:text="${#temporals.format(step.signatureRequest.dueAt, 'd MMM yyyy HH:mm')}">
+                                    —
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="d-flex gap-2 pt-2 border-top">
+                            <a th:href="@{'/esign/sign/' + ${step.id}}" class="btn btn-primary flex-grow-1">
+                                <i class="fas fa-signature me-1"></i> ตรวจสอบและลงนาม
+                            </a>
+                            <button th:if="${step.signatureRequest.overdue}" type="button"
+                                    class="btn btn-outline-danger"
+                                    data-bs-toggle="modal"
+                                    th:data-bs-target="'#modal-ext-' + ${step.id}"
+                                    title="ขอขยายเวลาลงนาม">
+                                <i class="fas fa-clock-rotate-left"></i>
+                            </button>
+                        </div>
+
+                    </div>
+                </div>
+
+                <!-- Modal ขอขยายเวลาลงนามรายใบ -->
+                <div th:if="${step.signatureRequest.overdue}"
+                     class="modal fade" th:id="'modal-ext-' + ${step.id}" tabindex="-1" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered">
+                        <div class="modal-content border-0 shadow">
+                            <form th:action="@{'/esign/step/' + ${step.id} + '/request-extension'}" method="post">
+                                <div class="modal-header bg-danger text-white">
+                                    <h5 class="modal-title">
+                                        <i class="fas fa-clock-rotate-left me-1"></i> ขอขยายเวลาลงนาม
+                                    </h5>
+                                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                </div>
+                                <div class="modal-body p-4">
+                                    <div class="mb-3">
+                                        <strong class="d-block text-dark mb-1" th:text="${step.signatureRequest.documentLabel}"></strong>
+                                        <small class="text-muted" th:text="'กำหนดเดิม: ' + ${#temporals.format(step.signatureRequest.dueAt, 'd MMM yyyy HH:mm')}"></small>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label class="form-label fw-semibold">ระบุเหตุผลในการขอขยายเวลา</label>
+                                        <textarea name="reason" class="form-control" rows="3" required
+                                                  placeholder="เช่น ติดภารกิจราชการต่างจังหวัด / กำลังตรวจสอบเอกสารเพิ่มเติม"></textarea>
+                                    </div>
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                    <button type="submit" class="btn btn-danger">
+                                        <i class="fas fa-paper-plane me-1"></i> ส่งคำขอขยายเวลา
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- No Results from Search Filter -->
+        <div id="noSearchResults" class="card border-0 shadow-sm rounded-4 d-none">
+            <div class="card-body text-center py-5">
+                <i class="fas fa-magnifying-glass fa-2x text-secondary opacity-50 mb-2"></i>
+                <p class="text-secondary mb-0">ไม่พบเอกสารตรงตามคำค้นหา</p>
+            </div>
+        </div>
+
     </div>
+
+    <!-- Client-side Search & Filter Script -->
+    <script>
+    (function() {
+        var items = document.querySelectorAll('.inbox-card-item');
+        if (!items.length) return;
+
+        var overdueCount = 0;
+        var normalCount = 0;
+
+        items.forEach(function(el) {
+            if (el.getAttribute('data-overdue') === 'true') {
+                overdueCount++;
+            } else {
+                normalCount++;
+            }
+        });
+
+        var kpiOverdue = document.getElementById('kpi-overdue');
+        var kpiNormal = document.getElementById('kpi-normal');
+        var filterOverdueCount = document.getElementById('filter-overdue-count');
+        var filterNormalCount = document.getElementById('filter-normal-count');
+
+        if (kpiOverdue) kpiOverdue.textContent = overdueCount;
+        if (kpiNormal) kpiNormal.textContent = normalCount;
+        if (filterOverdueCount) filterOverdueCount.textContent = overdueCount;
+        if (filterNormalCount) filterNormalCount.textContent = normalCount;
+
+        var searchInput = document.getElementById('inboxSearchInput');
+        var filterBtns = document.querySelectorAll('.filter-btn');
+        var currentFilter = 'all';
+
+        function applyFilter() {
+            var term = (searchInput ? searchInput.value.toLowerCase().trim() : '');
+            var visibleCount = 0;
+
+            items.forEach(function(card) {
+                var cardSearch = (card.getAttribute('data-search') || '').toLowerCase();
+                var isOverdue = card.getAttribute('data-overdue') === 'true';
+
+                var matchesSearch = !term || cardSearch.indexOf(term) !== -1;
+                var matchesFilter = (currentFilter === 'all') ||
+                                    (currentFilter === 'overdue' && isOverdue) ||
+                                    (currentFilter === 'normal' && !isOverdue);
+
+                if (matchesSearch && matchesFilter) {
+                    card.classList.remove('d-none');
+                    visibleCount++;
+                } else {
+                    card.classList.add('d-none');
+                }
+            });
+
+            var noResults = document.getElementById('noSearchResults');
+            if (noResults) {
+                if (visibleCount === 0) {
+                    noResults.classList.remove('d-none');
+                } else {
+                    noResults.classList.add('d-none');
+                }
+            }
+        }
+
+        if (searchInput) {
+            searchInput.addEventListener('input', applyFilter);
+        }
+
+        filterBtns.forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                filterBtns.forEach(function(b) { b.classList.remove('active'); });
+                this.classList.add('active');
+                currentFilter = this.getAttribute('data-filter');
+                applyFilter();
+            });
+        });
+    })();
+    </script>
 </section>
 </body>
 </html>

@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="/css/dark-theme.css?v=2.9">
     <link rel="stylesheet" href="/css/doc_preview.css?v=2.9">
     <link rel="stylesheet" href="/css/esign.css?v=2.9">
+    <link rel="stylesheet" href="/css/searchable_select.css?v=1.0">
     <script th:inline="javascript">
         // Anti-flash: apply user's server-side theme BEFORE paint
         (function(){var t=/*[[${user != null && user.themePreference != null ? user.themePreference : 'light'}]]*/ 'light';
@@ -105,6 +106,9 @@
                 </a>
                 <a href="/admin/academic/settings" class="sidebar-link" id="nav-settings">
                     <i class="fas fa-cog"></i> การตั้งค่า
+                </a>
+                <a href="/admin/academic/settings/signers" class="sidebar-link" id="nav-signers-settings">
+                    <i class="fas fa-sliders"></i> ตั้งค่าผู้ลงนามเอกสาร
                 </a>
             </th:block>
 
@@ -594,9 +598,14 @@
 
 <!-- ===== Floating Buttons สำหรับทุกหน้าฟอร์มเอกสาร ===== -->
 <script>
-    // Auto-create floating buttons for doc form pages
+    // Auto-create floating buttons for doc form pages ONLY
     (function() {
         function findButtons() {
+            var docForm = document.querySelector('form[id^="doc_form_"], form[id^="docForm"], .doc-form-wrapper, .card-doc-form');
+            if (!docForm) {
+                return { preview: null, back: null };
+            }
+
             var previewBtn = null, backBtn = null;
 
             document.querySelectorAll('button, a, [role="button"]').forEach(function(el) {
@@ -605,7 +614,7 @@
                 if (!previewBtn && txt.indexOf('ดูตัวอย่าง') !== -1 && el.querySelector('.fa-eye') && !el.classList.contains('btn-doc-preview')) {
                     previewBtn = el;
                 }
-                if (!backBtn && txt.indexOf('กลับ') !== -1 && el.querySelector('.fa-arrow-left')) {
+                if (!backBtn && txt.indexOf('กลับ') !== -1 && el.querySelector('.fa-arrow-left') && !el.classList.contains('no-floating-back')) {
                     backBtn = el;
                 }
             });
@@ -790,6 +799,7 @@
 <script src="/js/global-search.js"></script>
 <script src="/js/form_loading.js"></script>
 <script src="/js/notification.js"></script>
+<script src="/js/searchable_select.js?v=1.0"></script>
 <!-- Replaces inline onerror=/onsubmit=/onclick= attributes, which CSP refuses.
      This layout backs every page, so loading it once covers the whole app. -->
 <script src="/js/csp_fallbacks.js"></script>

@@ -9,7 +9,7 @@
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
             <div>
                 <h3 class="mb-1">
-                    <i class="fas fa-file-signature"></i>
+                    <i class="fas fa-file-signature text-primary me-2"></i>
                     <span th:text="${envelope.documentLabel} ?: ('เอกสารที่ ' + ${envelope.documentType})">เอกสาร</span>
                 </h3>
                 <p class="text-secondary mb-0">
@@ -18,8 +18,49 @@
                 </p>
             </div>
             <a href="/esign/inbox" class="btn btn-outline-secondary">
-                <i class="fas fa-arrow-left"></i> กลับ
+                <i class="fas fa-arrow-left"></i> กลับหน้ารวม
             </a>
+        </div>
+
+        <!-- Continuous Signing Queue Indicator -->
+        <div th:if="${queueTotal > 1}" class="card border-primary border-opacity-25 bg-primary bg-opacity-10 mb-3 shadow-sm">
+            <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge bg-primary rounded-pill px-3 py-2">
+                        <i class="fas fa-layer-group me-1"></i> โหมดลงนามต่อเนื่อง
+                    </span>
+                    <span class="fw-semibold text-dark">
+                        เอกสารที่ <span class="text-primary fw-bold" th:text="${queueIndex}">1</span> จากทั้งหมด <span th:text="${queueTotal}">3</span> ฉบับในคิวของคุณ
+                    </span>
+                </div>
+                <div class="progress flex-grow-1 mx-3 d-none d-md-block" style="height: 8px; max-width: 200px;">
+                    <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated"
+                         role="progressbar"
+                         th:style="'width: ' + (${queueIndex} * 100 / ${queueTotal}) + '%;'"></div>
+                </div>
+                <span class="small text-muted d-none d-sm-inline">
+                    เมื่อเซ็นเสร็จจะนำไปฉบับถัดไปอัตโนมัติ
+                </span>
+            </div>
+        </div>
+
+        <!-- Overdue Alert & Extension Option -->
+        <div th:if="${envelope.overdue}" class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 shadow-sm">
+            <div>
+                <i class="fas fa-triangle-exclamation fa-lg me-2"></i>
+                <strong>เอกสารนี้เลยกำหนดลงนามแล้ว</strong>
+                <span class="ms-1" th:if="${envelope.dueAt != null}">
+                    (กำหนดเดิม: <span th:text="${#temporals.format(envelope.dueAt, 'd MMM yyyy HH:mm')}"></span>)
+                </span>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-danger bg-white" data-bs-toggle="modal" data-bs-target="#requestExtensionModal">
+                <i class="fas fa-clock-rotate-left me-1"></i> ขอขยายเวลาลงนาม
+            </button>
+        </div>
+
+        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show">
+            <i class="fas fa-circle-check"></i> <span th:text="${succMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
 
         <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show">
@@ -168,6 +209,38 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ขอขยายเวลาลงนาม -->
+    <div class="modal fade" id="requestExtensionModal" tabindex="-1" aria-labelledby="requestExtensionModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form th:action="@{'/esign/step/' + ${step.id} + '/request-extension'}" method="post">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="requestExtensionModalLabel">
+                            <i class="fas fa-clock-rotate-left me-1"></i> ขอขยายเวลาลงนาม
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <p class="text-secondary mb-3">
+                            ระบบจะส่งการแจ้งเตือนไปยังผู้ส่งเอกสาร/แอดมิน เพื่อพิจารณาขยายกำหนดวันลงนามให้แก่คุณ
+                        </p>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">ระบุเหตุผลในการขอขยายเวลา (ถ้ามี)</label>
+                            <textarea name="reason" class="form-control" rows="3"
+                                      placeholder="เช่น ติดภารกิจราชการต่างจังหวัด / อยู่ระหว่างตรวจสอบเอกสารแนบเพิ่มเติม"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-paper-plane me-1"></i> ส่งคำขอขยายเวลา
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>

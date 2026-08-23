@@ -8,6 +8,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.slf4j.Logger;
@@ -64,6 +65,8 @@ public class SignatureWorkflowService {
     private final StaffMemberService staffMemberService;
     private final SignatureVerificationService verificationService;
     private final SignedDocumentArchiver archiver;
+    private final DocumentWorkflowConfigService workflowConfigService;
+    private final DocumentSnapshotProvider snapshotProvider;
 
     public SignatureWorkflowService(
             SignatureRequestRepository requestRepository,
@@ -75,7 +78,9 @@ public class SignatureWorkflowService {
             SignatureNotifier notifier,
             StaffMemberService staffMemberService,
             SignatureVerificationService verificationService,
-            SignedDocumentArchiver archiver) {
+            SignedDocumentArchiver archiver,
+            DocumentWorkflowConfigService workflowConfigService,
+            DocumentSnapshotProvider snapshotProvider) {
         this.requestRepository = requestRepository;
         this.stepRepository = stepRepository;
         this.auditRepository = auditRepository;
@@ -86,6 +91,8 @@ public class SignatureWorkflowService {
         this.staffMemberService = staffMemberService;
         this.verificationService = verificationService;
         this.archiver = archiver;
+        this.workflowConfigService = workflowConfigService;
+        this.snapshotProvider = snapshotProvider;
     }
 
     /**
@@ -152,6 +159,66 @@ public class SignatureWorkflowService {
         return stepRepository.findInbox(signer.getId(), SignatureStepStatus.ACTIVE);
     }
 
+    /** Finds the next pending signature step for a signer excluding current step. */
+    public Optional<SignatureStep> findNextPendingStep(UserDtls signer, Long currentStepId) {
+        if (signer == null) return Optional.empty();
+        List<SignatureStep> inbox = findInbox(signer);
+        return inbox.stream()
+                .filter(s -> currentStepId == null || !s.getId().equals(currentStepId))
+                .findFirst();
+    }
+
+    /** Extends the due date of a signature envelope. */
+    @Transactional
+    public Result extendDueDate(Long envelopeId, LocalDateTime newDueAt, UserDtls actor, ActorContext context) {
+        SignatureRequest envelope = requestRepository.findById(envelopeId).orElse(null);
+        if (envelope == null) {
+            return Result.failed("ไม่พบรายการเวียนลงนามนี้");
+        }
+        if (!envelope.getStatus().isOpen()) {
+            return Result.failed("ไม่สามารถขยายเวลาของเอกสารที่ลงนามครบหรือยกเลิกแล้ว");
+        }
+
+        envelope.setDueAt(newDueAt);
+        SignatureRequest saved = requestRepository.save(envelope);
+
+        audit(saved, null, SignatureAuditEventType.VIEWED, actor, context,
+                "ขยายกำหนดเวลาลงนามเป็น: " + (newDueAt != null ? newDueAt.toString() : "ไม่จำกัด"));
+
+        // Notify currently active signer about the extension
+        saved.activeStep().ifPresent(step -> {
+            if (step.getSigner() != null) {
+                notifier.notifySignatureRequested(noticeFor(saved, step, List.of(step.getSigner())));
+            }
+        });
+
+        return new Result(saved, null);
+    }
+
+    /** Records a due date extension request from a signer to the initiator. */
+    @Transactional
+    public Result requestExtension(Long stepId, String reason, UserDtls signer, ActorContext context) {
+        SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
+        if (step == null || step.getSigner() == null || !step.getSigner().getId().equals(signer.getId())) {
+            return Result.failed("ไม่พบรายการลงนามนี้");
+        }
+
+        SignatureRequest envelope = step.getSignatureRequest();
+        if (!envelope.getStatus().isOpen()) {
+            return Result.failed("รายการเวียนลงนามนี้ไม่ได้อยู่ในสถานะเปิด");
+        }
+
+        UserDtls initiator = envelope.getInitiatedBy();
+        if (initiator != null) {
+            notifier.notifyExtensionRequested(initiator, envelope, signer, reason);
+        }
+
+        audit(envelope, step.getId(), SignatureAuditEventType.VIEWED, signer, context,
+                "ผู้ลงนามขอขยายเวลาลงนาม เหตุผล: " + (reason != null && !reason.isBlank() ? reason : "ไม่ระบุ"));
+
+        return new Result(envelope, null);
+    }
+
     public long countPending(UserDtls signer) {
         return stepRepository.countPendingFor(signer.getId());
     }
@@ -193,7 +260,9 @@ public class SignatureWorkflowService {
             String documentLabel, String frozenJson, List<SignerAssignment> assignments,
             LocalDateTime dueAt, UserDtls initiator, ActorContext actor) {
 
-        List<SignatureSlot> slots = anchorRegistry.slotsFor(module, documentType);
+        List<SignatureSlot> slots = workflowConfigService != null
+                ? workflowConfigService.effectiveSlotsFor(module, documentType)
+                : anchorRegistry.slotsFor(module, documentType);
         if (slots.isEmpty()) {
             return Result.failed("เอกสารฉบับนี้ไม่มีจุดลงนาม จึงส่งไปลงนามไม่ได้");
         }
@@ -527,8 +596,18 @@ public class SignatureWorkflowService {
      * reachable. Nulls are filtered from the recipient list because the
      * initiator or a signer account can legitimately be absent.
      */
+    private UserDtls unproxy(UserDtls u) {
+        if (u == null || u.getId() == null) return u;
+        return userRepository.findById(u.getId()).orElse(u);
+    }
+
     private SignatureNotice noticeFor(SignatureRequest envelope, SignatureStep step,
             List<UserDtls> recipients) {
+        List<UserDtls> unproxiedRecipients = recipients.stream()
+                .filter(java.util.Objects::nonNull)
+                .map(this::unproxy)
+                .toList();
+
         return new SignatureNotice(
                 envelope.getId(),
                 envelope.getModule(),
@@ -541,7 +620,7 @@ public class SignatureWorkflowService {
                 step == null ? null : step.getRoleLabel(),
                 step == null ? null : step.getSignerNameSnapshot(),
                 step == null ? null : step.getDeclineReason(),
-                recipients.stream().filter(java.util.Objects::nonNull).toList());
+                unproxiedRecipients);
     }
 
     /** Appends to the trail. Never throws: losing an event must not undo a signature. */
@@ -611,37 +690,58 @@ public class SignatureWorkflowService {
     public com.ecom.academic.dto.SignaturePanelView buildPanel(SignatureModule module, Long requestId,
             int documentType, UserDtls viewer) {
 
-        List<SignatureSlot> slots = anchorRegistry.slotsFor(module, documentType);
+        List<SignatureSlot> slots = workflowConfigService != null
+                ? workflowConfigService.effectiveSlotsFor(module, documentType)
+                : anchorRegistry.slotsFor(module, documentType);
         if (slots.isEmpty()) {
             return com.ecom.academic.dto.SignaturePanelView.unsignable();
         }
 
-        // Role-matched suggestions per slot. Shown first, but never the only
-        // choice — the role tags are hand-maintained and frequently incomplete.
+        Map<String, Integer> defaultSignerUserIds = workflowConfigService != null
+                ? workflowConfigService.defaultSignerUserIds(module, documentType)
+                : Map.of();
+
+        // 1. Resolve applicant user for this specific request
+        UserDtls applicantUser = snapshotProvider != null ? snapshotProvider.applicantOf(module, requestId) : null;
+        if (applicantUser == null && viewer != null && snapshotProvider != null
+                && snapshotProvider.isApplicantOf(module, requestId, viewer.getId())) {
+            applicantUser = viewer;
+        }
+
+        // 2. Role-matched suggestions per slot (inactive accounts excluded)
         java.util.Map<String, List<com.ecom.academic.dto.SignerOptionDTO>> recommended =
                 new java.util.LinkedHashMap<>();
         for (SignatureSlot slot : slots) {
-            if (slot.defaultStaffRole() == null) {
-                recommended.put(slot.slotKey(), List.of());
+            if (slot.defaultStaffRole() == null || "applicant".equalsIgnoreCase(slot.slotKey())) {
+                if (applicantUser != null && Boolean.TRUE.equals(applicantUser.getIsEnable())
+                        && (applicantUser.getAccountNonLocked() == null || Boolean.TRUE.equals(applicantUser.getAccountNonLocked()))) {
+                    recommended.put(slot.slotKey(), List.of(com.ecom.academic.dto.SignerOptionDTO.fromUser(applicantUser)));
+                } else {
+                    recommended.put(slot.slotKey(), List.of());
+                }
                 continue;
             }
             recommended.put(slot.slotKey(),
                     staffMemberService.findByRoleWithAccountStatus(slot.defaultStaffRole()).stream()
+                            .filter(com.ecom.academic.model.StaffMember::isSignable)
                             .map(com.ecom.academic.dto.SignerOptionDTO::from)
                             .toList());
         }
 
-        // Everyone with a linked account, so any real person can be asked —
-        // including administrators, who are often absent from the staff
-        // directory yet still sign documents.
+        // 3. Everyone with an ACTIVE, linked account (inactive excluded!)
         List<com.ecom.academic.dto.SignerOptionDTO> others =
                 staffMemberService.findAllWithAccounts().stream()
                         .filter(com.ecom.academic.model.StaffMember::isSignable)
                         .map(com.ecom.academic.dto.SignerOptionDTO::from)
                         .toList();
 
+        com.ecom.academic.dto.SignerOptionDTO applicantOption = applicantUser != null
+                ? com.ecom.academic.dto.SignerOptionDTO.fromUser(applicantUser)
+                : null;
+
         return new com.ecom.academic.dto.SignaturePanelView(
-                slots, recommended, others,
+                slots, recommended, others, defaultSignerUserIds,
+                applicantOption,
                 com.ecom.academic.dto.SignerOptionDTO.fromUser(viewer),
                 findBlockingEnvelope(module, requestId, documentType).orElse(null),
                 true);

@@ -66,7 +66,15 @@ public class ProfileImageStorage {
         if (filename == null || filename.isBlank()) {
             return true;
         }
-        return PROTECTED_FILENAMES.contains(filename.trim().toLowerCase(Locale.ROOT));
+        String lower = filename.trim().toLowerCase(Locale.ROOT);
+        if (PROTECTED_FILENAMES.contains(lower)) {
+            return true;
+        }
+        String clean = lower.contains("_cp-") ? lower.substring(lower.indexOf("_cp-") + 1) : lower;
+        if (clean.startsWith("cp-")) {
+            return true; // Directory photos cached from college site are protected from accidental purge
+        }
+        return false;
     }
 
     /**
@@ -237,7 +245,10 @@ public class ProfileImageStorage {
             return null;
         }
 
-        String safeName = FileUtils.sanitizeFilename(baseName);
+        String safeName = safeBaseName(baseName);
+        if (safeName.isBlank() || safeName.equals(".") || safeName.equals("..")) {
+            safeName = "cp-" + UUID.randomUUID().toString().substring(0, 8) + "." + extension;
+        }
         Path target = baseDir.resolve(safeName).normalize();
         if (!target.startsWith(baseDir)) {
             log.warn("Rejected fetched profile image: resolved path escapes the upload directory");

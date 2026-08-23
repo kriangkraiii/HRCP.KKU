@@ -64,11 +64,11 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("applicant", "ผู้ขอประเมินผลการสอน",
                             "applicant_name", APPLICANT, 1))),
 
-            // doc 1's HR officer name is hard-coded in the .docx with no
-            // placeholder, so only the applicant can be anchored here.
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 1), List.of(
                     new SignatureSlot("applicant", "ผู้ขอรับการประเมิน",
-                            "applicant_name", APPLICANT, 1))),
+                            "applicant_name", APPLICANT, 1),
+                    new SignatureSlot("hr", "นักทรัพยากรบุคคล",
+                            "hr_staff_name", "HR", 2))),
 
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 2), List.of(
                     new SignatureSlot("head", "หัวหน้าสาขาวิชา",

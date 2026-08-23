@@ -387,13 +387,42 @@ public class UserServiceImpl implements UserService {
 			dbUser.setLastNameEn(user.getLastNameEn());
 			dbUser.setAcademicPositionEn(user.getAcademicPositionEn());
 
+			// Handle role change and Applicant ID management
+			if (user.getRole() != null && !user.getRole().isBlank()) {
+				String newRole = user.getRole().trim();
+				String oldRole = dbUser.getRole();
+				if (!newRole.equals(oldRole)) {
+					dbUser.setRole(newRole);
+					if ("ROLE_ADMIN".equals(newRole)) {
+						// When changed to ADMIN, clear and remove the applicant ID
+						dbUser.setApplicantId(null);
+						logger.info("User ID {} ({}) role changed from {} to ROLE_ADMIN. Cleared applicantId.",
+								dbUser.getId(), dbUser.getEmail(), oldRole);
+					} else if ("ROLE_USER".equals(newRole)) {
+						// When changed to USER, generate applicant ID if currently null
+						if (dbUser.getApplicantId() == null || dbUser.getApplicantId().isBlank()) {
+							dbUser.setApplicantId(generateApplicantId());
+							logger.info("User ID {} ({}) role changed to ROLE_USER. Assigned applicantId: {}.",
+									dbUser.getId(), dbUser.getEmail(), dbUser.getApplicantId());
+						}
+					}
+				}
+			}
+
 			// Handle profile image if provided
 			if (img != null && !img.isEmpty()) {
+				String oldImage = dbUser.getProfileImage();
 				String imageName = profileImageStorage.store(img);
 				if (imageName == null) {
 					throw new IllegalArgumentException("ไฟล์รูปภาพไม่ถูกต้อง");
 				}
 				dbUser.setProfileImage(imageName);
+				if (oldImage != null && !oldImage.equals(imageName)) {
+					long count = userRepository.countByProfileImage(oldImage);
+					if (count <= 1) { // Only dbUser currently references it before save
+						profileImageStorage.deleteIfPresent(oldImage);
+					}
+				}
 			}
 
 			// Save and return

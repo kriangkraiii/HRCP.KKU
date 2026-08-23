@@ -16,11 +16,18 @@
 					<span th:if="${userType==1}">จัดการผู้ใช้งานทั่วไป</span>
 					<span th:if="${userType==2}">จัดการผู้ดูแลระบบ (Admin)</span>
 				</h3>
-				<a th:href="@{/admin/add-admin(type=${userType})}" class="btn btn-academic">
-					<i class="fas fa-plus me-1"></i>
-					<span th:if="${userType==1}">เพิ่มผู้ใช้งาน</span>
-					<span th:if="${userType==2}">เพิ่มผู้ดูแลระบบ</span>
-				</a>
+				<div class="d-flex gap-2 align-items-center">
+					<form th:if="${userType==1}" th:action="@{/admin/academic/staff/sync}" method="post" class="d-inline">
+						<button type="submit" class="btn btn-outline-primary shadow-sm">
+							<i class="fas fa-sync me-1"></i> ซิงก์ข้อมูลและรูปภาพจากเว็บไซต์คณะ
+						</button>
+					</form>
+					<a th:href="@{/admin/add-admin(type=${userType})}" class="btn btn-academic">
+						<i class="fas fa-plus me-1"></i>
+						<span th:if="${userType==1}">เพิ่มผู้ใช้งาน</span>
+						<span th:if="${userType==2}">เพิ่มผู้ดูแลระบบ</span>
+					</a>
+				</div>
 			</div>
 
 			<div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show" role="alert">

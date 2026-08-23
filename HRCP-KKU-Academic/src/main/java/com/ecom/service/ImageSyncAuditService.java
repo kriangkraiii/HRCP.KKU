@@ -72,7 +72,7 @@ public class ImageSyncAuditService {
     public void onApplicationStartup() {
         log.info("🚀 [Startup Image & Storage Sync] Initializing startup check, orphan cleanup, and expired trash purge...");
         try {
-            ImageAuditReport report = auditAndSync(true, true);
+            ImageAuditReport report = auditAndSync(true, false);
             int adminTrashPurged = adminStorageService != null ? adminStorageService.purgeOldTrash(30) : 0;
             int userTrashPurged = userStorageService != null ? userStorageService.purgeOldTrash(30) : 0;
             log.info("🚀 [Startup Sync Complete] Disk files: {}, DB users: {}, Orphan images purged: {}, Missing references healed: {}, Expired trash files purged: {} (Took {}ms)",

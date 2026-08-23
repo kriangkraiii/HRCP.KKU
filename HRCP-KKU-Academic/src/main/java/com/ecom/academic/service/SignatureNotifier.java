@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import com.ecom.academic.dto.SignatureNotice;
+import com.ecom.academic.model.SignatureRequest;
 import com.ecom.model.NotificationType;
 import com.ecom.model.UserDtls;
 import com.ecom.service.NotificationService;
@@ -118,11 +119,24 @@ public class SignatureNotifier {
     public void notifyCancelled(SignatureNotice notice) {
         String title = "ยกเลิกการเวียนลงนาม: " + notice.safeDocumentLabel();
         for (UserDtls recipient : notice.recipients()) {
-            notify(recipient, title,
-                    "ผู้ส่งเอกสารได้ยกเลิกการเวียนลงนามนี้ คุณไม่ต้องดำเนินการใด ๆ",
-                    notice.module().adminLink(notice.requestId()),
-                    NotificationType.SIGNATURE_DECLINED, false);
+            notify(recipient, title, "การเวียนลงนามในเอกสารนี้ถูกยกเลิกแล้ว",
+                    "/esign/inbox", NotificationType.SYSTEM, false);
+            email(recipient, title, EmailTemplateHelper.wrapLayout("ยกเลิกการเวียนลงนาม", "แจ้งเพื่อทราบ",
+                    "<p>การเวียนลงนามในเอกสาร <strong>" + escape(notice.safeDocumentLabel())
+                            + "</strong> ถูกยกเลิกโดยผู้ส่งเอกสาร</p>"));
         }
+    }
+
+    /** Tells the initiator that a signer requested a due date extension. */
+    @Async
+    public void notifyExtensionRequested(UserDtls initiator, SignatureRequest envelope, UserDtls signer, String reason) {
+        if (initiator == null) return;
+        String title = "ขอขยายเวลาลงนาม: " + (envelope.getDocumentLabel() != null ? envelope.getDocumentLabel() : "เอกสาร");
+        String message = (signer != null ? signer.getName() : "ผู้ลงนาม") + " ขอขยายเวลาลงนาม"
+                + (reason != null && !reason.isBlank() ? " (เหตุผล: " + reason + ")" : "");
+        String link = envelope.getModule() != null ? envelope.getModule().adminLink(envelope.getRequestId()) : "/admin/academic/requests";
+
+        notify(initiator, title, message, link, NotificationType.SIGNATURE_REMINDER, true);
     }
 
     // =====================================================================

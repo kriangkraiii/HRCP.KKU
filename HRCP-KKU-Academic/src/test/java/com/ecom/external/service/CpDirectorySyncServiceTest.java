@@ -89,6 +89,7 @@ class CpDirectorySyncServiceTest {
     void aPhotoTheUserChoseIsNeverReplaced() {
         UserDtls u = user();
         u.setProfileImage("my-own-photo.jpg");
+        when(imageStorage.exists("my-own-photo.jpg")).thenReturn(true);
         when(userRepo.findByEmail(EMAIL)).thenReturn(u);
         when(client.fetchAll()).thenReturn(List.of(person()));
 

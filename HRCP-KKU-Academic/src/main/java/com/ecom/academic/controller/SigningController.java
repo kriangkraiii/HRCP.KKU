@@ -106,11 +106,23 @@ public class SigningController {
 
         workflow.recordView(step, me, actorContext());
 
+        List<SignatureStep> inbox = workflow.findInbox(me);
+        int queueTotal = inbox.size();
+        int queueIndex = 1;
+        for (int i = 0; i < inbox.size(); i++) {
+            if (inbox.get(i).getId().equals(stepId)) {
+                queueIndex = i + 1;
+                break;
+            }
+        }
+
         model.addAttribute("step", step);
         model.addAttribute("envelope", step.getSignatureRequest());
         model.addAttribute("mySignatures", signatureService.findMine(me));
         model.addAttribute("defaultSignature", signatureService.findDefault(me).orElse(null));
         model.addAttribute("consentText", SignatureStep.CONSENT_TEXT);
+        model.addAttribute("queueTotal", queueTotal);
+        model.addAttribute("queueIndex", queueIndex);
         model.addAttribute("canSign",
                 step.getStatus() == SignatureStepStatus.ACTIVE
                         && step.getSignatureRequest().getStatus().isOpen());
@@ -157,14 +169,62 @@ public class SigningController {
             @RequestParam(value = "consent", required = false) Boolean consent,
             Principal principal, RedirectAttributes redirectAttributes) {
 
-        Result result = workflow.sign(stepId, currentUser(principal), userSignatureId,
+        UserDtls me = currentUser(principal);
+        Result result = workflow.sign(stepId, me, userSignatureId,
                 Boolean.TRUE.equals(consent), actorContext());
 
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());
             return "redirect:/esign/sign/" + stepId;
         }
-        redirectAttributes.addFlashAttribute("succMsg", "ลงนามเรียบร้อยแล้ว");
+
+        // Check if there is another document in the queue for continuous flow
+        java.util.Optional<SignatureStep> nextStep = workflow.findNextPendingStep(me, stepId);
+        if (nextStep.isPresent()) {
+            redirectAttributes.addFlashAttribute("succMsg",
+                    "ลงนามเอกสารฉบับนี้เรียบร้อยแล้ว — นำคุณไปยังเอกสารถัดไปในคิวทันที");
+            return "redirect:/esign/sign/" + nextStep.get().getId();
+        }
+
+        redirectAttributes.addFlashAttribute("succMsg", "ลงนามครบทุกเอกสารในคิวเรียบร้อยแล้ว");
+        return "redirect:/esign/inbox";
+    }
+
+    @PostMapping("/step/{stepId}/request-extension")
+    public String requestExtension(@PathVariable Long stepId,
+            @RequestParam(value = "reason", required = false) String reason,
+            Principal principal, RedirectAttributes redirectAttributes) {
+
+        Result result = workflow.requestExtension(stepId, reason, currentUser(principal), actorContext());
+        if (!result.ok()) {
+            redirectAttributes.addFlashAttribute("errorMsg", result.error());
+        } else {
+            redirectAttributes.addFlashAttribute("succMsg", "ส่งคำขอขยายเวลาลงนามไปยังผู้ส่งเอกสารเรียบร้อยแล้ว");
+        }
+        return "redirect:/esign/sign/" + stepId;
+    }
+
+    @PostMapping("/envelope/{envelopeId}/extend-due")
+    public String extendDueDate(@PathVariable Long envelopeId,
+            @RequestParam("dueAt") String dueAtStr,
+            Principal principal, RedirectAttributes redirectAttributes) {
+
+        LocalDateTime newDueAt = null;
+        if (dueAtStr != null && !dueAtStr.isBlank()) {
+            try {
+                newDueAt = LocalDateTime.parse(dueAtStr);
+            } catch (DateTimeParseException e) {
+                redirectAttributes.addFlashAttribute("errorMsg", "รูปแบบวันเวลาไม่ถูกต้อง");
+                return "redirect:/esign/inbox";
+            }
+        }
+
+        Result result = workflow.extendDueDate(envelopeId, newDueAt, currentUser(principal), actorContext());
+        if (!result.ok()) {
+            redirectAttributes.addFlashAttribute("errorMsg", result.error());
+        } else {
+            redirectAttributes.addFlashAttribute("succMsg", "ขยายกำหนดเวลาลงนามเรียบร้อยแล้ว");
+        }
         return "redirect:/esign/inbox";
     }
 

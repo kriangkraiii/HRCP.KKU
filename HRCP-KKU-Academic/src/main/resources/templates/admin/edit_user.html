@@ -127,12 +127,24 @@
 								<hr class="mt-0">
 
 								<div class="row mb-3">
-									<div class="col-md-12">
+									<div class="col-md-6">
 										<label class="form-label fw-bold">อีเมล <span
 												class="text-danger">*</span></label>
 										<input type="email" name="email" class="form-control" id="emailInput"
 											placeholder="example@kku.ac.th" th:value="${editUser.email}" required>
 										<div class="invalid-feedback">กรุณากรอกอีเมลที่ถูกต้อง</div>
+									</div>
+									<div class="col-md-6">
+										<label class="form-label fw-bold">สิทธิ์การใช้งาน (Role) <span
+												class="text-danger">*</span></label>
+										<select name="role" class="form-select" id="roleSelect">
+											<option value="ROLE_USER" th:selected="${editUser.role == 'ROLE_USER'}"> ผู้ใช้งานทั่วไป (User)</option>
+											<option value="ROLE_ADMIN" th:selected="${editUser.role == 'ROLE_ADMIN'}"> ผู้ดูแลระบบ (Admin)</option>
+										</select>
+										<div class="form-text text-muted" id="roleNotice">
+											<span th:if="${editUser.role == 'ROLE_USER'}"> หากเปลี่ยนเป็นผู้ดูแลระบบ (Admin) เลข Applicant ID จะถูกลบออกอัตโนมัติ</span>
+											<span th:if="${editUser.role == 'ROLE_ADMIN'}"> บัญชีผู้ดูแลระบบจะไม่มี Applicant ID</span>
+										</div>
 									</div>
 								</div>
 

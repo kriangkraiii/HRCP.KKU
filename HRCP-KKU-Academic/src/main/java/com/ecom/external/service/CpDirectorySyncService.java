@@ -151,11 +151,32 @@ public class CpDirectorySyncService {
      * method called from inside its own class never passes through the proxy that
      * would apply it.
      */
+    private UserDtls findMatchingUser(CpPerson person) {
+        if (person.email() != null && !person.email().isBlank()) {
+            String trimmed = person.email().trim();
+            UserDtls u = userRepo.findByEmailIgnoreCase(trimmed);
+            if (u != null) return u;
+            u = userRepo.findByEmail(trimmed);
+            if (u != null) return u;
+        }
+        if (!isBlank(person.firstName()) && !isBlank(person.lastName())) {
+            List<UserDtls> matches = userRepo.findByFirstNameIgnoreCaseAndLastNameIgnoreCase(
+                    person.firstName().trim(), person.lastName().trim());
+            if (matches.size() == 1) return matches.get(0);
+        }
+        if (!isBlank(person.firstNameEn()) && !isBlank(person.lastNameEn())) {
+            List<UserDtls> matches = userRepo.findByFirstNameEnIgnoreCaseAndLastNameEnIgnoreCase(
+                    person.firstNameEn().trim(), person.lastNameEn().trim());
+            if (matches.size() == 1) return matches.get(0);
+        }
+        return null;
+    }
+
     private Applied apply(CpPerson person) {
         String email = person.email();
 
-        UserDtls user = userRepo.findByEmail(email);
-        Optional<FsFaculty> faculty = facultyRepo.findByEmailNormalized(email);
+        UserDtls user = findMatchingUser(person);
+        Optional<FsFaculty> faculty = email != null ? facultyRepo.findByEmailNormalized(email) : Optional.empty();
 
         if (user == null && faculty.isEmpty()) {
             // Someone on the college site who is not in this system: administrative
@@ -183,20 +204,31 @@ public class CpDirectorySyncService {
         return new Applied(true, photo, details);
     }
 
+    private boolean isCustomUserPhoto(String filename) {
+        if (filename == null || filename.isBlank() || PLACEHOLDER_IMAGE.equalsIgnoreCase(filename)) {
+            return false;
+        }
+        // If the referenced file doesn't exist on disk, allow sync to download and restore it
+        if (!imageStorage.exists(filename)) {
+            return false;
+        }
+        // If it's a directory sync file, it is managed by the sync
+        String clean = filename.contains("_cp-") ? filename.substring(filename.indexOf("_cp-") + 1) : filename;
+        if (clean.startsWith("cp-")) {
+            return false;
+        }
+        return true;
+    }
+
     /**
-     * Gives an account a photograph, but only if it has none.
-     *
-     * <p>A picture someone chose for themselves outranks the one on the college
-     * page — replacing it every Sunday would be a bug that looks like vandalism.
+     * Gives an account a photograph, but only if it has none or if the referenced file is missing from disk.
      */
     private boolean applyPhoto(UserDtls user, CpPerson person) {
-        if (person.imagePath() == null) {
+        if (person.imagePath() == null || person.imagePath().isBlank()) {
             return false;
         }
         String current = user.getProfileImage();
-        boolean hasCustomPhoto = current != null && !current.isBlank()
-                && !PLACEHOLDER_IMAGE.equalsIgnoreCase(current);
-        if (hasCustomPhoto) {
+        if (isCustomUserPhoto(current)) {
             return false;
         }
 
@@ -206,8 +238,11 @@ public class CpDirectorySyncService {
         // reuse it immediately without issuing an unnecessary network HTTP request.
         if (imageStorage.exists(targetFileName)) {
             log.debug("Reusing existing cached photo on disk for {}: {}", user.getEmail(), targetFileName);
-            user.setProfileImage(targetFileName);
-            return true;
+            if (!targetFileName.equals(user.getProfileImage())) {
+                user.setProfileImage(targetFileName);
+                return true;
+            }
+            return false;
         }
 
         String url = props.imageUrl(person.imagePath());

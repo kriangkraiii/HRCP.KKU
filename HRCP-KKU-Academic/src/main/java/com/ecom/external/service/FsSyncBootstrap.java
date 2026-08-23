@@ -37,6 +37,7 @@ public class FsSyncBootstrap implements ApplicationRunner {
     private final FsSyncService syncService;
     private final CpDirectorySyncService cpSyncService;
     private final StaffMemberService staffMemberService;
+    private final com.ecom.service.UserDirectorySync userDirectorySync;
     private final FsFacultyRepository facultyRepo;
     private final ScopusPublicationRepository publicationRepo;
     private final boolean enabled;
@@ -46,6 +47,7 @@ public class FsSyncBootstrap implements ApplicationRunner {
     public FsSyncBootstrap(FsSyncService syncService,
             CpDirectorySyncService cpSyncService,
             StaffMemberService staffMemberService,
+            com.ecom.service.UserDirectorySync userDirectorySync,
             FsFacultyRepository facultyRepo,
             ScopusPublicationRepository publicationRepo,
             @Value("${fs.sync.on-startup:true}") boolean enabled,
@@ -54,6 +56,7 @@ public class FsSyncBootstrap implements ApplicationRunner {
         this.syncService = syncService;
         this.cpSyncService = cpSyncService;
         this.staffMemberService = staffMemberService;
+        this.userDirectorySync = userDirectorySync;
         this.facultyRepo = facultyRepo;
         this.publicationRepo = publicationRepo;
         this.enabled = enabled;
@@ -89,7 +92,12 @@ public class FsSyncBootstrap implements ApplicationRunner {
             log.info("First-run faculty load: {} row(s) [{}]", result.rows(),
                     result.success() ? "ok" : result.message());
         } else {
-            log.debug("Faculty mirror already holds {} row(s) — no first-run pull needed", faculty);
+            log.debug("Faculty mirror already holds {} row(s) — ensuring missing accounts are created", faculty);
+            try {
+                userDirectorySync.createMissingAccounts();
+            } catch (Exception e) {
+                log.warn("Startup missing account check encountered an issue: {}", e.getMessage());
+            }
         }
 
         long publications = publicationRepo.count();

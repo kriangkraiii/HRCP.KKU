@@ -9,6 +9,10 @@
 <div th:fragment="panel" th:if="${signaturePanel != null && signaturePanel.signable}"
      class="card card-academic mt-4">
 
+    <!-- Searchable Select Assets -->
+    <link rel="stylesheet" th:href="@{/css/searchable_select.css}">
+    <script th:src="@{/js/searchable_select.js}"></script>
+
     <div class="card-header bg-white d-flex justify-content-between align-items-center">
         <span><i class="fas fa-file-signature"></i> การลงนามอิเล็กทรอนิกส์</span>
         <span th:if="${signaturePanel.locked}" class="badge"
@@ -47,18 +51,67 @@
                 </li>
             </ul>
 
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-                <span class="small text-secondary">
-                    รหัสตรวจสอบ:
-                    <code th:text="${signaturePanel.activeEnvelope.verificationCode}">CODE</code>
-                </span>
+            <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap bg-light p-3 rounded-3 mb-3">
+                <div>
+                    <span class="small text-secondary d-block">
+                        รหัสตรวจสอบ: <code th:text="${signaturePanel.activeEnvelope.verificationCode}">CODE</code>
+                    </span>
+                    <span class="small text-secondary" th:if="${signaturePanel.activeEnvelope.dueAt != null}">
+                        กำหนดลงนามภายใน:
+                        <strong th:classappend="${signaturePanel.activeEnvelope.overdue} ? 'text-danger' : 'text-dark'"
+                                th:text="${#temporals.format(signaturePanel.activeEnvelope.dueAt, 'd MMM yyyy HH:mm')}"></strong>
+                        <span class="badge bg-danger ms-1" th:if="${signaturePanel.activeEnvelope.overdue}">เลยกำหนด</span>
+                    </span>
+                </div>
 
+                <div class="d-flex gap-2 align-items-center" th:if="${signaturePanel.activeEnvelope.status.open}">
+                    <button type="button" class="btn btn-sm btn-outline-secondary"
+                            data-bs-toggle="modal"
+                            th:data-bs-target="'#modal-extend-due-' + ${signaturePanel.activeEnvelope.id}">
+                        <i class="fas fa-calendar-plus me-1"></i> แก้ไข/ขยายกำหนดเวลา
+                    </button>
+                </div>
+            </div>
+
+            <!-- Modal ปรับเปลี่ยน Due Date -->
+            <div th:if="${signaturePanel.activeEnvelope.status.open}"
+                 class="modal fade" th:id="'modal-extend-due-' + ${signaturePanel.activeEnvelope.id}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
+                        <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/extend-due'}" method="post">
+                            <div class="modal-header bg-primary text-white">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-clock me-1"></i> ขยายกำหนดเวลาลงนาม
+                                </h5>
+                                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                                <div class="mb-3">
+                                    <label class="form-label fw-semibold">กำหนดวันเวลาลงนามใหม่</label>
+                                    <input type="datetime-local" name="dueAt" class="form-control"
+                                           th:value="${signaturePanel.activeEnvelope.dueAt != null ? #temporals.format(signaturePanel.activeEnvelope.dueAt, 'yyyy-MM-dd''T''HH:mm') : ''}"
+                                           required>
+                                    <div class="form-text">ระบบจะอัปเดตกำหนดเวลาและแจ้งเตือนผู้ลงนามในลำดับปัจจุบัน</div>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-save me-1"></i> บันทึกกำหนดเวลาใหม่
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 flex-wrap">
                 <form th:if="${signaturePanel.activeEnvelope.status.open}"
                       th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/cancel'}"
                       method="post" class="d-flex gap-2 align-items-center flex-grow-1"
                       data-confirm="ยกเลิกการเวียนลงนาม? ลายเซ็นที่ลงไปแล้วจะเป็นโมฆะทั้งหมด">
                     <input type="text" name="reason" class="form-control form-control-sm"
-                           maxlength="500" placeholder="เหตุผลที่ยกเลิก">
+                           maxlength="500" placeholder="ระบุเหตุผลหากต้องการยกเลิกการเวียนลงนามนี้">
                     <button type="submit" class="btn btn-sm btn-outline-danger flex-shrink-0">
                         ยกเลิกการเวียนลงนาม
                     </button>
@@ -72,53 +125,97 @@
             <input type="hidden" name="requestId" th:value="${request.id}">
             <input type="hidden" name="documentType" th:value="${documentType}">
 
-            <p class="text-secondary small">
+            <p class="text-secondary small mb-3">
                 เลือกผู้ลงนามแต่ละตำแหน่ง ระบบจะส่งให้ลงนาม<strong>ตามลำดับ</strong>
                 และแจ้งเตือนทีละคนเมื่อถึงคิว — เว้นว่างไว้หากยังไม่ต้องการให้ตำแหน่งนั้นลงนามในรอบนี้
             </p>
 
             <div class="row g-3">
                 <div class="col-md-6" th:each="slot, iter : ${signaturePanel.slots}">
-                    <label class="form-label">
-                        <span class="badge bg-secondary" th:text="${iter.count}">1</span>
-                        <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
-                    </label>
-                    <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
+                    
+                    <!-- ============ 1. ผู้ยื่นคำร้อง (Applicant) — เซ็นด้วยตนเองเท่านั้น ไม่ต้องเลือก ============ -->
+                    <div th:if="${slot.slotKey == 'applicant' or slot.defaultStaffRole == null}">
+                        <label class="form-label d-flex justify-content-between align-items-center">
+                            <span>
+                                <span class="badge bg-primary me-1" th:text="${iter.count}">1</span>
+                                <span th:text="${slot.roleLabel}">ผู้ขอรับการประเมิน</span>
+                            </span>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle">
+                                <i class="fas fa-user-check me-1"></i> ผู้ยื่นคำร้อง (เซ็นด้วยตนเอง)
+                            </span>
+                        </label>
+                        <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
+                        <input type="hidden" name="delegateReasons" value="">
 
-                    <select name="signerUserIds" class="form-select">
-                        <option value="">— ไม่ลงนามในรอบนี้ —</option>
+                        <div class="p-2 border rounded bg-light d-flex align-items-center justify-content-between">
+                            <div class="d-flex align-items-center gap-2">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                    <i class="fas fa-pen-nib"></i>
+                                </div>
+                                <div>
+                                    <div class="fw-bold text-dark"
+                                         th:text="${signaturePanel.applicantOption != null ? signaturePanel.applicantOption.displayName : (signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.displayName : 'ผู้ยื่นคำร้อง')}">
+                                        ชื่อผู้ยื่น
+                                    </div>
+                                    <small class="text-secondary"
+                                           th:text="${signaturePanel.applicantOption != null ? signaturePanel.applicantOption.email : (signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.email : '')}">
+                                        user@user.com
+                                    </small>
+                                </div>
+                            </div>
+                            <div>
+                                <input type="hidden" name="signerUserIds"
+                                       th:value="${signaturePanel.applicantOption != null ? signaturePanel.applicantOption.userId : (signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.userId : '')}">
+                                <span class="badge bg-white text-muted border">
+                                    <i class="fas fa-lock text-primary me-1"></i> ล็อกผู้ยื่นอัตโนมัติ
+                                </span>
+                            </div>
+                        </div>
+                    </div>
 
-                        <!-- ตัวเองก่อน เพื่อให้แอดมินที่ต้องลงนามเองกดได้ทันที -->
-                        <optgroup label="ลงนามเอง" th:if="${signaturePanel.currentUserOption != null}">
-                            <option th:value="${signaturePanel.currentUserOption.userId}"
-                                    th:text="'ฉัน — ' + ${signaturePanel.currentUserOption.displayName}">ฉัน</option>
-                        </optgroup>
+                    <!-- ============ 2. ตำแหน่งผู้บริหาร / เจ้าหน้าที่อื่นๆ — มี Searchable Select พิมพ์ค้นหาได้ ============ -->
+                    <div th:unless="${slot.slotKey == 'applicant' or slot.defaultStaffRole == null}">
+                        <label class="form-label">
+                            <span class="badge bg-secondary me-1" th:text="${iter.count}">1</span>
+                            <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
+                        </label>
+                        <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
 
-                        <optgroup th:label="'ผู้ที่มีบทบาท ' + ${slot.roleLabel}"
-                                  th:if="${!#lists.isEmpty(signaturePanel.optionsFor(slot.slotKey))}">
-                            <option th:each="opt : ${signaturePanel.optionsFor(slot.slotKey)}"
-                                    th:value="${opt.userId}"
-                                    th:disabled="${!opt.signable}"
-                                    th:text="${opt.signable}
-                                             ? (${opt.displayName} + ' (' + ${opt.email} + ')')
-                                             : (${opt.displayName} + ' — ยังไม่ได้ผูกบัญชี')">ชื่อ</option>
-                        </optgroup>
+                        <select name="signerUserIds" class="form-select signer-searchable-select">
+                            <option value="">— ไม่ลงนามในรอบนี้ —</option>
 
-                        <!-- บทบาทใน staff_member เป็นข้อมูลที่ตั้งเอง มักไม่ครบ
-                             จึงต้องเลือกคนอื่นได้ด้วย ไม่งั้นส่งให้คนที่ต้องเซ็นจริงไม่ได้ -->
-                        <optgroup label="บุคลากรอื่นในระบบ"
-                                  th:if="${!#lists.isEmpty(signaturePanel.otherOptionsFor(slot.slotKey))}">
-                            <option th:each="opt : ${signaturePanel.otherOptionsFor(slot.slotKey)}"
-                                    th:value="${opt.userId}"
-                                    th:text="${opt.displayName} + ' (' + ${opt.email} + ')'">ชื่อ</option>
-                        </optgroup>
-                    </select>
+                            <!-- ตัวเองก่อน เพื่อให้แอดมินที่ต้องลงนามเองกดได้ทันที -->
+                            <optgroup label="ลงนามเอง" th:if="${signaturePanel.currentUserOption != null}">
+                                <option th:value="${signaturePanel.currentUserOption.userId}"
+                                        th:text="'ฉัน — ' + ${signaturePanel.currentUserOption.displayName}">ฉัน</option>
+                            </optgroup>
 
-                    <!-- ปฏิบัติราชการแทน — เอกสารราชการไทยมีเสมอเมื่อผู้มีอำนาจไม่อยู่
-                         ถ้ากรอกเหตุผล ระบบจะพิมพ์คำว่า "(แทน)" นำหน้าชื่อในเอกสาร -->
-                    <input type="text" name="delegateReasons" class="form-control form-control-sm mt-1"
-                           maxlength="500"
-                           th:placeholder="'ลงนามแทน ' + ${slot.roleLabel} + ' (ระบุเหตุผล — เว้นว่างหากลงนามในตำแหน่งตนเอง)'">
+                            <optgroup th:label="'ผู้ที่มีบทบาท ' + ${slot.roleLabel}"
+                                      th:if="${!#lists.isEmpty(signaturePanel.optionsFor(slot.slotKey))}">
+                                <option th:each="opt : ${signaturePanel.optionsFor(slot.slotKey)}"
+                                        th:value="${opt.userId}"
+                                        th:disabled="${!opt.signable}"
+                                        th:selected="${opt.userId != null and opt.userId == signaturePanel.defaultSignerFor(slot.slotKey)}"
+                                        th:text="${opt.signable}
+                                                 ? (${opt.displayName} + ' (' + ${opt.email} + ')')
+                                                 : (${opt.displayName} + ' — ยังไม่ได้ผูกบัญชี')">ชื่อ</option>
+                            </optgroup>
+
+                            <optgroup label="บุคลากรอื่นในระบบ"
+                                      th:if="${!#lists.isEmpty(signaturePanel.otherOptionsFor(slot.slotKey))}">
+                                <option th:each="opt : ${signaturePanel.otherOptionsFor(slot.slotKey)}"
+                                        th:value="${opt.userId}"
+                                        th:selected="${opt.userId != null and opt.userId == signaturePanel.defaultSignerFor(slot.slotKey)}"
+                                        th:text="${opt.displayName} + ' (' + ${opt.email} + ')'">ชื่อ</option>
+                            </optgroup>
+                        </select>
+
+                        <!-- ปฏิบัติราชการแทน — ระบุเหตุผลหากลงนามแทน -->
+                        <input type="text" name="delegateReasons" class="form-control form-control-sm mt-1"
+                               maxlength="500"
+                               th:placeholder="'ลงนามแทน ' + ${slot.roleLabel} + ' (ระบุเหตุผล — เว้นว่างหากลงนามในตำแหน่งตนเอง)'">
+                    </div>
+
                 </div>
 
                 <div class="col-md-6">
@@ -132,8 +229,7 @@
                 <i class="fas fa-circle-info"></i>
                 เมื่อกดส่ง ระบบจะ<strong>บันทึกสำเนาเอกสารฉบับปัจจุบันไว้</strong>
                 และล็อกฟอร์มไม่ให้แก้ไข เพื่อให้ทุกคนลงนามบนเนื้อหาเดียวกัน
-                ผู้ที่ไม่มีบัญชีในระบบจะเลือกเป็นผู้ลงนามไม่ได้
-                (ผูกบัญชีได้ที่เมนู <em>จัดการบุคลากร</em>)
+                ผู้ที่ไม่มีบัญชีหรือถูกปิดใช้งาน (Inactive) จะไม่สามารถเลือกเป็นผู้ลงนามได้
             </div>
 
             <button type="submit" class="btn btn-academic"

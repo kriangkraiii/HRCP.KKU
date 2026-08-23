@@ -33,6 +33,7 @@ public class StaffMemberController {
 
     private final StaffMemberService staffMemberService;
     private final StaffDirectorySync staffDirectorySync;
+    private final com.ecom.external.service.CpDirectorySyncService cpDirectorySyncService;
     private final AdminLogService adminLogService;
     private final UserRepository userRepository;
     private final HttpServletRequest httpRequest;
@@ -43,8 +44,20 @@ public class StaffMemberController {
             AdminLogService adminLogService,
             UserRepository userRepository,
             HttpServletRequest httpRequest) {
+        this(staffMemberService, staffDirectorySync, null, adminLogService, userRepository, httpRequest);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public StaffMemberController(
+            StaffMemberService staffMemberService,
+            StaffDirectorySync staffDirectorySync,
+            @org.springframework.beans.factory.annotation.Autowired(required = false) com.ecom.external.service.CpDirectorySyncService cpDirectorySyncService,
+            AdminLogService adminLogService,
+            UserRepository userRepository,
+            HttpServletRequest httpRequest) {
         this.staffMemberService = staffMemberService;
         this.staffDirectorySync = staffDirectorySync;
+        this.cpDirectorySyncService = cpDirectorySyncService;
         this.adminLogService = adminLogService;
         this.userRepository = userRepository;
         this.httpRequest = httpRequest;
@@ -84,9 +97,18 @@ public class StaffMemberController {
             java.security.Principal principal) {
         try {
             StaffDirectorySync.Result syncResult = staffDirectorySync.importFromDirectory();
+            String cpMsg = "";
+            try {
+                if (cpDirectorySyncService != null) {
+                    com.ecom.external.service.CpDirectorySyncService.Result cpResult = cpDirectorySyncService.sync();
+                    cpMsg = " | " + cpResult.describe();
+                }
+            } catch (Exception cpEx) {
+                log.warn("CP Photo sync warning: {}", cpEx.getMessage());
+            }
             StaffMemberService.AutoLinkReport linkReport = staffMemberService.autoLinkAllAccounts();
 
-            String combinedMessage = syncResult.describe();
+            String combinedMessage = syncResult.describe() + cpMsg;
             if (linkReport.hasChanges()) {
                 combinedMessage += " | " + linkReport.describe();
             }

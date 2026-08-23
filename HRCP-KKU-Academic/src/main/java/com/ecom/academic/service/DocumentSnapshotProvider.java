@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.SignatureModule;
+import com.ecom.model.UserDtls;
 
 /**
  * Reads a document's saved form data and label, whichever module it belongs to.
@@ -30,6 +31,28 @@ public class DocumentSnapshotProvider {
             PositionRequestService positionRequestService) {
         this.academicRequestService = academicRequestService;
         this.positionRequestService = positionRequestService;
+    }
+
+    /**
+     * Retrieves the applicant user account behind a request.
+     */
+    public UserDtls applicantOf(SignatureModule module, Long requestId) {
+        if (requestId == null) {
+            return null;
+        }
+        try {
+            if (module == SignatureModule.ACADEMIC) {
+                return academicRequestService.findById(requestId)
+                        .map(com.ecom.academic.model.AcademicRequest::getApplicant)
+                        .orElse(null);
+            }
+            return positionRequestService.findById(requestId)
+                    .map(com.ecom.academic.model.PositionRequest::getApplicant)
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("Could not find applicant of {} request {}: {}", module, requestId, e.toString());
+            return null;
+        }
     }
 
     /**

@@ -44,12 +44,6 @@ public class WebConfig implements WebMvcConfigurer {
 				.addResourceLocations("classpath:/static/vendor/")
 				.setCachePeriod(86400);
 
-		// General static resources
-		registry.addResourceHandler("/css/**").addResourceLocations("classpath:/static/css/");
-		registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/");
-		registry.addResourceHandler("/img/**").addResourceLocations("classpath:/static/img/")
-				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
-
 		// Normalize upload base directory to proper URI (safely encodes spaces like 'Spring pj' on Mac)
 		java.nio.file.Path basePath = java.nio.file.Path.of(uploadBaseDir).toAbsolutePath().normalize();
 		String baseUri = basePath.toUri().toString();
@@ -82,6 +76,12 @@ public class WebConfig implements WebMvcConfigurer {
 		}
 		registry.addResourceHandler("/img/product_img/**")
 				.addResourceLocations(productUploadUri, "file:uploads/product_img/", "classpath:/static/img/product_img/")
+				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
+
+		// General static resources
+		registry.addResourceHandler("/css/**").addResourceLocations("classpath:/static/css/");
+		registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/");
+		registry.addResourceHandler("/img/**").addResourceLocations("classpath:/static/img/")
 				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
 
 		// Serve uploaded files from external directory with caching

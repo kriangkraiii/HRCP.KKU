@@ -201,6 +201,52 @@
         return out.toDataURL('image/png');
     }
 
+    /**
+     * Converts white/light background of scanned signatures or PDFs into transparent pixels.
+     */
+    function processCanvasBackground(sourceCanvas) {
+        const out = document.createElement('canvas');
+        out.width = sourceCanvas.width;
+        out.height = sourceCanvas.height;
+        const outCtx = out.getContext('2d');
+        outCtx.drawImage(sourceCanvas, 0, 0);
+
+        let imgData;
+        try {
+            imgData = outCtx.getImageData(0, 0, out.width, out.height);
+        } catch (e) {
+            return sourceCanvas;
+        }
+
+        const data = imgData.data;
+        let whiteCount = 0;
+        const total = out.width * out.height;
+
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+            if (a > 100 && r > 220 && g > 220 && b > 220) {
+                whiteCount++;
+            }
+        }
+
+        // If at least 20% is white background, convert light pixels to transparent
+        if (whiteCount / total > 0.20) {
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i + 1], b = data[i + 2], a = data[i + 3];
+                if (r > 215 && g > 215 && b > 215) {
+                    data[i + 3] = 0; // completely transparent
+                } else if (r > 175 && g > 175 && b > 175) {
+                    // Soft alpha edge
+                    const brightness = (r + g + b) / 3;
+                    const factor = (215 - brightness) / 40;
+                    data[i + 3] = Math.round(a * Math.max(0, Math.min(1, factor)));
+                }
+            }
+            outCtx.putImageData(imgData, 0, 0);
+        }
+        return out;
+    }
+
     /** Draws an already-loaded image onto a fresh transparent canvas, scaled to fit. */
     function canvasFromImage(img, maxW, maxH) {
         const scale = Math.min(maxW / img.width, maxH / img.height, 1);
@@ -208,7 +254,7 @@
         out.width = Math.max(1, Math.round(img.width * scale));
         out.height = Math.max(1, Math.round(img.height * scale));
         out.getContext('2d').drawImage(img, 0, 0, out.width, out.height);
-        return out;
+        return processCanvasBackground(out);
     }
 
     /* -------------------------------------------------------------- preview */
@@ -256,9 +302,6 @@
             const fontSpec = '64px ' + TYPED_FONT;
             const measure = document.createElement('canvas').getContext('2d');
             measure.font = fontSpec;
-            // Extra width beyond the measured text: the shear pushes glyphs
-            // sideways, and Thai vowels and tone marks sit above and below the
-            // baseline, so a tight box would clip them.
             const width = Math.ceil(measure.measureText(text).width) + 90;
 
             const out = document.createElement('canvas');
@@ -270,7 +313,6 @@
             outCtx.textBaseline = 'middle';
             outCtx.textAlign = 'center';
 
-            // Shear about the vertical centre so the lean is even top to bottom.
             outCtx.translate(0, out.height / 2);
             outCtx.transform(1, 0, TYPED_SLANT, 1, 0, 0);
             outCtx.fillText(text, out.width / 2, 0);
@@ -289,15 +331,77 @@
 
     /* --------------------------------------------------------------- upload */
 
+    function ensurePdfJs() {
+        if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+        return new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.onload = () => {
+                if (window.pdfjsLib) {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    resolve(window.pdfjsLib);
+                } else {
+                    reject(new Error('PDF.js failed'));
+                }
+            };
+            script.onerror = () => reject(new Error('Failed to load PDF.js'));
+            document.head.appendChild(script);
+        });
+    }
+
+    async function handlePdfUpload(file) {
+        try {
+            previewEmpty.textContent = 'กำลังประมวลผลไฟล์ PDF...';
+            const pdfjs = await ensurePdfJs();
+            const buffer = await file.arrayBuffer();
+            const pdf = await pdfjs.getDocument({ data: buffer }).promise;
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 2.0 });
+
+            const pdfCanvas = document.createElement('canvas');
+            pdfCanvas.width = viewport.width;
+            pdfCanvas.height = viewport.height;
+            const pdfCtx = pdfCanvas.getContext('2d');
+
+            await page.render({ canvasContext: pdfCtx, viewport: viewport }).promise;
+
+            const processed = processCanvasBackground(pdfCanvas);
+            const trimmed = trimToInk(processed);
+
+            if (!trimmed) {
+                window.alert('ไม่พบลายเซ็นหรือเนื้อหาในหน้าแรกของไฟล์ PDF');
+                setPreview(null);
+            } else {
+                setPreview(trimmed);
+            }
+        } catch (err) {
+            console.error('PDF parsing error:', err);
+            window.alert('ไม่สามารถอ่านไฟล์ PDF นี้ได้ กรุณาลองใช้ไฟล์รูปภาพ PNG / JPG แทน');
+            setPreview(null);
+        } finally {
+            previewEmpty.textContent = 'ยังไม่มีลายเซ็น — วาด อัปโหลด หรือพิมพ์ชื่อทางด้านซ้าย';
+        }
+    }
+
     uploadInput.addEventListener('change', function () {
         const file = uploadInput.files && uploadInput.files[0];
         if (!file) {
             setPreview(null);
             return;
         }
-        if (!file.type.startsWith('image/')) {
-            window.alert('กรุณาเลือกไฟล์รูปภาพ');
+
+        const isPdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+        const isImage = file.type.startsWith('image/') || /\.(png|jpe?g|webp)$/i.test(file.name);
+
+        if (!isPdf && !isImage) {
+            window.alert('กรุณาเลือกไฟล์รูปภาพ (PNG, JPG) หรือไฟล์ PDF');
             uploadInput.value = '';
+            return;
+        }
+
+        if (isPdf) {
+            handlePdfUpload(file);
             return;
         }
 
@@ -305,9 +409,8 @@
         reader.onload = function () {
             const img = new Image();
             img.onload = function () {
-                // Re-encoding through a canvas normalises JPEG/GIF/etc. to PNG and
-                // caps the dimensions the server would otherwise reject.
-                setPreview(trimToInk(canvasFromImage(img, 1500, 500)));
+                const canvas = canvasFromImage(img, 1500, 500);
+                setPreview(trimToInk(canvas));
             };
             img.onerror = function () {
                 window.alert('ไม่สามารถอ่านไฟล์รูปภาพนี้ได้');
