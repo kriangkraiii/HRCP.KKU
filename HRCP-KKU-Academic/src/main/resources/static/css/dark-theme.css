@@ -2118,3 +2118,95 @@ body,
     color: #ffffff !important;
     transform: translateX(-2px);
 }
+
+/* ==========================================================================
+   Upload Modal & Storage Components in Dark Mode
+   ========================================================================== */
+[data-theme="dark"] .upload-modal-overlay {
+    background: rgba(0, 0, 0, 0.75) !important;
+}
+
+[data-theme="dark"] .upload-modal-content {
+    background: #1a1e2b !important;
+    border: 1px solid #334155 !important;
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7) !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .upload-modal-header {
+    border-bottom: 1px solid #283347 !important;
+    background: #1a1e2b !important;
+}
+
+[data-theme="dark"] .upload-modal-header h5,
+[data-theme="dark"] .upload-modal-header h4,
+[data-theme="dark"] .upload-modal-header h6 {
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .upload-modal-body {
+    background: #1a1e2b !important;
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .upload-modal-footer {
+    border-top: 1px solid #283347 !important;
+    background: #151823 !important;
+}
+
+[data-theme="dark"] .upload-file-item {
+    border-bottom: 1px solid #283347 !important;
+}
+
+[data-theme="dark"] .upload-file-item .fw-semibold {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .upload-progress-bar {
+    background: #283347 !important;
+}
+
+[data-theme="dark"] .upload-file-status {
+    color: #94a3b8 !important;
+}
+
+[data-theme="dark"] .upload-file-status .speed {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] .upload-file-status .eta {
+    color: #60a5fa !important;
+}
+
+[data-theme="dark"] .upload-file-status .done {
+    color: #4ade80 !important;
+}
+
+[data-theme="dark"] .upload-file-status .fail {
+    color: #f87171 !important;
+}
+
+[data-theme="dark"] .upload-modal-header .btn-close,
+[data-theme="dark"] .upload-modal-content .btn-close {
+    filter: invert(1) grayscale(100%) brightness(200%) !important;
+}
+
+[data-theme="dark"] .folder-card {
+    background: #1e2230 !important;
+    border-color: #2e354b !important;
+}
+
+[data-theme="dark"] .folder-card:hover {
+    background: #252b3d !important;
+    border-color: #3b82f6 !important;
+}
+
+[data-theme="dark"] .folder-card .text-dark {
+    color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .storage-dropzone {
+    background-color: #141722 !important;
+    border-color: #334155 !important;
+    color: #94a3b8 !important;
+}

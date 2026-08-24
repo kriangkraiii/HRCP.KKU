@@ -102,6 +102,11 @@ public class TwoFactorService {
 
             String body = com.ecom.util.EmailTemplateHelper.buildOtpEmail(user.getName(), otp, purposeText, OTP_EXPIRY_MINUTES);
 
+            if (com.ecom.util.EmailTemplateHelper.isTestEmail(user.getEmail())) {
+                logger.info("Test account OTP generated for {} [{}] => OTP: {}", user.getEmail(), purpose, otp);
+                return;
+            }
+
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);

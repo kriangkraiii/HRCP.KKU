@@ -127,4 +127,10 @@ public class AcademicAttachment {
     public void setDeletedAt(LocalDateTime deletedAt) {
         this.deletedAt = deletedAt;
     }
+
+    public String getFileExtension() {
+        if (originalFilename == null) return "";
+        int dot = originalFilename.lastIndexOf('.');
+        return dot >= 0 ? originalFilename.substring(dot + 1).toUpperCase() : "";
+    }
 }

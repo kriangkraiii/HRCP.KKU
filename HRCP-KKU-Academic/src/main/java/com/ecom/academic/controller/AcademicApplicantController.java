@@ -233,7 +233,7 @@ public class AcademicApplicantController {
     /**
      * ฟอร์มกรอกเอกสารที่ 0: บันทึกข้อความ ขอรับการประเมินผลการสอน
      */
-    @GetMapping("/request/{id}/document-0")
+    @GetMapping({"/request/{id}/document-0", "/request/{id}/document/0"})
     public String document0Form(@PathVariable Long id, Principal principal, Model model) {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
@@ -253,6 +253,7 @@ public class AcademicApplicantController {
         model.addAttribute("doc0Data", doc0Data);
 
         // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
+        model.addAttribute("documentType", 0);
         model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.ACADEMIC);
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, id, 0, user));
@@ -260,7 +261,7 @@ public class AcademicApplicantController {
         return "academic/applicant/document_0_form";
     }
 
-    @PostMapping("/request/{id}/document-0")
+    @PostMapping({"/request/{id}/document-0", "/request/{id}/document/0"})
     public String submitDocument0(@PathVariable Long id,
             @RequestParam Map<String, String> formData,
             @RequestParam(value = "action", defaultValue = "submit") String action,
@@ -308,7 +309,7 @@ public class AcademicApplicantController {
     /**
      * ฟอร์มกรอกเอกสารที่ 1: แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน
      */
-    @GetMapping("/request/{id}/document-1")
+    @GetMapping({"/request/{id}/document-1", "/request/{id}/document/1"})
     public String document1Form(@PathVariable Long id, Principal principal, Model model) {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
@@ -331,6 +332,7 @@ public class AcademicApplicantController {
         model.addAttribute("attachmentCount", attachments != null ? attachments.size() : 0);
 
         // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
+        model.addAttribute("documentType", 1);
         model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.ACADEMIC);
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, id, 1, user));
@@ -338,7 +340,7 @@ public class AcademicApplicantController {
         return "academic/applicant/document_1_form";
     }
 
-    @PostMapping("/request/{id}/document-1")
+    @PostMapping({"/request/{id}/document-1", "/request/{id}/document/1"})
     public String submitDocument1(@PathVariable Long id,
             @RequestParam Map<String, String> formData,
             @RequestParam(value = "action", defaultValue = "submit") String action,
@@ -366,6 +368,13 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/request/" + id + "/document-1?saved=draft";
         }
 
+        if ("submit".equals(action)) {
+            long attachmentCount = requestService.countAttachments(id);
+            if (attachmentCount == 0) {
+                return "redirect:/user/academic/request/" + id + "/document-1?error=no_attachments";
+            }
+        }
+
         String filePath = documentService.generateDocument(request.getId(), 1, jsonData, null);
 
         requestService.saveDocument(request, 1, jsonData, filePath,
@@ -382,7 +391,7 @@ public class AcademicApplicantController {
 
     // ==================== แนบไฟล์ประกอบการประเมินผลการสอน (เอกสารที่ 1) ====================
 
-    @PostMapping("/request/{id}/document-1/attachments")
+    @PostMapping({"/request/{id}/document-1/attachments", "/request/{id}/document/1/attachments"})
     public String uploadDocument1Attachments(
             @PathVariable Long id,
             @RequestParam("files") MultipartFile[] files,
@@ -508,6 +517,50 @@ public class AcademicApplicantController {
                 .body(new FileSystemResource(path));
     }
 
+    @GetMapping("/request/{id}/attachment/{attachmentId}/view")
+    public ResponseEntity<Resource> viewAttachment(
+            @PathVariable Long id,
+            @PathVariable Long attachmentId,
+            Principal principal) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        UserDtls user = getUser(principal);
+        if (!request.getApplicant().getId().equals(user.getId())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+        }
+
+        AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
+                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+
+        Path path = Path.of(attachment.getStoredFilePath());
+        if (!Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String ext = attachment.getFileExtension() != null ? attachment.getFileExtension().toUpperCase() : "";
+        String contentType = switch (ext) {
+            case "PDF" -> "application/pdf";
+            case "PNG" -> "image/png";
+            case "JPG", "JPEG" -> "image/jpeg";
+            case "DOCX" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "XLSX" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "PPTX" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            default -> "application/octet-stream";
+        };
+
+        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
+        String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(Files.size(path))
+                .body(new FileSystemResource(path));
+    }
+
     @PostMapping("/request/{id}/attachment/{attachmentId}/delete")
     public String deleteAttachment(
             @PathVariable Long id,
@@ -561,6 +614,12 @@ public class AcademicApplicantController {
         List<AcademicDocument> allDocs = requestService.getDocumentsSorted(id);
         if (!isDoc0Complete(allDocs) || !isDoc1Complete(allDocs)) {
             redirectAttributes.addFlashAttribute("error", "กรุณากรอกเอกสารที่ 0 และแบบตรวจสอบเอกสารที่ 1 ให้ครบถ้วนสมบูรณ์ก่อนส่งคำร้อง");
+            return "redirect:/user/academic/new-request";
+        }
+
+        // ตรวจสอบว่ามีไฟล์แนบในเอกสารที่ 1 หรือยัง
+        if (requestService.countAttachments(id) == 0) {
+            redirectAttributes.addFlashAttribute("error", "กรุณาแนบไฟล์เอกสารประกอบการประเมินผลการสอนอย่างน้อย 1 ไฟล์ในแบบฟอร์มเอกสารที่ 1 ก่อนส่งคำร้อง");
             return "redirect:/user/academic/new-request";
         }
 

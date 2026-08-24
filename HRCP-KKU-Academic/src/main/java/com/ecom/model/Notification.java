@@ -49,7 +49,7 @@ public class Notification {
 	private String link;
 
 	@Enumerated(EnumType.STRING)
-	@Column(nullable = false)
+	@Column(name = "type", nullable = false, length = 50, columnDefinition = "varchar(50)")
 	private NotificationType type;
 
 	@Column(nullable = false)

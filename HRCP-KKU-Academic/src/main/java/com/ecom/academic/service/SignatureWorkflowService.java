@@ -156,6 +156,7 @@ public class SignatureWorkflowService {
 
     /** Everything awaiting this person's signature. */
     public List<SignatureStep> findInbox(UserDtls signer) {
+        if (signer == null) return List.of();
         return stepRepository.findInbox(signer.getId(), SignatureStepStatus.ACTIVE);
     }
 
@@ -166,6 +167,31 @@ public class SignatureWorkflowService {
         return inbox.stream()
                 .filter(s -> currentStepId == null || !s.getId().equals(currentStepId))
                 .findFirst();
+    }
+
+    /**
+     * Cancels all open signature envelopes and marks pending steps as SKIPPED for a request
+     * when the request itself or its draft is cancelled/deleted.
+     */
+    @Transactional
+    public void cancelAllForRequest(SignatureModule module, Long requestId, UserDtls actingUser, String reason) {
+        List<SignatureRequest> envelopes = requestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(module, requestId);
+        for (SignatureRequest envelope : envelopes) {
+            if (envelope.getStatus().isOpen()) {
+                envelope.setStatus(SignatureRequestStatus.CANCELLED);
+                envelope.setCancelledAt(LocalDateTime.now());
+                envelope.setCancelReason(truncate(reason != null ? reason : "ยกเลิกแบบร่างคำร้อง", 500));
+                if (envelope.getSteps() != null) {
+                    envelope.getSteps().stream()
+                            .filter(s -> s.getStatus() == SignatureStepStatus.WAITING
+                                    || s.getStatus() == SignatureStepStatus.ACTIVE)
+                            .forEach(s -> s.setStatus(SignatureStepStatus.SKIPPED));
+                }
+                requestRepository.save(envelope);
+                audit(envelope, null, SignatureAuditEventType.CANCELLED, actingUser, ActorContext.none(),
+                        reason != null ? reason : "ยกเลิกแบบร่างคำร้อง");
+            }
+        }
     }
 
     /** Extends the due date of a signature envelope. */
@@ -199,24 +225,21 @@ public class SignatureWorkflowService {
     @Transactional
     public Result requestExtension(Long stepId, String reason, UserDtls signer, ActorContext context) {
         SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
-        if (step == null || step.getSigner() == null || !step.getSigner().getId().equals(signer.getId())) {
-            return Result.failed("ไม่พบรายการลงนามนี้");
+        if (step == null) {
+            return Result.failed("ไม่พบรายการลงนาม");
         }
-
         SignatureRequest envelope = step.getSignatureRequest();
-        if (!envelope.getStatus().isOpen()) {
-            return Result.failed("รายการเวียนลงนามนี้ไม่ได้อยู่ในสถานะเปิด");
-        }
-
-        UserDtls initiator = envelope.getInitiatedBy() != null
-                ? userRepository.findById(envelope.getInitiatedBy().getId()).orElse(null)
-                : null;
-        if (initiator != null) {
-            notifier.notifyExtensionRequested(initiator, envelope, signer, reason);
+        if (envelope == null || !envelope.getStatus().isOpen()) {
+            return Result.failed("คำขอลงนามนี้ปิดไปแล้ว");
         }
 
         audit(envelope, step.getId(), SignatureAuditEventType.VIEWED, signer, context,
-                "ผู้ลงนามขอขยายเวลาลงนาม เหตุผล: " + (reason != null && !reason.isBlank() ? reason : "ไม่ระบุ"));
+                "ผู้ลงนามขอขยายเวลา: " + (reason != null && !reason.isBlank() ? reason : "ไม่ระบุเหตุผล"));
+
+        UserDtls initiator = envelope.getInitiatedBy();
+        if (initiator != null) {
+            notifier.notifyExtensionRequested(initiator, envelope, signer, reason);
+        }
 
         return new Result(envelope, null);
     }

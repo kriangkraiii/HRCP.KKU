@@ -56,6 +56,8 @@ public class PositionRequestService {
 
     private final PositionAttachmentRepository attachmentRepository;
 
+    private final com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository;
+
     public PositionRequestService(
             PositionRequestRepository requestRepository,
             PositionDocumentRepository documentRepository,
@@ -64,7 +66,8 @@ public class PositionRequestService {
             AcademicRequestRepository academicRequestRepository,
             AcademicDocumentRepository academicDocumentRepository,
             PositionEmailService emailService,
-            PositionAttachmentRepository attachmentRepository) {
+            PositionAttachmentRepository attachmentRepository,
+            com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository) {
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.statusHistoryRepository = statusHistoryRepository;
@@ -73,6 +76,7 @@ public class PositionRequestService {
         this.academicDocumentRepository = academicDocumentRepository;
         this.emailService = emailService;
         this.attachmentRepository = attachmentRepository;
+        this.signatureRequestRepository = signatureRequestRepository;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -139,7 +143,8 @@ public class PositionRequestService {
             return jsonData;
         try {
             Map<String, String> submitted = objectMapper.readValue(jsonData,
-                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                    });
             preserveStaffOnlyFields(documentType, submitted, getLatestDocumentData(requestId, documentType));
             return objectMapper.writeValueAsString(submitted);
         } catch (Exception e) {
@@ -147,7 +152,9 @@ public class PositionRequestService {
         }
     }
 
-    /** Latest stored form data for a document type, or null when nothing saved yet. */
+    /**
+     * Latest stored form data for a document type, or null when nothing saved yet.
+     */
     public Map<String, String> getLatestDocumentData(Long requestId, int documentType) {
         List<PositionDocument> docs = getDocumentsByType(requestId, documentType);
         if (docs.isEmpty())
@@ -157,7 +164,8 @@ public class PositionRequestService {
             return null;
         try {
             return objectMapper.readValue(json,
-                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                    });
         } catch (Exception e) {
             return null;
         }
@@ -290,7 +298,8 @@ public class PositionRequestService {
         Optional<PositionRequest> opt = requestRepository.findById(requestId);
         if (opt.isPresent()) {
             PositionRequest req = opt.get();
-            if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == PositionRequestStatus.DRAFT) {
+            if (req.getApplicant().getId().equals(applicantId)
+                    && req.getCurrentStatus() == PositionRequestStatus.DRAFT) {
                 // Delete attachments and physical files
                 List<PositionAttachment> attachments = attachmentRepository.findActiveByRequestId(requestId);
                 for (PositionAttachment att : attachments) {
@@ -322,6 +331,15 @@ public class PositionRequestService {
                 if (req.getDocuments() != null && !req.getDocuments().isEmpty()) {
                     documentRepository.deleteAll(req.getDocuments());
                 }
+
+                // Delete / clean up any signature requests associated with this draft request
+                List<com.ecom.academic.model.SignatureRequest> draftEnvelopes = signatureRequestRepository
+                        .findByModuleAndRequestIdOrderByDocumentTypeAsc(
+                                com.ecom.academic.model.SignatureModule.POSITION, requestId);
+                if (!draftEnvelopes.isEmpty()) {
+                    signatureRequestRepository.deleteAll(draftEnvelopes);
+                }
+
                 requestRepository.delete(req);
                 return true;
             }
@@ -337,12 +355,12 @@ public class PositionRequestService {
 
     @Transactional
     public PositionRequest submitRequest(PositionRequest request) {
-        PositionRequestStatus old = request.getCurrentStatus();
+        PositionRequestStatus oldStatus = request.getCurrentStatus();
         request.setCurrentStatus(PositionRequestStatus.DOCUMENT_RECEIVED);
         request.setSubmissionDate(LocalDateTime.now());
         request = requestRepository.save(request);
 
-        addStatusHistory(request, old, PositionRequestStatus.DOCUMENT_RECEIVED, null, "ส่งคำร้องเข้าระบบ");
+        addStatusHistory(request, oldStatus, PositionRequestStatus.DOCUMENT_RECEIVED, null, "ส่งคำร้องเข้าระบบ");
 
         // Send notification to admins
         try {
@@ -366,16 +384,35 @@ public class PositionRequestService {
         PositionRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + requestId));
 
-        PositionRequestStatus old = request.getCurrentStatus();
+        PositionRequestStatus oldStatus = request.getCurrentStatus();
         request.setCurrentStatus(newStatus);
         request = requestRepository.save(request);
 
-        addStatusHistory(request, old, newStatus, changedBy, note);
+        addStatusHistory(request, oldStatus, newStatus, changedBy, note);
+
+        if (newStatus == PositionRequestStatus.REJECTED) {
+            List<com.ecom.academic.model.SignatureRequest> rejectedEnvelopes = signatureRequestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(com.ecom.academic.model.SignatureModule.POSITION, requestId);
+            for (com.ecom.academic.model.SignatureRequest env : rejectedEnvelopes) {
+                if (env.getStatus().isOpen()) {
+                    env.setStatus(com.ecom.academic.model.SignatureRequestStatus.CANCELLED);
+                    env.setCancelledAt(LocalDateTime.now());
+                    env.setCancelReason("คำร้องขอตำแหน่งถูกปฏิเสธ: " + (note != null ? note : "-"));
+                    if (env.getSteps() != null) {
+                        env.getSteps().forEach(s -> {
+                            if (s.getStatus() == com.ecom.academic.model.SignatureStepStatus.WAITING || s.getStatus() == com.ecom.academic.model.SignatureStepStatus.ACTIVE) {
+                                s.setStatus(com.ecom.academic.model.SignatureStepStatus.SKIPPED);
+                            }
+                        });
+                    }
+                    signatureRequestRepository.save(env);
+                }
+            }
+        }
 
         // Send email notification to applicant if requested
         if (sendNotify) {
             try {
-                emailService.sendStatusChangeEmail(request, old, newStatus);
+                emailService.sendStatusChangeEmail(request, oldStatus, newStatus);
             } catch (Exception e) {
                 System.err.println("Email notification failed on status update: " + e.getMessage());
             }
@@ -444,7 +481,8 @@ public class PositionRequestService {
     // ================== Document CRUD ==================
 
     public PositionDocument saveDocument(PositionRequest request, int documentType, String jsonData,
-            String filePath, String label, Integer copyNumber, String filledBy) {
+            String filePath,
+            String label, Integer copyNumber, String filledBy) {
         Optional<PositionDocument> existing = documentRepository.findDraftByRequestIdAndDocType(
                 request.getId(), documentType);
 
@@ -550,6 +588,7 @@ public class PositionRequestService {
             String major = data.get("major");
             if (major != null && !major.isBlank()) {
                 request.setMajor(major);
+                    
             }
             String method = data.get("evaluation_method");
             if (method != null && !method.isBlank()) {

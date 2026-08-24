@@ -123,7 +123,7 @@
         <form th:unless="${signaturePanel.locked}" th:action="@{/esign/envelope/create}" method="post">
             <input type="hidden" name="module" th:value="${signatureModule}">
             <input type="hidden" name="requestId" th:value="${request.id}">
-            <input type="hidden" name="documentType" th:value="${documentType}">
+            <input type="hidden" name="documentType" th:value="${documentType != null ? documentType : (currentDocType != null ? currentDocType : 0)}">
 
             <p class="text-secondary small mb-3">
                 เลือกผู้ลงนามแต่ละตำแหน่ง ระบบจะส่งให้ลงนาม<strong>ตามลำดับ</strong>

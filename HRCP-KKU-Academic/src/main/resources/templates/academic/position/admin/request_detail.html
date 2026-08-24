@@ -446,6 +446,14 @@
                         <td>
                           <div class="d-flex gap-1">
                             <a
+                              th:href="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
+                              target="_blank"
+                              class="btn btn-outline-info btn-sm"
+                              title="เปิดดูไฟล์"
+                            >
+                              <i class="fas fa-eye"></i>
+                            </a>
+                            <a
                               th:href="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
                               class="btn btn-outline-primary btn-sm"
                               title="ดาวน์โหลด"

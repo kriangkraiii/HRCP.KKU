@@ -52,7 +52,7 @@ public class PositionEmailService {
                 return;
             }
             String applicantEmail = request.getApplicant().getEmail();
-            if (applicantEmail == null || applicantEmail.isEmpty())
+            if (applicantEmail == null || applicantEmail.isEmpty() || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail))
                 return;
 
             String subject = "อัปเดตสถานะคำร้องขอตำแหน่งทางวิชาการ (" + request.getRequestCode() + ") - " + newStatus.getThaiLabel();
@@ -99,6 +99,9 @@ public class PositionEmailService {
 
     private void sendAdminNotification(UserDtls admin, PositionRequest request) {
         try {
+            if (admin == null || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
+                return;
+            }
             String subject = "แจ้งเตือนคำร้องขอตำแหน่งทางวิชาการใหม่ (" + request.getRequestCode() + ") - " + request.getApplicant().getName();
             String body = com.ecom.util.EmailTemplateHelper.buildAdminNewRequestEmail(
                     admin.getName(),

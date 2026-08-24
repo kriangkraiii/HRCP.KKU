@@ -76,4 +76,10 @@ public class PositionAttachment {
 
     public Boolean getIsDeleted() { return isDeleted; }
     public void setIsDeleted(Boolean isDeleted) { this.isDeleted = isDeleted; }
+
+    public String getFileExtension() {
+        if (originalFilename == null) return "";
+        int dot = originalFilename.lastIndexOf('.');
+        return dot >= 0 ? originalFilename.substring(dot + 1).toUpperCase() : "";
+    }
 }

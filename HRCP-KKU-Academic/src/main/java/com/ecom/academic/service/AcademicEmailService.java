@@ -50,7 +50,7 @@ public class AcademicEmailService {
                 return;
             }
             String applicantEmail = request.getApplicant().getEmail();
-            if (applicantEmail == null || applicantEmail.isEmpty())
+            if (applicantEmail == null || applicantEmail.isEmpty() || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail))
                 return;
 
             String subject = "อัปเดตสถานะคำร้องขอประเมินผลการสอน (#" + request.getId() + ") - " + newStatus.getThaiLabel();
@@ -100,6 +100,9 @@ public class AcademicEmailService {
 
     private void sendAdminNotification(UserDtls admin, AcademicRequest request) {
         try {
+            if (admin == null || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
+                return;
+            }
             String subject = "แจ้งเตือนคำร้องขอรับการประเมินใหม่ (#" + request.getId() + ") - " + request.getApplicant().getName();
             String body = com.ecom.util.EmailTemplateHelper.buildAdminNewRequestEmail(
                     admin.getName(),
@@ -157,7 +160,7 @@ public class AcademicEmailService {
     public void sendSuggestionEmail(AcademicRequest request, String suggestionsText) {
         try {
             String applicantEmail = request.getApplicant().getEmail();
-            if (applicantEmail == null || applicantEmail.isEmpty())
+            if (applicantEmail == null || applicantEmail.isEmpty() || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail))
                 return;
 
             String subject = "ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน (#" + request.getId() + ") - กรุณาแก้ไขเอกสาร";

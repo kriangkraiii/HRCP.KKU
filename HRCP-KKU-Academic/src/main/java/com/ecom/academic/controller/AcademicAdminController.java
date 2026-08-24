@@ -553,6 +553,7 @@ public class AcademicAdminController {
         }
 
         // แผงลงนามอิเล็กทรอนิกส์ (fragment ใช้ร่วมกันทั้งสอง phase)
+        model.addAttribute("documentType", type);
         model.addAttribute("signatureModule", SignatureModule.ACADEMIC);
         model.addAttribute("signaturePanel",
                 signatureWorkflow.buildPanel(SignatureModule.ACADEMIC, id, type, getUser(principal)));
@@ -789,7 +790,7 @@ public class AcademicAdminController {
             Principal principal,
             RedirectAttributes redirectAttributes) {
         UserDtls admin = getUser(principal);
-        AcademicRequest request = requestService.findById(id)
+        requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
         var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
@@ -1024,6 +1025,41 @@ public class AcademicAdminController {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION,
                         "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(Files.size(path))
+                .body(new FileSystemResource(path));
+    }
+
+    @GetMapping("/request/{id}/attachment/{attachmentId}/view")
+    public ResponseEntity<Resource> viewAttachment(@PathVariable Long id,
+            @PathVariable Long attachmentId) throws IOException {
+        com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
+                .orElseThrow(() -> new RuntimeException("Attachment not found"));
+
+        Path path = Path.of(attachment.getStoredFilePath());
+        if (!Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String ext = attachment.getFileExtension() != null ? attachment.getFileExtension().toUpperCase() : "";
+        String contentType = switch (ext) {
+            case "PDF" -> "application/pdf";
+            case "PNG" -> "image/png";
+            case "JPG", "JPEG" -> "image/jpeg";
+            case "DOCX" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "XLSX" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "PPTX" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            default -> "application/octet-stream";
+        };
+
+        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
+        String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "inline; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                 .contentType(MediaType.parseMediaType(contentType))
                 .contentLength(Files.size(path))
                 .body(new FileSystemResource(path));

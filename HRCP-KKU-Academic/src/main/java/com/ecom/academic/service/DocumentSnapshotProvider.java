@@ -33,6 +33,20 @@ public class DocumentSnapshotProvider {
         this.positionRequestService = positionRequestService;
     }
 
+    public boolean requestExists(SignatureModule module, Long requestId) {
+        if (requestId == null) {
+            return false;
+        }
+        try {
+            if (module == SignatureModule.ACADEMIC) {
+                return academicRequestService.findById(requestId).isPresent();
+            }
+            return positionRequestService.findById(requestId).isPresent();
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /**
      * Retrieves the applicant user account behind a request.
      */

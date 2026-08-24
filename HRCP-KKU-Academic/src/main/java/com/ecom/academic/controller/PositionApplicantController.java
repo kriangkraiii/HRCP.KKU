@@ -325,6 +325,7 @@ public class PositionApplicantController {
         }
 
         // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
+        model.addAttribute("documentType", type);
         model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.POSITION);
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
                 com.ecom.academic.model.SignatureModule.POSITION, id, type, user));

@@ -153,15 +153,22 @@ public class EvaluationExpiryScheduler {
                     daysLeft,
                     formattedDate);
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
-            helper.setTo(user.getEmail());
-            helper.setSubject(subject);
-            helper.setText(body, true);
-            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
-            mailSender.send(message);
-            log.info("Sent expiry alert to {} ({}d left)", user.getEmail(), daysLeft);
+            if (user == null || user.getEmail() == null || user.getEmail().isBlank()) return;
+
+            // Send real email only if not a test/mock account
+            if (!com.ecom.util.EmailTemplateHelper.isTestEmail(user.getEmail())) {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
+                helper.setTo(user.getEmail());
+                helper.setSubject(subject);
+                helper.setText(body, true);
+                com.ecom.util.EmailTemplateHelper.attachLogos(helper);
+                mailSender.send(message);
+                log.info("Sent expiry alert to {} ({}d left)", user.getEmail(), daysLeft);
+            } else {
+                log.debug("Skipped real SMTP expiry email for test account {}", user.getEmail());
+            }
 
             // Create In-App Notification (marked as important)
             String notifTitle = "⚠️ ผลประเมินการสอนจะหมดอายุภายใน " + alertLabel;

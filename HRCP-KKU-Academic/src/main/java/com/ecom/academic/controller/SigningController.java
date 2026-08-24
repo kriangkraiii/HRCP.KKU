@@ -258,7 +258,7 @@ public class SigningController {
     public String createEnvelope(
             @RequestParam("module") SignatureModule module,
             @RequestParam("requestId") Long requestId,
-            @RequestParam("documentType") int documentType,
+            @RequestParam(value = "documentType", defaultValue = "0") int documentType,
             @RequestParam(value = "slotKeys", required = false) List<String> slotKeys,
             @RequestParam(value = "signerUserIds", required = false) List<String> signerUserIds,
             @RequestParam(value = "delegateReasons", required = false) List<String> delegateReasons,

@@ -27,6 +27,25 @@ public final class EmailTemplateHelper {
     }
 
     /**
+     * ตรวจสอบว่าอีเมลนี้เป็นบัญชีทดสอบหรือ mock email (เช่น user@user.com, admin@admin.com, *.test, *.example)
+     * หรือไม่ เพื่อละเว้นการยิงคำขอ SMTP ไปยังเซิร์ฟเวอร์จริง ป้องกันข้อผิดพลาดและลด log noise
+     */
+    public static boolean isTestEmail(String email) {
+        if (email == null || email.isBlank()) {
+            return true;
+        }
+        String clean = email.trim().toLowerCase();
+        return clean.equals("user@user.com")
+                || clean.equals("admin@admin.com")
+                || clean.endsWith("@user.com")
+                || clean.endsWith("@admin.com")
+                || clean.endsWith("@test.com")
+                || clean.endsWith("@example.com")
+                || clean.endsWith("@invalid")
+                || clean.endsWith("@localhost");
+    }
+
+    /**
      * Wraps inner content in the official University & College email layout.
      *
      * @param headingTitle Main title in header

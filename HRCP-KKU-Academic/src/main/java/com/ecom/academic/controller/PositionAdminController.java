@@ -296,6 +296,7 @@ public class PositionAdminController {
         }
 
         // แผงลงนามอิเล็กทรอนิกส์ (fragment ใช้ร่วมกันทั้งสอง phase)
+        model.addAttribute("documentType", type);
         model.addAttribute("signatureModule", SignatureModule.POSITION);
         model.addAttribute("signaturePanel",
                 signatureWorkflow.buildPanel(SignatureModule.POSITION, id, type, getUser(principal)));
@@ -382,7 +383,7 @@ public class PositionAdminController {
             Principal principal,
             RedirectAttributes redirectAttributes) {
         UserDtls admin = getUser(principal);
-        PositionRequest request = positionService.findById(id)
+        positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + id));
 
         var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
@@ -612,6 +613,40 @@ public class PositionAdminController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
                 .contentLength(Files.size(path))
                 .body(resource);
+    }
+
+    @GetMapping("/request/{id}/attachment/{attachmentId}/view")
+    public ResponseEntity<Resource> viewAttachment(@PathVariable Long id,
+            @PathVariable Long attachmentId) throws IOException {
+        PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
+                .orElseThrow(() -> new RuntimeException("ไม่พบเอกสาร"));
+
+        Path path = Path.of(attachment.getStoredFilePath());
+        if (!Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String ext = attachment.getFileExtension() != null ? attachment.getFileExtension().toUpperCase() : "";
+        String contentType = switch (ext) {
+            case "PDF" -> "application/pdf";
+            case "PNG" -> "image/png";
+            case "JPG", "JPEG" -> "image/jpeg";
+            case "DOCX" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "XLSX" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "PPTX" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            default -> "application/octet-stream";
+        };
+
+        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
+        String safeFilename = java.net.URLEncoder.encode(rawFilename,
+                java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+        String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(contentType))
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
+                .contentLength(Files.size(path))
+                .body(new FileSystemResource(path));
     }
 
     @PostMapping("/request/{id}/attachment/{attachmentId}/delete")

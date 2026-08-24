@@ -191,6 +191,10 @@ public class SignatureNotifier {
         if (Boolean.FALSE.equals(recipient.getEmailNotificationEnabled())) {
             return;
         }
+        if (EmailTemplateHelper.isTestEmail(recipient.getEmail())) {
+            log.debug("Skipping real SMTP email for test/mock account: {}", recipient.getEmail());
+            return;
+        }
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");

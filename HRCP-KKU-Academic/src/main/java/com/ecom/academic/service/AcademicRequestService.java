@@ -53,19 +53,23 @@ public class AcademicRequestService {
 
     private final AcademicEmailService emailService;
 
+    private final com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository;
+
     public AcademicRequestService(
             AcademicRequestRepository requestRepository,
             AcademicDocumentRepository documentRepository,
             AcademicAttachmentRepository attachmentRepository,
             RequestStatusHistoryRepository historyRepository,
             AcademicDocumentEditLogRepository editLogRepository,
-            AcademicEmailService emailService) {
+            AcademicEmailService emailService,
+            com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository) {
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.attachmentRepository = attachmentRepository;
         this.historyRepository = historyRepository;
         this.editLogRepository = editLogRepository;
         this.emailService = emailService;
+        this.signatureRequestRepository = signatureRequestRepository;
     }
 
     public AcademicRequest createRequest(UserDtls applicant) {
@@ -116,6 +120,25 @@ public class AcademicRequestService {
         history.setChangedBy(changedBy);
         history.setNote(note);
         historyRepository.save(history);
+
+        if (newStatus == RequestStatus.REJECTED) {
+            List<com.ecom.academic.model.SignatureRequest> rejectedEnvelopes = signatureRequestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(com.ecom.academic.model.SignatureModule.ACADEMIC, requestId);
+            for (com.ecom.academic.model.SignatureRequest env : rejectedEnvelopes) {
+                if (env.getStatus().isOpen()) {
+                    env.setStatus(com.ecom.academic.model.SignatureRequestStatus.CANCELLED);
+                    env.setCancelledAt(LocalDateTime.now());
+                    env.setCancelReason("คำร้องถูกปฏิเสธ: " + (note != null ? note : "-"));
+                    if (env.getSteps() != null) {
+                        env.getSteps().forEach(s -> {
+                            if (s.getStatus() == com.ecom.academic.model.SignatureStepStatus.WAITING || s.getStatus() == com.ecom.academic.model.SignatureStepStatus.ACTIVE) {
+                                s.setStatus(com.ecom.academic.model.SignatureStepStatus.SKIPPED);
+                            }
+                        });
+                    }
+                    signatureRequestRepository.save(env);
+                }
+            }
+        }
 
         if (sendNotification) {
             try {
@@ -317,6 +340,12 @@ public class AcademicRequestService {
                 // Delete revision file if present
                 if (req.getRevisionFilePath() != null) {
                     deletePhysicalFile(req.getRevisionFilePath());
+                }
+
+                // Delete / clean up any signature requests associated with this draft request
+                List<com.ecom.academic.model.SignatureRequest> draftEnvelopes = signatureRequestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(com.ecom.academic.model.SignatureModule.ACADEMIC, requestId);
+                if (!draftEnvelopes.isEmpty()) {
+                    signatureRequestRepository.deleteAll(draftEnvelopes);
                 }
 
                 // Delete entire request folder from disk

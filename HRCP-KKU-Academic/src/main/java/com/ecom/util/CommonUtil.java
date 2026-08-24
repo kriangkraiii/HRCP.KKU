@@ -29,6 +29,9 @@ public class CommonUtil {
 	}
 
 	public Boolean sendMail(String url, String reciepentEmail) throws UnsupportedEncodingException, MessagingException {
+		if (EmailTemplateHelper.isTestEmail(reciepentEmail)) {
+			return true;
+		}
 		MimeMessage message = mailSender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
@@ -45,6 +48,9 @@ public class CommonUtil {
 
 	public Boolean sendOtpEmail(String recipientEmail, String otp)
 			throws UnsupportedEncodingException, MessagingException {
+		if (EmailTemplateHelper.isTestEmail(recipientEmail)) {
+			return true;
+		}
 		MimeMessage message = mailSender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
@@ -61,6 +67,9 @@ public class CommonUtil {
 
 	public Boolean sendNotificationEmail(String recipientEmail, String subject, String content)
 			throws UnsupportedEncodingException, MessagingException {
+		if (EmailTemplateHelper.isTestEmail(recipientEmail)) {
+			return true;
+		}
 		MimeMessage message = mailSender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 

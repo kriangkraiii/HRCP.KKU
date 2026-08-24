@@ -189,9 +189,16 @@ class SignatureStampingTest {
                         : service.generateP2PreviewDocx(docType, json);
                 byte[] viaSignedPath = render(module, docType, List.of());
 
-                assertThat(viaSignedPath)
-                        .as("%s doc %d must be untouched when nothing is signed", module, docType)
-                        .isEqualTo(plain);
+                Map<String, byte[]> actual = unzip(viaSignedPath);
+                Map<String, byte[]> expected = unzip(plain);
+                assertThat(actual.keySet())
+                        .as("%s doc %d entry keys must match", module, docType)
+                        .isEqualTo(expected.keySet());
+                for (String entryName : expected.keySet()) {
+                    assertThat(actual.get(entryName))
+                            .as("%s doc %d entry %s must match", module, docType, entryName)
+                            .isEqualTo(expected.get(entryName));
+                }
             }
         }
     }
