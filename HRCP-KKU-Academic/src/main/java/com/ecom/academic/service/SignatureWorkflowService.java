@@ -303,11 +303,24 @@ public class SignatureWorkflowService {
     }
 
     /**
+     * Whether this document has a place for the applicant to sign.
+     *
+     * <p>Answered from the configured slots, not the built-in ones: if an
+     * administrator has removed the applicant's slot, the form no longer offers
+     * anywhere to sign, and demanding that signature before the request may be
+     * submitted would leave the applicant stuck with no way out.
+     */
+    private boolean requiresApplicantSignature(SignatureModule module, int documentType) {
+        return slotsFor(module, documentType).stream()
+                .anyMatch(slot -> "applicant".equalsIgnoreCase(slot.slotKey()));
+    }
+
+    /**
      * Checks whether applicant signatures are completed for all required documents.
      */
     public boolean areApplicantSignaturesComplete(SignatureModule module, Long requestId, List<Integer> requiredDocTypes) {
         for (int docType : requiredDocTypes) {
-            boolean requiresApplicant = anchorRegistry.slot(module, docType, "applicant").isPresent();
+            boolean requiresApplicant = requiresApplicantSignature(module, docType);
             if (requiresApplicant && !isApplicantSignatureCompleted(module, requestId, docType)) {
                 return false;
             }
@@ -321,7 +334,7 @@ public class SignatureWorkflowService {
     public List<Integer> getUnsignedApplicantDocTypes(SignatureModule module, Long requestId, List<Integer> docTypes) {
         List<Integer> unsigned = new ArrayList<>();
         for (int docType : docTypes) {
-            boolean requiresApplicant = anchorRegistry.slot(module, docType, "applicant").isPresent();
+            boolean requiresApplicant = requiresApplicantSignature(module, docType);
             if (requiresApplicant && !isApplicantSignatureCompleted(module, requestId, docType)) {
                 unsigned.add(docType);
             }
@@ -344,9 +357,7 @@ public class SignatureWorkflowService {
             String documentLabel, String frozenJson, List<SignerAssignment> assignments,
             LocalDateTime dueAt, UserDtls initiator, ActorContext actor) {
 
-        List<SignatureSlot> slots = workflowConfigService != null
-                ? workflowConfigService.effectiveSlotsFor(module, documentType)
-                : anchorRegistry.slotsFor(module, documentType);
+        List<SignatureSlot> slots = slotsFor(module, documentType);
         if (slots.isEmpty()) {
             return Result.failed("เอกสารฉบับนี้ไม่มีจุดลงนาม จึงส่งไปลงนามไม่ได้");
         }
@@ -472,9 +483,7 @@ public class SignatureWorkflowService {
             return Result.failed("คำขอลงนามนี้ถูกปิดไปแล้ว (" + status.getThaiLabel() + ")");
         }
 
-        List<SignatureSlot> slots = workflowConfigService != null
-                ? workflowConfigService.effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType())
-                : anchorRegistry.slotsFor(envelope.getModule(), envelope.getDocumentType());
+        List<SignatureSlot> slots = slotsFor(envelope.getModule(), envelope.getDocumentType());
 
         int before = envelope.getSteps().size();
         String problem = addStepsForAssignments(envelope, slots, assignments);
@@ -487,6 +496,12 @@ public class SignatureWorkflowService {
 
         if (dueAt != null) {
             envelope.setDueAt(dueAt);
+        }
+
+        // Choosing who signs next is itself the act of releasing the document,
+        // so staff are not made to press a second button to mean the same thing.
+        if (!envelope.isCirculationStarted()) {
+            envelope.setCirculationStartedAt(LocalDateTime.now());
         }
 
         // Reopen a finished round so the freshly added steps can run.
@@ -781,13 +796,13 @@ public class SignatureWorkflowService {
 
         SignatureStep step = next.get();
 
-        // Admin Gate: If the step is for staff/executive/committee (not applicant),
-        // and the parent request exists and is still in DRAFT mode:
-        // Hold the step in WAITING until the request is submitted by the applicant!
-        if (!"applicant".equalsIgnoreCase(step.getSlotKey()) && snapshotProvider != null
-                && snapshotProvider.isDraftRequest(envelope.getModule(), envelope.getRequestId())) {
-            log.info("Holding signature step {} ({}) for envelope {} because request #{} is still in DRAFT",
-                    step.getId(), step.getRoleLabel(), envelope.getId(), envelope.getRequestId());
+        // The review gate. The applicant signs their own part whenever they like,
+        // but everyone after them waits until staff have read the document and
+        // released it — a mistake must not reach the dean because the system
+        // forwarded it on its own.
+        if (!"applicant".equalsIgnoreCase(step.getSlotKey()) && !envelope.isCirculationStarted()) {
+            log.info("Holding signature step {} ({}) for envelope {}: staff have not released it for circulation yet",
+                    step.getId(), step.getRoleLabel(), envelope.getId());
             return;
         }
 
@@ -801,18 +816,39 @@ public class SignatureWorkflowService {
     }
 
     /**
-     * Called upon request submission (DRAFT -> SUBMITTED) to activate the next
-     * step (e.g. staff/admin review & signature) for any circulating envelopes.
+     * Staff have checked this document; let it go to the signers after the
+     * applicant.
+     *
+     * <p>Deliberately per document rather than per request: each one is read on
+     * its own, and some are ready to circulate while others still need fixing.
+     *
+     * @return the released envelope, or an error to show the person who asked
      */
     @Transactional
-    public void advanceHeldStepsForRequest(SignatureModule module, Long requestId, ActorContext actor) {
-        List<SignatureRequest> envelopes = requestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(module, requestId);
-        for (SignatureRequest envelope : envelopes) {
-            if (envelope.getStatus() == SignatureRequestStatus.IN_PROGRESS && envelope.activeStep().isEmpty()) {
-                activateNextStep(envelope, actor);
-                requestRepository.save(envelope);
-            }
+    public Result startCirculation(Long envelopeId, UserDtls staff, ActorContext actor) {
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(envelopeId).orElse(null);
+        if (envelope == null) {
+            return Result.failed("ไม่พบคำขอลงนาม");
         }
+        if (!envelope.getStatus().isOpen()) {
+            return Result.failed("คำขอลงนามนี้ถูกปิดไปแล้ว (" + envelope.getStatus().getThaiLabel() + ")");
+        }
+        if (envelope.isCirculationStarted()) {
+            return Result.failed("เอกสารฉบับนี้ถูกส่งเวียนลงนามไปแล้ว");
+        }
+        boolean anyoneToAsk = envelope.getSteps().stream()
+                .anyMatch(step -> !"applicant".equalsIgnoreCase(step.getSlotKey())
+                        && step.getStatus() == SignatureStepStatus.WAITING);
+        if (!anyoneToAsk) {
+            return Result.failed("ยังไม่มีผู้ลงนามลำดับถัดไปให้ส่งต่อ กรุณาเลือกผู้ลงนามก่อน");
+        }
+
+        envelope.setCirculationStartedAt(LocalDateTime.now());
+        audit(envelope, null, SignatureAuditEventType.FORWARDED, staff, actor,
+                "เจ้าหน้าที่ตรวจสอบเอกสารแล้ว และเริ่มส่งเวียนลงนาม");
+
+        activateNextStep(envelope, actor);
+        return new Result(requestRepository.save(envelope), null);
     }
 
     // =====================================================================
@@ -904,9 +940,20 @@ public class SignatureWorkflowService {
         return value.length() <= max ? value : value.substring(0, max);
     }
 
-    /** Slots for a document paired with any assignment already made. */
-    public List<SignatureSlot> slotsFor(SignatureModule module, int documentType) {
-        return anchorRegistry.slotsFor(module, documentType);
+    /**
+     * The signature positions this document has, in signing order.
+     *
+     * <p>Reads what an administrator configured under
+     * {@code /admin/academic/settings/signers}, falling back to the built-in
+     * layout only when nothing has been configured. Everything that needs slots
+     * goes through here: asking the registry directly would quietly ignore that
+     * configuration and circulate the document to the wrong people, in the
+     * wrong order, with nothing to show that anything was amiss.
+     */
+    private List<SignatureSlot> slotsFor(SignatureModule module, int documentType) {
+        return workflowConfigService != null
+                ? workflowConfigService.effectiveSlotsFor(module, documentType)
+                : anchorRegistry.slotsFor(module, documentType);
     }
 
     /**
@@ -920,9 +967,7 @@ public class SignatureWorkflowService {
     public com.ecom.academic.dto.SignaturePanelView buildPanel(SignatureModule module, Long requestId,
             int documentType, UserDtls viewer) {
 
-        List<SignatureSlot> slots = workflowConfigService != null
-                ? workflowConfigService.effectiveSlotsFor(module, documentType)
-                : anchorRegistry.slotsFor(module, documentType);
+        List<SignatureSlot> slots = slotsFor(module, documentType);
         if (slots.isEmpty()) {
             return com.ecom.academic.dto.SignaturePanelView.unsignable();
         }

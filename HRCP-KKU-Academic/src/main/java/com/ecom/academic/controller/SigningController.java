@@ -227,6 +227,14 @@ public class SigningController {
         }
 
         redirectAttributes.addFlashAttribute("succMsg", "ลงนามครบทุกเอกสารในคิวเรียบร้อยแล้ว");
+
+        // Back to the request they came from, so they can see where it now
+        // stands and carry on with it — the inbox is empty by definition at
+        // this point and says nothing useful.
+        SignatureRequest envelope = result.request();
+        if (envelope != null) {
+            return "redirect:" + envelope.getModule().userLink(envelope.getRequestId());
+        }
         return "redirect:/esign/inbox";
     }
 
@@ -331,7 +339,32 @@ public class SigningController {
                 frozenJson, assignments, parseDueAt(dueAt), me, actorContext());
 
         flashOutcome(result, redirectAttributes);
+
+        // Their turn already? Take them straight to it. Making someone find the
+        // document again in another list is the kind of detour that gets a
+        // signature put off and forgotten.
+        String signNow = signLinkFor(result, me);
+        if (signNow != null) {
+            return "redirect:" + signNow;
+        }
         return "redirect:" + documentFormLink(module, requestId, documentType, me);
+    }
+
+    /**
+     * Where this person should go to sign, if the round is waiting on them.
+     *
+     * @return the signing link, or null when it is somebody else's turn
+     */
+    private String signLinkFor(Result result, UserDtls me) {
+        if (!result.ok() || result.request() == null || me == null) {
+            return null;
+        }
+        return result.request().getSteps().stream()
+                .filter(step -> step.getStatus() == SignatureStepStatus.ACTIVE)
+                .filter(step -> step.getSigner() != null && me.getId().equals(step.getSigner().getId()))
+                .findFirst()
+                .map(step -> "/esign/sign/" + step.getId())
+                .orElse(null);
     }
 
     /**
@@ -374,6 +407,37 @@ public class SigningController {
                 envelopeId, assignments, parseDueAt(dueAt), me, actorContext());
         flashOutcome(result, redirectAttributes);
         return "redirect:" + back;
+    }
+
+    /**
+     * Staff have checked this document and are releasing it to the next signers.
+     *
+     * <p>Separate from adding signers: the usual case is that the signers were
+     * chosen when the document was sent, and all staff need to do is say "I have
+     * read this, let it go".
+     */
+    @PostMapping("/envelope/{envelopeId}/start")
+    public String startCirculation(@PathVariable Long envelopeId,
+            Principal principal, RedirectAttributes redirectAttributes) {
+
+        UserDtls me = currentUser(principal);
+        SignatureRequest envelope = workflow.findEnvelope(envelopeId).orElse(null);
+        if (envelope == null) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่พบคำขอลงนาม");
+            return "redirect:/esign/inbox";
+        }
+        if (!isAdminOrStaff(me)) {
+            redirectAttributes.addFlashAttribute("errorMsg", "เฉพาะเจ้าหน้าที่เท่านั้นที่เริ่มเวียนลงนามได้");
+            return "redirect:/esign/inbox";
+        }
+
+        Result result = workflow.startCirculation(envelopeId, me, actorContext());
+        redirectAttributes.addFlashAttribute(result.ok() ? "succMsg" : "errorMsg",
+                result.ok()
+                        ? "เริ่มเวียนลงนามแล้ว ระบบได้แจ้งเตือนผู้ลงนามลำดับถัดไป"
+                        : result.error());
+        return "redirect:" + documentFormLink(envelope.getModule(), envelope.getRequestId(),
+                envelope.getDocumentType(), me);
     }
 
     /** Whether this person prepares and circulates documents for other people. */

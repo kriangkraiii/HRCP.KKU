@@ -669,16 +669,6 @@ public class AcademicApplicantController {
         // เปลี่ยนสถานะ DRAFT → RECEIVED
         requestService.submitDraftRequest(request);
 
-        // ปลดล็อกให้ขั้นตอนลงนามถัดไป (เช่น เจ้าหน้าที่/HR) เริ่มทำงานได้หลังยื่นคำร้อง
-        try {
-            var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
-                    getClientIpAddress(), httpRequest != null ? httpRequest.getHeader("User-Agent") : "Browser");
-            signatureWorkflow.advanceHeldStepsForRequest(com.ecom.academic.model.SignatureModule.ACADEMIC, id, actorContext);
-        } catch (Exception e) {
-            // Not fatal to the submission, but it leaves the document circulating
-            // with nobody asked to sign — never let that pass unrecorded.
-            log.error("Could not release held signature steps for ACADEMIC request {}: {}", id, e.toString(), e);
-        }
 
         // Log activity
         try {

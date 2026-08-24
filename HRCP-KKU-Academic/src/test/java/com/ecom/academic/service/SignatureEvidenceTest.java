@@ -133,11 +133,21 @@ class SignatureEvidenceTest {
         return r.signature();
     }
 
+    /**
+     * A round already released by staff.
+     *
+     * <p>These tests are about the evidence a signature leaves behind, so the
+     * document is put past the review gate immediately; the gate itself is
+     * covered in {@code SignatureWorkflowServiceTest}.
+     */
     private SignatureRequest createEnvelope(List<SignerAssignment> assignments, LocalDateTime dueAt) {
         Result r = workflow.createEnvelope(MODULE, REQUEST_ID, DOC_TYPE, "แบบประเมินคุณสมบัติ",
                 FROZEN_JSON, assignments, dueAt, admin, ActorContext.none());
         assertThat(r.ok()).as(r.error()).isTrue();
-        return r.request();
+
+        Result released = workflow.startCirculation(r.request().getId(), admin, ActorContext.none());
+        assertThat(released.ok()).as(released.error()).isTrue();
+        return released.request();
     }
 
     private SignatureStep stepOf(SignatureRequest envelope, String slotKey) {

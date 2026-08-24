@@ -81,18 +81,35 @@
                 </ul>
             </div>
 
-            <!-- รอผู้ยื่นกดส่งคำร้อง: ขั้นตอนของเจ้าหน้าที่/ผู้บริหารถูกหน่วงไว้จนกว่าคำร้องจะถูกยื่น
+            <!-- เอกสารถูกพักไว้รอเจ้าหน้าที่ตรวจ ไม่ใช่ระบบค้าง
                  ถ้าไม่บอกตรงนี้ หน้าจอจะดูเหมือนไม่มีอะไรเกิดขึ้นเลย -->
-            <div th:if="${signaturePanel.awaitingSubmission}"
+            <div th:if="${signaturePanel.awaitingStaffRelease}"
                  class="alert alert-info border-0 bg-info-subtle text-dark d-flex align-items-start gap-3 p-3 rounded-3 mb-3">
                 <i class="fas fa-hourglass-half fa-lg text-info mt-1 flex-shrink-0"></i>
                 <div class="small">
-                    <strong>ยังไม่ได้ส่งให้ผู้ลงนามลำดับถัดไป</strong>
+                    <strong>รอเจ้าหน้าที่ตรวจสอบก่อนเวียนลงนาม</strong>
                     <div class="text-secondary mt-1">
-                        คำร้องนี้ยังเป็นแบบร่าง ระบบจะเริ่มเวียนลงนามให้อัตโนมัติเมื่อผู้ยื่น<strong>กดยื่นคำร้อง</strong>เข้ามาในระบบแล้ว
+                        <span th:unless="${signaturePanel.isAdminViewer}">
+                            เจ้าหน้าที่/นักทรัพยากรบุคคลจะตรวจความถูกต้องของเอกสารและไฟล์แนบก่อน
+                            แล้วจึงเริ่มเวียนลงนามไปยังผู้บริหารตามลำดับ
+                        </span>
+                        <span th:if="${signaturePanel.isAdminViewer}">
+                            ผู้ลงนามถูกเลือกไว้แล้ว เมื่อตรวจเอกสารและไฟล์แนบเรียบร้อย กด
+                            <strong>“ตรวจสอบแล้ว — เริ่มเวียนลงนาม”</strong> เพื่อส่งต่อ
+                        </span>
                     </div>
                 </div>
             </div>
+
+            <!-- ปุ่มเริ่มเวียนลงนาม: ผู้ลงนามเลือกไว้ครบแล้ว เหลือแค่เจ้าหน้าที่ยืนยันว่าเอกสารถูกต้อง -->
+            <form th:if="${signaturePanel.isAdminViewer and signaturePanel.startable}"
+                  th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/start'}"
+                  method="post" class="mb-3"
+                  data-confirm="ตรวจสอบเอกสารเรียบร้อยแล้วใช่ไหม? ระบบจะแจ้งเตือนผู้ลงนามลำดับถัดไปทันที">
+                <button type="submit" class="btn btn-academic px-4 py-2">
+                    <i class="fas fa-shield-check me-1"></i> ตรวจสอบแล้ว — เริ่มเวียนลงนาม
+                </button>
+            </form>
 
             <!-- ============ ส่งเวียนลงนามต่อ (Admin/เจ้าหน้าที่เท่านั้น) ============
                  ตำแหน่งที่ยังไม่ได้เลือกผู้ลงนามตอนส่งรอบแรก จะมาเติมได้ที่นี่

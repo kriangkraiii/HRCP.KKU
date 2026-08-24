@@ -100,6 +100,18 @@ public class SignatureRequest {
     @Column(name = "cancelled_at")
     private LocalDateTime cancelledAt;
 
+    /**
+     * When staff checked this document and released it for circulation.
+     *
+     * <p>Null means nobody outside the applicant has been asked to sign yet.
+     * The applicant signs their own part straight away, but everything after
+     * that waits here until a member of staff has read the document and the
+     * files attached to it — the whole point of the review step is that a
+     * mistake must not reach the head of department or the dean.
+     */
+    @Column(name = "circulation_started_at")
+    private LocalDateTime circulationStartedAt;
+
     @Column(name = "cancel_reason", length = 500)
     private String cancelReason;
 
@@ -276,6 +288,19 @@ public class SignatureRequest {
 
     public LocalDateTime getCancelledAt() {
         return cancelledAt;
+    }
+
+    public LocalDateTime getCirculationStartedAt() {
+        return circulationStartedAt;
+    }
+
+    public void setCirculationStartedAt(LocalDateTime circulationStartedAt) {
+        this.circulationStartedAt = circulationStartedAt;
+    }
+
+    /** Whether staff have released this document to the signers after them. */
+    public boolean isCirculationStarted() {
+        return circulationStartedAt != null;
     }
 
     public void setCancelledAt(LocalDateTime cancelledAt) {

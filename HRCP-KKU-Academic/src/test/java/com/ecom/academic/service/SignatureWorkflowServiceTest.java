@@ -137,7 +137,23 @@ class SignatureWorkflowServiceTest {
         return r.signature();
     }
 
+    /**
+     * A round that is already under way.
+     *
+     * <p>Staff release it straight away because these tests are about the
+     * signing chain itself; the review gate that holds it until then has its
+     * own tests further down.
+     */
     private Result createEnvelope() {
+        Result created = createEnvelopeWithoutRelease();
+        assertThat(created.ok()).isTrue();
+        Result released = workflow.startCirculation(created.request().getId(), admin, ActorContext.none());
+        assertThat(released.ok()).isTrue();
+        return released;
+    }
+
+    /** A round still waiting for staff to check the document. */
+    private Result createEnvelopeWithoutRelease() {
         return workflow.createEnvelope(MODULE, REQUEST_ID, DOC_TYPE,
                 "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา", FROZEN_JSON,
                 List.of(new SignerAssignment("head", head.getId()),
@@ -330,7 +346,7 @@ class SignatureWorkflowServiceTest {
     void cannotOpenTwoRoundsAtOnce() {
         assertThat(createEnvelope().ok()).isTrue();
 
-        Result second = createEnvelope();
+        Result second = createEnvelopeWithoutRelease();
 
         assertThat(second.ok()).isFalse();
         assertThat(second.error()).contains("อยู่ระหว่างการเวียนลงนาม");
@@ -384,6 +400,7 @@ class SignatureWorkflowServiceTest {
                 List.of(new SignerAssignment("head", head.getId())),
                 LocalDateTime.now().minusDays(1), admin, ActorContext.none());
         assertThat(created.ok()).isTrue();
+        assertThat(workflow.startCirculation(created.request().getId(), admin, ActorContext.none()).ok()).isTrue();
 
         Result result = workflow.sign(stepOf(created.request(), "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none());
@@ -451,6 +468,7 @@ class SignatureWorkflowServiceTest {
                 List.of(new SignerAssignment("head", head.getId())),
                 null, admin, ActorContext.none());
         assertThat(result2.ok()).isTrue();
+        assertThat(workflow.startCirculation(result2.request().getId(), admin, ActorContext.none()).ok()).isTrue();
         SignatureRequest envelope2 = result2.request();
 
         Long stepId1 = stepOf(envelope1, "head").getId();
@@ -583,6 +601,7 @@ class SignatureWorkflowServiceTest {
                 "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา", FROZEN_JSON,
                 List.of(new SignerAssignment("head", head.getId())),
                 null, admin, ActorContext.none());
+        assertThat(workflow.startCirculation(created.request().getId(), admin, ActorContext.none()).ok()).isTrue();
 
         Result signed = workflow.sign(stepOf(created.request(), "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none());
@@ -614,5 +633,70 @@ class SignatureWorkflowServiceTest {
         assertThat(forwarded.error()).contains("อยู่แล้ว");
         assertThat(requestRepository.findByIdWithSteps(created.request().getId())
                 .orElseThrow().getSteps()).hasSize(2);
+    }
+
+    // =====================================================================
+    // ประตูตรวจของเจ้าหน้าที่ — ต้องกดเริ่มเองเท่านั้น
+    // =====================================================================
+
+    @Test
+    @DisplayName("ยังไม่กดเริ่ม ผู้ลงนามลำดับถัดไปต้องไม่ถึงคิว")
+    void nobodyIsAskedUntilStaffReleaseTheDocument() {
+        Result created = createEnvelopeWithoutRelease();
+        assertThat(created.ok()).isTrue();
+
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(created.request().getId()).orElseThrow();
+        assertThat(envelope.isCirculationStarted()).isFalse();
+        // head/dean ไม่ใช่ช่องของผู้ยื่น จึงต้องถูกพักไว้ทั้งคู่
+        assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+        assertThat(stepOf(envelope, "dean").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+        assertThat(workflow.findInbox(head)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("เจ้าหน้าที่กดเริ่ม คนแรกถึงคิวและเห็นในกล่องลงนาม")
+    void releasingTheDocumentAsksTheFirstSigner() {
+        Result created = createEnvelopeWithoutRelease();
+
+        Result released = workflow.startCirculation(created.request().getId(), admin, ActorContext.none());
+
+        assertThat(released.ok()).isTrue();
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(created.request().getId()).orElseThrow();
+        assertThat(envelope.isCirculationStarted()).isTrue();
+        assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
+        assertThat(stepOf(envelope, "dean").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+        assertThat(workflow.findInbox(head)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("กดเริ่มซ้ำไม่ได้ กันการแจ้งเตือนซ้ำซ้อน")
+    void releasingTwiceIsRefused() {
+        Result created = createEnvelopeWithoutRelease();
+        assertThat(workflow.startCirculation(created.request().getId(), admin, ActorContext.none()).ok()).isTrue();
+
+        Result again = workflow.startCirculation(created.request().getId(), admin, ActorContext.none());
+
+        assertThat(again.ok()).isFalse();
+        assertThat(again.error()).contains("ส่งเวียนลงนามไปแล้ว");
+    }
+
+    @Test
+    @DisplayName("เจ้าหน้าที่เลือกผู้ลงนามเพิ่ม ถือเป็นการปล่อยเวียนในตัว ไม่ต้องกดสองที")
+    void addingSignersAlsoReleasesTheDocument() {
+        Result created = workflow.createEnvelope(MODULE, REQUEST_ID, DOC_TYPE,
+                "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา", FROZEN_JSON,
+                List.of(new SignerAssignment("head", head.getId())),
+                null, admin, ActorContext.none());
+        assertThat(requestRepository.findByIdWithSteps(created.request().getId())
+                .orElseThrow().isCirculationStarted()).isFalse();
+
+        Result forwarded = workflow.forwardToNextSigners(created.request().getId(),
+                List.of(new SignerAssignment("dean", dean.getId())),
+                null, admin, ActorContext.none());
+
+        assertThat(forwarded.ok()).isTrue();
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(created.request().getId()).orElseThrow();
+        assertThat(envelope.isCirculationStarted()).isTrue();
+        assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
     }
 }

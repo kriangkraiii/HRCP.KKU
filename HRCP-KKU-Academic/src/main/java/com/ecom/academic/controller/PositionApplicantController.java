@@ -425,16 +425,6 @@ public class PositionApplicantController {
 
         positionService.submitRequest(request);
 
-        // ปลดล็อกให้ขั้นตอนลงนามถัดไป (เช่น เจ้าหน้าที่/HR) เริ่มทำงานได้หลังยื่นคำร้อง
-        // ถ้าพลาดตรงนี้ เอกสารจะค้างโดยไม่มีใครได้รับให้ลงนาม จึงต้องมีร่องรอยไว้เสมอ
-        try {
-            var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
-                    com.ecom.config.ClientIpUtils.resolveClientIp(httpRequest),
-                    httpRequest != null ? httpRequest.getHeader("User-Agent") : "Browser");
-            signatureWorkflow.advanceHeldStepsForRequest(com.ecom.academic.model.SignatureModule.POSITION, id, actorContext);
-        } catch (Exception e) {
-            log.error("Could not release held signature steps for POSITION request {}: {}", id, e.toString(), e);
-        }
 
         return "redirect:/user/position/dashboard?success=submitted";
     }

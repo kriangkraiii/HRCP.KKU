@@ -133,22 +133,31 @@ public record SignaturePanelView(
     }
 
     /**
-     * True when the round is stalled because the request has not been submitted.
+     * True when signers are lined up but staff have not released the document.
      *
-     * <p>The workflow holds every non-applicant step until the applicant sends
-     * the request in, which otherwise looks exactly like nothing happening.
+     * <p>Nothing is wrong; the document is deliberately parked until somebody
+     * has read it. Saying so matters because a held round looks exactly like a
+     * broken one from the outside.
      */
-    public boolean isAwaitingSubmission() {
+    public boolean isAwaitingStaffRelease() {
         if (activeEnvelope == null || activeEnvelope.getSteps() == null
-                || !activeEnvelope.getStatus().isOpen()) {
+                || !activeEnvelope.getStatus().isOpen()
+                || activeEnvelope.isCirculationStarted()) {
             return false;
         }
-        boolean noneActive = activeEnvelope.getSteps().stream()
-                .noneMatch(s -> s.getStatus() == com.ecom.academic.model.SignatureStepStatus.ACTIVE);
-        boolean someoneWaiting = activeEnvelope.getSteps().stream()
+        return activeEnvelope.getSteps().stream()
                 .anyMatch(s -> s.getStatus() == com.ecom.academic.model.SignatureStepStatus.WAITING
                         && !"applicant".equalsIgnoreCase(s.getSlotKey()));
-        return noneActive && someoneWaiting;
+    }
+
+    /**
+     * True when staff can release this document right now.
+     *
+     * <p>Signers are already chosen, so all that is needed is the decision that
+     * the document is correct — no need to fill the picker in again.
+     */
+    public boolean isStartable() {
+        return isAwaitingStaffRelease();
     }
 
     /** Role-matched candidates for one slot, never null. */
