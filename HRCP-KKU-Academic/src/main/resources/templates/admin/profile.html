@@ -13,14 +13,6 @@
             </div>
 
             <!-- Alerts -->
-            <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show" style="border-radius:12px;border:none;">
-                <i class="fas fa-check-circle me-2"></i>[[${succMsg}]]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show" style="border-radius:12px;border:none;">
-                <i class="fas fa-exclamation-circle me-2"></i>[[${errorMsg}]]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
 
             <form th:action="@{/admin/update-profile}" method="post" enctype="multipart/form-data" id="profileForm">
                 <input type="hidden" th:value="${user.id}" name="id">

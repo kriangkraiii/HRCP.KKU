@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -55,14 +56,25 @@ public class DocumentGenerationService {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
+    private Map<String, Object> parseJsonData(String jsonData) {
+        if (jsonData == null || jsonData.isBlank()) {
+            return new HashMap<>();
+        }
+        try {
+            return objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
+            });
+        } catch (Exception e) {
+            return new HashMap<>();
+        }
+    }
+
     // =====================================================================
     // Public API
     // =====================================================================
 
     public String generateDocument(Long requestId, int documentType, String jsonData, Integer copyNumber)
             throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
@@ -92,8 +104,7 @@ public class DocumentGenerationService {
 
     public List<String> generateDocument4Copies(Long requestId, String jsonData,
             List<Map<String, String>> committeeMembers) throws IOException {
-        Map<String, Object> baseDataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> baseDataMap = parseJsonData(jsonData);
         List<String> generatedPaths = new ArrayList<>();
 
         for (int i = 0; i < committeeMembers.size(); i++) {
@@ -111,8 +122,7 @@ public class DocumentGenerationService {
     }
 
     public byte[] generatePreviewDocx(int documentType, String jsonData) throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
@@ -135,8 +145,7 @@ public class DocumentGenerationService {
      */
     public byte[] generateSignedDocx(int documentType, String jsonData,
             List<StampedSignature> signatures) throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
@@ -155,8 +164,7 @@ public class DocumentGenerationService {
      */
     public byte[] generateSignedDocx(int documentType, String jsonData,
             List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
         ClassPathResource resource = new ClassPathResource(TEMPLATE_DIR + "doc_" + documentType + ".docx");
@@ -169,8 +177,7 @@ public class DocumentGenerationService {
     /** Phase 2 counterpart of the verification-stamped render. */
     public byte[] generateSignedP2Docx(int documentType, String jsonData,
             List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
         mapMethod3Fields(placeholders);
@@ -186,8 +193,7 @@ public class DocumentGenerationService {
     /** Phase 2 counterpart of {@link #generateSignedDocx}. */
     public byte[] generateSignedP2Docx(int documentType, String jsonData,
             List<StampedSignature> signatures) throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
         mapMethod3Fields(placeholders);
@@ -205,8 +211,7 @@ public class DocumentGenerationService {
 
     public byte[] generatePreviewDocxForCopy(int documentType, String jsonData,
             String committeeName, String committeePosition) throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         dataMap.put("committee_name", committeeName);
         dataMap.put("committee_position", committeePosition);
 
@@ -234,8 +239,7 @@ public class DocumentGenerationService {
 
     /** Preview-only (in-memory) for Phase 2 position documents */
     public byte[] generateP2PreviewDocx(int documentType, String jsonData) throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
         mapMethod3Fields(placeholders);
@@ -254,8 +258,7 @@ public class DocumentGenerationService {
 
     public String generateP2Document(com.ecom.academic.model.PositionRequest request,
             int documentType, String jsonData) throws IOException {
-        Map<String, Object> dataMap = objectMapper.readValue(jsonData, new TypeReference<Map<String, Object>>() {
-        });
+        Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         // ต้องประมวลผลชุดเดียวกับ generateP2PreviewDocx มิฉะนั้นเอกสารที่บันทึกจริง
         // จะไม่ตรงกับที่ผู้ใช้เห็นในหน้า "ดูตัวอย่างเอกสาร"

@@ -13,15 +13,6 @@
             คุณสามารถแก้ไขลายเซ็นได้ทุกเมื่อ (วาดใหม่ อัปโหลดใหม่ เปลี่ยนชื่อ หรือเปลี่ยนประเภท)
         </p>
 
-        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show">
-            <i class="fas fa-circle-check"></i> <span th:text="${succMsg}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show">
-            <i class="fas fa-circle-exclamation"></i> <span th:text="${errorMsg}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
         <!-- ==================== เพิ่ม / แก้ไขลายเซ็น ==================== -->
         <div class="card card-academic mb-4">
             <div class="card-header bg-white">

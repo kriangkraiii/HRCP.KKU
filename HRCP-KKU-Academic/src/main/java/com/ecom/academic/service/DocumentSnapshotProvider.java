@@ -136,4 +136,27 @@ public class DocumentSnapshotProvider {
             return null;
         }
     }
+
+    /**
+     * Checks if the parent request is currently an unsubmitted DRAFT.
+     * Returns false if the request is already submitted or if request does not exist (e.g. unit tests).
+     */
+    public boolean isDraftRequest(SignatureModule module, Long requestId) {
+        if (requestId == null) {
+            return false;
+        }
+        try {
+            if (module == SignatureModule.ACADEMIC) {
+                return academicRequestService.findById(requestId)
+                        .map(r -> r.getCurrentStatus() == com.ecom.academic.model.RequestStatus.DRAFT)
+                        .orElse(false);
+            }
+            return positionRequestService.findById(requestId)
+                    .map(r -> r.getCurrentStatus() == com.ecom.academic.model.PositionRequestStatus.DRAFT)
+                    .orElse(false);
+        } catch (Exception e) {
+            log.warn("Could not check draft status for {} request {}: {}", module, requestId, e.toString());
+            return false;
+        }
+    }
 }

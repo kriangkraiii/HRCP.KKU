@@ -21,19 +21,6 @@
 						</div>
 						<div class="card-body p-4">
 
-							<div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show"
-								role="alert">
-								<i class="fas fa-check-circle me-2"></i>
-								<span th:text="${succMsg}"></span>
-								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-							</div>
-							<div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show"
-								role="alert">
-								<i class="fas fa-exclamation-circle me-2"></i>
-								<span th:text="${errorMsg}"></span>
-								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-							</div>
-
 							<form th:action="@{/admin/update-user}" method="post" enctype="multipart/form-data" id="editUserForm">
 								<input type="hidden" name="id" th:value="${editUser.id}">
 								<input type="hidden" name="type" value="1">
@@ -60,8 +47,8 @@
 											<option value="นาง" th:selected="${editUser.title == 'นาง'}">นาง</option>
 											<option value="นางสาว" th:selected="${editUser.title == 'นางสาว'}">นางสาว</option>
 											<option value="ดร." th:selected="${editUser.title == 'ดร.'}">ดร.</option>
-											<option value="อาจารย์" th:selected="${editUser.title == 'อาจารย์' or editUser.title == 'อ.'}">อาจารย์ (อ.)</option>
-											<option value="อ.ดร." th:selected="${editUser.title == 'อ.ดร.' or editUser.title == 'อาจารย์ ดร.'}">อาจารย์ ดร. (อ.ดร.)</option>
+											<option value="อาจารย์" th:selected="${editUser.title == 'อาจารย์' or editUser.title == 'อ.'}">อาจารย์</option>
+											<option value="อ.ดร." th:selected="${editUser.title == 'อ.ดร.' or editUser.title == 'อาจารย์ ดร.'}">อาจารย์ ดร.</option>
 											<option value="ผศ." th:selected="${editUser.title == 'ผศ.' or editUser.title == 'ผู้ช่วยศาสตราจารย์'}">ผศ.</option>
 											<option value="ผศ.ดร." th:selected="${editUser.title == 'ผศ.ดร.' or editUser.title == 'ผู้ช่วยศาสตราจารย์ ดร.' or editUser.title == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผศ.ดร.</option>
 											<option value="รศ." th:selected="${editUser.title == 'รศ.' or editUser.title == 'รองศาสตราจารย์'}">รศ.</option>
@@ -105,9 +92,9 @@
 										<select name="academicPosition" class="form-select">
 											<option value="" th:selected="${editUser.academicPosition == null || editUser.academicPosition == ''}">-- ไม่ระบุ --</option>
 											<option value="อาจารย์" th:selected="${editUser.academicPosition == 'อาจารย์'}">อาจารย์</option>
-											<option value="ผู้ช่วยศาสตราจารย์" th:selected="${editUser.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์ (ผศ.)</option>
-											<option value="รองศาสตราจารย์" th:selected="${editUser.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์ (รศ.)</option>
-											<option value="ศาสตราจารย์" th:selected="${editUser.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์ (ศ.)</option>
+											<option value="ผู้ช่วยศาสตราจารย์" th:selected="${editUser.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
+											<option value="รองศาสตราจารย์" th:selected="${editUser.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
+											<option value="ศาสตราจารย์" th:selected="${editUser.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
 										</select>
 									</div>
 									<div class="col-md-6">

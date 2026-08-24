@@ -38,7 +38,20 @@ public record SignaturePanelView(
         SignerOptionDTO applicantOption,
         SignerOptionDTO currentUserOption,
         SignatureRequest activeEnvelope,
-        boolean signable) {
+        boolean signable,
+        boolean isAdminViewer) {
+
+    public SignaturePanelView(
+            List<SignatureSlot> slots,
+            Map<String, List<SignerOptionDTO>> recommendedOptions,
+            List<SignerOptionDTO> otherOptions,
+            Map<String, Integer> defaultSignerUserIds,
+            SignerOptionDTO applicantOption,
+            SignerOptionDTO currentUserOption,
+            SignatureRequest activeEnvelope,
+            boolean signable) {
+        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false);
+    }
 
     /** True while the document is out for signature or already fully signed. */
     public boolean isLocked() {
@@ -48,6 +61,94 @@ public record SignaturePanelView(
     /** True when a fresh round can be started. */
     public boolean canSend() {
         return signable && activeEnvelope == null;
+    }
+
+    /** True if the applicant has already signed their slot in the active round. */
+    public boolean isApplicantSigned() {
+        if (activeEnvelope == null || activeEnvelope.getSteps() == null) {
+            return false;
+        }
+        return activeEnvelope.getSteps().stream()
+                .filter(s -> "applicant".equalsIgnoreCase(s.getSlotKey()))
+                .anyMatch(s -> s.getStatus() == com.ecom.academic.model.SignatureStepStatus.SIGNED);
+    }
+
+    /** True if this document includes an applicant slot. */
+    public boolean hasApplicantSlot() {
+        if (slots == null) return false;
+        return slots.stream().anyMatch(s -> "applicant".equalsIgnoreCase(s.slotKey()));
+    }
+
+    /** True if this document includes staff, head, dean or committee slots. */
+    public boolean hasNonApplicantSlots() {
+        if (slots == null) return false;
+        return slots.stream().anyMatch(s -> !"applicant".equalsIgnoreCase(s.slotKey()));
+    }
+
+    /**
+     * Slots that still have nobody assigned in the current round.
+     *
+     * <p>A round only ever contains the positions that were filled in when it
+     * was started; the rest are simply absent. Those are what an administrator
+     * fills in later when forwarding the document onward.
+     */
+    public List<SignatureSlot> unfilledSlots() {
+        if (slots == null) {
+            return List.of();
+        }
+        if (activeEnvelope == null || activeEnvelope.getSteps() == null) {
+            return List.of();
+        }
+        List<SignatureSlot> rest = new ArrayList<>();
+        for (SignatureSlot slot : slots) {
+            boolean taken = activeEnvelope.getSteps().stream()
+                    .anyMatch(step -> slot.slotKey().equalsIgnoreCase(step.getSlotKey())
+                            && step.getStatus() != com.ecom.academic.model.SignatureStepStatus.SKIPPED);
+            if (!taken) {
+                rest.add(slot);
+            }
+        }
+        return rest;
+    }
+
+    /** True when some position on this document has still not been sent to anyone. */
+    public boolean hasUnfilledSlots() {
+        return !unfilledSlots().isEmpty();
+    }
+
+    /**
+     * True when an administrator may still add signers to this round.
+     *
+     * <p>Includes rounds already marked complete: a document whose applicant
+     * signature is done is exactly the one waiting to be forwarded to the head
+     * of department and the dean.
+     */
+    public boolean isForwardable() {
+        if (activeEnvelope == null || activeEnvelope.getStatus() == null) {
+            return false;
+        }
+        boolean stillOpen = activeEnvelope.getStatus().isOpen()
+                || activeEnvelope.getStatus() == com.ecom.academic.model.SignatureRequestStatus.COMPLETED;
+        return stillOpen && hasUnfilledSlots();
+    }
+
+    /**
+     * True when the round is stalled because the request has not been submitted.
+     *
+     * <p>The workflow holds every non-applicant step until the applicant sends
+     * the request in, which otherwise looks exactly like nothing happening.
+     */
+    public boolean isAwaitingSubmission() {
+        if (activeEnvelope == null || activeEnvelope.getSteps() == null
+                || !activeEnvelope.getStatus().isOpen()) {
+            return false;
+        }
+        boolean noneActive = activeEnvelope.getSteps().stream()
+                .noneMatch(s -> s.getStatus() == com.ecom.academic.model.SignatureStepStatus.ACTIVE);
+        boolean someoneWaiting = activeEnvelope.getSteps().stream()
+                .anyMatch(s -> s.getStatus() == com.ecom.academic.model.SignatureStepStatus.WAITING
+                        && !"applicant".equalsIgnoreCase(s.getSlotKey()));
+        return noneActive && someoneWaiting;
     }
 
     /** Role-matched candidates for one slot, never null. */
@@ -81,6 +182,6 @@ public record SignaturePanelView(
 
     /** An empty panel, for documents with no signature block. */
     public static SignaturePanelView unsignable() {
-        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false);
+        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false);
     }
 }

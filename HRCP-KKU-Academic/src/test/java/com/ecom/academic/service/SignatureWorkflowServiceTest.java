@@ -547,4 +547,72 @@ class SignatureWorkflowServiceTest {
         assertThat(workflow.isDocumentLocked(MODULE, REQUEST_ID, 1)).isFalse();
         assertThat(workflow.isApplicantSignatureCompleted(MODULE, REQUEST_ID, 1)).isFalse();
     }
+
+    // =====================================================================
+    // ส่งเวียนลงนามต่อ — ครึ่งหลังของ Admin Gate
+    // =====================================================================
+
+    @Test
+    @DisplayName("เติมผู้ลงนามเข้าซองที่เวียนอยู่ แล้วคนใหม่ถึงคิวต่อทันที")
+    void forwardingAddsTheNextSignerToAnOpenRound() {
+        Result created = workflow.createEnvelope(MODULE, REQUEST_ID, DOC_TYPE,
+                "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา", FROZEN_JSON,
+                List.of(new SignerAssignment("head", head.getId())),
+                null, admin, ActorContext.none());
+        assertThat(created.ok()).isTrue();
+        assertThat(created.request().getSteps()).hasSize(1);
+
+        Result forwarded = workflow.forwardToNextSigners(created.request().getId(),
+                List.of(new SignerAssignment("dean", dean.getId())),
+                null, admin, ActorContext.none());
+
+        assertThat(forwarded.ok()).isTrue();
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(created.request().getId()).orElseThrow();
+        assertThat(envelope.getSteps()).hasSize(2);
+        // หัวหน้าสาขายังถือคิวอยู่ การเติมคนใหม่ต้องไม่แย่งคิวไป
+        assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
+        assertThat(stepOf(envelope, "dean").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+    }
+
+    @Test
+    @DisplayName("ซองที่ลงนามครบแล้ว ยังส่งเวียนต่อให้ผู้บริหารได้ — ไม่ล็อกตาย")
+    void forwardingReopensACompletedRound() {
+        // เอกสารที่มีแต่ช่องของผู้ยื่น จะ COMPLETED ทันทีที่ผู้ยื่นเซ็น
+        // ถ้าเปิดต่อไม่ได้ เจ้าหน้าที่จะไม่มีทางส่งให้คณบดีเลย
+        Result created = workflow.createEnvelope(MODULE, REQUEST_ID, DOC_TYPE,
+                "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา", FROZEN_JSON,
+                List.of(new SignerAssignment("head", head.getId())),
+                null, admin, ActorContext.none());
+
+        Result signed = workflow.sign(stepOf(created.request(), "head").getId(), head,
+                headSignature.getId(), true, ActorContext.none());
+        assertThat(signed.ok()).isTrue();
+        assertThat(requestRepository.findById(created.request().getId()).orElseThrow().getStatus())
+                .isEqualTo(SignatureRequestStatus.COMPLETED);
+
+        Result forwarded = workflow.forwardToNextSigners(created.request().getId(),
+                List.of(new SignerAssignment("dean", dean.getId())),
+                null, admin, ActorContext.none());
+
+        assertThat(forwarded.ok()).isTrue();
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(created.request().getId()).orElseThrow();
+        assertThat(envelope.getStatus()).isEqualTo(SignatureRequestStatus.IN_PROGRESS);
+        assertThat(envelope.getCompletedAt()).isNull();
+        assertThat(stepOf(envelope, "dean").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("เติมตำแหน่งที่มีผู้ลงนามอยู่แล้ว ต้องไม่เกิดขั้นตอนซ้ำ")
+    void forwardingDoesNotDuplicateAnExistingSlot() {
+        Result created = createEnvelope();
+
+        Result forwarded = workflow.forwardToNextSigners(created.request().getId(),
+                List.of(new SignerAssignment("dean", dean.getId())),
+                null, admin, ActorContext.none());
+
+        assertThat(forwarded.ok()).isFalse();
+        assertThat(forwarded.error()).contains("อยู่แล้ว");
+        assertThat(requestRepository.findByIdWithSteps(created.request().getId())
+                .orElseThrow().getSteps()).hasSize(2);
+    }
 }

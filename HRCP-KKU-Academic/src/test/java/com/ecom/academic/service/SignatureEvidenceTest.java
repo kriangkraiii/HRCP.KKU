@@ -81,6 +81,9 @@ class SignatureEvidenceTest {
     @Autowired
     private SignatureStepRepository stepRepository;
 
+    @Autowired
+    private SignedDocumentRenderer renderer;
+
     private UserDtls admin;
     private UserDtls head;
     private UserDtls dean;
@@ -219,28 +222,33 @@ class SignatureEvidenceTest {
     }
 
     @Test
-    @DisplayName("ลงนามแทนต้องบันทึกเหตุผลและพิมพ์ (แทน) นำหน้าชื่อ")
-    void delegatedSigningIsRecorded() {
+    @DisplayName("ผู้ลงนามทุกคนต้องลงนามในชื่อและบัญชีของตนเองโดยไม่มีการลงนามแทนเด็ดขาด")
+    void everySignerSignsInTheirOwnNameWithoutDelegation() {
         SignatureRequest envelope = createEnvelope(
-                List.of(new SignerAssignment("dean", dean.getId(),
-                        "คณบดีลาราชการ รองคณบดีปฏิบัติราชการแทน")),
+                List.of(new SignerAssignment("dean", dean.getId())),
                 null);
 
         SignatureStep step = stepOf(envelope, "dean");
-        assertThat(step.isDelegated()).isTrue();
-        assertThat(step.getDelegateReason()).contains("ปฏิบัติราชการแทน");
-        assertThat(step.getPrintedSignerName()).startsWith("(แทน)");
+        assertThat(step.isDelegated()).isFalse();
+        assertThat(step.getDelegateReason()).isNull();
+        assertThat(step.getPrintedSignerName()).doesNotContain("(แทน)");
+        assertThat(step.getPrintedSignerName()).isEqualTo(dean.getName());
     }
 
     @Test
-    @DisplayName("ไม่ได้ลงนามแทน ต้องไม่มีคำว่า (แทน)")
-    void ordinarySigningIsNotMarkedDelegated() {
-        SignatureRequest envelope = createEnvelope(
-                List.of(new SignerAssignment("dean", dean.getId())), null);
+    @DisplayName("ผู้ยื่นคำร้องลงนามในชื่อตนเองและไม่มีการลงนามแทน")
+    void applicantSlotSignsInTheirOwnName() {
+        Result r = workflow.createEnvelope(SignatureModule.ACADEMIC, REQUEST_ID, 0, "ก.พ.ว. 01",
+                FROZEN_JSON,
+                List.of(new SignerAssignment("applicant", admin.getId())),
+                null, admin, ActorContext.none());
+        assertThat(r.ok()).as(r.error()).isTrue();
 
-        SignatureStep step = stepOf(envelope, "dean");
+        SignatureStep step = stepOf(r.request(), "applicant");
         assertThat(step.isDelegated()).isFalse();
+        assertThat(step.getDelegateReason()).isNull();
         assertThat(step.getPrintedSignerName()).doesNotContain("(แทน)");
+        assertThat(step.getPrintedSignerName()).isEqualTo(admin.getName());
     }
 
     @Test
@@ -317,5 +325,34 @@ class SignatureEvidenceTest {
                 List.of(new SignerAssignment("head", head.getId())), null);
 
         assertThat(second.getVerificationCode()).isNotEqualTo(first.getVerificationCode());
+    }
+
+    @Test
+    @DisplayName("หน้ายืนยันการลงนามต้องแสดงลายเซ็นตัวอย่างในตำแหน่งที่จะลงนาม")
+    void previewSignatureIsStampedOnConfirmationPage() throws IOException {
+        SignatureRequest envelope = createEnvelope(
+                List.of(new SignerAssignment("dean", dean.getId())), null);
+        SignatureStep step = stepOf(envelope, "dean");
+
+        byte[] docxWithout = renderer.renderDocx(envelope);
+        assertThat(docxWithout).isNotEmpty();
+
+        byte[] docxWithPreview = renderer.renderDocx(envelope, step, deanSignature);
+        assertThat(docxWithPreview).isNotEmpty();
+        assertThat(docxWithPreview.length).isGreaterThan(docxWithout.length);
+    }
+
+    @Test
+    @DisplayName("เมื่อลงนามแล้ว เอกสารที่ดึงผ่าน renderer จะมีลายเซ็นฝังอยู่จริง")
+    void signedDocumentCarriesSignatureAfterSigning() throws IOException {
+        SignatureRequest envelope = createEnvelope(
+                List.of(new SignerAssignment("dean", dean.getId())), null);
+        SignatureStep step = stepOf(envelope, "dean");
+
+        Result r = workflow.sign(step.getId(), dean, deanSignature.getId(), true, ActorContext.none());
+        assertThat(r.ok()).as(r.error()).isTrue();
+
+        byte[] signedDocx = renderer.renderDocx(envelope);
+        assertThat(signedDocx).isNotEmpty();
     }
 }

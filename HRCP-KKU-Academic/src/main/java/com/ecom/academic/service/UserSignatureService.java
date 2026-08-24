@@ -52,6 +52,10 @@ public class UserSignatureService {
         return repository.findByIdAndUserIdAndIsDeletedFalse(id, owner.getId());
     }
 
+    public Optional<UserSignature> findById(Long id) {
+        return repository.findById(id).filter(s -> !Boolean.TRUE.equals(s.getIsDeleted()));
+    }
+
     public Optional<UserSignature> findDefault(UserDtls owner) {
         return repository.findByUserIdAndIsDefaultTrueAndIsDeletedFalse(owner.getId());
     }

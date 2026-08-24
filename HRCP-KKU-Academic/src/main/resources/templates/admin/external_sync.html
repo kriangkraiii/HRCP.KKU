@@ -12,16 +12,8 @@
     <div class="container-fluid py-4 px-4">
 
         <!-- Global Alerts -->
-        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show mb-4 shadow-sm">
-            <i class="fas fa-check-circle me-1"></i> [[${succMsg}]]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
         <div th:if="${warnMsg}" class="alert alert-warning alert-dismissible fade show mb-4 shadow-sm">
             <i class="fas fa-clock me-1"></i> [[${warnMsg}]]
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show mb-4 shadow-sm">
-            <i class="fas fa-exclamation-triangle me-1"></i> [[${errorMsg}]]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
 

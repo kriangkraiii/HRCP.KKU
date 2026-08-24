@@ -90,7 +90,8 @@ public class AcademicAdminController {
             HttpServletRequest httpRequest,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
-            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow) {
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
+            com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -98,10 +99,13 @@ public class AcademicAdminController {
         this.adminLogService = adminLogService;
         this.positionRequestService = positionRequestService;
         this.signatureWorkflow = signatureWorkflow;
+        this.signedDocumentRenderer = signedDocumentRenderer;
         this.httpRequest = httpRequest;
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
     }
+
+    private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -870,7 +874,24 @@ public class AcademicAdminController {
                 .orElseThrow(() -> new RuntimeException("Document not found"));
 
         byte[] data = null;
-        if (doc.getGeneratedFilePath() != null) {
+
+        // Check if there is an e-sign envelope (open or completed) with signatures
+        java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
+                signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.ACADEMIC, id, doc.getDocumentType());
+        if (optEnvelope.isPresent()) {
+            com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
+            try {
+                if ("pdf".equalsIgnoreCase(format)) {
+                    data = signedDocumentRenderer.renderPdf(envelope);
+                } else {
+                    data = signedDocumentRenderer.renderDocx(envelope);
+                }
+            } catch (Exception e) {
+                // fall through to saved draft file if render fails
+            }
+        }
+
+        if (data == null && doc.getGeneratedFilePath() != null) {
             data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
         }
 
@@ -905,6 +926,27 @@ public class AcademicAdminController {
         if (!docs.isEmpty()) {
             return downloadDocument(id, docs.get(0).getId(), format);
         }
+
+        // Check if envelope exists
+        java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
+                signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.ACADEMIC, id, type);
+        if (optEnvelope.isPresent()) {
+            com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
+            try {
+                byte[] data = "pdf".equalsIgnoreCase(format)
+                        ? signedDocumentRenderer.renderPdf(envelope)
+                        : signedDocumentRenderer.renderDocx(envelope);
+                if (data != null && data.length > 0) {
+                    String docLabel = DOC_LABELS.getOrDefault(type, "เอกสารที่ " + type);
+                    String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+                    String baseName = request.getRequestCode() + "_เอกสารที่_" + type + "_" + cleanDocName;
+                    return PreviewResponseFactory.build(documentService, data, format, baseName);
+                }
+            } catch (Exception e) {
+                // fall through
+            }
+        }
+
         Map<String, String> autoData = autoFillHelper.getPreFilledAcademicDocData(request, type, null);
         String jsonData = objectMapper.writeValueAsString(autoData);
         byte[] data = documentService.generatePreviewDocx(type, jsonData);
@@ -923,10 +965,23 @@ public class AcademicAdminController {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
             for (AcademicDocument doc : docs) {
-                if (doc.getGeneratedFilePath() == null)
-                    continue;
-                Path filePath = Path.of(doc.getGeneratedFilePath());
-                if (!Files.exists(filePath))
+                byte[] docxBytes = null;
+                java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
+                        signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.ACADEMIC, id, doc.getDocumentType());
+                if (optEnvelope.isPresent()) {
+                    try {
+                        docxBytes = signedDocumentRenderer.renderDocx(optEnvelope.get());
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+                if (docxBytes == null && doc.getGeneratedFilePath() != null) {
+                    Path filePath = Path.of(doc.getGeneratedFilePath());
+                    if (Files.exists(filePath)) {
+                        docxBytes = Files.readAllBytes(filePath);
+                    }
+                }
+                if (docxBytes == null)
                     continue;
 
                 String docLabel = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
@@ -936,7 +991,7 @@ public class AcademicAdminController {
                 String entryName = "เอกสารที่_" + doc.getDocumentType() + "_" + cleanDocName + ".docx";
 
                 zos.putNextEntry(new ZipEntry(entryName));
-                zos.write(Files.readAllBytes(filePath));
+                zos.write(docxBytes);
                 zos.closeEntry();
             }
         }

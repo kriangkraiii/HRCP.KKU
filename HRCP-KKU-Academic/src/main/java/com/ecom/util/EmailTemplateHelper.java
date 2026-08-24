@@ -26,23 +26,28 @@ public final class EmailTemplateHelper {
         // Direct CDN URLs used in HTML body - no MIME attachment needed to avoid [inline] chip in Gmail inbox
     }
 
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(EmailTemplateHelper.class);
+
     /**
-     * ตรวจสอบว่าอีเมลนี้เป็นบัญชีทดสอบหรือ mock email (เช่น user@user.com, admin@admin.com, *.test, *.example)
-     * หรือไม่ เพื่อละเว้นการยิงคำขอ SMTP ไปยังเซิร์ฟเวอร์จริง ป้องกันข้อผิดพลาดและลด log noise
+     * Whether to skip a real SMTP request for this address.
+     *
+     * <p>True for the configured rehearsal accounts (see
+     * {@code app.notification.test-accounts}), and for a missing address, which
+     * cannot be delivered to either. The two are distinct problems, so a
+     * missing address is logged rather than quietly treated as a test account.
+     *
+     * <p>Matching is by exact address. It used to match whole domains —
+     * {@code @test.com}, {@code @example.com}, and every address at
+     * {@code @user.com} and {@code @admin.com} — which would have made a real
+     * person silently unreachable if their address happened to look like one.
      */
     public static boolean isTestEmail(String email) {
         if (email == null || email.isBlank()) {
+            log.warn("Skipping email with no recipient address — this is a data problem, not a test account");
             return true;
         }
-        String clean = email.trim().toLowerCase();
-        return clean.equals("user@user.com")
-                || clean.equals("admin@admin.com")
-                || clean.endsWith("@user.com")
-                || clean.endsWith("@admin.com")
-                || clean.endsWith("@test.com")
-                || clean.endsWith("@example.com")
-                || clean.endsWith("@invalid")
-                || clean.endsWith("@localhost");
+        return com.ecom.config.TestAccountRegistry.isConfiguredTestAccount(email);
     }
 
     /**

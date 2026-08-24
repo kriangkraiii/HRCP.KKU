@@ -52,6 +52,7 @@ public class AcademicRequestService {
     private final AcademicDocumentEditLogRepository editLogRepository;
 
     private final AcademicEmailService emailService;
+    private final com.ecom.service.AfterCommitRunner afterCommit;
 
     private final com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository;
 
@@ -62,6 +63,7 @@ public class AcademicRequestService {
             RequestStatusHistoryRepository historyRepository,
             AcademicDocumentEditLogRepository editLogRepository,
             AcademicEmailService emailService,
+            com.ecom.service.AfterCommitRunner afterCommit,
             com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository) {
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
@@ -69,6 +71,7 @@ public class AcademicRequestService {
         this.historyRepository = historyRepository;
         this.editLogRepository = editLogRepository;
         this.emailService = emailService;
+        this.afterCommit = afterCommit;
         this.signatureRequestRepository = signatureRequestRepository;
     }
 
@@ -141,11 +144,10 @@ public class AcademicRequestService {
         }
 
         if (sendNotification) {
-            try {
-                emailService.sendStatusChangeEmail(request, oldStatus, newStatus);
-            } catch (Exception e) {
-                System.err.println("Failed to send email notification: " + e.getMessage());
-            }
+            // Announced only once the new status is actually committed, and by
+            // id so the background thread reads its own copy of the row.
+            Long notifyId = request.getId();
+            afterCommit.run(() -> emailService.sendStatusChangeEmail(notifyId, oldStatus, newStatus));
         }
 
         return request;
@@ -578,7 +580,7 @@ public class AcademicRequestService {
     }
 
     public void sendSuggestionEmail(AcademicRequest request, String suggestionsText) {
-        emailService.sendSuggestionEmail(request, suggestionsText);
-
+        Long notifyId = request.getId();
+        afterCommit.run(() -> emailService.sendSuggestionEmail(notifyId, suggestionsText));
     }
 }

@@ -18,6 +18,7 @@ public enum SignatureAuditEventType {
     SIGNED("ลงนาม", "fas fa-signature"),
     DECLINED("ปฏิเสธการลงนาม", "fas fa-circle-xmark"),
     CANCELLED("ยกเลิกการเวียน", "fas fa-ban"),
+    FORWARDED("ส่งเวียนลงนามต่อ", "fas fa-share"),
     COMPLETED("ลงนามครบทุกคน", "fas fa-circle-check"),
     VOIDED("ลายเซ็นเป็นโมฆะ", "fas fa-triangle-exclamation"),
     EXPIRED("เลยกำหนด", "fas fa-clock");

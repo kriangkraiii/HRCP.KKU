@@ -24,6 +24,7 @@ import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
 import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.SignatureStepStatus;
+import com.ecom.academic.model.UserSignature;
 import com.ecom.academic.service.SignatureVerificationService;
 import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.SignatureWorkflowService.ActorContext;
@@ -76,11 +77,21 @@ public class SigningController {
         this.httpRequest = httpRequest;
     }
 
-    /** Everything waiting on the signed-in person. */
+    /** Everything waiting on the signed-in person + sent envelopes tracking. */
     @GetMapping("/inbox")
     public String inbox(Principal principal, Model model) {
         UserDtls me = currentUser(principal);
-        model.addAttribute("pendingSteps", workflow.findInbox(me));
+        boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
+
+        List<SignatureStep> pendingSteps = workflow.findInbox(me);
+        List<SignatureRequest> sentEnvelopes = workflow.findSentEnvelopes(me);
+        List<SignatureRequest> allActiveEnvelopes = isAdmin ? workflow.findAllActiveEnvelopes() : List.of();
+
+        model.addAttribute("pendingSteps", pendingSteps);
+        model.addAttribute("sentEnvelopes", sentEnvelopes);
+        model.addAttribute("allActiveEnvelopes", allActiveEnvelopes);
+        model.addAttribute("isAdmin", isAdmin);
+        model.addAttribute("currentUser", me);
         return "academic/esign/inbox";
     }
 
@@ -97,7 +108,10 @@ public class SigningController {
         UserDtls me = currentUser(principal);
         SignatureStep step = workflow.findStep(stepId).orElse(null);
 
-        if (step == null || step.getSigner() == null || !step.getSigner().getId().equals(me.getId())) {
+        boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
+        boolean isSigner = step != null && step.getSigner() != null && me != null && step.getSigner().getId().equals(me.getId());
+
+        if (step == null || step.getSigner() == null || (!isSigner && !isAdmin)) {
             // Not "forbidden": revealing that a step exists tells an outsider
             // something about documents they have nothing to do with.
             redirectAttributes.addFlashAttribute("errorMsg", "ไม่พบรายการลงนามนี้");
@@ -131,16 +145,42 @@ public class SigningController {
 
     /** Streams the document being signed, for the on-page preview. */
     @GetMapping("/sign/{stepId}/preview")
-    public ResponseEntity<byte[]> preview(@PathVariable Long stepId, Principal principal) {
+    public ResponseEntity<byte[]> preview(
+            @PathVariable Long stepId,
+            @RequestParam(value = "userSignatureId", required = false) Long userSignatureId,
+            Principal principal) {
         UserDtls me = currentUser(principal);
         SignatureStep step = workflow.findStep(stepId).orElse(null);
 
-        if (step == null || step.getSigner() == null || !step.getSigner().getId().equals(me.getId())) {
+        boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
+        boolean isSigner = step != null && step.getSigner() != null && me != null && step.getSigner().getId().equals(me.getId());
+
+        if (step == null || step.getSigner() == null || (!isSigner && !isAdmin)) {
             return ResponseEntity.notFound().build();
         }
 
+        UserSignature previewSig = null;
+        if (userSignatureId != null) {
+            previewSig = signatureService.findMine(userSignatureId, me).orElse(null);
+            if (previewSig == null && isAdmin) {
+                previewSig = signatureService.findById(userSignatureId).orElse(null);
+            }
+        }
+        if (previewSig == null && step.getStatus() == SignatureStepStatus.ACTIVE) {
+            UserDtls targetSigner = (isSigner || !isAdmin) ? me : step.getSigner();
+            if (targetSigner != null) {
+                previewSig = signatureService.findDefault(targetSigner).orElse(null);
+                if (previewSig == null) {
+                    List<UserSignature> mine = signatureService.findMine(targetSigner);
+                    if (!mine.isEmpty()) {
+                        previewSig = mine.get(0);
+                    }
+                }
+            }
+        }
+
         try {
-            byte[] pdf = renderer.renderPdf(step.getSignatureRequest());
+            byte[] pdf = renderer.renderPdf(step.getSignatureRequest(), step, previewSig);
             if (pdf != null && pdf.length > 0) {
                 return ResponseEntity.ok()
                         .contentType(MediaType.APPLICATION_PDF)
@@ -150,15 +190,15 @@ public class SigningController {
             }
             // No LibreOffice on this host — hand over the DOCX so the signer can
             // still read what they are being asked to sign.
-            byte[] docx = renderer.renderDocx(step.getSignatureRequest());
+            byte[] docx = renderer.renderDocx(step.getSignatureRequest(), step, previewSig);
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(
                             "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
                     .header("Content-Disposition", "inline; filename=\"document.docx\"")
                     .header("X-Preview-Format", "docx-fallback")
                     .body(docx);
-        } catch (IOException e) {
-            log.error("Failed to render document for signing step {}: {}", stepId, e.toString());
+        } catch (Exception e) {
+            log.error("Failed to render document for signing step {}: {}", stepId, e.toString(), e);
             return ResponseEntity.internalServerError().build();
         }
     }
@@ -261,15 +301,16 @@ public class SigningController {
             @RequestParam(value = "documentType", defaultValue = "0") int documentType,
             @RequestParam(value = "slotKeys", required = false) List<String> slotKeys,
             @RequestParam(value = "signerUserIds", required = false) List<String> signerUserIds,
-            @RequestParam(value = "delegateReasons", required = false) List<String> delegateReasons,
             @RequestParam(value = "dueAt", required = false) String dueAt,
             Principal principal, RedirectAttributes redirectAttributes) {
 
         UserDtls me = currentUser(principal);
 
-        // Administrators circulate any document; an applicant may circulate the
-        // documents of their own request, several of which only they sign.
-        boolean isAdmin = "ROLE_ADMIN".equals(me.getRole());
+        // Administrators and staff circulate any document; an applicant may
+        // circulate the documents of their own request, several of which only
+        // they sign. Staff are included because the panel offers them the send
+        // button — refusing here would bounce them off an access rule instead.
+        boolean isAdmin = isAdminOrStaff(me);
         boolean isOwner = documentLabelResolver.isApplicantOf(module, requestId, me.getId());
         if (!isAdmin && !isOwner) {
             redirectAttributes.addFlashAttribute("errorMsg",
@@ -280,36 +321,116 @@ public class SigningController {
         String documentLabel = documentLabelResolver.labelFor(module, documentType);
         String frozenJson = documentLabelResolver.currentJsonFor(module, requestId, documentType);
 
-        List<SignerAssignment> assignments = new ArrayList<>();
-        if (slotKeys != null && signerUserIds != null) {
-            for (int i = 0; i < slotKeys.size() && i < signerUserIds.size(); i++) {
-                String raw = signerUserIds.get(i);
-                if (raw == null || raw.isBlank()) {
-                    continue;
-                }
-                // Parallel arrays: the browser submits one entry per slot, in
-                // slot order, so index i lines up across all three.
-                String reason = (delegateReasons != null && i < delegateReasons.size())
-                        ? delegateReasons.get(i)
-                        : null;
-                try {
-                    assignments.add(new SignerAssignment(
-                            slotKeys.get(i), Integer.valueOf(raw.trim()), reason));
-                } catch (NumberFormatException e) {
-                    redirectAttributes.addFlashAttribute("errorMsg", "ผู้ลงนามที่เลือกไม่ถูกต้อง");
-                    return "redirect:" + documentFormLink(module, requestId, documentType, me);
-                }
-            }
+        List<SignerAssignment> assignments = parseAssignments(slotKeys, signerUserIds);
+        if (assignments == null) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ผู้ลงนามที่เลือกไม่ถูกต้อง");
+            return "redirect:" + documentFormLink(module, requestId, documentType, me);
         }
 
         Result result = workflow.createEnvelope(module, requestId, documentType, documentLabel,
                 frozenJson, assignments, parseDueAt(dueAt), me, actorContext());
 
-        redirectAttributes.addFlashAttribute(result.ok() ? "succMsg" : "errorMsg",
-                result.ok()
-                        ? "ส่งเอกสารไปลงนามเรียบร้อยแล้ว ระบบได้แจ้งเตือนผู้ลงนามคนแรก"
-                        : result.error());
+        flashOutcome(result, redirectAttributes);
         return "redirect:" + documentFormLink(module, requestId, documentType, me);
+    }
+
+    /**
+     * Adds the next signers to a round already under way.
+     *
+     * <p>The counterpart to the review gate: once the applicant has signed and
+     * submitted, staff check the document and send it on to the head of
+     * department and the dean from here.
+     */
+    @PostMapping("/envelope/{envelopeId}/forward")
+    public String forwardEnvelope(@PathVariable Long envelopeId,
+            @RequestParam(value = "slotKeys", required = false) List<String> slotKeys,
+            @RequestParam(value = "signerUserIds", required = false) List<String> signerUserIds,
+            @RequestParam(value = "dueAt", required = false) String dueAt,
+            Principal principal, RedirectAttributes redirectAttributes) {
+
+        UserDtls me = currentUser(principal);
+        SignatureRequest envelope = workflow.findEnvelope(envelopeId).orElse(null);
+        if (envelope == null) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่พบคำขอลงนาม");
+            return "redirect:/esign/inbox";
+        }
+        // Forwarding commits other people to act, so it is staff-only — unlike
+        // cancelling, which the applicant may also do to their own request.
+        if (!isAdminOrStaff(me)) {
+            redirectAttributes.addFlashAttribute("errorMsg", "คุณไม่มีสิทธิ์ส่งเวียนลงนามต่อ");
+            return "redirect:/esign/inbox";
+        }
+
+        String back = documentFormLink(envelope.getModule(), envelope.getRequestId(),
+                envelope.getDocumentType(), me);
+
+        List<SignerAssignment> assignments = parseAssignments(slotKeys, signerUserIds);
+        if (assignments == null) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ผู้ลงนามที่เลือกไม่ถูกต้อง");
+            return "redirect:" + back;
+        }
+
+        Result result = workflow.forwardToNextSigners(
+                envelopeId, assignments, parseDueAt(dueAt), me, actorContext());
+        flashOutcome(result, redirectAttributes);
+        return "redirect:" + back;
+    }
+
+    /** Whether this person prepares and circulates documents for other people. */
+    private boolean isAdminOrStaff(UserDtls user) {
+        return user != null
+                && ("ROLE_ADMIN".equals(user.getRole()) || "ROLE_STAFF".equals(user.getRole()));
+    }
+
+    /**
+     * Pairs up the form's parallel arrays into assignments.
+     *
+     * <p>The browser submits one {@code slotKeys} entry and one
+     * {@code signerUserIds} entry per position, in slot order, so index i lines
+     * up across both. A blank id means that position is not part of this round.
+     *
+     * @return the assignments, or null when an id was not a number at all
+     */
+    private List<SignerAssignment> parseAssignments(List<String> slotKeys, List<String> signerUserIds) {
+        List<SignerAssignment> assignments = new ArrayList<>();
+        if (slotKeys == null || signerUserIds == null) {
+            return assignments;
+        }
+        for (int i = 0; i < slotKeys.size() && i < signerUserIds.size(); i++) {
+            String raw = signerUserIds.get(i);
+            if (raw == null || raw.isBlank()) {
+                continue;
+            }
+            try {
+                assignments.add(new SignerAssignment(slotKeys.get(i), Integer.valueOf(raw.trim())));
+            } catch (NumberFormatException e) {
+                return null;
+            }
+        }
+        return assignments;
+    }
+
+    /**
+     * Reports what actually happened, rather than assuming it went out.
+     *
+     * <p>A round whose next step is being held back — because the request is
+     * still a draft — is saved successfully but notifies nobody. Saying it was
+     * sent would be the false reassurance that makes the button look broken.
+     */
+    private void flashOutcome(Result result, RedirectAttributes redirectAttributes) {
+        if (!result.ok()) {
+            redirectAttributes.addFlashAttribute("errorMsg", result.error());
+            return;
+        }
+        SignatureRequest saved = result.request();
+        if (saved != null && saved.activeStep().isEmpty()) {
+            redirectAttributes.addFlashAttribute("warnMsg",
+                    "บันทึกผู้ลงนามเรียบร้อยแล้ว แต่ยังไม่ได้ส่งให้ใครลงนาม "
+                            + "ระบบจะเริ่มเวียนลงนามให้อัตโนมัติเมื่อผู้ยื่นกดส่งคำร้อง");
+            return;
+        }
+        redirectAttributes.addFlashAttribute("succMsg",
+                "ส่งเอกสารไปลงนามเรียบร้อยแล้ว ระบบได้แจ้งเตือนผู้ลงนามคนถัดไป");
     }
 
     /**

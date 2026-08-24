@@ -145,22 +145,14 @@ public class SignatureStep {
     private String delegateReason;
 
     /**
-     * Whether this person signs on someone else's behalf ("ปฏิบัติราชการแทน").
-     *
-     * <p>Keyed on the reason rather than {@link #delegatedFrom}, because the
-     * usual case is deputising for an <em>office</em> — "แทนคณบดี" — where the
-     * particular absent person is neither known nor relevant. The named
-     * predecessor is recorded when it happens to be known.
+     * Delegated / proxy signing is completely prohibited project-wide.
      */
     public boolean isDelegated() {
-        return delegateReason != null && !delegateReason.isBlank();
+        return false;
     }
 
-    /** The name to print, marked when signed on another's behalf. */
+    /** The name to print, each signer signs in their own official identity. */
     public String getPrintedSignerName() {
-        if (isDelegated()) {
-            return "(แทน) " + (signerNameSnapshot != null ? signerNameSnapshot : "");
-        }
         return signerNameSnapshot;
     }
 

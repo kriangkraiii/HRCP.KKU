@@ -53,6 +53,7 @@ public class PositionRequestService {
     private final AcademicDocumentRepository academicDocumentRepository;
 
     private final PositionEmailService emailService;
+    private final com.ecom.service.AfterCommitRunner afterCommit;
 
     private final PositionAttachmentRepository attachmentRepository;
 
@@ -66,6 +67,7 @@ public class PositionRequestService {
             AcademicRequestRepository academicRequestRepository,
             AcademicDocumentRepository academicDocumentRepository,
             PositionEmailService emailService,
+            com.ecom.service.AfterCommitRunner afterCommit,
             PositionAttachmentRepository attachmentRepository,
             com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository) {
         this.requestRepository = requestRepository;
@@ -75,6 +77,7 @@ public class PositionRequestService {
         this.academicRequestRepository = academicRequestRepository;
         this.academicDocumentRepository = academicDocumentRepository;
         this.emailService = emailService;
+        this.afterCommit = afterCommit;
         this.attachmentRepository = attachmentRepository;
         this.signatureRequestRepository = signatureRequestRepository;
     }
@@ -362,12 +365,10 @@ public class PositionRequestService {
 
         addStatusHistory(request, oldStatus, PositionRequestStatus.DOCUMENT_RECEIVED, null, "ส่งคำร้องเข้าระบบ");
 
-        // Send notification to admins
-        try {
-            emailService.sendNewRequestNotificationToAdmins(request);
-        } catch (Exception e) {
-            System.err.println("Email notification failed on submit: " + e.getMessage());
-        }
+        // Announced only once the submission is actually committed, and by id
+        // so the background thread reads its own copy of the row.
+        Long notifyId = request.getId();
+        afterCommit.run(() -> emailService.sendNewRequestNotificationToAdmins(notifyId));
 
         return request;
     }
@@ -411,11 +412,8 @@ public class PositionRequestService {
 
         // Send email notification to applicant if requested
         if (sendNotify) {
-            try {
-                emailService.sendStatusChangeEmail(request, oldStatus, newStatus);
-            } catch (Exception e) {
-                System.err.println("Email notification failed on status update: " + e.getMessage());
-            }
+            Long notifyId = request.getId();
+            afterCommit.run(() -> emailService.sendStatusChangeEmail(notifyId, oldStatus, newStatus));
         }
 
         return request;

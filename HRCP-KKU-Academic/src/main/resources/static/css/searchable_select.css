@@ -5,6 +5,11 @@
 .searchable-select-wrapper {
     position: relative;
     width: 100%;
+    z-index: 1;
+}
+
+.searchable-select-wrapper.is-open {
+    z-index: 1060;
 }
 
 .searchable-select-btn {
@@ -48,15 +53,23 @@
     top: 100%;
     left: 0;
     right: 0;
-    z-index: 1050;
+    z-index: 1065;
     display: none;
     margin-top: 4px;
     background: var(--bg-dropdown, #ffffff);
     border: 1px solid var(--border-color, rgba(0, 0, 0, 0.15));
     border-radius: 0.5rem;
-    box-shadow: var(--shadow-dropdown, 0 0.5rem 1.5rem rgba(0, 0, 0, 0.15));
-    max-height: 320px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    max-height: 280px;
     overflow-y: auto;
+}
+
+.searchable-select-dropdown.is-dropup {
+    top: auto;
+    bottom: 100%;
+    margin-top: 0;
+    margin-bottom: 4px;
+    box-shadow: 0 -10px 25px -5px rgba(0, 0, 0, 0.2), 0 -8px 10px -6px rgba(0, 0, 0, 0.1);
 }
 
 .searchable-select-dropdown.show {

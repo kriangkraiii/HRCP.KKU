@@ -97,18 +97,8 @@ public class SignatureWorkflowService {
 
     /**
      * Who should sign one slot, as chosen by whoever sends the document out.
-     *
-     * @param delegateReason set when this person signs on behalf of the role
-     *                       holder ("ปฏิบัติราชการแทน"), which Thai official
-     *                       documents require whenever the office holder is
-     *                       unavailable; null when they hold the role themselves
      */
-    public record SignerAssignment(String slotKey, Integer signerUserId, String delegateReason) {
-
-        /** An ordinary assignment, with nobody being deputised for. */
-        public SignerAssignment(String slotKey, Integer signerUserId) {
-            this(slotKey, signerUserId, null);
-        }
+    public record SignerAssignment(String slotKey, Integer signerUserId) {
     }
 
     /** Context captured from the HTTP request, for the evidence record. */
@@ -145,6 +135,13 @@ public class SignatureWorkflowService {
                 .stream().findFirst();
     }
 
+    /**
+     * Finds the active or completed envelope holding signatures for a document.
+     */
+    public Optional<SignatureRequest> findEnvelope(SignatureModule module, Long requestId, int documentType) {
+        return findBlockingEnvelope(module, requestId, documentType);
+    }
+
     /** Whether the document form should be read-only right now. */
     public boolean isDocumentLocked(SignatureModule module, Long requestId, int documentType) {
         return findBlockingEnvelope(module, requestId, documentType).isPresent();
@@ -158,6 +155,17 @@ public class SignatureWorkflowService {
     public List<SignatureStep> findInbox(UserDtls signer) {
         if (signer == null) return List.of();
         return stepRepository.findInbox(signer.getId(), SignatureStepStatus.ACTIVE);
+    }
+
+    /** Open envelopes sent/initiated by this user that are currently in progress. */
+    public List<SignatureRequest> findSentEnvelopes(UserDtls initiator) {
+        if (initiator == null || initiator.getId() == null) return List.of();
+        return requestRepository.findByInitiatedByWithSteps(initiator.getId(), SignatureRequestStatus.IN_PROGRESS);
+    }
+
+    /** All open envelopes across the system (for Admin/Staff overview). */
+    public List<SignatureRequest> findAllActiveEnvelopes() {
+        return requestRepository.findByStatusWithSteps(SignatureRequestStatus.IN_PROGRESS);
     }
 
     /** Finds the next pending signature step for a signer excluding current step. */
@@ -361,21 +369,59 @@ public class SignatureWorkflowService {
         envelope.setVerificationCode(newVerificationCode());
         envelope.setDueAt(dueAt);
 
-        int order = 0;
+        String problem = addStepsForAssignments(envelope, slots, assignments);
+        if (problem != null) {
+            return Result.failed(problem);
+        }
+
+        if (envelope.getSteps().isEmpty()) {
+            return Result.failed("กรุณาเลือกผู้ลงนามอย่างน้อยหนึ่งคน");
+        }
+
+        SignatureRequest saved = requestRepository.save(envelope);
+        audit(saved, null, SignatureAuditEventType.CREATED, initiator, actor,
+                "ส่งเอกสารไปลงนาม " + saved.getSteps().size() + " ขั้นตอน");
+
+        activateNextStep(saved, actor);
+        return new Result(requestRepository.save(saved), null);
+    }
+
+    /**
+     * Attaches one step per assigned slot to an envelope, in slot order.
+     *
+     * <p>Shared by starting a round and by forwarding one onward, so both build
+     * steps the same way. Slots left unassigned are simply not part of the round
+     * yet — a document may legitimately need only some of its signatures now.
+     *
+     * @return an error message to show the sender, or null when all is well
+     */
+    private String addStepsForAssignments(SignatureRequest envelope, List<SignatureSlot> slots,
+            List<SignerAssignment> assignments) {
+
+        int order = envelope.getSteps().stream()
+                .mapToInt(SignatureStep::getStepOrder)
+                .max()
+                .orElse(0);
+
         for (SignatureSlot slot : slots) {
             SignerAssignment assignment = assignments.stream()
                     .filter(a -> a.slotKey().equals(slot.slotKey()))
                     .findFirst()
                     .orElse(null);
-            // Slots left unassigned are simply not part of this round — a
-            // document may legitimately need only some of its signatures now.
             if (assignment == null || assignment.signerUserId() == null) {
+                continue;
+            }
+            // Never ask the same position twice in one round.
+            boolean alreadyPresent = envelope.getSteps().stream()
+                    .anyMatch(existing -> slot.slotKey().equalsIgnoreCase(existing.getSlotKey())
+                            && existing.getStatus() != SignatureStepStatus.SKIPPED);
+            if (alreadyPresent) {
                 continue;
             }
 
             UserDtls signer = userRepository.findById(assignment.signerUserId()).orElse(null);
             if (signer == null) {
-                return Result.failed("ไม่พบบัญชีผู้ลงนามสำหรับ \"" + slot.roleLabel() + "\"");
+                return "ไม่พบบัญชีผู้ลงนามสำหรับ \"" + slot.roleLabel() + "\"";
             }
 
             order++;
@@ -389,25 +435,68 @@ public class SignatureWorkflowService {
             step.setSignerPositionSnapshot(signer.getAcademicPosition());
             step.setStatus(SignatureStepStatus.WAITING);
 
-            // Acting for someone else: recorded so the document prints "(แทน)"
-            // and the audit trail says why this person signed in that place.
-            if (assignment.delegateReason() != null && !assignment.delegateReason().isBlank()) {
-                step.setDelegateReason(truncate(assignment.delegateReason().trim(), 500));
-            }
-
             envelope.addStep(step);
         }
+        return null;
+    }
 
-        if (envelope.getSteps().isEmpty()) {
+    /**
+     * Adds the next tier of signers to a round that is already under way.
+     *
+     * <p>This is the administrator's half of the review gate: the applicant
+     * signs and submits, staff check the document, and only then is it sent on
+     * to the head of department and the dean. Without it a round could never
+     * grow past the signatures chosen when it was first sent, which for a
+     * document whose only initial slot is the applicant's meant it could never
+     * be circulated at all.
+     *
+     * <p>A round already marked complete is reopened: a document whose applicant
+     * signature is finished is exactly the one waiting to be forwarded.
+     */
+    @Transactional
+    public Result forwardToNextSigners(Long envelopeId, List<SignerAssignment> assignments,
+            LocalDateTime dueAt, UserDtls adminUser, ActorContext actor) {
+
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(envelopeId).orElse(null);
+        if (envelope == null) {
+            return Result.failed("ไม่พบคำขอลงนาม");
+        }
+        if (assignments == null || assignments.isEmpty()) {
             return Result.failed("กรุณาเลือกผู้ลงนามอย่างน้อยหนึ่งคน");
         }
+        SignatureRequestStatus status = envelope.getStatus();
+        if (!status.isOpen() && status != SignatureRequestStatus.COMPLETED) {
+            return Result.failed("คำขอลงนามนี้ถูกปิดไปแล้ว (" + status.getThaiLabel() + ")");
+        }
 
-        SignatureRequest saved = requestRepository.save(envelope);
-        audit(saved, null, SignatureAuditEventType.CREATED, initiator, actor,
-                "ส่งเอกสารไปลงนาม " + saved.getSteps().size() + " ขั้นตอน");
+        List<SignatureSlot> slots = workflowConfigService != null
+                ? workflowConfigService.effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType())
+                : anchorRegistry.slotsFor(envelope.getModule(), envelope.getDocumentType());
 
-        activateNextStep(saved, actor);
-        return new Result(requestRepository.save(saved), null);
+        int before = envelope.getSteps().size();
+        String problem = addStepsForAssignments(envelope, slots, assignments);
+        if (problem != null) {
+            return Result.failed(problem);
+        }
+        if (envelope.getSteps().size() == before) {
+            return Result.failed("ผู้ลงนามที่เลือกถูกเพิ่มไว้ในรอบนี้อยู่แล้ว");
+        }
+
+        if (dueAt != null) {
+            envelope.setDueAt(dueAt);
+        }
+
+        // Reopen a finished round so the freshly added steps can run.
+        if (status == SignatureRequestStatus.COMPLETED) {
+            envelope.setStatus(SignatureRequestStatus.IN_PROGRESS);
+            envelope.setCompletedAt(null);
+        }
+
+        audit(envelope, null, SignatureAuditEventType.FORWARDED, adminUser, actor,
+                "ส่งเวียนลงนามต่ออีก " + (envelope.getSteps().size() - before) + " ขั้นตอน");
+
+        activateNextStep(envelope, actor);
+        return new Result(requestRepository.save(envelope), null);
     }
 
     // =====================================================================
@@ -684,6 +773,17 @@ public class SignatureWorkflowService {
         }
 
         SignatureStep step = next.get();
+
+        // Admin Gate: If the step is for staff/executive/committee (not applicant),
+        // and the parent request exists and is still in DRAFT mode:
+        // Hold the step in WAITING until the request is submitted by the applicant!
+        if (!"applicant".equalsIgnoreCase(step.getSlotKey()) && snapshotProvider != null
+                && snapshotProvider.isDraftRequest(envelope.getModule(), envelope.getRequestId())) {
+            log.info("Holding signature step {} ({}) for envelope {} because request #{} is still in DRAFT",
+                    step.getId(), step.getRoleLabel(), envelope.getId(), envelope.getRequestId());
+            return;
+        }
+
         step.setStatus(SignatureStepStatus.ACTIVE);
         step.setNotifiedAt(LocalDateTime.now());
         stepRepository.save(step);
@@ -691,6 +791,21 @@ public class SignatureWorkflowService {
         audit(envelope, step.getId(), SignatureAuditEventType.NOTIFIED, null, actor,
                 "แจ้งเตือน " + step.getSignerNameSnapshot() + " ให้ลงนาม");
         notifier.notifySignatureRequested(noticeFor(envelope, step, List.of(step.getSigner())));
+    }
+
+    /**
+     * Called upon request submission (DRAFT -> SUBMITTED) to activate the next
+     * step (e.g. staff/admin review & signature) for any circulating envelopes.
+     */
+    @Transactional
+    public void advanceHeldStepsForRequest(SignatureModule module, Long requestId, ActorContext actor) {
+        List<SignatureRequest> envelopes = requestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(module, requestId);
+        for (SignatureRequest envelope : envelopes) {
+            if (envelope.getStatus() == SignatureRequestStatus.IN_PROGRESS && envelope.activeStep().isEmpty()) {
+                activateNextStep(envelope, actor);
+                requestRepository.save(envelope);
+            }
+        }
     }
 
     // =====================================================================
@@ -836,23 +951,43 @@ public class SignatureWorkflowService {
                             .toList());
         }
 
-        // 3. Everyone with an ACTIVE, linked account (inactive excluded!)
-        List<com.ecom.academic.dto.SignerOptionDTO> others =
-                staffMemberService.findAllWithAccounts().stream()
-                        .filter(com.ecom.academic.model.StaffMember::isSignable)
-                        .map(com.ecom.academic.dto.SignerOptionDTO::from)
-                        .toList();
+        // 3. Everyone with an ACTIVE account (Staff members + Admins/Staff/Users)
+        java.util.Map<Integer, com.ecom.academic.dto.SignerOptionDTO> othersMap = new java.util.LinkedHashMap<>();
+        staffMemberService.findAllWithAccounts().stream()
+                .filter(com.ecom.academic.model.StaffMember::isSignable)
+                .forEach(s -> {
+                    com.ecom.academic.dto.SignerOptionDTO dto = com.ecom.academic.dto.SignerOptionDTO.from(s);
+                    if (dto.userId() != null) {
+                        othersMap.put(dto.userId(), dto);
+                    }
+                });
+
+        userRepository.findAll().stream()
+                .filter(u -> Boolean.TRUE.equals(u.getIsEnable()))
+                .forEach(u -> {
+                    if (!othersMap.containsKey(u.getId())) {
+                        othersMap.put(u.getId(), com.ecom.academic.dto.SignerOptionDTO.fromUser(u));
+                    }
+                });
+
+        List<com.ecom.academic.dto.SignerOptionDTO> others = new java.util.ArrayList<>(othersMap.values());
+        others.sort(java.util.Comparator.comparing(com.ecom.academic.dto.SignerOptionDTO::displayName,
+                java.util.Comparator.nullsLast(String::compareToIgnoreCase)));
 
         com.ecom.academic.dto.SignerOptionDTO applicantOption = applicantUser != null
                 ? com.ecom.academic.dto.SignerOptionDTO.fromUser(applicantUser)
                 : null;
+
+        boolean isAdminViewer = viewer != null
+                && ("ROLE_ADMIN".equals(viewer.getRole()) || "ROLE_STAFF".equals(viewer.getRole()));
 
         return new com.ecom.academic.dto.SignaturePanelView(
                 slots, recommended, others, defaultSignerUserIds,
                 applicantOption,
                 com.ecom.academic.dto.SignerOptionDTO.fromUser(viewer),
                 findBlockingEnvelope(module, requestId, documentType).orElse(null),
-                true);
+                true,
+                isAdminViewer);
     }
 
     /** Signed steps carrying the images to stamp, in order. */

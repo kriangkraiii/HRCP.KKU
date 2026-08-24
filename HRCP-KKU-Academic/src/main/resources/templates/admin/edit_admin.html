@@ -34,32 +34,6 @@
                 </a>
               </div>
               <div class="card-body p-4">
-                <div
-                  th:if="${succMsg}"
-                  class="alert alert-success alert-dismissible fade show"
-                  role="alert"
-                >
-                  <i class="fas fa-check-circle me-2"></i>
-                  <span th:text="${succMsg}"></span>
-                  <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="alert"
-                  ></button>
-                </div>
-                <div
-                  th:if="${errorMsg}"
-                  class="alert alert-danger alert-dismissible fade show"
-                  role="alert"
-                >
-                  <i class="fas fa-exclamation-circle me-2"></i>
-                  <span th:text="${errorMsg}"></span>
-                  <button
-                    type="button"
-                    class="btn-close"
-                    data-bs-dismiss="alert"
-                  ></button>
-                </div>
 
                 <form
                   th:action="@{/admin/update-admin}"
@@ -86,8 +60,8 @@
                         <option value="นาง" th:selected="${admin.title == 'นาง'}">นาง</option>
                         <option value="นางสาว" th:selected="${admin.title == 'นางสาว'}">นางสาว</option>
                         <option value="ดร." th:selected="${admin.title == 'ดร.'}">ดร.</option>
-                        <option value="อาจารย์" th:selected="${admin.title == 'อาจารย์' or admin.title == 'อ.'}">อาจารย์ (อ.)</option>
-                        <option value="อ.ดร." th:selected="${admin.title == 'อ.ดร.' or admin.title == 'อาจารย์ ดร.'}">อาจารย์ ดร. (อ.ดร.)</option>
+                        <option value="อาจารย์" th:selected="${admin.title == 'อาจารย์' or admin.title == 'อ.'}">อาจารย์</option>
+                        <option value="อ.ดร." th:selected="${admin.title == 'อ.ดร.' or admin.title == 'อาจารย์ ดร.'}">อาจารย์ ดร.</option>
                         <option value="ผศ." th:selected="${admin.title == 'ผศ.' or admin.title == 'ผู้ช่วยศาสตราจารย์'}">ผศ.</option>
                         <option value="ผศ.ดร." th:selected="${admin.title == 'ผศ.ดร.' or admin.title == 'ผู้ช่วยศาสตราจารย์ ดร.' or admin.title == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผศ.ดร.</option>
                         <option value="รศ." th:selected="${admin.title == 'รศ.' or admin.title == 'รองศาสตราจารย์'}">รศ.</option>
@@ -146,19 +120,19 @@
                           value="ผู้ช่วยศาสตราจารย์"
                           th:selected="${admin.academicPosition == 'ผู้ช่วยศาสตราจารย์'}"
                         >
-                          ผู้ช่วยศาสตราจารย์ (ผศ.)
+                          ผู้ช่วยศาสตราจารย์
                         </option>
                         <option
                           value="รองศาสตราจารย์"
                           th:selected="${admin.academicPosition == 'รองศาสตราจารย์'}"
                         >
-                          รองศาสตราจารย์ (รศ.)
+                          รองศาสตราจารย์
                         </option>
                         <option
                           value="ศาสตราจารย์"
                           th:selected="${admin.academicPosition == 'ศาสตราจารย์'}"
                         >
-                          ศาสตราจารย์ (ศ.)
+                          ศาสตราจารย์
                         </option>
                       </select>
                     </div>

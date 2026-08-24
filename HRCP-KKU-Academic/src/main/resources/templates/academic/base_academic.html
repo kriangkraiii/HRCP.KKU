@@ -81,7 +81,6 @@
                     <i class="fas fa-cloud-arrow-down"></i> ดึงข้อมูลจากระบบภายนอก
                 </a>
 
-
                 <div class="sidebar-section-title">ระบบ & การตั้งค่า</div>
                 <a href="/admin/notifications" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-notifications">
                     <span><i class="fas fa-bell me-2"></i>การแจ้งเตือน</span>
@@ -501,7 +500,6 @@
                     </div>
                 </div>
 
-
                 <!-- Help / User Guide Icon -->
                 <a th:href="${user != null and user.role == 'ROLE_ADMIN' ? '/admin/academic/guide' : '/user/academic/guide'}"
                    class="topbar-icon-btn"
@@ -528,6 +526,23 @@
                 </a>
             </div>
         </header>
+
+        <!-- ข้อความผลลัพธ์กลาง: หน้าใดก็ตามที่ redirect มาพร้อม flash attribute จะแสดงตรงนี้
+             โดยไม่ต้องไปเพิ่มบล็อกซ้ำในทุกเทมเพลต -->
+        <div class="px-4 pt-3" th:if="${succMsg != null or errorMsg != null or warnMsg != null}">
+            <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fas fa-circle-check me-2"></i> <span th:text="${succMsg}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="ปิด"></button>
+            </div>
+            <div th:if="${warnMsg}" class="alert alert-warning alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fas fa-triangle-exclamation me-2"></i> <span th:text="${warnMsg}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="ปิด"></button>
+            </div>
+            <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+                <i class="fas fa-circle-exclamation me-2"></i> <span th:text="${errorMsg}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="ปิด"></button>
+            </div>
+        </div>
 
         <div class="content-wrapper" id="main-content" th:replace="${content}"></div>
         <footer class="main-footer" role="contentinfo">

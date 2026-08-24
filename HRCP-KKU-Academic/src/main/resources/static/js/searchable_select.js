@@ -187,9 +187,25 @@ class SearchableSelect {
         document.querySelectorAll('.searchable-select-btn.is-open').forEach(b => {
             if (b !== this.btn) b.classList.remove('is-open');
         });
+        document.querySelectorAll('.searchable-select-wrapper.is-open').forEach(w => {
+            if (w !== this.wrapper) w.classList.remove('is-open');
+        });
+
+        // Auto-detect whether to drop down or drop up based on viewport space
+        const rect = this.btn.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - rect.bottom;
+        const spaceAbove = rect.top;
+        const dropdownHeight = 280;
+
+        if (spaceBelow < dropdownHeight && spaceAbove > spaceBelow) {
+            this.dropdown.classList.add('is-dropup');
+        } else {
+            this.dropdown.classList.remove('is-dropup');
+        }
 
         this.dropdown.classList.add('show');
         this.btn.classList.add('is-open');
+        this.wrapper.classList.add('is-open');
         this.searchInput.value = '';
         this.filterOptions('');
         setTimeout(() => this.searchInput.focus(), 50);
@@ -197,7 +213,9 @@ class SearchableSelect {
 
     close() {
         this.dropdown.classList.remove('show');
+        this.dropdown.classList.remove('is-dropup');
         this.btn.classList.remove('is-open');
+        this.wrapper.classList.remove('is-open');
     }
 
     toggle() {

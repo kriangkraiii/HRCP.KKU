@@ -91,17 +91,30 @@ public class SignedDocumentRenderer {
      * would imply more than is true.
      */
     public byte[] renderDocx(SignatureRequest envelope) throws IOException {
-        List<StampedSignature> signatures = collectSignatures(envelope);
+        return renderDocx(envelope, null, null);
+    }
+
+    /**
+     * The document rendered with collected signatures, plus optionally previewing
+     * an active step's signature before confirmation.
+     */
+    public byte[] renderDocx(SignatureRequest envelope, SignatureStep previewStep, com.ecom.academic.model.UserSignature previewSig) throws IOException {
+        List<StampedSignature> signatures = collectSignatures(envelope, previewStep, previewSig);
         DocumentGenerationService.VerificationStamp verification =
                 envelope.getStatus() == SignatureRequestStatus.COMPLETED
                         ? verificationStampFor(envelope)
                         : null;
 
+        String json = envelope.getFrozenJson();
+        if (json == null || json.isBlank()) {
+            json = "{}";
+        }
+
         return envelope.getModule() == SignatureModule.ACADEMIC
                 ? documentGenerationService.generateSignedDocx(
-                        envelope.getDocumentType(), envelope.getFrozenJson(), signatures, verification)
+                        envelope.getDocumentType(), json, signatures, verification)
                 : documentGenerationService.generateSignedP2Docx(
-                        envelope.getDocumentType(), envelope.getFrozenJson(), signatures, verification);
+                        envelope.getDocumentType(), json, signatures, verification);
     }
 
     /** The footer's caption, code and QR. */
@@ -163,7 +176,14 @@ public class SignedDocumentRenderer {
      *         the DOCX instead rather than failing the page
      */
     public byte[] renderPdf(SignatureRequest envelope) throws IOException {
-        byte[] docx = renderDocx(envelope);
+        return renderPdf(envelope, null, null);
+    }
+
+    /**
+     * Renders document as PDF with collected signatures and optional preview signature.
+     */
+    public byte[] renderPdf(SignatureRequest envelope, SignatureStep previewStep, com.ecom.academic.model.UserSignature previewSig) throws IOException {
+        byte[] docx = renderDocx(envelope, previewStep, previewSig);
         if (!documentGenerationService.isPdfConversionAvailable()) {
             return null;
         }
@@ -171,13 +191,18 @@ public class SignedDocumentRenderer {
     }
 
     /**
-     * Loads the image for each signed step.
+     * Loads the image for each signed step, plus optional preview signature.
      *
      * <p>Reads {@code imagePathSnapshot} rather than following the link to the
      * signer's library: someone deleting a signature from their own library must
      * not blank out a document they already signed.
      */
     private List<StampedSignature> collectSignatures(SignatureRequest envelope) {
+        return collectSignatures(envelope, null, null);
+    }
+
+    private List<StampedSignature> collectSignatures(SignatureRequest envelope,
+            SignatureStep previewStep, com.ecom.academic.model.UserSignature previewSig) {
         List<StampedSignature> stamped = new ArrayList<>();
 
         for (SignatureStep step : stepRepository.findSignedSteps(envelope.getId())) {
@@ -210,6 +235,30 @@ public class SignedDocumentRenderer {
 
             stamped.add(new StampedSignature(step.getAnchorPlaceholder(), png, width, height));
         }
+
+        // Place preview signature onto active step's anchor if provided and not already signed
+        if (previewStep != null && previewSig != null && previewStep.getAnchorPlaceholder() != null) {
+            boolean alreadyStamped = stamped.stream()
+                    .anyMatch(s -> s.anchorPlaceholder().equals(previewStep.getAnchorPlaceholder()));
+            if (!alreadyStamped && previewSig.getImagePath() != null && !previewSig.getImagePath().isBlank()) {
+                byte[] png = signatureImageStorage.read(previewSig.getImagePath());
+                if (png != null) {
+                    int width = 0;
+                    int height = 0;
+                    try {
+                        BufferedImage image = ImageIO.read(new ByteArrayInputStream(png));
+                        if (image != null) {
+                            width = image.getWidth();
+                            height = image.getHeight();
+                        }
+                    } catch (IOException e) {
+                        log.warn("Could not measure preview signature image {}: {}", previewSig.getImagePath(), e.toString());
+                    }
+                    stamped.add(new StampedSignature(previewStep.getAnchorPlaceholder(), png, width, height));
+                }
+            }
+        }
+
         return stamped;
     }
 }

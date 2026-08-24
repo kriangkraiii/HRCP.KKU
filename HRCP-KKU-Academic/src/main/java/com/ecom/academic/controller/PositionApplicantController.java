@@ -53,6 +53,11 @@ public class PositionApplicantController {
     private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+    private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
+    private final jakarta.servlet.http.HttpServletRequest httpRequest;
+
+    private static final org.slf4j.Logger log =
+            org.slf4j.LoggerFactory.getLogger(PositionApplicantController.class);
 
     public PositionApplicantController(
             PositionRequestService positionService,
@@ -61,7 +66,9 @@ public class PositionApplicantController {
             DocumentGenerationService documentService,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
-            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow) {
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
+            com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer,
+            jakarta.servlet.http.HttpServletRequest httpRequest) {
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.academicService = academicService;
@@ -69,6 +76,8 @@ public class PositionApplicantController {
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
         this.signatureWorkflow = signatureWorkflow;
+        this.signedDocumentRenderer = signedDocumentRenderer;
+        this.httpRequest = httpRequest;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -415,6 +424,18 @@ public class PositionApplicantController {
         }
 
         positionService.submitRequest(request);
+
+        // ปลดล็อกให้ขั้นตอนลงนามถัดไป (เช่น เจ้าหน้าที่/HR) เริ่มทำงานได้หลังยื่นคำร้อง
+        // ถ้าพลาดตรงนี้ เอกสารจะค้างโดยไม่มีใครได้รับให้ลงนาม จึงต้องมีร่องรอยไว้เสมอ
+        try {
+            var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
+                    com.ecom.config.ClientIpUtils.resolveClientIp(httpRequest),
+                    httpRequest != null ? httpRequest.getHeader("User-Agent") : "Browser");
+            signatureWorkflow.advanceHeldStepsForRequest(com.ecom.academic.model.SignatureModule.POSITION, id, actorContext);
+        } catch (Exception e) {
+            log.error("Could not release held signature steps for POSITION request {}: {}", id, e.toString(), e);
+        }
+
         return "redirect:/user/position/dashboard?success=submitted";
     }
 
@@ -435,30 +456,36 @@ public class PositionApplicantController {
         }
 
         List<PositionDocument> docs = positionService.getDocumentsByType(id, type);
-        if (docs.isEmpty()) {
-            Map<String, String> autoData = autoFillHelper.getPreFilledPositionDocData(request, type, null);
-            String jsonData = objectMapper.writeValueAsString(autoData);
-            byte[] previewData = documentService.generateP2PreviewDocx(type, jsonData);
-            String label = positionService.getDocLabel(type);
-            String cleanDocName = label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
-            String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + type + "_" + cleanDocName;
-            return PreviewResponseFactory.build(documentService, previewData, format, baseName);
-        }
-
-        PositionDocument doc = docs.get(0);
+        PositionDocument doc = docs.isEmpty() ? null : docs.get(0);
         byte[] data = null;
-        String label = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
+        String label = (doc != null && doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank())
                 ? doc.getDocumentLabel()
                 : positionService.getDocLabel(type);
 
-        if (doc.getGeneratedFilePath() != null) {
+        // Check if there is an e-sign envelope (open or completed) with signatures
+        java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
+                signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.POSITION, id, type);
+        if (optEnvelope.isPresent()) {
+            com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
+            try {
+                if ("pdf".equalsIgnoreCase(format)) {
+                    data = signedDocumentRenderer.renderPdf(envelope);
+                } else {
+                    data = signedDocumentRenderer.renderDocx(envelope);
+                }
+            } catch (Exception e) {
+                // fall through to saved draft file if render fails
+            }
+        }
+
+        if (data == null && doc != null && doc.getGeneratedFilePath() != null) {
             Path filePath = Path.of(doc.getGeneratedFilePath());
             if (Files.exists(filePath)) {
                 data = Files.readAllBytes(filePath);
             }
         }
 
-        if (data == null && doc.getJsonData() != null) {
+        if (data == null && doc != null && doc.getJsonData() != null) {
             try {
                 String generatedPath = documentService.generateP2Document(request, type, doc.getJsonData());
                 if (generatedPath != null) {
@@ -473,6 +500,12 @@ public class PositionApplicantController {
             } catch (Exception e) {
                 // fall through
             }
+        }
+
+        if (data == null && docs.isEmpty()) {
+            Map<String, String> autoData = autoFillHelper.getPreFilledPositionDocData(request, type, null);
+            String jsonData = objectMapper.writeValueAsString(autoData);
+            data = documentService.generateP2PreviewDocx(type, jsonData);
         }
 
         if (data == null) {

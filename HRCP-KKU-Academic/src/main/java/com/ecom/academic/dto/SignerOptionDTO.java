@@ -49,8 +49,23 @@ public record SignerOptionDTO(
         if (user == null) {
             return null;
         }
-        String title = user.getAcademicPosition();
-        String name = (title == null || title.isBlank() ? "" : title + " ") + user.getName();
-        return new SignerOptionDTO(null, user.getId(), name.trim(), null, user.getEmail(), true);
+        String prefix = user.getAcademicPosition();
+        if (prefix == null || prefix.isBlank()) {
+            prefix = user.getTitle();
+        }
+        String fullName = user.getName();
+        if ((fullName == null || fullName.isBlank()) && (user.getFirstName() != null || user.getLastName() != null)) {
+            fullName = (user.getFirstName() != null ? user.getFirstName() : "") + " " + (user.getLastName() != null ? user.getLastName() : "");
+        }
+        if (fullName == null || fullName.isBlank()) {
+            fullName = user.getEmail();
+        }
+        String displayName = (prefix == null || prefix.isBlank() ? "" : prefix + " ") + fullName;
+        if (user.getRole() != null && ("ROLE_ADMIN".equalsIgnoreCase(user.getRole()) || "ADMIN".equalsIgnoreCase(user.getRole()))) {
+            displayName = displayName.trim() + " [แอดมิน]";
+        } else if (user.getRole() != null && ("ROLE_STAFF".equalsIgnoreCase(user.getRole()) || "STAFF".equalsIgnoreCase(user.getRole()))) {
+            displayName = displayName.trim() + " [เจ้าหน้าที่]";
+        }
+        return new SignerOptionDTO(null, user.getId(), displayName.trim(), null, user.getEmail(), true);
     }
 }

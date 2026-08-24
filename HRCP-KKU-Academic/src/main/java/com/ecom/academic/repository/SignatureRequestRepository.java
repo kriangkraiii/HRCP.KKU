@@ -76,4 +76,23 @@ public interface SignatureRequestRepository extends JpaRepository<SignatureReque
     List<SignatureRequest> findByStatusAndDueAtBefore(SignatureRequestStatus status, LocalDateTime cutoff);
 
     List<SignatureRequest> findByStatusOrderByCreatedAtAsc(SignatureRequestStatus status);
+
+    @Query("""
+            SELECT DISTINCT r FROM SignatureRequest r
+            LEFT JOIN FETCH r.steps s
+            LEFT JOIN FETCH s.signer
+            WHERE r.status = :status
+            ORDER BY r.createdAt DESC
+            """)
+    List<SignatureRequest> findByStatusWithSteps(@Param("status") SignatureRequestStatus status);
+
+    @Query("""
+            SELECT DISTINCT r FROM SignatureRequest r
+            LEFT JOIN FETCH r.steps s
+            LEFT JOIN FETCH s.signer
+            WHERE r.initiatedBy.id = :userId AND r.status = :status
+            ORDER BY r.createdAt DESC
+            """)
+    List<SignatureRequest> findByInitiatedByWithSteps(@Param("userId") Integer userId,
+            @Param("status") SignatureRequestStatus status);
 }

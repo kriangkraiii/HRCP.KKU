@@ -299,6 +299,29 @@ class EsignPdfViewer {
         }
     }
 
+    async loadNewPdf(newUrl) {
+        if (!newUrl) return;
+        this.pdfUrl = newUrl;
+        const openTabBtn = this.container.querySelector('a[title="เปิดแท็บใหม่"]');
+        if (openTabBtn) {
+            openTabBtn.href = newUrl;
+        }
+        if (this.loadingEl) {
+            this.loadingEl.style.display = 'flex';
+            this.loadingEl.classList.remove('d-none');
+            if (this.pagesViewEl) {
+                this.pagesViewEl.innerHTML = '';
+                this.pagesViewEl.appendChild(this.loadingEl);
+            }
+        }
+        try {
+            await this.loadDocument();
+        } catch (err) {
+            console.warn('PDF.js reload error, falling back to native frame:', err);
+            this.renderNativeFallback();
+        }
+    }
+
     renderNativeFallback() {
         this.container.innerHTML = `
             <div class="esign-viewer-wrapper">

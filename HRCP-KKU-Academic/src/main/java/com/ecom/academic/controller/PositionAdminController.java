@@ -75,6 +75,7 @@ public class PositionAdminController {
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
     private final com.ecom.academic.service.AcademicCommitteeService committeeService;
+    private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
 
     public PositionAdminController(
             PositionRequestService positionService,
@@ -88,7 +89,8 @@ public class PositionAdminController {
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
             com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
-            com.ecom.academic.service.AcademicCommitteeService committeeService) {
+            com.ecom.academic.service.AcademicCommitteeService committeeService,
+            com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer) {
         this.positionService = positionService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -101,6 +103,7 @@ public class PositionAdminController {
         this.documentPrewarmService = documentPrewarmService;
         this.signatureWorkflow = signatureWorkflow;
         this.committeeService = committeeService;
+        this.signedDocumentRenderer = signedDocumentRenderer;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -419,24 +422,30 @@ public class PositionAdminController {
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
         List<PositionDocument> docs = positionService.getDocumentsByType(id, type);
-        if (docs.isEmpty()) {
-            Map<String, String> autoData = autoFillHelper.getPreFilledPositionDocData(request, type, null);
-            String jsonData = objectMapper.writeValueAsString(autoData);
-            byte[] previewData = documentService.generateP2PreviewDocx(type, jsonData);
-            String label = positionService.getDocLabel(type);
-            String cleanDocName = label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
-            String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + type + "_" + cleanDocName;
-            return PreviewResponseFactory.build(documentService, previewData, format, baseName);
-        }
-
-        PositionDocument doc = docs.get(0);
+        PositionDocument doc = docs.isEmpty() ? null : docs.get(0);
         byte[] data = null;
-        String label = doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank()
+        String label = (doc != null && doc.getDocumentLabel() != null && !doc.getDocumentLabel().isBlank())
                 ? doc.getDocumentLabel()
                 : positionService.getDocLabel(type);
 
+        // Check if there is an e-sign envelope (open or completed) with signatures
+        java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
+                signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.POSITION, id, type);
+        if (optEnvelope.isPresent()) {
+            com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
+            try {
+                if ("pdf".equalsIgnoreCase(format)) {
+                    data = signedDocumentRenderer.renderPdf(envelope);
+                } else {
+                    data = signedDocumentRenderer.renderDocx(envelope);
+                }
+            } catch (Exception e) {
+                // fall through to saved draft file if render fails
+            }
+        }
+
         // Try using existing generated file first
-        if (doc.getGeneratedFilePath() != null) {
+        if (data == null && doc != null && doc.getGeneratedFilePath() != null) {
             Path filePath = Path.of(doc.getGeneratedFilePath());
             if (Files.exists(filePath)) {
                 data = Files.readAllBytes(filePath);
@@ -444,7 +453,7 @@ public class PositionAdminController {
         }
 
         // If no file exists, generate on-the-fly from jsonData + template
-        if (data == null && doc.getJsonData() != null) {
+        if (data == null && doc != null && doc.getJsonData() != null) {
             try {
                 String generatedPath = documentService.generateP2Document(request, type, doc.getJsonData());
                 if (generatedPath != null) {
@@ -460,6 +469,12 @@ public class PositionAdminController {
             } catch (Exception e) {
                 logger.warn("On-the-fly DOCX generation failed for doc {}: {}", type, e.getMessage());
             }
+        }
+
+        if (data == null && docs.isEmpty()) {
+            Map<String, String> autoData = autoFillHelper.getPreFilledPositionDocData(request, type, null);
+            String jsonData = objectMapper.writeValueAsString(autoData);
+            data = documentService.generateP2PreviewDocx(type, jsonData);
         }
 
         if (data == null) {
@@ -483,8 +498,19 @@ public class PositionAdminController {
             for (PositionDocument doc : documents) {
                 byte[] docBytes = null;
 
+                // Check signed envelope first
+                java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
+                        signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.POSITION, id, doc.getDocumentType());
+                if (optEnvelope.isPresent()) {
+                    try {
+                        docBytes = signedDocumentRenderer.renderDocx(optEnvelope.get());
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+
                 // Try existing file
-                if (doc.getGeneratedFilePath() != null) {
+                if (docBytes == null && doc.getGeneratedFilePath() != null) {
                     Path filePath = Path.of(doc.getGeneratedFilePath());
                     if (Files.exists(filePath)) {
                         docBytes = Files.readAllBytes(filePath);

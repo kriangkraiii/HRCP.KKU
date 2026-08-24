@@ -58,16 +58,6 @@
             </button>
         </div>
 
-        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show">
-            <i class="fas fa-circle-check"></i> <span th:text="${succMsg}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
-        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show">
-            <i class="fas fa-circle-exclamation"></i> <span th:text="${errorMsg}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-
         <div th:unless="${canSign}" class="alert alert-secondary">
             <i class="fas fa-circle-info"></i>
             ขั้นตอนนี้ไม่สามารถลงนามได้แล้ว
@@ -92,7 +82,9 @@
                     <div class="card-body p-0">
                         <!-- เนื้อหาที่แสดงคือฉบับที่ถูก freeze ไว้ตอนส่งลงนาม
                              ไม่ใช่ฟอร์มปัจจุบัน — สิ่งที่เห็นคือสิ่งที่จะถูกลงนามจริง -->
-                        <div id="esign-pdf-container" th:data-pdf-url="@{'/esign/sign/' + ${step.id} + '/preview'}">
+                        <div id="esign-pdf-container"
+                             th:data-step-id="${step.id}"
+                             th:data-pdf-url="@{'/esign/sign/' + ${step.id} + '/preview' + (${defaultSignature != null} ? ('?userSignatureId=' + ${defaultSignature.id}) : (${!#lists.isEmpty(mySignatures)} ? ('?userSignatureId=' + ${mySignatures[0].id}) : ''))}">
                             <!-- EsignPdfViewer will dynamically mount here -->
                         </div>
                     </div>
@@ -141,11 +133,15 @@
                             <div class="card-header bg-white"><i class="fas fa-signature"></i> เลือกลายเซ็น</div>
                             <div class="card-body">
 
-                                <div class="row g-2">
-                                    <div class="col-6" th:each="sig : ${mySignatures}">
+                                <!-- ห้ามใส่ required กับ radio ที่ซ่อนด้วย .btn-check (Bootstrap ตั้ง
+                                     clip + pointer-events:none) เพราะเบราว์เซอร์จะโฟกัสไม่ได้ แล้วปฏิเสธ
+                                     การ submit แบบเงียบๆ ปุ่มลงนามจะกดไม่ติดโดยไม่มีข้อความใดๆ
+                                     — เลือกให้ตัวแรกไว้เสมอแทน ส่วนการตรวจจริงทำที่ฝั่งเซิร์ฟเวอร์ -->
+                                <div class="row g-2" th:with="noDefault=${#lists.isEmpty(mySignatures.?[isDefault])}">
+                                    <div class="col-6" th:each="sig, sigStat : ${mySignatures}">
                                         <input type="radio" class="btn-check" name="userSignatureId"
                                                th:id="'sig-' + ${sig.id}" th:value="${sig.id}"
-                                               th:checked="${sig.isDefault}" required>
+                                               th:checked="${sig.isDefault or (noDefault and sigStat.first)}">
                                         <label class="btn btn-outline-secondary w-100 p-2"
                                                th:for="'sig-' + ${sig.id}">
                                             <span class="sig-card-thumb d-block mb-1" style="height:70px;">
@@ -253,9 +249,22 @@
             const container = document.getElementById('esign-pdf-container');
             if (container) {
                 const pdfUrl = container.getAttribute('data-pdf-url');
+                const stepId = container.getAttribute('data-step-id');
                 if (pdfUrl && window.initEsignPdfViewer) {
-                    window.initEsignPdfViewer('esign-pdf-container', pdfUrl, { initialFit: 'width' });
+                    window.activeEsignViewer = window.initEsignPdfViewer('esign-pdf-container', pdfUrl, { initialFit: 'width' });
                 }
+
+                // Dynamic live update of preview when selecting a different signature
+                const sigRadios = document.querySelectorAll('input[name="userSignatureId"]');
+                sigRadios.forEach(function(radio) {
+                    radio.addEventListener('change', function() {
+                        const sigId = this.value;
+                        const newPdfUrl = '/esign/sign/' + stepId + '/preview?userSignatureId=' + sigId;
+                        if (window.activeEsignViewer && typeof window.activeEsignViewer.loadNewPdf === 'function') {
+                            window.activeEsignViewer.loadNewPdf(newPdfUrl);
+                        }
+                    });
+                });
             }
         });
     </script>

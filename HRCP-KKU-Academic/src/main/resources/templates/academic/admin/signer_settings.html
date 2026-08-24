@@ -106,11 +106,16 @@
         .doc-accordion-item {
             border: 1px solid var(--border-color, #e2e8f0);
             border-radius: 0.875rem !important;
-            overflow: hidden;
+            overflow: visible;
             margin-bottom: 1rem;
             background: var(--bg-card, #ffffff);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
             transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .accordion-collapse.show,
+        .accordion-body,
+        .table-responsive {
+            overflow: visible !important;
         }
         [data-theme="dark"] .doc-accordion-item {
             background: #1a1d26 !important;
@@ -325,16 +330,6 @@
         </div>
 
         <!-- ==================== ALERT NOTIFICATIONS ==================== -->
-        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show shadow-sm border-0 d-flex align-items-center gap-2 mb-4" role="alert">
-            <i class="fa-solid fa-circle-check fs-5 text-success"></i>
-            <div><strong class="me-1">สำเร็จ:</strong> <span th:text="${succMsg}"></span></div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show shadow-sm border-0 d-flex align-items-center gap-2 mb-4" role="alert">
-            <i class="fa-solid fa-triangle-exclamation fs-5 text-danger"></i>
-            <div><strong class="me-1">ข้อผิดพลาด:</strong> <span th:text="${errorMsg}"></span></div>
-            <button type="button" class="btn-close ms-auto" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
 
         <!-- ==================== WORKFLOW GOVERNANCE & SECURITY RULES ==================== -->
         <div class="policy-card p-3 p-md-4 mb-4">
@@ -414,16 +409,10 @@
 
             <!-- Quick Action Buttons -->
             <div class="d-flex align-items-center gap-2">
-                <div class="input-group input-group-sm" style="max-width: 260px;">
+                <div class="input-group input-group-sm" style="max-width: 280px;">
                     <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
                     <input type="text" id="docSearchInput" class="form-control bg-light border-start-0" placeholder="ค้นหาชื่อเอกสารหรือตำแหน่ง..." oninput="filterDocuments(this.value)">
                 </div>
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleAllAccordions(true)" title="ขยายทุกเอกสาร">
-                    <i class="fa-solid fa-angles-down me-1"></i> ขยายทั้งหมด
-                </button>
-                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="toggleAllAccordions(false)" title="ยุบทุกเอกสาร">
-                    <i class="fa-solid fa-angles-up me-1"></i> ยุบทั้งหมด
-                </button>
             </div>
         </div>
 

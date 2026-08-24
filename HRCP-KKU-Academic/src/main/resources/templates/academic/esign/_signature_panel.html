@@ -7,54 +7,167 @@
   ต้องการ model attributes: signaturePanel, request (มี id), documentType, signatureModule
 -->
 <div th:fragment="panel" th:if="${signaturePanel != null && signaturePanel.signable}"
-     class="card card-academic mt-4">
+     class="card card-academic mt-4 shadow-sm border-0">
 
     <!-- Searchable Select Assets -->
     <link rel="stylesheet" th:href="@{/css/searchable_select.css}">
     <script th:src="@{/js/searchable_select.js}"></script>
 
-    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-        <span><i class="fas fa-file-signature"></i> การลงนามอิเล็กทรอนิกส์</span>
-        <span th:if="${signaturePanel.locked}" class="badge"
-              th:classappend="'bg-' + ${signaturePanel.activeEnvelope.status.color}"
-              th:text="${signaturePanel.activeEnvelope.status.thaiLabel}">สถานะ</span>
+    <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
+        <span class="fw-bold text-dark fs-6">
+            <i class="fas fa-file-signature text-primary me-2"></i> การลงนามอิเล็กทรอนิกส์ (E-Signature)
+        </span>
+        <div class="d-flex align-items-center gap-2">
+            <span th:if="${signaturePanel.locked}" class="badge rounded-pill px-3 py-2"
+                  th:classappend="'bg-' + ${signaturePanel.activeEnvelope.status.color}"
+                  th:text="${signaturePanel.activeEnvelope.status.thaiLabel}">สถานะ</span>
+            <span th:unless="${signaturePanel.locked}" class="badge rounded-pill bg-light text-secondary border px-3 py-2">
+                <i class="fas fa-clock me-1"></i> ยังไม่ได้ส่งเวียนลงนาม
+            </span>
+        </div>
     </div>
 
-    <div class="card-body">
+    <div class="card-body p-4">
 
-        <!-- ============ กำลังเวียนลงนาม / ลงนามครบแล้ว ============ -->
+        <!-- ===================================================================== -->
+        <!-- 1. กรณี: กำลังเวียนลงนามอยู่ หรือลงนามครบแล้ว (LOCKED)                    -->
+        <!-- ===================================================================== -->
         <div th:if="${signaturePanel.locked}">
-            <div class="alert alert-warning">
-                <i class="fas fa-lock"></i>
-                เอกสารนี้ถูกล็อกไม่ให้แก้ไข เนื่องจากอยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว
-                <div class="small mt-1">
-                    หากต้องการแก้ไข ต้องยกเลิกการเวียนลงนามก่อน ซึ่งจะทำให้ลายเซ็นที่มีอยู่เป็นโมฆะทั้งหมด
+            <div class="alert alert-warning border-0 bg-warning-subtle text-dark d-flex align-items-center gap-3 p-3 rounded-3 mb-3">
+                <i class="fas fa-lock fa-2x text-warning flex-shrink-0"></i>
+                <div class="small">
+                    <strong>เอกสารฉบับนี้ถูกล็อกไม่ให้แก้ไข</strong> เนื่องจากอยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว
+                    <div class="text-secondary mt-1">
+                        หากพบข้อผิดพลาด เจ้าหน้าที่สามารถกด <em>"ส่งกลับให้แก้ไขและลงนามใหม่"</em> เพื่อให้ผู้ยื่นแก้ไขและลงนามใหม่
+                    </div>
                 </div>
             </div>
 
-            <ul class="list-group list-group-flush mb-3">
-                <li class="list-group-item d-flex justify-content-between align-items-center gap-2"
-                    th:each="s : ${signaturePanel.activeEnvelope.steps}">
-                    <div>
-                        <span class="badge bg-secondary me-1" th:text="${s.stepOrder}">1</span>
-                        <span th:text="${s.roleLabel}">ตำแหน่ง</span>
-                        <div class="small text-secondary">
-                            <span th:text="${s.signerNameSnapshot}">ชื่อ</span>
-                            <span th:if="${s.signedAt != null}"
-                                  th:text="' · ' + ${#temporals.format(s.signedAt, 'd MMM yyyy HH:mm')}"></span>
+            <!-- รายการลำดับขั้นตอนการลงนาม -->
+            <div class="card border rounded-3 mb-3 overflow-hidden">
+                <div class="card-header bg-light py-2 px-3 fw-semibold small text-secondary">
+                    <i class="fas fa-list-ol text-primary me-1"></i> ลำดับขั้นตอนผู้ลงนาม
+                </div>
+                <ul class="list-group list-group-flush mb-0">
+                    <li class="list-group-item d-flex justify-content-between align-items-center gap-2 p-3"
+                        th:each="s : ${signaturePanel.activeEnvelope.steps}">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge rounded-circle d-flex align-items-center justify-content-center"
+                                  style="width: 28px; height: 28px;"
+                                  th:classappend="${s.status.name() == 'SIGNED'} ? 'bg-success text-white' : (${s.status.name() == 'ACTIVE'} ? 'bg-primary text-white' : 'bg-light text-secondary border')"
+                                  th:text="${s.stepOrder}">1</span>
+                            <div>
+                                <strong class="text-dark d-block" th:text="${s.roleLabel}">ตำแหน่ง</strong>
+                                <div class="small text-secondary">
+                                    <span th:text="${s.signerNameSnapshot}">ชื่อผู้ลงนาม</span>
+                                    <span th:if="${s.signedAt != null}" class="text-success fw-medium"
+                                          th:text="' · ลงนามเมื่อ ' + ${#temporals.format(s.signedAt, 'd MMM yyyy HH:mm')}"></span>
+                                </div>
+                                <div class="small text-danger mt-1" th:if="${s.declineReason != null}"
+                                     th:text="'เหตุผลที่ปฏิเสธ: ' + ${s.declineReason}"></div>
+                            </div>
                         </div>
-                        <div class="small text-danger" th:if="${s.declineReason != null}"
-                             th:text="'เหตุผล: ' + ${s.declineReason}"></div>
-                    </div>
-                    <span class="badge" th:classappend="'bg-' + ${s.status.color}"
-                          th:text="${s.status.thaiLabel}">สถานะ</span>
-                </li>
-            </ul>
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge rounded-pill px-2 py-1"
+                                  th:classappend="'bg-' + ${s.status.color}"
+                                  th:text="${s.status.thaiLabel}">สถานะ</span>
+                            <a th:if="${s.status.name() == 'ACTIVE' and (signaturePanel.isAdminViewer or (signaturePanel.currentUserOption != null and s.signer != null and s.signer.id == signaturePanel.currentUserOption.userId))}"
+                               th:href="@{'/esign/sign/' + ${s.id}}"
+                               class="btn btn-sm btn-primary px-3">
+                                <i class="fas fa-pen-nib me-1"></i> ลงนามตอนนี้
+                            </a>
+                        </div>
+                    </li>
+                </ul>
+            </div>
 
+            <!-- รอผู้ยื่นกดส่งคำร้อง: ขั้นตอนของเจ้าหน้าที่/ผู้บริหารถูกหน่วงไว้จนกว่าคำร้องจะถูกยื่น
+                 ถ้าไม่บอกตรงนี้ หน้าจอจะดูเหมือนไม่มีอะไรเกิดขึ้นเลย -->
+            <div th:if="${signaturePanel.awaitingSubmission}"
+                 class="alert alert-info border-0 bg-info-subtle text-dark d-flex align-items-start gap-3 p-3 rounded-3 mb-3">
+                <i class="fas fa-hourglass-half fa-lg text-info mt-1 flex-shrink-0"></i>
+                <div class="small">
+                    <strong>ยังไม่ได้ส่งให้ผู้ลงนามลำดับถัดไป</strong>
+                    <div class="text-secondary mt-1">
+                        คำร้องนี้ยังเป็นแบบร่าง ระบบจะเริ่มเวียนลงนามให้อัตโนมัติเมื่อผู้ยื่น<strong>กดยื่นคำร้อง</strong>เข้ามาในระบบแล้ว
+                    </div>
+                </div>
+            </div>
+
+            <!-- ============ ส่งเวียนลงนามต่อ (Admin/เจ้าหน้าที่เท่านั้น) ============
+                 ตำแหน่งที่ยังไม่ได้เลือกผู้ลงนามตอนส่งรอบแรก จะมาเติมได้ที่นี่
+                 นี่คือขั้นตอนที่เจ้าหน้าที่ตรวจสอบเอกสารแล้วส่งต่อให้ผู้บริหาร -->
+            <div th:if="${signaturePanel.isAdminViewer and signaturePanel.forwardable}"
+                 class="card border-primary border-opacity-25 rounded-3 mb-3">
+                <div class="card-header bg-primary bg-opacity-10 py-2 px-3 fw-semibold small text-primary">
+                    <i class="fas fa-share me-1"></i> ตรวจสอบแล้ว — ส่งเวียนลงนามต่อ
+                </div>
+                <div class="card-body p-3">
+                    <p class="text-secondary small mb-3">
+                        <i class="fas fa-shield-check text-success me-1"></i>
+                        เมื่อตรวจสอบความถูกต้องของเอกสารและไฟล์แนบแล้ว เลือกผู้ลงนามในตำแหน่งที่เหลือ
+                        ระบบจะส่งให้ลงนาม<strong>ตามลำดับขั้นตอน</strong>
+                    </p>
+
+                    <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/forward'}"
+                          method="post"
+                          data-confirm="ยืนยันความถูกต้องและส่งเวียนลงนามต่อ? ระบบจะแจ้งเตือนผู้ลงนามลำดับถัดไปทันที">
+                        <div class="row g-3">
+                            <div class="col-md-6" th:each="slot, iter : ${signaturePanel.unfilledSlots()}">
+                                <label class="form-label mb-1">
+                                    <span class="badge bg-secondary me-1" th:text="${iter.count}">1</span>
+                                    <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
+                                </label>
+                                <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
+                                <select name="signerUserIds" class="form-select signer-searchable-select">
+                                    <option value="">— ยังไม่ส่งในรอบนี้ —</option>
+
+                                    <optgroup label="ลงนามเอง" th:if="${signaturePanel.currentUserOption != null}">
+                                        <option th:value="${signaturePanel.currentUserOption.userId}"
+                                                th:text="'ฉัน — ' + ${signaturePanel.currentUserOption.displayName}">ฉัน</option>
+                                    </optgroup>
+
+                                    <optgroup th:label="'ผู้ที่มีบทบาท ' + ${slot.roleLabel}"
+                                              th:if="${!#lists.isEmpty(signaturePanel.optionsFor(slot.slotKey))}">
+                                        <option th:each="opt : ${signaturePanel.optionsFor(slot.slotKey)}"
+                                                th:value="${opt.userId}"
+                                                th:disabled="${!opt.signable}"
+                                                th:selected="${opt.userId != null and opt.userId == signaturePanel.defaultSignerFor(slot.slotKey)}"
+                                                th:text="${opt.signable}
+                                                         ? (${opt.displayName} + ' (' + ${opt.email} + ')')
+                                                         : (${opt.displayName} + ' — ยังไม่ได้ผูกบัญชี')">ชื่อ</option>
+                                    </optgroup>
+
+                                    <optgroup label="บุคลากรอื่นในระบบ"
+                                              th:if="${!#lists.isEmpty(signaturePanel.otherOptionsFor(slot.slotKey))}">
+                                        <option th:each="opt : ${signaturePanel.otherOptionsFor(slot.slotKey)}"
+                                                th:value="${opt.userId}"
+                                                th:selected="${opt.userId != null and opt.userId == signaturePanel.defaultSignerFor(slot.slotKey)}"
+                                                th:text="${opt.displayName} + ' (' + ${opt.email} + ')'">ชื่อ</option>
+                                    </optgroup>
+                                </select>
+                            </div>
+
+                            <div class="col-md-6">
+                                <label class="form-label">กำหนดลงนามภายใน (ไม่บังคับ)</label>
+                                <input type="datetime-local" name="dueAt" class="form-control"
+                                       th:value="${signaturePanel.activeEnvelope.dueAt != null ? #temporals.format(signaturePanel.activeEnvelope.dueAt, 'yyyy-MM-dd''T''HH:mm') : ''}">
+                                <div class="form-text">ปล่อยว่างไว้เพื่อใช้กำหนดเวลาเดิม</div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-academic px-4 py-2 mt-3">
+                            <i class="fas fa-paper-plane me-1"></i> ยืนยันความถูกต้องและส่งเวียนลงนามต่อ
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Footer Details & Actions -->
             <div class="d-flex align-items-center justify-content-between gap-3 flex-wrap bg-light p-3 rounded-3 mb-3">
                 <div>
-                    <span class="small text-secondary d-block">
-                        รหัสตรวจสอบ: <code th:text="${signaturePanel.activeEnvelope.verificationCode}">CODE</code>
+                    <span class="small text-secondary d-block mb-1">
+                        รหัสตรวจสอบเอกสาร: <code class="fw-bold text-dark bg-white px-2 py-1 rounded border" th:text="${signaturePanel.activeEnvelope.verificationCode}">CODE</code>
                     </span>
                     <span class="small text-secondary" th:if="${signaturePanel.activeEnvelope.dueAt != null}">
                         กำหนดลงนามภายใน:
@@ -64,17 +177,57 @@
                     </span>
                 </div>
 
-                <div class="d-flex gap-2 align-items-center" th:if="${signaturePanel.activeEnvelope.status.open}">
+                <div class="d-flex gap-2 align-items-center" th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer}">
+                    <!-- ปุ่มขอให้ลงนามใหม่ (Admin Re-sign trigger) -->
+                    <button type="button" class="btn btn-sm btn-outline-warning text-dark"
+                            data-bs-toggle="modal"
+                            th:data-bs-target="'#modal-resign-' + ${signaturePanel.activeEnvelope.id}">
+                        <i class="fas fa-rotate-left text-warning me-1"></i> ส่งกลับให้แก้ไขและลงนามใหม่
+                    </button>
+
                     <button type="button" class="btn btn-sm btn-outline-secondary"
                             data-bs-toggle="modal"
                             th:data-bs-target="'#modal-extend-due-' + ${signaturePanel.activeEnvelope.id}">
-                        <i class="fas fa-calendar-plus me-1"></i> แก้ไข/ขยายกำหนดเวลา
+                        <i class="fas fa-calendar-plus me-1"></i> ขยายกำหนดเวลา
                     </button>
                 </div>
             </div>
 
+            <!-- Modal ส่งกลับให้แก้ไขและลงนามใหม่ (สำหรับ Admin/Staff) -->
+            <div th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer}"
+                 class="modal fade" th:id="'modal-resign-' + ${signaturePanel.activeEnvelope.id}" tabindex="-1" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content border-0 shadow">
+                        <form th:action="@{'/admin/' + ${signatureModule.name().toLowerCase()} + '/request/' + ${request.id} + '/document/' + ${documentType != null ? documentType : 0} + '/request-resign'}" method="post">
+                            <div class="modal-header bg-warning text-dark">
+                                <h5 class="modal-title">
+                                    <i class="fas fa-rotate-left me-1"></i> ส่งกลับให้แก้ไขและลงนามใหม่
+                                </h5>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                            </div>
+                            <div class="modal-body p-4">
+                                <div class="mb-3">
+                                    <p class="small text-secondary mb-2">
+                                        ระบบจะยกเลิกการเวียนลงนามรอบปัจจุบัน ปลดล็อกเอกสารให้แก้ไขได้ และส่งการแจ้งเตือน (Email + In-App) ไปยังผู้ยื่นคำร้องพร้อมเหตุผล
+                                    </p>
+                                    <label class="form-label fw-semibold">ระบุเหตุผล / สิ่งที่ต้องแก้ไข</label>
+                                    <textarea name="reason" class="form-control" rows="3" required
+                                              placeholder="เช่น ข้อมูลตำแหน่งทางวิชาการไม่ถูกต้อง / กรุณาแนบเอกสารเพิ่มเติมในข้อ 2"></textarea>
+                                </div>
+                            </div>
+                            <div class="modal-footer">
+                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                <button type="submit" class="btn btn-warning text-dark">
+                                    <i class="fas fa-paper-plane me-1"></i> ยืนยันส่งกลับให้แก้ไข
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
             <!-- Modal ปรับเปลี่ยน Due Date -->
-            <div th:if="${signaturePanel.activeEnvelope.status.open}"
+            <div th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer}"
                  class="modal fade" th:id="'modal-extend-due-' + ${signaturePanel.activeEnvelope.id}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow">
@@ -105,37 +258,59 @@
                 </div>
             </div>
 
-            <div class="d-flex align-items-center gap-3 flex-wrap">
-                <form th:if="${signaturePanel.activeEnvelope.status.open}"
-                      th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/cancel'}"
+            <!-- ปุ่มยกเลิกการเวียนลงนาม (Admin Only) -->
+            <div class="d-flex align-items-center gap-3 flex-wrap" th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer}">
+                <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/cancel'}"
                       method="post" class="d-flex gap-2 align-items-center flex-grow-1"
                       data-confirm="ยกเลิกการเวียนลงนาม? ลายเซ็นที่ลงไปแล้วจะเป็นโมฆะทั้งหมด">
                     <input type="text" name="reason" class="form-control form-control-sm"
                            maxlength="500" placeholder="ระบุเหตุผลหากต้องการยกเลิกการเวียนลงนามนี้">
                     <button type="submit" class="btn btn-sm btn-outline-danger flex-shrink-0">
-                        ยกเลิกการเวียนลงนาม
+                        <i class="fas fa-ban me-1"></i> ยกเลิกการเวียนลงนาม
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- ============ ยังไม่ได้ส่ง — เลือกผู้ลงนาม ============ -->
-        <form th:unless="${signaturePanel.locked}" th:action="@{/esign/envelope/create}" method="post">
+        <!-- ===================================================================== -->
+        <!-- 2. กรณี: ยังไม่ได้ส่ง — ฟอร์มเลือกผู้ลงนาม / ลงนามส่วนตนเอง (UNLOCKED)   -->
+        <!-- ===================================================================== -->
+        <form th:unless="${signaturePanel.locked}" th:action="@{/esign/envelope/create}" method="post"
+              data-confirm="ส่งเอกสารไปลงนาม? ฟอร์มจะถูกล็อกไม่ให้แก้ไขจนกว่าจะลงนามครบหรือยกเลิก">
             <input type="hidden" name="module" th:value="${signatureModule}">
             <input type="hidden" name="requestId" th:value="${request.id}">
             <input type="hidden" name="documentType" th:value="${documentType != null ? documentType : (currentDocType != null ? currentDocType : 0)}">
 
-            <p class="text-secondary small mb-3">
-                เลือกผู้ลงนามแต่ละตำแหน่ง ระบบจะส่งให้ลงนาม<strong>ตามลำดับ</strong>
-                และแจ้งเตือนทีละคนเมื่อถึงคิว — เว้นว่างไว้หากยังไม่ต้องการให้ตำแหน่งนั้นลงนามในรอบนี้
-            </p>
+            <!-- คำอธิบายสำหรับผู้ยื่นคำร้อง (Applicant View) -->
+            <div th:if="${!signaturePanel.isAdminViewer}" class="mb-3">
+                <div class="alert alert-primary bg-primary-subtle border-0 text-dark p-3 rounded-3 mb-3">
+                    <div class="d-flex align-items-start gap-2">
+                        <i class="fas fa-pen-nib text-primary fa-lg mt-1"></i>
+                        <div>
+                            <strong class="d-block mb-1">การลงนามในส่วนของผู้ยื่นคำร้อง</strong>
+                            <p class="small text-secondary mb-0">
+                                ท่านจะลงนามเฉพาะในส่วนของผู้ขอรับการประเมิน เมื่อท่านลงนามและ<strong>กดยื่นคำร้อง</strong>ในระบบแล้ว
+                                เจ้าหน้าที่/นักทรัพยากรบุคคลจะเข้าตรวจสอบความถูกต้องของเอกสาร และจัดการส่งเวียนลงนามไปยังผู้บริหาร (หัวหน้าสาขาวิชา/คณบดี) ตามลำดับขั้นตอน
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- คำอธิบายสำหรับเจ้าหน้าที่ (Admin View) -->
+            <div th:if="${signaturePanel.isAdminViewer}" class="mb-3">
+                <p class="text-secondary small mb-2">
+                    <i class="fas fa-shield-check text-success me-1"></i>
+                    <strong>ระบบตรวจสอบก่อนเวียนลงนาม:</strong> กรุณาตรวจสอบความถูกต้องของเอกสาร จากนั้นเลือกผู้ลงนามแต่ละตำแหน่ง ระบบจะส่งให้ลงนาม<strong>ตามลำดับขั้นตอน</strong>
+                </p>
+            </div>
 
             <div class="row g-3">
                 <div class="col-md-6" th:each="slot, iter : ${signaturePanel.slots}">
                     
                     <!-- ============ 1. ผู้ยื่นคำร้อง (Applicant) — เซ็นด้วยตนเองเท่านั้น ไม่ต้องเลือก ============ -->
                     <div th:if="${slot.slotKey == 'applicant' or slot.defaultStaffRole == null}">
-                        <label class="form-label d-flex justify-content-between align-items-center">
+                        <label class="form-label d-flex justify-content-between align-items-center mb-1">
                             <span>
                                 <span class="badge bg-primary me-1" th:text="${iter.count}">1</span>
                                 <span th:text="${slot.roleLabel}">ผู้ขอรับการประเมิน</span>
@@ -145,7 +320,6 @@
                             </span>
                         </label>
                         <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
-                        <input type="hidden" name="delegateReasons" value="">
 
                         <div class="p-2 border rounded bg-light d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
@@ -173,68 +347,74 @@
                         </div>
                     </div>
 
-                    <!-- ============ 2. ตำแหน่งผู้บริหาร / เจ้าหน้าที่อื่นๆ — มี Searchable Select พิมพ์ค้นหาได้ ============ -->
+                    <!-- ============ 2. ตำแหน่งผู้บริหาร / เจ้าหน้าที่อื่นๆ (Admin View เท่านั้นที่สามารถเลือกและส่งได้) ============ -->
                     <div th:unless="${slot.slotKey == 'applicant' or slot.defaultStaffRole == null}">
-                        <label class="form-label">
+                        <label class="form-label mb-1">
                             <span class="badge bg-secondary me-1" th:text="${iter.count}">1</span>
                             <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
                         </label>
                         <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
 
-                        <select name="signerUserIds" class="form-select signer-searchable-select">
-                            <option value="">— ไม่ลงนามในรอบนี้ —</option>
+                        <!-- สำหรับ Admin: สามารถค้นหาและเลือกผู้ลงนามได้ -->
+                        <div th:if="${signaturePanel.isAdminViewer}">
+                            <select name="signerUserIds" class="form-select signer-searchable-select">
+                                <option value="">— ไม่ลงนามในรอบนี้ —</option>
 
-                            <!-- ตัวเองก่อน เพื่อให้แอดมินที่ต้องลงนามเองกดได้ทันที -->
-                            <optgroup label="ลงนามเอง" th:if="${signaturePanel.currentUserOption != null}">
-                                <option th:value="${signaturePanel.currentUserOption.userId}"
-                                        th:text="'ฉัน — ' + ${signaturePanel.currentUserOption.displayName}">ฉัน</option>
-                            </optgroup>
+                                <!-- ตัวเองก่อน เพื่อให้เจ้าหน้าที่/แอดมินที่ต้องลงนามเองกดได้ทันที -->
+                                <optgroup label="ลงนามเอง" th:if="${signaturePanel.currentUserOption != null}">
+                                    <option th:value="${signaturePanel.currentUserOption.userId}"
+                                            th:text="'ฉัน — ' + ${signaturePanel.currentUserOption.displayName}">ฉัน</option>
+                                </optgroup>
 
-                            <optgroup th:label="'ผู้ที่มีบทบาท ' + ${slot.roleLabel}"
-                                      th:if="${!#lists.isEmpty(signaturePanel.optionsFor(slot.slotKey))}">
-                                <option th:each="opt : ${signaturePanel.optionsFor(slot.slotKey)}"
-                                        th:value="${opt.userId}"
-                                        th:disabled="${!opt.signable}"
-                                        th:selected="${opt.userId != null and opt.userId == signaturePanel.defaultSignerFor(slot.slotKey)}"
-                                        th:text="${opt.signable}
-                                                 ? (${opt.displayName} + ' (' + ${opt.email} + ')')
-                                                 : (${opt.displayName} + ' — ยังไม่ได้ผูกบัญชี')">ชื่อ</option>
-                            </optgroup>
+                                <optgroup th:label="'ผู้ที่มีบทบาท ' + ${slot.roleLabel}"
+                                          th:if="${!#lists.isEmpty(signaturePanel.optionsFor(slot.slotKey))}">
+                                    <option th:each="opt : ${signaturePanel.optionsFor(slot.slotKey)}"
+                                            th:value="${opt.userId}"
+                                            th:disabled="${!opt.signable}"
+                                            th:selected="${opt.userId != null and opt.userId == signaturePanel.defaultSignerFor(slot.slotKey)}"
+                                            th:text="${opt.signable}
+                                                     ? (${opt.displayName} + ' (' + ${opt.email} + ')')
+                                                     : (${opt.displayName} + ' — ยังไม่ได้ผูกบัญชี')">ชื่อ</option>
+                                </optgroup>
 
-                            <optgroup label="บุคลากรอื่นในระบบ"
-                                      th:if="${!#lists.isEmpty(signaturePanel.otherOptionsFor(slot.slotKey))}">
-                                <option th:each="opt : ${signaturePanel.otherOptionsFor(slot.slotKey)}"
-                                        th:value="${opt.userId}"
-                                        th:selected="${opt.userId != null and opt.userId == signaturePanel.defaultSignerFor(slot.slotKey)}"
-                                        th:text="${opt.displayName} + ' (' + ${opt.email} + ')'">ชื่อ</option>
-                            </optgroup>
-                        </select>
+                                <optgroup label="บุคลากรอื่นในระบบ"
+                                          th:if="${!#lists.isEmpty(signaturePanel.otherOptionsFor(slot.slotKey))}">
+                                    <option th:each="opt : ${signaturePanel.otherOptionsFor(slot.slotKey)}"
+                                            th:value="${opt.userId}"
+                                            th:selected="${opt.userId != null and opt.userId == signaturePanel.defaultSignerFor(slot.slotKey)}"
+                                            th:text="${opt.displayName} + ' (' + ${opt.email} + ')'">ชื่อ</option>
+                                </optgroup>
+                            </select>
+                        </div>
 
-                        <!-- ปฏิบัติราชการแทน — ระบุเหตุผลหากลงนามแทน -->
-                        <input type="text" name="delegateReasons" class="form-control form-control-sm mt-1"
-                               maxlength="500"
-                               th:placeholder="'ลงนามแทน ' + ${slot.roleLabel} + ' (ระบุเหตุผล — เว้นว่างหากลงนามในตำแหน่งตนเอง)'">
+                        <!-- สำหรับ Applicant: ปิดไว้และแสดงข้อความแนะนำ -->
+                        <div th:unless="${signaturePanel.isAdminViewer}" class="p-2 border rounded bg-light text-secondary small">
+                            <i class="fas fa-user-clock text-muted me-1"></i>
+                            <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
+                            <span class="text-muted">(เจ้าหน้าที่จะเป็นผู้ตรวจสอบและส่งเวียนต่อหลังยื่นคำร้อง)</span>
+                            <input type="hidden" name="signerUserIds" value="">
+                        </div>
                     </div>
 
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-6" th:if="${signaturePanel.isAdminViewer}">
                     <label class="form-label">กำหนดลงนามภายใน (ไม่บังคับ)</label>
                     <input type="datetime-local" name="dueAt" class="form-control">
                     <div class="form-text">ระบบจะเตือนซ้ำเมื่อใกล้ครบกำหนด</div>
                 </div>
             </div>
 
-            <div class="alert alert-info small mt-3 mb-3">
-                <i class="fas fa-circle-info"></i>
-                เมื่อกดส่ง ระบบจะ<strong>บันทึกสำเนาเอกสารฉบับปัจจุบันไว้</strong>
-                และล็อกฟอร์มไม่ให้แก้ไข เพื่อให้ทุกคนลงนามบนเนื้อหาเดียวกัน
-                ผู้ที่ไม่มีบัญชีหรือถูกปิดใช้งาน (Inactive) จะไม่สามารถเลือกเป็นผู้ลงนามได้
+            <div class="alert alert-info border-0 bg-info-subtle text-dark small mt-3 mb-3">
+                <i class="fas fa-circle-info text-info me-1"></i>
+                เมื่อกดส่ง ระบบจะ<strong>บันทึกสำเนาเอกสารฉบับปัจจุบันไว้ (Freeze Snapshot)</strong>
+                และล็อกฟอร์มไม่ให้แก้ไข เพื่อให้ทุกคนลงนามบนเนื้อหาที่ถูกต้องเดียวกัน
             </div>
 
-            <button type="submit" class="btn btn-academic"
-                    data-confirm="ส่งเอกสารไปลงนาม? ฟอร์มจะถูกล็อกไม่ให้แก้ไขจนกว่าจะลงนามครบหรือยกเลิก">
-                <i class="fas fa-paper-plane"></i> ส่งไปลงนาม
+            <button type="submit" class="btn btn-academic px-4 py-2">
+                <i class="fas fa-paper-plane me-1"></i>
+                <span th:if="${!signaturePanel.isAdminViewer}">ส่งและลงนามในส่วนของผู้ยื่นคำร้อง</span>
+                <span th:if="${signaturePanel.isAdminViewer}">ยืนยันความถูกต้องและส่งเวียนลงนาม</span>
             </button>
         </form>
     </div>

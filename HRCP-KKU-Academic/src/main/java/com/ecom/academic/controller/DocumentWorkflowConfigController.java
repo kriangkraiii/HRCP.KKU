@@ -45,11 +45,32 @@ public class DocumentWorkflowConfigController {
         model.addAttribute("academicGroups", workflowConfigService.getGroupedConfigs(SignatureModule.ACADEMIC));
         model.addAttribute("positionGroups", workflowConfigService.getGroupedConfigs(SignatureModule.POSITION));
 
-        // Available staff members for default signer dropdowns
-        List<SignerOptionDTO> availableSigners = staffMemberService.findAllWithAccounts().stream()
+        // Available signers for default signer dropdowns:
+        // Include staff members with accounts AND all active system users (Admins, Staff, general users)
+        java.util.Map<Integer, SignerOptionDTO> map = new java.util.LinkedHashMap<>();
+
+        // 1. First add all signable staff members
+        staffMemberService.findAllWithAccounts().stream()
                 .filter(StaffMember::isSignable)
-                .map(SignerOptionDTO::from)
-                .toList();
+                .forEach(s -> {
+                    SignerOptionDTO dto = SignerOptionDTO.from(s);
+                    if (dto.userId() != null) {
+                        map.put(dto.userId(), dto);
+                    }
+                });
+
+        // 2. Add all active users from userRepository (Admins, Staff, etc.)
+        userRepository.findAll().stream()
+                .filter(u -> Boolean.TRUE.equals(u.getIsEnable()))
+                .forEach(u -> {
+                    if (!map.containsKey(u.getId())) {
+                        map.put(u.getId(), SignerOptionDTO.fromUser(u));
+                    }
+                });
+
+        List<SignerOptionDTO> availableSigners = new java.util.ArrayList<>(map.values());
+        availableSigners.sort(java.util.Comparator.comparing(SignerOptionDTO::displayName,
+                java.util.Comparator.nullsLast(String::compareToIgnoreCase)));
         model.addAttribute("availableSigners", availableSigners);
 
         return "academic/admin/signer_settings";

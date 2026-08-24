@@ -34,17 +34,12 @@
                             <i class="fas fa-check-circle"></i> [[${successMsg}]]
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                         </div>
-                        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show mt-3">
-                            <i class="fas fa-exclamation-circle"></i> [[${errorMsg}]]
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
 
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
 
                         <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
         <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
-
 
                     <!-- ปุ่มส่งข้อเสนอแนะ (แสดงหลังบันทึกเอกสารแล้ว) -->
                     <div th:if="${param.success != null || param.saved != null || existingData != null}" class="mt-3 border-top pt-3">

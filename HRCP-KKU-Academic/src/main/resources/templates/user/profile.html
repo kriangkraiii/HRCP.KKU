@@ -13,14 +13,6 @@
             </div>
 
             <!-- Alerts -->
-            <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show" style="border-radius:12px;border:none;">
-                <i class="fas fa-check-circle me-2"></i>[[${succMsg}]]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show" style="border-radius:12px;border:none;">
-                <i class="fas fa-exclamation-circle me-2"></i>[[${errorMsg}]]
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
 
             <form th:action="@{/user/update-profile}" method="post" enctype="multipart/form-data" id="profileForm">
                 <input type="hidden" th:value="${user.id}" name="id">
@@ -90,8 +82,8 @@
                                             <option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
                                             <option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
                                             <option value="ดร." th:selected="${user.title == 'ดร.'}">ดร.</option>
-                                            <option value="อาจารย์" th:selected="${user.title == 'อาจารย์' or user.title == 'อ.'}">อาจารย์ (อ.)</option>
-                                            <option value="อ.ดร." th:selected="${user.title == 'อ.ดร.' or user.title == 'อาจารย์ ดร.'}">อาจารย์ ดร. (อ.ดร.)</option>
+                                            <option value="อาจารย์" th:selected="${user.title == 'อาจารย์' or user.title == 'อ.'}">อาจารย์</option>
+                                            <option value="อ.ดร." th:selected="${user.title == 'อ.ดร.' or user.title == 'อาจารย์ ดร.'}">อาจารย์ ดร.</option>
                                             <option value="ผศ." th:selected="${user.title == 'ผศ.' or user.title == 'ผู้ช่วยศาสตราจารย์'}">ผศ.</option>
                                             <option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.' or user.title == 'ผู้ช่วยศาสตราจารย์ ดร.' or user.title == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผศ.ดร.</option>
                                             <option value="รศ." th:selected="${user.title == 'รศ.' or user.title == 'รองศาสตราจารย์'}">รศ.</option>

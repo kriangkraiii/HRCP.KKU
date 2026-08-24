@@ -91,7 +91,8 @@ public class AcademicApplicantController {
             UserStorageService userStorageService,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
-            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow) {
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
+            com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -104,7 +105,10 @@ public class AcademicApplicantController {
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
         this.signatureWorkflow = signatureWorkflow;
+        this.signedDocumentRenderer = signedDocumentRenderer;
     }
+
+    private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -635,6 +639,17 @@ public class AcademicApplicantController {
         // เปลี่ยนสถานะ DRAFT → RECEIVED
         requestService.submitDraftRequest(request);
 
+        // ปลดล็อกให้ขั้นตอนลงนามถัดไป (เช่น เจ้าหน้าที่/HR) เริ่มทำงานได้หลังยื่นคำร้อง
+        try {
+            var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
+                    getClientIpAddress(), httpRequest != null ? httpRequest.getHeader("User-Agent") : "Browser");
+            signatureWorkflow.advanceHeldStepsForRequest(com.ecom.academic.model.SignatureModule.ACADEMIC, id, actorContext);
+        } catch (Exception e) {
+            // Not fatal to the submission, but it leaves the document circulating
+            // with nobody asked to sign — never let that pass unrecorded.
+            log.error("Could not release held signature steps for ACADEMIC request {}: {}", id, e.toString(), e);
+        }
+
         // Log activity
         try {
             adminLogService.log(principal.getName(), user.getName(),
@@ -646,7 +661,7 @@ public class AcademicApplicantController {
         }
 
         // ส่งอีเมลแจ้งเตือนแอดมิน
-        emailService.sendNewRequestNotificationToAdmins(request);
+        emailService.sendNewRequestNotificationToAdmins(id);
 
         return "redirect:/user/academic/request/" + id + "?success=submitted";
     }
@@ -823,7 +838,24 @@ public class AcademicApplicantController {
         }
 
         byte[] data = null;
-        if (doc.getGeneratedFilePath() != null) {
+
+        // Check if there is an e-sign envelope (open or completed) with signatures
+        java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
+                signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.ACADEMIC, id, doc.getDocumentType());
+        if (optEnvelope.isPresent()) {
+            com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
+            try {
+                if ("pdf".equalsIgnoreCase(format)) {
+                    data = signedDocumentRenderer.renderPdf(envelope);
+                } else {
+                    data = signedDocumentRenderer.renderDocx(envelope);
+                }
+            } catch (Exception e) {
+                // fall through to saved draft file if render fails
+            }
+        }
+
+        if (data == null && doc.getGeneratedFilePath() != null) {
             data = documentService.getDocumentBytes(doc.getGeneratedFilePath());
         }
 
@@ -855,6 +887,26 @@ public class AcademicApplicantController {
             Principal principal) throws IOException {
         List<AcademicDocument> docs = requestService.getDocumentsByType(id, type);
         if (docs.isEmpty()) {
+            // Check if envelope exists for auto-generated / submitted document
+            java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
+                    signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.ACADEMIC, id, type);
+            if (optEnvelope.isPresent()) {
+                com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
+                try {
+                    byte[] data = "pdf".equalsIgnoreCase(format)
+                            ? signedDocumentRenderer.renderPdf(envelope)
+                            : signedDocumentRenderer.renderDocx(envelope);
+                    if (data != null && data.length > 0) {
+                        AcademicRequest req = requestService.findById(id).orElse(null);
+                        String code = req != null ? req.getRequestCode() : "REQ";
+                        String label = DocumentPreviewController.getDocTitle(type);
+                        String baseName = code + "_เอกสารที่_" + type + "_" + label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+                        return PreviewResponseFactory.build(documentService, data, format, baseName);
+                    }
+                } catch (Exception e) {
+                    // fall through
+                }
+            }
             return ResponseEntity.notFound().build();
         }
         return downloadDocument(id, docs.get(0).getId(), format, principal);

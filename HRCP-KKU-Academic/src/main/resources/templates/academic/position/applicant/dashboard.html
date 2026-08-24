@@ -153,16 +153,6 @@
                 })();
             </script>
 
-            <div th:if="${succMsg != null}" class="alert alert-success alert-dismissible fade show">
-                <i class="fas fa-check-circle me-2"></i>
-                <span th:text="${succMsg}"></span>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-            <div th:if="${errorMsg != null}" class="alert alert-danger alert-dismissible fade show">
-                <i class="fas fa-exclamation-circle me-2"></i>
-                <span th:text="${errorMsg}"></span>
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <span th:if="${param.error[0] == 'active_exists'}">ไม่สามารถยื่นคำร้องใหม่ได้ มีคำร้องที่กำลังดำเนินการอยู่</span>

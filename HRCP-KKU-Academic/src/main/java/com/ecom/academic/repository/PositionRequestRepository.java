@@ -12,6 +12,16 @@ import com.ecom.academic.model.PositionRequestStatus;
 
 public interface PositionRequestRepository extends JpaRepository<PositionRequest, Long> {
 
+    /**
+     * Loads a request with its applicant already fetched.
+     *
+     * <p>For background work: a notification thread must not be handed an
+     * entity belonging to the request thread's still-open session, so it
+     * re-reads its own copy with everything it needs already attached.
+     */
+    @Query("SELECT r FROM PositionRequest r LEFT JOIN FETCH r.applicant WHERE r.id = :id")
+    Optional<PositionRequest> findByIdWithApplicant(@Param("id") Long id);
+
     @Query("SELECT r FROM PositionRequest r WHERE r.applicant.id = :userId ORDER BY r.createdAt DESC")
     List<PositionRequest> findByApplicantId(@Param("userId") Integer userId);
 

@@ -24,14 +24,6 @@
         </div>
 
         <!-- Notification Alerts -->
-        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fas fa-circle-check me-2"></i> <span th:text="${succMsg}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
-        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
-            <i class="fas fa-circle-exclamation me-2"></i> <span th:text="${errorMsg}"></span>
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-        </div>
 
         <!-- Filter & Search Toolbar -->
         <div class="card card-academic mb-4 shadow-sm border-0">

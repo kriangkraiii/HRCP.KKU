@@ -21,19 +21,6 @@
 						</div>
 						<div class="card-body p-4">
 
-							<div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show"
-								role="alert">
-								<i class="fas fa-check-circle me-2"></i>
-								<span th:text="${succMsg}"></span>
-								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-							</div>
-							<div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show"
-								role="alert">
-								<i class="fas fa-exclamation-circle me-2"></i>
-								<span th:text="${errorMsg}"></span>
-								<button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-							</div>
-
 							<div class="alert alert-info border-0">
 								<i class="fas fa-info-circle me-2 text-primary"></i>
 								<strong>หมายเหตุ:</strong> บัญชีที่เพิ่มจะยังไม่มีรหัสผ่าน ผู้ใช้ต้องกด
@@ -77,9 +64,9 @@
 										<select name="academicPosition" class="form-select">
 											<option value="">-- ไม่ระบุ --</option>
 											<option value="อาจารย์">อาจารย์</option>
-											<option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์ (ผศ.)</option>
-											<option value="รองศาสตราจารย์">รองศาสตราจารย์ (รศ.)</option>
-											<option value="ศาสตราจารย์">ศาสตราจารย์ (ศ.)</option>
+											<option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+											<option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+											<option value="ศาสตราจารย์">ศาสตราจารย์</option>
 										</select>
 									</div>
 									<div class="col-md-6">

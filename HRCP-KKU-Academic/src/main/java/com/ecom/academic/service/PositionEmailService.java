@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.repository.PositionRequestRepository;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -20,20 +21,44 @@ public class PositionEmailService {
     private final JavaMailSender mailSender;
     private final UserRepository userRepository;
     private final com.ecom.service.NotificationService notificationService;
+    private final PositionRequestRepository requestRepository;
 
     @org.springframework.beans.factory.annotation.Value("${spring.mail.username:noreply@kku.ac.th}")
     private String senderEmail;
 
-    public PositionEmailService(JavaMailSender mailSender, UserRepository userRepository, com.ecom.service.NotificationService notificationService) {
+    public PositionEmailService(JavaMailSender mailSender, UserRepository userRepository,
+            com.ecom.service.NotificationService notificationService,
+            PositionRequestRepository requestRepository) {
         this.mailSender = mailSender;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.requestRepository = requestRepository;
+    }
+
+    /**
+     * Re-reads the request on this thread.
+     *
+     * <p>These methods run on a background thread. The entity the caller was
+     * holding belongs to the caller's Hibernate session, which is very likely
+     * still open — touching its lazy associations from here would put two
+     * threads on one session. So the caller passes an id and nothing else, and
+     * we load our own detached copy with the applicant already attached.
+     */
+    private PositionRequest reload(Long requestId) {
+        if (requestId == null) {
+            return null;
+        }
+        return requestRepository.findByIdWithApplicant(requestId).orElse(null);
     }
 
     @Async
-    public void sendStatusChangeEmail(PositionRequest request,
+    public void sendStatusChangeEmail(Long requestId,
             PositionRequestStatus oldStatus, PositionRequestStatus newStatus) {
         try {
+            PositionRequest request = reload(requestId);
+            if (request == null) {
+                return;
+            }
             // 1. Create in-app notification for applicant
             if (request != null && request.getApplicant() != null) {
                 boolean isImportant = newStatus == PositionRequestStatus.REVISION_REQUESTED
@@ -72,8 +97,12 @@ public class PositionEmailService {
     }
 
     @Async
-    public void sendNewRequestNotificationToAdmins(PositionRequest request) {
+    public void sendNewRequestNotificationToAdmins(Long requestId) {
         try {
+            PositionRequest request = reload(requestId);
+            if (request == null) {
+                return;
+            }
             // 1. Create in-app notification for all admins
             if (request != null && request.getApplicant() != null) {
                 String notifTitle = "คำร้องขอตำแหน่งทางวิชาการใหม่";
