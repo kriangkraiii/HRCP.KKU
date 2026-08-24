@@ -608,6 +608,12 @@ public class PositionRequestService {
         return attachmentRepository.countActiveByRequestId(requestId);
     }
 
+    public long getTotalAttachmentSize(Long requestId) {
+        return getAttachments(requestId).stream()
+                .mapToLong(att -> att.getFileSize() != null ? att.getFileSize() : 0L)
+                .sum();
+    }
+
     public void saveAttachment(com.ecom.academic.model.PositionAttachment attachment) {
         attachmentRepository.save(attachment);
     }

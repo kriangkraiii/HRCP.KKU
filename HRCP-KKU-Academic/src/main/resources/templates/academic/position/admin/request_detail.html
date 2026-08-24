@@ -354,7 +354,7 @@
             <!-- Document Archive -->
             <div class="detail-section">
               <div class="detail-section-header">
-                <h5><i class="fas fa-folder-open"></i> คลังเอกสารเพิ่มเติม</h5>
+                <h5><i class="fas fa-folder-open"></i> เอกสารในคำร้อง</h5>
                 <span
                   class="badge bg-secondary"
                   th:text="${attachmentCount} + ' / 10 ไฟล์'"
@@ -372,7 +372,7 @@
                       type="file"
                       name="file"
                       class="form-control"
-                      accept=".pdf,.docx"
+                      accept=".pdf,.docx,.doc,.zip"
                       required
                     />
                     <button type="submit" class="btn btn-success btn-sm">
@@ -380,16 +380,15 @@
                     </button>
                   </div>
                   <small class="text-muted"
-                    ><i class="fas fa-info-circle"></i> รองรับไฟล์ .pdf และ
-                    .docx (สูงสุด 10 ไฟล์)</small
+                    ><i class="fas fa-info-circle"></i> รองรับไฟล์ .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB)</small
                   >
                 </form>
                 <div
-                  th:if="${attachmentCount >= 10}"
+                  th:if="${attachmentCount >= 20}"
                   class="alert alert-warning mb-3"
                 >
                   <i class="fas fa-exclamation-triangle"></i>
-                  ถึงจำนวนเอกสารสูงสุดแล้ว (10 ไฟล์)
+                  ถึงจำนวนเอกสารสูงสุดแล้ว (20 ไฟล์)
                 </div>
 
                 <div
@@ -426,12 +425,16 @@
                             class="fas fa-file-word text-primary"
                             th:if="${att.fileType == 'DOCX'}"
                           ></i>
+                          <i
+                            class="fas fa-file-archive text-secondary"
+                            th:if="${att.fileType == 'ZIP'}"
+                          ></i>
                           <span th:text="${att.originalFilename}"></span>
                         </td>
                         <td>
                           <span
                             class="badge"
-                            th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : 'bg-primary'}"
+                            th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : (att.fileType == 'DOCX' ? 'bg-primary' : 'bg-secondary')}"
                             th:text="${att.fileType}"
                           ></span>
                         </td>
@@ -446,6 +449,7 @@
                         <td>
                           <div class="d-flex gap-1">
                             <a
+                              th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
                               th:href="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
                               target="_blank"
                               class="btn btn-outline-info btn-sm"

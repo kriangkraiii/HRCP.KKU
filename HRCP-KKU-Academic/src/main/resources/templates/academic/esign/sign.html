@@ -82,9 +82,17 @@
                     <div class="card-body p-0">
                         <!-- เนื้อหาที่แสดงคือฉบับที่ถูก freeze ไว้ตอนส่งลงนาม
                              ไม่ใช่ฟอร์มปัจจุบัน — สิ่งที่เห็นคือสิ่งที่จะถูกลงนามจริง -->
+                        <!-- วงเล็บที่ต่อท้าย @{...} ถูก Thymeleaf อ่านเป็น "รายการพารามิเตอร์ของ URL"
+                             ไม่ใช่การต่อสตริง จึงต้องส่งพารามิเตอร์ด้วยไวยากรณ์ @{...(name=value)}
+                             ของจริงเท่านั้น มิฉะนั้นจะได้ URL เพี้ยนจนโหลดไม่ขึ้น -->
                         <div id="esign-pdf-container"
+                             th:with="previewSigId=${defaultSignature != null
+                                        ? defaultSignature.id
+                                        : (!#lists.isEmpty(mySignatures) ? mySignatures[0].id : null)}"
                              th:data-step-id="${step.id}"
-                             th:data-pdf-url="@{'/esign/sign/' + ${step.id} + '/preview' + (${defaultSignature != null} ? ('?userSignatureId=' + ${defaultSignature.id}) : (${!#lists.isEmpty(mySignatures)} ? ('?userSignatureId=' + ${mySignatures[0].id}) : ''))}">
+                             th:data-pdf-url="${previewSigId != null}
+                                        ? @{/esign/sign/{stepId}/preview(stepId=${step.id}, userSignatureId=${previewSigId})}
+                                        : @{/esign/sign/{stepId}/preview(stepId=${step.id})}">
                             <!-- EsignPdfViewer will dynamically mount here -->
                         </div>
                     </div>

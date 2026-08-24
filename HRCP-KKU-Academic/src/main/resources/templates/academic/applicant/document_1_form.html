@@ -196,7 +196,7 @@
                         </div>
                         <div class="card-body">
                             <p class="text-muted small mb-3">
-                                <i class="fas fa-info-circle me-1"></i> ท่านสามารถแนบไฟล์หลักฐานประกอบ เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา (รองรับไฟล์ PDF, Word, PowerPoint, Excel, Zip)
+                                <i class="fas fa-info-circle me-1"></i> ท่านสามารถแนบไฟล์หลักฐานประกอบ เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา (รองรับไฟล์ .pdf, .docx, .doc, .zip — ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)
                             </p>
 
                             <!-- Drag and Drop & Multiple Upload Form -->
@@ -205,8 +205,8 @@
                                 <label for="multiFileInput" class="upload-dropzone p-4 border border-2 border-dashed rounded-3 text-center mb-3 d-block" id="dropzoneArea" style="cursor: pointer;">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2 d-block"></i>
                                     <h6 class="fw-bold mb-1">เลือกไฟล์ หรือลากไฟล์มาวางที่นี่</h6>
-                                    <p class="text-muted small mb-3">รองรับไฟล์: .pdf, .docx, .doc, .pptx, .xlsx, .zip, .rar, .png, .jpg (เลือกได้หลายไฟล์พร้อมกัน)</p>
-                                    <input type="file" name="files" id="multiFileInput" multiple class="d-none" accept=".pdf,.docx,.doc,.pptx,.ppt,.xlsx,.xls,.zip,.rar,.7z,.png,.jpg,.jpeg">
+                                    <p class="text-muted small mb-3">รองรับไฟล์: .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)</p>
+                                    <input type="file" name="files" id="multiFileInput" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
                                     <span class="btn btn-primary px-4 rounded-pill shadow-sm" id="btnChooseFiles">
                                         <i class="fas fa-folder-open me-1"></i> เลือกไฟล์จากเครื่อง
                                     </span>
@@ -268,7 +268,8 @@
                                             </td>
                                             <td class="text-center">
                                                 <div class="btn-group btn-group-sm">
-                                                    <a th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'" 
+                                                    <a th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
+                                                       th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'" 
                                                        target="_blank" class="btn btn-outline-info" title="เปิดดูไฟล์">
                                                         <i class="fas fa-eye"></i>
                                                     </a>
@@ -277,7 +278,7 @@
                                                         <i class="fas fa-download"></i>
                                                     </a>
                                                     <form th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'" 
-                                                          method="post" class="d-inline" onsubmit="return confirm('คุณต้องการลบไฟล์นี้หรือไม่?');">
+                                                          method="post" class="d-inline" data-confirm="คุณต้องการลบไฟล์นี้หรือไม่?">
                                                         <button type="submit" class="btn btn-outline-danger" title="ลบไฟล์">
                                                             <i class="fas fa-trash-alt"></i>
                                                         </button>
@@ -456,8 +457,40 @@
                                 });
                             }
 
+                            var ALLOWED_EXTS = ['.pdf', '.docx', '.doc', '.zip'];
+                            var MAX_TOTAL_BYTES = 75 * 1024 * 1024; // 75MB
+
                             function updateQueueDisplay() {
                                 if (!fileInput.files || fileInput.files.length === 0) {
+                                    queueContainer.classList.add('d-none');
+                                    queueList.innerHTML = '';
+                                    return;
+                                }
+
+                                var invalidExtFiles = [];
+                                var totalSelectedBytes = 0;
+
+                                Array.from(fileInput.files).forEach(function(file) {
+                                    totalSelectedBytes += file.size;
+                                    var lower = file.name.toLowerCase();
+                                    var valid = ALLOWED_EXTS.some(function(ext) { return lower.endsWith(ext); });
+                                    if (!valid) {
+                                        invalidExtFiles.push(file.name);
+                                    }
+                                });
+
+                                if (invalidExtFiles.length > 0) {
+                                    alert('พบไฟล์ที่ไม่รองรับ: ' + invalidExtFiles.join(', ') + '\nอนุญาตเฉพาะไฟล์ .pdf, .docx, .doc, .zip เท่านั้น');
+                                    fileInput.value = '';
+                                    queueContainer.classList.add('d-none');
+                                    queueList.innerHTML = '';
+                                    return;
+                                }
+
+                                if (totalSelectedBytes > MAX_TOTAL_BYTES) {
+                                    var currentMB = (totalSelectedBytes / (1024 * 1024)).toFixed(1);
+                                    alert('ขนาดไฟล์รวมที่เลือก (' + currentMB + ' MB) เกินขีดจำกัด 75 MB ต่อคำร้อง\nกรุณาเลือกไฟล์ใหม่');
+                                    fileInput.value = '';
                                     queueContainer.classList.add('d-none');
                                     queueList.innerHTML = '';
                                     return;
@@ -466,10 +499,12 @@
                                 queueList.innerHTML = '';
                                 Array.from(fileInput.files).forEach(function(file, idx) {
                                     var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                    var isZip = file.name.toLowerCase().endsWith('.zip');
+                                    var iconClass = isZip ? 'fas fa-file-archive text-secondary' : (file.name.toLowerCase().endsWith('.pdf') ? 'fas fa-file-pdf text-danger' : 'fas fa-file-word text-primary');
                                     var li = document.createElement('li');
                                     li.className = 'list-group-item d-flex justify-content-between align-items-center py-2';
                                     li.innerHTML = '<div class="d-flex align-items-center gap-2">' +
-                                        '<i class="fas fa-file text-primary"></i>' +
+                                        '<i class="' + iconClass + '"></i>' +
                                         '<span class="fw-semibold text-break">' + escapeHtml(file.name) + '</span>' +
                                         '</div>' +
                                         '<span class="badge bg-secondary rounded-pill">' + sizeMB + ' MB</span>';

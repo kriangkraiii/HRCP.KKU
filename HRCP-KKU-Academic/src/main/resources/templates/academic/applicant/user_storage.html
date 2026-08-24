@@ -115,14 +115,14 @@
                     <i class="fas fa-cloud-upload-alt me-1"></i> อัปโหลดไฟล์
                 </button>
                 <form id="uploadForm" class="js-hidden">
-                    <input type="file" id="fileUploadInput" multiple data-call-change="uploadFiles" data-call-arg="files">
+                    <input type="file" id="fileUploadInput" multiple accept=".pdf,.doc,.docx,.zip" data-call-change="uploadFiles" data-call-arg="files">
                 </form>
             </div>
 
             <!-- Drop Zone -->
             <div id="dropZone" class="card border-2 border-dashed mb-4 text-center py-4 storage-dropzone js-hidden">
                 <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
-                <p class="text-muted mb-0">วางไฟล์ที่นี่เพื่ออัปโหลด</p>
+                <p class="text-muted mb-0">วางไฟล์ที่นี่เพื่ออัปโหลด (.pdf, .docx, .doc, .zip)</p>
             </div>
 
             <!-- Folders Grid -->
@@ -532,16 +532,37 @@
             if (el) el.textContent = doneCount + '/' + items.length + ' ไฟล์เสร็จแล้ว';
         }
 
+        var ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx', 'zip'];
+
         // ==================== Chunked Upload Engine ====================
         function uploadFiles(files) {
+            var validFiles = [];
+            for (var k = 0; k < files.length; k++) {
+                var f = files[k];
+                var ext = f.name.split('.').pop().toLowerCase();
+                if (!ALLOWED_EXTENSIONS.includes(ext)) {
+                    if (typeof showToast === 'function') {
+                        showToast('ไม่อนุญาตให้อัปโหลดไฟล์ .' + ext + ' (อนุญาตเฉพาะ: ' + ALLOWED_EXTENSIONS.join(', ') + ')', false);
+                    } else {
+                        alert('ไม่อนุญาตให้อัปโหลดไฟล์ .' + ext + ' (อนุญาตเฉพาะ: ' + ALLOWED_EXTENSIONS.join(', ') + ')');
+                    }
+                    continue;
+                }
+                validFiles.push(f);
+            }
+            if (validFiles.length === 0) {
+                document.getElementById('fileUploadInput').value = '';
+                return;
+            }
+
             openUploadModal();
             document.getElementById('cancelAllBtn').classList.remove('js-hidden');
 
             var startIndex = uploadQueue.length;
-            for (var i = 0; i < files.length; i++) {
+            for (var i = 0; i < validFiles.length; i++) {
                 var fileIndex = startIndex + i;
-                uploadQueue.push({file: files[i], index: fileIndex});
-                addFileToModal(files[i], fileIndex);
+                uploadQueue.push({file: validFiles[i], index: fileIndex});
+                addFileToModal(validFiles[i], fileIndex);
             }
             updateSummary();
 

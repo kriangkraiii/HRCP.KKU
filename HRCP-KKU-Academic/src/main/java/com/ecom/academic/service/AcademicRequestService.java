@@ -381,6 +381,12 @@ public class AcademicRequestService {
         return attachmentRepository.countByRequestId(requestId);
     }
 
+    public long getTotalAttachmentSize(Long requestId) {
+        return getAttachments(requestId).stream()
+                .mapToLong(att -> att.getFileSize() != null ? att.getFileSize() : 0L)
+                .sum();
+    }
+
     public Optional<AcademicAttachment> findAttachmentById(Long attachmentId) {
         return attachmentRepository.findById(attachmentId);
     }

@@ -12,12 +12,10 @@ import javax.imageio.ImageIO;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
-import com.ecom.academic.model.SignatureRequestStatus;
 import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.repository.SignatureStepRepository;
 import com.ecom.academic.service.DocumentGenerationService.StampedSignature;
@@ -44,51 +42,21 @@ public class SignedDocumentRenderer {
     private final DocumentGenerationService documentGenerationService;
     private final SignatureStepRepository stepRepository;
     private final SignatureImageStorage signatureImageStorage;
-    private final QrCodeGenerator qrCodeGenerator;
-
-    /**
-     * Public address of this system, embedded in the verification QR.
-     *
-     * <p>Configurable because the QR is scanned from paper, where a localhost
-     * URL would be useless.
-     */
-    @Value("${app.esign.base-url:https://localhost:8081}")
-    private String baseUrl;
-
-    /**
-     * Warns when the QR would point somewhere unreachable.
-     *
-     * <p>A localhost URL is right for a developer machine and useless on paper:
-     * the code is printed on an official document and scanned by whoever is
-     * holding it. Silently shipping that would produce documents that look
-     * verifiable and are not, so it is said out loud at boot.
-     */
-    @jakarta.annotation.PostConstruct
-    void warnIfBaseUrlIsLocal() {
-        if (baseUrl != null && (baseUrl.contains("localhost") || baseUrl.contains("127.0.0.1"))) {
-            log.warn("app.esign.base-url is {} — QR codes printed on signed documents will point at "
-                    + "this machine and will not resolve for anyone else. Set APP_ESIGN_BASE_URL to the "
-                    + "public address before using signatures in production.", baseUrl);
-        }
-    }
 
     public SignedDocumentRenderer(DocumentGenerationService documentGenerationService,
             SignatureStepRepository stepRepository,
-            SignatureImageStorage signatureImageStorage,
-            QrCodeGenerator qrCodeGenerator) {
+            SignatureImageStorage signatureImageStorage) {
         this.documentGenerationService = documentGenerationService;
         this.stepRepository = stepRepository;
         this.signatureImageStorage = signatureImageStorage;
-        this.qrCodeGenerator = qrCodeGenerator;
     }
 
     /**
      * The document as it currently stands, including every signature collected.
      *
-     * <p>Once the chain is complete the verification footer is printed too, so
-     * the finished document carries its own means of being checked. While it is
-     * still circulating the footer is omitted — a code on a half-signed document
-     * would imply more than is true.
+     * <p>The document carries the signatures only. The verification code still
+     * exists on the envelope and {@code /esign/verify/{code}} still works, but
+     * nothing is printed onto the document itself.
      */
     public byte[] renderDocx(SignatureRequest envelope) throws IOException {
         return renderDocx(envelope, null, null);
@@ -100,10 +68,6 @@ public class SignedDocumentRenderer {
      */
     public byte[] renderDocx(SignatureRequest envelope, SignatureStep previewStep, com.ecom.academic.model.UserSignature previewSig) throws IOException {
         List<StampedSignature> signatures = collectSignatures(envelope, previewStep, previewSig);
-        DocumentGenerationService.VerificationStamp verification =
-                envelope.getStatus() == SignatureRequestStatus.COMPLETED
-                        ? verificationStampFor(envelope)
-                        : null;
 
         String json = envelope.getFrozenJson();
         if (json == null || json.isBlank()) {
@@ -112,18 +76,9 @@ public class SignedDocumentRenderer {
 
         return envelope.getModule() == SignatureModule.ACADEMIC
                 ? documentGenerationService.generateSignedDocx(
-                        envelope.getDocumentType(), json, signatures, verification)
+                        envelope.getDocumentType(), json, signatures)
                 : documentGenerationService.generateSignedP2Docx(
-                        envelope.getDocumentType(), json, signatures, verification);
-    }
-
-    /** The footer's caption, code and QR. */
-    private DocumentGenerationService.VerificationStamp verificationStampFor(SignatureRequest envelope) {
-        String url = baseUrl + "/esign/verify/" + envelope.getVerificationCode();
-        return new DocumentGenerationService.VerificationStamp(
-                "รหัสตรวจสอบ: " + envelope.getVerificationCode(),
-                "เอกสารนี้ลงนามด้วยลายมือชื่ออิเล็กทรอนิกส์ ตรวจสอบความถูกต้องได้ที่ระบบ",
-                qrCodeGenerator.pngFor(url));
+                        envelope.getDocumentType(), json, signatures);
     }
 
     /**

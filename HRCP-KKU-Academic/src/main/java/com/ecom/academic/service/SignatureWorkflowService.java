@@ -67,6 +67,7 @@ public class SignatureWorkflowService {
     private final SignedDocumentArchiver archiver;
     private final DocumentWorkflowConfigService workflowConfigService;
     private final DocumentSnapshotProvider snapshotProvider;
+    private final com.ecom.service.AfterCommitRunner afterCommitRunner;
 
     public SignatureWorkflowService(
             SignatureRequestRepository requestRepository,
@@ -80,7 +81,8 @@ public class SignatureWorkflowService {
             SignatureVerificationService verificationService,
             SignedDocumentArchiver archiver,
             DocumentWorkflowConfigService workflowConfigService,
-            DocumentSnapshotProvider snapshotProvider) {
+            DocumentSnapshotProvider snapshotProvider,
+            com.ecom.service.AfterCommitRunner afterCommitRunner) {
         this.requestRepository = requestRepository;
         this.stepRepository = stepRepository;
         this.auditRepository = auditRepository;
@@ -93,6 +95,7 @@ public class SignatureWorkflowService {
         this.archiver = archiver;
         this.workflowConfigService = workflowConfigService;
         this.snapshotProvider = snapshotProvider;
+        this.afterCommitRunner = afterCommitRunner;
     }
 
     /**
@@ -759,8 +762,12 @@ public class SignatureWorkflowService {
                     "ลงนามครบทุกขั้นตอน");
             notifier.notifyCompleted(noticeFor(envelope, null, List.of(envelope.getInitiatedBy())));
             // Archived off-thread: PDF conversion is slow and must not extend
-            // the signing transaction.
-            archiver.archive(envelope.getId());
+            // the signing transaction. Run after commit to prevent optimistic locking race.
+            if (afterCommitRunner != null) {
+                afterCommitRunner.run(() -> archiver.archive(envelope.getId()));
+            } else {
+                archiver.archive(envelope.getId());
+            }
             return;
         }
 

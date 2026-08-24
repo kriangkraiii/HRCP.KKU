@@ -789,6 +789,37 @@
     </div>
 </div>
 
+<!-- Global In-App Confirmation Modal (Replaces browser-native window.confirm) -->
+<div class="modal fade" id="appGlobalConfirmModal" tabindex="-1" aria-labelledby="appGlobalConfirmModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered confirm-modal-dialog">
+        <div class="modal-content confirm-modal-content">
+            <!-- Top Gradient Accent Bar -->
+            <div id="confirmModalAccentBar" class="confirm-modal-accent-bar"></div>
+
+            <div class="modal-body text-center px-4 pt-4 pb-3">
+                <div id="confirmModalIconBadge" class="confirm-modal-icon-badge">
+                    <i id="confirmModalIcon" class="fas fa-circle-question"></i>
+                </div>
+                <h5 class="modal-title fw-bold mb-2 confirm-modal-title" id="appGlobalConfirmModalLabel">
+                    ยืนยันการดำเนินการ
+                </h5>
+                <p id="confirmModalMessage" class="confirm-modal-message mb-0">
+                    คุณต้องการดำเนินการต่อใช่หรือไม่?
+                </p>
+            </div>
+
+            <div class="modal-footer justify-content-center gap-2 border-0 pt-2 pb-4 px-4">
+                <button type="button" class="btn confirm-modal-btn-cancel px-4 py-2" id="confirmModalCancelBtn" data-bs-dismiss="modal">
+                    ยกเลิก
+                </button>
+                <button type="button" class="btn btn-primary px-4 py-2 shadow-sm" id="confirmModalOkBtn" style="border-radius: 12px; font-weight: 600; min-width: 105px;">
+                    ยืนยัน
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Global: bulletproof fix for stuck gray screen after modal close -->
 <script>
 (function() {

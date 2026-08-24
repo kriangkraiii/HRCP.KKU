@@ -27,20 +27,20 @@
         </button>
         <form id="uploadForm" class="js-hidden">
             <input type="file" id="fileUploadInput" multiple
-                   accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.txt,.rtf,.odt,.ods"
+                   accept=".pdf,.doc,.docx,.zip"
                    data-call-change="uploadFiles" data-call-arg="files">
         </form>
     </div>
     <div class="text-muted small">
         <i class="fas fa-info-circle me-1 text-primary"></i>
-        <span>รองรับไฟล์เอกสาร: .pdf, .doc, .docx, .xls, .xlsx, .csv, .ppt, .pptx, .txt, .rtf, .odt, .ods (โควตารวม 10 GB)</span>
+        <span>รองรับไฟล์เอกสาร: .pdf, .doc, .docx, .zip (โควตารวม 10 GB)</span>
     </div>
 </div>
 
 <!-- Drop Zone -->
 <div th:if="${viewMode == 'storage'}" id="dropZone" class="card border-2 border-dashed mb-4 text-center py-4 storage-dropzone js-hidden">
     <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
-    <p class="text-muted mb-0">วางไฟล์ที่นี่เพื่ออัปโหลด (.pdf, .docx, .xlsx, ฯลฯ)</p>
+    <p class="text-muted mb-0">วางไฟล์ที่นี่เพื่ออัปโหลด (.pdf, .docx, .doc, .zip)</p>
 </div>
 
 <!-- Folders Grid -->

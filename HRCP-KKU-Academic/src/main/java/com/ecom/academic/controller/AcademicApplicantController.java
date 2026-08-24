@@ -419,6 +419,9 @@ public class AcademicApplicantController {
         }
 
         long currentCount = requestService.countAttachments(id);
+        long currentTotalSize = requestService.getTotalAttachmentSize(id);
+        final long MAX_TOTAL_BYTES = 75L * 1024L * 1024L; // 75 MB
+
         int uploadedCount = 0;
         String uploadDir = "uploads/academic/" + id + "/attachments/";
         Files.createDirectories(Path.of(uploadDir));
@@ -434,12 +437,14 @@ public class AcademicApplicantController {
             if (originalFilename == null || originalFilename.isBlank()) continue;
 
             String lower = originalFilename.toLowerCase();
-            if (!lower.endsWith(".pdf") && !lower.endsWith(".docx") && !lower.endsWith(".doc")
-                    && !lower.endsWith(".pptx") && !lower.endsWith(".ppt")
-                    && !lower.endsWith(".xlsx") && !lower.endsWith(".xls")
-                    && !lower.endsWith(".zip") && !lower.endsWith(".rar") && !lower.endsWith(".7z")
-                    && !lower.endsWith(".png") && !lower.endsWith(".jpg") && !lower.endsWith(".jpeg")) {
-                redirectAttributes.addFlashAttribute("error", "ไฟล์ " + originalFilename + " มีประเภทไฟล์ที่ไม่รองรับ");
+            boolean isAllowed = lower.endsWith(".pdf") || lower.endsWith(".docx") || lower.endsWith(".doc") || lower.endsWith(".zip");
+            if (!isAllowed) {
+                redirectAttributes.addFlashAttribute("error", "ไฟล์ " + originalFilename + " มีประเภทไฟล์ที่ไม่รองรับ (อนุญาตเฉพาะ .pdf, .docx, .doc, .zip)");
+                continue;
+            }
+
+            if (currentTotalSize + file.getSize() > MAX_TOTAL_BYTES) {
+                redirectAttributes.addFlashAttribute("error", "ขนาดไฟล์แนบรวมทั้งหมดเกิน 75 MB ต่อคำร้อง ไม่สามารถอัปโหลดไฟล์ " + originalFilename + " ได้");
                 continue;
             }
 
@@ -452,10 +457,7 @@ public class AcademicApplicantController {
             String fileType = "OTHER";
             if (lower.endsWith(".pdf")) fileType = "PDF";
             else if (lower.endsWith(".docx") || lower.endsWith(".doc")) fileType = "DOCX";
-            else if (lower.endsWith(".pptx") || lower.endsWith(".ppt")) fileType = "PPTX";
-            else if (lower.endsWith(".xlsx") || lower.endsWith(".xls")) fileType = "XLSX";
-            else if (lower.endsWith(".zip") || lower.endsWith(".rar") || lower.endsWith(".7z")) fileType = "ZIP";
-            else if (lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")) fileType = "IMAGE";
+            else if (lower.endsWith(".zip")) fileType = "ZIP";
 
             AcademicAttachment attachment = new AcademicAttachment();
             attachment.setRequest(request);
@@ -464,6 +466,8 @@ public class AcademicApplicantController {
             attachment.setFileType(fileType);
             attachment.setFileSize(file.getSize());
             requestService.saveAttachment(attachment);
+
+            currentTotalSize += file.getSize();
             uploadedCount++;
         }
 
@@ -541,7 +545,34 @@ public class AcademicApplicantController {
             return ResponseEntity.notFound().build();
         }
 
+        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
         String ext = attachment.getFileExtension() != null ? attachment.getFileExtension().toUpperCase() : "";
+
+        // สำหรับไฟล์ DOCX แปลงเป็น PDF แบบ On-the-fly เพื่อให้บราวเซอร์เปิดอ่านได้ทันที (แทนการดาวน์โหลด)
+        if ("DOCX".equalsIgnoreCase(ext)) {
+            try {
+                byte[] docxBytes = Files.readAllBytes(path);
+                byte[] pdfBytes = documentService.convertDocxToPdfCached(docxBytes);
+                if (pdfBytes != null && pdfBytes.length > 0) {
+                    String baseName = rawFilename.toLowerCase().endsWith(".docx")
+                            ? rawFilename.substring(0, rawFilename.length() - 5)
+                            : rawFilename;
+                    String pdfFilename = baseName + ".pdf";
+                    String safePdfFilename = java.net.URLEncoder.encode(pdfFilename, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+                    String asciiPdfFilename = pdfFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.CONTENT_DISPOSITION,
+                                    "inline; filename=\"" + asciiPdfFilename + "\"; filename*=UTF-8''" + safePdfFilename)
+                            .contentType(MediaType.APPLICATION_PDF)
+                            .contentLength(pdfBytes.length)
+                            .body(new org.springframework.core.io.ByteArrayResource(pdfBytes));
+                }
+            } catch (Exception e) {
+                log.warn("Failed to convert DOCX attachment {} to PDF for inline preview, falling back to original file: {}", attachmentId, e.toString());
+            }
+        }
+
         String contentType = switch (ext) {
             case "PDF" -> "application/pdf";
             case "PNG" -> "image/png";
@@ -552,7 +583,6 @@ public class AcademicApplicantController {
             default -> "application/octet-stream";
         };
 
-        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
         String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
                 .replace("+", "%20");
         String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");

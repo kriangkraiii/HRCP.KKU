@@ -568,27 +568,41 @@ public class PositionAdminController {
             PositionRequest request = positionService.findById(id)
                     .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
-            if (positionService.countAttachments(id) >= 10) {
+            if (positionService.countAttachments(id) >= 20) {
                 return "redirect:/admin/position/request/" + id + "?error=max_attachments";
             }
 
+            long currentTotalSize = positionService.getTotalAttachmentSize(id);
+            if (currentTotalSize + file.getSize() > 75L * 1024L * 1024L) {
+                return "redirect:/admin/position/request/" + id + "?error=total_size_exceeded";
+            }
+
             String originalFilename = file.getOriginalFilename();
-            if (originalFilename == null || (!originalFilename.toLowerCase().endsWith(".pdf")
-                    && !originalFilename.toLowerCase().endsWith(".docx"))) {
+            if (originalFilename == null) {
+                return "redirect:/admin/position/request/" + id + "?error=invalid_file_type";
+            }
+            String lower = originalFilename.toLowerCase();
+            boolean isAllowed = lower.endsWith(".pdf") || lower.endsWith(".docx") || lower.endsWith(".doc") || lower.endsWith(".zip");
+            if (!isAllowed) {
                 return "redirect:/admin/position/request/" + id + "?error=invalid_file_type";
             }
 
             String uploadDir = "uploads/position/" + id + "/attachments/";
             Files.createDirectories(Path.of(uploadDir));
-            String storedName = System.currentTimeMillis() + "_" + originalFilename;
+            String storedName = System.currentTimeMillis() + "_" + FileUtils.sanitizeFilename(originalFilename);
             Path storedPath = Path.of(uploadDir, storedName);
             file.transferTo(storedPath.toFile());
+
+            String fileType = "OTHER";
+            if (lower.endsWith(".pdf")) fileType = "PDF";
+            else if (lower.endsWith(".docx") || lower.endsWith(".doc")) fileType = "DOCX";
+            else if (lower.endsWith(".zip")) fileType = "ZIP";
 
             PositionAttachment attachment = new PositionAttachment();
             attachment.setRequest(request);
             attachment.setOriginalFilename(originalFilename);
             attachment.setStoredFilePath(storedPath.toString());
-            attachment.setFileType(originalFilename.toLowerCase().endsWith(".pdf") ? "PDF" : "DOCX");
+            attachment.setFileType(fileType);
             attachment.setFileSize(file.getSize());
             positionService.saveAttachment(attachment);
 
@@ -652,7 +666,34 @@ public class PositionAdminController {
             return ResponseEntity.notFound().build();
         }
 
+        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
         String ext = attachment.getFileExtension() != null ? attachment.getFileExtension().toUpperCase() : "";
+
+        // สำหรับไฟล์ DOCX แปลงเป็น PDF แบบ On-the-fly เพื่อให้บราวเซอร์เปิดอ่านได้ทันที (แทนการดาวน์โหลด)
+        if ("DOCX".equalsIgnoreCase(ext)) {
+            try {
+                byte[] docxBytes = Files.readAllBytes(path);
+                byte[] pdfBytes = documentService.convertDocxToPdfCached(docxBytes);
+                if (pdfBytes != null && pdfBytes.length > 0) {
+                    String baseName = rawFilename.toLowerCase().endsWith(".docx")
+                            ? rawFilename.substring(0, rawFilename.length() - 5)
+                            : rawFilename;
+                    String pdfFilename = baseName + ".pdf";
+                    String safePdfFilename = java.net.URLEncoder.encode(pdfFilename, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+                    String asciiPdfFilename = pdfFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.CONTENT_DISPOSITION,
+                                    "inline; filename=\"" + asciiPdfFilename + "\"; filename*=UTF-8''" + safePdfFilename)
+                            .contentType(MediaType.APPLICATION_PDF)
+                            .contentLength(pdfBytes.length)
+                            .body(new org.springframework.core.io.ByteArrayResource(pdfBytes));
+                }
+            } catch (Exception e) {
+                logger.warn("Failed to convert DOCX attachment {} to PDF for inline preview, falling back to original file: {}", attachmentId, e.toString());
+            }
+        }
+
         String contentType = switch (ext) {
             case "PDF" -> "application/pdf";
             case "PNG" -> "image/png";
@@ -663,7 +704,6 @@ public class PositionAdminController {
             default -> "application/octet-stream";
         };
 
-        String rawFilename = attachment.getOriginalFilename() != null ? attachment.getOriginalFilename() : "attachment";
         String safeFilename = java.net.URLEncoder.encode(rawFilename,
                 java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
         String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");

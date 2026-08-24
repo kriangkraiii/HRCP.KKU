@@ -27,7 +27,7 @@ function initDragDrop() {
     });
 }
 
-var ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx', 'xls', 'xlsx', 'csv', 'ppt', 'pptx', 'txt', 'rtf', 'odt', 'ods'];
+var ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx', 'zip'];
 
 function uploadFiles(files) {
     for (var i = 0; i < files.length; i++) {

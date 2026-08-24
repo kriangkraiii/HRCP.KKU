@@ -35,7 +35,7 @@ public class AdminStorageService {
             AdminFolderRepository folderRepository,
             AdminFileRepository fileRepository,
             @Value("${app.storage.admin.max-bytes:10737418240}") long maxStorageBytes,
-            @Value("${app.storage.admin.allowed-extensions:pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,rtf,odt,ods}") String allowedExtensionsStr) {
+            @Value("${app.storage.admin.allowed-extensions:pdf,doc,docx,zip}") String allowedExtensionsStr) {
         this.folderRepository = folderRepository;
         this.fileRepository = fileRepository;
         this.maxStorageBytes = maxStorageBytes;

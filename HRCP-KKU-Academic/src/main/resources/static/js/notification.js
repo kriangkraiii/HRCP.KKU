@@ -504,49 +504,63 @@ function restoreNotification(id) {
 }
 
 function permanentDeleteNotification(id) {
-    if (!confirm('ต้องการลบการแจ้งเตือนนี้ถาวรหรือไม่? (ไม่สามารถกู้คืนได้)')) return;
+    var msg = 'ต้องการลบการแจ้งเตือนนี้ถาวรหรือไม่? (ไม่สามารถกู้คืนได้)';
+    var confirmPromise = (typeof window.appConfirm === 'function') 
+        ? window.appConfirm(msg, { title: 'ยืนยันลบถาวร', confirmText: 'ยืนยันลบ', variant: 'danger' })
+        : Promise.resolve(confirm(msg));
 
-    var csrf = getCsrf();
-    var headers = Object.assign({ 'Content-Type': 'application/json' }, csrf.headers);
+    confirmPromise.then(function(ok) {
+        if (!ok) return;
 
-    fetch('/api/notifications/' + id + '/permanent-delete', {
-        method: 'POST',
-        headers: headers
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
-            showNotificationToast(data.message || 'ลบถาวรแล้ว', true);
-            if (data.tabCounts) {
-                updateTabCounts(data.tabCounts);
+        var csrf = getCsrf();
+        var headers = Object.assign({ 'Content-Type': 'application/json' }, csrf.headers);
+
+        fetch('/api/notifications/' + id + '/permanent-delete', {
+            method: 'POST',
+            headers: headers
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showNotificationToast(data.message || 'ลบถาวรแล้ว', true);
+                if (data.tabCounts) {
+                    updateTabCounts(data.tabCounts);
+                }
+                var row = document.getElementById('notif-row-' + id);
+                if (row) {
+                    row.remove();
+                }
             }
-            var row = document.getElementById('notif-row-' + id);
-            if (row) {
-                row.remove();
-            }
-        }
+        });
     });
 }
 
 function emptyTrash() {
-    if (!confirm('ต้องการล้างถังขยะการแจ้งเตือนทั้งหมดหรือไม่? (ไม่สามารถกู้คืนได้)')) return;
+    var msg = 'ต้องการล้างถังขยะการแจ้งเตือนทั้งหมดหรือไม่? (ไม่สามารถกู้คืนได้)';
+    var confirmPromise = (typeof window.appConfirm === 'function') 
+        ? window.appConfirm(msg, { title: 'ยืนยันล้างถังขยะ', confirmText: 'ยืนยันล้าง', variant: 'danger' })
+        : Promise.resolve(confirm(msg));
 
-    var csrf = getCsrf();
-    var headers = Object.assign({ 'Content-Type': 'application/json' }, csrf.headers);
+    confirmPromise.then(function(ok) {
+        if (!ok) return;
 
-    fetch('/api/notifications/empty-trash', {
-        method: 'POST',
-        headers: headers
-    })
-    .then(function(r) { return r.json(); })
-    .then(function(data) {
-        if (data.success) {
-            showNotificationToast(data.message || 'ล้างถังขยะแล้ว', true);
-            if (data.tabCounts) {
-                updateTabCounts(data.tabCounts);
+        var csrf = getCsrf();
+        var headers = Object.assign({ 'Content-Type': 'application/json' }, csrf.headers);
+
+        fetch('/api/notifications/empty-trash', {
+            method: 'POST',
+            headers: headers
+        })
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            if (data.success) {
+                showNotificationToast(data.message || 'ล้างถังขยะแล้ว', true);
+                if (data.tabCounts) {
+                    updateTabCounts(data.tabCounts);
+                }
+                setTimeout(function() { window.location.reload(); }, 600);
             }
-            setTimeout(function() { window.location.reload(); }, 600);
-        }
+        });
     });
 }
 

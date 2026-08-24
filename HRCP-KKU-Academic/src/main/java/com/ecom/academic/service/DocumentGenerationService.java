@@ -1779,8 +1779,19 @@ public class DocumentGenerationService {
 
     /**
      * แปลง DOCX → PDF โดยใช้ Two-Tier Cache (L1 Memory + L2 Disk Cache)
+     *
+     * <p>ถ้าไบต์ที่ส่งเข้ามาเป็น PDF อยู่แล้วจะคืนกลับไปเลย ไม่แปลงซ้ำ เพราะการ
+     * ให้ LibreOffice import PDF แล้ว export ใหม่ จะทำลายการ map ตัวอักษรไทย
+     * จนอ่านไม่ออก และมันพังแบบ "ได้ไฟล์ที่ดูปกติแต่ข้อความเพี้ยน" ไม่ใช่ error
+     * จึงหลุดสายตาได้ง่ายมาก กันไว้ที่นี่ทีเดียวให้ครอบทุกจุดที่เรียกใช้
      */
     public byte[] convertDocxToPdfCached(byte[] docxBytes) throws IOException {
+        if (isPdfBytes(docxBytes)) {
+            log.warn("convertDocxToPdfCached ได้รับไฟล์ที่เป็น PDF อยู่แล้ว — คืนไฟล์เดิมกลับไป "
+                    + "ไม่แปลงซ้ำ (ผู้เรียกน่าจะส่งผลลัพธ์ของ renderPdf มาผิดที่)");
+            return docxBytes;
+        }
+
         String key = sha256(docxBytes);
         
         // 1. ตรวจสอบ L1 In-Memory Cache (< 1ms)
@@ -1817,6 +1828,13 @@ public class DocumentGenerationService {
         }
 
         return pdf;
+    }
+
+    /** ไบต์ชุดนี้เป็นไฟล์ PDF อยู่แล้วหรือไม่ (ดูจาก magic bytes) */
+    private static boolean isPdfBytes(byte[] bytes) {
+        return bytes != null && bytes.length >= 5
+                && bytes[0] == '%' && bytes[1] == 'P' && bytes[2] == 'D'
+                && bytes[3] == 'F' && bytes[4] == '-';
     }
 
     public byte[] convertDocxToPdf(byte[] docxBytes) throws IOException {

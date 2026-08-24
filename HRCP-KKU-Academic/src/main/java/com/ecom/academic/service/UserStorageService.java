@@ -36,8 +36,8 @@ public class UserStorageService {
     public UserStorageService(
             UserFolderRepository folderRepo,
             UserFileRepository fileRepo,
-            @Value("${app.storage.user.max-bytes:1073741824}") long maxStorageBytes,
-            @Value("${app.storage.user.allowed-extensions:pdf,doc,docx,xls,xlsx,csv,ppt,pptx,txt,rtf,odt,ods}") String allowedExtensionsStr) {
+            @Value("${app.storage.user.max-bytes:536870912}") long maxStorageBytes,
+            @Value("${app.storage.user.allowed-extensions:pdf,doc,docx,zip}") String allowedExtensionsStr) {
         this.folderRepo = folderRepo;
         this.fileRepo = fileRepo;
         this.maxStorageBytes = maxStorageBytes;

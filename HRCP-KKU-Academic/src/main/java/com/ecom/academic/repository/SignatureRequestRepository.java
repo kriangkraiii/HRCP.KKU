@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -95,4 +96,14 @@ public interface SignatureRequestRepository extends JpaRepository<SignatureReque
             """)
     List<SignatureRequest> findByInitiatedByWithSteps(@Param("userId") Integer userId,
             @Param("status") SignatureRequestStatus status);
+
+    @Modifying
+    @Query("""
+            UPDATE SignatureRequest r
+            SET r.signedDocxPath = :docxPath, r.signedPdfPath = :pdfPath
+            WHERE r.id = :id
+            """)
+    int updateSignedDocumentPaths(@Param("id") Long id,
+            @Param("docxPath") String docxPath,
+            @Param("pdfPath") String pdfPath);
 }

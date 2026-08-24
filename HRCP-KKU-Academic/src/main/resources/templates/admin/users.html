@@ -178,10 +178,19 @@
 				const newStatus = el.checked;
 
 				if (!newStatus) {
-					if (!confirm('Are you sure you want to deactivate this user account?')) {
-						el.checked = true;
-						return;
-					}
+					var msg = 'คุณแน่ใจหรือไม่ว่าต้องการระงับการใช้งาน (Deactivate) บัญชีผู้ใช้นี้?';
+					var confirmPromise = (typeof window.appConfirm === 'function')
+						? window.appConfirm(msg, { title: 'ยืนยันระงับบัญชี', confirmText: 'ยืนยันระงับ', variant: 'danger' })
+						: Promise.resolve(confirm(msg));
+
+					confirmPromise.then(function(ok) {
+						if (!ok) {
+							el.checked = true;
+							return;
+						}
+						postForm('/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type);
+					});
+					return;
 				}
 
 				postForm('/admin/updateSts?status=' + newStatus + '&id=' + id + '&type=' + type);
@@ -189,12 +198,17 @@
 
 			function resetTwoFactor(el) {
 				const email = el.dataset.email;
-				if (!confirm('ปิดการยืนยันตัวตนสองขั้นตอน (2FA) ของ ' + email + ' ใช่หรือไม่?\n\n'
+				var msg = 'ปิดการยืนยันตัวตนสองขั้นตอน (2FA) ของ ' + email + ' ใช่หรือไม่?\n\n'
 						+ 'หลังจากนี้บัญชีนี้จะเข้าระบบได้โดยไม่ต้องกรอก OTP\n'
-						+ 'ควรแจ้งเจ้าตัวให้เปิดใหม่เองเมื่อเข้าอีเมลได้แล้ว')) {
-					return;
-				}
-				postForm('/admin/reset-2fa?id=' + el.dataset.id + '&type=' + el.dataset.type);
+						+ 'ควรแจ้งเจ้าตัวให้เปิดใหม่เองเมื่อเข้าอีเมลได้แล้ว';
+				var confirmPromise = (typeof window.appConfirm === 'function')
+					? window.appConfirm(msg, { title: 'ยืนยันรีเซ็ต 2FA', confirmText: 'ยืนยันปิด 2FA', variant: 'warning' })
+					: Promise.resolve(confirm(msg));
+
+				confirmPromise.then(function(ok) {
+					if (!ok) return;
+					postForm('/admin/reset-2fa?id=' + el.dataset.id + '&type=' + el.dataset.type);
+				});
 			}
 
 			function openDeleteModal(el) {

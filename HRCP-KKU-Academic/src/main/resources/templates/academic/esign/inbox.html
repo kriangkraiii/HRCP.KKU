@@ -147,18 +147,9 @@
                             <i class="fas fa-clipboard-check fa-3x text-success opacity-75"></i>
                         </div>
                         <h5 class="fw-bold text-dark mb-1">ไม่มีเอกสารรอคุณลงนามในขณะนี้</h5>
-                        <p class="text-secondary mb-3 max-w-md mx-auto">
+                        <p class="text-secondary mb-0 max-w-md mx-auto">
                             ระบบเวียนลงนามแบบเรียงตามลำดับ (Sequential) เอกสารจะปรากฏในหน้านี้เมื่อถึงคิวลงนามของคุณ
                         </p>
-                        <div class="d-flex justify-content-center gap-2">
-                            <button type="button" class="btn btn-outline-primary"
-                                    onclick="document.getElementById('tab-sent').click();">
-                                <i class="fas fa-paper-plane me-1"></i> ดูเอกสารที่ส่งไปลงนาม
-                            </button>
-                            <a href="/admin/academic/requests" class="btn btn-primary">
-                                <i class="fas fa-list me-1"></i> หน้ารายการคำร้อง
-                            </a>
-                        </div>
                     </div>
                 </div>
 
@@ -451,8 +442,51 @@
 
     </div>
 
-    <!-- Client-side Search & Filter Script -->
+    <!-- Tab Switch & Search Filter Scripts -->
     <script>
+    function switchEsignTab(tabId) {
+        var tabTriggerEl = document.getElementById(tabId);
+        if (!tabTriggerEl) return;
+
+        // Try Bootstrap 5 Tab API
+        if (window.bootstrap && bootstrap.Tab) {
+            try {
+                var tab = bootstrap.Tab.getOrCreateInstance(tabTriggerEl);
+                tab.show();
+            } catch (e) {
+                console.warn('Bootstrap Tab show error:', e);
+            }
+        }
+
+        // Direct DOM toggle fallback to guarantee tab pane visibility
+        document.querySelectorAll('#esignTabs .nav-link').forEach(function(el) {
+            el.classList.remove('active');
+            el.setAttribute('aria-selected', 'false');
+        });
+        tabTriggerEl.classList.add('active');
+        tabTriggerEl.setAttribute('aria-selected', 'true');
+
+        var targetSelector = tabTriggerEl.getAttribute('data-bs-target');
+        if (targetSelector) {
+            document.querySelectorAll('#esignTabsContent .tab-pane').forEach(function(pane) {
+                pane.classList.remove('show', 'active');
+            });
+            var targetPane = document.querySelector(targetSelector);
+            if (targetPane) {
+                targetPane.classList.add('show', 'active');
+            }
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        var hash = window.location.hash;
+        if (hash === '#sent' || hash === '#tab-sent' || hash === '#content-sent') {
+            switchEsignTab('tab-sent');
+        } else if (hash === '#all' || hash === '#tab-all-active' || hash === '#content-all-active') {
+            switchEsignTab('tab-all-active');
+        }
+    });
+
     (function() {
         var items = document.querySelectorAll('.inbox-card-item');
         if (!items.length) return;

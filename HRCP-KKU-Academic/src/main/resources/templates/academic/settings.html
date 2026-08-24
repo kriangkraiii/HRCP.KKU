@@ -787,14 +787,20 @@
                 document.querySelectorAll('.custom-alert-delete-btn').forEach(function(btn) {
                     btn.addEventListener('click', function() {
                         var id = this.dataset.id;
-                        if (!confirm('ต้องการลบการแจ้งเตือนนี้ใช่หรือไม่?')) return;
+                        var msg = 'ต้องการลบการแจ้งเตือนนี้ใช่หรือไม่?';
+                        var confirmPromise = (typeof window.appConfirm === 'function')
+                            ? window.appConfirm(msg, { title: 'ยืนยันลบการแจ้งเตือน', confirmText: 'ยืนยันลบ', variant: 'danger' })
+                            : Promise.resolve(confirm(msg));
 
-                        var itemEl = document.getElementById('custom-alert-' + id);
-                        fetch(basePath + '/custom-alert/delete', {
-                            method: 'POST',
-                            headers: buildHeaders({'Content-Type': 'application/x-www-form-urlencoded'}),
-                            body: 'id=' + encodeURIComponent(id)
-                        })
+                        confirmPromise.then(function(ok) {
+                            if (!ok) return;
+
+                            var itemEl = document.getElementById('custom-alert-' + id);
+                            fetch(basePath + '/custom-alert/delete', {
+                                method: 'POST',
+                                headers: buildHeaders({'Content-Type': 'application/x-www-form-urlencoded'}),
+                                body: 'id=' + encodeURIComponent(id)
+                            })
                         .then(function(r) { return r.json(); })
                         .then(function(data) {
                             if (data.success) {

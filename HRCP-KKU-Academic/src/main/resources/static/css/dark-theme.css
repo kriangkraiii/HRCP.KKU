@@ -1947,8 +1947,12 @@ body,
 }
 
 [data-theme="dark"] .sig-preview-box {
-    background-color: #1e2533 !important;
-    border-color: #334155 !important;
+    background-color: #ffffff !important;
+    border-color: #475569 !important;
+}
+
+[data-theme="dark"] .sig-preview-box #sigPreviewEmpty {
+    color: #64748b !important;
 }
 
 [data-theme="dark"] .sig-card {
@@ -2209,4 +2213,22 @@ body,
     background-color: #141722 !important;
     border-color: #334155 !important;
     color: #94a3b8 !important;
+}
+
+/* Confirm Modal Dark Theme */
+[data-theme="dark"] .confirm-modal-content {
+    background: #181d28 !important;
+    border-color: #2e384d !important;
+    color: #f8fafc !important;
+}
+
+[data-theme="dark"] .confirm-modal-btn-cancel {
+    background: #1e2533 !important;
+    border-color: #334155 !important;
+    color: #cbd5e1 !important;
+}
+
+[data-theme="dark"] .confirm-modal-btn-cancel:hover {
+    background: #283244 !important;
+    color: #ffffff !important;
 }

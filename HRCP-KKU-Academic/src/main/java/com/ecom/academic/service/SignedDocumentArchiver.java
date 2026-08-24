@@ -58,9 +58,7 @@ public class SignedDocumentArchiver {
             return;
         }
 
-        envelope.setSignedDocxPath(copies.docxPath());
-        envelope.setSignedPdfPath(copies.pdfPath());
-        requestRepository.save(envelope);
+        requestRepository.updateSignedDocumentPaths(envelopeId, copies.docxPath(), copies.pdfPath());
 
         log.info("Archived signed copy of envelope {} ({})", envelopeId, envelope.getVerificationCode());
     }

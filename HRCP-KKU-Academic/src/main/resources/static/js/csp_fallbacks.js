@@ -135,18 +135,183 @@
     );
 
     /*
+     * Global in-app confirm dialog — replaces browser native window.confirm.
+     * Accessible via window.appConfirm(message, options) -> Promise<boolean>.
+     */
+    function getConfirmModalInstance() {
+        var el = document.getElementById('appGlobalConfirmModal');
+        if (!el) return null;
+        if (typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            return bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: true });
+        }
+        return null;
+    }
+
+    window.appConfirm = function (message, options) {
+        options = options || {};
+        var title = options.title || 'ยืนยันการดำเนินการ';
+        var confirmText = options.confirmText || 'ยืนยัน';
+        var cancelText = options.cancelText || 'ยกเลิก';
+        var variant = options.variant;
+
+        if (!variant) {
+            var msgLower = (message || '').toLowerCase();
+            if (msgLower.indexOf('ลบ') !== -1 || msgLower.indexOf('ยกเลิก') !== -1 || msgLower.indexOf('ปฏิเสธ') !== -1 || msgLower.indexOf('โมฆะ') !== -1 || msgLower.indexOf('deactivate') !== -1 || msgLower.indexOf('delete') !== -1) {
+                variant = 'danger';
+            } else if (msgLower.indexOf('คำเตือน') !== -1 || msgLower.indexOf('ระวัง') !== -1 || msgLower.indexOf('warn') !== -1) {
+                variant = 'warning';
+            } else {
+                variant = 'primary';
+            }
+        }
+
+        return new Promise(function (resolve) {
+            var modalEl = document.getElementById('appGlobalConfirmModal');
+            if (!modalEl || typeof bootstrap === 'undefined') {
+                resolve(window.confirm(message));
+                return;
+            }
+
+            var modal = getConfirmModalInstance();
+            var titleEl = document.getElementById('appGlobalConfirmModalLabel');
+            var msgEl = document.getElementById('confirmModalMessage');
+            var okBtn = document.getElementById('confirmModalOkBtn');
+            var cancelBtn = document.getElementById('confirmModalCancelBtn');
+            var iconBadge = document.getElementById('confirmModalIconBadge');
+            var iconEl = document.getElementById('confirmModalIcon');
+            var accentBar = document.getElementById('confirmModalAccentBar');
+
+            if (titleEl) titleEl.textContent = title;
+            if (msgEl) msgEl.textContent = message;
+            if (okBtn) okBtn.textContent = confirmText;
+            if (cancelBtn) cancelBtn.textContent = cancelText;
+
+            if (accentBar) accentBar.className = 'confirm-modal-accent-bar ' + (variant !== 'primary' ? variant : '');
+            if (iconBadge) iconBadge.className = 'confirm-modal-icon-badge ' + (variant !== 'primary' ? variant : '');
+            if (okBtn) {
+                okBtn.className = 'btn px-4 py-2 shadow-sm ' + (variant === 'danger' ? 'btn-danger' : (variant === 'warning' ? 'btn-warning' : 'btn-primary'));
+            }
+
+            if (iconEl) {
+                if (variant === 'danger') {
+                    iconEl.className = 'fas fa-triangle-exclamation';
+                } else if (variant === 'warning') {
+                    iconEl.className = 'fas fa-exclamation-circle';
+                } else if (message.indexOf('ส่ง') !== -1 || message.indexOf('ลงนาม') !== -1) {
+                    iconEl.className = 'fas fa-paper-plane';
+                } else {
+                    iconEl.className = 'fas fa-circle-question';
+                }
+            }
+
+            var resolved = false;
+
+            function handleConfirm() {
+                if (resolved) return;
+                resolved = true;
+                if (modal) modal.hide();
+                resolve(true);
+            }
+
+            // Replace OK button with fresh listener to prevent stacking
+            if (okBtn) {
+                var newOkBtn = okBtn.cloneNode(true);
+                okBtn.parentNode.replaceChild(newOkBtn, okBtn);
+                newOkBtn.addEventListener('click', handleConfirm);
+            }
+
+            function onHidden() {
+                modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                if (!resolved) {
+                    resolved = true;
+                    resolve(false);
+                }
+            }
+            modalEl.addEventListener('hidden.bs.modal', onHidden);
+
+            if (modal) modal.show();
+        });
+    };
+
+    /*
      * Form confirmations — replaces onsubmit="return confirm('...')".
-     * The message lives in data-confirm so Thymeleaf can interpolate it.
+     * Intercepts forms with data-confirm and displays the in-app confirmation modal.
      */
     document.addEventListener('submit', function (e) {
         var form = e.target;
         if (!form || !form.dataset) return;
         var message = form.dataset.confirm;
         if (!message) return;
-        if (!window.confirm(message)) {
-            e.preventDefault();
-            e.stopImmediatePropagation();
+
+        if (form._inAppConfirmed) {
+            form._inAppConfirmed = false;
+            return;
         }
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        var title = form.dataset.confirmTitle || 'ยืนยันการดำเนินการ';
+        var okText = form.dataset.confirmOk || (form.dataset.confirmVariant === 'danger' ? 'ยืนยันลบ' : 'ยืนยัน');
+
+        window.appConfirm(message, {
+            title: title,
+            confirmText: okText,
+            variant: form.dataset.confirmVariant
+        }).then(function (confirmed) {
+            if (confirmed) {
+                form._inAppConfirmed = true;
+                if (typeof form.requestSubmit === 'function') {
+                    form.requestSubmit();
+                } else {
+                    form.submit();
+                }
+            }
+        });
+    });
+
+    /*
+     * Button & Link confirmations with data-confirm.
+     */
+    document.addEventListener('click', function (e) {
+        var trigger = e.target.closest('[data-confirm]');
+        if (!trigger || trigger.tagName === 'FORM') return;
+
+        // If inside a form with data-confirm and this is a submit button, let submit handler handle it
+        if (trigger.type === 'submit' && trigger.form && trigger.form.dataset && trigger.form.dataset.confirm) {
+            return;
+        }
+
+        var message = trigger.dataset.confirm;
+        if (!message) return;
+
+        if (trigger._inAppConfirmed) {
+            trigger._inAppConfirmed = false;
+            return;
+        }
+
+        e.preventDefault();
+        e.stopImmediatePropagation();
+
+        var title = trigger.dataset.confirmTitle || 'ยืนยันการดำเนินการ';
+        var okText = trigger.dataset.confirmOk || 'ยืนยัน';
+
+        window.appConfirm(message, {
+            title: title,
+            confirmText: okText,
+            variant: trigger.dataset.confirmVariant
+        }).then(function (confirmed) {
+            if (confirmed) {
+                trigger._inAppConfirmed = true;
+                if (trigger.tagName === 'A' && trigger.href && trigger.href !== '#' && !trigger.href.startsWith('javascript:')) {
+                    window.location.href = trigger.href;
+                } else if (trigger.form && trigger.type === 'submit') {
+                    trigger.form.submit();
+                } else {
+                    trigger.click();
+                }
+            }
+        });
     });
 
     /*

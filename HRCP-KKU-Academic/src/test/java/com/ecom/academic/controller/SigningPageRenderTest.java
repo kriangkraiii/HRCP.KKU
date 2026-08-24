@@ -21,6 +21,7 @@ import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.SignatureWorkflowService.ActorContext;
 import com.ecom.academic.service.SignatureWorkflowService.SignerAssignment;
+import com.ecom.academic.model.SignatureKind;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -56,6 +57,9 @@ class SigningPageRenderTest {
 
     @Autowired
     private SignatureWorkflowService workflow;
+
+    @Autowired
+    private com.ecom.academic.service.UserSignatureService signatureService;
 
     private MockMvc mockMvc;
     private UserDtls applicant;
@@ -143,5 +147,84 @@ class SigningPageRenderTest {
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/forward")))
                 .andExpect(content().string(
                         org.hamcrest.Matchers.containsString("ยืนยันความถูกต้องและส่งเวียนลงนามต่อ")));
+    }
+    @Test
+    @DisplayName("หน้าลงนาม render ได้ และ URL ตัวอย่างเอกสารต้องเรียกได้จริง")
+    void signPageBuildsAWorkingPreviewUrl() throws Exception {
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ ขอรับการประเมินผลการสอน", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        // เดิม @{...} มีวงเล็บต่อท้าย ซึ่ง Thymeleaf อ่านเป็นรายการพารามิเตอร์
+        // ผลคือหน้าพังทั้งหน้า (ถ้าไม่มีลายเซ็น) หรือได้ URL เพี้ยนจนกรอบเอกสารขึ้น 404
+        String html = mockMvc.perform(get("/esign/sign/" + stepId)
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String marker = "data-pdf-url=\"";
+        int at = html.indexOf(marker);
+        org.assertj.core.api.Assertions.assertThat(at).as("ต้องมี data-pdf-url").isNotNegative();
+        String previewUrl = html.substring(at + marker.length(), html.indexOf('"', at + marker.length()));
+
+        org.assertj.core.api.Assertions.assertThat(previewUrl)
+                .isEqualTo("/esign/sign/" + stepId + "/preview");
+
+        // และ URL นั้นต้องเรียกได้จริง ไม่ใช่ 404
+        mockMvc.perform(get(previewUrl).with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk());
+    }
+
+    /** A saved signature for this person, so the preview has one to stamp. */
+    private Long newSignature(UserDtls owner) throws Exception {
+        java.awt.image.BufferedImage image =
+                new java.awt.image.BufferedImage(200, 60, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g = image.createGraphics();
+        g.setColor(java.awt.Color.BLACK);
+        g.drawLine(5, 50, 195, 10);
+        g.dispose();
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "png", out);
+        String dataUrl = "data:image/png;base64,"
+                + java.util.Base64.getEncoder().encodeToString(out.toByteArray());
+
+        var saved = signatureService.create(owner, dataUrl, SignatureKind.DRAW, "ลายเซ็น", null, null, true);
+        org.assertj.core.api.Assertions.assertThat(saved.ok()).isTrue();
+        return saved.signature().getId();
+    }
+
+    @Test
+    @DisplayName("ผู้ลงนามที่มีลายเซ็นอยู่แล้ว — URL ต้องพ่วง userSignatureId ที่ถูกต้อง")
+    void previewUrlCarriesTheChosenSignature() throws Exception {
+        Long signatureId = newSignature(applicant);
+
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ ขอรับการประเมินผลการสอน", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        String html = mockMvc.perform(get("/esign/sign/" + stepId)
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String marker = "data-pdf-url=\"";
+        int at = html.indexOf(marker);
+        String previewUrl = html.substring(at + marker.length(), html.indexOf('"', at + marker.length()));
+
+        // นี่คือเคสที่พังจริง: ของเดิมได้ URL เพี้ยนจนกรอบเอกสารขึ้นหน้า 404
+        org.assertj.core.api.Assertions.assertThat(previewUrl)
+                .isEqualTo("/esign/sign/" + stepId + "/preview?userSignatureId=" + signatureId);
+
+        mockMvc.perform(get("/esign/sign/" + stepId + "/preview")
+                        .param("userSignatureId", String.valueOf(signatureId))
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk());
     }
 }

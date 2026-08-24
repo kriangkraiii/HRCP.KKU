@@ -420,11 +420,18 @@
         }
 
         function confirmDelete(id, name) {
-            if (confirm('คุณต้องการลบข้อมูลผู้ทรงคุณวุฒิ "' + name + '" หรือไม่?')) {
-                const form = document.getElementById('deleteForm');
-                form.action = '/admin/academic/committee/' + id + '/delete';
-                form.submit();
-            }
+            var msg = 'คุณต้องการลบข้อมูลผู้ทรงคุณวุฒิ "' + name + '" หรือไม่?';
+            var confirmPromise = (typeof window.appConfirm === 'function')
+                ? window.appConfirm(msg, { title: 'ยืนยันลบผู้ทรงคุณวุฒิ', confirmText: 'ยืนยันลบ', variant: 'danger' })
+                : Promise.resolve(confirm(msg));
+
+            confirmPromise.then(function(ok) {
+                if (ok) {
+                    const form = document.getElementById('deleteForm');
+                    form.action = '/admin/academic/committee/' + id + '/delete';
+                    form.submit();
+                }
+            });
         }
     </script>
 </section>
