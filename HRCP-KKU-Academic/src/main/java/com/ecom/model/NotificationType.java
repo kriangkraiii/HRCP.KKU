@@ -10,10 +10,7 @@ public enum NotificationType {
     SIGNATURE_REMINDER("เตือนให้ลงนามในเอกสาร", "fas fa-bell text-warning"),
     SIGNATURE_COMPLETED("ลงนามครบทุกคนแล้ว", "fas fa-circle-check text-success"),
     SIGNATURE_DECLINED("ปฏิเสธการลงนาม", "fas fa-circle-xmark text-danger"),
-    SYSTEM("การแจ้งเตือนจากระบบ", "fas fa-bell text-secondary"),
-    LIKE("liked your post", "fas fa-thumbs-up text-primary"),
-    COMMENT("commented on your post", "fas fa-comment text-info"),
-    ORDER("order update", "fas fa-shopping-cart text-success");
+    SYSTEM("การแจ้งเตือนจากระบบ", "fas fa-bell text-secondary");
 
     private final String thaiLabel;
     private final String iconClass;

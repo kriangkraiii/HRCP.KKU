@@ -9,7 +9,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Unit tests for GlobalExceptionHandler.
- * Tests exception handling for PetitionNotFoundException and UserNotFoundException.
+ * Tests exception handling for UserNotFoundException.
  */
 class GlobalExceptionHandlerTest {
     
@@ -20,35 +20,6 @@ class GlobalExceptionHandlerTest {
     void setUp() {
         exceptionHandler = new GlobalExceptionHandler();
         model = new ConcurrentModel();
-    }
-    
-    @Test
-    void testHandlePetitionNotFound_ShouldReturn404View() {
-        // Given
-        String errorMessage = "ไม่พบคำร้องที่ระบุ";
-        PetitionNotFoundException exception = new PetitionNotFoundException(errorMessage);
-        
-        // When
-        String viewName = exceptionHandler.handlePetitionNotFound(exception, model);
-        
-        // Then
-        assertEquals("error/404", viewName);
-        assertEquals(errorMessage, model.getAttribute("error"));
-        assertEquals("ไม่พบคำร้อง", model.getAttribute("errorTitle"));
-    }
-    
-    @Test
-    void testHandlePetitionNotFound_WithDifferentMessage() {
-        // Given
-        String errorMessage = "Petition with ID 999 not found";
-        PetitionNotFoundException exception = new PetitionNotFoundException(errorMessage);
-        
-        // When
-        String viewName = exceptionHandler.handlePetitionNotFound(exception, model);
-        
-        // Then
-        assertEquals("error/404", viewName);
-        assertEquals(errorMessage, model.getAttribute("error"));
     }
     
     @Test

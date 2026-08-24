@@ -7,27 +7,11 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
 
 /**
- * Global exception handler for petition-related exceptions.
+ * Global exception handler for application exceptions.
  * Handles exceptions thrown by controllers and provides appropriate error views.
  */
 @ControllerAdvice
 public class GlobalExceptionHandler {
-    
-    /**
-     * Handle PetitionNotFoundException.
-     * Returns a 404 error page when a petition is not found.
-     * 
-     * @param ex the exception
-     * @param model the model to add error attributes
-     * @return the error view name
-     */
-    @ExceptionHandler(PetitionNotFoundException.class)
-    @ResponseStatus(HttpStatus.NOT_FOUND)
-    public String handlePetitionNotFound(PetitionNotFoundException ex, Model model) {
-        model.addAttribute("error", ex.getMessage());
-        model.addAttribute("errorTitle", "ไม่พบคำร้อง");
-        return "error/404";
-    }
     
     /**
      * Handle UserNotFoundException.
