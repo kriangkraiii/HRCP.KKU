@@ -334,7 +334,7 @@ class DocPreviewEngine {
         }
 
         const hash = this.hashFormData();
-        if (hash === this.loadedHash) {
+        if (hash === this.loadedHash && this.currentBlobUrl && this.frame && this.frame.src === this.currentBlobUrl) {
             this.setStatus('fresh');
             return;
         }
@@ -488,6 +488,7 @@ class DocPreviewEngine {
             btn.textContent = tab.label;
             btn.addEventListener('click', () => {
                 this.activeTab = idx;
+                this.loadedHash = null;
                 tabBar.querySelectorAll('.docx-tab').forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
                 this.loadPreview();
@@ -558,6 +559,7 @@ class DocPreviewEngine {
     showStandalone(previewUrl, title) {
         this.standaloneUrl = previewUrl;
         this.standaloneTitle = title;
+        this.loadedHash = null;
         
         if (this.tabs) {
             const existing = this.overlay.querySelector('.docx-tab-bar');
@@ -591,6 +593,7 @@ class DocPreviewEngine {
         this.overlay.classList.remove('active');
         document.body.style.overflow = '';
         this.releaseBlobUrl();
+        this.loadedHash = null;
         if (this.frame) this.frame.src = 'about:blank';
     }
 

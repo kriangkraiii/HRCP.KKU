@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+<section>
+    <div class="container-fluid p-4">
+
+        <!-- Page Header -->
+        <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
+            <div>
+                <h1 class="h3 fw-bold text-primary mb-1">
+                    <i class="fas fa-user-tie me-2"></i>จัดการข้อมูลผู้ทรงคุณวุฒิ (External Experts)
+                </h1>
+                <p class="text-secondary small mb-0">
+                    ฐานข้อมูลผู้ทรงคุณวุฒิภายนอก (External Readers / Assessors) สำหรับประเมินผลการสอนและผลงานทางวิชาการ (รองรับทั้งภาษาไทยและภาษาอังกฤษ พร้อมระบบลงนามผ่าน KKU SSO)
+                </p>
+            </div>
+            <div>
+                <button type="button" class="btn btn-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#addCommitteeModal">
+                    <i class="fas fa-plus-circle me-1"></i> เพิ่มผู้ทรงคุณวุฒิใหม่
+                </button>
+            </div>
+        </div>
+
+        <!-- Notification Alerts -->
+        <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-circle-check me-2"></i> <span th:text="${succMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+        <div th:if="${errorMsg}" class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="fas fa-circle-exclamation me-2"></i> <span th:text="${errorMsg}"></span>
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+
+        <!-- Filter & Search Toolbar -->
+        <div class="card card-academic mb-4 shadow-sm border-0">
+            <div class="card-body p-3">
+                <form method="get" th:action="@{/admin/academic/committee}" class="row g-2 align-items-center">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white text-muted"><i class="fas fa-search"></i></span>
+                            <input type="text" name="keyword" class="form-control" placeholder="ค้นหาชื่อไทย/อังกฤษ, สังกัด, อีเมล, ความเชี่ยวชาญ..." th:value="${keyword}">
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <select name="type" class="form-select">
+                            <option value="">-- ทุกประเภทผู้ทรงคุณวุฒิ --</option>
+                            <option th:each="t : ${committeeTypes}"
+                                    th:value="${t.name()}"
+                                    th:text="${t.thaiLabel}"
+                                    th:selected="${selectedType != null && selectedType.name() == t.name()}">
+                            </option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-fill">
+                            <i class="fas fa-filter me-1"></i> ค้นหา
+                        </button>
+                        <a th:href="@{/admin/academic/committee}" class="btn btn-outline-secondary">
+                            <i class="fas fa-rotate-left"></i>
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Committee Table Card -->
+        <div class="card card-academic shadow-sm border-0">
+            <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
+                <h5 class="mb-0 fw-bold text-secondary">
+                    <i class="fas fa-list-check me-2 text-primary"></i>รายชื่อผู้ทรงคุณวุฒิทั้งหมด
+                    <span class="badge bg-primary rounded-pill ms-2" th:text="${members != null ? members.size() : 0}">0</span>
+                </h5>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th style="width: 45px;" class="text-center">#</th>
+                            <th>ชื่อ - นามสกุล (TH / EN)</th>
+                            <th>สถาบัน / สังกัด</th>
+                            <th>ประเภทผู้ทรงคุณวุฒิ</th>
+                            <th>อีเมล (KKU SSO) / โทรศัพท์</th>
+                            <th>ความเชี่ยวชาญ</th>
+                            <th style="width: 110px;" class="text-center">จัดการ</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:if="${members == null || members.isEmpty()}">
+                            <td colspan="7" class="text-center py-5 text-muted">
+                                <i class="fas fa-folder-open fa-3x mb-3 text-secondary opacity-50"></i>
+                                <h6>ไม่พบข้อมูลผู้ทรงคุณวุฒิ</h6>
+                                <p class="small mb-0">กดปุ่ม "เพิ่มผู้ทรงคุณวุฒิใหม่" เพื่อบันทึกข้อมูลเข้าสู่ฐานข้อมูล</p>
+                            </td>
+                        </tr>
+                        <tr th:each="m, iter : ${members}">
+                            <td class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
+                            <td>
+                                <div class="fw-bold text-dark" th:text="${m.fullName}">ศ.ดร. สมชาย ใจดี</div>
+                                <div class="small text-secondary" th:if="${m.firstNameEn != null && !m.firstNameEn.isBlank()}"
+                                     th:text="${m.fullNameEn}">Prof. Dr. Somchai Jaidee</div>
+                                <div class="badge bg-light text-muted border mt-1"
+                                     th:text="${m.academicPosition != null ? m.academicPosition : (m.academicPositionEn != null ? m.academicPositionEn : '-')}">ศาสตราจารย์</div>
+                            </td>
+                            <td>
+                                <div class="text-dark fw-semibold">
+                                    <i class="fas fa-building-columns text-primary me-1"></i>
+                                    <span th:text="${m.affiliation}">คณะวิทยาศาสตร์ มหาวิทยาลัยขอนแก่น</span>
+                                </div>
+                                <div class="small text-muted" th:if="${m.affiliationEn != null && !m.affiliationEn.isBlank()}"
+                                     th:text="${m.affiliationEn}">Faculty of Science, Khon Kaen University</div>
+                            </td>
+                            <td>
+                                <span class="badge" th:classappend="'bg-' + ${m.committeeType.color}">
+                                    <i th:class="${m.committeeType.icon} + ' me-1'"></i>
+                                    <span th:text="${m.committeeType.thaiLabel}">ผู้ทรงคุณวุฒิ</span>
+                                </span>
+                            </td>
+                            <td>
+                                <div class="text-dark small">
+                                    <i class="fas fa-envelope text-info me-1"></i>
+                                    <a th:href="'mailto:' + ${m.email}" class="text-decoration-none" th:text="${m.email}">email@kku.ac.th</a>
+                                </div>
+                                <div class="text-muted small" th:if="${m.phoneNumber != null && !m.phoneNumber.isBlank()}">
+                                    <i class="fas fa-phone text-success me-1"></i>
+                                    <span th:text="${m.phoneNumber}">081-2345678</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="small text-dark" th:text="${m.expertiseField != null && !m.expertiseField.isBlank() ? m.expertiseField : '-'}">ปัญญาประดิษฐ์</div>
+                                <div class="small text-muted" th:if="${m.expertiseFieldEn != null && !m.expertiseFieldEn.isBlank()}"
+                                     th:text="${m.expertiseFieldEn}">Artificial Intelligence</div>
+                            </td>
+                            <td class="text-center">
+                                <div class="btn-group btn-group-sm">
+                                    <button type="button" class="btn btn-outline-primary"
+                                            th:data-id="${m.id}"
+                                            th:data-title="${m.title}"
+                                            th:data-firstname="${m.firstName}"
+                                            th:data-lastname="${m.lastName}"
+                                            th:data-position="${m.academicPosition}"
+                                            th:data-affiliation="${m.affiliation}"
+                                            th:data-expertise="${m.expertiseField}"
+                                            th:data-title-en="${m.titleEn}"
+                                            th:data-firstname-en="${m.firstNameEn}"
+                                            th:data-lastname-en="${m.lastNameEn}"
+                                            th:data-position-en="${m.academicPositionEn}"
+                                            th:data-affiliation-en="${m.affiliationEn}"
+                                            th:data-expertise-en="${m.expertiseFieldEn}"
+                                            th:data-email="${m.email}"
+                                            th:data-phone="${m.phoneNumber}"
+                                            th:data-type="${m.committeeType.name()}"
+                                            onclick="openEditModal(this)"
+                                            title="แก้ไขข้อมูล">
+                                        <i class="fas fa-pen-to-square"></i>
+                                    </button>
+                                    <button type="button" class="btn btn-outline-danger"
+                                            th:onclick="'confirmDelete(' + ${m.id} + ', \'' + ${#strings.escapeJavaScript(m.fullName)} + '\')'"
+                                            title="ลบข้อมูล">
+                                        <i class="fas fa-trash-can"></i>
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal เพิ่มผู้ทรงคุณวุฒิใหม่ -->
+    <div class="modal fade" id="addCommitteeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form th:action="@{/admin/academic/committee/save}" method="post">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title"><i class="fas fa-user-plus me-2"></i>เพิ่มข้อมูลผู้ทรงคุณวุฒิ (External Expert)</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        
+                        <!-- แท็บภาษาไทย / ภาษาอังกฤษ -->
+                        <div class="row g-4">
+                            <!-- ฝั่งซ้าย: ข้อมูลภาษาไทย -->
+                            <div class="col-lg-6 border-end pe-lg-4">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-language me-1"></i> ข้อมูลภาษาไทย (Thai Information)</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">คำนำหน้า / ตำแหน่งย่อ <span class="text-danger">*</span></label>
+                                        <input type="text" name="title" class="form-control" placeholder="เช่น ศ.ดร., รศ.ดร., ผศ." required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">ชื่อ (ไทย) <span class="text-danger">*</span></label>
+                                        <input type="text" name="firstName" class="form-control" placeholder="ชื่อภาษาไทย" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">นามสกุล (ไทย) <span class="text-danger">*</span></label>
+                                        <input type="text" name="lastName" class="form-control" placeholder="นามสกุลภาษาไทย" required>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">ตำแหน่งทางวิชาการเต็ม (ไทย)</label>
+                                        <input type="text" name="academicPosition" class="form-control" placeholder="เช่น ศาสตราจารย์, รองศาสตราจารย์">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">สถาบัน / คณะ / มหาวิทยาลัยต้นสังกัด (ไทย) <span class="text-danger">*</span></label>
+                                        <input type="text" name="affiliation" class="form-control" placeholder="เช่น คณะวิทยาศาสตร์ มหาวิทยาลัยขอนแก่น" required>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">สาขาวิชา / ความเชี่ยวชาญ (ไทย)</label>
+                                        <input type="text" name="expertiseField" class="form-control" placeholder="เช่น วิทยาการคอมพิวเตอร์, ปัญญาประดิษฐ์">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ฝั่งขวา: ข้อมูลภาษาอังกฤษ -->
+                            <div class="col-lg-6 ps-lg-4">
+                                <h6 class="fw-bold text-success mb-3"><i class="fas fa-globe me-1"></i> ข้อมูลภาษาอังกฤษ (English Information)</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Title (EN)</label>
+                                        <input type="text" name="titleEn" class="form-control" placeholder="e.g. Prof. Dr., Assoc. Prof.">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">First Name (EN)</label>
+                                        <input type="text" name="firstNameEn" class="form-control" placeholder="First Name">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Last Name (EN)</label>
+                                        <input type="text" name="lastNameEn" class="form-control" placeholder="Last Name">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Academic Position (EN)</label>
+                                        <input type="text" name="academicPositionEn" class="form-control" placeholder="e.g. Professor, Associate Professor">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Affiliation / Institution (EN)</label>
+                                        <input type="text" name="affiliationEn" class="form-control" placeholder="e.g. Faculty of Science, Khon Kaen University">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Field of Expertise (EN)</label>
+                                        <input type="text" name="expertiseFieldEn" class="form-control" placeholder="e.g. Computer Science, Artificial Intelligence">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- ส่วนข้อมูลการติดต่อและระบบลงนาม -->
+                        <h6 class="fw-bold text-dark mb-3"><i class="fas fa-envelope-circle-check me-1"></i> ข้อมูลการติดต่อและการลงนาม (Contact & SSO)</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">ประเภทผู้ทรงคุณวุฒิ <span class="text-danger">*</span></label>
+                                <select name="committeeType" class="form-select" required>
+                                    <option th:each="t : ${committeeTypes}" th:value="${t.name()}" th:text="${t.thaiLabel}"></option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">อีเมล (สำหรับ KKU SSO & รับหนังสือ) <span class="text-danger">*</span></label>
+                                <input type="email" name="email" class="form-control" placeholder="name@kku.ac.th หรือ email@institution.ac.th" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">เบอร์โทรศัพท์ติดต่อ</label>
+                                <input type="text" name="phoneNumber" class="form-control" placeholder="08x-xxxxxxx">
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> บันทึกข้อมูล</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal แก้ไขผู้ทรงคุณวุฒิ -->
+    <div class="modal fade" id="editCommitteeModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form th:action="@{/admin/academic/committee/save}" method="post" id="editForm">
+                    <input type="hidden" name="id" id="editId">
+                    <div class="modal-header bg-primary text-white">
+                        <h5 class="modal-title"><i class="fas fa-pen-to-square me-2"></i>แก้ไขข้อมูลผู้ทรงคุณวุฒิ</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        
+                        <div class="row g-4">
+                            <!-- ฝั่งซ้าย: ข้อมูลภาษาไทย -->
+                            <div class="col-lg-6 border-end pe-lg-4">
+                                <h6 class="fw-bold text-primary mb-3"><i class="fas fa-language me-1"></i> ข้อมูลภาษาไทย (Thai Information)</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">คำนำหน้า / ตำแหน่งย่อ <span class="text-danger">*</span></label>
+                                        <input type="text" name="title" id="editTitle" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">ชื่อ (ไทย) <span class="text-danger">*</span></label>
+                                        <input type="text" name="firstName" id="editFirstName" class="form-control" required>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">นามสกุล (ไทย) <span class="text-danger">*</span></label>
+                                        <input type="text" name="lastName" id="editLastName" class="form-control" required>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">ตำแหน่งทางวิชาการเต็ม (ไทย)</label>
+                                        <input type="text" name="academicPosition" id="editPosition" class="form-control">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">สถาบัน / คณะ / มหาวิทยาลัยต้นสังกัด (ไทย) <span class="text-danger">*</span></label>
+                                        <input type="text" name="affiliation" id="editAffiliation" class="form-control" required>
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">สาขาวิชา / ความเชี่ยวชาญ (ไทย)</label>
+                                        <input type="text" name="expertiseField" id="editExpertise" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- ฝั่งขวา: ข้อมูลภาษาอังกฤษ -->
+                            <div class="col-lg-6 ps-lg-4">
+                                <h6 class="fw-bold text-success mb-3"><i class="fas fa-globe me-1"></i> ข้อมูลภาษาอังกฤษ (English Information)</h6>
+                                <div class="row g-3">
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Title (EN)</label>
+                                        <input type="text" name="titleEn" id="editTitleEn" class="form-control">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">First Name (EN)</label>
+                                        <input type="text" name="firstNameEn" id="editFirstNameEn" class="form-control">
+                                    </div>
+                                    <div class="col-md-4">
+                                        <label class="form-label fw-semibold">Last Name (EN)</label>
+                                        <input type="text" name="lastNameEn" id="editLastNameEn" class="form-control">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Academic Position (EN)</label>
+                                        <input type="text" name="academicPositionEn" id="editPositionEn" class="form-control">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Affiliation / Institution (EN)</label>
+                                        <input type="text" name="affiliationEn" id="editAffiliationEn" class="form-control">
+                                    </div>
+
+                                    <div class="col-12">
+                                        <label class="form-label fw-semibold">Field of Expertise (EN)</label>
+                                        <input type="text" name="expertiseFieldEn" id="editExpertiseEn" class="form-control">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <hr class="my-4">
+
+                        <!-- ส่วนข้อมูลการติดต่อและระบบลงนาม -->
+                        <h6 class="fw-bold text-dark mb-3"><i class="fas fa-envelope-circle-check me-1"></i> ข้อมูลการติดต่อและการลงนาม (Contact & SSO)</h6>
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold">ประเภทผู้ทรงคุณวุฒิ <span class="text-danger">*</span></label>
+                                <select name="committeeType" id="editType" class="form-select" required>
+                                    <option th:each="t : ${committeeTypes}" th:value="${t.name()}" th:text="${t.thaiLabel}"></option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label fw-semibold">อีเมล (สำหรับ KKU SSO & รับหนังสือ) <span class="text-danger">*</span></label>
+                                <input type="email" name="email" id="editEmail" class="form-control" required>
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label fw-semibold">เบอร์โทรศัพท์ติดต่อ</label>
+                                <input type="text" name="phoneNumber" id="editPhone" class="form-control">
+                            </div>
+                        </div>
+
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i> บันทึกการแก้ไข</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Form (Hidden) -->
+    <form id="deleteForm" method="post" style="display: none;"></form>
+
+    <script>
+        function openEditModal(btn) {
+            document.getElementById('editId').value = btn.dataset.id;
+            
+            // Thai fields
+            document.getElementById('editTitle').value = btn.dataset.title || '';
+            document.getElementById('editFirstName').value = btn.dataset.firstname || '';
+            document.getElementById('editLastName').value = btn.dataset.lastname || '';
+            document.getElementById('editPosition').value = btn.dataset.position || '';
+            document.getElementById('editAffiliation').value = btn.dataset.affiliation || '';
+            document.getElementById('editExpertise').value = btn.dataset.expertise || '';
+
+            // English fields
+            document.getElementById('editTitleEn').value = btn.dataset.titleEn || '';
+            document.getElementById('editFirstNameEn').value = btn.dataset.firstnameEn || '';
+            document.getElementById('editLastNameEn').value = btn.dataset.lastnameEn || '';
+            document.getElementById('editPositionEn').value = btn.dataset.positionEn || '';
+            document.getElementById('editAffiliationEn').value = btn.dataset.affiliationEn || '';
+            document.getElementById('editExpertiseEn').value = btn.dataset.expertiseEn || '';
+
+            // Contact & type
+            document.getElementById('editEmail').value = btn.dataset.email || '';
+            document.getElementById('editPhone').value = btn.dataset.phone || '';
+            document.getElementById('editType').value = btn.dataset.type || '';
+
+            new bootstrap.Modal(document.getElementById('editCommitteeModal')).show();
+        }
+
+        function confirmDelete(id, name) {
+            if (confirm('คุณต้องการลบข้อมูลผู้ทรงคุณวุฒิ "' + name + '" หรือไม่?')) {
+                const form = document.getElementById('deleteForm');
+                form.action = '/admin/academic/committee/' + id + '/delete';
+                form.submit();
+            }
+        }
+    </script>
+</section>
+</body>
+</html>

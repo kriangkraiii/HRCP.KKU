@@ -142,32 +142,101 @@
 
                 <!-- รายชื่อผู้ทรงคุณวุฒิ (10 คน) -->
                 <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">รายชื่อผู้ทรงคุณวุฒิ (สูงสุด 10 คน)</h5></div>
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-0 fw-bold"><i class="fas fa-user-tie text-primary me-2"></i>รายชื่อผู้ทรงคุณวุฒิ (สูงสุด 10 คน)</h5>
+                            <small class="text-muted">สามารถพิมพ์ข้อมูลเอง หรือเลือกดึงจากฐานข้อมูลผู้ทรงคุณวุฒิภายนอกที่บันทึกไว้ได้</small>
+                        </div>
+                        <div>
+                            <a th:href="@{/admin/academic/committee}" target="_blank" class="btn btn-sm btn-outline-primary">
+                                <i class="fas fa-user-plus me-1"></i> จัดการฐานข้อมูลผู้ทรงคุณวุฒิ
+                            </a>
+                        </div>
+                    </div>
                     <div class="card-body">
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle">
                                 <thead class="table-light">
                                     <tr>
-                                        <th style="width:5%">#</th>
-                                        <th style="width:25%">ชื่อ-นามสกุล</th>
-                                        <th style="width:20%">สาขาที่เชี่ยวชาญ</th>
-                                        <th style="width:20%">ความเชี่ยวชาญ</th>
-                                        <th style="width:30%">ข้อมูลเพิ่มเติม</th>
+                                        <th style="width:4%">#</th>
+                                        <th style="width:16%">เลือกจากฐานข้อมูล</th>
+                                        <th style="width:25%">ชื่อ-นามสกุล (TH / EN)</th>
+                                        <th style="width:18%">สาขาวิชา</th>
+                                        <th style="width:17%">ความเชี่ยวชาญ</th>
+                                        <th style="width:20%">ข้อมูลต้นสังกัด / อีเมล / โทรศัพท์</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr th:each="i : ${#numbers.sequence(1, 10)}">
-                                        <td th:text="${i}"></td>
-                                        <td><input type="text" th:name="'name' + ${i}" class="form-control form-control-sm"></td>
-                                        <td><input type="text" th:name="'majorcom' + ${i}" class="form-control form-control-sm"></td>
-                                        <td><input type="text" th:name="'major_expert' + ${i}" class="form-control form-control-sm"></td>
-                                        <td><input type="text" th:name="'Information' + ${i}" class="form-control form-control-sm"></td>
+                                        <td th:text="${i}" class="text-center fw-bold text-muted"></td>
+                                        <td>
+                                            <select class="form-select form-select-sm expert-selector" th:attr="data-row=${i}" onchange="onExpertSelected(this)">
+                                                <option value="">-- เลือกผู้ทรงคุณวุฒิ --</option>
+                                                <option th:each="exp : ${externalExperts}"
+                                                        th:value="${exp.id}"
+                                                        th:data-fullname="${exp.fullName}"
+                                                        th:data-fullname-en="${exp.fullNameEn}"
+                                                        th:data-title="${exp.title}"
+                                                        th:data-position="${exp.academicPosition}"
+                                                        th:data-position-en="${exp.academicPositionEn}"
+                                                        th:data-affiliation="${exp.affiliation}"
+                                                        th:data-affiliation-en="${exp.affiliationEn}"
+                                                        th:data-email="${exp.email}"
+                                                        th:data-phone="${exp.phoneNumber}"
+                                                        th:data-expert="${exp.expertiseField}"
+                                                        th:data-expert-en="${exp.expertiseFieldEn}"
+                                                        th:text="${exp.fullName + (exp.affiliation != null ? ' (' + exp.affiliation + ')' : '')}">
+                                                </option>
+                                            </select>
+                                        </td>
+                                        <td><input type="text" th:name="'name' + ${i}" th:id="'exp_name_' + ${i}" class="form-control form-control-sm" placeholder="ชื่อ-นามสกุล ทั้งไทยและอังกฤษ"></td>
+                                        <td><input type="text" th:name="'majorcom' + ${i}" th:id="'exp_major_' + ${i}" class="form-control form-control-sm" placeholder="สาขาวิชา"></td>
+                                        <td><input type="text" th:name="'major_expert' + ${i}" th:id="'exp_expert_' + ${i}" class="form-control form-control-sm" placeholder="ความเชี่ยวชาญ"></td>
+                                        <td><input type="text" th:name="'Information' + ${i}" th:id="'exp_info_' + ${i}" class="form-control form-control-sm" placeholder="สังกัด, อีเมล, เบอร์โทร"></td>
                                     </tr>
                                 </tbody>
                             </table>
                         </div>
                     </div>
                 </div>
+
+                <script>
+                    function onExpertSelected(selectEl) {
+                        const row = selectEl.dataset.row;
+                        const opt = selectEl.options[selectEl.selectedIndex];
+                        if (!opt || !opt.value) return;
+
+                        const nameTh = opt.dataset.fullname || '';
+                        const nameEn = opt.dataset.fullnameen || '';
+                        const combinedName = (nameEn && nameEn !== nameTh) ? `${nameTh} (${nameEn})` : nameTh;
+
+                        const fieldTh = opt.dataset.expert || '';
+                        const fieldEn = opt.dataset.experten || '';
+                        const posTh = opt.dataset.position || '';
+                        const posEn = opt.dataset.positionen || '';
+
+                        const affTh = opt.dataset.affiliation || '';
+                        const affEn = opt.dataset.affiliationen || '';
+                        const email = opt.dataset.email || '';
+                        const phone = opt.dataset.phone || '';
+
+                        const affText = (affEn && affEn !== affTh) ? `${affTh} (${affEn})` : affTh;
+                        let infoParts = [];
+                        if (affText) infoParts.push(affText);
+                        if (email) infoParts.push(`อีเมล: ${email}`);
+                        if (phone) infoParts.push(`โทร: ${phone}`);
+
+                        const nameInput = document.getElementById('exp_name_' + row);
+                        const majorInput = document.getElementById('exp_major_' + row);
+                        const expertInput = document.getElementById('exp_expert_' + row);
+                        const infoInput = document.getElementById('exp_info_' + row);
+
+                        if (nameInput) nameInput.value = combinedName;
+                        if (majorInput) majorInput.value = fieldTh;
+                        if (expertInput) expertInput.value = fieldEn || posTh;
+                        if (infoInput) infoInput.value = infoParts.join(' | ');
+                    }
+                </script>
 
                 <!-- ข้อมูลการประชุม -->
                 <div class="card card-academic mb-4">

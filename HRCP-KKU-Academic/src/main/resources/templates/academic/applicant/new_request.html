@@ -27,6 +27,8 @@
                 <span th:if="${param.error[0] == 'incomplete_docs'}">กรุณากรอกเอกสารและแบบตรวจสอบให้ครบถ้วนก่อนส่งคำร้อง</span>
                 <span th:unless="${param.error[0] == 'incomplete_docs'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
             <div class="mb-3">
                 <a href="/user/academic/dashboard" class="btn-back-pill">
                     <i class="fas fa-arrow-left"></i> กลับ

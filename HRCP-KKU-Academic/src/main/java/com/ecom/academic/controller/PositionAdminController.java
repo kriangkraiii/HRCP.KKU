@@ -74,6 +74,7 @@ public class PositionAdminController {
     private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+    private final com.ecom.academic.service.AcademicCommitteeService committeeService;
 
     public PositionAdminController(
             PositionRequestService positionService,
@@ -86,7 +87,8 @@ public class PositionAdminController {
             com.ecom.academic.repository.AcademicDocumentRepository academicDocumentRepository,
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
-            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow) {
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
+            com.ecom.academic.service.AcademicCommitteeService committeeService) {
         this.positionService = positionService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -98,6 +100,7 @@ public class PositionAdminController {
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
         this.signatureWorkflow = signatureWorkflow;
+        this.committeeService = committeeService;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -278,6 +281,7 @@ public class PositionAdminController {
         model.addAttribute("heads", staffMemberService.findByRoleOrAll("HEAD"));
         model.addAttribute("committee", staffMemberService.findByRoleOrAll("COMMITTEE"));
         model.addAttribute("hrStaff", staffMemberService.findByRoleOrAll("HR"));
+        model.addAttribute("externalExperts", committeeService.findAllActive());
 
         if (type == 5) {
             List<PositionDocument> doc1List = positionService.getDocumentsByType(id, 1);

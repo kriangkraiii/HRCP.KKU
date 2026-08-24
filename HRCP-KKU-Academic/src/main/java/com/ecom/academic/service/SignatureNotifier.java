@@ -1,5 +1,6 @@
 package com.ecom.academic.service;
 
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 import org.slf4j.Logger;
@@ -206,21 +207,34 @@ public class SignatureNotifier {
 
     private String buildRequestEmail(SignatureNotice notice) {
         StringBuilder body = new StringBuilder();
-        body.append("<p>เรียน ").append(escape(notice.signerName())).append("</p>");
-        body.append("<p>มีเอกสารรอลายเซ็นของท่านในระบบ</p>");
-        body.append("<ul>");
-        body.append("<li>เอกสาร: <strong>").append(escape(notice.safeDocumentLabel())).append("</strong></li>");
-        body.append("<li>ประเภทคำร้อง: ").append(escape(notice.module().getThaiLabel())).append("</li>");
-        body.append("<li>ตำแหน่งที่ลงนาม: <strong>").append(escape(notice.roleLabel())).append("</strong></li>");
+        body.append("<p style='font-size: 15px; line-height: 1.6;'>เรียน <strong>").append(escape(notice.signerName())).append("</strong></p>");
+        body.append("<p style='font-size: 14px; line-height: 1.6;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น ขอความอนุเคราะห์ท่านในการตรวจสอบและลงนามในเอกสารอิเล็กทรอนิกส์ตามรายละเอียดดังต่อไปนี้:</p>");
+        
+        body.append("<div style='background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0d47a1; padding: 15px 18px; border-radius: 8px; margin: 16px 0;'>");
+        body.append("<table style='width: 100%; border-collapse: collapse; font-size: 14px;'>");
+        body.append("<tr><td style='padding: 4px 0; color: #64748b; width: 140px;'>เอกสาร:</td><td style='padding: 4px 0; font-weight: 600; color: #0f172a;'>").append(escape(notice.safeDocumentLabel())).append("</td></tr>");
+        body.append("<tr><td style='padding: 4px 0; color: #64748b;'>ประเภทคำร้อง:</td><td style='padding: 4px 0; color: #0f172a;'>").append(escape(notice.module().getThaiLabel())).append("</td></tr>");
+        body.append("<tr><td style='padding: 4px 0; color: #64748b;'>ตำแหน่งที่ลงนาม:</td><td style='padding: 4px 0; font-weight: 600; color: #0d47a1;'>").append(escape(notice.roleLabel())).append("</td></tr>");
+        body.append("<tr><td style='padding: 4px 0; color: #64748b;'>รหัสตรวจสอบ:</td><td style='padding: 4px 0; font-family: monospace; color: #475569;'>").append(escape(notice.verificationCode())).append("</td></tr>");
+        body.append("</table>");
+        body.append("</div>");
+
         if (notice.dueAt() != null) {
-            body.append("<li>กำหนดลงนามภายใน: ").append(notice.dueAt().format(DUE_FORMAT)).append("</li>");
+            long daysLeft = java.time.Duration.between(LocalDateTime.now(), notice.dueAt()).toDays();
+            String timeText = daysLeft >= 0 ? " (เหลือเวลาประมาณ " + (daysLeft == 0 ? "วันนี้" : daysLeft + " วัน") + ")" : " (เลยกำหนดเวลา)";
+            body.append("<div style='background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px; margin: 16px 0; color: #92400e; font-size: 14px;'>");
+            body.append("📅 <strong>กำหนดลงนามภายใน:</strong> ").append(notice.dueAt().format(DUE_FORMAT)).append(timeText);
+            body.append("</div>");
         }
-        body.append("</ul>");
-        body.append("<p>กรุณาเข้าสู่ระบบเพื่อตรวจสอบเอกสารและลงนาม ")
-                .append("โดยไปที่เมนู <strong>\"รอลงนาม\"</strong></p>");
-        // No signing link in the email on purpose: a mailbox is not an identity,
-        // and signing must begin from an authenticated session in the system.
-        return EmailTemplateHelper.wrapLayout("ขอเชิญลงนามในเอกสาร", "รอลงนาม", body.toString());
+
+        String signLink = "/esign/sign/" + notice.stepId();
+        body.append("<p style='font-size: 14px; color: #475569; margin-top: 20px;'>ท่านสามารถตรวจสอบเอกสารฉบับจริงและลงนามผ่านระบบด้วยบัญชี <strong>KKU SSO</strong> โดยกดปุ่มด้านล่างนี้:</p>");
+        body.append("<div style='text-align: center; margin: 24px 0;'>");
+        body.append("<a href='").append(signLink).append("' style='display: inline-block; background-color: #0d47a1; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 4px rgba(13, 71, 161, 0.2);'>เข้าสู่ระบบ KKU SSO เพื่อลงนาม</a>");
+        body.append("</div>");
+        body.append("<p style='font-size: 12px; color: #94a3b8; text-align: center;'>หากปุ่มไม่ทำงาน สามารถเข้าสู่ระบบและไปที่เมนู <strong>\"รอลงนาม\"</strong> ได้โดยตรง</p>");
+
+        return EmailTemplateHelper.wrapLayout("ขอความอนุเคราะห์ลงนามเอกสารอิเล็กทรอนิกส์", "รอลงนาม", body.toString());
     }
 
     private String escape(String value) {

@@ -35,6 +35,7 @@ public class SsoAccessPolicy {
 
     private final FsFacultyRepository facultyRepo;
     private final UserRepository userRepository;
+    private final com.ecom.academic.repository.AcademicCommitteeMemberRepository committeeRepo;
 
     /** Addresses allowed in addition to the faculty directory (admins, support). */
     private final Set<String> extraAllowed;
@@ -48,10 +49,21 @@ public class SsoAccessPolicy {
 
     public SsoAccessPolicy(FsFacultyRepository facultyRepo,
             UserRepository userRepository,
+            String allowedEmails,
+            boolean allowExistingLocalUsers) {
+        this(facultyRepo, userRepository, null, allowedEmails, allowExistingLocalUsers);
+    }
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public SsoAccessPolicy(FsFacultyRepository facultyRepo,
+            UserRepository userRepository,
+            @org.springframework.beans.factory.annotation.Autowired(required = false)
+            com.ecom.academic.repository.AcademicCommitteeMemberRepository committeeRepo,
             @Value("${app.auth.sso.allowed-emails:}") String allowedEmails,
             @Value("${app.auth.sso.allow-existing-local-users:false}") boolean allowExistingLocalUsers) {
         this.facultyRepo = facultyRepo;
         this.userRepository = userRepository;
+        this.committeeRepo = committeeRepo;
         this.allowExistingLocalUsers = allowExistingLocalUsers;
         this.extraAllowed = Arrays.stream(allowedEmails.split(","))
                 .map(String::trim)
@@ -100,6 +112,12 @@ public class SsoAccessPolicy {
         }
 
         if (extraAllowed.contains(normalized)) {
+            return Decision.allow(null);
+        }
+
+        // Allow active committee members registered in the system
+        if (committeeRepo != null && committeeRepo.findByEmailIgnoreCaseAndIsActiveTrue(normalized).isPresent()) {
+            log.info("SSO login accepted — user is an active committee member");
             return Decision.allow(null);
         }
 
