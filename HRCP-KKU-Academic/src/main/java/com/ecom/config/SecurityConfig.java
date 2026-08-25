@@ -31,18 +31,29 @@ public class SecurityConfig {
         private final AuthModeProperties authProperties;
         private final KkuSsoProperties ssoProperties;
 
+        /**
+         * ชื่อคุกกี้ session — อ่านจากค่าเดียวกับที่ตั้ง container ไว้
+         *
+         * <p>เคยเขียน "JSESSIONID" ตายตัวไว้ตรงตอน logout ถ้าเปลี่ยนชื่อคุกกี้ใน
+         * properties แล้วลืมแก้ตรงนี้ logout จะไม่ลบคุกกี้ให้ โดยไม่มีอะไรฟ้อง
+         */
+        private final String sessionCookieName;
+
         public SecurityConfig(RateLimitFilter rateLimitFilter,
                         CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
                         AuthFailureHandlerImpl authenticationFailureHandler,
                         UserDetailsServiceImpl userDetailsServiceImpl,
                         AuthModeProperties authProperties,
-                        KkuSsoProperties ssoProperties) {
+                        KkuSsoProperties ssoProperties,
+                        @org.springframework.beans.factory.annotation.Value(
+                                        "${server.servlet.session.cookie.name:JSESSIONID}") String sessionCookieName) {
                 this.rateLimitFilter = rateLimitFilter;
                 this.customAuthenticationSuccessHandler = customAuthenticationSuccessHandler;
                 this.authenticationFailureHandler = authenticationFailureHandler;
                 this.userDetailsServiceImpl = userDetailsServiceImpl;
                 this.authProperties = authProperties;
                 this.ssoProperties = ssoProperties;
+                this.sessionCookieName = sessionCookieName;
         }
 
         /**
@@ -202,7 +213,7 @@ public class SecurityConfig {
                                 .logout(logout -> logout
                                                 .logoutUrl("/logout")
                                                 .invalidateHttpSession(true)
-                                                .deleteCookies("JSESSIONID")
+                                                .deleteCookies(sessionCookieName)
                                                 .clearAuthentication(true)
                                                 .logoutSuccessHandler((request, response,
                                                                 authentication) -> response

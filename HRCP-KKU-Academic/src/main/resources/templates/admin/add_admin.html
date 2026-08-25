@@ -15,7 +15,9 @@
 						<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
 							style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #1a237e, #0d47a1) !important;">
 							<h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>เพิ่มบัญชีผู้ใช้งาน</h5>
-							<a th:href="${param.type != null ? '/admin/users?type=' + param.type[0] : '/admin/users?type=1'}" class="btn btn-outline-light btn-sm rounded-pill px-3">
+							<!-- type รับได้แค่ 1 หรือ 2 ตามตัวเลือกด้านล่าง ค่าที่ส่งมาแปลกๆ ให้ตกเป็น 1
+							     ไม่ต่อสตริงดิบลง href เพราะเป็นการเอาค่าจาก URL ไปวางในแอตทริบิวต์ตรงๆ -->
+							<a th:href="@{/admin/users(type=${param.type != null and param.type[0] == '2' ? '2' : '1'})}" class="btn btn-outline-light btn-sm rounded-pill px-3">
 								<i class="fas fa-arrow-left me-1"></i> กลับ
 							</a>
 						</div>
