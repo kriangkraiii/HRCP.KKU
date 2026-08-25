@@ -67,9 +67,10 @@ public class SignatureReminderScheduler {
     @Transactional
     public void run() {
         int reminded = sendReminders();
-        int expired = expireOverdue();
-        if (reminded > 0 || expired > 0) {
-            log.info("Signature reminders: {} nudged, {} expired", reminded, expired);
+        Overdue overdue = handleOverdue();
+        if (reminded > 0 || overdue.expired() > 0 || overdue.nudged() > 0) {
+            log.info("Signature reminders: {} nudged, {} past their own reminder, {} expired",
+                    reminded, overdue.nudged(), overdue.expired());
         }
     }
 
@@ -111,25 +112,75 @@ public class SignatureReminderScheduler {
     }
 
     /**
-     * Closes rounds whose deadline has passed.
+     * Deals with rounds whose deadline has passed — most are closed, some are
+     * only reminded.
      *
-     * <p>Marked {@code EXPIRED} rather than left open: an envelope past its date
-     * already refuses signatures, so leaving it "in progress" would show a
-     * document as pending that nobody can actually complete.
+     * <p>Closing means {@code EXPIRED} rather than left open: an envelope past
+     * its date already refuses signatures, so leaving it "in progress" would
+     * show a document as pending that nobody can actually complete.
+     *
+     * <p>Rounds waiting on an applicant to sign their own unsubmitted request
+     * are the exception — their date is a reminder they set for themselves, and
+     * signatures are still accepted past it. Closing those would strand the
+     * request: the document would count as unsigned, and submitting it needs
+     * that signature.
      */
-    private int expireOverdue() {
+    private Overdue handleOverdue() {
         List<SignatureRequest> overdue = requestRepository
                 .findByStatusAndDueAtBefore(SignatureRequestStatus.IN_PROGRESS, LocalDateTime.now());
-        int count = 0;
+        int expired = 0;
+        int nudged = 0;
 
         for (SignatureRequest envelope : overdue) {
             try {
+                SignatureStep advisoryStep = advisoryStepOf(envelope);
+                if (advisoryStep != null) {
+                    nudged += nudgePastReminder(envelope, advisoryStep);
+                    continue;
+                }
                 workflow.expire(envelope.getId());
-                count++;
+                expired++;
             } catch (Exception e) {
                 log.warn("Could not expire envelope {}: {}", envelope.getId(), e.toString());
             }
         }
-        return count;
+        return new Overdue(expired, nudged);
+    }
+
+    /** What one pass over the overdue rounds did. */
+    private record Overdue(int expired, int nudged) {
+    }
+
+    /** The step holding this round, if its deadline is only a reminder. */
+    private SignatureStep advisoryStepOf(SignatureRequest envelope) {
+        return stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId()).stream()
+                .filter(s -> s.getStatus() == SignatureStepStatus.ACTIVE && s.getSigner() != null)
+                .filter(workflow::deadlineIsAdvisory)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * Tells someone the date they set for themselves has arrived.
+     *
+     * <p>Stamping {@code remindedAt} is what keeps this to one message: the
+     * three-day rule in {@link #sendReminders()} reads the same field, so the
+     * reminder does not repeat every morning for as long as the document sits
+     * there. Reading it here too is what stops the same pass sending both a
+     * nudge and this notice within minutes of each other.
+     *
+     * @return 1 when a message was sent, 0 when they were contacted recently
+     */
+    private int nudgePastReminder(SignatureRequest envelope, SignatureStep step) {
+        LocalDateTime cutoff = LocalDateTime.now().minusDays(Math.max(1, reminderAfterDays));
+        LocalDateTime lastContact = step.getRemindedAt() != null ? step.getRemindedAt() : step.getNotifiedAt();
+        if (lastContact != null && lastContact.isAfter(cutoff)) {
+            return 0;
+        }
+
+        step.setRemindedAt(LocalDateTime.now());
+        stepRepository.save(step);
+        notifier.notifyDeadlineReached(workflow.reminderNoticeFor(envelope, step));
+        return 1;
     }
 }

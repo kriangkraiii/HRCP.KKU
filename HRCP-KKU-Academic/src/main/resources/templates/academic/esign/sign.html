@@ -44,8 +44,22 @@
             </div>
         </div>
 
+        <!-- เลยกำหนดที่ตั้งเตือนไว้เอง: เตือนความจำเท่านั้น ยังลงนามได้ -->
+        <div th:if="${envelope.overdue and deadlineAdvisory}" class="alert alert-warning d-flex align-items-center flex-wrap gap-2 mb-3 shadow-sm">
+            <div>
+                <i class="fas fa-bell fa-lg me-2"></i>
+                <strong>เลยกำหนดที่คุณตั้งเตือนไว้แล้ว</strong>
+                <span class="ms-1" th:if="${envelope.dueAt != null}">
+                    (ตั้งเตือนไว้: <span th:text="${#temporals.format(envelope.dueAt, 'd MMM yyyy HH:mm')}"></span>)
+                </span>
+                <div class="small mt-1">
+                    กำหนดนี้เป็นเพียงการแจ้งเตือน — คุณยังลงนามได้ตามปกติ ไม่ต้องขอขยายเวลา
+                </div>
+            </div>
+        </div>
+
         <!-- Overdue Alert & Extension Option -->
-        <div th:if="${envelope.overdue}" class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 shadow-sm">
+        <div th:if="${envelope.overdue and !deadlineAdvisory}" class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 shadow-sm">
             <div>
                 <i class="fas fa-triangle-exclamation fa-lg me-2"></i>
                 <strong>เอกสารนี้เลยกำหนดลงนามแล้ว</strong>
@@ -217,8 +231,9 @@
         </div>
     </div>
 
-    <!-- Modal ขอขยายเวลาลงนาม -->
-    <div class="modal fade" id="requestExtensionModal" tabindex="-1" aria-labelledby="requestExtensionModalLabel" aria-hidden="true">
+    <!-- Modal ขอขยายเวลาลงนาม (ไม่แสดงเมื่อกำหนดเวลาเป็นเพียงการแจ้งเตือน) -->
+    <div th:unless="${deadlineAdvisory}"
+         class="modal fade" id="requestExtensionModal" tabindex="-1" aria-labelledby="requestExtensionModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
                 <form th:action="@{'/esign/step/' + ${step.id} + '/request-extension'}" method="post">

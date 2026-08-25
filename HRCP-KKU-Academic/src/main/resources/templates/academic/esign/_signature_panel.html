@@ -187,10 +187,15 @@
                         รหัสตรวจสอบเอกสาร: <code class="fw-bold text-dark bg-white px-2 py-1 rounded border" th:text="${signaturePanel.activeEnvelope.verificationCode}">CODE</code>
                     </span>
                     <span class="small text-secondary" th:if="${signaturePanel.activeEnvelope.dueAt != null}">
-                        กำหนดลงนามภายใน:
-                        <strong th:classappend="${signaturePanel.activeEnvelope.overdue} ? 'text-danger' : 'text-dark'"
+                        <span th:text="${signaturePanel.deadlineAdvisory} ? 'ตั้งเตือนให้ลงนามภายใน:' : 'กำหนดลงนามภายใน:'">กำหนดลงนามภายใน:</span>
+                        <strong th:classappend="${signaturePanel.activeEnvelope.overdue}
+                                                ? (${signaturePanel.deadlineAdvisory} ? 'text-warning-emphasis' : 'text-danger')
+                                                : 'text-dark'"
                                 th:text="${#temporals.format(signaturePanel.activeEnvelope.dueAt, 'd MMM yyyy HH:mm')}"></strong>
-                        <span class="badge bg-danger ms-1" th:if="${signaturePanel.activeEnvelope.overdue}">เลยกำหนด</span>
+                        <span class="badge bg-warning text-dark ms-1"
+                              th:if="${signaturePanel.activeEnvelope.overdue and signaturePanel.deadlineAdvisory}">เลยกำหนดที่ตั้งเตือนไว้ (ยังลงนามได้)</span>
+                        <span class="badge bg-danger ms-1"
+                              th:if="${signaturePanel.activeEnvelope.overdue and !signaturePanel.deadlineAdvisory}">เลยกำหนด</span>
                     </span>
                 </div>
 
@@ -286,6 +291,56 @@
                         <i class="fas fa-ban me-1"></i> ยกเลิกการเวียนลงนาม
                     </button>
                 </form>
+            </div>
+        </div>
+
+        <!-- ===================================================================== -->
+        <!-- 1.5 รอบเดิมถูกปิดเพราะเลยกำหนด — ตั้งกำหนดใหม่เพื่อเปิดต่อจากเดิมได้   -->
+        <!-- ===================================================================== -->
+        <div th:if="${signaturePanel.revivableEnvelope != null and signaturePanel.isAdminViewer}"
+             class="alert alert-secondary border d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+            <div>
+                <i class="fas fa-clock text-secondary me-2"></i>
+                <strong>รอบเวียนลงนามก่อนหน้าถูกปิดเพราะเลยกำหนด</strong>
+                <div class="small text-secondary mt-1">
+                    ลายเซ็นที่ลงไว้แล้ว <span th:text="${signaturePanel.revivableEnvelope.progressLabel}">0 / 0</span> ยังอยู่ครบ
+                    — ตั้งกำหนดเวลาใหม่เพื่อเวียนต่อจากเดิม หรือเริ่มรอบใหม่จากฟอร์มด้านล่าง
+                </div>
+            </div>
+            <button type="button" class="btn btn-sm btn-outline-primary bg-white"
+                    data-bs-toggle="modal"
+                    th:data-bs-target="'#modal-revive-' + ${signaturePanel.revivableEnvelope.id}">
+                <i class="fas fa-calendar-plus me-1"></i> ตั้งกำหนดใหม่และเวียนต่อ
+            </button>
+        </div>
+
+        <div th:if="${signaturePanel.revivableEnvelope != null and signaturePanel.isAdminViewer}"
+             class="modal fade" th:id="'modal-revive-' + ${signaturePanel.revivableEnvelope.id}" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content border-0 shadow">
+                    <form th:action="@{'/esign/envelope/' + ${signaturePanel.revivableEnvelope.id} + '/extend-due'}" method="post">
+                        <div class="modal-header bg-primary text-white">
+                            <h5 class="modal-title"><i class="fas fa-calendar-plus me-1"></i> เปิดการเวียนลงนามอีกครั้ง</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <div class="mb-3">
+                                <label class="form-label fw-semibold">กำหนดวันเวลาลงนามใหม่</label>
+                                <input type="datetime-local" name="dueAt" class="form-control" required>
+                                <div class="form-text">
+                                    ระบบจะเปิดรอบเดิมขึ้นมาใหม่ ลายเซ็นที่ลงไว้แล้วยังอยู่ครบ
+                                    และจะแจ้งเตือนผู้ลงนามลำดับถัดไปให้ทราบ
+                                </div>
+                            </div>
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="fas fa-rotate-right me-1"></i> เปิดการเวียนลงนามอีกครั้ง
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         </div>
 
@@ -415,10 +470,17 @@
 
                 </div>
 
-                <div class="col-md-6" th:if="${signaturePanel.isAdminViewer}">
-                    <label class="form-label">กำหนดลงนามภายใน (ไม่บังคับ)</label>
+                <!-- แอดมินตั้งกำหนดที่มีผลบังคับ / ผู้ยื่นตั้งไว้เตือนตัวเองเท่านั้น -->
+                <div class="col-md-6">
+                    <label class="form-label"
+                           th:text="${signaturePanel.isAdminViewer}
+                                    ? 'กำหนดลงนามภายใน (ไม่บังคับ)'
+                                    : 'ตั้งเตือนให้ลงนามภายใน (ไม่บังคับ)'">กำหนดลงนามภายใน (ไม่บังคับ)</label>
                     <input type="datetime-local" name="dueAt" class="form-control">
-                    <div class="form-text">ระบบจะเตือนซ้ำเมื่อใกล้ครบกำหนด</div>
+                    <div class="form-text"
+                         th:text="${signaturePanel.isAdminViewer}
+                                  ? 'ระบบจะเตือนซ้ำเมื่อใกล้ครบกำหนด'
+                                  : 'ใช้เตือนความจำเท่านั้น เลยกำหนดแล้วยังลงนามได้ตามปกติ'">ระบบจะเตือนซ้ำเมื่อใกล้ครบกำหนด</div>
                 </div>
             </div>
 

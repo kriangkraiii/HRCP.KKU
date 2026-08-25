@@ -150,6 +150,28 @@ public class SignatureWorkflowService {
         return findBlockingEnvelope(module, requestId, documentType).isPresent();
     }
 
+    /**
+     * The round the clock closed on this document, if one is waiting to be
+     * revived.
+     *
+     * <p>An expired round holds real signatures and a frozen document, but
+     * {@link #findBlockingEnvelope} does not return it — expiry releases the
+     * form so people are not stuck. That leaves it off every page, which is
+     * where "ขอขยายเวลา" used to lead nowhere: the signer asks, and the person
+     * who could grant it has nothing to click. Offered only while no newer round
+     * is open, so reviving can never collide with a live one.
+     */
+    public Optional<SignatureRequest> findRevivableEnvelope(SignatureModule module, Long requestId, int documentType) {
+        if (isDocumentLocked(module, requestId, documentType)) {
+            return Optional.empty();
+        }
+        return requestRepository
+                .findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, documentType)
+                .stream()
+                .filter(e -> e.getStatus() == SignatureRequestStatus.EXPIRED)
+                .findFirst();
+    }
+
     public List<SignatureRequest> findForRequest(SignatureModule module, Long requestId) {
         return requestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(module, requestId);
     }
@@ -205,27 +227,71 @@ public class SignatureWorkflowService {
         }
     }
 
-    /** Extends the due date of a signature envelope. */
+    /**
+     * Extends the due date of a signature envelope, reviving it if the clock
+     * already closed it.
+     *
+     * <p>An {@code EXPIRED} envelope is accepted deliberately. Expiry is the one
+     * terminal state nobody chose — the scheduler reached it on its own — and
+     * the overdue banner offers "ขอขยายเวลา" as the way out, so refusing to
+     * extend afterwards would send people to a button that leads nowhere. A
+     * cancelled or fully-signed round stays closed: those ended because someone
+     * decided they should.
+     */
     @Transactional
     public Result extendDueDate(Long envelopeId, LocalDateTime newDueAt, UserDtls actor, ActorContext context) {
-        SignatureRequest envelope = requestRepository.findById(envelopeId).orElse(null);
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(envelopeId).orElse(null);
         if (envelope == null) {
             return Result.failed("ไม่พบรายการเวียนลงนามนี้");
         }
-        if (!envelope.getStatus().isOpen()) {
+        SignatureRequestStatus status = envelope.getStatus();
+        if (!status.isOpen() && status != SignatureRequestStatus.EXPIRED) {
             return Result.failed("ไม่สามารถขยายเวลาของเอกสารที่ลงนามครบหรือยกเลิกแล้ว");
+        }
+        if (newDueAt != null && !newDueAt.isAfter(LocalDateTime.now())) {
+            return Result.failed("กรุณาระบุกำหนดเวลาใหม่ที่ยังมาไม่ถึง");
+        }
+
+        boolean reviving = status == SignatureRequestStatus.EXPIRED;
+        if (reviving && isDocumentLocked(envelope.getModule(), envelope.getRequestId(),
+                envelope.getDocumentType())) {
+            // Somebody already started the document over. Two open rounds on one
+            // document would mean two frozen copies collecting signatures, and
+            // no answer to which one the document actually is.
+            return Result.failed("เอกสารฉบับนี้มีการเวียนลงนามรอบใหม่แล้ว จึงเปิดรอบเดิมขึ้นมาอีกไม่ได้");
         }
 
         envelope.setDueAt(newDueAt);
+
+        if (reviving) {
+            envelope.setStatus(SignatureRequestStatus.IN_PROGRESS);
+            // Put back only the turns the clock took away. Every persisted step
+            // has a signer — an unassigned slot never becomes a step at all —
+            // so a skipped, unsigned step can only be one expiry cut short.
+            envelope.getSteps().stream()
+                    .filter(s -> s.getStatus() == SignatureStepStatus.SKIPPED && s.getSignedAt() == null)
+                    .forEach(s -> s.setStatus(SignatureStepStatus.WAITING));
+        }
+
         SignatureRequest saved = requestRepository.save(envelope);
 
-        audit(saved, null, SignatureAuditEventType.VIEWED, actor, context,
-                "ขยายกำหนดเวลาลงนามเป็น: " + (newDueAt != null ? newDueAt.toString() : "ไม่จำกัด"));
+        audit(saved, null, SignatureAuditEventType.DUE_EXTENDED, actor, context,
+                (reviving ? "เปิดการเวียนลงนามอีกครั้ง และขยาย" : "ขยาย")
+                        + "กำหนดเวลาลงนามเป็น: " + (newDueAt != null ? newDueAt.toString() : "ไม่จำกัด"));
+
+        if (reviving) {
+            // Goes through the normal activation so the staff review gate still
+            // applies: reviving a round must not push a document onward that
+            // nobody has read.
+            activateNextStep(saved, context);
+            saved = requestRepository.save(saved);
+        }
 
         // Notify currently active signer about the extension
-        saved.activeStep().ifPresent(step -> {
+        SignatureRequest notified = saved;
+        notified.activeStep().ifPresent(step -> {
             if (step.getSigner() != null) {
-                notifier.notifySignatureRequested(noticeFor(saved, step, List.of(step.getSigner())));
+                notifier.notifySignatureRequested(noticeFor(notified, step, List.of(step.getSigner())));
             }
         });
 
@@ -243,8 +309,14 @@ public class SignatureWorkflowService {
         if (envelope == null || !envelope.getStatus().isOpen()) {
             return Result.failed("คำขอลงนามนี้ปิดไปแล้ว");
         }
+        // The initiator of an unsubmitted request is the applicant themselves,
+        // so this would post them a request addressed to themselves. The page
+        // hides the button; this refuses the route.
+        if (deadlineIsAdvisory(step)) {
+            return Result.failed("กำหนดเวลานี้เป็นเพียงการแจ้งเตือน คุณยังลงนามได้ตามปกติ");
+        }
 
-        audit(envelope, step.getId(), SignatureAuditEventType.VIEWED, signer, context,
+        audit(envelope, step.getId(), SignatureAuditEventType.EXTENSION_REQUESTED, signer, context,
                 "ผู้ลงนามขอขยายเวลา: " + (reason != null && !reason.isBlank() ? reason : "ไม่ระบุเหตุผล"));
 
         UserDtls initiator = envelope.getInitiatedBy();
@@ -313,6 +385,31 @@ public class SignatureWorkflowService {
     private boolean requiresApplicantSignature(SignatureModule module, int documentType) {
         return slotsFor(module, documentType).stream()
                 .anyMatch(slot -> "applicant".equalsIgnoreCase(slot.slotKey()));
+    }
+
+    /**
+     * Whether this step's deadline is a reminder rather than a gate.
+     *
+     * <p>True only for the applicant signing their own part of a request they
+     * have not submitted yet. Nothing is waiting on them but themselves, so a
+     * lapsed date has nobody to protect — and refusing the signature would only
+     * block the submission the date existed to hurry along, because an unsigned
+     * document keeps the request from being submitted at all. Asking them to
+     * request an extension is asking them to petition themselves.
+     *
+     * <p>Every other step keeps the hard deadline. The ตามลำดับขั้น chain is
+     * exactly where a date does protect someone: a document parked with one
+     * signer is invisible to everyone behind them.
+     */
+    public boolean deadlineIsAdvisory(SignatureStep step) {
+        if (step == null || !"applicant".equalsIgnoreCase(step.getSlotKey())) {
+            return false;
+        }
+        SignatureRequest envelope = step.getSignatureRequest();
+        if (envelope == null || snapshotProvider == null) {
+            return false;
+        }
+        return snapshotProvider.isDraftRequest(envelope.getModule(), envelope.getRequestId());
     }
 
     /**
@@ -550,7 +647,7 @@ public class SignatureWorkflowService {
         if (!envelope.getStatus().isOpen()) {
             return Result.failed("คำขอลงนามนี้ถูกปิดไปแล้ว (" + envelope.getStatus().getThaiLabel() + ")");
         }
-        if (envelope.isOverdue()) {
+        if (envelope.isOverdue() && !deadlineIsAdvisory(step)) {
             return Result.failed("เลยกำหนดเวลาลงนามแล้ว กรุณาติดต่อผู้ส่งเอกสาร");
         }
         // 4. Consent is not optional — it is what makes this a signature.
@@ -1033,13 +1130,25 @@ public class SignatureWorkflowService {
         boolean isAdminViewer = viewer != null
                 && ("ROLE_ADMIN".equals(viewer.getRole()) || "ROLE_STAFF".equals(viewer.getRole()));
 
+        SignatureRequest activeEnvelope = findBlockingEnvelope(module, requestId, documentType).orElse(null);
+
+        boolean deadlineAdvisory = activeEnvelope != null
+                && activeEnvelope.activeStep().map(this::deadlineIsAdvisory).orElse(false);
+
+        // Only worth looking for a closed round when no live one is in the way.
+        SignatureRequest revivableEnvelope = activeEnvelope == null
+                ? findRevivableEnvelope(module, requestId, documentType).orElse(null)
+                : null;
+
         return new com.ecom.academic.dto.SignaturePanelView(
                 slots, recommended, others, defaultSignerUserIds,
                 applicantOption,
                 com.ecom.academic.dto.SignerOptionDTO.fromUser(viewer),
-                findBlockingEnvelope(module, requestId, documentType).orElse(null),
+                activeEnvelope,
                 true,
-                isAdminViewer);
+                isAdminViewer,
+                deadlineAdvisory,
+                revivableEnvelope);
     }
 
     /** Signed steps carrying the images to stamp, in order. */

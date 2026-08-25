@@ -79,6 +79,34 @@ public class SignatureNotifier {
         }
     }
 
+    /**
+     * Tells someone the date they set for themselves has arrived.
+     *
+     * <p>Worded apart from {@link #notifyReminder} on purpose. This one goes to
+     * an applicant whose deadline is only a reminder, and the message has to say
+     * so — "เลยกำหนดลงนาม" with no qualifier reads as a door that has closed, and
+     * would send them looking for someone to ask for an extension they do not
+     * need.
+     */
+    @Async
+    public void notifyDeadlineReached(SignatureNotice notice) {
+        String title = "ถึงกำหนดที่ตั้งเตือนไว้: " + notice.safeDocumentLabel();
+        String message = "เลยกำหนดที่คุณตั้งเตือนไว้สำหรับ \"" + notice.safeDocumentLabel() + "\" แล้ว "
+                + "คุณยังลงนามได้ตามปกติ และยื่นคำร้องได้เมื่อลงนามครบ";
+        String body = EmailTemplateHelper.wrapLayout("ถึงกำหนดที่ตั้งเตือนไว้", "แจ้งเตือน",
+                "<p>เอกสาร <strong>" + escape(notice.safeDocumentLabel()) + "</strong> "
+                        + "ยังรอลายเซ็นของคุณอยู่ และเลยวันที่คุณตั้งเตือนไว้แล้ว</p>"
+                        + "<p>กำหนดนี้เป็น<strong>เพียงการแจ้งเตือน</strong> "
+                        + "เอกสารยังไม่ถูกปิด คุณลงนามเมื่อใดก็ได้ "
+                        + "และยื่นคำร้องได้ทันทีที่ลงนามครบทุกฉบับ</p>");
+
+        for (UserDtls recipient : notice.recipients()) {
+            notify(recipient, title, message, "/esign/sign/" + notice.stepId(),
+                    NotificationType.SIGNATURE_REMINDER, true);
+            email(recipient, title, body);
+        }
+    }
+
     /** Tells the initiator the chain finished. */
     @Async
     public void notifyCompleted(SignatureNotice notice) {

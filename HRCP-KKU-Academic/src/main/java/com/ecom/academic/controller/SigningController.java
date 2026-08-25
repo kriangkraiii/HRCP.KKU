@@ -131,16 +131,25 @@ public class SigningController {
             }
         }
 
+        SignatureRequest envelope = step.getSignatureRequest();
+
+        // The deadline is either a gate or a reminder, and the page has to show
+        // the right one: offering a signing button the service will refuse sends
+        // people through the form only to bounce them at the end.
+        boolean deadlineAdvisory = workflow.deadlineIsAdvisory(step);
+
         model.addAttribute("step", step);
-        model.addAttribute("envelope", step.getSignatureRequest());
+        model.addAttribute("envelope", envelope);
         model.addAttribute("mySignatures", signatureService.findMine(me));
         model.addAttribute("defaultSignature", signatureService.findDefault(me).orElse(null));
         model.addAttribute("consentText", SignatureStep.CONSENT_TEXT);
         model.addAttribute("queueTotal", queueTotal);
         model.addAttribute("queueIndex", queueIndex);
+        model.addAttribute("deadlineAdvisory", deadlineAdvisory);
         model.addAttribute("canSign",
                 step.getStatus() == SignatureStepStatus.ACTIVE
-                        && step.getSignatureRequest().getStatus().isOpen());
+                        && envelope.getStatus().isOpen()
+                        && (deadlineAdvisory || !envelope.isOverdue()));
         return "academic/esign/sign";
     }
 
@@ -253,10 +262,27 @@ public class SigningController {
         return "redirect:/esign/sign/" + stepId;
     }
 
+    /**
+     * Moves a round's deadline, reopening it if the clock already closed it.
+     *
+     * <p>Guarded like {@link #cancelEnvelope}: both change when other people are
+     * expected to act, so both are limited to the people who own the round.
+     */
     @PostMapping("/envelope/{envelopeId}/extend-due")
     public String extendDueDate(@PathVariable Long envelopeId,
             @RequestParam("dueAt") String dueAtStr,
             Principal principal, RedirectAttributes redirectAttributes) {
+
+        UserDtls me = currentUser(principal);
+        SignatureRequest envelope = workflow.findEnvelope(envelopeId).orElse(null);
+        if (envelope == null) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่พบรายการเวียนลงนามนี้");
+            return "redirect:/esign/inbox";
+        }
+        if (!mayManage(envelope, me)) {
+            redirectAttributes.addFlashAttribute("errorMsg", "คุณไม่มีสิทธิ์แก้กำหนดเวลาลงนามนี้");
+            return "redirect:/esign/inbox";
+        }
 
         LocalDateTime newDueAt = null;
         if (dueAtStr != null && !dueAtStr.isBlank()) {
@@ -268,7 +294,7 @@ public class SigningController {
             }
         }
 
-        Result result = workflow.extendDueDate(envelopeId, newDueAt, currentUser(principal), actorContext());
+        Result result = workflow.extendDueDate(envelopeId, newDueAt, me, actorContext());
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());
         } else {

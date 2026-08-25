@@ -19,6 +19,8 @@ public enum SignatureAuditEventType {
     DECLINED("ปฏิเสธการลงนาม", "fas fa-circle-xmark"),
     CANCELLED("ยกเลิกการเวียน", "fas fa-ban"),
     FORWARDED("ส่งเวียนลงนามต่อ", "fas fa-share"),
+    EXTENSION_REQUESTED("ขอขยายเวลาลงนาม", "fas fa-clock-rotate-left"),
+    DUE_EXTENDED("ขยายกำหนดเวลาลงนาม", "fas fa-calendar-plus"),
     COMPLETED("ลงนามครบทุกคน", "fas fa-circle-check"),
     VOIDED("ลายเซ็นเป็นโมฆะ", "fas fa-triangle-exclamation"),
     EXPIRED("เลยกำหนด", "fas fa-clock");

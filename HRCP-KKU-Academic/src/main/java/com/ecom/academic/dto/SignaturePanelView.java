@@ -29,6 +29,11 @@ import com.ecom.academic.service.SignatureAnchorRegistry.SignatureSlot;
  *                           have no account usable as a signer
  * @param activeEnvelope     the round currently circulating, or null
  * @param signable           whether this document has any signature position
+ * @param deadlineAdvisory   whether the round's due date is only a reminder —
+ *                           true while the applicant is signing their own part
+ *                           of a request they have not submitted yet
+ * @param revivableEnvelope  a round the clock closed that can be reopened by
+ *                           setting a new deadline, or null
  */
 public record SignaturePanelView(
         List<SignatureSlot> slots,
@@ -39,7 +44,9 @@ public record SignaturePanelView(
         SignerOptionDTO currentUserOption,
         SignatureRequest activeEnvelope,
         boolean signable,
-        boolean isAdminViewer) {
+        boolean isAdminViewer,
+        boolean deadlineAdvisory,
+        SignatureRequest revivableEnvelope) {
 
     public SignaturePanelView(
             List<SignatureSlot> slots,
@@ -50,7 +57,7 @@ public record SignaturePanelView(
             SignerOptionDTO currentUserOption,
             SignatureRequest activeEnvelope,
             boolean signable) {
-        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false);
+        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null);
     }
 
     /** True while the document is out for signature or already fully signed. */
@@ -191,6 +198,6 @@ public record SignaturePanelView(
 
     /** An empty panel, for documents with no signature block. */
     public static SignaturePanelView unsignable() {
-        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false);
+        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false, false, null);
     }
 }

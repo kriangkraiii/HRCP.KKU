@@ -179,6 +179,87 @@ class SigningPageRenderTest {
                 .andExpect(status().isOk());
     }
 
+    @Test
+    @DisplayName("เลยกำหนดที่ตั้งเตือนไว้เอง: หน้าลงนามต้องเป็นป้ายเตือน ไม่ใช่ปุ่มขอขยายเวลา")
+    void anAdvisoryDeadlineRendersAReminderNotAGate() throws Exception {
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                java.time.LocalDateTime.now().minusDays(1), applicant, ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        String html = mockMvc.perform(get("/esign/sign/" + stepId)
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(html)
+                .contains("เลยกำหนดที่คุณตั้งเตือนไว้แล้ว")
+                .doesNotContain("เอกสารนี้เลยกำหนดลงนามแล้ว")
+                .doesNotContain("requestExtensionModal")
+                // ปุ่มลงนามต้องยังกดได้จริง ไม่ใช่ถูกปิดเงียบ ๆ
+                .doesNotContain("ขั้นตอนนี้ไม่สามารถลงนามได้แล้ว");
+    }
+
+    @Test
+    @DisplayName("ผู้ยื่นต้องเห็นช่องตั้งเตือนเวลาลงนามของตัวเองในแผงส่งลงนาม")
+    void theApplicantCanSetTheirOwnReminderDate() throws Exception {
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+
+        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/0")
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("ตั้งเตือนให้ลงนามภายใน (ไม่บังคับ)")))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("เลยกำหนดแล้วยังลงนามได้ตามปกติ")));
+    }
+
+    @Test
+    @DisplayName("แผงลงนามต้องบอกว่ากำหนดที่เลยไปเป็นเพียงการแจ้งเตือน ไม่ใช่ป้ายแดง")
+    void thePanelMarksAnAdvisoryDeadlineAsAReminder() throws Exception {
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                java.time.LocalDateTime.now().minusDays(1), applicant, ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
+
+        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/0")
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("เลยกำหนดที่ตั้งเตือนไว้ (ยังลงนามได้)")))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("ตั้งเตือนให้ลงนามภายใน:")));
+    }
+
+    @Test
+    @DisplayName("รอบที่ถูกปิดเพราะเลยกำหนด แอดมินต้องมีปุ่มตั้งกำหนดใหม่เพื่อเวียนต่อ")
+    void anExpiredRoundOffersAWayBack() throws Exception {
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
+                "แบบตรวจสอบเอกสาร", "{\"applicant_name\":\"ทดสอบ\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId()),
+                        new SignerAssignment("hr", admin.getId())),
+                null, admin, ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
+        org.assertj.core.api.Assertions.assertThat(
+                workflow.expire(created.request().getId()).ok()).isTrue();
+
+        // ก่อนแก้: ซองที่ EXPIRED ไม่ปรากฏบนหน้าไหนเลย ปุ่ม "ขอขยายเวลา"
+        // ที่ผู้ลงนามกดจึงไม่มีใครกดรับได้
+        mockMvc.perform(get("/admin/academic/request/" + request.getId() + "/document/1")
+                        .with(user(admin.getEmail()).roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("ตั้งกำหนดใหม่และเวียนต่อ")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "/esign/envelope/" + created.request().getId() + "/extend-due")));
+    }
+
     /** A saved signature for this person, so the preview has one to stamp. */
     private Long newSignature(UserDtls owner) throws Exception {
         java.awt.image.BufferedImage image =

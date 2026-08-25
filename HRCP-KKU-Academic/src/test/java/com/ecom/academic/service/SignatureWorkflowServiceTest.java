@@ -20,6 +20,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
+import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.SignatureAuditEventType;
 import com.ecom.academic.model.SignatureKind;
 import com.ecom.academic.model.SignatureModule;
@@ -78,6 +80,12 @@ class SignatureWorkflowServiceTest {
 
     @Autowired
     private UserSignatureRepository userSignatureRepository;
+
+    @Autowired
+    private com.ecom.academic.repository.PositionRequestRepository positionRequestRepository;
+
+    @Autowired
+    private SignatureReminderScheduler reminderScheduler;
 
     private UserDtls admin;
     private UserDtls head;
@@ -508,6 +516,159 @@ class SignatureWorkflowServiceTest {
 
         SignatureRequest reloaded = requestRepository.findById(envelope.getId()).orElseThrow();
         assertThat(reloaded.getDueAt()).isNotNull();
+    }
+
+    // =====================================================================
+    // กำหนดเวลาของผู้ยื่นเองตอนยังไม่ยื่นคำร้อง = แจ้งเตือน ไม่ใช่ประตูปิด
+    //
+    // POSITION document 4 is used here because it carries both kinds of step
+    // at once — ผู้เสนอขอ then ผู้บังคับบัญชาชั้นต้น — so the same overdue
+    // envelope can show that one is let through and the other is not.
+    // =====================================================================
+
+    private static final int DRAFT_DOC_TYPE = 4;
+
+    /** A real DRAFT request, so {@code isDraftRequest()} has a row to find. */
+    private PositionRequest newDraftRequest(UserDtls applicant) {
+        PositionRequest request = new PositionRequest();
+        request.setApplicant(applicant);
+        request.setRequestCode("DRAFT-" + java.util.UUID.randomUUID());
+        request.setCurrentStatus(PositionRequestStatus.DRAFT);
+        return positionRequestRepository.save(request);
+    }
+
+    private Result createDraftEnvelope(PositionRequest request, UserDtls applicant) {
+        return workflow.createEnvelope(MODULE, request.getId(), DRAFT_DOC_TYPE,
+                "แบบคำขอ", FROZEN_JSON,
+                List.of(new SignerAssignment("applicant", applicant.getId()),
+                        new SignerAssignment("head", head.getId())),
+                LocalDateTime.now().minusDays(1), applicant, ActorContext.none());
+    }
+
+    @Test
+    @DisplayName("ยังไม่ยื่นคำร้อง: ผู้ยื่นลงนามส่วนตัวเองได้แม้เลยกำหนดที่ตั้งเตือนไว้")
+    void applicantMaySignPastTheDeadlineWhileStillADraft() throws IOException {
+        UserDtls applicant = newUser("draft-signer@kku.ac.th", "ROLE_USER");
+        UserSignature signature = newSignature(applicant);
+        PositionRequest request = newDraftRequest(applicant);
+
+        SignatureRequest envelope = createDraftEnvelope(request, applicant).request();
+        assertThat(envelope.isOverdue()).isTrue();
+
+        Result signed = workflow.sign(stepOf(envelope, "applicant").getId(), applicant,
+                signature.getId(), true, ActorContext.none());
+
+        assertThat(signed.ok()).as("เลยกำหนดที่ตั้งเตือนไว้ แต่ยังต้องลงนามได้").isTrue();
+    }
+
+    @Test
+    @DisplayName("ยังไม่ยื่นคำร้อง: ผู้ลงนามลำดับถัดไปยังถูกกั้นด้วยกำหนดเวลาเหมือนเดิม")
+    void chainSignerStillBlockedPastTheDeadlineOnADraft() throws IOException {
+        UserDtls applicant = newUser("draft-chain@kku.ac.th", "ROLE_USER");
+        UserSignature signature = newSignature(applicant);
+        PositionRequest request = newDraftRequest(applicant);
+
+        SignatureRequest envelope = createDraftEnvelope(request, applicant).request();
+        assertThat(workflow.sign(stepOf(envelope, "applicant").getId(), applicant,
+                signature.getId(), true, ActorContext.none()).ok()).isTrue();
+        assertThat(workflow.startCirculation(envelope.getId(), admin, ActorContext.none()).ok()).isTrue();
+
+        Result blocked = workflow.sign(stepOf(envelope, "head").getId(), head,
+                headSignature.getId(), true, ActorContext.none());
+
+        assertThat(blocked.ok()).as("สายเวียนตามลำดับต้องยังใช้กติกาเดิม").isFalse();
+        assertThat(blocked.error()).contains("เลยกำหนด");
+    }
+
+    @Test
+    @DisplayName("ยังไม่ยื่นคำร้อง: ผู้ยื่นขอขยายเวลาให้ตัวเองไม่ได้ เพราะไม่จำเป็น")
+    void extensionRequestIsRefusedWhenTheDeadlineIsOnlyAReminder() throws IOException {
+        UserDtls applicant = newUser("draft-extension@kku.ac.th", "ROLE_USER");
+        newSignature(applicant);
+        PositionRequest request = newDraftRequest(applicant);
+
+        SignatureRequest envelope = createDraftEnvelope(request, applicant).request();
+
+        Result result = workflow.requestExtension(stepOf(envelope, "applicant").getId(),
+                "ยังทำเอกสารไม่เสร็จ", applicant, ActorContext.none());
+
+        assertThat(result.ok()).isFalse();
+        assertThat(result.error()).contains("แจ้งเตือน");
+    }
+
+    @Test
+    @DisplayName("ยังไม่ยื่นคำร้อง: ตัวตั้งเวลาไม่ปิดซองของผู้ยื่นที่เลยกำหนด")
+    void theSchedulerLeavesAnApplicantsOwnDraftRoundOpen() throws IOException {
+        UserDtls applicant = newUser("draft-scheduler@kku.ac.th", "ROLE_USER");
+        newSignature(applicant);
+        PositionRequest request = newDraftRequest(applicant);
+
+        SignatureRequest envelope = createDraftEnvelope(request, applicant).request();
+        reminderScheduler.run();
+
+        SignatureRequest reloaded = requestRepository.findById(envelope.getId()).orElseThrow();
+        assertThat(reloaded.getStatus()).isEqualTo(SignatureRequestStatus.IN_PROGRESS);
+    }
+
+    @Test
+    @DisplayName("ซองที่เลยกำหนดจนถูกปิด สามารถตั้งกำหนดใหม่แล้วเวียนต่อได้")
+    void expiredEnvelopeCanBeExtendedAndResumes() {
+        SignatureRequest envelope = createEnvelope().request();
+        assertThat(workflow.expire(envelope.getId()).ok()).isTrue();
+        assertThat(requestRepository.findById(envelope.getId()).orElseThrow().getStatus())
+                .isEqualTo(SignatureRequestStatus.EXPIRED);
+
+        Result revived = workflow.extendDueDate(envelope.getId(),
+                LocalDateTime.now().plusDays(7), admin, ActorContext.none());
+        assertThat(revived.ok()).isTrue();
+
+        SignatureRequest reloaded = requestRepository.findById(envelope.getId()).orElseThrow();
+        assertThat(reloaded.getStatus()).isEqualTo(SignatureRequestStatus.IN_PROGRESS);
+
+        // The turn the clock took away is given back, not just the status.
+        assertThat(stepOf(reloaded, "head").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
+        assertThat(workflow.sign(stepOf(reloaded, "head").getId(), head,
+                headSignature.getId(), true, ActorContext.none()).ok()).isTrue();
+    }
+
+    @Test
+    @DisplayName("ขยายกำหนดเวลาไปยังเวลาที่ผ่านมาแล้วไม่ได้")
+    void extendDueDateRefusesAPastDate() {
+        SignatureRequest envelope = createEnvelope().request();
+
+        Result result = workflow.extendDueDate(envelope.getId(),
+                LocalDateTime.now().minusDays(1), admin, ActorContext.none());
+
+        assertThat(result.ok()).isFalse();
+    }
+
+    @Test
+    @DisplayName("เริ่มรอบใหม่ไปแล้ว จะปลุกรอบเดิมที่หมดอายุขึ้นมาอีกไม่ได้")
+    void anExpiredRoundCannotBeRevivedOnceANewOneStarted() {
+        SignatureRequest expired = createEnvelope().request();
+        assertThat(workflow.expire(expired.getId()).ok()).isTrue();
+
+        // เอกสารถูกปลดล็อกแล้ว จึงส่งเวียนรอบใหม่ได้
+        assertThat(createEnvelope().ok()).isTrue();
+
+        Result result = workflow.extendDueDate(expired.getId(),
+                LocalDateTime.now().plusDays(7), admin, ActorContext.none());
+
+        assertThat(result.ok()).as("สองรอบเปิดพร้อมกันบนเอกสารเดียวไม่ได้").isFalse();
+        assertThat(requestRepository.findById(expired.getId()).orElseThrow().getStatus())
+                .isEqualTo(SignatureRequestStatus.EXPIRED);
+    }
+
+    @Test
+    @DisplayName("ซองที่ยกเลิกไปแล้วยังขยายเวลาไม่ได้")
+    void cancelledEnvelopeStaysClosed() {
+        SignatureRequest envelope = createEnvelope().request();
+        assertThat(workflow.cancel(envelope.getId(), admin, "ยกเลิก", ActorContext.none()).ok()).isTrue();
+
+        Result result = workflow.extendDueDate(envelope.getId(),
+                LocalDateTime.now().plusDays(7), admin, ActorContext.none());
+
+        assertThat(result.ok()).isFalse();
     }
 
     @Test
