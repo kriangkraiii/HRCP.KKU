@@ -1488,6 +1488,24 @@ body,
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
 }
 
+[data-theme="dark"] .at-badge,
+[data-theme="dark"] .admin-table-title .at-badge,
+[data-theme="dark"] .at-count,
+[data-theme="dark"] .admin-table-title .at-count {
+    color: #ffffff !important;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+[data-theme="dark"] .at-badge-eval,
+[data-theme="dark"] .at-count-eval {
+    background-color: #1565c0 !important;
+}
+
+[data-theme="dark"] .at-badge-pos,
+[data-theme="dark"] .at-count-pos {
+    background-color: #2e7d32 !important;
+}
+
 [data-theme="dark"] .doc-grid-item {
     border-color: var(--border-color);
 }

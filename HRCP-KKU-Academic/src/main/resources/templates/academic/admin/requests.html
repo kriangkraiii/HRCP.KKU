@@ -96,14 +96,14 @@
                         <div class="admin-table-wrap">
                             <div class="admin-table-header">
                                 <h5 class="admin-table-title">
-                                    <span class="at-badge" style="background:#1565c0">ประเมินผล</span>
+                                    <span class="at-badge at-badge-eval">ประเมินผล</span>
                                     <th:block th:each="s : ${statuses}" th:if="${s.name() == activeStatus}">
                                         <i class="fas" th:classappend="${s.icon}" th:style="'color:' + ${s.color}"></i>
                                         <span th:text="${s.thaiLabel}"></span>
                                     </th:block>
                                     <span class="at-count"
                                           th:each="s : ${statuses}" th:if="${s.name() == activeStatus}"
-                                          th:style="'background-color:' + ${s.color}"
+                                          th:style="'background-color:' + ${s.color} + ' !important'"
                                           th:text="${requests != null ? requests.size() : 0}"></span>
                                 </h5>
                                 <span class="admin-table-meta"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</span>
@@ -173,10 +173,10 @@
                         <div class="admin-table-wrap">
                             <div class="admin-table-header">
                                 <h5 class="admin-table-title">
-                                    <span class="at-badge" style="background:#1565c0">ประเมินผล</span>
+                                    <span class="at-badge at-badge-eval">ประเมินผล</span>
                                     <i class="fas fa-clipboard-check" style="color:#1565c0"></i>
                                     คำร้องประเมินผลการสอน
-                                    <span class="at-count" style="background:#1565c0"
+                                    <span class="at-count at-count-eval"
                                           th:text="${pendingRequests != null ? pendingRequests.size() : 0}"></span>
                                 </h5>
                                 <span class="admin-table-meta"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</span>
@@ -302,7 +302,7 @@
                     <div class="admin-table-wrap">
                         <div class="admin-table-header">
                             <h5 class="admin-table-title">
-                                <span class="at-badge" style="background:#2e7d32">ขอตำแหน่ง</span>
+                                <span class="at-badge at-badge-pos">ขอตำแหน่ง</span>
                                 <th:block th:if="${activePosStatus != null}">
                                     <th:block th:each="ps : ${positionStatuses}" th:if="${ps.name() == activePosStatus}">
                                         <i class="fas" th:classappend="${ps.icon}" th:style="'color:' + ${ps.color}"></i>
@@ -313,7 +313,7 @@
                                     <i class="fas fa-university" style="color:#2e7d32"></i>
                                     คำร้องขอตำแหน่งทางวิชาการ
                                 </th:block>
-                                <span class="at-count" style="background:#2e7d32"
+                                <span class="at-count at-count-pos"
                                       th:text="${positionRequests != null ? positionRequests.size() : 0}"></span>
                             </h5>
                             <span class="admin-table-meta"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</span>
