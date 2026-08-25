@@ -274,11 +274,40 @@ public class PositionRequestServiceTest {
         }
 
         @Test
-        void hasActiveRequest_ReturnsFalse_WhenCompleted() {
+        void hasActiveRequest_ReturnsFalse_WhenRejected() {
             PositionRequest request = positionService.createDraftRequest(testUser, null);
             positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.SENT_TO_HR, testAdmin, null);
+            positionService.updateStatus(request.getId(), PositionRequestStatus.REJECTED, testAdmin, null);
             assertThat(positionService.hasActiveRequest(testUser.getId())).isFalse();
+        }
+
+        @Test
+        void hasActiveRequest_ReturnsTrue_WhenRevisionRequested() {
+            PositionRequest request = positionService.createDraftRequest(testUser, null);
+            positionService.submitRequest(request);
+            positionService.updateStatus(request.getId(), PositionRequestStatus.REVISION_REQUESTED, testAdmin, null);
+            assertThat(positionService.hasActiveRequest(testUser.getId())).isTrue();
+        }
+
+        /**
+         * Ties this method to the enum, so a status added later cannot quietly
+         * mean two different things in two places — which is exactly how
+         * REJECTED came to lock people out for good.
+         */
+        @Test
+        void everyTerminalStatusEndsTheRequest() {
+            PositionRequest request = positionService.createDraftRequest(testUser, null);
+            positionService.submitRequest(request);
+
+            for (PositionRequestStatus status : PositionRequestStatus.values()) {
+                if (!status.isTerminal()) {
+                    continue;
+                }
+                positionService.updateStatus(request.getId(), status, testAdmin, null);
+                assertThat(positionService.hasActiveRequest(testUser.getId()))
+                        .as("%s ประกาศตัวว่าเป็นสถานะจบ จึงต้องยื่นคำร้องใหม่ได้", status)
+                        .isFalse();
+            }
         }
     }
 

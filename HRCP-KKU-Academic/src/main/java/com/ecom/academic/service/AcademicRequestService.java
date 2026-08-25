@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Stream;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -354,15 +355,31 @@ public class AcademicRequestService {
     }
 
     /**
-     * Check if applicant has any active (non-terminal) requests.
-     * Terminal statuses are: REJECTED, COMPLETED
-     * DRAFT is excluded from active check (ถ้ามี draft ถือว่ายังสร้างคำร้องได้)
-     * Active means: RECEIVED, SUB_COMMITTEE_APPOINTED, MEETING_SCHEDULED,
-     * COMPLETED_PASS, COMPLETED_REVISE
+     * Whether this applicant still has a request in flight, which is what stops
+     * them opening a second one.
+     *
+     * <p>Which statuses count as finished is asked of {@link
+     * RequestStatus#isTerminal()} rather than listed here. Listing them is how
+     * this went wrong before: the list named REJECTED and COMPLETED but not
+     * COMPLETED_FAIL, so an applicant told their teaching evaluation did not
+     * pass could never ask to be evaluated again — the one situation where
+     * asking again is the whole point.
+     *
+     * <p>{@code DRAFT} is excluded on top of that, and has to be: {@code
+     * newRequestForm} finds or creates the draft only after this check, so a
+     * draft counting as active would lock people out of their own unfinished
+     * form. (The position flow does the opposite for its own reasons — see
+     * {@code PositionRequestService.hasActiveRequest}.)
+     *
+     * <p>COMPLETED_PASS and COMPLETED_REVISE stay active on purpose: a passed
+     * result still feeds a position request, and a revise still needs work.
      */
     public boolean hasActiveRequest(Integer applicantId) {
-        List<RequestStatus> excludedStatuses = Arrays.asList(
-                RequestStatus.REJECTED, RequestStatus.COMPLETED, RequestStatus.DRAFT);
+        List<RequestStatus> excludedStatuses = Stream.concat(
+                Arrays.stream(RequestStatus.values()).filter(RequestStatus::isTerminal),
+                Stream.of(RequestStatus.DRAFT))
+                .toList();
+
         List<AcademicRequest> activeRequests = requestRepository
                 .findByApplicantIdAndCurrentStatusNotIn(applicantId, excludedStatuses);
         return !activeRequests.isEmpty();

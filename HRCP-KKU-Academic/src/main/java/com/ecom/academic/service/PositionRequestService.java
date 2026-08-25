@@ -350,9 +350,25 @@ public class PositionRequestService {
         return false;
     }
 
+    /**
+     * Whether this person still has a request in flight, which is what stops
+     * them opening a second one.
+     *
+     * <p>Which statuses count as finished is asked of {@link
+     * PositionRequestStatus#isTerminal()} rather than listed here. Listing them
+     * is how this went wrong before: the list held only {@code SENT_TO_HR}, so a
+     * rejected request counted as in flight for ever and its owner could never
+     * submit another one — with no way out, since only drafts can be cancelled.
+     *
+     * <p>{@code DRAFT} deliberately counts as active. An unfinished draft is
+     * something to go back to, not a reason to start again, and this is what
+     * keeps {@code createRequest} from leaving a second draft behind. The
+     * applicant reaches theirs from the "คำร้องฉบับร่าง" card on the dashboard.
+     */
     public boolean hasActiveRequest(Integer userId) {
-        List<PositionRequestStatus> terminal = Arrays.asList(
-                PositionRequestStatus.SENT_TO_HR);
+        List<PositionRequestStatus> terminal = Arrays.stream(PositionRequestStatus.values())
+                .filter(PositionRequestStatus::isTerminal)
+                .toList();
         return requestRepository.findActiveByApplicantId(userId, terminal).isPresent();
     }
 

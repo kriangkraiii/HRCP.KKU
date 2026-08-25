@@ -167,15 +167,18 @@ public class PositionApplicantController {
     public String newRequestForm(Principal principal, Model model) {
         UserDtls user = getUser(principal);
 
-        // Check if user already has active request
-        if (positionService.hasActiveRequest(user.getId())) {
-            return "redirect:/user/position/dashboard?error=active_exists";
-        }
-
-        // Check for existing draft
+        // An unfinished draft comes first. It counts as an active request, so
+        // checking the other way round meant this branch never ran and someone
+        // opening this page with a draft waiting was turned away with an error
+        // instead of being taken back to their own form.
         Optional<PositionRequest> draft = positionService.findDraftByApplicant(user.getId());
         if (draft.isPresent()) {
             return "redirect:/user/position/request/" + draft.get().getId();
+        }
+
+        // Check if user already has active request
+        if (positionService.hasActiveRequest(user.getId())) {
+            return "redirect:/user/position/dashboard?error=active_exists";
         }
 
         // Get eligible evaluations from Phase 1
