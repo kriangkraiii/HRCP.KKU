@@ -17,10 +17,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Deque;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.HexFormat;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Semaphore;
@@ -465,6 +467,22 @@ public class DocumentGenerationService {
     /** Ceiling on printed height, so a tall image cannot push the following line down. */
     private static final long SIGNATURE_MAX_HEIGHT_EMU = (long) (1.2 * EMU_PER_CM);
 
+    /** EMUs per twip, the unit Word measures line heights in. 1 twip = 1/1440 inch. */
+    private static final long EMU_PER_TWIP = 635L;
+
+    /**
+     * Height every stamped signature line is pinned to.
+     *
+     * <p>The ceiling rather than each image's own height: a row stays level only
+     * if all of its signature lines are the same height, whatever shape the
+     * signatures happen to be.
+     */
+    private static final long SIGNATURE_LINE_HEIGHT_TWIPS = SIGNATURE_MAX_HEIGHT_EMU / EMU_PER_TWIP;
+
+    /** A span of the document to swap for new markup. */
+    private record Edit(int start, int end, String markup) {
+    }
+
     /**
      * Starting id for {@code docPr}/{@code cNvPr} elements.
      *
@@ -662,11 +680,21 @@ public class DocumentGenerationService {
      * of signatures still to be placed.
      */
     private String insertSignatures(String xml, List<PreparedSignature> signatures) {
-        /** A span of the document to swap for new markup. */
-        record Edit(int start, int end, String markup) {
-        }
-
         List<Edit> edits = new ArrayList<>();
+
+        // Cells that gain a signature line of their own. Collected before any
+        // spacer is worked out, because a cell that is being signed must never
+        // also be padded.
+        Set<Integer> signedCellStarts = new HashSet<>();
+        // Cells already padded, keyed by where the cell starts. Two signers in
+        // one row would otherwise each pad the third cell, stacking two blank
+        // lines into it.
+        Set<Integer> paddedCellStarts = new HashSet<>();
+
+        record Placement(PreparedSignature sig, int[] namePara, int[] signLine) {
+        }
+        List<Placement> placements = new ArrayList<>();
+
         for (PreparedSignature sig : signatures) {
             // The verification QR shares this list for its image part but is
             // placed by position, not by anchor.
@@ -679,20 +707,40 @@ public class DocumentGenerationService {
                         sig.anchorPlaceholder());
                 continue;
             }
-
             int[] signLine = precedingSignatureLine(xml, namePara[0]);
-            if (signLine != null) {
+            placements.add(new Placement(sig, namePara, signLine));
+
+            // Only the branch that adds a paragraph makes its cell taller, so
+            // only that one puts the row out of step.
+            if (signLine == null) {
+                int[] cell = enclosingElement(xml, namePara[0], "w:tc");
+                if (cell != null) {
+                    signedCellStarts.add(cell[0]);
+                }
+            }
+        }
+
+        for (Placement placement : placements) {
+            PreparedSignature sig = placement.sig();
+            int[] namePara = placement.namePara();
+
+            if (placement.signLine() != null) {
                 // The template draws a "ลงชื่อ ......" rule: sign on that line and
                 // drop the dot leader, so the image is not pushed off the margin.
+                int[] signLine = placement.signLine();
                 String rewritten = stampOntoSignatureLine(xml.substring(signLine[0], signLine[1]), sig);
                 edits.add(new Edit(signLine[0], signLine[1], rewritten));
-            } else {
-                // No rule to sign on, so add a line above the name. It reuses the
-                // name paragraph's own properties, which is what keeps the image
-                // aligned with the name underneath it in every template.
-                String pPr = paragraphProperties(xml, namePara[0], namePara[1]);
-                edits.add(new Edit(namePara[0], namePara[0], "<w:p>" + pPr + signatureDrawingRun(sig) + "</w:p>"));
+                continue;
             }
+
+            // No rule to sign on, so add a line above the name. It reuses the
+            // name paragraph's own properties, which is what keeps the image
+            // aligned with the name underneath it in every template.
+            String pPr = paragraphProperties(xml, namePara[0], namePara[1]);
+            edits.add(new Edit(namePara[0], namePara[0],
+                    "<w:p>" + withFixedSignatureHeight(pPr) + signatureDrawingRun(sig) + "</w:p>"));
+
+            edits.addAll(spacerEditsForRowOf(xml, namePara[0], signedCellStarts, paddedCellStarts));
         }
 
         // Apply back to front so that each edit's offsets are still valid when it
@@ -761,6 +809,99 @@ public class DocumentGenerationService {
         }
         long leaders = text.chars().filter(c -> DOT_LEADER_CHARS.indexOf(c) >= 0).count();
         return leaders >= 5 ? previous : null;
+    }
+
+    /**
+     * Keeps the names in a signature row level when only some of them signed.
+     *
+     * <p>Adding the signature line makes its cell one paragraph taller, and a
+     * table row is as tall as its tallest cell. Cells are top-aligned unless the
+     * template says otherwise — none of these do — so a name in a cell that did
+     * not grow rides up to the top of the row and ends up floating well above
+     * the job title printed underneath it, while the signed name sits low. Every
+     * name in the row gets the same blank line, so they stay on one level and
+     * each stays against its own title.
+     *
+     * <p>Bottom-aligning the row would be shorter, but doc_2's signature cells
+     * are comment boxes whose text runs from the top edge down; pushing that
+     * whole block to the bottom would open a hole above it. A blank line leaves
+     * the existing layout alone.
+     *
+     * @param signedCellStarts cells getting a signature of their own, which must
+     *                         not also be padded
+     * @param paddedCellStarts cells already padded; added to as it goes, so that
+     *                         two signers in one row do not both pad a third
+     */
+    private List<Edit> spacerEditsForRowOf(String xml, int signedNameParagraphStart,
+            Set<Integer> signedCellStarts, Set<Integer> paddedCellStarts) {
+
+        int[] row = enclosingElement(xml, signedNameParagraphStart, "w:tr");
+        if (row == null) {
+            return List.of(); // not a table: nothing to keep in line
+        }
+
+        List<Edit> spacers = new ArrayList<>();
+        for (int[] cell : childElements(xml, row[0], row[1], "w:tc")) {
+            if (signedCellStarts.contains(cell[0]) || !paddedCellStarts.add(cell[0])) {
+                continue;
+            }
+            int[] namePara = signatureNameParagraphIn(xml, cell[0], cell[1]);
+            if (namePara == null) {
+                // Not a signature cell — padding it would drop a blank line into
+                // unrelated content.
+                paddedCellStarts.remove(cell[0]);
+                continue;
+            }
+            String pPr = paragraphProperties(xml, namePara[0], namePara[1]);
+            spacers.add(new Edit(namePara[0], namePara[0], "<w:p>" + withFixedSignatureHeight(pPr) + "</w:p>"));
+        }
+        return spacers;
+    }
+
+    /**
+     * Pins a paragraph to the height a stamped signature occupies.
+     *
+     * <p>Applied to the signature line and to the blank line standing in for a
+     * missing one alike. Without it the row is only as level as the signatures
+     * happen to be: images are scaled to a fixed width, so a wide flat signature
+     * prints shorter than a tall one, and two people signing the same row would
+     * still have their names at different heights.
+     */
+    private String withFixedSignatureHeight(String pPr) {
+        String spacing = "<w:spacing w:before=\"0\" w:after=\"0\" w:line=\""
+                + SIGNATURE_LINE_HEIGHT_TWIPS + "\" w:lineRule=\"exact\"/>";
+
+        if (pPr == null || pPr.isEmpty()) {
+            return "<w:pPr>" + spacing + "</w:pPr>";
+        }
+        if (pPr.endsWith("/>")) { // <w:pPr/> — no children yet
+            return "<w:pPr>" + spacing + "</w:pPr>";
+        }
+        // Replace any spacing the template set, so the two rules cannot disagree.
+        String cleaned = pPr.replaceAll("<w:spacing[^>]*/>", "");
+        int open = cleaned.indexOf('>');
+        return open == -1 ? pPr : cleaned.substring(0, open + 1) + spacing + cleaned.substring(open + 1);
+    }
+
+    /**
+     * The signer's printed name inside one table cell, if it holds one.
+     *
+     * <p>Recognised the same way {@link #findSignatureNameParagraph} does it —
+     * the parenthesised form around a placeholder. Reading placeholders works
+     * here because stamping runs after defragmentation but before replacement,
+     * so the tokens are still present and each sits in a single run.
+     *
+     * @return {@code {start, end}} of the paragraph, or null when the cell has
+     *         no name in it
+     */
+    private int[] signatureNameParagraphIn(String xml, int cellStart, int cellEnd) {
+        for (int[] para : childElements(xml, cellStart, cellEnd, "w:p")) {
+            String text = paragraphText(xml.substring(para[0], para[1])).trim();
+            if (text.startsWith("(") && text.contains(")") && text.contains("{{")) {
+                return para;
+            }
+        }
+        return null;
     }
 
     /**
@@ -898,6 +1039,124 @@ public class DocumentGenerationService {
             }
         }
         return null;
+    }
+
+    /**
+     * The innermost {@code <tag>...</tag>} containing an offset.
+     *
+     * <p>Depth-counted for the same reason {@link #enclosingParagraph} is: these
+     * templates nest tables inside table cells, so a {@code lastIndexOf} would
+     * happily return an outer row that the offset is not really a child of.
+     *
+     * @param tag qualified name without brackets, e.g. {@code "w:tc"}
+     * @return {@code {start, end}} where end is past the closing tag, or null
+     */
+    private int[] enclosingElement(String xml, int offset, String tag) {
+        String open = "<" + tag;
+        String close = "</" + tag + ">";
+        Deque<Integer> stack = new ArrayDeque<>();
+        int pos = 0;
+
+        while (pos < xml.length()) {
+            int nextOpen = indexOfElement(xml, open, pos);
+            int nextClose = xml.indexOf(close, pos);
+
+            if (nextOpen == -1 && nextClose == -1) {
+                break;
+            }
+            if (nextClose == -1 || (nextOpen != -1 && nextOpen < nextClose)) {
+                int tagEnd = xml.indexOf('>', nextOpen);
+                if (tagEnd == -1) {
+                    break;
+                }
+                if (xml.charAt(tagEnd - 1) != '/') { // self-closing has no body
+                    stack.push(nextOpen);
+                }
+                pos = tagEnd + 1;
+            } else {
+                int end = nextClose + close.length();
+                Integer start = stack.poll();
+                if (start != null && start <= offset && offset < end) {
+                    return new int[] { start, end };
+                }
+                pos = end;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Direct {@code <tag>} children of a span, in document order.
+     *
+     * <p>Only the outermost level: asking a row for its cells must not also
+     * return the cells of a table nested inside one of them.
+     */
+    private List<int[]> childElements(String xml, int from, int to, String tag) {
+        String open = "<" + tag;
+        String close = "</" + tag + ">";
+        List<int[]> children = new ArrayList<>();
+        int depth = 0;
+        int currentStart = -1;
+        int pos = from;
+
+        while (pos < to) {
+            int nextOpen = indexOfElement(xml, open, pos);
+            int nextClose = xml.indexOf(close, pos);
+            if (nextOpen >= to) {
+                nextOpen = -1;
+            }
+            if (nextClose >= to) {
+                nextClose = -1;
+            }
+            if (nextOpen == -1 && nextClose == -1) {
+                break;
+            }
+
+            if (nextClose == -1 || (nextOpen != -1 && nextOpen < nextClose)) {
+                int tagEnd = xml.indexOf('>', nextOpen);
+                if (tagEnd == -1) {
+                    break;
+                }
+                if (xml.charAt(tagEnd - 1) != '/') {
+                    if (depth == 0) {
+                        currentStart = nextOpen;
+                    }
+                    depth++;
+                }
+                pos = tagEnd + 1;
+            } else {
+                int end = nextClose + close.length();
+                depth--;
+                if (depth == 0 && currentStart != -1) {
+                    children.add(new int[] { currentStart, end });
+                    currentStart = -1;
+                }
+                pos = end;
+            }
+        }
+        return children;
+    }
+
+    /**
+     * Finds an element's opening tag, ignoring longer names that share a prefix.
+     *
+     * <p>{@code <w:p} would otherwise match {@code <w:pPr>}, and {@code <w:tc}
+     * would match {@code <w:tcPr>} — the same trap {@link #isParagraphTagAt}
+     * exists to avoid.
+     */
+    private static int indexOfElement(String xml, String openTag, int from) {
+        int hit = xml.indexOf(openTag, from);
+        while (hit != -1) {
+            int after = hit + openTag.length();
+            if (after < xml.length()) {
+                char c = xml.charAt(after);
+                if (c == '>' || c == '/' || Character.isWhitespace(c)) {
+                    return hit;
+                }
+            }
+            hit = xml.indexOf(openTag, hit + openTag.length());
+        }
+        return -1;
     }
 
     /**

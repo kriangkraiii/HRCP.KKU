@@ -78,7 +78,7 @@ class EsignPdfViewer {
                                 <div class="esign-spinner-icon"><i class="fas fa-file-signature"></i></div>
                             </div>
                             <h6 class="esign-loading-title" id="${this.container.id}-loading-title">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
-                            <p class="esign-loading-subtitle" id="${this.container.id}-loading-sub">ระบบกำลังแสดงผลเอกสาร PDF ความละเอียดสูงสำหรับการลงนาม</p>
+
                             <div class="esign-loading-progress-bar">
                                 <div class="esign-loading-progress-val"></div>
                             </div>
@@ -367,7 +367,7 @@ class EsignPdfViewer {
                             <div class="esign-spinner-icon"><i class="fas fa-file-signature"></i></div>
                         </div>
                         <h6 class="esign-loading-title" id="${this.container.id}-loading-title">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
-                        <p class="esign-loading-subtitle" id="${this.container.id}-loading-sub">ระบบกำลังแสดงผลเอกสาร PDF ความละเอียดสูงสำหรับการลงนาม</p>
+                   
                         <div class="esign-loading-progress-bar">
                             <div class="esign-loading-progress-val"></div>
                         </div>

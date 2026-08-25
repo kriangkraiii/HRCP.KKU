@@ -177,6 +177,116 @@ class SignatureStampingTest {
         return count;
     }
 
+    // =====================================================================
+    // Keeping a signature row level when only some of it has been signed
+    //
+    // Stamping adds a paragraph, which makes that cell — and so the whole row —
+    // taller. Cells are top-aligned by default, so an unsigned name rides up to
+    // the top of the row and floats away from the job title printed under it.
+    // These read the finished XML rather than the PDF because that is where the
+    // cause lives; the PDF only shows the symptom.
+    // =====================================================================
+
+    /** Cells of the row holding a document's signature names. */
+    private static List<String> signatureRowCells(String documentXml) {
+        int table = documentXml.lastIndexOf("<w:tbl>");
+        assertThat(table).as("expected a signature table").isNotNegative();
+
+        java.util.regex.Matcher row = java.util.regex.Pattern
+                .compile("<w:tr[ >].*?</w:tr>", java.util.regex.Pattern.DOTALL)
+                .matcher(documentXml.substring(table));
+        assertThat(row.find()).as("expected a first row in the signature table").isTrue();
+
+        List<String> cells = new ArrayList<>();
+        java.util.regex.Matcher cell = java.util.regex.Pattern
+                .compile("<w:tc>.*?</w:tc>", java.util.regex.Pattern.DOTALL)
+                .matcher(row.group());
+        while (cell.find()) {
+            cells.add(cell.group());
+        }
+        return cells;
+    }
+
+    private static final String FIXED_LINE = "w:lineRule=\"exact\"";
+
+    @Test
+    @DisplayName("เซ็นช่องเดียว: ช่องที่ยังไม่เซ็นต้องได้บรรทัดเว้นระยะ ชื่อจึงอยู่ระดับเดียวกัน")
+    void theUnsignedHalfOfTheRowIsPaddedToMatch() throws IOException {
+        byte[] png = samplePng();
+        byte[] docx = render(SignatureModule.ACADEMIC, 1,
+                List.of(new StampedSignature("applicant_name", png, 300, 100)));
+
+        List<String> cells = signatureRowCells(text(unzip(docx), "word/document.xml"));
+        assertThat(cells).as("doc_1 signature row has two columns").hasSize(2);
+
+        String signed = cells.stream().filter(c -> c.contains("<w:drawing>")).findFirst().orElseThrow();
+        String unsigned = cells.stream().filter(c -> !c.contains("<w:drawing>")).findFirst().orElseThrow();
+
+        // Before the fix the unsigned cell held a single paragraph, so its name
+        // sat a whole signature's height above the signed one.
+        assertThat(countOfParagraphOpens(unsigned))
+                .as("the unsigned cell needs a blank line standing in for the signature")
+                .isEqualTo(countOfParagraphOpens(signed));
+        assertThat(countOf(unsigned, FIXED_LINE))
+                .as("that blank line must be pinned to the signature height")
+                .isEqualTo(1);
+        assertThat(countOf(signed, FIXED_LINE))
+                .as("the signature line is pinned to the same height")
+                .isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("เซ็นครบทั้งแถว: ไม่ต้องมีบรรทัดเว้นระยะเกินมา")
+    void aFullySignedRowGetsNoPadding() throws IOException {
+        byte[] png = samplePng();
+        byte[] docx = render(SignatureModule.ACADEMIC, 1, List.of(
+                new StampedSignature("applicant_name", png, 300, 100),
+                new StampedSignature("hr_staff_name", png, 300, 100)));
+
+        List<String> cells = signatureRowCells(text(unzip(docx), "word/document.xml"));
+        assertThat(cells).hasSize(2);
+        for (String cell : cells) {
+            assertThat(cell).as("every cell signs for itself").contains("<w:drawing>");
+            // One fixed line per cell: the signature's own. A cell that was both
+            // signed and padded would report two.
+            assertThat(countOf(cell, FIXED_LINE)).isEqualTo(1);
+        }
+    }
+
+    @Test
+    @DisplayName("หลายคนลงนามในแถวเดียวกัน ช่องที่เหลือต้องได้บรรทัดเว้นระยะอันเดียว")
+    void twoSignersInOneRowDoNotDoublePadTheThird() throws IOException {
+        byte[] png = samplePng();
+        // doc_2 puts หัวหน้าสาขา and คณบดี in the same row. Each of them padding
+        // the other's neighbour independently would stack blank lines.
+        byte[] docx = render(SignatureModule.ACADEMIC, 2,
+                List.of(new StampedSignature("department_head", png, 300, 100)));
+
+        String document = text(unzip(docx), "word/document.xml");
+        for (String cell : signatureRowCells(document)) {
+            assertThat(countOf(cell, FIXED_LINE))
+                    .as("at most one fixed-height line per cell")
+                    .isLessThanOrEqualTo(1);
+        }
+        assertThat(countOfParagraphOpens(document))
+                .as("<w:p> and </w:p> must remain balanced")
+                .isEqualTo(countOf(document, "</w:p>"));
+    }
+
+    @Test
+    @DisplayName("ชื่อที่ไม่ได้อยู่ในตาราง ไม่ต้องเว้นระยะให้ใคร")
+    void namesOutsideATableAreLeftAlone() throws IOException {
+        byte[] png = samplePng();
+        // doc_8's dean name is loose body text with no table around it.
+        byte[] docx = render(SignatureModule.ACADEMIC, 8,
+                List.of(new StampedSignature("dean_name", png, 300, 100)));
+
+        String document = text(unzip(docx), "word/document.xml");
+        assertThat(countOf(document, FIXED_LINE))
+                .as("only the signature line itself, with nothing padded alongside")
+                .isEqualTo(1);
+    }
+
     @Test
     @DisplayName("ไม่มีลายเซ็น ต้องได้ไฟล์เหมือนเดิมทุกไบต์ (ไม่กระทบเอกสารเดิม)")
     void withoutSignaturesOutputIsUnchanged() throws IOException {
