@@ -34,8 +34,27 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
 
-                    <form th:action="'/user/academic/request/' + ${request.id} + '/document-1'" method="post" th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/1'"
+                    <!-- ส่งคำร้องแล้ว: ฟอร์มอ่านอย่างเดียว แต่ยังเข้ามาลงนามได้ -->
+                    <div th:unless="${editable}" class="alert alert-secondary d-flex align-items-start gap-2">
+                        <i class="fas fa-lock mt-1"></i>
+                        <div>
+                            <strong>เอกสารถูกล็อก</strong> — ส่งคำร้องแล้วจึงแก้ไขไม่ได้
+                            จะแก้ไขได้ต่อเมื่อแอดมินส่งเอกสารกลับมาให้แก้ไขเท่านั้น
+                        </div>
+                    </div>
+                    <div th:if="${editable and revisionRequested}" class="alert alert-warning d-flex align-items-start gap-2">
+                        <i class="fas fa-pen-to-square mt-1"></i>
+                        <div>
+                            <strong>แอดมินส่งเอกสารกลับมาให้แก้ไข</strong>
+                            <span th:if="${revisionNote}"> — เหตุผล: [[${revisionNote}]]</span>
+                            <div class="small">แก้ไขข้อมูลแล้วกดบันทึกเอกสาร จากนั้น<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ที่แผงลงนามด้านล่าง</div>
+                        </div>
+                    </div>
+
+                    <form th:action="'/user/academic/request/' + ${request.id} + '/document-1'" method="post"
+                        th:attr="data-auto-draft=${editable ? '/api/draft/academic/' + request.id + '/1' : null}"
                         id="doc1Form">
+                        <fieldset th:disabled="${!editable}" class="border-0 p-0 m-0">
 
                         <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ ผู้ยื่น -->
                         <input type="hidden" name="chk_app_1" id="chk_app_1"
@@ -174,11 +193,12 @@
                             <span id="doc1ValidationMsg">กรุณาติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc1CheckedCount">0</span>/5)</span>
                         </div>
 
+                        </fieldset>
                         <div class="d-flex gap-2 mt-4">
                             <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                                 <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                             </button>
-                            <button type="submit" name="action" value="submit" class="btn btn-academic" id="doc1SubmitBtn" disabled>
+                            <button th:if="${editable}" type="submit" name="action" value="submit" class="btn btn-academic" id="doc1SubmitBtn" disabled>
                                 <i class="fas fa-paper-plane"></i> บันทึกเอกสาร
                             </button>
                             <a th:href="'/user/academic/request/' + ${request.id}"
@@ -199,8 +219,8 @@
                                 <i class="fas fa-info-circle me-1"></i> ท่านสามารถแนบไฟล์หลักฐานประกอบ เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา (รองรับไฟล์ .pdf, .docx, .doc, .zip — ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)
                             </p>
 
-                            <!-- Drag and Drop & Multiple Upload Form -->
-                            <form th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments'" 
+                            <!-- Drag and Drop & Multiple Upload Form — เฉพาะตอนที่แก้ไขได้ -->
+                            <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments'" 
                                   method="post" enctype="multipart/form-data" id="attachmentUploadForm">
                                 <label for="multiFileInput" class="upload-dropzone p-4 border border-2 border-dashed rounded-3 text-center mb-3 d-block" id="dropzoneArea" style="cursor: pointer;">
                                     <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2 d-block"></i>
@@ -277,7 +297,7 @@
                                                        class="btn btn-outline-primary" title="ดาวน์โหลด">
                                                         <i class="fas fa-download"></i>
                                                     </a>
-                                                    <form th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'" 
+                                                    <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'" 
                                                           method="post" class="d-inline" data-confirm="คุณต้องการลบไฟล์นี้หรือไม่?">
                                                         <button type="submit" class="btn btn-outline-danger" title="ลบไฟล์">
                                                             <i class="fas fa-trash-alt"></i>
@@ -291,7 +311,8 @@
                             </div>
                             <div th:unless="${attachments != null && !attachments.isEmpty()}" class="text-center py-4 text-muted rounded-3 mt-3 empty-attachments-box">
                                 <i class="fas fa-folder-open fa-2x mb-2 d-block text-secondary opacity-50"></i>
-                                <span>ยังไม่มีไฟล์แนบประกอบการประเมิน (สามารถเลือกไฟล์อัปโหลดเพิ่มได้ที่นี่)</span>
+                                <span th:if="${editable}">ยังไม่มีไฟล์แนบประกอบการประเมิน (สามารถเลือกไฟล์อัปโหลดเพิ่มได้ที่นี่)</span>
+                                <span th:unless="${editable}">ยังไม่มีไฟล์แนบประกอบการประเมิน</span>
                             </div>
                         </div>
                     </div>
@@ -369,6 +390,8 @@
                         (function() {
                             var checkboxes = document.querySelectorAll('.chk-toggle-app');
                             var submitBtn = document.getElementById('doc1SubmitBtn');
+                            // เอกสารถูกล็อก: ไม่มีปุ่มบันทึกให้ตรวจ
+                            if (!submitBtn) return;
                             var alertBox = document.getElementById('doc1ValidationAlert');
                             var countSpan = document.getElementById('doc1CheckedCount');
                             var attCountHolder = document.getElementById('attachmentCountHolder');

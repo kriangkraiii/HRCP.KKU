@@ -241,6 +241,83 @@ public class AcademicRequestService {
         return documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
     }
 
+    // ================== ประตูแก้ไขเอกสารของผู้ยื่น ==================
+
+    /**
+     * สถานะที่ปิดกระบวนการไปแล้ว — ไม่เปิดให้แก้เอกสารอีกไม่ว่ากรณีใด
+     */
+    private static final java.util.EnumSet<RequestStatus> CLOSED_STATUSES = java.util.EnumSet.of(
+            RequestStatus.COMPLETED, RequestStatus.COMPLETED_PASS, RequestStatus.COMPLETED_REVISE,
+            RequestStatus.COMPLETED_FAIL, RequestStatus.REJECTED);
+
+    /**
+     * ผู้ยื่นแก้ไขเอกสารฉบับนี้ได้หรือไม่
+     *
+     * <p>ก่อนส่งคำร้อง (DRAFT) แก้ได้ตามปกติ หลังส่งแล้วเอกสารถือว่าอยู่ในมือแอดมิน
+     * และจะกลับมาแก้ได้ก็ต่อเมื่อแอดมินกด "ขอให้แก้ไขและลงนามใหม่" ส่งกลับมาเท่านั้น
+     *
+     * <p>ต้องไม่มีซองลงนามค้างอยู่ด้วย เพราะการแก้เอกสารที่ส่งเวียนหรือลงนามไปแล้ว
+     * เท่ากับเปลี่ยนเนื้อหาใต้ลายเซ็นที่ผู้ลงนามไม่เคยเห็น — เป็นกติกาเดียวกับที่
+     * ฝั่งแอดมินใช้อยู่ใน {@code AcademicAdminController.generateDocument}
+     */
+    public boolean canApplicantEditDocument(AcademicRequest request, int documentType) {
+        if (request == null || request.getCurrentStatus() == null) {
+            return false;
+        }
+        if (request.getCurrentStatus() == RequestStatus.DRAFT) {
+            return true;
+        }
+        if (CLOSED_STATUSES.contains(request.getCurrentStatus())) {
+            return false;
+        }
+        if (isDocumentSignatureLocked(request.getId(), documentType)) {
+            return false;
+        }
+        return isRevisionRequested(request.getId(), documentType);
+    }
+
+    /** เอกสารกำลังเวียนลงนาม หรือลงนามครบแล้ว */
+    private boolean isDocumentSignatureLocked(Long requestId, int documentType) {
+        return !signatureRequestRepository.findBlockingEnvelopes(
+                com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType).isEmpty();
+    }
+
+    /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
+    public boolean isRevisionRequested(Long requestId, int documentType) {
+        return documentRepository.findByRequestIdAndDocumentType(requestId, documentType).stream()
+                .anyMatch(AcademicDocument::isRevisionRequested);
+    }
+
+    /** เหตุผลที่แอดมินส่งเอกสารฉบับนี้กลับมาให้แก้ไข (ถ้ามี) */
+    public String getRevisionNote(Long requestId, int documentType) {
+        return documentRepository.findByRequestIdAndDocumentType(requestId, documentType).stream()
+                .filter(AcademicDocument::isRevisionRequested)
+                .map(AcademicDocument::getRevisionNote)
+                .filter(note -> note != null && !note.isBlank())
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * แอดมินส่งเอกสารกลับให้ผู้ยื่นแก้ไข — ปลดล็อกเฉพาะเอกสารฉบับที่ระบุ
+     *
+     * <p>ไม่ต้องล้างค่านี้ตอนผู้ยื่นบันทึกเอกสารเสร็จ เพราะการลงนามใหม่จะสร้างซอง
+     * ลงนามใบใหม่ซึ่งล็อกเอกสารกลับเองอยู่แล้ว
+     */
+    @Transactional
+    public void openDocumentForRevision(Long requestId, int documentType, String note) {
+        List<AcademicDocument> docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
+        String trimmed = (note != null && !note.isBlank()) ? note.trim() : null;
+        if (trimmed != null && trimmed.length() > 500) {
+            trimmed = trimmed.substring(0, 500);
+        }
+        for (AcademicDocument doc : docs) {
+            doc.setRevisionRequestedAt(LocalDateTime.now());
+            doc.setRevisionNote(trimmed);
+        }
+        documentRepository.saveAll(docs);
+    }
+
     public List<RequestStatusHistory> getStatusHistory(Long requestId) {
         return historyRepository.findByRequestIdOrderByChangedAtDesc(requestId);
     }

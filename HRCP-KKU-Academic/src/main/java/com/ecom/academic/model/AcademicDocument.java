@@ -55,6 +55,19 @@ public class AcademicDocument {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    /**
+     * เวลาที่แอดมินกด "ขอให้แก้ไขและลงนามใหม่" ส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่น
+     *
+     * <p>null = ผู้ยื่นแก้ไขไม่ได้ (หลังส่งคำร้องแล้วเอกสารอยู่ในมือแอดมิน)
+     * ค่านี้คือประตูเดียวที่เปิดให้ผู้ยื่นกลับมาแก้เอกสารหลังส่งคำร้อง
+     */
+    @Column(name = "revision_requested_at")
+    private LocalDateTime revisionRequestedAt;
+
+    /** เหตุผลที่แอดมินส่งกลับมาให้แก้ไข — แสดงให้ผู้ยื่นเห็นบนหน้าเอกสาร */
+    @Column(name = "revision_note", length = 500)
+    private String revisionNote;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -167,5 +180,26 @@ public class AcademicDocument {
 
     public void setDeletedAt(LocalDateTime deletedAt) {
         this.deletedAt = deletedAt;
+    }
+
+    public LocalDateTime getRevisionRequestedAt() {
+        return revisionRequestedAt;
+    }
+
+    public void setRevisionRequestedAt(LocalDateTime revisionRequestedAt) {
+        this.revisionRequestedAt = revisionRequestedAt;
+    }
+
+    public String getRevisionNote() {
+        return revisionNote;
+    }
+
+    public void setRevisionNote(String revisionNote) {
+        this.revisionNote = revisionNote;
+    }
+
+    /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
+    public boolean isRevisionRequested() {
+        return revisionRequestedAt != null;
     }
 }

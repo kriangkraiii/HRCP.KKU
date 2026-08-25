@@ -801,38 +801,40 @@
                                 headers: buildHeaders({'Content-Type': 'application/x-www-form-urlencoded'}),
                                 body: 'id=' + encodeURIComponent(id)
                             })
-                        .then(function(r) { return r.json(); })
-                        .then(function(data) {
-                            if (data.success) {
-                                showSaveToast(data.message, '#2e7d32');
-                                if (itemEl) itemEl.remove();
-                                var badge = document.getElementById('customAlertCountBadge');
-                                if (badge && data.count !== undefined) {
-                                    badge.textContent = data.count + ' / 5';
-                                    var addBtn = document.getElementById('btnAddCustomAlert');
-                                    if (addBtn) addBtn.disabled = data.count >= 5;
-                                }
-                                var remaining = document.querySelectorAll('.custom-alert-item');
-                                if (remaining.length === 0) {
-                                    var container = document.getElementById('customAlertsContainer');
-                                    if (container) {
-                                        container.innerHTML = '<div id="customAlertEmpty" class="col-12">' +
-                                            '<div class="text-center py-4 px-3 border border-dashed rounded-3" style="background: var(--bg-hover, rgba(0,0,0,0.02));">' +
-                                            '<i class="fas fa-clock fa-2x text-muted mb-2 opacity-50"></i>' +
-                                            '<p class="text-muted small mb-0">ยังไม่มีการแจ้งเตือนกำหนดเอง กดปุ่ม <strong>"เพิ่มเวลาแจ้งเตือน"</strong> เพื่อสร้างการแจ้งเตือนเพิ่มเติม</p>' +
-                                            '</div></div>';
+                            .then(function(r) { return r.json(); })
+                            .then(function(data) {
+                                if (data.success) {
+                                    showSaveToast(data.message, '#2e7d32');
+                                    if (itemEl) itemEl.remove();
+                                    var badge = document.getElementById('customAlertCountBadge');
+                                    if (badge && data.count !== undefined) {
+                                        badge.textContent = data.count + ' / 5';
+                                        var addBtn = document.getElementById('btnAddCustomAlert');
+                                        if (addBtn) addBtn.disabled = data.count >= 5;
                                     }
+                                    var remaining = document.querySelectorAll('.custom-alert-item');
+                                    if (remaining.length === 0) {
+                                        var container = document.getElementById('customAlertsContainer');
+                                        if (container) {
+                                            container.innerHTML = '<div id="customAlertEmpty" class="col-12">' +
+                                                '<div class="text-center py-4 px-3 border border-dashed rounded-3" style="background: var(--bg-hover, rgba(0,0,0,0.02));">' +
+                                                '<i class="fas fa-clock fa-2x text-muted mb-2 opacity-50"></i>' +
+                                                '<p class="text-muted small mb-0">ยังไม่มีการแจ้งเตือนกำหนดเอง กดปุ่ม <strong>"เพิ่มเวลาแจ้งเตือน"</strong> เพื่อสร้างการแจ้งเตือนเพิ่มเติม</p>' +
+                                                '</div></div>';
+                                        }
+                                    }
+                                } else {
+                                    alert(data.message);
                                 }
-                            } else {
-                                alert(data.message);
-                            }
-                        })
-                        .catch(function() {
-                            alert('เกิดข้อผิดพลาดในการลบการแจ้งเตือน');
+                            })
+                            .catch(function() {
+                                alert('เกิดข้อผิดพลาดในการลบการแจ้งเตือน');
+                            });
                         });
                     });
                 });
             })();
         </script>
     </section>
-
+</body>
+</html>

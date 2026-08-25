@@ -42,13 +42,16 @@ public class SignedDocumentRenderer {
     private final DocumentGenerationService documentGenerationService;
     private final SignatureStepRepository stepRepository;
     private final SignatureImageStorage signatureImageStorage;
+    private final SignerNameResolver signerNameResolver;
 
     public SignedDocumentRenderer(DocumentGenerationService documentGenerationService,
             SignatureStepRepository stepRepository,
-            SignatureImageStorage signatureImageStorage) {
+            SignatureImageStorage signatureImageStorage,
+            SignerNameResolver signerNameResolver) {
         this.documentGenerationService = documentGenerationService;
         this.stepRepository = stepRepository;
         this.signatureImageStorage = signatureImageStorage;
+        this.signerNameResolver = signerNameResolver;
     }
 
     /**
@@ -73,6 +76,10 @@ public class SignedDocumentRenderer {
         if (json == null || json.isBlank()) {
             json = "{}";
         }
+
+        // ช่องลงนามที่ยังไม่มีใครเซ็นต้องขึ้นชื่อคนที่รอเซ็นอยู่ ไม่ใช่วงเล็บว่าง
+        // เติมตอน render เท่านั้น — frozenJson ที่เก็บไว้และแฮชของมันไม่ถูกแตะ
+        json = signerNameResolver.fillInto(envelope, json);
 
         return envelope.getModule() == SignatureModule.ACADEMIC
                 ? documentGenerationService.generateSignedDocx(

@@ -139,31 +139,38 @@
                 <i class="fas fa-flag-checkered"></i> <span>เสร็จสิ้น — คำร้องได้ดำเนินการเสร็จสิ้นแล้ว</span>
             </div>
 
+            <!-- แอดมินส่งเอกสารกลับมาให้แก้ไข -->
+            <div th:if="${canEditDoc0 or canEditDoc1}" class="result-alert ra-revise">
+                <i class="fas fa-pen-to-square"></i>
+                <div>
+                    <span>แอดมินส่งเอกสารกลับมาให้ท่านแก้ไข</span>
+                    <div class="ra-detail">
+                        <span th:if="${canEditDoc0}">เอกสารที่ 0<span th:if="${revisionNoteDoc0}"> — เหตุผล: [[${revisionNoteDoc0}]]</span><br></span>
+                        <span th:if="${canEditDoc1}">เอกสารที่ 1<span th:if="${revisionNoteDoc1}"> — เหตุผล: [[${revisionNoteDoc1}]]</span><br></span>
+                        กรุณาแก้ไขข้อมูลให้เรียบร้อย แล้ว<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ในหน้าเอกสารนั้น
+                    </div>
+                </div>
+            </div>
+
             <!-- Documents List -->
             <div class="section-card">
                 <div class="section-card-header">
                     <h5><i class="fas fa-file-word me-2"></i>เอกสารของฉัน</h5>
-                    <div th:unless="${request.currentStatus.name() == 'COMPLETED' or request.currentStatus.name() == 'COMPLETED_PASS' or request.currentStatus.name() == 'COMPLETED_REVISE' or request.currentStatus.name() == 'REJECTED'}">
-                        <th:block th:if="${hasDoc0}">
-                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-0'" class="btn btn-sm btn-outline-primary me-1">
-                                <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 0
-                            </a>
-                        </th:block>
-                        <th:block th:unless="${hasDoc0}">
-                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-0'" class="btn btn-sm btn-academic me-1">
-                                <i class="fas fa-plus-circle me-1"></i> กรอกเอกสารที่ 0
-                            </a>
-                        </th:block>
-                        <th:block th:if="${hasDoc1}">
-                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'" class="btn btn-sm btn-outline-primary">
-                                <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 1
-                            </a>
-                        </th:block>
-                        <th:block th:unless="${hasDoc1}">
-                            <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'" class="btn btn-sm btn-academic">
-                                <i class="fas fa-plus-circle me-1"></i> กรอกเอกสารที่ 1
-                            </a>
-                        </th:block>
+                    <!-- ปุ่มแก้ไขโผล่เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น -->
+                    <div>
+                        <a th:if="${canEditDoc0}"
+                           th:href="'/user/academic/request/' + ${request.id} + '/document-0'"
+                           class="btn btn-sm btn-warning me-1">
+                            <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 0
+                        </a>
+                        <a th:if="${canEditDoc1}"
+                           th:href="'/user/academic/request/' + ${request.id} + '/document-1'"
+                           class="btn btn-sm btn-warning">
+                            <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 1
+                        </a>
+                        <span th:if="${!canEditDoc0 and !canEditDoc1}" class="text-muted small">
+                            <i class="fas fa-lock me-1"></i> ส่งคำร้องแล้ว 
+                        </span>
                     </div>
                 </div>
                 <div class="section-card-body">

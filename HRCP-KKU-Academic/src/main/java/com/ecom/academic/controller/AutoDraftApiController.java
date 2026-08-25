@@ -61,6 +61,14 @@ public class AutoDraftApiController {
             if (!mayEdit(user, request.getApplicant()))
                 return ResponseEntity.status(403).build();
 
+            // บันทึกร่างอัตโนมัติก็คือการเขียนทับเอกสาร จึงต้องผ่านประตูเดียวกับการกดบันทึก:
+            // หลังส่งคำร้องแล้วผู้ยื่นแก้ได้เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น
+            if (!ROLE_ADMIN.equals(user.getRole())
+                    && !academicService.canApplicantEditDocument(request, docType)) {
+                return ResponseEntity.status(409)
+                        .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อแอดมินส่งกลับมาให้แก้ไขเท่านั้น"));
+            }
+
             String label = academicService.getDocLabel(docType);
             academicService.saveDraft(request, docType, jsonData, label, null);
 

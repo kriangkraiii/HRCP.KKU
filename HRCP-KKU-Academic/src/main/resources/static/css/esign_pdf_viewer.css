@@ -116,20 +116,119 @@
 }
 
 .esign-viewer-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 20;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%;
+    background: rgba(15, 23, 42, 0.7);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     color: #ffffff;
-    gap: 14px;
-    padding: 40px 0;
+    padding: 40px 20px;
+    animation: esignFadeIn 0.25s ease-out;
+    transition: opacity 0.25s ease;
 }
 
-.esign-viewer-loading .spinner-border {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-width: 0.25em;
+.esign-loading-card {
+    background: rgba(30, 41, 59, 0.9);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.45), 0 0 1px rgba(255, 255, 255, 0.2);
+    border-radius: 16px;
+    padding: 32px 36px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    max-width: 420px;
+    width: 90%;
+    animation: esignCardPop 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes esignCardPop {
+    from { opacity: 0; transform: scale(0.92) translateY(12px); }
+    to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.esign-spinner-wrapper {
+    position: relative;
+    width: 60px;
+    height: 60px;
+    margin-bottom: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.esign-spinner {
+    position: absolute;
+    inset: 0;
+    width: 60px;
+    height: 60px;
+    border: 3.5px solid rgba(255, 255, 255, 0.15);
+    border-top-color: #38bdf8;
+    border-right-color: #818cf8;
+    border-radius: 50%;
+    animation: esign-spin 0.85s cubic-bezier(0.55, 0.15, 0.45, 0.85) infinite;
+}
+
+@keyframes esign-spin {
+    to { transform: rotate(360deg); }
+}
+
+.esign-spinner-icon {
+    font-size: 22px;
+    color: #38bdf8;
+    animation: esignIconPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes esignIconPulse {
+    0%, 100% { transform: scale(1); opacity: 0.85; }
+    50% { transform: scale(1.12); opacity: 1; color: #a78bfa; }
+}
+
+.esign-loading-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #f8fafc;
+    margin: 0 0 6px 0;
+}
+
+.esign-loading-subtitle {
+    font-size: 0.82rem;
+    color: #94a3b8;
+    margin: 0 0 16px 0;
+    line-height: 1.4;
+}
+
+.esign-loading-progress-bar {
+    width: 100%;
+    height: 4px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 10px;
+    overflow: hidden;
+    position: relative;
+}
+
+.esign-loading-progress-val {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 40%;
+    background: linear-gradient(90deg, #38bdf8, #818cf8, #34d399);
+    border-radius: 10px;
+    animation: esignProgressAnim 1.5s ease-in-out infinite;
+}
+
+@keyframes esignProgressAnim {
+    0% { left: -40%; width: 30%; }
+    50% { width: 60%; }
+    100% { left: 100%; width: 30%; }
 }
 
 .esign-fallback-frame {

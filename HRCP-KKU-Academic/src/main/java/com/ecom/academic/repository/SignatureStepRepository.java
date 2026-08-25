@@ -47,6 +47,21 @@ public interface SignatureStepRepository extends JpaRepository<SignatureStep, Lo
 
     List<SignatureStep> findBySignatureRequestIdOrderByStepOrderAsc(Long signatureRequestId);
 
+    /**
+     * Every step of an envelope with the signer's account loaded.
+     *
+     * <p>Used when printing signer names onto the document: the name line of a
+     * step that has not been signed yet still has to say who is expected to
+     * sign it, and reading {@code signer} lazily would fail outside a session.
+     */
+    @Query("""
+            SELECT s FROM SignatureStep s
+            LEFT JOIN FETCH s.signer
+            WHERE s.signatureRequest.id = :requestId
+            ORDER BY s.stepOrder ASC
+            """)
+    List<SignatureStep> findStepsWithSigner(@Param("requestId") Long requestId);
+
     /** Steps already signed, whose images must be stamped into the document. */
     @Query("""
             SELECT s FROM SignatureStep s

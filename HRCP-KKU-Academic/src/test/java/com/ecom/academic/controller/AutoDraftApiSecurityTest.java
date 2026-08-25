@@ -83,6 +83,7 @@ class AutoDraftApiSecurityTest {
         academicRequest.setId(99L);
         academicRequest.setApplicant(owner);
         when(academicService.findById(99L)).thenReturn(Optional.of(academicRequest));
+        when(academicService.canApplicantEditDocument(any(AcademicRequest.class), anyInt())).thenReturn(true);
 
         PositionRequest positionRequest = new PositionRequest();
         positionRequest.setId(77L);
@@ -114,6 +115,27 @@ class AutoDraftApiSecurityTest {
     @Test
     @DisplayName("H-02: แอดมินยังบันทึกร่างของคำร้องใดก็ได้")
     void academicDraft_byAdmin_isAllowed() {
+        ResponseEntity<?> response = controller.academicDraft(99L, 0, "{\"x\":\"1\"}", adminPrincipal);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(200);
+    }
+
+    @Test
+    @DisplayName("เอกสารถูกล็อกหลังส่งคำร้อง: บันทึกร่างอัตโนมัติของผู้ยื่นต้องถูกปฏิเสธ")
+    void academicDraft_whenDocumentLockedForApplicant_isRefused() {
+        when(academicService.canApplicantEditDocument(any(AcademicRequest.class), anyInt())).thenReturn(false);
+
+        ResponseEntity<?> response = controller.academicDraft(99L, 0, "{\"x\":\"1\"}", ownerPrincipal);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(409);
+        verify(academicService, never()).saveDraft(any(), anyInt(), anyString(), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("เอกสารถูกล็อกสำหรับผู้ยื่น แต่แอดมินยังบันทึกร่างได้")
+    void academicDraft_byAdmin_ignoresApplicantLock() {
+        when(academicService.canApplicantEditDocument(any(AcademicRequest.class), anyInt())).thenReturn(false);
+
         ResponseEntity<?> response = controller.academicDraft(99L, 0, "{\"x\":\"1\"}", adminPrincipal);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);

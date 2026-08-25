@@ -17,15 +17,21 @@
                     จัดการเอกสารที่รอคุณลงนาม และติดตามสถานะเอกสารที่กำลังเวียนลงนามในระบบ
                 </p>
             </div>
-            <div class="d-flex gap-2">
+            <div class="d-flex align-items-center flex-wrap gap-2">
+                <button type="button" id="btnOpenVerifyModal" class="btn btn-outline-secondary d-flex align-items-center gap-2"
+                        data-bs-toggle="modal" data-bs-target="#verifyCodeModal">
+                    <i class="fas fa-shield-halved text-primary"></i>
+                    <span>ตรวจสอบเอกสาร</span>
+                </button>
                 <a th:if="${!#lists.isEmpty(pendingSteps) and #lists.size(pendingSteps) > 1}"
                    th:href="@{'/esign/sign/' + ${pendingSteps[0].id}}"
                    class="btn btn-primary shadow-sm px-3 d-flex align-items-center gap-2">
                     <i class="fas fa-bolt"></i>
                     <span>เริ่มลงนามต่อเนื่อง (<span th:text="${#lists.size(pendingSteps)}">0</span> ฉบับ)</span>
                 </a>
-                <a href="/esign/my-signatures" class="btn btn-outline-secondary">
-                    <i class="fas fa-signature me-1"></i> ลายเซ็นของฉัน
+                <a href="/esign/my-signatures" class="btn btn-outline-secondary d-flex align-items-center gap-2">
+                    <i class="fas fa-signature text-secondary"></i>
+                    <span>ลายเซ็นของฉัน</span>
                 </a>
             </div>
         </div>
@@ -559,6 +565,178 @@
                 applyFilter();
             });
         });
+    })();
+    </script>
+
+    <!-- Modal: Quick Verify Code for Mobile & General use -->
+    <div class="modal fade" id="verifyCodeModal" tabindex="-1" aria-labelledby="verifyCodeModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
+            <div class="modal-content border-0 shadow" style="border-radius: 16px; overflow: hidden;">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold" id="verifyCodeModalLabel">
+                        <i class="fas fa-shield-halved text-primary me-2"></i>ตรวจสอบเอกสารที่ลงนาม
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="verifyCodeForm" action="/esign/verify" method="GET">
+                    <div class="modal-body pt-3">
+                        <p class="text-secondary small mb-3">
+                            กรอกรหัสตรวจสอบเอกสาร (Verification Code) 10 หลัก ที่ปรากฏบริเวณมุมล่างของเอกสารฉบับจริง หรือในอีเมลแจ้งเตือน
+                        </p>
+
+                        <!-- Alert Box for Non-existent / Error Codes -->
+                        <div id="verifyCodeAlert" class="alert alert-danger py-2 px-3 mb-3 small d-none" role="alert"></div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold small text-secondary mb-1">รหัสตรวจสอบเอกสาร</label>
+                            <div class="input-group">
+                                <span class="input-group-text bg-light text-primary">
+                                    <i class="fas fa-barcode"></i>
+                                </span>
+                                <input type="text" id="verifyCodeInputModal" name="code" class="form-control text-uppercase fw-bold"
+                                       placeholder="เช่น 55B5NXJLWW"
+                                       maxlength="20"
+                                       style="font-family: monospace; letter-spacing: 1px; font-size: 1.1rem;"
+                                       autocomplete="off" required>
+                            </div>
+                        </div>
+                        <div class="alert alert-light border py-2 px-3 mb-0 small text-muted">
+                            <i class="fas fa-info-circle text-primary me-1"></i>
+                            ระบบจะตรวจสอบความครบถ้วนของเนื้อหา (SHA-256 Checksum) และรายชื่อผู้ลงนามตาม พ.ร.บ.ธุรกรรมอิเล็กทรอนิกส์
+                        </div>
+                    </div>
+                    <div class="modal-footer border-0 pt-0">
+                        <button type="button" class="btn btn-light rounded-pill px-3" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="button" id="btnVerifySubmit" class="btn btn-primary rounded-pill px-4">
+                            <i class="fas fa-search me-1"></i> ตรวจสอบทันที
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    // Verification Code Quick Handler (CSP Compliant & Async Validation)
+    (function() {
+        function initVerifyModalHandler() {
+            var modalEl = document.getElementById('verifyCodeModal');
+            var formEl = document.getElementById('verifyCodeForm');
+            var inputEl = document.getElementById('verifyCodeInputModal');
+            var alertEl = document.getElementById('verifyCodeAlert');
+            var btnEl = document.getElementById('btnVerifySubmit');
+            var openBtn = document.getElementById('btnOpenVerifyModal');
+
+            if (openBtn && modalEl) {
+                openBtn.addEventListener('click', function() {
+                    if (window.bootstrap && window.bootstrap.Modal) {
+                        var m = bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl);
+                        m.show();
+                    }
+                });
+            }
+
+            if (modalEl && inputEl) {
+                modalEl.addEventListener('shown.bs.modal', function () {
+                    inputEl.focus();
+                    inputEl.select();
+                    if (alertEl) alertEl.classList.add('d-none');
+                });
+            }
+
+            async function doVerifyCode() {
+                var raw = inputEl ? inputEl.value : '';
+                var cleanCode = (raw || '').replace(/[^a-zA-Z0-9]/g, '').trim().toUpperCase();
+
+                if (!cleanCode) {
+                    if (alertEl) {
+                        alertEl.innerHTML = '<i class="fas fa-circle-exclamation me-1"></i> กรุณาระบุรหัสตรวจสอบเอกสาร';
+                        alertEl.classList.remove('d-none');
+                    }
+                    if (inputEl) inputEl.focus();
+                    return;
+                }
+
+                if (alertEl) alertEl.classList.add('d-none');
+
+                if (btnEl) {
+                    btnEl.disabled = true;
+                    btnEl.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> กำลังตรวจสอบ...';
+                }
+
+                var exists = false;
+                try {
+                    var resp = await fetch('/esign/verify/check/' + encodeURIComponent(cleanCode));
+                    if (resp.ok) {
+                        var contentType = resp.headers.get('content-type') || '';
+                        if (contentType.includes('application/json')) {
+                            var data = await resp.json();
+                            exists = !!(data && data.exists);
+                        } else {
+                            // Non-JSON ok response -> navigate
+                            window.location.href = '/esign/verify/' + encodeURIComponent(cleanCode);
+                            return;
+                        }
+                    } else if (resp.status === 404) {
+                        exists = false;
+                    } else {
+                        // Other error -> navigate directly
+                        window.location.href = '/esign/verify/' + encodeURIComponent(cleanCode);
+                        return;
+                    }
+                } catch (err) {
+                    // Fallback to direct navigation if network error
+                    window.location.href = '/esign/verify/' + encodeURIComponent(cleanCode);
+                    return;
+                }
+
+                if (exists) {
+                    window.location.href = '/esign/verify/' + encodeURIComponent(cleanCode);
+                } else {
+                    if (alertEl) {
+                        alertEl.innerHTML = '<i class="fas fa-circle-xmark me-1"></i> ไม่พบเอกสารรหัส <strong class="text-dark bg-white px-1 rounded border">' + cleanCode + '</strong> ในระบบ — กรุณาตรวจสอบรหัสอีกครั้ง';
+                        alertEl.classList.remove('d-none');
+                    }
+                    if (inputEl) {
+                        inputEl.focus();
+                        inputEl.select();
+                    }
+                    if (btnEl) {
+                        btnEl.disabled = false;
+                        btnEl.innerHTML = '<i class="fas fa-search me-1"></i> ตรวจสอบทันที';
+                    }
+                }
+            }
+
+            if (formEl) {
+                formEl.addEventListener('submit', function(e) {
+                    e.preventDefault();
+                    doVerifyCode();
+                });
+            }
+
+            if (btnEl) {
+                btnEl.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    doVerifyCode();
+                });
+            }
+
+            if (inputEl) {
+                inputEl.addEventListener('keydown', function(e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        doVerifyCode();
+                    }
+                });
+            }
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initVerifyModalHandler);
+        } else {
+            initVerifyModalHandler();
+        }
     })();
     </script>
 </section>

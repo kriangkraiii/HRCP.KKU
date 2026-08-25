@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.ecom.academic.model.SignatureModule;
@@ -581,18 +582,39 @@ public class SigningController {
      * when, which is personal data — an anonymous page would publish it to
      * anyone who photographed a document.
      */
-    @GetMapping("/verify/{code}")
-    public String verify(@PathVariable String code, Model model) {
-        SignatureRequest envelope = workflow.findByVerificationCodeWithSteps(code).orElse(null);
+    @GetMapping({"/verify", "/verify/", "/verify/{code}"})
+    public String verify(@PathVariable(required = false) String code,
+                         @RequestParam(value = "code", required = false) String queryCode,
+                         Model model) {
+        String targetCode = (code != null && !code.isBlank()) ? code.trim().toUpperCase()
+                : (queryCode != null && !queryCode.isBlank() ? queryCode.trim().toUpperCase() : null);
+
+        if (targetCode == null || targetCode.isBlank()) {
+            return "academic/esign/verify";
+        }
+
+        SignatureRequest envelope = workflow.findByVerificationCodeWithSteps(targetCode).orElse(null);
 
         if (envelope == null) {
-            model.addAttribute("notFoundCode", code);
+            model.addAttribute("notFoundCode", targetCode);
             return "academic/esign/verify";
         }
 
         model.addAttribute("report", verificationService.verify(envelope));
         model.addAttribute("auditTrail", workflow.auditTrail(envelope.getId()));
         return "academic/esign/verify";
+    }
+
+    /** Quick API to check if a verification code exists before redirecting */
+    @GetMapping(value = "/verify/check/{code}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @ResponseBody
+    public ResponseEntity<?> checkCodeExists(@PathVariable String code) {
+        if (code == null || code.isBlank()) {
+            return ResponseEntity.badRequest().body(java.util.Map.of("exists", false, "message", "กรุณาระบุรหัส"));
+        }
+        String cleanCode = code.trim().toUpperCase();
+        boolean exists = workflow.findByVerificationCode(cleanCode).isPresent();
+        return ResponseEntity.ok(java.util.Map.of("exists", exists, "code", cleanCode));
     }
 
     /** IP and user agent, recorded with every signature as part of the evidence. */

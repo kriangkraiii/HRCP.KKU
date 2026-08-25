@@ -115,6 +115,23 @@ public class AcademicApplicantController {
     /** เอกสารที่ผู้ยื่นสามารถเห็นได้ (doc type 0, 1, 8) */
     private static final List<Integer> APPLICANT_VISIBLE_DOC_TYPES = Arrays.asList(0, 1, 8);
 
+    private static final String EDIT_LOCKED_MESSAGE =
+            "ไม่สามารถแก้ไขเอกสารได้ เนื่องจากส่งคำร้องไปแล้ว — จะแก้ไขได้ต่อเมื่อแอดมินส่งเอกสารกลับมาให้แก้ไขเท่านั้น";
+
+    /**
+     * บอกหน้าเอกสารว่าตอนนี้แก้ไขได้หรือไม่ และแอดมินส่งกลับมาด้วยเหตุผลอะไร
+     *
+     * <p>หน้าเอกสารยังเปิดดูได้เสมอแม้แก้ไม่ได้ เพราะแผงลงนามอยู่บนหน้าเดียวกัน
+     * ผู้ยื่นต้องเข้ามาลงนามได้แม้ฟอร์มจะถูกล็อก
+     */
+    private void addEditGate(Model model, AcademicRequest request, int documentType) {
+        boolean editable = requestService.canApplicantEditDocument(request, documentType);
+        model.addAttribute("editable", editable);
+        model.addAttribute("revisionNote", requestService.getRevisionNote(request.getId(), documentType));
+        model.addAttribute("revisionRequested",
+                requestService.isRevisionRequested(request.getId(), documentType));
+    }
+
     @GetMapping("/dashboard")
     public String dashboard(Principal principal, Model model) {
         UserDtls user = getUser(principal);
@@ -255,6 +272,7 @@ public class AcademicApplicantController {
         model.addAttribute("existingDocs", existingDocs);
         model.addAttribute("existingData", existingJson);
         model.addAttribute("doc0Data", doc0Data);
+        addEditGate(model, request, 0);
 
         // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
         model.addAttribute("documentType", 0);
@@ -269,13 +287,19 @@ public class AcademicApplicantController {
     public String submitDocument0(@PathVariable Long id,
             @RequestParam Map<String, String> formData,
             @RequestParam(value = "action", defaultValue = "submit") String action,
-            Principal principal) throws IOException {
+            Principal principal,
+            RedirectAttributes redirectAttributes) throws IOException {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/academic/dashboard";
+        }
+
+        if (!requestService.canApplicantEditDocument(request, 0)) {
+            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
+            return "redirect:/user/academic/request/" + id + "/document-0";
         }
 
         formData.remove("action");
@@ -334,6 +358,7 @@ public class AcademicApplicantController {
         model.addAttribute("doc1Data", doc1Data);
         model.addAttribute("attachments", attachments);
         model.addAttribute("attachmentCount", attachments != null ? attachments.size() : 0);
+        addEditGate(model, request, 1);
 
         // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
         model.addAttribute("documentType", 1);
@@ -348,13 +373,19 @@ public class AcademicApplicantController {
     public String submitDocument1(@PathVariable Long id,
             @RequestParam Map<String, String> formData,
             @RequestParam(value = "action", defaultValue = "submit") String action,
-            Principal principal) throws IOException {
+            Principal principal,
+            RedirectAttributes redirectAttributes) throws IOException {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
         UserDtls user = getUser(principal);
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/academic/dashboard";
+        }
+
+        if (!requestService.canApplicantEditDocument(request, 1)) {
+            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
+            return "redirect:/user/academic/request/" + id + "/document-1";
         }
 
         formData.remove("action");
@@ -409,8 +440,8 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
-        if (request.getCurrentStatus() != RequestStatus.DRAFT) {
-            redirectAttributes.addFlashAttribute("error", "ไม่สามารถแก้ไขไฟล์แนบได้เนื่องจากส่งคำร้องไปแล้ว");
+        if (!requestService.canApplicantEditDocument(request, 1)) {
+            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
             return "redirect:/user/academic/request/" + id + "/document-1";
         }
 
@@ -607,8 +638,8 @@ public class AcademicApplicantController {
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/academic/dashboard";
         }
-        if (request.getCurrentStatus() != RequestStatus.DRAFT) {
-            redirectAttributes.addFlashAttribute("error", "ไม่สามารถลบไฟล์ได้เนื่องจากส่งคำร้องไปแล้ว");
+        if (!requestService.canApplicantEditDocument(request, 1)) {
+            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
             return "redirect:/user/academic/request/" + id + "/document-1";
         }
 
@@ -762,6 +793,12 @@ public class AcademicApplicantController {
         boolean hasDoc1 = isDoc1Complete(allDocuments);
         model.addAttribute("hasDoc0", hasDoc0);
         model.addAttribute("hasDoc1", hasDoc1);
+
+        // หลังส่งคำร้องแล้วปุ่มแก้ไขจะโผล่เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น
+        model.addAttribute("canEditDoc0", requestService.canApplicantEditDocument(request, 0));
+        model.addAttribute("canEditDoc1", requestService.canApplicantEditDocument(request, 1));
+        model.addAttribute("revisionNoteDoc0", requestService.getRevisionNote(id, 0));
+        model.addAttribute("revisionNoteDoc1", requestService.getRevisionNote(id, 1));
 
         // ดึงข้อมูลจาก doc_0 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
         List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);

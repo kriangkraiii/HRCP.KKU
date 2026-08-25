@@ -250,31 +250,39 @@
     </div>
 
     <!-- Interactive PDF Viewer Assets -->
-    <link rel="stylesheet" href="/css/esign_pdf_viewer.css">
-    <script src="/js/esign_pdf_viewer.js"></script>
+    <link rel="stylesheet" href="/css/esign_pdf_viewer.css?v=3.1">
+    <script src="/js/esign_pdf_viewer.js?v=3.1"></script>
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const container = document.getElementById('esign-pdf-container');
-            if (container) {
-                const pdfUrl = container.getAttribute('data-pdf-url');
-                const stepId = container.getAttribute('data-step-id');
-                if (pdfUrl && window.initEsignPdfViewer) {
-                    window.activeEsignViewer = window.initEsignPdfViewer('esign-pdf-container', pdfUrl, { initialFit: 'width' });
-                }
+        (function() {
+            function initSignViewer() {
+                const container = document.getElementById('esign-pdf-container');
+                if (container) {
+                    const pdfUrl = container.getAttribute('data-pdf-url');
+                    const stepId = container.getAttribute('data-step-id');
+                    if (pdfUrl && window.initEsignPdfViewer) {
+                        window.activeEsignViewer = window.initEsignPdfViewer('esign-pdf-container', pdfUrl, { initialFit: 'width' });
+                    }
 
-                // Dynamic live update of preview when selecting a different signature
-                const sigRadios = document.querySelectorAll('input[name="userSignatureId"]');
-                sigRadios.forEach(function(radio) {
-                    radio.addEventListener('change', function() {
-                        const sigId = this.value;
-                        const newPdfUrl = '/esign/sign/' + stepId + '/preview?userSignatureId=' + sigId;
-                        if (window.activeEsignViewer && typeof window.activeEsignViewer.loadNewPdf === 'function') {
-                            window.activeEsignViewer.loadNewPdf(newPdfUrl);
-                        }
+                    // Dynamic live update of preview when selecting a different signature
+                    const sigRadios = document.querySelectorAll('input[name="userSignatureId"]');
+                    sigRadios.forEach(function(radio) {
+                        radio.addEventListener('change', function() {
+                            const sigId = this.value;
+                            const newPdfUrl = '/esign/sign/' + stepId + '/preview?userSignatureId=' + sigId;
+                            if (window.activeEsignViewer && typeof window.activeEsignViewer.loadNewPdf === 'function') {
+                                window.activeEsignViewer.loadNewPdf(newPdfUrl);
+                            }
+                        });
                     });
-                });
+                }
             }
-        });
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', initSignViewer);
+            } else {
+                initSignViewer();
+            }
+        })();
     </script>
 </section>
 </body>

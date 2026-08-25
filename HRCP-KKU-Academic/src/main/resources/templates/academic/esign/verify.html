@@ -13,15 +13,56 @@
 
         <h3 class="mb-4"><i class="fas fa-shield-halved"></i> ตรวจสอบเอกสารที่ลงนามอิเล็กทรอนิกส์</h3>
 
-        <!-- ============ ไม่พบรหัส ============ -->
-        <div th:if="${notFoundCode != null}" class="card card-academic">
-            <div class="card-body text-center py-5">
-                <i class="fas fa-circle-question fa-2x text-secondary mb-3"></i>
-                <h5>ไม่พบเอกสารตามรหัสที่ระบุ</h5>
-                <p class="text-secondary mb-0">
-                    รหัส <code th:text="${notFoundCode}">CODE</code> ไม่ตรงกับเอกสารใดในระบบ
-                    — กรุณาตรวจสอบการพิมพ์อีกครั้ง
+        <!-- ============ เข้ามาโดยยังไม่ได้ระบุรหัส ============ -->
+        <div th:if="${report == null and notFoundCode == null}" class="card card-academic shadow-sm mb-4">
+            <div class="card-body p-4 text-center">
+                <div class="d-inline-flex p-3 rounded-circle bg-primary bg-opacity-10 text-primary mb-3">
+                    <i class="fas fa-shield-halved fa-2x"></i>
+                </div>
+                <h5 class="fw-bold mb-2">ระบุรหัสตรวจสอบเอกสาร</h5>
+                <p class="text-secondary small mb-4" style="max-width: 480px; margin: 0 auto;">
+                    กรอกรหัสตรวจสอบเอกสาร (Verification Code) 10 หลัก ที่ระบุบริเวณมุมล่างของเอกสารฉบับจริง หรือในอีเมลแจ้งเตือน
                 </p>
+                <form onsubmit="event.preventDefault(); handleVerifySubmit(document.getElementById('verifyInputMain').value);" style="max-width: 420px; margin: 0 auto;">
+                    <div class="input-group mb-3">
+                        <span class="input-group-text bg-white text-primary">
+                            <i class="fas fa-barcode"></i>
+                        </span>
+                        <input type="text" id="verifyInputMain" class="form-control text-uppercase fw-bold"
+                               placeholder="เช่น 55B5NXJLWW"
+                               maxlength="20"
+                               style="font-family: monospace; letter-spacing: 1px; font-size: 1.1rem;"
+                               autocomplete="off" autofocus required>
+                        <button type="submit" class="btn btn-primary px-3">
+                            <i class="fas fa-search me-1"></i> ตรวจสอบ
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- ============ ไม่พบรหัส ============ -->
+        <div th:if="${notFoundCode != null}" class="card card-academic shadow-sm mb-4">
+            <div class="card-body text-center py-5">
+                <div class="d-inline-flex p-3 rounded-circle bg-danger bg-opacity-10 text-danger mb-3">
+                    <i class="fas fa-triangle-exclamation fa-2x"></i>
+                </div>
+                <h5 class="fw-bold text-danger">ไม่พบเอกสารตามรหัสที่ระบุ</h5>
+                <p class="text-secondary mb-4">
+                    รหัส <code class="fw-bold text-dark bg-light px-2 py-1 rounded border" th:text="${notFoundCode}">CODE</code> ไม่ตรงกับเอกสารใดในระบบ — กรุณาตรวจสอบการพิมพ์อีกครั้ง
+                </p>
+                <form onsubmit="event.preventDefault(); handleVerifySubmit(document.getElementById('verifyInputRetry').value);" style="max-width: 400px; margin: 0 auto;">
+                    <div class="input-group">
+                        <input type="text" id="verifyInputRetry" class="form-control text-uppercase fw-bold"
+                               placeholder="กรอกรหัสใหม่อีกครั้ง"
+                               maxlength="20"
+                               style="font-family: monospace; letter-spacing: 1px;"
+                               autocomplete="off" required>
+                        <button type="submit" class="btn btn-primary px-3">
+                            <i class="fas fa-search me-1"></i> ลองใหม่
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
 
@@ -136,6 +177,18 @@
             </div>
         </div>
     </div>
+
+    <script>
+    function handleVerifySubmit(code) {
+        if (!code) return;
+        var cleanCode = code.replace(/[^a-zA-Z0-9]/g, '').trim().toUpperCase();
+        if (!cleanCode) {
+            alert('กรุณาระบุรหัสตรวจสอบเอกสาร');
+            return;
+        }
+        window.location.href = '/esign/verify/' + encodeURIComponent(cleanCode);
+    }
+    </script>
 </section>
 </body>
 </html>

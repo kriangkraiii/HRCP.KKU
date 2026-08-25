@@ -158,8 +158,17 @@ class DocPreviewEngine {
                 </div>
                 <div class="docx-preview-body" id="docxPreviewBody">
                     <div class="docx-loading" id="docxLoading">
-                        <div class="docx-spinner"></div>
-                        <span>กำลังสร้างเอกสาร...</span>
+                        <div class="docx-loading-card">
+                            <div class="docx-spinner-wrapper">
+                                <div class="docx-spinner"></div>
+                                <div class="docx-spinner-icon"><i class="fas fa-file-pdf"></i></div>
+                            </div>
+                            <h6 class="docx-loading-title" id="docxLoadingTitle">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
+                            <p class="docx-loading-subtitle" id="docxLoadingSub">ระบบกำลังประมวลผลข้อมูลและแปลงเป็น PDF เพื่อแสดงผลที่แม่นยำ 100%</p>
+                            <div class="docx-loading-progress-bar">
+                                <div class="docx-loading-progress-val"></div>
+                            </div>
+                        </div>
                     </div>
                     <iframe class="docx-preview-iframe" id="docxPreviewFrame" title="ตัวอย่างเอกสาร"></iframe>
                     <div class="docx-render-area" id="docxRenderArea"></div>
@@ -293,11 +302,45 @@ class DocPreviewEngine {
         });
     }
 
+    /** จัดการแสดง / ซ่อน loading state พร้อมแอนิเมชันนุ่มนวล */
+    setLoadingState(show, title, subtitle) {
+        const loading = document.getElementById('docxLoading');
+        const refreshBtn = document.getElementById('docxRefreshBtn');
+        if (!loading) return;
+
+        if (show) {
+            if (title) {
+                const titleEl = document.getElementById('docxLoadingTitle');
+                if (titleEl) titleEl.textContent = title;
+            }
+            if (subtitle) {
+                const subEl = document.getElementById('docxLoadingSub');
+                if (subEl) subEl.textContent = subtitle;
+            }
+            loading.style.display = 'flex';
+            loading.style.opacity = '1';
+            if (refreshBtn) {
+                refreshBtn.disabled = true;
+                refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> กำลังอัปเดต...';
+            }
+        } else {
+            loading.style.opacity = '0';
+            setTimeout(() => {
+                if (loading && loading.style.opacity === '0') {
+                    loading.style.display = 'none';
+                }
+            }, 250);
+            if (refreshBtn) {
+                refreshBtn.disabled = false;
+                refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i> อัปเดตตัวอย่าง';
+            }
+        }
+    }
+
     /** ดึงเอกสารจาก server แล้วแสดงผล — ข้ามถ้าข้อมูลไม่เปลี่ยนจากที่แสดงอยู่ */
     async loadPreview() {
         if (this.standaloneUrl) {
-            const loading = document.getElementById('docxLoading');
-            if (loading) loading.style.display = 'flex';
+            this.setLoadingState(true, 'กำลังเปิดเอกสารตัวอย่าง...', 'ระบบกำลังดึงข้อมูลและเตรียมแสดงผล PDF ความละเอียดสูง');
             this.setStatus('loading');
 
             try {
@@ -317,7 +360,7 @@ class DocPreviewEngine {
                 const blob = await response.blob();
 
                 if (format === 'pdf' || (blob.type && blob.type.includes('pdf'))) {
-                    this.showPdf(blob);
+                    await this.showPdf(blob);
                 } else {
                     await this.showDocxFallback(blob);
                 }
@@ -328,7 +371,7 @@ class DocPreviewEngine {
                 this.showError(err.message);
                 this.setStatus('error');
             } finally {
-                if (loading) loading.style.display = 'none';
+                this.setLoadingState(false);
             }
             return;
         }
@@ -339,8 +382,7 @@ class DocPreviewEngine {
             return;
         }
 
-        const loading = document.getElementById('docxLoading');
-        if (loading) loading.style.display = 'flex';
+        this.setLoadingState(true, 'กำลังสร้างเอกสารตัวอย่าง...', 'ระบบกำลังจัดหน้าและประมวลผลข้อมูลเป็น PDF แบบเรียลไทม์');
         this.setStatus('loading');
 
         try {
@@ -353,7 +395,7 @@ class DocPreviewEngine {
             const blob = await response.blob();
 
             if (format === 'pdf') {
-                this.showPdf(blob);
+                await this.showPdf(blob);
             } else {
                 await this.showDocxFallback(blob);
             }
@@ -365,20 +407,36 @@ class DocPreviewEngine {
             this.showError(err.message);
             this.setStatus('error');
         } finally {
-            if (loading) loading.style.display = 'none';
+            this.setLoadingState(false);
         }
     }
 
     /** แสดง PDF ใน iframe — viewer ของเบราว์เซอร์จัดการ zoom/เลื่อนหน้า/พิมพ์ให้เอง */
     showPdf(blob) {
-        this.releaseBlobUrl();
-        this.currentBlobUrl = URL.createObjectURL(blob);
+        return new Promise((resolve) => {
+            this.releaseBlobUrl();
+            this.currentBlobUrl = URL.createObjectURL(blob);
 
-        this.setBanner(false);
-        this.renderContainer.style.display = 'none';
-        this.renderContainer.innerHTML = '';
-        this.frame.style.display = 'block';
-        this.frame.src = this.currentBlobUrl;
+            this.setBanner(false);
+            this.renderContainer.style.display = 'none';
+            this.renderContainer.innerHTML = '';
+            this.frame.style.display = 'block';
+
+            let finished = false;
+            const complete = () => {
+                if (!finished) {
+                    finished = true;
+                    resolve();
+                }
+            };
+
+            this.frame.onload = () => {
+                setTimeout(complete, 100);
+            };
+            setTimeout(complete, 1000); // Safety fallback
+
+            this.frame.src = this.currentBlobUrl;
+        });
     }
 
     /** โหมดสำรอง: render DOCX ด้วย docx-preview (เลย์เอาต์เป็นแค่ค่าประมาณ) */

@@ -22,8 +22,36 @@
                         <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
-                    <form th:action="'/user/academic/request/' + ${request.id} + '/document-0'" method="post" th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/0'"
+                    <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
+                        <i class="fas fa-circle-check"></i> <span th:text="${success}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-circle-exclamation"></i> <span th:text="${error}"></span>
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- ส่งคำร้องแล้ว: ฟอร์มอ่านอย่างเดียว แต่ยังเข้ามาลงนามได้ -->
+                    <div th:unless="${editable}" class="alert alert-secondary d-flex align-items-start gap-2">
+                        <i class="fas fa-lock mt-1"></i>
+                        <div>
+                            <strong>เอกสารถูกล็อก</strong> — ส่งคำร้องแล้วจึงแก้ไขไม่ได้
+                            จะแก้ไขได้ต่อเมื่อแอดมินส่งเอกสารกลับมาให้แก้ไขเท่านั้น
+                        </div>
+                    </div>
+                    <div th:if="${editable and revisionRequested}" class="alert alert-warning d-flex align-items-start gap-2">
+                        <i class="fas fa-pen-to-square mt-1"></i>
+                        <div>
+                            <strong>แอดมินส่งเอกสารกลับมาให้แก้ไข</strong>
+                            <span th:if="${revisionNote}"> — เหตุผล: [[${revisionNote}]]</span>
+                            <div class="small">แก้ไขข้อมูลแล้วกดบันทึกเอกสาร จากนั้น<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ที่แผงลงนามด้านล่าง</div>
+                        </div>
+                    </div>
+
+                    <form th:action="'/user/academic/request/' + ${request.id} + '/document-0'" method="post"
+                        th:attr="data-auto-draft=${editable ? '/api/draft/academic/' + request.id + '/0' : null}"
                         id="doc0Form">
+                        <fieldset th:disabled="${!editable}" class="border-0 p-0 m-0">
 
                         <!-- ข้อมูลบันทึกข้อความ -->
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-file-signature"></i> ข้อมูลบันทึกข้อความ
@@ -174,11 +202,12 @@
                             <i class="fas fa-exclamation-triangle"></i> <span id="doc0ValidationMsg"></span>
                         </div>
 
+                        </fieldset>
                         <div class="d-flex gap-2 mt-4">
                             <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                                 <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                             </button>
-                            <button type="submit" name="action" value="submit" class="btn btn-academic" id="doc0SubmitBtn">
+                            <button th:if="${editable}" type="submit" name="action" value="submit" class="btn btn-academic" id="doc0SubmitBtn">
                                 <i class="fas fa-paper-plane"></i> บันทึกเอกสาร
                             </button>
                             <a th:href="'/user/academic/request/' + ${request.id}"

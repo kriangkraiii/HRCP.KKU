@@ -808,6 +808,11 @@ public class AcademicAdminController {
                 admin,
                 actorContext);
 
+        // ปุ่มนี้คือประตูเดียวที่เปิดให้ผู้ยื่นกลับมาแก้เอกสารหลังส่งคำร้องแล้ว
+        // การยกเลิกซองลงนามอย่างเดียวไม่พอ เพราะเอกสารที่ไม่มีช่องลงนามของผู้ยื่น
+        // จะไม่มีซองให้ยกเลิกตั้งแต่แรก
+        requestService.openDocumentForRevision(id, type, reason);
+
         try {
             adminLogService.log(principal.getName(), admin.getName(),
                     "REQUEST_DOC_RESIGN",

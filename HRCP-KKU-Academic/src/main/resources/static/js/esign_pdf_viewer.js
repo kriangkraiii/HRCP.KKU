@@ -72,8 +72,17 @@ class EsignPdfViewer {
                 </div>
                 <div class="esign-viewer-pages" id="${this.container.id}-pages-view">
                     <div class="esign-viewer-loading" id="${this.container.id}-loading">
-                        <div class="spinner-border text-light" role="status"></div>
-                        <span>กำลังจัดเตรียมเอกสารต้นฉบับ...</span>
+                        <div class="esign-loading-card">
+                            <div class="esign-spinner-wrapper">
+                                <div class="esign-spinner"></div>
+                                <div class="esign-spinner-icon"><i class="fas fa-file-signature"></i></div>
+                            </div>
+                            <h6 class="esign-loading-title" id="${this.container.id}-loading-title">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
+                            <p class="esign-loading-subtitle" id="${this.container.id}-loading-sub">ระบบกำลังแสดงผลเอกสาร PDF ความละเอียดสูงสำหรับการลงนาม</p>
+                            <div class="esign-loading-progress-bar">
+                                <div class="esign-loading-progress-val"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -161,13 +170,13 @@ class EsignPdfViewer {
             this.totalPagesEl.textContent = this.pageCount;
         }
 
-        if (this.loadingEl) {
-            this.loadingEl.style.display = 'none';
-        }
-
         await this.calculateFitWidthScale();
         this.currentScale = this.fitWidthScale;
         await this.renderAllPages();
+
+        if (this.loadingEl) {
+            this.loadingEl.style.display = 'none';
+        }
     }
 
     renderDocxNotice() {
@@ -306,8 +315,34 @@ class EsignPdfViewer {
         if (openTabBtn) {
             openTabBtn.href = newUrl;
         }
+
+        const titleEl = document.getElementById(`${this.container.id}-loading-title`);
+        const subEl = document.getElementById(`${this.container.id}-loading-sub`);
+        if (titleEl) titleEl.textContent = 'กำลังอัปเดตตัวอย่างพร้อมลายเซ็น...';
+        if (subEl) subEl.textContent = 'ระบบกำลังจำลองตำแหน่งลายเซ็นลงบนเอกสารฉบับจริง';
+
+        if (this.frameEl) {
+            let done = false;
+            const hideLoading = () => {
+                if (!done) {
+                    done = true;
+                    if (this.loadingEl) {
+                        this.loadingEl.style.opacity = '0';
+                        setTimeout(() => {
+                            if (this.loadingEl) this.loadingEl.style.display = 'none';
+                        }, 250);
+                    }
+                }
+            };
+            this.frameEl.onload = () => setTimeout(hideLoading, 200);
+            setTimeout(hideLoading, 4000);
+            this.frameEl.src = newUrl + '#view=FitH&toolbar=1';
+            return;
+        }
+
         if (this.loadingEl) {
             this.loadingEl.style.display = 'flex';
+            this.loadingEl.style.opacity = '1';
             this.loadingEl.classList.remove('d-none');
             if (this.pagesViewEl) {
                 this.pagesViewEl.innerHTML = '';
@@ -325,11 +360,45 @@ class EsignPdfViewer {
     renderNativeFallback() {
         this.container.innerHTML = `
             <div class="esign-viewer-wrapper">
+                <div class="esign-viewer-loading" id="${this.container.id}-loading">
+                    <div class="esign-loading-card">
+                        <div class="esign-spinner-wrapper">
+                            <div class="esign-spinner"></div>
+                            <div class="esign-spinner-icon"><i class="fas fa-file-signature"></i></div>
+                        </div>
+                        <h6 class="esign-loading-title" id="${this.container.id}-loading-title">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
+                        <p class="esign-loading-subtitle" id="${this.container.id}-loading-sub">ระบบกำลังแสดงผลเอกสาร PDF ความละเอียดสูงสำหรับการลงนาม</p>
+                        <div class="esign-loading-progress-bar">
+                            <div class="esign-loading-progress-val"></div>
+                        </div>
+                    </div>
+                </div>
                 <iframe src="${this.pdfUrl}#view=FitH&toolbar=1"
                         class="esign-fallback-frame"
+                        id="${this.container.id}-frame"
                         title="เอกสารที่จะลงนาม"></iframe>
             </div>
         `;
+
+        this.loadingEl = document.getElementById(`${this.container.id}-loading`);
+        this.frameEl = document.getElementById(`${this.container.id}-frame`);
+
+        if (this.frameEl) {
+            let done = false;
+            const hideLoading = () => {
+                if (!done) {
+                    done = true;
+                    if (this.loadingEl) {
+                        this.loadingEl.style.opacity = '0';
+                        setTimeout(() => {
+                            if (this.loadingEl) this.loadingEl.style.display = 'none';
+                        }, 250);
+                    }
+                }
+            };
+            this.frameEl.onload = () => setTimeout(hideLoading, 250);
+            setTimeout(hideLoading, 4000); // Safety fallback
+        }
     }
 }
 

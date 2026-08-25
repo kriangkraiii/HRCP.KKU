@@ -64,6 +64,7 @@ class AttachmentConstraintsTest {
 
         when(requestService.findById(1L)).thenReturn(Optional.of(sampleRequest));
         when(userRepository.findByEmail("applicant@kku.ac.th")).thenReturn(applicantUser);
+        when(requestService.canApplicantEditDocument(any(AcademicRequest.class), eq(1))).thenReturn(true);
 
         applicantController = new AcademicApplicantController(
                 requestService,
@@ -160,5 +161,43 @@ class AttachmentConstraintsTest {
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isNotNull();
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("เกิน 75 MB");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
+    }
+
+    @Test
+    @DisplayName("ส่งคำร้องแล้วและแอดมินยังไม่ได้ส่งกลับ: อัปโหลดไฟล์แนบไม่ได้")
+    void uploadAfterSubmit_withoutAdminSendBack_shouldBeRejected() throws Exception {
+        sampleRequest.setCurrentStatus(RequestStatus.RECEIVED);
+        when(requestService.canApplicantEditDocument(any(AcademicRequest.class), eq(1))).thenReturn(false);
+
+        MockMultipartFile file = new MockMultipartFile("files", "test.pdf", "application/pdf", "pdf content".getBytes());
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.uploadDocument1Attachments(
+                1L,
+                new MultipartFile[]{file},
+                principal,
+                redirectAttributes
+        );
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("แอดมิน");
+        verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
+    }
+
+    @Test
+    @DisplayName("ส่งคำร้องแล้วและแอดมินยังไม่ได้ส่งกลับ: ลบไฟล์แนบไม่ได้")
+    void deleteAfterSubmit_withoutAdminSendBack_shouldBeRejected() {
+        sampleRequest.setCurrentStatus(RequestStatus.RECEIVED);
+        when(requestService.canApplicantEditDocument(any(AcademicRequest.class), eq(1))).thenReturn(false);
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.deleteAttachment(1L, 5L, principal, redirectAttributes);
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("แอดมิน");
+        verify(requestService, never()).deleteAttachment(any(Long.class));
     }
 }
