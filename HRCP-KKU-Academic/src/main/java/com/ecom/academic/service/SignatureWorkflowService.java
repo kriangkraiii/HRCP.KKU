@@ -986,7 +986,14 @@ public class SignatureWorkflowService {
                 unproxiedRecipients);
     }
 
-    /** Appends to the trail. Never throws: losing an event must not undo a signature. */
+    /**
+     * Appends to the trail. The catch covers mapping and in-memory faults, so a
+     * malformed event cannot undo a signature — but it is not a safety net for
+     * database rejections: PostgreSQL aborts the whole transaction on error, and
+     * every later statement in the caller then fails with "current transaction is
+     * aborted" no matter what is caught here. The trail's schema has to accept
+     * whatever {@link SignatureAuditEventType} can produce.
+     */
     private void audit(SignatureRequest envelope, Long stepId, SignatureAuditEventType type,
             UserDtls actorUser, ActorContext actor, String detail) {
         try {

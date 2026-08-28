@@ -128,6 +128,17 @@
 			<groupId>org.flywaydb</groupId>
 			<artifactId>flyway-database-postgresql</artifactId>
 		</dependency>
+		<!--
+			Boot 4 moved each technology's auto-configuration into its own module.
+			Without this one, flyway-core sits on the classpath doing nothing and
+			every spring.flyway.* property is silently ignored — which is exactly
+			what happened here: no flyway_schema_history table was ever created,
+			so V0–V10 never ran and Hibernate's ddl-auto built the whole schema.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-flyway</artifactId>
+		</dependency>
 
 		<!-- ============================================================ -->
 		<!-- AWS S3 Only (lightweight, no full SDK)                        -->
