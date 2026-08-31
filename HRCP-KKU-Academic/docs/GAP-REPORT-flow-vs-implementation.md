@@ -1,0 +1,472 @@
+# รายงานช่องว่าง: Flow การขอกำหนดตำแหน่งทางวิชาการ (ผศ./รศ./ศ.) เทียบกับระบบจริง
+
+**วันที่จัดทำ:** 31 สิงหาคม 2569
+**เอกสารอ้างอิง:** `Flow การขอกำหนดตำแหน่งทางวิชาการ (ผศ.รศ.ศ.).pdf` — 10 หน้า, 33 ขั้นตอน
+หน่วยงาน: วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น
+**ขอบเขต:** เทียบขั้นตอนใน flow chart ทีละข้อกับโค้ดใน `HRCP-KKU-Academic` เพื่อระบุว่า
+ระบบรองรับข้อใดแล้ว ข้อใดยังไม่รองรับ และข้อใดรองรับแบบผิดเงื่อนไข
+
+> **สถานะการแก้:** ข้อที่ขึ้นต้นด้วย ✅ ถูกแก้ในโค้ดระบบแล้วพร้อมเทสกำกับ
+> ข้อที่เหลือมีเทสรองรับใน `src/test/java` โดยข้อที่ยังไม่มีฟีเจอร์จะเป็นเทสที่ `@Disabled("GAP-xx")`
+> ไว้เป็น executable spec พร้อมเปิดใช้ทันทีที่ implement เสร็จ
+
+---
+
+## สรุปผู้บริหาร
+
+| ระดับ | จำนวน | สาระ |
+|-------|-------|------|
+| ✅ แก้แล้ว | 3 | เลือกตำแหน่งแล้วไม่มีส่วนผลงานขึ้นเลย (GAP-09), สถานะผูกกับเช็คบ็อกซ์แจ้งเตือน (GAP-36), อีเมลจริงถูก seed ในเทส (GAP-04) |
+| 🔴 วิกฤต | 5 | ชุดทดสอบเป็นของปลอมทั้งหมด, ไม่มี guard การเปลี่ยนสถานะ, งานวิจัยไม่มี linkage, ผศ. ไม่มีปุ่มเลือกงานวิจัย |
+| 🟠 สูง | 8 | เงื่อนไขคุณสมบัติขัดกันเอง, วันหมดอายุไม่เคยถูกบังคับ, วงจรแก้ไขไม่มีทางกลับ |
+| 🟡 กลาง | 8 | ขั้นตอนใน flow ที่ไม่มีตัวแทนในระบบ (ปฏิทิน, จองห้อง, จำนวนชุดเอกสาร, วันที่ออกคำสั่ง) |
+
+**ข้อค้นพบที่ตอบคำถามผู้ใช้โดยตรง:**
+
+1. *"งานวิจัยตอนขอตำแหน่งยังไม่มีให้เลือกเลย"* → มีสองสาเหตุซ้อนกัน
+   - **GAP-09 (แก้แล้ว)**: เลือกตำแหน่งแล้ว **ไม่มีส่วนผลงานทางวิชาการโผล่ขึ้นมาเลย** เพราะ
+     listener ถูกผูกกับ `<select>` ที่ถูกสคริปต์อื่นแทนที่ทิ้งไป — ทั้งช่องกรอกงานวิจัยและปุ่ม
+     Scopus จึงถูกซ่อนอยู่ตลอด
+   - **GAP-10 (ยังไม่แก้)**: ต่อให้ส่วนนั้นโผล่แล้ว กล่องรับผลงาน 11 กลุ่มก็มีปุ่ม "เลือกจาก
+     Scopus" เพียง **3 กลุ่ม** และ **ส่วนของ ผู้ช่วยศาสตราจารย์ ไม่มีปุ่มแม้แต่ปุ่มเดียว**
+2. *"ต้องเป็นงานวิจัยของคนคนนั้นเท่านั้น"* → **ทำถูกแล้ว** ฝั่ง server (GAP-13 เป็นข้อควรระวังเรื่อง
+   บัญชีทดสอบเท่านั้น)
+3. *"ยื่นไปแล้วใช้ยื่นซ้ำไม่ได้"* → **GAP-11/GAP-12**: ยัง implement ไม่ได้ในโครงสร้างปัจจุบัน เพราะ
+   ระบบไม่เคยเก็บว่าคำร้องใดใช้งานวิจัยชิ้นไหน
+
+---
+
+## ส่วนที่ 1 — เทียบขั้นตอนใน PDF ทีละข้อ
+
+### เฟส 1 — การยื่นเอกสารประเมินการสอน (ข้อ 1–15)
+
+| ข้อ | ขั้นตอนตาม PDF | ผู้รับผิดชอบ | สถานะในระบบ | หมายเหตุ |
+|-----|----------------|-------------|-------------|---------|
+| 1 | หน่วยสารบรรณรับเรื่องขอรับการประเมินผลการสอน | สารบรรณ | ✅ | `RequestStatus.RECEIVED`; ผู้ยื่นส่งเองผ่าน `POST /user/academic/request/{id}/submit` |
+| 2 | เสนอคณบดี/รองคณบดีพิจารณา | คณบดี | ⚠️ | ไม่มีสถานะแยก — รวมอยู่ใน `RECEIVED` การ "ไม่รับเรื่อง" ใช้ `REJECTED` |
+| 3 | คณบดีเสนอรายชื่ออนุกรรมการ **จำนวน 3 คน** | คณบดี | ⚠️ **GAP-35** | เอกสารที่ 2 "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ" มีอยู่ แต่ไม่มีการบังคับจำนวน 3 คน |
+| 4 | เจ้าหน้าที่จัดพิมพ์คำสั่งแต่งตั้ง + เสนอคณบดีลงนาม | จิราภรณ์ | ✅ | เอกสารที่ 3 + e-signature workflow; บันทึกแล้ว → `SUB_COMMITTEE_APPOINTED` |
+| 5 | จัดทำบันทึก + จัดชุดเอกสาร **3 ชุด** ส่งอนุกรรมการ (~15 วัน) | จิราภรณ์ | ⚠️ **GAP-42** | ระบบไม่มีที่เก็บ "จำนวนชุด" และไม่มีการนับ 15 วัน |
+| 6 | ประสานงานนัดหมายวันประชุม + ลงปฏิทิน `Calendar.google.com` | จิราภรณ์ | ❌ **GAP-40** | เอกสารที่ 4 เก็บวันประชุมได้ (`meetingDate`) แต่ **ไม่มี integration กับ Google Calendar** |
+| 7 | จองห้องประชุมออนไลน์ + ขออาหารว่าง/เครื่องดื่ม | จิราภรณ์ | ❌ **GAP-41** | ไม่มีในระบบ |
+| 8 | ประชุมคณะอนุกรรมการประเมินการสอน | อนุกรรมการ | ✅ | เอกสารที่ 6/7 บันทึกผล → `COMPLETED_PASS` / `COMPLETED_FAIL` |
+| 9 | สรุปวาระเข้าที่ประชุมกรรมการประจำวิทยาลัยฯ | จิราภรณ์ | ❌ **GAP-33** | ไม่มีสถานะรองรับ |
+| 10 | **กรรมการประจำวิทยาลัยฯ ประชุมรับรองผลประเมิน** | กรรมการวิทยาลัยฯ | ❌ **GAP-33** | `RequestStatus` ข้ามจาก `MEETING_SCHEDULED` ไป `COMPLETED_*` ตรง ๆ ไม่มีขั้นรับรอง |
+| 11 | แจ้งผลให้ผู้ขอกำหนดตำแหน่งทราบ | จิราภรณ์ | ✅ | เอกสารที่ 8 → `COMPLETED` + ส่งอีเมล |
+| 12 | แจ้งผล **กรณีมีแก้ไข** ให้ผู้ยื่นแก้ | จิราภรณ์ | ⚠️ **GAP-34** | มี `COMPLETED_REVISE` แต่ไม่มีทางเดินต่อ |
+| 13 | ผู้ยื่นส่งเอกสารที่แก้แล้วกลับมา | ผู้เสนอขอฯ | ⚠️ **GAP-34** | มี `POST /user/academic/upload-revision/{id}` แต่ไม่เปลี่ยนสถานะกลับเข้ากระบวนการ |
+| 14 | เจ้าหน้าที่ส่งเอกสารที่แก้แล้วไปยังอนุกรรมการ | จิราภรณ์ | ❌ **GAP-34** | ไม่มี |
+| 15 | อนุกรรมการประชุมพิจารณาซ้ำ → วนกลับข้อ 9/10/11 | อนุกรรมการ | ❌ **GAP-34** | ไม่มีทาง transition กลับ วงจรแก้ไขจึงเป็นทางตัน |
+
+### เฟส 2 — การขอกำหนดตำแหน่งทางวิชาการ (ข้อ 16–33)
+
+| ข้อ | ขั้นตอนตาม PDF | ผู้รับผิดชอบ | สถานะในระบบ | หมายเหตุ |
+|-----|----------------|-------------|-------------|---------|
+| 16 | ผู้บังคับบัญชาระดับต้น (หัวหน้าสาขาวิชา) ลงความเห็น **ครบถ้วน/ไม่ครบถ้วน** ในส่วนที่ 2 | ผู้เสนอขอฯ | ⚠️ | เอกสารที่ 5 "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา" อยู่ใน `ADMIN_DOCS` — ผู้ยื่นมองไม่เห็น ต่างจาก flow ที่ให้ผู้ยื่นเป็นคนเดินเรื่อง |
+| 17 | ผู้เสนอขอฯ ทำบันทึกเสนอคณบดีลงนามส่วนที่ 2 | ผู้เสนอขอฯ | ✅ | e-signature workflow |
+| 18 | คณบดีลงความเห็น **เข้าข่าย/ไม่เข้าข่าย** | คณบดี | ✅ | slot ลงนามใน `DocumentWorkflowConfig` |
+| 19 | เข้าเล่ม ก.พ.อ.03/ก.พ.ว.มข.03 **11 ชุด** + ผลงาน **1 ชุด** ส่ง PDF | ผู้เสนอขอฯ | ⚠️ **GAP-42** | ส่งไฟล์ได้ แต่ไม่มีที่เก็บจำนวนชุด |
+| 20 | เจ้าหน้าที่สรุปวาระ + ส่งไฟล์ให้กรรมการกลั่นกรองฯ | จิราภรณ์ | ✅ | `SCREENING_COMMITTEE` |
+| 21 | นำวาระเข้าที่ประชุมกรรมการกลั่นกรองฯ | จิราภรณ์ | ✅ | เอกสารที่ 8 |
+| 22 | กรรมการกลั่นกรองฯ ประชุมพิจารณา (YES/NO) | กรรมการกลั่นกรอง | ✅ | `SCREENING_APPROVED` / `REVISION_REQUESTED` |
+| 23 | แจ้งมติให้ผู้เสนอขอฯ ทราบ | จิราภรณ์ | ✅ | อีเมลแจ้งสถานะ |
+| 24 | ผู้เสนอขอฯ ส่งเอกสาร **11 ชุด** ให้กรรมการประจำวิทยาลัยฯ | ผู้เสนอขอฯ | ⚠️ **GAP-42** | จำนวนชุดไม่มีที่เก็บ |
+| 25–26 | เจ้าหน้าที่สรุปวาระ + เลขานุการนำวาระเข้าที่ประชุม | จิราภรณ์/เลขาฯ | ✅ | `COLLEGE_COMMITTEE` |
+| 27 | กรรมการประจำวิทยาลัยฯ ประชุมพิจารณา (YES/NO) | กรรมการวิทยาลัยฯ | ✅ | `COLLEGE_APPROVED` / `REVISION_REQUESTED` |
+| 28–29 | แจ้งมติให้เจ้าหน้าที่และผู้เสนอขอฯ | เลขาฯ/จิราภรณ์ | ✅ | อีเมลแจ้งสถานะ |
+| 30 | ส่งบันทึกพร้อมชุดเอกสาร **11 รายการ** ตามจำนวนชุดที่กำหนด | ผู้เสนอขอฯ | ⚠️ **GAP-42/43** | `DOC_LABELS` มี 9 รายการ ขาด "ผลงานวิจัยฉบับสมบูรณ์" และ "รายชื่อผู้ทรงคุณวุฒิ (Reader)" ในฐานะรายการแยก |
+| 31 | เจ้าหน้าที่จัดพิมพ์บันทึก **(ลับ)** เสนอมหาวิทยาลัย | จิราภรณ์ | ⚠️ **GAP-43** | `SENT_TO_HR` มี แต่ไม่มีรายการ Reader และไม่มีการทำเครื่องหมาย "ลับ" |
+| 32 | มหาวิทยาลัยออกคำสั่งแต่งตั้ง — **วันที่มติ = วันที่สภาฯ รับเรื่อง** (ประกาศ มข. 2666/2562) | กองทรัพยากรบุคคล | ❌ **GAP-44** | ไม่มีการเก็บวันมติ/วันสภารับเรื่อง |
+| 33 | กรณียังไม่ตีพิมพ์ — **วันแต่งตั้ง = วันที่กองทรัพยากรบุคคลได้รับวารสาร** | กองทรัพยากรบุคคล | ❌ **GAP-44** | ไม่มีการเก็บสถานะการตีพิมพ์และวันที่รับวารสาร |
+
+---
+
+## ส่วนที่ 2 — รายละเอียดช่องว่างแต่ละข้อ
+
+### กลุ่ม A — คุณภาพชุดทดสอบ
+
+#### 🔴 GAP-01 — ชุดทดสอบ UAT เป็นของปลอมทั้งหมด
+
+10 ไฟล์ใน `src/test/java/com/ecom/uat/` รวม **1,939 บรรทัด** มี `assertTrue(true, "…")` **238 จุด**
+ไม่มีจุดใดเรียกโค้ด production เลย
+
+```java
+// src/test/java/com/ecom/uat/UAT_PositionRequestTest.java:20-21
+@Test @DisplayName("TC-01: สร้าง Position Request (DRAFT)")
+void createDraft() { assertTrue(true, "สร้าง DRAFT สำเร็จ"); }
+```
+
+| ไฟล์ | เคสปลอม |
+|------|---------|
+| `UAT_AcademicRequestWorkflowTest.java` | 46 |
+| `UAT_SecurityAccessControlTest.java` | 35 |
+| `UAT_AdminManagementTest.java` | 34 |
+| `UAT_AcademicApplicantTest.java` | 27 |
+| `UAT_AuthenticationTest.java` | 23 |
+| `UAT_DocumentGenerationTest.java` | 18 |
+| `UAT_PositionRequestTest.java` | 18 |
+| `UAT_FileManagementTest.java` | 16 |
+| `UAT_StaffMemberTest.java` | 11 |
+| `UAT_UserProfileTest.java` | 10 |
+
+**ผลกระทบ:** รายงาน UAT ที่ส่งไปแล้ว (`UAT_Test_Cases.docx`) อ้างอิงเคสเหล่านี้ ทำให้ตัวเลข
+"ผ่าน 238 เคส" ไม่มีความหมายทางเทคนิค
+
+#### 🔴 GAP-02 — Migration V5–V11 ไม่เคยรันจริงบน PostgreSQL
+
+เทสที่มีอยู่ (`FlywayMigrationRunTest`) ครอบเฉพาะ V0–V4 บน H2 และคอมเมนต์ในไฟล์ระบุเองว่า:
+
+> *"V5 and V6 use PostgreSQL partial indexes … they are left correct and left untested here;
+> they still need one run against real PostgreSQL before deploy."*
+> — `FlywayMigrationRunTest.java:26-32`
+
+ระหว่างนั้น V7–V11 ถูกเพิ่มเข้ามาโดยไม่มีเทสใด ๆ ทั้งสิ้น สภาพแวดล้อมทดสอบตั้ง
+`spring.flyway.enabled=false` (`src/test/resources/application.properties:16`) แล้วสร้าง schema
+จาก entity แทน — ซึ่งเป็นคนละ schema กับที่ production จะได้
+
+#### 🔴 GAP-04 — ทุก `@SpringBootTest` เดิม seed อีเมลจริงของบุคคลเป็น ROLE_ADMIN
+
+> **ค้นพบระหว่างเขียนเทส** — ตาข่ายนิรภัยของชุดทดสอบใหม่ดักได้ทันทีในการรันครั้งแรก
+
+`src/test/resources/application.properties` **แทนที่** (ไม่ใช่รวมกับ) `application.properties` ตัวหลัก
+บน test classpath จึงไม่มีการตั้ง `app.admin.email` ระหว่างเทส และ `AdminInitializer` ตกไปใช้ค่า default
+ที่เขียนไว้ใน `@Value`:
+
+```java
+// AdminInitializer.java:28
+@Value("${app.admin.email:kriangkrai.p@kkumail.com}")
+private String adminEmail;
+```
+
+ผลคือ **ทุกเทสที่ใช้ `@SpringBootTest` (36 คลาส) สร้างบัญชี `kriangkrai.p@kkumail.com` เป็น ROLE_ADMIN
+ที่เปิดใช้งานและเปิดรับอีเมล** อะไรก็ตามที่แจ้งเตือนแอดมิน — เช่นการส่งคำร้อง — จะจ่าหน้าอีเมลถึงที่อยู่จริงนี้
+
+ที่ยังไม่มีอีเมลหลุดออกไปเป็นเพราะ `spring.mail.host=localhost` ไม่มี mail server ตอบ ไม่ใช่เพราะมีการ
+ป้องกัน — เครื่องที่มี local relay หรือการ override `spring.mail.*` เพียงบรรทัดเดียวก็กลายเป็นการส่งจริง
+
+**แก้แล้วในชุดทดสอบนี้:** ตั้ง `app.admin.email` / `app.user.email` เป็นโดเมนสงวน `example.invalid`
+ใน `src/test/resources/application.properties` ซึ่งคุ้มครองเทสเดิมทั้ง 101 ไฟล์ด้วย
+**ยังต้องแก้ที่ production code:** ค่า default ใน `@Value` ไม่ควรเป็นอีเมลของบุคคล
+
+#### 🔴 GAP-05 — รหัสผ่าน Gmail app password ถูก commit ไว้ในรีโป
+
+```java
+// SendAllTestEmailsTest.java:16-18
+private static final String TARGET_EMAIL = "kriangkrai.p@kkumail.com";
+private static final String SENDER_EMAIL = "kriangkrai.p@kkumail.com";
+private static final String SENDER_PASS  = "sajn mwtj mxza xsoe";
+```
+
+เทสนี้เชื่อมต่อ `smtp.gmail.com` และส่งอีเมลจริง มีเพียง `@Disabled` หนึ่งบรรทัดกั้นไว้
+ควร **เพิกถอน app password นี้ทันที** และย้ายไปอ่านจาก environment variable อย่างเดียว
+(ชุดทดสอบใหม่มี `MailSafetyNetTest` ที่ fail ถ้า `@Disabled` ถูกเอาออก)
+
+#### 🔴 GAP-03 — ไม่มีเทสระดับเบราว์เซอร์เลย
+
+บั๊กที่ผู้ใช้เจอส่วนใหญ่อยู่ในชั้นที่เทสปัจจุบันแตะไม่ถึง: JavaScript ในฟอร์ม (dynamic rows,
+auto-draft, Scopus picker), CSP ที่บล็อก inline handler, canvas ลายเซ็น, และ Thymeleaf ที่คอมไพล์ผ่าน
+แต่พังตอน render
+
+---
+
+### กลุ่ม B — งานวิจัย / Scopus
+
+#### ✅ GAP-09 — เลือกตำแหน่งแล้ว **ไม่มีส่วนผลงานทางวิชาการขึ้นมาเลย** — **แก้แล้ว**
+
+> **ค้นพบด้วยเทสเบราว์เซอร์จริง** — เป็นอาการที่รุนแรงกว่า GAP-10 และอธิบายคำว่า
+> "ไม่มีให้เลือกเลย" ได้ตรงที่สุด
+
+`doc_form_1.html` ผูก listener ตอน parse:
+
+```js
+document.getElementById('targetPos').addEventListener('change', ...);
+```
+
+แต่ `select_to_datalist.js` (โหลดจาก `base_academic.html:613`) ทำงานตอน `DOMContentLoaded`
+แล้ว **แทนที่ `<select>` ทั้งอันด้วย `<input list="...">`** — listener จึงหายไปพร้อมกับ element เดิม
+
+ผลคือ **ผู้ยื่นเลือกตำแหน่งแล้วไม่มีอะไรเกิดขึ้นเลย** ไม่มีส่วน ผศ./รศ./ศ. โผล่ขึ้นมา
+ทั้งช่องกรอกงานวิจัย ตำรา และปุ่มเลือกจาก Scopus จึงถูกซ่อนอยู่ตลอด ไม่ว่าจะเลือกตำแหน่งใด
+(เกิดทั้งฝั่งผู้ยื่นและฝั่งเจ้าหน้าที่)
+
+**แก้แล้ว:** เปลี่ยนเป็น event delegation บน `document` และให้ event เริ่มต้น `bubbles: true`
+มีเทสกำกับใน `e2e/ScopusPickerE2ETest`
+
+#### 🔴 GAP-10 — ส่วน ผู้ช่วยศาสตราจารย์ ไม่มีปุ่ม "เลือกจาก Scopus" เลย
+
+ใน `templates/academic/position/applicant/doc_form_1.html` มีกล่องรับรายการผลงาน **17 กลุ่ม**
+แต่มีปุ่มเปิด picker เพียง **3 จุด**:
+
+| บรรทัด | ปุ่ม | preset |
+|--------|------|--------|
+| 402 | `assocResearchRows` | `assocResearch` |
+| 491 | `assocM3ResearchRows` | `assocM3` |
+| 561 | `profResearchRows` | `profResearch` |
+
+กลุ่มที่ **ไม่มีปุ่ม**:
+
+| บรรทัด | container | ตำแหน่ง |
+|--------|-----------|---------|
+| **286** | `asstResearchRows` | **ผศ. — งานวิจัย** |
+| **315** | `asstOtherRows` | **ผศ. — ผลงานอื่น** |
+| **344** | `asstBookRows` | **ผศ. — ตำรา/หนังสือ** |
+| 407 | `assocOtherRows` | รศ. — ผลงานอื่น |
+| 432 | `assocBookRows` | รศ. — ตำรา/หนังสือ |
+| 566 | `profOtherRows` | ศ. — ผลงานอื่น |
+| 591 | `profBookRows` | ศ. — ตำรา/หนังสือ |
+| 619 | `profM3ResearchRows` | ศ. — วิธีที่ 3 |
+
+`SCOPUS_PRESETS` (`doc_form_1.html:881-899`) นิยามไว้แค่ 3 preset เช่นกัน
+
+**นี่คือสาเหตุตรงของอาการ "ไม่มีให้เลือกเลย"** — ผู้ยื่นที่เลือกตำแหน่ง ผู้ช่วยศาสตราจารย์ จะเห็น
+เฉพาะ `sectionAsst` (สลับด้วย `targetPos` change handler, บรรทัด 913-918) ซึ่งไม่มีปุ่มใด ๆ ทั้งสิ้น
+
+#### 🔴 GAP-11 — ไม่มี linkage ระหว่าง publication กับคำร้อง
+
+`ScopusPicker.applySelection()` เรียก `/api/my/publications/citations` เพื่อขอ **ข้อความ citation
+ที่จัดรูปแล้ว** จากนั้น `fillRows()` เขียนข้อความนั้นลง `<input type="text">` ธรรมดา
+(`scopus_picker.js:257-299`) — `publication.id` ถูกทิ้งที่ฝั่ง browser ไม่เคยถูกส่งกลับ server
+
+ผลคือใน `com/ecom/academic/` ไม่มีคอลัมน์ ตาราง หรือฟิลด์ใดที่อ้างถึง `scopus_publication.id` เลย
+(ยืนยันด้วย grep `publication_id|publicationId|scopus_publication_id` — ไม่พบผลลัพธ์)
+
+**ผลกระทบต่อเนื่อง:**
+- กติกา "ยื่นซ้ำไม่ได้" implement ไม่ได้ — ไม่มีอะไรให้เทียบ
+- แอดมินตรวจสอบไม่ได้ว่าผลงานที่อ้างในคำร้อง ตรงกับรายการ Scopus จริงชิ้นใด
+- ผู้ยื่นแก้ข้อความ citation ทีหลังได้อิสระ (ตามที่ตั้งใจไว้) แต่ก็แปลว่าไม่มี source of truth
+
+#### 🔴 GAP-12 — ไม่มีการกันยื่นซ้ำ
+
+`ScopusQueryService.listOwn()` (บรรทัด 95-115) รับเฉพาะ `yearFrom/yearTo/query/page/size`
+ไม่มีพารามิเตอร์ exclude และไม่มีที่ใดในระบบตรวจว่างานวิจัยชิ้นหนึ่งเคยถูกใช้ยื่นไปแล้วหรือยัง
+
+**กติกาที่ตกลงกันไว้ (จะเป็น spec ของเทส):**
+
+> งานวิจัยที่ถูกใช้ในคำร้องที่**พ้นสถานะ `DRAFT`** แล้ว จะไม่ปรากฏใน picker และยื่นซ้ำไม่ได้
+> **ยกเว้น**คำร้องนั้นถูก `REJECTED` — ให้ปลดล็อกกลับมาใช้ได้
+
+#### 🟠 GAP-13 — ทางลัด `isUniversalAccessUser` เปิดให้เห็นงานวิจัยของทุกคน
+
+การจำกัด "เฉพาะงานวิจัยของตัวเอง" **ทำถูกต้องแล้ว**: `fs_user_id` ถูกดึงจาก `Principal` → email
+เท่านั้น ไม่มี endpoint ใดรับ owner id เป็นพารามิเตอร์ (`MyPublicationsApiController:25-31`)
+
+แต่มีข้อยกเว้นสำหรับบัญชีทดสอบ:
+
+```java
+// ScopusQueryService.java:54-60
+public boolean isUniversalAccessUser(UserDtls user) {
+    return testUserEmail != null && !testUserEmail.isBlank()
+            && user.getEmail().trim().equalsIgnoreCase(testUserEmail.trim());
+}
+```
+
+ค่ามาจาก `app.user.email=${USER_EMAIL:user@user.com}` (`application.properties:336`) ซึ่งเป็น
+**ตัวแปรเดียวกับที่ `AdminInitializer` ใช้สร้างบัญชีผู้ใช้เริ่มต้น** หากบน production ตั้ง
+`USER_EMAIL` เป็นอีเมลอาจารย์จริง อาจารย์ท่านนั้นจะเห็นและเลือกงานวิจัยของทุกคนในระบบได้ทันที
+โดยไม่มีอะไรเตือน
+
+---
+
+### กลุ่ม C — คุณสมบัติผู้ยื่น / การส่งต่อเฟส 1 → เฟส 2
+
+#### 🟠 GAP-20 — นิยาม "ผลประเมินที่ใช้ได้" ขัดกันเอง 2 ที่
+
+| | `PositionRequestService.getEligibleEvaluations()` (บ. 202-232) | `AcademicRequestService.getLatestEvaluationExpiry()` (บ. 583-635) |
+|---|---|---|
+| สถานะที่รับ | `COMPLETED` เท่านั้น | `COMPLETED_PASS` **หรือ** `COMPLETED` |
+| แหล่งวันหมดอายุ | คีย์ `expiration_date` ใน doc 8 | `evaluation_date` / `faculty_board_meeting_date` **+ 3 ปี** |
+| ถ้าไม่มีข้อมูล | ถือว่าใช้ได้ (`return true`) | fallback `submissionDate + 3 ปี` |
+
+**อาการที่ผู้ใช้จะเจอ:** อาจารย์ที่คำร้องค้างอยู่ที่ `COMPLETED_PASS` (แจ้งผล-ผ่าน แต่ยังไม่ได้ปิดเรื่อง)
+จะเห็นการ์ดนับถอยหลังวันหมดอายุบนแดชบอร์ด (เพราะแดชบอร์ดใช้ `getLatestEvaluationExpiry`) แต่พอกด
+"ยื่นขอกำหนดตำแหน่ง" จะพบว่า**ไม่มีผลประเมินให้เลือก** (เพราะหน้านั้นใช้ `getEligibleEvaluations`)
+
+#### 🟠 GAP-21 — `isExpired()` คืนค่า "ยังไม่หมดอายุ" เสมอเมื่อวันที่เป็นชื่อเดือนไทย
+
+```java
+// PositionRequestService.java:234-252
+String cleaned = thaiDateStr.replaceAll("[^0-9]", " ").trim();
+String[] parts = cleaned.split("\\s+");
+if (parts.length >= 3) { /* … */ }
+return false;   // ← "assume not expired if can't parse"
+```
+
+`"17 กุมภาพันธ์ 2569"` → ลบ non-digit → `"17   2569"` → `parts.length == 2` → **ตกลงมา `return false`
+= ยังไม่หมดอายุ**
+
+ระบบเขียนวันที่เป็นชื่อเดือนไทยเป็นปกติ — `AcademicRequestService.parseThaiDate()` (บ. 637-673) มีไว้
+รองรับรูปแบบนี้โดยเฉพาะ ดังนั้น **การหมดอายุผลประเมินแทบไม่เคยถูกบังคับจริง**
+
+#### 🟠 GAP-22 — `findRequestsExpiringSoon()` ทิ้งพารามิเตอร์
+
+```java
+// AcademicRequestService.java:678-680
+public List<AcademicRequest> findRequestsExpiringSoon(LocalDateTime before) {
+    return requestRepository.findByApplicantIdOrderByCreatedAtDesc(null);
+}
+```
+
+พารามิเตอร์ `before` ไม่ถูกใช้ และส่ง `null` เป็น applicant id ปัจจุบัน `EvaluationExpiryScheduler`
+ไม่ได้เรียกเมธอดนี้ (มันวน `findAll()` เอง) แต่เมธอดนี้ยัง public อยู่และจะพาผู้เรียกรายต่อไปตกหลุม
+
+---
+
+### กลุ่ม D — สถานะ / ลำดับ flow
+
+#### 🔴 GAP-30 — ไม่มี guard การเปลี่ยนสถานะเลยทั้งสองเฟส
+
+`AcademicRequestService.updateStatus()` (บ. 110-155) และ `PositionRequestService.updateStatus()`
+(บ. 398-436) รับสถานะปลายทางใด ๆ จากสถานะต้นทางใด ๆ โดยไม่ตรวจว่าเป็น transition ที่ flow อนุญาต
+
+ผลที่เป็นไปได้:
+- แอดมินกดผิด กระโดด `DRAFT → SENT_TO_HR` ได้ทันที ข้ามการกลั่นกรองและกรรมการวิทยาลัยฯ ทั้งหมด
+- ดึงคำร้องที่ `SENT_TO_HR` (terminal) กลับมาเป็น `DRAFT` ได้
+- ไม่มี audit ว่าการข้ามขั้นเกิดขึ้น (history บันทึกแค่ old → new ไม่ได้บอกว่าผิดกติกา)
+
+#### 🔴 GAP-31 — บันทึก doc 8 ปลุกคำร้องที่ถูกปฏิเสธไปแล้ว
+
+```java
+// AcademicRequestService.java:558-561
+case 8 -> {
+    updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
+            "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน", sendNotify);
+}
+```
+
+ต่างจาก case 3/4/6 ที่มีเงื่อนไขคุมอยู่ case 8 ไม่มีเงื่อนไขใด ๆ — บันทึกเอกสารที่ 8 บนคำร้องที่
+`REJECTED` หรือ `COMPLETED_FAIL` ไปแล้ว จะดันสถานะกลับเป็น `COMPLETED` และส่งอีเมลแจ้ง "เสร็จสิ้น"
+ให้ผู้ยื่นที่ถูกปฏิเสธไปแล้ว
+
+#### 🟠 GAP-32 — ตรรกะ "ก้าวหน้าหรือยัง" ผูกกับ `enum.ordinal()`
+
+```java
+// PositionRequestService.java:452
+if (request.getCurrentStatus().ordinal() < PositionRequestStatus.SCREENING_COMMITTEE.ordinal())
+```
+```java
+// AcademicRequestService.java:525, 534
+if (request.getCurrentStatus().ordinal() < RequestStatus.SUB_COMMITTEE_APPOINTED.ordinal())
+```
+
+`ordinal()` คือลำดับการประกาศใน enum ไม่ใช่ลำดับใน flow ปัจจุบันบังเอิญให้ผลถูก แต่:
+- ใน `PositionRequestStatus` `REJECTED` (5) อยู่**ก่อน** `SCREENING_APPROVED` (6) จึงถูกนับว่า
+  "ก้าวหน้าน้อยกว่า" การอนุมัติ ซึ่งไม่มีความหมายเชิงธุรกิจ
+- การเพิ่มสถานะใหม่ตรงกลาง (เช่นสถานะรับรองของกรรมการวิทยาลัยฯ ที่ GAP-33 ต้องการ) จะทำให้ตรรกะ
+  เพี้ยนเงียบ ๆ โดยคอมไพล์ผ่าน
+
+#### 🟠 GAP-33 — ขั้นตอน 9/10 (กรรมการประจำวิทยาลัยฯ รับรองผลประเมินการสอน) ไม่มีสถานะ
+
+`RequestStatus` มีลำดับ `RECEIVED → SUB_COMMITTEE_APPOINTED → MEETING_SCHEDULED → COMPLETED_*`
+ตาม flow ผลจากที่ประชุมอนุกรรมการ (ข้อ 8) **ต้องผ่านการรับรองจากกรรมการประจำวิทยาลัยฯ (ข้อ 10)
+ก่อน** จึงจะแจ้งผลได้ (ข้อ 11) — ขั้นนี้หายไปทั้งขั้น
+
+`getProgressSteps()` (บ. 40-42) ก็แสดงแค่ 3 สถานะ ทำให้แถบความคืบหน้าที่ผู้ยื่นเห็น ไม่ตรงกับ
+กระบวนการจริง 15 ขั้น
+
+#### 🟠 GAP-34 — วงจร "กรณีมีแก้ไข" (ข้อ 12–15) เป็นทางตัน
+
+`COMPLETED_REVISE` มีอยู่ และ `hasActiveRequest()` จงใจให้มันยังนับเป็น active (บ. 374-376) แต่:
+- ไม่มี transition ใดพากลับเข้า `MEETING_SCHEDULED` เพื่อให้อนุกรรมการพิจารณาซ้ำ
+- `POST /user/academic/upload-revision/{id}` เก็บไฟล์ลง `revisionFilePath` แต่ไม่เปลี่ยนสถานะ
+- `COMPLETED_REVISE` ไม่ใช่ terminal ผู้ยื่นจึงยื่นคำร้องใหม่ก็ไม่ได้ และเดินหน้าต่อก็ไม่ได้ — ค้าง
+
+#### ✅ GAP-36 — สถานะจะเดินหน้าก็ต่อเมื่อเจ้าหน้าที่ติ๊ก "แจ้งผู้ยื่น" — **แก้แล้ว**
+
+> **ค้นพบระหว่างเขียนเทสเส้นทางผู้ใช้จริง**
+
+```java
+// AcademicAdminController.java:776-783
+// Auto-update status + notify only if admin chose to
+if (sendNotify) {
+    requestService.autoUpdateStatusByDocument(id, type, admin, jsonData);
+}
+```
+
+การ **เปลี่ยนสถานะ** กับการ **ส่งอีเมลแจ้ง** ถูกมัดรวมไว้ในเช็คบ็อกซ์เดียวกัน เจ้าหน้าที่ที่บันทึก
+เอกสารที่ 3 (คำสั่งแต่งตั้งอนุกรรมการ) โดยไม่ติ๊ก "แจ้งผู้ยื่น" จะได้เอกสารที่บันทึกเรียบร้อย
+แต่**คำร้องยังค้างอยู่ที่สถานะเดิม** และหน้าจอไม่มีอะไรบอกว่าขั้นตอนนั้นไม่ได้เดิน
+
+ทั้งสองอย่างควรแยกจากกัน: การเดินสถานะเป็นข้อเท็จจริงของกระบวนการ ส่วนการแจ้งเตือนเป็นทางเลือก
+
+**แก้แล้ว** ใน `AcademicAdminController` และ `PositionAdminController` — เรียก
+`autoUpdateStatusByDocument(..., sendNotify)` เสมอ โดยส่งค่าเช็คบ็อกซ์เข้าไปคุมเฉพาะการส่งอีเมล
+มีเทสกำกับใน `AcademicStatusFlowTest.StatusAdvanceIsIndependentOfNotification` (3 เคส)
+
+#### 🟡 GAP-37 — ลำดับบังคับที่ไม่ได้บอกผู้ใช้: ต้องแนบไฟล์ก่อนจึงบันทึกเอกสารที่ 1 ได้
+
+```java
+// AcademicApplicantController.java:406-411
+if ("submit".equals(action)) {
+    if (requestService.countAttachments(id) == 0) {
+        return "redirect:/user/academic/request/" + id + "/document-1?error=no_attachments";
+    }
+}
+```
+
+เอกสารที่ 1 จะบันทึกไม่ได้เลยจนกว่าจะมีไฟล์แนบอย่างน้อยหนึ่งไฟล์ — เป็นข้อกำหนดที่สมเหตุสมผล
+(ตรงกับข้อ 1 ที่ระบุเอกสารแนบ 7 หมวด) แต่ผู้ใช้ที่กรอกฟอร์มเสร็จแล้วกดบันทึกจะถูกเด้งกลับ
+มาที่หน้าเดิมพร้อม query string `?error=no_attachments` ซึ่งต้องตรวจสอบว่าหน้าแสดงข้อความ
+อธิบายจริงหรือไม่ ไม่งั้นผู้ใช้จะเห็นแค่ "กดบันทึกแล้วไม่มีอะไรเกิดขึ้น"
+
+#### 🟡 GAP-35 — ไม่บังคับจำนวนอนุกรรมการ 3 คน
+
+flow ข้อ 3 ระบุ "อนุกรรมการประเมินการสอน **จำนวน 3 คน**" ชัดเจน `AcademicCommitteeService` ให้เลือก
+กี่คนก็ได้ ไม่มีการตรวจ
+
+---
+
+### กลุ่ม E — ขั้นตอนที่ยังไม่มีตัวแทนในระบบ
+
+| # | ขั้นตอน | สิ่งที่ขาด |
+|---|---------|-----------|
+| 🟡 **GAP-40** | ข้อ 6 — ลงกำหนดการปฏิทิน `Calendar.google.com` | ไม่มี Google Calendar integration; `meetingDate` เก็บได้แต่ไม่ซิงก์ออก |
+| 🟡 **GAP-41** | ข้อ 7 — จองห้องประชุม + ขออาหารว่าง/เครื่องดื่ม | ไม่มีในระบบเลย |
+| 🟡 **GAP-42** | ข้อ 5/19/24/30 — **จำนวนชุดเอกสาร** (3 ชุด / 6 ชุด / 10 ชุด / 11 ชุด) | `PositionDocument.copyNumber` มีอยู่แต่ใช้เป็น index ไม่ใช่จำนวนชุดที่ต้องส่ง; ไม่มีการตรวจว่าครบ |
+| 🟡 **GAP-43** | ข้อ 30/31 — ชุดเอกสาร 11 รายการ + "รายชื่อผู้ทรงคุณวุฒิ (Reader)" + ทำเครื่องหมาย "ลับ" | `DOC_LABELS` มี 9 รายการ (บ. 89-100) ขาด "ผลงานวิจัยฉบับสมบูรณ์" และรายการ Reader แยก |
+| 🟡 **GAP-44** | ข้อ 32/33 — วันที่ออกคำสั่งแต่งตั้ง | ไม่มีฟิลด์เก็บวันมติกรรมการวิทยาลัยฯ / วันสภาฯ รับเรื่อง / สถานะการตีพิมพ์ / วันที่กองทรัพยากรบุคคลได้รับวารสาร |
+
+---
+
+## ส่วนที่ 3 — ตารางแมป GAP → เทส
+
+| GAP | ไฟล์เทส | ชนิด |
+|-----|---------|------|
+| GAP-01 | ชุดใหม่ทั้งหมด (`flow`, `academic`, `research`, `notification`) | ทั้งหมด |
+| GAP-02 | `migration/MigrationOnPostgresTest` | Testcontainers ⚠️ |
+| GAP-03 | `e2e/FullJourneyE2ETest`, `e2e/ScopusPickerE2ETest` | Playwright ⚠️ |
+| GAP-04 | `notification/MailSafetyNetTest` + แก้ที่ `src/test/resources/application.properties` | เทสจริง |
+| GAP-05 | `notification/MailSafetyNetTest.liveSmtpTestStaysDisabled` | เทสจริง |
+| GAP-36 | `flow/FullJourneyMockMvcTest` (ต้องส่ง `sendNotify=true` สถานะจึงเดิน) | เทสจริง |
+| GAP-37 | `flow/FullJourneyMockMvcTest` (ต้องแนบไฟล์ก่อนบันทึกเอกสารที่ 1) | เทสจริง |
+| GAP-10 | `research/ScopusPickerCoverageTest`, `e2e/ScopusPickerE2ETest` | เทสจะ **fail** — เป็นหลักฐาน |
+| GAP-11/12 | `research/ResearchReuseLockSpec` | `@Disabled` — executable spec |
+| GAP-13 | `research/UniversalAccessGuardTest` | เทสจริง |
+| GAP-20/21/22 | `academic/EvaluationEligibilityTest` | เทสจริง + ส่วนที่ `@Disabled` |
+| GAP-30/31/32 | `academic/RequestStatusTransitionTest`, `academic/PositionStatusTransitionTest` | เทสจริง + `@Disabled` |
+| GAP-33/34/35 | `academic/RevisionLoopIT` | `@Disabled` |
+| GAP-40…44 | บันทึกในรายงานนี้เท่านั้น (ต้องตัดสินใจเชิงนโยบายก่อน) | — |
+
+> ⚠️ **เทสสองชั้นที่ยังรันไม่ได้บนเครื่องนี้** — `MigrationOnPostgresTest` และ `e2e/*E2ETest`
+> เขียนเสร็จและคอมไพล์ผ่านแล้ว แต่ถูก `@EnabledIfDockerAvailable` ข้ามไป เพราะ Docker Desktop
+> บนเครื่องนี้ไม่ได้สร้าง unix socket ไว้ (`/var/run/docker.sock` เป็น symlink ที่ชี้ไปที่ว่าง
+> และ `~/.docker/run/` เป็นโฟลเดอร์เปล่า) แม้คำสั่ง `docker` จะใช้งานได้ก็ตาม
+>
+> **วิธีเปิดใช้:** Docker Desktop → Settings → Advanced → ติ๊ก
+> *"Allow the default Docker socket to be used (requires password)"* → restart Docker Desktop
+> จากนั้นรัน `./mvnw verify -Pe2e -DskipTests=false` (ครั้งแรก Playwright จะดาวน์โหลดเบราว์เซอร์)
+>
+> จนกว่าจะเปิดใช้ **GAP-02 และ GAP-03 ยังถือว่ายังไม่ได้ถูกตรวจสอบจริง**
+
+---
+
+## ส่วนที่ 4 — ข้อเสนอลำดับความสำคัญในการแก้
+
+1. **GAP-10** — เพิ่ม preset + ปุ่มให้ครบทั้ง 17 กลุ่ม (งานเล็ก ผลกระทบสูงสุดต่อผู้ใช้จริง)
+2. **GAP-20/21** — รวมนิยาม "ผลประเมินที่ใช้ได้" ไว้ที่เดียว และใช้ `parseThaiDate()` ที่มีอยู่แล้ว
+   แทน `isExpired()` ที่พัง
+3. **GAP-31** — ใส่เงื่อนไขให้ case 8 เหมือน case 3/4
+4. **GAP-30** — เพิ่มตาราง transition ที่อนุญาต ตาม flow 33 ข้อ
+5. **GAP-11/12** — ออกแบบตาราง `position_request_publication` (request_id, publication_id, doc_type,
+   slot_index) แล้วจึงบังคับกติกายื่นซ้ำ
+6. **GAP-33/34** — เพิ่มสถานะรับรองของกรรมการวิทยาลัยฯ และปิดวงจรแก้ไข
+7. GAP-40…44 — ต้องคุยกับผู้รับผิดชอบ (คุณจิราภรณ์) ก่อนว่าจะทำในระบบหรือคงไว้นอกระบบ

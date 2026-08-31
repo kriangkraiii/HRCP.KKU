@@ -908,9 +908,19 @@
                 ScopusPicker.open(preset);
             };
 
-            // Show/hide position-specific sections
-            document.getElementById('targetPos').addEventListener('change', function() {
-                const val = this.value;
+            // Show/hide position-specific sections.
+            //
+            // Delegated from document rather than bound to #targetPos itself.
+            // select_to_datalist.js (loaded by base_academic.html) replaces every
+            // <select> in this form with an <input list="..."> on DOMContentLoaded,
+            // and a listener attached to the original element goes with it when it
+            // is removed. The result was that choosing a target position did
+            // nothing at all: no section ever appeared, so the whole ผลงานทางวิชาการ
+            // part of the form — research rows, books, the Scopus buttons — stayed
+            // invisible whichever position was chosen.
+            document.addEventListener('change', function(e) {
+                if (!e.target || e.target.id !== 'targetPos') return;
+                const val = e.target.value;
                 document.getElementById('sectionAsst').style.display = (val === 'ผู้ช่วยศาสตราจารย์') ? '' : 'none';
                 document.getElementById('sectionAssoc').style.display = (val === 'รองศาสตราจารย์') ? '' : 'none';
                 document.getElementById('sectionProf').style.display = (val === 'ศาสตราจารย์') ? '' : 'none';
@@ -919,7 +929,8 @@
             // Load existing data
             document.addEventListener('DOMContentLoaded', function() {
                 // Trigger section visibility
-                document.getElementById('targetPos').dispatchEvent(new Event('change'));
+                // bubbles: true — the handler above listens on document.
+                document.getElementById('targetPos').dispatchEvent(new Event('change', { bubbles: true }));
 
                 const existingData = /*[[${existingData}]]*/ null;
                 if (existingData) {
@@ -996,7 +1007,8 @@
                             }
                         }
                         // Re-trigger visibility after data load
-                        document.getElementById('targetPos').dispatchEvent(new Event('change'));
+                        // bubbles: true — the handler above listens on document.
+                document.getElementById('targetPos').dispatchEvent(new Event('change', { bubbles: true }));
                     } catch(e) { console.error('Draft restore error:', e); }
                 }
             });

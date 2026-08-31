@@ -362,14 +362,14 @@ public class PositionAdminController {
                         getClientIpAddress());
             } catch (Exception logEx) { /* ignore */ }
 
-            // Auto-update status + notify if admin chose to
-            if (sendNotify) {
-                try {
-                    positionService.autoUpdateStatusByDocument(id, type, admin, jsonData, true);
-                } catch (Exception e) {
-                    logger.warn("Phase2 auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
-                    return "redirect:/admin/position/request/" + id + "?success=doc_generated&warn=notify_failed";
-                }
+            // Advance the status; notify only if the officer asked to.
+            // Same reasoning as the Phase 1 controller: the checkbox decides who
+            // gets an e-mail, not whether the step counts as done.
+            try {
+                positionService.autoUpdateStatusByDocument(id, type, admin, jsonData, sendNotify);
+            } catch (Exception e) {
+                logger.warn("Phase2 auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
+                return "redirect:/admin/position/request/" + id + "?success=doc_generated&warn=notify_failed";
             }
 
             return "redirect:/admin/position/request/" + id + "?success=doc_generated";

@@ -105,6 +105,43 @@
 			<scope>test</scope>
 		</dependency>
 
+		<!-- Runs the suite against a real PostgreSQL instead of H2.
+		     Production is PostgreSQL and the schema is built by Flyway, but the
+		     test profile turned Flyway off and let Hibernate build the schema
+		     from the entities instead — so V5 onwards (PostgreSQL partial
+		     indexes, which H2 cannot express at all) have never once been
+		     executed by the build. See FlywayMigrationRunTest's own note. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-testcontainers</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<!-- Testcontainers 2.x renamed every module artifact with a
+		     `testcontainers-` prefix; the old `junit-jupiter` / `postgresql`
+		     coordinates resolve to nothing on the 2.0.5 that Boot 4.1 manages. -->
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>org.testcontainers</groupId>
+			<artifactId>testcontainers-postgresql</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!-- Drives a real browser. The forms this system lives on are mostly
+		     JavaScript — the Scopus picker modal, the rows that grow on demand,
+		     the auto-draft listener and the signature canvas — and none of that
+		     is reachable from MockMvc. Bound to the `e2e` profile so the normal
+		     build stays fast and needs no browser download. -->
+		<dependency>
+			<groupId>com.microsoft.playwright</groupId>
+			<artifactId>playwright</artifactId>
+			<version>1.49.0</version>
+			<scope>test</scope>
+		</dependency>
+
 		<!-- ============================================================ -->
 		<!-- Database                                                      -->
 		<!-- ============================================================ -->
@@ -257,6 +294,12 @@
             <configuration>
                 <!-- ข้ามเทสต์โดยค่าเริ่มต้นเหมือนเดิม แต่สั่งรันได้ด้วย -DskipTests=false -->
                 <skipTests>${skipTests}</skipTests>
+                <!-- The browser suite needs a Playwright download and a running
+                     Docker daemon, so it is not part of `mvn test`. It runs
+                     under -Pe2e via failsafe instead. -->
+                <excludes>
+                    <exclude>**/*E2ETest.java</exclude>
+                </excludes>
             </configuration>
         </plugin>
         <!-- OWASP Dependency-Check — scan for known CVEs in third-party libs (ISO 27001 A.12) -->
@@ -272,5 +315,38 @@
         </plugin>
     </plugins>
 </build>
+
+<profiles>
+    <!-- Browser-level end-to-end suite.
+         Split out because it needs three things the normal build does not: a
+         running Docker daemon (PostgreSQL via Testcontainers), a Playwright
+         browser download, and a couple of minutes. Run with:
+             ./mvnw verify -Pe2e -DskipTests=false -->
+    <profile>
+        <id>e2e</id>
+        <build>
+            <plugins>
+                <plugin>
+                    <groupId>org.apache.maven.plugins</groupId>
+                    <artifactId>maven-failsafe-plugin</artifactId>
+                    <configuration>
+                        <skipTests>${skipTests}</skipTests>
+                        <includes>
+                            <include>**/*E2ETest.java</include>
+                        </includes>
+                    </configuration>
+                    <executions>
+                        <execution>
+                            <goals>
+                                <goal>integration-test</goal>
+                                <goal>verify</goal>
+                            </goals>
+                        </execution>
+                    </executions>
+                </plugin>
+            </plugins>
+        </build>
+    </profile>
+</profiles>
 </project>
 <!-- ./mvnw versions:display-dependency-updates -->

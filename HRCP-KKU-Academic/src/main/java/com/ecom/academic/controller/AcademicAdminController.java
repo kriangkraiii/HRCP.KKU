@@ -773,14 +773,19 @@ public class AcademicAdminController {
                         + id,
                 getClientIpAddress());
 
-        // Auto-update status + notify only if admin chose to
-        if (sendNotify) {
-            try {
-                requestService.autoUpdateStatusByDocument(id, type, admin, jsonData);
-            } catch (Exception e) {
-                logger.warn("Auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
-                return "redirect:/admin/academic/request/" + id + "?success=doc_generated&warn=notify_failed";
-            }
+        // Advance the status; notify only if the officer asked to.
+        //
+        // These used to be one decision. "แจ้งผู้ยื่น" is about whether to send an
+        // e-mail, but it also gated the status change, so an officer who saved
+        // เอกสารที่ 3 without ticking it got the document stored and the request
+        // left at its previous status — with nothing on screen to say the step
+        // had not taken. Where the request stands is a fact about the process and
+        // does not depend on who is being told about it.
+        try {
+            requestService.autoUpdateStatusByDocument(id, type, admin, jsonData, sendNotify);
+        } catch (Exception e) {
+            logger.warn("Auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
+            return "redirect:/admin/academic/request/" + id + "?success=doc_generated&warn=notify_failed";
         }
 
         return "redirect:/admin/academic/request/" + id + "?success=doc_generated";
