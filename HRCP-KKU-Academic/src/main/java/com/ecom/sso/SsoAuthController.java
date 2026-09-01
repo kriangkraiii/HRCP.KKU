@@ -69,16 +69,10 @@ public class SsoAuthController {
     /** Starts a login by handing the browser to KKU SSO. */
     @GetMapping("/auth/sso/login")
     public String startLogin(RedirectAttributes redirect) {
-        System.out.println("==================================================================");
-        System.out.println("👉 [SSO] User clicked 'เข้าสู่ระบบด้วย KKU SSO'");
-        System.out.println("   - Stage: " + props.getStage());
-        System.out.println("   - App ID: " + props.getAppId());
-        System.out.println("   - Redirect URL configured: " + props.getRedirectLoginUrl());
-        System.out.println("   - Generated SSO Login URL: " + props.loginUrl());
-        System.out.println("==================================================================");
+        log.info("SSO login starting — stage={} appId={} redirectUrl={} loginUrl={}",
+                props.getStage(), props.getAppId(), props.getRedirectLoginUrl(), props.loginUrl());
 
         if (!props.isConfigured()) {
-            System.err.println("❌ [SSO ERROR] Configuration is incomplete: " + props.describeMissing());
             log.error("SSO login attempted but configuration is incomplete: {}", props.describeMissing());
             redirect.addFlashAttribute("errorMsg",
                     "ระบบ SSO ยังไม่ได้ตั้งค่าให้สมบูรณ์ กรุณาติดต่อผู้ดูแลระบบ");
@@ -100,47 +94,45 @@ public class SsoAuthController {
             HttpServletResponse response,
             RedirectAttributes redirect) {
 
-        System.out.println("==================================================================");
-        System.out.println("📥 [SSO CALLBACK] Received callback from KKU SSO");
-        System.out.println("   - URI: " + request.getRequestURI());
-        System.out.println("   - Code: " + (code != null ? (code.length() > 10 ? code.substring(0, 10) + "..." : code) : "NULL"));
-        System.out.println("   - Error from SSO: " + error + " (" + errorDescription + ")");
-        System.out.println("==================================================================");
+        log.info("SSO callback received — uri={} code={} error={} ({})",
+                request.getRequestURI(), abbreviate(code), error, errorDescription);
 
         if (error != null && !error.isBlank()) {
-            System.err.println("❌ [SSO ERROR] Provider returned error: " + error + " - " + errorDescription);
+            log.warn("SSO provider returned an error: {} — {}", error, errorDescription);
             return denied(redirect, "KKU SSO แจ้งข้อผิดพลาด: " + (errorDescription != null ? errorDescription : error));
         }
 
         if (code == null || code.isBlank()) {
-            System.err.println("❌ [SSO ERROR] Callback arrived without a code parameter");
-            log.warn("SSO callback arrived without a code parameter");
+            log.warn("SSO callback arrived without a code parameter — "
+                    + "the provider bounced the browser back without completing a login. "
+                    + "Check that kku.sso.stage matches the environment this app-id is registered on, "
+                    + "and that the registered redirect URL is exactly {}", props.getRedirectLoginUrl());
             return denied(redirect, "การเข้าสู่ระบบไม่สมบูรณ์ ไม่ได้รับ code จาก KKU SSO");
         }
 
         var token = client.exchangeCode(code);
         if (token.isEmpty()) {
-            System.err.println("❌ [SSO ERROR] Token exchange failed with KKU SSO API");
+            log.warn("SSO token exchange failed — no token for the code returned by the provider");
             return denied(redirect, "ยืนยันตัวตนกับระบบ SSO ไม่สำเร็จ (ไม่สามารถแลก Token ได้) กรุณาลองใหม่อีกครั้ง");
         }
 
         KkuSsoClient.SsoToken ssoToken = token.get();
-        System.out.println("✅ [SSO TOKEN OK] Successfully received token for: " + ssoToken.email() + " (Name: " + ssoToken.firstName() + " " + ssoToken.lastName() + ")");
+        log.info("SSO token exchanged for {}", ssoToken.email());
 
         SsoAccessPolicy.Decision decision = accessPolicy.evaluate(ssoToken.email());
         if (!decision.allowed()) {
-            System.err.println("❌ [SSO ACCESS DENIED] " + decision.reason() + " for email: " + ssoToken.email());
+            log.warn("SSO access denied for {}: {}", ssoToken.email(), decision.reason());
             return denied(redirect, decision.reason());
         }
 
         UserDtls user = provisionAllowingForARace(ssoToken, decision.faculty());
         if (user == null) {
-            System.err.println("❌ [SSO ERROR] Failed to provision/fetch user account in DB");
+            log.error("SSO sign-in could not provision a local account for {}", ssoToken.email());
             return denied(redirect, "เกิดข้อผิดพลาดในการเตรียมบัญชีผู้ใช้ในระบบ");
         }
 
         if (signInService.requiresTwoFactor(user)) {
-            System.out.println("🔐 [SSO 2FA] User requires two-factor authentication -> redirecting to 2FA page");
+            log.info("SSO sign-in for {} needs a second factor", user.getEmail());
             signInService.startTwoFactor(request, user, SignInService.Method.SSO, ssoToken.accessToken());
             return "redirect:" + SignInService.VERIFY_PATH;
         }
@@ -148,8 +140,8 @@ public class SsoAuthController {
         String landing = signInService.completeSignIn(request, response, user,
                 SignInService.Method.SSO, ssoToken.accessToken());
 
-        System.out.println("🎉 [SSO SUCCESS] User logged in successfully! Role=" + user.getRole() + " -> Redirecting to: " + landing);
-        System.out.println("==================================================================");
+        log.info("SSO sign-in complete for {} (role {}) — sending them to {}",
+                user.getEmail(), user.getRole(), landing);
         return "redirect:" + landing;
     }
 
@@ -215,6 +207,14 @@ public class SsoAuthController {
             session.invalidate();
         }
         SecurityContextHolder.clearContext();
+    }
+
+    /** Enough of a code to correlate with the provider's logs, never the whole thing. */
+    private static String abbreviate(String code) {
+        if (code == null || code.isBlank()) {
+            return "NONE";
+        }
+        return code.length() > 10 ? code.substring(0, 10) + "…" : code;
     }
 
     private String denied(RedirectAttributes redirect, String message) {

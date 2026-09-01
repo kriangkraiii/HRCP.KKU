@@ -58,14 +58,8 @@ public class KkuSsoClient {
      * @return the token payload, or empty when SSO rejected the exchange
      */
     public Optional<SsoToken> exchangeCode(String code) {
-        System.out.println("==================================================================");
-        System.out.println("🚀 [SSO TOKEN EXCHANGE] Sending request to KKU SSO API...");
-        System.out.println("   - Endpoint: " + props.tokenEndpoint());
-        System.out.println("   - App ID: " + props.getAppId());
-        System.out.println("   - Client ID: " + props.getClientId());
-        System.out.println("   - Redirect URL sent: " + props.getRedirectLoginUrl());
-        System.out.println("   - One-time Code: " + (code != null ? (code.length() > 10 ? code.substring(0, 10) + "..." : code) : "NULL"));
-        System.out.println("==================================================================");
+        log.info("SSO token exchange — endpoint={} appId={} clientId={} redirectUrl={}",
+                props.tokenEndpoint(), props.getAppId(), props.getClientId(), props.getRedirectLoginUrl());
 
         ObjectNode body = mapper.createObjectNode();
         body.put("code", code);
@@ -75,24 +69,22 @@ public class KkuSsoClient {
 
         JsonNode response = post(props.tokenEndpoint(), body.toString(), null);
         if (response == null) {
-            System.err.println("❌ [SSO TOKEN ERROR] Response is null (Network error / Connection refused / Timeout)");
+            log.warn("SSO token exchange got no response at all — network, TLS or timeout");
             return Optional.empty();
         }
 
-        System.out.println("📥 [SSO TOKEN RESPONSE] " + response.toString());
-
+        // The body carries the access token, so it is never logged whole. What is
+        // useful for diagnosis is the outcome and, on failure, the error code.
         if (!response.path("ok").asBoolean(false)) {
             // Documented failure shape: 200 OK with ok=false and an error code.
             String err = response.path("error").asText("unknown");
-            System.err.println("❌ [SSO TOKEN REJECTED] KKU SSO returned ok=false, error=" + err);
-            log.warn("SSO token exchange rejected: {}", err);
+            log.warn("SSO token exchange rejected by the provider: error={}", err);
             return Optional.empty();
         }
 
         String accessToken = text(response, "accessToken");
         String email = text(response, "email");
         if (accessToken == null || email == null) {
-            System.err.println("❌ [SSO TOKEN ERROR] Response is ok=true but missing accessToken or email");
             log.error("SSO token response was ok=true but missing accessToken or email");
             return Optional.empty();
         }
@@ -164,15 +156,13 @@ public class KkuSsoClient {
                     .exchange((request, response) -> {
                         String raw = readBody(response);
                         if (response.getStatusCode().isError()) {
-                            System.err.println("❌ [SSO HTTP ERROR] " + safePath(url) + " returned HTTP " + response.getStatusCode().value() + " Body: " + raw);
-                            log.warn("SSO call to {} returned HTTP {}",
-                                    safePath(url), response.getStatusCode().value());
+                            log.warn("SSO call to {} returned HTTP {}: {}",
+                                    safePath(url), response.getStatusCode().value(), raw);
                             return null;
                         }
                         return raw == null || raw.isBlank() ? null : mapper.readTree(raw);
                     });
         } catch (Exception e) {
-            System.err.println("❌ [SSO NETWORK EXCEPTION] Call to " + safePath(url) + " failed: " + e.getMessage());
             log.error("SSO call to {} failed: {}", safePath(url), e.toString());
             return null;
         }
