@@ -411,7 +411,7 @@
         <script th:inline="javascript">
             var basePath = /*[[${settingsBasePath}]]*/ '';
             var csrfToken = /*[[${_csrf.token}]]*/ '';
-            var csrfHeaderName = /*[[${_csrf.headerName}]]*/ 'X-XSRF-TOKEN';
+            var csrfHeaderName = /*[[${_csrf.headerName}]]*/ 'X-HRCP-CT';
 
             // === Auto-save toggle settings ===
             document.querySelectorAll('.setting-toggle').forEach(function(toggle) {

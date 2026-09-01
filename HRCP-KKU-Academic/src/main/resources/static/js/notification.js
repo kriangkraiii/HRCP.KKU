@@ -11,7 +11,7 @@ function getCsrf() {
     if (token) {
         headers[header] = token;
         headers['X-CSRF-TOKEN'] = token;
-        headers['X-XSRF-TOKEN'] = token;
+        headers['X-HRCP-CT'] = token;
     }
     return {
         token: token,

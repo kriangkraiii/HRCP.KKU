@@ -245,7 +245,7 @@
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json',
-					'X-XSRF-TOKEN': /*[[${_csrf.token}]]*/ ''
+					'X-HRCP-CT': /*[[${_csrf.token}]]*/ ''
 				}
 			})
 				.then(function(res) { return res.json(); })

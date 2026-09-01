@@ -72,9 +72,9 @@
 				-->
 				<iframe th:if="${param.logout != null and ssoLogoutUrl != null}"
 						th:src="${ssoLogoutUrl}"
+						class="sso-logout-frame"
 						title="ออกจากระบบ KKU SSO"
-						aria-hidden="true" tabindex="-1"
-						style="display:none;width:0;height:0;border:0"></iframe>
+						aria-hidden="true" tabindex="-1" hidden></iframe>
 
 				<div th:if="${errorMsg}" class="alert alert-danger">
 					<i class="fas fa-exclamation-circle"></i>

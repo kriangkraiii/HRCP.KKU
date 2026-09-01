@@ -157,6 +157,28 @@ class SsoCallbackSurvivesAStaleSessionTest extends AbstractFlowTest {
                 .contains("sso_error");
     }
 
+    /**
+     * The retry sends the browser back to the address it asked for, so that
+     * address has to be one of ours.
+     *
+     * <p>A request for {@code //evil.example/x} arrives with that as its request
+     * URI, and a redirect to it is protocol-relative — the browser reads it as
+     * another host. Anyone could hand out such a link and have this application
+     * forward people off-site.
+     */
+    @Test
+    @DisplayName("code ที่มาพร้อม path หลอกให้ redirect ออกนอกเว็บ ต้องไม่ถูกพากลับไปที่นั่น")
+    void anOffSitePathIsNeverRedirectedBackTo() throws Exception {
+        MvcResult result = mvc.perform(get("//evil.example/x?code=one-time-code-from-sso")
+                .with(holdingADeadSessionCookie()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertThat(result.getResponse().getRedirectedUrl())
+                .as("ต้องจบที่หน้าของเราเอง ไม่ใช่โดเมนที่ผู้ยิงกำหนด")
+                .isEqualTo("/signin?expired=true");
+    }
+
     /** Guards the loop: one retry, then the ordinary expired page. */
     @Test
     @DisplayName("ถ้าเบราว์เซอร์ยังส่ง cookie เดิมกลับมาอีก ต้องไม่วนไม่รู้จบ")

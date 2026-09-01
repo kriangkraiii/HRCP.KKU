@@ -296,7 +296,7 @@ class DocPreviewEngine {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-XSRF-TOKEN': this.getCsrfToken()
+                'X-HRCP-CT': this.getCsrfToken()
             },
             body: JSON.stringify(this.getFormData())
         });
@@ -348,7 +348,7 @@ class DocPreviewEngine {
                 const fetchUrl = this.standaloneUrl + sep + '_t=' + Date.now();
                 const response = await fetch(fetchUrl, {
                     headers: {
-                        'X-XSRF-TOKEN': this.getCsrfToken()
+                        'X-HRCP-CT': this.getCsrfToken()
                     }
                 });
                 if (!response.ok) {

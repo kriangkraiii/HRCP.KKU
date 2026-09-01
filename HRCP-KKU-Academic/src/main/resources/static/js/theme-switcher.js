@@ -49,7 +49,7 @@
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'X-XSRF-TOKEN': token
+                'X-HRCP-CT': token
             },
             body: 'key=themePreference&value=' + encodeURIComponent(pref)
         }).catch(function () {

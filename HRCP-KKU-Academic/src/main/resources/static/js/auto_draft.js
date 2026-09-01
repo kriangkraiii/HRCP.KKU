@@ -170,7 +170,7 @@
 
     fetch(this.endpoint, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "X-XSRF-TOKEN": token },
+      headers: { "Content-Type": "application/json", "X-HRCP-CT": token },
       body: JSON.stringify(this._collect()),
     })
       .then(function (r) {

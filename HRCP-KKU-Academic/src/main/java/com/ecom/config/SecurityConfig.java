@@ -43,6 +43,10 @@ public class SecurityConfig {
 
         private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
+        /** @see #securityFilterChain the reasoning sits with the repository setup */
+        private static final String CSRF_COOKIE_NAME = "HRCPCT";
+        private static final String CSRF_HEADER_NAME = "X-HRCP-CT";
+
         public SecurityConfig(RateLimitFilter rateLimitFilter,
                         CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
                         AuthFailureHandlerImpl authenticationFailureHandler,
@@ -91,7 +95,8 @@ public class SecurityConfig {
                         String code = request.getParameter("code");
                         boolean alreadyRetried = request.getParameter("sso_retry") != null;
 
-                        if (code == null || code.isBlank() || alreadyRetried) {
+                        if (code == null || code.isBlank() || alreadyRetried
+                                        || !isKnownCallbackPath(request.getRequestURI())) {
                                 expiredPage.onInvalidSessionDetected(request, response);
                                 return;
                         }
@@ -109,6 +114,23 @@ public class SecurityConfig {
                                         + "&sso_retry=1";
                         response.sendRedirect(again);
                 };
+        }
+
+        /**
+         * The addresses a login may legitimately come back to.
+         *
+         * <p>An allowlist rather than a check that the path merely looks local.
+         * The retry above sends the browser back to the address it asked for, and
+         * a request for {@code //evil.example/x?code=1} yields the request URI
+         * {@code //evil.example/x} — which {@code sendRedirect} treats as
+         * protocol-relative and follows off-site. Naming the four paths that can
+         * carry a code leaves nothing to reason about.
+         */
+        private static boolean isKnownCallbackPath(String uri) {
+                return "/signin".equals(uri)
+                                || "/signin/".equals(uri)
+                                || "/auth/callback/login".equals(uri)
+                                || "/auth/callback/login/".equals(uri);
         }
 
         /**
@@ -182,6 +204,21 @@ public class SecurityConfig {
                                         // closed. SameSite=Lax stops it riding along on
                                         // cross-site requests.
                                         CookieCsrfTokenRepository repository = new CookieCsrfTokenRepository();
+
+                                        // Named after this application rather than left at the
+                                        // defaults. "XSRF-TOKEN" with an "X-XSRF-TOKEN" header is the
+                                        // shape Spring Security ships with, and it is the first thing
+                                        // a fingerprinting tool reads off a response: the cookie name
+                                        // alone announces the framework before anything else is
+                                        // examined. The session cookie was renamed for the same
+                                        // reason and these now match it.
+                                        //
+                                        // Nothing else needs to know the names: forms render
+                                        // ${_csrf.parameterName} and scripts read the header name
+                                        // from the <meta name="_csrf_header"> tag, both of which
+                                        // follow whatever is set here.
+                                        repository.setCookieName(CSRF_COOKIE_NAME);
+                                        repository.setHeaderName(CSRF_HEADER_NAME);
                                         repository.setCookieCustomizer(cookie -> cookie
                                                         .httpOnly(true)
                                                         .sameSite("Lax")
