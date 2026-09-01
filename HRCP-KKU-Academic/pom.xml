@@ -304,6 +304,9 @@
             <configuration>
                 <!-- ข้ามเทสต์โดยค่าเริ่มต้นเหมือนเดิม แต่สั่งรันได้ด้วย -DskipTests=false -->
                 <skipTests>${skipTests}</skipTests>
+                <systemPropertyVariables>
+                    <spring.profiles.active>test</spring.profiles.active>
+                </systemPropertyVariables>
                 <!-- The browser suite needs a Playwright download and a running
                      Docker daemon, so it is not part of `mvn test`. It runs
                      under -Pe2e via failsafe instead. -->

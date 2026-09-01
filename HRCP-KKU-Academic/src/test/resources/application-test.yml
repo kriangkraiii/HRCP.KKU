@@ -1,0 +1,53 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  flyway:
+    enabled: false
+  h2:
+    console:
+      enabled: true
+  main:
+    allow-bean-definition-overriding: true
+  mail:
+    host: localhost
+    port: 25
+    username: noreply@example.invalid
+    password: dummy
+
+app:
+  admin:
+    email: admin@example.invalid
+    password: Test-Passw0rd!
+  user:
+    email: user@example.invalid
+    password: Test-Passw0rd!
+  alert:
+    email:
+      enabled: false
+
+fs:
+  api:
+    enabled: false
+
+cp:
+  web:
+    enabled: false
+  sync:
+    on-startup: false
+
+server:
+  ssl:
+    enabled: false
+
+logging:
+  level:
+    com.ecom: WARN
+    org.springframework: WARN
