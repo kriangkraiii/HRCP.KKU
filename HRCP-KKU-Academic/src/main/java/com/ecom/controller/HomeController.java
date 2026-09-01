@@ -71,16 +71,36 @@ public class HomeController {
 		return "redirect:/signin";
 	}
 
+	/**
+	 * The sign-in page, and the address KKU SSO returns to.
+	 *
+	 * <p>The provider is configured to come back to {@code /signin} rather than
+	 * straight to the callback endpoint, so anything arriving here with a
+	 * {@code code} is handed on to {@link com.ecom.sso.SsoAuthController}.
+	 */
 	@GetMapping("/signin")
 	public String login(@org.springframework.web.bind.annotation.RequestParam(name = "code", required = false) String code,
-			@org.springframework.web.bind.annotation.RequestParam(name = "error", required = false) String error) {
+			@org.springframework.web.bind.annotation.RequestParam(name = "error", required = false) String error,
+			HttpServletRequest request) {
 		if (code != null && !code.isBlank()) {
-			System.out.println("📥 [SSO] Request arrived at /signin with code=" + (code.length() > 10 ? code.substring(0, 10) + "..." : code) + " -> Forwarding to /auth/callback/login");
+			logger.info("SSO returned to /signin with a code — handing over to the callback");
 			return "forward:/auth/callback/login";
 		}
 		if (error != null && !error.isBlank()) {
-			System.out.println("📥 [SSO] Request arrived at /signin with error=" + error + " -> Forwarding to /auth/callback/login");
+			logger.warn("SSO returned to /signin with error={}", error);
 			return "forward:/auth/callback/login";
+		}
+
+		// Someone opening the login page and the provider bouncing the browser
+		// back empty-handed look identical from the server — same URL, no
+		// parameters — and the second is what a misregistered redirect URL looks
+		// like. The referrer is the only thing that tells them apart, so when it
+		// names the SSO host this is worth a line of its own.
+		String referrer = request.getHeader("Referer");
+		if (referrer != null && referrer.contains("sso")) {
+			logger.warn("Browser arrived at /signin from {} with no code and no error — "
+					+ "the provider ended the flow without issuing one. Check that the redirect URL "
+					+ "registered for this app-id is exactly the one this app sends.", referrer);
 		}
 		return "guest/login";
 	}

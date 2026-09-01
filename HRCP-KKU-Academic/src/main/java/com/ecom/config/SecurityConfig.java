@@ -57,6 +57,57 @@ public class SecurityConfig {
         }
 
         /**
+         * What to do when a browser presents a session this server has never heard of.
+         *
+         * <p>Ordinarily: send it to the "your session expired" page, which is what
+         * {@code invalidSessionUrl} used to do for everything.
+         *
+         * <p>The exception is a login coming back from KKU SSO. Sessions live in
+         * memory, so every restart leaves browsers holding a cookie for a session
+         * that no longer exists — for as long as the cookie lasts, half an hour
+         * here. The provider returns to {@code /signin?code=…} and that request
+         * carries the dead cookie, so session management intercepted it and
+         * redirected <em>before any controller ran</em>. The one-time code went
+         * with it. Nothing was logged, because nothing of ours was reached: the
+         * professor simply landed back on the login page, and trying again
+         * produced exactly the same nothing.
+         *
+         * <p>So when a code is present the dead cookie is cleared and the browser
+         * is sent back to the same address with the code intact. The second time
+         * around there is no stale id to object to, and the login continues.
+         *
+         * <p>{@code sso_retry} bounds it to one attempt: a browser that ignores
+         * the delete gets the expired page rather than a redirect loop.
+         */
+        private org.springframework.security.web.session.InvalidSessionStrategy staleCookieMustNotBreakAnSsoLogin() {
+                var expiredPage = new org.springframework.security.web.session.SimpleRedirectInvalidSessionStrategy(
+                                "/signin?expired=true");
+
+                return (request, response) -> {
+                        String code = request.getParameter("code");
+                        boolean alreadyRetried = request.getParameter("sso_retry") != null;
+
+                        if (code == null || code.isBlank() || alreadyRetried) {
+                                expiredPage.onInvalidSessionDetected(request, response);
+                                return;
+                        }
+
+                        jakarta.servlet.http.Cookie dead = new jakarta.servlet.http.Cookie(sessionCookieName, "");
+                        dead.setPath("/");
+                        dead.setMaxAge(0);
+                        dead.setHttpOnly(true);
+                        dead.setSecure(request.isSecure());
+                        response.addCookie(dead);
+
+                        String query = request.getQueryString();
+                        String again = request.getRequestURI()
+                                        + "?" + (query == null || query.isBlank() ? "code=" + code : query)
+                                        + "&sso_retry=1";
+                        response.sendRedirect(again);
+                };
+        }
+
+        /**
          * Screens that exist only to serve local password login. They stay open in
          * dev mode and are refused outright once SSO is the only way in.
          *
@@ -156,7 +207,7 @@ public class SecurityConfig {
                                 .sessionManagement(session -> session
                                                 .sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED)
                                                 .sessionFixation(fixation -> fixation.changeSessionId())
-                                                .invalidSessionUrl("/signin?expired=true")
+                                                .invalidSessionStrategy(staleCookieMustNotBreakAnSsoLogin())
                                                 .maximumSessions(1)
                                                 .maxSessionsPreventsLogin(false))
 
