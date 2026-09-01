@@ -219,7 +219,11 @@ public class SecurityConfig {
                                 .authorizeHttpRequests(authz -> authz
                                                 // "/signin/" เป็นคนละ path กับ "/signin" ในสายตา Spring 6
                                                 // และ KKU SSO ส่ง code กลับมาที่ตัวมี slash ปิดท้าย
-                                                .requestMatchers("/", "/signin", "/signin/",
+                                                //
+                                                // "/logout" ต้องเปิดด้วย: .logout().permitAll() ครอบเฉพาะ POST
+                                                // แต่ SSO ส่งผู้ใช้กลับมาด้วย GET หลังจากปิด session ฝั่งเขาแล้ว
+                                                // ซึ่งตอนนั้นเราไม่มี session เหลือ จึงถูกมองเป็นคนแปลกหน้า
+                                                .requestMatchers("/", "/signin", "/signin/", "/logout", "/logout/",
                                                                 "/static/**", "/css/**", "/js/**", "/img/**",
                                                                 "/vendor/**",
                                                                 "/img/profile_img/**",
@@ -272,9 +276,15 @@ public class SecurityConfig {
                                                 .invalidateHttpSession(true)
                                                 .deleteCookies(sessionCookieName)
                                                 .clearAuthentication(true)
-                                                .logoutSuccessHandler((request, response,
-                                                                authentication) -> response
-                                                                                .sendRedirect(logoutDestination()))
+                                                .logoutSuccessHandler((request, response, authentication) -> {
+                                                        // Where the browser goes next is decided here and nowhere
+                                                        // else. In SSO mode it leaves for the provider, and if that
+                                                        // journey stalls there is otherwise nothing on our side that
+                                                        // says a logout was ever asked for.
+                                                        String destination = logoutDestination();
+                                                        log.info("Local session ended — sending the browser to {}", destination);
+                                                        response.sendRedirect(destination);
+                                                })
                                                 .permitAll())
                                 .exceptionHandling(ex -> ex
                                                 .authenticationEntryPoint((request, response, authException) -> {

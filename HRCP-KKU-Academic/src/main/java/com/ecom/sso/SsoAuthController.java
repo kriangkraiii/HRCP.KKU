@@ -151,9 +151,18 @@ public class SsoAuthController {
         return "redirect:" + landing;
     }
 
-    /** Where KKU SSO returns after logging the user out of the identity provider. */
-    @GetMapping({"/auth/callback/logout", "/auth/callback/logout/", "/logout"})
+    /**
+     * Where KKU SSO returns after logging the user out of the identity provider.
+     *
+     * <p>Every spelling the provider might use is mapped. It has already been seen
+     * returning to {@code /signin/} rather than {@code /signin} on the way in, and
+     * since Spring 6 a trailing slash makes a different path — one with no
+     * handler, which security then turns into a redirect that looks like nothing
+     * happened at all.
+     */
+    @GetMapping({"/auth/callback/logout", "/auth/callback/logout/", "/logout", "/logout/"})
     public String logoutCallback(HttpServletRequest request) {
+        log.info("Logout callback at {} — ending the local session", request.getRequestURI());
         endLocalSession(request);
         return "redirect:/signin?logout=true";
     }
