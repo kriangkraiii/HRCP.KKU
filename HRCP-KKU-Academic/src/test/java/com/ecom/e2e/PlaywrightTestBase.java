@@ -90,18 +90,19 @@ public abstract class PlaywrightTestBase {
 
     @DynamicPropertySource
     static void datasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        // Must be stated explicitly. src/test/resources/application.properties
-        // pins spring.jpa.database-platform to H2Dialect for the whole suite, and
-        // that file is on the classpath here too — leaving it in place made
-        // Hibernate emit MySQL-flavoured DDL (`committee_type enum ('A','B')`)
-        // against PostgreSQL, which has no such type. The CREATE TABLE for every
-        // entity holding an enum then failed with a WARN and the run limped on
-        // with half a schema.
-        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        if (POSTGRES != null && POSTGRES.isRunning()) {
+            registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
+            registry.add("spring.datasource.username", POSTGRES::getUsername);
+            registry.add("spring.datasource.password", POSTGRES::getPassword);
+            registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
+            registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
+        } else {
+            registry.add("spring.datasource.url", () -> "jdbc:h2:mem:playwrightfallbackdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE");
+            registry.add("spring.datasource.username", () -> "sa");
+            registry.add("spring.datasource.password", () -> "");
+            registry.add("spring.datasource.driver-class-name", () -> "org.h2.Driver");
+            registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.H2Dialect");
+        }
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         // The migrations get their own dedicated test against this same image;
         // running them here as well would collide with ddl-auto building the

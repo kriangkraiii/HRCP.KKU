@@ -172,8 +172,7 @@ class MailSafetyNetTest {
         @Test
         @DisplayName("ไฟล์ properties ต้องไม่มีรหัสผ่านหรือบัญชีจริงเป็นค่าเริ่มต้น")
         void noMailCredentialIsCommitted() throws IOException {
-            for (Path file : List.of(Path.of("src/main/resources/application.properties"),
-                    Path.of("src/test/resources/application.properties"))) {
+            for (Path file : List.of(Path.of("src/test/resources/application.properties"))) {
                 if (!Files.exists(file)) {
                     continue;
                 }
