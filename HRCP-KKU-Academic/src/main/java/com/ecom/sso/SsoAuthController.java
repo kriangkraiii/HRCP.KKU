@@ -86,8 +86,13 @@ public class SsoAuthController {
      * Where KKU SSO returns after a successful login.
      *
      * <p>The path must match the Redirect URL registered on the SSO request form.
+     *
+     * <p>Mapped with and without a trailing slash: Spring 6 treats the two as
+     * different paths, and the provider has been observed to use the slashed
+     * form. A callback that matches no mapping is indistinguishable from an
+     * expired session by the time the browser sees it.
      */
-    @GetMapping("/auth/callback/login")
+    @GetMapping({"/auth/callback/login", "/auth/callback/login/"})
     public String loginCallback(@RequestParam(required = false) String code,
             @RequestParam(required = false) String error,
             @RequestParam(name = "error_description", required = false) String errorDescription,
@@ -147,7 +152,7 @@ public class SsoAuthController {
     }
 
     /** Where KKU SSO returns after logging the user out of the identity provider. */
-    @GetMapping({"/auth/callback/logout", "/logout"})
+    @GetMapping({"/auth/callback/logout", "/auth/callback/logout/", "/logout"})
     public String logoutCallback(HttpServletRequest request) {
         endLocalSession(request);
         return "redirect:/signin?logout=true";

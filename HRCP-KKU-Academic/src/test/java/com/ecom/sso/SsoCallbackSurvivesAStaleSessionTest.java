@@ -126,6 +126,37 @@ class SsoCallbackSurvivesAStaleSessionTest extends AbstractFlowTest {
                 .contains("/signin");
     }
 
+    /**
+     * The address KKU SSO actually returns to: {@code /signin/}, with a trailing
+     * slash.
+     *
+     * <p>Spring stopped matching a trailing slash to a mapping without one, so
+     * {@code @GetMapping("/signin")} does not serve {@code /signin/}. The request
+     * was therefore neither public nor handled: security saw an anonymous call to
+     * something that needs a login and redirected to the sign-in page, taking the
+     * one-time code with it. The provider was doing exactly what it was registered
+     * to do; one character of path decided the whole thing.
+     */
+    @Test
+    @DisplayName("/signin/ (มี slash ปิดท้าย) ต้องเปิดได้เหมือน /signin เพราะ SSO ส่งมาที่ path นี้")
+    void theTrailingSlashFormIsServedToo() throws Exception {
+        mvc.perform(get("/signin/"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("/auth/callback/login/ ก็ต้องมี handler เช่นกัน เผื่อ SSO ใช้รูปแบบมี slash")
+    void theCallbackEndpointAlsoAnswersWithATrailingSlash() throws Exception {
+        // ไม่มี code ติดมา จึงจบที่ sso_error โดยไม่ต้องยิงเครือข่ายไปหา provider
+        MvcResult result = mvc.perform(get("/auth/callback/login/"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertThat(result.getResponse().getRedirectedUrl())
+                .as("ต้องเข้าถึง controller ได้จริง ไม่ใช่ถูก security ปัดตกเพราะไม่มี mapping")
+                .contains("sso_error");
+    }
+
     /** Guards the loop: one retry, then the ordinary expired page. */
     @Test
     @DisplayName("ถ้าเบราว์เซอร์ยังส่ง cookie เดิมกลับมาอีก ต้องไม่วนไม่รู้จบ")

@@ -77,8 +77,17 @@ public class HomeController {
 	 * <p>The provider is configured to come back to {@code /signin} rather than
 	 * straight to the callback endpoint, so anything arriving here with a
 	 * {@code code} is handed on to {@link com.ecom.sso.SsoAuthController}.
+	 *
+	 * <p><b>Both spellings are mapped, and that is not tidiness.</b> KKU SSO
+	 * returns to {@code /signin/} — with the trailing slash — and since Spring 6
+	 * a mapping for {@code /signin} no longer answers for it. The request then
+	 * matched no handler and no public rule, so security treated it as an
+	 * anonymous call to a protected page and redirected to the login screen,
+	 * discarding the one-time code on the way. Every login failed on one
+	 * character of path, and the redirect that swallowed it looked exactly like an
+	 * expired session.
 	 */
-	@GetMapping("/signin")
+	@GetMapping({"/signin", "/signin/"})
 	public String login(@org.springframework.web.bind.annotation.RequestParam(name = "code", required = false) String code,
 			@org.springframework.web.bind.annotation.RequestParam(name = "error", required = false) String error,
 			HttpServletRequest request) {

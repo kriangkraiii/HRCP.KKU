@@ -217,7 +217,9 @@ public class SecurityConfig {
 
                                 .authenticationProvider(authenticationProvider)
                                 .authorizeHttpRequests(authz -> authz
-                                                .requestMatchers("/", "/signin",
+                                                // "/signin/" เป็นคนละ path กับ "/signin" ในสายตา Spring 6
+                                                // และ KKU SSO ส่ง code กลับมาที่ตัวมี slash ปิดท้าย
+                                                .requestMatchers("/", "/signin", "/signin/",
                                                                 "/static/**", "/css/**", "/js/**", "/img/**",
                                                                 "/vendor/**",
                                                                 "/img/profile_img/**",
