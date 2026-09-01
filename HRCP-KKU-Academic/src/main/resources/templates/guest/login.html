@@ -68,15 +68,11 @@
 					<span th:text="${errorMsg}"></span>
 				</div>
 
-				<!-- SSO mode: a single button, no local credential entry at all -->
+				<!-- SSO mode: a clean single button without local credentials -->
 				<th:block th:if="${ssoMode}">
-					<a th:href="@{/auth/sso/login}" class="btn-guest-primary">
+					<a th:href="@{/auth/sso/login}" class="btn-guest-primary" id="ssoLoginBtn">
 						<i class="fas fa-university" aria-hidden="true"></i> เข้าสู่ระบบด้วย KKU SSO
 					</a>
-					<p class="guest-card-sub" style="margin-top:1rem;font-size:0.9em">
-						ระบบนี้เปิดให้เฉพาะบุคลากรที่ได้รับสิทธิ์เท่านั้น
-						หากเข้าใช้งานไม่ได้ กรุณาติดต่อผู้ดูแลระบบ
-					</p>
 				</th:block>
 
 				<!-- Development mode: the original email/password login -->

@@ -21,6 +21,7 @@ import com.ecom.external.harvest.model.HarvestResult;
 import com.ecom.external.harvest.model.RawPublication;
 import com.ecom.external.model.ExternalAuthorMapping;
 import com.ecom.external.model.FsFaculty;
+import com.ecom.external.service.EnglishNameSplitter;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -92,10 +93,21 @@ public class DblpAdapter implements PublicationSourceAdapter {
                     }
                 }
 
-                // If no DBLP PID seeded, query by English name
+                // If no DBLP PID seeded, query by English name (clean without academic titles)
                 if (queries.isEmpty() && faculty.getNameEn() != null && !faculty.getNameEn().isBlank()) {
-                    String cleanEnName = faculty.getNameEn().trim();
-                    queries.add(cleanEnName);
+                    EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(faculty.getNameEn());
+                    if (parts.firstName() != null && parts.lastName() != null) {
+                        queries.add(parts.firstName() + " " + parts.lastName());
+                        // If compound surname (e.g. Runapongsa Sae-ung), also add primary surname query
+                        String[] lastTokens = parts.lastName().split("[\\s\\-]+");
+                        if (lastTokens.length > 1) {
+                            queries.add(parts.firstName() + " " + lastTokens[0]);
+                        }
+                    } else if (parts.firstName() != null) {
+                        queries.add(parts.firstName());
+                    } else {
+                        queries.add(faculty.getNameEn().trim());
+                    }
                 }
 
                 for (String q : queries) {

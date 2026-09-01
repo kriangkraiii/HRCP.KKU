@@ -1,5 +1,6 @@
 package com.ecom.external.harvest.adapter;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -85,43 +86,46 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
 
         try {
             int fromYear = context.yearFrom();
+            String filterParam = "from-pub-date:" + fromYear + "-01-01";
 
-            while (cursor != null && !cursor.isBlank() && page <= maxPages) {
-                String filterParam = "from-pub-date:" + fromYear + "-01-01";
-                String url = "/works?query.affiliation=Khon+Kaen+University&filter=" + filterParam
-                        + "&rows=" + props.getPageSize() + "&cursor=" + cursor;
+            // Query Crossref per faculty member to ensure complete individual coverage
+            for (FsFaculty faculty : context.targetFaculty()) {
+                if (faculty.getNameEn() == null || faculty.getNameEn().isBlank()) {
+                    continue;
+                }
 
-                log.debug("Crossref harvest request page {}: {}", page, url);
+                EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(faculty.getNameEn());
+                if (parts.firstName() == null || parts.lastName() == null) {
+                    continue;
+                }
+
+                String authorQuery = java.net.URLEncoder.encode(parts.firstName() + " " + parts.lastName(), StandardCharsets.UTF_8);
+                String url = "/works?query.author=" + authorQuery + "&filter=" + filterParam + "&rows=" + props.getPageSize();
+
+                log.debug("Crossref harvest request for user {} ({}: {})", faculty.getFsUserId(), faculty.getNameEn(), url);
                 requestsMade++;
 
-                String responseBody = restClient.get()
-                        .uri(url)
-                        .retrieve()
-                        .body(String.class);
+                try {
+                    String responseBody = restClient.get()
+                            .uri(url)
+                            .retrieve()
+                            .body(String.class);
 
-                if (responseBody == null || responseBody.isBlank()) {
-                    break;
+                    if (responseBody != null && !responseBody.isBlank()) {
+                        JsonNode root = mapper.readTree(responseBody);
+                        JsonNode message = root.path("message");
+                        JsonNode items = message.path("items");
+                        if (items.isArray() && !items.isEmpty()) {
+                            for (JsonNode item : items) {
+                                processItem(item, facultyByName, harvested);
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("Crossref author query failed for {}: {}", faculty.getNameEn(), ex.getMessage());
                 }
-
-                JsonNode root = mapper.readTree(responseBody);
-                JsonNode message = root.path("message");
-                JsonNode items = message.path("items");
-                if (!items.isArray() || items.isEmpty()) {
-                    break;
-                }
-
-                for (JsonNode item : items) {
-                    processItem(item, facultyByName, harvested);
-                }
-
-                String nextCursor = message.path("next-cursor").asText(null);
-                if (nextCursor == null || nextCursor.equals(cursor)) {
-                    break;
-                }
-                cursor = nextCursor;
 
                 throttle(props.getThrottleMs());
-                page++;
             }
 
             long durationMs = System.currentTimeMillis() - startedAt;

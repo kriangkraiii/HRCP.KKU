@@ -210,60 +210,67 @@
                                     <div class="d-flex flex-column gap-2">
                                         <button type="button" class="btn btn-primary w-100 fw-semibold"
                                                 id="btnHarvestAll"
-                                                onclick="triggerHarvestAllAsync()"
+                                                data-call="triggerHarvestAllAsync"
                                                 th:disabled="${harvestRunning}">
                                             <i class="fas fa-cloud-arrow-down me-1"></i> ดึงทุกแหล่งพร้อมกัน
                                         </button>
 
                                         <div class="dropdown">
-                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
-                                                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100 d-flex align-items-center justify-content-between"
+                                                    type="button" id="btnDropdownSource" data-bs-toggle="dropdown" aria-expanded="false"
                                                     th:disabled="${harvestRunning}">
-                                                <i class="fas fa-filter me-1"></i> เลือกดึงเฉพาะแหล่ง
+                                                <span id="dropdownSourceLabel"><i class="fas fa-filter me-1"></i> เลือกดึงเฉพาะแหล่ง</span>
                                             </button>
-                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm w-100">
                                                 <li>
-                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('openalex')">
-                                                        <i class="fas fa-globe text-info me-2"></i>OpenAlex (Global API)
+                                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center justify-content-between harvest-source-item"
+                                                            data-call="triggerHarvestSourceAsync"
+                                                            data-call-args='["openalex", "OpenAlex (Global API)"]'
+                                                            data-source="openalex"
+                                                            data-name="OpenAlex (Global API)">
+                                                        <span><i class="fas fa-globe text-info me-2"></i>OpenAlex (Global API)</span>
+                                                        <i class="fas fa-play text-muted small ms-2"></i>
                                                     </button>
                                                 </li>
                                                 <li>
-                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('crossref')">
-                                                        <i class="fas fa-crosshairs text-warning me-2"></i>Crossref (DOI Works)
+                                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center justify-content-between harvest-source-item"
+                                                            data-call="triggerHarvestSourceAsync"
+                                                            data-call-args='["crossref", "Crossref (DOI Works)"]'
+                                                            data-source="crossref"
+                                                            data-name="Crossref (DOI Works)">
+                                                        <span><i class="fas fa-crosshairs text-warning me-2"></i>Crossref (DOI Works)</span>
+                                                        <i class="fas fa-play text-muted small ms-2"></i>
                                                     </button>
                                                 </li>
                                                 <li>
-                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('dblp')">
-                                                        <i class="fas fa-laptop-code text-primary me-2"></i>DBLP (Computer Science)
+                                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center justify-content-between harvest-source-item"
+                                                            data-call="triggerHarvestSourceAsync"
+                                                            data-call-args='["dblp", "DBLP (Computer Science)"]'
+                                                            data-source="dblp"
+                                                            data-name="DBLP (Computer Science)">
+                                                        <span><i class="fas fa-laptop-code text-primary me-2"></i>DBLP (Computer Science)</span>
+                                                        <i class="fas fa-play text-muted small ms-2"></i>
                                                     </button>
                                                 </li>
                                                 <li>
-                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('thaijo')">
-                                                        <i class="fas fa-file-lines text-danger me-2"></i>ThaiJO (OAI-PMH)
+                                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center justify-content-between harvest-source-item"
+                                                            data-call="triggerHarvestSourceAsync"
+                                                            data-call-args='["thaijo", "ThaiJO (OAI-PMH)"]'
+                                                            data-source="thaijo"
+                                                            data-name="ThaiJO (OAI-PMH)">
+                                                        <span><i class="fas fa-file-lines text-danger me-2"></i>ThaiJO (OAI-PMH)</span>
+                                                        <i class="fas fa-play text-muted small ms-2"></i>
                                                     </button>
                                                 </li>
                                                 <li>
-                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('kkuir')">
-                                                        <i class="fas fa-building-columns text-secondary me-2"></i>KKU IR (คลังสถาบัน มข.)
+                                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center justify-content-between harvest-source-item"
+                                                            data-call="triggerHarvestSourceAsync"
+                                                            data-call-args='["kkuir", "KKU IR (คลังสถาบัน มข.)"]'
+                                                            data-source="kkuir"
+                                                            data-name="KKU IR (คลังสถาบัน มข.)">
+                                                        <span><i class="fas fa-building-columns text-secondary me-2"></i>KKU IR (คลังสถาบัน มข.)</span>
+                                                        <i class="fas fa-play text-muted small ms-2"></i>
                                                     </button>
-                                                </li>
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>c/harvest/thaijo}" method="post">
-                                                        <button type="submit" class="dropdown-item py-2">
-                                                            <i class="fas fa-file-lines text-danger me-2"></i>ThaiJO (OAI-PMH)
-                                                        </button>
-                                                    </form>
-                                                </li>
-                                                <li>
-                                                    <form th:action="@{/admin/external-sync/harvest/kkuir}" method="post">
-                                                        <button type="submit" class="dropdown-item py-2">
-                                                            <i class="fas fa-building-columns text-secondary me-2"></i>KKU IR (คลังสถาบัน มข.)
-                                                        </button>
-                                                    </form>
                                                 </li>
                                             </ul>
                                         </div>
@@ -623,7 +630,7 @@
                 </div>
                 <div class="modal-footer bg-light py-2 px-4 justify-content-between">
                     <div class="small text-muted" id="harvestDurationText">ใช้เวลา: 0.0s</div>
-                    <button type="button" class="btn btn-primary d-none" id="harvestDoneBtn" onclick="location.reload()">
+                    <button type="button" class="btn btn-primary d-none" id="harvestDoneBtn" data-call="reloadPage">
                         <i class="fas fa-check me-1"></i>ปิดหน้าต่างและดูผลลัพธ์
                     </button>
                 </div>
@@ -632,86 +639,90 @@
     </div>
 
     <script>
-        function switchToChangesTab() {
-            var tabBtn = document.getElementById('tab-changes-btn');
-            if (tabBtn) {
-                var tab = new bootstrap.Tab(tabBtn);
-                tab.show();
-            }
-        }
-
-        // Handle URL hash or param
-        document.addEventListener('DOMContentLoaded', function() {
-            var params = new URLSearchParams(window.location.search);
-            if (params.get('tab') === 'changes') {
-                switchToChangesTab();
-            }
-        });
-
-        // Submit button locking to prevent double clicks
-        document.addEventListener('submit', function (e) {
-            var form = e.target;
-            if (!form.dataset || form.dataset.lockButton !== '1') return;
-            var btn = form.querySelector('button');
-            if (!btn) return;
-            if (btn.disabled) {
-                e.preventDefault();
-                return;
-            }
-            btn.disabled = true;
-            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังดึงข้อมูล…';
-        });
-
-        // Cooldown timer handlers
-        document.querySelectorAll('button[data-cooldown]').forEach(function (btn) {
-            var left = parseInt(btn.getAttribute('data-cooldown') || '0', 10);
-            if (!left) return;
-
-            var label = btn.querySelector('span');
-            var timer = setInterval(function () {
-                left--;
-                if (left <= 0) {
-                    clearInterval(timer);
-                    location.reload();
-                    return;
-                }
-                if (label) label.textContent = 'รออีก ' + left + ' วินาที';
-            }, 1000);
-        });
-
-        // Real-Time Progress Tracker Script
-        var harvestModalObj = null;
+        // --- 1. Global Functions (Available immediately on window) ---
         var harvestPoller = null;
 
+        function getCsrfHeaders() {
+            var headers = { 'Accept': 'application/json', 'Content-Type': 'application/json' };
+            var csrfTokenEl = document.querySelector('meta[name="_csrf"]');
+            var csrfHeaderEl = document.querySelector('meta[name="_csrf_header"]');
+            var token = csrfTokenEl ? csrfTokenEl.getAttribute('content') : null;
+            var header = csrfHeaderEl ? csrfHeaderEl.getAttribute('content') : 'X-CSRF-TOKEN';
+            if (token) {
+                headers[header] = token;
+            }
+            return headers;
+        }
+
         function triggerHarvestAllAsync() {
-            openHarvestModal("ดึงงานวิจัยทุกแหล่งพร้อมกัน (5 แหล่ง)");
-            fetch('/admin/external-sync/harvest/start', { method: 'POST' })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    startHarvestPolling();
-                })
-                .catch(function(err) {
-                    console.error("Harvest start error:", err);
-                    startHarvestPolling();
-                });
+            var dropdownLabel = document.getElementById('dropdownSourceLabel');
+            if (dropdownLabel) dropdownLabel.innerHTML = '<i class="fas fa-filter me-1"></i> เลือกดึงเฉพาะแหล่ง';
+            openHarvestModal("ดึงงานวิจัยทุกแหล่งพร้อมกัน (5 แหล่ง)", "ALL");
+            
+            fetch('/admin/external-sync/harvest/start', {
+                method: 'POST',
+                headers: getCsrfHeaders()
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error("HTTP status " + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                startHarvestPolling();
+            })
+            .catch(function(err) {
+                console.error("Harvest start error:", err);
+                var taskEl = document.getElementById('harvestTaskText');
+                if (taskEl) taskEl.textContent = 'กำลังเชื่อมต่อเซิร์ฟเวอร์...';
+                startHarvestPolling();
+            });
         }
 
-        function triggerHarvestSourceAsync(source) {
-            openHarvestModal("ดึงงานวิจัยจาก " + source.toUpperCase());
-            fetch('/admin/external-sync/harvest/source-async/' + source, { method: 'POST' })
-                .then(function(r) { return r.json(); })
-                .then(function(data) {
-                    startHarvestPolling();
-                })
-                .catch(function(err) {
-                    console.error("Harvest single source start error:", err);
-                    startHarvestPolling();
-                });
+        function triggerHarvestSourceAsync(source, displayName) {
+            var labelName = displayName || (source ? source.toUpperCase() : 'UNKNOWN');
+            var dropdownLabel = document.getElementById('dropdownSourceLabel');
+            if (dropdownLabel) {
+                dropdownLabel.innerHTML = '<i class="fas fa-check text-primary me-1"></i> เลือกแล้ว: ' + labelName;
+            }
+
+            // Hide dropdown menu
+            var ddToggle = document.getElementById('btnDropdownSource');
+            if (ddToggle && window.bootstrap && bootstrap.Dropdown) {
+                try {
+                    var ddInstance = bootstrap.Dropdown.getInstance(ddToggle);
+                    if (ddInstance) ddInstance.hide();
+                } catch(e) {}
+            }
+            var openDdMenu = document.querySelector('.dropdown-menu.show');
+            if (openDdMenu) openDdMenu.classList.remove('show');
+
+            openHarvestModal("ดึงงานวิจัยจาก: " + labelName, source ? source.toUpperCase() : 'ALL');
+
+            fetch('/admin/external-sync/harvest/source-async/' + encodeURIComponent(source), {
+                method: 'POST',
+                headers: getCsrfHeaders()
+            })
+            .then(function(r) {
+                if (!r.ok) throw new Error("HTTP status " + r.status);
+                return r.json();
+            })
+            .then(function(data) {
+                startHarvestPolling();
+            })
+            .catch(function(err) {
+                console.error("Harvest single source start error:", err);
+                var taskEl = document.getElementById('harvestTaskText');
+                if (taskEl) taskEl.textContent = 'กำลังเชื่อมต่อเซิร์ฟเวอร์...';
+                startHarvestPolling();
+            });
         }
 
-        function openHarvestModal(title) {
+        function openHarvestModal(title, targetSource) {
             var modalEl = document.getElementById('harvestProgressModal');
-            if (!modalEl) return;
+            if (!modalEl) {
+                console.error("Modal #harvestProgressModal not found!");
+                return;
+            }
             document.getElementById('harvestProgressModalLabel').innerHTML = '<i class="fas fa-network-wired me-2"></i>' + title;
             document.getElementById('harvestPercentText').textContent = '0%';
             var pBar = document.getElementById('harvestProgressBar');
@@ -725,26 +736,74 @@
             document.getElementById('harvestCompletionAlert').classList.add('d-none');
             document.getElementById('harvestDoneBtn').classList.add('d-none');
 
-            // Reset source status badges
-            document.querySelectorAll('#harvestSourcesList .badge-source-status').forEach(function(b) {
-                b.className = 'badge bg-secondary badge-source-status';
-                b.textContent = 'รอดำเนินการ';
+            var normTarget = (targetSource || 'ALL').toUpperCase();
+            if (normTarget === 'KKU_IR') normTarget = 'KKUIR';
+
+            // Configure source list visibility and status
+            document.querySelectorAll('#harvestSourcesList .list-group-item').forEach(function(item) {
+                var src = item.getAttribute('data-src');
+                var badge = item.querySelector('.badge-source-status');
+                if (normTarget === 'ALL' || src === normTarget) {
+                    item.classList.remove('opacity-50', 'bg-light');
+                    if (normTarget !== 'ALL') {
+                        item.classList.add('bg-primary', 'bg-opacity-10', 'border-primary');
+                    } else {
+                        item.classList.remove('bg-primary', 'bg-opacity-10', 'border-primary');
+                    }
+                    if (badge) {
+                        badge.className = 'badge bg-primary badge-source-status';
+                        badge.innerHTML = normTarget === 'ALL' ? 'รอดำเนินการ' : '<i class="fas fa-spinner fa-spin me-1"></i>กำลังดึง';
+                    }
+                } else {
+                    item.classList.add('opacity-50', 'bg-light');
+                    item.classList.remove('bg-primary', 'bg-opacity-10', 'border-primary');
+                    if (badge) {
+                        badge.className = 'badge bg-light text-muted border badge-source-status';
+                        badge.innerHTML = '<i class="fas fa-minus me-1"></i>ไม่ได้เลือก';
+                    }
+                }
             });
 
-            harvestModalObj = new bootstrap.Modal(modalEl);
-            harvestModalObj.show();
+            // Display modal reliably (Bootstrap + Vanilla Fallback)
+            if (window.bootstrap && bootstrap.Modal) {
+                try {
+                    var inst = bootstrap.Modal.getOrCreateInstance(modalEl);
+                    inst.show();
+                } catch(e) {
+                    showModalFallback(modalEl);
+                }
+            } else {
+                showModalFallback(modalEl);
+            }
+        }
+
+        function showModalFallback(modalEl) {
+            modalEl.classList.add('show');
+            modalEl.style.display = 'block';
+            modalEl.removeAttribute('aria-hidden');
+            modalEl.setAttribute('aria-modal', 'true');
+            document.body.classList.add('modal-open');
+            if (!document.getElementById('harvestModalBackdrop')) {
+                var backdrop = document.createElement('div');
+                backdrop.className = 'modal-backdrop fade show';
+                backdrop.id = 'harvestModalBackdrop';
+                document.body.appendChild(backdrop);
+            }
         }
 
         function startHarvestPolling() {
             if (harvestPoller) clearInterval(harvestPoller);
-            harvestPoller = setInterval(function() {
-                fetch('/admin/external-sync/harvest/progress')
-                    .then(function(r) { return r.json(); })
-                    .then(function(snap) {
-                        updateHarvestProgressUI(snap);
-                    })
-                    .catch(function(err) { console.error("Poll error:", err); });
-            }, 600);
+            fetchProgress();
+            harvestPoller = setInterval(fetchProgress, 500);
+        }
+
+        function fetchProgress() {
+            fetch('/admin/external-sync/harvest/progress')
+                .then(function(r) { return r.json(); })
+                .then(function(snap) {
+                    updateHarvestProgressUI(snap);
+                })
+                .catch(function(err) { console.error("Poll error:", err); });
         }
 
         function updateHarvestProgressUI(snap) {
@@ -783,7 +842,7 @@
             }
 
             if (snap.completed || (!snap.running && pct >= 100)) {
-                clearInterval(harvestPoller);
+                if (harvestPoller) clearInterval(harvestPoller);
                 pBar.className = 'progress-bar bg-success';
                 document.getElementById('harvestLiveBadge').className = 'badge bg-success text-white fw-bold';
                 document.getElementById('harvestLiveBadge').innerHTML = '<i class="fas fa-check-circle me-1"></i>เสร็จสมบูรณ์';
@@ -794,6 +853,86 @@
                 document.getElementById('harvestDoneBtn').classList.remove('d-none');
             }
         }
+
+        // --- 2. Global Event Delegation (Capture Phase) ---
+        document.addEventListener('click', function(e) {
+            var allBtn = e.target.closest('#btnHarvestAll');
+            if (allBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                triggerHarvestAllAsync();
+                return;
+            }
+
+            var item = e.target.closest('.harvest-source-item');
+            if (item) {
+                e.preventDefault();
+                e.stopPropagation();
+                var src = item.getAttribute('data-source');
+                var name = item.getAttribute('data-name');
+                triggerHarvestSourceAsync(src, name);
+                return;
+            }
+
+            var doneBtn = e.target.closest('#harvestDoneBtn');
+            if (doneBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                window.location.reload();
+                return;
+            }
+        }, true);
+
+        // --- 3. Export to window ---
+        window.triggerHarvestAllAsync = triggerHarvestAllAsync;
+        window.triggerHarvestSourceAsync = triggerHarvestSourceAsync;
+        window.reloadPage = function() { window.location.reload(); };
+
+        function switchToChangesTab() {
+            var tabBtn = document.getElementById('tab-changes-btn');
+            if (tabBtn && window.bootstrap && bootstrap.Tab) {
+                var tab = new bootstrap.Tab(tabBtn);
+                tab.show();
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function() {
+            var params = new URLSearchParams(window.location.search);
+            if (params.get('tab') === 'changes') {
+                switchToChangesTab();
+            }
+        });
+
+        // Submit button locking to prevent double clicks
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (!form.dataset || form.dataset.lockButton !== '1') return;
+            var btn = form.querySelector('button');
+            if (!btn) return;
+            if (btn.disabled) {
+                e.preventDefault();
+                return;
+            }
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> กำลังดึงข้อมูล…';
+        });
+
+        // Cooldown timer handlers
+        document.querySelectorAll('button[data-cooldown]').forEach(function (btn) {
+            var left = parseInt(btn.getAttribute('data-cooldown') || '0', 10);
+            if (!left) return;
+
+            var label = btn.querySelector('span');
+            var timer = setInterval(function () {
+                left--;
+                if (left <= 0) {
+                    clearInterval(timer);
+                    location.reload();
+                    return;
+                }
+                if (label) label.textContent = 'รออีก ' + left + ' วินาที';
+            }, 1000);
+        });
     </script>
 </section>
 </body>

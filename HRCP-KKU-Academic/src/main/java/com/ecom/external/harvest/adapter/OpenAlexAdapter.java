@@ -1,5 +1,6 @@
 package com.ecom.external.harvest.adapter;
 
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -88,43 +89,50 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
 
         try {
             int fromYear = context.yearFrom();
-            String rorId = props.getRorId();
 
-            while (cursor != null && !cursor.isBlank() && page <= maxPages) {
-                String filterParam = "authorships.institutions.ror:" + rorId + ",from_publication_date:" + fromYear + "-01-01";
+            // Search directly per faculty member using clean English name
+            for (FsFaculty faculty : context.targetFaculty()) {
+                if (faculty.getNameEn() == null || faculty.getNameEn().isBlank()) {
+                    continue;
+                }
+
+                EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(faculty.getNameEn());
+                if (parts.firstName() == null || parts.lastName() == null) {
+                    continue;
+                }
+
+                String cleanAuthorName = parts.firstName() + " " + parts.lastName();
+                String filterParam = "raw_author_name.search:" + java.net.URLEncoder.encode(cleanAuthorName, StandardCharsets.UTF_8)
+                        + ",from_publication_date:" + fromYear + "-01-01";
                 if (context.since() != null) {
                     filterParam += ",from_updated_date:" + context.since().toLocalDate().toString();
                 }
 
-                String url = "/works?filter=" + filterParam + "&per_page=" + props.getPageSize() + "&cursor=" + cursor;
+                String url = "/works?filter=" + filterParam + "&per_page=" + props.getPageSize();
 
-                log.debug("OpenAlex harvest request page {}: {}", page, url);
+                log.debug("OpenAlex author harvest request for user {} ({}: {})", faculty.getFsUserId(), faculty.getNameEn(), url);
                 requestsMade++;
 
-                String responseBody = restClient.get()
-                        .uri(url)
-                        .retrieve()
-                        .body(String.class);
+                try {
+                    String responseBody = restClient.get()
+                            .uri(url)
+                            .retrieve()
+                            .body(String.class);
 
-                if (responseBody == null || responseBody.isBlank()) {
-                    break;
+                    if (responseBody != null && !responseBody.isBlank()) {
+                        JsonNode root = mapper.readTree(responseBody);
+                        JsonNode results = root.path("results");
+                        if (results.isArray() && !results.isEmpty()) {
+                            for (JsonNode workNode : results) {
+                                processWork(workNode, facultyByName, harvested);
+                            }
+                        }
+                    }
+                } catch (Exception ex) {
+                    log.warn("OpenAlex author query failed for {}: {}", faculty.getNameEn(), ex.getMessage());
                 }
-
-                JsonNode root = mapper.readTree(responseBody);
-                JsonNode results = root.path("results");
-                if (!results.isArray() || results.isEmpty()) {
-                    break;
-                }
-
-                for (JsonNode workNode : results) {
-                    processWork(workNode, facultyByName, harvested);
-                }
-
-                JsonNode meta = root.path("meta");
-                cursor = meta.path("next_cursor").asText(null);
 
                 throttle(props.getThrottleMs());
-                page++;
             }
 
             long durationMs = System.currentTimeMillis() - startedAt;

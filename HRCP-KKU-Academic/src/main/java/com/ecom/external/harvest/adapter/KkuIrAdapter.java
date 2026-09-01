@@ -96,64 +96,96 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
 
         Map<String, FsFaculty> facultyByName = buildFacultyNameIndex(context.targetFaculty());
 
-        String resumptionToken = null;
-        int page = 1;
-        int maxPages = 30;
+        String baseUrl = props.getOaiEndpoint();
+        String fromDate = context.yearFrom() + "-01-01";
+
+        String setConfig = props.getSet();
+        List<String> targetSets = new ArrayList<>();
+        if (setConfig != null && !setConfig.isBlank()) {
+            for (String s : setConfig.split(",")) {
+                if (!s.trim().isEmpty()) {
+                    targetSets.add(s.trim());
+                }
+            }
+        }
+        if (targetSets.isEmpty()) {
+            targetSets.add(null);
+        }
 
         try {
-            String baseUrl = props.getOaiEndpoint();
-            String fromDate = context.yearFrom() + "-01-01";
+            for (String currentSet : targetSets) {
+                String resumptionToken = null;
+                int page = 1;
+                int maxPages = 30;
 
-            while (page <= maxPages) {
-                String requestUrl;
-                if (resumptionToken == null || resumptionToken.isBlank()) {
-                    requestUrl = baseUrl + "?verb=ListRecords&metadataPrefix=oai_dc&from=" + fromDate;
-                    if (props.getSet() != null && !props.getSet().isBlank()) {
-                        requestUrl += "&set=" + props.getSet();
+                while (page <= maxPages) {
+                    String requestUrl;
+                    if (resumptionToken == null || resumptionToken.isBlank()) {
+                        requestUrl = baseUrl + "?verb=ListRecords&metadataPrefix=oai_dc&from=" + fromDate;
+                        if (currentSet != null && !currentSet.isBlank()) {
+                            requestUrl += "&set=" + currentSet;
+                        }
+                    } else {
+                        requestUrl = baseUrl + "?verb=ListRecords&resumptionToken=" + resumptionToken;
                     }
-                } else {
-                    requestUrl = baseUrl + "?verb=ListRecords&resumptionToken=" + resumptionToken;
+
+                    log.debug("KKU IR OAI-PMH harvest set={} page {}: {}", currentSet, page, requestUrl);
+                    requestsMade++;
+
+                    String xml = restClient.get()
+                            .uri(requestUrl)
+                            .retrieve()
+                            .body(String.class);
+
+                    if (xml == null || xml.isBlank()) {
+                        break;
+                    }
+
+                    DocumentBuilder builder = xmlFactory.newDocumentBuilder();
+                    Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+
+                    // Check for OAI error response (e.g. noRecordsMatch)
+                    NodeList errorNodes = doc.getElementsByTagNameNS("http://www.openarchives.org/OAI/2.0/", "error");
+                    if (errorNodes.getLength() == 0) {
+                        errorNodes = doc.getElementsByTagName("error");
+                    }
+                    if (errorNodes.getLength() > 0) {
+                        String errCode = ((Element) errorNodes.item(0)).getAttribute("code");
+                        String errText = errorNodes.item(0).getTextContent();
+                        if ("noRecordsMatch".equalsIgnoreCase(errCode)) {
+                            log.debug("KKU IR OAI-PMH: no records match for set={}", currentSet);
+                            break;
+                        } else {
+                            log.warn("KKU IR OAI-PMH notice: code={}, message={}", errCode, errText);
+                            break;
+                        }
+                    }
+
+                    NodeList recordNodes = doc.getElementsByTagNameNS("http://www.openarchives.org/OAI/2.0/", "record");
+                    if (recordNodes.getLength() == 0) {
+                        recordNodes = doc.getElementsByTagName("record");
+                    }
+
+                    for (int i = 0; i < recordNodes.getLength(); i++) {
+                        Element record = (Element) recordNodes.item(i);
+                        processRecord(record, facultyByName, harvested);
+                    }
+
+                    NodeList tokenNodes = doc.getElementsByTagNameNS("http://www.openarchives.org/OAI/2.0/", "resumptionToken");
+                    if (tokenNodes.getLength() == 0) {
+                        tokenNodes = doc.getElementsByTagName("resumptionToken");
+                    }
+
+                    if (tokenNodes.getLength() > 0 && tokenNodes.item(0).getTextContent() != null
+                            && !tokenNodes.item(0).getTextContent().isBlank()) {
+                        resumptionToken = tokenNodes.item(0).getTextContent().trim();
+                    } else {
+                        break;
+                    }
+
+                    throttle(props.getThrottleMs());
+                    page++;
                 }
-
-                log.debug("KKU IR OAI-PMH harvest page {}: {}", page, requestUrl);
-                requestsMade++;
-
-                String xml = restClient.get()
-                        .uri(requestUrl)
-                        .retrieve()
-                        .body(String.class);
-
-                if (xml == null || xml.isBlank()) {
-                    break;
-                }
-
-                DocumentBuilder builder = xmlFactory.newDocumentBuilder();
-                Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
-
-                NodeList recordNodes = doc.getElementsByTagNameNS("http://www.openarchives.org/OAI/2.0/", "record");
-                if (recordNodes.getLength() == 0) {
-                    recordNodes = doc.getElementsByTagName("record");
-                }
-
-                for (int i = 0; i < recordNodes.getLength(); i++) {
-                    Element record = (Element) recordNodes.item(i);
-                    processRecord(record, facultyByName, harvested);
-                }
-
-                NodeList tokenNodes = doc.getElementsByTagNameNS("http://www.openarchives.org/OAI/2.0/", "resumptionToken");
-                if (tokenNodes.getLength() == 0) {
-                    tokenNodes = doc.getElementsByTagName("resumptionToken");
-                }
-
-                if (tokenNodes.getLength() > 0 && tokenNodes.item(0).getTextContent() != null
-                        && !tokenNodes.item(0).getTextContent().isBlank()) {
-                    resumptionToken = tokenNodes.item(0).getTextContent().trim();
-                } else {
-                    break;
-                }
-
-                throttle(props.getThrottleMs());
-                page++;
             }
 
             long durationMs = System.currentTimeMillis() - startedAt;

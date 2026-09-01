@@ -235,25 +235,38 @@ public class PublicationHarvestService {
             return HarvestResult.failed(sourceName, 0, 0, "No adapter registered for source: " + sourceName);
         }
 
+        String source = adapter.sourceName();
+        String syncType = source.toLowerCase();
+
+        int totalSteps = 3; // 1 step fetch + 2 steps DB write
+        progressTracker.start(totalSteps, List.of(source));
+        progressTracker.updateSource(source, "RUNNING", 30, 0, "กำลังดึงข้อมูลจาก " + source + "...");
+        progressTracker.advance(source, "กำลังดึงข้อมูลจาก " + source + "...");
+
         List<FsFaculty> facultyList = facultyRepo.findAll();
         Map<Long, List<ExternalAuthorMapping>> mappings = loadMappingsGroupedByUser();
 
-        String syncType = adapter.sourceName().toLowerCase();
         writer.markRunning(syncType);
         OffsetDateTime cursor = loadCursor(syncType);
 
         HarvestContext context = HarvestContext.of(cursor, props.getYearFrom(), facultyList, mappings);
         HarvestResult result = adapter.harvest(context);
 
+        int written = 0;
         if (result.success() && !result.publications().isEmpty()) {
-            int written = writeInBatches(result.publications());
+            written = writeInBatches(result.publications(), source);
             writer.recordSuccess(syncType, written, result.requestsMade(), result.durationMs(), result.newCursor(), result.message());
+            progressTracker.updateSource(source, "SUCCESS", 100, result.publications().size(),
+                    String.format("สำเร็จ (%d รายการ, บันทึก %d)", result.publications().size(), written));
         } else if (result.success()) {
             writer.recordSuccess(syncType, 0, result.requestsMade(), result.durationMs(), result.newCursor(), result.message());
+            progressTracker.updateSource(source, "SUCCESS", 100, 0, "สำเร็จ (ไม่พบรายการใหม่)");
         } else {
             writer.recordFailure(syncType, new RuntimeException(result.message()));
+            progressTracker.updateSource(source, "FAILED", 100, 0, result.message());
         }
 
+        progressTracker.finish(List.of(result), written);
         return result;
     }
 

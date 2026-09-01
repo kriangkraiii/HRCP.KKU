@@ -210,11 +210,12 @@ body {
     border: none;
     border-radius: var(--g-radius-sm);
     background: linear-gradient(135deg, var(--g-navy) 0%, var(--g-blue) 100%);
-    color: #fff;
+    color: #fff !important;
     font-family: var(--g-font);
     font-size: 1rem;
     font-weight: 600;
     cursor: pointer;
+    text-decoration: none !important;
     transition: transform 0.2s var(--g-ease), box-shadow 0.2s var(--g-ease);
     margin-top: 6px;
     display: flex;
@@ -226,10 +227,134 @@ body {
 .btn-guest-primary:hover {
     transform: translateY(-2px);
     box-shadow: 0 6px 24px rgba(26, 35, 126, 0.3);
+    color: #fff !important;
+    text-decoration: none !important;
 }
 
 .btn-guest-primary:active {
     transform: translateY(0);
+}
+
+/* ---------- SSO Welcome Card (UI/UX Pro Max) ---------- */
+.sso-welcome-container {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    padding: 28px 24px;
+    margin-top: 8px;
+    box-shadow: 0 10px 30px rgba(10, 22, 40, 0.06), 0 1px 3px rgba(10, 22, 40, 0.04);
+    text-align: center;
+    transition: transform 0.3s var(--g-ease), box-shadow 0.3s var(--g-ease);
+}
+
+.sso-welcome-container:hover {
+    box-shadow: 0 14px 36px rgba(10, 22, 40, 0.09), 0 2px 6px rgba(10, 22, 40, 0.04);
+}
+
+.sso-icon-badge {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 16px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, rgba(26, 35, 126, 0.08) 0%, rgba(41, 98, 255, 0.15) 100%);
+    color: #1a237e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    border: 1px solid rgba(26, 35, 126, 0.1);
+}
+
+.sso-title {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--g-navy);
+    margin-bottom: 6px;
+}
+
+.sso-description {
+    font-size: 0.88rem;
+    color: var(--g-muted);
+    line-height: 1.6;
+    margin-bottom: 22px;
+}
+
+.btn-guest-sso {
+    width: 100%;
+    padding: 14px 20px;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #0d47a1 0%, #1565c0 50%, #1976d2 100%);
+    color: #ffffff !important;
+    font-family: var(--g-font);
+    font-size: 1.05rem;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    box-shadow: 0 6px 20px rgba(13, 71, 161, 0.28);
+    transition: all 0.25s var(--g-ease);
+}
+
+.btn-guest-sso:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 28px rgba(13, 71, 161, 0.38);
+    background: linear-gradient(135deg, #0a3880 0%, #0d47a1 50%, #1565c0 100%);
+    color: #ffffff !important;
+    text-decoration: none !important;
+}
+
+.btn-guest-sso:active {
+    transform: translateY(0);
+}
+
+.sso-domains-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+    font-size: 0.82rem;
+    color: var(--g-muted);
+    flex-wrap: wrap;
+}
+
+.sso-domains-badge span {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: #f1f5f9;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: 500;
+    border: 1px solid #e2e8f0;
+}
+
+.sso-domains-badge i {
+    color: #10b981;
+    font-size: 0.85rem;
+}
+
+.sso-security-note {
+    margin-top: 22px;
+    padding-top: 16px;
+    border-top: 1px dashed var(--g-border);
+    font-size: 0.8rem;
+    color: #64748b;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    line-height: 1.5;
+}
+
+.sso-security-note i {
+    color: #0d47a1;
+    font-size: 14px;
+    flex-shrink: 0;
 }
 
 .btn-guest-primary:disabled {
