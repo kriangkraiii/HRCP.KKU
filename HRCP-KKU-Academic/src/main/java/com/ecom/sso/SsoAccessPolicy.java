@@ -96,27 +96,39 @@ public class SsoAccessPolicy {
         if (local == null) {
             local = userRepository.findByEmail(normalized);
         }
+        Optional<FsFaculty> faculty = facultyRepo.findByEmailNormalized(normalized);
+
+        System.out.println("🔍 [SSO ACCESS POLICY] Checking permissions for email: " + normalized);
+        System.out.println("   - Local DB account found: " + (local != null ? ("YES (Role=" + local.getRole() + ", Active=" + local.getIsEnable() + ")") : "NO"));
+        System.out.println("   - Faculty Directory record found: " + (faculty.isPresent() ? ("YES (Active=" + faculty.get().isActive() + ")") : "NO"));
+        System.out.println("   - In extraAllowed list: " + (extraAllowed.contains(normalized) ? "YES" : "NO"));
+        System.out.println("   - Setting app.auth.sso.allow-existing-local-users: " + allowExistingLocalUsers);
+
         if (local != null && !Boolean.TRUE.equals(local.getIsEnable())) {
+            System.err.println("❌ [SSO ACCESS REFUSED] Local account is deactivated in DB");
             log.warn("SSO login refused — the local account is deactivated: {}", normalized);
             return Decision.deny("บัญชีนี้ถูกปิดการใช้งานในระบบ กรุณาติดต่อผู้ดูแลระบบ");
         }
 
-        Optional<FsFaculty> faculty = facultyRepo.findByEmailNormalized(normalized);
         if (faculty.isPresent()) {
             FsFaculty f = faculty.get();
             if (!f.isActive()) {
+                System.err.println("❌ [SSO ACCESS REFUSED] Faculty record is inactive");
                 log.warn("SSO login refused — faculty record is inactive");
                 return Decision.deny("บัญชีนี้ถูกระงับการใช้งานในระบบต้นทาง");
             }
+            System.out.println("✅ [SSO ACCESS GRANTED] Allowed as Faculty member: " + f.getFirstName() + " " + f.getLastName());
             return Decision.allow(f);
         }
 
         if (extraAllowed.contains(normalized)) {
+            System.out.println("✅ [SSO ACCESS GRANTED] Allowed via extra allowed emails list");
             return Decision.allow(null);
         }
 
         // Allow active committee members registered in the system
         if (committeeRepo != null && committeeRepo.findByEmailIgnoreCaseAndIsActiveTrue(normalized).isPresent()) {
+            System.out.println("✅ [SSO ACCESS GRANTED] Allowed as active committee member");
             log.info("SSO login accepted — user is an active committee member");
             return Decision.allow(null);
         }
@@ -124,14 +136,13 @@ public class SsoAccessPolicy {
         // A deactivated row was already turned away above, so reaching here with a
         // local account means it is one this deployment is willing to admit.
         if (allowExistingLocalUsers && local != null) {
+            System.out.println("✅ [SSO ACCESS GRANTED] Allowed as existing local user in DB (Role=" + local.getRole() + ")");
             return Decision.allow(null);
         }
 
-        // Logged without the address: a refusal is routine and the e-mail is
-        // personal data that does not belong in an ops log.
+        System.err.println("❌ [SSO ACCESS REFUSED] Email '" + normalized + "' is not authorized in DB or Allowlist");
         log.info("SSO login refused — address is not on the allowlist");
-        return Decision.deny("บัญชีของคุณยังไม่ได้รับสิทธิ์เข้าใช้ระบบนี้ "
-                + "กรุณาติดต่อผู้ดูแลระบบเพื่อขอเปิดสิทธิ์");
+        return Decision.deny("บัญชีของคุณยังไม่ได้รับสิทธิ์เข้าใช้ระบบนี้ กรุณาติดต่อผู้ดูแลระบบเพื่อขอเปิดสิทธิ์");
     }
 
     /** Outcome of an allowlist check. */

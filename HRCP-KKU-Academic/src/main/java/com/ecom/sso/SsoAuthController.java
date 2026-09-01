@@ -69,7 +69,16 @@ public class SsoAuthController {
     /** Starts a login by handing the browser to KKU SSO. */
     @GetMapping("/auth/sso/login")
     public String startLogin(RedirectAttributes redirect) {
+        System.out.println("==================================================================");
+        System.out.println("👉 [SSO] User clicked 'เข้าสู่ระบบด้วย KKU SSO'");
+        System.out.println("   - Stage: " + props.getStage());
+        System.out.println("   - App ID: " + props.getAppId());
+        System.out.println("   - Redirect URL configured: " + props.getRedirectLoginUrl());
+        System.out.println("   - Generated SSO Login URL: " + props.loginUrl());
+        System.out.println("==================================================================");
+
         if (!props.isConfigured()) {
+            System.err.println("❌ [SSO ERROR] Configuration is incomplete: " + props.describeMissing());
             log.error("SSO login attempted but configuration is incomplete: {}", props.describeMissing());
             redirect.addFlashAttribute("errorMsg",
                     "ระบบ SSO ยังไม่ได้ตั้งค่าให้สมบูรณ์ กรุณาติดต่อผู้ดูแลระบบ");
@@ -85,48 +94,67 @@ public class SsoAuthController {
      */
     @GetMapping("/auth/callback/login")
     public String loginCallback(@RequestParam(required = false) String code,
+            @RequestParam(required = false) String error,
+            @RequestParam(name = "error_description", required = false) String errorDescription,
             HttpServletRequest request,
             HttpServletResponse response,
             RedirectAttributes redirect) {
 
+        System.out.println("==================================================================");
+        System.out.println("📥 [SSO CALLBACK] Received callback from KKU SSO");
+        System.out.println("   - URI: " + request.getRequestURI());
+        System.out.println("   - Code: " + (code != null ? (code.length() > 10 ? code.substring(0, 10) + "..." : code) : "NULL"));
+        System.out.println("   - Error from SSO: " + error + " (" + errorDescription + ")");
+        System.out.println("==================================================================");
+
+        if (error != null && !error.isBlank()) {
+            System.err.println("❌ [SSO ERROR] Provider returned error: " + error + " - " + errorDescription);
+            return denied(redirect, "KKU SSO แจ้งข้อผิดพลาด: " + (errorDescription != null ? errorDescription : error));
+        }
+
         if (code == null || code.isBlank()) {
+            System.err.println("❌ [SSO ERROR] Callback arrived without a code parameter");
             log.warn("SSO callback arrived without a code parameter");
-            return denied(redirect, "การเข้าสู่ระบบไม่สมบูรณ์ กรุณาลองใหม่อีกครั้ง");
+            return denied(redirect, "การเข้าสู่ระบบไม่สมบูรณ์ ไม่ได้รับ code จาก KKU SSO");
         }
 
         var token = client.exchangeCode(code);
         if (token.isEmpty()) {
-            return denied(redirect, "ยืนยันตัวตนกับระบบ SSO ไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+            System.err.println("❌ [SSO ERROR] Token exchange failed with KKU SSO API");
+            return denied(redirect, "ยืนยันตัวตนกับระบบ SSO ไม่สำเร็จ (ไม่สามารถแลก Token ได้) กรุณาลองใหม่อีกครั้ง");
         }
 
         KkuSsoClient.SsoToken ssoToken = token.get();
+        System.out.println("✅ [SSO TOKEN OK] Successfully received token for: " + ssoToken.email() + " (Name: " + ssoToken.firstName() + " " + ssoToken.lastName() + ")");
+
         SsoAccessPolicy.Decision decision = accessPolicy.evaluate(ssoToken.email());
         if (!decision.allowed()) {
+            System.err.println("❌ [SSO ACCESS DENIED] " + decision.reason() + " for email: " + ssoToken.email());
             return denied(redirect, decision.reason());
         }
 
         UserDtls user = provisionAllowingForARace(ssoToken, decision.faculty());
         if (user == null) {
-            return denied(redirect, "เกิดข้อผิดพลาดในการเตรียมบัญชีผู้ใช้ กรุณาลองใหม่อีกครั้ง");
+            System.err.println("❌ [SSO ERROR] Failed to provision/fetch user account in DB");
+            return denied(redirect, "เกิดข้อผิดพลาดในการเตรียมบัญชีผู้ใช้ในระบบ");
         }
 
         if (signInService.requiresTwoFactor(user)) {
-            // No session yet — the token is stashed for the challenge only, and
-            // becomes part of a real session once the code checks out.
+            System.out.println("🔐 [SSO 2FA] User requires two-factor authentication -> redirecting to 2FA page");
             signInService.startTwoFactor(request, user, SignInService.Method.SSO, ssoToken.accessToken());
-            log.info("SSO sign-in parked at the one-time code step");
             return "redirect:" + SignInService.VERIFY_PATH;
         }
 
         String landing = signInService.completeSignIn(request, response, user,
                 SignInService.Method.SSO, ssoToken.accessToken());
 
-        log.info("SSO sign-in completed for a local account with role {}", user.getRole());
+        System.out.println("🎉 [SSO SUCCESS] User logged in successfully! Role=" + user.getRole() + " -> Redirecting to: " + landing);
+        System.out.println("==================================================================");
         return "redirect:" + landing;
     }
 
     /** Where KKU SSO returns after logging the user out of the identity provider. */
-    @GetMapping("/auth/callback/logout")
+    @GetMapping({"/auth/callback/logout", "/logout"})
     public String logoutCallback(HttpServletRequest request) {
         endLocalSession(request);
         return "redirect:/signin?logout=true";

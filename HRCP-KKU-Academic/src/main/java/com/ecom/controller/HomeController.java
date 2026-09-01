@@ -72,8 +72,14 @@ public class HomeController {
 	}
 
 	@GetMapping("/signin")
-	public String login(@org.springframework.web.bind.annotation.RequestParam(name = "code", required = false) String code) {
+	public String login(@org.springframework.web.bind.annotation.RequestParam(name = "code", required = false) String code,
+			@org.springframework.web.bind.annotation.RequestParam(name = "error", required = false) String error) {
 		if (code != null && !code.isBlank()) {
+			System.out.println("📥 [SSO] Request arrived at /signin with code=" + (code.length() > 10 ? code.substring(0, 10) + "..." : code) + " -> Forwarding to /auth/callback/login");
+			return "forward:/auth/callback/login";
+		}
+		if (error != null && !error.isBlank()) {
+			System.out.println("📥 [SSO] Request arrived at /signin with error=" + error + " -> Forwarding to /auth/callback/login");
 			return "forward:/auth/callback/login";
 		}
 		return "guest/login";
