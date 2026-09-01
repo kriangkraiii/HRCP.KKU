@@ -2655,6 +2655,122 @@ body {
   color: var(--text-secondary);
 }
 
+/* ===== Attachment table (responsive) ===== */
+.attachment-table-wrap {
+  container-type: inline-size;
+  container-name: attachtable;
+  overflow-x: auto; /* fallback: buttons stay reachable if the table still overflows */
+}
+
+.admin-table-attachments {
+  table-layout: auto;
+}
+
+.admin-table-attachments tbody td:last-child {
+  white-space: nowrap;
+}
+
+.admin-table-attachments tbody td:last-child .d-flex {
+  flex-wrap: nowrap;
+}
+
+.admin-table-attachments .at-name {
+  min-width: 160px;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+/* Tighter cells so all 6 columns fit inside the detail panel */
+@media (max-width: 1200px) {
+  .admin-table-attachments thead th,
+  .admin-table-attachments tbody td {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}
+
+/* Stacked card layout: no horizontal scrolling, delete button always visible */
+@media (max-width: 768px) {
+  .detail-section-body .input-group {
+    flex-wrap: wrap;
+  }
+
+  .detail-section-body .input-group > .form-control {
+    flex: 1 1 100%;
+    border-radius: 6px !important;
+    margin-bottom: 8px;
+  }
+
+  .detail-section-body .input-group > .btn {
+    flex: 1 1 100%;
+    border-radius: 6px !important;
+  }
+}
+
+/* Stack as cards whenever the panel itself is narrow (not just the viewport),
+   so the action buttons are never clipped. */
+@container attachtable (max-width: 680px) {
+  .admin-table-attachments,
+  .admin-table-attachments tbody,
+  .admin-table-attachments tr,
+  .admin-table-attachments td {
+    display: block;
+    width: 100%;
+  }
+
+  .admin-table-attachments thead {
+    display: none;
+  }
+
+  .admin-table-attachments tbody tr {
+    position: relative;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+    background: var(--bg-card);
+  }
+
+  .admin-table-attachments tbody td {
+    border: none;
+    padding: 3px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    text-align: left;
+  }
+
+  .admin-table-attachments tbody td::before {
+    content: attr(data-label);
+    flex: 0 0 auto;
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--text-muted);
+  }
+
+  .admin-table-attachments tbody td.at-name {
+    display: block;
+    font-weight: 600;
+    padding-bottom: 6px;
+  }
+
+  .admin-table-attachments tbody td.at-name::before {
+    display: none;
+  }
+
+  /* Row number is meaningless in card layout - hide it */
+  .admin-table-attachments tbody td.at-index {
+    display: none;
+  }
+
+  .admin-table-attachments tbody td:last-child {
+    padding-top: 8px;
+    margin-top: 6px;
+    border-top: 1px solid var(--border-color);
+  }
+}
+
 /* Course detail sub-row */
 .admin-table .course-detail-row td {
   padding: 6px var(--space-md) 10px;
@@ -2870,8 +2986,8 @@ body {
     min-width: calc(50% - var(--space-sm));
     flex: 0 0 calc(50% - var(--space-sm));
   }
-  .admin-table thead th:nth-child(4),
-  .admin-table tbody td:nth-child(4) {
+  .admin-table:not(.admin-table-attachments) thead th:nth-child(4),
+  .admin-table:not(.admin-table-attachments) tbody td:nth-child(4) {
     display: none; /* hide email on tablet */
   }
 }
@@ -2887,12 +3003,13 @@ body {
   .admin-search {
     flex-direction: column;
   }
-  .admin-table thead th:nth-child(5),
-  .admin-table tbody td:nth-child(5),
-  .admin-table thead th:nth-child(6),
-  .admin-table tbody td:nth-child(6) {
+  .admin-table:not(.admin-table-attachments) thead th:nth-child(5),
+  .admin-table:not(.admin-table-attachments) tbody td:nth-child(5),
+  .admin-table:not(.admin-table-attachments) thead th:nth-child(6),
+  .admin-table:not(.admin-table-attachments) tbody td:nth-child(6) {
     display: none; /* hide dates on mobile */
   }
+  /* attachments table uses the stacked card layout instead of hiding columns */
 }
 
 /* =============================================
