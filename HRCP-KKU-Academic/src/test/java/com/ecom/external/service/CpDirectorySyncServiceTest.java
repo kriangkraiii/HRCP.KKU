@@ -55,6 +55,16 @@ class CpDirectorySyncServiceTest {
         when(imageStorage.storeFromBytes(any(), anyString())).thenReturn("cp-somchai.png");
     }
 
+    /** A live read: what the client returns when the college site answered. */
+    private CpWebClient.DirectoryFetch live(CpPerson... people) {
+        return new CpWebClient.DirectoryFetch(List.of(people), false);
+    }
+
+    /** The same people, but served from the on-disk snapshot after a timeout. */
+    private CpWebClient.DirectoryFetch fromSnapshot(CpPerson... people) {
+        return new CpWebClient.DirectoryFetch(List.of(people), true);
+    }
+
     private CpPerson person() {
         return new CpPerson(EMAIL, "สมชาย", "ใจดี",
                 "ผู้ช่วยศาสตราจารย์ดร.", "ผศ.ดร.",
@@ -76,7 +86,7 @@ class CpDirectorySyncServiceTest {
         UserDtls u = user();
         u.setProfileImage("default.png");
         when(userRepo.findByEmail(EMAIL)).thenReturn(u);
-        when(client.fetchAll()).thenReturn(List.of(person()));
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
 
         CpDirectorySyncService.Result result = sync.sync();
 
@@ -91,7 +101,7 @@ class CpDirectorySyncServiceTest {
         u.setProfileImage("my-own-photo.jpg");
         when(imageStorage.exists("my-own-photo.jpg")).thenReturn(true);
         when(userRepo.findByEmail(EMAIL)).thenReturn(u);
-        when(client.fetchAll()).thenReturn(List.of(person()));
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
 
         sync.sync();
 
@@ -106,7 +116,7 @@ class CpDirectorySyncServiceTest {
         UserDtls u = user();
         u.setProfileImage("default.png");
         when(userRepo.findByEmail(EMAIL)).thenReturn(u);
-        when(client.fetchAll()).thenReturn(List.of(person()));
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
         when(imageStorage.exists("cp-somchai.jaidee.png")).thenReturn(true);
 
         CpDirectorySyncService.Result result = sync.sync();
@@ -123,7 +133,7 @@ class CpDirectorySyncServiceTest {
         u.setProfileImage("default.png");
         u.setAcademicPosition("รองศาสตราจารย์");   // จากระบบ HR ซึ่งเป็นแหล่งหลัก
         when(userRepo.findByEmail(EMAIL)).thenReturn(u);
-        when(client.fetchAll()).thenReturn(List.of(person()));
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
 
         sync.sync();
 
@@ -138,7 +148,7 @@ class CpDirectorySyncServiceTest {
     @DisplayName("คนบนเว็บคณะที่ไม่มีในระบบเรา ต้องไม่ถูกสร้างเป็นบัญชีใหม่")
     void someoneOnlyOnTheWebsiteIsNotCreatedHere() {
         when(userRepo.findByEmail(EMAIL)).thenReturn(null);
-        when(client.fetchAll()).thenReturn(List.of(person()));
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
 
         CpDirectorySyncService.Result result = sync.sync();
 
@@ -157,11 +167,45 @@ class CpDirectorySyncServiceTest {
         staff.setFsUserId(1001L);
         when(staffRepo.findByFsUserId(1001L)).thenReturn(Optional.of(staff));
         when(userRepo.findByEmail(EMAIL)).thenReturn(null);
-        when(client.fetchAll()).thenReturn(List.of(person()));
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
 
         sync.sync();
 
         assertThat(staff.getDepartment()).isEqualTo("หลักสูตรวิทยาการคอมพิวเตอร์");
+    }
+
+    @Test
+    @DisplayName("เมื่อเว็บคณะล่ม แล้วอ่านจากข้อมูลสำรอง งานซิงค์ต้องเดินต่อและรายงานว่าใช้ข้อมูลสำรอง")
+    void aRunServedFromTheSnapshotStillAppliesAndSaysSo() {
+        UserDtls u = user();
+        u.setProfileImage("default.png");
+        when(userRepo.findByEmail(EMAIL)).thenReturn(u);
+        when(client.fetchAllWithFallback()).thenReturn(fromSnapshot(person()));
+
+        CpDirectorySyncService.Result result = sync.sync();
+
+        // A snapshot run is a success — every field is applied exactly as a live one.
+        assertThat(result.success()).isTrue();
+        assertThat(result.photos()).isEqualTo(1);
+        assertThat(u.getFirstName()).isEqualTo("สมชาย");
+
+        // …but it must not be reported as if the site had answered.
+        assertThat(result.usedFallbackCache()).isTrue();
+        assertThat(result.describe()).contains("ข้อมูลสำรองในเครื่อง");
+    }
+
+    @Test
+    @DisplayName("การอ่านสดจากเว็บคณะ ต้องไม่ถูกรายงานว่าเป็นข้อมูลสำรอง")
+    void aLiveRunIsNotReportedAsFallback() {
+        UserDtls u = user();
+        u.setProfileImage("default.png");
+        when(userRepo.findByEmail(EMAIL)).thenReturn(u);
+        when(client.fetchAllWithFallback()).thenReturn(live(person()));
+
+        CpDirectorySyncService.Result result = sync.sync();
+
+        assertThat(result.usedFallbackCache()).isFalse();
+        assertThat(result.describe()).doesNotContain("ข้อมูลสำรอง");
     }
 
     @Test
@@ -172,6 +216,6 @@ class CpDirectorySyncServiceTest {
         CpDirectorySyncService.Result result = sync.sync();
 
         assertThat(result.success()).isFalse();
-        verify(client, never()).fetchAll();
+        verify(client, never()).fetchAllWithFallback();
     }
 }

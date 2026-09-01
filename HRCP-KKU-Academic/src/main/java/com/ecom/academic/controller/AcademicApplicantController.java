@@ -848,6 +848,17 @@ public class AcademicApplicantController {
 
         requestService.setRevisionFile(id, filePath);
 
+        // ข้อ 13 — ส่งเอกสารที่แก้แล้วกลับมายังคณะอนุกรรมการ
+        //
+        // Until now this stored the file and left the status at "แจ้งผล - แก้ไข",
+        // which is neither terminal nor able to move on: the applicant could not
+        // start a new request and the officer had nothing telling them work had
+        // come back. The revise branch was a dead end (GAP-34).
+        if (request.getCurrentStatus() == RequestStatus.COMPLETED_REVISE) {
+            requestService.updateStatus(id, RequestStatus.REVISION_SUBMITTED, user,
+                    "ผู้ขอกำหนดตำแหน่งส่งเอกสารที่แก้ไขแล้ว: " + file.getOriginalFilename());
+        }
+
         // Delete old revision file from disk
         if (oldRevisionPath != null && !oldRevisionPath.isBlank() && !oldRevisionPath.equals(filePath)) {
             try {

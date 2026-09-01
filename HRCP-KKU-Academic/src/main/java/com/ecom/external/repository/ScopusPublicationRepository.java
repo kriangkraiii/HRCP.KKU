@@ -1,5 +1,6 @@
 package com.ecom.external.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -37,10 +38,19 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
      * The picker's query. Optional year window and free-text filter are folded in
      * so the database does the work rather than shipping every row to the JVM.
      * Hits {@code idx_scopus_pub_user_year}.
+     *
+     * @param excluded publications already submitted on a position request that
+     *                 has left {@code DRAFT} (GAP-12). Filtered here rather than
+     *                 after paging: dropping rows from a page the database already
+     *                 counted would leave {@code total} disagreeing with what the
+     *                 picker shows. Never empty — callers pass a list holding an
+     *                 impossible id when nothing is spent, because {@code IN ()}
+     *                 is not valid SQL.
      */
     @Query("""
             SELECT p FROM ScopusPublication p
             WHERE p.fsUserId = :fsUserId
+              AND p.id NOT IN :excluded
               AND (:pattern IS NULL OR LOWER(p.title) LIKE :pattern
                                     OR LOWER(p.publicationName) LIKE :pattern
                                     OR LOWER(p.doi) LIKE :pattern)
@@ -52,6 +62,7 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
             @Param("yearFrom") Integer yearFrom,
             @Param("yearTo") Integer yearTo,
             @Param("pattern") String pattern,
+            @Param("excluded") Collection<Long> excluded,
             Pageable pageable);
 
     /**
@@ -118,4 +129,35 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
     @Query("SELECT DISTINCT p.publicationYear FROM ScopusPublication p "
             + "WHERE p.publicationYear IS NOT NULL ORDER BY p.publicationYear DESC")
     List<Integer> findDistinctYears();
+
+    // ---- Multi-source harvesting and deduplication queries (V14) ----
+
+    Optional<ScopusPublication> findByFsUserIdAndDoiIgnoreCase(Long fsUserId, String doi);
+
+    Optional<ScopusPublication> findByFsUserIdAndDedupHash(Long fsUserId, String dedupHash);
+
+    Optional<ScopusPublication> findByFsUserIdAndExternalId(Long fsUserId, String externalId);
+
+    long countByDataSource(String dataSource);
+
+    @Query("SELECT p.dataSource, COUNT(p) FROM ScopusPublication p GROUP BY p.dataSource")
+    List<Object[]> countGroupByDataSource();
+
+    /**
+     * Level 2.5 Deduplication: PostgreSQL pg_trgm trigram similarity match on title
+     * within the same author and publication year.
+     */
+    @Query(value = """
+            SELECT id FROM scopus_publication
+            WHERE fs_user_id = :fsUserId
+              AND publication_year = :year
+              AND similarity(LOWER(title), LOWER(:candidateTitle)) >= :threshold
+            ORDER BY similarity(LOWER(title), LOWER(:candidateTitle)) DESC
+            LIMIT 1
+            """, nativeQuery = true)
+    Optional<Long> findFuzzyMatchId(@Param("fsUserId") Long fsUserId,
+                                     @Param("candidateTitle") String candidateTitle,
+                                     @Param("year") int year,
+                                     @Param("threshold") double threshold);
 }
+

@@ -2,24 +2,23 @@ package com.ecom.research;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
 import java.util.List;
-import java.util.stream.Stream;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestPublication;
 import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.repository.PositionRequestPublicationRepository;
 import com.ecom.external.model.ScopusPublication;
 import com.ecom.model.UserDtls;
 import com.ecom.support.AbstractFlowTest;
@@ -34,79 +33,28 @@ import com.ecom.support.TestDataFactory;
  * {@code REJECTED}: a request that was refused never consumed anything, so its
  * publications come back.
  *
- * <p><b>Why almost everything here is disabled.</b> The rule cannot be enforced
- * today, and not because a check is missing — because the fact it would check is
- * never recorded. {@code ScopusPicker.applySelection()} asks the server for a
- * formatted citation string and writes that string into a plain text input;
- * {@code publication.id} is dropped in the browser and never travels back. So no
- * row anywhere ties a position request to a publication. That is GAP-11, and it
- * has to be built before GAP-12 can be.
+ * <p><b>What had to be built first.</b> The rule was unenforceable not because a
+ * check was missing but because the fact it would check was never recorded:
+ * {@code ScopusPicker.applySelection()} asked for a formatted citation, wrote the
+ * text into a plain input, and dropped {@code publication.id} in the browser
+ * (GAP-11). The picker now keeps that id in a hidden field beside each line, the
+ * save path turns it into a {@code position_request_publication} row, and this
+ * class is what says the rule holds.
  *
- * <p>{@link LinkageEvidence} proves the linkage really is absent, and will start
- * failing the moment it is added — which is the signal to enable the rest of
- * this class.
- *
- * <p>These tests are written against the picker's own HTTP API rather than any
- * new interface, so they constrain behaviour and not implementation: whoever
- * builds the link table is free to choose its shape.
+ * <p>Written against the picker's own HTTP API rather than any internal
+ * interface, so it constrains behaviour and not implementation — the link table
+ * can be reshaped without touching a line here.
  */
 @DisplayName("งานวิจัย: กติกาห้ามใช้ผลงานซ้ำ (GAP-11/GAP-12)")
 class ResearchReuseLockSpec extends AbstractFlowTest {
 
     private static final long FS_ID = 7001L;
 
-    @Nested
-    @DisplayName("หลักฐานว่ายังไม่มีการผูกผลงานกับคำร้อง")
-    class LinkageEvidence {
-
-        /**
-         * Nothing in the position module references a publication id. When the
-         * link table lands this test fails, and the failure message says what to
-         * do next.
-         */
-        @Test
-        @DisplayName("GAP-11: ไม่มีโค้ดใดในโมดูลคำร้องตำแหน่งอ้างถึง publication id เลย")
-        void positionModuleNeverReferencesAPublicationId() throws IOException {
-            Path module = Path.of("src/main/java/com/ecom/academic");
-            List<Path> referencing;
-            try (Stream<Path> files = Files.walk(module)) {
-                referencing = files
-                        .filter(p -> p.toString().endsWith(".java"))
-                        .filter(ResearchReuseLockSpec::mentionsAPublicationId)
-                        .toList();
-            }
-
-            assertThat(referencing)
-                    .as("""
-                            ยังไม่มีการเก็บว่าคำร้องไหนใช้ผลงานชิ้นใด กติกา 'ยื่นซ้ำไม่ได้' จึงบังคับไม่ได้
-                            เมื่อสร้างตารางเชื่อม (เช่น position_request_publication) แล้ว เทสข้อนี้จะ fail
-                            ให้ลบเทสข้อนี้ทิ้ง แล้วเปิด @Disabled ที่เหลือในคลาสนี้""")
-                    .isEmpty();
-        }
-
-        /**
-         * The browser-side half of the same gap: the picker sends ids up to ask
-         * for citations, then keeps nothing. Pinned here so that a future change
-         * which starts submitting ids is noticed.
-         */
-        @Test
-        @DisplayName("GAP-11: picker ส่ง citation เป็นข้อความล้วนลงฟอร์ม ไม่เก็บ id ไว้เลย")
-        void pickerWritesOnlyFreeText() throws IOException {
-            String picker = Files.readString(
-                    Path.of("src/main/resources/static/js/scopus_picker.js"), StandardCharsets.UTF_8);
-
-            assertThat(picker)
-                    .as("ค่าที่ใส่ลงฟอร์มคือ row.citation ซึ่งเป็นข้อความ")
-                    .contains("setValue(target.titlePrefix + '_' + n, row.citation)");
-            assertThat(picker)
-                    .as("ไม่มีการเขียน id ลง hidden input ใด ๆ")
-                    .doesNotContain("type=\"hidden\"");
-        }
-    }
+    @Autowired
+    private PositionRequestPublicationRepository links;
 
     @Nested
-    @Disabled("GAP-11: ต้องสร้างการผูกผลงานกับคำร้องก่อน จึงจะบังคับกติกานี้ได้")
-    @DisplayName("กติกาที่ต้องเป็นจริงเมื่อ implement แล้ว")
+    @DisplayName("กติกาห้ามใช้ผลงานซ้ำ")
     class TheRule {
 
         @Test
@@ -215,14 +163,67 @@ class ResearchReuseLockSpec extends AbstractFlowTest {
         }
     }
 
-    private static boolean mentionsAPublicationId(Path file) {
-        try {
-            String source = Files.readString(file, StandardCharsets.UTF_8);
-            return source.contains("publicationId")
-                    || source.contains("publication_id")
-                    || source.contains("ScopusPublication");
-        } catch (IOException e) {
-            return false;
+    /**
+     * The path the rule above depends on: what the picker leaves in the form has
+     * to survive a save.
+     *
+     * <p>{@code TheRule} writes link rows directly, so it would go on passing
+     * even if the hidden field the picker fills never reached the database. This
+     * posts the form exactly as the browser does.
+     */
+    @Nested
+    @DisplayName("เส้นทางจากฟอร์มถึงตารางผูก")
+    class SavingTheForm {
+
+        @Test
+        @DisplayName("บันทึกเอกสารที่ 1 ที่มี scopus id — ต้องเกิดการผูกผลงานกับคำร้อง")
+        void savingTheFormRecordsTheLink() throws Exception {
+            UserDtls applicant = data.applicant();
+            data.faculty(FS_ID, TestDataFactory.APPLICANT_EMAIL);
+            ScopusPublication paper = data.publication(FS_ID, "ผลงานที่เลือกจาก picker", 2023, 5);
+            PositionRequest draft =
+                    data.positionRequest(applicant, PositionRequestStatus.DRAFT, null);
+
+            expectAccepted(mvc.perform(post("/user/position/request/" + draft.getId() + "/document/1")
+                    .with(user(applicant.getEmail()))
+                    .with(csrf())
+                    .param("target_position", "ผู้ช่วยศาสตราจารย์")
+                    // ชื่อฟิลด์ชุดนี้คือสิ่งที่ ScopusPicker เขียนลงฟอร์มจริง
+                    .param("asst_research_working_1", "Somchai J. (2023). ผลงานที่เลือกจาก picker.")
+                    .param("asst_research_working_scopus_id_1", String.valueOf(paper.getId()))),
+                    "/user/position/request/" + draft.getId());
+
+            assertThat(links.findByRequestId(draft.getId()))
+                    .as("id ที่ picker ใส่ไว้ในฟอร์มต้องถูกบันทึกเป็นการผูกผลงาน ไม่ใช่ถูกทิ้ง")
+                    .extracting(PositionRequestPublication::getPublicationId)
+                    .containsExactly(paper.getId());
+
+            // ยังเป็นแบบร่าง — จึงยังไม่ถูกใช้ ต้องเลือกได้ตามปกติ
+            mvc.perform(get("/api/my/publications").with(user(applicant.getEmail())))
+                    .andExpect(jsonPath("$.total").value(1));
+        }
+
+        @Test
+        @DisplayName("ลบผลงานออกจากฟอร์มแล้วบันทึกใหม่ — การผูกต้องหายไปด้วย")
+        void removingARowRemovesTheLink() throws Exception {
+            UserDtls applicant = data.applicant();
+            data.faculty(FS_ID, TestDataFactory.APPLICANT_EMAIL);
+            ScopusPublication paper = data.publication(FS_ID, "ผลงานที่จะถูกลบทิ้ง", 2023, 5);
+            PositionRequest draft =
+                    data.positionRequest(applicant, PositionRequestStatus.DRAFT, null);
+
+            String url = "/user/position/request/" + draft.getId() + "/document/1";
+            mvc.perform(post(url).with(user(applicant.getEmail())).with(csrf())
+                    .param("asst_research_working_1", "ผลงานที่จะถูกลบทิ้ง")
+                    .param("asst_research_working_scopus_id_1", String.valueOf(paper.getId())));
+
+            // บันทึกอีกครั้งโดยไม่มีแถวนั้นแล้ว
+            mvc.perform(post(url).with(user(applicant.getEmail())).with(csrf())
+                    .param("asst_research_working_1", ""));
+
+            assertThat(links.findByRequestId(draft.getId()))
+                    .as("ฟอร์มคือความจริงว่าคำร้องอ้างผลงานอะไรอยู่ตอนนี้")
+                    .isEmpty();
         }
     }
 }

@@ -1,5 +1,7 @@
 package com.ecom.external.service;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
@@ -11,9 +13,12 @@ import org.springframework.http.MediaType;
 import org.springframework.http.client.ClientHttpRequestFactory;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestClient;
+import org.springframework.web.client.RestClientResponseException;
 
 import com.ecom.external.config.CpWebProperties;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -49,21 +54,35 @@ public class CpWebClient {
 
     public CpWebClient(CpWebProperties props) {
         this.props = props;
-        this.http = RestClient.builder().requestFactory(requestFactory()).build();
+        this.http = RestClient.builder().requestFactory(requestFactory(props)).build();
     }
 
-    private static ClientHttpRequestFactory requestFactory() {
+    private static ClientHttpRequestFactory requestFactory(CpWebProperties props) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(10));
-        factory.setReadTimeout(Duration.ofSeconds(30));
+        int connectSec = props != null && props.getConnectTimeoutSeconds() > 0 ? props.getConnectTimeoutSeconds() : 5;
+        int readSec = props != null && props.getReadTimeoutSeconds() > 0 ? props.getReadTimeoutSeconds() : 15;
+        factory.setConnectTimeout(Duration.ofSeconds(connectSec));
+        factory.setReadTimeout(Duration.ofSeconds(readSec));
         return factory;
     }
 
     /** Everyone listed in the directory, across as many pages as it takes. */
     public List<CpPerson> fetchAll() {
+        return fetchAllWithFallback().people();
+    }
+
+    /**
+     * The same read as {@link #fetchAll()}, but saying where the answer came from.
+     *
+     * <p>A run that fell back to the snapshot is not a failure — the caller can
+     * still apply every field — but it is not fresh either, and the person reading
+     * the sync page deserves to be told which of the two they are looking at.
+     */
+    public DirectoryFetch fetchAllWithFallback() {
         List<CpPerson> people = new ArrayList<>();
         int page = 1;
         int totalPages = 1;
+        boolean liveSuccess = false;
 
         while (page <= totalPages && page <= MAX_PAGES) {
             JsonNode body = get(props.listEndpoint(page));
@@ -77,11 +96,29 @@ public class CpWebClient {
             for (JsonNode item : data.path("items")) {
                 toPerson(item).ifPresent(people::add);
             }
+            liveSuccess = true;
             page++;
         }
 
+        if (liveSuccess && !people.isEmpty()) {
+            log.info("Read {} people from the college directory (live API)", people.size());
+            if (props != null && props.isFallbackCacheEnabled()) {
+                saveSnapshot(people);
+            }
+            return new DirectoryFetch(people, false);
+        }
+
+        if (props != null && props.isFallbackCacheEnabled()) {
+            List<CpPerson> cached = loadSnapshot();
+            if (!cached.isEmpty()) {
+                log.warn("College directory unreachable — serving {} people from the local snapshot instead",
+                        cached.size());
+                return new DirectoryFetch(cached, true);
+            }
+        }
+
         log.info("Read {} people from the college directory", people.size());
-        return people;
+        return new DirectoryFetch(people, false);
     }
 
     /**
@@ -97,8 +134,11 @@ public class CpWebClient {
                     .retrieve()
                     .body(byte[].class);
             return Optional.ofNullable(bytes);
+        } catch (ResourceAccessException e) {
+            log.warn("Could not fetch directory photo due to timeout/connection error ({}): {}", url, e.getMessage());
+            return Optional.empty();
         } catch (Exception e) {
-            log.warn("Could not fetch a directory photo: {}", e.toString());
+            log.warn("Could not fetch a directory photo ({}): {}", url, e.toString());
             return Optional.empty();
         }
     }
@@ -212,18 +252,105 @@ public class CpWebClient {
         }
     }
 
+    /**
+     * One request, or {@code null} when the directory could not answer.
+     *
+     * <p>Only a connection or read timeout is retried: those are the failures a
+     * second attempt a moment later can actually fix. An HTTP status or a
+     * malformed body will say the same thing however many times it is asked, so
+     * those give up at once.
+     *
+     * <p>Nothing here throws. This is background enrichment — the sync it feeds
+     * has other sources, and a college web server that is down is not a reason to
+     * fail the run, only to say so at {@code WARN}.
+     */
     private JsonNode get(String url) {
-        try {
-            String raw = http.get()
-                    .uri(url)
-                    .accept(MediaType.APPLICATION_JSON)
-                    .retrieve()
-                    .body(String.class);
-            return raw == null || raw.isBlank() ? null : mapper.readTree(raw);
-        } catch (Exception e) {
-            log.error("College directory request failed: {}", e.toString());
-            return null;
+        int retries = props != null ? Math.max(0, props.getMaxRetryAttempts()) : 0;
+        String lastFailure = null;
+
+        for (int attempt = 0; attempt <= retries; attempt++) {
+            try {
+                String raw = http.get()
+                        .uri(url)
+                        .accept(MediaType.APPLICATION_JSON)
+                        .retrieve()
+                        .body(String.class);
+                return raw == null || raw.isBlank() ? null : mapper.readTree(raw);
+            } catch (ResourceAccessException e) {
+                lastFailure = e.getMessage();
+                if (attempt == retries || !backoff(attempt)) {
+                    break;
+                }
+                log.debug("College directory attempt {} of {} timed out for {}, retrying",
+                        attempt + 1, retries + 1, url);
+            } catch (RestClientResponseException e) {
+                log.warn("College directory returned HTTP {} for {}: {}",
+                        e.getStatusCode().value(), url, e.getMessage());
+                return null;
+            } catch (Exception e) {
+                log.error("College directory request failed for {}: {}", url, e.toString());
+                return null;
+            }
         }
+
+        log.warn("College directory unreachable after {} attempt(s) (connection/read timeout): {} — {}",
+                retries + 1, url, lastFailure);
+        return null;
+    }
+
+    /** @return false when the wait was interrupted, meaning stop retrying */
+    private boolean backoff(int attempt) {
+        try {
+            Thread.sleep(300L * (attempt + 1));
+            return true;
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+        }
+    }
+
+    private Path resolveSnapshotPath() {
+        if (props != null && props.getSnapshotFilePath() != null && !props.getSnapshotFilePath().isBlank()) {
+            return Path.of(props.getSnapshotFilePath()).toAbsolutePath().normalize();
+        }
+        return Path.of("uploads/cache/cp_directory_snapshot.json").toAbsolutePath().normalize();
+    }
+
+    /**
+     * Persists the latest directory listing to local disk as a fallback snapshot.
+     */
+    public synchronized void saveSnapshot(List<CpPerson> people) {
+        if (people == null || people.isEmpty()) {
+            return;
+        }
+        try {
+            Path path = resolveSnapshotPath();
+            if (path.getParent() != null) {
+                Files.createDirectories(path.getParent());
+            }
+            mapper.writerWithDefaultPrettyPrinter().writeValue(path.toFile(), people);
+            log.debug("Saved directory snapshot with {} entries to {}", people.size(), path);
+        } catch (Exception e) {
+            log.warn("Could not save college directory snapshot: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Loads the last known good directory listing from the local snapshot file.
+     */
+    public synchronized List<CpPerson> loadSnapshot() {
+        try {
+            Path path = resolveSnapshotPath();
+            if (Files.exists(path) && Files.isRegularFile(path) && Files.size(path) > 0) {
+                List<CpPerson> people = mapper.readValue(path.toFile(), new TypeReference<List<CpPerson>>() {});
+                if (people != null && !people.isEmpty()) {
+                    return people;
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Could not load college directory snapshot from fallback cache: {}", e.getMessage());
+        }
+        return List.of();
     }
 
     private static String text(JsonNode node, String field) {
@@ -233,6 +360,15 @@ public class CpWebClient {
         }
         String s = value.asText().trim();
         return s.isEmpty() ? null : s;
+    }
+
+    /**
+     * A directory read, and where it came from.
+     *
+     * @param usedFallbackCache true when the live API could not be reached and the
+     *                          people listed are the last snapshot saved to disk
+     */
+    public record DirectoryFetch(List<CpPerson> people, boolean usedFallbackCache) {
     }
 
     /**

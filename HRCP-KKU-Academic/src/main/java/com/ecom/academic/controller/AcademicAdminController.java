@@ -320,16 +320,15 @@ public class AcademicAdminController {
         model.addAttribute("request", request);
         model.addAttribute("documents", documents);
         model.addAttribute("statuses", RequestStatus.values());
+        // Only the moves the process allows from where this request stands.
+        // Offering the whole list invited exactly the mistake the guard now
+        // refuses, and left the officer to find out from an error message.
+        model.addAttribute("allowedNextStatuses", request.getCurrentStatus().allowedNext());
         model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
 
         // Progress percentage
         RequestStatus[] steps = RequestStatus.getProgressSteps();
-        int currentIdx = 0;
-        for (int i = 0; i < steps.length; i++) {
-            if (request.getCurrentStatus().ordinal() >= steps[i].ordinal()) {
-                currentIdx = i;
-            }
-        }
+        int currentIdx = Math.max(0, request.getCurrentStatus().progressIndex());
         int progressPercent = steps.length > 1 ? (currentIdx * 100) / (steps.length - 1) : 0;
         model.addAttribute("progressPercent", progressPercent);
 

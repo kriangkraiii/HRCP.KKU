@@ -75,10 +75,20 @@ class AcademicRequestActiveStateTest {
         return userRepository.save(u);
     }
 
-    /** A submitted request sitting at the given status. */
+    /**
+     * A request sitting at the given status.
+     *
+     * <p>Set directly rather than walked there through {@code updateStatus}.
+     * These tests are about {@code hasActiveRequest} — what a status *means* —
+     * not about how a request reaches one, and the transition guard rightly
+     * refuses the jumps this used to make (a draft cannot become
+     * "แจ้งผล - ไม่ผ่าน" in one step). Walking the real sequence here would add
+     * a dozen irrelevant lines to every case.
+     */
     private AcademicRequest requestAt(RequestStatus status) {
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        return requestService.updateStatus(request.getId(), status, admin, null, false);
+        request.setCurrentStatus(status);
+        return requestService.save(request);
     }
 
     @Test

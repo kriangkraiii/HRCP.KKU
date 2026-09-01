@@ -13,18 +13,17 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 /**
  * Which parts of the ก.พ.ว.มข.03 form actually offer "เลือกจาก Scopus".
  *
- * <p>This is the reported fault — "งานวิจัยตอนขอตำแหน่งยังไม่มีให้เลือกเลย" — and
- * it is not a bug in the picker. The picker works; it is simply absent from most
- * of the form, and entirely absent from the ผู้ช่วยศาสตราจารย์ section, which is
- * the section most applicants use. Someone applying for ผศ. sees no button
- * anywhere on the page and concludes the feature does not exist.
+ * <p>This was the reported fault — "งานวิจัยตอนขอตำแหน่งยังไม่มีให้เลือกเลย" — and it
+ * was never a bug in the picker. The picker worked; it was simply absent from
+ * most of the form, and entirely absent from the ผู้ช่วยศาสตราจารย์ section, which
+ * is the section most applicants use. Someone applying for ผศ. saw no button
+ * anywhere on the page and concluded the feature did not exist.
  *
  * <p>The check is a template scan rather than a browser test on purpose: it
  * covers every section at once, including the two that are hidden until the
@@ -32,8 +31,10 @@ import org.junit.jupiter.api.Test;
  * test in {@code ScopusPickerE2ETest} then proves the buttons that do exist
  * actually work.
  *
- * <p>The first test records today's coverage so the gap is visible in a test
- * report and not only in a document; the disabled one states the target.
+ * <p>Every group is covered now (GAP-10, fixed). What the checks below are for
+ * is the next person who adds a group to the form: a new container with no
+ * preset, or a preset no button reaches, fails here rather than being discovered
+ * by an applicant who cannot find their research.
  */
 @DisplayName("งานวิจัย: ความครอบคลุมของปุ่ม 'เลือกจาก Scopus' ในแบบ ก.พ.ว.มข.03")
 class ScopusPickerCoverageTest {
@@ -108,39 +109,13 @@ class ScopusPickerCoverageTest {
     }
 
     @Test
-    @DisplayName("GAP-10: ส่วน ผู้ช่วยศาสตราจารย์ ไม่มีปุ่มเลือกจาก Scopus แม้แต่ปุ่มเดียว")
-    void assistantProfessorSectionHasNoPickerAtAll() {
-        Set<String> reachable = containersReachableFromAPreset();
-
-        assertThat(reachable)
+    @DisplayName("ส่วน ผู้ช่วยศาสตราจารย์ ต้องมีปุ่มเลือกจาก Scopus ครบทั้งสามกลุ่ม")
+    void assistantProfessorSectionOffersThePicker() {
+        assertThat(containersReachableFromAPreset())
                 .as("""
-                        ผู้ยื่นที่เลือกตำแหน่ง 'ผู้ช่วยศาสตราจารย์' จะเห็นเฉพาะ sectionAsst
-                        ซึ่งไม่มีปุ่ม 'เลือกจาก Scopus' เลย จึงต้องพิมพ์ชื่อผลงานเองทั้งหมด
-                        นี่คืออาการ 'ไม่มีงานวิจัยให้เลือก' ที่ผู้ใช้รายงาน
-                        ถ้าเทสข้อนี้เริ่ม fail แปลว่า GAP-10 ถูกแก้แล้ว — ให้เปิดเทส
-                        everySectionThatTakesPublicationsShouldOfferThePicker แทน""")
-                .doesNotContain("asstResearchRows", "asstOtherRows", "asstBookRows");
-    }
-
-    @Test
-    @DisplayName("GAP-10: กล่องรับผลงาน 11 กลุ่ม มีปุ่มเลือกจาก Scopus เพียง 3 กลุ่ม")
-    void onlyThreeOfElevenSectionsOfferThePicker() {
-        Set<String> reachable = containersReachableFromAPreset();
-
-        assertThat(reachable)
-                .as("ปุ่มที่มีอยู่จริงในวันนี้")
-                .containsExactlyInAnyOrder(
-                        "assocResearchRows", "assocM3ResearchRows", "profResearchRows");
-
-        List<String> missing = CONTAINERS_THAT_TAKE_PUBLICATIONS.stream()
-                .filter(c -> !reachable.contains(c))
-                .toList();
-
-        assertThat(missing)
-                .as("กลุ่มที่ยังขาดปุ่ม — ผู้ยื่นต้องพิมพ์ชื่อผลงานเองทั้งหมด")
-                .containsExactly("asstResearchRows", "asstOtherRows", "asstBookRows",
-                        "assocOtherRows", "assocBookRows",
-                        "profOtherRows", "profBookRows", "profM3ResearchRows");
+                        นี่คือส่วนที่ผู้ยื่นส่วนใหญ่ใช้ และเป็นส่วนที่เคยไม่มีปุ่มเลยสักปุ่ม
+                        จนผู้ใช้เข้าใจว่าระบบไม่มีให้เลือกงานวิจัย (GAP-10)""")
+                .contains("asstResearchRows", "asstOtherRows", "asstBookRows");
     }
 
     @Test
@@ -166,10 +141,10 @@ class ScopusPickerCoverageTest {
     }
 
     @Test
-    @Disabled("GAP-10: ต้องเพิ่ม preset และปุ่มให้ครบทั้ง 11 กลุ่มก่อน")
-    @DisplayName("GAP-10 (spec): ทุกกลุ่มที่รับผลงานต้องเลือกจาก Scopus ได้")
-    void everySectionThatTakesPublicationsShouldOfferThePicker() {
+    @DisplayName("GAP-10: ทุกกลุ่มที่รับผลงานต้องเลือกจาก Scopus ได้")
+    void everySectionThatTakesPublicationsOffersThePicker() {
         assertThat(containersReachableFromAPreset())
+                .as("กลุ่มที่ขาดปุ่ม แปลว่าผู้ยื่นต้องพิมพ์ชื่อผลงานเองทั้งหมดในกลุ่มนั้น")
                 .containsAll(CONTAINERS_THAT_TAKE_PUBLICATIONS);
     }
 }

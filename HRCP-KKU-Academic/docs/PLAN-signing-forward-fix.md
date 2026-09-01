@@ -193,7 +193,7 @@ app.notification.test-accounts=${TEST_ACCOUNTS:user@user.com,admin@admin.com}
 - **การแจ้งเตือนในระบบ (กระดิ่ง) ไม่แตะ** — `NotificationService:45` เป็น `notificationRepository.save(...)` ล้วน ไม่มี `JavaMailSender` บัญชีเทสยังต้องเห็นกระดิ่งเพื่อเทสได้ **นี่คือดีไซน์เดิมที่ถูกแล้ว**
 - ทุกครั้งที่บล็อก `log.info("[MAIL SUPPRESSED] to={} reason={}")` เพื่อยืนยันตอนเทสว่าระบบ "จะส่ง" อะไรออกไปบ้าง
 
-> ⚠️ **หมายเหตุความปลอดภัย (นอกขอบเขตงานนี้ แต่ควรรู้):** `application.properties:126` มี Gmail app password จริง `sajn mwtj mxza xsoe` commit อยู่ใน git และซ้ำอีกที่ `SendAllTestEmailsTest.java:18` — ควร revoke แล้วย้ายไป env var แยกต่างหาก
+> ⚠️ **หมายเหตุความปลอดภัย (นอกขอบเขตงานนี้ แต่ควรรู้):** `application.properties` มี Gmail app password จริง commit อยู่ใน git และซ้ำอีกที่ `SendAllTestEmailsTest.java` — **ย้ายไป env var แล้ว (GAP-05)** แต่ยังต้อง revoke รหัสผ่านตัวนั้นที่บัญชี Google เพราะยังอ่านได้จากประวัติ git
 
 ---
 

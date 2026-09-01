@@ -216,6 +216,40 @@ public class ScopusPublication {
     @Column(name = "raw_json", columnDefinition = "TEXT")
     private String rawJson;
 
+    // ----- multi-source harvesting (V14) -----
+
+    /** Which pipeline produced this row. Existing rows default to {@code SCOPUS}. */
+    @Column(name = "data_source", nullable = false, length = 32)
+    private String dataSource = "SCOPUS";
+
+    /** Source-specific document key (DOI, OpenAlex ID, DBLP key, OAI identifier). */
+    @Column(name = "external_id", length = 512)
+    private String externalId;
+
+    @Column(name = "openalex_id", length = 128)
+    private String openalexId;
+
+    /** Crossref relevance score, when the paper was found via affiliation search. */
+    @Column(name = "crossref_score")
+    private Double crossrefScore;
+
+    @Column(name = "sjr_quartile", length = 8)
+    private String sjrQuartile;
+
+    @Column(name = "tci_tier", length = 8)
+    private String tciTier;
+
+    /** SHA-256 of normalised title + year + first-author surname. Dedup Level 2. */
+    @Column(name = "dedup_hash", length = 128)
+    private String dedupHash;
+
+    /** Full response body from the source, stored verbatim for audit and re-parsing. */
+    @Column(name = "raw_source_metadata", columnDefinition = "TEXT")
+    private String rawSourceMetadata;
+
+    @Column(name = "language", length = 8)
+    private String language;
+
     @Column(name = "synced_at", nullable = false)
     private LocalDateTime syncedAt;
 
@@ -644,5 +678,79 @@ public class ScopusPublication {
 
     public void setSyncedAt(LocalDateTime syncedAt) {
         this.syncedAt = syncedAt;
+    }
+
+    // ----- multi-source harvest accessors (V14) -----
+
+    public String getDataSource() {
+        return dataSource;
+    }
+
+    public void setDataSource(String dataSource) {
+        this.dataSource = dataSource;
+    }
+
+    public String getExternalId() {
+        return externalId;
+    }
+
+    public void setExternalId(String externalId) {
+        this.externalId = externalId;
+    }
+
+    public String getOpenalexId() {
+        return openalexId;
+    }
+
+    public void setOpenalexId(String openalexId) {
+        this.openalexId = openalexId;
+    }
+
+    public Double getCrossrefScore() {
+        return crossrefScore;
+    }
+
+    public void setCrossrefScore(Double crossrefScore) {
+        this.crossrefScore = crossrefScore;
+    }
+
+    public String getSjrQuartile() {
+        return sjrQuartile;
+    }
+
+    public void setSjrQuartile(String sjrQuartile) {
+        this.sjrQuartile = sjrQuartile;
+    }
+
+    public String getTciTier() {
+        return tciTier;
+    }
+
+    public void setTciTier(String tciTier) {
+        this.tciTier = tciTier;
+    }
+
+    public String getDedupHash() {
+        return dedupHash;
+    }
+
+    public void setDedupHash(String dedupHash) {
+        this.dedupHash = dedupHash;
+    }
+
+    public String getRawSourceMetadata() {
+        return rawSourceMetadata;
+    }
+
+    public void setRawSourceMetadata(String rawSourceMetadata) {
+        this.rawSourceMetadata = rawSourceMetadata;
+    }
+
+    public String getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(String language) {
+        this.language = language;
     }
 }

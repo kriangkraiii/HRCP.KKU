@@ -210,13 +210,29 @@
                     <div class="card card-academic border shadow-sm my-4">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 fw-semibold text-primary">
-                                <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอน (สามารถแนบได้หลายไฟล์)
+                                <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอน
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">จำเป็นต้องแนบ</span>
                             </h6>
                             <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' ไฟล์'}">0 ไฟล์</span>
                         </div>
                         <div class="card-body">
-                            <p class="text-muted small mb-3">
-                                <i class="fas fa-info-circle me-1"></i> ท่านสามารถแนบไฟล์หลักฐานประกอบ เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา (รองรับไฟล์ .pdf, .docx, .doc, .zip — ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)
+                            <!--
+                              ข้อความนี้เคยขึ้นต้นว่า "ท่านสามารถแนบไฟล์..." ซึ่งอ่านเหมือนเป็นทางเลือก
+                              แต่ controller ปฏิเสธการบันทึกเอกสารที่ 1 เมื่อยังไม่มีไฟล์แนบเลย
+                              (?error=no_attachments) ผู้ยื่นจึงกรอกฟอร์มจนจบแล้วค่อยถูกเด้งกลับมา
+                              โดยไม่เคยมีอะไรบอกล่วงหน้า — GAP-37
+                            -->
+                            <p class="small mb-3" th:if="${attachmentCount == 0}">
+                                <span class="text-danger fw-semibold">
+                                    <i class="fas fa-exclamation-circle me-1"></i> ต้องแนบไฟล์อย่างน้อย 1 ไฟล์ก่อน จึงจะบันทึกเอกสารนี้ได้
+                                </span>
+                                <span class="text-muted d-block mt-1">
+                                    เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา
+                                    (รองรับไฟล์ .pdf, .docx, .doc, .zip — ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)
+                                </span>
+                            </p>
+                            <p class="text-muted small mb-3" th:unless="${attachmentCount == 0}">
+                                <i class="fas fa-info-circle me-1"></i> แนบไฟล์หลักฐานประกอบเพิ่มได้ เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา (รองรับไฟล์ .pdf, .docx, .doc, .zip — ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)
                             </p>
 
                             <!-- Drag and Drop & Multiple Upload Form — เฉพาะตอนที่แก้ไขได้ -->

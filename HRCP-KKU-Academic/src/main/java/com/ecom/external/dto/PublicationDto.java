@@ -26,9 +26,37 @@ public record PublicationDto(
         String issue,
         String pages,
         String url,
-        boolean openAccess) {
+        boolean openAccess,
+        String dataSource,
+        String tciTier) {
+
+    public PublicationDto(
+            Long id,
+            String eid,
+            String title,
+            String publicationName,
+            Integer year,
+            String doi,
+            Integer citedBy,
+            String authorNames,
+            String quartile,
+            Double percentile,
+            String type,
+            String volume,
+            String issue,
+            String pages,
+            String url,
+            boolean openAccess) {
+        this(id, eid, title, publicationName, year, doi, citedBy, authorNames, quartile, percentile, type, volume, issue, pages, url, openAccess, "SCOPUS", null);
+    }
 
     public static PublicationDto from(ScopusPublication p) {
+        String effectiveQuartile = p.getCiteScoreQuartile() != null && !p.getCiteScoreQuartile().isBlank()
+                ? p.getCiteScoreQuartile()
+                : (p.getSjrQuartile() != null && !p.getSjrQuartile().isBlank()
+                        ? p.getSjrQuartile()
+                        : p.getTciTier());
+
         return new PublicationDto(
                 p.getId(),
                 p.getEid(),
@@ -38,14 +66,16 @@ public record PublicationDto(
                 p.getDoi(),
                 p.getCitedBy(),
                 p.getAuthorNames(),
-                p.getCiteScoreQuartile(),
+                effectiveQuartile,
                 p.getCiteScorePercentile(),
                 p.getSubtypeDescription() != null ? p.getSubtypeDescription() : p.getAggregationType(),
                 p.getVolume(),
                 p.getIssue(),
                 pageLabel(p),
                 p.getScopusUrl(),
-                p.getOpenAccess() != null && p.getOpenAccess() == 1);
+                p.getOpenAccess() != null && p.getOpenAccess() == 1,
+                p.getDataSource() != null ? p.getDataSource() : "SCOPUS",
+                p.getTciTier());
     }
 
     /** E-journals use an article number where print journals give a page range. */

@@ -43,4 +43,21 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
 
     @org.springframework.data.jpa.repository.Query("SELECT r FROM AcademicRequest r WHERE (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
     List<AcademicRequest> searchForAdmin(@org.springframework.data.repository.query.Param("keyword") String keyword);
+
+    /**
+     * Finished evaluations whose result lapses before a given moment.
+     *
+     * <p>Backs the expiry reminder job. Rows with no computed expiry are left
+     * out: there is nothing to warn anyone about yet.
+     */
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT r FROM AcademicRequest r
+            WHERE r.evaluationExpiryDate IS NOT NULL
+              AND r.evaluationExpiryDate < :before
+              AND r.currentStatus IN :statuses
+            ORDER BY r.evaluationExpiryDate ASC
+            """)
+    List<AcademicRequest> findExpiringBefore(
+            @org.springframework.data.repository.query.Param("before") java.time.LocalDateTime before,
+            @org.springframework.data.repository.query.Param("statuses") List<RequestStatus> statuses);
 }

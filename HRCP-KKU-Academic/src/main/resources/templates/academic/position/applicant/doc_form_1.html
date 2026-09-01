@@ -310,6 +310,9 @@
                         <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["asstResearchRows", "asst_research_working", "asst_used_research"]'>
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
                         </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["asstResearch"]'>
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                        </button>
 
                         <h6 class="fw-bold">๔.๑.๒ ผลงานทางวิชาการในลักษณะอื่น</h6>
                         <div id="asstOtherRows">
@@ -339,6 +342,9 @@
                         <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["asstOtherRows", "asst_other_working", "asst_used_other"]'>
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["asstOther"]'>
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                        </button>
 
                         <h6 class="fw-bold">๔.๑.๓ ตำราหรือหนังสือ</h6>
                         <div id="asstBookRows">
@@ -367,6 +373,9 @@
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary" data-call="addWorkRow" data-call-args='["asstBookRows", "asst_book_working", "asst_used_book"]'>
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["asstBook"]'>
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
                         </button>
                     </div>
                 </div>
@@ -427,6 +436,9 @@
                         <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["assocOtherRows", "assoc_other_working", "assoc_used_other"]'>
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["assocOther"]'>
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                        </button>
 
                         <h6 class="fw-bold">๔.๒.๓ ตำราหรือหนังสือ</h6>
                         <div id="assocBookRows">
@@ -451,6 +463,9 @@
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["assocBookRows", "assoc_book_working", "assoc_used_book"]'>
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["assocBook"]'>
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
                         </button>
 
                         <hr>
@@ -586,6 +601,9 @@
                         <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["profOtherRows", "prof_other_working", "prof_used_other"]'>
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["profOther"]'>
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                        </button>
 
                         <h6 class="fw-bold">๔.๓.๓ ตำราหรือหนังสือ</h6>
                         <div id="profBookRows">
@@ -610,6 +628,9 @@
                         </div>
                         <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addWorkRow" data-call-args='["profBookRows", "prof_book_working", "prof_used_book"]'>
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
+                        </button>
+                        <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["profBook"]'>
+                            <i class="fas fa-book"></i> เลือกจาก Scopus
                         </button>
 
                         <hr>
@@ -646,6 +667,9 @@
                             </div>
                             <button type="button" class="btn btn-sm btn-outline-primary mb-3" data-call="addM3Row">
                                 <i class="fas fa-plus"></i> เพิ่ม
+                            </button>
+                            <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["profM3"]'>
+                                <i class="fas fa-book"></i> เลือกจาก Scopus
                             </button>
                         </div>
 
@@ -877,12 +901,55 @@
             // CSP refuses inline handler attributes, and a config holding a
             // callback cannot be expressed in data-* attributes either. So the
             // markup now names a preset and the objects live here.
+            // One entry per container that collects academic work — all eleven of
+            // them. There used to be three, and none of them in the ผู้ช่วยศาสตราจารย์
+            // section, which is the section most applicants use: they opened the
+            // form, saw no button anywhere, and reported that the system does not
+            // offer their research at all.
+            //
+            // Written out one by one rather than generated from the prefixes. The
+            // repetition is the point: each line can be read against the field
+            // names in the markup above it, and ScopusPickerCoverageTest reads
+            // these declarations to check every group is covered.
             const SCOPUS_PRESETS = {
+                // ---- ผู้ช่วยศาสตราจารย์ ----
+                asstResearch: {
+                    container: 'asstResearchRows',
+                    titlePrefix: 'asst_research_working',
+                    yearPrefix: 'asst_used_research_year',
+                    addRow: function() { addWorkRow('asstResearchRows','asst_research_working','asst_used_research'); }
+                },
+                asstOther: {
+                    container: 'asstOtherRows',
+                    titlePrefix: 'asst_other_working',
+                    yearPrefix: 'asst_used_other_year',
+                    addRow: function() { addWorkRow('asstOtherRows','asst_other_working','asst_used_other'); }
+                },
+                asstBook: {
+                    container: 'asstBookRows',
+                    titlePrefix: 'asst_book_working',
+                    yearPrefix: 'asst_used_book_year',
+                    addRow: function() { addWorkRow('asstBookRows','asst_book_working','asst_used_book'); }
+                },
+
+                // ---- รองศาสตราจารย์ ----
                 assocResearch: {
                     container: 'assocResearchRows',
                     titlePrefix: 'assoc_research_working',
                     yearPrefix: 'assoc_used_research_year',
                     addRow: function() { addWorkRow('assocResearchRows','assoc_research_working','assoc_used_research'); }
+                },
+                assocOther: {
+                    container: 'assocOtherRows',
+                    titlePrefix: 'assoc_other_working',
+                    yearPrefix: 'assoc_used_other_year',
+                    addRow: function() { addWorkRow('assocOtherRows','assoc_other_working','assoc_used_other'); }
+                },
+                assocBook: {
+                    container: 'assocBookRows',
+                    titlePrefix: 'assoc_book_working',
+                    yearPrefix: 'assoc_used_book_year',
+                    addRow: function() { addWorkRow('assocBookRows','assoc_book_working','assoc_used_book'); }
                 },
                 assocM3: {
                     container: 'assocM3ResearchRows',
@@ -890,11 +957,31 @@
                     quartilePrefix: 'assoc_m3_quartile',
                     addRow: addAssocM3Row
                 },
+
+                // ---- ศาสตราจารย์ ----
                 profResearch: {
                     container: 'profResearchRows',
                     titlePrefix: 'prof_research_working',
                     yearPrefix: 'prof_used_research_year',
                     addRow: function() { addWorkRow('profResearchRows','prof_research_working','prof_used_research'); }
+                },
+                profOther: {
+                    container: 'profOtherRows',
+                    titlePrefix: 'prof_other_working',
+                    yearPrefix: 'prof_used_other_year',
+                    addRow: function() { addWorkRow('profOtherRows','prof_other_working','prof_used_other'); }
+                },
+                profBook: {
+                    container: 'profBookRows',
+                    titlePrefix: 'prof_book_working',
+                    yearPrefix: 'prof_used_book_year',
+                    addRow: function() { addWorkRow('profBookRows','prof_book_working','prof_used_book'); }
+                },
+                profM3: {
+                    container: 'profM3ResearchRows',
+                    titlePrefix: 'prof_method3_research',
+                    quartilePrefix: 'prof_m3_quartile',
+                    addRow: addM3Row
                 }
             };
 

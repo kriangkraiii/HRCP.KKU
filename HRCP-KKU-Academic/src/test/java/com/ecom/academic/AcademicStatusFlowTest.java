@@ -1,13 +1,13 @@
 package com.ecom.academic;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import java.util.List;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -35,6 +35,13 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
     @Autowired
     private AcademicRequestService service;
 
+    /** ข้อ 3 — คำสั่งแต่งตั้งต้องระบุอนุกรรมการครบ 3 คน จึงจะถือว่าแต่งตั้งแล้ว */
+    private static final String APPOINTMENT_ORDER = "{\"committee_1_name\":\"รศ.ดร. หนึ่ง\",\"committee_2_name\":\"รศ.ดร. สอง\",\"committee_3_name\":\"ผศ.ดร. สาม\"}";
+
+    private RequestStatus statusOf(AcademicRequest request) {
+        return service.findById(request.getId()).orElseThrow().getCurrentStatus();
+    }
+
     private List<RequestStatus> historyOf(Long requestId) {
         return service.getStatusHistory(requestId).stream()
                 .map(RequestStatusHistory::getNewStatus)
@@ -46,37 +53,52 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
     class HappyPath {
 
         @Test
-        @DisplayName("เดินครบข้อ 1-11: รับเรื่อง → แต่งตั้งอนุกรรมการ → นัดประชุม → ผ่าน → เสร็จสิ้น")
+        @DisplayName("เดินครบข้อ 1-11: รับเรื่อง → แต่งตั้งอนุกรรมการ → นัดประชุม → ผ่าน → กรรมการวิทยาลัยฯ รับรอง → เสร็จสิ้น")
         void walksTheDocumentedSequence() {
             UserDtls applicant = data.applicant();
             UserDtls staff = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
             // ข้อ 4 — คำสั่งแต่งตั้งคณะอนุกรรมการ (เอกสารที่ 3)
-            service.autoUpdateStatusByDocument(request.getId(), 3, staff, null, false);
-            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
+            service.autoUpdateStatusByDocument(request.getId(), 3, staff, APPOINTMENT_ORDER, false);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
 
             // ข้อ 6 — นัดหมายวันประชุม (เอกสารที่ 4)
             service.autoUpdateStatusByDocument(request.getId(), 4, staff, null, false);
-            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .isEqualTo(RequestStatus.MEETING_SCHEDULED);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.MEETING_SCHEDULED);
 
             // ข้อ 8 — ผลจากที่ประชุมคณะอนุกรรมการ (เอกสารที่ 6)
             service.autoUpdateStatusByDocument(request.getId(), 6, staff,
                     "{\"eval_result_level\":\"ดี\"}", false);
-            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .isEqualTo(RequestStatus.COMPLETED_PASS);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.COMPLETED_PASS);
+
+            // ข้อ 9-10 — คณะกรรมการประจำวิทยาลัยฯ รับรองผลประเมิน
+            service.updateStatus(request.getId(), RequestStatus.COLLEGE_ENDORSED, staff,
+                    "ที่ประชุมกรรมการประจำวิทยาลัยฯ รับรองผล", false);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.COLLEGE_ENDORSED);
 
             // ข้อ 11 — แจ้งผลให้ผู้ขอกำหนดตำแหน่งทราบ (เอกสารที่ 8)
             service.autoUpdateStatusByDocument(request.getId(), 8, staff, null, false);
-            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .isEqualTo(RequestStatus.COMPLETED);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.COMPLETED);
 
             assertThat(historyOf(request.getId()))
                     .as("ทุกก้าวต้องถูกบันทึกไว้ในไทม์ไลน์")
-                    .containsExactly(RequestStatus.COMPLETED, RequestStatus.COMPLETED_PASS,
-                            RequestStatus.MEETING_SCHEDULED, RequestStatus.SUB_COMMITTEE_APPOINTED);
+                    .containsExactly(RequestStatus.COMPLETED, RequestStatus.COLLEGE_ENDORSED,
+                            RequestStatus.COMPLETED_PASS, RequestStatus.MEETING_SCHEDULED,
+                            RequestStatus.SUB_COMMITTEE_APPOINTED);
+        }
+
+        @Test
+        @DisplayName("ข้อ 11 ต้องรอข้อ 9-10 ก่อน — บันทึกเอกสารที่ 8 ก่อนกรรมการวิทยาลัยฯ รับรอง สถานะยังไม่ขยับ")
+        void document8WaitsForTheCollegeEndorsement() {
+            UserDtls applicant = data.applicant();
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.COMPLETED_PASS);
+
+            service.autoUpdateStatusByDocument(request.getId(), 8, data.admin(), null, false);
+
+            assertThat(statusOf(request))
+                    .as("เอกสารยังถูกบันทึก แต่สถานะรอการรับรองตามข้อ 9-10")
+                    .isEqualTo(RequestStatus.COMPLETED_PASS);
         }
 
         @Test
@@ -184,6 +206,9 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
                     + "/document/3")
                     .param("order_no", "123/2569")
                     .param("order_date", "5 กันยายน 2569")
+                    .param("committee_1_name", "รศ.ดร. หนึ่ง")
+                    .param("committee_2_name", "รศ.ดร. สอง")
+                    .param("committee_3_name", "ผศ.ดร. สาม")
                     // sendNotify deliberately absent — the officer did not tick it
                     .with(csrf())
                     .with(user(officer.getEmail()).roles("ADMIN"))),
@@ -201,7 +226,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls officer = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 3, officer, null, false);
+            service.autoUpdateStatusByDocument(request.getId(), 3, officer, APPOINTMENT_ORDER, false);
 
             settle();
             assertThat(mail().to(TestDataFactory.APPLICANT_EMAIL))
@@ -216,7 +241,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls officer = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 3, officer, null, true);
+            service.autoUpdateStatusByDocument(request.getId(), 3, officer, APPOINTMENT_ORDER, true);
 
             awaitCondition("อีเมลถึงผู้ยื่น",
                     () -> !mail().to(TestDataFactory.APPLICANT_EMAIL).isEmpty());
@@ -224,35 +249,52 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
     }
 
     @Nested
-    @DisplayName("ช่องว่างที่พบ — ลำดับสถานะไม่ถูกบังคับ")
-    class TransitionGaps {
+    @DisplayName("ลำดับสถานะถูกบังคับตาม flow (GAP-30/31/32/33/34)")
+    class TransitionRules {
 
         /**
-         * GAP-31. Every other {@code case} in
-         * {@code autoUpdateStatusByDocument} checks where the request already is
-         * before moving it. Document 8 does not, so saving it on a request that
-         * was refused turns that refusal into "เสร็จสิ้น" — and mails the
-         * applicant to say so.
+         * GAP-30, fixed. {@code updateStatus} was a setter with an audit trail:
+         * it took whatever it was handed, so a mistyped dropdown could send a
+         * request from "รับคำร้อง" straight to "เสร็จสิ้น", skipping steps 3 to 10.
          */
         @Test
-        @DisplayName("GAP-31: บันทึกเอกสารที่ 8 บนคำร้องที่ถูกปฏิเสธ ปลุกคำร้องกลับมาเป็น 'เสร็จสิ้น'")
-        void document8ResurrectsARejectedRequest() {
+        @DisplayName("กระโดดข้ามขั้นตอนไม่ได้อีกแล้ว")
+        void illegalJumpsAreRejected() {
             UserDtls applicant = data.applicant();
-            AcademicRequest request = data.evaluation(applicant, RequestStatus.REJECTED);
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 8, data.admin(), null, false);
+            assertThatThrownBy(() -> service.updateStatus(request.getId(),
+                    RequestStatus.COMPLETED, data.admin(), "ข้ามทุกขั้นตอน", false))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessageContaining("ไม่ตรงกับลำดับใน flow");
 
-            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .as("""
-                            คำร้องที่ 'ไม่รับคำร้อง' กลายเป็น 'เสร็จสิ้น' เพราะ case 8 ไม่มีเงื่อนไขคุม
-                            ถ้าเทสข้อนี้เริ่ม fail แปลว่า GAP-31 ถูกแก้แล้ว""")
-                    .isEqualTo(RequestStatus.COMPLETED);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.RECEIVED);
         }
 
         @Test
-        @Disabled("GAP-31: ต้องใส่เงื่อนไขให้ case 8 เหมือน case 3/4/6 ก่อน")
-        @DisplayName("GAP-31 (spec): คำร้องที่จบไปแล้วต้องไม่ถูกดึงกลับเข้ากระบวนการ")
-        void closedRequestsShouldStayClosed() {
+        @DisplayName("คำร้องที่จบไปแล้ว ดึงกลับมาไม่ได้")
+        void terminalRequestsCannotBeRewound() {
+            UserDtls applicant = data.applicant();
+            for (RequestStatus closed : List.of(RequestStatus.COMPLETED,
+                    RequestStatus.COMPLETED_FAIL, RequestStatus.REJECTED)) {
+                AcademicRequest request = data.evaluation(applicant, closed);
+
+                assertThatThrownBy(() -> service.updateStatus(request.getId(),
+                        RequestStatus.DRAFT, data.admin(), "ถอยกลับ", false))
+                        .as("%s เป็นสถานะปลายทาง", closed)
+                        .isInstanceOf(IllegalStateException.class);
+            }
+        }
+
+        /**
+         * GAP-31, fixed. Every other case in {@code autoUpdateStatusByDocument}
+         * checked where the request stood; document 8 did not, so saving it on a
+         * refused request turned that refusal into "เสร็จสิ้น" and mailed the
+         * applicant to say so.
+         */
+        @Test
+        @DisplayName("GAP-31: บันทึกเอกสารที่ 8 บนคำร้องที่ปิดไปแล้ว ไม่ปลุกคำร้องกลับมา")
+        void closedRequestsStayClosed() {
             UserDtls applicant = data.applicant();
             for (RequestStatus closed : List.of(RequestStatus.REJECTED,
                     RequestStatus.COMPLETED_FAIL)) {
@@ -260,84 +302,147 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
 
                 service.autoUpdateStatusByDocument(request.getId(), 8, data.admin(), null, false);
 
-                assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
+                assertThat(statusOf(request))
+                        .as("คำร้องที่ %s ต้องอยู่อย่างนั้น", closed.getThaiLabel())
                         .isEqualTo(closed);
             }
         }
 
+        @Test
+        @DisplayName("ไม่รับคำร้องทำได้ทุกจุดที่ยังไม่ปิด")
+        void rejectionIsAlwaysAvailableWhileOpen() {
+            UserDtls applicant = data.applicant();
+            for (RequestStatus open : List.of(RequestStatus.RECEIVED,
+                    RequestStatus.SUB_COMMITTEE_APPOINTED, RequestStatus.MEETING_SCHEDULED,
+                    RequestStatus.COMPLETED_PASS, RequestStatus.COLLEGE_ENDORSED)) {
+                AcademicRequest request = data.evaluation(applicant, open);
+
+                service.updateStatus(request.getId(), RequestStatus.REJECTED, data.admin(),
+                        "ตีกลับ", false);
+
+                assertThat(statusOf(request)).isEqualTo(RequestStatus.REJECTED);
+            }
+        }
+
         /**
-         * GAP-30. {@code updateStatus} is a setter with an audit trail, not a
-         * transition. Nothing stops an accidental jump from "รับคำร้อง" straight
-         * to "เสร็จสิ้น", skipping the subcommittee, the meeting and the
-         * college board — steps 3 through 10 of the flow.
+         * GAP-32, fixed. The "has it got this far" checks compared
+         * {@code enum.ordinal()}, which is the declaration order and not the
+         * process order — reordering the enum would have changed the behaviour
+         * silently. They now ask the state machine.
          */
         @Test
-        @DisplayName("GAP-30: กระโดดข้ามขั้นตอนได้ทั้งหมด ไม่มีอะไรห้าม")
-        void anyJumpIsCurrentlyAllowed() {
+        @DisplayName("GAP-32: บันทึกเอกสารซ้ำไม่ดึงสถานะถอยหลัง")
+        void resavingAnEarlierDocumentDoesNotRewind() {
             UserDtls applicant = data.applicant();
-            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
 
-            service.updateStatus(request.getId(), RequestStatus.COMPLETED, data.admin(),
-                    "ข้ามทุกขั้นตอน", false);
+            service.autoUpdateStatusByDocument(request.getId(), 3, data.admin(), null, false);
 
-            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .as("ถ้าเทสข้อนี้เริ่ม fail แปลว่า GAP-30 ถูกแก้แล้ว")
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.MEETING_SCHEDULED);
+        }
+
+        /**
+         * GAP-33, fixed. The bar showed three of the fifteen steps and omitted
+         * the college board's endorsement entirely.
+         */
+        @Test
+        @DisplayName("GAP-33: แถบความคืบหน้าครอบคลุมเส้นทางหลักครบ รวมขั้นรับรองของกรรมการวิทยาลัยฯ")
+        void progressBarCoversTheMainPath() {
+            assertThat(RequestStatus.getProgressSteps())
+                    .containsExactly(RequestStatus.RECEIVED,
+                            RequestStatus.SUB_COMMITTEE_APPOINTED,
+                            RequestStatus.MEETING_SCHEDULED,
+                            RequestStatus.COMPLETED_PASS,
+                            RequestStatus.COLLEGE_ENDORSED,
+                            RequestStatus.COMPLETED);
+
+            assertThat(RequestStatus.COLLEGE_ENDORSED.progressIndex())
+                    .as("ต้องอยู่ก่อนขั้นสุดท้าย")
+                    .isEqualTo(RequestStatus.COMPLETED.progressIndex() - 1);
+            assertThat(RequestStatus.DRAFT.progressIndex()).isEqualTo(-1);
+        }
+
+        /**
+         * GAP-34, fixed. "แจ้งผล - แก้ไข" was neither terminal nor able to move
+         * on: the applicant could not start a new request and had no way forward.
+         * Steps 12-15 now close the loop.
+         */
+        @Test
+        @DisplayName("GAP-34: วงจรแก้ไข (ข้อ 12-15) เดินครบรอบจนกลับมาเสร็จสิ้นได้")
+        void theReviseLoopCompletes() {
+            UserDtls applicant = data.applicant();
+            UserDtls staff = data.admin();
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.COMPLETED_REVISE);
+
+            // ข้อ 13 — ผู้ยื่นส่งเอกสารที่แก้แล้วกลับมา
+            service.updateStatus(request.getId(), RequestStatus.REVISION_SUBMITTED, applicant,
+                    "ส่งเอกสารที่แก้ไขแล้ว", false);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.REVISION_SUBMITTED);
+
+            // ข้อ 14-15 — เจ้าหน้าที่ส่งเข้าที่ประชุมอนุกรรมการอีกรอบ
+            service.updateStatus(request.getId(), RequestStatus.MEETING_SCHEDULED, staff,
+                    "นัดประชุมพิจารณาเอกสารที่แก้ไข", false);
+
+            // แล้ววนตามกรณีไม่มีแก้ไข: ข้อ 9 → 10 → 11
+            service.autoUpdateStatusByDocument(request.getId(), 6, staff,
+                    "{\"eval_result_level\":\"ดี\"}", false);
+            service.updateStatus(request.getId(), RequestStatus.COLLEGE_ENDORSED, staff,
+                    "กรรมการวิทยาลัยฯ รับรอง", false);
+            service.autoUpdateStatusByDocument(request.getId(), 8, staff, null, false);
+
+            assertThat(statusOf(request))
+                    .as("เดิมค้างอยู่ที่ 'แจ้งผล - แก้ไข' ไปต่อไม่ได้และยื่นใหม่ก็ไม่ได้")
                     .isEqualTo(RequestStatus.COMPLETED);
         }
 
+        /**
+         * GAP-35. ข้อ 3 asks for "อนุกรรมการประเมินการสอน จำนวน 3 คน" and the
+         * appointment order has a line for each. Saving it with a name missing
+         * used to mark the request "แต่งตั้งอนุกรรมการ" when no such committee
+         * had been appointed.
+         */
         @Test
-        @DisplayName("GAP-30: ดึงคำร้องที่จบแล้วกลับมาเป็นแบบร่างได้")
-        void terminalRequestsCanBeRewound() {
-            UserDtls applicant = data.applicant();
-            AcademicRequest request = data.evaluation(applicant, RequestStatus.COMPLETED);
-
-            service.updateStatus(request.getId(), RequestStatus.DRAFT, data.admin(), "ถอยกลับ", false);
-
-            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .isEqualTo(RequestStatus.DRAFT);
-        }
-
-        @Test
-        @Disabled("GAP-30: ต้องมีตารางการเปลี่ยนสถานะที่อนุญาต ตาม flow 33 ข้อก่อน")
-        @DisplayName("GAP-30 (spec): การเปลี่ยนสถานะที่ผิดลำดับต้องถูกปฏิเสธ")
-        void illegalTransitionsShouldBeRejected() {
+        @DisplayName("GAP-35: คำสั่งแต่งตั้งที่ยังไม่ครบ 3 คน ไม่ทำให้สถานะเป็น 'แต่งตั้งอนุกรรมการ'")
+        void anIncompleteAppointmentOrderDoesNotAdvanceTheStatus() {
             UserDtls applicant = data.applicant();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            org.assertj.core.api.Assertions
-                    .assertThatThrownBy(() -> service.updateStatus(request.getId(),
-                            RequestStatus.COMPLETED, data.admin(), "ข้ามขั้นตอน", false))
-                    .as("RECEIVED → COMPLETED ข้ามข้อ 3-10 ทั้งหมด")
-                    .isInstanceOf(IllegalStateException.class);
-        }
+            service.autoUpdateStatusByDocument(request.getId(), 3, data.admin(),
+                    "{\"committee_1_name\":\"รศ.ดร. หนึ่ง\",\"committee_2_name\":\"\"}", false);
 
-        /**
-         * GAP-33 and GAP-34. The progress bar the applicant watches shows three
-         * of the fifteen steps, and the "กรณีมีแก้ไข" branch (ข้อ 12–15) has no
-         * way back into the process once entered.
-         */
-        @Test
-        @DisplayName("GAP-33: แถบความคืบหน้าแสดงแค่ 3 ขั้น จากกระบวนการจริง 15 ขั้น")
-        void progressBarUnderstatesTheProcess() {
-            assertThat(RequestStatus.getProgressSteps())
-                    .as("ขาดขั้นรับรองผลโดยคณะกรรมการประจำวิทยาลัยฯ (ข้อ 10) และขั้นแจ้งผล (ข้อ 11)")
-                    .containsExactly(RequestStatus.RECEIVED,
-                            RequestStatus.SUB_COMMITTEE_APPOINTED,
-                            RequestStatus.MEETING_SCHEDULED);
+            assertThat(statusOf(request))
+                    .as("ขาดชื่ออนุกรรมการ 2 คน — ยังถือว่ายังไม่ได้แต่งตั้ง")
+                    .isEqualTo(RequestStatus.RECEIVED);
         }
 
         @Test
-        @DisplayName("GAP-34: 'แจ้งผล - แก้ไข' ค้างอยู่กับที่ — เดินต่อไม่ได้ ยื่นใหม่ก็ไม่ได้")
-        void reviseBranchIsADeadEnd() {
+        @DisplayName("GAP-35: ครบ 3 คนแล้ว สถานะจึงเปลี่ยนเป็น 'แต่งตั้งอนุกรรมการ'")
+        void aCompleteAppointmentOrderAdvancesTheStatus() {
             UserDtls applicant = data.applicant();
-            data.evaluation(applicant, RequestStatus.COMPLETED_REVISE);
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            assertThat(RequestStatus.COMPLETED_REVISE.isTerminal())
-                    .as("ไม่ใช่สถานะปลายทาง จึงยื่นคำร้องใหม่ไม่ได้")
-                    .isFalse();
-            assertThat(service.hasActiveRequest(applicant.getId()))
-                    .as("และยังนับเป็นคำร้องค้าง — ผู้ยื่นจึงติดอยู่ตรงนี้")
-                    .isTrue();
+            service.autoUpdateStatusByDocument(request.getId(), 3, data.admin(),
+                    "{\"committee_1_name\":\"รศ.ดร. หนึ่ง\",\"committee_2_name\":\"รศ.ดร. สอง\","
+                            + "\"committee_3_name\":\"ผศ.ดร. สาม\"}",
+                    false);
+
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
+        }
+
+        @Test
+        @DisplayName("ทุกสถานะที่ยังไม่ปิด ต้องมีทางเดินต่ออย่างน้อยหนึ่งทาง — ไม่มีทางตัน")
+        void noOpenStatusIsADeadEnd() {
+            for (RequestStatus status : RequestStatus.values()) {
+                if (status.isTerminal()) {
+                    assertThat(status.allowedNext())
+                            .as("%s เป็นสถานะปลายทาง ต้องไปไหนต่อไม่ได้", status)
+                            .isEmpty();
+                } else {
+                    assertThat(status.allowedNext())
+                            .as("%s ไม่ใช่สถานะปลายทาง แต่ไปต่อไม่ได้ = ผู้ยื่นติดอยู่ตรงนี้", status)
+                            .isNotEmpty();
+                }
+            }
         }
     }
 }

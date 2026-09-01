@@ -37,7 +37,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  * <p>Skipped rather than failed when Docker is not running.
  */
 @EnabledIfDockerAvailable
-@DisplayName("Migration: รัน V0-V11 ครบชุดบน PostgreSQL จริง")
+@DisplayName("Migration: รัน V0-V13 ครบชุดบน PostgreSQL จริง")
 class MigrationOnPostgresTest {
 
     private static final PostgreSQLContainer POSTGRES =
@@ -60,8 +60,18 @@ class MigrationOnPostgresTest {
                 id SERIAL PRIMARY KEY,
                 email VARCHAR(255) UNIQUE)
             """,
-            "CREATE TABLE IF NOT EXISTS academic_request (id BIGSERIAL PRIMARY KEY)",
-            "CREATE TABLE IF NOT EXISTS position_request (id BIGSERIAL PRIMARY KEY)",
+            """
+            CREATE TABLE IF NOT EXISTS academic_request (
+                id BIGSERIAL PRIMARY KEY,
+                current_status VARCHAR(50),
+                CONSTRAINT academic_request_current_status_check
+                    CHECK (current_status IN ('DRAFT','RECEIVED','COMPLETED')))
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS position_request (
+                id BIGSERIAL PRIMARY KEY,
+                current_status VARCHAR(50))
+            """,
             """
             CREATE TABLE IF NOT EXISTS staff_member (
                 id BIGSERIAL PRIMARY KEY,
@@ -78,6 +88,43 @@ class MigrationOnPostgresTest {
             CREATE TABLE IF NOT EXISTS notifications (
                 id BIGSERIAL PRIMARY KEY,
                 type VARCHAR(50))
+            """,
+            // V12 drops the enum checks on these. They carry a CHECK here so the
+            // test proves the migration removes a constraint that really exists,
+            // rather than passing because there was never anything to drop.
+            """
+            CREATE TABLE IF NOT EXISTS request_status_history (
+                id BIGSERIAL PRIMARY KEY,
+                request_id BIGINT REFERENCES academic_request(id),
+                old_status VARCHAR(50),
+                new_status VARCHAR(50),
+                CONSTRAINT request_status_history_new_status_check
+                    CHECK (new_status IN ('DRAFT','RECEIVED','COMPLETED')))
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS position_status_history (
+                id BIGSERIAL PRIMARY KEY,
+                request_id BIGINT REFERENCES position_request(id),
+                old_status VARCHAR(50),
+                new_status VARCHAR(50))
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS academic_committee_member (
+                id BIGSERIAL PRIMARY KEY,
+                committee_type VARCHAR(50))
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS position_document_edit_log (
+                id BIGSERIAL PRIMARY KEY,
+                action VARCHAR(50))
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS scopus_publication (
+                id BIGSERIAL PRIMARY KEY,
+                fs_user_id BIGINT,
+                eid VARCHAR(255),
+                title VARCHAR(2000),
+                synced_at TIMESTAMP DEFAULT NOW() NOT NULL)
             """);
 
     @BeforeAll
@@ -121,7 +168,7 @@ class MigrationOnPostgresTest {
     }
 
     @Test
-    @DisplayName("V0-V11 รันผ่านทั้งชุด และสร้างตารางครบทุกตัว")
+    @DisplayName("V0-V14 รันผ่านทั้งชุด และสร้างตารางครบทุกตัว")
     void everyMigrationApplies() throws SQLException {
         MigrateResult result = migrate();
 
@@ -129,13 +176,15 @@ class MigrationOnPostgresTest {
         assertThat(result.migrations)
                 .as("รายการ migration ที่รันไปจริง")
                 .extracting(m -> m.version)
-                .contains("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11");
+                .contains("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14");
 
         assertThat(tableNames())
                 .as("ตารางที่ migration รับผิดชอบต้องถูกสร้างครบ")
                 .contains("petitions", "petition_statuses", "academic_document_edit_log",
                         "user_signature", "signature_request", "signature_step",
-                        "signature_audit_event", "document_workflow_config");
+                        "signature_audit_event", "document_workflow_config",
+                        "position_request_publication", "external_author_mapping",
+                        "journal_tier");
     }
 
     @Test
@@ -226,6 +275,108 @@ class MigrationOnPostgresTest {
                 .isEmpty();
         assertThat(checkConstraintsOn("signature_step")).isEmpty();
         assertThat(checkConstraintsOn("user_signature")).isEmpty();
+    }
+
+    /**
+     * V12 is what lets the two statuses the flow document requires exist at all.
+     * Without it the CHECK frozen when the table was first created rejects any
+     * value added to the enum afterwards.
+     */
+    @Test
+    @DisplayName("V12: เพิ่มค่าสถานะใหม่ลงตารางได้ หลัง CHECK เก่าถูกลบ")
+    void v12LetsNewStatusValuesBeStored() throws SQLException {
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            assertThatThrownBy(() -> st.execute(
+                    "INSERT INTO academic_request (current_status) VALUES ('COLLEGE_ENDORSED')"))
+                    .as("ก่อน migrate: CHECK เก่ายังปฏิเสธค่าใหม่")
+                    .isInstanceOf(SQLException.class);
+        }
+
+        migrate();
+
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            st.execute("INSERT INTO academic_request (current_status) VALUES ('COLLEGE_ENDORSED')");
+            int id = singleInt(st, "SELECT max(id) FROM academic_request");
+            st.execute("""
+                    INSERT INTO request_status_history (request_id, old_status, new_status)
+                    VALUES (%d, 'COMPLETED_PASS', 'COLLEGE_ENDORSED')
+                    """.formatted(id));
+
+            assertThat(singleInt(st,
+                    "SELECT count(*) FROM request_status_history WHERE new_status = 'COLLEGE_ENDORSED'"))
+                    .as("ตารางประวัติสถานะก็ต้องรับค่าใหม่ได้ ไม่งั้นการเปลี่ยนสถานะจะ rollback ทั้งรายการ")
+                    .isEqualTo(1);
+        }
+    }
+
+    @Test
+    @DisplayName("V12: ลบ CHECK ของคอลัมน์ enum บนตารางคำร้องและประวัติครบทุกตัว")
+    void v12RemovesEveryRequestEnumCheck() throws SQLException {
+        migrate();
+
+        for (String table : List.of("academic_request", "request_status_history",
+                "position_request", "position_status_history",
+                "academic_document_edit_log", "position_document_edit_log",
+                "academic_committee_member")) {
+            assertThat(checkConstraintsOn(table))
+                    .as("%s ยังเหลือ CHECK ที่ผูกกับค่า enum", table)
+                    .isEmpty();
+        }
+    }
+
+    /**
+     * V13 carries the rule "the same work cannot be submitted twice" (GAP-11/12).
+     * The unique key is the half of it the database owns: a double submit, a
+     * double-clicked save or a retried request must not be able to record the
+     * same publication twice on one request and make it look like two pieces of
+     * work.
+     */
+    @Test
+    @DisplayName("V13: ตารางผูกผลงานกันการผูกผลงานชิ้นเดิมกับคำร้องเดิมซ้ำ")
+    void v13EnforcesOneLinkPerPublicationPerRequest() throws SQLException {
+        migrate();
+
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            st.execute("INSERT INTO position_request (current_status) VALUES ('DRAFT')");
+            int requestId = singleInt(st, "SELECT max(id) FROM position_request");
+
+            String link = """
+                    INSERT INTO position_request_publication
+                        (request_id, publication_id, document_type, slot_index)
+                    VALUES (%d, 555, 1, %d)
+                    """;
+            st.execute(link.formatted(requestId, 1));
+
+            assertThatThrownBy(() -> st.execute(link.formatted(requestId, 2)))
+                    .as("ผลงานชิ้นเดียวกันบนคำร้องเดียวกัน ต้องมีได้แถวเดียว")
+                    .isInstanceOf(SQLException.class);
+        }
+    }
+
+    /**
+     * Deleting a request must take its publication links with it. Without the
+     * cascade the delete fails on a foreign key, and a request nobody can remove
+     * is a support ticket rather than an error anyone sees.
+     */
+    @Test
+    @DisplayName("V13: ลบคำร้องแล้วการผูกผลงานต้องถูกลบตามไปด้วย")
+    void v13LinksAreDeletedWithTheirRequest() throws SQLException {
+        migrate();
+
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            st.execute("INSERT INTO position_request (current_status) VALUES ('DRAFT')");
+            int requestId = singleInt(st, "SELECT max(id) FROM position_request");
+            st.execute("""
+                    INSERT INTO position_request_publication
+                        (request_id, publication_id, document_type, slot_index)
+                    VALUES (%d, 777, 1, 1)
+                    """.formatted(requestId));
+
+            st.execute("DELETE FROM position_request WHERE id = " + requestId);
+
+            assertThat(singleInt(st, "SELECT count(*) FROM position_request_publication"))
+                    .isZero();
+        }
     }
 
     // ------------------------------------------------------------------

@@ -17,6 +17,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
+import com.ecom.academic.repository.PositionRequestPublicationRepository;
 import com.ecom.external.dto.PublicationDto;
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.model.ScopusPublication;
@@ -34,7 +35,10 @@ class ScopusQueryServiceTest {
 
     private final ScopusPublicationRepository publicationRepo = mock(ScopusPublicationRepository.class);
     private final FsFacultyRepository facultyRepo = mock(FsFacultyRepository.class);
-    private final ScopusQueryService service = new ScopusQueryService(publicationRepo, facultyRepo);
+    private final PositionRequestPublicationRepository linkRepo =
+            mock(PositionRequestPublicationRepository.class);
+    private final ScopusQueryService service =
+            new ScopusQueryService(publicationRepo, facultyRepo, linkRepo);
 
     private UserDtls userWithEmail(String email) {
         UserDtls u = new UserDtls();
@@ -55,13 +59,13 @@ class ScopusQueryServiceTest {
         UserDtls user = userWithEmail("somchai@kku.ac.th");
         when(facultyRepo.findByEmailNormalized("somchai@kku.ac.th"))
                 .thenReturn(Optional.of(faculty(1001L, "somchai@kku.ac.th")));
-        when(publicationRepo.findOwnedBy(eq(1001L), any(), any(), any(), any(Pageable.class)))
+        when(publicationRepo.findOwnedBy(eq(1001L), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
         service.listOwn(user, null, null, null, 0, 50);
 
         // The owner id must come from the resolved faculty record, never a parameter.
-        verify(publicationRepo).findOwnedBy(eq(1001L), any(), any(), any(), any(Pageable.class));
+        verify(publicationRepo).findOwnedBy(eq(1001L), any(), any(), any(), any(), any(Pageable.class));
     }
 
     @Test
@@ -75,7 +79,7 @@ class ScopusQueryServiceTest {
         assertThat(result.getTotalElements()).isZero();
         // Critically: no repository call at all, so there is no chance of a
         // null owner id turning into "match every row".
-        verify(publicationRepo, never()).findOwnedBy(any(), any(), any(), any(), any(Pageable.class));
+        verify(publicationRepo, never()).findOwnedBy(any(), any(), any(), any(), any(), any(Pageable.class));
     }
 
     @Test
@@ -204,10 +208,10 @@ class ScopusQueryServiceTest {
     }
 
     @Test
-    @DisplayName("บัญชีทดสอบที่ตรงกับ app.user.email ต้องสามารถค้นหาผลงานวิจัยทั้งหมดได้")
+    @DisplayName("บัญชีที่ตรงกับ app.research.universal-access-email ต้องค้นหาผลงานทั้งหมดได้")
     void testUserCanSearchAllPublications() {
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "testUserEmail", "user@user.com");
-        UserDtls testUser = userWithEmail("user@user.com");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "universalAccessEmail", "demo@example.invalid");
+        UserDtls testUser = userWithEmail("demo@example.invalid");
         when(publicationRepo.adminSearch(eq(null), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
@@ -215,22 +219,22 @@ class ScopusQueryServiceTest {
 
         assertThat(results).isNotNull();
         verify(publicationRepo).adminSearch(eq(null), any(), any(), any(), any(Pageable.class));
-        verify(publicationRepo, never()).findOwnedBy(any(), any(), any(), any(), any());
+        verify(publicationRepo, never()).findOwnedBy(any(), any(), any(), any(), any(), any());
     }
 
     @Test
-    @DisplayName("อาจารย์ทั่วไปที่ไม่ใช่บัญชีทดสอบ ต้องค้นหาได้เฉพาะผลงานของตนเองเท่านั้น")
+    @DisplayName("อาจารย์ทั่วไปที่ไม่ใช่บัญชีที่ตั้งค่าไว้ ต้องค้นหาได้เฉพาะผลงานของตนเองเท่านั้น")
     void regularTeacherIsStrictlyFilteredByOwnFsUserId() {
-        org.springframework.test.util.ReflectionTestUtils.setField(service, "testUserEmail", "user@user.com");
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "universalAccessEmail", "demo@example.invalid");
         UserDtls teacher = userWithEmail("teacher@kku.ac.th");
         when(facultyRepo.findByEmailNormalized("teacher@kku.ac.th"))
                 .thenReturn(Optional.of(faculty(999L, "teacher@kku.ac.th")));
-        when(publicationRepo.findOwnedBy(eq(999L), any(), any(), any(), any(Pageable.class)))
+        when(publicationRepo.findOwnedBy(eq(999L), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
         service.listOwn(teacher, null, null, null, 0, 50);
 
-        verify(publicationRepo).findOwnedBy(eq(999L), any(), any(), any(), any(Pageable.class));
+        verify(publicationRepo).findOwnedBy(eq(999L), any(), any(), any(), any(), any(Pageable.class));
         verify(publicationRepo, never()).adminSearch(any(), any(), any(), any(), any());
     }
 }

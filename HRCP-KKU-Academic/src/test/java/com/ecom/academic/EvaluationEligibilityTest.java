@@ -3,8 +3,8 @@ package com.ecom.academic;
 import static org.assertj.core.api.Assertions.assertThat;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -26,10 +26,14 @@ import com.ecom.support.AbstractFlowTest;
  * who passed cannot proceed; wrong in the other and an expired result is
  * accepted.
  *
- * <p>Two independent definitions of "a usable result" exist in the code today
- * and they disagree. Both are pinned here: the tests that pass describe what the
- * system does now, and the {@code @Disabled} ones describe what the flow
- * document says it should do. See GAP-20 and GAP-21.
+ * <p>There used to be two definitions of "a usable result" in the code and they
+ * disagreed — one accepted only {@code COMPLETED}, the other also
+ * {@code COMPLETED_PASS} — so the two screens a professor sees contradicted each
+ * other (GAP-20). And the expiry check could not read a Thai month name, so it
+ * answered "not expired" to every date written the way the documents actually
+ * write them (GAP-21). Both are now one rule,
+ * {@code AcademicRequestService.findUsableEvaluations}, and these tests hold it
+ * there.
  */
 @DisplayName("คุณสมบัติผู้ยื่น: ผลประเมินการสอนที่ใช้ขอตำแหน่งได้")
 class EvaluationEligibilityTest extends AbstractFlowTest {
@@ -104,36 +108,15 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
         }
 
         /**
-         * GAP-20. The dashboard reads {@code getLatestEvaluationExpiry}, which
-         * accepts COMPLETED_PASS, while the "start a position request" screen
-         * reads {@code getEligibleEvaluations}, which does not. A professor
-         * whose request stops at COMPLETED_PASS therefore sees a countdown
-         * telling them their result is valid, and a form telling them they have
-         * no result to use.
-         *
-         * <p>The assertion below records today's behaviour so the contradiction
-         * is visible in the suite rather than only in the report; the intended
-         * behaviour is the disabled test that follows.
+         * GAP-20, fixed. The dashboard's expiry countdown and the "start a
+         * position request" screen used to answer this question separately and
+         * disagree: a professor whose request stopped at COMPLETED_PASS was
+         * shown a valid result on one screen and none on the next. Both now ask
+         * {@code AcademicRequestService.findUsableEvaluations}.
          */
         @Test
-        @DisplayName("GAP-20: COMPLETED_PASS ยังใช้ยื่นไม่ได้ (พฤติกรรมปัจจุบัน)")
-        void completedPassIsNotEligibleToday() {
-            UserDtls applicant = data.applicant();
-            data.completedEvaluation(applicant, RequestStatus.COMPLETED_PASS, null);
-
-            assertThat(positionService.getEligibleEvaluations(applicant.getId()))
-                    .as("ถ้าเทสข้อนี้เริ่ม fail แปลว่า GAP-20 ถูกแก้แล้ว — ให้เปิดเทสถัดไปแทน")
-                    .isEmpty();
-
-            assertThat(academicService.getLatestEvaluationExpiry(applicant.getId()))
-                    .as("แต่แดชบอร์ดกลับบอกว่าผลประเมินยังใช้ได้ — นี่คือความขัดแย้ง")
-                    .isNotNull();
-        }
-
-        @Test
-        @Disabled("GAP-20: ต้องรวมนิยาม 'ผลประเมินที่ใช้ได้' ให้เหลือที่เดียวก่อน")
-        @DisplayName("GAP-20 (spec): COMPLETED_PASS ควรใช้ยื่นขอตำแหน่งได้")
-        void completedPassShouldBeEligible() {
+        @DisplayName("COMPLETED_PASS ใช้ยื่นขอตำแหน่งได้ (ข้อ 11 — แจ้งผลแล้วให้ยื่นต่อได้)")
+        void completedPassIsEligible() {
             UserDtls applicant = data.applicant();
             AcademicRequest evaluation =
                     data.completedEvaluation(applicant, RequestStatus.COMPLETED_PASS, null);
@@ -141,6 +124,22 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
             assertThat(positionService.getEligibleEvaluations(applicant.getId()))
                     .extracting(AcademicRequest::getId)
                     .containsExactly(evaluation.getId());
+        }
+
+        @Test
+        @DisplayName("แดชบอร์ดกับหน้ายื่นคำร้องต้องตอบตรงกันเสมอ")
+        void theTwoScreensAgree() {
+            UserDtls applicant = data.applicant();
+            data.completedEvaluation(applicant, RequestStatus.COMPLETED_PASS, null);
+
+            boolean dashboardSaysValid =
+                    academicService.getLatestEvaluationExpiry(applicant.getId()) != null;
+            boolean formOffersIt =
+                    !positionService.getEligibleEvaluations(applicant.getId()).isEmpty();
+
+            assertThat(formOffersIt)
+                    .as("ถ้าสองหน้านี้ไม่ตรงกัน ผู้ยื่นจะเจอทางตันโดยไม่มีคำอธิบาย")
+                    .isEqualTo(dashboardSaysValid);
         }
     }
 
@@ -171,40 +170,48 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
         }
 
         /**
-         * GAP-21. {@code isExpired} strips every non-digit and then expects three
-         * numbers. A date written with a Thai month name leaves only two, so the
-         * method falls through to its {@code return false} — "assume not
-         * expired". Documents in this system routinely carry Thai month names;
-         * {@code AcademicRequestService.parseThaiDate} exists specifically to
-         * read them.
-         *
-         * <p>The result is that expiry is, in practice, almost never enforced.
+         * GAP-21, fixed. The old reader stripped every non-digit and then
+         * expected three numbers, so a date written with a Thai month name left
+         * it with two and it fell through to "assume not expired". Expiry was in
+         * practice never enforced. There is now one date reader,
+         * {@code AcademicRequestService.parseThaiDate}, and it takes both forms.
          */
         @Test
-        @DisplayName("GAP-21: วันหมดอายุที่เขียนด้วยชื่อเดือนไทย ถูกมองว่ายังไม่หมดอายุเสมอ")
-        void thaiMonthNameExpiryIsIgnoredToday() {
+        @DisplayName("วันหมดอายุที่เขียนด้วยชื่อเดือนไทยและผ่านมาแล้ว — ใช้ยื่นไม่ได้")
+        void thaiMonthNameExpiryIsHonoured() {
             UserDtls applicant = data.applicant();
             // 1 มกราคม 2560 = 1 January 2017, long past.
+            data.completedEvaluation(applicant, RequestStatus.COMPLETED, "1 มกราคม 2560");
+
+            assertThat(positionService.getEligibleEvaluations(applicant.getId())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("วันหมดอายุชื่อเดือนไทยที่ยังไม่ถึง — ยังใช้ได้")
+        void futureThaiMonthNameExpiryIsStillValid() {
+            UserDtls applicant = data.applicant();
             AcademicRequest evaluation = data.completedEvaluation(applicant,
-                    RequestStatus.COMPLETED, "1 มกราคม 2560");
+                    RequestStatus.COMPLETED, "1 มกราคม 2599");
 
             assertThat(positionService.getEligibleEvaluations(applicant.getId()))
-                    .as("""
-                            ผลประเมินที่หมดอายุตั้งแต่ปี 2560 ยังถูกเสนอให้ใช้ยื่นได้
-                            เพราะ isExpired() อ่านชื่อเดือนไทยไม่ออกแล้วคืนค่า 'ยังไม่หมดอายุ'
-                            ถ้าเทสข้อนี้เริ่ม fail แปลว่า GAP-21 ถูกแก้แล้ว""")
                     .extracting(AcademicRequest::getId)
                     .containsExactly(evaluation.getId());
         }
 
         @Test
-        @Disabled("GAP-21: ต้องให้ isExpired ใช้ตัวอ่านวันที่ไทยตัวเดียวกับ parseThaiDate ก่อน")
-        @DisplayName("GAP-21 (spec): วันหมดอายุที่เขียนด้วยชื่อเดือนไทยและผ่านมาแล้ว ต้องใช้ยื่นไม่ได้")
-        void thaiMonthNameExpiryShouldBeHonoured() {
-            UserDtls applicant = data.applicant();
-            data.completedEvaluation(applicant, RequestStatus.COMPLETED, "1 มกราคม 2560");
+        @DisplayName("ตัวอ่านวันที่รับได้ทั้งชื่อเดือนไทย ตัวเลข เลขไทย และปี พ.ศ.")
+        void theDateReaderTakesEveryFormTheDocumentsUse() {
+            LocalDateTime expected = LocalDateTime.of(2026, 2, 17, 0, 0);
 
-            assertThat(positionService.getEligibleEvaluations(applicant.getId())).isEmpty();
+            assertThat(AcademicRequestService.parseThaiDate("17 กุมภาพันธ์ 2569")).isEqualTo(expected);
+            assertThat(AcademicRequestService.parseThaiDate("17/2/2569")).isEqualTo(expected);
+            assertThat(AcademicRequestService.parseThaiDate("17-2-2569")).isEqualTo(expected);
+            assertThat(AcademicRequestService.parseThaiDate("๑๗ กุมภาพันธ์ ๒๕๖๙")).isEqualTo(expected);
+            assertThat(AcademicRequestService.parseThaiDate("17 กุมภาพันธ์ 2026")).isEqualTo(expected);
+
+            assertThat(AcademicRequestService.parseThaiDate("ไม่ใช่วันที่")).isNull();
+            assertThat(AcademicRequestService.parseThaiDate("")).isNull();
+            assertThat(AcademicRequestService.parseThaiDate(null)).isNull();
         }
 
         @Test
@@ -216,6 +223,52 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
 
             assertThat(academicService.getLatestEvaluationExpiry(applicant.getId()))
                     .isEqualTo(evaluation.getSubmissionDate().plusYears(3));
+        }
+
+        /**
+         * GAP-22, fixed. This method used to ignore its argument entirely and
+         * ask the repository for the requests of applicant {@code null}, which
+         * is nobody — so the reminder job it backs could never have found
+         * anything to warn about.
+         */
+        @Test
+        @DisplayName("ค้นหาผลประเมินที่ใกล้หมดอายุ — คืนเฉพาะรายการที่หมดอายุก่อนวันที่ระบุ")
+        void expiringSoonHonoursTheCutoff() {
+            UserDtls applicant = data.applicant();
+
+            AcademicRequest lapsingSoon = data.evaluation(applicant, RequestStatus.COMPLETED);
+            lapsingSoon.setEvaluationExpiryDate(LocalDateTime.now().plusDays(20));
+            data.saveEvaluation(lapsingSoon);
+
+            AcademicRequest lapsingLater = data.evaluation(applicant, RequestStatus.COMPLETED);
+            lapsingLater.setEvaluationExpiryDate(LocalDateTime.now().plusYears(2));
+            data.saveEvaluation(lapsingLater);
+
+            AcademicRequest noExpiryYet = data.evaluation(applicant, RequestStatus.COMPLETED);
+
+            assertThat(academicService.findRequestsExpiringSoon(LocalDateTime.now().plusDays(30)))
+                    .extracting(AcademicRequest::getId)
+                    .as("ต้องได้เฉพาะรายการที่หมดอายุภายใน 30 วัน")
+                    .containsExactly(lapsingSoon.getId())
+                    .doesNotContain(lapsingLater.getId(), noExpiryYet.getId());
+        }
+
+        @Test
+        @DisplayName("ค้นหาผลประเมินใกล้หมดอายุ — ไม่นับคำร้องที่ยังไม่จบกระบวนการ")
+        void expiringSoonIgnoresUnfinishedRequests() {
+            UserDtls applicant = data.applicant();
+            AcademicRequest inFlight = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
+            inFlight.setEvaluationExpiryDate(LocalDateTime.now().plusDays(5));
+            data.saveEvaluation(inFlight);
+
+            assertThat(academicService.findRequestsExpiringSoon(LocalDateTime.now().plusDays(30)))
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("ส่งวันที่เป็น null — ไม่ล้ม คืนรายการว่าง")
+        void expiringSoonHandlesNull() {
+            assertThat(academicService.findRequestsExpiringSoon(null)).isEmpty();
         }
 
         @Test

@@ -47,6 +47,21 @@ public class PositionRequestServiceTest {
     @Autowired
     private PositionRequestRepository requestRepository;
 
+    /**
+     * Parks a submitted request at a status without walking there.
+     *
+     * <p>These cases are about what a status *means* to {@code hasActiveRequest},
+     * not about how a request reaches it, and the transition guard rightly
+     * refuses the jumps they used to make. Walking the real sequence would add
+     * a dozen irrelevant lines to each one.
+     */
+    private PositionRequest requestAt(PositionRequestStatus status) {
+        PositionRequest request = positionService.createDraftRequest(testUser, null);
+        positionService.submitRequest(request);
+        request.setCurrentStatus(status);
+        return positionService.save(request);
+    }
+
     @Autowired
     private PositionDocumentRepository documentRepository;
 
@@ -193,15 +208,15 @@ public class PositionRequestServiceTest {
             positionService.submitRequest(request);
             positionService.updateStatus(request.getId(), PositionRequestStatus.DOCUMENT_VERIFICATION, testAdmin,
                     "ตรวจสอบ");
-            positionService.updateStatus(request.getId(), PositionRequestStatus.SCREENING_APPROVED, testAdmin,
-                    "อนุมัติ");
+            positionService.updateStatus(request.getId(), PositionRequestStatus.SCREENING_COMMITTEE, testAdmin,
+                    "เสนอวาระกลั่นกรอง");
 
             List<PositionStatusHistory> history = positionService.getStatusHistory(request.getId());
             assertThat(history).hasSize(3); // submit + 2 updates
             assertThat(history).extracting(PositionStatusHistory::getNewStatus)
                     .contains(PositionRequestStatus.DOCUMENT_RECEIVED,
                             PositionRequestStatus.DOCUMENT_VERIFICATION,
-                            PositionRequestStatus.SCREENING_APPROVED);
+                            PositionRequestStatus.SCREENING_COMMITTEE);
         }
 
         @Test
@@ -230,15 +245,23 @@ public class PositionRequestServiceTest {
         void updateStatus_FullLifecycle_DraftToSentToHR() {
             PositionRequest request = positionService.createDraftRequest(testUser, null);
             positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.DOCUMENT_VERIFICATION, testAdmin, null);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.SCREENING_APPROVED, testAdmin, null);
+
+            // ข้อ 20-31 ตามลำดับใน flow — ข้ามขั้นไม่ได้อีกแล้ว
+            for (PositionRequestStatus step : List.of(
+                    PositionRequestStatus.DOCUMENT_VERIFICATION,
+                    PositionRequestStatus.SCREENING_COMMITTEE,
+                    PositionRequestStatus.SCREENING_APPROVED,
+                    PositionRequestStatus.COLLEGE_COMMITTEE,
+                    PositionRequestStatus.COLLEGE_APPROVED)) {
+                positionService.updateStatus(request.getId(), step, testAdmin, null);
+            }
             PositionRequest completed = positionService.updateStatus(
                     request.getId(), PositionRequestStatus.SENT_TO_HR, testAdmin, "ส่งออก");
 
             assertThat(completed.getCurrentStatus()).isEqualTo(PositionRequestStatus.SENT_TO_HR);
 
             List<PositionStatusHistory> history = positionService.getStatusHistory(request.getId());
-            assertThat(history).hasSize(4); // submit + 3 updates
+            assertThat(history).hasSize(7); // submit + 6 updates
         }
     }
 
@@ -267,25 +290,19 @@ public class PositionRequestServiceTest {
 
         @Test
         void hasActiveRequest_ReturnsFalse_WhenSentToHR() {
-            PositionRequest request = positionService.createDraftRequest(testUser, null);
-            positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.SENT_TO_HR, testAdmin, null);
+            requestAt(PositionRequestStatus.SENT_TO_HR);
             assertThat(positionService.hasActiveRequest(testUser.getId())).isFalse();
         }
 
         @Test
         void hasActiveRequest_ReturnsFalse_WhenRejected() {
-            PositionRequest request = positionService.createDraftRequest(testUser, null);
-            positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.REJECTED, testAdmin, null);
+            requestAt(PositionRequestStatus.REJECTED);
             assertThat(positionService.hasActiveRequest(testUser.getId())).isFalse();
         }
 
         @Test
         void hasActiveRequest_ReturnsTrue_WhenRevisionRequested() {
-            PositionRequest request = positionService.createDraftRequest(testUser, null);
-            positionService.submitRequest(request);
-            positionService.updateStatus(request.getId(), PositionRequestStatus.REVISION_REQUESTED, testAdmin, null);
+            requestAt(PositionRequestStatus.REVISION_REQUESTED);
             assertThat(positionService.hasActiveRequest(testUser.getId())).isTrue();
         }
 
@@ -296,14 +313,12 @@ public class PositionRequestServiceTest {
          */
         @Test
         void everyTerminalStatusEndsTheRequest() {
-            PositionRequest request = positionService.createDraftRequest(testUser, null);
-            positionService.submitRequest(request);
-
             for (PositionRequestStatus status : PositionRequestStatus.values()) {
                 if (!status.isTerminal()) {
                     continue;
                 }
-                positionService.updateStatus(request.getId(), status, testAdmin, null);
+                requestRepository.deleteAll();
+                requestAt(status);
                 assertThat(positionService.hasActiveRequest(testUser.getId()))
                         .as("%s ประกาศตัวว่าเป็นสถานะจบ จึงต้องยื่นคำร้องใหม่ได้", status)
                         .isFalse();

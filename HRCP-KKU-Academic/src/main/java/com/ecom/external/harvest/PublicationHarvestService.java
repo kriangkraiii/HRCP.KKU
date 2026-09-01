@@ -1,0 +1,246 @@
+package com.ecom.external.harvest;
+
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Service;
+
+import com.ecom.external.harvest.config.HarvestProperties;
+import com.ecom.external.harvest.model.HarvestContext;
+import com.ecom.external.harvest.model.HarvestResult;
+import com.ecom.external.harvest.model.RawPublication;
+import com.ecom.external.model.ExternalAuthorMapping;
+import com.ecom.external.model.FsFaculty;
+import com.ecom.external.model.FsSyncState;
+import com.ecom.external.repository.ExternalAuthorMappingRepository;
+import com.ecom.external.repository.FsFacultyRepository;
+import com.ecom.external.repository.FsSyncStateRepository;
+import com.ecom.external.service.FsSyncWriter;
+import com.ecom.service.SystemAlertService;
+
+/**
+ * Main orchestrator for multi-source academic publication harvesting.
+ *
+ * <p>Uses Java 21 Virtual Threads to execute external source adapters (Crossref, OpenAlex,
+ * DBLP, ThaiJO, KKU IR) concurrently, then batches writes through {@link FsSyncWriter}
+ * with deduplication and journal quartile enrichment.
+ */
+@Service
+public class PublicationHarvestService {
+
+    private static final Logger log = LoggerFactory.getLogger(PublicationHarvestService.class);
+    private static final String SCHEDULE_ZONE = "Asia/Bangkok";
+    private static final int WRITE_BATCH_SIZE = 50;
+
+    private final List<PublicationSourceAdapter> adapters;
+    private final HarvestProperties props;
+    private final FsFacultyRepository facultyRepo;
+    private final ExternalAuthorMappingRepository mappingRepo;
+    private final FsSyncStateRepository syncStateRepo;
+    private final FsSyncWriter writer;
+    private final SystemAlertService alerts;
+
+    private final AtomicBoolean running = new AtomicBoolean(false);
+
+    public PublicationHarvestService(
+            List<PublicationSourceAdapter> adapters,
+            HarvestProperties props,
+            FsFacultyRepository facultyRepo,
+            ExternalAuthorMappingRepository mappingRepo,
+            FsSyncStateRepository syncStateRepo,
+            FsSyncWriter writer,
+            SystemAlertService alerts
+    ) {
+        this.adapters = adapters != null ? adapters : List.of();
+        this.props = props;
+        this.facultyRepo = facultyRepo;
+        this.mappingRepo = mappingRepo;
+        this.syncStateRepo = syncStateRepo;
+        this.writer = writer;
+        this.alerts = alerts;
+    }
+
+    /**
+     * Daily scheduled cron job.
+     */
+    @Scheduled(cron = "${harvest.cron:0 0 4 * * *}", zone = SCHEDULE_ZONE)
+    public void scheduledHarvest() {
+        if (!props.isEnabled()) {
+            log.info("Multi-source publication harvesting is disabled by configuration");
+            return;
+        }
+        harvestAll();
+    }
+
+    /**
+     * Runs all enabled source adapters in parallel using virtual threads.
+     */
+    public List<HarvestResult> harvestAll() {
+        if (!running.compareAndSet(false, true)) {
+            log.warn("Publication harvest is already running — skipping request");
+            return List.of(HarvestResult.skipped("ALL", "Another harvest job is already in progress"));
+        }
+
+        long startedAt = System.currentTimeMillis();
+        log.info("Starting multi-source publication harvest across {} adapter(s)", adapters.size());
+
+        try {
+            List<FsFaculty> facultyList = facultyRepo.findAll();
+            if (facultyList.isEmpty()) {
+                log.warn("Publication harvest skipped: no faculty found in database");
+                return List.of(HarvestResult.skipped("ALL", "No faculty found in database"));
+            }
+
+            Map<Long, List<ExternalAuthorMapping>> mappingsByUserId = loadMappingsGroupedByUser();
+
+            // Run each adapter concurrently on a Java 21 Virtual Thread
+            List<HarvestResult> results = new ArrayList<>();
+            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+                List<Callable<HarvestResult>> tasks = new ArrayList<>();
+
+                for (PublicationSourceAdapter adapter : adapters) {
+                    if (!adapter.isEnabled()) {
+                        continue;
+                    }
+
+                    tasks.add(() -> {
+                        String source = adapter.sourceName();
+                        String syncType = source.toLowerCase();
+                        writer.markRunning(syncType);
+                        OffsetDateTime cursor = loadCursor(syncType);
+
+                        HarvestContext context = HarvestContext.of(
+                                cursor,
+                                props.getYearFrom(),
+                                facultyList,
+                                mappingsByUserId
+                        );
+
+                        log.info("Adapter [{}] starting harvest...", source);
+                        HarvestResult result = adapter.harvest(context);
+
+                        // Batch write harvested publications to database
+                        if (result.success() && !result.publications().isEmpty()) {
+                            int totalWritten = writeInBatches(result.publications());
+                            writer.recordSuccess(syncType, totalWritten, result.requestsMade(),
+                                    result.durationMs(), result.newCursor(), result.message());
+                            log.info("Adapter [{}] wrote {} publication(s)", source, totalWritten);
+                        } else if (result.success()) {
+                            writer.recordSuccess(syncType, 0, result.requestsMade(),
+                                    result.durationMs(), result.newCursor(), result.message());
+                        } else {
+                            writer.recordFailure(syncType, new RuntimeException(result.message()));
+                        }
+
+                        return result;
+                    });
+                }
+
+                List<Future<HarvestResult>> futures = executor.invokeAll(tasks);
+                for (Future<HarvestResult> f : futures) {
+                    results.add(f.get());
+                }
+            }
+
+            long totalDuration = System.currentTimeMillis() - startedAt;
+            int totalWorks = results.stream().mapToInt(r -> r.publications().size()).sum();
+            log.info("Multi-source harvest completed in {} ms: {} total works from {} sources",
+                    totalDuration, totalWorks, results.size());
+
+            alerts.success("เก็บเกี่ยวผลงานวิจัยรอบวัน",
+                    "เสร็จสิ้น " + results.size() + " แหล่งข้อมูล รวม " + totalWorks + " รายการ (" + totalDuration + " ms)");
+
+            return results;
+
+        } catch (Exception e) {
+            log.error("Multi-source publication harvest encountered an unexpected failure: {}", e.getMessage(), e);
+            alerts.failure("เก็บเกี่ยวผลงานวิจัยรอบวัน", "เกิดข้อผิดพลาด: " + e.getMessage());
+            return List.of(HarvestResult.failed("ALL", 0, System.currentTimeMillis() - startedAt, e.getMessage()));
+        } finally {
+            running.set(false);
+        }
+    }
+
+    /**
+     * Executes a single specific adapter manually by source name.
+     */
+    public HarvestResult harvestSource(String sourceName) {
+        if (sourceName == null || sourceName.isBlank()) {
+            return HarvestResult.failed("UNKNOWN", 0, 0, "Source name cannot be blank");
+        }
+
+        PublicationSourceAdapter adapter = adapters.stream()
+                .filter(a -> a.sourceName().equalsIgnoreCase(sourceName))
+                .findFirst()
+                .orElse(null);
+
+        if (adapter == null) {
+            return HarvestResult.failed(sourceName, 0, 0, "No adapter registered for source: " + sourceName);
+        }
+
+        List<FsFaculty> facultyList = facultyRepo.findAll();
+        Map<Long, List<ExternalAuthorMapping>> mappings = loadMappingsGroupedByUser();
+
+        String syncType = adapter.sourceName().toLowerCase();
+        writer.markRunning(syncType);
+        OffsetDateTime cursor = loadCursor(syncType);
+
+        HarvestContext context = HarvestContext.of(cursor, props.getYearFrom(), facultyList, mappings);
+        HarvestResult result = adapter.harvest(context);
+
+        if (result.success() && !result.publications().isEmpty()) {
+            int written = writeInBatches(result.publications());
+            writer.recordSuccess(syncType, written, result.requestsMade(), result.durationMs(), result.newCursor(), result.message());
+        } else if (result.success()) {
+            writer.recordSuccess(syncType, 0, result.requestsMade(), result.durationMs(), result.newCursor(), result.message());
+        } else {
+            writer.recordFailure(syncType, new RuntimeException(result.message()));
+        }
+
+        return result;
+    }
+
+    private int writeInBatches(List<RawPublication> publications) {
+        int written = 0;
+        double threshold = props.getFuzzyThreshold();
+
+        for (int i = 0; i < publications.size(); i += WRITE_BATCH_SIZE) {
+            int end = Math.min(i + WRITE_BATCH_SIZE, publications.size());
+            List<RawPublication> batch = publications.subList(i, end);
+            written += writer.writeHarvestedBatch(batch, threshold);
+        }
+        return written;
+    }
+
+    private Map<Long, List<ExternalAuthorMapping>> loadMappingsGroupedByUser() {
+        Map<Long, List<ExternalAuthorMapping>> map = new HashMap<>();
+        for (ExternalAuthorMapping m : mappingRepo.findAll()) {
+            map.computeIfAbsent(m.getFsUserId(), k -> new ArrayList<>()).add(m);
+        }
+        return map;
+    }
+
+    private OffsetDateTime loadCursor(String syncType) {
+        return syncStateRepo.findById(syncType)
+                .map(FsSyncState::getLastUpdatedSince)
+                .orElse(null);
+    }
+
+    public boolean isRunning() {
+        return running.get();
+    }
+}

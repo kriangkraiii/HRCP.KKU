@@ -4,17 +4,27 @@ import java.time.Duration;
 import java.util.HashMap;
 import java.util.Map;
 
+import java.util.List;
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.ecom.external.dto.PublicationDto;
+import com.ecom.external.harvest.PublicationHarvestService;
+import com.ecom.external.harvest.model.HarvestResult;
+import com.ecom.external.model.ExternalAuthorMapping;
 import com.ecom.external.model.FsSyncState;
+import com.ecom.external.repository.ExternalAuthorMappingRepository;
 import com.ecom.external.repository.FsFacultyRepository;
 import com.ecom.external.repository.ScopusPublicationRepository;
 import com.ecom.external.service.FsApiClient;
@@ -41,19 +51,25 @@ public class ExternalSyncAdminController {
     private final FsApiClient apiClient;
     private final FsFacultyRepository facultyRepo;
     private final ScopusPublicationRepository publicationRepo;
+    private final PublicationHarvestService harvestService;
+    private final ExternalAuthorMappingRepository mappingRepo;
 
     public ExternalSyncAdminController(FsSyncService syncService,
             ManualSyncGuard guard,
             ScopusQueryService scopusQuery,
             FsApiClient apiClient,
             FsFacultyRepository facultyRepo,
-            ScopusPublicationRepository publicationRepo) {
+            ScopusPublicationRepository publicationRepo,
+            PublicationHarvestService harvestService,
+            ExternalAuthorMappingRepository mappingRepo) {
         this.syncService = syncService;
         this.guard = guard;
         this.scopusQuery = scopusQuery;
         this.apiClient = apiClient;
         this.facultyRepo = facultyRepo;
         this.publicationRepo = publicationRepo;
+        this.harvestService = harvestService;
+        this.mappingRepo = mappingRepo;
     }
 
     /** Current mirror contents and the outcome of the last run of each job. */
@@ -154,4 +170,91 @@ public class ExternalSyncAdminController {
         body.put("page", result.getNumber());
         return ResponseEntity.ok(body);
     }
+
+    // =========================================================================
+    // Multi-Source Harvesting Endpoints (V14)
+    // =========================================================================
+
+    /**
+     * Triggers parallel harvest across all enabled external sources (Virtual Threads).
+     */
+    @PostMapping("/harvest/all")
+    public ResponseEntity<List<HarvestResult>> triggerHarvestAll() {
+        List<HarvestResult> results = harvestService.harvestAll();
+        return ResponseEntity.ok(results);
+    }
+
+    /**
+     * Triggers harvest for a specific source (e.g. crossref, openalex, dblp, thaijo, kkuir).
+     */
+    @PostMapping("/harvest/{source}")
+    public ResponseEntity<HarvestResult> triggerHarvestSource(@PathVariable String source) {
+        HarvestResult result = harvestService.harvestSource(source);
+        return ResponseEntity.ok(result);
+    }
+
+    /**
+     * Returns publication counts broken down by data source.
+     */
+    @GetMapping("/harvest/stats")
+    public ResponseEntity<Map<String, Object>> harvestStats() {
+        Map<String, Object> stats = new HashMap<>();
+        stats.put("total", publicationRepo.count());
+
+        Map<String, Long> bySource = new HashMap<>();
+        for (Object[] row : publicationRepo.countGroupByDataSource()) {
+            String source = (String) row[0];
+            Long count = (Long) row[1];
+            bySource.put(source != null ? source : "UNKNOWN", count);
+        }
+        stats.put("bySource", bySource);
+        stats.put("isHarvestRunning", harvestService.isRunning());
+        return ResponseEntity.ok(stats);
+    }
+
+    // =========================================================================
+    // External Author Mappings (DBLP PID, ORCID)
+    // =========================================================================
+
+    @GetMapping("/author-mappings")
+    public ResponseEntity<List<ExternalAuthorMapping>> getAllAuthorMappings(
+            @RequestParam(required = false) Long fsUserId,
+            @RequestParam(required = false) String provider) {
+        if (fsUserId != null && provider != null) {
+            return ResponseEntity.ok(mappingRepo.findByFsUserIdAndProvider(fsUserId, provider));
+        } else if (fsUserId != null) {
+            return ResponseEntity.ok(mappingRepo.findByFsUserId(fsUserId));
+        } else if (provider != null) {
+            return ResponseEntity.ok(mappingRepo.findByProvider(provider));
+        }
+        return ResponseEntity.ok(mappingRepo.findAll());
+    }
+
+    @PostMapping("/author-mappings")
+    public ResponseEntity<ExternalAuthorMapping> saveAuthorMapping(@RequestBody ExternalAuthorMapping mapping) {
+        if (mapping.getFsUserId() == null || mapping.getProvider() == null || mapping.getExternalPid() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        Optional<ExternalAuthorMapping> existing = mappingRepo.findByFsUserIdAndProviderAndExternalPid(
+                mapping.getFsUserId(), mapping.getProvider().toUpperCase(), mapping.getExternalPid().trim());
+
+        ExternalAuthorMapping toSave = existing.orElse(mapping);
+        toSave.setProvider(mapping.getProvider().toUpperCase().trim());
+        toSave.setExternalPid(mapping.getExternalPid().trim());
+        toSave.setDisplayName(mapping.getDisplayName());
+        toSave.setVerified(mapping.isVerified());
+
+        return ResponseEntity.ok(mappingRepo.save(toSave));
+    }
+
+    @DeleteMapping("/author-mappings/{id}")
+    public ResponseEntity<Void> deleteAuthorMapping(@PathVariable Long id) {
+        if (mappingRepo.existsById(id)) {
+            mappingRepo.deleteById(id);
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.notFound().build();
+    }
 }
+

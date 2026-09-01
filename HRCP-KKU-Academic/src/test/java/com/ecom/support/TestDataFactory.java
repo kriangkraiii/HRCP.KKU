@@ -25,6 +25,7 @@ import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestPublication;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureKind;
@@ -33,6 +34,7 @@ import com.ecom.academic.service.UserSignatureService;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
 import com.ecom.academic.repository.PositionDocumentRepository;
+import com.ecom.academic.repository.PositionRequestPublicationRepository;
 import com.ecom.academic.repository.PositionRequestRepository;
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.model.ScopusPublication;
@@ -74,6 +76,7 @@ public class TestDataFactory {
     private final PositionDocumentRepository positionDocuments;
     private final FsFacultyRepository faculties;
     private final ScopusPublicationRepository publications;
+    private final PositionRequestPublicationRepository publicationLinks;
     private final NotificationRepository notifications;
     private final JdbcTemplate jdbc;
     private final UserSignatureService signatureService;
@@ -86,6 +89,7 @@ public class TestDataFactory {
             PositionDocumentRepository positionDocuments,
             FsFacultyRepository faculties,
             ScopusPublicationRepository publications,
+            PositionRequestPublicationRepository publicationLinks,
             NotificationRepository notifications,
             JdbcTemplate jdbc,
             UserSignatureService signatureService,
@@ -100,6 +104,7 @@ public class TestDataFactory {
         this.positionDocuments = positionDocuments;
         this.faculties = faculties;
         this.publications = publications;
+        this.publicationLinks = publicationLinks;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -134,7 +139,8 @@ public class TestDataFactory {
                 "signature_audit_event", "signature_step", "signature_request",
                 // Position side: children → request
                 "position_document_edit_log", "position_attachment",
-                "position_status_history", "position_document", "position_request",
+                "position_status_history", "position_document",
+                "position_request_publication", "position_request",
                 // Academic side: children → request
                 "academic_document_edit_log", "academic_attachment",
                 "request_status_history", "academic_document", "academic_request",
@@ -188,6 +194,11 @@ public class TestDataFactory {
         u.setAcademicPosition("อาจารย์");
         u.setCreatedDate(new Date());
         return userRepository.save(u);
+    }
+
+    /** Persists a change a test made to an evaluation it already holds. */
+    public AcademicRequest saveEvaluation(AcademicRequest request) {
+        return academicRequests.save(request);
     }
 
     /** Persists a change a test made to a user it already holds. */
@@ -326,27 +337,40 @@ public class TestDataFactory {
     }
 
     /**
-     * Records that a position request puts a publication forward.
+     * Records that a position request puts a publication forward — the same row
+     * saving เอกสารที่ 1 with a Scopus id in it would write.
      *
-     * <p>Unimplemented, and deliberately loud about it: nothing in the system
-     * stores this fact yet (GAP-11). The picker writes a formatted citation into
-     * a free-text input and discards {@code publication.id}, so there is no row,
-     * column or table that ties the two together — which is why the "cannot
-     * submit the same work twice" rule cannot be enforced.
-     *
-     * <p>Every caller is inside {@code ResearchReuseLockSpec.TheRule}, which is
-     * {@code @Disabled} as a whole, so this never runs today. Whoever builds the
-     * link table implements this method at the same time, enables that class,
-     * and gets the rule checked for free.
+     * <p>Goes straight to the table rather than through the form so that the rule
+     * tests state the rule and nothing else. The path from picker to link row has
+     * its own test ({@code ResearchReuseLockSpec.savingTheFormRecordsTheLink}).
      */
-    public void recordPublicationUse(PositionRequest request, ScopusPublication publication) {
-        throw new UnsupportedOperationException("""
-                GAP-11: ยังไม่มีที่เก็บว่าคำร้องขอตำแหน่งใดใช้ผลงานวิจัยชิ้นใด
+    public PositionRequestPublication recordPublicationUse(PositionRequest request,
+            ScopusPublication publication) {
+        return publicationLinks.save(new PositionRequestPublication(
+                request, publication.getId(), 1, 1));
+    }
 
-                ต้องสร้างการผูกก่อน (เช่นตาราง position_request_publication ที่มี
-                request_id, publication_id, document_type, slot_index) แล้วให้
-                ScopusPicker ส่ง id ขึ้นมาพร้อมฟอร์ม จากนั้นจึงเขียน body ของเมธอดนี้
-                และเปิด ResearchReuseLockSpec.TheRule""");
+    /**
+     * A publication as the multi-source harvest writes them (V14): no Scopus
+     * {@code eid}, no citation count, and a {@code dataSource} naming where it
+     * came from.
+     *
+     * <p>Worth its own factory because those three differences are exactly what
+     * could quietly break the picker — it was built when every row came from
+     * Scopus and carried all three.
+     */
+    public ScopusPublication harvestedPublication(long fsUserId, String title, int year, String source) {
+        ScopusPublication p = new ScopusPublication();
+        p.setFsUserId(fsUserId);
+        p.setTitle(title);
+        p.setPublicationName("Journal of Multi-source Testing");
+        p.setPublicationYear(year);
+        p.setAuthorNames("Somchai J. | Malee T.");
+        p.setDoi("10.1234/" + Math.abs(title.hashCode()));
+        p.setDataSource(source);
+        p.setExternalId("ext-" + Math.abs(title.hashCode()));
+        p.setSyncedAt(LocalDateTime.now());
+        return publications.save(p);
     }
 
     public ScopusPublication publication(long fsUserId, String title, int year, int citedBy) {

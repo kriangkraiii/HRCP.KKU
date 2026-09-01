@@ -156,6 +156,66 @@ class MailSafetyNetTest {
         }
     }
 
+    @Nested
+    @DisplayName("ห้าม commit รหัสผ่านอีเมลลงรีโป (GAP-05)")
+    class CredentialTests {
+
+        /**
+         * A Gmail app password used to sit in {@code application.properties} as
+         * the default for {@code spring.mail.password}, and again in
+         * {@code SendAllTestEmailsTest}. A credential in a committed file is a
+         * leaked credential: it is in every clone and in the history of each.
+         *
+         * <p>Both are now environment-only, and this is what stops the next
+         * person from putting one back "just while I test something".
+         */
+        @Test
+        @DisplayName("ไฟล์ properties ต้องไม่มีรหัสผ่านหรือบัญชีจริงเป็นค่าเริ่มต้น")
+        void noMailCredentialIsCommitted() throws IOException {
+            for (Path file : List.of(Path.of("src/main/resources/application.properties"),
+                    Path.of("src/test/resources/application.properties"))) {
+                if (!Files.exists(file)) {
+                    continue;
+                }
+                assertThat(credentialDefaultsIn(file))
+                        .as("""
+                                %s ตั้งค่าเริ่มต้นของบัญชี/รหัสผ่านอีเมลไว้ในไฟล์ — ค่านั้นถูก commit
+                                ลง git แปลว่าหลุดไปแล้ว ให้เว้นว่างไว้แล้วส่งผ่าน environment เท่านั้น
+                                เช่น spring.mail.password=${EMAIL_PASSWORD:}""", file)
+                        .isEmpty();
+            }
+        }
+
+        @Test
+        @DisplayName("เทส SMTP จริงต้องอ่านรหัสผ่านจาก environment ไม่ใช่จากตัวไฟล์")
+        void theLiveTestCarriesNoPasswordOfItsOwn() throws IOException {
+            String source = Files.readString(
+                    TEST_SOURCES.resolve("com/ecom/util/SendAllTestEmailsTest.java"),
+                    StandardCharsets.UTF_8);
+
+            assertThat(source)
+                    .as("รหัสผ่านต้องมาจาก environment เท่านั้น")
+                    .doesNotContain("setPassword(\"")
+                    .contains("EMAIL_PASSWORD");
+        }
+    }
+
+    /**
+     * Lines like {@code spring.mail.password=${EMAIL_PASSWORD:something}} — a
+     * placeholder whose fallback is a real value rather than empty.
+     */
+    private static List<String> credentialDefaultsIn(Path file) throws IOException {
+        return Files.readAllLines(file, StandardCharsets.UTF_8).stream()
+                .map(String::trim)
+                .filter(line -> !line.startsWith("#"))
+                .filter(line -> line.startsWith("spring.mail.password")
+                        || line.startsWith("spring.mail.username"))
+                .filter(line -> !line.matches(".*:}\\s*$"))   // ${VAR:} — empty fallback, fine
+                .filter(line -> line.contains(":"))
+                .filter(line -> !line.matches("^[^=]+=\\$\\{[A-Z_]+}$"))  // ${VAR} — no fallback, fine
+                .toList();
+    }
+
     private static boolean mentionsExternalSmtpHost(Path file) {
         try {
             String source = Files.readString(file, StandardCharsets.UTF_8);

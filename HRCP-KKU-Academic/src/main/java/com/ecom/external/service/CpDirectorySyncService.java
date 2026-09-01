@@ -104,7 +104,8 @@ public class CpDirectorySyncService {
         }
 
         try {
-            List<CpPerson> people = client.fetchAll();
+            CpWebClient.DirectoryFetch fetch = client.fetchAllWithFallback();
+            List<CpPerson> people = fetch.people();
             if (people.isEmpty()) {
                 return Result.skipped("ไม่ได้รับข้อมูลจากเว็บไซต์คณะ");
             }
@@ -127,8 +128,16 @@ public class CpDirectorySyncService {
                 }
             }
 
-            Result result = new Result(people.size(), photos, details, unmatched, null);
-            log.info("College directory sync finished: {}", result);
+            Result result = new Result(people.size(), photos, details, unmatched,
+                    fetch.usedFallbackCache(), null);
+            if (result.usedFallbackCache()) {
+                // Everything was still applied, so this is not a failed run — but the
+                // figures describe a snapshot of unknown age, and whoever reads them
+                // should know that before treating them as today's directory.
+                log.warn("College directory sync finished from the local snapshot (live API unreachable): {}", result);
+            } else {
+                log.info("College directory sync finished: {}", result);
+            }
             alerts.success(SOURCE, result.describe());
             return result;
 
@@ -399,15 +408,23 @@ public class CpDirectorySyncService {
         }
     }
 
-    /** Outcome of a whole run. */
-    public record Result(int read, int photos, int details, int unmatched, String error) {
+    /**
+     * Outcome of a whole run.
+     *
+     * @param usedFallbackCache true when the live site could not be reached and the
+     *                          run worked from the last snapshot on disk. The run
+     *                          still succeeded — {@link #success()} stays true — but
+     *                          the data is as old as that snapshot.
+     */
+    public record Result(int read, int photos, int details, int unmatched,
+            boolean usedFallbackCache, String error) {
 
         static Result skipped(String reason) {
-            return new Result(0, 0, 0, 0, reason);
+            return new Result(0, 0, 0, 0, false, reason);
         }
 
         static Result failed(String message) {
-            return new Result(0, 0, 0, 0, message == null ? "ไม่ทราบสาเหตุ" : message);
+            return new Result(0, 0, 0, 0, false, message == null ? "ไม่ทราบสาเหตุ" : message);
         }
 
         public boolean success() {
@@ -419,14 +436,20 @@ public class CpDirectorySyncService {
             if (error != null) {
                 return error;
             }
-            return "อ่านจากเว็บคณะ " + read + " คน — เพิ่มรูป " + photos + " คน, "
+            String source = usedFallbackCache
+                    ? "อ่านจากเว็บคณะ (ข้อมูลสำรองในเครื่อง) "
+                    : "อ่านจากเว็บคณะ ";
+            String summary = source + read + " คน — เพิ่มรูป " + photos + " คน, "
                     + "เติมข้อมูล " + details + " คน, ไม่พบในระบบ " + unmatched + " คน";
+            return usedFallbackCache
+                    ? summary + " (เชื่อมต่อเว็บคณะไม่ได้ จึงใช้ข้อมูลล่าสุดที่เคยซิงค์สำเร็จ)"
+                    : summary;
         }
 
         @Override
         public String toString() {
             return read + " read, " + photos + " photos, " + details + " details filled, "
-                    + unmatched + " unmatched";
+                    + unmatched + " unmatched" + (usedFallbackCache ? " (from fallback snapshot)" : "");
         }
     }
 }

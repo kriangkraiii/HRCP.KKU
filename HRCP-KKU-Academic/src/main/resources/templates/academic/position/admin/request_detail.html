@@ -325,12 +325,12 @@
                     <label class="form-label">สถานะใหม่</label>
                     <select name="status" class="form-select" required>
                       <option value="">-- เลือก --</option>
+                      <!-- เฉพาะสถานะที่เปลี่ยนไปได้จริงจากสถานะปัจจุบัน ตามลำดับใน flow
+                           เดิมแสดงทุกสถานะ ทำให้กดข้ามขั้นตอนได้โดยไม่มีอะไรห้าม -->
                       <option
-                        th:each="s : ${statuses}"
-                        th:if="${!s.isDraft()}"
+                        th:each="s : ${allowedNextStatuses}"
                         th:value="${s.name()}"
                         th:text="${s.thaiLabel}"
-                        th:disabled="${s == request.currentStatus}"
                         th:style="'color:' + ${s.color}"
                       ></option>
                     </select>

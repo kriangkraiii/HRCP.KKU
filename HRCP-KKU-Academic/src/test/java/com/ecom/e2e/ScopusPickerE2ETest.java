@@ -86,8 +86,8 @@ class ScopusPickerE2ETest extends PlaywrightTestBase {
     }
 
     @Test
-    @DisplayName("GAP-10: เลือกตำแหน่ง ผศ. แล้วไม่มีปุ่ม 'เลือกจาก Scopus' ให้กดเลย")
-    void assistantProfessorSeesNoPickerButton() {
+    @DisplayName("GAP-10: เลือกตำแหน่ง ผศ. แล้วต้องเห็นปุ่ม 'เลือกจาก Scopus' ครบทั้งสามกลุ่ม")
+    void assistantProfessorSeesAPickerButtonInEveryGroup() {
         UserDtls professor = data.applicant();
         openDocumentOne(openADraftPositionRequestFor(professor));
 
@@ -95,23 +95,23 @@ class ScopusPickerE2ETest extends PlaywrightTestBase {
 
         assertThat(visiblePickerButtons().count())
                 .as("""
-                        นี่คืออาการที่ผู้ใช้รายงาน: ผู้ยื่นขอ ผศ. เปิดหน้ากรอกผลงานแล้วไม่เห็นปุ่มเลย
+                        อาการที่ผู้ใช้รายงานคือเปิดหน้ากรอกผลงานของ ผศ. แล้วไม่เห็นปุ่มเลยสักปุ่ม
                         จึงเข้าใจว่าระบบไม่มีให้เลือกงานวิจัย ทั้งที่ picker ทำงานได้ปกติ
-                        ถ้าเทสข้อนี้เริ่ม fail แปลว่า GAP-10 ถูกแก้แล้ว""")
-                .isZero();
+                        ตอนนี้ต้องมีครบสามกลุ่ม: งานวิจัย, ผลงานอื่น, ตำรา/หนังสือ""")
+                .isEqualTo(3);
     }
 
     @Test
-    @DisplayName("เลือกตำแหน่ง รศ. แล้วมีปุ่มให้กด (เทียบให้เห็นความต่างกับ ผศ.)")
-    void associateProfessorDoesSeePickerButtons() {
+    @DisplayName("เลือกตำแหน่ง รศ. แล้วมีปุ่มครบทั้งสี่กลุ่ม (รวมวิธีที่ ๓)")
+    void associateProfessorSeesAPickerButtonInEveryGroup() {
         UserDtls professor = data.applicant();
         openDocumentOne(openADraftPositionRequestFor(professor));
 
         chooseTargetPosition("รองศาสตราจารย์");
 
         assertThat(visiblePickerButtons().count())
-                .as("ส่วน รศ. มีปุ่มอยู่ 2 จุด — ต่างจาก ผศ. ที่ไม่มีเลย")
-                .isEqualTo(2);
+                .as("ส่วน รศ. มีสี่กลุ่ม: งานวิจัย, ผลงานอื่น, ตำรา/หนังสือ และงานวิจัยวิธีที่ ๓")
+                .isEqualTo(4);
     }
 
     @Test

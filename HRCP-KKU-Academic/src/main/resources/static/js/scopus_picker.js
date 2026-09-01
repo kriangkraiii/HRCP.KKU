@@ -25,7 +25,9 @@
         target: null,
         publications: [],
         selected: new Set(),
-        loaded: false
+        loaded: false,
+        /** True while the picker is writing rows, so its own events are ignored. */
+        filling: false
     };
 
     // ---------------------------------------------------------------- markup
@@ -255,6 +257,18 @@
      * to type everything by hand can simply ignore the picker.
      */
     function fillRows(target, rows) {
+        // setValue fires a synthetic input event so the auto-draft picks the row
+        // up; the manual-edit listener above must not read that as the professor
+        // retyping the line.
+        state.filling = true;
+        try {
+            fillRowsInternal(target, rows);
+        } finally {
+            state.filling = false;
+        }
+    }
+
+    function fillRowsInternal(target, rows) {
         var startAt = firstEmptyIndex(target.titlePrefix);
         var needed = startAt + rows.length - 1;
 
@@ -278,6 +292,7 @@
                 return;
             }
             filled++;
+            rememberPublicationId(target.titlePrefix, n, row.id);
 
             if (target.quartilePrefix && row.quartile) {
                 var radio = document.querySelector(
@@ -312,6 +327,60 @@
         while (document.querySelector('[name="' + prefix + '_' + (n + 1) + '"]')) n++;
         return n;
     }
+
+    /**
+     * Keeps the publication id behind a citation line, in a hidden field beside it.
+     *
+     * The citation itself stays free text the professor may reword, which is the
+     * point — but the wording alone cannot say which paper a line is, so the
+     * server had no way to know what a request actually puts forward, and the rule
+     * that the same work cannot be submitted twice had nothing to check (GAP-11).
+     * The id now travels with the form like any other field.
+     *
+     * The field is created here rather than in the eleven row templates: every
+     * group would otherwise need the same edit, and a group whose author forgot it
+     * would lose the link silently.
+     */
+    function rememberPublicationId(titlePrefix, n, publicationId) {
+        var name = titlePrefix + '_scopus_id_' + n;
+        var hidden = document.querySelector('[name="' + name + '"]');
+        if (!hidden) {
+            var title = document.querySelector('[name="' + titlePrefix + '_' + n + '"]');
+            if (!title) return;
+            hidden = document.createElement('input');
+            hidden.type = 'hidden';
+            hidden.name = name;
+            title.insertAdjacentElement('afterend', hidden);
+        }
+        hidden.value = publicationId == null ? '' : String(publicationId);
+    }
+
+    /** The hidden id field paired with a title input named {prefix}_{n}. */
+    function findIdFieldFor(titleName) {
+        var m = /^(.+)_(\d+)$/.exec(titleName);
+        if (!m) return null;
+        return document.querySelector('[name="' + m[1] + '_scopus_id_' + m[2] + '"]');
+    }
+
+    /**
+     * Drops the id when a filled line is typed over by hand.
+     *
+     * A line the professor rewrote from scratch is a different piece of work, and
+     * leaving the old id attached would spend the wrong publication. Clearing on
+     * any manual edit errs towards under-locking — the cost is a duplicate staff
+     * can see, rather than a paper locked away that nobody ever submitted.
+     *
+     * Delegated from document and registered once: rows are created long after
+     * this file runs, and there are eleven groups of them.
+     */
+    document.addEventListener('input', function (event) {
+        var el = event.target;
+        if (!el || !el.name || el.type === 'hidden') return;
+        var hidden = findIdFieldFor(el.name);
+        if (hidden && hidden.value && !state.filling) {
+            hidden.value = '';
+        }
+    });
 
     /** Returns false when no such field exists, so the caller can report a shortfall. */
     function setValue(name, value) {

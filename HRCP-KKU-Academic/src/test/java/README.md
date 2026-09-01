@@ -41,29 +41,36 @@
 | `com.ecom.support` | โครงพื้นฐาน: `AbstractFlowTest`, `TestDataFactory`, `RecordingMailSender` | – |
 | `com.ecom.flow` | **เส้นทางผู้ใช้จริงตั้งแต่ต้นจนจบ ข้อ 1-31** ผ่าน HTTP จริง | ไม่ |
 | `com.ecom.academic` | เฟส 1: ลำดับสถานะ, คุณสมบัติผู้ยื่น, วันหมดอายุผลประเมิน | ไม่ |
-| `com.ecom.research` | งานวิจัย/Scopus: การจำกัดสิทธิ์, ความครอบคลุมของ picker, กติกาห้ามยื่นซ้ำ | ไม่ |
+| `com.ecom.research` | งานวิจัย/Scopus: การจำกัดสิทธิ์, ความครอบคลุมของ picker, กติกาห้ามยื่นซ้ำ, การผูกผลงานกับคำร้อง | ไม่ |
 | `com.ecom.notification` | อีเมลและกล่องข้อความในระบบ ทั้งสองเฟส + การแยกของแต่ละคน | ไม่ |
-| `com.ecom.migration` | รัน Flyway V0-V11 บน PostgreSQL จริง | **ใช่** |
+| `com.ecom.external` | ซิงค์ข้อมูล/รูปจากเว็บคณะ: ลำดับความสำคัญของแหล่งข้อมูล, การลองใหม่, ข้อมูลสำรองในเครื่อง | ไม่ |
+| `com.ecom.migration` | รัน Flyway V0-V13 บน PostgreSQL จริง | **ใช่** |
 | `com.ecom.e2e` | เบราว์เซอร์จริง (Playwright): Scopus picker, เส้นทางเต็ม, สิทธิ์เข้าถึง | **ใช่** |
 
 เทสเดิมในโปรเจกต์ (`com.ecom.config`, `com.ecom.service`, ฯลฯ) ยังอยู่ครบและรันได้ตามปกติ
 
 ---
 
-## เทสที่ `@Disabled` ไว้เป็น executable spec
+## ไม่มีเทสที่ `@Disabled` เหลืออยู่แล้ว
 
-เทสเหล่านี้อธิบายพฤติกรรมที่ **ควรจะเป็น** แต่ยัง implement ไม่ได้ในโครงสร้างปัจจุบัน
-ทุกตัวมีรหัส GAP กำกับ และมีเทสคู่กันที่ **ผ่าน** เพื่อบันทึกพฤติกรรมวันนี้ไว้ —
-เมื่อแก้ช่องว่างแล้ว เทสที่ผ่านจะเริ่ม fail ซึ่งเป็นสัญญาณให้เปิดตัว `@Disabled` แทน
+เคยมีเทสชุดหนึ่งที่ `@Disabled("GAP-xx")` ไว้เป็น executable spec — อธิบายพฤติกรรมที่ควรจะเป็น
+แต่ยัง implement ไม่ได้ ตอนนี้ **เปิดใช้งานครบทุกตัวและผ่านหมดแล้ว**:
 
-| เทส | ช่องว่าง |
-|-----|---------|
-| `ResearchReuseLockSpec.TheRule` | GAP-11/12 — ไม่มีการผูกผลงานวิจัยกับคำร้อง |
-| `ScopusPickerCoverageTest.everySectionThatTakesPublicationsShouldOfferThePicker` | GAP-10 — ปุ่มเลือกจาก Scopus ขาด 8 จาก 11 กลุ่ม |
-| `EvaluationEligibilityTest.completedPassShouldBeEligible` | GAP-20 — นิยาม "ผลประเมินที่ใช้ได้" ขัดกันสองที่ |
-| `EvaluationEligibilityTest.thaiMonthNameExpiryShouldBeHonoured` | GAP-21 — วันหมดอายุที่เป็นชื่อเดือนไทยไม่ถูกบังคับ |
-| `AcademicStatusFlowTest.closedRequestsShouldStayClosed` | GAP-31 — เอกสารที่ 8 ปลุกคำร้องที่ถูกปฏิเสธ |
-| `AcademicStatusFlowTest.illegalTransitionsShouldBeRejected` | GAP-30 — ไม่มี guard การเปลี่ยนสถานะ |
+| ช่องว่าง | เทสที่บังคับกติกาอยู่ตอนนี้ |
+|---------|------------------------------|
+| GAP-10 — ปุ่ม "เลือกจาก Scopus" ขาด 8 จาก 11 กลุ่ม | `research/ScopusPickerCoverageTest`, `e2e/ScopusPickerE2ETest` |
+| GAP-11/12 — ไม่มีการผูกผลงานวิจัยกับคำร้อง จึงกันยื่นซ้ำไม่ได้ | `research/ResearchReuseLockSpec` |
+| GAP-13 — ทางลัดบัญชีทดสอบเห็นผลงานของทุกคน | `research/MyPublicationsScopingTest` |
+| GAP-20/21/22 — นิยาม "ผลประเมินที่ใช้ได้" ขัดกัน / วันหมดอายุไม่ถูกบังคับ | `academic/EvaluationEligibilityTest` |
+| GAP-30…35 — ลำดับสถานะ, วงจรแก้ไข, ขั้นรับรองของกรรมการวิทยาลัยฯ, อนุกรรมการ 3 คน | `academic/AcademicStatusFlowTest` |
+
+ข้อยกเว้นเดียวคือ `SendAllTestEmailsTest` ซึ่ง `MailSafetyNetTest` **บังคับ** ให้ต้องมี `@Disabled`
+กำกับไว้ตลอด (ดูหัวข้อกติกาด้านบน)
+
+> ของที่ฐานข้อมูลต้องรองรับก่อน: `V12` ลบ `CHECK` ที่ตรึงรายการค่า enum ไว้ (ไม่งั้นสถานะใหม่
+> `COLLEGE_ENDORSED` / `REVISION_SUBMITTED` เขียนลงฐานไม่ได้) และ `V13` สร้างตาราง
+> `position_request_publication` ที่กติกาห้ามยื่นซ้ำใช้ — ทั้งสองตัวมีเทสใน `MigrationOnPostgresTest`
+> ซึ่งรันบน PostgreSQL จริงผ่าน Testcontainers
 
 ---
 

@@ -46,12 +46,12 @@ public class AdminInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // 0. Auto-drop stale check constraint on notifications table if present
-        try {
-            jdbcTemplate.execute("ALTER TABLE notifications DROP CONSTRAINT IF EXISTS notifications_type_check");
-        } catch (Exception e) {
-            log.debug("Auto-cleanup notifications_type_check notice: {}", e.getMessage());
-        }
+        // The stale notifications_type_check used to be dropped here on every
+        // startup. That was a workaround for Flyway never having been switched
+        // on: V7 exists to do exactly this, and V12 now covers the rest of the
+        // enum columns. Flyway runs during context initialisation, well before
+        // any CommandLineRunner, so by the time this method is reached the
+        // constraint is already gone.
 
         // 0.1 Clean up orphan signature requests for deleted academic/position requests
         try {

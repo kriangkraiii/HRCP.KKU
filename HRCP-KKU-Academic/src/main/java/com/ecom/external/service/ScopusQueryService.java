@@ -1,7 +1,9 @@
 package com.ecom.external.service;
 
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -11,6 +13,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.repository.PositionRequestPublicationRepository;
 import com.ecom.external.dto.PublicationDto;
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.model.ScopusPublication;
@@ -39,24 +43,82 @@ public class ScopusQueryService {
     private final ScopusPublicationRepository publicationRepo;
     private final FsFacultyRepository facultyRepo;
 
-    @org.springframework.beans.factory.annotation.Value("${app.user.email:user@user.com}")
-    private String testUserEmail;
+    /**
+     * Records which publications a position request has put forward, so this
+     * service can leave the spent ones out (GAP-12).
+     *
+     * <p>The dependency runs one way only — this module reads that table, and the
+     * position module never reaches back here: its link rows hold a bare id, not a
+     * {@code ScopusPublication}.
+     */
+    private final PositionRequestPublicationRepository publicationLinkRepo;
+
+    /**
+     * Statuses that consume nothing. A draft has not been submitted, and a
+     * rejected request never got anywhere — its author has to be able to put the
+     * same work forward again, or a single refusal would retire their papers for
+     * good.
+     */
+    private static final Set<PositionRequestStatus> STATUSES_THAT_FREE_A_PUBLICATION =
+            EnumSet.of(PositionRequestStatus.DRAFT, PositionRequestStatus.REJECTED);
+
+    /**
+     * Stands in for "nothing is spent". {@code NOT IN ()} is not valid SQL, so the
+     * query always receives at least one id, and no row can ever carry this one.
+     */
+    private static final Long NO_PUBLICATION = -1L;
+
+    /**
+     * The one account allowed to see everyone's publications, or blank for
+     * nobody — which is the default, and what production should keep.
+     *
+     * <p>This used to read {@code app.user.email}, the property
+     * {@code AdminInitializer} seeds the default user account from. One property,
+     * two unrelated jobs: setting {@code USER_EMAIL} to a real professor's
+     * address — an ordinary thing to do when creating their account — silently
+     * handed that professor every publication in the faculty, with nothing on
+     * screen to say so. A separate key that defaults to off cannot be switched on
+     * by accident.
+     */
+    @org.springframework.beans.factory.annotation.Value("${app.research.universal-access-email:}")
+    private String universalAccessEmail;
 
     public ScopusQueryService(ScopusPublicationRepository publicationRepo,
-            FsFacultyRepository facultyRepo) {
+            FsFacultyRepository facultyRepo,
+            PositionRequestPublicationRepository publicationLinkRepo) {
         this.publicationRepo = publicationRepo;
         this.facultyRepo = facultyRepo;
+        this.publicationLinkRepo = publicationLinkRepo;
     }
 
     /**
-     * Checks if the given account is the designated test account allowed to view all publications.
+     * The publications this professor has already submitted and cannot submit
+     * again, as a list the query can always use.
+     */
+    private List<Long> spentBy(UserDtls user) {
+        if (user == null || user.getId() == null) {
+            return List.of(NO_PUBLICATION);
+        }
+        List<Long> spent = publicationLinkRepo.findSpentPublicationIds(
+                user.getId(), STATUSES_THAT_FREE_A_PUBLICATION);
+        if (spent.isEmpty()) {
+            return List.of(NO_PUBLICATION);
+        }
+        return spent;
+    }
+
+    /**
+     * Whether this account is the one configured to see every publication.
+     *
+     * <p>False for everybody unless {@code app.research.universal-access-email}
+     * names an address, which nothing sets by default.
      */
     public boolean isUniversalAccessUser(UserDtls user) {
         if (user == null || user.getEmail() == null) {
             return false;
         }
-        return testUserEmail != null && !testUserEmail.isBlank()
-                && user.getEmail().trim().equalsIgnoreCase(testUserEmail.trim());
+        return universalAccessEmail != null && !universalAccessEmail.isBlank()
+                && user.getEmail().trim().equalsIgnoreCase(universalAccessEmail.trim());
     }
 
     /**
@@ -86,8 +148,12 @@ public class ScopusQueryService {
     }
 
     /**
-     * This user's own publications, filtered and paged.
-     * If the account is the designated test account, searches all publications in the database.
+     * This user's own publications, filtered and paged — minus the ones already
+     * submitted on a position request that has left {@code DRAFT}.
+     *
+     * <p>Hiding spent work is the picker half of "the same paper cannot be put
+     * forward twice" (GAP-12). The API half is in {@link #findOwnedByIds}, because
+     * a rule enforced only by what the screen offers is not enforced at all.
      *
      * @return an empty page when the account has no upstream counterpart — an
      *         unmatched user simply has nothing, never someone else's rows
@@ -110,7 +176,8 @@ public class ScopusQueryService {
         String pattern = likePattern(query);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), clampSize(size));
 
-        return publicationRepo.findOwnedBy(fsUserId.get(), yearFrom, yearTo, pattern, pageable)
+        return publicationRepo
+                .findOwnedBy(fsUserId.get(), yearFrom, yearTo, pattern, spentBy(user), pageable)
                 .map(PublicationDto::from);
     }
 
@@ -126,7 +193,15 @@ public class ScopusQueryService {
                 .map(PublicationDto::from);
     }
 
-    /** Resolves several ids at once, silently dropping any the user does not own. */
+    /**
+     * Resolves several ids at once, silently dropping any the user does not own
+     * or has already used on a submitted request.
+     *
+     * <p>This is what the picker calls to turn ticked rows into citations, and it
+     * is where the reuse rule is actually enforced: the list above only decides
+     * what is offered, and a stale tab or a hand-built request would otherwise
+     * walk straight past it.
+     */
     public List<PublicationDto> findOwnedByIds(UserDtls user, List<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
@@ -143,7 +218,9 @@ public class ScopusQueryService {
             return List.of();
         }
         Long owner = fsUserId.get();
+        Set<Long> spent = Set.copyOf(spentBy(user));
         return ids.stream()
+                .filter(id -> !spent.contains(id))
                 .map(id -> publicationRepo.findByIdAndFsUserId(id, owner))
                 .flatMap(Optional::stream)
                 .map(PublicationDto::from)

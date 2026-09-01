@@ -215,14 +215,20 @@ class MyPublicationsScopingTest extends AbstractFlowTest {
     }
 
     /**
-     * GAP-13. {@code app.user.email} does two jobs: it names the account
-     * {@code AdminInitializer} seeds, and it names the account allowed to see
+     * GAP-13, fixed. {@code app.user.email} used to do two jobs: name the account
+     * {@code AdminInitializer} seeds, and name the account allowed to see
      * <em>everyone's</em> publications. Setting it to a real professor's address
-     * on production would hand that professor the whole faculty's work, silently.
+     * on production — an ordinary thing to do when creating their account — handed
+     * that professor the whole faculty's work, silently.
+     *
+     * <p>The shortcut now has a key of its own that defaults to empty, so it is
+     * off unless somebody deliberately turns it on. These tests turn it on;
+     * {@link TheShortcutIsOffByDefault} proves what happens when nobody does.
      */
     @Nested
     @DisplayName("ทางลัดบัญชีทดสอบ (GAP-13)")
-    @TestPropertySource(properties = "app.user.email=" + TestDataFactory.APPLICANT_EMAIL)
+    @TestPropertySource(
+            properties = "app.research.universal-access-email=" + TestDataFactory.APPLICANT_EMAIL)
     class UniversalAccessTests {
 
         @Test
@@ -244,6 +250,27 @@ class MyPublicationsScopingTest extends AbstractFlowTest {
                     .with(user(TestDataFactory.OTHER_APPLICANT_EMAIL)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.total").value(1));
+        }
+    }
+
+    /**
+     * The other half of GAP-13: seeding the default account with a real address
+     * must grant nothing at all.
+     */
+    @Nested
+    @DisplayName("ทางลัดปิดอยู่เป็นค่าเริ่มต้น (GAP-13)")
+    @TestPropertySource(properties = "app.user.email=" + TestDataFactory.APPLICANT_EMAIL)
+    class TheShortcutIsOffByDefault {
+
+        @Test
+        @DisplayName("ตั้ง app.user.email เป็นอีเมลอาจารย์จริง ก็ยังเห็นเฉพาะผลงานของตัวเอง")
+        void seedingTheDefaultAccountGrantsNothing() throws Exception {
+            seedTwoProfessorsWithPapers();
+
+            mvc.perform(get("/api/my/publications").with(user(TestDataFactory.APPLICANT_EMAIL)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.total")
+                            .value(2));
         }
     }
 

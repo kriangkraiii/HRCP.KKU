@@ -79,6 +79,10 @@ class FullJourneyE2ETest extends PlaywrightTestBase {
                 officer, "ข้อ 4 — แต่งตั้งคณะอนุกรรมการ", false);
         academicService.updateStatus(draft.getId(), RequestStatus.MEETING_SCHEDULED,
                 officer, "ข้อ 6 — นัดหมายวันประชุม", false);
+        academicService.updateStatus(draft.getId(), RequestStatus.COMPLETED_PASS,
+                officer, "ข้อ 8 — ผลการประเมินจากคณะอนุกรรมการ", false);
+        academicService.updateStatus(draft.getId(), RequestStatus.COLLEGE_ENDORSED,
+                officer, "ข้อ 9-10 — กรรมการประจำวิทยาลัยฯ รับรองผล", false);
         academicService.updateStatus(draft.getId(), RequestStatus.COMPLETED,
                 officer, "ข้อ 11 — แจ้งผลการประเมิน", false);
         data.academicDocument(draft, 8, "{\"evaluation_result\":\"ผ่าน\"}");

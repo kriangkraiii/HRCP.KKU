@@ -102,6 +102,32 @@ public class AcademicRequestService {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    /**
+     * Refuses a status change the process does not allow.
+     *
+     * <p>{@code updateStatus} used to be a setter with an audit trail: it took
+     * whatever it was handed. A mistyped dropdown could send a request straight
+     * from "รับคำร้อง" to "เสร็จสิ้น", skipping the subcommittee, the meeting and
+     * the college board — steps 3 to 10 — or pull a closed request back open
+     * (GAP-30). The order lives in {@link RequestStatus#allowedNext()}.
+     *
+     * <p>Moving to the status it is already in is allowed and does nothing
+     * surprising: several callers re-assert the current status, and treating
+     * that as an error would turn a harmless no-op into a failure.
+     */
+    private void requireLegalTransition(RequestStatus from, RequestStatus to, Long requestId) {
+        if (from == null || from == to) {
+            return;
+        }
+        if (!from.canMoveTo(to)) {
+            throw new IllegalStateException(
+                    "เปลี่ยนสถานะคำร้อง #%d จาก \"%s\" ไปเป็น \"%s\" ไม่ได้ — ไม่ตรงกับลำดับใน flow (ขั้นที่ทำได้ต่อไป: %s)"
+                            .formatted(requestId, from.getThaiLabel(), to.getThaiLabel(),
+                                    from.allowedNext().stream().map(RequestStatus::getThaiLabel)
+                                            .reduce((a, b) -> a + ", " + b).orElse("ไม่มี — สถานะนี้ปิดแล้ว")));
+        }
+    }
+
     @Transactional
     public AcademicRequest updateStatus(Long requestId, RequestStatus newStatus, UserDtls changedBy, String note) {
         return updateStatus(requestId, newStatus, changedBy, note, true);
@@ -114,6 +140,7 @@ public class AcademicRequestService {
                 .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 
         RequestStatus oldStatus = request.getCurrentStatus();
+        requireLegalTransition(oldStatus, newStatus, requestId);
         request.setCurrentStatus(newStatus);
         requestRepository.save(request);
 
@@ -319,6 +346,40 @@ public class AcademicRequestService {
         documentRepository.saveAll(docs);
     }
 
+    /**
+     * Whether the appointment order names all three subcommittee members.
+     *
+     * <p>ข้อ 3 is specific — "รายชื่ออนุกรรมการประเมินการสอน จำนวน 3 คน" — and the
+     * order that goes out for the dean's signature has a line for each of them.
+     * Saving it with a name missing left the request marked "แต่งตั้งอนุกรรมการ"
+     * when no such committee had been appointed, and produced an order with a
+     * blank line in it (GAP-35).
+     *
+     * <p>The document is still saved either way; only the status waits.
+     */
+    boolean namesThreeSubCommitteeMembers(String jsonData) {
+        if (jsonData == null || jsonData.isBlank()) {
+            return false;
+        }
+        try {
+            Map<String, Object> data = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(jsonData,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                            });
+            for (int i = 1; i <= 3; i++) {
+                Object name = data.get("committee_" + i + "_name");
+                if (name == null || name.toString().isBlank()) {
+                    log.info("เอกสารที่ 3 ยังไม่ครบ: ขาดชื่ออนุกรรมการคนที่ {} — สถานะยังไม่เปลี่ยน", i);
+                    return false;
+                }
+            }
+            return true;
+        } catch (Exception e) {
+            log.warn("อ่านรายชื่ออนุกรรมการจากเอกสารที่ 3 ไม่ได้: {}", e.getMessage());
+            return false;
+        }
+    }
+
     public List<RequestStatusHistory> getStatusHistory(Long requestId) {
         return historyRepository.findByRequestIdOrderByChangedAtDesc(requestId);
     }
@@ -522,7 +583,8 @@ public class AcademicRequestService {
 
         switch (documentType) {
             case 3 -> {
-                if (request.getCurrentStatus().ordinal() < RequestStatus.SUB_COMMITTEE_APPOINTED.ordinal()) {
+                if (request.getCurrentStatus().canMoveTo(RequestStatus.SUB_COMMITTEE_APPOINTED)
+                        && namesThreeSubCommitteeMembers(jsonData)) {
                     updateStatus(requestId, RequestStatus.SUB_COMMITTEE_APPOINTED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ", sendNotify);
                 }
@@ -531,7 +593,7 @@ public class AcademicRequestService {
                 // Doc 5 auto-status is handled separately via /send-suggestion endpoint
             }
             case 4 -> {
-                if (request.getCurrentStatus().ordinal() < RequestStatus.MEETING_SCHEDULED.ordinal()) {
+                if (request.getCurrentStatus().canMoveTo(RequestStatus.MEETING_SCHEDULED)) {
                     updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", sendNotify);
                 }
@@ -543,21 +605,31 @@ public class AcademicRequestService {
                             new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
                             });
                     String evalLevel = data.getOrDefault("eval_result_level", "").toString();
-                    if ("ไม่ผ่าน".equals(evalLevel)) {
-                        updateStatus(requestId, RequestStatus.COMPLETED_FAIL, changedBy,
-                                "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel, sendNotify);
-                    } else if (!evalLevel.isEmpty()) {
-                        updateStatus(requestId, RequestStatus.COMPLETED_PASS, changedBy,
+                    RequestStatus outcome = "ไม่ผ่าน".equals(evalLevel)
+                            ? RequestStatus.COMPLETED_FAIL
+                            : RequestStatus.COMPLETED_PASS;
+                    if (!evalLevel.isEmpty()
+                            && request.getCurrentStatus().canMoveTo(outcome)) {
+                        updateStatus(requestId, outcome, changedBy,
                                 "อัพเดตอัตโนมัติ: ผลการประเมิน - " + evalLevel, sendNotify);
                     }
                 } catch (Exception e) {
-                    updateStatus(requestId, RequestStatus.COMPLETED_PASS, changedBy,
-                            "อัพเดตอัตโนมัติ: บันทึกแบบฟอร์มประเมิน", sendNotify);
+                    if (request.getCurrentStatus().canMoveTo(RequestStatus.COMPLETED_PASS)) {
+                        updateStatus(requestId, RequestStatus.COMPLETED_PASS, changedBy,
+                                "อัพเดตอัตโนมัติ: บันทึกแบบฟอร์มประเมิน", sendNotify);
+                    }
                 }
             }
             case 8 -> {
-                updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
-                        "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน", sendNotify);
+                // Unconditional until now, so saving this document on a request
+                // that had been refused turned that refusal into "เสร็จสิ้น" and
+                // mailed the applicant to say so (GAP-31). It also has to wait
+                // for the college board's endorsement (ข้อ 9-10) — the document
+                // is still saved either way, only the status holds back.
+                if (request.getCurrentStatus().canMoveTo(RequestStatus.COMPLETED)) {
+                    updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน", sendNotify);
+                }
             }
         }
     }
@@ -586,8 +658,7 @@ public class AcademicRequestService {
                 .findByApplicantIdOrderByCreatedAtDesc(applicantId);
 
         for (AcademicRequest req : requests) {
-            if (req.getCurrentStatus() == RequestStatus.COMPLETED_PASS
-                    || req.getCurrentStatus() == RequestStatus.COMPLETED) {
+            if (req.getCurrentStatus().carriesAPassedResult()) {
 
                 // If expiry is already computed, return it
                 if (req.getEvaluationExpiryDate() != null) {
@@ -634,49 +705,149 @@ public class AcademicRequestService {
         return null;
     }
 
-    /** Parse Thai date format: "17 กุมภาพันธ์ 2569" → LocalDateTime */
-    private LocalDateTime parseThaiDate(String thaiDate) {
-        try {
-            String[] thaiMonths = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
-                    "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+    private static final String[] THAI_MONTHS = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน",
+            "พฤษภาคม", "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
 
-            // Convert Thai digits to Arabic
+    /**
+     * Reads a Thai date in any of the forms the documents actually contain.
+     *
+     * <p>Accepts a month name ({@code "17 กุมภาพันธ์ 2569"}) and the all-numeric
+     * form ({@code "17/2/2569"}, {@code "17-2-2569"}), with Thai or Arabic
+     * digits, and converts a Buddhist year. Both forms are needed: staff type the
+     * month name into most documents, while the expiry field on document 8 has
+     * been filled both ways.
+     *
+     * <p>This is the single date reader for the whole evaluation-expiry rule.
+     * There used to be a second one in {@code PositionRequestService.isExpired},
+     * which stripped every non-digit and then expected three numbers — a month
+     * name left it with two, so it fell through to "assume not expired" and the
+     * expiry was, in practice, never enforced (GAP-21).
+     *
+     * @return the date, or null when the text is not a date at all
+     */
+    public static LocalDateTime parseThaiDate(String thaiDate) {
+        if (thaiDate == null || thaiDate.isBlank()) {
+            return null;
+        }
+        try {
             String normalized = thaiDate
                     .replace("๐", "0").replace("๑", "1").replace("๒", "2")
                     .replace("๓", "3").replace("๔", "4").replace("๕", "5")
                     .replace("๖", "6").replace("๗", "7").replace("๘", "8")
                     .replace("๙", "9").trim();
 
-            String[] parts = normalized.split("\\s+");
-            if (parts.length < 3)
+            String[] parts = normalized.split("[\\s/.\\-]+");
+            if (parts.length < 3) {
                 return null;
+            }
 
             int day = Integer.parseInt(parts[0]);
-            int month = -1;
-            for (int i = 0; i < thaiMonths.length; i++) {
-                if (thaiMonths[i].equals(parts[1])) {
-                    month = i + 1;
-                    break;
-                }
-            }
-            if (month == -1)
+            int month = monthOf(parts[1]);
+            if (month < 1 || month > 12) {
                 return null;
+            }
 
             int year = Integer.parseInt(parts[2]);
-            if (year > 2400)
-                year -= 543; // Convert Buddhist year
-
+            if (year > 2400) {
+                year -= 543; // Buddhist era
+            }
             return LocalDateTime.of(year, month, day, 0, 0);
         } catch (Exception e) {
+            log.debug("Not a date: '{}'", thaiDate);
             return null;
         }
     }
 
+    /** A Thai month name or a month number. */
+    private static int monthOf(String token) {
+        for (int i = 0; i < THAI_MONTHS.length; i++) {
+            if (THAI_MONTHS[i].equals(token)) {
+                return i + 1;
+            }
+        }
+        try {
+            return Integer.parseInt(token);
+        } catch (NumberFormatException e) {
+            return -1;
+        }
+    }
+
     /**
-     * ค้นหาคำร้องที่ผลประเมินใกล้หมดอายุ (สำหรับ scheduler)
+     * Evaluations this person may put behind a position request.
+     *
+     * <p>The single definition of "a usable result", so that the dashboard's
+     * expiry countdown and the "start a position request" screen can no longer
+     * disagree — they did, and a professor whose request stopped at
+     * COMPLETED_PASS was told on one screen that their result was valid and on
+     * the next that they had none (GAP-20).
+     *
+     * <p>Step 11 of the flow is "แจ้งผลการประเมินผลการสอนให้ผู้ขอกำหนดตำแหน่ง
+     * ทราบเพื่อดำเนินการยื่นขอกำหนดตำแหน่งทางวิชาการต่อไป" — a result that has
+     * been announced is usable, whether or not the paperwork behind it has been
+     * closed off as COMPLETED.
+     */
+    public List<AcademicRequest> findUsableEvaluations(Integer applicantId) {
+        return requestRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId).stream()
+                .filter(this::isUsableEvaluation)
+                .toList();
+    }
+
+    /** Whether one evaluation still backs a position request. */
+    public boolean isUsableEvaluation(AcademicRequest request) {
+        if (request == null || request.getCurrentStatus() == null) {
+            return false;
+        }
+        if (!request.getCurrentStatus().carriesAPassedResult()) {
+            return false;
+        }
+        // The result is evidenced by document 8, the notification of the result.
+        List<AcademicDocument> doc8s = documentRepository
+                .findByRequestIdAndDocumentType(request.getId(), 8);
+        if (doc8s.isEmpty() || doc8s.get(0).getJsonData() == null) {
+            return false;
+        }
+        return !isEvaluationExpired(doc8s.get(0).getJsonData());
+    }
+
+    /**
+     * Whether document 8 names an expiry date that has passed.
+     *
+     * <p>No date means no expiry, which is the historical behaviour and the
+     * right default: an older document that simply never carried the field must
+     * not be treated as lapsed.
+     */
+    private boolean isEvaluationExpired(String doc8Json) {
+        try {
+            Map<String, Object> data = new com.fasterxml.jackson.databind.ObjectMapper()
+                    .readValue(doc8Json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                            });
+            Object raw = data.get("expiration_date");
+            if (raw == null || raw.toString().isBlank()) {
+                return false;
+            }
+            LocalDateTime expiry = parseThaiDate(raw.toString());
+            return expiry != null && expiry.isBefore(LocalDateTime.now());
+        } catch (Exception e) {
+            log.warn("Could not read the expiry date on document 8: {}", e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * Evaluations whose result lapses before the given moment.
+     *
+     * <p>Previously ignored its argument entirely and asked for the requests of
+     * applicant {@code null}, which is nobody (GAP-22).
      */
     public List<AcademicRequest> findRequestsExpiringSoon(LocalDateTime before) {
-        return requestRepository.findByApplicantIdOrderByCreatedAtDesc(null);
+        if (before == null) {
+            return List.of();
+        }
+        return requestRepository.findExpiringBefore(before,
+                Arrays.stream(RequestStatus.values())
+                        .filter(RequestStatus::carriesAPassedResult)
+                        .toList());
     }
 
     public void sendSuggestionEmail(AcademicRequest request, String suggestionsText) {

@@ -8,6 +8,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -20,6 +22,7 @@ import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestPublication;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatus;
@@ -28,6 +31,7 @@ import com.ecom.academic.repository.AcademicRequestRepository;
 import com.ecom.academic.repository.PositionAttachmentRepository;
 import com.ecom.academic.repository.PositionDocumentEditLogRepository;
 import com.ecom.academic.repository.PositionDocumentRepository;
+import com.ecom.academic.repository.PositionRequestPublicationRepository;
 import com.ecom.academic.repository.PositionRequestRepository;
 import com.ecom.academic.repository.PositionStatusHistoryRepository;
 import com.ecom.model.UserDtls;
@@ -50,7 +54,11 @@ public class PositionRequestService {
 
     private final AcademicRequestRepository academicRequestRepository;
 
-    private final AcademicDocumentRepository academicDocumentRepository;
+    /**
+     * Owns the "is this evaluation still usable" rule, which both phases need.
+     * No cycle: the academic service knows nothing about position requests.
+     */
+    private final AcademicRequestService academicRequestService;
 
     private final PositionEmailService emailService;
     private final com.ecom.service.AfterCommitRunner afterCommit;
@@ -59,27 +67,32 @@ public class PositionRequestService {
 
     private final com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository;
 
+    /** Which publications each request puts forward — see {@link PositionRequestPublication}. */
+    private final PositionRequestPublicationRepository publicationLinkRepository;
+
     public PositionRequestService(
             PositionRequestRepository requestRepository,
             PositionDocumentRepository documentRepository,
             PositionStatusHistoryRepository statusHistoryRepository,
             PositionDocumentEditLogRepository editLogRepository,
             AcademicRequestRepository academicRequestRepository,
-            AcademicDocumentRepository academicDocumentRepository,
+            AcademicRequestService academicRequestService,
             PositionEmailService emailService,
             com.ecom.service.AfterCommitRunner afterCommit,
             PositionAttachmentRepository attachmentRepository,
-            com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository) {
+            com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository,
+            PositionRequestPublicationRepository publicationLinkRepository) {
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.statusHistoryRepository = statusHistoryRepository;
         this.editLogRepository = editLogRepository;
         this.academicRequestRepository = academicRequestRepository;
-        this.academicDocumentRepository = academicDocumentRepository;
+        this.academicRequestService = academicRequestService;
         this.emailService = emailService;
         this.afterCommit = afterCommit;
         this.attachmentRepository = attachmentRepository;
         this.signatureRequestRepository = signatureRequestRepository;
+        this.publicationLinkRepository = publicationLinkRepository;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -196,59 +209,18 @@ public class PositionRequestService {
     // ================== Eligibility ==================
 
     /**
-     * ดึง AcademicRequest ที่ผ่านการประเมินผลการสอน (COMPLETED)
-     * และมีเอกสารที่ 8 ที่ยังไม่หมดอายุ
+     * ผลประเมินการสอนที่ผู้ยื่นใช้ขอกำหนดตำแหน่งได้
+     *
+     * <p>Delegates to {@link AcademicRequestService#findUsableEvaluations} rather
+     * than deciding for itself. There used to be a second copy of the rule here,
+     * and the two disagreed: this one accepted only {@code COMPLETED} while the
+     * dashboard's expiry countdown also accepted {@code COMPLETED_PASS}, so a
+     * professor could be shown a valid result on one screen and none on the next
+     * (GAP-20). Its expiry check could not read a Thai month name either, which
+     * meant expiry was effectively never enforced (GAP-21).
      */
     public List<AcademicRequest> getEligibleEvaluations(Integer userId) {
-        List<AcademicRequest> completed = academicRequestRepository.findByApplicantIdOrderByCreatedAtDesc(userId)
-                .stream()
-                .filter(r -> r.getCurrentStatus() == RequestStatus.COMPLETED)
-                .toList();
-
-        return completed.stream().filter(r -> {
-            try {
-                List<AcademicDocument> doc8s = academicDocumentRepository
-                        .findByRequestIdAndDocumentType(r.getId(), 8);
-                if (doc8s.isEmpty())
-                    return false;
-
-                AcademicDocument doc8 = doc8s.get(0);
-                if (doc8.getJsonData() == null)
-                    return false;
-
-                Map<String, Object> data = objectMapper.readValue(doc8.getJsonData(),
-                        new TypeReference<Map<String, Object>>() {
-                        });
-                String expDateStr = (String) data.get("expiration_date");
-                if (expDateStr == null || expDateStr.isBlank())
-                    return true; // no expiry = valid
-
-                // Thai date format: parse simply — if it contains year > current year, valid
-                return !isExpired(expDateStr);
-            } catch (Exception e) {
-                return false;
-            }
-        }).toList();
-    }
-
-    private boolean isExpired(String thaiDateStr) {
-        try {
-            // Extract Buddhist year and convert to Gregorian
-            String cleaned = thaiDateStr.replaceAll("[^0-9]", " ").trim();
-            String[] parts = cleaned.split("\\s+");
-            if (parts.length >= 3) {
-                int buddhistYear = Integer.parseInt(parts[parts.length - 1]);
-                int gregorianYear = buddhistYear - 543;
-                int month = Integer.parseInt(parts[parts.length - 2]);
-                int day = Integer.parseInt(parts[parts.length - 3]);
-                LocalDate expDate = LocalDate.of(gregorianYear, month, day);
-                return expDate.isBefore(LocalDate.now());
-            }
-            // If Thai month names are used, try pattern with month names
-            return false; // assume not expired if can't parse
-        } catch (Exception e) {
-            return false; // assume not expired if can't parse
-        }
+        return academicRequestService.findUsableEvaluations(userId);
     }
 
     // ================== Request CRUD ==================
@@ -389,6 +361,27 @@ public class PositionRequestService {
         return request;
     }
 
+    /**
+     * Refuses a status change the process does not allow — same reasoning as the
+     * Phase 1 service. The order lives in
+     * {@link PositionRequestStatus#allowedNext()}.
+     */
+    private void requireLegalTransition(PositionRequestStatus from, PositionRequestStatus to,
+            Long requestId) {
+        if (from == null || from == to) {
+            return;
+        }
+        if (!from.canMoveTo(to)) {
+            throw new IllegalStateException(
+                    "เปลี่ยนสถานะคำร้องขอตำแหน่ง #%d จาก \"%s\" ไปเป็น \"%s\" ไม่ได้ — ไม่ตรงกับลำดับใน flow (ขั้นที่ทำได้ต่อไป: %s)"
+                            .formatted(requestId, from.getThaiLabel(), to.getThaiLabel(),
+                                    from.allowedNext().stream()
+                                            .map(PositionRequestStatus::getThaiLabel)
+                                            .reduce((a, b) -> a + ", " + b)
+                                            .orElse("ไม่มี — สถานะนี้ปิดแล้ว")));
+        }
+    }
+
     @Transactional
     public PositionRequest updateStatus(Long requestId, PositionRequestStatus newStatus,
             UserDtls changedBy, String note) {
@@ -402,6 +395,7 @@ public class PositionRequestService {
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + requestId));
 
         PositionRequestStatus oldStatus = request.getCurrentStatus();
+        requireLegalTransition(oldStatus, newStatus, requestId);
         request.setCurrentStatus(newStatus);
         request = requestRepository.save(request);
 
@@ -443,13 +437,13 @@ public class PositionRequestService {
 
         switch (documentType) {
             case 5, 7, 0 -> {
-                if (request.getCurrentStatus() == PositionRequestStatus.DOCUMENT_RECEIVED) {
+                if (request.getCurrentStatus().canMoveTo(PositionRequestStatus.DOCUMENT_VERIFICATION)) {
                     updateStatus(requestId, PositionRequestStatus.DOCUMENT_VERIFICATION, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึก" + getDocLabel(documentType), sendNotify);
                 }
             }
             case 8 -> {
-                if (request.getCurrentStatus().ordinal() < PositionRequestStatus.SCREENING_COMMITTEE.ordinal()) {
+                if (request.getCurrentStatus().canMoveTo(PositionRequestStatus.SCREENING_COMMITTEE)) {
                     updateStatus(requestId, PositionRequestStatus.SCREENING_COMMITTEE, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ", sendNotify);
                 }
@@ -530,6 +524,7 @@ public class PositionRequestService {
         if (documentType == 2 && jsonData != null) {
             syncDoc2ToRequest(request, jsonData);
         }
+        syncPublicationLinks(request, documentType, jsonData);
 
         return saved;
     }
@@ -570,6 +565,10 @@ public class PositionRequestService {
         if (documentType == 2 && jsonData != null) {
             syncDoc2ToRequest(request, jsonData);
         }
+        // A draft records its publications too. "Still a draft" means the work is
+        // not spent yet, not that nobody knows which work it is — the applicant
+        // may come back to this form a dozen times before submitting.
+        syncPublicationLinks(request, documentType, jsonData);
 
         return saved;
     }
@@ -611,6 +610,79 @@ public class PositionRequestService {
             requestRepository.save(request);
         } catch (Exception e) {
             System.err.println("Sync doc2 to request failed: " + e.getMessage());
+        }
+    }
+
+    // ================== Publication linkage (GAP-11) ==================
+
+    /**
+     * Field names the Scopus picker writes ids into: {@code
+     * asst_research_working_scopus_id_2}, and one per row of every publication
+     * group on the form.
+     */
+    private static final Pattern SCOPUS_ID_FIELD = Pattern.compile("^.+_scopus_id_(\\d+)$");
+
+    /**
+     * Records which publications this document puts forward.
+     *
+     * <p>The citation itself stays a free-text field the applicant may reword —
+     * that was always the intent. What is new is that the picker also submits the
+     * id behind each line, so the request and the publication are tied together
+     * and "this work has already been submitted" becomes a question the system
+     * can answer (GAP-11/12).
+     *
+     * <p>Rewritten wholesale on every save rather than merged: the form is the
+     * truth about what it currently contains, so a row the applicant deleted must
+     * take its link with it. Scoped to one document type so saving another form
+     * cannot clear this one's links.
+     *
+     * <p>Failure here never fails the save. A lost link means the reuse rule is
+     * lenient for that row — a worse outcome than saving, but a far better one
+     * than an applicant losing a form they spent an hour filling in.
+     */
+    private void syncPublicationLinks(PositionRequest request, int documentType, String jsonData) {
+        if (jsonData == null || jsonData.isBlank()) {
+            return;
+        }
+        try {
+            Map<String, String> data = objectMapper.readValue(jsonData,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+
+            // publicationId → the row it sits on, first occurrence winning. The
+            // same paper twice on one form is one link, not a constraint violation.
+            Map<Long, Integer> byPublication = new LinkedHashMap<>();
+            for (Map.Entry<String, String> entry : data.entrySet()) {
+                Matcher field = SCOPUS_ID_FIELD.matcher(entry.getKey());
+                if (!field.matches()) {
+                    continue;
+                }
+                String value = entry.getValue();
+                if (value == null || value.isBlank()) {
+                    continue;
+                }
+                try {
+                    byPublication.putIfAbsent(Long.valueOf(value.trim()),
+                            Integer.valueOf(field.group(1)));
+                } catch (NumberFormatException e) {
+                    // Someone hand-edited the form or a browser extension mangled
+                    // it. One unusable row, not a reason to drop the rest.
+                    log.warn("Ignoring unreadable Scopus id '{}' on request {} document {}",
+                            value, request.getId(), documentType);
+                }
+            }
+
+            publicationLinkRepository.deleteByRequestIdAndDocumentType(request.getId(), documentType);
+            if (byPublication.isEmpty()) {
+                return;
+            }
+            List<PositionRequestPublication> links = byPublication.entrySet().stream()
+                    .map(e -> new PositionRequestPublication(request, e.getKey(), documentType, e.getValue()))
+                    .toList();
+            publicationLinkRepository.saveAll(links);
+
+        } catch (Exception e) {
+            log.warn("Could not record the publications used by request {} document {}: {}",
+                    request.getId(), documentType, e.toString());
         }
     }
 

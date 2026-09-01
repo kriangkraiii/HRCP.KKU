@@ -184,6 +184,16 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .as("คะแนน 4.5 ทั้งสี่ส่วน = 90 คะแนน ต้องได้ระดับ 'เชี่ยวชาญ'")
                 .contains("\"eval_result_level\":\"เชี่ยวชาญ\"");
 
+        // --- ข้อ 9-10: คณะกรรมการประจำวิทยาลัยฯ ประชุมรับรองผลประเมินการสอน ---
+        expectAccepted(mvc.perform(post("/admin/academic/request/" + id + "/status")
+                .param("status", RequestStatus.COLLEGE_ENDORSED.name())
+                .param("note", "ข้อ 10 — ที่ประชุมกรรมการประจำวิทยาลัยฯ รับรองผลประเมินการสอน")
+                .with(csrf()).with(asOfficer())),
+                "/admin/academic/request/" + id);
+        assertThat(academicService.findById(id).orElseThrow().getCurrentStatus())
+                .as("ข้อ 9-10 — รับรองผลโดยกรรมการประจำวิทยาลัยฯ")
+                .isEqualTo(RequestStatus.COLLEGE_ENDORSED);
+
         // --- ข้อ 11: แจ้งผลให้ผู้ขอกำหนดตำแหน่งทราบ (เอกสารที่ 8) ---
         mvc.perform(formPost("/admin/academic/request/" + id + "/document/8",
                 officerFields(Map.of("evaluation_date", "20 กันยายน 2569",
@@ -438,9 +448,11 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         fields.put("order_no", "123/2569");
         fields.put("order_date", "5 กันยายน 2569");
         // ข้อ 3 — อนุกรรมการประเมินการสอน จำนวน 3 คน
-        fields.put("committee_1", "รศ.ดร. กรรมการ หนึ่ง");
-        fields.put("committee_2", "รศ.ดร. กรรมการ สอง");
-        fields.put("committee_3", "ผศ.ดร. กรรมการ สาม");
+        // ชื่อฟิลด์ตรงกับ doc_fragments/3.html ซึ่งสร้างด้วย th:name
+        // และตรงกับ placeholder {{committee_N_name}} ในเทมเพลต docx
+        fields.put("committee_1_name", "รศ.ดร. กรรมการ หนึ่ง");
+        fields.put("committee_2_name", "รศ.ดร. กรรมการ สอง");
+        fields.put("committee_3_name", "ผศ.ดร. กรรมการ สาม");
         return officerFields(fields);
     }
 

@@ -12,13 +12,18 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.external.harvest.PublicationDeduplicator;
+import com.ecom.external.harvest.PublicationHarmonizer;
+import com.ecom.external.harvest.model.RawPublication;
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.model.FsFacultyChange;
 import com.ecom.external.model.FsSyncState;
+import com.ecom.external.model.JournalTier;
 import com.ecom.external.model.ScopusPublication;
 import com.ecom.external.repository.FsFacultyChangeRepository;
 import com.ecom.external.repository.FsFacultyRepository;
 import com.ecom.external.repository.FsSyncStateRepository;
+import com.ecom.external.repository.JournalTierRepository;
 import com.ecom.external.repository.ScopusPublicationRepository;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -30,7 +35,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  * transactional method <em>on itself</em> gets no transaction at all. Batching
  * these writes into separate {@code REQUIRES_NEW} transactions only works if the
  * call crosses a bean boundary — which is exactly what this class provides for
- * {@link FsSyncService}.
+ * {@link FsSyncService} and {@link com.ecom.external.harvest.PublicationHarvestService}.
  */
 @Component
 public class FsSyncWriter {
@@ -41,17 +46,26 @@ public class FsSyncWriter {
     private final FsFacultyChangeRepository changeRepo;
     private final ScopusPublicationRepository publicationRepo;
     private final FsSyncStateRepository syncStateRepo;
+    private final PublicationHarmonizer harmonizer;
+    private final PublicationDeduplicator deduplicator;
+    private final JournalTierRepository journalTierRepo;
 
     private final ObjectMapper mapper = new ObjectMapper();
 
     public FsSyncWriter(FsFacultyRepository facultyRepo,
             FsFacultyChangeRepository changeRepo,
             ScopusPublicationRepository publicationRepo,
-            FsSyncStateRepository syncStateRepo) {
+            FsSyncStateRepository syncStateRepo,
+            PublicationHarmonizer harmonizer,
+            PublicationDeduplicator deduplicator,
+            JournalTierRepository journalTierRepo) {
         this.facultyRepo = facultyRepo;
         this.changeRepo = changeRepo;
         this.publicationRepo = publicationRepo;
         this.syncStateRepo = syncStateRepo;
+        this.harmonizer = harmonizer;
+        this.deduplicator = deduplicator;
+        this.journalTierRepo = journalTierRepo;
     }
 
     /**
@@ -219,6 +233,76 @@ public class FsSyncWriter {
 
         publicationRepo.saveAll(toSave);
         return toSave.size();
+    }
+
+    /**
+     * Processes one batch of harvested raw publications with 2.5-level deduplication,
+     * harmonization, and journal quartile/tier enrichment.
+     *
+     * @param batch raw publications harvested from external adapters
+     * @param fuzzyThreshold threshold for Level 2.5 pg_trgm similarity
+     * @return count of inserted/updated publications
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public int writeHarvestedBatch(List<RawPublication> batch, double fuzzyThreshold) {
+        if (batch == null || batch.isEmpty()) {
+            return 0;
+        }
+
+        List<ScopusPublication> toSave = new ArrayList<>(batch.size());
+
+        for (RawPublication raw : batch) {
+            Long fsUserId = raw.targetFsUserId();
+            if (fsUserId == null || raw.title() == null || raw.title().isBlank()) {
+                continue;
+            }
+
+            PublicationDeduplicator.DedupResult dedup = deduplicator.findDuplicate(raw, fsUserId, fuzzyThreshold);
+
+            ScopusPublication target;
+            if (dedup.isDuplicate()) {
+                // Merge enriched fields into existing publication
+                target = dedup.existing().get();
+                harmonizer.mergeIntoExisting(target, raw, dedup.computedHash());
+                enrichJournalTier(target);
+                log.debug("Merged harvested work from {} into existing pub id {} (dedup: {})",
+                        raw.dataSource(), target.getId(), dedup.matchLevel());
+            } else {
+                // Insert as new publication
+                target = harmonizer.harmonize(raw, fsUserId, dedup.computedHash());
+                enrichJournalTier(target);
+                log.debug("Inserting new harvested work from {} for user {} (hash: {})",
+                        raw.dataSource(), fsUserId, dedup.computedHash());
+            }
+
+            toSave.add(target);
+        }
+
+        publicationRepo.saveAll(toSave);
+        return toSave.size();
+    }
+
+    /**
+     * Looks up SJR and TCI tier rankings by ISSN/eISSN and attaches them to the publication.
+     */
+    private void enrichJournalTier(ScopusPublication p) {
+        if (p.getIssn() == null && p.getEissn() == null) {
+            return;
+        }
+
+        Integer year = p.getPublicationYear();
+        List<JournalTier> tiers = journalTierRepo.findByIssnOrEissnAndYear(p.getIssn(), p.getEissn(), year);
+        if (tiers.isEmpty()) {
+            tiers = journalTierRepo.findLatestByIssnOrEissn(p.getIssn(), p.getEissn());
+        }
+
+        for (JournalTier t : tiers) {
+            if ("SJR".equalsIgnoreCase(t.getProvider()) && (p.getSjrQuartile() == null || p.getSjrQuartile().isBlank())) {
+                p.setSjrQuartile(t.getTier());
+            } else if ("TCI".equalsIgnoreCase(t.getProvider()) && (p.getTciTier() == null || p.getTciTier().isBlank())) {
+                p.setTciTier(t.getTier());
+            }
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)

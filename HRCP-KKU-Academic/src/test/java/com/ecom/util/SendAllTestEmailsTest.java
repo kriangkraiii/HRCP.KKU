@@ -10,19 +10,55 @@ import org.springframework.mail.javamail.MimeMessageHelper;
 
 import jakarta.mail.internet.MimeMessage;
 
+/**
+ * Sends one of every e-mail this system produces, to a real inbox, through real
+ * Gmail. For looking at templates by eye — nothing here asserts anything.
+ *
+ * <p><b>Credentials come from the environment, never from this file.</b> A Gmail
+ * app password used to sit in the source, which meant it was in the repository,
+ * in every clone of it, and in the history of both (GAP-05). Anyone who wants to
+ * run this now supplies their own:
+ *
+ * <pre>
+ * EMAIL_USERNAME=you@example.com \
+ * EMAIL_PASSWORD='xxxx xxxx xxxx xxxx' \
+ * EMAIL_TARGET=you@example.com \
+ *   ./mvnw test -DskipTests=false -Dtest=SendAllTestEmailsTest
+ * </pre>
+ *
+ * (and takes the {@code @Disabled} off for that one run — {@code MailSafetyNetTest}
+ * will fail until it is put back, which is the point of it.)
+ */
 @Disabled("Manual live SMTP test - enable when explicitly sending test emails")
 class SendAllTestEmailsTest {
 
-    private static final String TARGET_EMAIL = "kriangkrai.p@kkumail.com";
-    private static final String SENDER_EMAIL = "kriangkrai.p@kkumail.com";
-    private static final String SENDER_PASS = "sajn mwtj mxza xsoe";
+    /**
+     * Reads one required setting, or stops with an explanation.
+     *
+     * <p>Refusing to run beats defaulting to somebody's address: the previous
+     * defaults mailed a named person's inbox from their own account, so a
+     * misfired run went out under their name.
+     */
+    private static String required(String variable) {
+        String value = System.getenv(variable);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("""
+                    ต้องตั้งค่า %s ก่อนรันเทสนี้ — เทสนี้ล็อกอินและส่งอีเมลออกไปจริง
+                    ตัวอย่าง: EMAIL_USERNAME=you@example.com EMAIL_PASSWORD='app password' \
+                              EMAIL_TARGET=you@example.com ./mvnw test -Dtest=SendAllTestEmailsTest"""
+                    .formatted(variable));
+        }
+        return value;
+    }
+
+    private final String targetEmail = required("EMAIL_TARGET");
 
     private JavaMailSenderImpl createMailSender() {
         JavaMailSenderImpl sender = new JavaMailSenderImpl();
         sender.setHost("smtp.gmail.com");
         sender.setPort(587);
-        sender.setUsername(System.getenv().getOrDefault("EMAIL_USERNAME", SENDER_EMAIL));
-        sender.setPassword(System.getenv().getOrDefault("EMAIL_PASSWORD", SENDER_PASS));
+        sender.setUsername(required("EMAIL_USERNAME"));
+        sender.setPassword(required("EMAIL_PASSWORD"));
 
         Properties props = sender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
@@ -37,7 +73,7 @@ class SendAllTestEmailsTest {
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
         helper.setFrom(mailSender.getUsername(), EmailTemplateHelper.SENDER_NAME);
-        helper.setTo(TARGET_EMAIL);
+        helper.setTo(targetEmail);
         helper.setSubject(subject);
         helper.setText(htmlContent, true);
         mailSender.send(message);
@@ -46,10 +82,10 @@ class SendAllTestEmailsTest {
     }
 
     @Test
-    @DisplayName("ส่งอีเมลทดสอบทุกรูปแบบไปยัง kriangkrai.p@kkumail.com โดยไม่มีไฟล์แนบและโหลดเร็ว 0ms")
+    @DisplayName("ส่งอีเมลทดสอบทุกรูปแบบไปยังที่อยู่ที่ตั้งไว้ใน EMAIL_TARGET (ไม่มีไฟล์แนบ)")
     void sendAllEmailTemplates() throws Exception {
         JavaMailSenderImpl mailSender = createMailSender();
-        System.out.println("🚀 กำลังส่งอีเมลทดสอบทุกรูปแบบ (Zero Attachment / Instant CDN) ไปยัง: " + TARGET_EMAIL);
+        System.out.println("🚀 กำลังส่งอีเมลทดสอบทุกรูปแบบ (Zero Attachment / Instant CDN) ไปยัง: " + targetEmail);
 
         // 1. Password Reset
         String resetUrl = "https://localhost:8081/reset-password?token=sample_test_token_123456";
