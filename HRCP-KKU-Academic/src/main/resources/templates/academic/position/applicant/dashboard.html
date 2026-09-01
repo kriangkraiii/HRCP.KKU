@@ -234,11 +234,11 @@
                     </div>
 
                     <!-- Progress Tracker (7 Standard Steps) -->
-                    <div class="progress-tracker">
-                        <div th:each="s : ${progressSteps}" class="progress-step"
-                            th:classappend="${req.currentStatus.ordinal() == s.ordinal()} ? 'active' : 
-                                     (${req.currentStatus.ordinal() > s.ordinal() && req.currentStatus.name() != 'REJECTED'} ? 'completed' : 
-                                     (${req.currentStatus.name() == 'REVISION_REQUESTED' && s.name() == 'DOCUMENT_VERIFICATION'} ? 'revise' : ''))">
+                    <div class="progress-tracker" th:with="pIdx=${req.currentStatus.progressIndex()}">
+                        <div th:each="s, sStat : ${progressSteps}" class="progress-step"
+                            th:classappend="${req.currentStatus.name() == 'REVISION_REQUESTED' && s.name() == 'DOCUMENT_VERIFICATION'} ? 'revise' :
+                                     (${pIdx == sStat.index} ? 'active' :
+                                     (${pIdx > sStat.index} ? 'completed' : ''))">
                             <div class="step-icon">
                                 <i th:class="'fas ' + ${s.icon}" style="font-size: 0.8rem;"></i>
                             </div>

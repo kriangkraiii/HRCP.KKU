@@ -56,13 +56,13 @@
 
       <!-- Progress Tracker -->
       <div class="detail-progress">
-        <div class="detail-progress-steps">
+        <div class="detail-progress-steps" th:with="pIdx=${request.currentStatus.progressIndex()}">
           <th:block th:each="step, iterStat : ${progressSteps}">
             <div class="detail-progress-step"
-                 th:classappend="${request.currentStatus.ordinal() > step.ordinal()} ? 'dp-done' : (${request.currentStatus.ordinal() == step.ordinal()} ? 'dp-done dp-active' : '')"
+                 th:classappend="${pIdx > iterStat.index} ? 'dp-done' : (${pIdx == iterStat.index} ? 'dp-done dp-active' : '')"
                  th:style="'--step-c:' + ${step.color}">
               <div th:if="${!iterStat.last}" class="detail-step-line"
-                   th:classappend="${request.currentStatus.ordinal() > step.ordinal()} ? 'line-done' : ''"></div>
+                   th:classappend="${pIdx > iterStat.index} ? 'line-done' : ''"></div>
               <div class="detail-progress-dot">
                 <i class="fas" th:classappend="${step.icon}"></i>
               </div>
