@@ -472,6 +472,19 @@
             openModal();
             load();
         },
-        fillMetrics: fillMetrics
+        fillMetrics: fillMetrics,
+
+        /**
+         * Puts a publication id back beside a citation line.
+         *
+         * Exposed for the form's own restore step. The hidden fields live only in
+         * the DOM the picker built, so reopening a saved form used to come back
+         * without them: the next save then posted a citation with no id attached
+         * and the server, correctly reading the form as the truth, dropped the
+         * link — after which the work counted as never submitted and could be put
+         * forward again. Restoring the field is what keeps a reopened form saying
+         * the same thing it said when it was closed.
+         */
+        rememberId: rememberPublicationId
     };
 })(window, document);

@@ -75,6 +75,10 @@ class FullJourneyE2ETest extends PlaywrightTestBase {
         // ---------- เดินกระบวนการเฟส 1 ให้จบ ----------
         // The step-by-step form filling is the MockMvc journey's job; here the
         // point is that each screen along the way opens for the right person.
+        // ข้อ 1 ก่อนเสมอ — ลำดับสถานะถูกบังคับด้วย RequestStatus.allowedNext() แล้ว (GAP-30)
+        // การกระโดดจาก "แบบร่าง" ไป "แต่งตั้งอนุกรรมการ" จึงถูกปฏิเสธ ไม่ใช่ผ่านเงียบ ๆ เหมือนเดิม
+        academicService.updateStatus(draft.getId(), RequestStatus.RECEIVED,
+                officer, "ข้อ 1 — หน่วยสารบรรณรับเรื่อง", false);
         academicService.updateStatus(draft.getId(), RequestStatus.SUB_COMMITTEE_APPOINTED,
                 officer, "ข้อ 4 — แต่งตั้งคณะอนุกรรมการ", false);
         academicService.updateStatus(draft.getId(), RequestStatus.MEETING_SCHEDULED,

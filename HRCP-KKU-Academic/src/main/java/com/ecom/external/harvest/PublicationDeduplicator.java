@@ -30,9 +30,22 @@ public class PublicationDeduplicator {
     private static final Logger log = LoggerFactory.getLogger(PublicationDeduplicator.class);
 
     private final ScopusPublicationRepository publicationRepo;
+    private final FuzzyTitleMatcher fuzzyMatcher;
 
-    public PublicationDeduplicator(ScopusPublicationRepository publicationRepo) {
+    /**
+     * Turned off for good the first time the similarity query fails.
+     *
+     * <p>Without {@code pg_trgm} that query fails for every row of every batch,
+     * for the life of the deployment. Asking anyway would mean one doomed
+     * statement per publication and one WARN line each — noise that buries the
+     * one message that matters.
+     */
+    private volatile boolean fuzzyTierAvailable = true;
+
+    public PublicationDeduplicator(ScopusPublicationRepository publicationRepo,
+            FuzzyTitleMatcher fuzzyMatcher) {
         this.publicationRepo = publicationRepo;
+        this.fuzzyMatcher = fuzzyMatcher;
     }
 
     public enum MatchLevel {
@@ -74,9 +87,18 @@ public class PublicationDeduplicator {
         }
 
         // Level 2.5: Fuzzy pg_trgm title match (requires title and year)
-        if (raw.title() != null && raw.title().length() >= 10 && raw.publicationYear() != null) {
+        //
+        // Runs through FuzzyTitleMatcher rather than the repository directly: the
+        // query is native SQL over an extension that may not be installed, and a
+        // failed statement would otherwise mark the caller's transaction
+        // rollback-only — discarding the entire batch being written for the sake
+        // of one comparison. See that class for the full story.
+        if (fuzzyTierAvailable
+                && raw.title() != null && raw.title().length() >= 10
+                && raw.publicationYear() != null) {
             try {
-                Optional<Long> fuzzyId = publicationRepo.findFuzzyMatchId(fsUserId, raw.title().trim(), raw.publicationYear(), fuzzyThreshold);
+                Optional<Long> fuzzyId = fuzzyMatcher.findSimilarTitleId(
+                        fsUserId, raw.title().trim(), raw.publicationYear(), fuzzyThreshold);
                 if (fuzzyId.isPresent()) {
                     Optional<ScopusPublication> fuzzyPub = publicationRepo.findById(fuzzyId.get());
                     if (fuzzyPub.isPresent()) {
@@ -85,7 +107,12 @@ public class PublicationDeduplicator {
                     }
                 }
             } catch (Exception e) {
-                log.warn("Fuzzy dedup query failed (pg_trgm extension active?): {}", e.getMessage());
+                fuzzyTierAvailable = false;
+                log.warn("""
+                        ปิดการกรองซ้ำชั้นที่ 3 (ความคล้ายของชื่อเรื่องด้วย pg_trgm) เพราะคิวรีล้มเหลว: {}
+                        การกรองด้วย DOI และ hash ของชื่อเรื่อง+ปี+ผู้แต่ง ยังทำงานตามปกติ
+                        ถ้าต้องการชั้นนี้ ให้ตรวจว่าฐานข้อมูลติดตั้ง extension pg_trgm แล้ว (migration V14 สร้างให้)""",
+                        e.getMessage());
             }
         }
 

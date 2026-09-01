@@ -21,12 +21,16 @@ import com.ecom.external.repository.ScopusPublicationRepository;
 class PublicationDeduplicatorTest {
 
     private ScopusPublicationRepository publicationRepo;
+    private FuzzyTitleMatcher fuzzyMatcher;
     private PublicationDeduplicator deduplicator;
 
     @BeforeEach
     void setUp() {
         publicationRepo = mock(ScopusPublicationRepository.class);
-        deduplicator = new PublicationDeduplicator(publicationRepo);
+        // The pg_trgm lookup now goes through its own bean so that a database
+        // without the extension cannot roll back the batch being written.
+        fuzzyMatcher = mock(FuzzyTitleMatcher.class);
+        deduplicator = new PublicationDeduplicator(publicationRepo, fuzzyMatcher);
     }
 
     @Test
@@ -105,7 +109,7 @@ class PublicationDeduplicatorTest {
 
         when(publicationRepo.findByFsUserIdAndDoiIgnoreCase(eq(userId), anyString())).thenReturn(Optional.empty());
         when(publicationRepo.findByFsUserIdAndDedupHash(eq(userId), anyString())).thenReturn(Optional.empty());
-        when(publicationRepo.findFuzzyMatchId(eq(userId), anyString(), eq(year), anyDouble())).thenReturn(Optional.of(3L));
+        when(fuzzyMatcher.findSimilarTitleId(eq(userId), anyString(), eq(year), anyDouble())).thenReturn(Optional.of(3L));
         when(publicationRepo.findById(3L)).thenReturn(Optional.of(existing));
 
         RawPublication raw = RawPublication.builder()

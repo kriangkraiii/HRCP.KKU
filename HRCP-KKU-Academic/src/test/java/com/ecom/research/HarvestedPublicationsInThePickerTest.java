@@ -22,10 +22,11 @@ import com.ecom.support.TestDataFactory;
  * <p>The harvest (V14: Crossref, OpenAlex, DBLP, ThaiJO, KKU IR) writes into the
  * same {@code scopus_publication} table keyed by {@code fs_user_id}, so nothing
  * had to be wired for the picker to see it. That is a claim worth a test rather
- * than an assumption: harvested rows differ from Scopus rows in three ways that
- * the picker predates — no {@code eid}, no citation count, and a
- * {@code data_source} that is not {@code SCOPUS} — and any one of them could
- * have been what a query or a formatter quietly depended on.
+ * than an assumption: harvested rows differ from Scopus rows in ways the picker
+ * predates — no citation count, a {@code data_source} that is not
+ * {@code SCOPUS}, and an {@code eid} synthesised locally rather than issued by
+ * Scopus — and any one of them could have been what a query or a formatter
+ * quietly depended on.
  */
 @DisplayName("งานวิจัยจากแหล่งใหม่ (V14) ต้องใช้ยื่นขอตำแหน่งได้เหมือนของ Scopus")
 class HarvestedPublicationsInThePickerTest extends AbstractFlowTest {
@@ -61,7 +62,8 @@ class HarvestedPublicationsInThePickerTest extends AbstractFlowTest {
 
         mvc.perform(get("/api/my/publications").with(user(applicant.getEmail())))
                 .andExpect(jsonPath("$.data[0].dataSource").value("CROSSREF"))
-                .andExpect(jsonPath("$.data[0].eid").doesNotExist());
+                // eid มีค่า แต่เป็นค่าที่ระบบสังเคราะห์เอง ไม่ใช่ของ Scopus
+                .andExpect(jsonPath("$.data[0].eid").value(org.hamcrest.Matchers.startsWith("CROSSREF:")));
 
         // The citation the form receives must still read as a citation even
         // though the row carries neither an eid nor a citation count.

@@ -1091,6 +1091,18 @@
                                     const r = document.querySelector(`[name="${key}"][value="${value}"]`);
                                     if (r) r.checked = true;
                                 } else { el.value = value; }
+                                continue;
+                            }
+
+                            // The publication ids the Scopus picker attaches to each
+                            // citation line have no field in this template — the picker
+                            // creates them as it fills a row. So a reopened form arrived
+                            // without them, the next save posted citations with no ids,
+                            // and the server dropped the links: the work then counted as
+                            // never submitted and could be put forward a second time.
+                            const scopusId = /^(.+)_scopus_id_(\d+)$/.exec(key);
+                            if (scopusId && value && window.ScopusPicker) {
+                                window.ScopusPicker.rememberId(scopusId[1], scopusId[2], value);
                             }
                         }
                         // Re-trigger visibility after data load

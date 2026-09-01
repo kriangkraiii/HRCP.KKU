@@ -351,24 +351,30 @@ public class TestDataFactory {
     }
 
     /**
-     * A publication as the multi-source harvest writes them (V14): no Scopus
-     * {@code eid}, no citation count, and a {@code dataSource} naming where it
-     * came from.
+     * A publication as the multi-source harvest writes them (V14): no citation
+     * count, a {@code dataSource} naming where it came from, and an {@code eid}
+     * synthesised from the source and its own id rather than issued by Scopus.
      *
-     * <p>Worth its own factory because those three differences are exactly what
-     * could quietly break the picker — it was built when every row came from
-     * Scopus and carried all three.
+     * <p>The synthetic eid mirrors {@code PublicationHarmonizer} exactly, and has
+     * to: {@code eid} is {@code NOT NULL} and half of the natural key
+     * {@code (fs_user_id, eid)}, so a fixture that left it out would be testing a
+     * row the harvest could never actually produce.
+     *
+     * <p>Worth its own factory because harvested rows differ from Scopus ones in
+     * precisely the fields the picker predates.
      */
     public ScopusPublication harvestedPublication(long fsUserId, String title, int year, String source) {
+        String externalId = "ext-" + Math.abs(title.hashCode());
         ScopusPublication p = new ScopusPublication();
         p.setFsUserId(fsUserId);
+        p.setEid(source + ":" + externalId);
         p.setTitle(title);
         p.setPublicationName("Journal of Multi-source Testing");
         p.setPublicationYear(year);
         p.setAuthorNames("Somchai J. | Malee T.");
         p.setDoi("10.1234/" + Math.abs(title.hashCode()));
         p.setDataSource(source);
-        p.setExternalId("ext-" + Math.abs(title.hashCode()));
+        p.setExternalId(externalId);
         p.setSyncedAt(LocalDateTime.now());
         return publications.save(p);
     }

@@ -182,6 +182,72 @@ class ScopusPickerE2ETest extends PlaywrightTestBase {
                 .isNotBlank();
     }
 
+    /**
+     * The fault a professor reported: submit a request using a paper, and the
+     * picker still offers that paper for the next one.
+     *
+     * <p>What ties a request to a publication is a hidden field the picker writes
+     * beside each citation. Nothing in the template declares those fields — the
+     * picker builds them as it fills a row — so reopening a saved form brought
+     * back the citation text and not the id. The next save, reading the form as
+     * the truth about what this request cites, then removed the link, and the
+     * work counted as never submitted.
+     *
+     * <p>Only a browser can show this: the id survives or is lost in the round
+     * trip through the page, which is precisely the part MockMvc does not have.
+     */
+    @Test
+    @DisplayName("เลือกผลงาน → บันทึก → เปิดหน้าใหม่ → บันทึกซ้ำ: ผลงานต้องยังผูกกับคำร้องอยู่")
+    void aPickedPublicationSurvivesReopeningTheForm() {
+        UserDtls professor = data.applicant();
+        Long requestId = openADraftPositionRequestFor(professor);
+        openDocumentOne(requestId);
+        chooseTargetPosition("รองศาสตราจารย์");
+
+        visiblePickerButtons().first().click();
+        page.waitForSelector("#scopusPickerModal.show");
+        page.locator("#spList input[type='checkbox']").first().check();
+        page.getByRole(AriaRole.BUTTON,
+                new com.microsoft.playwright.Page.GetByRoleOptions().setName("ใส่ในแบบฟอร์ม"))
+                .click();
+        awaitFilled("assoc_research_working_1");
+
+        String hiddenAfterPicking = page.inputValue("[name='assoc_research_working_scopus_id_1']");
+        assertThat(hiddenAfterPicking)
+                .as("picker ต้องแนบ id ของผลงานไว้ข้างข้อความอ้างอิง")
+                .isNotBlank();
+
+        saveDocumentOne();
+
+        // เปิดหน้าเดิมใหม่ เหมือนผู้ยื่นกลับมาดูอีกรอบก่อนกดยื่น
+        page.navigate(baseUrl() + "/user/position/request/" + requestId + "/document/1");
+        page.waitForSelector("#targetPos");
+        awaitFilled("assoc_research_working_1");
+
+        assertThat(page.locator("[name='assoc_research_working_scopus_id_1']").count())
+                .as("""
+                        ช่องซ่อนที่เก็บ id ต้องถูกสร้างคืนตอนโหลดฟอร์มกลับมา
+                        ถ้าหายไป การกดบันทึกครั้งถัดไปจะลบการผูกผลงานทิ้ง แล้วผลงานที่ยื่นไปแล้ว
+                        จะกลับมาเลือกยื่นซ้ำได้อีก""")
+                .isEqualTo(1);
+        assertThat(page.inputValue("[name='assoc_research_working_scopus_id_1']"))
+                .as("และต้องเป็น id เดิม ไม่ใช่ช่องว่าง")
+                .isEqualTo(hiddenAfterPicking);
+    }
+
+    /**
+     * Saves เอกสารที่ 1 and waits for the redirect that follows.
+     *
+     * <p>Targets the button by its {@code action} parameter rather than "the
+     * first submit button on the page": the navigation bar carries a sign-out
+     * form, so the looser selector logs the professor out and everything after it
+     * measures a login page.
+     */
+    private void saveDocumentOne() {
+        page.locator("button[name='action'][value='submit']").first().click();
+        page.waitForLoadState();
+    }
+
     @Test
     @DisplayName("บัญชีที่ไม่มีคู่ในระบบคณะ — modal บอกเหตุผล ไม่ใช่ค้างว่างเปล่า")
     void unlinkedAccountIsToldWhy() {

@@ -140,6 +140,26 @@ class ScopusPickerCoverageTest {
                 .containsAll(presetsWiredToAButton());
     }
 
+    /**
+     * The picker attaches a hidden publication id beside each citation it writes,
+     * and that id is what ties the request to the work (GAP-11). Those fields are
+     * built by the picker, not declared in this template, so a form reopened from
+     * saved data came back without them — and the next save, read faithfully as
+     * "this form cites nothing by id", dropped the links. The work then counted
+     * as never submitted and could be put forward again.
+     */
+    @Test
+    @DisplayName("เปิดฟอร์มที่บันทึกไว้ ต้องคืนค่า id ของผลงานที่ picker แนบไว้ด้วย")
+    void reopeningTheFormRestoresThePublicationIds() {
+        assertThat(source)
+                .as("""
+                        ลูปเติมค่ากลับเข้าฟอร์มข้ามคีย์ที่ไม่มี input รองรับ ซึ่งรวมถึง
+                        _scopus_id_ ที่ picker สร้างขึ้นเอง — ต้องสร้างช่องซ่อนคืนให้ด้วย
+                        ไม่งั้นการบันทึกครั้งถัดไปจะลบการผูกผลงานทิ้งเงียบ ๆ""")
+                .contains("_scopus_id_")
+                .contains("ScopusPicker.rememberId");
+    }
+
     @Test
     @DisplayName("GAP-10: ทุกกลุ่มที่รับผลงานต้องเลือกจาก Scopus ได้")
     void everySectionThatTakesPublicationsOffersThePicker() {

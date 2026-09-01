@@ -203,6 +203,46 @@ class ResearchReuseLockSpec extends AbstractFlowTest {
                     .andExpect(jsonPath("$.total").value(1));
         }
 
+        /**
+         * The server half of the reported fault: a paper stayed available in the
+         * picker after being submitted.
+         *
+         * <p>The cause was in the browser — a reopened form came back without the
+         * hidden ids the picker had attached, so the next save posted citations
+         * with nothing to tie them to and the links were dropped. That half is
+         * held by {@code ScopusPickerCoverageTest.reopeningTheFormRestoresThePublicationIds}.
+         *
+         * <p>What this test holds is the contract that fix relies on: saving the
+         * same form twice leaves exactly one link — neither a duplicate row nor a
+         * lost one.
+         */
+        @Test
+        @DisplayName("บันทึกฟอร์มเดิมซ้ำ — ต้องเหลือการผูกผลงานหนึ่งรายการ ไม่ซ้ำและไม่หาย")
+        void savingTheSameFormTwiceKeepsExactlyOneLink() throws Exception {
+            UserDtls applicant = data.applicant();
+            data.faculty(FS_ID, TestDataFactory.APPLICANT_EMAIL);
+            ScopusPublication paper = data.publication(FS_ID, "ผลงานที่เลือกไว้ก่อนกดยื่น", 2023, 5);
+            PositionRequest request =
+                    data.positionRequest(applicant, PositionRequestStatus.DRAFT, null);
+            String url = "/user/position/request/" + request.getId() + "/document/1";
+            String citation = "Somchai J. (2023). ผลงานที่เลือกไว้ก่อนกดยื่น.";
+
+            // ครั้งแรก: เพิ่งเลือกจาก picker — ฟอร์มมี hidden id ติดมาด้วย
+            mvc.perform(post(url).with(user(applicant.getEmail())).with(csrf())
+                    .param("asst_research_working_1", citation)
+                    .param("asst_research_working_scopus_id_1", String.valueOf(paper.getId())));
+
+            // ครั้งที่สอง: เปิดหน้าใหม่แล้วกดบันทึกอีกรอบ ข้อความ citation ยังอยู่ครบ
+            // ทุกตัวอักษร — เป็นการบันทึกซ้ำ ไม่ใช่การลบผลงานออกจากฟอร์ม
+            mvc.perform(post(url).with(user(applicant.getEmail())).with(csrf())
+                    .param("asst_research_working_1", citation)
+                    .param("asst_research_working_scopus_id_1", String.valueOf(paper.getId())));
+
+            assertThat(links.findByRequestId(request.getId()))
+                    .as("การเปิดหน้าใหม่แล้วบันทึกซ้ำ ต้องไม่ทำให้คำร้องกลายเป็นไม่ได้อ้างผลงานใด")
+                    .hasSize(1);
+        }
+
         @Test
         @DisplayName("ลบผลงานออกจากฟอร์มแล้วบันทึกใหม่ — การผูกต้องหายไปด้วย")
         void removingARowRemovesTheLink() throws Exception {

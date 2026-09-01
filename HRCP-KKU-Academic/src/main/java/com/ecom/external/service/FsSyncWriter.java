@@ -3,8 +3,10 @@ package com.ecom.external.service;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.locks.ReentrantLock;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +53,9 @@ public class FsSyncWriter {
     private final JournalTierRepository journalTierRepo;
 
     private final ObjectMapper mapper = new ObjectMapper();
+
+    /** @see #writeHarvestedBatch */
+    private final ReentrantLock harvestWriteLock = new ReentrantLock();
 
     public FsSyncWriter(FsFacultyRepository facultyRepo,
             FsFacultyChangeRepository changeRepo,
@@ -249,37 +254,97 @@ public class FsSyncWriter {
             return 0;
         }
 
-        List<ScopusPublication> toSave = new ArrayList<>(batch.size());
+        // Held for the whole write, across every adapter.
+        //
+        // Deduplication asks the database what already exists, and the adapters
+        // run concurrently on virtual threads. Two of them harvesting the same
+        // paper in one run would each ask before the other had written, each be
+        // told "nothing like it", and each insert it — a duplicate no constraint
+        // would catch, since the index on dedup_hash is not unique and their
+        // synthetic eids differ by source. Harvesting is network-bound and these
+        // writes are short, so serialising them costs almost nothing.
+        harvestWriteLock.lock();
+        try {
+            List<ScopusPublication> toSave = new ArrayList<>(batch.size());
 
-        for (RawPublication raw : batch) {
-            Long fsUserId = raw.targetFsUserId();
-            if (fsUserId == null || raw.title() == null || raw.title().isBlank()) {
-                continue;
+            // What this batch has already staged but not yet written, so the
+            // second copy of a paper arriving in one batch merges into the first
+            // instead of becoming a second row. Keyed per owner: the same work
+            // legitimately appears once for each of its faculty co-authors.
+            Map<String, ScopusPublication> stagedInThisBatch = new HashMap<>();
+
+            for (RawPublication raw : batch) {
+                Long fsUserId = raw.targetFsUserId();
+                if (fsUserId == null || raw.title() == null || raw.title().isBlank()) {
+                    continue;
+                }
+
+                PublicationDeduplicator.DedupResult dedup = deduplicator.findDuplicate(raw, fsUserId, fuzzyThreshold);
+
+                ScopusPublication target;
+                if (dedup.isDuplicate()) {
+                    // Merge enriched fields into existing publication
+                    target = dedup.existing().get();
+                    harmonizer.mergeIntoExisting(target, raw, dedup.computedHash());
+                    enrichJournalTier(target);
+                    log.debug("Merged harvested work from {} into existing pub id {} (dedup: {})",
+                            raw.dataSource(), target.getId(), dedup.matchLevel());
+                } else {
+                    ScopusPublication staged = findStaged(stagedInThisBatch, raw, fsUserId, dedup.computedHash());
+                    if (staged != null) {
+                        harmonizer.mergeIntoExisting(staged, raw, dedup.computedHash());
+                        enrichJournalTier(staged);
+                        log.debug("Merged harvested work from {} into a row staged earlier in this batch",
+                                raw.dataSource());
+                        continue;
+                    }
+                    // Insert as new publication
+                    target = harmonizer.harmonize(raw, fsUserId, dedup.computedHash());
+                    enrichJournalTier(target);
+                    stage(stagedInThisBatch, target, raw, fsUserId, dedup.computedHash());
+                    log.debug("Inserting new harvested work from {} for user {} (hash: {})",
+                            raw.dataSource(), fsUserId, dedup.computedHash());
+                }
+
+                toSave.add(target);
             }
 
-            PublicationDeduplicator.DedupResult dedup = deduplicator.findDuplicate(raw, fsUserId, fuzzyThreshold);
-
-            ScopusPublication target;
-            if (dedup.isDuplicate()) {
-                // Merge enriched fields into existing publication
-                target = dedup.existing().get();
-                harmonizer.mergeIntoExisting(target, raw, dedup.computedHash());
-                enrichJournalTier(target);
-                log.debug("Merged harvested work from {} into existing pub id {} (dedup: {})",
-                        raw.dataSource(), target.getId(), dedup.matchLevel());
-            } else {
-                // Insert as new publication
-                target = harmonizer.harmonize(raw, fsUserId, dedup.computedHash());
-                enrichJournalTier(target);
-                log.debug("Inserting new harvested work from {} for user {} (hash: {})",
-                        raw.dataSource(), fsUserId, dedup.computedHash());
-            }
-
-            toSave.add(target);
+            publicationRepo.saveAll(toSave);
+            return toSave.size();
+        } finally {
+            harvestWriteLock.unlock();
         }
+    }
 
-        publicationRepo.saveAll(toSave);
-        return toSave.size();
+    /** The same two keys deduplication uses, scoped to one owner. */
+    private static List<String> stagingKeys(RawPublication raw, Long fsUserId, String dedupHash) {
+        List<String> keys = new ArrayList<>(2);
+        String doi = PublicationHarmonizer.normalizeDoi(raw.doi());
+        if (doi != null && !doi.isBlank()) {
+            keys.add(fsUserId + "|doi|" + doi.toLowerCase());
+        }
+        if (dedupHash != null) {
+            keys.add(fsUserId + "|hash|" + dedupHash);
+        }
+        return keys;
+    }
+
+    private static ScopusPublication findStaged(Map<String, ScopusPublication> staged,
+            RawPublication raw, Long fsUserId, String dedupHash) {
+        for (String key : stagingKeys(raw, fsUserId, dedupHash)) {
+            ScopusPublication hit = staged.get(key);
+            if (hit != null) {
+                return hit;
+            }
+        }
+        return null;
+    }
+
+    private static void stage(Map<String, ScopusPublication> staged, ScopusPublication publication,
+            RawPublication raw, Long fsUserId, String dedupHash) {
+        for (String key : stagingKeys(raw, fsUserId, dedupHash)) {
+            staged.put(key, publication);
+        }
     }
 
     /**
