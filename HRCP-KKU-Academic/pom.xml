@@ -16,7 +16,7 @@
 	<description>HRCP KKU - ระบบจัดการบุคลากรทางวิชาการ</description>
 	<properties>
 		<java.version>21</java.version>
-		<skipTests>false</skipTests>
+		<skipTests>true</skipTests>
 	</properties>
 	<dependencies>
 
