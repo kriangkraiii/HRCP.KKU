@@ -15,6 +15,11 @@
 --   PetitionStatus.statusType       = enum STRING -> VARCHAR(50)
 -- ============================================================
 
+CREATE TABLE IF NOT EXISTS user_dtls (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255)
+);
+
 CREATE TABLE IF NOT EXISTS petitions (
     id BIGSERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL,
