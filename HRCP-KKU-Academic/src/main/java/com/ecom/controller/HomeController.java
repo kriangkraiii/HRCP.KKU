@@ -105,8 +105,17 @@ public class HomeController {
 		// parameters — and the second is what a misregistered redirect URL looks
 		// like. The referrer is the only thing that tells them apart, so when it
 		// names the SSO host this is worth a line of its own.
+		// Our own redirects keep the referrer that started the navigation, so a
+		// failure we already diagnosed and reported comes back through here
+		// looking like the provider's doing. The markers we set are the tell.
+		String ourOwnOutcome = request.getQueryString();
+		boolean weSentThemHere = ourOwnOutcome != null
+				&& (ourOwnOutcome.contains("sso_error")
+						|| ourOwnOutcome.contains("expired")
+						|| ourOwnOutcome.contains("logout"));
+
 		String referrer = request.getHeader("Referer");
-		if (referrer != null && referrer.contains("sso")) {
+		if (referrer != null && referrer.contains("sso") && !weSentThemHere) {
 			// Everything the provider sent back, not just the two parameters this
 			// method reads. If it explains itself under a name we do not know
 			// about — anything but "code" or "error" — that reason is otherwise

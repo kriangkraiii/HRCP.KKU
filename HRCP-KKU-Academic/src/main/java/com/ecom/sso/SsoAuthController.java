@@ -116,7 +116,7 @@ public class SsoAuthController {
             return denied(redirect, "การเข้าสู่ระบบไม่สมบูรณ์ ไม่ได้รับ code จาก KKU SSO");
         }
 
-        var token = client.exchangeCode(code, arrivalUrl(request));
+        var token = client.exchangeCode(code, registeredRedirectUrl(request));
         if (token.isEmpty()) {
             log.warn("SSO token exchange failed — no token for the code returned by the provider");
             return denied(redirect, "ยืนยันตัวตนกับระบบ SSO ไม่สำเร็จ (ไม่สามารถแลก Token ได้) กรุณาลองใหม่อีกครั้ง");
@@ -216,21 +216,38 @@ public class SsoAuthController {
     }
 
     /**
+     * What {@code auth.token} is told the redirect URL was.
+     *
+     * <p>The provider matches this against the URL registered for the app id, and
+     * answers a mismatch with nothing more useful than "cannot find a matching
+     * credential". The configured value wins because it is a copy of what was
+     * written on the request form — the registration itself.
+     *
+     * <p>It is deliberately <em>not</em> taken from the address the browser
+     * arrived at, tempting though that is. The provider returns to
+     * {@code /signin/} while the registration reads {@code /signin}: the two
+     * differ by the trailing slash, the provider compares them literally, and the
+     * address it chose is therefore the wrong one to echo back.
+     *
+     * @return the configured redirect URL, or the address the callback arrived at
+     *         when nothing is configured
+     */
+    private String registeredRedirectUrl(HttpServletRequest request) {
+        String configured = props.getRedirectLoginUrl();
+        if (configured != null && !configured.isBlank()) {
+            return configured;
+        }
+        return arrivalUrl(request);
+    }
+
+    /**
      * The address the browser was actually returned to, without the query string.
      *
-     * <p>This is what {@code auth.token} wants as {@code redirectUrl}, and the
-     * provider checks it against the URL registered for this app id. Reading it
-     * off the request removes the guesswork: whatever was written on the request
-     * form, the provider sent the browser to it, so it arrived here.
-     *
-     * <p>The forward attribute comes first because a callback registered as
-     * {@code /signin} is handed on to this controller internally — after that
-     * forward {@code getRequestURI()} reports the destination, and the address
-     * the provider used is only still available under
-     * {@code jakarta.servlet.forward.request_uri}.
-     *
-     * <p>Falls back to the configured value when neither is usable, so a
-     * deployment behind something that rewrites paths can still pin it by hand.
+     * <p>Only used when nothing is configured. The forward attribute comes first
+     * because a callback registered as {@code /signin} is handed on to this
+     * controller internally — after that forward {@code getRequestURI()} reports
+     * the destination, and the address the provider used is only still available
+     * under {@code jakarta.servlet.forward.request_uri}.
      */
     private String arrivalUrl(HttpServletRequest request) {
         String forwardedFrom = (String) request.getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
