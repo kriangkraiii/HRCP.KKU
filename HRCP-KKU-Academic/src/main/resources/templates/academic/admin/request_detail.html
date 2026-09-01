@@ -180,8 +180,8 @@
                 <i class="fas fa-inbox"></i>
                 <p>ยังไม่มีเอกสารเพิ่มเติม</p>
               </div>
-              <div th:unless="${#lists.isEmpty(attachments)}" style="overflow-x: auto">
-                <table class="admin-table">
+              <div th:unless="${#lists.isEmpty(attachments)}" class="attachment-table-wrap">
+                <table class="admin-table admin-table-attachments">
                   <thead>
                     <tr>
                       <th style="width: 36px">#</th>
@@ -189,27 +189,27 @@
                       <th>ประเภท</th>
                       <th>ขนาด</th>
                       <th>อัปโหลดเมื่อ</th>
-                      <th style="width: 80px">จัดการ</th>
+                      <th style="width: 120px">จัดการ</th>
                     </tr>
                   </thead>
                   <tbody>
                     <tr th:each="att, iterStat : ${attachments}">
-                      <td class="at-date" th:text="${iterStat.count}"></td>
-                      <td>
+                      <td class="at-date at-index" th:text="${iterStat.count}"></td>
+                      <td class="at-name" data-label="ชื่อไฟล์">
                         <i class="fas fa-file-pdf text-danger" th:if="${att.fileType == 'PDF'}"></i>
                         <i class="fas fa-file-word text-primary" th:if="${att.fileType == 'DOCX'}"></i>
                         <i class="fas fa-file-archive text-secondary" th:if="${att.fileType == 'ZIP'}"></i>
                         <span th:text="${att.originalFilename}"></span>
                       </td>
-                      <td>
+                      <td data-label="ประเภท">
                         <span class="badge" th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : (att.fileType == 'DOCX' ? 'bg-primary' : 'bg-secondary')}"
                           th:text="${att.fileType}"></span>
                       </td>
-                      <td class="at-date"
+                      <td class="at-date" data-label="ขนาด"
                         th:text="${att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-'}">
                       </td>
-                      <td class="at-date" th:text="${@thaiDateUtil.format(att.uploadedAt)}"></td>
-                      <td>
+                      <td class="at-date" data-label="อัปโหลดเมื่อ" th:text="${@thaiDateUtil.format(att.uploadedAt)}"></td>
+                      <td data-label="จัดการ">
                         <div class="d-flex gap-1">
                           <a th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
                             th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
