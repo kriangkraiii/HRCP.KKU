@@ -199,12 +199,12 @@ class ScopusQueryServiceTest {
     @Test
     @DisplayName("adminSearch ต้องเป็นเมธอดแยก ไม่ปนกับเส้นทางของอาจารย์")
     void adminSearchIsSeparateFromOwnerScopedReads() {
-        when(publicationRepo.adminSearch(any(), any(), any(), any(), any(Pageable.class)))
+        when(publicationRepo.adminSearch(any(), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of()));
 
         service.adminSearch(null, "x", 0, 10);
 
-        verify(publicationRepo).adminSearch(eq(null), eq(null), eq(null), eq("%x%"), any(Pageable.class));
+        verify(publicationRepo).adminSearch(eq(null), eq(null), eq(null), eq("%x%"), eq(null), any(Pageable.class));
     }
 
     @Test
@@ -212,13 +212,13 @@ class ScopusQueryServiceTest {
     void testUserCanSearchAllPublications() {
         org.springframework.test.util.ReflectionTestUtils.setField(service, "universalAccessEmail", "demo@example.invalid");
         UserDtls testUser = userWithEmail("demo@example.invalid");
-        when(publicationRepo.adminSearch(eq(null), any(), any(), any(), any(Pageable.class)))
+        when(publicationRepo.adminSearch(eq(null), any(), any(), any(), any(), any(Pageable.class)))
                 .thenReturn(Page.empty());
 
         Page<PublicationDto> results = service.listOwn(testUser, null, null, null, 0, 50);
 
         assertThat(results).isNotNull();
-        verify(publicationRepo).adminSearch(eq(null), any(), any(), any(), any(Pageable.class));
+        verify(publicationRepo).adminSearch(eq(null), any(), any(), any(), any(), any(Pageable.class));
         verify(publicationRepo, never()).findOwnedBy(any(), any(), any(), any(), any(), any());
     }
 
@@ -235,6 +235,6 @@ class ScopusQueryServiceTest {
         service.listOwn(teacher, null, null, null, 0, 50);
 
         verify(publicationRepo).findOwnedBy(eq(999L), any(), any(), any(), any(), any(Pageable.class));
-        verify(publicationRepo, never()).adminSearch(any(), any(), any(), any(), any());
+        verify(publicationRepo, never()).adminSearch(any(), any(), any(), any(), any(), any());
     }
 }

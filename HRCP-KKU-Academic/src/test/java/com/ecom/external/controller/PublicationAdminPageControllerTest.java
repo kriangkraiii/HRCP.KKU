@@ -68,46 +68,76 @@ class PublicationAdminPageControllerTest {
                 faculty(1002L, "มาลี", "ดีใจ")));
         when(publicationRepo.findDistinctAuthorIds()).thenReturn(List.of(1001L));
         when(publicationRepo.findDistinctYears()).thenReturn(List.of(2025, 2024));
-        when(scopusQuery.adminSearchWithOwner(any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyInt(),
-                org.mockito.ArgumentMatchers.anyInt()))
+        when(scopusQuery.adminSearchWithOwner(any(), any(), any(), any(), any(),
+                org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyInt()))
                 .thenReturn(new PageImpl<>(List.of(row(1001L, "งานวิจัยหนึ่ง"))));
+        when(publicationRepo.countGroupByDataSource()).thenReturn(List.of(
+                new Object[] { "SCOPUS", 12L },
+                new Object[] { "OPENALEX", 30L },
+                new Object[] { "CROSSREF", 7L }));
     }
 
     @Test
     @DisplayName("ไม่ใส่ตัวกรอง ต้องค้นทั้งคณะ")
     void withoutFiltersItSearchesEveryone() {
-        controller.page(null, null, null, 0, model);
+        controller.page(null, null, null, null, 0, model);
 
-        verify(scopusQuery).adminSearchWithOwner(isNull(), isNull(), isNull(), isNull(), eq(0), eq(25));
+        verify(scopusQuery).adminSearchWithOwner(isNull(), isNull(), isNull(), isNull(), isNull(),
+                eq(0), eq(25));
         assertThat(model.getAttribute("publications")).isNotNull();
     }
 
     @Test
     @DisplayName("เลือกปี ต้องกรองเฉพาะปีนั้น (ทั้งขอบล่างและขอบบน)")
     void pickingAYearNarrowsToThatYearOnly() {
-        controller.page("deep learning", 1001L, 2024, 1, model);
+        controller.page("deep learning", 1001L, 2024, null, 1, model);
 
         verify(scopusQuery).adminSearchWithOwner(eq(1001L), eq(2024), eq(2024),
-                eq("deep learning"), eq(1), eq(25));
+                eq("deep learning"), isNull(), eq(1), eq(25));
     }
 
     @Test
     @DisplayName("ลิงก์เปลี่ยนหน้าต้องพาตัวกรองไปด้วย")
     void thePagerCarriesTheFiltersAlong() {
-        controller.page("machine learning", 1001L, 2024, 0, model);
+        controller.page("machine learning", 1001L, 2024, "OPENALEX", 0, model);
 
         String filterQuery = (String) model.getAttribute("filterQuery");
         assertThat(filterQuery)
                 .as("ถ้าไม่พาไป หน้า 2 จะกลายเป็นผลลัพธ์คนละชุดโดยที่ผู้ใช้ไม่รู้")
                 .contains("machine+learning")
                 .contains("&fsUserId=1001")
-                .contains("&year=2024");
+                .contains("&year=2024")
+                .contains("&source=OPENALEX");
+    }
+
+    @Test
+    @DisplayName("เลือกแหล่งข้อมูล ต้องกรองเฉพาะผลงานจากแหล่งนั้น")
+    void pickingASourceNarrowsToThatSource() {
+        controller.page(null, null, null, "CROSSREF", 0, model);
+
+        verify(scopusQuery).adminSearchWithOwner(isNull(), isNull(), isNull(), isNull(),
+                eq("CROSSREF"), eq(0), eq(25));
+        assertThat(model.getAttribute("selectedSource")).isEqualTo("CROSSREF");
+    }
+
+    @Test
+    @DisplayName("สรุปจำนวนตามแหล่งข้อมูล ต้องเรียงจากมากไปน้อย")
+    void theSourceBreakdownIsOrderedBySize() {
+        controller.page(null, null, null, null, 0, model);
+
+        @SuppressWarnings("unchecked")
+        Map<String, Long> counts = (Map<String, Long>) model.getAttribute("sourceCounts");
+        assertThat(counts)
+                .as("ผลงานมาจากหลายแหล่งแล้ว หน้านี้ต้องบอกได้ว่าอะไรมาจากไหนและมากแค่ไหน")
+                .containsEntry("OPENALEX", 30L)
+                .containsEntry("SCOPUS", 12L);
+        assertThat(counts.keySet()).containsExactly("OPENALEX", "SCOPUS", "CROSSREF");
     }
 
     @Test
     @DisplayName("ตัวเลือกเจ้าของผลงาน ต้องมีเฉพาะคนที่มีผลงานจริง")
     void theAuthorFilterOffersOnlyPeopleWhoHavePublications() {
-        controller.page(null, null, null, 0, model);
+        controller.page(null, null, null, null, 0, model);
 
         @SuppressWarnings("unchecked")
         Map<Long, String> options = (Map<Long, String>) model.getAttribute("authorOptions");

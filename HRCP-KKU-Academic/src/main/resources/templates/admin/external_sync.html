@@ -68,25 +68,25 @@
                         <!-- Current contents -->
                         <div class="row g-3 mb-4">
                             <div class="col-md-3">
-                                <div class="border rounded-3 p-3 text-center h-100 bg-light">
+                                <div class="border rounded-3 p-3 text-center h-100 bg-light shadow-sm">
                                     <div class="fs-3 fw-bold text-primary" th:text="${facultyCount}">0</div>
                                     <div class="text-muted small">อาจารย์ในระบบ</div>
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <div class="border rounded-3 p-3 text-center h-100 bg-light">
+                                <div class="border rounded-3 p-3 text-center h-100 bg-light shadow-sm">
                                     <div class="fs-3 fw-bold text-success" th:text="${publicationCount}">0</div>
-                                    <div class="text-muted small">ผลงาน Scopus</div>
+                                    <div class="text-muted small">ผลงานวิจัยทั้งหมด</div>
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <div class="border rounded-3 p-3 text-center h-100 bg-light">
+                                <div class="border rounded-3 p-3 text-center h-100 bg-light shadow-sm">
                                     <div class="fs-3 fw-bold text-info" th:text="${facultyWithScopus}">0</div>
                                     <div class="text-muted small">อาจารย์ที่มี Scopus ID</div>
                                 </div>
                             </div>
                             <div class="col-md-3">
-                                <div class="border rounded-3 p-3 text-center h-100"
+                                <div class="border rounded-3 p-3 text-center h-100 shadow-sm"
                                      th:classappend="${pendingCount > 0} ? 'border-warning bg-warning bg-opacity-10' : 'bg-light'">
                                     <div class="fs-3 fw-bold"
                                          th:classappend="${pendingCount > 0} ? 'text-warning' : ''"
@@ -102,16 +102,48 @@
                             </div>
                         </div>
 
+                        <!-- Publication Source Breakdown Badges -->
+                        <div class="bg-light p-3 rounded-3 border mb-4 shadow-sm" th:if="${sourceCounts != null}">
+                            <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+                                <div class="fw-semibold text-secondary small">
+                                    <i class="fas fa-chart-pie me-1"></i>สถิติผลงานวิจัยแยกตามแหล่งข้อมูล:
+                                </div>
+                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                    <span class="badge bg-success bg-opacity-10 text-success border border-success px-2 py-1">
+                                        <i class="fas fa-book me-1"></i>Scopus: <strong th:text="${sourceCounts['SCOPUS'] != null ? sourceCounts['SCOPUS'] : 0}">0</strong>
+                                    </span>
+                                    <span class="badge bg-info bg-opacity-10 text-info border border-info px-2 py-1">
+                                        <i class="fas fa-globe me-1"></i>OpenAlex: <strong th:text="${sourceCounts['OPENALEX'] != null ? sourceCounts['OPENALEX'] : 0}">0</strong>
+                                    </span>
+                                    <span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-2 py-1">
+                                        <i class="fas fa-crosshairs me-1"></i>Crossref: <strong th:text="${sourceCounts['CROSSREF'] != null ? sourceCounts['CROSSREF'] : 0}">0</strong>
+                                    </span>
+                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1">
+                                        <i class="fas fa-laptop-code me-1"></i>DBLP: <strong th:text="${sourceCounts['DBLP'] != null ? sourceCounts['DBLP'] : 0}">0</strong>
+                                    </span>
+                                    <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1">
+                                        <i class="fas fa-file-lines me-1"></i>ThaiJO: <strong th:text="${sourceCounts['THAIJO'] != null ? sourceCounts['THAIJO'] : 0}">0</strong>
+                                    </span>
+                                    <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary px-2 py-1">
+                                        <i class="fas fa-building-columns me-1"></i>KKU IR: <strong th:text="${sourceCounts['KKU_IR'] != null ? sourceCounts['KKU_IR'] : 0}">0</strong>
+                                    </span>
+                                    <a th:href="@{/admin/publications}" class="btn btn-sm btn-outline-secondary ms-1 py-0">
+                                        <i class="fas fa-arrow-up-right-from-square me-1"></i>ดูรายการทั้งหมด
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- Manual triggers -->
-                        <h5 class="mb-3 fw-bold">ดึงข้อมูลตอนนี้</h5>
+                        <h5 class="mb-3 fw-bold"><i class="fas fa-play-circle text-primary me-2"></i>ดึงข้อมูลตอนนี้</h5>
                         <div class="row g-3 mb-4">
-                            <div class="col-md-6">
-                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm">
+                            <!-- Card 1: Faculty Directory -->
+                            <div class="col-lg-3 col-md-6">
+                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
                                     <h6 class="fw-bold"><i class="fas fa-users text-primary me-1"></i> ข้อมูลอาจารย์</h6>
                                     <p class="text-muted small flex-grow-1 mb-3">
                                         อ่านข้อมูลอาจารย์จากต้นทางมาเทียบกับของเรา
-                                        <strong>ถ้ามีอะไรเปลี่ยน จะยังไม่แก้ทันที</strong>
-                                        แต่จะพักไว้ให้ยืนยันที่แท็บ "ตรวจสอบข้อมูลอาจารย์ที่เปลี่ยน" ก่อน — กดได้ทุกเมื่อ ปลอดภัย
+                                        <strong>ถ้ามีอะไรเปลี่ยน จะพักไว้ให้ยืนยันก่อน</strong>
                                     </p>
                                     <form th:action="@{/admin/external-sync/users}" method="post"
                                           data-lock-button="1">
@@ -120,21 +152,20 @@
                                                 th:attr="data-cooldown=${usersCooldown}">
                                             <i class="fas fa-users"></i>
                                             <span th:if="${usersCooldown > 0}"
-                                                  th:text="'รออีก ' + ${usersCooldown} + ' วินาที'">รอ</span>
+                                                  th:text="'รออีก ' + ${usersCooldown} + ' วิ'">รอ</span>
                                             <span th:unless="${usersCooldown > 0}">ตรวจข้อมูลอาจารย์</span>
                                         </button>
                                     </form>
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
-                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm">
-                                    <h6 class="fw-bold"><i class="fas fa-book text-success me-1"></i> ผลงาน Scopus</h6>
+                            <!-- Card 2: Scopus Publications -->
+                            <div class="col-lg-3 col-md-6">
+                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
+                                    <h6 class="fw-bold"><i class="fas fa-book text-success me-1"></i> ผลงาน Scopus เดิม</h6>
                                     <p class="text-muted small flex-grow-1 mb-3">
-                                        ดึงผลงานของอาจารย์ทุกคนมาอัปเดต
+                                        ดึงผลงานวิจัยของอาจารย์ทุกคนจาก Scopus API
                                         ผลงานที่หายจากต้นทางจะไม่ถูกลบ
-                                        <strong>ใช้เวลาประมาณ 30–60 วินาที</strong>
-                                        เพราะเว้นจังหวะไม่ให้เกินโควตาของต้นทาง
                                     </p>
                                     <form th:action="@{/admin/external-sync/scopus}" method="post"
                                           data-lock-button="1">
@@ -143,85 +174,221 @@
                                                 th:attr="data-cooldown=${scopusCooldown}">
                                             <i class="fas fa-book"></i>
                                             <span th:if="${scopusCooldown > 0}"
-                                                  th:text="'รออีก ' + ${scopusCooldown} + ' วินาที'">รอ</span>
+                                                  th:text="'รออีก ' + ${scopusCooldown} + ' วิ'">รอ</span>
                                             <span th:unless="${scopusCooldown > 0}">ดึงผลงาน Scopus</span>
                                         </button>
                                     </form>
                                 </div>
                             </div>
 
-                            <div class="col-md-6">
-                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm">
-                                    <h6 class="fw-bold"><i class="fas fa-image text-info me-1"></i> รูปและข้อมูลจากเว็บไซต์คณะ</h6>
+                            <!-- Card 3: College Web Directory -->
+                            <div class="col-lg-3 col-md-6">
+                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
+                                    <h6 class="fw-bold"><i class="fas fa-image text-info me-1"></i> รูป/ข้อมูลเว็บคณะ</h6>
                                     <p class="text-muted small flex-grow-1 mb-3">
-                                        อ่านจาก <span class="text-nowrap">computing.kku.ac.th/people</span>
-                                        มาเติม <strong>รูปโปรไฟล์</strong> และข้อมูลที่ระบบ Fund Management ไม่มี
-                                        จับคู่กันด้วยอีเมล และ<strong>เติมเฉพาะช่องที่ยังว่าง</strong> ไม่ทับของเดิม
-                                        — ทำอัตโนมัติทุกวันอาทิตย์อยู่แล้ว
+                                        อ่านจาก <span class="text-nowrap">computing.kku.ac.th</span>
+                                        มาเติม <strong>รูปโปรไฟล์</strong> และข้อมูลตำแหน่ง
                                     </p>
                                     <form th:action="@{/admin/external-sync/college-web}" method="post"
                                           data-lock-button="1">
                                         <button type="submit" class="btn btn-outline-primary w-100">
-                                            <i class="fas fa-image"></i> ดึงรูปและข้อมูลจากเว็บคณะ
+                                            <i class="fas fa-image"></i> ดึงรูป/เว็บคณะ
                                         </button>
                                     </form>
                                 </div>
                             </div>
+
+                            <!-- Card 4: Multi-Source Publication Harvest (NEW) -->
+                            <div class="col-lg-3 col-md-6">
+                                <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white border-primary">
+                                    <div class="d-flex align-items-center justify-content-between mb-1">
+                                        <h6 class="fw-bold mb-0"><i class="fas fa-network-wired text-primary me-1"></i> ดึงงานวิจัย 5 แหล่งใหม่</h6>
+                                    </div>
+                                    <p class="text-muted small flex-grow-1 mb-3">
+                                        ดึงจาก <strong>OpenAlex, Crossref, DBLP, ThaiJO, KKU IR</strong> พร้อม Deduplication 2.5 ชั้น และเติม Tier
+                                    </p>
+                                    <div class="d-flex flex-column gap-2">
+                                        <button type="button" class="btn btn-primary w-100 fw-semibold"
+                                                id="btnHarvestAll"
+                                                onclick="triggerHarvestAllAsync()"
+                                                th:disabled="${harvestRunning}">
+                                            <i class="fas fa-cloud-arrow-down me-1"></i> ดึงทุกแหล่งพร้อมกัน
+                                        </button>
+
+                                        <div class="dropdown">
+                                            <button class="btn btn-outline-secondary btn-sm dropdown-toggle w-100"
+                                                    type="button" data-bs-toggle="dropdown" aria-expanded="false"
+                                                    th:disabled="${harvestRunning}">
+                                                <i class="fas fa-filter me-1"></i> เลือกดึงเฉพาะแหล่ง
+                                            </button>
+                                            <ul class="dropdown-menu dropdown-menu-end shadow-sm">
+                                                <li>
+                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('openalex')">
+                                                        <i class="fas fa-globe text-info me-2"></i>OpenAlex (Global API)
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('crossref')">
+                                                        <i class="fas fa-crosshairs text-warning me-2"></i>Crossref (DOI Works)
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('dblp')">
+                                                        <i class="fas fa-laptop-code text-primary me-2"></i>DBLP (Computer Science)
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('thaijo')">
+                                                        <i class="fas fa-file-lines text-danger me-2"></i>ThaiJO (OAI-PMH)
+                                                    </button>
+                                                </li>
+                                                <li>
+                                                    <button type="button" class="dropdown-item py-2" onclick="triggerHarvestSourceAsync('kkuir')">
+                                                        <i class="fas fa-building-columns text-secondary me-2"></i>KKU IR (คลังสถาบัน มข.)
+                                                    </button>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>c/harvest/thaijo}" method="post">
+                                                        <button type="submit" class="dropdown-item py-2">
+                                                            <i class="fas fa-file-lines text-danger me-2"></i>ThaiJO (OAI-PMH)
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                                <li>
+                                                    <form th:action="@{/admin/external-sync/harvest/kkuir}" method="post">
+                                                        <button type="submit" class="dropdown-item py-2">
+                                                            <i class="fas fa-building-columns text-secondary me-2"></i>KKU IR (คลังสถาบัน มข.)
+                                                        </button>
+                                                    </form>
+                                                </li>
+                                            </ul>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
-                        <!-- Last run -->
-                        <h5 class="mb-3 fw-bold">ผลการทำงานล่าสุด</h5>
+                        <!-- Last run Dashboard Table -->
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                            <h5 class="mb-0 fw-bold"><i class="fas fa-clock-rotate-left text-success me-2"></i>ผลการทำงานล่าสุดและสถานะรอบวัน</h5>
+                            <div class="d-flex gap-2 align-items-center flex-wrap">
+                                <span class="badge bg-success bg-opacity-10 text-success border border-success px-3 py-2">
+                                    <i class="fas fa-check-circle me-1"></i>ดึงสำเร็จ: <strong th:text="${okCount}">0</strong> / <span th:text="${totalJobs}">8</span> งาน
+                                </span>
+                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-3 py-2" th:if="${failedCount > 0}">
+                                    <i class="fas fa-exclamation-triangle me-1"></i>ล้มเหลว: <strong th:text="${failedCount}">0</strong> งาน
+                                </span>
+                                <span class="badge bg-info bg-opacity-10 text-info border border-info px-3 py-2" th:if="${runningCount > 0}">
+                                    <i class="fas fa-spinner fa-spin me-1"></i>กำลังดึง: <strong th:text="${runningCount}">0</strong> งาน
+                                </span>
+                            </div>
+                        </div>
+
                         <div class="table-responsive mb-4">
-                            <table class="table table-sm align-middle border">
+                            <table class="table table-sm align-middle border table-hover">
                                 <thead class="table-light">
                                 <tr>
-                                    <th>งาน</th>
-                                    <th>สถานะ</th>
-                                    <th>สำเร็จล่าสุด</th>
-                                    <th>จำนวนแถว</th>
-                                    <th>คำขอ</th>
-                                    <th>ใช้เวลา</th>
-                                    <th>หมายเหตุ</th>
+                                    <th style="min-width: 220px;">งาน / แหล่งข้อมูล</th>
+                                    <th style="width: 100px;">หมวดหมู่</th>
+                                    <th style="width: 120px;">สถานะล่าสุด</th>
+                                    <th style="min-width: 160px;">สำเร็จล่าสุด</th>
+                                    <th style="width: 100px;" class="text-center">ผลงานที่ได้</th>
+                                    <th style="width: 90px;" class="text-center">คำขอ</th>
+                                    <th style="width: 100px;" class="text-center">ใช้เวลา</th>
+                                    <th>หมายเหตุ / ข้อความสรุป</th>
                                 </tr>
                                 </thead>
                                 <tbody>
-                                <tr th:each="job : ${ {usersJob, scopusJob} }" th:if="${job != null}">
-                                    <td class="fw-semibold" th:text="${job.syncType == 'users'} ? 'ข้อมูลอาจารย์' : 'ผลงาน Scopus'">-</td>
+                                <tr th:each="jobItem : ${syncJobList}">
                                     <td>
-                                        <span class="badge bg-success" th:if="${job.lastStatus == 'OK'}">สำเร็จ</span>
-                                        <span class="badge bg-danger" th:if="${job.lastStatus == 'FAILED'}">ล้มเหลว</span>
-                                        <span class="badge bg-info" th:if="${job.lastStatus == 'RUNNING'}">กำลังทำงาน</span>
+                                        <i th:class="${jobItem.icon + ' ' + jobItem.colorClass + ' me-2'}"></i>
+                                        <span class="fw-semibold" th:text="${jobItem.name}">-</span>
                                     </td>
-                                    <td th:text="${job.lastSuccessAt != null
-                                                ? #temporals.format(job.lastSuccessAt, 'dd/MM/yyyy HH:mm') : '-'}">-</td>
-                                    <td th:text="${job.rowsProcessed}">-</td>
-                                    <td th:text="${job.requestsMade}">-</td>
-                                    <td th:text="${job.durationMs != null ? job.durationMs + ' ms' : '-'}">-</td>
-                                    <td class="small text-muted" th:text="${job.message}">-</td>
-                                </tr>
-                                <tr th:if="${usersJob == null and scopusJob == null}">
-                                    <td colspan="7" class="text-center text-muted">ยังไม่เคยมีการดึงข้อมูล</td>
+                                    <td>
+                                        <span class="badge bg-light text-dark border" th:text="${jobItem.category}">งานวิจัย</span>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-success" th:if="${jobItem.state != null and jobItem.state.lastStatus == 'OK'}">
+                                            <i class="fas fa-check-circle me-1"></i>สำเร็จ
+                                        </span>
+                                        <span class="badge bg-danger" th:if="${jobItem.state != null and jobItem.state.lastStatus == 'FAILED'}">
+                                            <i class="fas fa-times-circle me-1"></i>ล้มเหลว
+                                        </span>
+                                        <span class="badge bg-info" th:if="${jobItem.state != null and jobItem.state.lastStatus == 'RUNNING'}">
+                                            <i class="fas fa-spinner fa-spin me-1"></i>กำลังดึง
+                                        </span>
+                                        <span class="badge bg-secondary bg-opacity-75" th:if="${jobItem.state == null}">
+                                            <i class="fas fa-minus me-1"></i>ยังไม่เคยรัน
+                                        </span>
+                                    </td>
+                                    <td th:text="${jobItem.state != null and jobItem.state.lastSuccessAt != null
+                                                ? #temporals.format(jobItem.state.lastSuccessAt, 'dd/MM/yyyy HH:mm น.') : '-'}">-</td>
+                                    <td class="text-center">
+                                        <span class="fw-bold" th:text="${jobItem.state != null and jobItem.state.rowsProcessed != null ? jobItem.state.rowsProcessed : '-'}">-</span>
+                                    </td>
+                                    <td class="text-center text-muted" th:text="${jobItem.state != null and jobItem.state.requestsMade != null ? jobItem.state.requestsMade : '-'}">-</td>
+                                    <td class="text-center text-muted" th:text="${jobItem.state != null and jobItem.state.durationMs != null ? (jobItem.state.durationMs >= 1000 ? (jobItem.state.durationMs / 1000.0) + ' s' : jobItem.state.durationMs + ' ms') : '-'}">-</td>
+                                    <td class="small text-muted" th:text="${jobItem.state != null ? jobItem.state.message : '-'}">-</td>
                                 </tr>
                                 </tbody>
                             </table>
                         </div>
 
-                        <!-- Schedule -->
-                        <h5 class="mb-3 fw-bold">ตารางเวลาอัตโนมัติ <small class="text-muted fs-6">(เวลาไทย)</small></h5>
-                        <div class="table-responsive">
-                            <table class="table table-sm border">
-                                <tbody>
-                                <tr th:each="entry : ${schedule}">
-                                    <td style="width:30%" class="fw-medium" th:text="${entry.key}">งาน</td>
-                                    <td class="text-muted small font-monospace" th:text="${entry.value}">cron</td>
-                                </tr>
-                                </tbody>
-                            </table>
+                        <!-- Schedule (All 9 Background Jobs Grouped by Category) -->
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
+                            <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-check text-primary me-2"></i>ตารางเวลาอัตโนมัติทั้งโปรเจกต์ (All Scheduled Background Jobs)</h5>
+                            <small class="text-muted"><i class="fas fa-globe-asia me-1"></i>เวลาไทย (Asia/Bangkok)</small>
+                        </div>
+
+                        <div class="d-flex flex-column gap-3 mb-4" th:if="${scheduleCategories != null}">
+                            <div class="card border shadow-sm" th:each="cat : ${scheduleCategories}">
+                                <div class="card-header bg-light py-2 px-3 d-flex align-items-center justify-content-between">
+                                    <span class="fw-bold" th:classappend="${cat.colorClass}">
+                                        <i th:class="${cat.icon + ' me-2'}"></i><span th:text="${cat.title}">หมวดหมู่</span>
+                                    </span>
+                                    <span class="badge bg-secondary bg-opacity-25 text-dark" th:text="${cat.items.size() + ' งาน'}">3 งาน</span>
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm align-middle mb-0 table-hover">
+                                        <thead class="table-light small text-muted">
+                                        <tr>
+                                            <th style="min-width: 220px;">ชื่องานอัตโนมัติ</th>
+                                            <th style="min-width: 280px;">รายละเอียดการทำงาน</th>
+                                            <th style="width: 150px;">ความถี่ / เวลา</th>
+                                            <th style="width: 140px;">Cron Expression</th>
+                                            <th style="width: 170px;">รอบทำงานครั้งถัดไป</th>
+                                        </tr>
+                                        </thead>
+                                        <tbody>
+                                        <tr th:each="item : ${cat.items}">
+                                            <td>
+                                                <i th:class="${item.icon + ' text-secondary me-2'}"></i>
+                                                <span class="fw-semibold" th:text="${item.name}">ชื่องาน</span>
+                                            </td>
+                                            <td class="small text-muted" th:text="${item.description}">รายละเอียด</td>
+                                            <td>
+                                                <span class="badge" th:classappend="${item.badgeClass}" th:text="${item.frequency}">ทุกวัน 01:30 น.</span>
+                                            </td>
+                                            <td>
+                                                <code class="small text-dark" th:text="${item.cron}">0 30 1 * * *</code>
+                                            </td>
+                                            <td>
+                                                <span class="small font-monospace fw-bold text-success" th:text="${item.nextRun}">-</span>
+                                            </td>
+                                        </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="alert alert-info mt-3 mb-0 small">
                             <i class="fas fa-info-circle"></i>
-                            ระบบจะดึงข้อมูลให้อัตโนมัติตามเวลาข้างต้นทุกวัน
+                            ระบบจะดึงข้อมูลและประมวลผลให้อัตโนมัติตามเวลาข้างต้นทุกวัน/สัปดาห์
                             และจะดึงให้ทันทีตอนเปิดระบบครั้งแรกถ้ายังไม่มีข้อมูลเลย
                             ปุ่มด้านบนมีไว้สำหรับกรณีที่ต้องการข้อมูลล่าสุดทันทีโดยไม่รอรอบถัดไป
                             <br>
@@ -396,6 +563,74 @@
 
     </div>
 
+    <!-- Modal Real-Time Progress for Multi-Source Harvest -->
+    <div class="modal fade" id="harvestProgressModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="harvestProgressModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content shadow-lg border-0">
+                <div class="modal-header bg-primary text-white py-3">
+                    <h5 class="modal-title fw-bold" id="harvestProgressModalLabel">
+                        <i class="fas fa-network-wired me-2"></i>กำลังดึงงานวิจัยจากฐานข้อมูลภายนอก
+                    </h5>
+                    <span class="badge bg-light text-primary fw-bold" id="harvestLiveBadge">
+                        <i class="fas fa-spinner fa-spin me-1"></i>กำลังประมวลผล
+                    </span>
+                </div>
+                <div class="modal-body p-4">
+                    <!-- Main Real % Progress Bar -->
+                    <div class="d-flex justify-content-between align-items-center mb-1">
+                        <span class="fw-semibold text-secondary small" id="harvestCurrentAction">กำลังเริ่มต้นเชื่อมต่อ API...</span>
+                        <span class="fs-4 fw-bold text-primary" id="harvestPercentText">0%</span>
+                    </div>
+                    <div class="progress mb-3" style="height: 20px; border-radius: 10px;">
+                        <div id="harvestProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-primary"
+                             role="progressbar" style="width: 0%; font-weight: bold; font-size: 11px;">0%</div>
+                    </div>
+
+                    <!-- Current detailed task ticker -->
+                    <div class="p-2 mb-3 bg-light rounded-3 border small font-monospace text-truncate" id="harvestTaskTicker">
+                        <i class="fas fa-terminal text-muted me-2"></i><span id="harvestTaskText">กำลังเตรียมข้อมูลอาจารย์...</span>
+                    </div>
+
+                    <!-- Sources Step List -->
+                    <h6 class="fw-bold mb-2 small text-secondary"><i class="fas fa-list-check me-1"></i>สถานะขั้นตอนแยกตามแหล่งข้อมูล:</h6>
+                    <div class="list-group list-group-flush border rounded-3 overflow-hidden mb-3" id="harvestSourcesList">
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" data-src="OPENALEX">
+                            <span><i class="fas fa-globe text-info me-2"></i>OpenAlex (Global Works)</span>
+                            <span class="badge bg-secondary badge-source-status">รอดำเนินการ</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" data-src="CROSSREF">
+                            <span><i class="fas fa-crosshairs text-warning me-2"></i>Crossref (DOI Works)</span>
+                            <span class="badge bg-secondary badge-source-status">รอดำเนินการ</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" data-src="DBLP">
+                            <span><i class="fas fa-laptop-code text-primary me-2"></i>DBLP (Computer Science)</span>
+                            <span class="badge bg-secondary badge-source-status">รอดำเนินการ</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" data-src="THAIJO">
+                            <span><i class="fas fa-file-lines text-danger me-2"></i>ThaiJO (วารสารไทย OAI)</span>
+                            <span class="badge bg-secondary badge-source-status">รอดำเนินการ</span>
+                        </div>
+                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" data-src="KKUIR">
+                            <span><i class="fas fa-building-columns text-secondary me-2"></i>KKU IR (คลังสถาบัน มข.)</span>
+                            <span class="badge bg-secondary badge-source-status">รอดำเนินการ</span>
+                        </div>
+                    </div>
+
+                    <!-- Completion Alert Box (Hidden until done) -->
+                    <div class="alert alert-success d-none mb-0 small" id="harvestCompletionAlert">
+                        <i class="fas fa-check-circle me-1"></i><strong id="harvestSummaryText">เสร็จสิ้นเรียบร้อย</strong>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light py-2 px-4 justify-content-between">
+                    <div class="small text-muted" id="harvestDurationText">ใช้เวลา: 0.0s</div>
+                    <button type="button" class="btn btn-primary d-none" id="harvestDoneBtn" onclick="location.reload()">
+                        <i class="fas fa-check me-1"></i>ปิดหน้าต่างและดูผลลัพธ์
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script>
         function switchToChangesTab() {
             var tabBtn = document.getElementById('tab-changes-btn');
@@ -443,6 +678,122 @@
                 if (label) label.textContent = 'รออีก ' + left + ' วินาที';
             }, 1000);
         });
+
+        // Real-Time Progress Tracker Script
+        var harvestModalObj = null;
+        var harvestPoller = null;
+
+        function triggerHarvestAllAsync() {
+            openHarvestModal("ดึงงานวิจัยทุกแหล่งพร้อมกัน (5 แหล่ง)");
+            fetch('/admin/external-sync/harvest/start', { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    startHarvestPolling();
+                })
+                .catch(function(err) {
+                    console.error("Harvest start error:", err);
+                    startHarvestPolling();
+                });
+        }
+
+        function triggerHarvestSourceAsync(source) {
+            openHarvestModal("ดึงงานวิจัยจาก " + source.toUpperCase());
+            fetch('/admin/external-sync/harvest/source-async/' + source, { method: 'POST' })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    startHarvestPolling();
+                })
+                .catch(function(err) {
+                    console.error("Harvest single source start error:", err);
+                    startHarvestPolling();
+                });
+        }
+
+        function openHarvestModal(title) {
+            var modalEl = document.getElementById('harvestProgressModal');
+            if (!modalEl) return;
+            document.getElementById('harvestProgressModalLabel').innerHTML = '<i class="fas fa-network-wired me-2"></i>' + title;
+            document.getElementById('harvestPercentText').textContent = '0%';
+            var pBar = document.getElementById('harvestProgressBar');
+            pBar.style.width = '0%';
+            pBar.textContent = '0%';
+            pBar.className = 'progress-bar progress-bar-striped progress-bar-animated bg-primary';
+            document.getElementById('harvestTaskText').textContent = 'กำลังเริ่มต้นเชื่อมต่อ API...';
+            document.getElementById('harvestDurationText').textContent = 'ใช้เวลา: 0.0s';
+            document.getElementById('harvestLiveBadge').className = 'badge bg-light text-primary fw-bold';
+            document.getElementById('harvestLiveBadge').innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังประมวลผล';
+            document.getElementById('harvestCompletionAlert').classList.add('d-none');
+            document.getElementById('harvestDoneBtn').classList.add('d-none');
+
+            // Reset source status badges
+            document.querySelectorAll('#harvestSourcesList .badge-source-status').forEach(function(b) {
+                b.className = 'badge bg-secondary badge-source-status';
+                b.textContent = 'รอดำเนินการ';
+            });
+
+            harvestModalObj = new bootstrap.Modal(modalEl);
+            harvestModalObj.show();
+        }
+
+        function startHarvestPolling() {
+            if (harvestPoller) clearInterval(harvestPoller);
+            harvestPoller = setInterval(function() {
+                fetch('/admin/external-sync/harvest/progress')
+                    .then(function(r) { return r.json(); })
+                    .then(function(snap) {
+                        updateHarvestProgressUI(snap);
+                    })
+                    .catch(function(err) { console.error("Poll error:", err); });
+            }, 600);
+        }
+
+        function updateHarvestProgressUI(snap) {
+            if (!snap) return;
+
+            var pct = snap.percent || 0;
+            document.getElementById('harvestPercentText').textContent = pct + '%';
+            var pBar = document.getElementById('harvestProgressBar');
+            pBar.style.width = pct + '%';
+            pBar.textContent = pct + '%';
+
+            if (snap.currentTask) {
+                document.getElementById('harvestTaskText').textContent = snap.currentTask;
+            }
+
+            if (snap.durationMs) {
+                document.getElementById('harvestDurationText').textContent = 'ใช้เวลา: ' + (snap.durationMs / 1000).toFixed(1) + 's';
+            }
+
+            if (snap.sources && snap.sources.length > 0) {
+                snap.sources.forEach(function(s) {
+                    var el = document.querySelector('#harvestSourcesList div[data-src="' + s.sourceName + '"] .badge-source-status');
+                    if (el) {
+                        if (s.status === 'SUCCESS') {
+                            el.className = 'badge bg-success badge-source-status';
+                            el.innerHTML = '<i class="fas fa-check me-1"></i>สำเร็จ' + (s.itemsFound > 0 ? ' (' + s.itemsFound + ')' : '');
+                        } else if (s.status === 'FAILED') {
+                            el.className = 'badge bg-danger badge-source-status';
+                            el.innerHTML = '<i class="fas fa-times me-1"></i>ไม่สำเร็จ';
+                        } else if (s.status === 'RUNNING') {
+                            el.className = 'badge bg-info badge-source-status';
+                            el.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i>กำลังดึง';
+                        }
+                    }
+                });
+            }
+
+            if (snap.completed || (!snap.running && pct >= 100)) {
+                clearInterval(harvestPoller);
+                pBar.className = 'progress-bar bg-success';
+                document.getElementById('harvestLiveBadge').className = 'badge bg-success text-white fw-bold';
+                document.getElementById('harvestLiveBadge').innerHTML = '<i class="fas fa-check-circle me-1"></i>เสร็จสมบูรณ์';
+
+                var alertBox = document.getElementById('harvestCompletionAlert');
+                alertBox.classList.remove('d-none');
+                document.getElementById('harvestSummaryText').textContent = snap.completionSummary || 'ดึงข้อมูลเสร็จสิ้นเรียบร้อยแล้ว';
+                document.getElementById('harvestDoneBtn').classList.remove('d-none');
+            }
+        }
     </script>
 </section>
 </body>

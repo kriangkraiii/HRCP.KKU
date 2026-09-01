@@ -66,7 +66,8 @@ class PublicationHarvestServiceTest {
                 mappingRepo,
                 syncStateRepo,
                 writer,
-                alerts
+                alerts,
+                new HarvestProgressTracker()
         );
     }
 

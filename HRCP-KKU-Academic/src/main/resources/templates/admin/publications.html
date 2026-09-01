@@ -50,13 +50,34 @@
                     </div>
                 </div>
             </div>
+
+            <!-- ผลงานมาจากหลายแหล่งแล้ว ไม่ใช่ Scopus อย่างเดียว จึงต้องบอกได้ว่าอะไรมาจากไหน -->
+            <div class="col-12" th:if="${sourceCounts != null and !sourceCounts.isEmpty()}">
+                <div class="card card-academic">
+                    <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
+                        <span class="text-muted small me-1">แหล่งข้อมูล:</span>
+                        <a th:each="sc : ${sourceCounts}"
+                           th:href="@{/admin/publications(source=${sc.key})}"
+                           class="btn btn-sm py-0"
+                           th:classappend="${selectedSource != null and selectedSource == sc.key}
+                                           ? 'btn-academic' : 'btn-outline-secondary'">
+                            <span th:text="${sc.key}">SCOPUS</span>
+                            <span class="badge bg-light text-dark ms-1" th:text="${sc.value}">0</span>
+                        </a>
+                        <a th:if="${selectedSource != null and !selectedSource.isBlank()}"
+                           th:href="@{/admin/publications}" class="btn btn-sm btn-link py-0 text-decoration-none">
+                            ล้างตัวกรองแหล่งข้อมูล
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- ตัวกรอง -->
         <div class="card card-academic mb-4">
             <div class="card-body">
                 <form method="get" action="/admin/publications" class="row g-2 align-items-end">
-                    <div class="col-md-5">
+                    <div class="col-md-3">
                         <label class="form-label small text-muted mb-1">ค้นหา</label>
                         <input type="text" name="q" class="form-control" th:value="${q}"
                                placeholder="ชื่อผลงาน ผู้แต่ง หรือชื่อวารสาร">
@@ -77,6 +98,15 @@
                             <option value="">— ทุกปี —</option>
                             <option th:each="y : ${years}" th:value="${y}" th:text="${y}"
                                     th:selected="${selectedYear != null and selectedYear == y}"></option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label small text-muted mb-1">แหล่งข้อมูล</label>
+                        <select name="source" class="form-select">
+                            <option value="">— ทุกแหล่ง —</option>
+                            <option th:each="sc : ${sourceCounts}" th:value="${sc.key}"
+                                    th:text="${sc.key + ' (' + sc.value + ')'}"
+                                    th:selected="${selectedSource != null and selectedSource == sc.key}"></option>
                         </select>
                     </div>
                     <div class="col-md-1 d-grid">
@@ -114,6 +144,7 @@
                                 <th style="width:5rem">ปี</th>
                                 <th>ชื่อผลงาน</th>
                                 <th style="width:14rem">เจ้าของผลงาน</th>
+                                <th style="width:7rem">แหล่งข้อมูล</th>
                                 <th style="width:7rem">ประเภท</th>
                                 <th style="width:5rem" class="text-center">Q</th>
                                 <th style="width:6rem" class="text-end">อ้างอิง</th>
@@ -173,6 +204,15 @@
                                     th:text="${authorNames.get(row.fsUserId) != null
                                               ? authorNames.get(row.fsUserId)
                                               : 'รหัส ' + row.fsUserId}">-</td>
+                                <!-- แหล่งที่มาของแถวนี้ กดเพื่อกรองเฉพาะแหล่งนั้น -->
+                                <td class="small">
+                                    <a th:href="@{/admin/publications(source=${p.dataSource})}"
+                                       class="badge text-decoration-none"
+                                       th:classappend="${p.dataSource == 'SCOPUS'} ? 'bg-primary' : 'bg-info text-dark'"
+                                       th:text="${p.dataSource != null ? p.dataSource : 'SCOPUS'}">SCOPUS</a>
+                                    <div th:if="${p.tciTier}" class="text-muted mt-1"
+                                         th:text="'TCI ' + ${p.tciTier}">TCI</div>
+                                </td>
                                 <td class="small" th:text="${p.type != null ? p.type : '-'}">-</td>
                                 <td class="text-center">
                                     <span th:if="${p.quartile}" class="badge bg-secondary"

@@ -86,10 +86,15 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
     /**
      * Faculty-wide search. Named so that calling it is a deliberate act;
      * the controller layer gates it behind {@code ROLE_ADMIN}.
+     *
+     * @param dataSource one of {@code SCOPUS}, {@code CROSSREF}, {@code OPENALEX},
+     *                   {@code DBLP}, {@code THAIJO}, {@code KKU_IR}, or null for
+     *                   every source at once
      */
     @Query("""
             SELECT p FROM ScopusPublication p
             WHERE (:fsUserId IS NULL OR p.fsUserId = :fsUserId)
+              AND (:dataSource IS NULL OR p.dataSource = :dataSource)
               AND (:pattern IS NULL OR LOWER(p.title) LIKE :pattern
                                     OR LOWER(p.authorNames) LIKE :pattern
                                     OR LOWER(p.publicationName) LIKE :pattern
@@ -103,6 +108,7 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
             @Param("yearFrom") Integer yearFrom,
             @Param("yearTo") Integer yearTo,
             @Param("pattern") String pattern,
+            @Param("dataSource") String dataSource,
             Pageable pageable);
 
     long countByFsUserId(Long fsUserId);

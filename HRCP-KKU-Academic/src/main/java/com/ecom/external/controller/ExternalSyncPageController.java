@@ -55,10 +55,17 @@ public class ExternalSyncPageController {
     private final ScopusPublicationRepository publicationRepo;
     private final FsApiProperties props;
     private final CpDirectorySyncService cpSyncService;
+    private final com.ecom.external.harvest.PublicationHarvestService harvestService;
 
     private final String usersCron;
     private final String usersFullCron;
     private final String scopusCron;
+    private final String harvestCron;
+    private final String cpWebCron;
+    private final String imageCleanupCron;
+    private final String retentionCron;
+    private final String evalExpiryCron;
+    private final String esignReminderCron;
 
     public ExternalSyncPageController(FsSyncService syncService,
             FacultyChangeReviewService reviewService,
@@ -68,9 +75,16 @@ public class ExternalSyncPageController {
             ScopusPublicationRepository publicationRepo,
             FsApiProperties props,
             CpDirectorySyncService cpSyncService,
+            com.ecom.external.harvest.PublicationHarvestService harvestService,
             @Value("${fs.sync.users.cron:0 30 1 * * *}") String usersCron,
             @Value("${fs.sync.users.full-cron:0 0 3 * * SUN}") String usersFullCron,
-            @Value("${fs.sync.scopus.cron:0 0 2 * * *}") String scopusCron) {
+            @Value("${fs.sync.scopus.cron:0 0 2 * * *}") String scopusCron,
+            @Value("${harvest.cron:0 30 2 * * *}") String harvestCron,
+            @Value("${cp.web.sync.cron:0 30 3 * * SUN}") String cpWebCron,
+            @Value("${app.images.cleanup-cron:0 0 3 * * ?}") String imageCleanupCron,
+            @Value("${app.retention.cron:0 30 3 * * ?}") String retentionCron,
+            @Value("${evaluation.expiry.cron:0 0 8 * * *}") String evalExpiryCron,
+            @Value("${app.esign.reminder-cron:0 30 8 * * *}") String esignReminderCron) {
         this.syncService = syncService;
         this.reviewService = reviewService;
         this.changeRepo = changeRepo;
@@ -79,9 +93,16 @@ public class ExternalSyncPageController {
         this.publicationRepo = publicationRepo;
         this.props = props;
         this.cpSyncService = cpSyncService;
+        this.harvestService = harvestService;
         this.usersCron = usersCron;
         this.usersFullCron = usersFullCron;
         this.scopusCron = scopusCron;
+        this.harvestCron = harvestCron;
+        this.cpWebCron = cpWebCron;
+        this.imageCleanupCron = imageCleanupCron;
+        this.retentionCron = retentionCron;
+        this.evalExpiryCron = evalExpiryCron;
+        this.esignReminderCron = esignReminderCron;
     }
 
     @GetMapping
@@ -92,6 +113,25 @@ public class ExternalSyncPageController {
         model.addAttribute("publicationCount", publicationRepo.count());
         model.addAttribute("facultyWithScopus", facultyRepo.findAllWithScopusId().size());
 
+        // Breakdown of publications by data source
+        Map<String, Long> sourceCounts = new LinkedHashMap<>();
+        sourceCounts.put("SCOPUS", 0L);
+        sourceCounts.put("OPENALEX", 0L);
+        sourceCounts.put("CROSSREF", 0L);
+        sourceCounts.put("DBLP", 0L);
+        sourceCounts.put("THAIJO", 0L);
+        sourceCounts.put("KKU_IR", 0L);
+
+        List<Object[]> groupedCounts = publicationRepo.countGroupByDataSource();
+        for (Object[] r : groupedCounts) {
+            if (r != null && r.length == 2 && r[0] != null && r[1] != null) {
+                String ds = r[0].toString().toUpperCase();
+                long count = ((Number) r[1]).longValue();
+                sourceCounts.put(ds, count);
+            }
+        }
+        model.addAttribute("sourceCounts", sourceCounts);
+
         List<FsFacultyChange> pending = reviewService.pending();
         model.addAttribute("changes", pending);
         model.addAttribute("diffs", reviewService.readDiffs(pending));
@@ -101,10 +141,34 @@ public class ExternalSyncPageController {
 
         model.addAttribute("usersJob", jobs.get(FsSyncState.TYPE_USERS));
         model.addAttribute("scopusJob", jobs.get(FsSyncState.TYPE_SCOPUS));
+        model.addAttribute("jobs", jobs);
+        model.addAttribute("harvestRunning", harvestService.isRunning());
+
+        // List of all sync jobs for status dashboard table
+        List<SyncJobDisplay> syncJobList = List.of(
+                new SyncJobDisplay("users", "ข้อมูลอาจารย์ (Faculty Directory)", "fas fa-users", "text-primary", "บุคลากร", jobs.get(FsSyncState.TYPE_USERS)),
+                new SyncJobDisplay("college_web", "รูปและข้อมูลเว็บคณะ (computing.kku.ac.th)", "fas fa-image", "text-info", "บุคลากร", jobs.get("college_web")),
+                new SyncJobDisplay("scopus", "ผลงาน Scopus เดิม", "fas fa-book", "text-success", "งานวิจัย", jobs.get(FsSyncState.TYPE_SCOPUS)),
+                new SyncJobDisplay("openalex", "OpenAlex (Global Works API)", "fas fa-globe", "text-info", "งานวิจัย", jobs.get("openalex")),
+                new SyncJobDisplay("crossref", "Crossref (DOI Registry)", "fas fa-crosshairs", "text-warning", "งานวิจัย", jobs.get("crossref")),
+                new SyncJobDisplay("dblp", "DBLP (Computer Science Bibliography)", "fas fa-laptop-code", "text-primary", "งานวิจัย", jobs.get("dblp")),
+                new SyncJobDisplay("thaijo", "ThaiJO (วารสารวิชาการไทย OAI-PMH)", "fas fa-file-lines", "text-danger", "งานวิจัย", jobs.get("thaijo")),
+                new SyncJobDisplay("kkuir", "KKU IR (คลังสถาบัน มข. DSpace)", "fas fa-building-columns", "text-secondary", "งานวิจัย", jobs.get("kkuir"))
+        );
+        model.addAttribute("syncJobList", syncJobList);
+
+        long okCount = syncJobList.stream().filter(j -> j.state() != null && "OK".equalsIgnoreCase(j.state().getLastStatus())).count();
+        long failedCount = syncJobList.stream().filter(j -> j.state() != null && "FAILED".equalsIgnoreCase(j.state().getLastStatus())).count();
+        long runningCount = syncJobList.stream().filter(j -> j.state() != null && "RUNNING".equalsIgnoreCase(j.state().getLastStatus())).count();
+
+        model.addAttribute("okCount", okCount);
+        model.addAttribute("failedCount", failedCount);
+        model.addAttribute("runningCount", runningCount);
+        model.addAttribute("totalJobs", syncJobList.size());
 
         model.addAttribute("apiEnabled", props.isUsable());
         model.addAttribute("apiBaseUrl", props.getBaseUrl());
-        model.addAttribute("schedule", schedule());
+        model.addAttribute("scheduleCategories", scheduleCategories());
 
         // Seconds left on each cooldown, so the page can grey the button out
         // instead of letting an admin click into a rejection.
@@ -112,6 +176,32 @@ public class ExternalSyncPageController {
         model.addAttribute("scopusCooldown", guard.remaining(FsSyncState.TYPE_SCOPUS).toSeconds());
         return VIEW;
     }
+
+    public record SyncJobDisplay(
+            String id,
+            String name,
+            String icon,
+            String colorClass,
+            String category,
+            FsSyncState state
+    ) {}
+
+    public record ScheduleCategory(
+            String title,
+            String icon,
+            String colorClass,
+            List<ScheduleItem> items
+    ) {}
+
+    public record ScheduleItem(
+            String name,
+            String description,
+            String cron,
+            String frequency,
+            String nextRun,
+            String icon,
+            String badgeClass
+    ) {}
 
     private List<FsFacultyChange> recentDecisions() {
         PageRequest topTen = PageRequest.of(0, 10);
@@ -131,26 +221,125 @@ public class ExternalSyncPageController {
                 .toList();
     }
 
-    /** Human-readable next-run times, so "did it run?" has an answer on the page. */
-    private Map<String, String> schedule() {
-        Map<String, String> out = new LinkedHashMap<>();
-        out.put("ข้อมูลอาจารย์ (เฉพาะที่เปลี่ยน)", describe(usersCron));
-        out.put("ข้อมูลอาจารย์ (ตรวจซ้ำทั้งหมด)", describe(usersFullCron));
-        out.put("ผลงาน Scopus", describe(scopusCron));
-        return out;
+    /** Detailed schedule of all 9 background cron jobs across the system grouped by category. */
+    private List<ScheduleCategory> scheduleCategories() {
+        return List.of(
+                new ScheduleCategory(
+                        "การเชื่อมต่อภายนอก & งานวิจัย (External Integrations & Research Data)",
+                        "fas fa-network-wired",
+                        "text-primary",
+                        List.of(
+                                new ScheduleItem(
+                                        "ข้อมูลอาจารย์ (ดึงเฉพาะที่เปลี่ยน / Incremental)",
+                                        "ดึงข้อมูลอาจารย์ที่อัปเดตจากระบบ Fund Management มาเทียบกับฐานข้อมูล หากพบการแก้ไขจะพักไว้ให้ Admin อนุมัติ",
+                                        usersCron,
+                                        "ทุกวัน เวลา 01:30 น.",
+                                        describeNext(usersCron),
+                                        "fas fa-users",
+                                        "bg-primary"
+                                ),
+                                new ScheduleItem(
+                                        "ผลงานวิจัย Scopus เดิม",
+                                        "ดึงผลงานวิจัยของอาจารย์ทุกคนจาก Scopus API และจับคู่ Scopus ID",
+                                        scopusCron,
+                                        "ทุกวัน เวลา 02:00 น.",
+                                        describeNext(scopusCron),
+                                        "fas fa-book",
+                                        "bg-success"
+                                ),
+                                new ScheduleItem(
+                                        "งานวิจัย 5 แหล่งใหม่ (OpenAlex, Crossref, DBLP, ThaiJO, KKU IR)",
+                                        "ดึงผลงานจาก 5 แหล่งพร้อมกันแบบ Parallel ผ่าน Virtual Threads, ทำ Deduplication 2.5 ชั้น และตรวจระดับวารสาร SJR/TCI",
+                                        harvestCron,
+                                        "ทุกวัน เวลา 02:30 น.",
+                                        describeNext(harvestCron),
+                                        "fas fa-globe",
+                                        "bg-info text-dark"
+                                ),
+                                new ScheduleItem(
+                                        "ข้อมูลอาจารย์ (ตรวจซ้ำทั้งหมด / Full Re-sync)",
+                                        "ดึงข้อมูลอาจารย์ทุกคนแบบ Full Pass เพื่อตรวจสอบความถูกต้องและซ่อมแซมข้อมูลที่อาจค้าง",
+                                        usersFullCron,
+                                        "ทุกวันอาทิตย์ เวลา 03:00 น.",
+                                        describeNext(usersFullCron),
+                                        "fas fa-user-check",
+                                        "bg-primary"
+                                ),
+                                new ScheduleItem(
+                                        "รูปและข้อมูลจากเว็บไซต์คณะ (computing.kku.ac.th)",
+                                        "Sync ทำเนียบบุคลากร รูปโปรไฟล์ และข้อมูลตำแหน่งจากเว็บไซต์วิทยาลัยการคอมพิวเตอร์",
+                                        cpWebCron,
+                                        "ทุกวันอาทิตย์ เวลา 03:30 น.",
+                                        describeNext(cpWebCron),
+                                        "fas fa-image",
+                                        "bg-secondary"
+                                )
+                        )
+                ),
+                new ScheduleCategory(
+                        "บำรุงรักษาระบบ & นโยบายความปลอดภัย (System Maintenance & Compliance)",
+                        "fas fa-shield-halved",
+                        "text-warning",
+                        List.of(
+                                new ScheduleItem(
+                                        "กวาดล้างรูปภาพขยะ (Orphan Images Cleanup)",
+                                        "ตรวจสอบและลบไฟล์รูปภาพชั่วคราวและรูปที่ไม่มีการอ้างอิงในระบบ เพื่อคืนพื้นที่จัดเก็บ Disk",
+                                        imageCleanupCron,
+                                        "ทุกวัน เวลา 03:00 น.",
+                                        describeNext(imageCleanupCron),
+                                        "fas fa-broom",
+                                        "bg-warning text-dark"
+                                ),
+                                new ScheduleItem(
+                                        "จัดเก็บและล้าง Log ตาม พ.ร.บ.คอมพิวเตอร์ (Data Retention)",
+                                        "จัดเก็บ Archival Log และหมุนเวียนลบ Log ที่มีอายุเกิน 90 วัน ตามข้อกำหนด พ.ร.บ.คอมพิวเตอร์",
+                                        retentionCron,
+                                        "ทุกวัน เวลา 03:30 น.",
+                                        describeNext(retentionCron),
+                                        "fas fa-shield-alt",
+                                        "bg-dark"
+                                )
+                        )
+                ),
+                new ScheduleCategory(
+                        "การแจ้งเตือน & ระบบงานวิชาการ (Academic Workflows & Reminders)",
+                        "fas fa-bell",
+                        "text-danger",
+                        List.of(
+                                new ScheduleItem(
+                                        "ตรวจสอบคำขอประเมินตำแหน่งที่ใกล้หมดอายุ (Evaluation Expiry)",
+                                        "ตรวจสอบคำขอประเมินตำแหน่งทางวิชาการที่ใกล้ครบกำหนด และแจ้งเตือนกรรมการผู้ประเมิน",
+                                        evalExpiryCron,
+                                        "ทุกวัน เวลา 08:00 น.",
+                                        describeNext(evalExpiryCron),
+                                        "fas fa-hourglass-half",
+                                        "bg-danger"
+                                ),
+                                new ScheduleItem(
+                                        "แจ้งเตือนการลงนาม E-Signature ที่ค้างอยู่ (E-Sign Reminders)",
+                                        "ส่งอีเมลแจ้งเตือนผู้ลงนามเอกสารอิเล็กทรอนิกส์ที่ยังไม่ดำเนินการเกิน 3 วัน",
+                                        esignReminderCron,
+                                        "ทุกวัน เวลา 08:30 น.",
+                                        describeNext(esignReminderCron),
+                                        "fas fa-signature",
+                                        "bg-primary"
+                                )
+                        )
+                )
+        );
     }
 
-    private String describe(String cron) {
+    private String describeNext(String cron) {
         try {
             LocalDateTime next = CronExpression.parse(cron).next(LocalDateTime.now());
             if (next == null) {
-                return cron;
+                return "-";
             }
-            return String.format("%s — ครั้งถัดไป %02d/%02d/%d %02d:%02d น.",
-                    cron, next.getDayOfMonth(), next.getMonthValue(), next.getYear() + 543,
+            return String.format("%02d/%02d/%d %02d:%02d น.",
+                    next.getDayOfMonth(), next.getMonthValue(), next.getYear() + 543,
                     next.getHour(), next.getMinute());
         } catch (Exception e) {
-            return cron;
+            return "-";
         }
     }
 
@@ -236,6 +425,101 @@ public class ExternalSyncPageController {
         } else {
             guard.release(FsSyncState.TYPE_SCOPUS);
             redirect.addFlashAttribute("errorMsg", "ดึงผลงานไม่สำเร็จ: " + result.message());
+        }
+        return REDIRECT;
+    }
+
+    /**
+     * Harvests all 5 external publication sources concurrently.
+     */
+    @PostMapping("/harvest-all")
+    public String harvestAll(RedirectAttributes redirect) {
+        if (harvestService.isRunning()) {
+            redirect.addFlashAttribute("warnMsg", "ระบบกำลังดึงข้อมูลงานวิจัยอยู่แล้วในขณะนี้ กรุณารอสักครู่");
+            return REDIRECT;
+        }
+
+        List<com.ecom.external.harvest.model.HarvestResult> results = harvestService.harvestAll();
+        long totalWorks = results.stream().mapToLong(r -> r.publications().size()).sum();
+        long successCount = results.stream().filter(com.ecom.external.harvest.model.HarvestResult::success).count();
+
+        redirect.addFlashAttribute("succMsg", String.format(
+                "ดึงงานวิจัยจาก 5 แหล่งเสร็จสิ้น — สำเร็จ %d/%d แหล่งข้อมูล รวม %d รายการ",
+                successCount, results.size(), totalWorks));
+        return REDIRECT;
+    }
+
+    /**
+     * Asynchronous REST trigger for real-time progress modal.
+     */
+    @org.springframework.web.bind.annotation.PostMapping("/harvest/start")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public org.springframework.http.ResponseEntity<Map<String, Object>> harvestStartAsync() {
+        if (harvestService.isRunning()) {
+            return org.springframework.http.ResponseEntity.ok(Map.of(
+                    "status", "ALREADY_RUNNING",
+                    "message", "ระบบกำลังดึงข้อมูลงานวิจัยอยู่แล้วในขณะนี้"
+            ));
+        }
+
+        harvestService.harvestAllAsync();
+        return org.springframework.http.ResponseEntity.ok(Map.of(
+                "status", "STARTED",
+                "message", "เริ่มต้นการดึงข้อมูลจาก 5 แหล่งข้อมูลเรียบร้อยแล้ว"
+        ));
+    }
+
+    /**
+     * Asynchronous REST trigger for single source.
+     */
+    @org.springframework.web.bind.annotation.PostMapping("/harvest/source-async/{source}")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public org.springframework.http.ResponseEntity<Map<String, Object>> harvestSourceAsync(
+            @org.springframework.web.bind.annotation.PathVariable("source") String source) {
+        if (harvestService.isRunning()) {
+            return org.springframework.http.ResponseEntity.ok(Map.of(
+                    "status", "ALREADY_RUNNING",
+                    "message", "ระบบกำลังดึงข้อมูลงานวิจัยอยู่แล้วในขณะนี้"
+            ));
+        }
+
+        harvestService.harvestSourceAsync(source);
+        return org.springframework.http.ResponseEntity.ok(Map.of(
+                "status", "STARTED",
+                "source", source,
+                "message", "เริ่มต้นการดึงข้อมูลจาก " + source + " เรียบร้อยแล้ว"
+        ));
+    }
+
+    /**
+     * Real-time accurate % progress snapshot endpoint for polling.
+     */
+    @org.springframework.web.bind.annotation.GetMapping("/harvest/progress")
+    @org.springframework.web.bind.annotation.ResponseBody
+    public org.springframework.http.ResponseEntity<com.ecom.external.harvest.HarvestProgressTracker.ProgressSnapshot> harvestProgress() {
+        return org.springframework.http.ResponseEntity.ok(harvestService.getProgressTracker().snapshot());
+    }
+
+    /**
+     * Harvests a single specific external source synchronously.
+     */
+    @PostMapping("/harvest/{source}")
+    public String harvestSource(@org.springframework.web.bind.annotation.PathVariable("source") String source,
+                                RedirectAttributes redirect) {
+        if (harvestService.isRunning()) {
+            redirect.addFlashAttribute("warnMsg", "ระบบกำลังดึงข้อมูลงานวิจัยอยู่แล้วในขณะนี้ กรุณารอสักครู่");
+            return REDIRECT;
+        }
+
+        com.ecom.external.harvest.model.HarvestResult result = harvestService.harvestSource(source);
+        if (result.success()) {
+            redirect.addFlashAttribute("succMsg", String.format(
+                    "ดึงงานวิจัยจาก %s สำเร็จ — ได้รับ %d รายการ (ใช้ %d คำขอ, %.1f วินาที)",
+                    result.sourceName(), result.publications().size(), result.requestsMade(),
+                    result.durationMs() / 1000.0));
+        } else {
+            redirect.addFlashAttribute("errorMsg", String.format(
+                    "ดึงงานวิจัยจาก %s ไม่สำเร็จ: %s", result.sourceName(), result.message()));
         }
         return REDIRECT;
     }

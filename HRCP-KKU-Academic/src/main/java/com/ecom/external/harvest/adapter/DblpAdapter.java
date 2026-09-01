@@ -50,8 +50,10 @@ public class DblpAdapter implements PublicationSourceAdapter {
 
     private static ClientHttpRequestFactory requestFactory(HarvestProperties.DblpProps props) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(props.getConnectTimeoutSeconds()));
-        factory.setReadTimeout(Duration.ofSeconds(props.getReadTimeoutSeconds()));
+        int connectSec = props.getConnectTimeoutSeconds() > 0 ? Math.min(props.getConnectTimeoutSeconds(), 3) : 3;
+        int readSec = props.getReadTimeoutSeconds() > 0 ? Math.min(props.getReadTimeoutSeconds(), 5) : 5;
+        factory.setConnectTimeout(Duration.ofSeconds(connectSec));
+        factory.setReadTimeout(Duration.ofSeconds(readSec));
         return factory;
     }
 

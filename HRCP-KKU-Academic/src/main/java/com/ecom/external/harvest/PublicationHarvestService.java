@@ -53,6 +53,7 @@ public class PublicationHarvestService {
     private final FsSyncStateRepository syncStateRepo;
     private final FsSyncWriter writer;
     private final SystemAlertService alerts;
+    private final HarvestProgressTracker progressTracker;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
 
@@ -63,7 +64,8 @@ public class PublicationHarvestService {
             ExternalAuthorMappingRepository mappingRepo,
             FsSyncStateRepository syncStateRepo,
             FsSyncWriter writer,
-            SystemAlertService alerts
+            SystemAlertService alerts,
+            HarvestProgressTracker progressTracker
     ) {
         this.adapters = adapters != null ? adapters : List.of();
         this.props = props;
@@ -72,6 +74,7 @@ public class PublicationHarvestService {
         this.syncStateRepo = syncStateRepo;
         this.writer = writer;
         this.alerts = alerts;
+        this.progressTracker = progressTracker;
     }
 
     /**
@@ -84,6 +87,20 @@ public class PublicationHarvestService {
             return;
         }
         harvestAll();
+    }
+
+    /**
+     * Asynchronously starts the multi-source harvest on a Virtual Thread.
+     */
+    public java.util.concurrent.CompletableFuture<List<HarvestResult>> harvestAllAsync() {
+        return java.util.concurrent.CompletableFuture.supplyAsync(this::harvestAll, Executors.newVirtualThreadPerTaskExecutor());
+    }
+
+    /**
+     * Asynchronously starts a single source harvest on a Virtual Thread.
+     */
+    public java.util.concurrent.CompletableFuture<HarvestResult> harvestSourceAsync(String sourceName) {
+        return java.util.concurrent.CompletableFuture.supplyAsync(() -> harvestSource(sourceName), Executors.newVirtualThreadPerTaskExecutor());
     }
 
     /**
@@ -102,13 +119,25 @@ public class PublicationHarvestService {
             List<FsFaculty> facultyList = facultyRepo.findAll();
             if (facultyList.isEmpty()) {
                 log.warn("Publication harvest skipped: no faculty found in database");
+                progressTracker.finish(List.of(), 0);
                 return List.of(HarvestResult.skipped("ALL", "No faculty found in database"));
             }
 
             Map<Long, List<ExternalAuthorMapping>> mappingsByUserId = loadMappingsGroupedByUser();
 
+            List<String> enabledSources = adapters.stream()
+                    .filter(PublicationSourceAdapter::isEnabled)
+                    .map(PublicationSourceAdapter::sourceName)
+                    .toList();
+
+            // Total real steps = 1 step per adapter + estimated 5 DB batch writing steps
+            int totalSteps = Math.max(1, enabledSources.size() + 5);
+            progressTracker.start(totalSteps, enabledSources);
+
             // Run each adapter concurrently on a Java 21 Virtual Thread
             List<HarvestResult> results = new ArrayList<>();
+            int totalWritten = 0;
+
             try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
                 List<Callable<HarvestResult>> tasks = new ArrayList<>();
 
@@ -123,6 +152,8 @@ public class PublicationHarvestService {
                         writer.markRunning(syncType);
                         OffsetDateTime cursor = loadCursor(syncType);
 
+                        progressTracker.updateSource(source, "RUNNING", 15, 0, "กำลังดึงข้อมูล...");
+
                         HarvestContext context = HarvestContext.of(
                                 cursor,
                                 props.getYearFrom(),
@@ -134,18 +165,24 @@ public class PublicationHarvestService {
                         HarvestResult result = adapter.harvest(context);
 
                         // Batch write harvested publications to database
+                        int writtenForSource = 0;
                         if (result.success() && !result.publications().isEmpty()) {
-                            int totalWritten = writeInBatches(result.publications());
-                            writer.recordSuccess(syncType, totalWritten, result.requestsMade(),
+                            writtenForSource = writeInBatches(result.publications(), source);
+                            writer.recordSuccess(syncType, writtenForSource, result.requestsMade(),
                                     result.durationMs(), result.newCursor(), result.message());
-                            log.info("Adapter [{}] wrote {} publication(s)", source, totalWritten);
+                            log.info("Adapter [{}] wrote {} publication(s)", source, writtenForSource);
+                            progressTracker.updateSource(source, "SUCCESS", 100, result.publications().size(),
+                                    String.format("สำเร็จ (%d รายการ, บันทึก %d)", result.publications().size(), writtenForSource));
                         } else if (result.success()) {
                             writer.recordSuccess(syncType, 0, result.requestsMade(),
                                     result.durationMs(), result.newCursor(), result.message());
+                            progressTracker.updateSource(source, "SUCCESS", 100, 0, "สำเร็จ (ไม่พบรายการใหม่)");
                         } else {
                             writer.recordFailure(syncType, new RuntimeException(result.message()));
+                            progressTracker.updateSource(source, "FAILED", 100, 0, result.message());
                         }
 
+                        progressTracker.advance(source, "ประมวลผล " + source + " เสร็จสิ้น");
                         return result;
                     });
                 }
@@ -164,15 +201,21 @@ public class PublicationHarvestService {
             alerts.success("เก็บเกี่ยวผลงานวิจัยรอบวัน",
                     "เสร็จสิ้น " + results.size() + " แหล่งข้อมูล รวม " + totalWorks + " รายการ (" + totalDuration + " ms)");
 
+            progressTracker.finish(results, totalWritten);
             return results;
 
         } catch (Exception e) {
             log.error("Multi-source publication harvest encountered an unexpected failure: {}", e.getMessage(), e);
             alerts.failure("เก็บเกี่ยวผลงานวิจัยรอบวัน", "เกิดข้อผิดพลาด: " + e.getMessage());
+            progressTracker.finish(List.of(HarvestResult.failed("ALL", 0, System.currentTimeMillis() - startedAt, e.getMessage())), 0);
             return List.of(HarvestResult.failed("ALL", 0, System.currentTimeMillis() - startedAt, e.getMessage()));
         } finally {
             running.set(false);
         }
+    }
+
+    public HarvestProgressTracker getProgressTracker() {
+        return progressTracker;
     }
 
     /**
@@ -215,6 +258,10 @@ public class PublicationHarvestService {
     }
 
     private int writeInBatches(List<RawPublication> publications) {
+        return writeInBatches(publications, "DATABASE");
+    }
+
+    private int writeInBatches(List<RawPublication> publications, String source) {
         int written = 0;
         double threshold = props.getFuzzyThreshold();
 
@@ -222,6 +269,10 @@ public class PublicationHarvestService {
             int end = Math.min(i + WRITE_BATCH_SIZE, publications.size());
             List<RawPublication> batch = publications.subList(i, end);
             written += writer.writeHarvestedBatch(batch, threshold);
+            if (progressTracker != null) {
+                progressTracker.advance("DATABASE", String.format("กำลังบันทึกข้อมูล %s (%d/%d)...",
+                        source != null ? source : "", end, publications.size()));
+            }
         }
         return written;
     }

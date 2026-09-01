@@ -163,7 +163,7 @@ public class ScopusQueryService {
         if (isUniversalAccessUser(user)) {
             String pattern = likePattern(query);
             PageRequest pageable = PageRequest.of(Math.max(page, 0), clampSize(size));
-            return publicationRepo.adminSearch(null, yearFrom, yearTo, pattern, pageable)
+            return publicationRepo.adminSearch(null, yearFrom, yearTo, pattern, null, pageable)
                     .map(PublicationDto::from);
         }
 
@@ -286,7 +286,7 @@ public class ScopusQueryService {
             String query, int page, int size) {
         String pattern = likePattern(query);
         return publicationRepo
-                .adminSearch(fsUserId, yearFrom, yearTo, pattern,
+                .adminSearch(fsUserId, yearFrom, yearTo, pattern, null,
                         PageRequest.of(Math.max(page, 0), clampSize(size)))
                 .map(PublicationDto::from);
     }
@@ -301,9 +301,22 @@ public class ScopusQueryService {
      */
     public Page<AdminPublication> adminSearchWithOwner(Long fsUserId, Integer yearFrom, Integer yearTo,
             String query, int page, int size) {
+        return adminSearchWithOwner(fsUserId, yearFrom, yearTo, query, null, page, size);
+    }
+
+    /**
+     * @param dataSource keep only work that came from one place — {@code SCOPUS},
+     *                   {@code CROSSREF}, {@code OPENALEX} and the rest — or null
+     *                   for all of them. Since the harvest began writing into this
+     *                   same table, "where did this one come from" is a question
+     *                   the faculty-wide view has to be able to answer.
+     */
+    public Page<AdminPublication> adminSearchWithOwner(Long fsUserId, Integer yearFrom, Integer yearTo,
+            String query, String dataSource, int page, int size) {
         String pattern = likePattern(query);
+        String source = dataSource == null || dataSource.isBlank() ? null : dataSource.trim();
         return publicationRepo
-                .adminSearch(fsUserId, yearFrom, yearTo, pattern,
+                .adminSearch(fsUserId, yearFrom, yearTo, pattern, source,
                         PageRequest.of(Math.max(page, 0), clampSize(size)))
                 .map(AdminPublication::from);
     }

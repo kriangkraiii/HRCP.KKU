@@ -67,8 +67,10 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
 
     private static ClientHttpRequestFactory requestFactory(HarvestProperties.KkuIrProps props) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
-        factory.setConnectTimeout(Duration.ofSeconds(props.getConnectTimeoutSeconds()));
-        factory.setReadTimeout(Duration.ofSeconds(props.getReadTimeoutSeconds()));
+        int connectSec = props.getConnectTimeoutSeconds() > 0 ? Math.min(props.getConnectTimeoutSeconds(), 3) : 3;
+        int readSec = props.getReadTimeoutSeconds() > 0 ? Math.min(props.getReadTimeoutSeconds(), 5) : 5;
+        factory.setConnectTimeout(Duration.ofSeconds(connectSec));
+        factory.setReadTimeout(Duration.ofSeconds(readSec));
         return factory;
     }
 
@@ -162,8 +164,13 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
 
         } catch (Exception e) {
             long durationMs = System.currentTimeMillis() - startedAt;
-            log.error("KKU IR harvest failed: {}", e.getMessage(), e);
-            return HarvestResult.failed(SOURCE_NAME, requestsMade, durationMs, e.getMessage());
+            String msg = e.getMessage() != null ? e.getMessage() : "Unknown error";
+            if (msg.contains("Connection refused") || msg.contains("ConnectException") || msg.contains("timed out")) {
+                log.warn("KKU IR repository unreachable ({}): {}", props.getOaiEndpoint(), msg);
+                return HarvestResult.failed(SOURCE_NAME, requestsMade, durationMs, "ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ KKU IR ได้ (Connection Refused / Server Unreachable)");
+            }
+            log.error("KKU IR harvest failed: {}", msg, e);
+            return HarvestResult.failed(SOURCE_NAME, requestsMade, durationMs, msg);
         }
     }
 
