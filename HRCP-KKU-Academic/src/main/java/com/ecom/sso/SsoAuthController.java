@@ -13,6 +13,7 @@ import com.ecom.external.model.FsFaculty;
 import com.ecom.model.UserDtls;
 import com.ecom.service.SignInService;
 
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -110,7 +111,7 @@ public class SsoAuthController {
             return denied(redirect, "การเข้าสู่ระบบไม่สมบูรณ์ ไม่ได้รับ code จาก KKU SSO");
         }
 
-        var token = client.exchangeCode(code);
+        var token = client.exchangeCode(code, arrivalUrl(request));
         if (token.isEmpty()) {
             log.warn("SSO token exchange failed — no token for the code returned by the provider");
             return denied(redirect, "ยืนยันตัวตนกับระบบ SSO ไม่สำเร็จ (ไม่สามารถแลก Token ได้) กรุณาลองใหม่อีกครั้ง");
@@ -207,6 +208,37 @@ public class SsoAuthController {
             session.invalidate();
         }
         SecurityContextHolder.clearContext();
+    }
+
+    /**
+     * The address the browser was actually returned to, without the query string.
+     *
+     * <p>This is what {@code auth.token} wants as {@code redirectUrl}, and the
+     * provider checks it against the URL registered for this app id. Reading it
+     * off the request removes the guesswork: whatever was written on the request
+     * form, the provider sent the browser to it, so it arrived here.
+     *
+     * <p>The forward attribute comes first because a callback registered as
+     * {@code /signin} is handed on to this controller internally — after that
+     * forward {@code getRequestURI()} reports the destination, and the address
+     * the provider used is only still available under
+     * {@code jakarta.servlet.forward.request_uri}.
+     *
+     * <p>Falls back to the configured value when neither is usable, so a
+     * deployment behind something that rewrites paths can still pin it by hand.
+     */
+    private String arrivalUrl(HttpServletRequest request) {
+        String forwardedFrom = (String) request.getAttribute(RequestDispatcher.FORWARD_REQUEST_URI);
+        String path = forwardedFrom != null ? forwardedFrom : request.getRequestURI();
+        if (path == null || path.isBlank()) {
+            return props.getRedirectLoginUrl();
+        }
+        // getRequestURL() carries scheme, host and port as the client saw them —
+        // server.forward-headers-strategy=native keeps that true behind the proxy.
+        StringBuffer full = request.getRequestURL();
+        int pathStart = full.indexOf(request.getRequestURI());
+        String origin = pathStart > 0 ? full.substring(0, pathStart) : full.toString();
+        return origin + path;
     }
 
     /** Enough of a code to correlate with the provider's logs, never the whole thing. */

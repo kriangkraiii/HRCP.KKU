@@ -73,6 +73,26 @@ class SsoCallbackSurvivesAStaleSessionTest extends AbstractFlowTest {
                 .anyMatch(c -> c.getMaxAge() == 0);
     }
 
+    /**
+     * The SSONext manual's own example registers {@code /auth/callback/login} as
+     * the redirect URL, so that is where a by-the-book registration sends the
+     * browser. The protection has to cover it too — it keys on the code, not on
+     * the path, and this is what says so.
+     */
+    @Test
+    @DisplayName("path ตามคู่มือ (/auth/callback/login) ก็ต้องรอดจาก cookie ที่ตายแล้วเช่นกัน")
+    void theCallbackPathFromTheManualIsProtectedToo() throws Exception {
+        MvcResult result = mvc.perform(get("/auth/callback/login?code=one-time-code-from-sso")
+                .with(holdingADeadSessionCookie()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertThat(result.getResponse().getRedirectedUrl())
+                .as("ไม่ว่า SSO จะจดทะเบียนไว้เป็น path ไหน code ก็ต้องไม่ถูกทิ้ง")
+                .doesNotContain("expired=true")
+                .contains("code=one-time-code-from-sso");
+    }
+
     @Test
     @DisplayName("request ธรรมดาที่ cookie ตายแล้ว ยังต้องได้หน้า 'เซสชันหมดอายุ' เหมือนเดิม")
     void anOrdinaryStaleRequestStillGetsTheExpiredPage() throws Exception {

@@ -58,12 +58,24 @@ public class KkuSsoClient {
      * @return the token payload, or empty when SSO rejected the exchange
      */
     public Optional<SsoToken> exchangeCode(String code) {
+        return exchangeCode(code, props.getRedirectLoginUrl());
+    }
+
+    /**
+     * @param redirectUrl the address the provider actually returned the browser
+     *                    to. The provider compares it with the one registered
+     *                    against this app id and refuses the exchange if they
+     *                    differ, so the address it chose is by definition the
+     *                    right thing to send back — better than a configured
+     *                    guess at what somebody wrote on the request form.
+     */
+    public Optional<SsoToken> exchangeCode(String code, String redirectUrl) {
         log.info("SSO token exchange — endpoint={} appId={} clientId={} redirectUrl={}",
-                props.tokenEndpoint(), props.getAppId(), props.getClientId(), props.getRedirectLoginUrl());
+                props.tokenEndpoint(), props.getAppId(), props.getClientId(), redirectUrl);
 
         ObjectNode body = mapper.createObjectNode();
         body.put("code", code);
-        body.put("redirectUrl", props.getRedirectLoginUrl());
+        body.put("redirectUrl", redirectUrl);
         body.put("clientId", props.getClientId());
         body.put("clientSecret", props.getClientSecret());
 
