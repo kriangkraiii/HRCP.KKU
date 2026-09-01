@@ -98,9 +98,16 @@ public class HomeController {
 		// names the SSO host this is worth a line of its own.
 		String referrer = request.getHeader("Referer");
 		if (referrer != null && referrer.contains("sso")) {
-			logger.warn("Browser arrived at /signin from {} with no code and no error — "
-					+ "the provider ended the flow without issuing one. Check that the redirect URL "
-					+ "registered for this app-id is exactly the one this app sends.", referrer);
+			// Everything the provider sent back, not just the two parameters this
+			// method reads. If it explains itself under a name we do not know
+			// about — anything but "code" or "error" — that reason is otherwise
+			// lost, and the log would say only that nothing arrived.
+			String everythingItSent = request.getQueryString();
+			logger.warn("Browser arrived at /signin from {} with no code and no error. "
+					+ "Query string as received: [{}]. The provider ended the flow without "
+					+ "issuing a code — check that this app-id is registered and active on this "
+					+ "stage, and that the account signing in exists there.",
+					referrer, everythingItSent == null ? "" : everythingItSent);
 		}
 		return "guest/login";
 	}

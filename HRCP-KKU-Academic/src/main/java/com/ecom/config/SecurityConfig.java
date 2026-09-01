@@ -3,6 +3,8 @@ package com.ecom.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -38,6 +40,8 @@ public class SecurityConfig {
          * properties แล้วลืมแก้ตรงนี้ logout จะไม่ลบคุกกี้ให้ โดยไม่มีอะไรฟ้อง
          */
         private final String sessionCookieName;
+
+        private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
 
         public SecurityConfig(RateLimitFilter rateLimitFilter,
                         CustomAuthenticationSuccessHandler customAuthenticationSuccessHandler,
@@ -272,6 +276,20 @@ public class SecurityConfig {
                                                 .permitAll())
                                 .exceptionHandling(ex -> ex
                                                 .authenticationEntryPoint((request, response, authException) -> {
+                                                        // A login coming back from SSO must never end up here. If it
+                                                        // does, the provider was told to return to an address this
+                                                        // application does not serve — and because the redirect happens
+                                                        // before any controller, nothing else in the system would ever
+                                                        // mention it. The one-time code is discarded either way, so
+                                                        // this is the only place the path can be recorded.
+                                                        String strayCode = request.getParameter("code");
+                                                        if (strayCode != null && !strayCode.isBlank()) {
+                                                                log.warn("An SSO code arrived at {} — a path this application "
+                                                                                + "does not serve, so the login cannot complete. The redirect "
+                                                                                + "URL registered for this app-id must be exactly the sign-in "
+                                                                                + "address, with no extra path segments.",
+                                                                                request.getRequestURI());
+                                                        }
                                                         response.sendRedirect("/signin?expired=true");
                                                 })
                                                 // Without this a signed-in user whose role falls short

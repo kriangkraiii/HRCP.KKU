@@ -106,6 +106,26 @@ class SsoCallbackSurvivesAStaleSessionTest extends AbstractFlowTest {
                 .contains("expired=true");
     }
 
+    /**
+     * A code sent to an address this application does not serve.
+     *
+     * <p>Nothing can rescue the login at that point — the path has no handler —
+     * but the redirect that follows is indistinguishable from an expired session,
+     * so without a record of where the code landed there is nothing to take back
+     * to whoever registered the URL.
+     */
+    @Test
+    @DisplayName("code ที่มาผิด path (เช่น /signin/signin) ต้องถูกบันทึกไว้ ไม่ใช่หายเงียบ")
+    void aCodeSentToAPathWeDoNotServeIsRecorded() throws Exception {
+        MvcResult result = mvc.perform(get("/signin/signin?code=one-time-code-from-sso"))
+                .andExpect(status().is3xxRedirection())
+                .andReturn();
+
+        assertThat(result.getResponse().getRedirectedUrl())
+                .as("path นี้ไม่มี handler จึงจบที่หน้าล็อกอินตามปกติ — แต่ต้องมี log บอกว่าเกิดอะไรขึ้น")
+                .contains("/signin");
+    }
+
     /** Guards the loop: one retry, then the ordinary expired page. */
     @Test
     @DisplayName("ถ้าเบราว์เซอร์ยังส่ง cookie เดิมกลับมาอีก ต้องไม่วนไม่รู้จบ")
