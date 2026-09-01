@@ -671,7 +671,7 @@ public class SignatureWorkflowService {
         }
 
         step.setStatus(SignatureStepStatus.SIGNED);
-        step.setSignedAt(LocalDateTime.now());
+        step.setSignedAt(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         step.setUserSignature(signature);
         step.setImagePathSnapshot(signature.getImagePath());
         step.setConsentAccepted(true);

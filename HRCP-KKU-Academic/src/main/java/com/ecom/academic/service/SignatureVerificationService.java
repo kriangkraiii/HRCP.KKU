@@ -115,7 +115,7 @@ public class SignatureVerificationService {
                 String.valueOf(step.getSigner() == null ? "" : step.getSigner().getId()),
                 nullSafe(step.getSignerNameSnapshot()),
                 nullSafe(step.getDocHashSigned()),
-                step.getSignedAt() == null ? "" : step.getSignedAt().format(STAMP),
+                step.getSignedAt() == null ? "" : step.getSignedAt().truncatedTo(java.time.temporal.ChronoUnit.MICROS).format(STAMP),
                 nullSafe(step.getConsentTextVersion()),
                 nullSafe(step.getImagePathSnapshot()));
     }
