@@ -322,10 +322,22 @@ public class SecurityConfig {
          * rather than in the template means the one logout button behaves correctly
          * in both modes.
          */
+        /**
+         * Where the browser goes the moment the local session ends.
+         *
+         * <p>Always our own signed-out page, even in SSO mode. It used to hand the
+         * browser to the provider so that its session ended too, but that address
+         * serves a single-page app: the person sat watching a spinner while
+         * someone else's JavaScript bundle loaded, decided nothing had happened,
+         * and clicked again.
+         *
+         * <p>The provider's session is still ended — the signed-out page loads
+         * that same logout address in a hidden frame, which does the work without
+         * anyone waiting for it. Both hosts sit under {@code kku.ac.th}, so the
+         * browser treats the frame as same-site and sends the provider's cookie
+         * with it; the sign-out therefore takes effect exactly as it did before.
+         */
         private String logoutDestination() {
-                if (authProperties.isSsoMode() && ssoProperties.isConfigured()) {
-                        return ssoProperties.logoutUrl();
-                }
                 return "/signin?logout=true";
         }
 }

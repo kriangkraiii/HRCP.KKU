@@ -63,6 +63,19 @@
 					<i class="fas fa-check-circle"></i>
 					<span th:text="${succMsg}"></span>
 				</div>
+				<!--
+				  ออกจากระบบแล้ว: ปิด session ฝั่ง SSO ต่อในเบื้องหลัง
+				  หน้า logout ของ SSO เป็น single-page app ที่ต้องบูตก่อนจึงจะทำงาน
+				  ถ้าพาผู้ใช้ไปรอที่นั่นจะค้างหลายวินาทีจนเข้าใจว่ากดไม่ติด
+				  โหลดใน iframe ซ่อนแทน ผู้ใช้เห็นหน้านี้ทันทีและ session ฝั่งโน้นก็ถูกปิดจริง
+				  (สองโดเมนอยู่ใต้ kku.ac.th เบราว์เซอร์จึงถือเป็น same-site และส่ง cookie ให้)
+				-->
+				<iframe th:if="${param.logout != null and ssoLogoutUrl != null}"
+						th:src="${ssoLogoutUrl}"
+						title="ออกจากระบบ KKU SSO"
+						aria-hidden="true" tabindex="-1"
+						style="display:none;width:0;height:0;border:0"></iframe>
+
 				<div th:if="${errorMsg}" class="alert alert-danger">
 					<i class="fas fa-exclamation-circle"></i>
 					<span th:text="${errorMsg}"></span>

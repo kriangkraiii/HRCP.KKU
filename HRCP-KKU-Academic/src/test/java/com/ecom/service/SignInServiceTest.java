@@ -51,23 +51,27 @@ class SignInServiceTest {
     }
 
     @Test
-    @DisplayName("บัญชีที่เปิด 2FA ต้องถูกถาม OTP ไม่ว่าจะเข้าทางไหน")
-    void twoFactorIsOwedRegardlessOfHowTheSignInStarted() {
+    @DisplayName("บัญชีที่เปิด OTP ไว้เอง ต้องถูกถามรหัส")
+    void anAccountThatAsksForACodeGetsOne() {
         assertThat(signInService.requiresTwoFactor(user("ROLE_USER", true))).isTrue();
-        assertThat(signInService.requiresTwoFactor(user("ROLE_USER", false))).isFalse();
-
-        // General admin accounts must always require 2FA
-        UserDtls generalAdmin = user("ROLE_ADMIN", false);
-        assertThat(signInService.requiresTwoFactor(generalAdmin)).isTrue();
-
-        // admin@admin.com test account is exempt from mandatory 2FA unless enabled
-        UserDtls testAdmin = user("ROLE_ADMIN", false);
-        testAdmin.setEmail("admin@admin.com");
-        assertThat(signInService.requiresTwoFactor(testAdmin)).isFalse();
-
-        testAdmin.setTwoFactorEnabled(true);
-        assertThat(signInService.requiresTwoFactor(testAdmin)).isTrue();
+        assertThat(signInService.requiresTwoFactor(user("ROLE_ADMIN", true))).isTrue();
     }
+
+    /**
+     * Nobody is held to a second factor against their own setting any more. KKU
+     * SSO performs one before it will issue a code, so the prompt this used to
+     * force was the same check twice — and it fell on the accounts that sign in
+     * most often.
+     */
+    @Test
+    @DisplayName("ไม่มีบัญชีใดถูกบังคับ OTP — รวมถึงแอดมิน")
+    void noAccountIsForcedIntoASecondFactor() {
+        assertThat(signInService.requiresTwoFactor(user("ROLE_USER", false))).isFalse();
+        assertThat(signInService.requiresTwoFactor(user("ROLE_ADMIN", false)))
+                .as("แอดมินที่ปิดไว้เอง ต้องไม่ถูกถามซ้ำหลังผ่าน 2FA ของ SSO มาแล้ว")
+                .isFalse();
+    }
+
 
     @Test
     @DisplayName("พัก SSO ไว้ที่ขั้น OTP ต้องยังไม่ได้ session และ token ต้องไม่หาย")

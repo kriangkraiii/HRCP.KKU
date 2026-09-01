@@ -391,7 +391,9 @@
             </a>
             <form method="post" action="/logout">
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                <button type="submit" class="sidebar-logout">
+                <!-- ออกจากระบบเป็นการเปลี่ยนหน้าในเครื่องเรา ไม่ต้องรอใคร
+                     15 วินาทีตามค่าเริ่มต้นจึงนานเกินไปจนกดซ้ำไม่ได้ถ้ามีอะไรผิดพลาด -->
+                <button type="submit" class="sidebar-logout" data-loading-timeout="4000">
                     <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
                 </button>
             </form>

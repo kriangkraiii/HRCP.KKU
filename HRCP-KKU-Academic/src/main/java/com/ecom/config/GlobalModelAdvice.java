@@ -22,17 +22,27 @@ public class GlobalModelAdvice {
     public GlobalModelAdvice(UserService userService,
             com.ecom.service.NotificationService notificationService,
             AuthModeProperties authProperties,
-            com.ecom.academic.service.SignatureWorkflowService signatureWorkflowService) {
+            com.ecom.academic.service.SignatureWorkflowService signatureWorkflowService,
+            com.ecom.sso.KkuSsoProperties ssoProperties) {
         this.userService = userService;
         this.notificationService = notificationService;
         this.authProperties = authProperties;
         this.signatureWorkflowService = signatureWorkflowService;
+        this.ssoProperties = ssoProperties;
     }
+
+    private final com.ecom.sso.KkuSsoProperties ssoProperties;
 
     @ModelAttribute
     public void addGlobalAttributes(jakarta.servlet.http.HttpServletRequest request, Principal principal, Model model) {
         // Drives which sign-in controls the login page renders.
         model.addAttribute("ssoMode", authProperties.isSsoMode());
+
+        // The signed-out page loads this in a hidden frame so the provider's
+        // session ends too, without making anyone wait for its app to boot.
+        if (authProperties.isSsoMode() && ssoProperties.isConfigured()) {
+            model.addAttribute("ssoLogoutUrl", ssoProperties.logoutUrl());
+        }
 
         // Expose CSP Nonce for templates
         if (request != null) {

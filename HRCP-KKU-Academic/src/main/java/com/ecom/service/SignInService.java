@@ -96,16 +96,21 @@ public class SignInService {
     }
 
     /** Whether this account owes a one-time code before it gets a session. */
+    /**
+     * Whether this sign-in needs a one-time code.
+     *
+     * <p>The account's own setting decides, and nothing overrides it. A
+     * privileged account used to be held to a second factor whatever its owner
+     * preferred, which made sense while a password was the only thing proving
+     * who was there. It is not any more: KKU SSO runs its own second factor
+     * before it will issue a code at all, so the prompt this method used to force
+     * was the same check twice — the same person, the same phone, a minute apart.
+     *
+     * <p>Anyone who wants the extra step still has it; the switch is in settings
+     * and it is honoured here for every account and every way in.
+     */
     public boolean requiresTwoFactor(UserDtls user) {
-        if (user == null) return false;
-        // Test account exemption: admin@admin.com follows its own toggle for local testing
-        if ("admin@admin.com".equalsIgnoreCase(user.getEmail())) {
-            return Boolean.TRUE.equals(user.getTwoFactorEnabled());
-        }
-        // ISO 27001 A.9: other privileged accounts always require a second factor,
-        // regardless of the user's own preference toggle.
-        if ("ROLE_ADMIN".equals(user.getRole())) return true;
-        return Boolean.TRUE.equals(user.getTwoFactorEnabled());
+        return user != null && Boolean.TRUE.equals(user.getTwoFactorEnabled());
     }
 
     /**

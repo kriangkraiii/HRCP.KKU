@@ -15,6 +15,8 @@ import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 
+import com.ecom.sso.KkuSsoProperties;
+
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -41,9 +43,38 @@ public class SecurityHeadersFilter implements Filter {
          */
         private final boolean hstsEnabled;
 
+        /**
+         * Where the SSO provider is served from, for the logout frame.
+         *
+         * <p>Signing out has to end the session at the provider as well as here,
+         * and sending the browser there to do it means waiting for their whole
+         * single-page app to boot. Loading it in a hidden frame ends that session
+         * just the same while the person already sees the signed-out page — but a
+         * frame is exactly what {@code frame-src} governs, so the origin has to be
+         * named here. Taken from the configured stage rather than hard-coded, so
+         * UAT and production each allow only their own.
+         */
+        private final String ssoWebOrigin;
+
         public SecurityHeadersFilter(
-                        @Value("${app.security.hsts-enabled:true}") boolean hstsEnabled) {
+                        @Value("${app.security.hsts-enabled:true}") boolean hstsEnabled,
+                        KkuSsoProperties ssoProperties) {
                 this.hstsEnabled = hstsEnabled;
+                this.ssoWebOrigin = originOf(ssoProperties.webBaseUrl());
+        }
+
+        /** Scheme and host only — CSP sources carry no path. */
+        private static String originOf(String url) {
+                if (url == null || url.isBlank()) {
+                        return "";
+                }
+                try {
+                        java.net.URI uri = java.net.URI.create(url.trim());
+                        String origin = uri.getScheme() + "://" + uri.getHost();
+                        return uri.getPort() > 0 ? origin + ":" + uri.getPort() : origin;
+                } catch (IllegalArgumentException e) {
+                        return "";
+                }
         }
 
         @Override
@@ -195,7 +226,8 @@ public class SecurityHeadersFilter implements Filter {
                                 + "https://translate-pa.googleapis.com; "
                                 // blob: is required by the PDF preview iframe (doc_preview.js)
                                 + "frame-src 'self' blob: https://translate.google.com "
-                                + "https://docs.google.com https://hr2.kku.ac.th; "
+                                + "https://docs.google.com https://hr2.kku.ac.th"
+                                + (ssoWebOrigin.isBlank() ? "" : " " + ssoWebOrigin) + "; "
                                 + "frame-ancestors 'self'; "
                                 // The three directives below do not inherit from default-src.
                                 // Without form-action a reflected-injection bug could retarget
