@@ -32,6 +32,8 @@ app:
   alert:
     email:
       enabled: false
+  esign:
+    hmac-secret: test-signing-key-not-for-production
 
 fs:
   api:

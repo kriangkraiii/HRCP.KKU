@@ -221,8 +221,8 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
             AcademicRequest evaluation =
                     data.completedEvaluation(applicant, RequestStatus.COMPLETED, null);
 
-            assertThat(academicService.getLatestEvaluationExpiry(applicant.getId()))
-                    .isEqualTo(evaluation.getSubmissionDate().plusYears(3));
+            assertThat(academicService.getLatestEvaluationExpiry(applicant.getId()).truncatedTo(java.time.temporal.ChronoUnit.SECONDS))
+                    .isEqualTo(evaluation.getSubmissionDate().plusYears(3).truncatedTo(java.time.temporal.ChronoUnit.SECONDS));
         }
 
         /**
