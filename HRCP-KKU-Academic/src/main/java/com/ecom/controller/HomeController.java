@@ -72,7 +72,10 @@ public class HomeController {
 	}
 
 	@GetMapping("/signin")
-	public String login() {
+	public String login(@org.springframework.web.bind.annotation.RequestParam(name = "code", required = false) String code) {
+		if (code != null && !code.isBlank()) {
+			return "forward:/auth/callback/login";
+		}
 		return "guest/login";
 	}
 

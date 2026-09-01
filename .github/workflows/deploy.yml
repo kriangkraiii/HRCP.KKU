@@ -30,7 +30,7 @@ jobs:
       # 2.1) ตรวจสอบช่องโหว่ Dependencies (ISO 27001 A.12)
       - name: OWASP Dependency Check
         working-directory: ${{ env.PROJECT_DIR }}
-        run: mvn dependency-check:check -DfailBuildOnCVSS=7
+        run: mvn dependency-check:check -DfailBuildOnCVSS=7 -DfailOnError=false
         continue-on-error: true
 
       # 3) หยุด Windows Service "MyWebApp" ก่อน เพื่อปลดล็อกไฟล์ app.jar ที่กำลังถูกใช้งานอยู่

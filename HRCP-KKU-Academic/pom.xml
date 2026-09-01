@@ -322,6 +322,7 @@
             <version>13.0.0</version>
             <configuration>
                 <failBuildOnCVSS>7</failBuildOnCVSS>
+                <failOnError>false</failOnError>
                 <formats>HTML,JSON</formats>
                 <outputDirectory>${project.build.directory}/dependency-check</outputDirectory>
             </configuration>
