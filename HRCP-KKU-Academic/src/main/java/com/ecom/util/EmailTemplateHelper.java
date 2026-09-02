@@ -231,13 +231,13 @@ public final class EmailTemplateHelper {
           .append(escapeHtml(requestCode)).append("</strong> ของท่าน โดยมีรายละเอียดดังต่อไปนี้:</p>");
 
         sb.append("<div style='background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #d97706;padding:16px 20px;border-radius:8px;margin:20px 0;'>");
-        sb.append("<div style='font-weight:700;color:#92400e;margin-bottom:8px;font-size:14px;'>📝 ข้อเสนอแนะจากคณะอนุกรรมการ:</div>");
+        sb.append("<div style='font-weight:700;color:#92400e;margin-bottom:8px;font-size:14px;'>ข้อเสนอแนะจากคณะอนุกรรมการ:</div>");
         sb.append("<div style='color:#1e293b;font-size:14px;white-space:pre-wrap;line-line-height:1.6;'>")
           .append(escapeHtml(suggestionsText != null ? suggestionsText : "")).append("</div>");
         sb.append("</div>");
 
         sb.append("<div style='background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#991b1b;font-size:13px;font-weight:500;'>");
-        sb.append("⚠️ กรุณาเข้าสู่ระบบเพื่อแก้ไขเอกสารตามข้อเสนอแนะและยื่นเอกสารฉบับปรับปรุง");
+        sb.append("กรุณาเข้าสู่ระบบเพื่อแก้ไขเอกสารตามข้อเสนอแนะและยื่นเอกสารฉบับปรับปรุง");
         sb.append("</div>");
 
         return wrapLayout("ข้อเสนอแนะจากคณะอนุกรรมการ", "กรุณาแก้ไขเอกสาร", sb.toString());
@@ -277,7 +277,9 @@ public final class EmailTemplateHelper {
         sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>ระบบตรวจพบเหตุการณ์แจ้งเตือนสถานะการทำงาน ดังนี้:</p>");
 
         sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid ").append(levelColor).append(";padding:16px 20px;border-radius:8px;margin-bottom:20px;'>");
-        sb.append("<div style='font-weight:700;color:#1e293b;font-size:15px;margin-bottom:6px;'>").append(levelIcon).append(" ").append(escapeHtml(heading)).append("</div>");
+        sb.append("<div style='font-weight:700;color:#1e293b;font-size:15px;margin-bottom:6px;'>")
+          .append(levelIcon != null && !levelIcon.isBlank() ? escapeHtml(levelIcon) + " " : "")
+          .append(escapeHtml(heading)).append("</div>");
         sb.append("<div style='font-size:13px;color:#64748b;margin-bottom:8px;'>แหล่งที่มา: <strong>").append(escapeHtml(source)).append("</strong> | เวลา: ").append(escapeHtml(timestamp)).append("</div>");
         sb.append("<div style='background:#ffffff;border:1px solid #cbd5e1;padding:12px;border-radius:6px;font-size:13px;color:#334155;white-space:pre-wrap;font-family:monospace;'>")
           .append(escapeHtml(detail)).append("</div>");

@@ -1,18 +1,18 @@
 # แผนการพัฒนา: ระบบ Auto-Link และ Auto-Role บุคลากร (Staff Member) กับบัญชีผู้ใช้ (UserDtls)
 
-## 📌 ภาพรวมและปัญหา (Context & Problem)
+##  ภาพรวมและปัญหา (Context & Problem)
 1. **ปัญหาปัจจุบัน:** ในหน้าจัดการบุคลากร (`staff_list.html`) บุคลากรทุกคนแสดงสถานะ **"ยังไม่ผูก"** (Unlinked) ทำให้ไม่สามารถเลือกเป็นผู้ลงนามในระบบเอกสารอิเล็กทรอนิกส์ (E-Signature) ได้ ทั้งที่ข้อมูลในระบบ (`user_dtls` และ `fs_faculty` จากเว็บ `computing.kku.ac.th`) มีชื่อ-นามสกุล และอีเมล (`@kku.ac.th`) ตรงกัน 100%
 2. **บทบาทเริ่มต้น:** ทุกคนถูกตั้งเป็น `GENERAL` ไม่ได้ดึงตำแหน่งบริหาร (`manage_position` เช่น คณบดี, รองคณบดี) มาตั้งเป็นบทบาท `DEAN`, `HEAD` โดยอัตโนมัติ
 
 ---
 
-## 🎯 เป้าหมาย (Objectives)
+##  เป้าหมาย (Objectives)
 - **Option A (Smart Auto-Linking & Auto-Role on Sync):** ปรับปรุง `StaffDirectorySync` ให้ค้นหาและผูก `UserDtls` อัตโนมัติด้วย Email และ ชื่อ-สกุล พร้อมแมป `manage_position` เป็นบทบาท `DEAN` / `HEAD` โดยอัตโนมัติ
-- **Option B (One-Click Admin Auto-Link & Sync):** เพิ่มปุ่ม `⚡ ผูกบัญชีอัตโนมัติ` และ `🔄 ซิงค์ข้อมูลต้นทาง` ในหน้า `staff_list.html` ให้ผู้ดูแลระบบสามารถกด Re-link / Re-sync ได้ตลอดเวลาพร้อมสรุปผล
+- **Option B (One-Click Admin Auto-Link & Sync):** เพิ่มปุ่ม ` ผูกบัญชีอัตโนมัติ` และ ` ซิงค์ข้อมูลต้นทาง` ในหน้า `staff_list.html` ให้ผู้ดูแลระบบสามารถกด Re-link / Re-sync ได้ตลอดเวลาพร้อมสรุปผล
 
 ---
 
-## 🛠️ รายละเอียดการเปลี่ยนแปลง (Detailed Technical Breakdown)
+##  รายละเอียดการเปลี่ยนแปลง (Detailed Technical Breakdown)
 
 ### 1. Backend Service: `StaffDirectorySync.java`
 - **Auto-Link ในวงจร Sync:**
@@ -42,14 +42,14 @@
 
 ### 4. Frontend UI: `staff_list.html`
 - ปรับปรุง Header Toolbar:
-  - เพิ่มปุ่ม `⚡ ผูกบัญชีอัตโนมัติ (Auto-Link)`
-  - เพิ่มปุ่ม `🔄 ซิงค์ข้อมูลบุคลากร (Sync Directory)`
+  - เพิ่มปุ่ม ` ผูกบัญชีอัตโนมัติ (Auto-Link)`
+  - เพิ่มปุ่ม ` ซิงค์ข้อมูลบุคลากร (Sync Directory)`
 - แสดง Alert Banner เมื่อกดสำเร็จ (เช่น *"ผูกบัญชีสำเร็จ 35 คน, ปรับบทบาทบริหาร 4 คน"*)
 - ตารางบุคลากรจะแสดง Badge สีเขียว **"ผูกแล้ว"** พร้อม Tooltip แสดง Email ของบัญชีผู้ใช้ที่ผูกไว้
 
 ---
 
-## 🧪 แผนการทดสอบ (Verification Plan)
+## [Test] แผนการทดสอบ (Verification Plan)
 1. **Automated Tests:**
    - สร้าง Unit Test `StaffDirectorySyncTest` เพื่อทดสอบ:
      - การจับคู่อัตโนมัติด้วย Email

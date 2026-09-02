@@ -165,7 +165,7 @@ function permanentDeleteStorageFile(btn) {
     var id = btn.getAttribute('data-id');
     var name = btn.getAttribute('data-name');
     showConfirm('ลบถาวร',
-        '⚠️ ลบ <strong>' + name + '</strong> ถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+        'ลบ <strong>' + name + '</strong> ถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
         function() {
             var fd = new FormData();
             fd.append('id', id);
@@ -184,7 +184,7 @@ function permanentDeleteStorageFile(btn) {
 
 function emptyStorageTrash() {
     showConfirm('ล้างถังขยะทั้งหมด',
-        '⚠️ ลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+        'ลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
         function() {
             fetch('/admin/file-manager/storage/empty-trash', { method: 'POST', headers: getCsrfHeaders() })
                 .then(function(r) { return r.json(); })

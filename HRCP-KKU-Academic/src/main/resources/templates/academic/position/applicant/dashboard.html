@@ -109,7 +109,7 @@
                                 '<span class="text-danger"><i class="fas fa-exclamation-circle"></i> หมดอายุแล้ว</span>';
                             bar.style.width = '0%';
                             card.style.borderLeftColor = '#c62828';
-                            warn.textContent = '⚠️ ผลประเมินการสอนหมดอายุแล้ว กรุณาดำเนินการประเมินใหม่';
+                            warn.textContent = 'ผลประเมินการสอนหมดอายุแล้ว กรุณาดำเนินการประเมินใหม่';
                             return;
                         }
 
@@ -135,14 +135,14 @@
                         if (remaining < 30 * 24 * 60 * 60 * 1000) { // < 1 month
                             card.style.borderLeftColor = '#c62828';
                             bar.style.background = 'linear-gradient(90deg, #ef5350, #c62828)';
-                            warn.textContent = '🔴 กรุณายื่นขอตำแหน่งโดยเร็ว';
+                            warn.textContent = 'กรุณายื่นขอตำแหน่งโดยเร็ว';
                         } else if (remaining < 90 * 24 * 60 * 60 * 1000) { // < 3 months
                             card.style.borderLeftColor = '#f57f17';
                             bar.style.background = 'linear-gradient(90deg, #ffa726, #f57f17)';
-                            warn.textContent = '🟡 ใกล้หมดอายุ กรุณายื่นขอตำแหน่งภายในเร็วๆ นี้';
+                            warn.textContent = 'ใกล้หมดอายุ กรุณายื่นขอตำแหน่งภายในเร็วๆ นี้';
                         } else if (remaining < 180 * 24 * 60 * 60 * 1000) { // < 6 months
                             card.style.borderLeftColor = '#ff9800';
-                            warn.textContent = '🟠 ผลประเมินจะหมดอายุในอีกไม่ถึง 6 เดือน';
+                            warn.textContent = 'ผลประเมินจะหมดอายุในอีกไม่ถึง 6 เดือน';
                         } else {
                             warn.textContent = '';
                         }

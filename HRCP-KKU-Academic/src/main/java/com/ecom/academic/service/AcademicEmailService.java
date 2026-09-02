@@ -166,7 +166,7 @@ public class AcademicEmailService {
         String extraDetails = "";
         if (newStatus == RequestStatus.MEETING_SCHEDULED && request.getMeetingDate() != null) {
             extraDetails = "<div style='background:#f1f5f9;border:1px solid #cbd5e1;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
-                    + "<div style='font-weight:600;color:#1e293b;margin-bottom:4px;'>📅 รายละเอียดการนัดหมาย:</div>"
+                    + "<div style='font-weight:600;color:#1e293b;margin-bottom:4px;'>รายละเอียดการนัดหมาย:</div>"
                     + "<div>วันประชุม: <strong>" + request.getMeetingDate() + "</strong></div>"
                     + (request.getMeetingLocation() != null ? "<div>สถานที่: " + request.getMeetingLocation() + "</div>" : "")
                     + "</div>";

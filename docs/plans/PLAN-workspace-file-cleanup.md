@@ -15,9 +15,9 @@
 - คงไฟล์สคริปต์จำเป็นใน Root เช่น `deploy.sh` เพื่อไม่ให้กระทบต่อ Workflow การ Deploy
 
 ### 1.2 Absolute Constraints
-- ❌ **ห้ามแก้ไข/ย้าย/ลบ** ไฟล์หรือโฟลเดอร์ใดๆ ภายใน `HRCP-KKU-Academic/`
-- ❌ **ห้ามแตะต้อง** ไฟล์คอนฟิกเครื่องมือและการพัฒนา (`.agent/`, `.vscode/`, `.metadata/`, `.venv/`, `.gitignore`, `.github/`)
-- ✅ **เน้นเฉพาะ** การจัดระเบียบไฟล์เอกสาร Markdown, รายงาน JSON/HTML, สคริปต์ SQL, และไฟล์ PDF อ้างอิง
+- [NO] **ห้ามแก้ไข/ย้าย/ลบ** ไฟล์หรือโฟลเดอร์ใดๆ ภายใน `HRCP-KKU-Academic/`
+- [NO] **ห้ามแตะต้อง** ไฟล์คอนฟิกเครื่องมือและการพัฒนา (`.agent/`, `.vscode/`, `.metadata/`, `.venv/`, `.gitignore`, `.github/`)
+- [YES] **เน้นเฉพาะ** การจัดระเบียบไฟล์เอกสาร Markdown, รายงาน JSON/HTML, สคริปต์ SQL, และไฟล์ PDF อ้างอิง
 
 ---
 
@@ -106,7 +106,7 @@
 - [x] **Root Cleanliness Check:** Root Directory มีเฉพาะโฟลเดอร์หลัก, `deploy.sh`, และไฟล์คอนฟิก
 - [x] **Documentation Structure Check:** ไฟล์เอกสารทั้งหมดถูกจัดเข้าโฟลเดอร์ตามหมวดหมู่อย่างเป็นระเบียบ
 
-## ✅ PHASE X COMPLETE
-- Code Untouched: ✅ 100% Protected (No changes to `HRCP-KKU-Academic`)
-- Structure: ✅ Clean & Categorized
+## [YES] PHASE X COMPLETE
+- Code Untouched: [YES] 100% Protected (No changes to `HRCP-KKU-Academic`)
+- Structure: [YES] Clean & Categorized
 - Date: 2026-09-02

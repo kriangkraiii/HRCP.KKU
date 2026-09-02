@@ -1,11 +1,11 @@
 # PLAN: การเปิดใช้งานระบบดึงผลงานวิจัยแบบครอบคลุมรอบด้าน (Full Multi-Source Harvest)
 
-## 📌 เป้าหมาย (Goal)
+##  เป้าหมาย (Goal)
 ดึงผลงานวิจัยของอาจารย์วิทยาลัยการคอมพิวเตอร์ครบทั้ง 41 ท่านจากทุกฐานข้อมูลสากล (IEEE, ACM, Scopus, Crossref, DBLP, OpenAlex, ThaiJO, KKU IR) อย่างครบถ้วน แม่นยำ และไม่มีข้อมูลซ้ำซ้อน
 
 ---
 
-## 🛠️ รายละเอียดขั้นตอนดำเนินงาน (Task Breakdown)
+## ️ รายละเอียดขั้นตอนดำเนินงาน (Task Breakdown)
 1. **ตรวจสอบความพร้อมของ Adapters ทั้ง 5+1 แหล่ง:**
    - Scopus API
    - OpenAlex (Author Search)
@@ -24,5 +24,5 @@
 
 ---
 
-## 📅 ไฟล์แผนงาน:
+##  ไฟล์แผนงาน:
 - `docs/PLAN-publication-harvest-final.md`

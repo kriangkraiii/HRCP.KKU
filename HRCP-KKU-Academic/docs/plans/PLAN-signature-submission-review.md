@@ -6,12 +6,12 @@
 
 ---
 
-## 🎯 Goal
+##  Goal
 Implement a pre-submission applicant signature validation gate and an admin-driven per-document and batch re-sign/revision flow with real-time multi-channel notification (Email + In-App) and form editing capability.
 
 ---
 
-## 📋 Task Breakdown
+##  Task Breakdown
 
 ### Phase 1: Backend Signature Completeness & Validation Gate
 - Add validation methods in `SignatureWorkflowService`:
@@ -47,5 +47,5 @@ Implement a pre-submission applicant signature validation gate and an admin-driv
 
 ---
 
-## 🚀 Execution
+##  Execution
 Run `/create` or approve `implementation_plan.md` to begin implementation.

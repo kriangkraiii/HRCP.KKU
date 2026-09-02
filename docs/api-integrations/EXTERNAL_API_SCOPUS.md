@@ -44,11 +44,11 @@ unique key of a row is `(user_id, eid)`.
 
 | Param       | Required | Description |
 |-------------|----------|-------------|
-| `user_ids`  | ✅       | Comma-separated list of faculty `user_id`s (our system's IDs). Duplicates ignored. |
-| `year_from` | ✅       | Start year (inclusive), 4 digits. Based on the publication's Scopus cover date. |
-| `year_to`   | ❌       | End year (inclusive). Defaults to the current year. |
-| `limit`     | ❌       | Page size. Default `50`, max `500`. |
-| `offset`    | ❌       | Rows to skip. Default `0`. |
+| `user_ids`  | [YES]       | Comma-separated list of faculty `user_id`s (our system's IDs). Duplicates ignored. |
+| `year_from` | [YES]       | Start year (inclusive), 4 digits. Based on the publication's Scopus cover date. |
+| `year_to`   | [NO]       | End year (inclusive). Defaults to the current year. |
+| `limit`     | [NO]       | Page size. Default `50`, max `500`. |
+| `offset`    | [NO]       | Rows to skip. Default `0`. |
 
 `user_id`s are the platform's stable primary keys; obtain the person → `user_id` mapping from
 the platform operator.

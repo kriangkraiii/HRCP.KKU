@@ -1,6 +1,6 @@
 # Plan: Admin Unlimited Storage (ยกเลิกการจำกัดขนาดพื้นที่จัดเก็บสำหรับแอดมิน)
 
-## 📌 Context & Problem
+##  Context & Problem
 - ปัจจุบันในระบบคลังเอกสาร (`AdminStorageService` และ `file_manager.html` / `user_storage.html`):
   1. มีการกำหนดค่า Default Max Storage เช่น `app.storage.admin.max-bytes = 10 GB` (และ `app.storage.user.max-bytes = 500 MB`)
   2. การ์ดแสดงผลสรุปพื้นที่ "พื้นที่ใช้งาน" (ดังภาพหน้าจอ) แสดงเพียงขนาดไฟล์ที่ใช้ไป (เช่น `1.0 MB`) แต่ในส่วนโควตาแสดงการจำกัดขนาด หรือแถบความจุที่คำนวณจากขีดจำกัด
@@ -8,7 +8,7 @@
 
 ---
 
-## 🎯 Objectives
+##  Objectives
 1. **Admin Quota Exemption / Unlimited Mode**:
    - ปรับ `AdminStorageService` ให้รองรับ Unlimited Storage (ไม่มีการโยน `IllegalStateException` บล็อกการอัปโหลดไฟล์ของ Admin)
    - หากผู้ใช้เป็น `ROLE_ADMIN` หรือเข้าใช้งานคลังไฟล์ฝั่งผู้ดูแลระบบ (`/admin/file-manager/storage`) ระบบจะไม่จำกัดโควตา
@@ -22,7 +22,7 @@
 
 ---
 
-## 📋 Task Breakdown
+##  Task Breakdown
 
 ### Phase 1: Backend Service & Logic Update
 - [ ] **[MODIFY] `AdminStorageService.java`**:
@@ -50,7 +50,7 @@
 
 ---
 
-## 🔒 Socratic Gate & Open Questions for User
+##  Socratic Gate & Open Questions for User
 1. **ขอบเขตของ Unlimited Storage**:
    - ต้องการให้เป็น Unlimited เฉพาะ **คลังไฟล์ระบบแอดมิน (`/admin/file-manager`)** หรือรวมถึง **คลังไฟล์ส่วนตัว (`/user/academic/storage`) ของบัญชีที่เป็น Admin** ด้วยหรือไม่?
 2. **รูปแบบการแสดงผล UI ที่ต้องการ**:

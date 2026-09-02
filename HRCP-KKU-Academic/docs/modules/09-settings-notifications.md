@@ -6,8 +6,8 @@
 
 ```mermaid
 graph LR
-    User["👨‍🏫 ผู้ยื่นคำร้อง<br/>(Applicant)"]
-    Admin["👨‍💼 ผู้ดูแลระบบ<br/>(Admin)"]
+    User["‍ ผู้ยื่นคำร้อง<br/>(Applicant)"]
+    Admin["‍ ผู้ดูแลระบบ<br/>(Admin)"]
     System["⚙️ ระบบ<br/>(System)"]
 
     UC1(["UC-SET-01: ดูหน้าตั้งค่า"])

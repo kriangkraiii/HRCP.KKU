@@ -171,7 +171,7 @@ public class EvaluationExpiryScheduler {
             }
 
             // Create In-App Notification (marked as important)
-            String notifTitle = "⚠️ ผลประเมินการสอนจะหมดอายุภายใน " + alertLabel;
+            String notifTitle = "ผลประเมินการสอนจะหมดอายุภายใน " + alertLabel;
             String notifMsg = "ผลการประเมินการสอน (" + requestCode + ") ของท่านจะหมดอายุในอีก " + daysLeft + " วัน (วันที่ " + formattedDate + ") กรุณาดำเนินการยื่นขอตำแหน่งก่อนหมดอายุ";
             String notifLink = "/user/position/dashboard";
             notificationService.sendNotification(user, null, notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.EXPIRY_WARNING, true);

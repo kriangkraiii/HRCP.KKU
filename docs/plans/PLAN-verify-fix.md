@@ -20,7 +20,7 @@ When clicking "ตรวจสอบทันที" in the verification modal, 
   - Call `/esign/verify/check/{code}` API.
   - **If Found**: Navigate immediately to `/esign/verify/{code}`.
   - **If Not Found**: Display `<div class="alert alert-danger">` inside the modal:
-    `❌ ไม่พบเอกสารรหัส "..." ในระบบ กรุณาตรวจสอบรหัสอีกครั้ง`
+    `[NO] ไม่พบเอกสารรหัส "..." ในระบบ กรุณาตรวจสอบรหัสอีกครั้ง`
     Reset button and auto-select input text for easy correction.
 
 ### 3. Verification Plan

@@ -1,13 +1,13 @@
 # Plan: ระบบเร่งความเร็วการสร้างและพรีวิวเอกสาร (Hybrid Option A + B)
 
-## 📌 Context
+##  Context
 ปัญหาปัจจุบัน: เมื่อผู้ใช้กด "ดูตัวอย่าง" ในหน้ารายละเอียดคำร้องหรือหน้ากรอกฟอร์ม หน้าจอจะขึ้น **"กำลังสร้างเอกสาร..."** หมุนรอ 2–5 วินาที เนื่องจากระบบต้องเริ่ม Process LibreOffice ใหม่จากศูนย์ (Cold Start) และสร้างไฟล์ตามคำขอแบบ Synchronous ทุกครั้ง
 
 **เป้าหมาย:** ลดเวลาการแสดงผลตัวอย่างเอกสารให้เหลือ **< 50ms (Instant)** สำหรับเอกสารที่บันทึกแล้ว และ **~300–500ms** สำหรับการแปลงสด
 
 ---
 
-## 🏗️ Architectural Strategy (Hybrid Option A + B)
+## ️ Architectural Strategy (Hybrid Option A + B)
 
 ### 1. Option A: ปรับแต่ง LibreOffice Engine ให้แปลงเร็วขึ้น (5–8x Speedup)
 - **Profile Directory Reuse:** เปลี่ยนจากการสร้าง/ลบโฟลเดอร์ user profile ใหม่ทุกครั้ง มาใช้ Pre-initialized Profile Pool ช่วยลด I/O overhead ไปได้กว่า 1.5–2.0 วินาทีต่อไฟล์
@@ -21,7 +21,7 @@
 
 ---
 
-## 📋 Task Breakdown
+##  Task Breakdown
 
 ### Phase 1: LibreOffice Engine & Two-Tier Cache Optimization (Option A)
 - [ ] ปรับปรุง `DocumentGenerationService.java`:
@@ -48,7 +48,7 @@
 
 ---
 
-## 🎯 Verification Checklist
+##  Verification Checklist
 - [ ] กดบันทึกฟอร์มเอกสาร แล้วกด "ดูตัวอย่าง" ทันที → โหลดขึ้นใน < 100ms
 - [ ] เข้าหน้ารายละเอียดคำร้องที่มีเอกสารครบ 9 รายการ แล้วกดดูตัวอย่างทีละไฟล์ → เปิดได้ทันทีโดยไม่ต้องรอหมุน
 - [ ] ตัวอย่างเอกสาร PDF ฟอนต์ Sarabun, ตาราง, และเครื่องหมายถูก/กากบาทยังคงตรงตามมาตรฐาน มข. 100%

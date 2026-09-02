@@ -1,6 +1,6 @@
 # แผนการพัฒนา: ปรับปรุงเทมเพลตเอกสาร และระบบลำดับขั้นตอนการลงนาม (Signer Workflow & Dynamic Signers)
 
-## 📌 ภาพรวมและปัญหา (Context & Problem)
+##  ภาพรวมและปัญหา (Context & Problem)
 1. **ชื่อ Hardcoded ในเอกสาร [doc_1.docx](file:///Users/kriangkrai/Developer/Projects/eclipse-workspace/Spring%20pj/pjweb/HRCP.KKU/HRCP-KKU-Academic/src/main/resources/templates/docx/doc_1.docx):**
    - ในเทมเพลตเดิมมีชื่อ `(นางสาวจิราภรณ์  หอมอ่อน)` ฝังตายตัวในช่อง "นักทรัพยากรบุคคล" ทำให้ไม่สามารถเปลี่ยนชื่อตามเจ้าหน้าที่ HR ผู้รับผิดชอบจริงได้ และใน `SignatureAnchorRegistry.java` ยังไม่ได้เปิดช่อง (Slot) ให้เจ้าหน้าที่ HR ลงนามในเอกสารฉบับนี้
 2. **ลำดับขั้นการลงนาม (Sequential Signer Workflow):**
@@ -13,7 +13,7 @@
 
 ---
 
-## 🎯 เป้าหมาย (Objectives)
+##  เป้าหมาย (Objectives)
 1. **แก้ไขเทมเพลต `doc_1.docx`:** เปลี่ยนข้อความ Hardcoded `(นางสาวจิราภรณ์  หอมอ่อน)` ให้เป็น Dynamic Placeholder `({{hr_staff_name}})`
 2. **อัปเดต Signature Registry:** เพิ่ม Signature Slot ที่ 2 ให้ Doc 1 (`hr`, "นักทรัพยากรบุคคล", `hr_staff_name`, "HR", order 2)
 3. **แมปข้อมูลและตัวเลือกผู้ลงนามใน `DocumentGenerationService.java`:** รองรับการเติม `hr_staff_name` อัตโนมัติ
@@ -21,7 +21,7 @@
 
 ---
 
-## 🛠️ รายละเอียดการแก้ไขโค้ด (Detailed Technical Tasks)
+##  รายละเอียดการแก้ไขโค้ด (Detailed Technical Tasks)
 
 ### 1. Template Layer: `src/main/resources/templates/docx/doc_1.docx`
 - แก้ไข `word/document.xml` ในไฟล์ `doc_1.docx`:
@@ -42,7 +42,7 @@
 
 ---
 
-## 🧪 แผนการทดสอบ (Verification Plan)
+## [Test] แผนการทดสอบ (Verification Plan)
 1. **Unit Tests:**
    - ทดสอบ `SignatureAnchorRegistryTest` (ยืนยัน Slot ของ Doc 1 มีทั้ง Applicant และ HR)
    - ทดสอบ `SignatureWorkflowServiceTest` (ยืนยัน Sequential Step Activation และ Decline Termination)

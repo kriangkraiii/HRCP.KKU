@@ -409,7 +409,7 @@
             }
 
             showConfirm(
-                isActive ? '⚠️ ไฟล์อยู่ในคำร้องที่ยังไม่เสร็จสิ้น' : 'ย้ายไปถังขยะ',
+                isActive ? 'ไฟล์อยู่ในคำร้องที่ยังไม่เสร็จสิ้น' : 'ย้ายไปถังขยะ',
                 bodyMsg,
                 function() {
                     const { type, id } = parseFileId(fileId);
@@ -459,7 +459,7 @@
             const fileName = btn.getAttribute('data-filename');
             showConfirm(
                 'ลบถาวร',
-                '⚠️ ต้องการลบ <strong>' + fileName + '</strong> ถาวรหรือไม่?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+                'ต้องการลบ <strong>' + fileName + '</strong> ถาวรหรือไม่?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
                 function() {
                     const { type, id } = parseFileId(fileId);
                     fetch('/admin/file-manager/permanent-delete/' + type + '/' + id, {
@@ -485,7 +485,7 @@
         function emptyTrash() {
             showConfirm(
                 'ล้างถังขยะทั้งหมด',
-                '⚠️ ลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+                'ลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
                 function() {
                     fetch('/admin/file-manager/empty-trash', {
                         method: 'POST',

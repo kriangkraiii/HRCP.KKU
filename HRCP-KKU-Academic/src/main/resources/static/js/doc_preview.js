@@ -164,7 +164,7 @@ class DocPreviewEngine {
                                 <div class="docx-spinner-icon"><i class="fas fa-file-pdf"></i></div>
                             </div>
                             <h6 class="docx-loading-title" id="docxLoadingTitle">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
-                            <p class="docx-loading-subtitle" id="docxLoadingSub">ระบบกำลังประมวลผลข้อมูลและแปลงเป็น PDF เพื่อแสดงผลที่แม่นยำ 100%</p>
+                        
                             <div class="docx-loading-progress-bar">
                                 <div class="docx-loading-progress-val"></div>
                             </div>
@@ -340,7 +340,7 @@ class DocPreviewEngine {
     /** ดึงเอกสารจาก server แล้วแสดงผล — ข้ามถ้าข้อมูลไม่เปลี่ยนจากที่แสดงอยู่ */
     async loadPreview() {
         if (this.standaloneUrl) {
-            this.setLoadingState(true, 'กำลังเปิดเอกสารตัวอย่าง...', 'ระบบกำลังดึงข้อมูลและเตรียมแสดงผล PDF ความละเอียดสูง');
+            this.setLoadingState(true, 'กำลังเปิดเอกสารตัวอย่าง...');
             this.setStatus('loading');
 
             try {
@@ -382,7 +382,7 @@ class DocPreviewEngine {
             return;
         }
 
-        this.setLoadingState(true, 'กำลังสร้างเอกสารตัวอย่าง...', 'ระบบกำลังจัดหน้าและประมวลผลข้อมูลเป็น PDF แบบเรียลไทม์');
+        this.setLoadingState(true, 'กำลังสร้างเอกสารตัวอย่าง...');
         this.setStatus('loading');
 
         try {

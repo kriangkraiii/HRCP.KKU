@@ -1,4 +1,4 @@
-# 🏛️ HRCP KKU - ระบบสารสนเทศการขอกำหนดตำแหน่งทางวิชาการ
+# HRCP KKU - ระบบสารสนเทศการขอกำหนดตำแหน่งทางวิชาการ
 ### Academic Position Management & Processing System
 **วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น (College of Computing, Khon Kaen University)**
 
@@ -13,55 +13,55 @@
 
 ---
 
-## 📌 สารบัญ (Table of Contents)
+## สารบัญ (Table of Contents)
 
-1. [ภาพรวมของระบบ (Overview)](#-ภาพรวมของระบบ-overview)
-2. [ฟังก์ชันการทำงานหลัก (Key Features)](#-ฟังก์ชันการทำงานหลัก-key-features)
-3. [เทคโนโลยีและสถาปัตยกรรม (Tech Stack & Architecture)](#-เทคโนโลยีและสถาปัตยกรรม-tech-stack--architecture)
-4. [โครงสร้างไดเรกทอรี (Project Structure)](#-โครงสร้างไดเรกทอรี-project-structure)
-5. [การติดตั้งและรันในเครื่องพัฒนา (Local Development)](#-การติดตั้งและรันในเครื่องพัฒนา-local-development)
-6. [การติดตั้งและ Deploy บน Production (Docker Deployment)](#-การติดตั้งและ-deploy-บน-production-docker-deployment)
-7. [ระบบสำรองและกู้คืนข้อมูล (Backup & Disaster Recovery)](#-ระบบสำรองและกู้คืนข้อมูล-backup--disaster-recovery)
-8. [ความมั่นคงปลอดภัยและการปฏิบัติตามมาตรฐาน (Security & Compliance)](#-ความมั่นคงปลอดภัยและการปฏิบัติตามมาตรฐาน-security--compliance)
-9. [ดัชนีเอกสารและคู่มือ (Documentation Index)](#-ดัชนีเอกสารและคู่มือ-documentation-index)
+1. [ภาพรวมของระบบ (Overview)](#ภาพรวมของระบบ-overview)
+2. [ฟังก์ชันการทำงานหลัก (Key Features)](#ฟังก์ชันการทำงานหลัก-key-features)
+3. [เทคโนโลยีและสถาปัตยกรรม (Tech Stack & Architecture)](#เทคโนโลยีและสถาปัตยกรรม-tech-stack--architecture)
+4. [โครงสร้างไดเรกทอรี (Project Structure)](#โครงสร้างไดเรกทอรี-project-structure)
+5. [การติดตั้งและรันในเครื่องพัฒนา (Local Development)](#การติดตั้งและรันในเครื่องพัฒนา-local-development)
+6. [การติดตั้งและ Deploy บน Production (Docker Deployment)](#การติดตั้งและ-deploy-บน-production-docker-deployment)
+7. [ระบบสำรองและกู้คืนข้อมูล (Backup & Disaster Recovery)](#ระบบสำรองและกู้คืนข้อมูล-backup--disaster-recovery)
+8. [ความมั่นคงปลอดภัยและการปฏิบัติตามมาตรฐาน (Security & Compliance)](#ความมั่นคงปลอดภัยและการปฏิบัติตามมาตรฐาน-security--compliance)
+9. [ดัชนีเอกสารและคู่มือ (Documentation Index)](#ดัชนีเอกสารและคู่มือ-documentation-index)
 
 ---
 
-## 📖 ภาพรวมของระบบ (Overview)
+## ภาพรวมของระบบ (Overview)
 
 **HRCP KKU** เป็นระบบสารสนเทศสำหรับการบริหารจัดการและติดตามคำขอกำหนดตำแหน่งทางวิชาการ (ผู้ช่วยศาสตราจารย์, รองศาสตราจารย์, ศาสตราจารย์) ของคณาจารย์และบุคลากรสายวิชาการ วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น โดยพัฒนากระบวนการแบบครบวงจร (End-to-End Paperless Workflow) ตั้งแต่การยื่นคำขอ, การตรวจสอบคุณสมบัติ, การลงนามอิเล็กทรอนิกส์, การออกเอกสารแบบประเมินและเอกสารทางการ (DOCX/PDF) ไปจนถึงการส่งต่อข้อมูลเข้าสู่ระบบบริหารงานบุคคล
 
 ---
 
-## ✨ ฟังก์ชันการทำงานหลัก (Key Features)
+## ฟังก์ชันการทำงานหลัก (Key Features)
 
-### 1. 📝 Academic Request & Workflow Management
+### 1. Academic Request & Workflow Management
 - **ระบบยื่นและติดตามคำขอ:** คณาจารย์สามารถยื่นคำขอกำหนดตำแหน่งทางวิชาการ พร้อมแนบเอกสารหลักฐาน ตรวจสอบสถานะแบบเรียลไทม์ (Status Tracker)
 - **ระบบกำหนดรหัสคำขออัตโนมัติ:** รูปแบบมาตรฐาน `KKU-ACAD-YYYYMM-XXXX` ป้องกันความซ้ำซ้อนและรองรับการค้นหา
 - **Multi-Role Flow:** รองรับสิทธิ์การใช้งานแบบแยกหน้าที่อย่างรัดกุม (Applicant, Staff, Department Head, Dean/Executive, System Admin)
 
-### 2. ✍️ Digital Signature & Approval Matrix (e-Signature)
+### 2. Digital Signature & Approval Matrix (e-Signature)
 - **ระบบลงนามอิเล็กทรอนิกส์ตามลำดับขั้น:** รองรับการเซ็นกำกับและการลงนามอนุมัติตาม Matrix สายงานบริหาร
 - **ลายน้ำและตราประทับเวลา (Timestamping):** บันทึกประวัติการลงนามเพื่อป้องกันการปฏิเสธความรับผิดชอบ (Non-repudiation)
 
-### 3. 📄 Automated Document Generation (Pure ZIP/XML & PDF Conversion)
+### 3. Automated Document Generation (Pure ZIP/XML & PDF Conversion)
 - **สร้างเอกสาร DOCX อัตโนมัติ:** เทคโนโลยี Pure ZIP/XML Stream สำหรับแทนที่ตัวแปรใน Template โดยรักษาฟอร์แมตและความสวยงาม 100%
 - **แปลงไฟล์เป็น PDF ความละเอียดสูง:** เชื่อมต่อ LibreOffice Engine ร่วมกับฟอนต์มาตรฐาน **TH Sarabun PSK** และระบบแปลงตัวเลขอารบิกเป็นเลขไทย
 - **ระบบพรีวิวเอกสารความเร็วสูง:** แคชเอกสารและเรนเดอร์พรีวิวอย่างรวดเร็ว
 
-### 4. 🌐 External Integration & Data Harvesting
+### 4. External Integration & Data Harvesting
 - **Scopus API Harvesting:** ดึงข้อมูลบทความวิจัย, ผู้แต่ง, Quartile (Q1–Q4), CiteScore, และค่าดัชนีชี้วัดอัตโนมัติ
 - **SSO Authentication:** รองรับ Single Sign-On ร่วมกับระบบของมหาวิทยาลัยขอนแก่น
 - **External User Synchronization:** ระบบจับคู่และซิงค์ข้อมูลบุคลากรภายนอก
 
-### 5. 🛡️ Security, Audit Logging & ISMS Compliance
+### 5. Security, Audit Logging & ISMS Compliance
 - **Audit Logging:** บันทึกประวัติการจราจรและกิจกรรมสำคัญตามพระราชบัญญัติว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์
 - **Password Complexity:** ตรวจสอบความปลอดภัยของรหัสผ่านตามมาตรฐาน ISO 27001 (Passay 2.0.0)
 - **Security Headers & Rate Limiting:** ป้องกัน Brute-force Attacks, CSRF และ XSS
 
 ---
 
-## 🛠️ เทคโนโลยีและสถาปัตยกรรม (Tech Stack & Architecture)
+## เทคโนโลยีและสถาปัตยกรรม (Tech Stack & Architecture)
 
 | Layer | Technologies & Libraries | รายละเอียด |
 |---|---|---|
@@ -74,18 +74,18 @@
 
 ---
 
-## 📁 โครงสร้างไดเรกทอรี (Project Structure)
+## โครงสร้างไดเรกทอรี (Project Structure)
 
 ```text
 HRCP.KKU (Project Root)
-├── deploy.sh                           # 🚀 สคริปต์หลักสำหรับ Deploy บน Production
-├── HRCP-KKU-Academic/                  # 💻 Source Code โปรเจกต์ Spring Boot
+├── deploy.sh                           # สคริปต์หลักสำหรับ Deploy บน Production
+├── HRCP-KKU-Academic/                  # Source Code โปรเจกต์ Spring Boot
 │   ├── src/main/java/com/ecom/         # Java Packages (Controllers, Services, Models, Repositories)
 │   ├── src/main/resources/             # Templates (Thymeleaf), Static assets, Application configs
 │   ├── src/test/java/                  # Unit & Integration Test Suites
 │   ├── pom.xml                         # Maven Dependencies & Build Configuration
 │   └── Dockerfile                      # Multi-stage Docker build สำหรับแอปพลิเคชัน
-└── docs/                               # 📚 คลังเอกสารและทรัพยากรระบบ
+└── docs/                               # คลังเอกสารและทรัพยากรระบบ
     ├── api-integrations/               # เอกสารเชื่อมต่อ Scopus, SSO, External Users
     │   ├── EXTERNAL_API_SCOPUS.md
     │   ├── EXTERNAL_DATA_MAPPING_ANALYSIS.md
@@ -112,7 +112,7 @@ HRCP.KKU (Project Root)
 
 ---
 
-## 💻 การติดตั้งและรันในเครื่องพัฒนา (Local Development)
+## การติดตั้งและรันในเครื่องพัฒนา (Local Development)
 
 ### ข้อกำหนดของระบบ (Prerequisites)
 - **JDK 21** (แนะนำ Eclipse Temurin หรือ Oracle OpenJDK 21)
@@ -148,7 +148,7 @@ HRCP.KKU (Project Root)
 
 ---
 
-## 🚀 การติดตั้งและ Deploy บน Production (Docker Deployment)
+## การติดตั้งและ Deploy บน Production (Docker Deployment)
 
 ระบบถูกออกแบบให้ทำงานแบบแยก 3 Container ภายใต้ Network เดียวกันเพื่อความปลอดภัยสูงสุด โดย Database จะไม่ Publish Port ออกภายนอก Server
 
@@ -169,11 +169,11 @@ HRCP.KKU (Project Root)
    - ส่ง Image และโค้ดไปยัง Server ปลายทาง
    - สั่ง Restart Container `app` โดยไม่กระทบต่อ Container `db` ทำให้ข้อมูลและบริการทำงานได้อย่างต่อเนื่อง
 
-> 📖 อ่านขั้นตอนการติดตั้ง Server ใหม่และการตั้งค่าโดยละเอียดได้ที่ [docs/deployment.md](docs/deployment.md)
+> อ่านขั้นตอนการติดตั้ง Server ใหม่และการตั้งค่าโดยละเอียดได้ที่ [docs/deployment.md](docs/deployment.md)
 
 ---
 
-## 💾 ระบบสำรองและกู้คืนข้อมูล (Backup & Disaster Recovery)
+## ระบบสำรองและกู้คืนข้อมูล (Backup & Disaster Recovery)
 
 Container `backup` จะทำการรัน `pg_dump` อัตโนมัติทุกวันตามเวลาที่กำหนดใน `.env` (ค่าเริ่มต้น 02:00 น. เวลาไทย) และเก็บย้อนหลังตามจำนวนวันที่ตั้งไว้ (ค่าเริ่มต้น 14 วัน)
 
@@ -191,7 +191,7 @@ docker compose run --rm --entrypoint ls backup -lh /backups
 
 ---
 
-## 🔒 ความมั่นคงปลอดภัยและการปฏิบัติตามมาตรฐาน (Security & Compliance)
+## ความมั่นคงปลอดภัยและการปฏิบัติตามมาตรฐาน (Security & Compliance)
 
 - **ISMS (ISO/IEC 27001):** มีชุดเอกสารนโยบายความมั่นคงปลอดภัยสารสนเทศ การประเมินความเสี่ยง แผนรับมือภัยคุกคาม และการควบคุมการเข้าถึงใน [docs/isms/](docs/isms/)
 - **Activity & Traffic Audit Log:** ระบบ Middleware บันทึก Access Log และ Audit Trail ตามข้อกำหนดของ พ.ร.บ. ว่าด้วยการกระทำความผิดเกี่ยวกับคอมพิวเตอร์ (เก็บรักษาข้อมูลไม่น้อยกว่า 90 วัน)
@@ -200,7 +200,7 @@ docker compose run --rm --entrypoint ls backup -lh /backups
 
 ---
 
-## 📚 ดัชนีเอกสารและคู่มือ (Documentation Index)
+## ดัชนีเอกสารและคู่มือ (Documentation Index)
 
 | หมวดหมู่ | เอกสาร | รายละเอียด |
 |---|---|---|
@@ -217,9 +217,9 @@ docker compose run --rm --entrypoint ls backup -lh /backups
 
 ---
 
-## 👥 หน่วยงานผู้ดูแลระบบ (Maintainers)
+## หน่วยงานผู้ดูแลระบบ (Maintainers)
 
 **วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น (College of Computing, Khon Kaen University)**  
-- 📍 123 หมู่ 16 ถ.มิตรภาพ ต.ในเมือง อ.เมือง จ.ขอนแก่น 40002  
-- 🌐 Website: [https://computing.kku.ac.th](https://computing.kku.ac.th)  
-- 📧 Contact / Support: ทีมพัฒนาระบบสารสนเทศ วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น
+- 123 หมู่ 16 ถ.มิตรภาพ ต.ในเมือง อ.เมือง จ.ขอนแก่น 40002  
+- Website: [https://computing.kku.ac.th](https://computing.kku.ac.th)  
+- Contact / Support: ทีมพัฒนาระบบสารสนเทศ วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น

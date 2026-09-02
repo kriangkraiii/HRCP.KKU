@@ -14,8 +14,8 @@
 - จัดรูปแบบด้วย Markdown คุณภาพสูง สวยงาม อ่านง่าย พร้อม Badges, โครงสร้างไดเรกทอรี และ Diagram
 
 ### 1.2 Constraints & Scope
-- ❌ **ห้ามแก้ไข/แตะต้อง** ไฟล์ซอร์สโค้ดใน `HRCP-KKU-Academic/`
-- ✅ **เน้นการสร้างไฟล์ `README.md`** ที่ Root Directory และเชื่อมโยงเอกสารใน `docs/` ให้สมบูรณ์
+- [NO] **ห้ามแก้ไข/แตะต้อง** ไฟล์ซอร์สโค้ดใน `HRCP-KKU-Academic/`
+- [YES] **เน้นการสร้างไฟล์ `README.md`** ที่ Root Directory และเชื่อมโยงเอกสารใน `docs/` ให้สมบูรณ์
 
 ---
 
@@ -69,8 +69,8 @@ README.md Structure:
 - [x] **Completeness:** ครอบคลุมการติดตั้ง Local, Deploy, Backup, และโครงสร้างโฟลเดอร์ครบถ้วน
 - [x] **Formatting & Links:** รูปแบบ Markdown สวยงาม ลิงก์ไปยัง `docs/` ทำงานถูกต้อง
 
-## ✅ PHASE X COMPLETE
+## [YES] PHASE X COMPLETE
 - File Created: [README.md](file:///Users/kriangkrai/Developer/Projects/eclipse-workspace/Spring%20pj/pjweb/HRCP.KKU/README.md)
-- Code Untouched: ✅ 100% Protected
-- Verification: ✅ Passed
+- Code Untouched: [YES] 100% Protected
+- Verification: [YES] Passed
 - Date: 2026-09-02

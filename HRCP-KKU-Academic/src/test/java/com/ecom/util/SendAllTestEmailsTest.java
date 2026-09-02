@@ -77,7 +77,7 @@ class SendAllTestEmailsTest {
         helper.setSubject(subject);
         helper.setText(htmlContent, true);
         mailSender.send(message);
-        System.out.println("✅ Sent: " + subject);
+        System.out.println("Sent: " + subject);
         Thread.sleep(800); // polite delay between SMTP dispatches
     }
 
@@ -85,7 +85,7 @@ class SendAllTestEmailsTest {
     @DisplayName("ส่งอีเมลทดสอบทุกรูปแบบไปยังที่อยู่ที่ตั้งไว้ใน EMAIL_TARGET (ไม่มีไฟล์แนบ)")
     void sendAllEmailTemplates() throws Exception {
         JavaMailSenderImpl mailSender = createMailSender();
-        System.out.println("🚀 กำลังส่งอีเมลทดสอบทุกรูปแบบ (Zero Attachment / Instant CDN) ไปยัง: " + targetEmail);
+        System.out.println("กำลังส่งอีเมลทดสอบทุกรูปแบบ (Zero Attachment / Instant CDN) ไปยัง: " + targetEmail);
 
         // 1. Password Reset
         String resetUrl = "https://localhost:8081/reset-password?token=sample_test_token_123456";
@@ -109,7 +109,7 @@ class SendAllTestEmailsTest {
                         "อยู่ระหว่างการพิจารณาของคณะกรรมการ",
                         "แจ้งผล - ผ่านการประเมิน",
                         "#16a34a",
-                        "<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px 16px;margin-bottom:16px;color:#166534;font-size:13px;'><strong>🎉 ยินดีด้วย!</strong> ผลการประเมินการสอนของท่านผ่านเกณฑ์มาตรฐานเรียบร้อยแล้ว ท่านสามารถนำผลการประเมินไปใช้ยื่นคำขอตำแหน่งทางวิชาการได้ภายใน 1 ปี</div>"));
+                        "<div style='background:#f0fdf4;border:1px solid #bbf7d0;border-radius:6px;padding:12px 16px;margin-bottom:16px;color:#166534;font-size:13px;'><strong>ยินดีด้วย!</strong> ผลการประเมินการสอนของท่านผ่านเกณฑ์มาตรฐานเรียบร้อยแล้ว ท่านสามารถนำผลการประเมินไปใช้ยื่นคำขอตำแหน่งทางวิชาการได้ภายใน 1 ปี</div>"));
 
         // 5. Subcommittee Suggestions / Revision Request
         send(mailSender, "[ทดสอบ 5/9] ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน (#106) - กรุณาแก้ไขเอกสาร",
@@ -154,11 +154,11 @@ class SendAllTestEmailsTest {
                         "ผู้ดูแลระบบ (Admin)",
                         "การซิงค์ข้อมูลบุคลากรสำเร็จ",
                         "#16a34a",
-                        "✅",
+                        "",
                         "CpDirectorySyncService",
                         "อ่านข้อมูลจากเว็บคณะสำเร็จ 76 คน — อัปเดตข้อมูลครบถ้วน\nใช้เวลาในการประมวลผล: 1.42 วินาที\nไม่มีข้อผิดพลาด",
                         "18 ส.ค. 2026 21:00:00"));
 
-        System.out.println("🎉 ส่งอีเมลทดสอบครบทั้ง 9 รูปแบบเรียบร้อยแล้ว (ไม่มีไฟล์แนบ โหลดทันที)!");
+        System.out.println("ส่งอีเมลทดสอบครบทั้ง 9 รูปแบบเรียบร้อยแล้ว (ไม่มีไฟล์แนบ โหลดทันที)!");
     }
 }

@@ -8,7 +8,7 @@
 
 ```mermaid
 graph LR
-    Admin["👨‍💼 ผู้ดูแลระบบ<br/>(Admin)"]
+    Admin["‍ ผู้ดูแลระบบ<br/>(Admin)"]
 
     UC1(["UC-STAFF-01: ดูรายชื่อบุคลากร"])
     UC2(["UC-STAFF-02: เพิ่มบุคลากร"])

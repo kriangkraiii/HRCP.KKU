@@ -1,11 +1,11 @@
 # Project Plan: Comprehensive Database Indexing for HRCP.KKU
 
-## 📌 Executive Summary
+##  Executive Summary
 วางแผนและกำหนดกลยุทธ์การทำ Indexing ให้กับตารางฐานข้อมูลทั้งหมดในโปรเจกต์ HRCP.KKU (Spring Data JPA / PostgreSQL) เพื่อเพิ่มประสิทธิภาพการค้นหา, การ JOIN ผ่าน Foreign Key, การกรองสถานะ (Filter), และการเรียงลำดับเวลา (Sorting) ให้พร้อมรับการทำงานระดับ Production และป้องกันปัญหา Performance Degradation เมื่อข้อมูลมีขนาดใหญ่ขึ้น
 
 ---
 
-## 🎯 Scope of Work
+##  Scope of Work
 
 ### Phase 1: High Priority (Core & High-Traffic Tables)
 1. **`user_dtls` (`UserDtls.java`)**
@@ -61,7 +61,7 @@
 
 ---
 
-## 🛠️ Implementation Strategy Matrix
+##  Implementation Strategy Matrix
 
 | Entity Model | Proposed Index Name | Columns / Order | Target Query / Use Case |
 |---|---|---|---|
@@ -90,7 +90,7 @@
 
 ---
 
-## 🧪 Verification & Validation Checklist
+## [Test] Verification & Validation Checklist
 - [ ] 1. ตรวจสอบ Syntax ของ JPA `@Table(indexes = { ... })` บนทุก Entity
 - [ ] 2. คอมไพล์โปรเจกต์ผ่าน `./mvnw clean test-compile` (Zero errors)
 - [ ] 3. ตรวจสอบว่าไม่มีชื่อ Index ซ้ำกันระหว่าง Table ต่างๆ (ใช้ prefix ชัดเจน เช่น `idx_acad_...`, `idx_pos_...`)

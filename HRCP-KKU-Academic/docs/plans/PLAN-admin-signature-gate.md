@@ -7,7 +7,7 @@
 
 ---
 
-## 🎯 Goal & Business Objective
+##  Goal & Business Objective
 
 สร้างกลไก **"Admin Verification Gate"** เพื่อควบคุมการเวียนลงนามเอกสาร:
 1. **ผู้ยื่นคำร้อง (Applicant):** ลงนามเฉพาะในส่วนของผู้ยื่นคำร้อง และต้อง **กดยื่นคำร้อง (Submit Request)** เข้ามาในระบบก่อนเท่านั้น
@@ -18,7 +18,7 @@
 
 ---
 
-## 📋 Task Breakdown & Architecture
+##  Task Breakdown & Architecture
 
 ```mermaid
 graph TD
@@ -88,6 +88,6 @@ graph TD
 
 ---
 
-## 🚀 Next Steps
+##  Next Steps
 - ตรวจสอบและให้ความเห็นชอบแผนงาน
 - แจ้งเพื่อเริ่มดำเนินการขั้นตอน Implementation

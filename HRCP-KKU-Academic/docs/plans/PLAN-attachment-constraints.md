@@ -1,14 +1,14 @@
 # แผนการพัฒนา (Project Plan): จำกัดประเภทไฟล์แนบ (.pdf, .docx, .doc, .zip) ซ่อนปุ่มดูไฟล์ ZIP และจำกัดขนาดไฟล์แนบรวมไม่เกิน 75MB ต่อคำร้อง
 
-## 📋 ข้อมูลเบื้องต้น (Overview & Context)
+##  ข้อมูลเบื้องต้น (Overview & Context)
 ผู้ใช้งานต้องการปรับปรุงการแนบไฟล์ประกอบคำร้อง (Attachments) ดังนี้:
 1. **อนุญาตเฉพาะนามสกุลไฟล์:** `.pdf`, `.docx`, `.doc`, `.zip` เท่านั้น (ไม่อนุญาตไฟล์ประเภทอื่น เช่น `.xlsx`, `.pptx`, `.png`, `.jpg`, `.rar`, `.7z` ฯลฯ)
-2. **เงื่อนไขไฟล์ `.zip`:** ไฟล์ ZIP จะ**ไม่มีปุ่มเปิดดูไฟล์ (👁️)** มีเฉพาะปุ่ม**ดาวน์โหลด (📥)** (และปุ่มลบ 🗑️ สำหรับผู้มีสิทธิ์)
+2. **เงื่อนไขไฟล์ `.zip`:** ไฟล์ ZIP จะ**ไม่มีปุ่มเปิดดูไฟล์ (️)** มีเฉพาะปุ่ม**ดาวน์โหลด ()** (และปุ่มลบ ️ สำหรับผู้มีสิทธิ์)
 3. **จำกัดขนาดไฟล์แนบรวม (Total Size Limit):** ขนาดไฟล์แนบรวมทั้งหมดของแต่ละคำร้องต้อง**ไม่เกิน 75 MB** (78,643,200 bytes)
 
 ---
 
-## 🎯 วัตถุประสงค์ (Objectives)
+##  วัตถุประสงค์ (Objectives)
 
 1. **Client-side UI & Validation:**
    - อัปเดตข้อความใน Dropzone / Upload area ให้แสดงประเภทไฟล์ที่รองรับ: `.pdf, .docx, .doc, .zip` และแจ้งขีดจำกัดขนาดรวมไม่เกิน 75 MB
@@ -25,7 +25,7 @@
 
 ---
 
-## 🏗️ รายละเอียดการปรับปรุง (Architecture & Changes)
+## ️ รายละเอียดการปรับปรุง (Architecture & Changes)
 
 ### 1. Backend Service & Controllers
 - **`AcademicRequestService.java` & `PositionRequestService.java`:**
@@ -42,7 +42,7 @@
 - **`document_1_form.html`:**
   - อัปเดตข้อความ Dropzone: `รองรับไฟล์: .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)`
   - ปรับ `accept=".pdf,.docx,.doc,.zip"`
-  - ในตารางไฟล์แนบ: ซ่อนปุ่มเปิดดูไฟล์ (👁️) เมื่อเป็นไฟล์ ZIP (`th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"`)
+  - ในตารางไฟล์แนบ: ซ่อนปุ่มเปิดดูไฟล์ (️) เมื่อเป็นไฟล์ ZIP (`th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"`)
   - อัปเดต JavaScript validation ตรวจสอบประเภทไฟล์และขนาดรวม
 - **`doc_fragments/1.html`:**
   - ซ่อนปุ่มดูไฟล์สำหรับ ZIP ในหน้าสรุปสำหรับแอดมิน
@@ -57,7 +57,7 @@
 
 ---
 
-## 🧪 แผนการทดสอบ (Verification Plan)
+##  แผนการทดสอบ (Verification Plan)
 
 ### Automated Tests
 1. **FileTypeValidationTest:**
@@ -74,7 +74,7 @@
 
 ---
 
-## 🚀 ลำดับขั้นตอนการดำเนินงาน (Execution Steps)
+##  ลำดับขั้นตอนการดำเนินงาน (Execution Steps)
 - [ ] **Phase 1:** เพิ่ม `getTotalAttachmentSize` ใน `AcademicRequestService` และ `PositionRequestService`
 - [ ] **Phase 2:** ปรับปรุง Validation นามสกุล (.pdf, .docx, .doc, .zip) และ Total Size (75MB) ใน `AcademicApplicantController`, `AcademicAdminController`, `PositionAdminController`
 - [ ] **Phase 3:** อัปเดต UI Dropzone และเงื่อนไขซ่อนปุ่มดูไฟล์สำหรับ ZIP ใน `document_1_form.html`, `doc_fragments/1.html`, `request_detail.html`

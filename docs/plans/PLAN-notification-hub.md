@@ -1,6 +1,6 @@
 # Plan: ระบบศูนย์การแจ้งเตือนและการเปิดอ่านแบบครบวงจร (Option C: In-App Notification Hub)
 
-## 📌 Context
+##  Context
 ปัจจุบันระบบการแจ้งเตือนในเว็บยังมีข้อจำกัด:
 1. การแจ้งเตือนบางประเภทลิงก์ไปยังหน้ากว้างๆ (เช่น `/dashboard` หรือ `/requests`) ทำให้ผู้ใช้ต้องไปค้นหาคำร้องเองอีกรอบ
 2. การคลิกแจ้งเตือนยังไม่มีหน้าต่าง Modal เปิดอ่านรายละเอียดข้อความเต็ม วันเวลา และผู้ส่งเหมือนการเปิดอ่านอีเมล
@@ -10,7 +10,7 @@
 
 ---
 
-## 🏗️ Architecture Breakdown
+## ️ Architecture Breakdown
 
 ### 1. Deep Link Direct Routing (Backend)
 - ปรับปรุง Service ทุกจุดให้ใส่ลิงก์ที่ระบุ ID คำร้องโดยตรง:
@@ -33,7 +33,7 @@
 
 ---
 
-## 📋 Task Breakdown
+##  Task Breakdown
 
 ### Phase 1: Backend Deep Link & REST API Refactoring
 - [ ] แก้ไขลิงก์ใน `AcademicEmailService.java`, `PositionEmailService.java`, และ `EvaluationExpiryScheduler.java`
@@ -59,7 +59,7 @@
 
 ---
 
-## 🎯 Verification Checklist
+##  Verification Checklist
 - [ ] คลิกกระดิ่งด้านบนจากหน้าใดก็ได้ → มี Dropdown พรีวิว 5 ข้อความล่าสุด
 - [ ] คลิกที่ข้อความแจ้งเตือน → Modal เปิดแสดงรายละเอียดเต็ม และ Badge ตัวเลขแจ้งเตือนลดลงทันที
 - [ ] ใน Modal มีปุ่ม "ไปยังคำร้องนี้" ที่พากลับไปยังคำร้องถูกต้อง 100%

@@ -4,7 +4,7 @@
 
 ---
 
-## 📁 โครงสร้างเอกสาร (Documentation Structure)
+##  โครงสร้างเอกสาร (Documentation Structure)
 
 ```text
 docs/
@@ -17,7 +17,7 @@ docs/
 
 ---
 
-## 📌 สารบัญโมดูลระบบ (System Modules)
+##  สารบัญโมดูลระบบ (System Modules)
 
 | ลำดับ | เอกสาร | คำอธิบาย |
 |:---:|:---|:---|
@@ -35,7 +35,7 @@ docs/
 
 ---
 
-## 🎓 เอกสารเล่มปริญญานิพนธ์และ UI Specs (Thesis Deliverables)
+##  เอกสารเล่มปริญญานิพนธ์และ UI Specs (Thesis Deliverables)
 
 อยู่ในโฟลเดอร์ `thesis-deliverables/`:
 - **บทที่ 3 (วิธีดำเนินงาน):** `chapter3-methodology.md` และ `chapter3-methodology.docx`
@@ -45,7 +45,7 @@ docs/
 
 ---
 
-## 🧪 ผลการทดสอบและ UAT (UAT & Reports)
+##  ผลการทดสอบและ UAT (UAT & Reports)
 
 อยู่ในโฟลเดอร์ `uat-and-reports/`:
 - **UAT Test Cases:** `UAT_Test_Cases.doc`, `UAT_Test_Cases.docx`
@@ -53,7 +53,7 @@ docs/
 
 ---
 
-## 🛠️ เครื่องมือและสคริปต์สร้างเอกสาร (Tools)
+## ️ เครื่องมือและสคริปต์สร้างเอกสาร (Tools)
 
 อยู่ในโฟลเดอร์ `tools/`:
 - `generate_word.py`: สคริปต์ Python แปลงผลการทดสอบ Unit Tests เป็นตารางผลการทดสอบในเอกสาร Word

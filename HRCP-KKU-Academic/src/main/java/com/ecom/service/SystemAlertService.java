@@ -222,9 +222,9 @@ public class SystemAlertService {
     /** How loud the message is. */
     public enum Level {
 
-        FAILURE("⛔", "ทำงานไม่สำเร็จ", "#c62828", "[ไม่สำเร็จ]"),
-        RECOVERY("✅", "กลับมาทำงานได้แล้ว", "#2e7d32", "[กลับมาปกติ]"),
-        SUCCESS("✅", "ทำงานสำเร็จ", "#2e7d32", "[สำเร็จ]");
+        FAILURE("", "ทำงานไม่สำเร็จ", "#c62828", "[ไม่สำเร็จ]"),
+        RECOVERY("", "กลับมาทำงานได้แล้ว", "#2e7d32", "[กลับมาปกติ]"),
+        SUCCESS("", "ทำงานสำเร็จ", "#2e7d32", "[สำเร็จ]");
 
         private final String icon;
         private final String heading;

@@ -6,9 +6,9 @@
 
 ```mermaid
 graph LR
-    Guest["👤 ผู้ใช้ทั่วไป<br/>(Guest)"]
-    User["👨‍🏫 ผู้ยื่นคำร้อง<br/>(Applicant)"]
-    Admin["👨‍💼 ผู้ดูแลระบบ<br/>(Admin)"]
+    Guest[" ผู้ใช้ทั่วไป<br/>(Guest)"]
+    User["‍ ผู้ยื่นคำร้อง<br/>(Applicant)"]
+    Admin["‍ ผู้ดูแลระบบ<br/>(Admin)"]
 
     UC1(["UC-AUTH-01: เข้าสู่ระบบ"])
     UC2(["UC-AUTH-02: เข้าสู่ระบบครั้งแรก + OTP"])

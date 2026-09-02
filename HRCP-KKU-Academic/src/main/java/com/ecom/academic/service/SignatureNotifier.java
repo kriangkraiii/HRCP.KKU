@@ -255,7 +255,7 @@ public class SignatureNotifier {
             long daysLeft = java.time.Duration.between(LocalDateTime.now(), notice.dueAt()).toDays();
             String timeText = daysLeft >= 0 ? " (เหลือเวลาประมาณ " + (daysLeft == 0 ? "วันนี้" : daysLeft + " วัน") + ")" : " (เลยกำหนดเวลา)";
             body.append("<div style='background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px; margin: 16px 0; color: #92400e; font-size: 14px;'>");
-            body.append("📅 <strong>กำหนดลงนามภายใน:</strong> ").append(notice.dueAt().format(DUE_FORMAT)).append(timeText);
+            body.append("<strong>กำหนดลงนามภายใน:</strong> ").append(notice.dueAt().format(DUE_FORMAT)).append(timeText);
             body.append("</div>");
         }
 

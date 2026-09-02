@@ -1,12 +1,12 @@
 # PLAN: Universal Research Access for Test User Account
 
-## 📌 Executive Summary
+##  Executive Summary
 ระบบปัจจุบันจำกัดให้ผู้ใช้สามารถค้นหาและเลือกผลงานวิจัย Scopus ได้เฉพาะผลงานที่เป็นของตนเองเท่านั้น (จับคู่ผ่าน `fs_faculty.email == user.email`). 
 แผนงานนี้มีเป้าหมายเพื่ออนุญาตให้บัญชีทดสอบที่กำหนดผ่าน `app.user.email` (ค่าเริ่มต้น: `user@user.com`) สามารถค้นหาและเลือกผลงานวิจัย **ทั้งหมดในระบบ (All Scopus Publications)** ได้ เพื่อความสะดวกในการทดสอบกรอกคำร้องและสร้างเอกสารวิชาการ ในขณะที่บัญชีอาจารย์ทั่วไปทุกคนยังคงถูกจำกัดสิทธิ์ให้เห็นเฉพาะงานวิจัยของตนเองตามเดิม 100%
 
 ---
 
-## 🔒 Security & Data Isolation Analysis (การตรวจสอบความปลอดภัย)
+##  Security & Data Isolation Analysis (การตรวจสอบความปลอดภัย)
 
 | User Type | Scopus Query Behavior | Isolation Guarantee |
 |-----------|----------------------|---------------------|
@@ -16,7 +16,7 @@
 
 ---
 
-## 🛠️ Architecture & Implementation Breakdown
+## ️ Architecture & Implementation Breakdown
 
 ### Phase 1: ScopusQueryService Extension
 - **File:** `com.ecom.external.service.ScopusQueryService.java`
@@ -47,7 +47,7 @@
 
 ---
 
-## 🧪 Verification Plan
+##  Verification Plan
 
 ### Test Case 1: Test User (`user@user.com`)
 1. เข้าสู่ระบบด้วย `user@user.com`
@@ -64,7 +64,7 @@
 
 ---
 
-## 📋 Task Checklist
+##  Task Checklist
 - [ ] Implement `isUniversalAccessUser` in `ScopusQueryService`
 - [ ] Add universal bypass logic in `listOwn`, `findOwn`, `findOwnedByIds`, `metricsFor`
 - [ ] Verify `MyPublicationsApiController` behavior

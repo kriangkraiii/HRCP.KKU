@@ -1,6 +1,6 @@
 # แผนการพัฒนา: ระบบตั้งค่าผู้ลงนามและลำดับขั้นตอนการลงนาม (Document Workflow & Signer Matrix Settings)
 
-## 📌 1. ภาพรวมและวัตถุประสงค์ (Overview & Goals)
+##  1. ภาพรวมและวัตถุประสงค์ (Overview & Goals)
 พัฒนาหน้าตั้งค่า **Document Signer & Workflow Configuration** ในเมนูผู้ดูแลระบบ (`/admin/academic/settings/signers`) เพื่อให้แอดมินสามารถ:
 1. ปรับแต่งลำดับขั้นตอนการลงนาม (Signer Order / Sequence 1 $\rightarrow$ 2 $\rightarrow$ 3) ของเอกสารทั้ง 17 ฉบับ
 2. เปิด/ปิดการลงนามในแต่ละตำแหน่งของเอกสารนั้น (Enable/Disable Slots)
@@ -9,7 +9,7 @@
 
 ---
 
-## 🏗️ 2. โครงสร้างสถาปัตยกรรม (Architecture & Data Model)
+## ️ 2. โครงสร้างสถาปัตยกรรม (Architecture & Data Model)
 
 ### 2.1 Database Migration: `V8__create_document_workflow_config.sql`
 - สร้างตาราง `document_workflow_config`:
@@ -48,7 +48,7 @@
 
 ---
 
-## 🧪 3. แผนการทดสอบ (Verification Plan)
+## [Test] 3. แผนการทดสอบ (Verification Plan)
 1. **Unit & Integration Tests:**
    - ทดสอบ `DocumentWorkflowConfigServiceTest` (การดึง Effective Slots, การบันทึก, การ Fallback)
    - ทดสอบ `DocumentWorkflowConfigControllerTest` (การเข้าถึงหน้าตั้งค่าและการบันทึก)

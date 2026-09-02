@@ -2,12 +2,12 @@
 
 **วันที่ทดสอบ:** 11 สิงหาคม 2026
 **ขอบเขต:** รันชุดเทสอัตโนมัติ + ตรวจโค้ด (static audit) + ตรวจความปลอดภัย + เทสจริงผ่าน HTTP
-**สถานะ:** ✅ **แก้แล้วทั้งหมด 19 ข้อ (Critical + High + Medium)** บน branch `fix/security-audit-2026-08-11` พร้อมเทสคุมทุกข้อ
+**สถานะ:** **แก้แล้วทั้งหมด 19 ข้อ (Critical + High + Medium)** บน branch `fix/security-audit-2026-08-11` พร้อมเทสคุมทุกข้อ
 
 > **หมายเหตุการแก้ไข:** ทุกบักที่แก้ใช้วิธี test-first — เขียนเทสให้ fail ก่อน ยืนยันว่า fail ด้วยเหตุผลที่ถูกต้อง แล้วจึงแก้โค้ด
 > เพิ่มเทสใหม่ **45 เทส** ใน 8 ไฟล์ และซ่อมเทสตกยุคที่เหลือทั้งหมด
 >
-> ### ชุดเทสเต็ม: **514 เทส / 38 failures + 3 errors** → **559 เทส / 0 failures / 0 errors** ✅
+> ### ชุดเทสเต็ม: **514 เทส / 38 failures + 3 errors** → **559 เทส / 0 failures / 0 errors** [ผ่านทั้งหมด]
 > ดูสรุปท้ายเอกสารที่หัวข้อ **"ผลการแก้ไข"**
 
 ---
@@ -16,11 +16,11 @@
 
 | ระดับ | จำนวน | สรุป |
 |---|---|---|
-| 🔴 Critical | 2 | ผู้ใช้ทั่วไปแก้โปรไฟล์คนอื่นได้ / เขียนไฟล์ทับที่ไหนก็ได้บนเซิร์ฟเวอร์ |
+| [Critical] | 2 | ผู้ใช้ทั่วไปแก้โปรไฟล์คนอื่นได้ / เขียนไฟล์ทับที่ไหนก็ได้บนเซิร์ฟเวอร์ |
 | 🟠 High | 5 | ยกระดับสิทธิ์เข้าที่เก็บไฟล์แอดมิน, เขียนทับเอกสารคนอื่น, ข้าม brute-force, ข้ามโควตา, secret หลุด |
 | 🟡 Medium | 12 | หมดหน่วยความจำตอนโหลดไฟล์, ประวัติสถานะเรียงมั่ว, ข้อมูล error รั่ว, ปุ่มใช้ไม่ได้ |
-| 🔵 Low | 8 | คุกกี้ไม่มี Secure, config ตกค้าง, code smell |
-| 🧪 คุณภาพชุดเทส | 5 | 46% ของเทสเป็นของปลอม + เทสตกยุค 38 ตัว |
+| [Low] | 8 | คุกกี้ไม่มี Secure, config ตกค้าง, code smell |
+| [Test Quality] | 5 | 46% ของเทสเป็นของปลอม + เทสตกยุค 38 ตัว |
 
 **ประเด็นที่ควรแก้ก่อนขึ้น production:** C-01, C-02, H-01, H-02, H-03, H-05
 
@@ -28,7 +28,7 @@
 
 ---
 
-# 🔴 Critical
+# [Critical]
 
 ## C-01 — ผู้ใช้ทั่วไปแก้ไขโปรไฟล์ของผู้ใช้คนอื่นได้ (IDOR เขียนข้อมูล)
 
@@ -337,7 +337,7 @@ Docker/Kubernetes health probe อ่าน endpoint นี้แบบไม่
 
 ---
 
-# 🔵 Low
+# [Low]
 
 | # | เรื่อง | ที่มา |
 |---|---|---|
@@ -354,7 +354,7 @@ Docker/Kubernetes health probe อ่าน endpoint นี้แบบไม่
 
 ---
 
-# 🧪 คุณภาพของชุดเทส (แยกจากบักในระบบ)
+# คุณภาพของชุดเทส (แยกจากบักในระบบ)
 
 ## T-01 — เทส UAT 250 ตัวเป็นของปลอม ผ่านโดยไม่ได้ทดสอบอะไรเลย
 
@@ -509,28 +509,28 @@ PetitionControllerTest.testPostCreatePetition_ValidData_CreatesPetition
 
 | บัก | วิธียิง | ผลลัพธ์ |
 |---|---|---|
-| **C-01** | ผู้ใช้ id=3 POST `/user/update-profile` โดยใส่ `id=4` (บัญชีคนอื่น) | ✅ **บล็อก** — บัญชี id=4 ยังเป็น `ทดสอบ ผู้ใช้งาน` เหมือนเดิม ไม่ถูกแก้ ระบบเพิกเฉย `id` จากฟอร์มและแก้บัญชีตัวเองแทน |
-| **C-02a** | อัปโหลด `evil.html` (`<script>`) เป็นรูปโปรไฟล์ | ✅ **ปฏิเสธ** — ไม่มีไฟล์ `.html` ใน `uploads/profile_img/` และ `profileImage` ใน DB ไม่เปลี่ยน |
-| **C-02b** | อัปโหลดชื่อไฟล์ `../../pwned.png` | ✅ **ปฏิเสธ** — ไม่มีไฟล์ถูกเขียนนอก `profile_img/` เลย |
-| **C-02c** | ไฟล์ปลอม (ขึ้นต้น `GIF89a` ตั้งชื่อ `.png` content-type `image/png`) | ✅ **ปฏิเสธ** — การ decode ด้วย ImageIO จับได้ |
-| **H-01** | ผู้ใช้ ROLE_USER POST `/api/upload/init` พร้อม `storageType=admin&filename=payload.exe` | ✅ **บล็อก** — `{"success":false,"message":"ไม่มีสิทธิ์อัปโหลดไปยังพื้นที่เก็บข้อมูลของผู้ดูแลระบบ"}` |
-| **H-01 (regression)** | ROLE_ADMIN ทำแบบเดียวกัน | ✅ **ยังใช้ได้ปกติ** — ได้ `uploadId` กลับมา (ยกเลิก session แล้ว) |
-| **M-08** | ผู้ใช้ POST `/api/academic/preview/6` (แบบประเมินผลการสอน ฝั่งแอดมิน) | ✅ **403** |
-| **M-08 (regression)** | ผู้ใช้ POST `/api/academic/preview/0` (เอกสารของตัวเอง) | ✅ **200** ไม่บล็อกเกินจำเป็น |
-| **M-11** | `GET /actuator/health` แบบไม่ล็อกอิน | ✅ **200 UP** (เดิม 302 ไป `/signin`) |
-| **M-12** | `/admin/activity-logs?dateFrom=abc`, `?dateFrom=2026-13-99`, `?dateTo=xyz` | ✅ **200 ทุกเคส** (เดิมจะเป็น 500) |
-| **M-07** | ดาวน์โหลด CSV ประวัติการใช้งานจริง (98 KB) | ✅ ไม่มีแถวไหนขึ้นต้นด้วย `= + @` |
-| **แยกสิทธิ์ตาม role** | ผู้ใช้ยิง `/admin/academic/requests`, `/admin/users`, `/admin/activity-logs/export`, `/admin/file-manager/storage` | ✅ **403 ทุกเส้นทาง**; แอดมินยิง `/user/**` ได้ 403 เช่นกัน |
-| **หน้าจอหลัก** | ไล่ 16 หน้าทั้งสอง role | ✅ ไม่มี 500 เลย (`/petitions` และ `/user/position/` เป็น 404 ตามปกติ เพราะไม่มี root mapping — ทางเข้าจริงคือ `/petitions/my-petitions` และ `/user/position/dashboard` ซึ่งได้ 200) |
+| **C-01** | ผู้ใช้ id=3 POST `/user/update-profile` โดยใส่ `id=4` (บัญชีคนอื่น) | **[PASS] บล็อก** — บัญชี id=4 ยังเป็น `ทดสอบ ผู้ใช้งาน` เหมือนเดิม ไม่ถูกแก้ ระบบเพิกเฉย `id` จากฟอร์มและแก้บัญชีตัวเองแทน |
+| **C-02a** | อัปโหลด `evil.html` (`<script>`) เป็นรูปโปรไฟล์ | **[PASS] ปฏิเสธ** — ไม่มีไฟล์ `.html` ใน `uploads/profile_img/` และ `profileImage` ใน DB ไม่เปลี่ยน |
+| **C-02b** | อัปโหลดชื่อไฟล์ `../../pwned.png` | **[PASS] ปฏิเสธ** — ไม่มีไฟล์ถูกเขียนนอก `profile_img/` เลย |
+| **C-02c** | ไฟล์ปลอม (ขึ้นต้น `GIF89a` ตั้งชื่อ `.png` content-type `image/png`) | **[PASS] ปฏิเสธ** — การ decode ด้วย ImageIO จับได้ |
+| **H-01** | ผู้ใช้ ROLE_USER POST `/api/upload/init` พร้อม `storageType=admin&filename=payload.exe` | **[PASS] บล็อก** — `{"success":false,"message":"ไม่มีสิทธิ์อัปโหลดไปยังพื้นที่เก็บข้อมูลของผู้ดูแลระบบ"}` |
+| **H-01 (regression)** | ROLE_ADMIN ทำแบบเดียวกัน | **[PASS] ยังใช้ได้ปกติ** — ได้ `uploadId` กลับมา (ยกเลิก session แล้ว) |
+| **M-08** | ผู้ใช้ POST `/api/academic/preview/6` (แบบประเมินผลการสอน ฝั่งแอดมิน) | **[PASS] 403** |
+| **M-08 (regression)** | ผู้ใช้ POST `/api/academic/preview/0` (เอกสารของตัวเอง) | **[PASS] 200** ไม่บล็อกเกินจำเป็น |
+| **M-11** | `GET /actuator/health` แบบไม่ล็อกอิน | **[PASS] 200 UP** (เดิม 302 ไป `/signin`) |
+| **M-12** | `/admin/activity-logs?dateFrom=abc`, `?dateFrom=2026-13-99`, `?dateTo=xyz` | **[PASS] 200 ทุกเคส** (เดิมจะเป็น 500) |
+| **M-07** | ดาวน์โหลด CSV ประวัติการใช้งานจริง (98 KB) | [PASS] ไม่มีแถวไหนขึ้นต้นด้วย `= + @` |
+| **แยกสิทธิ์ตาม role** | ผู้ใช้ยิง `/admin/academic/requests`, `/admin/users`, `/admin/activity-logs/export`, `/admin/file-manager/storage` | **[PASS] 403 ทุกเส้นทาง**; แอดมินยิง `/user/**` ได้ 403 เช่นกัน |
+| **หน้าจอหลัก** | ไล่ 16 หน้าทั้งสอง role | [PASS] ไม่มี 500 เลย (`/petitions` และ `/user/position/` เป็น 404 ตามปกติ เพราะไม่มี root mapping — ทางเข้าจริงคือ `/petitions/my-petitions` และ `/user/position/dashboard` ซึ่งได้ 200) |
 
 ## การสร้างเอกสารและฟอนต์ไทย
 
 | สิ่งที่ตรวจ | ผล |
 |---|---|
-| สร้าง DOCX (Doc 0) | ✅ 200, 38 KB, ไฟล์เป็น `Microsoft Word 2007+` จริง |
-| แปลงเป็น PDF ผ่าน LibreOffice | ✅ 200, 113 KB, ขึ้นต้นด้วย `%PDF-` |
-| **ฟอนต์ไทยใน PDF** | ✅ **ฝังมาครบ** — `BAAAAA+THSarabunNew-Bold` และ `CAAAAA+THSarabunNew` แบบ subset พร้อม ToUnicode CMap → ข้อความไทยไม่กลายเป็นกล่องเปล่า |
-| แทนค่า placeholder ภาษาไทย | ✅ ทั้งชื่อไทยและวันที่ไทยถูกแทนค่าถูกต้อง ไม่มี `{{...}}` ตกค้าง |
+| สร้าง DOCX (Doc 0) | [PASS] 200, 38 KB, ไฟล์เป็น `Microsoft Word 2007+` จริง |
+| แปลงเป็น PDF ผ่าน LibreOffice | [PASS] 200, 113 KB, ขึ้นต้นด้วย `%PDF-` |
+| **ฟอนต์ไทยใน PDF** | **[PASS] ฝังมาครบ** — `BAAAAA+THSarabunNew-Bold` และ `CAAAAA+THSarabunNew` แบบ subset พร้อม ToUnicode CMap → ข้อความไทยไม่กลายเป็นกล่องเปล่า |
+| แทนค่า placeholder ภาษาไทย | [PASS] ทั้งชื่อไทยและวันที่ไทยถูกแทนค่าถูกต้อง ไม่มี `{{...}}` ตกค้าง |
 
 > **หมายเหตุ:** ระหว่างทดสอบผมเจอว่าชื่อไทยไม่ถูกแทนค่า แต่ตรวจซ้ำแล้วพบว่าเป็นเพราะ shell ของผมทำ UTF-8 เพี้ยนตอนส่ง `curl -d` เอง **ไม่ใช่บักของระบบ** — พอส่งเป็นไฟล์ JSON แบบ UTF-8 ตรง ๆ ก็แทนค่าได้ถูกต้อง
 
@@ -569,7 +569,7 @@ DB_PASSWORD=... EMAIL_USERNAME=... EMAIL_PASSWORD=... S3_ACCESS_KEY=... S3_SECRE
   - **ไม่มีคำร้อง เอกสาร หรือไฟล์ทดสอบใดถูกสร้างทิ้งไว้**
 - **ไม่มีไฟล์ใดใน `src/` ถูกแก้ไข** (ยืนยันด้วย `git status`)
 - แอปที่รันอยู่ที่พอร์ต 8080 ไม่ถูก restart หรือแก้ไขค่าใด ๆ
-- **⚠️ การรันเทสเขียนไฟล์จริงลง `uploads/profile_img/` โดยไม่คาดคิด** (ดู T-06 ด้านล่าง) — ต้องคืนค่าเอง:
+- **[ข้อควรระวัง] การรันเทสเขียนไฟล์จริงลง `uploads/profile_img/` โดยไม่คาดคิด** (ดู T-06 ด้านล่าง) — ต้องคืนค่าเอง:
   ```bash
   git checkout -- HRCP-KKU-Academic/uploads/profile_img/empty.jpg
   rm HRCP-KKU-Academic/uploads/profile_img/x7E7lS6ya0Ko3Ww6.gif

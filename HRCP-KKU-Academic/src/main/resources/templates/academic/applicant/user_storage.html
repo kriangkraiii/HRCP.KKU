@@ -747,7 +747,7 @@
 
         function permanentDeleteStorageFile(btn) {
             var id=btn.getAttribute('data-id'), name=btn.getAttribute('data-name');
-            showConfirm('ลบถาวร','⚠️ ลบ <strong>'+name+'</strong> ถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',function(){
+            showConfirm('ลบถาวร','ลบ <strong>'+name+'</strong> ถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',function(){
                 var fd=new FormData(); fd.append('id',id); fd.append('_csrf',csrfToken);
                 fetch('/user/academic/storage/file/permanent-delete',{method:'POST',body:fd})
                     .then(function(r){return r.json();}).then(function(d){showToast(d.message,d.success);if(d.success){var row=document.getElementById('strash-'+id);if(row){row.style.transition='opacity 0.3s';row.style.opacity='0';setTimeout(function(){row.remove();},300);}}});
@@ -755,7 +755,7 @@
         }
 
         function emptyStorageTrash() {
-            showConfirm('ล้างถังขยะ','⚠️ ลบไฟล์ทั้งหมดในถังขยะถาวร?',function(){
+            showConfirm('ล้างถังขยะ','ลบไฟล์ทั้งหมดในถังขยะถาวร?',function(){
                 fetch('/user/academic/storage/empty-trash',{method:'POST',headers:getCsrfHeaders()})
                     .then(function(r){return r.json();}).then(function(d){showToast(d.message,d.success);if(d.success)setTimeout(function(){location.reload();},1000);});
             });

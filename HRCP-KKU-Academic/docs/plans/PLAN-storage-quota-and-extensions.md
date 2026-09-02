@@ -1,13 +1,13 @@
 # แผนการพัฒนา (Project Plan): จำกัดประเภทไฟล์จัดเก็บเป็น PDF, DOCX, DOC, ZIP ทั้งระบบ และลดโควตาพื้นที่ผู้ใช้ทั่วไปเป็น 512MB (Storage Quota & Extensions Standardization)
 
-## 📋 ข้อมูลเบื้องต้น (Overview & Context)
+##  ข้อมูลเบื้องต้น (Overview & Context)
 - **ความต้องการของผู้ใช้ (User Request):**
   1. คลังจัดเก็บไฟล์ (Storage Manager / File Storage) ทั้งของ Admin และ User (ทั้งโปรเจค) อนุญาตให้จัดเก็บได้เฉพาะไฟล์: **`.pdf`, `.docx`, `.doc`, `.zip`** เท่านั้น (ไม่อนุญาตไฟล์ Office ตระกูล Spreadsheet/Presentation อื่นๆ เช่น xls, xlsx, ppt, pptx, txt, rtf, odt, ods)
   2. ปรับลดขนาดโควตาพื้นที่จัดเก็บไฟล์ของผู้ใช้ทั่วไป (User Storage Quota) จากเดิม 1GB (1,073,741,824 bytes) ลงมาเหลือ **512MB** (536,870,912 bytes)
 
 ---
 
-## 🎯 วัตถุประสงค์ (Objectives)
+##  วัตถุประสงค์ (Objectives)
 1. กำหนด Whitelist นามสกุลไฟล์ในระบบจัดเก็บไฟล์ (File Storage System) ทั้งหมดให้ตรงกันทั้งระบบคือ **`.pdf`, `.docx`, `.doc`, `.zip`**
 2. ปรับลดขนาดพื้นที่จัดเก็บไฟล์สูงสุดของผู้ใช้ทั่วไป (`app.storage.user.max-bytes`) เป็น **512 MB** (536,870,912 bytes)
 3. ตรวจสอบความถูกต้องทั้ง Client-side (JavaScript, file input accept attribute) และ Server-side (Service validation, Spring properties)
@@ -15,7 +15,7 @@
 
 ---
 
-## 🏗️ รายละเอียดการปรับปรุง (Proposed Changes)
+## ️ รายละเอียดการปรับปรุง (Proposed Changes)
 
 ### 1. Configuration & Properties
 - **ไฟล์:** `src/main/resources/application.properties`
@@ -58,7 +58,7 @@
 
 ---
 
-## 🧪 แผนการทดสอบ (Verification Plan)
+##  แผนการทดสอบ (Verification Plan)
 
 ### Automated Tests
 - รัน `./mvnw test -Dtest=StorageQuotaAndExtensionsTest,ChunkedUploadSecurityTest`
@@ -71,7 +71,7 @@
 
 ---
 
-## 🚀 ลำดับขั้นตอนการดำเนินงาน (Execution Steps)
+##  ลำดับขั้นตอนการดำเนินงาน (Execution Steps)
 - [ ] **Phase 1:** ปรับปรุง `application.properties` สำหรับโควตา 512MB และ Whitelist นามสกุล `pdf,doc,docx,zip`
 - [ ] **Phase 2:** ปรับปรุง `UserStorageService.java` และ `AdminStorageService.java`
 - [ ] **Phase 3:** ปรับปรุง `admin-storage.js`, `storage_content.html`, และ `user_storage.html`

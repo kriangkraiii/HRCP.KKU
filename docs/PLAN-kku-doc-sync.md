@@ -1,9 +1,9 @@
 # Plan: KKU HR Documents Automated Sync & Dynamic Library
 
-## 📌 Problem & Context
+##  Problem & Context
 Currently, the `/user/academic/documents` library is powered by a static JavaScript array hardcoded in `documents.html`. When KKU HR publishes new regulations, announcements, or checklists on `https://hr2.kku.ac.th/?page_id=5546` (such as the new 2569 regulations/announcements), the system cannot detect or display them unless developer manually updates HTML code.
 
-## 🎯 Goal
+##  Goal
 1. Fix the document PDF preview overlay so it renders cleanly and fully in the viewport.
 2. Build an automated sync pipeline (`KkuDocumentSyncService`) with Spring `@Scheduled` (cron: every 1 month) that parses `https://hr2.kku.ac.th/?page_id=5546` with Jsoup.
 3. Store documents in a new JPA entity `KkuRegulationDoc` with category grouping, new-item badges (🆕), and checksum/URL deduplication.
@@ -12,7 +12,7 @@ Currently, the `/user/academic/documents` library is powered by a static JavaScr
 
 ---
 
-## 🏗️ Architecture & Component Design
+## ️ Architecture & Component Design
 
 ### 1. Database Model (`KkuRegulationDoc`)
 - `id` (Long, PK)
@@ -57,7 +57,7 @@ Currently, the `/user/academic/documents` library is powered by a static JavaScr
 
 ---
 
-## 📋 Task Breakdown
+##  Task Breakdown
 
 ### Phase 1: Database & Repository
 - [ ] Create `KkuRegulationDoc` entity with indices on `category` and `fileKey`.

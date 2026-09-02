@@ -1,10 +1,10 @@
-# 📋 แผนการตรวจสอบและจัดการตารางฐานข้อมูลที่ไม่ได้ใช้งาน (Database Audit Plan)
+#  แผนการตรวจสอบและจัดการตารางฐานข้อมูลที่ไม่ได้ใช้งาน (Database Audit Plan)
 
 > **เอกสารนี้จัดทำขึ้นจากการสแกน Entity, Flyway Migrations, Repositories และ Business Services ทั้งหมดในโปรเจกต์ HRCP.KKU**
 
 ---
 
-## 🎯 1. สรุปผลการตรวจสอบ (Executive Summary)
+##  1. สรุปผลการตรวจสอบ (Executive Summary)
 
 จากการตรวจสอบฐานข้อมูลทั้งหมด **30 ตาราง** พบว่า:
 - **ตารางที่ไม่ได้ใช้งาน (Unused / Dead Tables):** มี **2 ตาราง** คือ `petitions` และ `petition_statuses`
@@ -13,16 +13,16 @@
 
 ---
 
-## 🔍 2. รายละเอียดตารางที่ไม่ได้ใช้งาน (Unused Tables)
+##  2. รายละเอียดตารางที่ไม่ได้ใช้งาน (Unused Tables)
 
 | ชื่อตาราง | ที่มา / ไฟล์สร้าง | สาเหตุที่ไม่ได้ใช้งาน | สถานะในโค้ดปัจจุบัน |
 |:---|:---|:---|:---|
-| **`petitions`** | `V1__create_petition_statuses_table.sql`<br/>`V2__create_petitions_table.sql` | เป็นตาราง "คำร้องทั่วไป" สมัยเริ่มพัฒนาโครงการ ก่อนที่ระบบจะ refactor แยกโมเดลเป็นคำร้องเฉพาะด้าน | ❌ **ไม่มี Entity Class**<br/>❌ **ไม่มี Repository / Service**<br/>❌ ไม่มีหน้า UI ใช้งาน |
-| **`petition_statuses`** | `V1__create_petition_statuses_table.sql` | ตารางเก็บประวัติสถานะของ `petitions` | ❌ **ไม่มี Entity Class**<br/>(ระบบเปลี่ยนไปใช้ `request_status_history` และ `position_status_history` แทน) |
+| **`petitions`** | `V1__create_petition_statuses_table.sql`<br/>`V2__create_petitions_table.sql` | เป็นตาราง "คำร้องทั่วไป" สมัยเริ่มพัฒนาโครงการ ก่อนที่ระบบจะ refactor แยกโมเดลเป็นคำร้องเฉพาะด้าน | [NO] **ไม่มี Entity Class**<br/>[NO] **ไม่มี Repository / Service**<br/>[NO] ไม่มีหน้า UI ใช้งาน |
+| **`petition_statuses`** | `V1__create_petition_statuses_table.sql` | ตารางเก็บประวัติสถานะของ `petitions` | [NO] **ไม่มี Entity Class**<br/>(ระบบเปลี่ยนไปใช้ `request_status_history` และ `position_status_history` แทน) |
 
 ---
 
-## 📊 3. แผนผังตารางที่ใช้งานจริงในปัจจุบัน (27 Active Tables)
+##  3. แผนผังตารางที่ใช้งานจริงในปัจจุบัน (27 Active Tables)
 
 ```mermaid
 graph TD
@@ -75,7 +75,7 @@ graph TD
 
 ---
 
-## 🛠️ 4. ทางเลือกและแนวทางดำเนินการ (Action Plan & Options)
+##  4. ทางเลือกและแนวทางดำเนินการ (Action Plan & Options)
 
 ### ทางเลือกที่ 1: ปล่อยไว้ตามเดิม (Recommended for stability)
 * **ข้อดี:** ไม่กระทบ Flyway migration chain เดิม และไม่มีผลเสียต่อประสิทธิภาพ (ตารางว่างไม่มีข้อมูล)
@@ -94,7 +94,7 @@ graph TD
 
 ---
 
-## 📋 5. Verification Checklist
+##  5. Verification Checklist
 
 - [x] ตรวจสอบทุก `@Entity` และ `@Table` ใน `com.ecom.*`
 - [x] ตรวจสอบไฟล์ Migration ทุกเวอร์ชัน (`V0` ถึง `V10`)

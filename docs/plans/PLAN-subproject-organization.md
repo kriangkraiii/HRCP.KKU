@@ -15,12 +15,12 @@
 - เคลียร์โฟลเดอร์ Log ขยะ `C:` ที่เกิดจากการรัน Logback บน macOS
 
 ### 1.2 Absolute Constraints
-- ❌ **ห้ามแตะต้อง** ไฟล์หรือโฟลเดอร์ที่เกี่ยวข้องกับโค้ดและการ Build:
+- [NO] **ห้ามแตะต้อง** ไฟล์หรือโฟลเดอร์ที่เกี่ยวข้องกับโค้ดและการ Build:
   - `src/` (Java Classes, Tests, Thymeleaf Templates, Static Resources, Properties)
   - `pom.xml`, `mvnw`, `mvnw.cmd`, `.mvn/`
   - `Dockerfile`, `docker-compose.yml`, `docker/`
   - `.env.example`, `.classpath`, `.project`, `.settings/`, `.factorypath`
-- ✅ **ดำเนินการเฉพาะ** ไฟล์ Markdown, เอกสาร Word (.doc/.docx), สคริปต์สร้างเอกสาร Python/Batch, และโฟลเดอร์ Log ตกค้าง
+- [YES] **ดำเนินการเฉพาะ** ไฟล์ Markdown, เอกสาร Word (.doc/.docx), สคริปต์สร้างเอกสาร Python/Batch, และโฟลเดอร์ Log ตกค้าง
 
 ---
 
@@ -34,7 +34,7 @@ HRCP-KKU-Academic/
 ├── Dockerfile / docker-compose.yml     # Container Configurations (คงเดิม)
 ├── docker/                             # Docker Deployment Scripts (คงเดิม)
 ├── mvnw / mvnw.cmd / pom.xml           # Maven Build Tooling (คงเดิม)
-├── src/                                # 🛡️ [PROTECTED] Java Source Code & Resources (คงเดิม 100%)
+├── src/                                #  [PROTECTED] Java Source Code & Resources (คงเดิม 100%)
 └── docs/                               # All Subproject Documentation & Assets
     ├── modules/                        # เอกสารรายละเอียด 9 โมดูลหลัก + Flow
     │   ├── 01-system-overview.md
@@ -115,7 +115,7 @@ HRCP-KKU-Academic/
 - [x] **Clean Root:** ไม่มีไฟล์เอกสารหรือ script ลอยอยู่ใน Root ของ `HRCP-KKU-Academic/`
 - [x] **Docs Reorganized:** เอกสารทั้งหมดถูกจัดเก็บในหมวดหมู่ที่เหมาะสมใน `docs/` (`modules/`, `plans/`, `thesis-deliverables/`, `uat-and-reports/`, `tools/`)
 
-## ✅ PHASE X COMPLETE
-- Subproject Organized: ✅ Clean & Categorized
-- Core Source Untouched: ✅ 100% Protected
+## [YES] PHASE X COMPLETE
+- Subproject Organized: [YES] Clean & Categorized
+- Core Source Untouched: [YES] 100% Protected
 - Date: 2026-09-02

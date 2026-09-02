@@ -1,10 +1,10 @@
-# 📋 แผนการดำเนินการลบตารางฐานข้อมูลและโมเดลที่ไม่ได้ใช้งาน (PLAN-drop-unused-tables.md)
+#  แผนการดำเนินการลบตารางฐานข้อมูลและโมเดลที่ไม่ได้ใช้งาน (PLAN-drop-unused-tables.md)
 
 > **เป้าหมาย:** ลบตาราง `petitions` และ `petition_statuses` ออกจากฐานข้อมูล และลบไฟล์ Enum/Model เก่าที่หลงเหลือ (`StatusType.java`) อย่างปลอดภัย โดยไม่กระทบต่อประวัติ Flyway migration และปรับปรุง Unit Test / Documentation ให้สอดคล้องกัน
 
 ---
 
-## 🎯 1. รายละเอียดขอบเขตงาน (Scope of Work)
+##  1. รายละเอียดขอบเขตงาน (Scope of Work)
 
 | รายการ | สิ่งที่ต้องทำ | วัตถุประสงค์ / ผลลัพธ์ |
 |:---|:---|:---|
@@ -16,7 +16,7 @@
 
 ---
 
-## 🏗️ 2. แผนการดำเนินงานตามขั้นตอน (Step-by-Step Task Breakdown)
+## ️ 2. แผนการดำเนินงานตามขั้นตอน (Step-by-Step Task Breakdown)
 
 ### Phase 1: สร้าง Migration Script `V11`
 * **ไฟล์เป้าหมาย:** `src/main/resources/db/migration/V11__drop_unused_petition_tables.sql`
@@ -53,7 +53,7 @@
 
 ---
 
-## 🛡️ 3. ข้อควรระวังและการป้องกันความเสี่ยง (Risk Mitigation)
+##  3. ข้อควรระวังและการป้องกันความเสี่ยง (Risk Mitigation)
 
 1. **ห้ามลบไฟล์ `V1` และ `V2` ออกจากโฟลเดอร์:**
    - *เหตุผล:* Flyway บันทึก Checksum ของไฟล์ `V1` และ `V2` ไว้ใน `flyway_schema_history` ของฐานข้อมูล Production แล้ว หากลบไฟล์เดิมทิ้ง Flyway จะฟ้อง Validation Error และแอปจะสตาร์ตไม่ขึ้น
@@ -63,7 +63,7 @@
 
 ---
 
-## 📋 4. Verification Checklist (การตรวจสอบหลังดำเนินการ)
+##  4. Verification Checklist (การตรวจสอบหลังดำเนินการ)
 
 - [ ] ไฟล์ `V11__drop_unused_petition_tables.sql` ถูกสร้างอย่างถูกต้อง
 - [ ] ไฟล์ `StatusType.java` ถูกลบเรียบร้อย และโปรเจกต์ Build ผ่าน

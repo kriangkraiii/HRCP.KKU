@@ -8,7 +8,7 @@
 
 ```mermaid
 graph LR
-    Admin["👨‍💼 ผู้ดูแลระบบ<br/>(Admin)"]
+    Admin["‍ ผู้ดูแลระบบ<br/>(Admin)"]
 
     UC1(["UC-FILE-01: ดูรายการไฟล์ทั้งหมด"])
     UC2(["UC-FILE-02: ย้ายไฟล์ไปถังขยะ"])

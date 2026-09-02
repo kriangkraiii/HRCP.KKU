@@ -1,11 +1,11 @@
 # PLAN: Fast Document Preview with JODConverter OfficeManager & In-Memory Stream Processing
 
-## 🎯 Goal
+##  Goal
 เร่งความเร็วการโหลดตัวอย่างเอกสาร (Document Preview) และการแปลง DOCX เป็น PDF ให้รวดเร็วระดับ Sub-second (< 0.5 วินาที) โดยแก้ปัญหา Cold-start Process ของ LibreOffice และเพิ่มประสิทธิภาพ In-Memory Caching & Streaming
 
 ---
 
-## 🔍 Context & Root Cause Analysis
+##  Context & Root Cause Analysis
 1. **คอขวดปัจจุบัน (Current Bottleneck):**
    - ใน [DocumentGenerationService.java](file:///Users/kriangkrai/Developer/Projects/eclipse-workspace/Spring%20pj/pjweb/HRCP.KKU/HRCP-KKU-Academic/src/main/java/com/ecom/academic/service/DocumentGenerationService.java), การแปลง PDF ใช้ `ProcessBuilder` รัน `soffice --headless` แบบ Cold Start ทุกครั้ง
    - ต้องสร้าง Temp Folder, แตก User Profile ใหม่, โหลดโปรแกรม LibreOffice ขึ้น RAM ใหม่ทั้งหมด ทำให้ใช้เวลา **2.5 - 5.0 วินาที** ต่อการกดดูตัวอย่าง 1 ครั้ง
@@ -14,7 +14,7 @@
 
 ---
 
-## 🏗️ Architecture & Technical Design
+## ️ Architecture & Technical Design
 
 ```mermaid
 graph TD
@@ -31,7 +31,7 @@ graph TD
 
 ---
 
-## 📋 Task Breakdown
+##  Task Breakdown
 
 ### Phase 1: JODConverter LocalOfficeManager Integration
 - [ ] สร้างหรือปรับปรุง Lifecycle ของ `LocalOfficeManager` ใน `DocumentGenerationService.java` (หรือสร้าง `@Bean OfficeManager` ใน Spring Config)
@@ -55,7 +55,7 @@ graph TD
 
 ---
 
-## 🛡️ Risk & Mitigation
+## ️ Risk & Mitigation
 - **Risk:** LibreOffice Crash หรือ Memory Leak เมื่อรันต่อเนื่อง
   - **Mitigation:** `LocalOfficeManager` มีระบบ Auto-heal และ Auto-recycle หลังทำงานครบ 200 tasks อัตโนมัติ
 - **Risk:** เครื่องที่ไม่มี LibreOffice รันโปรแกรมไม่ขึ้น
@@ -63,7 +63,7 @@ graph TD
 
 ---
 
-## 🏁 Verification Criteria
+##  Verification Criteria
 - [ ] กด Preview โหลดเสร็จภายใน 0.3 - 0.5 วินาที (เร็วขึ้น 80%+)
 - [ ] กด Preview ซ้ำเมื่อข้อมูลเดิม โหลดเสร็จทันที (Cache Hit < 10ms)
 - [ ] ทดสอบสร้างเอกสาร 0-8 และเอกสารตำแหน่งวิชาการได้ครบถ้วน

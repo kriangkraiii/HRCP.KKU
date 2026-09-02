@@ -42,9 +42,9 @@ accounts are excluded automatically. Each record's stable key is `user_id`.
 
 | Param           | Required | Description |
 |-----------------|----------|-------------|
-| `updated_since` | ❌       | RFC 3339 datetime. Returns only users modified at/after this time (incremental sync). Omit for a full pull. |
-| `limit`         | ❌       | Page size. Default `100`, max `500`. |
-| `offset`        | ❌       | Rows to skip. Default `0`. |
+| `updated_since` | [NO]       | RFC 3339 datetime. Returns only users modified at/after this time (incremental sync). Omit for a full pull. |
+| `limit`         | [NO]       | Page size. Default `100`, max `500`. |
+| `offset`        | [NO]       | Rows to skip. Default `0`. |
 
 ### Sync strategy (recommended)
 

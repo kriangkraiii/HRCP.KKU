@@ -6,8 +6,8 @@
 
 ```mermaid
 graph LR
-    User["👨‍🏫 ผู้ยื่นคำร้อง<br/>(Applicant)"]
-    Admin["👨‍💼 ผู้ดูแลระบบ<br/>(Admin)"]
+    User["‍ ผู้ยื่นคำร้อง<br/>(Applicant)"]
+    Admin["‍ ผู้ดูแลระบบ<br/>(Admin)"]
 
     UC1(["UC-PET-01: ยื่นคำร้องทั่วไป"])
     UC2(["UC-PET-02: ดูรายละเอียดคำร้อง"])

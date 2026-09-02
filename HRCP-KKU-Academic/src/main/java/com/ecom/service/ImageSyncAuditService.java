@@ -67,18 +67,18 @@ public class ImageSyncAuditService {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationStartup() {
-        log.info("🚀 [Startup Image & Storage Sync] Initializing startup check, orphan cleanup, and expired trash purge...");
+        log.info("[Startup Image & Storage Sync] Initializing startup check, orphan cleanup, and expired trash purge...");
         try {
             ImageAuditReport report = auditAndSync(true, false);
             int adminTrashPurged = adminStorageService != null ? adminStorageService.purgeOldTrash(30) : 0;
             // คลังไฟล์ส่วนตัวของผู้ยื่นถูกปิดและ drop ตารางไปแล้ว จึงไม่มีถังขยะให้ล้าง
             int userTrashPurged = 0;
-            log.info("🚀 [Startup Sync Complete] Disk files: {}, DB users: {}, Orphan images purged: {}, Missing references healed: {}, Expired trash files purged: {} (Took {}ms)",
+            log.info("[Startup Sync Complete] Disk files: {}, DB users: {}, Orphan images purged: {}, Missing references healed: {}, Expired trash files purged: {} (Took {}ms)",
                     report.totalDiskFiles(), report.totalDbUsers(),
                     report.orphanFilesPurged().size(), report.missingDbFilesHealed().size(),
                     (adminTrashPurged + userTrashPurged), report.durationMs());
         } catch (Exception e) {
-            log.error("⚠️ [Startup Image & Storage Sync Error] Failed during startup check: {}", e.getMessage(), e);
+            log.error("[Startup Image & Storage Sync Error] Failed during startup check: {}", e.getMessage(), e);
         }
     }
 
@@ -88,18 +88,18 @@ public class ImageSyncAuditService {
      */
     @Scheduled(cron = "${app.images.cleanup-cron:0 0 3 * * ?}")
     public void scheduledDailyCleanup() {
-        log.info("⏰ [Scheduled Storage Cleanup] Starting daily cron image audit, orphan cleanup, and 30-day trash purge...");
+        log.info("[Scheduled Storage Cleanup] Starting daily cron image audit, orphan cleanup, and 30-day trash purge...");
         try {
             ImageAuditReport report = auditAndSync(true, true);
             int adminTrashPurged = adminStorageService != null ? adminStorageService.purgeOldTrash(30) : 0;
             // คลังไฟล์ส่วนตัวของผู้ยื่นถูกปิดและ drop ตารางไปแล้ว จึงไม่มีถังขยะให้ล้าง
             int userTrashPurged = 0;
-            log.info("⏰ [Scheduled Storage Cleanup Complete] Disk files: {}, Orphan images purged: {}, Missing references healed: {}, Expired trash files purged: {} (Took {}ms)",
+            log.info("[Scheduled Storage Cleanup Complete] Disk files: {}, Orphan images purged: {}, Missing references healed: {}, Expired trash files purged: {} (Took {}ms)",
                     report.totalDiskFiles(), report.orphanFilesPurged().size(),
                     report.missingDbFilesHealed().size(), (adminTrashPurged + userTrashPurged),
                     report.durationMs());
         } catch (Exception e) {
-            log.error("⚠️ [Scheduled Storage Cleanup Error] Failed during scheduled cleanup: {}", e.getMessage(), e);
+            log.error("[Scheduled Storage Cleanup Error] Failed during scheduled cleanup: {}", e.getMessage(), e);
         }
     }
 

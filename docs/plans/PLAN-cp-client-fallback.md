@@ -1,6 +1,6 @@
 # แผนการพัฒนา: ระบบ Graceful Degradation และ Fallback Cache สำหรับ Service เชื่อมต่อภายนอก (CpWebClient)
 
-## 📌 ภาพรวมและปัญหา (Context & Problem)
+##  ภาพรวมและปัญหา (Context & Problem)
 เมื่อระบบพยายามเชื่อมต่อไปยัง External API เช่น `https://api.computing.kku.ac.th/api/v1/user/list` (เว็บไซต์คณะ เพื่อดึงรายชื่อและรูปบุคลากร) แล้วเกิดเหตุขัดข้องทางเครือข่าย เช่น **Connection Timeout**, เซิร์ฟเวอร์ปลายทางปิดปรับปรุง หรือปัญหา DNS:
 1. `CpWebClient` จะเกิด `ResourceAccessException: Connect timed out` และพ่น Log ระดับ `ERROR` ออกมาอย่างตื่นตระหนก แม้จะเป็นเพียงการซิงค์ข้อมูลเสริม (Enrichment) ใน Background Task
 2. ไม่มีระบบ **Fallback Snapshot Cache** ทำให้เมื่อ API ปลายทางล่ม ระบบจะไม่สามารถเข้าถึงข้อมูลล่าสุดที่เคยซิงค์สำเร็จได้
@@ -8,7 +8,7 @@
 
 ---
 
-## 🎯 เป้าหมาย (Objectives)
+##  เป้าหมาย (Objectives)
 1. **Graceful Degradation & Smart Exception Handling:** ดักจับ `ResourceAccessException` (Timeout, Connection Refused, DNS Failure) และ `RestClientException` แยกเฉพาะ โดยปรับระดับ Log เป็น `WARN` พร้อมข้อความที่ชัดเจน ไม่ให้รบกวนระบบหลัก
 2. **Configurable Timeouts:** เพิ่มคอนฟิก `cp.web.connect-timeout-seconds` และ `cp.web.read-timeout-seconds` ใน `CpWebProperties`
 3. **Local Snapshot Fallback Cache:** เมื่อดึงข้อมูลสำเร็จ ให้บันทึก Snapshot รายชื่อบุคลากรเก็บไว้ใน Disk/Storage ท้องถิ่น (`cp_directory_snapshot.json`) หากเกิด Timeout ในรอบถัดไป ระบบจะสลับไปอ่านจาก Snapshot Cache อัตโนมัติ ทำให้งานซิงค์และฟีเจอร์อื่นๆ ทำงานต่อเนื่องได้ 100%
@@ -16,7 +16,7 @@
 
 ---
 
-## 🛠️ รายละเอียดการเปลี่ยนแปลงทางเทคนิค (Detailed Technical Breakdown)
+##  รายละเอียดการเปลี่ยนแปลงทางเทคนิค (Detailed Technical Breakdown)
 
 ### 1. Configuration: `CpWebProperties.java`
 - เพิ่ม Properties:
@@ -51,7 +51,7 @@
 
 ---
 
-## 🧪 แผนการทดสอบ (Verification Plan)
+## [Test] แผนการทดสอบ (Verification Plan)
 1. **Automated Unit Tests:**
    - รัน Maven Test สำหรับชุดทดสอบ `CpWebClientTest` และ `CpDirectorySyncServiceTest`
 2. **Manual Simulation Verification:**
@@ -59,18 +59,18 @@
 
 ---
 
-## ✅ สถานะ (อัปเดต 1 กันยายน 2569)
+## [YES] สถานะ (อัปเดต 1 กันยายน 2569)
 
 ข้อ 1-4 ทำครบแล้ว รัน `./mvnw test -DskipTests=false` ผ่านทั้งชุด (1,016 เทส, ข้าม 10 เทสที่ต้องใช้ Docker)
 
 | หัวข้อ | สถานะ |
 |--------|-------|
-| Configurable timeouts + `fallbackCacheEnabled` + `snapshotFilePath` | ✅ |
-| `maxRetryAttempts` (ค่าเริ่มต้น 2 ครั้ง, backoff 300ms × ครั้งที่) | ✅ |
-| แยก `ResourceAccessException` / `RestClientResponseException` / อื่น ๆ เป็น WARN/ERROR | ✅ |
-| `saveSnapshot()` / `loadSnapshot()` / `fetchAllWithFallback()` | ✅ |
-| `CpDirectorySyncService.Result.usedFallbackCache` + `describe()` | ✅ |
-| `CpWebClientTest` (7 เทส) + `CpDirectorySyncServiceTest` (9 เทส) | ✅ |
+| Configurable timeouts + `fallbackCacheEnabled` + `snapshotFilePath` | [YES] |
+| `maxRetryAttempts` (ค่าเริ่มต้น 2 ครั้ง, backoff 300ms × ครั้งที่) | [YES] |
+| แยก `ResourceAccessException` / `RestClientResponseException` / อื่น ๆ เป็น WARN/ERROR | [YES] |
+| `saveSnapshot()` / `loadSnapshot()` / `fetchAllWithFallback()` | [YES] |
+| `CpDirectorySyncService.Result.usedFallbackCache` + `describe()` | [YES] |
+| `CpWebClientTest` (7 เทส) + `CpDirectorySyncServiceTest` (9 เทส) | [YES] |
 | Manual simulation ชี้ base-url ไป host ที่ timeout จริง | ⬜ ต้องทำบนเครื่องจริง |
 
 **สิ่งที่ทำต่างจากแผนเดิม และเหตุผล**

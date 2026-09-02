@@ -1,6 +1,6 @@
 # PLAN: แก้ไขปัญหาการดึงข้อมูล KKU IR (Khon Kaen University Institutional Repository)
 
-## 📌 สาเหตุที่ดึงไม่สำเร็จ (Root Cause)
+##  สาเหตุที่ดึงไม่สำเร็จ (Root Cause)
 1. **URL เก่าปิดตัวลง:** ค่าเดิมชี้ไปที่ `https://repository.kku.ac.th/oai/request` ซึ่งเซิร์ฟเวอร์ปลายทางปิดพอร์ต 443 ทำให้เกิด `Connection Refused`
 2. **URL ที่แท้จริงของ มข. ในปัจจุบัน:** คือ **`https://kkuir.kku.ac.th/oai/request`**
 3. **รหัสคอลเลกชัน (Set ID) ของวิทยาลัยการคอมพิวเตอร์:**
@@ -10,7 +10,7 @@
 
 ---
 
-## 🛠️ รายละเอียดงานที่ต้องดำเนินการ (Task Breakdown)
+## ️ รายละเอียดงานที่ต้องดำเนินการ (Task Breakdown)
 1. **แก้ไขคอนฟิก `application.properties`:**
    - เปลี่ยน `harvest.kkuir.oai-endpoint` เป็น `https://kkuir.kku.ac.th/oai/request`
    - ตั้งค่า Set เริ่มต้นเป็น `col_123456789_37197`

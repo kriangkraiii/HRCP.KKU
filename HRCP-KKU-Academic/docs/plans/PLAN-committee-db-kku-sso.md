@@ -1,13 +1,13 @@
 # แผนงาน: ระบบจัดเก็บข้อมูลกรรมการลงฐานข้อมูล & ระบบลงนามผ่าน KKU SSO พร้อมอีเมลทางการ (PLAN-committee-db-kku-sso.md)
 
-## 📌 สรุปโจทย์และความต้องการ
+##  สรุปโจทย์และความต้องการ
 1. จัดเก็บข้อมูลกรรมการผู้ทรงคุณวุฒิลงใน Database: ชื่อ-สกุล, ตำแหน่งวิชาการ, สถาบัน/มหาวิทยาลัยต้นสังกัด, อีเมล, เบอร์โทรศัพท์, ประเภทกรรมการ และสาขาความเชี่ยวชาญ
 2. การลงนามของกรรมการต้องยืนยันตัวตนผ่าน **KKU SSO** (ไม่มีการใช้ Password ทั่วไปใน Production)
 3. อีเมลแจ้งเตือนที่ส่งหากรรมการต้องเป็น **รูปแบบหนังสือราชการทางการ น่าเชื่อถือ และระบุวันหมดอายุ (Due Date) ไว้อย่างชัดเจน**
 
 ---
 
-## 🗄️ โครงสร้างฐานข้อมูล (Entity Model)
+## ️ โครงสร้างฐานข้อมูล (Entity Model)
 
 ```sql
 CREATE TABLE academic_committee_member (
@@ -33,7 +33,7 @@ CREATE INDEX idx_comm_type ON academic_committee_member(committee_type);
 
 ---
 
-## 🔐 กลไกความปลอดภัยและ KKU SSO Workflow
+##  กลไกความปลอดภัยและ KKU SSO Workflow
 
 1. **ส่งหนังสือขอความอนุเคราะห์ (Email Notification):**
    - เมื่อเอกสารเข้าสู่คิวลงนามของกรรมการ ระบบส่งอีเมลราชการระบุรายละเอียดและวันหมดอายุ
@@ -49,7 +49,7 @@ CREATE INDEX idx_comm_type ON academic_committee_member(committee_type);
 
 ---
 
-## 📋 แผนการพัฒนาทีละขั้นตอน (Step-by-Step Task Breakdown)
+##  แผนการพัฒนาทีละขั้นตอน (Step-by-Step Task Breakdown)
 
 1. **Phase 1: Model & Repository**
    - สร้าง `AcademicCommitteeMember.java`, `CommitteeType.java`

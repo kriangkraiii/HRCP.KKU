@@ -97,10 +97,10 @@ public class DataRetentionService {
      */
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationStartup() {
-        log.info("🚀 [Startup Retention] Starting system data retention check and cleanup...");
+        log.info("[Startup Retention] Starting system data retention check and cleanup...");
         try {
             RetentionExecutionReport report = runFullRetentionCycle();
-            log.info("🚀 [Startup Retention Complete] DB records purged: {} (Notif: {}, Logs: {}, Sync: {}), Storage trash files: {} (Took {}ms)",
+            log.info("[Startup Retention Complete] DB records purged: {} (Notif: {}, Logs: {}, Sync: {}), Storage trash files: {} (Took {}ms)",
                     report.totalDatabaseRecordsPurged(),
                     (report.deletedNotificationsPurged() + report.ancientNotificationsPurged()),
                     report.adminLogsPurged(),
@@ -108,7 +108,7 @@ public class DataRetentionService {
                     report.totalStorageFilesPurged(),
                     report.durationMs());
         } catch (Exception e) {
-            log.error("⚠️ [Startup Retention Error] Failed during startup data retention cycle: {}", e.getMessage(), e);
+            log.error("[Startup Retention Error] Failed during startup data retention cycle: {}", e.getMessage(), e);
         }
     }
 
@@ -118,15 +118,15 @@ public class DataRetentionService {
      */
     @Scheduled(cron = "${app.retention.cron:0 30 3 * * ?}")
     public void scheduledDailyRetention() {
-        log.info("⏰ [Scheduled Retention] Starting daily data retention maintenance...");
+        log.info("[Scheduled Retention] Starting daily data retention maintenance...");
         try {
             RetentionExecutionReport report = runFullRetentionCycle();
-            log.info("⏰ [Scheduled Retention Complete] DB records purged: {}, Storage trash files: {} (Took {}ms)",
+            log.info("[Scheduled Retention Complete] DB records purged: {}, Storage trash files: {} (Took {}ms)",
                     report.totalDatabaseRecordsPurged(),
                     report.totalStorageFilesPurged(),
                     report.durationMs());
         } catch (Exception e) {
-            log.error("⚠️ [Scheduled Retention Error] Failed during scheduled data retention maintenance: {}", e.getMessage(), e);
+            log.error("[Scheduled Retention Error] Failed during scheduled data retention maintenance: {}", e.getMessage(), e);
         }
     }
 

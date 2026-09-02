@@ -462,7 +462,7 @@
                                     var submitter = e.submitter;
                                     if (submitter && submitter.value === 'submit' && submitBtn.disabled) {
                                         e.preventDefault();
-                                        alert('⚠️ ไม่สามารถบันทึกเอกสารได้: กรุณาตรวจสอบว่าติ๊กครบ 5 ข้อ, แนบครบ 5 ช่อง และขนาดแต่ละช่องไม่เกิน 75 MB');
+                                        alert('ไม่สามารถบันทึกเอกสารได้: กรุณาตรวจสอบว่าติ๊กครบ 5 ข้อ, แนบครบ 5 ช่อง และขนาดแต่ละช่องไม่เกิน 75 MB');
                                         return false;
                                     }
                                 });
@@ -553,7 +553,7 @@
                                             var newMb = (totalBytes / (1024 * 1024)).toFixed(1);
                                             var curMb = (currentBytes / (1024 * 1024)).toFixed(1);
                                             var totalMb = ((currentBytes + totalBytes) / (1024 * 1024)).toFixed(1);
-                                            alert('⚠️ ขนาดไฟล์รวมในช่องที่ ' + slot + ' จะเกินขีดจำกัด 75 MB ต่อช่อง!\n\n' +
+                                            alert('ขนาดไฟล์รวมในช่องที่ ' + slot + ' จะเกินขีดจำกัด 75 MB ต่อช่อง!\n\n' +
                                                   '• ไฟล์เดิมในช่องนี้: ' + curMb + ' MB\n' +
                                                   '• ไฟล์ใหม่ที่เลือก: ' + newMb + ' MB\n' +
                                                   '• ขนาดรวมทั้งหมด: ' + totalMb + ' MB (จำกัด 75.0 MB)\n\n' +
@@ -590,7 +590,7 @@
                                             if (curBytes + totalBytes > MAX_SLOT_BYTES) {
                                                 e.preventDefault();
                                                 var totalMb = ((curBytes + totalBytes) / (1024 * 1024)).toFixed(1);
-                                                alert('⚠️ ไม่สามารถอัปโหลดได้: ขนาดรวมในช่องที่ ' + s + ' (' + totalMb + ' MB) จะเกินขีดจำกัด 75 MB ต่อช่อง');
+                                                alert('ไม่สามารถอัปโหลดได้: ขนาดรวมในช่องที่ ' + s + ' (' + totalMb + ' MB) จะเกินขีดจำกัด 75 MB ต่อช่อง');
                                                 return false;
                                             }
                                         });

@@ -8,15 +8,15 @@
 
 ---
 
-## 🎯 Context & Goal
+##  Context & Goal
 
 มีงานค้างยังไม่ commit **34 ไฟล์** ซึ่งเริ่มทำฟีเจอร์ **"Admin Signature Gate"** แต่ทำไปแค่ครึ่งเดียว:
 
 | ส่วน | สถานะ |
 |---|---|
-| **"หน่วง"** — `activateNextStep()` ไม่ปล่อย step ที่ไม่ใช่ `applicant` ถ้าคำร้องยัง `DRAFT` | ✅ ทำแล้ว |
-| **"ปลดล็อก/ส่งต่อ"** — `forwardToNextSigners(...)` ที่ Phase 3 ของแผนเดิมระบุไว้ | ❌ **ไม่มีในโค้ดเลย** (grep เจอ 0 ที่) |
-| ปุ่ม "ยืนยันและส่งเวียนลงนามต่อ" ใน Phase 2 | ❌ **ยังไม่มีในเทมเพลต** |
+| **"หน่วง"** — `activateNextStep()` ไม่ปล่อย step ที่ไม่ใช่ `applicant` ถ้าคำร้องยัง `DRAFT` | [YES] ทำแล้ว |
+| **"ปลดล็อก/ส่งต่อ"** — `forwardToNextSigners(...)` ที่ Phase 3 ของแผนเดิมระบุไว้ | [NO] **ไม่มีในโค้ดเลย** (grep เจอ 0 ที่) |
+| ปุ่ม "ยืนยันและส่งเวียนลงนามต่อ" ใน Phase 2 | [NO] **ยังไม่มีในเทมเพลต** |
 
 ผลคือกดปุ่มแล้วเอกสารถูกล็อก แต่ไม่มีใครได้รับให้เซ็น และหน้าจอไม่บอกอะไรเลย — ตรงกับอาการ *"หน้า reload แต่สถานะเหมือนเดิม"*
 
@@ -24,7 +24,7 @@
 
 ---
 
-## 📋 Part A — ปุ่ม "ส่งไปลงนาม" ไม่ทำงาน
+##  Part A — ปุ่ม "ส่งไปลงนาม" ไม่ทำงาน
 
 ### สาเหตุที่ยืนยันแล้ว (4 ข้อ ทับซ้อนกัน)
 
@@ -142,7 +142,7 @@ public Result forwardToNextSigners(Long envelopeId, List<SignerAssignment> assig
 
 ---
 
-## 📋 Part B — สกัดแจ้งเตือนตอนเทส
+##  Part B — สกัดแจ้งเตือนตอนเทส
 
 ### สภาพปัจจุบัน
 
@@ -193,11 +193,11 @@ app.notification.test-accounts=${TEST_ACCOUNTS:user@user.com,admin@admin.com}
 - **การแจ้งเตือนในระบบ (กระดิ่ง) ไม่แตะ** — `NotificationService:45` เป็น `notificationRepository.save(...)` ล้วน ไม่มี `JavaMailSender` บัญชีเทสยังต้องเห็นกระดิ่งเพื่อเทสได้ **นี่คือดีไซน์เดิมที่ถูกแล้ว**
 - ทุกครั้งที่บล็อก `log.info("[MAIL SUPPRESSED] to={} reason={}")` เพื่อยืนยันตอนเทสว่าระบบ "จะส่ง" อะไรออกไปบ้าง
 
-> ⚠️ **หมายเหตุความปลอดภัย (นอกขอบเขตงานนี้ แต่ควรรู้):** `application.properties` มี Gmail app password จริง commit อยู่ใน git และซ้ำอีกที่ `SendAllTestEmailsTest.java` — **ย้ายไป env var แล้ว (GAP-05)** แต่ยังต้อง revoke รหัสผ่านตัวนั้นที่บัญชี Google เพราะยังอ่านได้จากประวัติ git
+> [NOTE] **หมายเหตุความปลอดภัย (นอกขอบเขตงานนี้ แต่ควรรู้):** `application.properties` มี Gmail app password จริง commit อยู่ใน git และซ้ำอีกที่ `SendAllTestEmailsTest.java` — **ย้ายไป env var แล้ว (GAP-05)** แต่ยังต้อง revoke รหัสผ่านตัวนั้นที่บัญชี Google เพราะยังอ่านได้จากประวัติ git
 
 ---
 
-## 📁 ไฟล์หลักที่แตะ
+##  ไฟล์หลักที่แตะ
 
 | ไฟล์ | ทำอะไร |
 |---|---|
@@ -215,7 +215,7 @@ app.notification.test-accounts=${TEST_ACCOUNTS:user@user.com,admin@admin.com}
 
 ---
 
-## ✅ Phase X: Verification Checklist
+## [YES] Phase X: Verification Checklist
 
 ### Part A — เดินครบวงจร (`user@user.com` + `admin@admin.com`)
 
@@ -239,15 +239,15 @@ app.notification.test-accounts=${TEST_ACCOUNTS:user@user.com,admin@admin.com}
 
 ### เทสอัตโนมัติ
 
-- [ ] `mvn -pl HRCP-KKU-Academic test` — ⚠️ ระวัง `SystemAlertServiceTest` ที่ `verify(mailSender, times(n)).send(...)` อาจพังถ้า fixture ใช้อีเมลในลิสต์เทส
+- [ ] `mvn -pl HRCP-KKU-Academic test` — [NOTE] ระวัง `SystemAlertServiceTest` ที่ `verify(mailSender, times(n)).send(...)` อาจพังถ้า fixture ใช้อีเมลในลิสต์เทส
 - [ ] เทสใหม่ `isTestEmail` (**ยังไม่มีเทสเลย**) ครอบ exact match / null / โดเมนใกล้เคียงที่ต้อง **ไม่** โดนบล็อก
 - [ ] เทสใหม่ `forwardToNextSigners`: envelope `COMPLETED` + เติม signer → กลับเป็น `IN_PROGRESS` และ step ใหม่เป็น `ACTIVE`
-- [ ] ⚠️ `SignatureWorkflowServiceTest` ใช้ `REQUEST_ID = 4242L` ที่ไม่มีแถวจริงในตาราง → `isDraftRequest` คืน `false` เสมอ ทำให้ **เทสชุดนี้จับ DRAFT gate ไม่ได้เลย** ต้องเพิ่มเคสที่มีคำร้องสถานะ `DRAFT` จริง
+- [ ] [NOTE] `SignatureWorkflowServiceTest` ใช้ `REQUEST_ID = 4242L` ที่ไม่มีแถวจริงในตาราง → `isDraftRequest` คืน `false` เสมอ ทำให้ **เทสชุดนี้จับ DRAFT gate ไม่ได้เลย** ต้องเพิ่มเคสที่มีคำร้องสถานะ `DRAFT` จริง
 
 
 ---
 
-## 📌 บันทึกหลังลงมือทำ (2026-08-24)
+##  บันทึกหลังลงมือทำ (2026-08-24)
 
 ทำครบทั้ง Part A และ Part B แล้ว ทดสอบผ่าน **786 tests, 0 failures** (รันเต็มหลายรอบติดกันเพื่อยืนยันว่าไม่ flaky)
 

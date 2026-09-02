@@ -21,7 +21,7 @@
 |---|---|
 | `{p}` | คำนำหน้าตามตำแหน่งที่ขอ — `asst` (ผศ.) / `assoc` (รศ.) / `prof` (ศ.) |
 | `{n}`, `{idx}` | เลขลำดับแถว เริ่มที่ `1` เพิ่มขึ้นตามจำนวนรายการที่ผู้ใช้เพิ่ม |
-| ⚠️ | ชื่อคีย์มีข้อผิดพลาดที่ต้องคงไว้ (ดู § ท้ายเอกสาร) |
+| [NOTE] | ชื่อคีย์มีข้อผิดพลาดที่ต้องคงไว้ (ดู § ท้ายเอกสาร) |
 
 ---
 
@@ -150,7 +150,7 @@
 | `OUTPUT_AUTHOR.is_first_author` | `chk_firstauthor{idx}` | checkbox `☑` |
 | `OUTPUT_AUTHOR.is_corresponding_author` | `chk_Corres{idx}` | checkbox `☑` |
 | `OUTPUT_AUTHOR.is_essential_contributor` | `essen{idx}` | checkbox `☑` |
-| `PUBLICATION_VENUE.impact_factor` | ⚠️ `impactfacttor{idx}` | ตัวเลข |
+| `PUBLICATION_VENUE.impact_factor` | [NOTE] `impactfacttor{idx}` | ตัวเลข |
 | `PUBLICATION_VENUE.indexed_database` | `data{idx}` | ข้อความ เช่น `Scopus` |
 | `RESEARCHER.title_th` | `applicant_title` | ข้อความ |
 | `RESEARCHER.academic_title_th` | `current_position` | ข้อความ |
@@ -247,7 +247,7 @@ importer จะเติมเฉพาะ **ชื่อผลงาน · ป�
 |---|---|
 | `output_type_code` = งานวิจัย | `group1_research` |
 | `output_type_code` = กลุ่มที่ ๒ รายการที่ ๑–๑๒ | `chkgroup2_1` … `chkgroup2_12` |
-| `output_type_code` = ตำรา | ⚠️ `chkgroup3_ treatise` |
+| `output_type_code` = ตำรา | [NOTE] `chkgroup3_ treatise` |
 | `output_type_code` = หนังสือ | `chkgroup3_book` |
 | `output_type_code` = บทความทางวิชาการ | `chkgroup3_Academicarticles` |
 
@@ -270,7 +270,7 @@ importer จะเติมเฉพาะ **ชื่อผลงาน · ป�
 | คีย์ใน `json_data` | ฟิลด์ที่ขอมาประกอบเป็นข้อความ |
 |---|---|
 | `des_journal` | `PUBLICATION_VENUE`: `journal_name` + `impact_factor` + `citation_count` + `indexed_database` |
-| ⚠️ `des_ patent` | `PATENT_IP`: `ip_type` + `grant_date` + `registration_no` + `countries_covered` |
+| [NOTE] `des_ patent` | `PATENT_IP`: `ip_type` + `grant_date` + `registration_no` + `countries_covered` |
 | `des_techreport` | `TECH_TRANSFER`: `user_organization` + `usage_description` |
 | `des_poster` | `PUBLICATION_VENUE`: `presentation_type` + `session_name` + `conference_name` + `conference_country` |
 | `des_scholarship` | `GRANT_PROJECT`: `title_th` + `funder_name` + `fiscal_year_be` + `budget_amount` |
@@ -280,7 +280,7 @@ importer จะเติมเฉพาะ **ชื่อผลงาน · ป�
 
 | ฟิลด์ที่ขอ | คีย์ใน `json_data` |
 |---|---|
-| `OUTPUT_AUTHOR.is_first_author` (ของผู้ยื่น) | ⚠️ `chk_ firstauthor` |
+| `OUTPUT_AUTHOR.is_first_author` (ของผู้ยื่น) | [NOTE] `chk_ firstauthor` |
 | `OUTPUT_AUTHOR.is_corresponding_author` (ของผู้ยื่น) | `chk_corresp` |
 | `OUTPUT_AUTHOR.is_essential_contributor` (ของผู้ยื่น) | `chk_essen` |
 | `OUTPUT_AUTHOR.author_name_full` (ผู้ประพันธ์อันดับแรก) | `firstauthor_name` |
