@@ -1,0 +1,32 @@
+@startuml uc-04-committee
+!include _style.puml
+title ระบบย่อยที่ 4 — การจัดการคณะกรรมการและบุคลากร
+
+left to right direction
+
+actor "ผู้ดูแลระบบ\n(Admin)" as Admin
+
+rectangle "การจัดการคณะกรรมการและบุคลากร" {
+  usecase "UC-33\nจัดการทะเบียนบุคลากร" as UC33
+  usecase "UC-34\nเชื่อมโยงบุคลากร\nกับบัญชีผู้ใช้" as UC34
+  usecase "UC-35\nจัดการรายชื่อคณะกรรมการ\nและผู้ทรงคุณวุฒิ" as UC35
+  usecase "UC-36\nกำหนดผังลำดับผู้ลงนาม\nของเอกสารแต่ละประเภท" as UC36
+  usecase "UC-37\nพิจารณาคำขอ\nเปลี่ยนสังกัด" as UC37
+  usecase "ซิงโครไนซ์ข้อมูล\nจากระบบภายนอก" as Sync
+  usecase "เปิดสิทธิ์เข้าใช้ระบบ\nให้ผู้ทรงคุณวุฒิภายนอก" as Grant
+}
+
+actor "fs.computing" as FS
+
+Admin --> UC33
+Admin --> UC34
+Admin --> UC35
+Admin --> UC36
+Admin --> UC37
+
+UC34 ..> Sync : <<include>>
+UC37 ..> Sync : <<include>>
+UC35 ..> Grant : <<include>>
+Sync --> FS
+
+@enduml

@@ -1,0 +1,31 @@
+@startuml uc-07-notification
+!include _style.puml
+title ระบบย่อยที่ 7 — การแจ้งเตือนและการค้นหา
+
+left to right direction
+
+actor "ผู้ยื่นคำร้อง\n(Applicant)" as App
+actor "เวลา\n(Time)" as Time
+
+rectangle "การแจ้งเตือนและการค้นหา" {
+  usecase "UC-49\nรับและจัดการ\nการแจ้งเตือนในระบบ" as UC49
+  usecase "UC-50\nค้นหาข้อมูล\nแบบรวมทั้งระบบ" as UC50
+  usecase "UC-51\nแจ้งเตือนผลประเมิน\nใกล้หมดอายุ" as UC51
+  usecase "UC-52\nแจ้งเตือนเอกสาร\nค้างลงนาม" as UC52
+  usecase "ส่งจดหมาย\nอิเล็กทรอนิกส์" as SendMail
+}
+
+actor "Mail Server" as Mail
+
+App --> UC49
+App --> UC50
+Time --> UC51
+Time --> UC52
+
+UC51 ..> SendMail : <<include>>
+UC52 ..> SendMail : <<include>>
+UC49 <.. SendMail : <<extend>>
+
+SendMail --> Mail
+
+@enduml

@@ -1,0 +1,116 @@
+@startuml uc-03-signature
+!include _style.puml
+title ระบบย่อยที่ 3 — เอกสารและลายเซ็นอิเล็กทรอนิกส์
+
+left to right direction
+
+actor "ผู้ใช้ทั่วไป\n(Guest)" as Guest
+actor "ผู้ยื่นคำร้อง\n(Applicant)" as App
+actor "ผู้ประพันธ์ร่วม\n(Co-author)" as CoAuthor
+actor "หัวหน้าสาขาวิชา\n(Department Head)" as Head
+actor "รองคณบดี\n(Associate Dean)" as AsscDean
+actor "คณบดี\n(Dean)" as Dean
+actor "เจ้าหน้าที่บุคคล\n(HR Officer)" as HR
+actor "ประธานคณะกรรมการ\nประเมิน (Chair)" as Chair
+actor "ผู้ทรงคุณวุฒิภายนอก\n(External Reader)" as Reader
+actor "ผู้ดูแลระบบ\n(Admin)" as Admin
+
+rectangle "เอกสารและลายเซ็นอิเล็กทรอนิกส์" {
+  usecase "UC-21\nดูตัวอย่างเอกสาร" as UC21
+  usecase "UC-22\nแนบไฟล์เอกสารประกอบ" as UC22
+  usecase "UC-23\nดาวน์โหลดเอกสาร" as UC23
+  usecase "UC-24\nจัดการลายเซ็นส่วนตัว" as UC24
+  usecase "UC-25\nดูรายการเอกสาร\nรอลงนาม" as UC25
+  usecase "UC-26\nลงนามเอกสาร\nอิเล็กทรอนิกส์" as UC26
+  usecase "UC-27\nปฏิเสธการลงนาม" as UC27
+  usecase "UC-28\nขอขยายกำหนดเวลา\nลงนาม" as UC28
+  usecase "UC-29\nส่งต่อเอกสารให้\nผู้ลงนามถัดไป" as UC29
+  usecase "UC-30\nยกเลิกซองเอกสาร\nลงนาม" as UC30
+  usecase "UC-31\nขอให้ลงนามใหม่" as UC31
+  usecase "UC-32\nตรวจสอบความถูกต้อง\nของลายเซ็น" as UC32
+
+  usecase "อัปโหลดไฟล์ขนาดใหญ่\nแบบแบ่งส่วน" as Chunk
+  usecase "ตรวจสอบชนิด\nและขนาดไฟล์" as ChkFile
+  usecase "สร้างไฟล์เอกสาร PDF" as GenPdf
+  usecase "บันทึกร่องรอย\nการลงนาม" as Audit
+  usecase "แจ้งเตือนผู้ลงนาม\nลำดับถัดไป" as NotifySigner
+}
+
+actor "Mail Server" as Mail
+
+App --> UC21
+App --> UC22
+App --> UC23
+
+App --> UC24
+App --> UC25
+App --> UC26
+App --> UC27
+App --> UC28
+
+CoAuthor --> UC24
+CoAuthor --> UC25
+CoAuthor --> UC26
+CoAuthor --> UC27
+CoAuthor --> UC28
+
+Head --> UC24
+Head --> UC25
+Head --> UC26
+Head --> UC27
+Head --> UC28
+
+AsscDean --> UC24
+AsscDean --> UC25
+AsscDean --> UC26
+AsscDean --> UC27
+AsscDean --> UC28
+
+Dean --> UC24
+Dean --> UC25
+Dean --> UC26
+Dean --> UC27
+Dean --> UC28
+
+HR --> UC24
+HR --> UC25
+HR --> UC26
+HR --> UC27
+HR --> UC28
+
+Chair --> UC24
+Chair --> UC25
+Chair --> UC26
+Chair --> UC27
+Chair --> UC28
+
+Reader --> UC24
+Reader --> UC25
+Reader --> UC26
+Reader --> UC27
+Reader --> UC28
+
+Admin --> UC29
+Admin --> UC30
+Admin --> UC31
+Guest --> UC32
+
+UC22 ..> ChkFile : <<include>>
+UC22 <.. Chunk : <<extend>>
+UC21 ..> GenPdf : <<include>>
+UC23 ..> GenPdf : <<include>>
+UC26 ..> UC24 : <<include>>
+UC26 ..> Audit : <<include>>
+UC26 ..> NotifySigner : <<include>>
+UC27 ..> Audit : <<include>>
+UC29 ..> NotifySigner : <<include>>
+
+NotifySigner --> Mail
+
+note bottom of UC26
+  ผู้กระทำ A-02 ถึง A-09 คือผู้มีอำนาจลงนาม
+  ทุกตัวใช้ยูสเคส UC-24 ถึง UC-28 ร่วมกัน
+  ต่างกันเพียงเอกสารที่ได้รับมอบหมายให้ลงนาม
+end note
+
+@enduml

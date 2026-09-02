@@ -32,10 +32,16 @@ bin/
 **/application-prod.yml
 
 # === Runtime data ===
+# เอกสารที่ผู้ใช้อัปโหลดและเอกสารที่ระบบสร้างระหว่างทำงาน — เป็นข้อมูลจริงของผู้ใช้
+# ไม่ใช่ซอร์สโค้ด (เทมเพลต .docx ที่แอปใช้อยู่ใน src/main/resources/templates/docx/ และยังคง track ไว้)
 uploads/
 logs/
 *.log
 *.log.gz
+
+# === Word/Office temp & lock files ===
+~$*
+*.tmp
 
 # === OS ===
 .DS_Store

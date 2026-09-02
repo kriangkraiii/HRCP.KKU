@@ -1,0 +1,32 @@
+@startuml uc-06-external
+!include _style.puml
+title ระบบย่อยที่ 6 — การเชื่อมโยงข้อมูลภายนอก
+
+left to right direction
+
+actor "ผู้ยื่นคำร้อง\n(Applicant)" as App
+actor "ผู้ดูแลระบบ\n(Admin)" as Admin
+
+rectangle "การเชื่อมโยงข้อมูลภายนอก" {
+  usecase "UC-45\nซิงโครไนซ์ข้อมูลบุคลากร\nจากระบบภายนอก" as UC45
+  usecase "UC-46\nดึงข้อมูลผลงานตีพิมพ์\nและจำนวนการอ้างอิง" as UC46
+  usecase "UC-47\nดูรายการผลงานตีพิมพ์\nของตนเอง" as UC47
+  usecase "UC-48\nตรวจสอบข้อมูล\nผลงานตีพิมพ์ในระบบ" as UC48
+  usecase "ปรับปรุงรูปภาพ\nและข้อมูลโปรไฟล์" as SyncImg
+}
+
+actor "fs.computing" as FS
+actor "Scopus API" as Scopus
+
+Admin --> UC45
+Admin --> UC46
+Admin --> UC48
+App --> UC47
+
+UC45 ..> SyncImg : <<include>>
+UC45 --> FS
+UC46 --> Scopus
+UC46 --> FS
+UC47 ..> UC46 : <<include>>
+
+@enduml

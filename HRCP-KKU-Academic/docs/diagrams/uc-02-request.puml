@@ -1,0 +1,57 @@
+@startuml uc-02-request
+!include _style.puml
+title ระบบย่อยที่ 2 — กระบวนการยื่นคำร้อง
+
+left to right direction
+
+actor "ผู้ยื่นคำร้อง\n(Applicant)" as App
+actor "ผู้ดูแลระบบ\n(Admin)" as Admin
+
+rectangle "กระบวนการยื่นคำร้อง" {
+  usecase "UC-09\nสร้างคำร้อง" as UC09
+  usecase "UC-10\nกรอกและบันทึก\nแบบร่างเอกสาร" as UC10
+  usecase "UC-11\nส่งคำร้องเข้าสู่\nการพิจารณา" as UC11
+  usecase "UC-12\nยกเลิกคำร้องแบบร่าง" as UC12
+  usecase "UC-13\nติดตามสถานะคำร้อง" as UC13
+  usecase "UC-14\nส่งเอกสารฉบับแก้ไข" as UC14
+  usecase "UC-15\nดูประวัติคำร้อง\nย้อนหลัง" as UC15
+
+  usecase "UC-16\nตรวจสอบรายละเอียด\nคำร้อง" as UC16
+  usecase "UC-17\nปรับปรุงสถานะคำร้อง" as UC17
+  usecase "UC-18\nจัดทำและแก้ไข\nเอกสารประกอบ" as UC18
+  usecase "UC-19\nส่งข้อเสนอแนะ\nให้แก้ไข" as UC19
+  usecase "UC-20\nบันทึกผลการประเมิน" as UC20
+
+  usecase "ตรวจสอบความครบถ้วน\nของเอกสาร" as ChkDoc
+  usecase "บันทึกประวัติ\nการเปลี่ยนสถานะ" as Hist
+  usecase "แจ้งเตือน\nผู้เกี่ยวข้อง" as Notify
+}
+
+actor "Mail Server" as Mail
+
+App --> UC09
+App --> UC10
+App --> UC11
+App --> UC12
+App --> UC13
+App --> UC14
+App --> UC15
+
+Admin --> UC16
+Admin --> UC17
+Admin --> UC18
+Admin --> UC19
+Admin --> UC20
+
+UC09 ..> UC10 : <<include>>
+UC11 ..> ChkDoc : <<include>>
+UC11 ..> Notify : <<include>>
+UC17 ..> Hist : <<include>>
+UC17 ..> Notify : <<include>>
+UC19 ..> Notify : <<include>>
+UC20 ..> Notify : <<include>>
+UC14 ..> UC13 : <<extend>>
+
+Notify --> Mail
+
+@enduml
