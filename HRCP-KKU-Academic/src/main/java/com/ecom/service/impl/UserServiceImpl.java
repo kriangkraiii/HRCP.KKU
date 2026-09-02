@@ -495,8 +495,13 @@ public class UserServiceImpl implements UserService {
 		java.util.Map<String, String> result = new java.util.HashMap<>();
 
 		try {
-			UserDtls user = userRepository.findById(id)
-					.orElseThrow(() -> new RuntimeException("User not found"));
+			UserDtls user = userRepository.findById(id).orElse(null);
+			if (user == null) {
+				logger.warn("User not found when updating profile image for user ID: {}", id);
+				result.put("success", "false");
+				result.put("error", "ไม่พบข้อมูลผู้ใช้งาน");
+				return result;
+			}
 
 			String oldImage = user.getProfileImage();
 

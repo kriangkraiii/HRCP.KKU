@@ -456,7 +456,7 @@ public class AcademicApplicantController {
                     errorParts.add("ช่องที่ " + overStr + " มีขนาดรวมเกินขีดจำกัด 75 MB ต่อช่อง");
                 }
                 redirectAttributes.addFlashAttribute("error", String.join(" และ ", errorParts));
-                return "redirect:/user/academic/request/" + id + "/document-1";
+                return "redirect:/user/academic/request/" + id + "/document-1" + (missingSlots.size() == 5 ? "?error=no_attachments" : "");
             }
         }
 
