@@ -78,7 +78,7 @@ graph TD
 
 ## 🔍 3. ข้อมูลต้นทางที่มีให้ (2 แหล่ง)
 
-### แหล่งที่ 1: `roles_positions_users_combined.sql` (ข้อมูลบุคลากร ~50 ท่าน)
+### แหล่งที่ 1: `docs/database/seeds/roles_positions_users_combined.sql` (ข้อมูลบุคลากร ~50 ท่าน)
 - **ข้อมูลส่วนตัว:** `prefix` (คำนำหน้า), `user_fname`, `user_lname`, `gender`, `email`, `TEL`, `TELformat`
 - **ข้อมูลตำแหน่ง:** `position` (ตำแหน่งวิชาการ TH), `position_en`, `prefix_position_en`, `manage_position` (ตำแหน่งบริหาร)
 - **ข้อมูลภาษาอังกฤษ:** `Name_en`, `suffix_en` (เช่น Ph.D.)
