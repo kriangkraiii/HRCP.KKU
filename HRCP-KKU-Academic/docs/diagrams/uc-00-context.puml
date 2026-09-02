@@ -1,0 +1,67 @@
+@startuml uc-00-context
+!include _style.puml
+title แผนภาพยูสเคสระดับบริบท\nระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ
+
+left to right direction
+
+actor "ผู้ใช้ทั่วไป\n(Guest)" as Guest
+actor "ผู้ยื่นคำร้อง\n(Applicant)" as App
+actor "ผู้ประพันธ์ร่วม\n(Co-author)" as CoAuthor
+actor "หัวหน้าสาขาวิชา\n(Department Head)" as Head
+actor "รองคณบดี\n(Associate Dean)" as AsscDean
+actor "คณบดี\n(Dean)" as Dean
+actor "เจ้าหน้าที่บุคคล\n(HR Officer)" as HR
+actor "ประธานคณะกรรมการ\nประเมิน (Chair)" as Chair
+actor "ผู้ทรงคุณวุฒิภายนอก\n(External Reader)" as Reader
+actor "ผู้ดูแลระบบ\n(Admin)" as Admin
+actor "เวลา\n(Time)" as Time
+
+rectangle "ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ" as SYS {
+  usecase "ยืนยันตัวตน\nและจัดการบัญชี" as S1
+  usecase "ดำเนินกระบวนการ\nคำร้อง" as S2
+  usecase "จัดทำเอกสารและ\nลงนามอิเล็กทรอนิกส์" as S3
+  usecase "จัดการคณะกรรมการ\nและบุคลากร" as S4
+  usecase "บริหารจัดการระบบ" as S5
+  usecase "เชื่อมโยงข้อมูล\nภายนอก" as S6
+  usecase "แจ้งเตือน\nและติดตาม" as S7
+}
+
+actor "KKU SSO" as SSO
+actor "Mail Server" as Mail
+actor "fs.computing" as FS
+actor "Scopus API" as Scopus
+
+Admin --|> App
+
+note top of Guest
+  ผู้กระทำ A-02 ถึง A-10 ทุกตัว
+  สืบทอดยูสเคสของผู้ใช้ทั่วไป
+  (เข้าสู่ระบบและจัดการบัญชี)
+end note
+
+Guest --> S1
+App --> S2
+App --> S3
+App --> S7
+CoAuthor --> S3
+Head --> S3
+AsscDean --> S3
+Dean --> S3
+HR --> S3
+Chair --> S3
+Reader --> S3
+Admin --> S2
+Admin --> S4
+Admin --> S5
+Admin --> S6
+Time --> S7
+
+S1 --> SSO
+S1 --> Mail
+S3 --> Mail
+S7 --> Mail
+S4 --> FS
+S6 --> FS
+S6 --> Scopus
+
+@enduml

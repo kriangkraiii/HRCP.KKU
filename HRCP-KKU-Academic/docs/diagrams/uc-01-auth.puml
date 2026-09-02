@@ -1,0 +1,45 @@
+@startuml uc-01-auth
+!include _style.puml
+title ระบบย่อยที่ 1 — การยืนยันตัวตนและบัญชีผู้ใช้
+
+left to right direction
+
+actor "ผู้ใช้ทั่วไป\n(Guest)" as Guest
+actor "ผู้ยื่นคำร้อง\n(Applicant)" as App
+
+rectangle "การยืนยันตัวตนและบัญชีผู้ใช้" {
+  usecase "UC-01\nเข้าสู่ระบบด้วยรหัสผ่าน" as UC01
+  usecase "UC-02\nเข้าสู่ระบบด้วย KKU SSO" as UC02
+  usecase "UC-03\nยืนยันตัวตนสองขั้นตอน" as UC03
+  usecase "UC-04\nตั้งค่าบัญชีครั้งแรก" as UC04
+  usecase "UC-05\nขอรีเซ็ตรหัสผ่านที่ลืม" as UC05
+  usecase "UC-06\nออกจากระบบ" as UC06
+  usecase "UC-07\nจัดการโปรไฟล์ส่วนตัว" as UC07
+  usecase "UC-08\nเปลี่ยนรหัสผ่าน" as UC08
+  usecase "ส่งรหัส OTP\nทางอีเมล" as SendOtp
+  usecase "ตรวจสอบสิทธิ์\nเข้าใช้ระบบ" as ChkAllow
+}
+
+actor "KKU SSO" as SSO
+actor "Mail Server" as Mail
+
+App --|> Guest
+
+Guest --> UC01
+Guest --> UC02
+Guest --> UC04
+Guest --> UC05
+App --> UC06
+App --> UC07
+App --> UC08
+
+UC01 ..> UC03 : <<include>>
+UC02 ..> ChkAllow : <<include>>
+UC03 ..> SendOtp : <<include>>
+UC04 ..> SendOtp : <<include>>
+UC05 ..> SendOtp : <<include>>
+
+UC02 --> SSO
+SendOtp --> Mail
+
+@enduml

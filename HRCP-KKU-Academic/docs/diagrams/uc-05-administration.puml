@@ -1,0 +1,37 @@
+@startuml uc-05-administration
+!include _style.puml
+title ระบบย่อยที่ 5 — การจัดการผู้ใช้และระบบ
+
+left to right direction
+
+actor "ผู้ยื่นคำร้อง\n(Applicant)" as App
+actor "ผู้ดูแลระบบ\n(Admin)" as Admin
+actor "เวลา\n(Time)" as Time
+
+rectangle "การจัดการผู้ใช้และระบบ" {
+  usecase "UC-38\nจัดการบัญชีผู้ใช้" as UC38
+  usecase "UC-39\nรีเซ็ตการยืนยัน\nสองขั้นตอนของผู้ใช้" as UC39
+  usecase "UC-40\nจัดการไฟล์และ\nถังขยะของระบบ" as UC40
+  usecase "UC-41\nจัดการพื้นที่จัดเก็บ\nไฟล์ส่วนตัว" as UC41
+  usecase "UC-42\nตั้งค่าระบบและ\nการแจ้งเตือน" as UC42
+  usecase "UC-43\nดูบันทึกกิจกรรม\nและส่งออกรายงาน" as UC43
+  usecase "UC-44\nลบข้อมูลตามนโยบาย\nการเก็บรักษาข้อมูล" as UC44
+  usecase "ตรวจสอบโควตา\nพื้นที่จัดเก็บ" as Quota
+  usecase "บันทึกกิจกรรม\nของผู้ใช้" as Log
+}
+
+Admin --> UC38
+Admin --> UC39
+Admin --> UC40
+Admin --> UC42
+Admin --> UC43
+Admin --> UC44
+App --> UC41
+Time --> UC44
+
+UC41 ..> Quota : <<include>>
+UC40 ..> Quota : <<include>>
+UC38 ..> Log : <<include>>
+UC42 ..> Log : <<include>>
+
+@enduml

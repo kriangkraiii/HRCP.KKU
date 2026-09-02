@@ -1,0 +1,27 @@
+' รูปแบบร่วมของแผนภาพกิจกรรมทุกภาพ
+' นำเข้าด้วย !include _style_activity.puml
+skinparam defaultFontName "Tahoma"
+skinparam defaultFontSize 13
+skinparam dpi 150
+skinparam shadowing false
+
+skinparam activity {
+  BorderColor #546E7A
+  BackgroundColor #FFFFFF
+  FontSize 13
+  DiamondBorderColor #546E7A
+  DiamondBackgroundColor #FFF8E1
+  DiamondFontSize 12
+  StartColor #37474F
+  EndColor #37474F
+  BarColor #37474F
+}
+skinparam swimlane {
+  BorderColor #90A4AE
+  TitleFontSize 14
+  TitleFontStyle bold
+}
+skinparam ArrowColor #37474F
+skinparam ArrowFontSize 11
+skinparam NoteBackgroundColor #FFFDE7
+skinparam NoteBorderColor #FBC02D
