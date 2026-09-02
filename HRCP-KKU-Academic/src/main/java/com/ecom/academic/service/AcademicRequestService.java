@@ -563,6 +563,51 @@ public class AcademicRequestService {
         }
     }
 
+    // ==================== Slot-Based Attachment Methods ====================
+
+    private static final long MAX_SLOT_BYTES = 75L * 1024L * 1024L; // 75 MB per slot
+
+    public List<AcademicAttachment> getAttachmentsBySlot(Long requestId, int slot) {
+        return attachmentRepository.findByRequestIdAndChecklistItemAndIsDeletedFalseOrderByUploadedAtDesc(requestId, slot);
+    }
+
+    public java.util.Map<Integer, List<AcademicAttachment>> getAttachmentsGroupedBySlot(Long requestId) {
+        List<AcademicAttachment> all = attachmentRepository.findByRequestIdAndIsDeletedFalseOrderByChecklistItemAscUploadedAtDesc(requestId);
+        java.util.Map<Integer, List<AcademicAttachment>> map = new java.util.LinkedHashMap<>();
+        for (int i = 1; i <= 5; i++) {
+            map.put(i, new java.util.ArrayList<>());
+        }
+        for (AcademicAttachment att : all) {
+            Integer slot = att.getChecklistItem();
+            if (slot != null && slot >= 1 && slot <= 5) {
+                map.get(slot).add(att);
+            }
+        }
+        return map;
+    }
+
+    public long getSlotTotalSize(Long requestId, int slot) {
+        return getAttachmentsBySlot(requestId, slot).stream()
+                .mapToLong(att -> att.getFileSize() != null ? att.getFileSize() : 0L)
+                .sum();
+    }
+
+    public void validateSlotQuota(Long requestId, int slot, long incomingBytes) {
+        long currentSize = getSlotTotalSize(requestId, slot);
+        if (currentSize + incomingBytes > MAX_SLOT_BYTES) {
+            String usedMB = String.format("%.1f", currentSize / (1024.0 * 1024.0));
+            String incomingMB = String.format("%.1f", incomingBytes / (1024.0 * 1024.0));
+            throw new IllegalStateException(
+                    "ช่องที่ " + slot + " มีขนาดรวม " + usedMB + " MB แล้ว "
+                    + "ไม่สามารถอัปโหลดไฟล์ขนาด " + incomingMB + " MB เพิ่มได้ "
+                    + "(จำกัด 75 MB ต่อช่อง)");
+        }
+    }
+
+    public long countActiveAttachments(Long requestId) {
+        return attachmentRepository.findByRequestIdAndIsDeletedFalseOrderByChecklistItemAscUploadedAtDesc(requestId).size();
+    }
+
     /**
      * อัพเดตสถานะอัตโนมัติตามเอกสารที่กรอกเสร็จ
      * - Doc 3 saved → SUB_COMMITTEE_APPOINTED

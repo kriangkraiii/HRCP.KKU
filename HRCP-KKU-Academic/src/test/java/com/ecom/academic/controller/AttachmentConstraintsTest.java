@@ -2,6 +2,7 @@ package com.ecom.academic.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -10,6 +11,8 @@ import static org.mockito.Mockito.when;
 
 import java.nio.file.Path;
 import java.security.Principal;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -29,7 +32,6 @@ import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
-import com.ecom.academic.service.UserStorageService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
@@ -42,6 +44,7 @@ class AttachmentConstraintsTest {
     Path tempDir;
 
     private AcademicRequestService requestService;
+    private DocumentGenerationService documentService;
     private UserRepository userRepository;
     private AcademicApplicantController applicantController;
 
@@ -51,6 +54,7 @@ class AttachmentConstraintsTest {
     @BeforeEach
     void setUp() {
         requestService = mock(AcademicRequestService.class);
+        documentService = mock(DocumentGenerationService.class);
         userRepository = mock(UserRepository.class);
 
         applicantUser = new UserDtls();
@@ -68,26 +72,26 @@ class AttachmentConstraintsTest {
 
         applicantController = new AcademicApplicantController(
                 requestService,
-                mock(DocumentGenerationService.class),
+                documentService,
                 mock(StaffMemberService.class),
                 userRepository,
                 mock(AcademicEmailService.class),
                 mock(PositionRequestService.class),
                 mock(AdminLogService.class),
                 mock(HttpServletRequest.class),
-                mock(UserStorageService.class),
+                mock(com.ecom.util.DocumentFileTypeValidator.class),
                 mock(com.ecom.academic.service.DocumentDataAutoFillHelper.class),
                 mock(com.ecom.academic.service.DocumentPrewarmService.class),
                 mock(com.ecom.academic.service.SignatureWorkflowService.class),
-                mock(com.ecom.academic.service.SignedDocumentRenderer.class)
+                mock(com.ecom.academic.service.SignedDocumentRenderer.class),
+                mock(com.ecom.external.service.KkuDocumentSyncService.class)
         );
     }
 
     @Test
     @DisplayName("อนุญาตให้อัปโหลดไฟล์ PDF, DOCX, DOC, ZIP")
     void uploadAllowedFileTypes_shouldSucceed() throws Exception {
-        when(requestService.countAttachments(1L)).thenReturn(0L);
-        when(requestService.getTotalAttachmentSize(1L)).thenReturn(0L);
+        when(requestService.getSlotTotalSize(1L, 1)).thenReturn(0L);
 
         MockMultipartFile filePdf = new MockMultipartFile("files", "test.pdf", "application/pdf", "pdf content".getBytes());
         MockMultipartFile fileDocx = new MockMultipartFile("files", "test.docx", "application/vnd.openxmlformats", "docx content".getBytes());
@@ -99,6 +103,7 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.uploadDocument1Attachments(
                 1L,
+                1,
                 new MultipartFile[]{filePdf, fileDocx, fileDoc, fileZip},
                 principal,
                 redirectAttributes
@@ -112,8 +117,7 @@ class AttachmentConstraintsTest {
     @Test
     @DisplayName("ปฏิเสธไฟล์ประเภทที่ไม่รองรับ เช่น XLSX, PPTX, PNG, JPG, RAR")
     void uploadDisallowedFileTypes_shouldBeRejected() throws Exception {
-        when(requestService.countAttachments(1L)).thenReturn(0L);
-        when(requestService.getTotalAttachmentSize(1L)).thenReturn(0L);
+        when(requestService.getSlotTotalSize(1L, 1)).thenReturn(0L);
 
         MockMultipartFile fileXlsx = new MockMultipartFile("files", "data.xlsx", "application/vnd.ms-excel", "xlsx".getBytes());
         MockMultipartFile filePng = new MockMultipartFile("files", "image.png", "image/png", "png".getBytes());
@@ -124,6 +128,7 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.uploadDocument1Attachments(
                 1L,
+                1,
                 new MultipartFile[]{fileXlsx, filePng, fileRar},
                 principal,
                 redirectAttributes
@@ -136,14 +141,13 @@ class AttachmentConstraintsTest {
     }
 
     @Test
-    @DisplayName("ปฏิเสธไฟล์เมื่อขนาดไฟล์แนบรวมของคำร้องเกิน 75 MB")
+    @DisplayName("ปฏิเสธไฟล์เมื่อขนาดไฟล์แนบรวมของช่องเกิน 75 MB")
     void uploadExceeding75MBTotal_shouldBeRejected() throws Exception {
-        when(requestService.countAttachments(1L)).thenReturn(1L);
-        // มีไฟล์อยู่แล้ว 70 MB (73,400,320 bytes)
+        // มีไฟล์ในช่องที่ 1 อยู่แล้ว 70 MB (73,400,320 bytes)
         long current70MB = 70L * 1024L * 1024L;
-        when(requestService.getTotalAttachmentSize(1L)).thenReturn(current70MB);
+        when(requestService.getSlotTotalSize(1L, 1)).thenReturn(current70MB);
 
-        // จะอัปโหลดเพิ่ม 10 MB (เกินขีดจำกัด 75 MB รวม)
+        // จะอัปโหลดเพิ่ม 10 MB ในช่องที่ 1 (เกินขีดจำกัด 75 MB ของช่อง)
         byte[] tenMBBytes = new byte[10 * 1024 * 1024];
         MockMultipartFile largeFile = new MockMultipartFile("files", "extra_large.pdf", "application/pdf", tenMBBytes);
 
@@ -152,6 +156,7 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.uploadDocument1Attachments(
                 1L,
+                1,
                 new MultipartFile[]{largeFile},
                 principal,
                 redirectAttributes
@@ -159,7 +164,7 @@ class AttachmentConstraintsTest {
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isNotNull();
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("เกิน 75 MB");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("75 MB");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
     }
 
@@ -175,6 +180,7 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.uploadDocument1Attachments(
                 1L,
+                1,
                 new MultipartFile[]{file},
                 principal,
                 redirectAttributes
@@ -199,5 +205,90 @@ class AttachmentConstraintsTest {
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("แอดมิน");
         verify(requestService, never()).deleteAttachment(any(Long.class));
+    }
+
+    @Test
+    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อยังแนบไฟล์ไม่ครบทั้ง 5 ช่อง จะถูกปฏิเสธ")
+    void submitDoc1_missingSlots_shouldBeRejected() throws Exception {
+        Map<Integer, List<AcademicAttachment>> grouped = new java.util.HashMap<>();
+        for (int i = 1; i <= 5; i++) {
+            grouped.put(i, new java.util.ArrayList<>());
+        }
+        // แนบเฉพาะช่อง 1 และ 2
+        grouped.get(1).add(new AcademicAttachment());
+        grouped.get(2).add(new AcademicAttachment());
+        when(requestService.getAttachmentsGroupedBySlot(1L)).thenReturn(grouped);
+
+        Map<String, String> formData = new java.util.HashMap<>();
+        formData.put("action", "submit");
+        formData.put("title", "ผศ.ดร.");
+        formData.put("applicant_name", "สมชาย ใจดี");
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("ครบทั้ง 5 ช่อง");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("3, 4, 5");
+    }
+
+    @Test
+    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อแนบไฟล์ครบทั้ง 5 ช่อง จะสำเร็จ")
+    void submitDoc1_all5SlotsPresent_shouldSucceed() throws Exception {
+        Map<Integer, List<AcademicAttachment>> grouped = new java.util.HashMap<>();
+        for (int i = 1; i <= 5; i++) {
+            List<AcademicAttachment> list = new java.util.ArrayList<>();
+            list.add(new AcademicAttachment());
+            grouped.put(i, list);
+        }
+        when(requestService.getAttachmentsGroupedBySlot(1L)).thenReturn(grouped);
+        when(documentService.generateDocument(eq(1L), eq(1), anyString(), any())).thenReturn("generated/doc1.docx");
+
+        Map<String, String> formData = new java.util.HashMap<>();
+        formData.put("action", "submit");
+        formData.put("title", "ผศ.ดร.");
+        formData.put("applicant_name", "สมชาย ใจดี");
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc1_submitted");
+        verify(requestService).saveDocument(eq(sampleRequest), eq(1), anyString(), eq("generated/doc1.docx"), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อมีช่องที่ขนาดรวมเกิน 75 MB จะถูกปฏิเสธ")
+    void submitDoc1_slotOver75MB_shouldBeRejected() throws Exception {
+        Map<Integer, List<AcademicAttachment>> grouped = new java.util.HashMap<>();
+        for (int i = 1; i <= 5; i++) {
+            List<AcademicAttachment> list = new java.util.ArrayList<>();
+            AcademicAttachment att = new AcademicAttachment();
+            if (i == 2) {
+                att.setFileSize(76L * 1024L * 1024L); // 76 MB > 75 MB
+            } else {
+                att.setFileSize(10L * 1024L * 1024L); // 10 MB
+            }
+            list.add(att);
+            grouped.put(i, list);
+        }
+        when(requestService.getAttachmentsGroupedBySlot(1L)).thenReturn(grouped);
+
+        Map<String, String> formData = new java.util.HashMap<>();
+        formData.put("action", "submit");
+        formData.put("title", "ผศ.ดร.");
+        formData.put("applicant_name", "สมชาย ใจดี");
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("ช่องที่ 2 มีขนาดรวมเกินขีดจำกัด 75 MB ต่อช่อง");
+        verify(requestService, never()).saveDocument(any(), eq(1), anyString(), anyString(), anyString(), any());
     }
 }

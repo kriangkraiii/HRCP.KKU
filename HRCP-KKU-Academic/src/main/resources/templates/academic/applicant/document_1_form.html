@@ -206,7 +206,7 @@
                         </div>
                     </form>
 
-                    <!-- Multi-File Attachments Section -->
+                    <!-- Per-Checklist-Item Attachment Slots -->
                     <div class="card card-academic border shadow-sm my-4">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 fw-semibold text-primary">
@@ -215,121 +215,97 @@
                             </h6>
                             <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' ไฟล์'}">0 ไฟล์</span>
                         </div>
-                        <div class="card-body">
-                            <!--
-                              ข้อความนี้เคยขึ้นต้นว่า "ท่านสามารถแนบไฟล์..." ซึ่งอ่านเหมือนเป็นทางเลือก
-                              แต่ controller ปฏิเสธการบันทึกเอกสารที่ 1 เมื่อยังไม่มีไฟล์แนบเลย
-                              (?error=no_attachments) ผู้ยื่นจึงกรอกฟอร์มจนจบแล้วค่อยถูกเด้งกลับมา
-                              โดยไม่เคยมีอะไรบอกล่วงหน้า — GAP-37
-                            -->
-                            <p class="small mb-3" th:if="${attachmentCount == 0}">
-                                <span class="text-danger fw-semibold">
-                                    <i class="fas fa-exclamation-circle me-1"></i> ต้องแนบไฟล์อย่างน้อย 1 ไฟล์ก่อน จึงจะบันทึกเอกสารนี้ได้
-                                </span>
-                                <span class="text-muted d-block mt-1">
-                                    เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา
-                                    (รองรับไฟล์ .pdf, .docx, .doc, .zip — ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)
-                                </span>
-                            </p>
-                            <p class="text-muted small mb-3" th:unless="${attachmentCount == 0}">
-                                <i class="fas fa-info-circle me-1"></i> แนบไฟล์หลักฐานประกอบเพิ่มได้ เช่น บันทึกนำส่ง, แผนการสอน, เอกสารประกอบการสอน, สื่อการสอน, หรือผลการประเมินการสอนโดยนักศึกษา (รองรับไฟล์ .pdf, .docx, .doc, .zip — ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)
-                            </p>
+                        <div class="card-body p-0">
 
-                            <!-- Drag and Drop & Multiple Upload Form — เฉพาะตอนที่แก้ไขได้ -->
-                            <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments'" 
-                                  method="post" enctype="multipart/form-data" id="attachmentUploadForm">
-                                <label for="multiFileInput" class="upload-dropzone p-4 border border-2 border-dashed rounded-3 text-center mb-3 d-block" id="dropzoneArea" style="cursor: pointer;">
-                                    <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2 d-block"></i>
-                                    <h6 class="fw-bold mb-1">เลือกไฟล์ หรือลากไฟล์มาวางที่นี่</h6>
-                                    <p class="text-muted small mb-3">รองรับไฟล์: .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)</p>
-                                    <input type="file" name="files" id="multiFileInput" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
-                                    <span class="btn btn-primary px-4 rounded-pill shadow-sm" id="btnChooseFiles">
-                                        <i class="fas fa-folder-open me-1"></i> เลือกไฟล์จากเครื่อง
-                                    </span>
-                                </label>
+                            <!-- Slot labels matching checklist -->
+                            <th:block th:with="slotLabels=${ {
+                                'บันทึกนำส่งเอกสารประกอบประเมินผลการสอน',
+                                'แผนการสอน พร้อมเกณฑ์และวิธีวัดประเมินผลผู้เรียน',
+                                'สาระสำคัญของเนื้อหาวิชาฯ (เอกสารประกอบการสอน)',
+                                'สื่อการสอน เช่น ชีทเอกสาร PowerPoint แผ่นใส ฯลฯ',
+                                'ผลการประเมินการสอนโดยนักศึกษา'
+                            } }">
 
-                                <!-- Selected files queue list (before uploading) -->
-                                <div id="selectedFilesQueue" class="mb-3 d-none">
-                                    <h6 class="small fw-bold text-secondary mb-2">
-                                        <i class="fas fa-clock me-1"></i> ไฟล์ที่เลือกพร้อมอัปโหลด:
-                                    </h6>
-                                    <ul class="list-group mb-3" id="filesQueueList"></ul>
-                                    <div class="d-flex gap-2">
-                                        <button type="submit" class="btn btn-academic rounded-pill px-4" id="btnUploadQueue">
-                                            <i class="fas fa-upload me-1"></i> ยืนยันอัปโหลดไฟล์ (<span id="queueCountText">0</span>)
-                                        </button>
-                                        <button type="button" class="btn btn-outline-secondary rounded-pill px-3" id="btnClearQueue">
-                                            ยกเลิก
-                                        </button>
+                            <div th:each="label, iter : ${slotLabels}" class="border-bottom" th:classappend="${iter.last ? 'border-bottom-0' : ''}">
+                                <div class="px-3 py-3">
+                                    <!-- Slot Header -->
+                                    <div class="d-flex justify-content-between align-items-center mb-2">
+                                        <div class="d-flex align-items-center gap-2">
+                                            <span class="badge bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width:24px;height:24px;font-size:0.75rem;" th:text="${iter.count}">1</span>
+                                            <span class="fw-semibold small" th:text="${label}">เอกสาร</span>
+                                        </div>
+                                        <div class="d-flex align-items-center gap-2">
+                                            <small class="text-muted" th:text="${slotSizes[iter.count] + ' / 75.0 MB'}">0.0 / 75.0 MB</small>
+                                            <span class="badge rounded-pill px-2"
+                                                  th:classappend="${slotCounts[iter.count] > 0 ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}"
+                                                  th:text="${slotCounts[iter.count] + ' ไฟล์'}">0 ไฟล์</span>
+                                        </div>
+                                    </div>
+
+                                    <!-- Upload Form per Slot -->
+                                    <form th:if="${editable}"
+                                          th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments/' + ${iter.count}"
+                                          method="post" enctype="multipart/form-data"
+                                          th:id="'attachmentForm_' + ${iter.count}" class="mb-2">
+                                        <label th:for="'fileInput_' + ${iter.count}"
+                                               class="upload-dropzone p-3 border border-2 border-dashed rounded-3 text-center d-block slot-dropzone"
+                                               th:id="'dropzone_' + ${iter.count}"
+                                               th:data-slot="${iter.count}"
+                                               th:data-current-bytes="${slotBytes != null and slotBytes[iter.count] != null ? slotBytes[iter.count] : 0}"
+                                               style="cursor:pointer; background: #fafbfc;">
+                                            <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-1 d-block"></i>
+                                            <span class="small fw-semibold">เลือกไฟล์ หรือลากมาวาง</span>
+                                            <span class="text-muted d-block" style="font-size:0.75rem;">รองรับ .pdf, .docx, .doc, .zip (จำกัด 75 MB ต่อช่อง)</span>
+                                            <input type="file" name="files" th:id="'fileInput_' + ${iter.count}" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
+                                        </label>
+
+                                        <!-- Queue preview -->
+                                        <div th:id="'queue_' + ${iter.count}" class="mb-2 d-none">
+                                            <ul class="list-group list-group-flush mb-2" th:id="'queueList_' + ${iter.count}"></ul>
+                                            <div class="d-flex gap-2">
+                                                <button type="submit" class="btn btn-sm btn-academic rounded-pill px-3">
+                                                    <i class="fas fa-upload me-1"></i> อัปโหลด
+                                                </button>
+                                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 slot-clear-queue"
+                                                        th:data-slot="${iter.count}">ยกเลิก</button>
+                                            </div>
+                                        </div>
+                                    </form>
+
+                                    <!-- Uploaded Files for this Slot -->
+                                    <div th:if="${attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty()}" class="mt-2">
+                                        <div th:each="att, attIter : ${attachmentsBySlot[iter.count]}"
+                                             class="d-flex align-items-center justify-content-between py-2 px-2 rounded-2 mb-1"
+                                             style="background: #f8f9fa;">
+                                            <div class="d-flex align-items-center gap-2 text-break" style="min-width:0; flex:1;">
+                                                <span th:if="${att.fileType == 'PDF'}" class="text-danger"><i class="fas fa-file-pdf"></i></span>
+                                                <span th:if="${att.fileType == 'DOCX'}" class="text-primary"><i class="fas fa-file-word"></i></span>
+                                                <span th:if="${att.fileType == 'ZIP'}" class="text-secondary"><i class="fas fa-file-archive"></i></span>
+                                                <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt"></i></span>
+                                                <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">file.pdf</span>
+                                                <span class="badge bg-light text-secondary border" style="font-size:0.7rem;"
+                                                      th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
+                                            </div>
+                                            <div class="btn-group btn-group-sm ms-2">
+                                                <a th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
+                                                   th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
+                                                   target="_blank" class="btn btn-outline-info btn-sm py-0" title="ดู"><i class="fas fa-eye"></i></a>
+                                                <a th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
+                                                   class="btn btn-outline-primary btn-sm py-0" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
+                                                <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
+                                                      method="post" class="d-inline" data-confirm="คุณต้องการลบไฟล์นี้หรือไม่?">
+                                                    <button type="submit" class="btn btn-outline-danger btn-sm py-0" title="ลบ"><i class="fas fa-trash-alt"></i></button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div th:if="${attachmentsBySlot[iter.count] == null or attachmentsBySlot[iter.count].isEmpty()}" class="text-center py-2 text-muted small">
+                                        <i class="fas fa-folder-open me-1 opacity-50"></i> ยังไม่มีไฟล์แนบในช่องนี้
                                     </div>
                                 </div>
-                            </form>
+                            </div>
 
-                            <!-- Uploaded Files Table -->
-                            <div th:if="${attachments != null && !attachments.isEmpty()}" class="table-responsive mt-3">
-                                <table class="table table-hover align-middle border">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th style="width: 50px;" class="text-center">#</th>
-                                            <th>ชื่อไฟล์แนบ</th>
-                                            <th style="width: 120px;" class="text-center">ขนาด</th>
-                                            <th style="width: 180px;" class="text-center">วันที่อัปโหลด</th>
-                                            <th style="width: 120px;" class="text-center">การจัดการ</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr th:each="att, iter : ${attachments}">
-                                            <td class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
-                                            <td>
-                                                <div class="d-flex align-items-center gap-2">
-                                                    <span th:if="${att.fileType == 'PDF'}" class="text-danger fs-5"><i class="fas fa-file-pdf"></i></span>
-                                                    <span th:if="${att.fileType == 'DOCX'}" class="text-primary fs-5"><i class="fas fa-file-word"></i></span>
-                                                    <span th:if="${att.fileType == 'PPTX'}" class="text-warning fs-5"><i class="fas fa-file-powerpoint"></i></span>
-                                                    <span th:if="${att.fileType == 'XLSX'}" class="text-success fs-5"><i class="fas fa-file-excel"></i></span>
-                                                    <span th:if="${att.fileType == 'ZIP'}" class="text-secondary fs-5"><i class="fas fa-file-archive"></i></span>
-                                                    <span th:if="${att.fileType == 'IMAGE'}" class="text-info fs-5"><i class="fas fa-file-image"></i></span>
-                                                    <span th:if="${att.fileType == 'OTHER'}" class="text-muted fs-5"><i class="fas fa-file-alt"></i></span>
-                                                    <div>
-                                                        <div class="fw-semibold text-break" th:text="${att.originalFilename}">filename.pdf</div>
-                                                        <small class="badge bg-light text-secondary border" th:text="${att.fileType}">PDF</small>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td class="text-center text-muted small">
-                                                <span th:if="${att.fileSize != null}" th:text="${#numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB'}">0 MB</span>
-                                                <span th:unless="${att.fileSize != null}">-</span>
-                                            </td>
-                                            <td class="text-center text-muted small" th:text="${att.uploadedAt != null ? #temporals.format(att.uploadedAt, 'dd/MM/yyyy HH:mm') : '-'}">
-                                                01/01/2026 12:00
-                                            </td>
-                                            <td class="text-center">
-                                                <div class="btn-group btn-group-sm">
-                                                    <a th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
-                                                       th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'" 
-                                                       target="_blank" class="btn btn-outline-info" title="เปิดดูไฟล์">
-                                                        <i class="fas fa-eye"></i>
-                                                    </a>
-                                                    <a th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
-                                                       class="btn btn-outline-primary" title="ดาวน์โหลด">
-                                                        <i class="fas fa-download"></i>
-                                                    </a>
-                                                    <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'" 
-                                                          method="post" class="d-inline" data-confirm="คุณต้องการลบไฟล์นี้หรือไม่?">
-                                                        <button type="submit" class="btn btn-outline-danger" title="ลบไฟล์">
-                                                            <i class="fas fa-trash-alt"></i>
-                                                        </button>
-                                                    </form>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div th:unless="${attachments != null && !attachments.isEmpty()}" class="text-center py-4 text-muted rounded-3 mt-3 empty-attachments-box">
-                                <i class="fas fa-folder-open fa-2x mb-2 d-block text-secondary opacity-50"></i>
-                                <span th:if="${editable}">ยังไม่มีไฟล์แนบประกอบการประเมิน (สามารถเลือกไฟล์อัปโหลดเพิ่มได้ที่นี่)</span>
-                                <span th:unless="${editable}">ยังไม่มีไฟล์แนบประกอบการประเมิน</span>
-                            </div>
+                            </th:block>
                         </div>
                     </div>
 
@@ -364,6 +340,18 @@
                     <input type="hidden" id="currentDocType" value="1">
                     <input type="hidden" id="attachmentCountHolder" th:value="${attachmentCount != null ? attachmentCount : 0}">
                     <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
+                    <div id="slotStatusHolder"
+                         th:data-s1="${slotCounts[1]}"
+                         th:data-s2="${slotCounts[2]}"
+                         th:data-s3="${slotCounts[3]}"
+                         th:data-s4="${slotCounts[4]}"
+                         th:data-s5="${slotCounts[5]}"
+                         th:data-b1="${slotBytes != null and slotBytes[1] != null ? slotBytes[1] : 0}"
+                         th:data-b2="${slotBytes != null and slotBytes[2] != null ? slotBytes[2] : 0}"
+                         th:data-b3="${slotBytes != null and slotBytes[3] != null ? slotBytes[3] : 0}"
+                         th:data-b4="${slotBytes != null and slotBytes[4] != null ? slotBytes[4] : 0}"
+                         th:data-b5="${slotBytes != null and slotBytes[5] != null ? slotBytes[5] : 0}"
+                         style="display:none;"></div>
 
                     <script>
                         // Checkbox toggle สำหรับผู้ยื่น ✔️
@@ -402,7 +390,7 @@
                         // Initialize real-time preview for Doc 1
                         initDocPreview('doc1Form', 1);
 
-                        // === Checkbox & Attachment Validation: ต้องติ๊กครบ 5 ข้อ และต้องแนบไฟล์อย่างน้อย 1 ไฟล์ ===
+                        // === Checkbox & Attachment Validation: ต้องติ๊กครบ 5 ข้อ, แนบไฟล์ครบทั้ง 5 ช่อง, และแต่ละช่องห้ามเกิน 75 MB ===
                         (function() {
                             var checkboxes = document.querySelectorAll('.chk-toggle-app');
                             var submitBtn = document.getElementById('doc1SubmitBtn');
@@ -412,31 +400,53 @@
                             var countSpan = document.getElementById('doc1CheckedCount');
                             var attCountHolder = document.getElementById('attachmentCountHolder');
                             var attCount = attCountHolder ? parseInt(attCountHolder.value, 10) : 0;
+                            var slotHolder = document.getElementById('slotStatusHolder');
+                            var MAX_SLOT_BYTES = 75 * 1024 * 1024;
 
                             function validateDoc1() {
                                 var checked = document.querySelectorAll('.chk-toggle-app:checked').length;
                                 var total = checkboxes.length;
                                 if (countSpan) countSpan.textContent = checked;
 
-                                if (checked === total && attCount > 0) {
+                                var missingSlots = [];
+                                var overQuotaSlots = [];
+                                if (slotHolder) {
+                                    for (var s = 1; s <= 5; s++) {
+                                        var cnt = parseInt(slotHolder.getAttribute('data-s' + s) || '0', 10);
+                                        var bytes = parseInt(slotHolder.getAttribute('data-b' + s) || '0', 10);
+                                        if (cnt === 0) missingSlots.push(s);
+                                        if (bytes > MAX_SLOT_BYTES) {
+                                            var mb = (bytes / (1024 * 1024)).toFixed(1);
+                                            overQuotaSlots.push('ช่องที่ ' + s + ' (' + mb + ' MB)');
+                                        }
+                                    }
+                                }
+
+                                var allSlotsFilled = (missingSlots.length === 0);
+                                var noOverQuota = (overQuotaSlots.length === 0);
+                                var allChecked = (checked === total);
+
+                                if (allChecked && allSlotsFilled && noOverQuota) {
                                     submitBtn.disabled = false;
                                     alertBox.classList.remove('alert-warning', 'alert-danger');
                                     alertBox.classList.add('alert-success');
-                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบทุกข้อและมีไฟล์แนบแล้ว (' + attCount + ' ไฟล์) ✓ พร้อมบันทึกเอกสาร';
-                                } else if (checked === total && attCount === 0) {
-                                    submitBtn.disabled = true;
-                                    alertBox.classList.remove('alert-success', 'alert-warning');
-                                    alertBox.classList.add('alert-danger');
-                                    alertBox.innerHTML = '<i class="fas fa-exclamation-circle me-1"></i> ตรวจสอบครบ 5 ข้อแล้ว แต่<strong>ยังไม่ได้แนบไฟล์</strong> — กรุณาเลือกอัปโหลดไฟล์เอกสารประกอบด้านล่างอย่างน้อย 1 ไฟล์เพื่อเปิดใช้งานปุ่มบันทึก';
+                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบไฟล์ครบทั้ง 5 ช่องแล้ว (' + attCount + ' ไฟล์, ขนาดผ่านเกณฑ์) ✓ พร้อมบันทึกเอกสาร';
                                 } else {
                                     submitBtn.disabled = true;
-                                    alertBox.classList.remove('alert-success', 'alert-danger');
-                                    alertBox.classList.add('alert-warning');
-                                    var msg = '<i class="fas fa-exclamation-triangle me-1"></i> กรุณาติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc1CheckedCount">' + checked + '</span>/' + total + ')';
-                                    if (attCount === 0) {
-                                        msg += ' และแนบไฟล์เอกสารประกอบด้านล่างอย่างน้อย 1 ไฟล์';
+                                    alertBox.classList.remove('alert-success');
+                                    var reasons = [];
+                                    if (!allChecked) {
+                                        reasons.push('ติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc1CheckedCount">' + checked + '</span>/' + total + ')');
                                     }
-                                    alertBox.innerHTML = msg;
+                                    if (!allSlotsFilled) {
+                                        reasons.push('แนบไฟล์เอกสารประกอบให้ครบทั้ง 5 ช่อง (ยังขาดช่องที่ ' + missingSlots.join(', ') + ')');
+                                    }
+                                    if (!noOverQuota) {
+                                        reasons.push('ลดขนาดไฟล์เนื่องจากเกิน 75 MB ใน ' + overQuotaSlots.join(', '));
+                                    }
+                                    alertBox.classList.remove('alert-warning', 'alert-danger');
+                                    alertBox.classList.add('alert-danger');
+                                    alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> กรุณา' + reasons.join(' และ ');
                                     countSpan = document.getElementById('doc1CheckedCount');
                                 }
                             }
@@ -445,118 +455,161 @@
                                 cb.addEventListener('change', validateDoc1);
                             });
 
+                            // Main form submit prevention if disabled or over quota
+                            var doc1Form = document.getElementById('doc1Form');
+                            if (doc1Form) {
+                                doc1Form.addEventListener('submit', function(e) {
+                                    var submitter = e.submitter;
+                                    if (submitter && submitter.value === 'submit' && submitBtn.disabled) {
+                                        e.preventDefault();
+                                        alert('⚠️ ไม่สามารถบันทึกเอกสารได้: กรุณาตรวจสอบว่าติ๊กครบ 5 ข้อ, แนบครบ 5 ช่อง และขนาดแต่ละช่องไม่เกิน 75 MB');
+                                        return false;
+                                    }
+                                });
+                            }
+
                             // Initial check (for pre-loaded data)
                             validateDoc1();
                         })();
 
-                        // === Multi-File Drag & Drop & Queue Handling ===
+                        // === Multi-Slot Drag & Drop & Queue Handling ===
                         (function() {
-                            var dropzone = document.getElementById('dropzoneArea');
-                            var fileInput = document.getElementById('multiFileInput');
-                            var queueContainer = document.getElementById('selectedFilesQueue');
-                            var queueList = document.getElementById('filesQueueList');
-                            var queueCountText = document.getElementById('queueCountText');
-                            var btnClearQueue = document.getElementById('btnClearQueue');
-
-                            if (!dropzone || !fileInput) return;
-
-                            ['dragenter', 'dragover'].forEach(function(eventName) {
-                                dropzone.addEventListener(eventName, function(e) {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    dropzone.classList.add('border-primary', 'bg-white');
-                                });
-                            });
-
-                            ['dragleave', 'drop'].forEach(function(eventName) {
-                                dropzone.addEventListener(eventName, function(e) {
-                                    e.preventDefault();
-                                    e.stopPropagation();
-                                    dropzone.classList.remove('border-primary', 'bg-white');
-                                });
-                            });
-
-                            dropzone.addEventListener('drop', function(e) {
-                                var dt = e.dataTransfer;
-                                if (dt && dt.files && dt.files.length > 0) {
-                                    fileInput.files = dt.files;
-                                    updateQueueDisplay();
-                                }
-                            });
-
-                            fileInput.addEventListener('change', function() {
-                                updateQueueDisplay();
-                            });
-
-                            if (btnClearQueue) {
-                                btnClearQueue.addEventListener('click', function() {
-                                    fileInput.value = '';
-                                    queueContainer.classList.add('d-none');
-                                    queueList.innerHTML = '';
-                                });
-                            }
-
                             var ALLOWED_EXTS = ['.pdf', '.docx', '.doc', '.zip'];
-                            var MAX_TOTAL_BYTES = 75 * 1024 * 1024; // 75MB
-
-                            function updateQueueDisplay() {
-                                if (!fileInput.files || fileInput.files.length === 0) {
-                                    queueContainer.classList.add('d-none');
-                                    queueList.innerHTML = '';
-                                    return;
-                                }
-
-                                var invalidExtFiles = [];
-                                var totalSelectedBytes = 0;
-
-                                Array.from(fileInput.files).forEach(function(file) {
-                                    totalSelectedBytes += file.size;
-                                    var lower = file.name.toLowerCase();
-                                    var valid = ALLOWED_EXTS.some(function(ext) { return lower.endsWith(ext); });
-                                    if (!valid) {
-                                        invalidExtFiles.push(file.name);
-                                    }
-                                });
-
-                                if (invalidExtFiles.length > 0) {
-                                    alert('พบไฟล์ที่ไม่รองรับ: ' + invalidExtFiles.join(', ') + '\nอนุญาตเฉพาะไฟล์ .pdf, .docx, .doc, .zip เท่านั้น');
-                                    fileInput.value = '';
-                                    queueContainer.classList.add('d-none');
-                                    queueList.innerHTML = '';
-                                    return;
-                                }
-
-                                if (totalSelectedBytes > MAX_TOTAL_BYTES) {
-                                    var currentMB = (totalSelectedBytes / (1024 * 1024)).toFixed(1);
-                                    alert('ขนาดไฟล์รวมที่เลือก (' + currentMB + ' MB) เกินขีดจำกัด 75 MB ต่อคำร้อง\nกรุณาเลือกไฟล์ใหม่');
-                                    fileInput.value = '';
-                                    queueContainer.classList.add('d-none');
-                                    queueList.innerHTML = '';
-                                    return;
-                                }
-
-                                queueList.innerHTML = '';
-                                Array.from(fileInput.files).forEach(function(file, idx) {
-                                    var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                                    var isZip = file.name.toLowerCase().endsWith('.zip');
-                                    var iconClass = isZip ? 'fas fa-file-archive text-secondary' : (file.name.toLowerCase().endsWith('.pdf') ? 'fas fa-file-pdf text-danger' : 'fas fa-file-word text-primary');
-                                    var li = document.createElement('li');
-                                    li.className = 'list-group-item d-flex justify-content-between align-items-center py-2';
-                                    li.innerHTML = '<div class="d-flex align-items-center gap-2">' +
-                                        '<i class="' + iconClass + '"></i>' +
-                                        '<span class="fw-semibold text-break">' + escapeHtml(file.name) + '</span>' +
-                                        '</div>' +
-                                        '<span class="badge bg-secondary rounded-pill">' + sizeMB + ' MB</span>';
-                                    queueList.appendChild(li);
-                                });
-
-                                queueCountText.textContent = fileInput.files.length;
-                                queueContainer.classList.remove('d-none');
-                            }
+                            var MAX_SLOT_BYTES = 75 * 1024 * 1024; // 75MB per slot
 
                             function escapeHtml(str) {
                                 return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
                             }
+
+                            for (var slot = 1; slot <= 5; slot++) {
+                                (function(s) {
+                                    var dropzone = document.getElementById('dropzone_' + s);
+                                    var fileInput = document.getElementById('fileInput_' + s);
+                                    var queueContainer = document.getElementById('queue_' + s);
+                                    var queueList = document.getElementById('queueList_' + s);
+
+                                    if (!dropzone || !fileInput) return;
+
+                                    ['dragenter', 'dragover'].forEach(function(ev) {
+                                        dropzone.addEventListener(ev, function(e) {
+                                            e.preventDefault(); e.stopPropagation();
+                                            dropzone.classList.add('border-primary');
+                                            dropzone.style.background = '#fff';
+                                        });
+                                    });
+                                    ['dragleave', 'drop'].forEach(function(ev) {
+                                        dropzone.addEventListener(ev, function(e) {
+                                            e.preventDefault(); e.stopPropagation();
+                                            dropzone.classList.remove('border-primary');
+                                            dropzone.style.background = '#fafbfc';
+                                        });
+                                    });
+
+                                    dropzone.addEventListener('drop', function(e) {
+                                        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                            fileInput.files = e.dataTransfer.files;
+                                            updateSlotQueue(s);
+                                        }
+                                    });
+
+                                    fileInput.addEventListener('change', function() {
+                                        updateSlotQueue(s);
+                                    });
+
+                                    function updateSlotQueue(slot) {
+                                        var fi = document.getElementById('fileInput_' + slot);
+                                        var qc = document.getElementById('queue_' + slot);
+                                        var ql = document.getElementById('queueList_' + slot);
+                                        if (!fi || !fi.files || fi.files.length === 0) {
+                                            if (qc) qc.classList.add('d-none');
+                                            if (ql) ql.innerHTML = '';
+                                            return;
+                                        }
+
+                                        var invalidFiles = [];
+                                        var totalBytes = 0;
+                                        Array.from(fi.files).forEach(function(file) {
+                                            totalBytes += file.size;
+                                            var lower = file.name.toLowerCase();
+                                            if (!ALLOWED_EXTS.some(function(ext) { return lower.endsWith(ext); })) {
+                                                invalidFiles.push(file.name);
+                                            }
+                                        });
+
+                                        if (invalidFiles.length > 0) {
+                                            alert('พบไฟล์ที่ไม่รองรับในช่องที่ ' + slot + ': ' + invalidFiles.join(', ') + '\nอนุญาตเฉพาะ .pdf, .docx, .doc, .zip');
+                                            fi.value = '';
+                                            qc.classList.add('d-none');
+                                            ql.innerHTML = '';
+                                            return;
+                                        }
+
+                                        var currentBytes = 0;
+                                        if (dropzone) {
+                                            currentBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
+                                        }
+
+                                        if (currentBytes + totalBytes > MAX_SLOT_BYTES) {
+                                            var newMb = (totalBytes / (1024 * 1024)).toFixed(1);
+                                            var curMb = (currentBytes / (1024 * 1024)).toFixed(1);
+                                            var totalMb = ((currentBytes + totalBytes) / (1024 * 1024)).toFixed(1);
+                                            alert('⚠️ ขนาดไฟล์รวมในช่องที่ ' + slot + ' จะเกินขีดจำกัด 75 MB ต่อช่อง!\n\n' +
+                                                  '• ไฟล์เดิมในช่องนี้: ' + curMb + ' MB\n' +
+                                                  '• ไฟล์ใหม่ที่เลือก: ' + newMb + ' MB\n' +
+                                                  '• ขนาดรวมทั้งหมด: ' + totalMb + ' MB (จำกัด 75.0 MB)\n\n' +
+                                                  'กรุณาลดขนาดไฟล์หรือเลือกไฟล์ใหม่อีกครั้ง');
+                                            fi.value = '';
+                                            qc.classList.add('d-none');
+                                            ql.innerHTML = '';
+                                            return;
+                                        }
+
+                                        ql.innerHTML = '';
+                                        Array.from(fi.files).forEach(function(file) {
+                                            var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                            var lower = file.name.toLowerCase();
+                                            var iconClass = lower.endsWith('.zip') ? 'fas fa-file-archive text-secondary' :
+                                                           (lower.endsWith('.pdf') ? 'fas fa-file-pdf text-danger' : 'fas fa-file-word text-primary');
+                                            var li = document.createElement('li');
+                                            li.className = 'list-group-item d-flex justify-content-between align-items-center py-1 px-2';
+                                            li.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="' + iconClass + '"></i><span class="small fw-semibold text-break">' + escapeHtml(file.name) + '</span></div><span class="badge bg-secondary rounded-pill" style="font-size:0.7rem;">' + sizeMB + ' MB</span>';
+                                            ql.appendChild(li);
+                                        });
+                                        qc.classList.remove('d-none');
+                                    }
+
+                                    var form = document.getElementById('attachmentForm_' + s);
+                                    if (form) {
+                                        form.addEventListener('submit', function(e) {
+                                            var fi = document.getElementById('fileInput_' + s);
+                                            var totalBytes = 0;
+                                            if (fi && fi.files) {
+                                                Array.from(fi.files).forEach(function(f) { totalBytes += f.size; });
+                                            }
+                                            var curBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
+                                            if (curBytes + totalBytes > MAX_SLOT_BYTES) {
+                                                e.preventDefault();
+                                                var totalMb = ((curBytes + totalBytes) / (1024 * 1024)).toFixed(1);
+                                                alert('⚠️ ไม่สามารถอัปโหลดได้: ขนาดรวมในช่องที่ ' + s + ' (' + totalMb + ' MB) จะเกินขีดจำกัด 75 MB ต่อช่อง');
+                                                return false;
+                                            }
+                                        });
+                                    }
+                                })(slot);
+                            }
+
+                            // Clear queue buttons
+                            document.querySelectorAll('.slot-clear-queue').forEach(function(btn) {
+                                btn.addEventListener('click', function() {
+                                    var s = this.getAttribute('data-slot');
+                                    var fi = document.getElementById('fileInput_' + s);
+                                    var qc = document.getElementById('queue_' + s);
+                                    var ql = document.getElementById('queueList_' + s);
+                                    if (fi) fi.value = '';
+                                    if (qc) qc.classList.add('d-none');
+                                    if (ql) ql.innerHTML = '';
+                                });
+                            });
                         })();
                     </script>
                 </div>

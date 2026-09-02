@@ -45,8 +45,6 @@ class DatabaseIndexVerificationTest {
             PositionDocumentEditLog.class,
             StaffMember.class,
             AcademicCommitteeMember.class,
-            UserFolder.class,
-            UserFile.class,
             AdminFolder.class,
             AdminFile.class,
             FsFaculty.class,

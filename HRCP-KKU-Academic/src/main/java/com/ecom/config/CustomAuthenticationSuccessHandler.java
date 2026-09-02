@@ -33,7 +33,7 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
     private final SignInService signInService;
 
     public CustomAuthenticationSuccessHandler(BruteForceProtection bruteForceProtection,
-                                              UserService userService,
+                                              @org.springframework.context.annotation.Lazy UserService userService,
                                               SignInService signInService) {
         this.bruteForceProtection = bruteForceProtection;
         this.userService = userService;

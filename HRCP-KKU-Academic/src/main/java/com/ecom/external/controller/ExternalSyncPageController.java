@@ -56,6 +56,7 @@ public class ExternalSyncPageController {
     private final FsApiProperties props;
     private final CpDirectorySyncService cpSyncService;
     private final com.ecom.external.harvest.PublicationHarvestService harvestService;
+    private final com.ecom.external.service.KkuDocumentSyncService kkuDocSyncService;
 
     private final String usersCron;
     private final String usersFullCron;
@@ -66,6 +67,7 @@ public class ExternalSyncPageController {
     private final String retentionCron;
     private final String evalExpiryCron;
     private final String esignReminderCron;
+    private final String kkuHrCron;
 
     public ExternalSyncPageController(FsSyncService syncService,
             FacultyChangeReviewService reviewService,
@@ -76,6 +78,7 @@ public class ExternalSyncPageController {
             FsApiProperties props,
             CpDirectorySyncService cpSyncService,
             com.ecom.external.harvest.PublicationHarvestService harvestService,
+            com.ecom.external.service.KkuDocumentSyncService kkuDocSyncService,
             @Value("${fs.sync.users.cron:0 30 1 * * *}") String usersCron,
             @Value("${fs.sync.users.full-cron:0 0 3 * * SUN}") String usersFullCron,
             @Value("${fs.sync.scopus.cron:0 0 2 * * *}") String scopusCron,
@@ -84,7 +87,8 @@ public class ExternalSyncPageController {
             @Value("${app.images.cleanup-cron:0 0 3 * * ?}") String imageCleanupCron,
             @Value("${app.retention.cron:0 30 3 * * ?}") String retentionCron,
             @Value("${evaluation.expiry.cron:0 0 8 * * *}") String evalExpiryCron,
-            @Value("${app.esign.reminder-cron:0 30 8 * * *}") String esignReminderCron) {
+            @Value("${app.esign.reminder-cron:0 30 8 * * *}") String esignReminderCron,
+            @Value("${kku.hr.sync.cron:0 0 2 1 * ?}") String kkuHrCron) {
         this.syncService = syncService;
         this.reviewService = reviewService;
         this.changeRepo = changeRepo;
@@ -94,6 +98,7 @@ public class ExternalSyncPageController {
         this.props = props;
         this.cpSyncService = cpSyncService;
         this.harvestService = harvestService;
+        this.kkuDocSyncService = kkuDocSyncService;
         this.usersCron = usersCron;
         this.usersFullCron = usersFullCron;
         this.scopusCron = scopusCron;
@@ -103,6 +108,7 @@ public class ExternalSyncPageController {
         this.retentionCron = retentionCron;
         this.evalExpiryCron = evalExpiryCron;
         this.esignReminderCron = esignReminderCron;
+        this.kkuHrCron = kkuHrCron;
     }
 
     @GetMapping
@@ -153,7 +159,8 @@ public class ExternalSyncPageController {
                 new SyncJobDisplay("crossref", "Crossref (DOI Registry)", "fas fa-crosshairs", "text-warning", "งานวิจัย", jobs.get("crossref")),
                 new SyncJobDisplay("dblp", "DBLP (Computer Science Bibliography)", "fas fa-laptop-code", "text-primary", "งานวิจัย", jobs.get("dblp")),
                 new SyncJobDisplay("thaijo", "ThaiJO (วารสารวิชาการไทย OAI-PMH)", "fas fa-file-lines", "text-danger", "งานวิจัย", jobs.get("thaijo")),
-                new SyncJobDisplay("kkuir", "KKU IR (คลังสถาบัน มข. DSpace)", "fas fa-building-columns", "text-secondary", "งานวิจัย", jobs.get("kkuir"))
+                new SyncJobDisplay("kkuir", "KKU IR (คลังสถาบัน มข. DSpace)", "fas fa-building-columns", "text-secondary", "งานวิจัย", jobs.get("kkuir")),
+                new SyncJobDisplay("kku_regulations", "คลังข้อบังคับ & ประกาศ มข. (hr2.kku.ac.th)", "fas fa-landmark", "text-warning", "เอกสาร/ระเบียบ", kkuDocSyncService.getSyncState())
         );
         model.addAttribute("syncJobList", syncJobList);
 
@@ -273,6 +280,15 @@ public class ExternalSyncPageController {
                                         describeNext(cpWebCron),
                                         "fas fa-image",
                                         "bg-secondary"
+                                ),
+                                new ScheduleItem(
+                                        "คลังข้อบังคับ & ประกาศ กองทรัพยากรบุคคล มข.",
+                                        "ดึงและอัปเดตข้อบังคับ/ประกาศ/คำจำกัดความผลงานทางวิชาการใหม่จาก hr2.kku.ac.th อัตโนมัติ",
+                                        kkuHrCron,
+                                        "ทุกเดือน วันที่ 1 เวลา 02:00 น.",
+                                        describeNext(kkuHrCron),
+                                        "fas fa-landmark",
+                                        "bg-warning text-dark"
                                 )
                         )
                 ),
@@ -520,6 +536,20 @@ public class ExternalSyncPageController {
         } else {
             redirect.addFlashAttribute("errorMsg", String.format(
                     "ดึงงานวิจัยจาก %s ไม่สำเร็จ: %s", result.sourceName(), result.message()));
+        }
+        return REDIRECT;
+    }
+
+    /**
+     * Manually triggers immediate synchronization of KKU HR Regulations & Announcements.
+     */
+    @PostMapping("/kku-docs/run")
+    public String runKkuDocsSync(RedirectAttributes redirect) {
+        com.ecom.external.service.KkuDocumentSyncService.SyncResult result = kkuDocSyncService.syncNow();
+        if (result.isSuccess()) {
+            redirect.addFlashAttribute("succMsg", result.getMessage());
+        } else {
+            redirect.addFlashAttribute("errorMsg", result.getMessage());
         }
         return REDIRECT;
     }

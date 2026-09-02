@@ -9,13 +9,25 @@
 //
 // ถ้าจะเปิดกลับ ต้องสร้างตารางทั้งสองขึ้นใหม่ก่อน ไม่ใช่แค่ปลดคอมเมนต์
 
-// package com.ecom.academic.repository;
+// package com.ecom.academic.config;
 //
-// import java.util.List;
-// import org.springframework.data.jpa.repository.JpaRepository;
-// import com.ecom.academic.model.UserFolder;
+// import org.springframework.beans.factory.annotation.Value;
+// import org.springframework.stereotype.Component;
 //
-// public interface UserFolderRepository extends JpaRepository<UserFolder, Long> {
-//     List<UserFolder> findByOwnerIdAndParentIsNullOrderByNameAsc(Integer ownerId);
-//     List<UserFolder> findByOwnerIdAndParentIdOrderByNameAsc(Integer ownerId, Long parentId);
+// /**
+//  * สวิตช์ควบคุมคลังไฟล์ส่วนตัวของผู้ยื่น (/user/academic/storage)
+//  */
+// @Component
+// public class UserStorageProperties {
+//
+//     private final boolean enabled;
+//
+//     public UserStorageProperties(
+//             @Value("${app.storage.user.enabled:true}") boolean enabled) {
+//         this.enabled = enabled;
+//     }
+//
+//     public boolean isEnabled() {
+//         return enabled;
+//     }
 // }

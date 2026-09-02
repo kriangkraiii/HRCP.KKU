@@ -277,6 +277,23 @@
                                     </div>
                                 </div>
                             </div>
+
+                            <!-- Card 5: KKU HR Regulations Sync -->
+                            <div class="col-12 mt-3">
+                                <div class="border rounded-3 p-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between shadow-sm bg-white border-warning">
+                                    <div class="me-md-3 mb-2 mb-md-0">
+                                        <h6 class="fw-bold mb-1"><i class="fas fa-landmark text-warning me-1"></i> คลังข้อบังคับ & ประกาศ กองทรัพยากรบุคคล มข. (hr2.kku.ac.th)</h6>
+                                        <p class="text-muted small mb-0">
+                                            ดึงข้อบังคับ ประกาศ และคำจำกัดความผลงานทางวิชาการล่าสุดจาก <a href="https://hr2.kku.ac.th/?page_id=5546" target="_blank" class="text-primary text-decoration-none">hr2.kku.ac.th/?page_id=5546 <i class="fas fa-external-link-alt small"></i></a> อัตโนมัติทุก 1 เดือน (หรือกดสั่งซิงค์ทันที)
+                                        </p>
+                                    </div>
+                                    <form th:action="@{/admin/external-sync/kku-docs/run}" method="post" data-lock-button="1">
+                                        <button type="submit" class="btn btn-warning text-dark px-4 fw-semibold text-nowrap">
+                                            <i class="fas fa-sync-alt me-1"></i> ซิงค์คลังเอกสาร มข. ทันที
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Last run Dashboard Table -->

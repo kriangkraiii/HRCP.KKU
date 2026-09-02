@@ -290,6 +290,12 @@ public class SecurityConfig {
                                                 // unauthenticated scanner; container probes should use
                                                 // a port-level check instead.
                                                 .requestMatchers("/actuator/**").hasRole("ADMIN")
+                                                // คลังไฟล์ส่วนตัวของผู้ยื่นถูกยกเลิกทั้งฟีเจอร์
+                                                //
+                                                // UserFileManagerController ถูกคอมเมนต์ทิ้งแล้ว จึงไม่มี
+                                                // handler ที่ /user/academic/storage อีก คำขอที่เข้ามาจะ
+                                                // ตกไปที่กฎ "/user/**" แล้วจบด้วย 404 ตามปกติ
+                                                // ไม่ต้องมีกฎเฉพาะกิจกันไว้อีก
                                                 .requestMatchers("/admin/**").hasRole("ADMIN")
                                                 .requestMatchers("/user/**").hasRole("USER")
                                                 .anyRequest().authenticated())

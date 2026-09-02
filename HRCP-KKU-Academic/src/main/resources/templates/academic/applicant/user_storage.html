@@ -56,7 +56,7 @@
             <div class="card-body py-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
                     <span class="fw-semibold"><i class="fas fa-database me-1"></i> พื้นที่จัดเก็บ</span>
-                    <span class="text-muted"><span th:text="${totalSize}">0 B</span> / <span th:text="${maxStorage}">10.0 GB</span></span>
+                    <span class="text-muted"><span th:text="${totalSize}">0 B</span> / <span th:text="${maxStorage}">500.0 MB</span></span>
                 </div>
                 <div class="progress" style="height: 10px; border-radius: 5px;">
                     <div class="progress-bar" role="progressbar"
@@ -66,7 +66,7 @@
                          aria-valuemin="0" aria-valuemax="100">
                     </div>
                 </div>
-                <small class="text-muted mt-1 d-block">เหลือ <span th:text="${remainingStorage}">10.0 GB</span> (<span th:text="${#numbers.formatDecimal(usagePercent, 1, 1)}">0.0</span>% ใช้ไป)</small>
+                <small class="text-muted mt-1 d-block">เหลือ <span th:text="${remainingStorage}">500.0 MB</span> (<span th:text="${#numbers.formatDecimal(usagePercent, 1, 1)}">0.0</span>% ใช้ไป)</small>
             </div>
         </div>
         <div class="d-flex gap-2 mb-4 flex-wrap">
@@ -279,7 +279,7 @@
             position: fixed; inset: 0; z-index: 10500;
             background: rgba(0,0,0,0.55);
             backdrop-filter: blur(8px);
-            display: flex; align-items: center; justify-content: center;
+            display: none; align-items: center; justify-content: center;
             animation: fadeIn 0.25s ease;
         }
         .upload-modal-content {
@@ -398,12 +398,11 @@
     </style>
 
     <script th:inline="javascript">
-        var csrfToken = [[${_csrf.token}]];
-        var csrfHeaderName = [[${_csrf.headerName}]];
-        var currentFolderId = [[${currentFolderId}]];
+        var csrfToken = /*[[${_csrf.token}]]*/ '';
+        var csrfHeaderName = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+        var currentFolderId = /*[[${currentFolderId}]]*/ null;
 
-        var CHUNK_SIZE = 5 * 1024 * 1024; // 5MB
-        var activeUploads = {}; // uploadId -> {aborted: false}
+        var activeUploads = {}; // uploadKey -> {aborted: false, xhr: XMLHttpRequest}
         var uploadQueue = [];
         var isProcessing = false;
 
@@ -470,12 +469,21 @@
 
         // ==================== Upload Modal ====================
         function openUploadModal() {
-            document.getElementById('uploadModal').style.display = 'flex';
+            var modal = document.getElementById('uploadModal');
+            if (modal) {
+                modal.classList.remove('js-hidden');
+                modal.style.display = 'flex';
+            }
         }
         function closeUploadModal() {
             if (Object.keys(activeUploads).length === 0) {
-                document.getElementById('uploadModal').style.display = 'none';
-                document.getElementById('uploadFileList').innerHTML = '';
+                var modal = document.getElementById('uploadModal');
+                if (modal) {
+                    modal.classList.add('js-hidden');
+                    modal.style.display = 'none';
+                }
+                var list = document.getElementById('uploadFileList');
+                if (list) list.innerHTML = '';
             }
         }
 
@@ -534,7 +542,7 @@
 
         var ALLOWED_EXTENSIONS = ['pdf', 'doc', 'docx', 'zip'];
 
-        // ==================== Chunked Upload Engine ====================
+        // ==================== Upload Engine ====================
         function uploadFiles(files) {
             var validFiles = [];
             for (var k = 0; k < files.length; k++) {
@@ -580,125 +588,97 @@
             }
             isProcessing = true;
             var item = uploadQueue.shift();
-            chunkedUpload(item.file, item.index).then(function(){ processQueue(); });
+            directUpload(item.file, item.index).then(function(){ processQueue(); });
         }
 
-        async function chunkedUpload(file, fileIndex) {
-            var totalChunks = Math.ceil(file.size / CHUNK_SIZE);
-            if (totalChunks === 0) totalChunks = 1;
+        // ส่งไฟล์เป็น multipart ก้อนเดียวไปที่ POST /user/academic/storage/upload
+        //
+        // เดิมหน้านี้ยิงผ่าน API อัปโหลดแบบแบ่งชิ้น (chunked) แต่ API นั้น
+        // ถูกจำกัดให้เหลือเฉพาะแอดมินแล้ว จึงเปลี่ยนมาใช้ endpoint ของ
+        // controller ตัวเอง รูปแบบเดียวกับคลังไฟล์ฝั่งแอดมินใน
+        // static/js/admin-storage.js
+        //
+        // UserStorageReEnabledTest กันไม่ให้ย้อนกลับไปเรียก API ตัวนั้นอีก
+        //
+        // ใช้ XMLHttpRequest แทน fetch เพราะต้องการ upload progress event
+        // ซึ่ง fetch ยังให้ไม่ได้ กล่องแสดงความคืบหน้า ความเร็ว และเวลาที่เหลือ
+        // จึงยังทำงานเหมือนเดิม
+        //
+        // ข้อจำกัดใหม่: ขนาดไฟล์ถูกคุมด้วย spring.servlet.multipart.max-file-size
+        // ไม่ใช่โควตาอย่างเดียวเหมือนตอนเป็น chunked
+        function directUpload(file, fileIndex) {
+            return new Promise(function(resolve) {
+                updateProgress(fileIndex, 0, 0, 0);
+                var statusEl = document.getElementById('status-' + fileIndex);
+                if (statusEl) statusEl.innerHTML = 'กำลังอัปโหลด...';
 
-            // Step 1: Init
-            updateProgress(fileIndex, 0, 0, 0);
-            var statusEl = document.getElementById('status-' + fileIndex);
-            if (statusEl) statusEl.innerHTML = 'กำลังเตรียม...';
+                var fd = new FormData();
+                fd.append('file', file, file.name);
+                if (currentFolderId) fd.append('folderId', currentFolderId);
+                fd.append('_csrf', csrfToken);
 
-            var initFd = new FormData();
-            initFd.append('filename', file.name);
-            initFd.append('fileSize', file.size);
-            initFd.append('totalChunks', totalChunks);
-            if (currentFolderId) initFd.append('folderId', currentFolderId);
-            initFd.append('storageType', 'user');
-            initFd.append('_csrf', csrfToken);
+                var xhr = new XMLHttpRequest();
+                var uploadKey = 'u' + fileIndex + '_' + Date.now();
+                activeUploads[uploadKey] = {aborted: false, xhr: xhr};
 
-            var initRes;
-            try {
-                var r = await fetch('/api/upload/init', {method: 'POST', body: initFd});
-                initRes = await r.json();
-            } catch (e) {
-                markError(fileIndex, 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์');
-                updateSummary();
-                return;
-            }
+                var startTime = Date.now();
 
-            if (!initRes.success) {
-                markError(fileIndex, initRes.message);
-                updateSummary();
-                return;
-            }
-
-            var uploadId = initRes.uploadId;
-            activeUploads[uploadId] = {aborted: false};
-
-            // Step 2: Send chunks
-            var startTime = Date.now();
-            var bytesSent = 0;
-
-            for (var i = 0; i < totalChunks; i++) {
-                if (activeUploads[uploadId] && activeUploads[uploadId].aborted) {
-                    // Abort
-                    var abortFd = new FormData();
-                    abortFd.append('uploadId', uploadId);
-                    abortFd.append('_csrf', csrfToken);
-                    fetch('/api/upload/abort', {method: 'POST', body: abortFd}).catch(function(){});
-                    markError(fileIndex, 'ยกเลิกแล้ว');
-                    delete activeUploads[uploadId];
+                function finish() {
+                    delete activeUploads[uploadKey];
                     updateSummary();
-                    return;
+                    resolve();
                 }
 
-                var start = i * CHUNK_SIZE;
-                var end = Math.min(start + CHUNK_SIZE, file.size);
-                var chunkBlob = file.slice(start, end);
+                xhr.upload.onprogress = function(e) {
+                    if (!e.lengthComputable) return;
+                    var elapsed = (Date.now() - startTime) / 1000;
+                    var speed = elapsed > 0 ? e.loaded / elapsed : 0;
+                    var eta = speed > 0 ? (e.total - e.loaded) / speed : 0;
+                    updateProgress(fileIndex, (e.loaded / e.total) * 100, speed, eta);
+                };
 
-                var chunkFd = new FormData();
-                chunkFd.append('uploadId', uploadId);
-                chunkFd.append('chunkIndex', i);
-                chunkFd.append('chunk', chunkBlob, 'chunk_' + i);
-                chunkFd.append('_csrf', csrfToken);
+                xhr.onload = function() {
+                    // เซิร์ฟเวอร์ตอบ 200 พร้อม {success, message} เสมอ
+                    // ยกเว้นตอนไฟล์ใหญ่เกิน multipart limit ที่ container
+                    // ตัดจบก่อนถึง controller แล้วส่ง HTML error กลับมา
+                    var data = null;
+                    try { data = JSON.parse(xhr.responseText); } catch (e) { data = null; }
 
-                try {
-                    var cr = await fetch('/api/upload/chunk', {method: 'POST', body: chunkFd});
-                    var cd = await cr.json();
-                    if (!cd.success) {
-                        markError(fileIndex, cd.message);
-                        delete activeUploads[uploadId];
-                        updateSummary();
-                        return;
+                    if (xhr.status === 200 && data && data.success) {
+                        markDone(fileIndex);
+                    } else if (data && data.message) {
+                        markError(fileIndex, data.message);
+                    } else if (xhr.status === 413) {
+                        markError(fileIndex, 'ไฟล์ใหญ่เกินขนาดที่ระบบรับได้');
+                    } else {
+                        markError(fileIndex, 'อัปโหลดไม่สำเร็จ');
                     }
-                } catch (e) {
-                    markError(fileIndex, 'การส่งข้อมูลล้มเหลว');
-                    delete activeUploads[uploadId];
-                    updateSummary();
-                    return;
-                }
+                    finish();
+                };
 
-                bytesSent += (end - start);
-                var elapsed = (Date.now() - startTime) / 1000;
-                var speed = elapsed > 0 ? bytesSent / elapsed : 0;
-                var remaining = file.size - bytesSent;
-                var eta = speed > 0 ? remaining / speed : 0;
-                var percent = (bytesSent / file.size) * 100;
+                xhr.onerror = function() {
+                    markError(fileIndex, 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์');
+                    finish();
+                };
 
-                updateProgress(fileIndex, percent, speed, eta);
-            }
+                xhr.onabort = function() {
+                    markError(fileIndex, 'ยกเลิกแล้ว');
+                    finish();
+                };
 
-            // Step 3: Complete
-            if (statusEl) statusEl.innerHTML = 'กำลังรวมไฟล์...';
-
-            var completeFd = new FormData();
-            completeFd.append('uploadId', uploadId);
-            completeFd.append('_csrf', csrfToken);
-
-            try {
-                var completeR = await fetch('/api/upload/complete', {method: 'POST', body: completeFd});
-                var completeD = await completeR.json();
-                if (completeD.success) {
-                    markDone(fileIndex);
-                } else {
-                    markError(fileIndex, completeD.message);
-                }
-            } catch (e) {
-                markError(fileIndex, 'รวมไฟล์ไม่สำเร็จ');
-            }
-
-            delete activeUploads[uploadId];
-            updateSummary();
+                xhr.open('POST', '/user/academic/storage/upload');
+                if (csrfHeaderName) xhr.setRequestHeader(csrfHeaderName, csrfToken);
+                xhr.send(fd);
+            });
         }
 
         function cancelAllUploads() {
-            // Mark all active uploads as aborted
+            // ตัดการเชื่อมต่อที่กำลังวิ่งอยู่จริง แล้วเคลียร์คิวที่ยังไม่ได้เริ่ม
             for (var uid in activeUploads) {
                 activeUploads[uid].aborted = true;
+                if (activeUploads[uid].xhr) {
+                    try { activeUploads[uid].xhr.abort(); } catch (e) { /* ปิดไปแล้ว */ }
+                }
             }
             uploadQueue = [];
         }
@@ -781,7 +761,17 @@
             });
         }
 
-        document.addEventListener('DOMContentLoaded', function() { initDragDrop(); });
+        document.addEventListener('DOMContentLoaded', function() {
+            initDragDrop();
+            var modal = document.getElementById('uploadModal');
+            if (modal) {
+                modal.addEventListener('click', function(e) {
+                    if (e.target === modal) {
+                        closeUploadModal();
+                    }
+                });
+            }
+        });
     </script>
 </section>
 </body>

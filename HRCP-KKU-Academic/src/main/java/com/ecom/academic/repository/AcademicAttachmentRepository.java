@@ -15,4 +15,14 @@ public interface AcademicAttachmentRepository extends JpaRepository<AcademicAtta
     List<AcademicAttachment> findByIsDeletedFalseOrIsDeletedIsNull();
 
     List<AcademicAttachment> findByIsDeletedTrue();
+
+    // Slot-based queries
+    List<AcademicAttachment> findByRequestIdAndChecklistItemAndIsDeletedFalseOrderByUploadedAtDesc(
+            Long requestId, Integer checklistItem);
+
+    long countByRequestIdAndChecklistItemAndIsDeletedFalse(
+            Long requestId, Integer checklistItem);
+
+    List<AcademicAttachment> findByRequestIdAndIsDeletedFalseOrderByChecklistItemAscUploadedAtDesc(
+            Long requestId);
 }

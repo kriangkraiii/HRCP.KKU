@@ -2,7 +2,6 @@ package com.ecom.academic.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.never;
@@ -24,7 +23,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.mock.web.MockMultipartFile;
 
 import com.ecom.academic.service.AdminStorageService;
-import com.ecom.academic.service.UserStorageService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -36,13 +34,16 @@ import com.ecom.repository.UserRepository;
  *          skipped file-type validation and quota checks entirely
  *   H-04 — the quota was checked against a client-declared fileSize that was
  *          never compared with the bytes actually uploaded
+ *
+ * The applicant file locker is now switched off and this API serves admin
+ * storage only, so H-01 is asserted in its stronger form: a non-admin is
+ * turned away whatever storageType they name. The class-level @PreAuthorize
+ * is not exercised here — these tests call the controller directly, so they
+ * pin the in-method check that has to hold on its own.
  */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class ChunkedUploadSecurityTest {
-
-    @Mock
-    private UserStorageService userStorageService;
 
     @Mock
     private AdminStorageService adminStorageService;
@@ -57,7 +58,7 @@ class ChunkedUploadSecurityTest {
 
     @BeforeEach
     void setUp() {
-        controller = new ChunkedUploadController(userStorageService, adminStorageService, userRepository);
+        controller = new ChunkedUploadController(adminStorageService, userRepository);
 
         UserDtls user = new UserDtls();
         user.setId(1);
@@ -71,8 +72,6 @@ class ChunkedUploadSecurityTest {
 
         when(userRepository.findByEmail("user@test.com")).thenReturn(user);
         when(userRepository.findByEmail("admin@test.com")).thenReturn(admin);
-        when(userStorageService.getRemainingBytes(anyInt())).thenReturn(100L * 1024 * 1024);
-        when(userStorageService.formatSize(anyLong())).thenReturn("100 MB");
         // Admin storage has its own quota and file-type checks
         when(adminStorageService.getRemainingBytes()).thenReturn(100L * 1024 * 1024);
         when(adminStorageService.formatSize(anyLong())).thenReturn("100 MB");
@@ -106,6 +105,41 @@ class ChunkedUploadSecurityTest {
     }
 
     @Test
+    @DisplayName("คลังไฟล์ผู้ยื่นถูกปิด: ROLE_USER ต้องถูกปฏิเสธแม้ไม่ได้ขอ storageType=admin")
+    void initUpload_asUser_withUserStorageType_isRejected() {
+        ResponseEntity<Map<String, Object>> response = controller.initUpload(
+                "report.pdf", 1024L, 1, null, "user", userPrincipal);
+
+        assertThat(bodyOf(response).get("success")).isEqualTo(false);
+        assertThat(bodyOf(response)).doesNotContainKey("uploadId");
+    }
+
+    @Test
+    @DisplayName("คลังไฟล์ผู้ยื่นถูกปิด: แม้เป็นแอดมิน ก็เขียนลง storageType=user ไม่ได้")
+    void initUpload_asAdmin_withUserStorageType_isRejected() {
+        ResponseEntity<Map<String, Object>> response = controller.initUpload(
+                "report.pdf", 1024L, 1, null, "user", adminPrincipal);
+
+        assertThat(bodyOf(response).get("success")).isEqualTo(false);
+        assertThat(bodyOf(response)).doesNotContainKey("uploadId");
+    }
+
+    @Test
+    @DisplayName("โควตาไม่จำกัด: getRemainingBytes() คืน -1 ต้องไม่ถูกอ่านว่าพื้นที่เต็ม")
+    void initUpload_withUnlimitedAdminQuota_isNotRejected() {
+        when(adminStorageService.isUnlimited()).thenReturn(true);
+        when(adminStorageService.getRemainingBytes()).thenReturn(-1L);
+
+        ResponseEntity<Map<String, Object>> response = controller.initUpload(
+                "report.pdf", 5L * 1024 * 1024 * 1024, 1, null, "admin", adminPrincipal);
+
+        assertThat(bodyOf(response).get("success")).isEqualTo(true);
+        assertThat(bodyOf(response)).containsKey("uploadId");
+
+        controller.abortUpload((String) bodyOf(response).get("uploadId"));
+    }
+
+    @Test
     @DisplayName("H-01: ROLE_ADMIN ยังใช้ storageType=admin ได้ตามปกติ")
     void initUpload_asAdmin_withAdminStorageType_isAllowed() {
         ResponseEntity<Map<String, Object>> response = controller.initUpload(
@@ -123,7 +157,7 @@ class ChunkedUploadSecurityTest {
     @DisplayName("H-04: อัปโหลด byte จริงเกินขนาดที่ประกาศไว้ต้องถูกปฏิเสธ")
     void uploadChunk_exceedingDeclaredSize_isRejected() {
         ResponseEntity<Map<String, Object>> init = controller.initUpload(
-                "small.pdf", 10L, 1, null, "user", userPrincipal);
+                "small.pdf", 10L, 1, null, "admin", adminPrincipal);
         String uploadId = (String) bodyOf(init).get("uploadId");
         assertThat(uploadId).as("init should have succeeded").isNotNull();
 
@@ -140,14 +174,14 @@ class ChunkedUploadSecurityTest {
     @DisplayName("H-04: ขนาดที่บันทึกลง DB ต้องเป็นขนาดจริง ไม่ใช่ค่าที่ client ประกาศ")
     void completeUpload_persistsActualByteCountNotDeclaredSize() {
         ResponseEntity<Map<String, Object>> init = controller.initUpload(
-                "doc.pdf", 4096L, 1, null, "user", userPrincipal);
+                "doc.pdf", 4096L, 1, null, "admin", adminPrincipal);
         String uploadId = (String) bodyOf(init).get("uploadId");
 
         byte[] actual = new byte[321];
         controller.uploadChunk(uploadId, 0, new MockMultipartFile("chunk", actual));
         controller.completeUpload(uploadId);
 
-        verify(userStorageService).saveUploadedFile(
-                anyString(), anyString(), org.mockito.ArgumentMatchers.eq(321L), anyString(), any(), anyInt());
+        verify(adminStorageService).saveUploadedFile(
+                anyString(), anyString(), org.mockito.ArgumentMatchers.eq(321L), anyString(), any(), anyString());
     }
 }

@@ -37,17 +37,14 @@ public class ImageSyncAuditService {
     private final ProfileImageStorage profileImageStorage;
     private final UserRepository userRepository;
     private final com.ecom.academic.service.AdminStorageService adminStorageService;
-    private final com.ecom.academic.service.UserStorageService userStorageService;
 
     public ImageSyncAuditService(
             ProfileImageStorage profileImageStorage,
             UserRepository userRepository,
-            @org.springframework.context.annotation.Lazy com.ecom.academic.service.AdminStorageService adminStorageService,
-            @org.springframework.context.annotation.Lazy com.ecom.academic.service.UserStorageService userStorageService) {
+            @org.springframework.context.annotation.Lazy com.ecom.academic.service.AdminStorageService adminStorageService) {
         this.profileImageStorage = profileImageStorage;
         this.userRepository = userRepository;
         this.adminStorageService = adminStorageService;
-        this.userStorageService = userStorageService;
     }
 
     /**
@@ -74,7 +71,8 @@ public class ImageSyncAuditService {
         try {
             ImageAuditReport report = auditAndSync(true, false);
             int adminTrashPurged = adminStorageService != null ? adminStorageService.purgeOldTrash(30) : 0;
-            int userTrashPurged = userStorageService != null ? userStorageService.purgeOldTrash(30) : 0;
+            // คลังไฟล์ส่วนตัวของผู้ยื่นถูกปิดและ drop ตารางไปแล้ว จึงไม่มีถังขยะให้ล้าง
+            int userTrashPurged = 0;
             log.info("🚀 [Startup Sync Complete] Disk files: {}, DB users: {}, Orphan images purged: {}, Missing references healed: {}, Expired trash files purged: {} (Took {}ms)",
                     report.totalDiskFiles(), report.totalDbUsers(),
                     report.orphanFilesPurged().size(), report.missingDbFilesHealed().size(),
@@ -94,7 +92,8 @@ public class ImageSyncAuditService {
         try {
             ImageAuditReport report = auditAndSync(true, true);
             int adminTrashPurged = adminStorageService != null ? adminStorageService.purgeOldTrash(30) : 0;
-            int userTrashPurged = userStorageService != null ? userStorageService.purgeOldTrash(30) : 0;
+            // คลังไฟล์ส่วนตัวของผู้ยื่นถูกปิดและ drop ตารางไปแล้ว จึงไม่มีถังขยะให้ล้าง
+            int userTrashPurged = 0;
             log.info("⏰ [Scheduled Storage Cleanup Complete] Disk files: {}, Orphan images purged: {}, Missing references healed: {}, Expired trash files purged: {} (Took {}ms)",
                     report.totalDiskFiles(), report.orphanFilesPurged().size(),
                     report.missingDbFilesHealed().size(), (adminTrashPurged + userTrashPurged),

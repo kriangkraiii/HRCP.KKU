@@ -50,6 +50,9 @@ public class AcademicAttachment {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    @Column(name = "checklist_item")
+    private Integer checklistItem; // 1-5 (null = legacy/unassigned)
+
     @PrePersist
     protected void onCreate() {
         uploadedAt = LocalDateTime.now();
@@ -126,6 +129,14 @@ public class AcademicAttachment {
 
     public void setDeletedAt(LocalDateTime deletedAt) {
         this.deletedAt = deletedAt;
+    }
+
+    public Integer getChecklistItem() {
+        return checklistItem;
+    }
+
+    public void setChecklistItem(Integer checklistItem) {
+        this.checklistItem = checklistItem;
     }
 
     public String getFileExtension() {

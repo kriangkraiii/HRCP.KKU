@@ -34,7 +34,7 @@ public class AdminStorageService {
     public AdminStorageService(
             AdminFolderRepository folderRepository,
             AdminFileRepository fileRepository,
-            @Value("${app.storage.admin.max-bytes:10737418240}") long maxStorageBytes,
+            @Value("${app.storage.admin.max-bytes:0}") long maxStorageBytes,
             @Value("${app.storage.admin.allowed-extensions:pdf,doc,docx,zip}") String allowedExtensionsStr) {
         this.folderRepository = folderRepository;
         this.fileRepository = fileRepository;
@@ -45,6 +45,13 @@ public class AdminStorageService {
     }
 
     // ==================== File Type & Quota Validation ====================
+
+    /**
+     * Checks if admin storage has unlimited quota (maxStorageBytes <= 0).
+     */
+    public boolean isUnlimited() {
+        return maxStorageBytes <= 0;
+    }
 
     /**
      * Validates that the filename has an allowed document extension.
@@ -65,9 +72,12 @@ public class AdminStorageService {
     }
 
     /**
-     * Validates storage quota — throws if adding the given size would exceed the limit (10 GB).
+     * Validates storage quota — bypassed if storage is unlimited.
      */
     public void validateStorageQuota(long incomingBytes) {
+        if (isUnlimited()) {
+            return; // Unlimited for admin
+        }
         long currentUsage = getTotalSize();
         if (currentUsage + incomingBytes > maxStorageBytes) {
             throw new IllegalStateException(
@@ -78,6 +88,9 @@ public class AdminStorageService {
     }
 
     public long getRemainingBytes() {
+        if (isUnlimited()) {
+            return -1L;
+        }
         long used = getTotalSize();
         return Math.max(0, maxStorageBytes - used);
     }

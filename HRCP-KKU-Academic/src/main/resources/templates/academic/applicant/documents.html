@@ -28,123 +28,167 @@
                        placeholder="ค้นหาเอกสาร..." data-call-input="filterDocs" data-call-arg="value">
             </div>
 
-            <!-- Categories rendered by JS -->
-            <div id="docContainer"></div>
+            <!-- Categories rendered by Thymeleaf -->
+            <div id="docContainer">
+                <div th:each="cat, stat : ${categories}"
+                     class="doc-category"
+                     th:classappend="${stat.index == 0} ? ' is-open' : ''"
+                     th:attr="data-cat=${stat.index}"
+                     th:style="'--cat-delay:' + (${stat.index} * 80) + 'ms'">
+                    <div class="doc-category-header" data-call="toggleCat" data-call-arg="self">
+                        <i th:class="${cat.icon != null and !cat.icon.isEmpty() ? cat.icon : 'fas fa-landmark'} + ' cat-icon'"
+                           th:style="'color:' + ${cat.color != null and !cat.color.isEmpty() ? cat.color : 'var(--color-primary-medium,#1565c0)'}"></i>
+                        <strong th:text="${cat.title}">หมวดหมู่</strong>
+                        <span class="cat-count" th:text="${cat.docs.size()} + ' รายการ'">0 รายการ</span>
+                        <i class="fas fa-chevron-down cat-chevron"></i>
+                    </div>
+                    <div class="doc-category-body">
+                        <a th:each="d : ${cat.docs}"
+                           class="doc-item-v2 doc-searchable"
+                           th:attr="data-name=${d.title}, data-pdf-url=${d.fileUrl}, data-pdf-name=${d.title}"
+                           href="#">
+                            <i class="fas fa-file-pdf di-icon"></i>
+                            <span class="di-name">
+                                <span th:text="${d.title}">ชื่อเอกสาร</span>
+                                <span th:if="${d.isNew}" class="badge bg-danger ms-1 text-white" style="font-size: 0.72rem; padding: 2px 6px; border-radius: 4px; vertical-align: middle;">🆕 ใหม่</span>
+                            </span>
+                            <span class="di-ext">PDF</span>
+                        </a>
+                    </div>
+                </div>
+            </div>
 
         </div>
 
-        <!-- PDF Overlay -->
-        <div id="pdfOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;flex-direction:column;display:flex;opacity:0;pointer-events:none;transition:opacity var(--duration-normal,250ms) cubic-bezier(0.25,1,0.5,1);">
-            <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 24px;background:rgba(255,255,255,0.08);backdrop-filter:blur(8px);">
-                <span id="pdfTitle" style="color:#fff;font-weight:600;font-size:0.95rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:70%;"></span>
-                <div style="display:flex;gap:8px;">
-                    <a id="pdfDownloadLink" href="#" target="_blank" class="btn btn-sm btn-outline-light">
-                        <i class="fas fa-download me-1"></i>ดาวน์โหลด
+        <!-- PDF Full-Screen Modal Overlay -->
+        <div id="pdfOverlay" class="doc-pdf-overlay" aria-hidden="true" role="dialog" aria-modal="true">
+            <div class="doc-pdf-header">
+                <div class="doc-pdf-title-box">
+                    <i class="fas fa-file-pdf text-danger fs-5 me-2"></i>
+                    <span id="pdfTitle" class="doc-pdf-title">เอกสาร</span>
+                </div>
+                <div class="doc-pdf-actions">
+                    <a id="pdfDownloadLink" href="#" target="_blank" class="btn btn-sm btn-outline-light rounded-pill px-3">
+                        <i class="fas fa-download me-1"></i> ดาวน์โหลด
                     </a>
-                    <button type="button" data-call="closePdfOverlay" class="btn btn-sm btn-outline-light">
-                        <i class="fas fa-times me-1"></i>ปิด
+                    <button type="button" class="btn btn-sm btn-light rounded-pill px-3 fw-semibold ms-2" id="pdfCloseBtn">
+                        <i class="fas fa-times me-1"></i> ปิด
                     </button>
                 </div>
             </div>
-            <div style="flex:1;position:relative;overflow:hidden;">
-                <div id="pdfSpinner" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center;z-index:2;">
+            <div class="doc-pdf-body">
+                <div id="pdfSpinner" class="doc-pdf-spinner">
                     <div class="spinner-border text-light mb-3" style="width:3rem;height:3rem;"></div>
-                    <p style="color:#fff;opacity:.8;">กำลังโหลดเอกสาร...</p>
+                    <p class="text-light mb-0" style="font-size:0.95rem; opacity: 0.9;">กำลังโหลดเอกสาร...</p>
                 </div>
-                <iframe id="pdfFrame" style="width:100%;height:100%;border:none;transition:opacity var(--duration-normal,250ms) cubic-bezier(0.25,1,0.5,1);"></iframe>
+                <iframe id="pdfFrame" class="doc-pdf-iframe" title="PDF Document Viewer"></iframe>
             </div>
         </div>
 
-        <script>
-        // ===== Document Data =====
-        var B = 'https://docs.google.com/viewer?url=https%3A%2F%2Fhr2.kku.ac.th%2Fwp-content%2Fuploads%2F';
-        var S = '&embedded=true';
-        var CATS = [
-          { title:'ข้อบังคับมหาวิทยาลัยขอนแก่น', icon:'fas fa-landmark', color:'var(--color-primary-medium,#1565c0)', docs:[
-            ['ข้อบังคับฯ ต.วิชาการ ข้าราชการ พ.ศ. 2565','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%82%E0%B9%89%E0%B8%B2%E0%B8%A3%E0%B8%B2%E0%B8%8A%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%9E.%E0%B8%A8.-2565-1.pdf'],
-            ['ข้อบังคับฯ ต.วิชาการ พนักงานมหาวิทยาลัย พ.ศ. 2565','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%9E%E0%B8%99%E0%B8%B1%E0%B8%81%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2-%E0%B8%9E.%E0%B8%A8.-2565.pdf'],
-            ['ข้อบังคับฯ ต.วิชาการ พนักงานมหาวิทยาลัย (ฉบับที่ 2) พ.ศ. 2566','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%9E%E0%B8%99%E0%B8%B1%E0%B8%81%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-2-%E0%B8%9E.%E0%B8%A8.-2566.pdf'],
-            ['ข้อบังคับฯ ศ. ได้รับเงินประจำตำแหน่งสูงขึ้น พ.ศ. 2566','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%A8.-%E0%B9%84%E0%B8%94%E0%B9%89%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B9%80%E0%B8%87%E0%B8%B4%E0%B8%99%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%88%E0%B8%B3%E0%B8%95%E0%B8%B3%E0%B9%81%E0%B8%AB%E0%B8%99%E0%B9%88%E0%B8%87%E0%B8%AA%E0%B8%B9%E0%B8%87%E0%B8%82%E0%B8%B6%E0%B9%89%E0%B8%99-%E0%B8%9E.%E0%B8%A8.-2566.pdf'],
-            ['ข้อบังคับฯ ศ.คลินิก พ.ศ. 2566','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%A8.-%E0%B8%84%E0%B8%A5%E0%B8%B4%E0%B8%99%E0%B8%B4%E0%B8%81-%E0%B8%9E.%E0%B8%A8.-2566.pdf'],
-            ['ข้อบังคับฯ ผศ.พิเศษ รศ.พิเศษ ศ.พิเศษ พ.ศ. 2566','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%9C%E0%B8%A8.%E0%B8%9E%E0%B8%B4%E0%B9%80%E0%B8%A8%E0%B8%A9-%E0%B8%A3%E0%B8%A8.%E0%B8%9E%E0%B8%B4%E0%B9%80%E0%B8%A8%E0%B8%A9-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%A8.%E0%B8%9E%E0%B8%B4%E0%B9%80%E0%B8%A8%E0%B8%A9-%E0%B8%9E.%E0%B8%A8.-2566.pdf'],
-            ['ข้อบังคับฯ ศ.เกียรติคุณ พ.ศ. 2560','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%95.%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-%E0%B8%A8.%E0%B9%80%E0%B8%81%E0%B8%B5%E0%B8%A2%E0%B8%A3%E0%B8%95%E0%B8%B4%E0%B8%84%E0%B8%B8%E0%B8%93-%E0%B8%9E.%E0%B8%A8.-2560.pdf'],
-            ['ข้อบังคับฯ มาตรฐานภาระงาน พ.ศ. 2559','%E0%B8%82%E0%B9%89%E0%B8%AD%E0%B8%9A%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%B1%E0%B8%9A%E0%B8%AF-%E0%B8%A1%E0%B8%B2%E0%B8%95%E0%B8%A3%E0%B8%90%E0%B8%B2%E0%B8%99%E0%B8%A0%E0%B8%B2%E0%B8%A3%E0%B8%B0%E0%B8%87%E0%B8%B2%E0%B8%99-%E0%B8%9E.%E0%B8%A8.-2559.pdf']
-          ]},
-          { title:'ประกาศมหาวิทยาลัยขอนแก่น', icon:'fas fa-scroll', color:'#ef6c00', docs:[
-            ['ประกาศ มข. 3202/2566 จำนวนเงินทุนจากแหล่งทุนภายนอก','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-3202_2566.pdf'],
-            ['ประกาศ มข. 3203/2566 หลักเกณฑ์เทียบตำแหน่งทางวิชาการ','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-3203_2566.pdf'],
-            ['ประกาศ มข. 792/2566 กำหนดตำแหน่งทางวิชาการที่เรียกชื่ออย่างอื่น','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-792_2566.pdf'],
-            ['ประกาศ มข. 792/2566 (ราชกิจจานุเบกษา)','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-792_2566-%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A3%E0%B8%B2%E0%B8%8A%E0%B8%81%E0%B8%B4%E0%B8%88%E0%B8%88%E0%B8%B2%E0%B8%99%E0%B8%B8%E0%B9%80%E0%B8%9A%E0%B8%81%E0%B8%A9%E0%B8%B2.pdf'],
-            ['ประกาศ มข. 1607/2566 หลักเกณฑ์ประเมินผลการสอน','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-1607_2566.pdf'],
-            ['ประกาศ มข. 1661/2566 แนวปฏิบัติขอกำหนดตำแหน่งทางวิชาการ','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-1661_2566.pdf'],
-            ['ประกาศ มข. 439/2564 เทียบเกณฑ์คุณภาพผลงาน','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-439_2564.pdf'],
-            ['ประกาศ มข. 1955/2564 คำจำกัดความ รูปแบบ ลักษณะการเผยแพร่','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-1955_2564.pdf'],
-            ['ประกาศ มข. 1956/2564 ลักษณะการมีส่วนร่วมในผลงาน','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-1956_2564-.pdf'],
-            ['ประกาศ มข. 36/2564 แนวปฏิบัติเสนอตำรา/หนังสือ (ฉบับที่ 3)','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-36_2564-.pdf'],
-            ['ประกาศ มข. 3005/2561 แนวปฏิบัติเสนอตำรา/หนังสือ','%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A8%E0%B8%A1%E0%B8%AB%E0%B8%B2%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A5%E0%B8%B1%E0%B8%A2%E0%B8%82%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%81%E0%B9%88%E0%B8%99-%E0%B8%89%E0%B8%9A%E0%B8%B1%E0%B8%9A%E0%B8%97%E0%B8%B5%E0%B9%88-3005_2561.pdf']
-          ]},
-          { title:'เอกสารแนบท้ายข้อบังคับฯ', icon:'fas fa-paperclip', color:'#2e7d32', docs:[
-            ['ลักษณะการมีส่วนร่วมในผลงานทางวิชาการทั่วไป','%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%A9%E0%B8%93%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%A1%E0%B8%B5%E0%B8%AA%E0%B9%88%E0%B8%A7%E0%B8%99%E0%B8%A3%E0%B9%88%E0%B8%A7%E0%B8%A1%E0%B9%83%E0%B8%99%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%97%E0%B8%B2%E0%B8%87%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%97%E0%B8%B1%E0%B9%88%E0%B8%A7%E0%B9%84%E0%B8%9B-%E0%B8%84%E0%B8%A5%E0%B8%B4%E0%B8%81-2.pdf'],
-            ['ลักษณะการมีส่วนร่วมในผลงานทางวิชาการเฉพาะด้าน','%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%A9%E0%B8%93%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%A1%E0%B8%B5%E0%B8%AA%E0%B9%88%E0%B8%A7%E0%B8%99%E0%B8%A3%E0%B9%88%E0%B8%A7%E0%B8%A1%E0%B9%83%E0%B8%99%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%97%E0%B8%B2%E0%B8%87%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-%E0%B8%84%E0%B8%A5%E0%B8%B4%E0%B8%81-2.pdf']
-          ]},
-          { title:'คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 1-3)', icon:'fas fa-flask', color:'#7b1fa2', docs:[
-            ['กลุ่ม 1: งานวิจัย','%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%88%E0%B8%B1%E0%B8%A2-2.pdf'],
-            ['กลุ่ม 2: ผลงานวิชาการเพื่ออุตสาหกรรม','2.1-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%AD%E0%B8%B8%E0%B8%95%E0%B8%AA%E0%B8%B2%E0%B8%AB%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1-3.pdf'],
-            ['กลุ่ม 2: ผลงานวิชาการเพื่อพัฒนาการเรียนการสอน','2.2-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%9E%E0%B8%B1%E0%B8%92%E0%B8%99%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%99%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%AA%E0%B8%AD%E0%B8%99%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%99%E0%B8%A3%E0%B8%B9%E0%B9%89-1-2.pdf'],
-            ['กลุ่ม 2: ผลงานวิชาการเพื่อพัฒนานโยบายสาธารณะ','2.3-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B9%80%E0%B8%9E%E0%B8%B7%E0%B9%88%E0%B8%AD%E0%B8%9E%E0%B8%B1%E0%B8%92%E0%B8%99%E0%B8%B2%E0%B8%99%E0%B9%82%E0%B8%A2%E0%B8%9A%E0%B8%B2%E0%B8%A2%E0%B8%AA%E0%B8%B2%E0%B8%98%E0%B8%B2%E0%B8%A3%E0%B8%93%E0%B8%B0-3.pdf'],
-            ['กลุ่ม 2: กรณีศึกษา (Case Study)','2.4-%E0%B8%81%E0%B8%A3%E0%B8%93%E0%B8%B5%E0%B8%A8%E0%B8%B6%E0%B8%81%E0%B8%A9%E0%B8%B2-case-study-3.pdf'],
-            ['กลุ่ม 2: งานแปล','2.5-%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B9%81%E0%B8%9B%E0%B8%A5-3.pdf'],
-            ['กลุ่ม 2: พจนานุกรม สารานุกรม นามานุกรม','2.6-%E0%B8%9E%E0%B8%88%E0%B8%99%E0%B8%B2%E0%B8%99%E0%B8%B8%E0%B8%81%E0%B8%A3%E0%B8%A1-%E0%B8%AA%E0%B8%B2%E0%B8%A3%E0%B8%B2%E0%B8%99%E0%B8%B8%E0%B8%81%E0%B8%A3%E0%B8%A1-%E0%B8%99%E0%B8%B2%E0%B8%A1%E0%B8%B2%E0%B8%99%E0%B8%B8%E0%B8%81%E0%B8%A3%E0%B8%A1-%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%AD%E0%B8%B7%E0%B9%88%E0%B8%99%E0%B9%83%E0%B8%99%E0%B8%A5%E0%B8%B1%E0%B8%81%E0%B8%A9%E0%B8%93%E0%B8%B0%E0%B9%80%E0%B8%94%E0%B8%B5%E0%B8%A2%E0%B8%A7%E0%B8%81%E0%B8%B1%E0%B8%99-3.pdf'],
-            ['กลุ่ม 2: ผลงานสร้างสรรค์ด้านวิทยาศาสตร์และเทคโนโลยี','2.7-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B8%AA%E0%B8%A3%E0%B8%A3%E0%B8%84%E0%B9%8C%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%A7%E0%B8%B4%E0%B8%97%E0%B8%A2%E0%B8%B2%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%95%E0%B8%A3%E0%B9%8C%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B9%80%E0%B8%97%E0%B8%84%E0%B9%82%E0%B8%99%E0%B9%82%E0%B8%A5%E0%B8%A2%E0%B8%B5-1-3.pdf'],
-            ['กลุ่ม 2: ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ','2.8-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B8%AA%E0%B8%A3%E0%B8%A3%E0%B8%84%E0%B9%8C%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%B8%E0%B8%99%E0%B8%97%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%B0-%E0%B8%A8%E0%B8%B4%E0%B8%A5%E0%B8%9B%E0%B8%B0-3.pdf'],
-            ['กลุ่ม 2: สิทธิบัตร','2.9-%E0%B8%AA%E0%B8%B4%E0%B8%97%E0%B8%98%E0%B8%B4%E0%B8%9A%E0%B8%B1%E0%B8%95%E0%B8%A3-3.pdf'],
-            ['กลุ่ม 2: ซอฟต์แวร์','2.10-%E0%B8%8B%E0%B8%AD%E0%B8%9F%E0%B8%95%E0%B9%8C%E0%B9%81%E0%B8%A7%E0%B8%A3%E0%B9%8C-3.pdf'],
-            ['กลุ่ม 2: ผลงานนวัตกรรม','2.12-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%99%E0%B8%A7%E0%B8%B1%E0%B8%95%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1-3.pdf'],
-            ['กลุ่ม 3: ตำรา','3.1-%E0%B8%95%E0%B8%B3%E0%B8%A3%E0%B8%B2-3.pdf'],
-            ['กลุ่ม 3: หนังสือ','3.2-%E0%B8%AB%E0%B8%99%E0%B8%B1%E0%B8%87%E0%B8%AA%E0%B8%B7%E0%B8%AD-1-2.pdf'],
-            ['กลุ่ม 3: บทความทางวิชาการ','3.3%E0%B8%9A%E0%B8%97%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%97%E0%B8%B2%E0%B8%87%E0%B8%A7%E0%B8%B4%E0%B8%8A%E0%B8%B2%E0%B8%81%E0%B8%B2%E0%B8%A3-3.pdf']
-          ]},
-          { title:'คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 4 เฉพาะด้าน)', icon:'fas fa-star', color:'#004d40', docs:[
-            ['ผลงานรับใช้ท้องถิ่นและสังคม (เฉพาะด้าน)','4.1-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A3%E0%B8%B1%E0%B8%9A%E0%B9%83%E0%B8%8A%E0%B9%89%E0%B8%97%E0%B9%89%E0%B8%AD%E0%B8%87%E0%B8%96%E0%B8%B4%E0%B9%88%E0%B8%99%E0%B9%81%E0%B8%A5%E0%B8%B0%E0%B8%AA%E0%B8%B1%E0%B8%87%E0%B8%84%E0%B8%A1-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-1-2.pdf'],
-            ['ผลงานสร้างสรรค์ด้านสุนทรียะ ศิลปะ (เฉพาะด้าน)','4.2-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%A3%E0%B9%89%E0%B8%B2%E0%B8%87%E0%B8%AA%E0%B8%A3%E0%B8%A3%E0%B8%84%E0%B9%8C%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99%E0%B8%AA%E0%B8%B8%E0%B8%99%E0%B8%97%E0%B8%A3%E0%B8%B5%E0%B8%A2%E0%B8%B0-%E0%B8%A8%E0%B8%B4%E0%B8%A5%E0%B8%9B%E0%B8%B0-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-3.pdf'],
-            ['ผลงานการสอน (เฉพาะด้าน)','4.3-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%81%E0%B8%B2%E0%B8%A3%E0%B8%AA%E0%B8%AD%E0%B8%99-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-3.pdf'],
-            ['ผลงานนวัตกรรม (เฉพาะด้าน)','4.4-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%99%E0%B8%A7%E0%B8%B1%E0%B8%95%E0%B8%81%E0%B8%A3%E0%B8%A3%E0%B8%A1-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-1.pdf'],
-            ['ผลงานศาสนา (เฉพาะด้าน)','4.5-%E0%B8%9C%E0%B8%A5%E0%B8%87%E0%B8%B2%E0%B8%99%E0%B8%A8%E0%B8%B2%E0%B8%AA%E0%B8%99%E0%B8%B2-%E0%B9%80%E0%B8%89%E0%B8%9E%E0%B8%B2%E0%B8%B0%E0%B8%94%E0%B9%89%E0%B8%B2%E0%B8%99-3.pdf']
-          ]}
-        ];
+        <style>
+            .doc-pdf-overlay {
+                position: fixed !important;
+                inset: 0 !important;
+                top: 0 !important;
+                left: 0 !important;
+                right: 0 !important;
+                bottom: 0 !important;
+                width: 100vw !important;
+                height: 100vh !important;
+                background: rgba(15, 23, 42, 0.9) !important;
+                backdrop-filter: blur(10px) !important;
+                -webkit-backdrop-filter: blur(10px) !important;
+                z-index: 999999 !important;
+                display: none;
+                flex-direction: column !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                opacity: 0;
+                transition: opacity 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+            }
+            .doc-pdf-overlay.is-active {
+                display: flex !important;
+                opacity: 1 !important;
+            }
+            .doc-pdf-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 14px 24px;
+                background: rgba(30, 41, 59, 0.98);
+                border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+                color: #fff;
+                flex-shrink: 0;
+                z-index: 10;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+            }
+            .doc-pdf-title-box {
+                display: flex;
+                align-items: center;
+                min-width: 0;
+                max-width: 75%;
+            }
+            .doc-pdf-title {
+                font-weight: 600;
+                font-size: 1rem;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                color: #f8fafc;
+            }
+            .doc-pdf-actions {
+                display: flex;
+                align-items: center;
+                gap: 8px;
+            }
+            .doc-pdf-body {
+                flex: 1;
+                position: relative;
+                width: 100%;
+                height: calc(100vh - 65px);
+                background: #1e293b;
+                overflow: hidden;
+            }
+            .doc-pdf-spinner {
+                position: absolute;
+                top: 50%;
+                left: 50%;
+                transform: translate(-50%, -50%);
+                text-align: center;
+                z-index: 5;
+            }
+            .doc-pdf-iframe {
+                position: absolute;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                border: none;
+                background: #fff;
+                transition: opacity 0.3s ease;
+                opacity: 0;
+            }
+        </style>
 
-        // ===== Render categories =====
-        (function(){
-            var container = document.getElementById('docContainer');
-            CATS.forEach(function(cat, ci){
-                var open = ci === 0 ? ' is-open' : '';
-                var delay = ci * 80;
-                var html = '<div class="doc-category'+open+'" data-cat="'+ci+'" style="--cat-delay:'+delay+'ms">'
-                  + '<div class="doc-category-header" data-call="toggleCat" data-call-arg="self">'
-                  + '<i class="'+cat.icon+' cat-icon" style="color:'+cat.color+'"></i>'
-                  + '<strong>'+cat.title+'</strong>'
-                  + '<span class="cat-count">'+cat.docs.length+' รายการ</span>'
-                  + '<i class="fas fa-chevron-down cat-chevron"></i>'
-                  + '</div><div class="doc-category-body">';
-                cat.docs.forEach(function(d){
-                    var url = B + d[1] + S;
-                    html += '<a class="doc-item-v2 doc-searchable" data-name="'+d[0]+'" href="#" data-pdf-url="'+url+'" data-pdf-name="'+d[0]+'">'
-                      + '<i class="fas fa-file-pdf di-icon"></i>'
-                      + '<span class="di-name">'+d[0]+'</span>'
-                      + '<span class="di-ext">PDF</span></a>';
-                });
-                html += '</div></div>';
-                container.insertAdjacentHTML('beforeend', html);
-            });
-        })();
+        <script>
+        // Ensure PDF overlay is placed directly in document.body
+        function teleportPdfOverlay() {
+            var o = document.getElementById('pdfOverlay');
+            if (o && o.parentElement !== document.body) {
+                document.body.appendChild(o);
+            }
+        }
+        teleportPdfOverlay();
+        document.addEventListener('DOMContentLoaded', teleportPdfOverlay);
 
         // Toggle categories
-        function toggleCat(header){header.closest('.doc-category').classList.toggle('is-open');}
+        function toggleCat(header){
+            if (!header) return;
+            var cat = header.closest('.doc-category');
+            if (cat) cat.classList.toggle('is-open');
+        }
 
-        // The document links are built as an HTML string above. They used to carry
-        // onclick="openPdfOverlay('<url>','<name>')", which meant escaping quotes
-        // into the attribute by hand; CSP refuses inline handlers anyway. The link
-        // now carries data-pdf-url / data-pdf-name and is routed here.
+        // Click handler for PDF preview
         document.addEventListener('click', function(e){
             var link = e.target.closest('[data-pdf-url]');
             if(!link) return;
@@ -154,53 +198,96 @@
 
         // Search
         function filterDocs(query){
-            query=query.toLowerCase().trim();
+            query = (query || '').toLowerCase().trim();
             document.querySelectorAll('.doc-searchable').forEach(function(item){
-                var name=(item.getAttribute('data-name')||'').toLowerCase();
-                item.style.display=(!query||name.includes(query))?'':'none';
+                var name = (item.getAttribute('data-name')||'').toLowerCase();
+                item.style.display = (!query || name.includes(query)) ? '' : 'none';
             });
             document.querySelectorAll('.doc-category').forEach(function(cat){
-                var vis=cat.querySelectorAll('.doc-searchable:not([style*="display: none"])');
+                var vis = cat.querySelectorAll('.doc-searchable:not([style*="display: none"])');
                 if(query){
-                    cat.style.display=vis.length>0?'':'none';
-                    if(vis.length>0&&!cat.classList.contains('is-open'))cat.classList.add('is-open');
-                }else{cat.style.display='';}
+                    cat.style.display = vis.length > 0 ? '' : 'none';
+                    if(vis.length > 0 && !cat.classList.contains('is-open')) cat.classList.add('is-open');
+                } else {
+                    cat.style.display = '';
+                }
             });
         }
 
         // PDF Overlay
         var _pdfTimeout;
-        function openPdfOverlay(url,title){
-            document.getElementById('pdfTitle').textContent=title;
-            var spinner=document.getElementById('pdfSpinner');
-            var frame=document.getElementById('pdfFrame');
-            var overlay=document.getElementById('pdfOverlay');
-            spinner.style.display='block';
-            frame.style.opacity='0';
-            frame.src=url;
-            frame.onload=function(){
-                spinner.style.display='none';
-                frame.style.opacity='1';
-            };
+        function openPdfOverlay(url, title){
+            teleportPdfOverlay();
+            var overlay = document.getElementById('pdfOverlay');
+            if (!overlay) return;
+
+            var titleEl = document.getElementById('pdfTitle');
+            if (titleEl) titleEl.textContent = title || 'เอกสาร';
+
+            var spinner = document.getElementById('pdfSpinner');
+            var frame = document.getElementById('pdfFrame');
+            var downloadLink = document.getElementById('pdfDownloadLink');
+
+            if (spinner) spinner.style.display = 'block';
+            if (frame) {
+                frame.style.opacity = '0';
+                var embedUrl = url;
+                if (url && url.startsWith('http') && !url.includes('docs.google.com/viewer')) {
+                    embedUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(url) + '&embedded=true';
+                }
+                frame.src = embedUrl;
+                frame.onload = function(){
+                    if (spinner) spinner.style.display = 'none';
+                    frame.style.opacity = '1';
+                };
+            }
+
+            if (downloadLink) downloadLink.href = url || '#';
+
             clearTimeout(_pdfTimeout);
-            _pdfTimeout=setTimeout(function(){spinner.style.display='none';frame.style.opacity='1';},15000);
-            document.getElementById('pdfDownloadLink').href=url;
-            overlay.style.opacity='1';
-            overlay.style.pointerEvents='auto';
-            document.body.style.overflow='hidden';
+            _pdfTimeout = setTimeout(function(){
+                if (spinner) spinner.style.display = 'none';
+                if (frame) frame.style.opacity = '1';
+            }, 10000);
+
+            overlay.classList.add('is-active');
+            overlay.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
         }
+
         function closePdfOverlay(){
-            var overlay=document.getElementById('pdfOverlay');
-            overlay.style.opacity='0';
-            overlay.style.pointerEvents='none';
-            var frame=document.getElementById('pdfFrame');
-            setTimeout(function(){frame.src='';},300);
-            frame.onload=null;
+            var overlay = document.getElementById('pdfOverlay');
+            if (!overlay) return;
+            overlay.classList.remove('is-active');
+            overlay.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
             clearTimeout(_pdfTimeout);
-            document.body.style.overflow='';
+            setTimeout(function(){
+                var frame = document.getElementById('pdfFrame');
+                if (frame) frame.src = '';
+            }, 250);
         }
-        document.addEventListener('keydown',function(e){
-            if(e.key==='Escape'&&document.getElementById('pdfOverlay').style.opacity==='1')closePdfOverlay();
+
+        // Close button listener
+        var closeBtn = document.getElementById('pdfCloseBtn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', closePdfOverlay);
+        }
+
+        // Backdrop click to close
+        var overlayEl = document.getElementById('pdfOverlay');
+        if (overlayEl) {
+            overlayEl.addEventListener('click', function(e) {
+                if (e.target === overlayEl) closePdfOverlay();
+            });
+        }
+
+        // Escape key to close
+        document.addEventListener('keydown', function(e){
+            if(e.key === 'Escape'){
+                var overlay = document.getElementById('pdfOverlay');
+                if(overlay && overlay.classList.contains('is-active')) closePdfOverlay();
+            }
         });
         </script>
     </section>

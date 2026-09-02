@@ -32,16 +32,13 @@ class ImageSyncAuditServiceTest {
     @Mock
     private com.ecom.academic.service.AdminStorageService adminStorageService;
 
-    @Mock
-    private com.ecom.academic.service.UserStorageService userStorageService;
-
     private ProfileImageStorage storage;
     private ImageSyncAuditService auditService;
 
     @BeforeEach
     void setUp() {
         storage = new ProfileImageStorage(tempUploadDir.toString());
-        auditService = new ImageSyncAuditService(storage, userRepository, adminStorageService, userStorageService);
+        auditService = new ImageSyncAuditService(storage, userRepository, adminStorageService);
     }
 
     @Test

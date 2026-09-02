@@ -10,6 +10,8 @@
     <link href="/vendor/fonts/sarabun.css"
         rel="stylesheet">
     <link rel="icon" type="image/png" href="/img/favicon.png">
+    <link rel="preconnect" href="https://translate.google.com">
+    <link rel="preconnect" href="https://translate.googleapis.com">
     <meta name="_csrf" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
     <link rel="stylesheet" href="/css/style.css?v=3.1">
@@ -140,9 +142,11 @@
                 <a href="/user/academic/documents" class="sidebar-link" id="nav-documents">
                     <i class="fas fa-book-open"></i> เอกสาร/ข้อบังคับ
                 </a>
+                <!--/* คลังไฟล์ส่วนตัวของผู้ยื่นถูกยกเลิก เหลือใช้เฉพาะฝั่งแอดมิน
                 <a href="/user/academic/storage" class="sidebar-link" id="nav-storage">
                     <i class="fas fa-cloud"></i> ที่เก็บไฟล์ของฉัน
                 </a>
+                */-->
                 <a href="/esign/inbox" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-signing">
                     <span><i class="fas fa-file-signature me-2"></i>รอลงนาม</span>
                     <span class="badge bg-warning text-dark rounded-pill"
@@ -172,7 +176,7 @@
 
         <div class="lang-dropdown">
             <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdownMenu" aria-label="เปลี่ยนภาษา">
-                <i class="fas fa-language lang-icon" aria-hidden="true"></i>
+                <i class="fas fa-language lang-icon" id="langDropdownIcon" aria-hidden="true"></i>
                 <span id="langCurrentLabel">TH</span>
             </button>
             <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" aria-label="เลือกภาษา">
@@ -180,6 +184,88 @@
                 <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem" tabindex="-1">English</button>
             </div>
         </div>
+
+        <!-- Language Switcher Loading Overlay (Glassmorphism) -->
+        <div id="langLoadingOverlay" class="lang-loading-overlay" aria-live="polite" aria-hidden="true">
+            <div class="lang-loading-card">
+                <div class="lang-loading-spinner">
+                    <i class="fas fa-circle-notch fa-spin"></i>
+                </div>
+                <div class="lang-loading-text" id="langLoadingTitle">กำลังเปลี่ยนภาษา...</div>
+                <div class="lang-loading-sub" id="langLoadingSub">Please wait a moment</div>
+            </div>
+        </div>
+
+        <style>
+            .lang-loading-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100vw;
+                height: 100vh;
+                background: rgba(15, 23, 42, 0.45);
+                backdrop-filter: blur(5px);
+                -webkit-backdrop-filter: blur(5px);
+                z-index: 999999;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                opacity: 0;
+                visibility: hidden;
+                transition: opacity 0.2s ease, visibility 0.2s ease;
+                pointer-events: none;
+            }
+            .lang-loading-overlay.active {
+                opacity: 1;
+                visibility: visible;
+                pointer-events: all;
+            }
+            .lang-loading-card {
+                background: rgba(255, 255, 255, 0.95);
+                border: 1px solid rgba(255, 255, 255, 0.8);
+                box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+                border-radius: 18px;
+                padding: 24px 34px;
+                text-align: center;
+                min-width: 250px;
+                max-width: 90vw;
+                transform: scale(0.92);
+                transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            }
+            .lang-loading-overlay.active .lang-loading-card {
+                transform: scale(1);
+            }
+            [data-theme="dark"] .lang-loading-card {
+                background: rgba(30, 41, 59, 0.95);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.6);
+            }
+            .lang-loading-spinner {
+                font-size: 2.2rem;
+                color: #8b1d24; /* KKU Crimson */
+                margin-bottom: 12px;
+                display: inline-block;
+            }
+            [data-theme="dark"] .lang-loading-spinner {
+                color: #f59e0b;
+            }
+            .lang-loading-text {
+                font-size: 1.05rem;
+                font-weight: 700;
+                color: #1e293b;
+                margin-bottom: 4px;
+            }
+            [data-theme="dark"] .lang-loading-text {
+                color: #f8fafc;
+            }
+            .lang-loading-sub {
+                font-size: 0.85rem;
+                color: #64748b;
+            }
+            [data-theme="dark"] .lang-loading-sub {
+                color: #94a3b8;
+            }
+        </style>
 
         <script type="text/javascript">
             // === Google Translate Init (with error handling) ===
@@ -217,7 +303,6 @@
 
                     script.onerror = function () {
                         console.warn('[Google Translate] Failed to load script (attempt ' + attempt + '/' + MAX_RETRIES + ')');
-                        // Remove failed script tag
                         if (script.parentNode) script.parentNode.removeChild(script);
 
                         if (attempt < MAX_RETRIES) {
@@ -234,12 +319,17 @@
                 loadGoogleTranslate();
             })();
 
-            // === Language Dropdown Logic ===
+            // === Language Dropdown & Loading State Logic ===
             document.addEventListener("DOMContentLoaded", function () {
                 var btn = document.getElementById('langDropdownBtn');
+                var icon = document.getElementById('langDropdownIcon');
                 var menu = document.getElementById('langDropdownMenu');
                 var currentLabel = document.getElementById('langCurrentLabel');
-                var items = menu.querySelectorAll('.lang-dropdown-item');
+                var items = menu ? menu.querySelectorAll('.lang-dropdown-item') : [];
+                var overlay = document.getElementById('langLoadingOverlay');
+                var loadingTitle = document.getElementById('langLoadingTitle');
+                var loadingSub = document.getElementById('langLoadingSub');
+                var hideTimeout = null;
 
                 // Read googtrans cookie
                 function getCookie(name) {
@@ -249,11 +339,7 @@
 
                 // Clear all googtrans cookies across all domain variants
                 function clearGoogTransCookies() {
-                    var domains = [
-                        '',
-                        window.location.hostname,
-                        '.' + window.location.hostname
-                    ];
+                    var domains = ['', window.location.hostname, '.' + window.location.hostname];
                     var paths = ['/', ''];
                     domains.forEach(function (d) {
                         paths.forEach(function (p) {
@@ -267,11 +353,7 @@
 
                 // Set googtrans cookie on all domain variants
                 function setGoogTransCookie(value) {
-                    var domains = [
-                        '',
-                        window.location.hostname,
-                        '.' + window.location.hostname
-                    ];
+                    var domains = ['', window.location.hostname, '.' + window.location.hostname];
                     domains.forEach(function (d) {
                         var cookieStr = 'googtrans=' + value + '; path=/';
                         if (d) cookieStr += '; domain=' + d;
@@ -279,12 +361,49 @@
                     });
                 }
 
+                // Show loading state
+                function showLangLoading(targetLang) {
+                    if (hideTimeout) clearTimeout(hideTimeout);
+                    if (targetLang === 'en') {
+                        if (loadingTitle) loadingTitle.textContent = 'Switching to English...';
+                        if (loadingSub) loadingSub.textContent = 'กำลังเปลี่ยนเป็นภาษาอังกฤษ โปรดรอสักครู่';
+                    } else {
+                        if (loadingTitle) loadingTitle.textContent = 'กำลังเปลี่ยนเป็นภาษาไทย...';
+                        if (loadingSub) loadingSub.textContent = 'Switching to Thai, please wait';
+                    }
+                    if (overlay) {
+                        overlay.classList.add('active');
+                        overlay.setAttribute('aria-hidden', 'false');
+                    }
+                    if (icon) {
+                        icon.className = 'fas fa-circle-notch fa-spin lang-icon';
+                    }
+                    if (btn) {
+                        btn.style.pointerEvents = 'none';
+                    }
+                }
+
+                // Hide loading state
+                function hideLangLoading() {
+                    if (hideTimeout) clearTimeout(hideTimeout);
+                    if (overlay) {
+                        overlay.classList.remove('active');
+                        overlay.setAttribute('aria-hidden', 'true');
+                    }
+                    if (icon) {
+                        icon.className = 'fas fa-language lang-icon';
+                    }
+                    if (btn) {
+                        btn.style.pointerEvents = '';
+                    }
+                }
+
                 // Detect active language from cookie
                 var currentLangCookie = getCookie('googtrans');
                 var activeLang = (currentLangCookie && currentLangCookie.indexOf('/en') !== -1) ? 'en' : 'th';
 
                 // Set initial UI state
-                currentLabel.textContent = activeLang.toUpperCase();
+                if (currentLabel) currentLabel.textContent = activeLang.toUpperCase();
                 items.forEach(function (item) {
                     if (item.dataset.lang === activeLang) {
                         item.classList.add('active');
@@ -293,51 +412,83 @@
 
                 // Toggle dropdown
                 function openMenu() {
-                    menu.classList.add('show');
-                    btn.setAttribute('aria-expanded', 'true');
-                    var firstItem = menu.querySelector('.lang-dropdown-item');
-                    if (firstItem) firstItem.focus();
+                    if (menu) {
+                        menu.classList.add('show');
+                        if (btn) btn.setAttribute('aria-expanded', 'true');
+                        var firstItem = menu.querySelector('.lang-dropdown-item');
+                        if (firstItem) firstItem.focus();
+                    }
                 }
                 function closeMenu() {
-                    menu.classList.remove('show');
-                    btn.setAttribute('aria-expanded', 'false');
-                    btn.focus();
+                    if (menu) {
+                        menu.classList.remove('show');
+                        if (btn) {
+                            btn.setAttribute('aria-expanded', 'false');
+                            btn.focus();
+                        }
+                    }
                 }
+
                 function selectLang(lang) {
                     closeMenu();
+                    var currentLang = (currentLabel ? currentLabel.textContent.trim().toLowerCase() : 'th');
+                    if (lang === currentLang) return; // Same language
+
+                    showLangLoading(lang);
+
                     if (_gtTranslateReady) {
                         var gtCombo = document.querySelector('#google_translate_element select');
                         if (gtCombo) {
                             gtCombo.value = lang;
                             gtCombo.dispatchEvent(new Event('change'));
-                            currentLabel.textContent = lang.toUpperCase();
+                            if (currentLabel) currentLabel.textContent = lang.toUpperCase();
                             items.forEach(function (it) {
                                 it.classList.toggle('active', it.dataset.lang === lang);
                             });
+
+                            // Listen for translation DOM change or finish
+                            var observer = new MutationObserver(function (mutations, obs) {
+                                obs.disconnect();
+                                setTimeout(hideLangLoading, 300);
+                            });
+                            observer.observe(document.documentElement, {
+                                attributes: true,
+                                attributeFilter: ['class', 'lang']
+                            });
+
+                            // Failsafe timeout in case observer misses
+                            hideTimeout = setTimeout(function () {
+                                observer.disconnect();
+                                hideLangLoading();
+                            }, 2000);
                             return;
                         }
                     }
+
                     var langCode = lang === 'en' ? '/th/en' : '/th/th';
                     clearGoogTransCookies();
                     setGoogTransCookie(langCode);
+                    // Reload with overlay active for seamless transition
                     window.location.reload();
                 }
 
                 // Toggle dropdown
-                btn.addEventListener('click', function (e) {
-                    e.stopPropagation();
-                    if (menu.classList.contains('show')) { closeMenu(); } else { openMenu(); }
-                });
+                if (btn) {
+                    btn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        if (menu && menu.classList.contains('show')) { closeMenu(); } else { openMenu(); }
+                    });
 
-                // Keyboard support on toggle button
-                btn.addEventListener('keydown', function (e) {
-                    if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
-                        e.preventDefault();
-                        if (!menu.classList.contains('show')) openMenu();
-                    } else if (e.key === 'Escape') {
-                        closeMenu();
-                    }
-                });
+                    // Keyboard support on toggle button
+                    btn.addEventListener('keydown', function (e) {
+                        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                            e.preventDefault();
+                            if (menu && !menu.classList.contains('show')) openMenu();
+                        } else if (e.key === 'Escape') {
+                            closeMenu();
+                        }
+                    });
+                }
 
                 // Language selection + keyboard navigation on items
                 items.forEach(function (item, idx) {
@@ -365,7 +516,7 @@
 
                 // Close dropdown on outside click
                 document.addEventListener('click', function () {
-                    if (menu.classList.contains('show')) closeMenu();
+                    if (menu && menu.classList.contains('show')) closeMenu();
                 });
             });
         </script>

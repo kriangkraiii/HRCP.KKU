@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.service.AdminStorageService;
-import com.ecom.academic.service.UserStorageService;
 import com.ecom.external.repository.FsFacultyChangeRepository;
 import com.ecom.repository.AdminLogRepository;
 import com.ecom.repository.NotificationRepository;
@@ -44,7 +43,6 @@ public class DataRetentionService {
     private final AdminLogRepository adminLogRepository;
     private final FsFacultyChangeRepository fsFacultyChangeRepository;
     private final AdminStorageService adminStorageService;
-    private final UserStorageService userStorageService;
 
     @Value("${app.retention.notification-deleted-days:60}")
     private int notificationDeletedDays;
@@ -65,13 +63,11 @@ public class DataRetentionService {
             NotificationRepository notificationRepository,
             AdminLogRepository adminLogRepository,
             FsFacultyChangeRepository fsFacultyChangeRepository,
-            @Lazy AdminStorageService adminStorageService,
-            @Lazy UserStorageService userStorageService) {
+            @Lazy AdminStorageService adminStorageService) {
         this.notificationRepository = notificationRepository;
         this.adminLogRepository = adminLogRepository;
         this.fsFacultyChangeRepository = fsFacultyChangeRepository;
         this.adminStorageService = adminStorageService;
-        this.userStorageService = userStorageService;
     }
 
     /**
@@ -225,11 +221,16 @@ public class DataRetentionService {
     }
 
     /**
-     * Purges expired trash files from User Cloud Storage.
+     * เคยล้างถังขยะของคลังไฟล์ส่วนตัวผู้ยื่น
+     *
+     * <p>คลังไฟล์นั้นถูกปิดไปแล้วและตาราง user_file/user_folder ถูก drop ทิ้ง
+     * จึงไม่มีอะไรให้ล้างอีก คงเมธอดกับ field ใน report ไว้เพื่อไม่ให้รูปร่าง
+     * ของรายงานเปลี่ยน แล้วคืน 0 เสมอ
      */
     public int purgeUserStorageTrash(int olderThanDays) {
-        if (userStorageService == null || olderThanDays <= 0) return 0;
-        return userStorageService.purgeOldTrash(olderThanDays);
+        // if (userStorageService == null || olderThanDays <= 0) return 0;
+        // return userStorageService.purgeOldTrash(olderThanDays);
+        return 0;
     }
 
     // ================= Getters for Current Retention Configuration =================

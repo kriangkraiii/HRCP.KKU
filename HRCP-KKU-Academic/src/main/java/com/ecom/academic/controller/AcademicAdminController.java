@@ -35,6 +35,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import com.ecom.config.ClientIpUtils;
+import com.ecom.academic.model.AcademicAttachment;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
@@ -537,6 +538,8 @@ public class AcademicAdminController {
                     // ignore parse errors
                 }
             }
+            Map<Integer, List<AcademicAttachment>> attachmentsBySlot = requestService.getAttachmentsGroupedBySlot(id);
+            model.addAttribute("attachmentsBySlot", attachmentsBySlot);
         }
 
         // สำหรับ doc_0 (admin): ดึงข้อมูลที่ผู้ยื่นกรอกมาแสดง

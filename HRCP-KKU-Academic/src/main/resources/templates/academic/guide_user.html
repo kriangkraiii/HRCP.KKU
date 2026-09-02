@@ -23,7 +23,7 @@
                 <a href="#sec-eval" class="guide-qn-item"><i class="fas fa-clipboard-check"></i> ประเมินผล</a>
                 <a href="#sec-position" class="guide-qn-item"><i class="fas fa-university"></i> ขอตำแหน่ง</a>
                 <a href="#sec-docs" class="guide-qn-item"><i class="fas fa-book-open"></i> เอกสารอ้างอิง</a>
-                <a href="#sec-storage" class="guide-qn-item"><i class="fas fa-cloud"></i> ที่เก็บไฟล์</a>
+                <!--/* <a href="#sec-storage" class="guide-qn-item"><i class="fas fa-cloud"></i> ที่เก็บไฟล์</a> */-->
                 <a href="#sec-settings" class="guide-qn-item"><i class="fas fa-cog"></i> ตั้งค่า</a>
             </div>
 
@@ -215,7 +215,7 @@
             </div>
 
             <!-- ===== 5. ที่เก็บไฟล์ ===== -->
-            <div class="guide-section" id="sec-storage">
+            <div class="guide-section" id="sec-storage" th:if="false">
                 <button type="button" class="guide-section-header" aria-expanded="false">
                     <span><i class="fas fa-cloud guide-sec-icon" style="color:#0288d1"></i> 5. ที่เก็บไฟล์ของฉัน</span>
                     <i class="fas fa-chevron-down guide-chevron"></i>
@@ -249,7 +249,7 @@
 
                     <div class="guide-info">
                         <i class="fas fa-info-circle"></i>
-                        <div><strong>หมายเหตุ:</strong> ที่เก็บไฟล์นี้เป็นพื้นที่ส่วนตัว แอดมินและผู้ใช้อื่นไม่สามารถเห็นไฟล์ของท่าน ระบบรองรับการ chunked upload สำหรับไฟล์ขนาดใหญ่</div>
+                        <div><strong>หมายเหตุ:</strong> ที่เก็บไฟล์นี้เป็นพื้นที่ส่วนตัว แอดมินและผู้ใช้อื่นไม่สามารถเห็นไฟล์ของท่าน รองรับเฉพาะไฟล์เอกสาร (.pdf, .doc, .docx, .zip) และมีโควตาพื้นที่ต่อบัญชี</div>
                     </div>
                 </div>
             </div>

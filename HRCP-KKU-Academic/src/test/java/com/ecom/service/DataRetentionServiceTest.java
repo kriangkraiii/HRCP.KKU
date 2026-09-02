@@ -19,7 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import com.ecom.academic.service.AdminStorageService;
-import com.ecom.academic.service.UserStorageService;
 import com.ecom.external.repository.FsFacultyChangeRepository;
 import com.ecom.repository.AdminLogRepository;
 import com.ecom.repository.NotificationRepository;
@@ -39,9 +38,6 @@ class DataRetentionServiceTest {
     @Mock
     private AdminStorageService adminStorageService;
 
-    @Mock
-    private UserStorageService userStorageService;
-
     private DataRetentionService retentionService;
 
     @BeforeEach
@@ -50,8 +46,7 @@ class DataRetentionServiceTest {
                 notificationRepository,
                 adminLogRepository,
                 fsFacultyChangeRepository,
-                adminStorageService,
-                userStorageService);
+                adminStorageService);
 
         // Inject default test properties
         ReflectionTestUtils.setField(retentionService, "notificationDeletedDays", 60);
@@ -110,7 +105,6 @@ class DataRetentionServiceTest {
         when(adminLogRepository.deleteLogsBefore(any(LocalDateTime.class))).thenReturn(20);
         when(fsFacultyChangeRepository.deleteProcessedChangesBefore(any(LocalDateTime.class))).thenReturn(3);
         when(adminStorageService.purgeOldTrash(30)).thenReturn(4);
-        when(userStorageService.purgeOldTrash(30)).thenReturn(2);
 
         var report = retentionService.runFullRetentionCycle();
 
@@ -120,9 +114,9 @@ class DataRetentionServiceTest {
         assertEquals(20, report.adminLogsPurged());
         assertEquals(3, report.facultySyncLogsPurged());
         assertEquals(4, report.adminStorageTrashPurged());
-        assertEquals(2, report.userStorageTrashPurged());
+        assertEquals(0, report.userStorageTrashPurged());
         assertEquals(38, report.totalDatabaseRecordsPurged());
-        assertEquals(6, report.totalStorageFilesPurged());
+        assertEquals(4, report.totalStorageFilesPurged());
         assertTrue(report.durationMs() >= 0);
         assertNotNull(report.executionTimestamp());
     }

@@ -77,6 +77,7 @@ class ExternalSyncPageControllerTest {
                 props,
                 cpSyncService,
                 harvestService,
+                mock(com.ecom.external.service.KkuDocumentSyncService.class),
                 "0 30 1 * * *",
                 "0 0 3 * * SUN",
                 "0 0 2 * * *",
@@ -85,7 +86,8 @@ class ExternalSyncPageControllerTest {
                 "0 0 3 * * ?",
                 "0 30 3 * * ?",
                 "0 0 8 * * *",
-                "0 30 8 * * *"
+                "0 30 8 * * *",
+                "0 0 2 1 * ?"
         );
     }
 
@@ -127,19 +129,19 @@ class ExternalSyncPageControllerTest {
         @SuppressWarnings("unchecked")
         List<ExternalSyncPageController.SyncJobDisplay> syncJobList =
                 (List<ExternalSyncPageController.SyncJobDisplay>) model.getAttribute("syncJobList");
-        assertThat(syncJobList).hasSize(8);
+        assertThat(syncJobList).hasSize(9);
         assertThat(syncJobList.stream().map(ExternalSyncPageController.SyncJobDisplay::id).toList())
-                .containsExactly("users", "college_web", "scopus", "openalex", "crossref", "dblp", "thaijo", "kkuir");
+                .containsExactly("users", "college_web", "scopus", "openalex", "crossref", "dblp", "thaijo", "kkuir", "kku_regulations");
 
         assertThat(model.getAttribute("okCount")).isEqualTo(1L);
-        assertThat(model.getAttribute("totalJobs")).isEqualTo(8);
+        assertThat(model.getAttribute("totalJobs")).isEqualTo(9);
 
         @SuppressWarnings("unchecked")
         List<ExternalSyncPageController.ScheduleCategory> scheduleCategories =
                 (List<ExternalSyncPageController.ScheduleCategory>) model.getAttribute("scheduleCategories");
         assertThat(scheduleCategories).hasSize(3);
         int totalCronItems = scheduleCategories.stream().mapToInt(c -> c.items().size()).sum();
-        assertThat(totalCronItems).isEqualTo(9);
+        assertThat(totalCronItems).isEqualTo(10);
     }
 
     @Test

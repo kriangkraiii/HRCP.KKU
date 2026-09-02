@@ -25,11 +25,11 @@ import com.ecom.academic.service.DocumentGenerationService;
  * ไบต์ที่ได้รับเป็น PDF หรือยัง ถ้าเผลอส่งเข้า LibreOffice ซ้ำ มันจะ import PDF
  * กลับเข้ามาแล้ว export ใหม่ ซึ่งทำลายการ map ตัวอักษรไทยจนอ่านไม่ออก
  */
-final class PreviewResponseFactory {
+public final class PreviewResponseFactory {
 
     private static final Logger log = LoggerFactory.getLogger(PreviewResponseFactory.class);
 
-    static final String FORMAT_HEADER = "X-Preview-Format";
+    public static final String FORMAT_HEADER = "X-Preview-Format";
 
     private static final String DOCX_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
 
@@ -39,7 +39,7 @@ final class PreviewResponseFactory {
     /**
      * @param documentBytes ไฟล์เอกสาร จะเป็น DOCX หรือ PDF ที่เรนเดอร์มาแล้วก็ได้
      */
-    static ResponseEntity<byte[]> build(DocumentGenerationService service, byte[] documentBytes,
+    public static ResponseEntity<byte[]> build(DocumentGenerationService service, byte[] documentBytes,
             String format, String baseFilename) {
 
         String safeBase = (baseFilename == null || baseFilename.isBlank()) ? "document" : baseFilename;

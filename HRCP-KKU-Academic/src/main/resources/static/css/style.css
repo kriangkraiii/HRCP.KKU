@@ -398,10 +398,16 @@ body {
 }
 
 /* ===== Floating Document Buttons ===== */
+/*
+ * วางไว้ด้านบน ใต้แถบหัวเรื่องพอดี
+ *
+ * .top-navbar สูงอย่างน้อย 54px และเป็น sticky อยู่ที่ top:0 ปุ่มชุดนี้เป็น
+ * position:fixed จึงต้องเผื่อระยะนั้นเอง ไม่งั้นจะไปทับแถบหัวเรื่อง
+ */
 .floating-doc-btn {
   position: fixed;
-  bottom: 24px !important;
-  top: auto !important;
+  top: 70px !important;
+  bottom: auto !important;
   z-index: 1040;
   border-radius: 9999px !important;
   padding: 10px 22px !important;
@@ -418,7 +424,8 @@ body {
 }
 .floating-doc-btn-back {
   left: calc(var(--sidebar-width, 260px) + 24px);
-  bottom: 24px !important;
+  top: 70px !important;
+  bottom: auto !important;
   background-color: #ffffff;
   border: 1.5px solid #cbd5e1;
   color: #475569;
@@ -430,7 +437,8 @@ body {
 }
 .floating-doc-btn-preview {
   right: 24px;
-  bottom: 24px !important;
+  top: 70px !important;
+  bottom: auto !important;
   background-color: #ffffff;
   border: 1.5px solid #0d47a1;
   color: #0d47a1;
@@ -441,14 +449,16 @@ body {
 }
 @media (max-width: 991px) {
   .floating-doc-btn {
-    bottom: 20px !important;
-    top: auto !important;
+    top: 66px !important;
+    bottom: auto !important;
   }
   .floating-doc-btn-back {
     left: 16px;
+    top: 66px !important;
   }
   .floating-doc-btn-preview {
     right: 16px;
+    top: 66px !important;
   }
 }
 

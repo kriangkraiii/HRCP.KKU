@@ -8,6 +8,8 @@
 	<link href="/vendor/fonts/sarabun.css" rel="stylesheet">
 	<link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
 	<link rel="icon" type="image/png" href="/img/favicon.png">
+	<link rel="preconnect" href="https://translate.google.com">
+	<link rel="preconnect" href="https://translate.googleapis.com">
 	<link rel="stylesheet" href="/css/guest.css">
 </head>
 
@@ -17,8 +19,8 @@
 
 	<!-- Language Switcher -->
 	<div class="lang-dropdown">
-		<button type="button" class="lang-dropdown-btn" id="langDropdownBtn">
-			<i class="fas fa-language lang-icon"></i>
+		<button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-label="เปลี่ยนภาษา">
+			<i class="fas fa-language lang-icon" id="langDropdownIcon"></i>
 			<span id="langCurrentLabel">TH</span>
 		</button>
 		<div class="lang-dropdown-menu" id="langDropdownMenu">
@@ -26,6 +28,74 @@
 			<button type="button" class="lang-dropdown-item" data-lang="en">English</button>
 		</div>
 	</div>
+
+	<!-- Language Switcher Loading Overlay (Glassmorphism) -->
+	<div id="langLoadingOverlay" class="lang-loading-overlay" aria-live="polite" aria-hidden="true">
+		<div class="lang-loading-card">
+			<div class="lang-loading-spinner">
+				<i class="fas fa-circle-notch fa-spin"></i>
+			</div>
+			<div class="lang-loading-text" id="langLoadingTitle">กำลังเปลี่ยนภาษา...</div>
+			<div class="lang-loading-sub" id="langLoadingSub">Please wait a moment</div>
+		</div>
+	</div>
+
+	<style>
+		.lang-loading-overlay {
+			position: fixed;
+			top: 0;
+			left: 0;
+			width: 100vw;
+			height: 100vh;
+			background: rgba(15, 23, 42, 0.45);
+			backdrop-filter: blur(5px);
+			-webkit-backdrop-filter: blur(5px);
+			z-index: 999999;
+			display: flex;
+			align-items: center;
+			justify-content: center;
+			opacity: 0;
+			visibility: hidden;
+			transition: opacity 0.2s ease, visibility 0.2s ease;
+			pointer-events: none;
+		}
+		.lang-loading-overlay.active {
+			opacity: 1;
+			visibility: visible;
+			pointer-events: all;
+		}
+		.lang-loading-card {
+			background: rgba(255, 255, 255, 0.95);
+			border: 1px solid rgba(255, 255, 255, 0.8);
+			box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05);
+			border-radius: 18px;
+			padding: 24px 34px;
+			text-align: center;
+			min-width: 250px;
+			max-width: 90vw;
+			transform: scale(0.92);
+			transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+		}
+		.lang-loading-overlay.active .lang-loading-card {
+			transform: scale(1);
+		}
+		.lang-loading-spinner {
+			font-size: 2.2rem;
+			color: #8b1d24;
+			margin-bottom: 12px;
+			display: inline-block;
+		}
+		.lang-loading-text {
+			font-size: 1.05rem;
+			font-weight: 700;
+			color: #1e293b;
+			margin-bottom: 4px;
+		}
+		.lang-loading-sub {
+			font-size: 0.85rem;
+			color: #64748b;
+		}
+	</style>
 
 	<div class="guest-split">
 		<!-- Brand Panel -->
@@ -154,9 +224,14 @@
 
 		document.addEventListener('DOMContentLoaded', function () {
 			var btn = document.getElementById('langDropdownBtn');
+			var icon = document.getElementById('langDropdownIcon');
 			var menu = document.getElementById('langDropdownMenu');
 			var label = document.getElementById('langCurrentLabel');
-			var items = menu.querySelectorAll('.lang-dropdown-item');
+			var items = menu ? menu.querySelectorAll('.lang-dropdown-item') : [];
+			var overlay = document.getElementById('langLoadingOverlay');
+			var loadingTitle = document.getElementById('langLoadingTitle');
+			var loadingSub = document.getElementById('langLoadingSub');
+			var hideTimeout = null;
 
 			function getCookie(n) {
 				var m = document.cookie.match(new RegExp('(^|;\\s*)' + n + '=([^;]*)'));
@@ -180,30 +255,96 @@
 				});
 			}
 
+			function showLangLoading(targetLang) {
+				if (hideTimeout) clearTimeout(hideTimeout);
+				if (targetLang === 'en') {
+					if (loadingTitle) loadingTitle.textContent = 'Switching to English...';
+					if (loadingSub) loadingSub.textContent = 'กำลังเปลี่ยนเป็นภาษาอังกฤษ โปรดรอสักครู่';
+				} else {
+					if (loadingTitle) loadingTitle.textContent = 'กำลังเปลี่ยนเป็นภาษาไทย...';
+					if (loadingSub) loadingSub.textContent = 'Switching to Thai, please wait';
+				}
+				if (overlay) {
+					overlay.classList.add('active');
+					overlay.setAttribute('aria-hidden', 'false');
+				}
+				if (icon) {
+					icon.className = 'fas fa-circle-notch fa-spin lang-icon';
+				}
+				if (btn) {
+					btn.style.pointerEvents = 'none';
+				}
+			}
+
+			function hideLangLoading() {
+				if (hideTimeout) clearTimeout(hideTimeout);
+				if (overlay) {
+					overlay.classList.remove('active');
+					overlay.setAttribute('aria-hidden', 'true');
+				}
+				if (icon) {
+					icon.className = 'fas fa-language lang-icon';
+				}
+				if (btn) {
+					btn.style.pointerEvents = '';
+				}
+			}
+
 			var cur = getCookie('googtrans');
 			var active = (cur && cur.indexOf('/en') !== -1) ? 'en' : 'th';
-			label.textContent = active.toUpperCase();
+			if (label) label.textContent = active.toUpperCase();
 			items.forEach(function (it) { if (it.dataset.lang === active) it.classList.add('active'); });
 
-			btn.addEventListener('click', function (e) { e.stopPropagation(); menu.classList.toggle('show'); });
+			if (btn) {
+				btn.addEventListener('click', function (e) {
+					e.stopPropagation();
+					if (menu) menu.classList.toggle('show');
+				});
+			}
+
 			items.forEach(function (item) {
 				item.addEventListener('click', function (e) {
 					e.stopPropagation();
 					var lang = this.dataset.lang;
-					menu.classList.remove('show');
+					if (menu) menu.classList.remove('show');
+
+					var currentLang = (label ? label.textContent.trim().toLowerCase() : 'th');
+					if (lang === currentLang) return;
+
+					showLangLoading(lang);
+
 					if (_gtTranslateReady) {
 						var combo = document.querySelector('#google_translate_element select');
-						if (combo) { combo.value = lang; combo.dispatchEvent(new Event('change'));
-							label.textContent = lang.toUpperCase();
+						if (combo) {
+							combo.value = lang;
+							combo.dispatchEvent(new Event('change'));
+							if (label) label.textContent = lang.toUpperCase();
 							items.forEach(function (it) { it.classList.toggle('active', it.dataset.lang === lang); });
+
+							var observer = new MutationObserver(function (mutations, obs) {
+								obs.disconnect();
+								setTimeout(hideLangLoading, 300);
+							});
+							observer.observe(document.documentElement, {
+								attributes: true,
+								attributeFilter: ['class', 'lang']
+							});
+
+							hideTimeout = setTimeout(function () {
+								observer.disconnect();
+								hideLangLoading();
+							}, 2000);
 							return;
 						}
 					}
-					clearGT(); setGT(lang === 'en' ? '/th/en' : '/th/th');
+					clearGT();
+					setGT(lang === 'en' ? '/th/en' : '/th/th');
 					window.location.reload();
 				});
 			});
-			document.addEventListener('click', function () { menu.classList.remove('show'); });
+			document.addEventListener('click', function () {
+				if (menu) menu.classList.remove('show');
+			});
 		});
 	</script>
 	<script>

@@ -24,17 +24,25 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import com.ecom.academic.model.AdminFile;
-import com.ecom.academic.model.UserFile;
 import com.ecom.academic.service.AdminStorageService;
-import com.ecom.academic.service.UserStorageService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
 /**
  * Chunked upload controller — supports unlimited file size by splitting files into 5MB chunks.
- * Works for both user (/user/academic) and admin (/admin/file-manager) storage.
+ *
+ * <p>Admin storage (/admin/file-manager) only. This used to serve the applicant
+ * file locker as well, defaulting {@code storageType} to "user" for anyone
+ * signed in. That locker is now switched off
+ * ({@link com.ecom.academic.config.UserStorageProperties}), so the user branch
+ * is gone and the whole controller is closed to non-admins.
+ *
+ * <p>The role gate lives on the class rather than on each mapping because
+ * /chunk, /complete and /abort take only an uploadId: a session opened by an
+ * admin would otherwise be drivable by anyone holding that id.
  */
 @Controller
+@org.springframework.security.access.prepost.PreAuthorize("hasRole('ADMIN')")
 public class ChunkedUploadController {
 
     private static final Logger log = LoggerFactory.getLogger(ChunkedUploadController.class);
@@ -60,17 +68,13 @@ public class ChunkedUploadController {
             })
             .build();
 
-    private final UserStorageService userStorageService;
-
     private final AdminStorageService adminStorageService;
 
     private final UserRepository userRepository;
 
     public ChunkedUploadController(
-            UserStorageService userStorageService,
             AdminStorageService adminStorageService,
             UserRepository userRepository) {
-        this.userStorageService = userStorageService;
         this.adminStorageService = adminStorageService;
         this.userRepository = userRepository;
     }
@@ -84,7 +88,7 @@ public class ChunkedUploadController {
             @RequestParam long fileSize,
             @RequestParam int totalChunks,
             @RequestParam(required = false) Long folderId,
-            @RequestParam(defaultValue = "user") String storageType,
+            @RequestParam(defaultValue = ADMIN_STORAGE) String storageType,
             Principal principal) {
 
         Map<String, Object> result = new HashMap<>();
@@ -96,11 +100,13 @@ public class ChunkedUploadController {
             return ResponseEntity.ok(result);
         }
 
-        // Admin storage is not something a request parameter may opt into.
-        boolean wantsAdminStorage = ADMIN_STORAGE.equals(storageType);
-        if (wantsAdminStorage && !"ROLE_ADMIN".equals(user.getRole())) {
+        // Admin storage is the only destination left. The class-level role gate
+        // already turns non-admins away; this rejects an admin asking for the
+        // retired "user" destination rather than silently writing to the wrong
+        // place.
+        if (!ADMIN_STORAGE.equals(storageType) || !"ROLE_ADMIN".equals(user.getRole())) {
             result.put("success", false);
-            result.put("message", "ไม่มีสิทธิ์อัปโหลดไปยังพื้นที่เก็บข้อมูลของผู้ดูแลระบบ");
+            result.put("message", "ไม่มีสิทธิ์อัปโหลดไปยังพื้นที่เก็บข้อมูลนี้");
             return ResponseEntity.ok(result);
         }
 
@@ -111,37 +117,24 @@ public class ChunkedUploadController {
         }
 
         // Validate file type and storage quota
-        if (wantsAdminStorage) {
-            try {
-                adminStorageService.validateFileType(filename);
-            } catch (IllegalArgumentException e) {
-                result.put("success", false);
-                result.put("message", e.getMessage());
-                return ResponseEntity.ok(result);
-            }
+        try {
+            adminStorageService.validateFileType(filename);
+        } catch (IllegalArgumentException e) {
+            result.put("success", false);
+            result.put("message", e.getMessage());
+            return ResponseEntity.ok(result);
+        }
 
+        // เมื่อตั้งโควตาแอดมินเป็นไม่จำกัด getRemainingBytes() จะคืน -1
+        // ซึ่งถ้าเอาไปเทียบตรง ๆ จะกลายเป็นว่าไฟล์ทุกขนาดใหญ่กว่าที่เหลือ
+        // แล้วปฏิเสธทุกการอัปโหลดพร้อมข้อความว่าพื้นที่เต็ม
+        if (!adminStorageService.isUnlimited()) {
             long remaining = adminStorageService.getRemainingBytes();
             if (fileSize > remaining) {
                 result.put("success", false);
                 result.put("message", "พื้นที่เก็บข้อมูลของผู้ดูแลระบบเต็ม (เหลือ " + adminStorageService.formatSize(remaining)
                         + " จากทั้งหมด " + adminStorageService.formatSize(adminStorageService.getMaxStorageBytes())
                         + ") ไม่สามารถอัปโหลดไฟล์ขนาด " + adminStorageService.formatSize(fileSize) + " ได้");
-                return ResponseEntity.ok(result);
-            }
-        } else {
-            try {
-                userStorageService.validateFileType(filename);
-            } catch (IllegalArgumentException e) {
-                result.put("success", false);
-                result.put("message", e.getMessage());
-                return ResponseEntity.ok(result);
-            }
-
-            long remaining = userStorageService.getRemainingBytes(user.getId());
-            if (fileSize > remaining) {
-                result.put("success", false);
-                result.put("message", "พื้นที่เก็บข้อมูลไม่พอ (เหลือ " + userStorageService.formatSize(remaining)
-                        + ") ไม่สามารถอัปโหลดไฟล์ขนาด " + userStorageService.formatSize(fileSize) + " ได้");
                 return ResponseEntity.ok(result);
             }
         }
@@ -162,9 +155,7 @@ public class ChunkedUploadController {
         session.fileSize = fileSize;
         session.totalChunks = totalChunks;
         session.folderId = folderId;
-        session.ownerId = user.getId();
         session.ownerEmail = user.getEmail();
-        session.storageType = storageType;
         session.chunkDir = chunkDir;
 
         activeSessions.put(uploadId, session);
@@ -243,15 +234,7 @@ public class ChunkedUploadController {
         }
 
         try {
-            // Determine storage directory
-            String storageRoot;
-            if (ADMIN_STORAGE.equals(session.storageType)) {
-                storageRoot = "uploads/admin-storage";
-            } else {
-                storageRoot = "uploads/user-storage/" + session.ownerId;
-            }
-
-            Path storageDir = Path.of(storageRoot);
+            Path storageDir = Path.of("uploads/admin-storage");
             Files.createDirectories(storageDir);
 
             // Determine file extension
@@ -275,18 +258,10 @@ public class ChunkedUploadController {
             long actualSize = Files.size(finalPath);
 
             // Save to DB
-            String savedName;
-            if (ADMIN_STORAGE.equals(session.storageType)) {
-                AdminFile saved = adminStorageService.saveUploadedFile(
-                        session.filename, finalPath.toString(), actualSize,
-                        detectContentType(session.filename), session.folderId, session.ownerEmail);
-                savedName = saved.getOriginalFilename();
-            } else {
-                UserFile saved = userStorageService.saveUploadedFile(
-                        session.filename, finalPath.toString(), actualSize,
-                        detectContentType(session.filename), session.folderId, session.ownerId);
-                savedName = saved.getOriginalFilename();
-            }
+            AdminFile saved = adminStorageService.saveUploadedFile(
+                    session.filename, finalPath.toString(), actualSize,
+                    detectContentType(session.filename), session.folderId, session.ownerEmail);
+            String savedName = saved.getOriginalFilename();
 
             // Cleanup chunks
             cleanupChunks(session);
@@ -376,9 +351,7 @@ public class ChunkedUploadController {
         final java.util.concurrent.atomic.AtomicInteger receivedChunks =
                 new java.util.concurrent.atomic.AtomicInteger();
         Long folderId;
-        Integer ownerId;
         String ownerEmail;
-        String storageType;
         Path chunkDir;
     }
 }

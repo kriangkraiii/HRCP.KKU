@@ -20,7 +20,8 @@ function initBreadcrumbs() {
         '/user/academic/new-request': 'ยื่นคำร้องขอประเมินการสอน',
         '/user/position/dashboard': 'ยื่นขอตำแหน่งทางวิชาการ',
         '/user/academic/documents': 'คลังเอกสาร & ข้อบังคับ',
-        '/user/academic/storage': 'ที่เก็บไฟล์ของฉัน',
+        // คลังไฟล์ส่วนตัวของผู้ยื่นถูกยกเลิก
+        // '/user/academic/storage': 'ที่เก็บไฟล์ของฉัน',
         '/user/academic/guide': 'คู่มือการใช้งาน',
         '/user/academic/settings': 'การตั้งค่าระบบ',
         '/user/notifications': 'ศูนย์การแจ้งเตือน',

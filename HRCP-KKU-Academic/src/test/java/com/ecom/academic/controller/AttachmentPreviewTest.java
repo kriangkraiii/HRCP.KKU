@@ -29,7 +29,6 @@ import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
-import com.ecom.academic.service.UserStorageService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
@@ -77,11 +76,12 @@ class AttachmentPreviewTest {
                 mock(PositionRequestService.class),
                 mock(AdminLogService.class),
                 mock(HttpServletRequest.class),
-                mock(UserStorageService.class),
+                mock(com.ecom.util.DocumentFileTypeValidator.class),
                 mock(com.ecom.academic.service.DocumentDataAutoFillHelper.class),
                 mock(com.ecom.academic.service.DocumentPrewarmService.class),
                 mock(com.ecom.academic.service.SignatureWorkflowService.class),
-                mock(com.ecom.academic.service.SignedDocumentRenderer.class)
+                mock(com.ecom.academic.service.SignedDocumentRenderer.class),
+                mock(com.ecom.external.service.KkuDocumentSyncService.class)
         );
 
         adminController = new AcademicAdminController(

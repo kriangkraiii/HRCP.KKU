@@ -9,12 +9,10 @@ import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.AdminFile;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.StaffMember;
-import com.ecom.academic.model.UserFile;
 import com.ecom.academic.repository.AcademicRequestRepository;
 import com.ecom.academic.repository.AdminFileRepository;
 import com.ecom.academic.repository.PositionRequestRepository;
 import com.ecom.academic.repository.StaffMemberRepository;
-import com.ecom.academic.repository.UserFileRepository;
 import com.ecom.model.Notification;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.NotificationRepository;
@@ -25,7 +23,6 @@ public class GlobalSearchService {
 
     private final AcademicRequestRepository academicRequestRepository;
     private final PositionRequestRepository positionRequestRepository;
-    private final UserFileRepository userFileRepository;
     private final AdminFileRepository adminFileRepository;
     private final UserRepository userRepository;
     private final StaffMemberRepository staffMemberRepository;
@@ -34,14 +31,12 @@ public class GlobalSearchService {
     public GlobalSearchService(
             AcademicRequestRepository academicRequestRepository,
             PositionRequestRepository positionRequestRepository,
-            UserFileRepository userFileRepository,
             AdminFileRepository adminFileRepository,
             UserRepository userRepository,
             StaffMemberRepository staffMemberRepository,
             NotificationRepository notificationRepository) {
         this.academicRequestRepository = academicRequestRepository;
         this.positionRequestRepository = positionRequestRepository;
-        this.userFileRepository = userFileRepository;
         this.adminFileRepository = adminFileRepository;
         this.userRepository = userRepository;
         this.staffMemberRepository = staffMemberRepository;
@@ -133,19 +128,23 @@ public class GlobalSearchService {
             ));
         }
 
-        // 4. User Personal Files
-        List<UserFile> files = userFileRepository.searchByOwner(user.getId(), kw);
-        for (UserFile f : files) {
-            results.add(new SearchResultItem(
-                    "ไฟล์ของฉัน",
-                    f.getOriginalFilename(),
-                    "ขนาด: " + formatFileSize(f.getFileSize()),
-                    "/user/academic/storage",
-                    "fas fa-file-alt text-secondary",
-                    "ไฟล์",
-                    "bg-secondary"
-            ));
-        }
+        // 4. User Personal Files — ถูกปิดไปทั้งฟีเจอร์
+        //
+        // คลังไฟล์ส่วนตัวของผู้ยื่นถูกยกเลิก ตาราง user_file ถูก drop แล้ว
+        // จึงไม่มีอะไรให้ค้น เก็บโค้ดเดิมไว้เป็นคอมเมนต์
+        //
+        // List<UserFile> files = userFileRepository.searchByOwner(user.getId(), kw);
+        // for (UserFile f : files) {
+        //     results.add(new SearchResultItem(
+        //             "ไฟล์ของฉัน",
+        //             f.getOriginalFilename(),
+        //             "ขนาด: " + formatFileSize(f.getFileSize()),
+        //             "/user/academic/storage",
+        //             "fas fa-file-alt text-secondary",
+        //             "ไฟล์",
+        //             "bg-secondary"
+        //     ));
+        // }
 
         // 5. User In-App Notifications
         List<Notification> notifs = notificationRepository.searchAllActive(user, java.time.LocalDateTime.now(), kw, org.springframework.data.domain.PageRequest.of(0, 5)).getContent();
@@ -278,9 +277,10 @@ public class GlobalSearchService {
         if (containsAny(kw, "เอกสาร", "ข้อบังคับ", "แบบฟอร์ม", "doc", "document")) {
             results.add(new SearchResultItem("เมนูระบบ", "คลังเอกสาร / ข้อบังคับ", "ดาวน์โหลดแบบฟอร์มและข้อบังคับมหาวิทยาลัย", "/user/academic/documents", "fas fa-book-open text-primary", "เมนู", "bg-light text-dark border"));
         }
-        if (containsAny(kw, "สตอเรจ", "ไฟล์", "storage", "ไดรฟ์", "เก็บไฟล์")) {
-            results.add(new SearchResultItem("เมนูระบบ", "ที่เก็บไฟล์ของฉัน (Storage)", "จัดการไฟล์และหลักฐานส่วนตัว", "/user/academic/storage", "fas fa-cloud text-primary", "เมนู", "bg-light text-dark border"));
-        }
+        // เมนูคลังไฟล์ส่วนตัวถูกยกเลิก ไม่มีหน้าปลายทางแล้ว
+        // if (containsAny(kw, "สตอเรจ", "ไฟล์", "storage", "ไดรฟ์", "เก็บไฟล์")) {
+        //     results.add(new SearchResultItem("เมนูระบบ", "ที่เก็บไฟล์ของฉัน (Storage)", "จัดการไฟล์และหลักฐานส่วนตัว", "/user/academic/storage", "fas fa-cloud text-primary", "เมนู", "bg-light text-dark border"));
+        // }
         if (containsAny(kw, "คู่มือ", "guide", "วิธีใช้", "ช่วยเหลือ", "help")) {
             results.add(new SearchResultItem("เมนูระบบ", "คู่มือการใช้งานระบบ", "คำแนะนำขั้นตอนการยื่นคำร้องและการใช้งาน", "/user/academic/guide", "fas fa-book text-info", "คู่มือ", "bg-info"));
         }

@@ -214,13 +214,15 @@ public class FileManagerController {
         model.addAttribute("viewMode", "storage");
 
         long currentUsage = adminStorageService.getTotalSize();
+        boolean isUnlimited = adminStorageService.isUnlimited();
         long maxBytes = adminStorageService.getMaxStorageBytes();
-        int usagePercent = maxBytes > 0 ? (int) Math.min(100, (currentUsage * 100) / maxBytes) : 0;
+        int usagePercent = (!isUnlimited && maxBytes > 0) ? (int) Math.min(100, (currentUsage * 100) / maxBytes) : 0;
 
         model.addAttribute("totalFiles", adminStorageService.getTotalFileCount());
         model.addAttribute("totalSize", adminStorageService.formatSize(currentUsage));
-        model.addAttribute("maxStorageSize", adminStorageService.formatSize(maxBytes));
-        model.addAttribute("remainingSize", adminStorageService.formatSize(adminStorageService.getRemainingBytes()));
+        model.addAttribute("isUnlimited", isUnlimited);
+        model.addAttribute("maxStorageSize", isUnlimited ? "ไม่จำกัด" : adminStorageService.formatSize(maxBytes));
+        model.addAttribute("remainingSize", isUnlimited ? "ไม่จำกัด" : adminStorageService.formatSize(adminStorageService.getRemainingBytes()));
         model.addAttribute("usagePercent", usagePercent);
         model.addAttribute("totalFolders", adminStorageService.getTotalFolderCount());
         model.addAttribute("trashCount", adminStorageService.getTrashCount());
