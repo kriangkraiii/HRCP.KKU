@@ -285,11 +285,102 @@
     /* ----------------------------------------------------------------- type */
 
     /**
-     * Renders the typed name to a canvas in a handwriting face.
-     *
-     * Waits on document.fonts before measuring: drawing while the webfont is
-     * still loading silently falls back to a system font, which then gets baked
-     * into the saved PNG.
+     * Draws a digital signature stamp:
+     * - Left: Signer's Thai name in large font (wrapped across 1-2 lines)
+     * - Right: "Digitally signed by", Name, "Date: YYYY.MM.DD", "HH:mm:ss +07'00'"
+     * - Surrounding clean light-gray border
+     */
+    function drawDigitalSignatureStamp(canvas, text, dateObj) {
+        const width = 540;
+        const height = 185;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Background: clean white
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        // Outer border: crisp light-gray
+        ctx.strokeStyle = '#c8c8c8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(1, 1, width - 2, height - 2);
+
+        // Date formatting: Bangkok +07'00'
+        const d = dateObj || new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        const secs = String(d.getSeconds()).padStart(2, '0');
+
+        const dateLine = `Date: ${year}.${month}.${day}`;
+        const timeLine = `${hours}:${mins}:${secs} +07'00'`;
+
+        // Left Column: Large Thai Name
+        ctx.fillStyle = '#0a0a0a';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+
+        const leftCenterX = 120;
+        const words = text.split(/\s+/).filter(Boolean);
+        if (words.length >= 2) {
+            const line1 = words.slice(0, Math.ceil(words.length / 2)).join(' ');
+            const line2 = words.slice(Math.ceil(words.length / 2)).join(' ');
+
+            ctx.font = 'bold 36px ' + TYPED_FONT;
+            const maxW = 210;
+            const w1 = ctx.measureText(line1).width;
+            const w2 = ctx.measureText(line2).width;
+            if (w1 > maxW || w2 > maxW) {
+                const scale = Math.min(maxW / Math.max(w1, w2), 1.0);
+                ctx.font = 'bold ' + Math.max(Math.floor(36 * scale), 20) + 'px ' + TYPED_FONT;
+            }
+            ctx.fillText(line1, leftCenterX, 65);
+            ctx.fillText(line2, leftCenterX, 120);
+        } else {
+            ctx.font = 'bold 38px ' + TYPED_FONT;
+            const w = ctx.measureText(text).width;
+            if (w > 215) {
+                const scale = 215 / w;
+                ctx.font = 'bold ' + Math.max(Math.floor(38 * scale), 20) + 'px ' + TYPED_FONT;
+            }
+            ctx.fillText(text, leftCenterX, 92);
+        }
+
+        // Right Column: Metadata
+        const rightX = 265;
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+
+        // Line 1: "Digitally signed by"
+        ctx.font = 'bold 22px ' + TYPED_FONT;
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillText('Digitally signed by', rightX, 48);
+
+        // Line 2: Signer Full Name
+        ctx.font = '20px ' + TYPED_FONT;
+        ctx.fillStyle = '#222222';
+        let rightName = text;
+        if (ctx.measureText(rightName).width > 250) {
+            ctx.font = '17px ' + TYPED_FONT;
+        }
+        ctx.fillText(rightName, rightX, 82);
+
+        // Line 3: "Date: YYYY.MM.DD"
+        ctx.font = '22px ' + TYPED_FONT;
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillText(dateLine, rightX, 122);
+
+        // Line 4: "HH:mm:ss +07'00'"
+        ctx.font = '22px ' + TYPED_FONT;
+        ctx.fillStyle = '#0a0a0a';
+        ctx.fillText(timeLine, rightX, 156);
+    }
+
+    /**
+     * Renders the typed name into an official digital signature stamp.
      */
     function renderTypedSignature() {
         const text = (typedTextInput.value || '').trim();
@@ -299,27 +390,10 @@
         }
 
         const draw = function () {
-            const fontSpec = '64px ' + TYPED_FONT;
-            const measure = document.createElement('canvas').getContext('2d');
-            measure.font = fontSpec;
-            const width = Math.ceil(measure.measureText(text).width) + 90;
-
             const out = document.createElement('canvas');
-            out.width = Math.min(width, 1500);
-            out.height = 160;
-            const outCtx = out.getContext('2d');
-            outCtx.font = fontSpec;
-            outCtx.fillStyle = INK;
-            outCtx.textBaseline = 'middle';
-            outCtx.textAlign = 'center';
-
-            outCtx.translate(0, out.height / 2);
-            outCtx.transform(1, 0, TYPED_SLANT, 1, 0, 0);
-            outCtx.fillText(text, out.width / 2, 0);
-            outCtx.setTransform(1, 0, 0, 1, 0, 0);
-
+            drawDigitalSignatureStamp(out, text, new Date());
             typedFontField.value = TYPED_FONT;
-            setPreview(trimToInk(out));
+            setPreview(out.toDataURL('image/png'));
         };
 
         if (document.fonts && document.fonts.ready) {
@@ -436,6 +510,11 @@
                 panels[key].classList.toggle('d-none', key !== kind);
             }
         });
+
+        const typeNotice = document.getElementById('sigTypeNotice');
+        if (typeNotice) {
+            typeNotice.classList.toggle('d-none', kind !== 'TYPE');
+        }
 
         // Each tab owns its own artwork, so switching clears what the previous
         // one produced rather than saving a signature the user is no longer

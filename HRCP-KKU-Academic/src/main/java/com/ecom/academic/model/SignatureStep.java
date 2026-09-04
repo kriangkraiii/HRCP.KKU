@@ -137,6 +137,9 @@ public class SignatureStep {
     @Column(name = "evidence_hmac", length = 128)
     private String evidenceHmac;
 
+    @Column(name = "digital_cert_subject", length = 500)
+    private String digitalCertSubject;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "delegated_from_user_id")
     private UserDtls delegatedFrom;
@@ -354,6 +357,14 @@ public class SignatureStep {
 
     public void setEvidenceHmac(String evidenceHmac) {
         this.evidenceHmac = evidenceHmac;
+    }
+
+    public String getDigitalCertSubject() {
+        return digitalCertSubject;
+    }
+
+    public void setDigitalCertSubject(String digitalCertSubject) {
+        this.digitalCertSubject = digitalCertSubject;
     }
 
     public UserDtls getDelegatedFrom() {

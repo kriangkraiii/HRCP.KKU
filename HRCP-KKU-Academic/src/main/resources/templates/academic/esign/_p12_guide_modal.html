@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- Modal: คู่มือการขอรับไฟล์ .p12 และรหัสผ่าน Digital ID ของ มข. -->
+<div th:fragment="p12GuideModal" class="modal fade" id="p12GuideModal" tabindex="-1" aria-labelledby="p12GuideModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header bg-academic text-white py-3">
+                <h5 class="modal-title d-flex align-items-center gap-2" id="p12GuideModalLabel">
+                    <i class="fas fa-book-open"></i>
+                    <span>คู่มือการขอรับไฟล์ Digital ID (.p12) และรหัสผ่าน มหาวิทยาลัยขอนแก่น</span>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+
+                <!-- แนะนำภาพรวม -->
+                <div class="alert alert-primary border-primary bg-primary bg-opacity-10 d-flex align-items-start gap-3 mb-4">
+                    <i class="fas fa-shield-halved text-primary fs-3 mt-1"></i>
+                    <div>
+                        <strong class="text-primary d-block mb-1">ทำไมต้องใช้ไฟล์ Digital ID (.p12)?</strong>
+                        <div class="small text-secondary">
+                            ไฟล์ใบรับรองดิจิทัลส่วนบุคคล (.p12 / .pfx) ออกโดยมหาวิทยาลัยขอนแก่น (ODT KKU) เพื่อใช้รับรองตัวตนผู้ลงนามตาม 
+                            <strong>พ.ร.บ.ว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์ พ.ศ. 2544 มาตรา 26 (ลายมือชื่อดิจิทัลที่มีผลทางกฎหมายระดับสูง)</strong> 
+                            ช่วยป้องกันการปลอมแปลงและตรวจสอบความถูกต้องของเอกสารได้ 100% ผ่านโปรแกรม Adobe Acrobat Reader
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3 ขั้นตอนเข้าใจง่าย -->
+                <div class="timeline-steps">
+
+                    <!-- ขั้นตอนที่ 1 -->
+                    <div class="d-flex gap-3 mb-4">
+                        <div class="flex-shrink-0">
+                            <span class="badge rounded-circle bg-academic text-white fs-6 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">1</span>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold text-dark mb-1">
+                                <i class="fas fa-cloud-arrow-down text-primary me-1"></i> วิธีขอรับ/ดาวน์โหลดไฟล์ .p12 จาก มข.
+                            </h6>
+                            <p class="small text-secondary mb-2">
+                                บุคลากร มข. ทุกท่านสามารถดาวน์โหลดใบรับรอง Digital ID ประจำตัวได้ง่ายๆ ผ่านพอร์ทัล iKKU:
+                            </p>
+                            <ol class="small text-secondary ps-3 mb-2">
+                                <li class="mb-1">เข้าสู่ระบบพอร์ทัลบริการบุคลากร มข. (iKKU) ที่ 
+                                    <a href="https://i.kku.ac.th" target="_blank" class="fw-bold text-decoration-none text-primary">
+                                        https://i.kku.ac.th <i class="fas fa-external-link-alt small"></i>
+                                    </a>
+                                </li>
+                                <li class="mb-1">เข้าสู่ระบบด้วยบัญชีผู้ใช้ <strong>@kku.ac.th</strong> ของท่าน</li>
+                                <li class="mb-1">เลือกบริการ <strong>"Digital ID"</strong> หรือ <strong>"ลายมือชื่อดิจิทัล"</strong> &gt; <strong>"ขอรับใบรับรองดิจิทัลส่วนบุคคล (.p12)"</strong></li>
+                                <li class="mb-1">กดดาวน์โหลดไฟล์ <code>.p12</code> (หรือ <code>.pfx</code>) มาเก็บไว้ในเครื่องคอมพิวเตอร์ของท่าน</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <hr class="text-muted opacity-25 my-3">
+
+                    <!-- ขั้นตอนที่ 2 -->
+                    <div class="d-flex gap-3 mb-4">
+                        <div class="flex-shrink-0">
+                            <span class="badge rounded-circle bg-warning text-dark fs-6 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">2</span>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold text-dark mb-1">
+                                <i class="fas fa-key text-warning me-1"></i> Digital ID Password (รหัสผ่านของไฟล์ .p12) เอามาจากไหน?
+                            </h6>
+                            <div class="alert alert-warning py-2 px-3 small border mb-2">
+                                <i class="fas fa-exclamation-circle text-warning me-1"></i>
+                                <strong>ข้อสำคัญ:</strong> Digital ID Password นี้ <u>ไม่ใช่</u> รหัสผ่านอีเมล หรือรหัสผ่าน SSO มข. ทั่วไป!
+                            </div>
+                            <p class="small text-secondary mb-2">
+                                <strong>Digital ID Password</strong> ที่ใช้เปิดไฟล์ .p12 คือ:
+                            </p>
+                            <ul class="small text-secondary ps-3 mb-2">
+                                <li class="mb-1"><strong>รหัสผ่านที่ท่านกำหนดขึ้นเอง</strong> ตอนกดขอรับ/ดาวน์โหลดไฟล์ .p12 จากระบบ <a href="https://i.kku.ac.th" target="_blank">i.kku.ac.th</a> เพื่อความปลอดภัยของกุญแจส่วนตัว</li>
+                                <li class="mb-1">หรือในบางกรณี ระบบ มข. อาจสร้างรหัสเริ่มต้นและแจ้งให้ท่านทราบทาง <strong>KKU Mail หรือ SMS</strong> ขณะดาวน์โหลดไฟล์</li>
+                            </ul>
+                            <div class="small text-muted fst-italic">
+                                *หากจำรหัสผ่านไม่ได้ ท่านสามารถเข้าสู่ระบบ <a href="https://i.kku.ac.th" target="_blank">https://i.kku.ac.th</a> เพื่อกดดาวน์โหลดไฟล์ .p12 ใหม่พร้อมตั้ง Digital ID Password ใหม่ได้ตลอดเวลา
+                            </div>
+                        </div>
+                    </div>
+
+                    <hr class="text-muted opacity-25 my-3">
+
+                    <!-- ขั้นตอนที่ 3 -->
+                    <div class="d-flex gap-3 mb-3">
+                        <div class="flex-shrink-0">
+                            <span class="badge rounded-circle bg-success text-white fs-6 d-flex align-items-center justify-content-center" style="width: 38px; height: 38px;">3</span>
+                        </div>
+                        <div class="flex-grow-1">
+                            <h6 class="fw-bold text-dark mb-1">
+                                <i class="fas fa-circle-check text-success me-1"></i> วิธีนำมาติดตั้งในระบบ (ใส่ครั้งเดียว พร้อมตรวจสอบความถูกต้อง)
+                            </h6>
+                            <ol class="small text-secondary ps-3 mb-2">
+                                <li class="mb-1">ไปที่เมนู <strong>"ลายเซ็นของฉัน"</strong> เลื่อนลงมาที่หัวข้อ <strong>"ใบรับรองดิจิทัล Digital ID (.p12)"</strong></li>
+                                <li class="mb-1">คลิกปุ่ม <strong>"เลือกไฟล์"</strong> แล้วเลือกไฟล์ <code>.p12</code> ที่ดาวน์โหลดมาจาก <a href="https://i.kku.ac.th" target="_blank">i.kku.ac.th</a></li>
+                                <li class="mb-1">กรอก <strong>Digital ID Password</strong> ในช่องข้อความ</li>
+                                <li class="mb-1">
+                                    กดปุ่ม <strong><i class="fas fa-magnifying-glass me-1"></i> ตรวจสอบความถูกต้อง</strong> — เพื่อให้ระบบทดสอบปลดล็อกไฟล์ทันที 
+                                    ป้องกันการใส่รหัสผิดหรือเลือกไฟล์ผิด หากรหัสถูกต้อง ระบบจะแสดงชื่อเจ้าของใบรับรองและวันหมดอายุให้ท่านทราบ
+                                </li>
+                                <li class="mb-1">
+                                    กดปุ่ม <strong>"ติดตั้งและบันทึกใบรับรอง"</strong> — ระบบจะบันทึกและเข้ารหัส Digital ID Password ด้วยมาตรฐาน <strong>AES-256</strong> ให้อัตโนมัติครั้งเดียว 
+                                    เพื่อให้ท่านสามารถลงนามในเอกสารทุกฉบับได้ในคลิกเดียว (One-Click Sign) ทันที!
+                                </li>
+                            </ol>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- FAQ / Help Footer Box -->
+                <div class="bg-light p-3 rounded border small mt-3">
+                    <div class="fw-bold text-dark mb-1"><i class="fas fa-circle-info text-primary me-1"></i> คำถามที่พบบ่อย (FAQ):</div>
+                    <ul class="text-secondary ps-3 mb-0">
+                        <li class="mb-1"><strong>หากต้องการเปลี่ยนรหัสผ่านหรืออัปเดตไฟล์ในภายหลัง?</strong> สามารถกดปุ่ม <strong>"เปลี่ยนไฟล์ .p12"</strong> ที่การ์ดใบรับรองเพื่ออัปเดตไฟล์ฉบับใหม่ได้ตลอดเวลา</li>
+                        <li class="mb-1"><strong>ติดตั้งครั้งเดียว ใช้ได้ตลอดหรือไม่?</strong> ใช้ได้ตลอดอายุของใบรับรอง เมื่อใกล้หมดอายุระบบจะแจ้งเตือนให้ท่านอัปโหลดไฟล์ใหม่แทนที่</li>
+                        <li><strong>ข้อมูลความปลอดภัย:</strong> ไฟล์กุญแจและรหัสผ่านถูกจัดเก็บในระบบที่เข้ารหัสอย่างเข้มงวด เข้าถึงได้เฉพาะขั้นตอนการประทับตราดิจิทัลของท่านเท่านั้น</li>
+                    </ul>
+                </div>
+
+            </div>
+            <div class="modal-footer bg-light py-2">
+                <a href="/esign/my-signatures" class="btn btn-academic btn-sm">
+                    <i class="fas fa-arrow-right me-1"></i> ไปที่หน้า ลายเซ็นของฉัน เพื่อติดตั้งทันที
+                </a>
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">ปิดหน้าต่าง</button>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

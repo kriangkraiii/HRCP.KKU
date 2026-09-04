@@ -138,7 +138,40 @@
                     </ul>
                 </div>
 
-                <div th:if="${canSign}">
+                <!-- แจ้งเตือนกรณีไม่มี Digital ID (.p12) หรือหมดอายุ - บังคับให้ติดตั้งก่อนจึงจะอนุญาตให้ลงนาม -->
+                <div th:if="${canSign and (myCert == null or myCert.expired)}" class="alert alert-danger border-danger shadow-sm mb-3">
+                    <div class="d-flex align-items-start gap-3">
+                        <i class="fas fa-certificate text-danger fs-2 mt-1"></i>
+                        <div class="flex-grow-1">
+                            <h6 class="alert-heading fw-bold mb-1 text-danger">
+                                <span th:if="${myCert == null}"><i class="fas fa-lock me-1"></i> ยังไม่สามารถลงนามได้: จำเป็นต้องติดตั้ง Digital ID (.p12)</span>
+                                <span th:if="${myCert != null and myCert.expired}"><i class="fas fa-calendar-xmark me-1"></i> ยังไม่สามารถลงนามได้: ใบรับรอง Digital ID (.p12) หมดอายุแล้ว</span>
+                            </h6>
+                            <p class="mb-2 small text-secondary">
+                                <span th:if="${myCert == null}">
+                                    คุณยังไม่ได้ติดตั้งใบรับรอง <strong>Digital ID (.p12)</strong> ของมหาวิทยาลัยขอนแก่นในระบบ 
+                                    — ตามนโยบายความปลอดภัยและ พ.ร.บ.ธุรกรรมอิเล็กทรอนิกส์ ผู้ลงนามต้องติดตั้งใบรับรองดิจิทัลส่วนบุคคลก่อน จึงจะได้รับอนุญาตให้ลงนามในเอกสารนี้
+                                </span>
+                                <span th:if="${myCert != null and myCert.expired}">
+                                    ใบรับรอง <strong>Digital ID (.p12)</strong> ของคุณหมดอายุแล้ว (เมื่อ <strong th:text="${#temporals.format(myCert.validTo, 'd MMM yyyy HH:mm')}">-</strong>) 
+                                    ตามกฎหมายธุรกรรมอิเล็กทรอนิกส์และนโยบายความปลอดภัย <strong>จะไม่สามารถใช้ลงนามในเอกสารได้</strong> กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" class="fw-bold">https://i.kku.ac.th</a> แล้วอัปเดตไฟล์ใหม่ที่หน้า "ลายเซ็นของฉัน"
+                                </span>
+                            </p>
+                            <div class="d-flex flex-wrap gap-2 mt-2">
+                                <a href="/esign/my-signatures" class="btn btn-danger btn-sm">
+                                    <i class="fas fa-rotate me-1" th:if="${myCert != null and myCert.expired}"></i>
+                                    <i class="fas fa-upload me-1" th:if="${myCert == null}"></i>
+                                    <span th:text="${myCert != null and myCert.expired ? 'ไปอัปเดตไฟล์ .p12 ใหม่ (ที่หน้าลายเซ็นของฉัน)' : 'ไปติดตั้งไฟล์ .p12 (ที่หน้าลายเซ็นของฉัน)'}">ไปติดตั้งไฟล์ .p12</span>
+                                </a>
+                                <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
+                                    <i class="fas fa-book-open me-1"></i> วิธีขอรับไฟล์ .p12 และรหัสผ่าน
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div th:if="${canSign and myCert != null and !myCert.expired}">
 
                     <!-- ไม่มีลายเซ็นเก็บไว้ ต้องไปสร้างก่อน -->
                     <div th:if="${#lists.isEmpty(mySignatures)}" class="alert alert-warning">
@@ -180,6 +213,47 @@
                             </div>
                         </div>
 
+                        <!-- Digital ID (.p12) Verification Status -->
+                        <div class="card card-academic mb-3 border-success">
+                            <div class="card-header bg-success bg-opacity-10 text-success fw-semibold py-2 d-flex justify-content-between align-items-center">
+                                <span><i class="fas fa-certificate me-1"></i> ลงนามด้วย Digital ID (.p12) มข.</span>
+                                <button type="button" class="btn btn-link btn-sm text-success p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
+                                    <i class="fas fa-circle-question me-1"></i> คู่มือ
+                                </button>
+                            </div>
+                            <div class="card-body py-2">
+                                <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                                    <div class="small">
+                                        <i class="fas fa-user-check text-success me-1"></i>
+                                        <strong th:text="${myCert.commonName}">ชื่อผู้ลงนาม</strong>
+                                    </div>
+                                    <span class="badge bg-success bg-opacity-75">
+                                        <i class="fas fa-shield-halved me-1"></i> PAdES Certified
+                                    </span>
+                                </div>
+                                <div class="small text-muted mb-2">
+                                    ออกโดย: <span th:text="${myCert.issuerDn}">Thai University Consortium CA</span>
+                                </div>
+
+                                <!-- One-Click Sign -->
+                                <div th:if="${myCert.hasSavedPin()}" class="alert alert-success border py-1 px-2 mb-0 small">
+                                    <i class="fas fa-bolt text-warning me-1"></i> <strong>One-Click Sign:</strong> ระบบจะใช้ Digital ID Password ที่บันทึกไว้เข้ารหัสเอกสารอัตโนมัติ
+                                </div>
+
+                                <!-- Fallback if old cert without saved password -->
+                                <div th:unless="${myCert.hasSavedPin()}" class="mb-1">
+                                    <label class="form-label small fw-semibold text-dark mb-1" for="digitalCertPin">
+                                        <i class="fas fa-key text-primary me-1"></i> Digital ID Password ของคุณ:
+                                    </label>
+                                    <input type="password" class="form-control form-control-sm" id="digitalCertPin" name="digitalCertPin"
+                                           placeholder="ระบุ Digital ID Password เพื่อปลดล็อกใบรับรอง" autocomplete="off">
+                                    <div class="form-text small" style="font-size: 0.75rem;">
+                                        รหัสผ่านใช้ปลดล็อกใบรับรองในหน่วยความจำชั่วคราวและทำลายทิ้งทันที
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- ความยินยอม — เป็นสาระสำคัญตาม พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์ ม.9
                              ระบบบันทึกทั้งข้อความที่แสดง เวลา IP และอุปกรณ์ไว้เป็นหลักฐาน -->
                         <div class="card card-academic mb-3">
@@ -197,8 +271,9 @@
                                     </label>
                                 </div>
 
-                                <div class="form-text mt-2">
-                                    ระบบจะบันทึกวันเวลา หมายเลข IP และอุปกรณ์ที่ใช้ลงนามไว้เป็นหลักฐาน
+                                <div class="form-text mt-2 text-muted">
+                                    <i class="fas fa-clock text-primary me-1"></i>
+                                    ระบบจะบันทึกวันและเวลาในตราประทับและหลักฐานดิจิทัลตาม<strong>เวลาจริง ณ วินาทีที่ท่านกดยืนยันการลงนาม</strong> พร้อมหมายเลข IP และอุปกรณ์
                                 </div>
                             </div>
                         </div>
@@ -263,6 +338,9 @@
             </div>
         </div>
     </div>
+
+    <!-- Reusable P12 Guide Modal -->
+    <div th:replace="~{academic/esign/_p12_guide_modal :: p12GuideModal}"></div>
 
     <!-- Interactive PDF Viewer Assets -->
     <link rel="stylesheet" href="/css/esign_pdf_viewer.css?v=3.1">

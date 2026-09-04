@@ -651,6 +651,17 @@ body,
     border-top-color: rgba(255,255,255,0.06) !important;
 }
 
+[data-theme="dark"] .topbar-sidebar-toggle {
+    color: #cbd5e1 !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+[data-theme="dark"] .topbar-sidebar-toggle:hover {
+    background: rgba(255, 255, 255, 0.08) !important;
+    color: #60a5fa !important;
+    border-color: #60a5fa !important;
+}
+
 /* ======================================
    DASHBOARD — Info Bars (inline bg)
    ====================================== */

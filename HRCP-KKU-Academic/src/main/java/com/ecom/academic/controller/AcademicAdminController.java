@@ -1092,6 +1092,12 @@ public class AcademicAdminController {
         com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("Attachment not found"));
 
+        if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                    .location(java.net.URI.create(attachment.getStoredFilePath()))
+                    .build();
+        }
+
         Path path = Path.of(attachment.getStoredFilePath());
 
         String contentType = attachment.getFileType().equalsIgnoreCase("PDF")
@@ -1116,6 +1122,12 @@ public class AcademicAdminController {
             @PathVariable Long attachmentId) throws IOException {
         com.ecom.academic.model.AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("Attachment not found"));
+
+        if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                    .location(java.net.URI.create(attachment.getStoredFilePath()))
+                    .build();
+        }
 
         Path path = Path.of(attachment.getStoredFilePath());
         if (!Files.exists(path)) {
@@ -1180,11 +1192,13 @@ public class AcademicAdminController {
                 .orElse(null);
 
         if (attachment != null) {
-            // ลบไฟล์จริง
-            try {
-                Files.deleteIfExists(Path.of(attachment.getStoredFilePath()));
-            } catch (IOException e) {
-                // ignore
+            // ลบไฟล์จริง (ถ้าไม่ใช่ลิงก์)
+            if (!"LINK".equalsIgnoreCase(attachment.getFileType())) {
+                try {
+                    Files.deleteIfExists(Path.of(attachment.getStoredFilePath()));
+                } catch (Exception e) {
+                    // ignore
+                }
             }
             requestService.deleteAttachment(attachmentId);
 

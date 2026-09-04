@@ -249,4 +249,18 @@ class UserSignatureControllerTest {
         assertThat(result.error()).isNotBlank();
         assertThat(signatureService.findMine(owner)).isEmpty();
     }
+
+    @Test
+    @DisplayName("Pre-flight ตรวจสอบความถูกต้องของ .p12 คืน JSON ผลลัพธ์")
+    void verifyCertificateEndpoint() throws Exception {
+        org.springframework.mock.web.MockMultipartFile certFile = new org.springframework.mock.web.MockMultipartFile(
+                "certFile", "test.p12", "application/x-pkcs12", new byte[]{1, 2, 3});
+
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart("/esign/my-certificates/verify")
+                        .file(certFile)
+                        .param("password", "AnyPassword")
+                        .with(user(owner.getEmail()).roles("USER")).with(csrf()))
+                .andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith(MediaType.APPLICATION_JSON));
+    }
 }

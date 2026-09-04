@@ -33,6 +33,7 @@ import com.ecom.academic.service.DocumentSnapshotProvider;
 import com.ecom.academic.service.SignatureWorkflowService.Result;
 import com.ecom.academic.service.SignatureWorkflowService.SignerAssignment;
 import com.ecom.academic.service.SignedDocumentRenderer;
+import com.ecom.academic.service.UserDigitalCertificateService;
 import com.ecom.academic.service.UserSignatureService;
 import com.ecom.config.ClientIpUtils;
 import com.ecom.model.UserDtls;
@@ -61,6 +62,7 @@ public class SigningController {
     private final SignatureVerificationService verificationService;
     private final DocumentSnapshotProvider documentLabelResolver;
     private final HttpServletRequest httpRequest;
+    private final UserDigitalCertificateService digitalCertificateService;
 
     public SigningController(SignatureWorkflowService workflow,
             SignedDocumentRenderer renderer,
@@ -68,7 +70,8 @@ public class SigningController {
             UserRepository userRepository,
             SignatureVerificationService verificationService,
             DocumentSnapshotProvider documentLabelResolver,
-            HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest,
+            UserDigitalCertificateService digitalCertificateService) {
         this.workflow = workflow;
         this.renderer = renderer;
         this.signatureService = signatureService;
@@ -76,6 +79,7 @@ public class SigningController {
         this.verificationService = verificationService;
         this.documentLabelResolver = documentLabelResolver;
         this.httpRequest = httpRequest;
+        this.digitalCertificateService = digitalCertificateService;
     }
 
     /** Everything waiting on the signed-in person + sent envelopes tracking. */
@@ -138,18 +142,24 @@ public class SigningController {
         // people through the form only to bounce them at the end.
         boolean deadlineAdvisory = workflow.deadlineIsAdvisory(step);
 
+        var myCert = digitalCertificateService.findActive(me).orElse(null);
+        boolean hasValidCert = myCert != null && !myCert.isExpired();
+
+        boolean canSign = step.getStatus() == SignatureStepStatus.ACTIVE
+                && envelope.getStatus().isOpen()
+                && (deadlineAdvisory || !envelope.isOverdue());
+
         model.addAttribute("step", step);
         model.addAttribute("envelope", envelope);
         model.addAttribute("mySignatures", signatureService.findMine(me));
         model.addAttribute("defaultSignature", signatureService.findDefault(me).orElse(null));
+        model.addAttribute("myCert", myCert);
+        model.addAttribute("hasValidCert", hasValidCert);
         model.addAttribute("consentText", SignatureStep.CONSENT_TEXT);
         model.addAttribute("queueTotal", queueTotal);
         model.addAttribute("queueIndex", queueIndex);
         model.addAttribute("deadlineAdvisory", deadlineAdvisory);
-        model.addAttribute("canSign",
-                step.getStatus() == SignatureStepStatus.ACTIVE
-                        && envelope.getStatus().isOpen()
-                        && (deadlineAdvisory || !envelope.isOverdue()));
+        model.addAttribute("canSign", canSign);
         return "academic/esign/sign";
     }
 
@@ -217,11 +227,24 @@ public class SigningController {
     public String sign(@PathVariable Long stepId,
             @RequestParam(value = "userSignatureId", required = false) Long userSignatureId,
             @RequestParam(value = "consent", required = false) Boolean consent,
+            @RequestParam(value = "digitalCertPin", required = false) String digitalCertPin,
             Principal principal, RedirectAttributes redirectAttributes) {
 
         UserDtls me = currentUser(principal);
+        var certOpt = digitalCertificateService.findActive(me);
+        if (certOpt.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMsg",
+                    "คุณยังไม่ได้ติดตั้งใบรับรอง Digital ID (.p12) ของมหาวิทยาลัยขอนแก่น กรุณาติดตั้งที่หน้า \"ลายเซ็นของฉัน\" ก่อนจึงจะได้รับอนุญาตให้ลงนาม");
+            return "redirect:/esign/sign/" + stepId;
+        }
+        if (certOpt.get().isExpired()) {
+            redirectAttributes.addFlashAttribute("errorMsg",
+                    "ใบรับรอง Digital ID (.p12) ของคุณหมดอายุแล้ว ไม่สามารถใช้ลงนามเอกสารได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th และติดตั้งที่หน้า \"ลายเซ็นของฉัน\"");
+            return "redirect:/esign/sign/" + stepId;
+        }
+
         Result result = workflow.sign(stepId, me, userSignatureId,
-                Boolean.TRUE.equals(consent), actorContext());
+                Boolean.TRUE.equals(consent), actorContext(), digitalCertPin);
 
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());

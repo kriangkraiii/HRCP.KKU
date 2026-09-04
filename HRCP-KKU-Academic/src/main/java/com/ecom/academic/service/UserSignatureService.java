@@ -236,4 +236,138 @@ public class UserSignatureService {
         String trimmed = name.trim();
         return trimmed.length() > 100 ? trimmed.substring(0, 100) : trimmed;
     }
+
+    /**
+     * Generates a digital stamp PNG with exact timestamp and stores it, returning the stored filename.
+     */
+    public String generateAndStoreDigitalStamp(String signerName, java.time.LocalDateTime signedAt) {
+        byte[] png = generateDigitalStampPng(signerName, signedAt);
+        if (png == null) {
+            return null;
+        }
+        var stored = storage.store(png);
+        return stored != null ? stored.filename() : null;
+    }
+
+    /**
+     * Renders a digital signature stamp:
+     * - Left: signer's name in Thai font
+     * - Right: "Digitally signed by", Name, "Date: YYYY.MM.DD", "HH:mm:ss +07'00'"
+     * - Crisp light-gray border
+     */
+    public byte[] generateDigitalStampPng(String signerName, java.time.LocalDateTime signedAt) {
+        if (signerName == null || signerName.isBlank()) {
+            return null;
+        }
+        int width = 540;
+        int height = 185;
+        java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(width, height, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g2 = img.createGraphics();
+        try {
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_ANTIALIASING, java.awt.RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_TEXT_ANTIALIASING, java.awt.RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+            g2.setRenderingHint(java.awt.RenderingHints.KEY_RENDERING, java.awt.RenderingHints.VALUE_RENDER_QUALITY);
+
+            // Background: white
+            g2.setColor(java.awt.Color.WHITE);
+            g2.fillRect(0, 0, width, height);
+
+            // Border: light-gray
+            g2.setColor(new java.awt.Color(200, 200, 200));
+            g2.setStroke(new java.awt.BasicStroke(1.5f));
+            g2.drawRect(1, 1, width - 2, height - 2);
+
+            // Time formatting
+            java.time.LocalDateTime dt = signedAt != null ? signedAt : java.time.LocalDateTime.now();
+            java.time.format.DateTimeFormatter dateFormatter = java.time.format.DateTimeFormatter.ofPattern("yyyy.MM.dd");
+            java.time.format.DateTimeFormatter timeFormatter = java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss");
+            String dateLine = "Date: " + dt.format(dateFormatter);
+            String timeLine = dt.format(timeFormatter) + " +07'00'";
+
+            // Font setup
+            java.awt.Font thaiFont = getThaiFont(36, java.awt.Font.BOLD);
+            java.awt.Font metaFontBold = getThaiFont(22, java.awt.Font.BOLD);
+            java.awt.Font metaFontPlain = getThaiFont(20, java.awt.Font.PLAIN);
+
+            // Left Column: Large Name
+            g2.setColor(new java.awt.Color(10, 10, 10));
+            String clean = signerName.trim();
+            String[] tokens = clean.split("\\s+");
+            if (tokens.length >= 2) {
+                int half = (tokens.length + 1) / 2;
+                StringBuilder sb1 = new StringBuilder();
+                for (int i = 0; i < half; i++) {
+                    if (!sb1.isEmpty()) sb1.append(" ");
+                    sb1.append(tokens[i]);
+                }
+                StringBuilder sb2 = new StringBuilder();
+                for (int i = half; i < tokens.length; i++) {
+                    if (!sb2.isEmpty()) sb2.append(" ");
+                    sb2.append(tokens[i]);
+                }
+                String l1 = sb1.toString();
+                String l2 = sb2.toString();
+
+                g2.setFont(thaiFont);
+                java.awt.FontMetrics fm = g2.getFontMetrics();
+                int w1 = fm.stringWidth(l1);
+                int w2 = fm.stringWidth(l2);
+                int maxW = 210;
+                if (w1 > maxW || w2 > maxW) {
+                    float scale = (float) maxW / Math.max(w1, w2);
+                    g2.setFont(thaiFont.deriveFont(Math.max(36 * scale, 20f)));
+                    fm = g2.getFontMetrics();
+                }
+                g2.drawString(l1, 120 - fm.stringWidth(l1) / 2, 75);
+                g2.drawString(l2, 120 - fm.stringWidth(l2) / 2, 125);
+            } else {
+                g2.setFont(thaiFont);
+                java.awt.FontMetrics fm = g2.getFontMetrics();
+                int w = fm.stringWidth(clean);
+                if (w > 215) {
+                    float scale = 215f / w;
+                    g2.setFont(thaiFont.deriveFont(Math.max(36 * scale, 20f)));
+                    fm = g2.getFontMetrics();
+                }
+                g2.drawString(clean, 120 - fm.stringWidth(clean) / 2, 100);
+            }
+
+            // Right Column: Metadata
+            int rightX = 265;
+            g2.setColor(new java.awt.Color(10, 10, 10));
+            g2.setFont(metaFontBold);
+            g2.drawString("Digitally signed by", rightX, 48);
+
+            g2.setColor(new java.awt.Color(35, 35, 35));
+            g2.setFont(metaFontPlain);
+            g2.drawString(clean, rightX, 82);
+
+            g2.setColor(new java.awt.Color(10, 10, 10));
+            g2.setFont(metaFontBold);
+            g2.drawString(dateLine, rightX, 122);
+            g2.drawString(timeLine, rightX, 156);
+
+        } finally {
+            g2.dispose();
+        }
+
+        try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
+            javax.imageio.ImageIO.write(img, "PNG", baos);
+            return baos.toByteArray();
+        } catch (java.io.IOException e) {
+            log.error("Failed to render digital stamp PNG: {}", e.toString());
+            return null;
+        }
+    }
+
+    private java.awt.Font getThaiFont(int size, int style) {
+        String[] fontNames = {"TH Sarabun New", "Sarabun", "Tahoma", "Leelawadee", "Angsana New", "Cordia New", "SansSerif"};
+        for (String name : fontNames) {
+            java.awt.Font f = new java.awt.Font(name, style, size);
+            if (!f.getFamily().equals("Dialog") || name.equals("SansSerif")) {
+                return f;
+            }
+        }
+        return new java.awt.Font("SansSerif", style, size);
+    }
 }

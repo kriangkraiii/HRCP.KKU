@@ -548,13 +548,18 @@ public class AcademicRequestService {
 
     public void deleteAttachment(Long attachmentId) {
         attachmentRepository.findById(attachmentId).ifPresent(att -> {
-            deletePhysicalFile(att.getStoredFilePath());
+            if (!"LINK".equalsIgnoreCase(att.getFileType())) {
+                deletePhysicalFile(att.getStoredFilePath());
+            }
             attachmentRepository.delete(att);
         });
     }
 
     private void deletePhysicalFile(String filePath) {
         if (filePath != null && !filePath.isBlank()) {
+            if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+                return;
+            }
             try {
                 java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(filePath));
             } catch (Exception e) {

@@ -149,7 +149,7 @@
                                 <h6 class="mb-0 fw-semibold text-primary">
                                     <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอนที่ผู้ยื่นอัปโหลด
                                 </h6>
-                                <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' ไฟล์'}">0 ไฟล์</span>
+                                <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' รายการ'}">0 รายการ</span>
                             </div>
                             <div class="card-body p-0">
                                 <th:block th:with="slotLabels=${ {
@@ -164,7 +164,7 @@
                                             <span class="fw-semibold small text-secondary" th:text="${label}">ช่องเอกสาร</span>
                                             <span class="badge rounded-pill"
                                                   th:classappend="${attachmentsBySlot != null and attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty() ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}"
-                                                  th:text="${(attachmentsBySlot != null and attachmentsBySlot[iter.count] != null ? attachmentsBySlot[iter.count].size() : 0) + ' ไฟล์'}">0 ไฟล์</span>
+                                                  th:text="${(attachmentsBySlot != null and attachmentsBySlot[iter.count] != null ? attachmentsBySlot[iter.count].size() : 0) + ' รายการ'}">0 รายการ</span>
                                         </div>
 
                                         <div th:if="${attachmentsBySlot != null and attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty()}">
@@ -174,18 +174,26 @@
                                                     <span th:if="${att.fileType == 'PDF'}" class="text-danger"><i class="fas fa-file-pdf"></i></span>
                                                     <span th:if="${att.fileType == 'DOCX'}" class="text-primary"><i class="fas fa-file-word"></i></span>
                                                     <span th:if="${att.fileType == 'ZIP'}" class="text-secondary"><i class="fas fa-file-archive"></i></span>
+                                                    <span th:if="${att.fileType == 'LINK'}" class="text-info"><i class="fas fa-link"></i></span>
                                                     <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt"></i></span>
                                                     <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">filename.pdf</span>
-                                                    <span class="badge bg-white text-secondary border ms-1" style="font-size:0.7rem;"
+                                                    <span th:if="${att.fileType != 'LINK'}" class="badge bg-white text-secondary border ms-1" style="font-size:0.7rem;"
                                                           th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
+                                                    <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle ms-1" style="font-size:0.7rem;"><i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก</span>
                                                 </div>
                                                 <div class="btn-group btn-group-sm ms-2">
-                                                    <a th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
+                                                    <a th:if="${att.fileType == 'LINK'}"
+                                                       th:href="${att.storedFilePath}" 
+                                                       target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm py-0" title="เปิดลิงก์ภายนอก">
+                                                        <i class="fas fa-external-link-alt me-1"></i> เปิดลิงก์
+                                                    </a>
+                                                    <a th:if="${att.fileType != 'LINK' and att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
                                                        th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'" 
                                                        target="_blank" class="btn btn-outline-info btn-sm py-0" title="เปิดดูไฟล์">
                                                         <i class="fas fa-eye me-1"></i> ดู
                                                     </a>
-                                                    <a th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
+                                                    <a th:if="${att.fileType != 'LINK'}"
+                                                       th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
                                                        class="btn btn-outline-primary btn-sm py-0" title="ดาวน์โหลด">
                                                         <i class="fas fa-download me-1"></i> ดาวน์โหลด
                                                     </a>
@@ -194,7 +202,7 @@
                                         </div>
                                         <div th:unless="${attachmentsBySlot != null and attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty()}"
                                              class="text-muted small py-1 fst-italic">
-                                            <i class="fas fa-minus-circle me-1 text-secondary opacity-50"></i> ยังไม่มีไฟล์ในช่องนี้
+                                            <i class="fas fa-minus-circle me-1 text-secondary opacity-50"></i> ยังไม่มีไฟล์หรือลิงก์ในช่องนี้
                                         </div>
                                     </div>
                                 </th:block>

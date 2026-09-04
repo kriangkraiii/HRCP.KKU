@@ -61,6 +61,9 @@ class SigningPageRenderTest {
     @Autowired
     private com.ecom.academic.service.UserSignatureService signatureService;
 
+    @Autowired
+    private com.ecom.academic.repository.UserDigitalCertificateRepository certificateRepository;
+
     private MockMvc mockMvc;
     private UserDtls applicant;
     private UserDtls admin;
@@ -307,5 +310,128 @@ class SigningPageRenderTest {
                         .param("userSignatureId", String.valueOf(signatureId))
                         .with(user(applicant.getEmail()).roles("USER")))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("ผู้ลงนามที่ยังไม่มี Digital ID (.p12) — หน้าลงนามต้องแสดงกล่องแจ้งเตือนบังคับติดตั้งและมีคู่มือ Modal")
+    void signingPageShowsP12RequirementAlertAndModalGuideWhenNoCert() throws Exception {
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        String html = mockMvc.perform(get("/esign/sign/" + stepId)
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(html)
+                .contains("จำเป็นต้องติดตั้ง Digital ID (.p12)")
+                .contains("p12GuideModal")
+                .contains("คู่มือการขอรับไฟล์ Digital ID (.p12) และรหัสผ่าน");
+    }
+
+    @Test
+    @DisplayName("ผู้ลงนามที่ยังไม่มี Digital ID (.p12) — กดยืนยันลงนาม POST ต้องถูกปฏิเสธและแจ้งเตือนให้ติดตั้งก่อน")
+    void signEndpointBlocksUserWithoutActiveP12Cert() throws Exception {
+        Long signatureId = newSignature(applicant);
+
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/esign/sign/" + stepId)
+                        .param("userSignatureId", String.valueOf(signatureId))
+                        .param("consent", "true")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/esign/sign/" + stepId))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attributeExists("errorMsg"));
+    }
+
+    @Test
+    @DisplayName("ผู้ลงนามที่มีใบรับรอง .p12 หมดอายุแล้ว — หน้าลงนามต้องแจ้งเตือนว่าหมดอายุ และซ่อนฟอร์มลงนาม")
+    void signingPageShowsExpiredAlertWhenCertIsExpired() throws Exception {
+        com.ecom.academic.model.UserDigitalCertificate expiredCert = new com.ecom.academic.model.UserDigitalCertificate();
+        expiredCert.setUser(applicant);
+        expiredCert.setCertificatePath("dummy_expired.p12");
+        expiredCert.setOriginalFilename("kku_expired.p12");
+        expiredCert.setSubjectDn("CN=นายสมชาย ทดสอบ, O=KKU, C=TH");
+        expiredCert.setIssuerDn("CN=ODT KKU CA, O=KKU, C=TH");
+        expiredCert.setValidFrom(java.time.LocalDateTime.now().minusYears(2));
+        expiredCert.setValidTo(java.time.LocalDateTime.now().minusDays(1)); // หมดอายุแล้ว
+        expiredCert.setActive(true);
+        certificateRepository.save(expiredCert);
+
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        String html = mockMvc.perform(get("/esign/sign/" + stepId)
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(html)
+                .contains("ใบรับรอง Digital ID (.p12) หมดอายุแล้ว")
+                .contains("จะไม่สามารถใช้ลงนามในเอกสารได้")
+                .contains("ไปอัปเดตไฟล์ .p12 ใหม่")
+                .doesNotContain("ยืนยันการลงนาม");
+    }
+
+    @Test
+    @DisplayName("ผู้ลงนามที่ใบรับรองหมดอายุ — กดยืนยันลงนาม POST ต้องถูกปฏิเสธและแจ้งเตือนว่าใบรับรองหมดอายุ")
+    void signEndpointBlocksUserWithExpiredP12Cert() throws Exception {
+        Long signatureId = newSignature(applicant);
+
+        com.ecom.academic.model.UserDigitalCertificate expiredCert = new com.ecom.academic.model.UserDigitalCertificate();
+        expiredCert.setUser(applicant);
+        expiredCert.setCertificatePath("dummy_expired.p12");
+        expiredCert.setOriginalFilename("kku_expired.p12");
+        expiredCert.setSubjectDn("CN=นายสมชาย ทดสอบ, O=KKU, C=TH");
+        expiredCert.setIssuerDn("CN=ODT KKU CA, O=KKU, C=TH");
+        expiredCert.setValidFrom(java.time.LocalDateTime.now().minusYears(2));
+        expiredCert.setValidTo(java.time.LocalDateTime.now().minusDays(1)); // หมดอายุแล้ว
+        expiredCert.setActive(true);
+        certificateRepository.save(expiredCert);
+
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/esign/sign/" + stepId)
+                        .param("userSignatureId", String.valueOf(signatureId))
+                        .param("consent", "true")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl("/esign/sign/" + stepId))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash().attribute("errorMsg",
+                        org.hamcrest.Matchers.containsString("หมดอายุแล้ว")));
+    }
+
+    @Test
+    @DisplayName("ระบบสร้างตราประทับ Digital Signature Stamp สำหรับพิมพ์ชื่อ (TYPE) ได้ถูกต้อง")
+    void generateDigitalStampProducesValidPng() throws Exception {
+        byte[] png = signatureService.generateDigitalStampPng("สมโภช พิมพ์พงษ์ต้อน", java.time.LocalDateTime.now());
+        org.assertj.core.api.Assertions.assertThat(png).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(png.length).isGreaterThan(1000);
+
+        java.awt.image.BufferedImage img = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(png));
+        org.assertj.core.api.Assertions.assertThat(img).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(img.getWidth()).isEqualTo(540);
+        org.assertj.core.api.Assertions.assertThat(img.getHeight()).isEqualTo(185);
     }
 }

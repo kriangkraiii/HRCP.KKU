@@ -199,30 +199,37 @@
                         <i class="fas fa-file-pdf text-danger" th:if="${att.fileType == 'PDF'}"></i>
                         <i class="fas fa-file-word text-primary" th:if="${att.fileType == 'DOCX'}"></i>
                         <i class="fas fa-file-archive text-secondary" th:if="${att.fileType == 'ZIP'}"></i>
+                        <i class="fas fa-link text-info" th:if="${att.fileType == 'LINK'}"></i>
                         <span th:text="${att.originalFilename}"></span>
                       </td>
                       <td data-label="ประเภท">
-                        <span class="badge" th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : (att.fileType == 'DOCX' ? 'bg-primary' : 'bg-secondary')}"
-                          th:text="${att.fileType}"></span>
+                        <span class="badge" th:classappend="${att.fileType == 'PDF' ? 'bg-danger' : (att.fileType == 'DOCX' ? 'bg-primary' : (att.fileType == 'LINK' ? 'bg-info text-dark' : 'bg-secondary'))}"
+                          th:text="${att.fileType == 'LINK' ? 'ลิงก์' : att.fileType}"></span>
                       </td>
                       <td class="at-date" data-label="ขนาด"
-                        th:text="${att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-'}">
+                        th:text="${att.fileType == 'LINK' ? '-' : (att.fileSize != null ? (att.fileSize > 1048576 ? #numbers.formatDecimal(att.fileSize / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize / 1024.0, 1, 1) + ' KB') : '-')}">
                       </td>
                       <td class="at-date" data-label="อัปโหลดเมื่อ" th:text="${@thaiDateUtil.format(att.uploadedAt)}"></td>
                       <td data-label="จัดการ">
                         <div class="d-flex gap-1">
-                          <a th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
+                          <a th:if="${att.fileType == 'LINK'}"
+                            th:href="${att.storedFilePath}"
+                            target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm" title="เปิดลิงก์ภายนอก">
+                            <i class="fas fa-external-link-alt"></i>
+                          </a>
+                          <a th:if="${att.fileType != 'LINK' and att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
                             th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
                             target="_blank" class="btn btn-outline-info btn-sm" title="เปิดดูไฟล์">
                             <i class="fas fa-eye"></i>
                           </a>
-                          <a th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
+                          <a th:if="${att.fileType != 'LINK'}"
+                            th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
                             class="btn btn-outline-primary btn-sm" title="ดาวน์โหลด">
                             <i class="fas fa-download"></i>
                           </a>
                           <form
                             th:action="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
-                            method="post" style="display: inline" data-confirm="ต้องการลบเอกสารนี้หรือไม่?">
+                            method="post" style="display: inline" th:data-confirm="${att.fileType == 'LINK' ? 'ต้องการลบลิงก์นี้หรือไม่?' : 'ต้องการลบเอกสารนี้หรือไม่?'}">
                             <button type="submit" class="btn btn-outline-danger btn-sm" title="ลบ">
                               <i class="fas fa-trash"></i>
                             </button>

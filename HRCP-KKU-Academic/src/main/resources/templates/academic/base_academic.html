@@ -25,6 +25,12 @@
         window.USER_THEME_PREFERENCE=t;
         if(t==='system'){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light';}
         if(t==='dark')document.documentElement.setAttribute('data-theme','dark');})();
+        // Anti-flash: apply sidebar collapsed state BEFORE paint
+        try {
+            if (localStorage.getItem('sidebar_collapsed') === 'true' && window.innerWidth >= 992) {
+                document.documentElement.classList.add('sidebar-collapsed');
+            }
+        } catch(e) {}
     </script>
 </head>
 
@@ -555,8 +561,12 @@
     <div class="main-content" role="main">
         <!-- Top Navbar Header -->
         <header class="top-navbar d-flex justify-content-between align-items-center px-4 py-2" th:if="${user != null}">
-            <!-- Left: Breadcrumbs -->
-            <div class="topbar-left d-flex align-items-center gap-2 text-truncate me-3" style="max-width: 45%;">
+            <!-- Left: Sidebar Toggle & Breadcrumbs -->
+            <div class="topbar-left d-flex align-items-center gap-2 text-truncate me-3" style="max-width: 50%;">
+                <button type="button" class="topbar-sidebar-toggle me-1" id="sidebarToggleBtn"
+                        aria-label="ซ่อน/แสดงแถบเมนูด้านข้าง" title="ซ่อน/แสดงแถบเมนู (Sidebar)">
+                    <i class="fas fa-bars-staggered" id="sidebarToggleIcon"></i>
+                </button>
                 <nav aria-label="breadcrumb" class="d-none d-md-block">
                     <ol class="breadcrumb mb-0 py-0" id="topbar-breadcrumb">
                         <li class="breadcrumb-item">
@@ -705,24 +715,72 @@
 
     <script src="/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script>
-        // Mobile sidebar toggle
+        // Sidebar toggle (Responsive: Mobile Drawer + Desktop Collapse)
         const sToggle = document.getElementById('sidebarToggle');
+        const topbarToggle = document.getElementById('sidebarToggleBtn');
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('sidebarOverlay');
+
         function openSidebar() {
-            sidebar.classList.add('show');
-            overlay.classList.add('show');
-            sToggle.setAttribute('aria-expanded', 'true');
+            if (sidebar) sidebar.classList.add('show');
+            if (overlay) overlay.classList.add('show');
+            if (sToggle) sToggle.setAttribute('aria-expanded', 'true');
         }
+
         function closeSidebar() {
-            sidebar.classList.remove('show');
-            overlay.classList.remove('show');
-            sToggle.setAttribute('aria-expanded', 'false');
+            if (sidebar) sidebar.classList.remove('show');
+            if (overlay) overlay.classList.remove('show');
+            if (sToggle) sToggle.setAttribute('aria-expanded', 'false');
         }
-        sToggle.addEventListener('click', () => {
-            sidebar.classList.contains('show') ? closeSidebar() : openSidebar();
+
+        function toggleSidebar() {
+            if (window.innerWidth < 992) {
+                // Mobile behavior: drawer slide-in / slide-out
+                if (sidebar) {
+                    sidebar.classList.contains('show') ? closeSidebar() : openSidebar();
+                }
+            } else {
+                // Desktop behavior: hide/collapse sidebar and expand main content
+                const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
+                document.documentElement.classList.toggle('sidebar-collapsed', isCollapsed);
+                try {
+                    localStorage.setItem('sidebar_collapsed', isCollapsed ? 'true' : 'false');
+                } catch(e) {}
+                if (topbarToggle) {
+                    topbarToggle.setAttribute('aria-expanded', String(!isCollapsed));
+                }
+            }
+        }
+
+        if (sToggle) {
+            sToggle.addEventListener('click', () => {
+                sidebar.classList.contains('show') ? closeSidebar() : openSidebar();
+            });
+        }
+        if (topbarToggle) {
+            topbarToggle.addEventListener('click', toggleSidebar);
+        }
+        if (overlay) {
+            overlay.addEventListener('click', closeSidebar);
+        }
+
+        // Sync initial state from anti-flash script
+        if (document.documentElement.classList.contains('sidebar-collapsed')) {
+            document.body.classList.add('sidebar-collapsed');
+            if (topbarToggle) topbarToggle.setAttribute('aria-expanded', 'false');
+        }
+
+        // Keyboard shortcut: Alt + S or Ctrl + B to toggle sidebar
+        document.addEventListener('keydown', (e) => {
+            if ((e.altKey && (e.key === 's' || e.key === 'S')) ||
+                (e.ctrlKey && (e.key === 'b' || e.key === 'B'))) {
+                const tag = document.activeElement ? document.activeElement.tagName.toLowerCase() : '';
+                if (tag !== 'input' && tag !== 'textarea' && !document.activeElement.isContentEditable) {
+                    e.preventDefault();
+                    toggleSidebar();
+                }
+            }
         });
-        overlay.addEventListener('click', closeSidebar);
 
         // Active link highlighting + aria-current
         const path = window.location.pathname + window.location.search;

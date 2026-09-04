@@ -43,15 +43,21 @@ public class SignedDocumentRenderer {
     private final SignatureStepRepository stepRepository;
     private final SignatureImageStorage signatureImageStorage;
     private final SignerNameResolver signerNameResolver;
+    private final UserDigitalCertificateService digitalCertificateService;
+    private final UserSignatureService userSignatureService;
 
     public SignedDocumentRenderer(DocumentGenerationService documentGenerationService,
             SignatureStepRepository stepRepository,
             SignatureImageStorage signatureImageStorage,
-            SignerNameResolver signerNameResolver) {
+            SignerNameResolver signerNameResolver,
+            UserDigitalCertificateService digitalCertificateService,
+            UserSignatureService userSignatureService) {
         this.documentGenerationService = documentGenerationService;
         this.stepRepository = stepRepository;
         this.signatureImageStorage = signatureImageStorage;
         this.signerNameResolver = signerNameResolver;
+        this.digitalCertificateService = digitalCertificateService;
+        this.userSignatureService = userSignatureService;
     }
 
     /**
@@ -113,6 +119,11 @@ public class SignedDocumentRenderer {
             if (documentGenerationService.isPdfConversionAvailable()) {
                 byte[] pdf = documentGenerationService.convertDocxToPdfCached(docx);
                 if (pdf != null && pdf.length > 0) {
+                    try {
+                        pdf = digitalCertificateService.applyDigitalSignaturesToEnvelope(pdf, envelope, null);
+                    } catch (Exception e) {
+                        log.warn("Could not apply digital certificates to envelope {}: {}", envelope.getId(), e.getMessage());
+                    }
                     Path target = dir.resolve(base + ".pdf");
                     Files.write(target, pdf);
                     pdfPath = target.toString();
@@ -202,8 +213,15 @@ public class SignedDocumentRenderer {
         if (previewStep != null && previewSig != null && previewStep.getAnchorPlaceholder() != null) {
             boolean alreadyStamped = stamped.stream()
                     .anyMatch(s -> s.anchorPlaceholder().equals(previewStep.getAnchorPlaceholder()));
-            if (!alreadyStamped && previewSig.getImagePath() != null && !previewSig.getImagePath().isBlank()) {
-                byte[] png = signatureImageStorage.read(previewSig.getImagePath());
+            if (!alreadyStamped) {
+                byte[] png = null;
+                if (previewSig.getKind() == com.ecom.academic.model.SignatureKind.TYPE
+                        && previewSig.getTypedText() != null && !previewSig.getTypedText().isBlank()) {
+                    png = userSignatureService.generateDigitalStampPng(previewSig.getTypedText(), java.time.LocalDateTime.now());
+                } else if (previewSig.getImagePath() != null && !previewSig.getImagePath().isBlank()) {
+                    png = signatureImageStorage.read(previewSig.getImagePath());
+                }
+
                 if (png != null) {
                     int width = 0;
                     int height = 0;

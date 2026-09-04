@@ -211,9 +211,9 @@
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 fw-semibold text-primary">
                                 <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอน
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">จำเป็นต้องแนบ (ต้องแนบไฟล์อย่างน้อย 1 ไฟล์ต่อช่อง ครบทั้ง 5 ช่อง)</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">จำเป็นต้องแนบ (ต้องแนบไฟล์หรือลิงก์อย่างน้อย 1 รายการต่อช่อง ครบทั้ง 5 ช่อง)</span>
                             </h6>
-                            <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' ไฟล์'}">0 ไฟล์</span>
+                            <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' รายการ'}">0 รายการ</span>
                         </div>
                         <div class="card-body p-0">
 
@@ -238,41 +238,84 @@
                                             <small class="text-muted" th:text="${slotSizes[iter.count] + ' / 75.0 MB'}">0.0 / 75.0 MB</small>
                                             <span class="badge rounded-pill px-2"
                                                   th:classappend="${slotCounts[iter.count] > 0 ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}"
-                                                  th:text="${slotCounts[iter.count] + ' ไฟล์'}">0 ไฟล์</span>
+                                                  th:text="${slotCounts[iter.count] + ' รายการ'}">0 รายการ</span>
                                         </div>
                                     </div>
 
-                                    <!-- Upload Form per Slot -->
-                                    <form th:if="${editable}"
-                                          th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments/' + ${iter.count}"
-                                          method="post" enctype="multipart/form-data"
-                                          th:id="'attachmentForm_' + ${iter.count}" class="mb-2">
-                                        <label th:for="'fileInput_' + ${iter.count}"
-                                               class="upload-dropzone p-3 border border-2 border-dashed rounded-3 text-center d-block slot-dropzone"
-                                               th:id="'dropzone_' + ${iter.count}"
-                                               th:data-slot="${iter.count}"
-                                               th:data-current-bytes="${slotBytes != null and slotBytes[iter.count] != null ? slotBytes[iter.count] : 0}"
-                                               style="cursor:pointer; background: #fafbfc;">
-                                            <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-1 d-block"></i>
-                                            <span class="small fw-semibold">เลือกไฟล์ หรือลากมาวาง</span>
-                                            <span class="text-muted d-block" style="font-size:0.75rem;">รองรับ .pdf, .docx, .doc, .zip (จำกัด 75 MB ต่อช่อง)</span>
-                                            <input type="file" name="files" th:id="'fileInput_' + ${iter.count}" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
-                                        </label>
-
-                                        <!-- Queue preview -->
-                                        <div th:id="'queue_' + ${iter.count}" class="mb-2 d-none">
-                                            <ul class="list-group list-group-flush mb-2" th:id="'queueList_' + ${iter.count}"></ul>
-                                            <div class="d-flex gap-2">
-                                                <button type="submit" class="btn btn-sm btn-academic rounded-pill px-3">
-                                                    <i class="fas fa-upload me-1"></i> อัปโหลด
-                                                </button>
-                                                <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 slot-clear-queue"
-                                                        th:data-slot="${iter.count}">ยกเลิก</button>
-                                            </div>
+                                    <!-- Upload & Link Toggle and Forms (if editable) -->
+                                    <div th:if="${editable}" class="mb-2">
+                                        <!-- Mode Switch Buttons -->
+                                        <div class="btn-group btn-group-sm mb-2" role="group">
+                                            <button type="button" class="btn btn-outline-primary active slot-toggle-btn"
+                                                    th:id="'tabUploadBtn_' + ${iter.count}"
+                                                    th:data-slot="${iter.count}" data-target="upload">
+                                                <i class="fas fa-file-upload me-1"></i> อัปโหลดไฟล์
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary slot-toggle-btn"
+                                                    th:id="'tabLinkBtn_' + ${iter.count}"
+                                                    th:data-slot="${iter.count}" data-target="link">
+                                                <i class="fas fa-link me-1"></i> แนบลิงก์ (URL)
+                                            </button>
                                         </div>
-                                    </form>
 
-                                    <!-- Uploaded Files for this Slot -->
+                                        <!-- Upload Form per Slot -->
+                                        <form th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments/' + ${iter.count}"
+                                              method="post" enctype="multipart/form-data"
+                                              th:id="'attachmentForm_' + ${iter.count}" class="mb-2">
+                                            <label th:for="'fileInput_' + ${iter.count}"
+                                                   class="upload-dropzone p-3 border border-2 border-dashed rounded-3 text-center d-block slot-dropzone"
+                                                   th:id="'dropzone_' + ${iter.count}"
+                                                   th:data-slot="${iter.count}"
+                                                   th:data-current-bytes="${slotBytes != null and slotBytes[iter.count] != null ? slotBytes[iter.count] : 0}"
+                                                   style="cursor:pointer; background: #fafbfc;">
+                                                <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-1 d-block"></i>
+                                                <span class="small fw-semibold">เลือกไฟล์ หรือลากมาวาง</span>
+                                                <span class="text-muted d-block" style="font-size:0.75rem;">รองรับ .pdf, .docx, .doc, .zip (จำกัด 75 MB ต่อช่อง)</span>
+                                                <input type="file" name="files" th:id="'fileInput_' + ${iter.count}" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
+                                            </label>
+
+                                            <!-- Queue preview -->
+                                            <div th:id="'queue_' + ${iter.count}" class="mb-2 d-none">
+                                                <ul class="list-group list-group-flush mb-2" th:id="'queueList_' + ${iter.count}"></ul>
+                                                <div class="d-flex gap-2">
+                                                    <button type="submit" class="btn btn-sm btn-academic rounded-pill px-3">
+                                                        <i class="fas fa-upload me-1"></i> อัปโหลด
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 slot-clear-queue"
+                                                            th:data-slot="${iter.count}">ยกเลิก</button>
+                                                </div>
+                                            </div>
+                                        </form>
+
+                                        <!-- Link Form per Slot -->
+                                        <form th:action="'/user/academic/request/' + ${request.id} + '/document-1/links/' + ${iter.count}"
+                                              method="post"
+                                              th:id="'linkForm_' + ${iter.count}" class="p-3 border rounded-3 bg-white mb-2 d-none">
+                                            <div class="row g-2 align-items-center">
+                                                <div class="col-md-7">
+                                                    <div class="input-group input-group-sm">
+                                                        <span class="input-group-text bg-light text-muted"><i class="fas fa-link"></i></span>
+                                                        <input type="url" name="url" th:id="'linkUrl_' + ${iter.count}" class="form-control"
+                                                               placeholder="https://drive.google.com/... หรือ OneDrive / Cloud URL" required>
+                                                    </div>
+                                                </div>
+                                                <div class="col-md-3">
+                                                    <input type="text" name="title" th:id="'linkTitle_' + ${iter.count}" class="form-control form-control-sm"
+                                                           placeholder="ชื่อเรียก/คำอธิบาย (ถ้ามี)">
+                                                </div>
+                                                <div class="col-md-2 d-grid">
+                                                    <button type="submit" class="btn btn-sm btn-academic rounded-pill">
+                                                        <i class="fas fa-plus me-1"></i> เพิ่มลิงก์
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="text-muted small mt-1" style="font-size:0.75rem;">
+                                                <i class="fas fa-info-circle me-1"></i> แนบลิงก์จาก Google Drive, OneDrive, CMU/KKU Cloud, YouTube หรือคลาวด์ภายนอก
+                                            </div>
+                                        </form>
+                                    </div>
+
+                                    <!-- Uploaded Files & Links for this Slot -->
                                     <div th:if="${attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty()}" class="mt-2">
                                         <div th:each="att, attIter : ${attachmentsBySlot[iter.count]}"
                                              class="d-flex align-items-center justify-content-between py-2 px-2 rounded-2 mb-1"
@@ -281,26 +324,36 @@
                                                 <span th:if="${att.fileType == 'PDF'}" class="text-danger"><i class="fas fa-file-pdf"></i></span>
                                                 <span th:if="${att.fileType == 'DOCX'}" class="text-primary"><i class="fas fa-file-word"></i></span>
                                                 <span th:if="${att.fileType == 'ZIP'}" class="text-secondary"><i class="fas fa-file-archive"></i></span>
+                                                <span th:if="${att.fileType == 'LINK'}" class="text-info"><i class="fas fa-link"></i></span>
                                                 <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt"></i></span>
                                                 <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">file.pdf</span>
-                                                <span class="badge bg-light text-secondary border" style="font-size:0.7rem;"
+                                                <span th:if="${att.fileType != 'LINK'}" class="badge bg-light text-secondary border" style="font-size:0.7rem;"
                                                       th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
+                                                <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.7rem;">
+                                                    <i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก
+                                                </span>
                                             </div>
                                             <div class="btn-group btn-group-sm ms-2">
-                                                <a th:if="${att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
+                                                <a th:if="${att.fileType == 'LINK'}"
+                                                   th:href="${att.storedFilePath}"
+                                                   target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm py-0" title="เปิดลิงก์ในแท็บใหม่">
+                                                   <i class="fas fa-external-link-alt me-1"></i> เปิดลิงก์
+                                                </a>
+                                                <a th:if="${att.fileType != 'LINK' and att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
                                                    th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
                                                    target="_blank" class="btn btn-outline-info btn-sm py-0" title="ดู"><i class="fas fa-eye"></i></a>
-                                                <a th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
+                                                <a th:if="${att.fileType != 'LINK'}"
+                                                   th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
                                                    class="btn btn-outline-primary btn-sm py-0" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
                                                 <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
-                                                      method="post" class="d-inline" data-confirm="คุณต้องการลบไฟล์นี้หรือไม่?">
+                                                      method="post" class="d-inline" th:data-confirm="${att.fileType == 'LINK' ? 'คุณต้องการลบลิงก์นี้หรือไม่?' : 'คุณต้องการลบไฟล์นี้หรือไม่?'}">
                                                     <button type="submit" class="btn btn-outline-danger btn-sm py-0" title="ลบ"><i class="fas fa-trash-alt"></i></button>
                                                 </form>
                                             </div>
                                         </div>
                                     </div>
                                     <div th:if="${attachmentsBySlot[iter.count] == null or attachmentsBySlot[iter.count].isEmpty()}" class="text-center py-2 text-muted small">
-                                        <i class="fas fa-folder-open me-1 opacity-50"></i> ยังไม่มีไฟล์แนบในช่องนี้
+                                        <i class="fas fa-folder-open me-1 opacity-50"></i> ยังไม่มีไฟล์หรือลิงก์แนบในช่องนี้
                                     </div>
                                 </div>
                             </div>
@@ -430,7 +483,7 @@
                                     submitBtn.disabled = false;
                                     alertBox.classList.remove('alert-warning', 'alert-danger');
                                     alertBox.classList.add('alert-success');
-                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบไฟล์ครบทั้ง 5 ช่องแล้ว (' + attCount + ' ไฟล์, ขนาดผ่านเกณฑ์) ✓ พร้อมบันทึกเอกสาร';
+                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบไฟล์/ลิงก์ครบทั้ง 5 ช่องแล้ว (' + attCount + ' รายการ, ขนาดผ่านเกณฑ์) ✓ พร้อมบันทึกเอกสาร';
                                 } else {
                                     submitBtn.disabled = true;
                                     alertBox.classList.remove('alert-success');
@@ -439,7 +492,7 @@
                                         reasons.push('ติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc1CheckedCount">' + checked + '</span>/' + total + ')');
                                     }
                                     if (!allSlotsFilled) {
-                                        reasons.push('แนบไฟล์เอกสารประกอบให้ครบทั้ง 5 ช่อง (ยังขาดช่องที่ ' + missingSlots.join(', ') + ')');
+                                        reasons.push('แนบไฟล์หรือลิงก์เอกสารประกอบให้ครบทั้ง 5 ช่อง (ยังขาดช่องที่ ' + missingSlots.join(', ') + ')');
                                     }
                                     if (!noOverQuota) {
                                         reasons.push('ลดขนาดไฟล์เนื่องจากเกิน 75 MB ใน ' + overQuotaSlots.join(', '));
@@ -608,6 +661,46 @@
                                     if (fi) fi.value = '';
                                     if (qc) qc.classList.add('d-none');
                                     if (ql) ql.innerHTML = '';
+                                });
+                            });
+
+                            // Toggle between File Upload and Link Attachment panels
+                            document.querySelectorAll('.slot-toggle-btn').forEach(function(btn) {
+                                btn.addEventListener('click', function() {
+                                    var slot = this.getAttribute('data-slot');
+                                    var target = this.getAttribute('data-target');
+                                    var uploadForm = document.getElementById('attachmentForm_' + slot);
+                                    var linkForm = document.getElementById('linkForm_' + slot);
+                                    var uploadBtn = document.getElementById('tabUploadBtn_' + slot);
+                                    var linkBtn = document.getElementById('tabLinkBtn_' + slot);
+
+                                    if (target === 'upload') {
+                                        if (uploadForm) uploadForm.classList.remove('d-none');
+                                        if (linkForm) linkForm.classList.add('d-none');
+                                        if (uploadBtn) {
+                                            uploadBtn.classList.add('active');
+                                            uploadBtn.classList.remove('btn-outline-primary');
+                                            uploadBtn.classList.add('btn-primary');
+                                        }
+                                        if (linkBtn) {
+                                            linkBtn.classList.remove('active');
+                                            linkBtn.classList.remove('btn-primary');
+                                            linkBtn.classList.add('btn-outline-primary');
+                                        }
+                                    } else {
+                                        if (uploadForm) uploadForm.classList.add('d-none');
+                                        if (linkForm) linkForm.classList.remove('d-none');
+                                        if (uploadBtn) {
+                                            uploadBtn.classList.remove('active');
+                                            uploadBtn.classList.remove('btn-primary');
+                                            uploadBtn.classList.add('btn-outline-primary');
+                                        }
+                                        if (linkBtn) {
+                                            linkBtn.classList.add('active');
+                                            linkBtn.classList.remove('btn-outline-primary');
+                                            linkBtn.classList.add('btn-primary');
+                                        }
+                                    }
                                 });
                             });
                         })();

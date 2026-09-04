@@ -29,10 +29,10 @@ public class AcademicAttachment {
     @JoinColumn(name = "request_id", nullable = false)
     private AcademicRequest request;
 
-    @Column(name = "original_filename", nullable = false)
+    @Column(name = "original_filename", nullable = false, length = 500)
     private String originalFilename;
 
-    @Column(name = "stored_file_path", nullable = false)
+    @Column(name = "stored_file_path", nullable = false, length = 2048)
     private String storedFilePath;
 
     @Column(name = "file_type")
@@ -143,5 +143,9 @@ public class AcademicAttachment {
         if (originalFilename == null) return "";
         int dot = originalFilename.lastIndexOf('.');
         return dot >= 0 ? originalFilename.substring(dot + 1).toUpperCase() : "";
+    }
+
+    public boolean isLink() {
+        return "LINK".equalsIgnoreCase(fileType);
     }
 }

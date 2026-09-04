@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ecom.academic.dto.SignatureNotice;
 import com.ecom.academic.model.SignatureAuditEvent;
 import com.ecom.academic.model.SignatureAuditEventType;
+import com.ecom.academic.model.SignatureKind;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
 import com.ecom.academic.model.SignatureRequestStatus;
@@ -68,6 +69,9 @@ public class SignatureWorkflowService {
     private final DocumentWorkflowConfigService workflowConfigService;
     private final DocumentSnapshotProvider snapshotProvider;
     private final com.ecom.service.AfterCommitRunner afterCommitRunner;
+    private final UserDigitalCertificateService digitalCertificateService;
+    private final DigitalCertificateStorage digitalCertificateStorage;
+    private final PdfDigitalSignatureService pdfDigitalSignatureService;
 
     public SignatureWorkflowService(
             SignatureRequestRepository requestRepository,
@@ -82,7 +86,10 @@ public class SignatureWorkflowService {
             SignedDocumentArchiver archiver,
             DocumentWorkflowConfigService workflowConfigService,
             DocumentSnapshotProvider snapshotProvider,
-            com.ecom.service.AfterCommitRunner afterCommitRunner) {
+            com.ecom.service.AfterCommitRunner afterCommitRunner,
+            UserDigitalCertificateService digitalCertificateService,
+            DigitalCertificateStorage digitalCertificateStorage,
+            PdfDigitalSignatureService pdfDigitalSignatureService) {
         this.requestRepository = requestRepository;
         this.stepRepository = stepRepository;
         this.auditRepository = auditRepository;
@@ -96,6 +103,9 @@ public class SignatureWorkflowService {
         this.workflowConfigService = workflowConfigService;
         this.snapshotProvider = snapshotProvider;
         this.afterCommitRunner = afterCommitRunner;
+        this.digitalCertificateService = digitalCertificateService;
+        this.digitalCertificateStorage = digitalCertificateStorage;
+        this.pdfDigitalSignatureService = pdfDigitalSignatureService;
     }
 
     /**
@@ -628,6 +638,12 @@ public class SignatureWorkflowService {
     @Transactional
     public Result sign(Long stepId, UserDtls actingUser, Long userSignatureId,
             boolean consentAccepted, ActorContext actor) {
+        return sign(stepId, actingUser, userSignatureId, consentAccepted, actor, null);
+    }
+
+    @Transactional
+    public Result sign(Long stepId, UserDtls actingUser, Long userSignatureId,
+            boolean consentAccepted, ActorContext actor, String digitalCertPin) {
 
         SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
         if (step == null) {
@@ -659,7 +675,30 @@ public class SignatureWorkflowService {
         if (signature == null) {
             return Result.failed("ไม่พบลายเซ็นที่เลือก — กรุณาสร้างลายเซ็นในหน้า \"ลายเซ็นของฉัน\" ก่อน");
         }
-        // 6. The frozen content must be intact. Belt and braces: the form is
+        // 6. Digital Certificate verification if signer has registered .p12
+        var optCert = digitalCertificateService.findActive(actingUser);
+        String authMethodToUse = SignatureStep.AUTH_METHOD_SESSION;
+        if (optCert.isPresent()) {
+            var cert = optCert.get();
+            if (cert.isExpired()) {
+                return Result.failed("ใบรับรอง Digital ID (.p12) ของคุณหมดอายุแล้ว ไม่สามารถใช้ลงนามได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th");
+            }
+            String pin = digitalCertificateService.resolvePin(cert, digitalCertPin);
+            if (pin != null && !pin.isBlank()) {
+                try {
+                    byte[] p12Bytes = digitalCertificateStorage.read(cert.getCertificatePath());
+                    pdfDigitalSignatureService.inspect(p12Bytes, pin);
+                    authMethodToUse = "DIGITAL_ID_P12";
+                    step.setDigitalCertSubject(cert.getSubjectDn());
+                } catch (Exception e) {
+                    return Result.failed("รหัสผ่าน (PIN) สำหรับ Digital ID ไม่ถูกต้อง: " + e.getMessage());
+                }
+            } else if (!cert.hasSavedPin() && (digitalCertPin != null && !digitalCertPin.isBlank())) {
+                return Result.failed("รหัสผ่าน (PIN) สำหรับ Digital ID ไม่ถูกต้อง");
+            }
+        }
+
+        // 7. The frozen content must be intact. Belt and braces: the form is
         //    locked while an envelope is open, so reaching this means something
         //    wrote to the row directly.
         if (!sha256(envelope.getFrozenJson()).equals(envelope.getFrozenHash())) {
@@ -673,10 +712,23 @@ public class SignatureWorkflowService {
         step.setStatus(SignatureStepStatus.SIGNED);
         step.setSignedAt(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         step.setUserSignature(signature);
-        step.setImagePathSnapshot(signature.getImagePath());
+
+        String imagePathSnapshot = signature.getImagePath();
+        if (signature.getKind() == SignatureKind.TYPE && signature.getTypedText() != null && !signature.getTypedText().isBlank()) {
+            try {
+                String freshStampPath = userSignatureService.generateAndStoreDigitalStamp(
+                        signature.getTypedText(), step.getSignedAt());
+                if (freshStampPath != null) {
+                    imagePathSnapshot = freshStampPath;
+                }
+            } catch (Exception e) {
+                log.warn("Could not generate fresh digital stamp for step {}: {}", step.getId(), e.toString());
+            }
+        }
+        step.setImagePathSnapshot(imagePathSnapshot);
         step.setConsentAccepted(true);
         step.setConsentTextVersion(SignatureStep.CONSENT_TEXT_VERSION);
-        step.setAuthMethod(SignatureStep.AUTH_METHOD_SESSION);
+        step.setAuthMethod(authMethodToUse);
         step.setIpAddress(actor.ipAddress());
         step.setUserAgent(truncate(actor.userAgent(), 500));
         step.setDocHashSigned(envelope.getFrozenHash());

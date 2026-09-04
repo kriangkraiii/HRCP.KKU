@@ -99,6 +99,14 @@
                             <div class="form-text">
                                 ลายเซ็นจะถูกตัดขอบว่างและบันทึกเป็นรูปพื้นหลังโปร่งใสอัตโนมัติ
                             </div>
+                            <div id="sigTypeNotice" class="alert alert-info py-2 px-3 mt-2 small d-none shadow-sm">
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-clock text-primary fs-5"></i>
+                                    <div>
+                                        <strong>วันและเวลาในการลงนาม:</strong> วันที่และเวลาในตราประทับตัวอย่างนี้เป็นการแสดงเวลาจำลอง โดยเมื่อนำไปลงนามในเอกสารจริง ระบบจะสร้างตราประทับและบันทึกตาม<strong>วันและเวลาจริง ณ วินาทีที่ท่านกดยืนยันการลงนาม</strong>เสมอ
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -190,9 +198,257 @@
                 </div>
             </div>
         </div>
+
+        <!-- ==================== ใบรับรองดิจิทัล (Digital ID .p12) ==================== -->
+        <div class="card card-academic mb-4">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h5 class="mb-0">
+                    <i class="fas fa-certificate text-primary"></i> ใบรับรองดิจิทัล Digital ID (.p12)
+                </h5>
+                <div class="d-flex align-items-center gap-2">
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
+                        <i class="fas fa-book-open me-1"></i> คู่มือการขอรับไฟล์ .p12 และรหัสผ่าน
+                    </button>
+                    <span th:if="${activeCertificate != null}" class="badge bg-success">
+                        <i class="fas fa-check-circle me-1"></i> ติดตั้งแล้ว
+                    </span>
+                    <span th:if="${activeCertificate == null}" class="badge bg-secondary">
+                        ยังไม่ได้ติดตั้ง
+                    </span>
+                </div>
+            </div>
+            <div class="card-body">
+                <p class="text-secondary mb-3">
+                    ติดตั้งใบรับรองดิจิทัลส่วนบุคคล (.p12) ของมหาวิทยาลัยขอนแก่น (ODT Digital ID) เพื่อใช้ลงนามแบบ 
+                    <strong>Cryptographic Digital Signature (PAdES)</strong> ที่มีผลทางกฎหมายระดับสูงตาม พ.ร.บ.ธุรกรรมอิเล็กทรอนิกส์ ม.26 
+                    โดยระบบจะประทับลายมือชื่อดิจิทัลลงในไฟล์ PDF โดยตรงอย่างถูกต้องเรียบหรู (ไม่ต้องใช้ไฟล์ .fdf หรือตีตารางสารบรรณ)
+                </p>
+
+                <!-- Active Certificate Card -->
+                <div th:if="${activeCertificate != null}" class="p-3 bg-light rounded border mb-4">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h6 class="mb-0 text-dark fw-bold" th:text="${activeCertificate.commonName}">ชื่อผู้ลงนาม</h6>
+                                <span class="badge bg-success bg-opacity-75">
+                                    <i class="fas fa-shield-halved me-1"></i> พร้อมใช้งาน One-Click Sign
+                                </span>
+                            </div>
+                            <div class="small text-muted mb-1">
+                                <strong>ผู้ออกใบรับรอง (Issuer):</strong> <span th:text="${activeCertificate.issuerDn}">Thai University Consortium CA</span>
+                            </div>
+                            <div class="small text-muted mb-1">
+                                <strong>ไฟล์ต้นฉบับ:</strong> <span th:text="${activeCertificate.originalFilename != null ? activeCertificate.originalFilename : 'Digital_ID.p12'}">cert.p12</span>
+                            </div>
+                            <div class="small text-muted">
+                                <strong>วันหมดอายุ:</strong> 
+                                <span th:text="${activeCertificate.validTo != null ? #temporals.format(activeCertificate.validTo, 'd MMM yyyy HH:mm') : '-'}">-</span>
+                                <span th:if="${activeCertificate.expired}" class="badge bg-danger ms-1">หมดอายุแล้ว</span>
+                            </div>
+                            <div th:if="${activeCertificate.expired}" class="alert alert-danger py-2 px-3 mt-2 mb-0 small">
+                                <i class="fas fa-triangle-exclamation me-1"></i> <strong>ใบรับรองนี้หมดอายุแล้ว:</strong> จะไม่สามารถใช้ลงนามในเอกสารได้ กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" class="fw-bold alert-link text-decoration-underline">https://i.kku.ac.th</a> แล้วกด "เปลี่ยนไฟล์ .p12" ด้านล่าง
+                            </div>
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <a href="#certUploadCard" class="btn btn-sm btn-outline-primary">
+                                    <i class="fas fa-arrows-rotate me-1"></i> เปลี่ยนไฟล์ .p12
+                                </a>
+                            </div>
+                        </div>
+                        <form th:action="@{'/esign/my-certificates/' + ${activeCertificate.id} + '/deactivate'}" method="post"
+                              data-confirm="ยืนยันการยกเลิกใช้งานใบรับรองดิจิทัลนี้?">
+                            <button type="submit" class="btn btn-sm btn-outline-danger">
+                                <i class="fas fa-trash me-1"></i> ยกเลิกการใช้งาน
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- คำแนะนำ: วิธีดาวน์โหลดไฟล์ .p12 และการดูรหัสผ่าน -->
+                <div class="alert alert-info border-info bg-info bg-opacity-10 mb-3">
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
+                        <div class="d-flex align-items-center gap-2">
+                            <i class="fas fa-circle-question text-info fs-5"></i>
+                            <strong class="text-dark">คำแนะนำ: วิธีขอรับไฟล์ .p12 และรหัสผ่านสำหรับติดตั้ง</strong>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
+                            <i class="fas fa-book-open me-1"></i> อ่านคู่มือฉบับเต็ม
+                        </button>
+                    </div>
+                    <div class="small text-secondary ps-4">
+                        <ol class="mb-2 ps-3">
+                            <li class="mb-1">
+                                <strong>วิธีดาวน์โหลดไฟล์ .p12 จาก มข.:</strong> 
+                                เข้าสู่ระบบบริการบุคลากร มข. (iKKU) ที่ <a href="https://i.kku.ac.th" target="_blank" class="fw-bold text-decoration-none">https://i.kku.ac.th</a> ด้วยบัญชี <code>@kku.ac.th</code> แล้วเลือกดาวน์โหลดไฟล์ <strong>Digital ID (.p12)</strong> ประจำตัว
+                            </li>
+                            <li class="mb-1">
+                                <strong>Digital ID Password ของไฟล์เอามาจากไหน:</strong> 
+                                คือรหัสผ่านที่คุณตั้งขึ้นเองตอนกดดาวน์โหลด Digital ID จาก <a href="https://i.kku.ac.th" target="_blank">i.kku.ac.th</a> (หรือรหัสที่ระบบ มข. ส่งให้ทาง KKU Mail / SMS) <em>*ไม่ใช่รหัสผ่านอีเมลทั่วไป</em>
+                            </li>
+                            <li>
+                                <strong>ใส่ครั้งเดียวพร้อมระบบตรวจสอบความถูกต้อง:</strong> 
+                                เลือกไฟล์ .p12 กรอกรหัสผ่าน แล้วกดปุ่ม <strong>"ตรวจสอบความถูกต้อง"</strong> ก่อนบันทึก — ระบบจะเข้ารหัสด้วย AES-256 ให้คุณลงนามในเอกสารทุกฉบับได้ในคลิกเดียว (One-Click Sign) ทันที
+                            </li>
+                        </ol>
+                    </div>
+                </div>
+
+                <!-- Form Upload / Replace Certificate -->
+                <div class="card border border-dashed" id="certUploadCard">
+                    <div class="card-body">
+                        <h6 class="card-title mb-2">
+                            <i class="fas fa-cloud-arrow-up text-primary me-1"></i>
+                            <span th:text="${activeCertificate == null ? 'ติดตั้งใบรับรอง Digital ID (.p12)' : 'อัปเดตหรือเปลี่ยนไฟล์ใบรับรอง .p12 ใหม่'}">ติดตั้งใบรับรอง</span>
+                        </h6>
+                        <form id="certUploadForm" th:action="@{/esign/my-certificates/upload}" method="post" enctype="multipart/form-data">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">เลือกไฟล์ Digital ID (.p12 หรือ .pfx) <span class="text-danger">*</span></label>
+                                    <input type="file" id="certFileInput" name="certFile" class="form-control form-control-sm" accept=".p12,.pfx" required>
+                                    <div class="form-text small">ไฟล์ .p12 ที่ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank">i.kku.ac.th</a></div>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-semibold">Digital ID Password (รหัสผ่านของไฟล์) <span class="text-danger">*</span></label>
+                                    <div class="input-group input-group-sm">
+                                        <input type="password" id="certPasswordInput" name="pin" class="form-control" placeholder="ระบุ Digital ID Password" required autocomplete="off">
+                                        <button type="button" class="btn btn-outline-secondary" id="btnToggleCertPwd" tabindex="-1">
+                                            <i class="fas fa-eye"></i>
+                                        </button>
+                                    </div>
+                                    <div class="form-text small">รหัสผ่านที่ตั้งไว้ตอนดาวน์โหลดไฟล์จาก i.kku.ac.th</div>
+                                </div>
+
+                                <!-- กล่องแสดงผลการตรวจสอบ -->
+                                <div class="col-12 d-none" id="verifyFeedbackBox">
+                                    <div id="verifyFeedbackAlert" class="alert py-2 px-3 small mb-0"></div>
+                                </div>
+
+                                <div class="col-12 d-flex align-items-center flex-wrap gap-2 pt-1">
+                                    <button type="button" id="btnVerifyCert" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-magnifying-glass me-1"></i> ตรวจสอบความถูกต้อง
+                                    </button>
+                                    <button type="submit" id="btnSubmitCert" class="btn btn-sm btn-academic" disabled>
+                                        <i class="fas fa-check-circle me-1"></i> ติดตั้งและบันทึกใบรับรอง
+                                    </button>
+                                    <span id="verifyNoticeText" class="small text-muted">
+                                        <i class="fas fa-circle-exclamation text-warning me-1"></i> กรุณากด <strong>"ตรวจสอบความถูกต้อง"</strong> ก่อนจึงจะสามารถกดบันทึกได้
+                                    </span>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
+
+    <!-- Reusable P12 Guide Modal -->
+    <div th:replace="~{academic/esign/_p12_guide_modal :: p12GuideModal}"></div>
+
     <script src="/js/signature_pad.js"></script>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const csrfToken = document.querySelector('meta[name="_csrf"]')?.content || '';
+        const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
+
+        function setupTogglePassword(btnId, inputId) {
+            const btn = document.getElementById(btnId);
+            const input = document.getElementById(inputId);
+            if (btn && input) {
+                btn.addEventListener('click', function () {
+                    const isPassword = input.type === 'password';
+                    input.type = isPassword ? 'text' : 'password';
+                    btn.innerHTML = isPassword ? '<i class="fas fa-eye-slash"></i>' : '<i class="fas fa-eye"></i>';
+                });
+            }
+        }
+        setupTogglePassword('btnToggleCertPwd', 'certPasswordInput');
+
+        // 1. Upload Pre-flight Verification
+        const certFile = document.getElementById('certFileInput');
+        const certPwd = document.getElementById('certPasswordInput');
+        const btnVerify = document.getElementById('btnVerifyCert');
+        const btnSubmit = document.getElementById('btnSubmitCert');
+        const verifyBox = document.getElementById('verifyFeedbackBox');
+        const verifyAlert = document.getElementById('verifyFeedbackAlert');
+        const verifyNotice = document.getElementById('verifyNoticeText');
+
+        function resetUploadVerify() {
+            if (btnSubmit) btnSubmit.disabled = true;
+            if (verifyNotice) verifyNotice.classList.remove('d-none');
+            if (verifyBox) verifyBox.classList.add('d-none');
+        }
+
+        if (certFile) certFile.addEventListener('change', resetUploadVerify);
+        if (certPwd) certPwd.addEventListener('input', resetUploadVerify);
+
+        if (btnVerify) {
+            btnVerify.addEventListener('click', async function () {
+                if (!certFile.files || certFile.files.length === 0) {
+                    window.alert('กรุณาเลือกไฟล์ .p12 ก่อนกดตรวจสอบ');
+                    certFile.focus();
+                    return;
+                }
+                if (!certPwd.value || !certPwd.value.trim()) {
+                    window.alert('กรุณากรอก Digital ID Password ก่อนกดตรวจสอบ');
+                    certPwd.focus();
+                    return;
+                }
+
+                btnVerify.disabled = true;
+                btnVerify.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span> กำลังตรวจสอบ...';
+                resetUploadVerify();
+
+                try {
+                    const formData = new FormData();
+                    formData.append('certFile', certFile.files[0]);
+                    formData.append('password', certPwd.value);
+                    if (csrfToken) formData.append('_csrf', csrfToken);
+
+                    const headers = {};
+                    if (csrfHeader && csrfToken) headers[csrfHeader] = csrfToken;
+
+                    const response = await fetch('/esign/my-certificates/verify', {
+                        method: 'POST',
+                        headers: headers,
+                        body: formData
+                    });
+
+                    const data = await response.json();
+                    verifyBox.classList.remove('d-none');
+
+                    if (data.ok) {
+                        verifyAlert.className = 'alert alert-success py-2 px-3 small mb-0 border-success shadow-sm';
+                        verifyAlert.innerHTML = `
+                            <div class="d-flex align-items-center gap-2">
+                                <i class="fas fa-circle-check fs-4 text-success"></i>
+                                <div>
+                                    <strong>ตรวจสอบสำเร็จ:</strong> ใบรับรองของ <u>${data.commonName}</u> ถูกต้องพร้อมใช้งาน<br>
+                                    <span class="text-muted">ผู้ออก: ${data.issuer} · ใช้ได้ถึง: ${data.validTo}</span>
+                                </div>
+                            </div>`;
+                        btnSubmit.disabled = false;
+                        verifyNotice.classList.add('d-none');
+                    } else {
+                        verifyAlert.className = 'alert alert-danger py-2 px-3 small mb-0 border-danger shadow-sm';
+                        verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ${data.error || 'Digital ID Password ไม่ถูกต้อง หรือไฟล์ไม่สมบูรณ์'}`;
+                        btnSubmit.disabled = true;
+                        verifyNotice.classList.remove('d-none');
+                    }
+                } catch (err) {
+                    verifyBox.classList.remove('d-none');
+                    verifyAlert.className = 'alert alert-danger py-2 px-3 small mb-0 border-danger shadow-sm';
+                    verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อตรวจสอบได้: ${err.message}`;
+                    btnSubmit.disabled = true;
+                } finally {
+                    btnVerify.disabled = false;
+                    btnVerify.innerHTML = '<i class="fas fa-magnifying-glass me-1"></i> ตรวจสอบความถูกต้อง';
+                }
+            });
+        }
+    });
+    </script>
 </section>
 </body>
 </html>

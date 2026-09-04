@@ -577,6 +577,68 @@ public class AcademicApplicantController {
         return "redirect:/user/academic/request/" + id + "/document-1";
     }
 
+    @PostMapping({
+            "/request/{id}/document-1/links/{slot}",
+            "/request/{id}/document/1/links/{slot}",
+            "/request/{id}/document-1/links",
+            "/request/{id}/document/1/links"
+    })
+    public String attachDocument1Link(
+            @PathVariable Long id,
+            @PathVariable(required = false) Integer slot,
+            @RequestParam("url") String url,
+            @RequestParam(value = "title", required = false) String title,
+            Principal principal,
+            RedirectAttributes redirectAttributes) {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+
+        UserDtls user = getUser(principal);
+        if (!request.getApplicant().getId().equals(user.getId())) {
+            return "redirect:/user/academic/dashboard";
+        }
+
+        if (!requestService.canApplicantEditDocument(request, 1)) {
+            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
+            return "redirect:/user/academic/request/" + id + "/document-1";
+        }
+
+        if (url == null || url.isBlank()) {
+            redirectAttributes.addFlashAttribute("error", "กรุณาระบุ URL ลิงก์ไฟล์");
+            return "redirect:/user/academic/request/" + id + "/document-1";
+        }
+
+        String trimmedUrl = url.trim();
+        if (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) {
+            redirectAttributes.addFlashAttribute("error", "รูปแบบ URL ไม่ถูกต้อง (ต้องขึ้นต้นด้วย http:// หรือ https://)");
+            return "redirect:/user/academic/request/" + id + "/document-1";
+        }
+
+        if (trimmedUrl.length() > 2048) {
+            redirectAttributes.addFlashAttribute("error", "ความยาวของ URL เกินขีดจำกัด (สูงสุด 2,048 ตัวอักษร)");
+            return "redirect:/user/academic/request/" + id + "/document-1";
+        }
+
+        int targetSlot = (slot != null && slot >= 1 && slot <= 5) ? slot : 1;
+
+        String linkTitle = (title != null && !title.isBlank()) ? title.trim() : trimmedUrl;
+        if (linkTitle.length() > 500) {
+            linkTitle = linkTitle.substring(0, 497) + "...";
+        }
+
+        AcademicAttachment attachment = new AcademicAttachment();
+        attachment.setRequest(request);
+        attachment.setOriginalFilename(linkTitle);
+        attachment.setStoredFilePath(trimmedUrl);
+        attachment.setFileType("LINK");
+        attachment.setFileSize(0L);
+        attachment.setChecklistItem(targetSlot);
+        requestService.saveAttachment(attachment);
+
+        redirectAttributes.addFlashAttribute("success", "แนบลิงก์ไฟล์สำหรับช่องที่ " + targetSlot + " เรียบร้อยแล้ว");
+        return "redirect:/user/academic/request/" + id + "/document-1";
+    }
+
     @GetMapping("/request/{id}/attachment/{attachmentId}/download")
     public ResponseEntity<Resource> downloadAttachment(
             @PathVariable Long id,
@@ -591,6 +653,12 @@ public class AcademicApplicantController {
 
         AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("Attachment not found"));
+
+        if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                    .location(java.net.URI.create(attachment.getStoredFilePath()))
+                    .build();
+        }
 
         Path path = Path.of(attachment.getStoredFilePath());
         if (!Files.exists(path)) {
@@ -639,6 +707,12 @@ public class AcademicApplicantController {
 
         AcademicAttachment attachment = requestService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("Attachment not found"));
+
+        if ("LINK".equalsIgnoreCase(attachment.getFileType())) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                    .location(java.net.URI.create(attachment.getStoredFilePath()))
+                    .build();
+        }
 
         Path path = Path.of(attachment.getStoredFilePath());
         if (!Files.exists(path)) {
@@ -714,13 +788,16 @@ public class AcademicApplicantController {
 
         AcademicAttachment attachment = requestService.findAttachmentById(attachmentId).orElse(null);
         if (attachment != null && attachment.getRequest().getId().equals(id)) {
-            try {
-                Files.deleteIfExists(Path.of(attachment.getStoredFilePath()));
-            } catch (IOException e) {
-                log.warn("Failed to delete file on disk: {}", e.getMessage());
+            boolean isLink = "LINK".equalsIgnoreCase(attachment.getFileType());
+            if (!isLink) {
+                try {
+                    Files.deleteIfExists(Path.of(attachment.getStoredFilePath()));
+                } catch (Exception e) {
+                    log.warn("Failed to delete file on disk: {}", e.getMessage());
+                }
             }
             requestService.deleteAttachment(attachmentId);
-            redirectAttributes.addFlashAttribute("success", "ลบไฟล์แนบเรียบร้อยแล้ว");
+            redirectAttributes.addFlashAttribute("success", isLink ? "ลบลิงก์เรียบร้อยแล้ว" : "ลบไฟล์แนบเรียบร้อยแล้ว");
         }
         return "redirect:/user/academic/request/" + id + "/document-1";
     }

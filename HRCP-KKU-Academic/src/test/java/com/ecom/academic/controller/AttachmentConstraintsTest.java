@@ -291,4 +291,119 @@ class AttachmentConstraintsTest {
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("ช่องที่ 2 มีขนาดรวมเกินขีดจำกัด 75 MB ต่อช่อง");
         verify(requestService, never()).saveDocument(any(), eq(1), anyString(), anyString(), anyString(), any());
     }
+
+    @Test
+    @DisplayName("แนบลิงก์ URL ในช่องที่ 3 สำเร็จและบันทึกประเภท LINK")
+    void attachDocument1Link_validUrl_shouldSucceed() {
+        org.mockito.ArgumentCaptor<AcademicAttachment> captor = org.mockito.ArgumentCaptor.forClass(AcademicAttachment.class);
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.attachDocument1Link(
+                1L, 3, "https://drive.google.com/file/d/123/view", "บันทึกการสอน Google Drive",
+                principal, redirectAttributes);
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("success")).contains("ช่องที่ 3 เรียบร้อยแล้ว");
+        verify(requestService).saveAttachment(captor.capture());
+
+        AcademicAttachment saved = captor.getValue();
+        assertThat(saved.getFileType()).isEqualTo("LINK");
+        assertThat(saved.getFileSize()).isEqualTo(0L);
+        assertThat(saved.getChecklistItem()).isEqualTo(3);
+        assertThat(saved.getOriginalFilename()).isEqualTo("บันทึกการสอน Google Drive");
+        assertThat(saved.getStoredFilePath()).isEqualTo("https://drive.google.com/file/d/123/view");
+    }
+
+    @Test
+    @DisplayName("แนบลิงก์ URL ที่ไม่ถูกต้อง (ไม่ใช่ http/https) จะถูกปฏิเสธ")
+    void attachDocument1Link_invalidUrl_shouldBeRejected() {
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.attachDocument1Link(
+                1L, 1, "javascript:alert('xss')", "Invalid Link",
+                principal, redirectAttributes);
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("รูปแบบ URL ไม่ถูกต้อง");
+        verify(requestService, never()).saveAttachment(any());
+    }
+
+    @Test
+    @DisplayName("การยื่นเอกสารที่ 1 โดยมีลิงก์แนบในบางช่องหรือทุกช่อง นับเป็นรายการที่ผ่านเกณฑ์ครบทั้ง 5 ช่อง")
+    void submitDoc1_withLinkAttachments_shouldSucceed() throws Exception {
+        Map<Integer, List<AcademicAttachment>> grouped = new java.util.HashMap<>();
+        for (int i = 1; i <= 5; i++) {
+            List<AcademicAttachment> list = new java.util.ArrayList<>();
+            AcademicAttachment att = new AcademicAttachment();
+            if (i >= 3) {
+                att.setFileType("LINK");
+                att.setFileSize(0L);
+                att.setStoredFilePath("https://drive.google.com/folder/" + i);
+            } else {
+                att.setFileType("PDF");
+                att.setFileSize(1024L * 1024L);
+                att.setStoredFilePath("uploads/file_" + i + ".pdf");
+            }
+            list.add(att);
+            grouped.put(i, list);
+        }
+        when(requestService.getAttachmentsGroupedBySlot(1L)).thenReturn(grouped);
+        when(documentService.generateDocument(eq(1L), eq(1), anyString(), any())).thenReturn("generated/doc1.docx");
+
+        Map<String, String> formData = new java.util.HashMap<>();
+        formData.put("action", "submit");
+        formData.put("title", "ผศ.ดร.");
+        formData.put("applicant_name", "สมชาย ใจดี");
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc1_submitted");
+        verify(requestService).saveDocument(eq(sampleRequest), eq(1), anyString(), eq("generated/doc1.docx"), anyString(), any());
+    }
+
+    @Test
+    @DisplayName("ลบเอกสารแนบประเภท LINK ลบสำเร็จและแสดงข้อความ ลบลิงก์เรียบร้อยแล้ว โดยไม่เกิดข้อผิดพลาด")
+    void deleteAttachment_linkAttachment_shouldSucceed() {
+        AcademicAttachment linkAtt = new AcademicAttachment();
+        linkAtt.setId(99L);
+        linkAtt.setRequest(sampleRequest);
+        linkAtt.setFileType("LINK");
+        linkAtt.setStoredFilePath("https://drive.google.com/view/123");
+        when(requestService.findAttachmentById(99L)).thenReturn(Optional.of(linkAtt));
+
+        RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        String result = applicantController.deleteAttachment(1L, 99L, principal, redirectAttributes);
+
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("success")).isEqualTo("ลบลิงก์เรียบร้อยแล้ว");
+        verify(requestService).deleteAttachment(99L);
+    }
+
+    @Test
+    @DisplayName("เปิดดู/ดาวน์โหลดเอกสารแนบประเภท LINK จะ redirect (302) ไปยัง URL ปลายทางโดยตรง")
+    void viewAndDownloadAttachment_linkType_shouldRedirectToExternalUrl() throws Exception {
+        AcademicAttachment linkAtt = new AcademicAttachment();
+        linkAtt.setId(88L);
+        linkAtt.setRequest(sampleRequest);
+        linkAtt.setFileType("LINK");
+        linkAtt.setStoredFilePath("https://onedrive.live.com/test-file");
+        when(requestService.findAttachmentById(88L)).thenReturn(Optional.of(linkAtt));
+
+        Principal principal = () -> "applicant@kku.ac.th";
+
+        var downloadResp = applicantController.downloadAttachment(1L, 88L, principal);
+        assertThat(downloadResp.getStatusCode().value()).isEqualTo(302);
+        assertThat(downloadResp.getHeaders().getLocation().toString()).isEqualTo("https://onedrive.live.com/test-file");
+
+        var viewResp = applicantController.viewAttachment(1L, 88L, principal);
+        assertThat(viewResp.getStatusCode().value()).isEqualTo(302);
+        assertThat(viewResp.getHeaders().getLocation().toString()).isEqualTo("https://onedrive.live.com/test-file");
+    }
 }
