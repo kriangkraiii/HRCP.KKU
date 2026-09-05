@@ -79,6 +79,9 @@
         inputs.forEach(function (input) {
             if (!isDateField(input)) return;
             if (hasOwnPicker(input)) return;
+            // ช่อง readonly/disabled คือค่าที่ดึงมาจากเอกสารอื่น ห้ามฉีด picker
+            // และห้ามเขียนทับด้วยวันปัจจุบัน
+            if (input.readOnly || input.disabled) return;
 
             var skipAutoFill = shouldSkipAutofill(input.name);
 

@@ -24,8 +24,8 @@
                             <div class="col-md-4">
                                 <label class="form-label">เลขที่หนังสือ <small class="text-muted">(ถ้ามี)</small></label>
                                 <input type="text" name="memo_no" class="form-control"
-                                    placeholder="เช่น อว 660301.26.8/"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('memo_no', '') : ''}">
+                                    placeholder="กรอกเลขที่หนังสือ (ถ้ามี)"
+                                    th:value="${doc0Data != null and !#strings.isEmpty(doc0Data['memo_no']) ? doc0Data['memo_no'] : 'อว 660301.26.8/'}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วันที่เอกสาร</label>

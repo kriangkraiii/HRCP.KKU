@@ -517,6 +517,14 @@ public class AcademicAdminController {
                     Map<String, Object> doc6Data = objectMapper.readValue(doc6Json,
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
                             });
+                    // ร่างอัตโนมัติของ doc_6 ไม่ผ่านการคำนวณฝั่ง server จึงไม่มี
+                    // eval_result_level → คำนวณจากคะแนนรวมให้ที่นี่
+                    Object lv = doc6Data.get("eval_result_level");
+                    if (lv == null || lv.toString().isBlank()) {
+                        String level = evalLevelFromScore(doc6Data.get("scorex"));
+                        if (!level.isEmpty())
+                            doc6Data.put("eval_result_level", level);
+                    }
                     model.addAttribute("doc6Data", doc6Data);
                 } catch (Exception e) {
                     // ignore
@@ -672,24 +680,14 @@ public class AcademicAdminController {
                 formData.put("score" + sec + "x", toThaiDigits(formData.get("score" + sec + "x")));
             }
 
-            // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์
-            long roundedTotal = Math.round(grandTotal);
-            formData.put("ch1", roundedTotal <= 56 ? "☑" : "☐");
-            formData.put("ch2", (roundedTotal >= 57 && roundedTotal <= 70) ? "☑" : "☐");
-            formData.put("ch3", (roundedTotal >= 71 && roundedTotal <= 85) ? "☑" : "☐");
-            formData.put("ch4", (roundedTotal >= 86 && roundedTotal <= 100) ? "☑" : "☐");
+            // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์ (ใช้คะแนนจริง ไม่ปัดขึ้น)
+            formData.put("ch1", grandTotal <= 56 ? "☑" : "☐");
+            formData.put("ch2", (grandTotal > 56 && grandTotal <= 70) ? "☑" : "☐");
+            formData.put("ch3", (grandTotal > 70 && grandTotal <= 85) ? "☑" : "☐");
+            formData.put("ch4", grandTotal > 85 ? "☑" : "☐");
 
             // กำหนด eval_level จากผลคะแนนเพื่อส่งต่อไป doc7/doc8
-            String evalLevel = "";
-            if (roundedTotal <= 56)
-                evalLevel = "ไม่ผ่าน";
-            else if (roundedTotal <= 70)
-                evalLevel = "ชำนาญ";
-            else if (roundedTotal <= 85)
-                evalLevel = "ชำนาญพิเศษ";
-            else
-                evalLevel = "เชี่ยวชาญ";
-            formData.put("eval_result_level", evalLevel);
+            formData.put("eval_result_level", evalLevelFromScore(grandTotal));
 
             // auto-fill title/applicant_name/requested_position จาก doc0 ถ้า form
             // ไม่ได้ส่งมา
@@ -702,7 +700,7 @@ public class AcademicAdminController {
                                 new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
                                 });
                         formData.put("title", doc0Data.getOrDefault("title", " "));
-                        formData.put("applicant_name", doc0Data.getOrDefault("full_name", " "));
+                        formData.put("applicant_name", doc0Data.getOrDefault("applicant_name", " "));
                         String pos = " ";
                         if ("✓".equals(doc0Data.get("chk1")))
                             pos = "ผู้ช่วยศาสตราจารย์";
@@ -1212,6 +1210,38 @@ public class AcademicAdminController {
         }
 
         return "redirect:/admin/academic/request/" + id + "?success=attachment_deleted";
+    }
+
+    /** แปลงเลขไทยเป็น Arabic เช่น "๙๙.๗๔" → "99.74" */
+    private static String toArabicDigits(String s) {
+        if (s == null || s.isEmpty())
+            return s;
+        return s.replace("๐", "0").replace("๑", "1").replace("๒", "2")
+                .replace("๓", "3").replace("๔", "4").replace("๕", "5")
+                .replace("๖", "6").replace("๗", "7").replace("๘", "8")
+                .replace("๙", "9");
+    }
+
+    /** สรุประดับผลการประเมินจากคะแนนรวม (รับได้ทั้งเลขไทยและ Arabic) */
+    private static String evalLevelFromScore(Object rawScore) {
+        if (rawScore == null)
+            return "";
+        String s = toArabicDigits(rawScore.toString()).trim();
+        if (s.isEmpty())
+            return "";
+        try {
+            // ใช้คะแนนจริงตามช่วงเกณฑ์ ไม่ปัดเศษขึ้น
+            double score = Double.parseDouble(s);
+            if (score <= 56)
+                return "ไม่ผ่าน";
+            if (score <= 70)
+                return "ชำนาญ";
+            if (score <= 85)
+                return "ชำนาญพิเศษ";
+            return "เชี่ยวชาญ";
+        } catch (NumberFormatException e) {
+            return "";
+        }
     }
 
     /** แปลงตัวเลข Arabic เป็นเลขไทย เช่น "3.50" → "๓.๕๐" */

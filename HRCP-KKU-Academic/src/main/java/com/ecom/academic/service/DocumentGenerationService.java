@@ -90,10 +90,7 @@ public class DocumentGenerationService {
                 : "doc_" + documentType + ".docx";
         String outputPath = outputDir + outputFileName;
 
-        // Doc 4: remap form field names to template placeholder names
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        }
+        preprocessPlaceholders(documentType, placeholders);
 
         byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
 
@@ -130,10 +127,7 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        // Doc 4: remap form field names to template placeholder names
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        }
+        preprocessPlaceholders(documentType, placeholders);
 
         return processTemplate(resource.getInputStream(), placeholders, documentType);
     }
@@ -153,9 +147,7 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        }
+        preprocessPlaceholders(documentType, placeholders);
 
         return processTemplate(resource.getInputStream(), placeholders, documentType, signatures);
     }
@@ -170,9 +162,7 @@ public class DocumentGenerationService {
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
         ClassPathResource resource = new ClassPathResource(TEMPLATE_DIR + "doc_" + documentType + ".docx");
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        }
+        preprocessPlaceholders(documentType, placeholders);
         return processTemplate(resource.getInputStream(), placeholders, documentType, signatures, verification);
     }
 
@@ -186,9 +176,7 @@ public class DocumentGenerationService {
         aliasFirstRowFields(placeholders);
 
         ClassPathResource resource = new ClassPathResource(TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx");
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        }
+        preprocessPlaceholders(documentType, placeholders);
         return processTemplate(resource.getInputStream(), placeholders, documentType, signatures, verification);
     }
 
@@ -204,9 +192,7 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        }
+        preprocessPlaceholders(documentType, placeholders);
 
         return processTemplate(resource.getInputStream(), placeholders, documentType, signatures);
     }
@@ -250,10 +236,7 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        // Doc 4: remap form field names to template placeholder names
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        }
+        preprocessPlaceholders(documentType, placeholders);
 
         return processTemplate(resource.getInputStream(), placeholders, documentType);
     }
@@ -276,10 +259,7 @@ public class DocumentGenerationService {
 
         String outputPath = outputDir + "p2doc_" + documentType + ".docx";
 
-        // Doc 4: remap form field names to template placeholder names
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        }
+        preprocessPlaceholders(documentType, placeholders);
 
         byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
 
@@ -1730,6 +1710,37 @@ public class DocumentGenerationService {
     // =====================================================================
     // Doc 4: Field Name Remapping & Dynamic List Expansion
     // =====================================================================
+
+    /** จุดเดียวสำหรับปรับ placeholder ก่อนแทนค่าลงเทมเพลต */
+    private void preprocessPlaceholders(int documentType, Map<String, String> placeholders) {
+        if (documentType == 4) {
+            preprocessDoc4Placeholders(placeholders);
+        } else if (documentType == 7) {
+            preprocessDoc7Placeholders(placeholders);
+        }
+    }
+
+    /**
+     * เอกสารที่ 7: ครั้งที่ประชุมและวันที่ต้องพิมพ์เป็นเลขไทยในเอกสาร
+     * แปลงตอนสร้างไฟล์เท่านั้น ข้อมูลที่บันทึกไว้ยังเป็นเลขอาราบิกเพื่อให้ฟอร์มแก้ไขได้ตามปกติ
+     */
+    private void preprocessDoc7Placeholders(Map<String, String> placeholders) {
+        for (String key : new String[] { "meeting_no", "meeting_date", "sign_date" }) {
+            String val = placeholders.get(key);
+            if (val != null && !val.isBlank()) {
+                placeholders.put(key, toThaiDigits(val));
+            }
+        }
+    }
+
+    /** แปลงตัวเลข Arabic เป็นเลขไทย เช่น "1/2569" → "๑/๒๕๖๙" */
+    private static String toThaiDigits(String s) {
+        StringBuilder sb = new StringBuilder(s.length());
+        for (char c : s.toCharArray()) {
+            sb.append(c >= '0' && c <= '9' ? (char) ('๐' + (c - '0')) : c);
+        }
+        return sb.toString();
+    }
 
     /**
      * เอกสารที่ 4: Remap form field names → DOCX template placeholder names

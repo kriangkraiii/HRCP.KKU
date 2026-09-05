@@ -42,7 +42,7 @@
                                 <label class="form-label">ชื่อผู้ยื่น</label>
                                 <div class="combo-input">
                                     <input type="text" name="applicant_name" class="form-control" list="staffList3" placeholder="เลือกหรือพิมพ์ชื่อ..."
-                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}" >
+                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}" >
                                     <datalist id="staffList3">
                                         <option th:each="s : ${staffMembers}" th:value="${s.displayName}"></option>
                                     </datalist>

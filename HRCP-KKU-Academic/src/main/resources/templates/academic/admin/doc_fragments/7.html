@@ -25,7 +25,7 @@
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลการประชุม</h5>
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">ครั้งที่/ปี</label><input type="text"
-                                    name="meeting_no" class="form-control" placeholder="ex. 1/2569"></div>
+                                    name="meeting_no" class="form-control" placeholder="เช่น 1/2569"></div>
                             <div class="col-md-4"><label class="form-label">วันที่ประชุม</label>
                                 <div class="input-group">
                                     <input type="text" name="meeting_date" class="form-control thai-full-date">
@@ -36,13 +36,15 @@
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
                         <div class="row mb-3">
-                            <div class="col-md-4"><label class="form-label">รหัสวิชา</label><input type="text"
-                                    name="course_code" class="form-control" placeholder="ex. CP 123 456"
+                            <div class="col-md-6"><label class="form-label">รหัสวิชา</label><input type="text"
+                                    name="course_code" class="form-control" placeholder="เช่น CP 123 456"
                                     th:value="${doc0Data != null ? doc0Data.getOrDefault('course_code', '') : ''}"></div>
-                            <div class="col-md-4"><label class="form-label">ชื่อวิชา</label><input type="text"
-                                    name="course_name" class="form-control" placeholder="ex. Introduction to Computer Science"
+                            <div class="col-md-6"><label class="form-label">ชื่อวิชา</label><input type="text"
+                                    name="course_name" class="form-control" placeholder="เช่น Introduction to Computer Science"
                                     th:value="${doc0Data != null ? doc0Data.getOrDefault('course_name', '') : ''}"></div>
-                            <div class="col-md-2">
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-md-4">
                                 <label class="form-label">คำนำหน้า</label>
                                 <input type="text" name="applicant_title" class="form-control" list="titleList7" placeholder="คำนำหน้า"
                                     th:value="${doc0Data != null ? doc0Data.getOrDefault('title', (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)) : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)}">
@@ -55,10 +57,10 @@
                                     <option value="ศาสตราจารย์">
                                 </datalist>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-6">
                                 <label class="form-label">ชื่อผู้ยื่น</label>
                                 <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name', request.applicant.name) : request.applicant.name}">
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}">
                             </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">ผลการประเมิน</h5>
@@ -76,7 +78,7 @@
                                         th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญ'}"
                                         style="pointer-events:none;" data-action="noop">
                                     <input type="hidden" name="final_level_1" id="fl1_val"
-                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญ' ? '✓' : ' '}">
+                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญ' ? '✓' : ' '}">
                                     <label class="form-check-label" for="fl1">ชำนาญ</label>
                                 </div>
                                 <div class="form-check">
@@ -84,7 +86,7 @@
                                         th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ'}"
                                         style="pointer-events:none;" data-action="noop">
                                     <input type="hidden" name="final_level_2" id="fl2_val"
-                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ' ? '✓' : ' '}">
+                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ' ? '✓' : ' '}">
                                     <label class="form-check-label" for="fl2">ชำนาญพิเศษ</label>
                                 </div>
                                 <div class="form-check">
@@ -92,7 +94,7 @@
                                         th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ'}"
                                         style="pointer-events:none;" data-action="noop">
                                     <input type="hidden" name="final_level_3" id="fl3_val"
-                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ' ? '✓' : ' '}">
+                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ' ? '✓' : ' '}">
                                     <label class="form-check-label" for="fl3">เชี่ยวชาญ</label>
                                 </div>
                             </div>

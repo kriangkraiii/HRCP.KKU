@@ -32,7 +32,7 @@
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-สกุล</label>
                                 <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('full_name',' ') : ' '}"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
                                     placeholder="เช่น สมชาย ใจดี">
                             </div>
                             <div class="col-md-4">
