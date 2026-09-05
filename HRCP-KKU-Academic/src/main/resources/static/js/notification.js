@@ -52,11 +52,12 @@ function updateSidebarBadge(count) {
         }
     });
 
-    // Topbar bell dot
-    var topbarDots = document.querySelectorAll('.topbar-badge-dot, #topbarNotifBadge');
+    // Topbar bell badge
+    var topbarDots = document.querySelectorAll('.topbar-badge-dot, .topbar-badge-count, #topbarNotifBadge');
     topbarDots.forEach(function(dot) {
         if (cnt > 0) {
-            dot.style.display = 'inline-block';
+            dot.style.display = 'inline-flex';
+            dot.textContent = cnt > 99 ? '99+' : cnt;
             dot.setAttribute('title', cnt + ' รายการที่ยังไม่ได้อ่าน');
         } else {
             dot.style.display = 'none';

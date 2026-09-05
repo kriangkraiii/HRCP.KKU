@@ -313,6 +313,50 @@ class SigningPageRenderTest {
     }
 
     @Test
+    @DisplayName("ผู้ลงนามเลือกลายเซ็น — การ์ดลายเซ็นต้องมีตัวบอกสถานะชัดเจน (⭐ ค่าเริ่มต้น, กำลังเลือกใช้อันนี้, active notice)")
+    void signatureSelectionCardsRenderClearlyWithDefaultAndActiveIndicators() throws Exception {
+        com.ecom.academic.model.UserDigitalCertificate cert = new com.ecom.academic.model.UserDigitalCertificate();
+        cert.setUser(applicant);
+        cert.setCertificatePath("dummy_active.p12");
+        cert.setOriginalFilename("kku_active.p12");
+        cert.setSubjectDn("CN=นายสมชาย ทดสอบ, O=KKU, C=TH");
+        cert.setIssuerDn("CN=ODT KKU CA, O=KKU, C=TH");
+        cert.setValidFrom(java.time.LocalDateTime.now().minusDays(10));
+        cert.setValidTo(java.time.LocalDateTime.now().plusYears(1));
+        cert.setActive(true);
+        certificateRepository.save(cert);
+
+        Long sig1 = newSignature(applicant); // default = true
+
+        java.awt.image.BufferedImage image =
+                new java.awt.image.BufferedImage(200, 60, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "png", out);
+        String dataUrl = "data:image/png;base64," + java.util.Base64.getEncoder().encodeToString(out.toByteArray());
+        signatureService.create(applicant, dataUrl, SignatureKind.DRAW, "ลายเซ็น 2 (แบบทางการ)", null, null, false);
+
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+                "บันทึกข้อความ ขอรับการประเมินผลการสอน", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        String html = mockMvc.perform(get("/esign/sign/" + stepId)
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(html)
+                .contains("sig-choice-card")
+                .contains("ค่าเริ่มต้น")
+                .contains("กำลังเลือกใช้อันนี้")
+                .contains("activeSigNotice")
+                .contains("selectedSigLabel")
+                .contains("ลายเซ็น 2 (แบบทางการ)");
+    }
+
+    @Test
     @DisplayName("ผู้ลงนามที่ยังไม่มี Digital ID (.p12) — หน้าลงนามต้องแสดงกล่องแจ้งเตือนบังคับติดตั้งและมีคู่มือ Modal")
     void signingPageShowsP12RequirementAlertAndModalGuideWhenNoCert() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
@@ -433,5 +477,51 @@ class SigningPageRenderTest {
         org.assertj.core.api.Assertions.assertThat(img).isNotNull();
         org.assertj.core.api.Assertions.assertThat(img.getWidth()).isEqualTo(540);
         org.assertj.core.api.Assertions.assertThat(img.getHeight()).isEqualTo(185);
+    }
+
+    @Test
+    @DisplayName("หน้ารวมลายเซ็น (ยังไม่มี .p12): ต้องแสดงขั้นตอนที่ 1 ติดตั้งใบรับรองก่อน และล็อกส่วนสร้างลายเซ็น")
+    void mySignaturesRendersPrerequisiteStepWhenNoCert() throws Exception {
+        String html = mockMvc.perform(get("/esign/my-signatures")
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(html)
+                .contains("ขั้นตอนที่ 1")
+                .contains("ติดตั้งใบรับรองดิจิทัล Digital ID (.p12) ของท่านก่อน")
+                .contains("ขั้นตอนที่ 2: สร้างและบันทึกลายเซ็น")
+                .contains("รอการติดตั้ง Digital ID (.p12)")
+                .doesNotContain("id=\"signatureEditor\"")
+                .doesNotContain("id=\"btnOpenCertManage\"");
+    }
+
+    @Test
+    @DisplayName("หน้ารวมลายเซ็น (มี .p12 แล้ว): ต้องปลดล็อกส่วนสร้างลายเซ็น และมีปุ่มจัดการใบรับรอง .p12 พร้อม Modal")
+    void mySignaturesRendersEditorAndManageButtonWhenActiveCertExists() throws Exception {
+        com.ecom.academic.model.UserDigitalCertificate cert = new com.ecom.academic.model.UserDigitalCertificate();
+        cert.setUser(applicant);
+        cert.setCertificatePath("active_cert.p12");
+        cert.setOriginalFilename("kku_cert.p12");
+        cert.setSubjectDn("CN=เกรียงไกร ประเสริฐ, O=KKU, C=TH");
+        cert.setIssuerDn("CN=ODT KKU CA, O=KKU, C=TH");
+        cert.setValidFrom(java.time.LocalDateTime.now().minusDays(5));
+        cert.setValidTo(java.time.LocalDateTime.now().plusYears(1));
+        cert.setActive(true);
+        certificateRepository.save(cert);
+
+        String html = mockMvc.perform(get("/esign/my-signatures")
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        org.assertj.core.api.Assertions.assertThat(html)
+                .contains("Digital ID:")
+                .contains("เกรียงไกร ประเสริฐ")
+                .contains("จัดการใบรับรอง .p12")
+                .contains("id=\"signatureEditor\"")
+                .contains("id=\"p12ManageModal\"")
+                .doesNotContain("p12-step-badge")
+                .doesNotContain("รอการติดตั้ง Digital ID (.p12)");
     }
 }

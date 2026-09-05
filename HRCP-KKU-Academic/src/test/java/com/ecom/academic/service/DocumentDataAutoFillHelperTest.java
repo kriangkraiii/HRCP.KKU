@@ -24,7 +24,12 @@ class DocumentDataAutoFillHelperTest {
 
     @BeforeEach
     void setUp() {
-        autoFillHelper = new DocumentDataAutoFillHelper();
+        // None of the cases here link a teaching evaluation, so the summariser is
+        // never asked anything; the stub is only what the constructor requires.
+        // The evaluation path has its own test, EvaluationAutoFillTest, against
+        // the real service and real documents.
+        autoFillHelper = new DocumentDataAutoFillHelper(
+                org.mockito.Mockito.mock(AcademicRequestService.class));
 
         testUser = new UserDtls();
         testUser.setId(10);

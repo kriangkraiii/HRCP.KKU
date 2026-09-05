@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
+import com.ecom.academic.dto.EvaluationSummary;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
@@ -28,6 +29,16 @@ public class DocumentDataAutoFillHelper {
 
     private static final Logger log = LoggerFactory.getLogger(DocumentDataAutoFillHelper.class);
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * Reads the teaching evaluation a position request was built on. No cycle:
+     * the academic service knows nothing of position requests or of this helper.
+     */
+    private final AcademicRequestService academicRequestService;
+
+    public DocumentDataAutoFillHelper(AcademicRequestService academicRequestService) {
+        this.academicRequestService = academicRequestService;
+    }
 
     // ==================== Academic Request (Teaching Evaluation) ====================
 
@@ -155,6 +166,36 @@ public class DocumentDataAutoFillHelper {
             }
         }
 
+        // 2b. The teaching evaluation this request was built on.
+        //
+        // The link has existed since the request was created but nothing ever
+        // read it, so applicants retyped the course, the year and the result the
+        // system was already holding — and a typo in any of them went unnoticed,
+        // because there was nothing to compare against.
+        if (request != null && request.getLinkedEvaluation() != null) {
+            EvaluationSummary evaluation =
+                    academicRequestService.summarize(request.getLinkedEvaluation());
+            if (evaluation != null) {
+                putIfAbsent(data, "teaching_eval_request_code", evaluation.requestCode());
+                putIfAbsent(data, "teaching_eval_course_code", evaluation.courseCode());
+                putIfAbsent(data, "teaching_eval_course_name", evaluation.courseName());
+                putIfAbsent(data, "teaching_eval_academic_year", evaluation.academicYear());
+                putIfAbsent(data, "teaching_eval_semester", evaluation.semester());
+                putIfAbsent(data, "teaching_eval_result_level", evaluation.resultLevel());
+                putIfAbsent(data, "teaching_eval_date", evaluation.evaluationDate());
+                putIfAbsent(data, "teaching_eval_expiry", evaluation.expiryDate());
+
+                // The first row of ก.พ.ว. มข. 03's teaching-experience table is
+                // the course that was just evaluated often enough to be worth
+                // starting from. Only ever a starting point: step 3 below puts
+                // anything the applicant saved back on top.
+                if (docType == 1) {
+                    putIfAbsent(data, "teaching_subject_1", evaluation.courseName());
+                    putIfAbsent(data, "teaching_semester_1", evaluation.semester());
+                }
+            }
+        }
+
         // 3. Overlay existing saved JSON data (Highest Priority)
         if (existingJson != null && !existingJson.isBlank()) {
             try {
@@ -172,6 +213,13 @@ public class DocumentDataAutoFillHelper {
         }
 
         return data;
+    }
+
+    /** Writes a value only when there is one and nothing has claimed the key. */
+    private void putIfAbsent(Map<String, String> data, String key, String value) {
+        if (value != null && !value.isBlank()) {
+            data.putIfAbsent(key, value);
+        }
     }
 
     // ==================== Helper Methods ====================

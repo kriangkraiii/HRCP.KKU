@@ -9,6 +9,7 @@ import java.util.stream.Stream;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.academic.dto.EvaluationSummary;
 import com.ecom.academic.model.AcademicAttachment;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
@@ -780,11 +781,7 @@ public class AcademicRequestService {
             return null;
         }
         try {
-            String normalized = thaiDate
-                    .replace("๐", "0").replace("๑", "1").replace("๒", "2")
-                    .replace("๓", "3").replace("๔", "4").replace("๕", "5")
-                    .replace("๖", "6").replace("๗", "7").replace("๘", "8")
-                    .replace("๙", "9").trim();
+            String normalized = com.ecom.util.ThaiDateUtil.toArabicDigits(thaiDate).trim();
 
             String[] parts = normalized.split("[\\s/.\\-]+");
             if (parts.length < 3) {
@@ -840,6 +837,123 @@ public class AcademicRequestService {
         return requestRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId).stream()
                 .filter(this::isUsableEvaluation)
                 .toList();
+    }
+
+    /**
+     * Flattens one evaluation into the facts the position flow needs — the
+     * course, the year, the result and when it lapses.
+     *
+     * <p>Reads document 8, the notification of the result, and falls back to
+     * document 0 for anything it does not carry. The split is not arbitrary:
+     * document 8 is the authoritative record of the *result*, but it has no
+     * academic-year field at all — only {@code semester}, written "1/2568" — while
+     * document 0 is where the applicant states the year outright, and states it as
+     * a required field. So the course code comes from document 8 where present
+     * and document 0 otherwise, and the year comes from document 0 first, then
+     * from the semester's second half, then from the year the evaluation was
+     * carried out.
+     *
+     * @return a summary, never null; its fields are null where the documents are
+     *         silent, and callers must expect that of an evaluation that has not
+     *         reached a result yet
+     */
+    public EvaluationSummary summarize(AcademicRequest request) {
+        if (request == null) {
+            return null;
+        }
+        Map<String, String> doc8 = documentData(request.getId(), 8);
+        Map<String, String> doc0 = documentData(request.getId(), 0);
+
+        String semester = firstNonBlank(doc8.get("semester"), doc0.get("semester"));
+        String evaluationDate = firstNonBlank(doc8.get("evaluation_date"),
+                doc8.get("faculty_board_meeting_date"));
+
+        LocalDateTime expiryAt = resolveExpiry(request, doc8, evaluationDate);
+        Long daysLeft = expiryAt == null ? null
+                : java.time.temporal.ChronoUnit.DAYS.between(LocalDateTime.now(), expiryAt);
+
+        return new EvaluationSummary(
+                request.getId(),
+                request.getRequestCode(),
+                firstNonBlank(doc8.get("course_code"), doc0.get("course_code")),
+                firstNonBlank(doc8.get("course_name"), doc0.get("course_name")),
+                firstNonBlank(doc0.get("academic_year"), yearOf(semester),
+                        yearOf(evaluationDate)),
+                semester,
+                firstNonBlank(doc8.get("result_level"), doc8.get("eval_result_level"),
+                        doc8.get("evaluation_result")),
+                evaluationDate,
+                doc8.get("expiration_date"),
+                expiryAt,
+                daysLeft);
+    }
+
+    /**
+     * When this result lapses: the date on document 8 if it names one, otherwise
+     * the stored expiry, otherwise three years from the evaluation or, failing
+     * that, from the submission — the same ladder
+     * {@link #getLatestEvaluationExpiry} walks, so the countdown on the dashboard
+     * and the one beside each choice cannot disagree.
+     */
+    private LocalDateTime resolveExpiry(AcademicRequest request, Map<String, String> doc8,
+            String evaluationDate) {
+        LocalDateTime stated = parseThaiDate(doc8.get("expiration_date"));
+        if (stated != null) {
+            return stated;
+        }
+        if (request.getEvaluationExpiryDate() != null) {
+            return request.getEvaluationExpiryDate();
+        }
+        LocalDateTime evaluated = parseThaiDate(evaluationDate);
+        if (evaluated != null) {
+            return evaluated.plusYears(3);
+        }
+        return request.getSubmissionDate() == null ? null
+                : request.getSubmissionDate().plusYears(3);
+    }
+
+    /** The stored form data of one document, or an empty map when there is none. */
+    private Map<String, String> documentData(Long requestId, int documentType) {
+        List<AcademicDocument> docs = documentRepository
+                .findByRequestIdAndDocumentType(requestId, documentType);
+        for (AcademicDocument doc : docs) {
+            if (doc.getJsonData() == null || doc.getJsonData().isBlank()) {
+                continue;
+            }
+            try {
+                return new com.fasterxml.jackson.databind.ObjectMapper().readValue(
+                        doc.getJsonData(),
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                        });
+            } catch (Exception e) {
+                log.warn("Could not read document {} of evaluation {}: {}", documentType,
+                        requestId, e.getMessage());
+            }
+        }
+        return Map.of();
+    }
+
+    /**
+     * The Buddhist year inside a semester ("1/2568") or a date ("17 กุมภาพันธ์
+     * 2569") — the last run of four digits, which is where the year sits in every
+     * form these fields take.
+     */
+    private static String yearOf(String text) {
+        if (text == null) {
+            return null;
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(\\d{4})(?!.*\\d{4})")
+                .matcher(com.ecom.util.ThaiDateUtil.toArabicDigits(text));
+        return m.find() ? m.group(1) : null;
+    }
+
+    private static String firstNonBlank(String... candidates) {
+        for (String candidate : candidates) {
+            if (candidate != null && !candidate.isBlank()) {
+                return candidate;
+            }
+        }
+        return null;
     }
 
     /** Whether one evaluation still backs a position request. */

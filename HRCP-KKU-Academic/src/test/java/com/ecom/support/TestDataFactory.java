@@ -240,6 +240,28 @@ public class TestDataFactory {
         return r;
     }
 
+    /**
+     * A finished, passed evaluation for one named course in one academic year —
+     * the pair that decides whether a position request may reuse it.
+     *
+     * <p>Writes both documents a real evaluation carries: document 0, where the
+     * applicant names the course and the year, and document 8, the notification
+     * of the result. The two disagree by design in one respect — document 8 has
+     * no year field of its own, only {@code semester} — and that is exactly the
+     * gap the course key has to bridge.
+     */
+    public AcademicRequest evaluationForCourse(UserDtls applicant, String courseCode,
+            String academicYear) {
+        AcademicRequest r = evaluation(applicant, RequestStatus.COMPLETED);
+        academicDocument(r, 0, "{\"course_code\":\"" + courseCode
+                + "\",\"course_name\":\"วิชาทดสอบ " + courseCode
+                + "\",\"academic_year\":\"" + academicYear + "\"}");
+        academicDocument(r, 8, "{\"evaluation_result\":\"ผ่าน\",\"course_code\":\"" + courseCode
+                + "\",\"course_name\":\"วิชาทดสอบ " + courseCode
+                + "\",\"result_level\":\"ชำนาญ\",\"semester\":\"1/" + academicYear + "\"}");
+        return r;
+    }
+
     public AcademicDocument academicDocument(AcademicRequest request, int type, String json) {
         AcademicDocument d = new AcademicDocument();
         d.setRequest(request);

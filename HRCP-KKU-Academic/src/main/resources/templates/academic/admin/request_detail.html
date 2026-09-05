@@ -101,10 +101,11 @@
           <div class="detail-info-item">
             <small>ตำแหน่งที่ขอ</small>
             <div class="di-value">
-              <span th:if="${doc0Data.getOrDefault('chk1', '') == '✓'}">ผศ.</span>
-              <span th:if="${doc0Data.getOrDefault('chk2', '') == '✓'}">รศ.</span>
+              <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk1', '') == '✓'}">ผู้ช่วยศาสตราจารย์</span>
+              <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk2', '') == '✓'}">รองศาสตราจารย์</span>
+              <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk3', '') == '✓'}">ศาสตราจารย์</span>
               <span
-                th:if="${doc0Data.getOrDefault('chk1', '') != '✓' and doc0Data.getOrDefault('chk2', '') != '✓'}">-</span>
+                th:if="${doc0Data == null or (doc0Data.getOrDefault('chk1', '') != '✓' and doc0Data.getOrDefault('chk2', '') != '✓' and doc0Data.getOrDefault('chk3', '') != '✓')}">-</span>
             </div>
           </div>
         </div>

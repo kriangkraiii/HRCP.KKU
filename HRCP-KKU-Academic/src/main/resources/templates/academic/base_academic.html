@@ -17,7 +17,7 @@
     <link rel="stylesheet" href="/css/style.css?v=3.1">
     <link rel="stylesheet" href="/css/dark-theme.css?v=3.1">
     <link rel="stylesheet" href="/css/doc_preview.css?v=3.0">
-    <link rel="stylesheet" href="/css/esign.css?v=2.9">
+    <link rel="stylesheet" href="/css/esign.css?v=3.2">
     <link rel="stylesheet" href="/css/searchable_select.css?v=1.0">
     <script th:inline="javascript">
         // Anti-flash: apply user's server-side theme BEFORE paint
@@ -177,19 +177,7 @@
         <script src="/js/auto_draft.js?v=2.9"></script>
         <script src="/js/checkbox_defaults.js"></script>
 
-        <!-- Custom Language Switcher -->
-        <div id="google_translate_element"></div> <!-- Hidden but required for init -->
-
-        <div class="lang-dropdown">
-            <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdownMenu" aria-label="เปลี่ยนภาษา">
-                <i class="fas fa-language lang-icon" id="langDropdownIcon" aria-hidden="true"></i>
-                <span id="langCurrentLabel">TH</span>
-            </button>
-            <div class="lang-dropdown-menu" id="langDropdownMenu" role="menu" aria-label="เลือกภาษา">
-                <button type="button" class="lang-dropdown-item" data-lang="th" role="menuitem" tabindex="-1">Thai</button>
-                <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem" tabindex="-1">English</button>
-            </div>
-        </div>
+        <div id="google_translate_element" style="display:none;"></div>
 
         <!-- Language Switcher Loading Overlay (Glassmorphism) -->
         <div id="langLoadingOverlay" class="lang-loading-overlay" aria-live="polite" aria-hidden="true">
@@ -270,6 +258,123 @@
             }
             [data-theme="dark"] .lang-loading-sub {
                 color: #94a3b8;
+            }
+
+            /* Topbar Language Dropdown */
+            .topbar-lang-dropdown {
+                position: relative;
+                display: inline-flex;
+                align-items: center;
+                margin-bottom: 0;
+            }
+            .topbar-lang-dropdown .lang-dropdown-btn {
+                display: inline-flex;
+                align-items: center;
+                gap: 6px;
+                background: var(--bg-card, #ffffff);
+                border: 1px solid var(--border-color, #e2e8f0);
+                color: var(--text-dark, #334155);
+                font-size: 0.82rem;
+                font-weight: 600;
+                cursor: pointer;
+                padding: 4px 10px;
+                border-radius: 20px;
+                height: 34px;
+                transition: all 0.2s ease;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+            }
+            .topbar-lang-dropdown .lang-dropdown-btn:hover {
+                border-color: var(--color-primary, #0d47a1);
+                color: var(--color-primary, #0d47a1);
+                background: rgba(13, 71, 161, 0.04);
+            }
+            .topbar-lang-dropdown .lang-dropdown-btn .lang-icon {
+                font-size: 1rem;
+                color: var(--color-primary, #0d47a1);
+            }
+            .topbar-lang-dropdown .lang-dropdown-menu {
+                display: none;
+                position: absolute;
+                top: calc(100% + 6px);
+                bottom: auto;
+                right: 0;
+                left: auto;
+                min-width: 130px;
+                background: var(--bg-card, #ffffff);
+                border: 1px solid var(--border-color, #e2e8f0);
+                border-radius: 10px;
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+                padding: 6px 0;
+                margin-bottom: 0;
+                z-index: 1060;
+                overflow: hidden;
+            }
+            .topbar-lang-dropdown .lang-dropdown-menu.show {
+                display: block;
+                animation: langDropInTop 0.18s ease-out;
+            }
+            @keyframes langDropInTop {
+                from {
+                    opacity: 0;
+                    transform: translateY(-6px);
+                }
+                to {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+            }
+            .topbar-lang-dropdown .lang-dropdown-item {
+                display: block;
+                width: 100%;
+                padding: 7px 16px;
+                background: none;
+                border: none;
+                color: var(--text-dark, #334155);
+                font-size: 0.85rem;
+                font-weight: 500;
+                text-align: left;
+                cursor: pointer;
+                transition: all 0.15s ease;
+            }
+            .topbar-lang-dropdown .lang-dropdown-item:hover {
+                background: rgba(13, 71, 161, 0.06);
+                color: var(--color-primary, #0d47a1);
+            }
+            .topbar-lang-dropdown .lang-dropdown-item.active {
+                color: var(--color-primary, #0d47a1);
+                font-weight: 700;
+                background: rgba(13, 71, 161, 0.08);
+            }
+
+            /* Dark Theme Support */
+            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-btn {
+                background: var(--bg-card, #1e293b);
+                border-color: rgba(255, 255, 255, 0.12);
+                color: #e2e8f0;
+            }
+            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-btn:hover {
+                border-color: #60a5fa;
+                color: #60a5fa;
+                background: rgba(96, 165, 250, 0.1);
+            }
+            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-btn .lang-icon {
+                color: #60a5fa;
+            }
+            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-menu {
+                background: var(--bg-card, #1e293b);
+                border-color: rgba(255, 255, 255, 0.12);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+            }
+            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-item {
+                color: #e2e8f0;
+            }
+            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-item:hover {
+                background: rgba(96, 165, 250, 0.12);
+                color: #93c5fd;
+            }
+            [data-theme="dark"] .topbar-lang-dropdown .lang-dropdown-item.active {
+                color: #60a5fa;
+                background: rgba(96, 165, 250, 0.18);
             }
         </style>
 
@@ -586,7 +691,7 @@
                 <!-- Notifications Bell Dropdown -->
                 <div class="dropdown" id="topbarNotificationContainer">
                     <button type="button"
-                            class="topbar-icon-btn position-relative dropdown-toggle border-0 bg-transparent p-0"
+                            class="topbar-icon-btn position-relative border-0 bg-transparent p-0"
                             id="topbarNotifBtn"
                             data-bs-toggle="dropdown"
                             data-bs-auto-close="outside"
@@ -595,10 +700,11 @@
                             aria-label="การแจ้งเตือน"
                             style="cursor: pointer;">
                         <i class="far fa-bell fa-lg"></i>
-                        <span class="position-absolute topbar-badge-dot rounded-circle bg-danger"
+                        <span class="position-absolute badge rounded-pill bg-danger topbar-badge-count"
                               id="topbarNotifBadge"
-                              th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
-                              th:title="${unreadNotificationCount} + ' รายการที่ยังไม่ได้อ่าน'"></span>
+                              th:style="${unreadNotificationCount != null and unreadNotificationCount > 0 ? 'display:inline-flex;' : 'display:none;'}"
+                              th:text="${unreadNotificationCount != null and unreadNotificationCount > 99 ? '99+' : (unreadNotificationCount != null ? unreadNotificationCount : 0)}"
+                              th:title="${unreadNotificationCount != null ? unreadNotificationCount : 0} + ' รายการที่ยังไม่ได้อ่าน'">0</span>
                     </button>
                     <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-0 rounded-4"
                          id="topbarNotifMenu"
@@ -660,6 +766,18 @@
                     <!-- Search Results Dropdown -->
                     <div id="globalSearchResults" class="global-search-dropdown shadow-lg border-0 rounded-3 position-absolute start-0 end-0 mt-1 d-none"
                          style="z-index: 1050; max-height: 400px; overflow-y: auto; background: var(--bg-card, #ffffff);">
+                    </div>
+                </div>
+
+                <!-- Custom Language Switcher (Topbar next to Quick Search) -->
+                <div class="lang-dropdown topbar-lang-dropdown">
+                    <button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-haspopup="true" aria-expanded="false" aria-controls="langDropdownMenu" aria-label="เปลี่ยนภาษา">
+                        <i class="fas fa-language lang-icon" id="langDropdownIcon" aria-hidden="true"></i>
+                        <span id="langCurrentLabel">TH</span>
+                    </button>
+                    <div class="lang-dropdown-menu shadow-sm" id="langDropdownMenu" role="menu" aria-label="เลือกภาษา">
+                        <button type="button" class="lang-dropdown-item" data-lang="th" role="menuitem" tabindex="-1">Thai</button>
+                        <button type="button" class="lang-dropdown-item" data-lang="en" role="menuitem" tabindex="-1">English</button>
                     </div>
                 </div>
 

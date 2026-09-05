@@ -357,7 +357,7 @@ public class AcademicApplicantController {
         String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
         Map<String, String> doc1Data = autoFillHelper.getPreFilledAcademicDocData(request, 1, existingJson);
 
-        // Slot-based attachments (1-5)
+        // Slot-based attachments (1-5) for backward compatibility
         Map<Integer, List<AcademicAttachment>> attachmentsBySlot = requestService.getAttachmentsGroupedBySlot(id);
         long totalAttachmentCount = attachmentsBySlot.values().stream().mapToLong(List::size).sum();
 
@@ -373,10 +373,18 @@ public class AcademicApplicantController {
             slotBytes.put(i, slotSize);
         }
 
+        List<AcademicAttachment> attachments = requestService.getAttachments(id);
+        totalAttachmentCount = attachments != null ? attachments.size() : 0;
+        long totalBytes = requestService.getTotalAttachmentSize(id);
+        String totalSizeFormatted = String.format("%.1f", totalBytes / (1024.0 * 1024.0));
+
         model.addAttribute("request", request);
         model.addAttribute("existingDocs", existingDocs);
         model.addAttribute("existingData", existingJson);
         model.addAttribute("doc1Data", doc1Data);
+        model.addAttribute("attachments", attachments);
+        model.addAttribute("totalBytes", totalBytes);
+        model.addAttribute("totalSizeFormatted", totalSizeFormatted);
         model.addAttribute("attachmentsBySlot", attachmentsBySlot);
         model.addAttribute("slotSizes", slotSizes);
         model.addAttribute("slotCounts", slotCounts);
@@ -428,35 +436,18 @@ public class AcademicApplicantController {
         }
 
         if ("submit".equals(action)) {
-            Map<Integer, List<AcademicAttachment>> attachmentsBySlot = requestService.getAttachmentsGroupedBySlot(id);
-            List<Integer> missingSlots = new java.util.ArrayList<>();
-            List<Integer> overQuotaSlots = new java.util.ArrayList<>();
-            final long MAX_SLOT_BYTES = 75L * 1024L * 1024L;
+            long activeAttachments = requestService.countActiveAttachments(id);
+            long totalSize = requestService.getTotalAttachmentSize(id);
+            final long MAX_TOTAL_BYTES = 75L * 1024L * 1024L;
 
-            for (int i = 1; i <= 5; i++) {
-                List<AcademicAttachment> slotAtts = attachmentsBySlot.get(i);
-                if (slotAtts == null || slotAtts.isEmpty()) {
-                    missingSlots.add(i);
-                } else {
-                    long slotSize = slotAtts.stream()
-                            .mapToLong(a -> a.getFileSize() != null ? a.getFileSize() : 0L).sum();
-                    if (slotSize > MAX_SLOT_BYTES) {
-                        overQuotaSlots.add(i);
-                    }
-                }
+            if (activeAttachments == 0) {
+                redirectAttributes.addFlashAttribute("error", "กรุณาแนบไฟล์หรือลิงก์เอกสารประกอบอย่างน้อย 1 รายการก่อนบันทึก");
+                return "redirect:/user/academic/request/" + id + "/document-1?error=no_attachments";
             }
-            if (!missingSlots.isEmpty() || !overQuotaSlots.isEmpty()) {
-                List<String> errorParts = new java.util.ArrayList<>();
-                if (!missingSlots.isEmpty()) {
-                    String missingStr = missingSlots.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", "));
-                    errorParts.add("กรุณาแนบไฟล์เอกสารประกอบให้ครบทั้ง 5 ช่อง (ยังขาดช่องที่ " + missingStr + ")");
-                }
-                if (!overQuotaSlots.isEmpty()) {
-                    String overStr = overQuotaSlots.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(", "));
-                    errorParts.add("ช่องที่ " + overStr + " มีขนาดรวมเกินขีดจำกัด 75 MB ต่อช่อง");
-                }
-                redirectAttributes.addFlashAttribute("error", String.join(" และ ", errorParts));
-                return "redirect:/user/academic/request/" + id + "/document-1" + (missingSlots.size() == 5 ? "?error=no_attachments" : "");
+            if (totalSize > MAX_TOTAL_BYTES) {
+                String usedMB = String.format("%.1f", totalSize / (1024.0 * 1024.0));
+                redirectAttributes.addFlashAttribute("error", "ขนาดไฟล์แนบรวมทั้งหมด (" + usedMB + " MB) เกินขีดจำกัด 75 MB ต่อคำร้อง");
+                return "redirect:/user/academic/request/" + id + "/document-1";
             }
         }
 
@@ -530,8 +521,8 @@ public class AcademicApplicantController {
                 else resolvedSlot = 1;
             }
 
-            long slotCurrentSize = requestService.getSlotTotalSize(id, resolvedSlot);
-            final long MAX_SLOT_BYTES = 75L * 1024L * 1024L; // 75 MB per slot
+            long currentTotalSize = requestService.getTotalAttachmentSize(id);
+            final long MAX_TOTAL_BYTES = 75L * 1024L * 1024L; // 75 MB total per request
 
             String lower = originalFilename.toLowerCase();
             boolean isAllowed = lower.endsWith(".pdf") || lower.endsWith(".docx") || lower.endsWith(".doc") || lower.endsWith(".zip");
@@ -540,11 +531,11 @@ public class AcademicApplicantController {
                 continue;
             }
 
-            if (slotCurrentSize + file.getSize() > MAX_SLOT_BYTES) {
-                String usedMB = String.format("%.1f", slotCurrentSize / (1024.0 * 1024.0));
+            if (currentTotalSize + file.getSize() > MAX_TOTAL_BYTES) {
+                String usedMB = String.format("%.1f", currentTotalSize / (1024.0 * 1024.0));
                 String fileMB = String.format("%.1f", file.getSize() / (1024.0 * 1024.0));
                 redirectAttributes.addFlashAttribute("error",
-                        "ช่องที่ " + resolvedSlot + " มีขนาดไฟล์เดิม " + usedMB + " MB เมื่อเพิ่มไฟล์ " + originalFilename + " (" + fileMB + " MB) จะเกินขนาดรวมสูงสุด 75 MB ต่อช่อง");
+                        "ขนาดไฟล์แนบเดิมรวม " + usedMB + " MB เมื่อเพิ่มไฟล์ " + originalFilename + " (" + fileMB + " MB) จะเกินขนาดรวมสูงสุด 75 MB ต่อคำร้อง");
                 continue;
             }
 
@@ -635,7 +626,10 @@ public class AcademicApplicantController {
         attachment.setChecklistItem(targetSlot);
         requestService.saveAttachment(attachment);
 
-        redirectAttributes.addFlashAttribute("success", "แนบลิงก์ไฟล์สำหรับช่องที่ " + targetSlot + " เรียบร้อยแล้ว");
+        redirectAttributes.addFlashAttribute("success",
+                (slot != null && slot >= 1 && slot <= 5)
+                        ? "แนบลิงก์ไฟล์สำหรับช่องที่ " + slot + " เรียบร้อยแล้ว"
+                        : "แนบลิงก์ไฟล์เรียบร้อยแล้ว");
         return "redirect:/user/academic/request/" + id + "/document-1";
     }
 

@@ -9,7 +9,7 @@ public enum PositionRequestStatus {
     REJECTED("ไม่รับคำร้อง", "fa-circle-xmark", "#c62828"),
     SCREENING_APPROVED("รับรองมติกลั่นกรองฯ", "fa-stamp", "#2e7d32"),
     COLLEGE_COMMITTEE("เสนอวาระคณะกรรมการวิทยาลัยฯ", "fa-landmark", "#7b1fa2"),
-    COLLEGE_APPROVED("รับรองมติคณะกรรมการวิทยาลัยฯ", "fa-certificate", "#1b5e20"),
+    COLLEGE_APPROVED("รับรองมติคณะกรรมการวิทยาลัยฯ", "fa-file-circle-check", "#1b5e20"),
     SENT_TO_HR("ส่งออกกองทรัพยากรบุคคล มข.", "fa-paper-plane", "#004d40");
 
     private final String thaiLabel;

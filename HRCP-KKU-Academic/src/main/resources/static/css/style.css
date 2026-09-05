@@ -716,6 +716,30 @@ body {
   animation: pulseBadge 2s infinite;
 }
 
+.topbar-badge-count {
+  top: 0px;
+  right: -2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  line-height: 14px;
+  text-align: center;
+  border: 1.5px solid #ffffff;
+  box-shadow: 0 2px 5px rgba(220, 53, 69, 0.35);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  z-index: 2;
+}
+
+.topbar-icon-btn.dropdown-toggle::after,
+#topbarNotifBtn::after {
+  display: none !important;
+}
+
 @keyframes pulseBadge {
   0% {
     transform: scale(0.95);

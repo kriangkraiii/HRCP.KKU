@@ -156,6 +156,9 @@
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <span th:if="${param.error[0] == 'active_exists'}">ไม่สามารถยื่นคำร้องใหม่ได้ มีคำร้องที่กำลังดำเนินการอยู่</span>
+                <span th:if="${param.error[0] == 'course_already_used'}">
+                    ผลการประเมินการสอนรายวิชาและปีการศึกษานี้ ถูกใช้ยื่นขอกำหนดตำแหน่งไปแล้ว จึงใช้<strong>ยื่นซ้ำ</strong>อีกไม่ได้
+                </span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 

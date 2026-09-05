@@ -28,7 +28,11 @@
             <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
                 <i class="fas fa-exclamation-circle me-1"></i>
                 <span th:if="${param.error[0] == 'incomplete_docs'}">กรุณากรอกเอกสารให้ครบทุกรายการก่อนส่งคำร้อง</span>
-                <span th:unless="${param.error[0] == 'incomplete_docs'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
+                <span th:if="${param.error[0] == 'course_already_used'}">
+                    ยื่นคำร้องนี้ไม่ได้ เพราะผลการประเมินการสอนรายวิชาและปีการศึกษานี้
+                    ถูกใช้ในคำร้องอื่นที่ยื่นไปแล้ว จึงใช้<strong>ยื่นซ้ำ</strong>อีกไม่ได้
+                </span>
+                <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'course_already_used'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
@@ -57,6 +61,39 @@
                         <div class="col-md-4">
                             <small class="text-muted">สาขาวิชา</small>
                             <div th:text="${doc2Data.getOrDefault('major', '-')}"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ผลประเมินการสอนที่คำร้องนี้ใช้ยื่น -->
+            <div th:if="${evaluationSummary != null}" class="card card-academic mb-4">
+                <div class="card-header bg-white border-bottom">
+                    <h5 class="mb-0"><i class="fas fa-chalkboard-teacher me-2"></i>ผลการประเมินการสอนที่ใช้ยื่นคำร้องนี้</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2 mb-3">
+                        <div class="fw-semibold" th:text="${evaluationSummary.courseLabel()}">รหัสวิชา — ชื่อวิชา</div>
+                        <span class="badge bg-light text-dark border">
+                            คำร้องประเมิน <span th:text="${evaluationSummary.requestCode()}"></span>
+                        </span>
+                    </div>
+                    <div class="row g-3 small">
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted">รหัสรายวิชา</div>
+                            <div class="fw-semibold" th:text="${evaluationSummary.courseCode() ?: '—'}">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted">ปีการศึกษา</div>
+                            <div class="fw-semibold" th:text="${evaluationSummary.academicYear() ?: '—'}">—</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted">ผลการประเมิน</div>
+                            <div class="fw-semibold" th:text="${evaluationSummary.resultLevel() ?: 'ผ่าน'}">ผ่าน</div>
+                        </div>
+                        <div class="col-6 col-md-3">
+                            <div class="text-muted">วันหมดอายุ</div>
+                            <div class="fw-semibold" th:text="${evaluationSummary.expiryDate() ?: '—'}">—</div>
                         </div>
                     </div>
                 </div>

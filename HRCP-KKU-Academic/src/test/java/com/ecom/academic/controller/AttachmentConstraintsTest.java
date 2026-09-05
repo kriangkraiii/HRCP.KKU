@@ -141,13 +141,13 @@ class AttachmentConstraintsTest {
     }
 
     @Test
-    @DisplayName("ปฏิเสธไฟล์เมื่อขนาดไฟล์แนบรวมของช่องเกิน 75 MB")
+    @DisplayName("ปฏิเสธไฟล์เมื่อขนาดไฟล์แนบรวมของคำร้องเกิน 75 MB")
     void uploadExceeding75MBTotal_shouldBeRejected() throws Exception {
-        // มีไฟล์ในช่องที่ 1 อยู่แล้ว 70 MB (73,400,320 bytes)
+        // มีไฟล์อยู่แล้ว 70 MB (73,400,320 bytes)
         long current70MB = 70L * 1024L * 1024L;
-        when(requestService.getSlotTotalSize(1L, 1)).thenReturn(current70MB);
+        when(requestService.getTotalAttachmentSize(1L)).thenReturn(current70MB);
 
-        // จะอัปโหลดเพิ่ม 10 MB ในช่องที่ 1 (เกินขีดจำกัด 75 MB ของช่อง)
+        // จะอัปโหลดเพิ่ม 10 MB (เกินขีดจำกัด 75 MB รวม)
         byte[] tenMBBytes = new byte[10 * 1024 * 1024];
         MockMultipartFile largeFile = new MockMultipartFile("files", "extra_large.pdf", "application/pdf", tenMBBytes);
 
@@ -208,16 +208,9 @@ class AttachmentConstraintsTest {
     }
 
     @Test
-    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อยังแนบไฟล์ไม่ครบทั้ง 5 ช่อง จะถูกปฏิเสธ")
+    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อยังไม่มีไฟล์แนบเลย จะถูกปฏิเสธ")
     void submitDoc1_missingSlots_shouldBeRejected() throws Exception {
-        Map<Integer, List<AcademicAttachment>> grouped = new java.util.HashMap<>();
-        for (int i = 1; i <= 5; i++) {
-            grouped.put(i, new java.util.ArrayList<>());
-        }
-        // แนบเฉพาะช่อง 1 และ 2
-        grouped.get(1).add(new AcademicAttachment());
-        grouped.get(2).add(new AcademicAttachment());
-        when(requestService.getAttachmentsGroupedBySlot(1L)).thenReturn(grouped);
+        when(requestService.countActiveAttachments(1L)).thenReturn(0L);
 
         Map<String, String> formData = new java.util.HashMap<>();
         formData.put("action", "submit");
@@ -229,21 +222,15 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("ครบทั้ง 5 ช่อง");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("3, 4, 5");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1?error=no_attachments");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("อย่างน้อย 1 รายการ");
     }
 
     @Test
-    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อแนบไฟล์ครบทั้ง 5 ช่อง จะสำเร็จ")
+    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อมีไฟล์แนบและขนาดไม่เกิน 75 MB จะสำเร็จ")
     void submitDoc1_all5SlotsPresent_shouldSucceed() throws Exception {
-        Map<Integer, List<AcademicAttachment>> grouped = new java.util.HashMap<>();
-        for (int i = 1; i <= 5; i++) {
-            List<AcademicAttachment> list = new java.util.ArrayList<>();
-            list.add(new AcademicAttachment());
-            grouped.put(i, list);
-        }
-        when(requestService.getAttachmentsGroupedBySlot(1L)).thenReturn(grouped);
+        when(requestService.countActiveAttachments(1L)).thenReturn(1L);
+        when(requestService.getTotalAttachmentSize(1L)).thenReturn(10L * 1024L * 1024L);
         when(documentService.generateDocument(eq(1L), eq(1), anyString(), any())).thenReturn("generated/doc1.docx");
 
         Map<String, String> formData = new java.util.HashMap<>();
@@ -261,21 +248,10 @@ class AttachmentConstraintsTest {
     }
 
     @Test
-    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อมีช่องที่ขนาดรวมเกิน 75 MB จะถูกปฏิเสธ")
+    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อขนาดไฟล์แนบรวมเกิน 75 MB จะถูกปฏิเสธ")
     void submitDoc1_slotOver75MB_shouldBeRejected() throws Exception {
-        Map<Integer, List<AcademicAttachment>> grouped = new java.util.HashMap<>();
-        for (int i = 1; i <= 5; i++) {
-            List<AcademicAttachment> list = new java.util.ArrayList<>();
-            AcademicAttachment att = new AcademicAttachment();
-            if (i == 2) {
-                att.setFileSize(76L * 1024L * 1024L); // 76 MB > 75 MB
-            } else {
-                att.setFileSize(10L * 1024L * 1024L); // 10 MB
-            }
-            list.add(att);
-            grouped.put(i, list);
-        }
-        when(requestService.getAttachmentsGroupedBySlot(1L)).thenReturn(grouped);
+        when(requestService.countActiveAttachments(1L)).thenReturn(1L);
+        when(requestService.getTotalAttachmentSize(1L)).thenReturn(76L * 1024L * 1024L); // 76 MB > 75 MB
 
         Map<String, String> formData = new java.util.HashMap<>();
         formData.put("action", "submit");
@@ -288,7 +264,7 @@ class AttachmentConstraintsTest {
         String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("ช่องที่ 2 มีขนาดรวมเกินขีดจำกัด 75 MB ต่อช่อง");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("เกินขีดจำกัด 75 MB");
         verify(requestService, never()).saveDocument(any(), eq(1), anyString(), anyString(), anyString(), any());
     }
 
@@ -304,7 +280,7 @@ class AttachmentConstraintsTest {
                 principal, redirectAttributes);
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("success")).contains("ช่องที่ 3 เรียบร้อยแล้ว");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("success")).contains("เรียบร้อยแล้ว");
         verify(requestService).saveAttachment(captor.capture());
 
         AcademicAttachment saved = captor.getValue();
@@ -331,25 +307,10 @@ class AttachmentConstraintsTest {
     }
 
     @Test
-    @DisplayName("การยื่นเอกสารที่ 1 โดยมีลิงก์แนบในบางช่องหรือทุกช่อง นับเป็นรายการที่ผ่านเกณฑ์ครบทั้ง 5 ช่อง")
+    @DisplayName("การยื่นเอกสารที่ 1 โดยมีลิงก์แนบ นับเป็นรายการที่ผ่านเกณฑ์")
     void submitDoc1_withLinkAttachments_shouldSucceed() throws Exception {
-        Map<Integer, List<AcademicAttachment>> grouped = new java.util.HashMap<>();
-        for (int i = 1; i <= 5; i++) {
-            List<AcademicAttachment> list = new java.util.ArrayList<>();
-            AcademicAttachment att = new AcademicAttachment();
-            if (i >= 3) {
-                att.setFileType("LINK");
-                att.setFileSize(0L);
-                att.setStoredFilePath("https://drive.google.com/folder/" + i);
-            } else {
-                att.setFileType("PDF");
-                att.setFileSize(1024L * 1024L);
-                att.setStoredFilePath("uploads/file_" + i + ".pdf");
-            }
-            list.add(att);
-            grouped.put(i, list);
-        }
-        when(requestService.getAttachmentsGroupedBySlot(1L)).thenReturn(grouped);
+        when(requestService.countActiveAttachments(1L)).thenReturn(2L);
+        when(requestService.getTotalAttachmentSize(1L)).thenReturn(1024L * 1024L);
         when(documentService.generateDocument(eq(1L), eq(1), anyString(), any())).thenReturn("generated/doc1.docx");
 
         Map<String, String> formData = new java.util.HashMap<>();

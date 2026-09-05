@@ -16,6 +16,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.academic.dto.EvaluationChoice;
+import com.ecom.academic.dto.EvaluationSummary;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionAttachment;
@@ -220,7 +222,105 @@ public class PositionRequestService {
      * meant expiry was effectively never enforced (GAP-21).
      */
     public List<AcademicRequest> getEligibleEvaluations(Integer userId) {
-        return academicRequestService.findUsableEvaluations(userId);
+        Set<String> spent = getSpentCourses(userId).keySet();
+        return academicRequestService.findUsableEvaluations(userId).stream()
+                .filter(evaluation -> !spent.contains(
+                        academicRequestService.summarize(evaluation).courseKey()))
+                .toList();
+    }
+
+    /**
+     * Every teaching evaluation this applicant could put forward, each marked
+     * with whether its course has already been spent.
+     *
+     * <p>The unmarked ones are exactly {@link #getEligibleEvaluations}; this adds
+     * the ones the rule excludes, and why, so the screen can say so. Anything
+     * that failed, was refused, or has lapsed is not here at all — that is not a
+     * choice being withheld, it is not a choice.
+     */
+    public List<EvaluationChoice> getEvaluationChoices(Integer applicantId) {
+        Map<String, String> spent = getSpentCourses(applicantId);
+        return academicRequestService.findUsableEvaluations(applicantId).stream()
+                .map(academicRequestService::summarize)
+                .map(summary -> new EvaluationChoice(summary,
+                        spent.containsKey(summary.courseKey()),
+                        spent.get(summary.courseKey())))
+                .toList();
+    }
+
+    /**
+     * Statuses that consume nothing. A draft has not been submitted, and a
+     * rejected request never got anywhere — its author has to be able to put the
+     * same teaching result forward again, or one refusal would burn an evaluation
+     * that is still perfectly valid. Same rule, and the same reasoning, as
+     * {@code ScopusQueryService.STATUSES_THAT_FREE_A_PUBLICATION}.
+     */
+    private static final List<PositionRequestStatus> STATUSES_THAT_FREE_A_COURSE =
+            List.of(PositionRequestStatus.DRAFT, PositionRequestStatus.REJECTED);
+
+    /**
+     * The courses this applicant has already spent, each mapped to the request
+     * that spent it.
+     *
+     * <p>Keyed by {@link EvaluationSummary#courseKey()} — course code plus
+     * academic year — so that a second evaluation of the same course in the same
+     * year is caught too, and so that the same course in a <em>later</em> year is
+     * not. The request code rides along because a screen that merely hides a
+     * choice leaves the applicant guessing; it can now say which request took it.
+     *
+     * <p>Derived from {@code linked_evaluation_id} rather than stored in a table
+     * of its own: the link is already in the database, the course and the year are
+     * already in the evaluation's documents, and a stored copy could only drift
+     * from them.
+     */
+    public Map<String, String> getSpentCourses(Integer applicantId) {
+        if (applicantId == null) {
+            return Map.of();
+        }
+        Map<String, String> spent = new LinkedHashMap<>();
+        for (PositionRequest request : requestRepository.findConsumingEvaluations(
+                applicantId, STATUSES_THAT_FREE_A_COURSE)) {
+            EvaluationSummary summary = academicRequestService.summarize(request.getLinkedEvaluation());
+            if (summary != null) {
+                spent.putIfAbsent(summary.courseKey(),
+                        request.getRequestCode() != null ? request.getRequestCode()
+                                : String.valueOf(request.getId()));
+            }
+        }
+        return spent;
+    }
+
+    /**
+     * Whether the evaluation behind this request is still free to be spent.
+     *
+     * <p>Asked again at submission, not only when the draft was created. A draft
+     * can sit for weeks, and in the meantime another request of the same
+     * applicant's may have gone in on the same course — the draft was legal when
+     * it was made and is not legal now.
+     *
+     * <p>A request carrying no evaluation is left alone: whether that is
+     * allowed is a different rule, and answering "no" here would report the
+     * wrong reason.
+     */
+    public boolean isEvaluationStillAvailable(PositionRequest request) {
+        if (request == null || request.getLinkedEvaluation() == null) {
+            return true;
+        }
+        EvaluationSummary summary = academicRequestService.summarize(request.getLinkedEvaluation());
+        if (summary == null) {
+            return true;
+        }
+        // getSpentCourses skips DRAFT, so a draft never reads as blocking itself.
+        return !getSpentCourses(request.getApplicant().getId()).containsKey(summary.courseKey());
+    }
+
+    /** Whether this applicant may still start a request on this evaluation. */
+    public boolean canUseEvaluation(Integer applicantId, Long evaluationId) {
+        if (evaluationId == null) {
+            return false;
+        }
+        return getEligibleEvaluations(applicantId).stream()
+                .anyMatch(evaluation -> evaluationId.equals(evaluation.getId()));
     }
 
     // ================== Request CRUD ==================

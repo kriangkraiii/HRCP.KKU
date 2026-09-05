@@ -140,11 +140,20 @@ public class PositionRequest {
     }
 
     public String getTargetPosition() {
-        return targetPosition;
+        if (targetPosition == null) {
+            return null;
+        }
+        String resolved = com.ecom.util.AcademicTitleResolver.resolveThaiAcademicPosition(targetPosition);
+        return resolved != null ? resolved : targetPosition;
     }
 
     public void setTargetPosition(String targetPosition) {
-        this.targetPosition = targetPosition;
+        if (targetPosition == null) {
+            this.targetPosition = null;
+            return;
+        }
+        String resolved = com.ecom.util.AcademicTitleResolver.resolveThaiAcademicPosition(targetPosition);
+        this.targetPosition = resolved != null ? resolved : targetPosition;
     }
 
     public String getEvaluationMethod() {

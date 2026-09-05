@@ -144,3 +144,133 @@
         padding: .5rem .5rem;
     }
 }
+
+/* -------------------------------------------------- selectable signature cards */
+
+.sig-choice-card {
+    position: relative;
+    display: block;
+    cursor: pointer;
+    border: 2px solid var(--border-color, #dee2e6);
+    border-radius: .75rem;
+    background-color: #fff;
+    padding: .85rem;
+    transition: all .2s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.sig-choice-card:hover {
+    border-color: #93c5fd;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(13, 110, 253, 0.08);
+}
+
+/* Checked / Selected State */
+.btn-check:checked + .sig-choice-card {
+    border-color: #0d6efd !important;
+    background: linear-gradient(180deg, #f8faff 0%, #edf5ff 100%) !important;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.22), 0 6px 16px rgba(13, 110, 253, 0.12) !important;
+}
+
+/* Radio circle indicator */
+.sig-choice-indicator {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: 2px solid #cbd5e1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #fff;
+    transition: all .2s ease;
+    flex-shrink: 0;
+}
+
+.sig-choice-indicator i {
+    display: none;
+    font-size: 11px;
+}
+
+.btn-check:checked + .sig-choice-card .sig-choice-indicator {
+    border-color: #0d6efd;
+    background-color: #0d6efd;
+    color: #fff;
+}
+
+.btn-check:checked + .sig-choice-card .sig-choice-indicator i {
+    display: inline-block;
+}
+
+/* Checkmark badge only shown when checked */
+.sig-badge-selected {
+    display: none !important;
+}
+
+.btn-check:checked + .sig-choice-card .sig-badge-selected {
+    display: inline-flex !important;
+    animation: fadeIn 0.25s ease-in-out;
+}
+
+/* Thumbnail container for signature card */
+.sig-choice-thumb {
+    height: 85px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: .5rem;
+    padding: .5rem;
+    margin: .5rem 0;
+    overflow: hidden;
+    transition: border-color .2s;
+}
+
+.btn-check:checked + .sig-choice-card .sig-choice-thumb {
+    border-color: #bfdbfe;
+    background-color: #ffffff;
+}
+
+.sig-choice-thumb img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: scale(0.95); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* -------------------------------------------------- p12 prerequisite flow */
+.p12-step-badge {
+    background-color: #fff;
+    color: #0d6efd;
+    font-weight: 700;
+    padding: 0.25rem 0.65rem;
+    border-radius: 50rem;
+    font-size: 0.8rem;
+    letter-spacing: 0.5px;
+}
+
+.sig-locked-card {
+    border: 2px dashed #cbd5e1;
+    background: #f8fafc;
+    border-radius: 0.75rem;
+    text-align: center;
+    padding: 2.5rem 1.5rem;
+}
+
+.sig-locked-icon {
+    width: 60px;
+    height: 60px;
+    background: #e2e8f0;
+    color: #64748b;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+

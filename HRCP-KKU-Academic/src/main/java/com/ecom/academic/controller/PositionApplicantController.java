@@ -181,10 +181,15 @@ public class PositionApplicantController {
             return "redirect:/user/position/dashboard?error=active_exists";
         }
 
-        // Get eligible evaluations from Phase 1
-        List<AcademicRequest> eligibleEvals = positionService.getEligibleEvaluations(user.getId());
-        model.addAttribute("evaluations", eligibleEvals);
-        model.addAttribute("hasEligible", !eligibleEvals.isEmpty());
+        // Every usable result from Phase 1, including the ones whose course this
+        // applicant has already spent — those are shown, and explained, rather
+        // than quietly left out.
+        List<com.ecom.academic.dto.EvaluationChoice> choices =
+                positionService.getEvaluationChoices(user.getId());
+        model.addAttribute("choices", choices);
+        model.addAttribute("hasEligible", choices.stream()
+                .anyMatch(com.ecom.academic.dto.EvaluationChoice::selectable));
+        model.addAttribute("hasAny", !choices.isEmpty());
 
         return "academic/position/applicant/new_request";
     }
@@ -196,6 +201,13 @@ public class PositionApplicantController {
 
         if (positionService.hasActiveRequest(user.getId())) {
             return "redirect:/user/position/dashboard?error=active_exists";
+        }
+
+        // The selection screen already leaves out a course this applicant has
+        // spent, but a screen is not the enforcement: a stale tab or a
+        // hand-built POST arrives with an id the screen would no longer offer.
+        if (!positionService.canUseEvaluation(user.getId(), evaluationId)) {
+            return "redirect:/user/position/dashboard?error=course_already_used";
         }
 
         PositionRequest request = positionService.createDraftRequest(user, evaluationId);
@@ -248,6 +260,11 @@ public class PositionApplicantController {
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/position/dashboard";
         }
+
+        // Which teaching evaluation this request was built on, so the applicant
+        // can check it here rather than by going back to the other phase.
+        model.addAttribute("evaluationSummary",
+                academicService.summarize(request.getLinkedEvaluation()));
 
         List<Integer> completedDocs = positionService.getCompletedDocTypes(id);
         List<PositionDocument> documents = positionService.getDocuments(id);
@@ -410,6 +427,14 @@ public class PositionApplicantController {
 
         if (request.getCurrentStatus() != PositionRequestStatus.DRAFT) {
             return "redirect:/user/position/request/" + id;
+        }
+
+        // Asked before the document checks on purpose. A course taken by another
+        // request in the meantime is not something filling in more documents can
+        // fix, so reporting "documents incomplete" would send the applicant off
+        // to do work that cannot help.
+        if (!positionService.isEvaluationStillAvailable(request)) {
+            return "redirect:/user/position/request/" + id + "?error=course_already_used";
         }
 
         // Check all applicant docs are completed

@@ -29,6 +29,29 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
     Optional<PositionRequest> findActiveByApplicantId(@Param("userId") Integer userId,
             @Param("terminalStatuses") List<PositionRequestStatus> terminalStatuses);
 
+    /**
+     * This applicant's requests that have actually spent the evaluation they
+     * were built on, with that evaluation already fetched.
+     *
+     * <p>Scoped to one applicant deliberately, not asked faculty-wide. The rule
+     * it feeds removes courses from what a person may choose, and a question
+     * asked across everyone would let one applicant's request take a course away
+     * from a colleague who happened to be evaluated on the same one.
+     *
+     * @param free statuses that consume nothing — {@code DRAFT}, which has not
+     *             been submitted, and {@code REJECTED}, which has to give its
+     *             course back
+     */
+    @Query("""
+            SELECT r FROM PositionRequest r
+            JOIN FETCH r.linkedEvaluation
+            WHERE r.applicant.id = :userId
+              AND r.currentStatus NOT IN :free
+            ORDER BY r.createdAt ASC
+            """)
+    List<PositionRequest> findConsumingEvaluations(@Param("userId") Integer userId,
+            @Param("free") List<PositionRequestStatus> free);
+
     @Query("SELECT r FROM PositionRequest r WHERE r.applicant.id = :userId AND r.currentStatus = 'DRAFT'")
     Optional<PositionRequest> findDraftByApplicantId(@Param("userId") Integer userId);
 

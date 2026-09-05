@@ -236,13 +236,13 @@
             </a>
             <small
               th:if="${linkedEvalRequest != null}"
-              style="color: var(--text-muted)"
+              class="text-muted d-inline-flex align-items-center gap-1"
             >
               <i class="fas fa-link"></i> อ้างอิง:
               <span th:text="${linkedEvalRequest.requestCode}"></span>
               <span
-                class="badge"
-                th:style="'background:' + ${linkedEvalRequest.currentStatus.color} + ';color:#fff;margin-left:4px'"
+                class="status-badge ms-1"
+                th:classappend="'status-' + ${linkedEvalRequest.currentStatus.name()}"
                 th:text="${linkedEvalRequest.currentStatus.thaiLabel}"
               ></span>
             </small>

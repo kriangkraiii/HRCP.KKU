@@ -206,159 +206,134 @@
                         </div>
                     </form>
 
-                    <!-- Per-Checklist-Item Attachment Slots -->
+                    <!-- Single Unified Attachment Box -->
                     <div class="card card-academic border shadow-sm my-4">
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 fw-semibold text-primary">
                                 <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอน
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">จำเป็นต้องแนบ (ต้องแนบไฟล์หรือลิงก์อย่างน้อย 1 รายการต่อช่อง ครบทั้ง 5 ช่อง)</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">จำเป็นต้องแนบ (อย่างน้อย 1 รายการ)</span>
                             </h6>
-                            <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' รายการ'}">0 รายการ</span>
+                            <div class="d-flex align-items-center gap-2">
+                                <small class="text-muted" id="totalSizeDisplay" th:text="${totalSizeFormatted != null ? totalSizeFormatted + ' / 75.0 MB' : '0.0 / 75.0 MB'}">0.0 / 75.0 MB</small>
+                                <span class="badge bg-primary rounded-pill px-3" id="attachmentCountBadge" th:text="${(attachmentCount != null ? attachmentCount : 0) + ' รายการ'}">0 รายการ</span>
+                            </div>
                         </div>
-                        <div class="card-body p-0">
+                        <div class="card-body p-3">
 
-                            <!-- Slot labels matching checklist -->
-                            <th:block th:with="slotLabels=${ {
-                                'บันทึกนำส่งเอกสารประกอบประเมินผลการสอน',
-                                'แผนการสอน พร้อมเกณฑ์และวิธีวัดประเมินผลผู้เรียน',
-                                'สาระสำคัญของเนื้อหาวิชาฯ (เอกสารประกอบการสอน)',
-                                'สื่อการสอน เช่น ชีทเอกสาร PowerPoint แผ่นใส ฯลฯ',
-                                'ผลการประเมินการสอนโดยนักศึกษา'
-                            } }">
+                            <!-- Upload & Link Toggle and Forms (if editable) -->
+                            <div th:if="${editable}" class="mb-3">
+                                <!-- Mode Switch Buttons -->
+                                <div class="btn-group btn-group-sm mb-3" role="group">
+                                    <button type="button" class="btn btn-primary active" id="tabUploadBtn" data-target="upload">
+                                        <i class="fas fa-file-upload me-1"></i> อัปโหลดไฟล์
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="tabLinkBtn" data-target="link">
+                                        <i class="fas fa-link me-1"></i> แนบลิงก์ (URL)
+                                    </button>
+                                </div>
 
-                            <div th:each="label, iter : ${slotLabels}" class="border-bottom" th:classappend="${iter.last ? 'border-bottom-0' : ''}">
-                                <div class="px-3 py-3">
-                                    <!-- Slot Header -->
-                                    <div class="d-flex justify-content-between align-items-center mb-2">
-                                        <div class="d-flex align-items-center gap-2">
-                                            <span class="badge bg-primary rounded-circle d-inline-flex align-items-center justify-content-center" style="width:24px;height:24px;font-size:0.75rem;" th:text="${iter.count}">1</span>
-                                            <span class="fw-semibold small" th:text="${label}">เอกสาร</span>
+                                <!-- Upload Form -->
+                                <form th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments'"
+                                      method="post" enctype="multipart/form-data" id="attachmentForm" class="mb-2">
+                                    <label for="fileInput"
+                                           class="upload-dropzone p-4 border border-2 border-dashed rounded-3 text-center d-block"
+                                           id="dropzone"
+                                           th:data-current-bytes="${totalBytes != null ? totalBytes : 0}"
+                                           style="cursor:pointer; background: #fafbfc;">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2 d-block"></i>
+                                        <span class="fs-6 fw-semibold d-block">คลิกเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</span>
+                                        <span class="text-muted small d-block mt-1">รองรับไฟล์: .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)</span>
+                                        <input type="file" name="files" id="fileInput" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
+                                    </label>
+
+                                    <!-- Queue preview -->
+                                    <div id="queue" class="mt-3 d-none">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="fw-semibold text-muted">ไฟล์ที่เลือกเตรียมอัปโหลด:</small>
+                                            <small class="text-primary fw-semibold" id="queueTotalSize"></small>
                                         </div>
-                                        <div class="d-flex align-items-center gap-2">
-                                            <small class="text-muted" th:text="${slotSizes[iter.count] + ' / 75.0 MB'}">0.0 / 75.0 MB</small>
-                                            <span class="badge rounded-pill px-2"
-                                                  th:classappend="${slotCounts[iter.count] > 0 ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}"
-                                                  th:text="${slotCounts[iter.count] + ' รายการ'}">0 รายการ</span>
-                                        </div>
-                                    </div>
-
-                                    <!-- Upload & Link Toggle and Forms (if editable) -->
-                                    <div th:if="${editable}" class="mb-2">
-                                        <!-- Mode Switch Buttons -->
-                                        <div class="btn-group btn-group-sm mb-2" role="group">
-                                            <button type="button" class="btn btn-outline-primary active slot-toggle-btn"
-                                                    th:id="'tabUploadBtn_' + ${iter.count}"
-                                                    th:data-slot="${iter.count}" data-target="upload">
-                                                <i class="fas fa-file-upload me-1"></i> อัปโหลดไฟล์
+                                        <ul class="list-group list-group-flush mb-2 border rounded" id="queueList"></ul>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-sm btn-academic rounded-pill px-3">
+                                                <i class="fas fa-upload me-1"></i> อัปโหลดไฟล์ที่เลือก
                                             </button>
-                                            <button type="button" class="btn btn-outline-primary slot-toggle-btn"
-                                                    th:id="'tabLinkBtn_' + ${iter.count}"
-                                                    th:data-slot="${iter.count}" data-target="link">
-                                                <i class="fas fa-link me-1"></i> แนบลิงก์ (URL)
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="clearQueueBtn">ยกเลิก</button>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <!-- Link Form -->
+                                <form th:action="'/user/academic/request/' + ${request.id} + '/document-1/links'"
+                                      method="post" id="linkForm" class="p-3 border rounded-3 bg-white mb-2 d-none">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-7">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-light text-muted"><i class="fas fa-link"></i></span>
+                                                <input type="url" name="url" id="linkUrl" class="form-control"
+                                                       placeholder="https://drive.google.com/... หรือ OneDrive / Cloud URL" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" name="title" id="linkTitle" class="form-control form-control-sm"
+                                                   placeholder="ชื่อเรียก/คำอธิบาย (ถ้ามี)">
+                                        </div>
+                                        <div class="col-md-2 d-grid">
+                                            <button type="submit" class="btn btn-sm btn-academic rounded-pill">
+                                                <i class="fas fa-plus me-1"></i> เพิ่มลิงก์
                                             </button>
                                         </div>
-
-                                        <!-- Upload Form per Slot -->
-                                        <form th:action="'/user/academic/request/' + ${request.id} + '/document-1/attachments/' + ${iter.count}"
-                                              method="post" enctype="multipart/form-data"
-                                              th:id="'attachmentForm_' + ${iter.count}" class="mb-2">
-                                            <label th:for="'fileInput_' + ${iter.count}"
-                                                   class="upload-dropzone p-3 border border-2 border-dashed rounded-3 text-center d-block slot-dropzone"
-                                                   th:id="'dropzone_' + ${iter.count}"
-                                                   th:data-slot="${iter.count}"
-                                                   th:data-current-bytes="${slotBytes != null and slotBytes[iter.count] != null ? slotBytes[iter.count] : 0}"
-                                                   style="cursor:pointer; background: #fafbfc;">
-                                                <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-1 d-block"></i>
-                                                <span class="small fw-semibold">เลือกไฟล์ หรือลากมาวาง</span>
-                                                <span class="text-muted d-block" style="font-size:0.75rem;">รองรับ .pdf, .docx, .doc, .zip (จำกัด 75 MB ต่อช่อง)</span>
-                                                <input type="file" name="files" th:id="'fileInput_' + ${iter.count}" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
-                                            </label>
-
-                                            <!-- Queue preview -->
-                                            <div th:id="'queue_' + ${iter.count}" class="mb-2 d-none">
-                                                <ul class="list-group list-group-flush mb-2" th:id="'queueList_' + ${iter.count}"></ul>
-                                                <div class="d-flex gap-2">
-                                                    <button type="submit" class="btn btn-sm btn-academic rounded-pill px-3">
-                                                        <i class="fas fa-upload me-1"></i> อัปโหลด
-                                                    </button>
-                                                    <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3 slot-clear-queue"
-                                                            th:data-slot="${iter.count}">ยกเลิก</button>
-                                                </div>
-                                            </div>
-                                        </form>
-
-                                        <!-- Link Form per Slot -->
-                                        <form th:action="'/user/academic/request/' + ${request.id} + '/document-1/links/' + ${iter.count}"
-                                              method="post"
-                                              th:id="'linkForm_' + ${iter.count}" class="p-3 border rounded-3 bg-white mb-2 d-none">
-                                            <div class="row g-2 align-items-center">
-                                                <div class="col-md-7">
-                                                    <div class="input-group input-group-sm">
-                                                        <span class="input-group-text bg-light text-muted"><i class="fas fa-link"></i></span>
-                                                        <input type="url" name="url" th:id="'linkUrl_' + ${iter.count}" class="form-control"
-                                                               placeholder="https://drive.google.com/... หรือ OneDrive / Cloud URL" required>
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-3">
-                                                    <input type="text" name="title" th:id="'linkTitle_' + ${iter.count}" class="form-control form-control-sm"
-                                                           placeholder="ชื่อเรียก/คำอธิบาย (ถ้ามี)">
-                                                </div>
-                                                <div class="col-md-2 d-grid">
-                                                    <button type="submit" class="btn btn-sm btn-academic rounded-pill">
-                                                        <i class="fas fa-plus me-1"></i> เพิ่มลิงก์
-                                                    </button>
-                                                </div>
-                                            </div>
-                                            <div class="text-muted small mt-1" style="font-size:0.75rem;">
-                                                <i class="fas fa-info-circle me-1"></i> แนบลิงก์จาก Google Drive, OneDrive, CMU/KKU Cloud, YouTube หรือคลาวด์ภายนอก
-                                            </div>
-                                        </form>
                                     </div>
+                                    <div class="text-muted small mt-2" style="font-size:0.8rem;">
+                                        <i class="fas fa-info-circle me-1"></i> สามารถแนบลิงก์แชร์เอกสาร โฟลเดอร์ หรือวิดีโอจาก Google Drive, OneDrive, CMU/KKU Cloud, YouTube ฯลฯ
+                                    </div>
+                                </form>
+                            </div>
 
-                                    <!-- Uploaded Files & Links for this Slot -->
-                                    <div th:if="${attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty()}" class="mt-2">
-                                        <div th:each="att, attIter : ${attachmentsBySlot[iter.count]}"
-                                             class="d-flex align-items-center justify-content-between py-2 px-2 rounded-2 mb-1"
-                                             style="background: #f8f9fa;">
-                                            <div class="d-flex align-items-center gap-2 text-break" style="min-width:0; flex:1;">
-                                                <span th:if="${att.fileType == 'PDF'}" class="text-danger"><i class="fas fa-file-pdf"></i></span>
-                                                <span th:if="${att.fileType == 'DOCX'}" class="text-primary"><i class="fas fa-file-word"></i></span>
-                                                <span th:if="${att.fileType == 'ZIP'}" class="text-secondary"><i class="fas fa-file-archive"></i></span>
-                                                <span th:if="${att.fileType == 'LINK'}" class="text-info"><i class="fas fa-link"></i></span>
-                                                <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt"></i></span>
-                                                <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">file.pdf</span>
-                                                <span th:if="${att.fileType != 'LINK'}" class="badge bg-light text-secondary border" style="font-size:0.7rem;"
-                                                      th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
-                                                <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.7rem;">
-                                                    <i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก
-                                                </span>
-                                            </div>
-                                            <div class="btn-group btn-group-sm ms-2">
-                                                <a th:if="${att.fileType == 'LINK'}"
-                                                   th:href="${att.storedFilePath}"
-                                                   target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm py-0" title="เปิดลิงก์ในแท็บใหม่">
-                                                   <i class="fas fa-external-link-alt me-1"></i> เปิดลิงก์
-                                                </a>
-                                                <a th:if="${att.fileType != 'LINK' and att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
-                                                   th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
-                                                   target="_blank" class="btn btn-outline-info btn-sm py-0" title="ดู"><i class="fas fa-eye"></i></a>
-                                                <a th:if="${att.fileType != 'LINK'}"
-                                                   th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
-                                                   class="btn btn-outline-primary btn-sm py-0" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
-                                                <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
-                                                      method="post" class="d-inline" th:data-confirm="${att.fileType == 'LINK' ? 'คุณต้องการลบลิงก์นี้หรือไม่?' : 'คุณต้องการลบไฟล์นี้หรือไม่?'}">
-                                                    <button type="submit" class="btn btn-outline-danger btn-sm py-0" title="ลบ"><i class="fas fa-trash-alt"></i></button>
-                                                </form>
-                                            </div>
+                            <!-- Uploaded Files & Links List -->
+                            <div th:if="${attachments != null and !attachments.isEmpty()}" class="mt-2">
+                                <h6 class="text-secondary fw-semibold small mb-2"><i class="fas fa-list-ul me-1"></i> รายการเอกสารและลิงก์ที่แนบแล้ว</h6>
+                                <div class="border rounded-2 overflow-hidden">
+                                    <div th:each="att, attIter : ${attachments}"
+                                         class="d-flex align-items-center justify-content-between py-2 px-3 border-bottom"
+                                         th:classappend="${attIter.last ? 'border-bottom-0' : ''}"
+                                         style="background: #fafbfc;">
+                                        <div class="d-flex align-items-center gap-2 text-break" style="min-width:0; flex:1;">
+                                            <span th:if="${att.fileType == 'PDF'}" class="text-danger"><i class="fas fa-file-pdf fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'DOCX'}" class="text-primary"><i class="fas fa-file-word fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'ZIP'}" class="text-secondary"><i class="fas fa-file-archive fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'LINK'}" class="text-info"><i class="fas fa-link fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt fa-lg"></i></span>
+                                            <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">file.pdf</span>
+                                            <span th:if="${att.fileType != 'LINK'}" class="badge bg-white text-secondary border" style="font-size:0.75rem;"
+                                                  th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
+                                            <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.75rem;">
+                                                <i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก
+                                            </span>
                                         </div>
-                                    </div>
-                                    <div th:if="${attachmentsBySlot[iter.count] == null or attachmentsBySlot[iter.count].isEmpty()}" class="text-center py-2 text-muted small">
-                                        <i class="fas fa-folder-open me-1 opacity-50"></i> ยังไม่มีไฟล์หรือลิงก์แนบในช่องนี้
+                                        <div class="btn-group btn-group-sm ms-2">
+                                            <a th:if="${att.fileType == 'LINK'}"
+                                               th:href="${att.storedFilePath}"
+                                               target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm" title="เปิดลิงก์ในแท็บใหม่">
+                                               <i class="fas fa-external-link-alt me-1"></i> เปิดลิงก์
+                                            </a>
+                                            <a th:if="${att.fileType != 'LINK' and att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
+                                               th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
+                                               target="_blank" class="btn btn-outline-info btn-sm" title="ดู"><i class="fas fa-eye"></i></a>
+                                            <a th:if="${att.fileType != 'LINK'}"
+                                               th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
+                                               class="btn btn-outline-primary btn-sm" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
+                                            <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
+                                                  method="post" class="d-inline" th:data-confirm="${att.fileType == 'LINK' ? 'คุณต้องการลบลิงก์นี้หรือไม่?' : 'คุณต้องการลบไฟล์นี้หรือไม่?'}">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="ลบ"><i class="fas fa-trash-alt"></i></button>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
-
-                            </th:block>
+                            <div th:if="${attachments == null or attachments.isEmpty()}" class="text-center py-4 text-muted">
+                                <i class="fas fa-folder-open fa-2x mb-2 opacity-50 d-block"></i>
+                                <span class="small">ยังไม่มีเอกสารหรือลิงก์แนบ กรุณาอัปโหลดไฟล์หรือแนบลิงก์อย่างน้อย 1 รายการ</span>
+                            </div>
                         </div>
                     </div>
 
@@ -392,19 +367,8 @@
 
                     <input type="hidden" id="currentDocType" value="1">
                     <input type="hidden" id="attachmentCountHolder" th:value="${attachmentCount != null ? attachmentCount : 0}">
+                    <input type="hidden" id="totalBytesHolder" th:value="${totalBytes != null ? totalBytes : 0}">
                     <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
-                    <div id="slotStatusHolder"
-                         th:data-s1="${slotCounts[1]}"
-                         th:data-s2="${slotCounts[2]}"
-                         th:data-s3="${slotCounts[3]}"
-                         th:data-s4="${slotCounts[4]}"
-                         th:data-s5="${slotCounts[5]}"
-                         th:data-b1="${slotBytes != null and slotBytes[1] != null ? slotBytes[1] : 0}"
-                         th:data-b2="${slotBytes != null and slotBytes[2] != null ? slotBytes[2] : 0}"
-                         th:data-b3="${slotBytes != null and slotBytes[3] != null ? slotBytes[3] : 0}"
-                         th:data-b4="${slotBytes != null and slotBytes[4] != null ? slotBytes[4] : 0}"
-                         th:data-b5="${slotBytes != null and slotBytes[5] != null ? slotBytes[5] : 0}"
-                         style="display:none;"></div>
 
                     <script>
                         // Checkbox toggle สำหรับผู้ยื่น ✔️
@@ -443,47 +407,33 @@
                         // Initialize real-time preview for Doc 1
                         initDocPreview('doc1Form', 1);
 
-                        // === Checkbox & Attachment Validation: ต้องติ๊กครบ 5 ข้อ, แนบไฟล์ครบทั้ง 5 ช่อง, และแต่ละช่องห้ามเกิน 75 MB ===
+                        // === Checkbox & Attachment Validation: ต้องติ๊กครบ 5 ข้อ, แนบไฟล์/ลิงก์อย่างน้อย 1 รายการ, และขนาดรวมไม่เกิน 75 MB ===
                         (function() {
                             var checkboxes = document.querySelectorAll('.chk-toggle-app');
                             var submitBtn = document.getElementById('doc1SubmitBtn');
-                            // เอกสารถูกล็อก: ไม่มีปุ่มบันทึกให้ตรวจ
                             if (!submitBtn) return;
                             var alertBox = document.getElementById('doc1ValidationAlert');
                             var countSpan = document.getElementById('doc1CheckedCount');
                             var attCountHolder = document.getElementById('attachmentCountHolder');
                             var attCount = attCountHolder ? parseInt(attCountHolder.value, 10) : 0;
-                            var slotHolder = document.getElementById('slotStatusHolder');
-                            var MAX_SLOT_BYTES = 75 * 1024 * 1024;
+                            var totalBytesHolder = document.getElementById('totalBytesHolder');
+                            var totalBytes = totalBytesHolder ? parseInt(totalBytesHolder.value, 10) : 0;
+                            var MAX_TOTAL_BYTES = 75 * 1024 * 1024; // 75 MB
 
                             function validateDoc1() {
                                 var checked = document.querySelectorAll('.chk-toggle-app:checked').length;
                                 var total = checkboxes.length;
                                 if (countSpan) countSpan.textContent = checked;
 
-                                var missingSlots = [];
-                                var overQuotaSlots = [];
-                                if (slotHolder) {
-                                    for (var s = 1; s <= 5; s++) {
-                                        var cnt = parseInt(slotHolder.getAttribute('data-s' + s) || '0', 10);
-                                        var bytes = parseInt(slotHolder.getAttribute('data-b' + s) || '0', 10);
-                                        if (cnt === 0) missingSlots.push(s);
-                                        if (bytes > MAX_SLOT_BYTES) {
-                                            var mb = (bytes / (1024 * 1024)).toFixed(1);
-                                            overQuotaSlots.push('ช่องที่ ' + s + ' (' + mb + ' MB)');
-                                        }
-                                    }
-                                }
-
-                                var allSlotsFilled = (missingSlots.length === 0);
-                                var noOverQuota = (overQuotaSlots.length === 0);
                                 var allChecked = (checked === total);
+                                var hasAttachment = (attCount > 0);
+                                var noOverQuota = (totalBytes <= MAX_TOTAL_BYTES);
 
-                                if (allChecked && allSlotsFilled && noOverQuota) {
+                                if (allChecked && hasAttachment && noOverQuota) {
                                     submitBtn.disabled = false;
                                     alertBox.classList.remove('alert-warning', 'alert-danger');
                                     alertBox.classList.add('alert-success');
-                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบไฟล์/ลิงก์ครบทั้ง 5 ช่องแล้ว (' + attCount + ' รายการ, ขนาดผ่านเกณฑ์) ✓ พร้อมบันทึกเอกสาร';
+                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบเอกสารแล้ว (' + attCount + ' รายการ, ขนาดรวม ' + (totalBytes / (1024 * 1024)).toFixed(1) + ' MB) ✓ พร้อมบันทึกเอกสาร';
                                 } else {
                                     submitBtn.disabled = true;
                                     alertBox.classList.remove('alert-success');
@@ -491,11 +441,12 @@
                                     if (!allChecked) {
                                         reasons.push('ติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc1CheckedCount">' + checked + '</span>/' + total + ')');
                                     }
-                                    if (!allSlotsFilled) {
-                                        reasons.push('แนบไฟล์หรือลิงก์เอกสารประกอบให้ครบทั้ง 5 ช่อง (ยังขาดช่องที่ ' + missingSlots.join(', ') + ')');
+                                    if (!hasAttachment) {
+                                        reasons.push('แนบไฟล์หรือลิงก์เอกสารประกอบอย่างน้อย 1 รายการ');
                                     }
                                     if (!noOverQuota) {
-                                        reasons.push('ลดขนาดไฟล์เนื่องจากเกิน 75 MB ใน ' + overQuotaSlots.join(', '));
+                                        var curMb = (totalBytes / (1024 * 1024)).toFixed(1);
+                                        reasons.push('ลดขนาดไฟล์เนื่องจากขนาดรวมเกิน 75 MB (ปัจจุบัน ' + curMb + ' MB)');
                                     }
                                     alertBox.classList.remove('alert-warning', 'alert-danger');
                                     alertBox.classList.add('alert-danger');
@@ -508,201 +459,172 @@
                                 cb.addEventListener('change', validateDoc1);
                             });
 
-                            // Main form submit prevention if disabled or over quota
                             var doc1Form = document.getElementById('doc1Form');
                             if (doc1Form) {
                                 doc1Form.addEventListener('submit', function(e) {
                                     var submitter = e.submitter;
                                     if (submitter && submitter.value === 'submit' && submitBtn.disabled) {
                                         e.preventDefault();
-                                        alert('ไม่สามารถบันทึกเอกสารได้: กรุณาตรวจสอบว่าติ๊กครบ 5 ข้อ, แนบครบ 5 ช่อง และขนาดแต่ละช่องไม่เกิน 75 MB');
+                                        alert('ไม่สามารถบันทึกเอกสารได้: กรุณาตรวจสอบว่าติ๊กครบ 5 ข้อ, แนบไฟล์/ลิงก์อย่างน้อย 1 รายการ และขนาดรวมไม่เกิน 75 MB');
                                         return false;
                                     }
                                 });
                             }
 
-                            // Initial check (for pre-loaded data)
                             validateDoc1();
                         })();
 
-                        // === Multi-Slot Drag & Drop & Queue Handling ===
+                        // === Single Unified Drag & Drop, File Queue & Link Form Handling ===
                         (function() {
                             var ALLOWED_EXTS = ['.pdf', '.docx', '.doc', '.zip'];
-                            var MAX_SLOT_BYTES = 75 * 1024 * 1024; // 75MB per slot
+                            var MAX_TOTAL_BYTES = 75 * 1024 * 1024; // 75MB total
 
                             function escapeHtml(str) {
                                 return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
                             }
 
-                            for (var slot = 1; slot <= 5; slot++) {
-                                (function(s) {
-                                    var dropzone = document.getElementById('dropzone_' + s);
-                                    var fileInput = document.getElementById('fileInput_' + s);
-                                    var queueContainer = document.getElementById('queue_' + s);
-                                    var queueList = document.getElementById('queueList_' + s);
+                            var dropzone = document.getElementById('dropzone');
+                            var fileInput = document.getElementById('fileInput');
+                            var queueContainer = document.getElementById('queue');
+                            var queueList = document.getElementById('queueList');
+                            var queueTotalSize = document.getElementById('queueTotalSize');
+                            var clearQueueBtn = document.getElementById('clearQueueBtn');
 
-                                    if (!dropzone || !fileInput) return;
-
-                                    ['dragenter', 'dragover'].forEach(function(ev) {
-                                        dropzone.addEventListener(ev, function(e) {
-                                            e.preventDefault(); e.stopPropagation();
-                                            dropzone.classList.add('border-primary');
-                                            dropzone.style.background = '#fff';
-                                        });
+                            if (dropzone && fileInput) {
+                                ['dragenter', 'dragover'].forEach(function(ev) {
+                                    dropzone.addEventListener(ev, function(e) {
+                                        e.preventDefault(); e.stopPropagation();
+                                        dropzone.classList.add('border-primary');
+                                        dropzone.style.background = '#fff';
                                     });
-                                    ['dragleave', 'drop'].forEach(function(ev) {
-                                        dropzone.addEventListener(ev, function(e) {
-                                            e.preventDefault(); e.stopPropagation();
-                                            dropzone.classList.remove('border-primary');
-                                            dropzone.style.background = '#fafbfc';
-                                        });
+                                });
+                                ['dragleave', 'drop'].forEach(function(ev) {
+                                    dropzone.addEventListener(ev, function(e) {
+                                        e.preventDefault(); e.stopPropagation();
+                                        dropzone.classList.remove('border-primary');
+                                        dropzone.style.background = '#fafbfc';
                                     });
+                                });
 
-                                    dropzone.addEventListener('drop', function(e) {
-                                        if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-                                            fileInput.files = e.dataTransfer.files;
-                                            updateSlotQueue(s);
-                                        }
-                                    });
+                                dropzone.addEventListener('drop', function(e) {
+                                    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                        fileInput.files = e.dataTransfer.files;
+                                        updateQueue();
+                                    }
+                                });
 
-                                    fileInput.addEventListener('change', function() {
-                                        updateSlotQueue(s);
-                                    });
+                                fileInput.addEventListener('change', function() {
+                                    updateQueue();
+                                });
 
-                                    function updateSlotQueue(slot) {
-                                        var fi = document.getElementById('fileInput_' + slot);
-                                        var qc = document.getElementById('queue_' + slot);
-                                        var ql = document.getElementById('queueList_' + slot);
-                                        if (!fi || !fi.files || fi.files.length === 0) {
-                                            if (qc) qc.classList.add('d-none');
-                                            if (ql) ql.innerHTML = '';
-                                            return;
-                                        }
-
-                                        var invalidFiles = [];
-                                        var totalBytes = 0;
-                                        Array.from(fi.files).forEach(function(file) {
-                                            totalBytes += file.size;
-                                            var lower = file.name.toLowerCase();
-                                            if (!ALLOWED_EXTS.some(function(ext) { return lower.endsWith(ext); })) {
-                                                invalidFiles.push(file.name);
-                                            }
-                                        });
-
-                                        if (invalidFiles.length > 0) {
-                                            alert('พบไฟล์ที่ไม่รองรับในช่องที่ ' + slot + ': ' + invalidFiles.join(', ') + '\nอนุญาตเฉพาะ .pdf, .docx, .doc, .zip');
-                                            fi.value = '';
-                                            qc.classList.add('d-none');
-                                            ql.innerHTML = '';
-                                            return;
-                                        }
-
-                                        var currentBytes = 0;
-                                        if (dropzone) {
-                                            currentBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
-                                        }
-
-                                        if (currentBytes + totalBytes > MAX_SLOT_BYTES) {
-                                            var newMb = (totalBytes / (1024 * 1024)).toFixed(1);
-                                            var curMb = (currentBytes / (1024 * 1024)).toFixed(1);
-                                            var totalMb = ((currentBytes + totalBytes) / (1024 * 1024)).toFixed(1);
-                                            alert('ขนาดไฟล์รวมในช่องที่ ' + slot + ' จะเกินขีดจำกัด 75 MB ต่อช่อง!\n\n' +
-                                                  '• ไฟล์เดิมในช่องนี้: ' + curMb + ' MB\n' +
-                                                  '• ไฟล์ใหม่ที่เลือก: ' + newMb + ' MB\n' +
-                                                  '• ขนาดรวมทั้งหมด: ' + totalMb + ' MB (จำกัด 75.0 MB)\n\n' +
-                                                  'กรุณาลดขนาดไฟล์หรือเลือกไฟล์ใหม่อีกครั้ง');
-                                            fi.value = '';
-                                            qc.classList.add('d-none');
-                                            ql.innerHTML = '';
-                                            return;
-                                        }
-
-                                        ql.innerHTML = '';
-                                        Array.from(fi.files).forEach(function(file) {
-                                            var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                                            var lower = file.name.toLowerCase();
-                                            var iconClass = lower.endsWith('.zip') ? 'fas fa-file-archive text-secondary' :
-                                                           (lower.endsWith('.pdf') ? 'fas fa-file-pdf text-danger' : 'fas fa-file-word text-primary');
-                                            var li = document.createElement('li');
-                                            li.className = 'list-group-item d-flex justify-content-between align-items-center py-1 px-2';
-                                            li.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="' + iconClass + '"></i><span class="small fw-semibold text-break">' + escapeHtml(file.name) + '</span></div><span class="badge bg-secondary rounded-pill" style="font-size:0.7rem;">' + sizeMB + ' MB</span>';
-                                            ql.appendChild(li);
-                                        });
-                                        qc.classList.remove('d-none');
+                                function updateQueue() {
+                                    if (!fileInput.files || fileInput.files.length === 0) {
+                                        if (queueContainer) queueContainer.classList.add('d-none');
+                                        if (queueList) queueList.innerHTML = '';
+                                        return;
                                     }
 
-                                    var form = document.getElementById('attachmentForm_' + s);
-                                    if (form) {
-                                        form.addEventListener('submit', function(e) {
-                                            var fi = document.getElementById('fileInput_' + s);
-                                            var totalBytes = 0;
-                                            if (fi && fi.files) {
-                                                Array.from(fi.files).forEach(function(f) { totalBytes += f.size; });
-                                            }
-                                            var curBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
-                                            if (curBytes + totalBytes > MAX_SLOT_BYTES) {
-                                                e.preventDefault();
-                                                var totalMb = ((curBytes + totalBytes) / (1024 * 1024)).toFixed(1);
-                                                alert('ไม่สามารถอัปโหลดได้: ขนาดรวมในช่องที่ ' + s + ' (' + totalMb + ' MB) จะเกินขีดจำกัด 75 MB ต่อช่อง');
-                                                return false;
-                                            }
-                                        });
+                                    var invalidFiles = [];
+                                    var incomingBytes = 0;
+                                    Array.from(fileInput.files).forEach(function(file) {
+                                        incomingBytes += file.size;
+                                        var lower = file.name.toLowerCase();
+                                        if (!ALLOWED_EXTS.some(function(ext) { return lower.endsWith(ext); })) {
+                                            invalidFiles.push(file.name);
+                                        }
+                                    });
+
+                                    if (invalidFiles.length > 0) {
+                                        alert('พบไฟล์ที่ไม่รองรับ: ' + invalidFiles.join(', ') + '\nอนุญาตเฉพาะ .pdf, .docx, .doc, .zip');
+                                        fileInput.value = '';
+                                        if (queueContainer) queueContainer.classList.add('d-none');
+                                        if (queueList) queueList.innerHTML = '';
+                                        return;
                                     }
-                                })(slot);
+
+                                    var currentBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
+                                    if (currentBytes + incomingBytes > MAX_TOTAL_BYTES) {
+                                        var newMb = (incomingBytes / (1024 * 1024)).toFixed(1);
+                                        var curMb = (currentBytes / (1024 * 1024)).toFixed(1);
+                                        var totalMb = ((currentBytes + incomingBytes) / (1024 * 1024)).toFixed(1);
+                                        alert('ขนาดไฟล์รวมจะเกินขีดจำกัด 75 MB ต่อคำร้อง!\n\n' +
+                                              '• ไฟล์เดิมที่มีอยู่: ' + curMb + ' MB\n' +
+                                              '• ไฟล์ใหม่ที่เลือก: ' + newMb + ' MB\n' +
+                                              '• ขนาดรวมทั้งหมด: ' + totalMb + ' MB (จำกัด 75.0 MB)\n\n' +
+                                              'กรุณาลดขนาดไฟล์หรือเลือกไฟล์ใหม่อีกครั้ง');
+                                        fileInput.value = '';
+                                        if (queueContainer) queueContainer.classList.add('d-none');
+                                        if (queueList) queueList.innerHTML = '';
+                                        return;
+                                    }
+
+                                    if (queueList) queueList.innerHTML = '';
+                                    if (queueTotalSize) {
+                                        queueTotalSize.textContent = 'รวม ' + fileInput.files.length + ' ไฟล์ (' + (incomingBytes / (1024 * 1024)).toFixed(2) + ' MB)';
+                                    }
+                                    Array.from(fileInput.files).forEach(function(file) {
+                                        var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                        var lower = file.name.toLowerCase();
+                                        var iconClass = lower.endsWith('.zip') ? 'fas fa-file-archive text-secondary' :
+                                                       (lower.endsWith('.pdf') ? 'fas fa-file-pdf text-danger' : 'fas fa-file-word text-primary');
+                                        var li = document.createElement('li');
+                                        li.className = 'list-group-item d-flex justify-content-between align-items-center py-2 px-3';
+                                        li.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="' + iconClass + '"></i><span class="small fw-semibold text-break">' + escapeHtml(file.name) + '</span></div><span class="badge bg-secondary rounded-pill" style="font-size:0.75rem;">' + sizeMB + ' MB</span>';
+                                        if (queueList) queueList.appendChild(li);
+                                    });
+                                    if (queueContainer) queueContainer.classList.remove('d-none');
+                                }
+
+                                var form = document.getElementById('attachmentForm');
+                                if (form) {
+                                    form.addEventListener('submit', function(e) {
+                                        var incomingBytes = 0;
+                                        if (fileInput.files) {
+                                            Array.from(fileInput.files).forEach(function(f) { incomingBytes += f.size; });
+                                        }
+                                        var curBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
+                                        if (curBytes + incomingBytes > MAX_TOTAL_BYTES) {
+                                            e.preventDefault();
+                                            var totalMb = ((curBytes + incomingBytes) / (1024 * 1024)).toFixed(1);
+                                            alert('ไม่สามารถอัปโหลดได้: ขนาดรวม (' + totalMb + ' MB) จะเกินขีดจำกัด 75 MB ต่อคำร้อง');
+                                            return false;
+                                        }
+                                    });
+                                }
+
+                                if (clearQueueBtn) {
+                                    clearQueueBtn.addEventListener('click', function() {
+                                        fileInput.value = '';
+                                        if (queueContainer) queueContainer.classList.add('d-none');
+                                        if (queueList) queueList.innerHTML = '';
+                                    });
+                                }
                             }
 
-                            // Clear queue buttons
-                            document.querySelectorAll('.slot-clear-queue').forEach(function(btn) {
-                                btn.addEventListener('click', function() {
-                                    var s = this.getAttribute('data-slot');
-                                    var fi = document.getElementById('fileInput_' + s);
-                                    var qc = document.getElementById('queue_' + s);
-                                    var ql = document.getElementById('queueList_' + s);
-                                    if (fi) fi.value = '';
-                                    if (qc) qc.classList.add('d-none');
-                                    if (ql) ql.innerHTML = '';
-                                });
-                            });
+                            // Toggle between File Upload and Link Attachment tabs
+                            var tabUploadBtn = document.getElementById('tabUploadBtn');
+                            var tabLinkBtn = document.getElementById('tabLinkBtn');
+                            var uploadForm = document.getElementById('attachmentForm');
+                            var linkForm = document.getElementById('linkForm');
 
-                            // Toggle between File Upload and Link Attachment panels
-                            document.querySelectorAll('.slot-toggle-btn').forEach(function(btn) {
-                                btn.addEventListener('click', function() {
-                                    var slot = this.getAttribute('data-slot');
-                                    var target = this.getAttribute('data-target');
-                                    var uploadForm = document.getElementById('attachmentForm_' + slot);
-                                    var linkForm = document.getElementById('linkForm_' + slot);
-                                    var uploadBtn = document.getElementById('tabUploadBtn_' + slot);
-                                    var linkBtn = document.getElementById('tabLinkBtn_' + slot);
-
-                                    if (target === 'upload') {
-                                        if (uploadForm) uploadForm.classList.remove('d-none');
-                                        if (linkForm) linkForm.classList.add('d-none');
-                                        if (uploadBtn) {
-                                            uploadBtn.classList.add('active');
-                                            uploadBtn.classList.remove('btn-outline-primary');
-                                            uploadBtn.classList.add('btn-primary');
-                                        }
-                                        if (linkBtn) {
-                                            linkBtn.classList.remove('active');
-                                            linkBtn.classList.remove('btn-primary');
-                                            linkBtn.classList.add('btn-outline-primary');
-                                        }
-                                    } else {
-                                        if (uploadForm) uploadForm.classList.add('d-none');
-                                        if (linkForm) linkForm.classList.remove('d-none');
-                                        if (uploadBtn) {
-                                            uploadBtn.classList.remove('active');
-                                            uploadBtn.classList.remove('btn-primary');
-                                            uploadBtn.classList.add('btn-outline-primary');
-                                        }
-                                        if (linkBtn) {
-                                            linkBtn.classList.add('active');
-                                            linkBtn.classList.remove('btn-outline-primary');
-                                            linkBtn.classList.add('btn-primary');
-                                        }
-                                    }
+                            if (tabUploadBtn && tabLinkBtn) {
+                                tabUploadBtn.addEventListener('click', function() {
+                                    if (uploadForm) uploadForm.classList.remove('d-none');
+                                    if (linkForm) linkForm.classList.add('d-none');
+                                    tabUploadBtn.classList.add('active', 'btn-primary');
+                                    tabUploadBtn.classList.remove('btn-outline-primary');
+                                    tabLinkBtn.classList.remove('active', 'btn-primary');
+                                    tabLinkBtn.classList.add('btn-outline-primary');
                                 });
-                            });
+                                tabLinkBtn.addEventListener('click', function() {
+                                    if (uploadForm) uploadForm.classList.add('d-none');
+                                    if (linkForm) linkForm.classList.remove('d-none');
+                                    tabLinkBtn.classList.add('active', 'btn-primary');
+                                    tabLinkBtn.classList.remove('btn-outline-primary');
+                                    tabUploadBtn.classList.remove('active', 'btn-primary');
+                                    tabUploadBtn.classList.add('btn-outline-primary');
+                                });
+                            }
                         })();
                     </script>
                 </div>

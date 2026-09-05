@@ -141,7 +141,7 @@
                 <!-- แจ้งเตือนกรณีไม่มี Digital ID (.p12) หรือหมดอายุ - บังคับให้ติดตั้งก่อนจึงจะอนุญาตให้ลงนาม -->
                 <div th:if="${canSign and (myCert == null or myCert.expired)}" class="alert alert-danger border-danger shadow-sm mb-3">
                     <div class="d-flex align-items-start gap-3">
-                        <i class="fas fa-certificate text-danger fs-2 mt-1"></i>
+                        <i class="fas fa-id-card text-danger fs-2 mt-1"></i>
                         <div class="flex-grow-1">
                             <h6 class="alert-heading fw-bold mb-1 text-danger">
                                 <span th:if="${myCert == null}"><i class="fas fa-lock me-1"></i> ยังไม่สามารถลงนามได้: จำเป็นต้องติดตั้ง Digital ID (.p12)</span>
@@ -185,30 +185,84 @@
                           th:action="@{'/esign/sign/' + ${step.id}}" method="post"
                           id="signForm">
                         <div class="card card-academic mb-3">
-                            <div class="card-header bg-white"><i class="fas fa-signature"></i> เลือกลายเซ็น</div>
+                            <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-dark">
+                                    <i class="fas fa-signature text-primary me-2"></i> เลือกลายเซ็นที่จะประทับลงในเอกสาร
+                                </span>
+                                <span class="badge bg-light text-secondary border"
+                                      th:text="${#lists.size(mySignatures)} + ' รายการ'">0 รายการ</span>
+                            </div>
                             <div class="card-body">
+                                <p class="small text-secondary mb-3">
+                                    <i class="fas fa-info-circle text-primary me-1"></i> เลือกลายเซ็นที่คุณต้องการประทับลงในตำแหน่ง <strong class="text-dark" th:text="${step.roleLabel}">ตำแหน่ง</strong> (ระบบจะแสดงตัวอย่างบนเอกสารทางด้านซ้ายอัตโนมัติ)
+                                </p>
 
-                                <!-- ห้ามใส่ required กับ radio ที่ซ่อนด้วย .btn-check (Bootstrap ตั้ง
-                                     clip + pointer-events:none) เพราะเบราว์เซอร์จะโฟกัสไม่ได้ แล้วปฏิเสธ
-                                     การ submit แบบเงียบๆ ปุ่มลงนามจะกดไม่ติดโดยไม่มีข้อความใดๆ
-                                     — เลือกให้ตัวแรกไว้เสมอแทน ส่วนการตรวจจริงทำที่ฝั่งเซิร์ฟเวอร์ -->
+                                <!-- Radio Cards: แสดงสถานะการเลือกชัดเจน พร้อมป้ายกำกับและขอบสีน้ำเงิน -->
                                 <div class="row g-2" th:with="noDefault=${#lists.isEmpty(mySignatures.?[isDefault])}">
-                                    <div class="col-6" th:each="sig, sigStat : ${mySignatures}">
-                                        <input type="radio" class="btn-check" name="userSignatureId"
+                                    <div class="col-12" th:each="sig, sigStat : ${mySignatures}">
+                                        <input type="radio" class="btn-check sig-radio-item" name="userSignatureId"
                                                th:id="'sig-' + ${sig.id}" th:value="${sig.id}"
+                                               th:data-display-name="${sig.displayName}"
                                                th:checked="${sig.isDefault or (noDefault and sigStat.first)}">
-                                        <label class="btn btn-outline-secondary w-100 p-2"
+                                        <label class="sig-choice-card w-100"
                                                th:for="'sig-' + ${sig.id}">
-                                            <span class="sig-card-thumb d-block mb-1" style="height:70px;">
+                                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                                <div class="d-flex align-items-center gap-2">
+                                                    <span class="sig-choice-indicator">
+                                                        <i class="fas fa-check"></i>
+                                                    </span>
+                                                    <strong class="text-dark fs-6 sig-name-text" th:text="${sig.displayName}">ชื่อลายเซ็น</strong>
+                                                </div>
+                                                <div class="d-flex align-items-center gap-1">
+                                                    <span th:if="${sig.isDefault}" class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">
+                                                        <i class="fas fa-circle-check me-1"></i> ค่าเริ่มต้น
+                                                    </span>
+                                                    <span class="badge bg-primary sig-badge-selected rounded-pill">
+                                                        <i class="fas fa-check-circle me-1"></i> กำลังเลือกใช้อันนี้
+                                                    </span>
+                                                </div>
+                                            </div>
+
+                                            <div class="sig-choice-thumb">
                                                 <img th:src="${sig.imageUrl}" th:alt="${sig.displayName}">
-                                            </span>
-                                            <small th:text="${sig.displayName}">ชื่อ</small>
+                                            </div>
+
+                                            <div class="d-flex justify-content-between align-items-center small text-secondary" style="font-size: 0.8rem;">
+                                                <span>
+                                                    <i class="fas fa-pen me-1 text-muted"></i>
+                                                    <span th:text="${sig.kind.thaiLabel}">ประเภท</span>
+                                                </span>
+                                                <span th:if="${sig.createdAt != null}" class="text-muted">
+                                                    สร้างเมื่อ <span th:text="${#temporals.format(sig.createdAt, 'd MMM yy')}"></span>
+                                                </span>
+                                            </div>
                                         </label>
                                     </div>
                                 </div>
 
-                                <div class="form-text mt-2">
-                                    จัดการลายเซ็นได้ที่ <a href="/esign/my-signatures">ลายเซ็นของฉัน</a>
+                                <!-- Dynamic Live Selected Status Box -->
+                                <div class="alert alert-primary bg-primary-subtle border-primary-subtle d-flex align-items-center justify-content-between p-2 px-3 rounded-3 shadow-sm mt-3" id="activeSigNotice">
+                                    <div class="d-flex align-items-center gap-2 text-break">
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                            <i class="fas fa-file-signature fa-sm"></i>
+                                        </div>
+                                        <div class="small">
+                                            <span class="text-secondary">ลายเซ็นที่จะใช้ประทับ:</span>
+                                            <strong class="text-primary fw-bold ms-1" id="selectedSigLabel"
+                                                    th:text="${defaultSignature != null ? defaultSignature.displayName : (!#lists.isEmpty(mySignatures) ? mySignatures[0].displayName : 'ลายเซ็นที่เลือก')}">ลายเซ็น</strong>
+                                            <span class="text-muted ms-1" th:if="${step.roleLabel != null}" th:text="'(ตำแหน่ง ' + ${step.roleLabel} + ')'"></span>
+                                        </div>
+                                    </div>
+                                    <span class="badge bg-primary rounded-pill px-2 py-1 small flex-shrink-0">
+                                        <i class="fas fa-check me-1"></i> พร้อมลงนาม
+                                    </span>
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
+                                    <span class="small text-muted">ต้องการเพิ่มหรือแก้ไขลายเซ็น?</span>
+                                    <a href="/esign/my-signatures" class="small text-primary text-decoration-none">
+                                        <i class="fas fa-cog me-1"></i> จัดการลายเซ็นของฉัน
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -216,7 +270,7 @@
                         <!-- Digital ID (.p12) Verification Status -->
                         <div class="card card-academic mb-3 border-success">
                             <div class="card-header bg-success bg-opacity-10 text-success fw-semibold py-2 d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-certificate me-1"></i> ลงนามด้วย Digital ID (.p12) มข.</span>
+                                <span><i class="fas fa-id-card me-1"></i> ลงนามด้วย Digital ID (.p12) มข.</span>
                                 <button type="button" class="btn btn-link btn-sm text-success p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
                                     <i class="fas fa-circle-question me-1"></i> คู่มือ
                                 </button>
@@ -237,7 +291,7 @@
 
                                 <!-- One-Click Sign -->
                                 <div th:if="${myCert.hasSavedPin()}" class="alert alert-success border py-1 px-2 mb-0 small">
-                                    <i class="fas fa-bolt text-warning me-1"></i> <strong>One-Click Sign:</strong> ระบบจะใช้ Digital ID Password ที่บันทึกไว้เข้ารหัสเอกสารอัตโนมัติ
+                                    <i class="fas fa-key text-success me-1"></i> <strong>One-Click Sign:</strong> ระบบจะใช้ Digital ID Password ที่บันทึกไว้เข้ารหัสเอกสารอัตโนมัติ
                                 </div>
 
                                 <!-- Fallback if old cert without saved password -->
@@ -356,10 +410,24 @@
                         window.activeEsignViewer = window.initEsignPdfViewer('esign-pdf-container', pdfUrl, { initialFit: 'width' });
                     }
 
-                    // Dynamic live update of preview when selecting a different signature
+                    // Dynamic live update of preview and selected label when selecting a different signature
                     const sigRadios = document.querySelectorAll('input[name="userSignatureId"]');
+                    const selectedSigLabel = document.getElementById('selectedSigLabel');
+
+                    function updateSelectedSigLabel(radio) {
+                        if (!radio || !selectedSigLabel) return;
+                        const labelText = radio.getAttribute('data-display-name');
+                        if (labelText) {
+                            selectedSigLabel.textContent = labelText;
+                        }
+                    }
+
                     sigRadios.forEach(function(radio) {
+                        if (radio.checked) {
+                            updateSelectedSigLabel(radio);
+                        }
                         radio.addEventListener('change', function() {
+                            updateSelectedSigLabel(this);
                             const sigId = this.value;
                             const newPdfUrl = '/esign/sign/' + stepId + '/preview?userSignatureId=' + sigId;
                             if (window.activeEsignViewer && typeof window.activeEsignViewer.loadNewPdf === 'function') {

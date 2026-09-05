@@ -4,311 +4,85 @@
 
 <body>
 <section>
-    <div class="container py-4">
+    <div class="container py-4" th:with="hasValidCert=${activeCertificate != null && !activeCertificate.expired}">
 
-        <h3 class="mb-2"><i class="fas fa-signature"></i> ลายเซ็นของฉัน</h3>
-        <p class="text-secondary mb-4">
-            บันทึกลายเซ็นที่คุณสามารถใช้ซ้ำได้เมื่อลงนาม — วาด อัปโหลดรูปภาพ หรือพิมพ์ชื่อของคุณ
-            เมื่อลงนาม ให้เลือกลายเซ็นที่บันทึกไว้แทนการสร้างใหม่ทุกครั้ง
-            คุณสามารถแก้ไขลายเซ็นได้ทุกเมื่อ (วาดใหม่ อัปโหลดใหม่ เปลี่ยนชื่อ หรือเปลี่ยนประเภท)
-        </p>
-
-        <!-- ==================== เพิ่ม / แก้ไขลายเซ็น ==================== -->
-        <div class="card card-academic mb-4">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">
-                    <i class="fas fa-plus" th:if="${editing == null}"></i>
-                    <i class="fas fa-pen" th:if="${editing != null}"></i>
-                    <span th:text="${editing == null} ? ' เพิ่มลายเซ็น' : ' แก้ไขลายเซ็น'"></span>
-                </h5>
-            </div>
-            <div class="card-body">
-
-                <div th:if="${editing == null && #lists.size(signatures) >= maxSignatures}"
-                     class="alert alert-warning mb-0">
-                    <i class="fas fa-circle-info"></i>
-                    เก็บลายเซ็นได้สูงสุด <span th:text="${maxSignatures}">5</span> รายการ
-                    — ลบรายการที่ไม่ใช้แล้วก่อนเพิ่มใหม่
-                </div>
-
-                <form th:unless="${editing == null && #lists.size(signatures) >= maxSignatures}"
-                      th:action="@{/esign/my-signatures}" method="post"
-                      id="signatureEditor"
-                      th:attr="data-initial-kind=${editing != null} ? ${editing.kind.name()} : 'DRAW'">
-
-                    <input type="hidden" name="id" th:if="${editing != null}" th:value="${editing.id}">
-                    <input type="hidden" name="imageData" id="sigImageData">
-                    <input type="hidden" name="kind" id="sigKind" value="DRAW">
-                    <input type="hidden" name="typedFont" id="sigTypedFont">
-
-                    <!-- แท็บเลือกวิธีสร้างลายเซ็น -->
-                    <div class="sig-tabs mb-3">
-                        <button type="button" class="sig-tab" data-sig-tab="DRAW" aria-selected="true">
-                            วาด
-                        </button>
-                        <button type="button" class="sig-tab" data-sig-tab="UPLOAD" aria-selected="false">
-                            อัปโหลดรูปภาพ
-                        </button>
-                        <button type="button" class="sig-tab" data-sig-tab="TYPE" aria-selected="false">
-                            พิมพ์
-                        </button>
-                    </div>
-
-                    <div class="row g-3">
-                        <!-- ฝั่งซ้าย: พื้นที่สร้างลายเซ็น -->
-                        <div class="col-lg-5">
-
-                            <div id="sigPanelDraw">
-                                <div class="sig-canvas-wrap">
-                                    <canvas id="sigCanvas"></canvas>
-                                </div>
-                                <div class="form-text">ใช้เมาส์ ปากกา หรือนิ้วลากเพื่อวาดลายเซ็น</div>
-                            </div>
-
-                            <div id="sigPanelUpload" class="d-none">
-                                <label class="form-label">เลือกไฟล์รูปลายเซ็น หรือ PDF</label>
-                                <input type="file" id="sigUpload" class="form-control" accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf,.pdf">
-                                <div class="form-text">
-                                    รองรับ PNG / JPG / PDF — ระบบจะแปลงและตัดขอบพื้นหลังให้อัตโนมัติ
-                                </div>
-                            </div>
-
-                            <div id="sigPanelType" class="d-none">
-                                <label class="form-label">พิมพ์ชื่อของคุณ</label>
-                                <input type="text" id="sigTypedText" name="typedText" class="form-control"
-                                       maxlength="120"
-                                       th:value="${editing != null} ? ${editing.typedText} : ''"
-                                       placeholder="เช่น เกรียงไกร ประเสริฐ">
-                                <div class="form-text">ระบบจะแปลงข้อความเป็นรูปลายเซ็นให้อัตโนมัติ</div>
-                            </div>
-
-                            <button type="button" id="sigClearBtn" class="btn btn-outline-secondary btn-sm mt-3">
-                                <i class="fas fa-eraser"></i> ล้าง
-                            </button>
-                        </div>
-
-                        <!-- ฝั่งขวา: ตัวอย่างผลลัพธ์จริงที่จะถูกนำไปใช้ในเอกสาร -->
-                        <div class="col-lg-7">
-                            <label class="form-label">ตัวอย่างลายเซ็น</label>
-                            <div class="sig-preview-box">
-                                <img id="sigPreview" class="d-none" alt="ตัวอย่างลายเซ็น">
-                                <span id="sigPreviewEmpty" class="text-secondary">
-                                    ยังไม่มีลายเซ็น — วาด อัปโหลด หรือพิมพ์ชื่อทางด้านซ้าย
-                                </span>
-                            </div>
-                            <div class="form-text">
-                                ลายเซ็นจะถูกตัดขอบว่างและบันทึกเป็นรูปพื้นหลังโปร่งใสอัตโนมัติ
-                            </div>
-                            <div id="sigTypeNotice" class="alert alert-info py-2 px-3 mt-2 small d-none shadow-sm">
-                                <div class="d-flex align-items-center gap-2">
-                                    <i class="fas fa-clock text-primary fs-5"></i>
-                                    <div>
-                                        <strong>วันและเวลาในการลงนาม:</strong> วันที่และเวลาในตราประทับตัวอย่างนี้เป็นการแสดงเวลาจำลอง โดยเมื่อนำไปลงนามในเอกสารจริง ระบบจะสร้างตราประทับและบันทึกตาม<strong>วันและเวลาจริง ณ วินาทีที่ท่านกดยืนยันการลงนาม</strong>เสมอ
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="row g-3 mt-1">
-                        <div class="col-md-6">
-                            <label class="form-label">ชื่อ</label>
-                            <input type="text" name="name" class="form-control" maxlength="100"
-                                   th:value="${editing != null} ? ${editing.name} : ''"
-                                   placeholder="เช่น ลายเซ็นของฉัน">
-                        </div>
-                        <div class="col-md-6 d-flex align-items-end">
-                            <div class="form-check">
-                                <input class="form-check-input" type="checkbox" name="makeDefault"
-                                       id="sigMakeDefault" value="true"
-                                       th:checked="${editing != null && editing.isDefault}">
-                                <label class="form-check-label" for="sigMakeDefault">
-                                    ตั้งเป็นลายเซ็นหลัก (เลือกให้อัตโนมัติเมื่อลงนาม)
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="d-flex flex-wrap gap-2 align-items-center mt-4">
-                        <button type="submit" id="sigSaveBtn" class="btn btn-academic" disabled>
-                            <i class="fas fa-save"></i> บันทึกลายเซ็น
-                        </button>
-                        <a th:if="${editing != null}" href="/esign/my-signatures"
-                           class="btn btn-link text-decoration-none">ยกเลิกการแก้ไข</a>
-                    </div>
-                </form>
-            </div>
-        </div>
-
-        <!-- ==================== ลายเซ็นที่บันทึกไว้ ==================== -->
-        <div class="card card-academic">
-            <div class="card-header bg-white">
-                <h5 class="mb-0">
-                    ลายเซ็นที่บันทึกไว้
-                    <span class="text-secondary" th:text="'(' + ${#lists.size(signatures)} + ')'">(0)</span>
-                </h5>
-            </div>
-            <div class="card-body">
-
-                <p th:if="${#lists.isEmpty(signatures)}" class="text-secondary mb-0">
-                    ยังไม่มีลายเซ็นที่บันทึกไว้ — สร้างลายเซ็นแรกของคุณด้านบน
+        <!-- Header -->
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
+            <div>
+                <h3 class="mb-1"><i class="fas fa-signature text-primary me-2"></i> ลายเซ็นของฉัน</h3>
+                <p class="text-secondary mb-0">
+                    จัดการลายเซ็นดิจิทัลและใบรับรองอิเล็กทรอนิกส์ส่วนบุคคลสำหรับการลงนามในระบบ KKU-HRCP
                 </p>
+            </div>
 
-                <div class="row g-3" th:unless="${#lists.isEmpty(signatures)}">
-                    <div class="col-md-4 col-sm-6" th:each="sig : ${signatures}">
-                        <div class="sig-card" th:classappend="${sig.isDefault} ? 'is-default' : ''">
-
-                            <div class="sig-card-thumb">
-                                <img th:src="${sig.imageUrl}" th:alt="${sig.displayName}">
-                            </div>
-
-                            <div class="d-flex justify-content-between align-items-start gap-2">
-                                <strong th:text="${sig.displayName}">ชื่อลายเซ็น</strong>
-                                <span class="badge bg-light text-secondary border"
-                                      th:text="${sig.kind.thaiLabel}">ประเภท</span>
-                            </div>
-
-                            <div class="mt-1">
-                                <span th:if="${sig.isDefault}" class="badge bg-success">
-                                    <i class="fas fa-star"></i> ลายเซ็นหลัก
-                                </span>
-                            </div>
-
-                            <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
-                                <a th:href="@{/esign/my-signatures(edit=${sig.id})}"
-                                   class="btn btn-sm btn-link p-0 text-decoration-none">แก้ไข</a>
-
-                                <form th:unless="${sig.isDefault}"
-                                      th:action="@{'/esign/my-signatures/' + ${sig.id} + '/default'}" method="post"
-                                      class="d-inline">
-                                    <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none">
-                                        ตั้งเป็นหลัก
-                                    </button>
-                                </form>
-
-                                <form th:action="@{'/esign/my-signatures/' + ${sig.id} + '/delete'}" method="post"
-                                      class="d-inline" data-confirm="ยืนยันการลบลายเซ็นนี้?">
-                                    <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none text-danger">
-                                        ลบ
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+            <!-- Right Side Action: Certificate Status & Management Button (When Valid Cert Exists) -->
+            <div th:if="${hasValidCert}" class="d-flex align-items-center flex-wrap gap-2">
+                <span class="badge bg-success-subtle text-success border border-success-subtle py-2 px-3 rounded-pill d-inline-flex align-items-center gap-2">
+                    <i class="fas fa-shield-halved"></i>
+                    <span>Digital ID: <strong th:text="${activeCertificate.commonName}">ชื่อผู้ลงนาม</strong></span>
+                    <span class="text-muted small" th:if="${activeCertificate.validTo != null}"
+                          th:text="'(หมดอายุ ' + ${#temporals.format(activeCertificate.validTo, 'd MMM yyyy')} + ')'"></span>
+                </span>
+                <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3 py-1 shadow-sm d-inline-flex align-items-center gap-1"
+                        data-bs-toggle="modal" data-bs-target="#p12ManageModal" id="btnOpenCertManage">
+                    <i class="fas fa-id-card"></i>
+                    <span>จัดการใบรับรอง .p12</span>
+                </button>
             </div>
         </div>
 
-        <!-- ==================== ใบรับรองดิจิทัล (Digital ID .p12) ==================== -->
-        <div class="card card-academic mb-4">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <h5 class="mb-0">
-                    <i class="fas fa-certificate text-primary"></i> ใบรับรองดิจิทัล Digital ID (.p12)
-                </h5>
-                <div class="d-flex align-items-center gap-2">
-                    <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
+        <!-- ==================== CASE 1: NO VALID CERTIFICATE (STEP 1: INSTALL P12 FIRST) ==================== -->
+        <div th:if="${!hasValidCert}">
+            <!-- Step 1 Hero Card -->
+            <div class="card card-academic border-primary shadow-sm mb-4">
+                <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="p12-step-badge">ขั้นตอนที่ 1</span>
+                        <h5 class="mb-0 text-white fw-bold">
+                            <i class="fas fa-id-card me-1"></i> ติดตั้งใบรับรองดิจิทัล Digital ID (.p12) ของท่านก่อน
+                        </h5>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-light text-primary fw-semibold rounded-pill px-3 shadow-sm"
+                            data-bs-toggle="modal" data-bs-target="#p12GuideModal">
                         <i class="fas fa-book-open me-1"></i> คู่มือการขอรับไฟล์ .p12 และรหัสผ่าน
                     </button>
-                    <span th:if="${activeCertificate != null}" class="badge bg-success">
-                        <i class="fas fa-check-circle me-1"></i> ติดตั้งแล้ว
-                    </span>
-                    <span th:if="${activeCertificate == null}" class="badge bg-secondary">
-                        ยังไม่ได้ติดตั้ง
-                    </span>
                 </div>
-            </div>
-            <div class="card-body">
-                <p class="text-secondary mb-3">
-                    ติดตั้งใบรับรองดิจิทัลส่วนบุคคล (.p12) ของมหาวิทยาลัยขอนแก่น (ODT Digital ID) เพื่อใช้ลงนามแบบ 
-                    <strong>Cryptographic Digital Signature (PAdES)</strong> ที่มีผลทางกฎหมายระดับสูงตาม พ.ร.บ.ธุรกรรมอิเล็กทรอนิกส์ ม.26 
-                    โดยระบบจะประทับลายมือชื่อดิจิทัลลงในไฟล์ PDF โดยตรงอย่างถูกต้องเรียบหรู (ไม่ต้องใช้ไฟล์ .fdf หรือตีตารางสารบรรณ)
-                </p>
-
-                <!-- Active Certificate Card -->
-                <div th:if="${activeCertificate != null}" class="p-3 bg-light rounded border mb-4">
-                    <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
-                        <div>
-                            <div class="d-flex align-items-center gap-2 mb-1">
-                                <h6 class="mb-0 text-dark fw-bold" th:text="${activeCertificate.commonName}">ชื่อผู้ลงนาม</h6>
-                                <span class="badge bg-success bg-opacity-75">
-                                    <i class="fas fa-shield-halved me-1"></i> พร้อมใช้งาน One-Click Sign
-                                </span>
-                            </div>
-                            <div class="small text-muted mb-1">
-                                <strong>ผู้ออกใบรับรอง (Issuer):</strong> <span th:text="${activeCertificate.issuerDn}">Thai University Consortium CA</span>
-                            </div>
-                            <div class="small text-muted mb-1">
-                                <strong>ไฟล์ต้นฉบับ:</strong> <span th:text="${activeCertificate.originalFilename != null ? activeCertificate.originalFilename : 'Digital_ID.p12'}">cert.p12</span>
-                            </div>
-                            <div class="small text-muted">
-                                <strong>วันหมดอายุ:</strong> 
-                                <span th:text="${activeCertificate.validTo != null ? #temporals.format(activeCertificate.validTo, 'd MMM yyyy HH:mm') : '-'}">-</span>
-                                <span th:if="${activeCertificate.expired}" class="badge bg-danger ms-1">หมดอายุแล้ว</span>
-                            </div>
-                            <div th:if="${activeCertificate.expired}" class="alert alert-danger py-2 px-3 mt-2 mb-0 small">
-                                <i class="fas fa-triangle-exclamation me-1"></i> <strong>ใบรับรองนี้หมดอายุแล้ว:</strong> จะไม่สามารถใช้ลงนามในเอกสารได้ กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" class="fw-bold alert-link text-decoration-underline">https://i.kku.ac.th</a> แล้วกด "เปลี่ยนไฟล์ .p12" ด้านล่าง
-                            </div>
-                            <div class="d-flex flex-wrap gap-2 mt-3">
-                                <a href="#certUploadCard" class="btn btn-sm btn-outline-primary">
-                                    <i class="fas fa-arrows-rotate me-1"></i> เปลี่ยนไฟล์ .p12
-                                </a>
-                            </div>
-                        </div>
-                        <form th:action="@{'/esign/my-certificates/' + ${activeCertificate.id} + '/deactivate'}" method="post"
-                              data-confirm="ยืนยันการยกเลิกใช้งานใบรับรองดิจิทัลนี้?">
-                            <button type="submit" class="btn btn-sm btn-outline-danger">
-                                <i class="fas fa-trash me-1"></i> ยกเลิกการใช้งาน
-                            </button>
-                        </form>
+                <div class="card-body p-4">
+                    <!-- Expired notice if applicable -->
+                    <div th:if="${activeCertificate != null && activeCertificate.expired}" class="alert alert-danger py-2 px-3 mb-3 small border-danger">
+                        <i class="fas fa-triangle-exclamation me-1"></i>
+                        <strong>ใบรับรองดิจิทัลเดิมหมดอายุแล้ว:</strong> จะไม่สามารถใช้ลงนามเอกสารได้ กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" class="fw-bold alert-link text-decoration-underline">https://i.kku.ac.th</a> แล้วติดตั้งด้านล่าง
                     </div>
-                </div>
 
-                <!-- คำแนะนำ: วิธีดาวน์โหลดไฟล์ .p12 และการดูรหัสผ่าน -->
-                <div class="alert alert-info border-info bg-info bg-opacity-10 mb-3">
-                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-                        <div class="d-flex align-items-center gap-2">
-                            <i class="fas fa-circle-question text-info fs-5"></i>
-                            <strong class="text-dark">คำแนะนำ: วิธีขอรับไฟล์ .p12 และรหัสผ่านสำหรับติดตั้ง</strong>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
-                            <i class="fas fa-book-open me-1"></i> อ่านคู่มือฉบับเต็ม
-                        </button>
-                    </div>
-                    <div class="small text-secondary ps-4">
-                        <ol class="mb-2 ps-3">
-                            <li class="mb-1">
-                                <strong>วิธีดาวน์โหลดไฟล์ .p12 จาก มข.:</strong> 
-                                เข้าสู่ระบบบริการบุคลากร มข. (iKKU) ที่ <a href="https://i.kku.ac.th" target="_blank" class="fw-bold text-decoration-none">https://i.kku.ac.th</a> ด้วยบัญชี <code>@kku.ac.th</code> แล้วเลือกดาวน์โหลดไฟล์ <strong>Digital ID (.p12)</strong> ประจำตัว
-                            </li>
-                            <li class="mb-1">
-                                <strong>Digital ID Password ของไฟล์เอามาจากไหน:</strong> 
-                                คือรหัสผ่านที่คุณตั้งขึ้นเองตอนกดดาวน์โหลด Digital ID จาก <a href="https://i.kku.ac.th" target="_blank">i.kku.ac.th</a> (หรือรหัสที่ระบบ มข. ส่งให้ทาง KKU Mail / SMS) <em>*ไม่ใช่รหัสผ่านอีเมลทั่วไป</em>
-                            </li>
-                            <li>
-                                <strong>ใส่ครั้งเดียวพร้อมระบบตรวจสอบความถูกต้อง:</strong> 
-                                เลือกไฟล์ .p12 กรอกรหัสผ่าน แล้วกดปุ่ม <strong>"ตรวจสอบความถูกต้อง"</strong> ก่อนบันทึก — ระบบจะเข้ารหัสด้วย AES-256 ให้คุณลงนามในเอกสารทุกฉบับได้ในคลิกเดียว (One-Click Sign) ทันที
-                            </li>
+                    <p class="text-secondary mb-3">
+                        การลงนามในระบบ KKU-HRCP เป็นการลงนามแบบ <strong>Cryptographic Digital Signature (PAdES)</strong> ตาม พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์ ซึ่งจำเป็นต้องใช้ใบรับรองดิจิทัลส่วนบุคคล (.p12) ของมหาวิทยาลัยขอนแก่นเป็นข้อกำหนดหลัก <strong>กรุณาติดตั้งไฟล์ .p12 ของท่านให้เรียบร้อย ระบบจึงจะเปิดให้สร้างและบันทึกลายเซ็นในขั้นตอนถัดไป</strong>
+                    </p>
+
+                    <!-- Instructions -->
+                    <div class="alert alert-info border-info bg-info bg-opacity-10 mb-4">
+                        <strong class="text-dark d-block mb-2"><i class="fas fa-circle-question text-info me-1"></i> คำแนะนำ 3 ขั้นตอนง่ายๆ:</strong>
+                        <ol class="small text-secondary mb-0 ps-3">
+                            <li class="mb-1"><strong>วิธีดาวน์โหลดไฟล์ .p12:</strong> เข้าสู่ระบบ iKKU ที่ <a href="https://i.kku.ac.th" target="_blank" class="fw-bold text-decoration-none">https://i.kku.ac.th</a> เพื่อดาวน์โหลดไฟล์ Digital ID (.p12) ของท่าน</li>
+                            <li class="mb-1"><strong>Digital ID Password:</strong> คือรหัสผ่านที่อยู่ในหน้าตอนกดดาวน์โหลดไฟล์จาก iKKU <em>(ไม่ใช่รหัสผ่านอีเมล)</em></li>
+                            <li><strong>ตรวจสอบความถูกต้อง:</strong> เลือกไฟล์ กรอกรหัสผ่าน แล้วกดปุ่ม <strong>"ตรวจสอบความถูกต้อง"</strong> ก่อนบันทึก — ระบบจะจดจำและเปิดใช้งาน One-Click Sign ทันที</li>
                         </ol>
                     </div>
-                </div>
 
-                <!-- Form Upload / Replace Certificate -->
-                <div class="card border border-dashed" id="certUploadCard">
-                    <div class="card-body">
-                        <h6 class="card-title mb-2">
-                            <i class="fas fa-cloud-arrow-up text-primary me-1"></i>
-                            <span th:text="${activeCertificate == null ? 'ติดตั้งใบรับรอง Digital ID (.p12)' : 'อัปเดตหรือเปลี่ยนไฟล์ใบรับรอง .p12 ใหม่'}">ติดตั้งใบรับรอง</span>
+                    <!-- Upload Form -->
+                    <div class="p-3 bg-light rounded-3 border">
+                        <h6 class="fw-bold text-dark mb-3">
+                            <i class="fas fa-cloud-arrow-up text-primary me-1"></i> อัปโหลดและติดตั้งไฟล์ใบรับรอง .p12
                         </h6>
                         <form id="certUploadForm" th:action="@{/esign/my-certificates/upload}" method="post" enctype="multipart/form-data">
                             <div class="row g-3">
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">เลือกไฟล์ Digital ID (.p12 หรือ .pfx) <span class="text-danger">*</span></label>
-                                    <input type="file" id="certFileInput" name="certFile" class="form-control form-control-sm" accept=".p12,.pfx" required>
+                                    <input type="file" id="certFileInput" name="certFile" class="form-control" accept=".p12,.pfx" required>
                                     <div class="form-text small">ไฟล์ .p12 ที่ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank">i.kku.ac.th</a></div>
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label small fw-semibold">Digital ID Password (รหัสผ่านของไฟล์) <span class="text-danger">*</span></label>
-                                    <div class="input-group input-group-sm">
+                                    <div class="input-group">
                                         <input type="password" id="certPasswordInput" name="pin" class="form-control" placeholder="ระบุ Digital ID Password" required autocomplete="off">
                                         <button type="button" class="btn btn-outline-secondary" id="btnToggleCertPwd" tabindex="-1">
                                             <i class="fas fa-eye"></i>
@@ -317,16 +91,16 @@
                                     <div class="form-text small">รหัสผ่านที่ตั้งไว้ตอนดาวน์โหลดไฟล์จาก i.kku.ac.th</div>
                                 </div>
 
-                                <!-- กล่องแสดงผลการตรวจสอบ -->
+                                <!-- Feedback Box -->
                                 <div class="col-12 d-none" id="verifyFeedbackBox">
                                     <div id="verifyFeedbackAlert" class="alert py-2 px-3 small mb-0"></div>
                                 </div>
 
-                                <div class="col-12 d-flex align-items-center flex-wrap gap-2 pt-1">
-                                    <button type="button" id="btnVerifyCert" class="btn btn-sm btn-outline-primary">
+                                <div class="col-12 d-flex align-items-center flex-wrap gap-2 pt-2">
+                                    <button type="button" id="btnVerifyCert" class="btn btn-outline-primary">
                                         <i class="fas fa-magnifying-glass me-1"></i> ตรวจสอบความถูกต้อง
                                     </button>
-                                    <button type="submit" id="btnSubmitCert" class="btn btn-sm btn-academic" disabled>
+                                    <button type="submit" id="btnSubmitCert" class="btn btn-academic" disabled>
                                         <i class="fas fa-check-circle me-1"></i> ติดตั้งและบันทึกใบรับรอง
                                     </button>
                                     <span id="verifyNoticeText" class="small text-muted">
@@ -338,9 +112,337 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
+            <!-- Step 2 Locked Card -->
+            <div class="sig-locked-card mb-4">
+                <div class="sig-locked-icon">
+                    <i class="fas fa-lock"></i>
+                </div>
+                <h5 class="fw-bold text-dark mb-2">ขั้นตอนที่ 2: สร้างและบันทึกลายเซ็น</h5>
+                <p class="text-secondary max-w-600 mx-auto mb-3" style="max-width: 540px;">
+                    ส่วนสร้างลายเซ็นจะปลดล็อกให้ใช้งานอัตโนมัติ หลังจากท่านดำเนินการติดตั้งใบรับรองดิจิทัล Digital ID (.p12) ในขั้นตอนที่ 1 เรียบร้อยแล้ว
+                </p>
+                <span class="badge bg-secondary-subtle text-secondary border px-3 py-2 rounded-pill">
+                    <i class="fas fa-clock me-1"></i> รอการติดตั้ง Digital ID (.p12)
+                </span>
+            </div>
+
+            <!-- Saved signatures note if user has previous signatures -->
+            <div th:if="${!#lists.isEmpty(signatures)}" class="card card-academic mb-4">
+                <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0 text-dark fw-bold">
+                        ลายเซ็นที่เคยบันทึกไว้
+                        <span class="text-secondary" th:text="'(' + ${#lists.size(signatures)} + ')'">(0)</span>
+                    </h6>
+                    <span class="badge bg-warning-subtle text-warning-emphasis border border-warning-subtle rounded-pill">
+                        <i class="fas fa-circle-info me-1"></i> รอยืนยันใบรับรองเพื่อลงนาม
+                    </span>
+                </div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4 col-sm-6" th:each="sig : ${signatures}">
+                            <div class="sig-card">
+                                <div class="sig-card-thumb">
+                                    <img th:src="${sig.imageUrl}" th:alt="${sig.displayName}">
+                                </div>
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <strong th:text="${sig.displayName}">ชื่อลายเซ็น</strong>
+                                    <span class="badge bg-light text-secondary border" th:text="${sig.kind.thaiLabel}">ประเภท</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== CASE 2: HAS VALID CERTIFICATE (SIGNATURE CREATION & MANAGEMENT) ==================== -->
+        <div th:if="${hasValidCert}">
+            <!-- ==================== เพิ่ม / แก้ไขลายเซ็น ==================== -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        <i class="fas fa-plus" th:if="${editing == null}"></i>
+                        <i class="fas fa-pen" th:if="${editing != null}"></i>
+                        <span th:text="${editing == null} ? ' เพิ่มลายเซ็น' : ' แก้ไขลายเซ็น'"></span>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <div th:if="${editing == null && #lists.size(signatures) >= maxSignatures}"
+                         class="alert alert-warning mb-0">
+                        <i class="fas fa-circle-info"></i>
+                        เก็บลายเซ็นได้สูงสุด <span th:text="${maxSignatures}">5</span> รายการ
+                        — ลบรายการที่ไม่ใช้แล้วก่อนเพิ่มใหม่
+                    </div>
+
+                    <form th:unless="${editing == null && #lists.size(signatures) >= maxSignatures}"
+                          th:action="@{/esign/my-signatures}" method="post"
+                          id="signatureEditor"
+                          th:attr="data-initial-kind=${editing != null} ? ${editing.kind.name()} : 'DRAW'">
+
+                        <input type="hidden" name="id" th:if="${editing != null}" th:value="${editing.id}">
+                        <input type="hidden" name="imageData" id="sigImageData">
+                        <input type="hidden" name="kind" id="sigKind" value="DRAW">
+                        <input type="hidden" name="typedFont" id="sigTypedFont">
+
+                        <!-- แท็บเลือกวิธีสร้างลายเซ็น -->
+                        <div class="sig-tabs mb-3">
+                            <button type="button" class="sig-tab" data-sig-tab="DRAW" aria-selected="true">
+                                วาด
+                            </button>
+                            <button type="button" class="sig-tab" data-sig-tab="UPLOAD" aria-selected="false">
+                                อัปโหลดรูปภาพ
+                            </button>
+                            <button type="button" class="sig-tab" data-sig-tab="TYPE" aria-selected="false">
+                                พิมพ์
+                            </button>
+                        </div>
+
+                        <div class="row g-3">
+                            <!-- ฝั่งซ้าย: พื้นที่สร้างลายเซ็น -->
+                            <div class="col-lg-5">
+
+                                <div id="sigPanelDraw">
+                                    <div class="sig-canvas-wrap">
+                                        <canvas id="sigCanvas"></canvas>
+                                    </div>
+                                    <div class="form-text">ใช้เมาส์ ปากกา หรือนิ้วลากเพื่อวาดลายเซ็น</div>
+                                </div>
+
+                                <div id="sigPanelUpload" class="d-none">
+                                    <label class="form-label">เลือกไฟล์รูปลายเซ็น หรือ PDF</label>
+                                    <input type="file" id="sigUpload" class="form-control" accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf,.pdf">
+                                    <div class="form-text">
+                                        รองรับ PNG / JPG / PDF — ระบบจะแปลงและตัดขอบพื้นหลังให้อัตโนมัติ
+                                    </div>
+                                </div>
+
+                                <div id="sigPanelType" class="d-none">
+                                    <label class="form-label">พิมพ์ชื่อของคุณ</label>
+                                    <input type="text" id="sigTypedText" name="typedText" class="form-control"
+                                           maxlength="120"
+                                           th:value="${editing != null} ? ${editing.typedText} : ''"
+                                           placeholder="เช่น เกรียงไกร ประเสริฐ">
+                                    <div class="form-text">ระบบจะแปลงข้อความเป็นรูปลายเซ็นให้อัตโนมัติ</div>
+                                </div>
+
+                                <button type="button" id="sigClearBtn" class="btn btn-outline-secondary btn-sm mt-3">
+                                    <i class="fas fa-rotate-left me-1"></i> ล้าง
+                                </button>
+                            </div>
+
+                            <!-- ฝั่งขวา: ตัวอย่างผลลัพธ์จริงที่จะถูกนำไปใช้ในเอกสาร -->
+                            <div class="col-lg-7">
+                                <label class="form-label">ตัวอย่างลายเซ็น</label>
+                                <div class="sig-preview-box">
+                                    <img id="sigPreview" class="d-none" alt="ตัวอย่างลายเซ็น">
+                                    <span id="sigPreviewEmpty" class="text-secondary">
+                                        ยังไม่มีลายเซ็น — วาด อัปโหลด หรือพิมพ์ชื่อทางด้านซ้าย
+                                    </span>
+                                </div>
+                                <div class="form-text">
+                                    ลายเซ็นจะถูกตัดขอบว่างและบันทึกเป็นรูปพื้นหลังโปร่งใสอัตโนมัติ
+                                </div>
+                                <div id="sigTypeNotice" class="alert alert-info py-2 px-3 mt-2 small d-none shadow-sm">
+                                    <div class="d-flex align-items-center gap-2">
+                                        <i class="fas fa-clock text-primary fs-5"></i>
+                                        <div>
+                                            <strong>วันและเวลาในการลงนาม:</strong> วันที่และเวลาในตราประทับตัวอย่างนี้เป็นการแสดงเวลาจำลอง โดยเมื่อนำไปลงนามในเอกสารจริง ระบบจะสร้างตราประทับและบันทึกตาม<strong>วันและเวลาจริง ณ วินาทีที่ท่านกดยืนยันการลงนาม</strong>เสมอ
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row g-3 mt-1">
+                            <div class="col-md-6">
+                                <label class="form-label">ชื่อ</label>
+                                <input type="text" name="name" class="form-control" maxlength="100"
+                                       th:value="${editing != null} ? ${editing.name} : ''"
+                                       placeholder="เช่น ลายเซ็นของฉัน">
+                            </div>
+                            <div class="col-md-6 d-flex align-items-end">
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="makeDefault"
+                                           id="sigMakeDefault" value="true"
+                                           th:checked="${editing != null && editing.isDefault}">
+                                    <label class="form-check-label" for="sigMakeDefault">
+                                        ตั้งเป็นลายเซ็นหลัก (เลือกให้อัตโนมัติเมื่อลงนาม)
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex flex-wrap gap-2 align-items-center mt-4">
+                            <button type="submit" id="sigSaveBtn" class="btn btn-academic" disabled>
+                                <i class="fas fa-save"></i> บันทึกลายเซ็น
+                            </button>
+                            <a th:if="${editing != null}" href="/esign/my-signatures"
+                               class="btn btn-link text-decoration-none">ยกเลิกการแก้ไข</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- ==================== ลายเซ็นที่บันทึกไว้ ==================== -->
+            <div class="card card-academic mb-4">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">
+                        ลายเซ็นที่บันทึกไว้
+                        <span class="text-secondary" th:text="'(' + ${#lists.size(signatures)} + ')'">(0)</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <p th:if="${#lists.isEmpty(signatures)}" class="text-secondary mb-0">
+                        ยังไม่มีลายเซ็นที่บันทึกไว้ — สร้างลายเซ็นแรกของคุณด้านบน
+                    </p>
+
+                    <div class="row g-3" th:unless="${#lists.isEmpty(signatures)}">
+                        <div class="col-md-4 col-sm-6" th:each="sig : ${signatures}">
+                            <div class="sig-card" th:classappend="${sig.isDefault} ? 'is-default' : ''">
+
+                                <div class="sig-card-thumb">
+                                    <img th:src="${sig.imageUrl}" th:alt="${sig.displayName}">
+                                </div>
+
+                                <div class="d-flex justify-content-between align-items-start gap-2">
+                                    <strong th:text="${sig.displayName}">ชื่อลายเซ็น</strong>
+                                    <span class="badge bg-light text-secondary border"
+                                          th:text="${sig.kind.thaiLabel}">ประเภท</span>
+                                </div>
+
+                                <div class="mt-1">
+                                    <span th:if="${sig.isDefault}" class="badge bg-success">
+                                        <i class="fas fa-circle-check me-1"></i> ลายเซ็นหลัก
+                                    </span>
+                                </div>
+
+                                <div class="d-flex flex-wrap gap-2 align-items-center mt-2">
+                                    <a th:href="@{/esign/my-signatures(edit=${sig.id})}"
+                                       class="btn btn-sm btn-link p-0 text-decoration-none">แก้ไข</a>
+
+                                    <form th:unless="${sig.isDefault}"
+                                          th:action="@{'/esign/my-signatures/' + ${sig.id} + '/default'}" method="post"
+                                          class="d-inline">
+                                        <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none">
+                                            ตั้งเป็นหลัก
+                                        </button>
+                                    </form>
+
+                                    <form th:action="@{'/esign/my-signatures/' + ${sig.id} + '/delete'}" method="post"
+                                          class="d-inline" data-confirm="ยืนยันการลบลายเซ็นนี้?">
+                                        <button type="submit" class="btn btn-sm btn-link p-0 text-decoration-none text-danger">
+                                            ลบ
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ==================== Modal จัดการใบรับรองดิจิทัล (.p12) ==================== -->
+            <div class="modal fade" id="p12ManageModal" tabindex="-1" aria-labelledby="p12ManageModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered modal-lg">
+                    <div class="modal-content">
+                        <div class="modal-header bg-light">
+                            <h5 class="modal-title fw-bold text-dark" id="p12ManageModalLabel">
+                                <i class="fas fa-id-card text-primary me-2"></i> จัดการใบรับรองดิจิทัล Digital ID (.p12)
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body p-4">
+                            <!-- Certificate Info Card -->
+                            <div class="p-3 bg-light rounded-3 border mb-4">
+                                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                                    <div>
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <h6 class="mb-0 text-dark fw-bold" th:text="${activeCertificate.commonName}">ชื่อผู้ลงนาม</h6>
+                                            <span class="badge bg-success bg-opacity-75">
+                                                <i class="fas fa-shield-halved me-1"></i> พร้อมใช้งาน One-Click Sign
+                                            </span>
+                                        </div>
+                                        <div class="small text-muted mb-1">
+                                            <strong>ผู้ออกใบรับรอง (Issuer):</strong> <span th:text="${activeCertificate.issuerDn}">Thai University Consortium CA</span>
+                                        </div>
+                                        <div class="small text-muted mb-1">
+                                            <strong>ไฟล์ต้นฉบับ:</strong> <span th:text="${activeCertificate.originalFilename != null ? activeCertificate.originalFilename : 'Digital_ID.p12'}">cert.p12</span>
+                                        </div>
+                                        <div class="small text-muted">
+                                            <strong>วันหมดอายุ:</strong> 
+                                            <span th:text="${activeCertificate.validTo != null ? #temporals.format(activeCertificate.validTo, 'd MMM yyyy HH:mm') : '-'}">-</span>
+                                        </div>
+                                    </div>
+                                    <form th:action="@{'/esign/my-certificates/' + ${activeCertificate.id} + '/deactivate'}" method="post"
+                                          data-confirm="ยืนยันการยกเลิกใช้งานใบรับรองดิจิทัลนี้?">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                                            <i class="fas fa-trash me-1"></i> ยกเลิกการใช้งาน
+                                        </button>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <!-- Replace / Update Certificate -->
+                            <div class="card border border-dashed mb-3">
+                                <div class="card-body p-3">
+                                    <h6 class="fw-bold text-dark mb-2">
+                                        <i class="fas fa-arrows-rotate text-primary me-1"></i> อัปเดตหรือเปลี่ยนไฟล์ใบรับรอง .p12 ใหม่
+                                    </h6>
+                                    <form id="certUploadFormModal" th:action="@{/esign/my-certificates/upload}" method="post" enctype="multipart/form-data">
+                                        <div class="row g-3">
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">เลือกไฟล์ Digital ID (.p12 หรือ .pfx) <span class="text-danger">*</span></label>
+                                                <input type="file" id="certFileInputModal" name="certFile" class="form-control form-control-sm" accept=".p12,.pfx" required>
+                                                <div class="form-text small">ไฟล์ .p12 ที่ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank">i.kku.ac.th</a></div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label class="form-label small fw-semibold">Digital ID Password (รหัสผ่านของไฟล์) <span class="text-danger">*</span></label>
+                                                <div class="input-group input-group-sm">
+                                                    <input type="password" id="certPasswordInputModal" name="pin" class="form-control" placeholder="ระบุ Digital ID Password" required autocomplete="off">
+                                                    <button type="button" class="btn btn-outline-secondary" id="btnToggleCertPwdModal" tabindex="-1">
+                                                        <i class="fas fa-eye"></i>
+                                                    </button>
+                                                </div>
+                                                <div class="form-text small">รหัสผ่านที่ตั้งไว้ตอนดาวน์โหลดไฟล์จาก i.kku.ac.th</div>
+                                            </div>
+
+                                            <!-- Feedback Box -->
+                                            <div class="col-12 d-none" id="verifyFeedbackBoxModal">
+                                                <div id="verifyFeedbackAlertModal" class="alert py-2 px-3 small mb-0"></div>
+                                            </div>
+
+                                            <div class="col-12 d-flex align-items-center flex-wrap gap-2 pt-1">
+                                                <button type="button" id="btnVerifyCertModal" class="btn btn-sm btn-outline-primary">
+                                                    <i class="fas fa-magnifying-glass me-1"></i> ตรวจสอบความถูกต้อง
+                                                </button>
+                                                <button type="submit" id="btnSubmitCertModal" class="btn btn-sm btn-academic" disabled>
+                                                    <i class="fas fa-check-circle me-1"></i> ติดตั้งและบันทึกใบรับรองใหม่
+                                                </button>
+                                                <span id="verifyNoticeTextModal" class="small text-muted">
+                                                    <i class="fas fa-circle-exclamation text-warning me-1"></i> กรุณากด <strong>"ตรวจสอบความถูกต้อง"</strong> ก่อนบันทึก
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between align-items-center">
+                                <button type="button" class="btn btn-sm btn-link text-decoration-none p-0" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
+                                    <i class="fas fa-book-open me-1"></i> คู่มือการขอรับไฟล์ .p12 และรหัสผ่าน
+                                </button>
+                                <button type="button" class="btn btn-secondary btn-sm px-3" data-bs-dismiss="modal">ปิด</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
 
     <!-- Reusable P12 Guide Modal -->
     <div th:replace="~{academic/esign/_p12_guide_modal :: p12GuideModal}"></div>
@@ -352,6 +454,7 @@
         const csrfToken = document.querySelector('meta[name="_csrf"]')?.content || '';
         const csrfHeader = document.querySelector('meta[name="_csrf_header"]')?.content || 'X-CSRF-TOKEN';
 
+        // Helper: Toggle Password Visibility
         function setupTogglePassword(btnId, inputId) {
             const btn = document.getElementById(btnId);
             const input = document.getElementById(inputId);
@@ -364,26 +467,29 @@
             }
         }
         setupTogglePassword('btnToggleCertPwd', 'certPasswordInput');
+        setupTogglePassword('btnToggleCertPwdModal', 'certPasswordInputModal');
 
-        // 1. Upload Pre-flight Verification
-        const certFile = document.getElementById('certFileInput');
-        const certPwd = document.getElementById('certPasswordInput');
-        const btnVerify = document.getElementById('btnVerifyCert');
-        const btnSubmit = document.getElementById('btnSubmitCert');
-        const verifyBox = document.getElementById('verifyFeedbackBox');
-        const verifyAlert = document.getElementById('verifyFeedbackAlert');
-        const verifyNotice = document.getElementById('verifyNoticeText');
+        // Helper: Pre-flight Verification Handler
+        function setupCertVerification(config) {
+            const certFile = document.getElementById(config.fileId);
+            const certPwd = document.getElementById(config.pwdId);
+            const btnVerify = document.getElementById(config.verifyBtnId);
+            const btnSubmit = document.getElementById(config.submitBtnId);
+            const verifyBox = document.getElementById(config.boxId);
+            const verifyAlert = document.getElementById(config.alertId);
+            const verifyNotice = document.getElementById(config.noticeId);
 
-        function resetUploadVerify() {
-            if (btnSubmit) btnSubmit.disabled = true;
-            if (verifyNotice) verifyNotice.classList.remove('d-none');
-            if (verifyBox) verifyBox.classList.add('d-none');
-        }
+            if (!certFile || !certPwd || !btnVerify) return;
 
-        if (certFile) certFile.addEventListener('change', resetUploadVerify);
-        if (certPwd) certPwd.addEventListener('input', resetUploadVerify);
+            function resetUploadVerify() {
+                if (btnSubmit) btnSubmit.disabled = true;
+                if (verifyNotice) verifyNotice.classList.remove('d-none');
+                if (verifyBox) verifyBox.classList.add('d-none');
+            }
 
-        if (btnVerify) {
+            certFile.addEventListener('change', resetUploadVerify);
+            certPwd.addEventListener('input', resetUploadVerify);
+
             btnVerify.addEventListener('click', async function () {
                 if (!certFile.files || certFile.files.length === 0) {
                     window.alert('กรุณาเลือกไฟล์ .p12 ก่อนกดตรวจสอบ');
@@ -416,36 +522,74 @@
                     });
 
                     const data = await response.json();
-                    verifyBox.classList.remove('d-none');
+                    if (verifyBox) verifyBox.classList.remove('d-none');
 
                     if (data.ok) {
-                        verifyAlert.className = 'alert alert-success py-2 px-3 small mb-0 border-success shadow-sm';
-                        verifyAlert.innerHTML = `
-                            <div class="d-flex align-items-center gap-2">
-                                <i class="fas fa-circle-check fs-4 text-success"></i>
-                                <div>
-                                    <strong>ตรวจสอบสำเร็จ:</strong> ใบรับรองของ <u>${data.commonName}</u> ถูกต้องพร้อมใช้งาน<br>
-                                    <span class="text-muted">ผู้ออก: ${data.issuer} · ใช้ได้ถึง: ${data.validTo}</span>
-                                </div>
-                            </div>`;
-                        btnSubmit.disabled = false;
-                        verifyNotice.classList.add('d-none');
+                        if (verifyAlert) {
+                            verifyAlert.className = 'alert alert-success py-2 px-3 small mb-0 border-success shadow-sm';
+                            verifyAlert.innerHTML = `
+                                <div class="d-flex align-items-center gap-2">
+                                    <i class="fas fa-circle-check fs-4 text-success"></i>
+                                    <div>
+                                        <strong>ตรวจสอบสำเร็จ:</strong> ใบรับรองของ <u>${data.commonName}</u> ถูกต้องพร้อมใช้งาน<br>
+                                        <span class="text-muted">ผู้ออก: ${data.issuer} · ใช้ได้ถึง: ${data.validTo}</span>
+                                    </div>
+                                </div>`;
+                        }
+                        if (btnSubmit) btnSubmit.disabled = false;
+                        if (verifyNotice) verifyNotice.classList.add('d-none');
                     } else {
-                        verifyAlert.className = 'alert alert-danger py-2 px-3 small mb-0 border-danger shadow-sm';
-                        verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ${data.error || 'Digital ID Password ไม่ถูกต้อง หรือไฟล์ไม่สมบูรณ์'}`;
-                        btnSubmit.disabled = true;
-                        verifyNotice.classList.remove('d-none');
+                        if (verifyAlert) {
+                            verifyAlert.className = 'alert alert-danger py-2 px-3 small mb-0 border-danger shadow-sm';
+                            verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ${data.error || 'Digital ID Password ไม่ถูกต้อง หรือไฟล์ไม่สมบูรณ์'}`;
+                        }
+                        if (btnSubmit) btnSubmit.disabled = true;
+                        if (verifyNotice) verifyNotice.classList.remove('d-none');
                     }
                 } catch (err) {
-                    verifyBox.classList.remove('d-none');
-                    verifyAlert.className = 'alert alert-danger py-2 px-3 small mb-0 border-danger shadow-sm';
-                    verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อตรวจสอบได้: ${err.message}`;
-                    btnSubmit.disabled = true;
+                    if (verifyBox) verifyBox.classList.remove('d-none');
+                    if (verifyAlert) {
+                        verifyAlert.className = 'alert alert-danger py-2 px-3 small mb-0 border-danger shadow-sm';
+                        verifyAlert.innerHTML = `<i class="fas fa-triangle-exclamation me-1"></i> ไม่สามารถเชื่อมต่อกับเซิร์ฟเวอร์เพื่อตรวจสอบได้: ${err.message}`;
+                    }
+                    if (btnSubmit) btnSubmit.disabled = true;
                 } finally {
                     btnVerify.disabled = false;
                     btnVerify.innerHTML = '<i class="fas fa-magnifying-glass me-1"></i> ตรวจสอบความถูกต้อง';
                 }
             });
+        }
+
+        // Initialize for Case 1 (Hero Card when no cert)
+        setupCertVerification({
+            fileId: 'certFileInput',
+            pwdId: 'certPasswordInput',
+            verifyBtnId: 'btnVerifyCert',
+            submitBtnId: 'btnSubmitCert',
+            boxId: 'verifyFeedbackBox',
+            alertId: 'verifyFeedbackAlert',
+            noticeId: 'verifyNoticeText'
+        });
+
+        // Initialize for Case 2 (Inside Modal when has cert)
+        setupCertVerification({
+            fileId: 'certFileInputModal',
+            pwdId: 'certPasswordInputModal',
+            verifyBtnId: 'btnVerifyCertModal',
+            submitBtnId: 'btnSubmitCertModal',
+            boxId: 'verifyFeedbackBoxModal',
+            alertId: 'verifyFeedbackAlertModal',
+            noticeId: 'verifyNoticeTextModal'
+        });
+
+        // Auto-open modal if manageCert param is present
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('manageCert') === 'true') {
+            const modalEl = document.getElementById('p12ManageModal');
+            if (modalEl && typeof bootstrap !== 'undefined') {
+                const modal = new bootstrap.Modal(modalEl);
+                modal.show();
+            }
         }
     });
     </script>

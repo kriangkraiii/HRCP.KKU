@@ -11,7 +11,8 @@
             </div>
             <h3 class="mb-4"><i class="fas fa-university"></i> การยื่นขอตำแหน่งทางวิชาการ — เลือกผลประเมินการสอน</h3>
 
-            <div th:unless="${hasEligible}" class="alert alert-warning">
+            <!-- ไม่มีผลประเมินที่ใช้ได้เลย -->
+            <div th:unless="${hasAny}" class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <strong>ไม่พบผลการประเมินผลการสอนที่ใช้ได้</strong>
                 <p class="mb-0 mt-2">คุณต้องมีผลการประเมินผลการสอนที่ <strong>ผ่านและยังไม่หมดอายุ</strong> จึงจะยื่นขอตำแหน่งทางวิชาการได้</p>
@@ -20,31 +21,95 @@
                 </a>
             </div>
 
-            <div th:if="${hasEligible}">
-                <div class="alert alert-info mb-4">
+            <!-- มีผลประเมิน แต่ทุกใบถูกใช้ยื่นไปหมดแล้ว -->
+            <div th:if="${hasAny and !hasEligible}" class="alert alert-warning">
+                <i class="fas fa-lock me-2"></i>
+                <strong>ผลการประเมินทุกรายการถูกใช้ยื่นขอตำแหน่งไปแล้ว</strong>
+                <p class="mb-0 mt-2">
+                    แต่ละรายวิชาในแต่ละปีการศึกษา ใช้ยื่นขอกำหนดตำแหน่งได้เพียงครั้งเดียว
+                    หากต้องการยื่นใหม่ ต้องขอรับการประเมินการสอนในรายวิชาหรือปีการศึกษาอื่นก่อน
+                </p>
+                <a href="/user/academic/dashboard" class="btn-back-pill mt-3">
+                    <i class="fas fa-arrow-left"></i> ไปขอประเมินการสอนรายวิชาใหม่
+                </a>
+            </div>
+
+            <div th:if="${hasAny}">
+                <div th:if="${hasEligible}" class="alert alert-info mb-4">
                     <i class="fas fa-info-circle me-2"></i>
-                    กรุณาเลือกผลการประเมินผลการสอนที่ต้องการใช้ในการยื่นขอตำแหน่งทางวิชาการ
+                    กรุณาตรวจสอบรายละเอียดแล้วเลือกผลการประเมินผลการสอนที่ต้องการใช้ยื่นขอตำแหน่งทางวิชาการ
+                    <div class="small mt-2 mb-0">
+                        <i class="fas fa-triangle-exclamation me-1"></i>
+                        เมื่อกดยื่นคำร้องแล้ว <strong>รายวิชาและปีการศึกษานั้นจะใช้ยื่นซ้ำอีกไม่ได้</strong>
+                    </div>
                 </div>
 
-                <div th:each="eval : ${evaluations}" class="card card-academic mb-3">
+                <div th:each="choice : ${choices}" class="card card-academic mb-3"
+                     th:classappend="${choice.spent} ? 'opacity-75 border-secondary' : ''">
                     <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <div>
+                        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+                            <div class="flex-grow-1">
                                 <h5 class="mb-1">
-                                    <i class="fas fa-check-circle text-success me-2"></i>
-                                    คำร้อง [[${eval.requestCode}]]
+                                    <i th:class="${choice.spent} ? 'fas fa-lock text-secondary me-2' : 'fas fa-check-circle text-success me-2'"></i>
+                                    <span th:text="${choice.summary.courseLabel()}">รหัสวิชา — ชื่อวิชา</span>
                                 </h5>
-                                <small class="text-muted">
-                                    วันที่ยื่น: <span th:text="${@thaiDateUtil.formatDateOnly(eval.submissionDate)}"></span>
-                                    | สถานะ: <span class="badge bg-success">เสร็จสิ้น</span>
-                                </small>
+                                <div class="text-muted small mb-3">
+                                    คำร้องประเมิน <span th:text="${choice.summary.requestCode()}"></span>
+                                </div>
+
+                                <div class="row g-3 small">
+                                    <div class="col-6 col-md-3">
+                                        <div class="text-muted">รหัสรายวิชา</div>
+                                        <div class="fw-semibold" th:text="${choice.summary.courseCode() ?: '—'}">—</div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="text-muted">ปีการศึกษา</div>
+                                        <div class="fw-semibold">
+                                            <span th:text="${choice.summary.academicYear() ?: '—'}">—</span>
+                                            <span class="text-muted" th:if="${choice.summary.semester()}"
+                                                  th:text="'(ภาค ' + ${choice.summary.semester()} + ')'"></span>
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="text-muted">ผลการประเมิน</div>
+                                        <div class="fw-semibold" th:text="${choice.summary.resultLevel() ?: 'ผ่าน'}">ผ่าน</div>
+                                    </div>
+                                    <div class="col-6 col-md-3">
+                                        <div class="text-muted">วันที่ประเมิน</div>
+                                        <div class="fw-semibold" th:text="${choice.summary.evaluationDate() ?: '—'}">—</div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-3 small" th:if="${choice.summary.daysLeft() != null}">
+                                    <span class="badge"
+                                          th:classappend="${choice.summary.daysLeft() < 90} ? 'bg-danger' : 'bg-success-subtle text-success border border-success-subtle'">
+                                        <i class="fas fa-hourglass-half me-1"></i>
+                                        เหลืออีก <span th:text="${choice.summary.daysLeft()}"></span> วัน
+                                    </span>
+                                    <span class="text-muted ms-2" th:if="${choice.summary.expiryDate()}">
+                                        หมดอายุ <span th:text="${choice.summary.expiryDate()}"></span>
+                                    </span>
+                                </div>
                             </div>
-                            <form th:action="'/user/position/create-request'" method="post">
-                                <input type="hidden" name="evaluationId" th:value="${eval.id}">
-                                <button type="submit" class="btn btn-academic">
-                                    <i class="fas fa-arrow-right me-1"></i> เลือกและสร้างคำร้อง
-                                </button>
-                            </form>
+
+                            <div class="text-end">
+                                <form th:if="${choice.selectable()}" th:action="'/user/position/create-request'" method="post">
+                                    <input type="hidden" name="evaluationId" th:value="${choice.evaluationId()}">
+                                    <button type="submit" class="btn btn-academic">
+                                        <i class="fas fa-arrow-right me-1"></i> เลือกและสร้างคำร้อง
+                                    </button>
+                                </form>
+                                <div th:if="${choice.spent}" class="text-end">
+                                    <span class="badge bg-secondary mb-2">
+                                        <i class="fas fa-lock me-1"></i> ใช้ยื่นไปแล้ว
+                                    </span>
+                                    <div class="small text-muted" style="max-width: 16rem;">
+                                        รายวิชาและปีการศึกษานี้ถูกใช้ในคำร้อง
+                                        <span class="fw-semibold" th:text="${choice.spentBy()}"></span>
+                                        จึงใช้ยื่นซ้ำไม่ได้
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -56,4 +121,5 @@
         </div>
     </section>
 </body>
+
 </html>

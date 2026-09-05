@@ -143,69 +143,52 @@
                             </table>
                         </div>
 
-                        <!-- Multi-File Attachments Section for Admin (Slot-Grouped) -->
-                        <div class="card card-academic border shadow-sm my-4" th:if="${attachments != null && !attachments.isEmpty()}">
+                        <!-- Multi-File Attachments Section for Admin (Unified Single List) -->
+                        <div class="card card-academic border shadow-sm my-4">
                             <div class="card-header bg-light d-flex justify-content-between align-items-center">
                                 <h6 class="mb-0 fw-semibold text-primary">
                                     <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอนที่ผู้ยื่นอัปโหลด
                                 </h6>
-                                <span class="badge bg-primary rounded-pill px-3" th:text="${attachmentCount + ' รายการ'}">0 รายการ</span>
+                                <span class="badge bg-primary rounded-pill px-3" th:text="${(attachments != null ? attachments.size() : 0) + ' รายการ'}">0 รายการ</span>
                             </div>
                             <div class="card-body p-0">
-                                <th:block th:with="slotLabels=${ {
-                                    '1. บันทึกนำส่งเอกสารประกอบประเมินผลการสอน',
-                                    '2. แผนการสอน พร้อมเกณฑ์และวิธีวัดประเมินผลผู้เรียน',
-                                    '3. สาระสำคัญของเนื้อหาวิชาฯ (เอกสารประกอบการสอน)',
-                                    '4. สื่อการสอน เช่น ชีทเอกสาร PowerPoint แผ่นใส ฯลฯ',
-                                    '5. ผลการประเมินการสอนโดยนักศึกษา'
-                                } }">
-                                    <div th:each="label, iter : ${slotLabels}" class="border-bottom p-3" th:classappend="${iter.last ? 'border-bottom-0' : ''}">
-                                        <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <span class="fw-semibold small text-secondary" th:text="${label}">ช่องเอกสาร</span>
-                                            <span class="badge rounded-pill"
-                                                  th:classappend="${attachmentsBySlot != null and attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty() ? 'bg-success-subtle text-success' : 'bg-secondary-subtle text-secondary'}"
-                                                  th:text="${(attachmentsBySlot != null and attachmentsBySlot[iter.count] != null ? attachmentsBySlot[iter.count].size() : 0) + ' รายการ'}">0 รายการ</span>
+                                <div th:if="${attachments != null && !attachments.isEmpty()}">
+                                    <div th:each="att, attIter : ${attachments}"
+                                         class="d-flex align-items-center justify-content-between py-2 px-3 border-bottom"
+                                         th:classappend="${attIter.last ? 'border-bottom-0' : ''}">
+                                        <div class="d-flex align-items-center gap-2 text-break" style="min-width:0; flex:1;">
+                                            <span th:if="${att.fileType == 'PDF'}" class="text-danger"><i class="fas fa-file-pdf fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'DOCX'}" class="text-primary"><i class="fas fa-file-word fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'ZIP'}" class="text-secondary"><i class="fas fa-file-archive fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'LINK'}" class="text-info"><i class="fas fa-link fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt fa-lg"></i></span>
+                                            <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">filename.pdf</span>
+                                            <span th:if="${att.fileType != 'LINK'}" class="badge bg-white text-secondary border ms-1" style="font-size:0.7rem;"
+                                                  th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
+                                            <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle ms-1" style="font-size:0.7rem;"><i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก</span>
                                         </div>
-
-                                        <div th:if="${attachmentsBySlot != null and attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty()}">
-                                            <div th:each="att : ${attachmentsBySlot[iter.count]}"
-                                                 class="d-flex align-items-center justify-content-between py-2 px-3 rounded mb-1 bg-light">
-                                                <div class="d-flex align-items-center gap-2 text-break" style="min-width:0; flex:1;">
-                                                    <span th:if="${att.fileType == 'PDF'}" class="text-danger"><i class="fas fa-file-pdf"></i></span>
-                                                    <span th:if="${att.fileType == 'DOCX'}" class="text-primary"><i class="fas fa-file-word"></i></span>
-                                                    <span th:if="${att.fileType == 'ZIP'}" class="text-secondary"><i class="fas fa-file-archive"></i></span>
-                                                    <span th:if="${att.fileType == 'LINK'}" class="text-info"><i class="fas fa-link"></i></span>
-                                                    <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt"></i></span>
-                                                    <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">filename.pdf</span>
-                                                    <span th:if="${att.fileType != 'LINK'}" class="badge bg-white text-secondary border ms-1" style="font-size:0.7rem;"
-                                                          th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
-                                                    <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle ms-1" style="font-size:0.7rem;"><i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก</span>
-                                                </div>
-                                                <div class="btn-group btn-group-sm ms-2">
-                                                    <a th:if="${att.fileType == 'LINK'}"
-                                                       th:href="${att.storedFilePath}" 
-                                                       target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm py-0" title="เปิดลิงก์ภายนอก">
-                                                        <i class="fas fa-external-link-alt me-1"></i> เปิดลิงก์
-                                                    </a>
-                                                    <a th:if="${att.fileType != 'LINK' and att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
-                                                       th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'" 
-                                                       target="_blank" class="btn btn-outline-info btn-sm py-0" title="เปิดดูไฟล์">
-                                                        <i class="fas fa-eye me-1"></i> ดู
-                                                    </a>
-                                                    <a th:if="${att.fileType != 'LINK'}"
-                                                       th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
-                                                       class="btn btn-outline-primary btn-sm py-0" title="ดาวน์โหลด">
-                                                        <i class="fas fa-download me-1"></i> ดาวน์โหลด
-                                                    </a>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div th:unless="${attachmentsBySlot != null and attachmentsBySlot[iter.count] != null and !attachmentsBySlot[iter.count].isEmpty()}"
-                                             class="text-muted small py-1 fst-italic">
-                                            <i class="fas fa-minus-circle me-1 text-secondary opacity-50"></i> ยังไม่มีไฟล์หรือลิงก์ในช่องนี้
+                                        <div class="btn-group btn-group-sm ms-2">
+                                            <a th:if="${att.fileType == 'LINK'}"
+                                               th:href="${att.storedFilePath}" 
+                                               target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm py-0" title="เปิดลิงก์ภายนอก">
+                                                <i class="fas fa-external-link-alt me-1"></i> เปิดลิงก์
+                                            </a>
+                                            <a th:if="${att.fileType != 'LINK' and att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
+                                               th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'" 
+                                               target="_blank" class="btn btn-outline-info btn-sm py-0" title="เปิดดูไฟล์">
+                                                <i class="fas fa-eye me-1"></i> ดู
+                                            </a>
+                                            <a th:if="${att.fileType != 'LINK'}"
+                                               th:href="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'" 
+                                               class="btn btn-outline-primary btn-sm py-0" title="ดาวน์โหลด">
+                                                <i class="fas fa-download me-1"></i> ดาวน์โหลด
+                                            </a>
                                         </div>
                                     </div>
-                                </th:block>
+                                </div>
+                                <div th:unless="${attachments != null && !attachments.isEmpty()}" class="p-3 text-muted text-center small">
+                                    <i class="fas fa-inbox me-1"></i> ไม่มีเอกสารแนบในคำร้องนี้
+                                </div>
                             </div>
                         </div>
 

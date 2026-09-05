@@ -1073,7 +1073,8 @@ body,
     background: rgba(96, 165, 250, 0.12) !important;
 }
 
-[data-theme="dark"] .topbar-badge-dot {
+[data-theme="dark"] .topbar-badge-dot,
+[data-theme="dark"] .topbar-badge-count {
     border-color: var(--bg-card, #1e293b) !important;
 }
 
