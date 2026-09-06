@@ -239,7 +239,8 @@ body {
   z-index: 1050;
   display: flex;
   flex-direction: column;
-  transition: transform var(--duration-normal) var(--ease-out-quart);
+  transition: transform var(--duration-normal) var(--ease-out-quart),
+              width var(--duration-normal) var(--ease-out-quart);
   overflow-y: auto;
   overflow-x: hidden !important;
   box-shadow: 4px 0 20px rgba(0, 0, 0, 0.15);
@@ -900,22 +901,214 @@ body {
   }
 }
 
-/* ===== Desktop Sidebar Hide / Collapse Mode ===== */
+/* ===== Desktop Sidebar Collapse Mode (Mini-Sidebar / Icon Rail) ===== */
 @media (min-width: 992px) {
   html.sidebar-collapsed .sidebar,
   body.sidebar-collapsed .sidebar {
-    transform: translateX(-100%);
+    transform: none !important;
+    width: var(--sidebar-collapsed, 70px) !important;
   }
 
   html.sidebar-collapsed .main-content,
   body.sidebar-collapsed .main-content {
-    margin-left: 0 !important;
+    margin-left: var(--sidebar-collapsed, 70px) !important;
   }
 
   html.sidebar-collapsed .floating-doc-btn-back,
   body.sidebar-collapsed .floating-doc-btn-back {
-    left: 24px !important;
+    left: calc(var(--sidebar-collapsed, 70px) + 24px) !important;
   }
+
+  /* Brand / Logo Area in Mini-Sidebar */
+  html.sidebar-collapsed .sidebar-brand {
+    padding: 16px 8px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+  }
+
+  html.sidebar-collapsed .sidebar-brand h6,
+  html.sidebar-collapsed .sidebar-brand small {
+    display: none !important;
+  }
+
+  html.sidebar-collapsed .sidebar-brand-logo {
+    width: 38px;
+    height: 38px;
+    object-fit: contain;
+    margin: 0 auto;
+  }
+
+  /* Section Titles as Subtle Divider Lines */
+  html.sidebar-collapsed .sidebar-section-title {
+    font-size: 0 !important;
+    height: 1px;
+    padding: 0;
+    margin: 10px 14px;
+    background: var(--sidebar-border);
+    border: none;
+    overflow: hidden;
+    line-height: 0;
+  }
+
+  /* Navigation Links in Mini-Sidebar (Centered Icon Tiles) */
+  html.sidebar-collapsed .sidebar-nav {
+    padding: 8px 0;
+  }
+
+  html.sidebar-collapsed .sidebar-link {
+    width: 48px;
+    height: 48px;
+    padding: 0 !important;
+    margin: 6px auto;
+    border-radius: 12px;
+    border-left: none !important;
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    gap: 0;
+  }
+
+  html.sidebar-collapsed .sidebar-link .sidebar-link-text {
+    display: none !important;
+  }
+
+  html.sidebar-collapsed .sidebar-link i {
+    font-size: 1.15rem;
+    width: auto;
+    margin: 0;
+    transition: transform var(--duration-fast), color var(--duration-fast);
+  }
+
+  html.sidebar-collapsed .sidebar-link:hover {
+    background: var(--sidebar-hover);
+  }
+
+  html.sidebar-collapsed .sidebar-link:hover i {
+    transform: scale(1.14);
+    color: #ffffff;
+  }
+
+  html.sidebar-collapsed .sidebar-link.active {
+    background: var(--sidebar-active, rgba(255, 255, 255, 0.16));
+    box-shadow: 0 0 14px rgba(66, 165, 245, 0.35);
+  }
+
+  html.sidebar-collapsed .sidebar-link.active i {
+    color: var(--accent-color, #42a5f5);
+  }
+
+  /* Mini Badge Dot at Top-Right of Icons */
+  html.sidebar-collapsed .sidebar-link .badge {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    min-width: 9px;
+    width: 9px;
+    height: 9px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 0;
+    line-height: 0;
+    border: 1.5px solid #0d1b3e;
+  }
+
+  /* Footer & Profile in Mini-Sidebar */
+  html.sidebar-collapsed .sidebar-footer {
+    padding: 12px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+
+  html.sidebar-collapsed .sidebar-user {
+    padding: 4px 0;
+    margin: 0 auto;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  html.sidebar-collapsed .sidebar-user .user-info {
+    display: none !important;
+  }
+
+  html.sidebar-collapsed .sidebar-user .user-avatar {
+    margin: 0;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    transition: border-color var(--duration-fast), transform var(--duration-fast);
+  }
+
+  html.sidebar-collapsed .sidebar-user:hover .user-avatar {
+    border-color: var(--accent-color, #42a5f5);
+    transform: scale(1.06);
+  }
+
+  html.sidebar-collapsed .sidebar-logout {
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    font-size: 0;
+  }
+
+  html.sidebar-collapsed .sidebar-logout .sidebar-logout-text {
+    display: none !important;
+  }
+
+  html.sidebar-collapsed .sidebar-logout i {
+    font-size: 1.1rem;
+    margin: 0;
+  }
+}
+
+/* ===== Floating Tooltip for Mini-Sidebar (Rail) ===== */
+.sidebar-rail-tooltip {
+  position: fixed;
+  z-index: 1070;
+  background: #0f172a;
+  color: #f8fafc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35), 0 0 0 1px rgba(255, 255, 255, 0.08);
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-50%) translateX(-4px);
+  transition: opacity 0.15s cubic-bezier(0.4, 0, 0.2, 1),
+              transform 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.sidebar-rail-tooltip.show {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(-50%) translateX(0);
+}
+
+.sidebar-rail-tooltip::before {
+  content: '';
+  position: absolute;
+  left: -4px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-right: 4px solid #0f172a;
 }
 
 /* ===== Reusable Components ===== */
@@ -4441,5 +4634,14 @@ body {
 [data-theme="dark"] .confirm-modal-btn-cancel:hover {
   background: #283244 !important;
   color: #ffffff !important;
+}
+
+/* ===== Bootstrap Modal Stacking Context Safety ===== */
+.modal {
+  z-index: 1055;
+}
+
+.modal-backdrop {
+  z-index: 1050;
 }
 

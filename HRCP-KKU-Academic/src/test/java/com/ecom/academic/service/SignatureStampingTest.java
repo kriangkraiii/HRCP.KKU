@@ -207,7 +207,7 @@ class SignatureStampingTest {
         return cells;
     }
 
-    private static final String FIXED_LINE = "w:lineRule=\"exact\"";
+    private static final String FIXED_LINE = "w:lineRule=\"atLeast\"";
 
     @Test
     @DisplayName("เซ็นช่องเดียว: ช่องที่ยังไม่เซ็นต้องได้บรรทัดเว้นระยะ ชื่อจึงอยู่ระดับเดียวกัน")

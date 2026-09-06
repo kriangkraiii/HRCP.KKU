@@ -57,116 +57,130 @@
             <!-- ADMIN Navigation -->
             <th:block th:if="${user != null && user.role == 'ROLE_ADMIN'}">
                 <div class="sidebar-section-title">งานวิชาการ & คำร้อง</div>
-                <a href="/admin/academic/requests" class="sidebar-link" id="nav-dashboard">
-                    <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
+                <a href="/admin/academic/requests" class="sidebar-link" id="nav-dashboard" data-title="แดชบอร์ด">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="sidebar-link-text">แดชบอร์ด</span>
                 </a>
-                <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff">
-                    <i class="fas fa-users-cog"></i> จัดการบุคลากร
+                <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff" data-title="จัดการบุคลากร">
+                    <i class="fas fa-users-cog"></i>
+                    <span class="sidebar-link-text">จัดการบุคลากร</span>
                 </a>
-                <a href="/admin/academic/committee" class="sidebar-link" id="nav-committee">
-                    <i class="fas fa-user-tie"></i> จัดการผู้ทรงคุณวุฒิภายนอก
+                <a href="/admin/academic/committee" class="sidebar-link" id="nav-committee" data-title="จัดการผู้ทรงคุณวุฒิภายนอก">
+                    <i class="fas fa-user-tie"></i>
+                    <span class="sidebar-link-text">จัดการผู้ทรงคุณวุฒิภายนอก</span>
                 </a>
-                <a href="/admin/academic/requests?type=evaluation" class="sidebar-link" id="nav-eval">
-                    <i class="fas fa-clipboard-check"></i> คำร้องประเมินผลการสอน
+                <a href="/admin/academic/requests?type=evaluation" class="sidebar-link" id="nav-eval" data-title="คำร้องประเมินผลการสอน">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="sidebar-link-text">คำร้องประเมินผลการสอน</span>
                 </a>
-                <a href="/admin/academic/requests?type=position" class="sidebar-link" id="nav-position">
-                    <i class="fas fa-university"></i> คำร้องขอตำแหน่งทางวิชาการ
+                <a href="/admin/academic/requests?type=position" class="sidebar-link" id="nav-position" data-title="คำร้องขอตำแหน่งทางวิชาการ">
+                    <i class="fas fa-university"></i>
+                    <span class="sidebar-link-text">คำร้องขอตำแหน่งทางวิชาการ</span>
                 </a>
 
                 <div class="sidebar-section-title">จัดการผู้ใช้งาน</div>
-                <a href="/admin/users?type=1" class="sidebar-link" id="nav-users">
-                    <i class="fas fa-users"></i> ผู้ใช้งานทั่วไป
+                <a href="/admin/users?type=1" class="sidebar-link" id="nav-users" data-title="ผู้ใช้งานทั่วไป">
+                    <i class="fas fa-users"></i>
+                    <span class="sidebar-link-text">ผู้ใช้งานทั่วไป</span>
                 </a>
-                <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins">
-                    <i class="fas fa-user-shield"></i> ผู้ดูแลระบบ (Admin)
+                <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins" data-title="ผู้ดูแลระบบ (Admin)">
+                    <i class="fas fa-user-shield"></i>
+                    <span class="sidebar-link-text">ผู้ดูแลระบบ (Admin)</span>
                 </a>
 
                 <div class="sidebar-section-title">ข้อมูลจากระบบภายนอก</div>
-                <a href="/admin/publications" class="sidebar-link" id="nav-publications">
-                    <i class="fas fa-flask"></i> งานวิจัยและผลงานตีพิมพ์
+                <a href="/admin/publications" class="sidebar-link" id="nav-publications" data-title="งานวิจัยและผลงานตีพิมพ์">
+                    <i class="fas fa-flask"></i>
+                    <span class="sidebar-link-text">งานวิจัยและผลงานตีพิมพ์</span>
                 </a>
-                <a href="/admin/external-sync" class="sidebar-link" id="nav-external-sync">
-                    <i class="fas fa-cloud-arrow-down"></i> ดึงข้อมูลจากระบบภายนอก
+                <a href="/admin/external-sync" class="sidebar-link" id="nav-external-sync" data-title="ดึงข้อมูลจากระบบภายนอก">
+                    <i class="fas fa-cloud-arrow-down"></i>
+                    <span class="sidebar-link-text">ดึงข้อมูลจากระบบภายนอก</span>
                 </a>
 
                 <div class="sidebar-section-title">ระบบ & การตั้งค่า</div>
-                <a href="/admin/notifications" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-notifications">
-                    <span><i class="fas fa-bell me-2"></i>การแจ้งเตือน</span>
-                    <span class="badge bg-danger rounded-pill notification-sidebar-badge"
+                <a href="/admin/notifications" class="sidebar-link" id="nav-notifications" data-title="การแจ้งเตือน">
+                    <i class="fas fa-bell"></i>
+                    <span class="sidebar-link-text">การแจ้งเตือน</span>
+                    <span class="badge bg-danger rounded-pill notification-sidebar-badge ms-auto"
                           th:if="${unreadNotificationCount != null && unreadNotificationCount > 0}"
                           th:text="${unreadNotificationCount}">0</span>
                 </a>
-                <a href="/esign/inbox" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-signing">
-                    <span><i class="fas fa-file-signature me-2"></i>รอลงนาม</span>
-                    <span class="badge bg-warning text-dark rounded-pill"
+                <a href="/esign/inbox" class="sidebar-link" id="nav-signing" data-title="รอลงนาม">
+                    <i class="fas fa-file-signature"></i>
+                    <span class="sidebar-link-text">รอลงนาม</span>
+                    <span class="badge bg-warning text-dark rounded-pill ms-auto"
                           th:if="${pendingSignatureCount != null && pendingSignatureCount > 0}"
                           th:text="${pendingSignatureCount}">0</span>
                 </a>
-                <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures">
-                    <i class="fas fa-signature"></i> ลายเซ็นของฉัน
+                <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures" data-title="ลายเซ็นของฉัน">
+                    <i class="fas fa-signature"></i>
+                    <span class="sidebar-link-text">ลายเซ็นของฉัน</span>
                 </a>
-                <a href="/admin/activity-logs" class="sidebar-link" id="nav-logs">
-                    <i class="fas fa-history"></i> ประวัติกิจกรรม
+                <a href="/admin/activity-logs" class="sidebar-link" id="nav-logs" data-title="ประวัติกิจกรรม">
+                    <i class="fas fa-history"></i>
+                    <span class="sidebar-link-text">ประวัติกิจกรรม</span>
                 </a>
-                <a href="/admin/file-manager" class="sidebar-link" id="nav-files">
-                    <i class="fas fa-folder-open"></i> จัดการไฟล์
+                <a href="/admin/file-manager" class="sidebar-link" id="nav-files" data-title="จัดการไฟล์">
+                    <i class="fas fa-folder-open"></i>
+                    <span class="sidebar-link-text">จัดการไฟล์</span>
                 </a>
-                <!-- <a href="/admin/academic/guide" class="sidebar-link" id="nav-guide">
-                    <i class="fas fa-book"></i> คู่มือการใช้งาน
-                </a> -->
-                <a href="/admin/academic/settings" class="sidebar-link" id="nav-settings">
-                    <i class="fas fa-cog"></i> การตั้งค่า
+                <a href="/admin/academic/settings" class="sidebar-link" id="nav-settings" data-title="การตั้งค่า">
+                    <i class="fas fa-cog"></i>
+                    <span class="sidebar-link-text">การตั้งค่า</span>
                 </a>
-                <a href="/admin/academic/settings/signers" class="sidebar-link" id="nav-signers-settings">
-                    <i class="fas fa-sliders"></i> ตั้งค่าผู้ลงนามเอกสาร
+                <a href="/admin/academic/settings/signers" class="sidebar-link" id="nav-signers-settings" data-title="ตั้งค่าผู้ลงนามเอกสาร">
+                    <i class="fas fa-sliders"></i>
+                    <span class="sidebar-link-text">ตั้งค่าผู้ลงนามเอกสาร</span>
                 </a>
             </th:block>
 
             <!-- USER Navigation -->
             <th:block th:if="${user != null && user.role == 'ROLE_USER'}">
                 <div class="sidebar-section-title">งานวิชาการ</div>
-                <a href="/user/academic/dashboard" class="sidebar-link" id="nav-dashboard">
-                    <i class="fas fa-tachometer-alt"></i> แดชบอร์ด
+                <a href="/user/academic/dashboard" class="sidebar-link" id="nav-dashboard" data-title="แดชบอร์ด">
+                    <i class="fas fa-tachometer-alt"></i>
+                    <span class="sidebar-link-text">แดชบอร์ด</span>
                 </a>
-                <a href="/user/academic/history" class="sidebar-link" id="nav-history">
-                    <i class="fas fa-history"></i> ประวัติการยื่นคำร้องทั้งหมด
+                <a href="/user/academic/history" class="sidebar-link" id="nav-history" data-title="ประวัติการยื่นคำร้องทั้งหมด">
+                    <i class="fas fa-history"></i>
+                    <span class="sidebar-link-text">ประวัติการยื่นคำร้องทั้งหมด</span>
                 </a>
-                <a href="/user/academic/new-request" class="sidebar-link" id="nav-new">
-                    <i class="fas fa-clipboard-check"></i> ยื่นคำร้องขอประเมินการสอน
+                <a href="/user/academic/new-request" class="sidebar-link" id="nav-new" data-title="ยื่นคำร้องขอประเมินการสอน">
+                    <i class="fas fa-clipboard-check"></i>
+                    <span class="sidebar-link-text">ยื่นคำร้องขอประเมินการสอน</span>
                 </a>
-                <a href="/user/position/dashboard" class="sidebar-link" id="nav-position">
-                    <i class="fas fa-university"></i> ยื่นขอตำแหน่งทางวิชาการ
+                <a href="/user/position/dashboard" class="sidebar-link" id="nav-position" data-title="ยื่นขอตำแหน่งทางวิชาการ">
+                    <i class="fas fa-university"></i>
+                    <span class="sidebar-link-text">ยื่นขอตำแหน่งทางวิชาการ</span>
                 </a>
 
                 <div class="sidebar-section-title">ทรัพยากร & การตั้งค่า</div>
-                <a href="/user/notifications" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-notifications">
-                    <span><i class="fas fa-bell me-2"></i>การแจ้งเตือน</span>
-                    <span class="badge bg-danger rounded-pill notification-sidebar-badge"
+                <a href="/user/notifications" class="sidebar-link" id="nav-notifications" data-title="การแจ้งเตือน">
+                    <i class="fas fa-bell"></i>
+                    <span class="sidebar-link-text">การแจ้งเตือน</span>
+                    <span class="badge bg-danger rounded-pill notification-sidebar-badge ms-auto"
                           th:if="${unreadNotificationCount != null && unreadNotificationCount > 0}"
                           th:text="${unreadNotificationCount}">0</span>
                 </a>
-                <a href="/user/academic/documents" class="sidebar-link" id="nav-documents">
-                    <i class="fas fa-book-open"></i> เอกสาร/ข้อบังคับ
+                <a href="/user/academic/documents" class="sidebar-link" id="nav-documents" data-title="เอกสาร/ข้อบังคับ">
+                    <i class="fas fa-book-open"></i>
+                    <span class="sidebar-link-text">เอกสาร/ข้อบังคับ</span>
                 </a>
-                <!--/* คลังไฟล์ส่วนตัวของผู้ยื่นถูกยกเลิก เหลือใช้เฉพาะฝั่งแอดมิน
-                <a href="/user/academic/storage" class="sidebar-link" id="nav-storage">
-                    <i class="fas fa-cloud"></i> ที่เก็บไฟล์ของฉัน
-                </a>
-                */-->
-                <a href="/esign/inbox" class="sidebar-link d-flex align-items-center justify-content-between" id="nav-signing">
-                    <span><i class="fas fa-file-signature me-2"></i>รอลงนาม</span>
-                    <span class="badge bg-warning text-dark rounded-pill"
+                <a href="/esign/inbox" class="sidebar-link" id="nav-signing" data-title="รอลงนาม">
+                    <i class="fas fa-file-signature"></i>
+                    <span class="sidebar-link-text">รอลงนาม</span>
+                    <span class="badge bg-warning text-dark rounded-pill ms-auto"
                           th:if="${pendingSignatureCount != null && pendingSignatureCount > 0}"
                           th:text="${pendingSignatureCount}">0</span>
                 </a>
-                <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures">
-                    <i class="fas fa-signature"></i> ลายเซ็นของฉัน
+                <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures" data-title="ลายเซ็นของฉัน">
+                    <i class="fas fa-signature"></i>
+                    <span class="sidebar-link-text">ลายเซ็นของฉัน</span>
                 </a>
-                <!-- <a href="/user/academic/guide" class="sidebar-link" id="nav-guide">
-                    <i class="fas fa-book"></i> คู่มือการใช้งาน
-                </a> -->
-                <a href="/user/academic/settings" class="sidebar-link" id="nav-settings">
-                    <i class="fas fa-cog"></i> การตั้งค่า
+                <a href="/user/academic/settings" class="sidebar-link" id="nav-settings" data-title="การตั้งค่า">
+                    <i class="fas fa-cog"></i>
+                    <span class="sidebar-link-text">การตั้งค่า</span>
                 </a>
             </th:block>
         </nav>
@@ -634,7 +648,7 @@
 
         <!-- Sidebar Footer: User Info -->
         <div class="sidebar-footer" th:if="${user != null}">
-            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user text-decoration-none" style="text-decoration:none !important;">
+            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user text-decoration-none" style="text-decoration:none !important;" th:attr="data-title=${user.name}">
                 <div class="user-avatar" style="width:34px;height:34px;min-width:34px;max-width:34px;flex-shrink:0;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
                     <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
                          th:src="'/img/profile_img/' + ${user.profileImage}"
@@ -655,8 +669,9 @@
                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
                 <!-- ออกจากระบบเป็นการเปลี่ยนหน้าในเครื่องเรา ไม่ต้องรอใคร
                      15 วินาทีตามค่าเริ่มต้นจึงนานเกินไปจนกดซ้ำไม่ได้ถ้ามีอะไรผิดพลาด -->
-                <button type="submit" class="sidebar-logout" data-loading-timeout="4000">
-                    <i class="fas fa-sign-out-alt"></i> ออกจากระบบ
+                <button type="submit" class="sidebar-logout" data-loading-timeout="4000" data-title="ออกจากระบบ">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="sidebar-logout-text">ออกจากระบบ</span>
                 </button>
             </form>
         </div>
@@ -859,6 +874,7 @@
                 }
             } else {
                 // Desktop behavior: hide/collapse sidebar and expand main content
+                if (window.__hideSidebarTooltip) window.__hideSidebarTooltip();
                 const isCollapsed = document.body.classList.toggle('sidebar-collapsed');
                 document.documentElement.classList.toggle('sidebar-collapsed', isCollapsed);
                 try {
@@ -887,6 +903,56 @@
             document.body.classList.add('sidebar-collapsed');
             if (topbarToggle) topbarToggle.setAttribute('aria-expanded', 'false');
         }
+
+        // Floating Tooltip for Mini-Sidebar (Icon Rail)
+        (function() {
+            const sbTooltip = document.createElement('div');
+            sbTooltip.className = 'sidebar-rail-tooltip';
+            sbTooltip.setAttribute('role', 'tooltip');
+            sbTooltip.setAttribute('aria-hidden', 'true');
+            document.body.appendChild(sbTooltip);
+
+            window.__hideSidebarTooltip = function() {
+                sbTooltip.classList.remove('show');
+            };
+
+            function showTooltip(e) {
+                if (!document.body.classList.contains('sidebar-collapsed') || window.innerWidth < 992) {
+                    sbTooltip.classList.remove('show');
+                    return;
+                }
+                const target = e.currentTarget;
+                const text = target.getAttribute('data-title');
+                if (!text) return;
+
+                const badge = target.querySelector('.badge');
+                let displayText = text;
+                if (badge && badge.textContent && badge.textContent.trim() !== '' && badge.style.display !== 'none') {
+                    const count = badge.textContent.trim();
+                    if (count !== '0') {
+                        displayText += ' (' + count + ')';
+                    }
+                }
+
+                sbTooltip.textContent = displayText;
+                const rect = target.getBoundingClientRect();
+                sbTooltip.style.top = (rect.top + rect.height / 2) + 'px';
+                sbTooltip.style.left = (rect.right + 10) + 'px';
+                sbTooltip.classList.add('show');
+            }
+
+            function hideTooltip() {
+                sbTooltip.classList.remove('show');
+            }
+
+            const railItems = document.querySelectorAll('#sidebar .sidebar-link, #sidebar .sidebar-user, #sidebar .sidebar-logout');
+            railItems.forEach(item => {
+                item.addEventListener('mouseenter', showTooltip);
+                item.addEventListener('mouseleave', hideTooltip);
+                item.addEventListener('click', hideTooltip);
+            });
+            window.addEventListener('scroll', hideTooltip, { passive: true });
+        })();
 
         // Keyboard shortcut: Alt + S or Ctrl + B to toggle sidebar
         document.addEventListener('keydown', (e) => {
@@ -1149,7 +1215,7 @@
     </div>
 </div>
 
-<!-- Global: bulletproof fix for stuck gray screen after modal close -->
+<!-- Global: bulletproof fix for stuck gray screen after modal close & stacking context traps -->
 <script>
 (function() {
     function forceUnlockScreen() {
@@ -1160,6 +1226,17 @@
         document.body.removeAttribute('data-bs-overflow');
         document.body.removeAttribute('data-bs-padding-right');
     }
+
+    // Teleport any Bootstrap modal to document.body before showing
+    // to prevent being trapped behind modal-backdrop inside transformed containers (e.g. .card-academic)
+    document.addEventListener('show.bs.modal', function(event) {
+        var modal = event.target;
+        if (modal && modal.classList && modal.classList.contains('modal')) {
+            if (modal.parentElement !== document.body) {
+                document.body.appendChild(modal);
+            }
+        }
+    });
     
     // Method 1: When modal STARTS closing, schedule cleanup
     document.addEventListener('hide.bs.modal', function() {

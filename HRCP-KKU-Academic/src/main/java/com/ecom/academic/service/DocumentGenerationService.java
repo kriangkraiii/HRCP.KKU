@@ -621,7 +621,7 @@ public class DocumentGenerationService {
      */
     private String signatureDrawingRun(PreparedSignature sig) {
         String name = "Signature " + sig.drawingId();
-        return "<w:r><w:drawing>"
+        return "<w:r><w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr><w:drawing>"
                 + "<wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\">"
                 + "<wp:extent cx=\"" + sig.widthEmu() + "\" cy=\"" + sig.heightEmu() + "\"/>"
                 + "<wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>"
@@ -849,18 +849,21 @@ public class DocumentGenerationService {
      */
     private String withFixedSignatureHeight(String pPr) {
         String spacing = "<w:spacing w:before=\"0\" w:after=\"0\" w:line=\""
-                + SIGNATURE_LINE_HEIGHT_TWIPS + "\" w:lineRule=\"exact\"/>";
+                + SIGNATURE_LINE_HEIGHT_TWIPS + "\" w:lineRule=\"atLeast\"/>";
+        String rPr = "<w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr>";
 
         if (pPr == null || pPr.isEmpty()) {
-            return "<w:pPr>" + spacing + "</w:pPr>";
+            return "<w:pPr>" + spacing + rPr + "</w:pPr>";
         }
         if (pPr.endsWith("/>")) { // <w:pPr/> — no children yet
-            return "<w:pPr>" + spacing + "</w:pPr>";
+            return "<w:pPr>" + spacing + rPr + "</w:pPr>";
         }
-        // Replace any spacing the template set, so the two rules cannot disagree.
-        String cleaned = pPr.replaceAll("<w:spacing[^>]*/>", "");
+        // Replace any spacing and font sizes the template set, so the line height
+        // is governed purely by the signature drawing without font baseline descent.
+        String cleaned = pPr.replaceAll("<w:spacing[^>]*/>", "")
+                .replaceAll("<w:rPr>.*?</w:rPr>", "");
         int open = cleaned.indexOf('>');
-        return open == -1 ? pPr : cleaned.substring(0, open + 1) + spacing + cleaned.substring(open + 1);
+        return open == -1 ? pPr : cleaned.substring(0, open + 1) + spacing + rPr + cleaned.substring(open + 1);
     }
 
     /**
