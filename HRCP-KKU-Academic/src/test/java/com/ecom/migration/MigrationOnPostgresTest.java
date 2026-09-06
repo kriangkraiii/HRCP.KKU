@@ -3,13 +3,18 @@ package com.ecom.migration;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Stream;
 
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.output.MigrateResult;
@@ -37,7 +42,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
  * <p>Skipped rather than failed when Docker is not running.
  */
 @EnabledIfDockerAvailable
-@DisplayName("Migration: รัน V0-V13 ครบชุดบน PostgreSQL จริง")
+@DisplayName("Migration: รันทุกไฟล์ที่มีอยู่ครบชุดบน PostgreSQL จริง")
 class MigrationOnPostgresTest {
 
     private static final PostgreSQLContainer POSTGRES =
@@ -125,6 +130,26 @@ class MigrationOnPostgresTest {
                 eid VARCHAR(255),
                 title VARCHAR(2000),
                 synced_at TIMESTAMP DEFAULT NOW() NOT NULL)
+            """,
+            // V16, V18 และ V20 ล้วน ALTER ตารางนี้ แต่ไม่มี migration ไฟล์ใด
+            // สร้างมันเลย — บนเครื่อง production ตารางนี้มีอยู่เพราะยุคก่อนใช้
+            // ddl-auto=update แล้ว Hibernate สร้างให้ ซึ่งคือสภาพที่รายการนี้
+            // จำลองอยู่ทั้งชุด
+            //
+            // ตั้งใจให้เป็นรูปร่าง "ก่อน V16": ยังไม่มี checklist_item และความยาว
+            // คอลัมน์ยังเป็น 255 ตัวอักษร ทั้งสามไฟล์จึงต้องพิสูจน์ว่ามันแก้ของจริง
+            // ไม่ใช่ผ่านเพราะไม่มีอะไรให้แก้
+            """
+            CREATE TABLE IF NOT EXISTS academic_attachment (
+                id BIGSERIAL PRIMARY KEY,
+                request_id BIGINT REFERENCES academic_request(id),
+                original_filename VARCHAR(255) NOT NULL,
+                stored_file_path VARCHAR(255) NOT NULL,
+                file_type VARCHAR(255),
+                file_size BIGINT,
+                uploaded_at TIMESTAMP,
+                is_deleted BOOLEAN DEFAULT FALSE,
+                deleted_at TIMESTAMP)
             """);
 
     @BeforeAll
@@ -167,16 +192,35 @@ class MigrationOnPostgresTest {
                 .migrate();
     }
 
+    /**
+     * ทุกเวอร์ชันที่มีอยู่ในโฟลเดอร์ migration ต้องอยู่ในรายการที่รันไปจริง
+     *
+     * <p>อ่านรายชื่อไฟล์แทนการเขียนเลขไว้ตายตัว เพราะรายการที่เขียนมือค้างอยู่ที่
+     * {@code "14"} มานาน ระหว่างนั้น V15-V20 ถูกเพิ่มเข้ามาโดยไม่มีอะไรยืนยันว่ามันรันได้
+     * และเมื่อ V16 พังจริง เทสทั้งคลาสก็ error พร้อมกันหมดโดยไม่มีใครสังเกต
+     * เพราะ Docker ไม่ได้เปิด มันจึงขึ้นเป็น skip เงียบ ๆ มาตลอด
+     */
+    private static List<String> versionsOnDisk() throws IOException {
+        try (Stream<Path> files = Files.list(Path.of("src", "main", "resources", "db", "migration"))) {
+            return files.map(p -> p.getFileName().toString())
+                    .filter(n -> n.matches("V\\d+__.*\\.sql"))
+                    .map(n -> n.substring(1, n.indexOf("__")))
+                    .filter(v -> !"0".equals(v)) // V0 คือ baseline ที่ Flyway ข้ามโดยตั้งใจ
+                    .sorted(Comparator.comparingInt(Integer::parseInt))
+                    .toList();
+        }
+    }
+
     @Test
-    @DisplayName("V0-V14 รันผ่านทั้งชุด และสร้างตารางครบทุกตัว")
-    void everyMigrationApplies() throws SQLException {
+    @DisplayName("migration ทุกไฟล์ที่มีอยู่รันผ่านทั้งชุด และสร้างตารางครบทุกตัว")
+    void everyMigrationApplies() throws SQLException, IOException {
         MigrateResult result = migrate();
 
         assertThat(result.success).isTrue();
         assertThat(result.migrations)
-                .as("รายการ migration ที่รันไปจริง")
+                .as("ทุกเวอร์ชันในโฟลเดอร์ migration ต้องถูกรันจริง")
                 .extracting(m -> m.version)
-                .contains("1", "2", "3", "4", "5", "6", "7", "8", "9", "10", "11", "12", "13", "14");
+                .containsAll(versionsOnDisk());
 
         assertThat(tableNames())
                 .as("ตารางที่ migration รับผิดชอบต้องถูกสร้างครบ")
@@ -184,7 +228,38 @@ class MigrationOnPostgresTest {
                         "user_signature", "signature_request", "signature_step",
                         "signature_audit_event", "document_workflow_config",
                         "position_request_publication", "external_author_mapping",
-                        "journal_tier");
+                        "journal_tier",
+                        // V15 และ V19
+                        "kku_regulation_docs", "user_digital_certificate");
+
+        assertThat(tableNames())
+                .as("V17 เลิกใช้ที่เก็บไฟล์ส่วนตัวของผู้ใช้ ตารางจึงต้องหายไป")
+                .doesNotContain("user_file", "user_folder");
+    }
+
+    @Test
+    @DisplayName("V16/V18: คอลัมน์ checklist_item ถูกเพิ่มแล้วขยายเป็น integer")
+    void v16AndV18AddTheChecklistColumnAsAnInteger() throws SQLException {
+        migrate();
+
+        assertThat(columnType("academic_attachment", "checklist_item"))
+                .as("""
+                        V16 สร้างคอลัมน์นี้เป็น smallint แต่ entity ประกาศเป็น Integer
+                        ddl-auto=validate จึงทำให้แอปสตาร์ตไม่ขึ้น V18 มีไว้แก้เรื่องนี้""")
+                .isEqualTo("integer");
+    }
+
+    @Test
+    @DisplayName("V20: ช่องเก็บพาธและชื่อไฟล์ต้องยาวพอสำหรับลิงก์ภายนอก")
+    void v20WidensTheColumnsThatHoldLinks() throws SQLException {
+        migrate();
+
+        assertThat(columnLength("academic_attachment", "stored_file_path"))
+                .as("ลิงก์ Google Drive/OneDrive ยาวเกิน 255 ตัวอักษรได้ง่าย")
+                .isEqualTo(2048);
+        assertThat(columnLength("academic_attachment", "original_filename"))
+                .as("ชื่อลิงก์ที่ผู้ใช้ตั้งเองก็ยาวกว่าชื่อไฟล์ทั่วไป")
+                .isEqualTo(500);
     }
 
     @Test
@@ -404,6 +479,26 @@ class MigrationOnPostgresTest {
 
     private List<String> indexNames() throws SQLException {
         return queryStrings("SELECT indexname FROM pg_indexes WHERE schemaname = 'public'");
+    }
+
+    /** ชนิดของคอลัมน์ตามที่ PostgreSQL บันทึกไว้จริง เช่น {@code integer}, {@code smallint} */
+    private String columnType(String table, String column) throws SQLException {
+        List<String> found = queryStrings(
+                "SELECT data_type FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = '" + table + "' "
+                        + "AND column_name = '" + column + "'");
+        assertThat(found).as("ไม่พบคอลัมน์ %s.%s", table, column).hasSize(1);
+        return found.get(0);
+    }
+
+    /** ความยาวสูงสุดของคอลัมน์ชนิดตัวอักษร */
+    private int columnLength(String table, String column) throws SQLException {
+        List<String> found = queryStrings(
+                "SELECT character_maximum_length FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = '" + table + "' "
+                        + "AND column_name = '" + column + "'");
+        assertThat(found).as("ไม่พบคอลัมน์ %s.%s", table, column).hasSize(1);
+        return Integer.parseInt(found.get(0));
     }
 
     /**

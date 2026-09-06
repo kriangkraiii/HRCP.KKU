@@ -185,7 +185,6 @@
         <input type="hidden" id="currentDocType" th:value="${documentType}">
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
         <link rel="stylesheet" href="/css/doc_preview.css">
-        <script src="/js/doc_preview.js"></script>
         <script>
             // Was a long onchange="..." body on the checkbox above; CSP refuses
             // inline handler attributes, so it lives here and is reached via

@@ -148,8 +148,12 @@ public class AdminController {
 
 	// ====== User Management ======
 
+	// type ต้องมีค่าเริ่มต้น: ทุกลิงก์ในระบบส่ง ?type= มาอยู่แล้ว แต่ถ้าใครเปิด
+	// /admin/users ตรง ๆ (พิมพ์เอง, บุ๊กมาร์กเก่า, ลิงก์ที่ถูกตัดพารามิเตอร์ทิ้ง)
+	// จะได้หน้า 400 เปล่า ๆ แทนที่จะได้รายชื่อผู้ใช้ — 1 คือผู้ใช้ทั่วไป ซึ่งเป็น
+	// รายการที่เข้ามาดูบ่อยที่สุด
 	@GetMapping("/users")
-	public String getAllUsers(Model m, @RequestParam Integer type) {
+	public String getAllUsers(Model m, @RequestParam(defaultValue = "1") Integer type) {
 		List<UserDtls> users = null;
 		if (type == 1) {
 			users = userService.getUsers("ROLE_USER");

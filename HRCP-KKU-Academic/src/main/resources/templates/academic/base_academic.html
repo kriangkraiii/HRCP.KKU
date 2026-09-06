@@ -840,6 +840,14 @@
             </div>
         </div>
 
+        <!-- โหลดก่อนเนื้อหาของหน้า เพราะแบบฟอร์มเอกสารเรียก initDocPreview(...)
+             ทันทีในสคริปต์ของตัวเอง ซึ่งอยู่ในเนื้อหาด้านล่างนี้
+             เดิมไฟล์นี้ถูกโหลดท้ายหน้า ทุกหน้าแบบฟอร์มจึงต้อง include ซ้ำเองเพื่อให้
+             เรียกได้ทัน ผลคือเบราว์เซอร์โหลดสองรอบแล้วรอบที่สองโยน
+             "SyntaxError: Identifier 'DocPreviewEngine' has already been declared"
+             ทิ้งไว้ใน console ทุกหน้า -->
+        <script src="/js/doc_preview.js?v=3.0"></script>
+
         <div class="content-wrapper" id="main-content" th:replace="${content}"></div>
         <footer class="main-footer" role="contentinfo">
             © <span th:text="${T(java.time.Year).now().getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น — ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ
@@ -1261,7 +1269,6 @@
     }, 1000);
 })();
 </script>
-<script src="/js/doc_preview.js?v=3.0"></script>
 <script src="/js/global-search.js"></script>
 <script src="/js/form_loading.js"></script>
 <script src="/js/notification.js"></script>

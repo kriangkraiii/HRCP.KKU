@@ -56,7 +56,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         // The universal-access shortcut is off unless a test asks for it: with a
         // real address here every publication-scoping assertion would pass for
         // the wrong reason. See GAP-13 in docs/GAP-REPORT-flow-vs-implementation.md.
-        "app.user.email=__no_universal_access__@example.invalid"
+        "app.user.email=__no_universal_access__@example.invalid",
+        // .p12 files that TestDataFactory installs are written to disk. Left at
+        // the default they land in the repository's own uploads/ directory and
+        // accumulate there, one per test that signs anything.
+        "app.upload.certificate-dir=${java.io.tmpdir}/hrcp-test-certificates"
 })
 public abstract class AbstractFlowTest {
 

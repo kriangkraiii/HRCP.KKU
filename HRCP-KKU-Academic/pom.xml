@@ -17,6 +17,10 @@
 	<properties>
 		<java.version>21</java.version>
 		<skipTests>false</skipTests>
+		<!-- บนเครื่องนักพัฒนา เครื่องมือที่ขาดไปทำให้เทสถูกข้ามพร้อมเหตุผล
+		     บน CI ให้ส่ง -Dhrcp.tools.required=true เพื่อให้มัน fail แทน —
+		     ไม่อย่างนั้นชั้นเทสทั้งชั้นหายไปเงียบ ๆ แล้ว build ยังขึ้นเขียว -->
+		<hrcp.tools.required>false</hrcp.tools.required>
 	</properties>
 	<dependencies>
 
@@ -332,15 +336,20 @@
             <configuration>
                 <!-- ข้ามเทสต์โดยค่าเริ่มต้นเหมือนเดิม แต่สั่งรันได้ด้วย -DskipTests=false -->
                 <skipTests>${skipTests}</skipTests>
+                <!-- ชั้นเบราว์เซอร์เคยถูกกันออกจากที่นี่ด้วย
+                     <exclude>**/*E2ETest.java</exclude> โดยให้ไปรันใน -Pe2e แทน
+                     แต่ CI ไม่เคยส่ง -Pe2e เลย และตัวเทสเองยังมี
+                     @EnabledIfDockerAvailable ที่ข้ามตัวเองเงียบ ๆ อีกชั้น
+                     ผลคือชั้นที่บั๊กอยู่หนาแน่นที่สุดไม่เคยถูกรันจริงแม้แต่ครั้งเดียว
+
+                     ตอนนี้เทสเบราว์เซอร์ (*BrowserTest) ใช้ H2 เหมือนเทสอื่น
+                     ไม่ต้องพึ่ง Docker จึงรันไปพร้อมกับชุดปกติได้ทุกครั้ง -->
                 <systemPropertyVariables>
                     <spring.profiles.active>test</spring.profiles.active>
+                    <!-- true = เครื่องมือที่ขาดไป (เบราว์เซอร์, LibreOffice, Docker)
+                         ต้องทำให้เทส fail ไม่ใช่ถูกข้ามเงียบ ๆ — CI ตั้งค่านี้เสมอ -->
+                    <hrcp.tools.required>${hrcp.tools.required}</hrcp.tools.required>
                 </systemPropertyVariables>
-                <!-- The browser suite needs a Playwright download and a running
-                     Docker daemon, so it is not part of `mvn test`. It runs
-                     under -Pe2e via failsafe instead. -->
-                <excludes>
-                    <exclude>**/*E2ETest.java</exclude>
-                </excludes>
             </configuration>
         </plugin>
         <!-- OWASP Dependency-Check — scan for known CVEs in third-party libs (ISO 27001 A.12) -->
@@ -359,35 +368,18 @@
 </build>
 
 <profiles>
-    <!-- Browser-level end-to-end suite.
-         Split out because it needs three things the normal build does not: a
-         running Docker daemon (PostgreSQL via Testcontainers), a Playwright
-         browser download, and a couple of minutes. Run with:
-             ./mvnw verify -Pe2e -DskipTests=false -->
+    <!-- โปรไฟล์สำหรับ CI: ห้ามข้ามชั้นเทสใด ๆ เงียบ ๆ
+         เครื่องมือที่ขาดไป (เบราว์เซอร์ของ Playwright, LibreOffice, Docker)
+         จะทำให้เทส fail แทนที่จะถูก skip
+             ./mvnw test -Pci -DskipTests=false
+
+         หมายเหตุ: เดิมมีโปรไฟล์ชื่อ e2e ที่ผูก failsafe ไว้กับ **/*E2ETest.java
+         โดยเฉพาะ ตอนนี้เทสเบราว์เซอร์รันในชุดปกติแล้ว โปรไฟล์นั้นจึงไม่จำเป็นอีก -->
     <profile>
-        <id>e2e</id>
-        <build>
-            <plugins>
-                <plugin>
-                    <groupId>org.apache.maven.plugins</groupId>
-                    <artifactId>maven-failsafe-plugin</artifactId>
-                    <configuration>
-                        <skipTests>${skipTests}</skipTests>
-                        <includes>
-                            <include>**/*E2ETest.java</include>
-                        </includes>
-                    </configuration>
-                    <executions>
-                        <execution>
-                            <goals>
-                                <goal>integration-test</goal>
-                                <goal>verify</goal>
-                            </goals>
-                        </execution>
-                    </executions>
-                </plugin>
-            </plugins>
-        </build>
+        <id>ci</id>
+        <properties>
+            <hrcp.tools.required>true</hrcp.tools.required>
+        </properties>
     </profile>
 </profiles>
 </project>

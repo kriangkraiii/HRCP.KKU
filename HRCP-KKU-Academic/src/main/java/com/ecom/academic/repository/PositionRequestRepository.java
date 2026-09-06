@@ -25,8 +25,35 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
     @Query("SELECT r FROM PositionRequest r WHERE r.applicant.id = :userId ORDER BY r.createdAt DESC")
     List<PositionRequest> findByApplicantId(@Param("userId") Integer userId);
 
-    @Query("SELECT r FROM PositionRequest r WHERE r.applicant.id = :userId AND r.currentStatus NOT IN :terminalStatuses")
-    Optional<PositionRequest> findActiveByApplicantId(@Param("userId") Integer userId,
+    /**
+     * คำร้องที่ยังเดินอยู่ของผู้ยื่นคนหนึ่ง เรียงจากใหม่ไปเก่า
+     *
+     * <p><b>คืนเป็น List ไม่ใช่ Optional โดยตั้งใจ</b> — กติกาของระบบตั้งใจให้มีได้
+     * ครั้งละหนึ่งฉบับ และ {@code hasActiveRequest} คือด่านที่บังคับเรื่องนี้ แต่
+     * "ควรมีหนึ่ง" กับ "มีหนึ่งเสมอ" ไม่ใช่เรื่องเดียวกัน ข้อมูลเดินไปอยู่ในสภาพ
+     * สองฉบับได้จริงโดยไม่ต้องผ่าน {@code createRequest} เลย เช่น
+     *
+     * <ol>
+     *   <li>คำร้อง A ถูกปฏิเสธ → {@code REJECTED} ซึ่งเป็นสถานะปลายทาง</li>
+     *   <li>ด่านจึงตอบว่าไม่มีคำร้องค้าง ผู้ยื่นสร้างคำร้อง B ได้ตามปกติ</li>
+     *   <li>เจ้าหน้าที่ย้อนสถานะ A ออกจาก {@code REJECTED} กลับมาเป็นสถานะที่ยังเดินอยู่</li>
+     * </ol>
+     *
+     * <p>ตอนนั้นทั้ง A และ B ต่างก็ยังเดินอยู่ และถ้าเมธอดนี้คืน {@code Optional}
+     * Spring Data จะโยน {@code IncorrectResultSizeDataAccessException} ทันที
+     * ผลคือ <b>ทุกหน้าที่เรียกด่านนี้ตอบ HTTP 500 ถาวร</b> — แดชบอร์ดของผู้ยื่น
+     * ทั้งสองเฟสและหน้าสร้างคำร้องใหม่ — และผู้ยื่นแก้เองไม่ได้เลย
+     * ด่านที่มีไว้กันไม่ให้เกิดสภาพนี้ กลายเป็นสิ่งแรกที่พังเมื่อมันเกิดขึ้น
+     *
+     * <p>คืนทุกแถวแล้วให้ผู้เรียกตัดสินใจเอง จึงตอบคำถาม "มีคำร้องค้างอยู่ไหม"
+     * ได้ถูกต้องทั้งตอนมีศูนย์ หนึ่ง หรือมากกว่านั้น
+     */
+    @Query("""
+            SELECT r FROM PositionRequest r
+            WHERE r.applicant.id = :userId AND r.currentStatus NOT IN :terminalStatuses
+            ORDER BY r.createdAt DESC
+            """)
+    List<PositionRequest> findActiveByApplicantId(@Param("userId") Integer userId,
             @Param("terminalStatuses") List<PositionRequestStatus> terminalStatuses);
 
     /**
@@ -52,8 +79,19 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
     List<PositionRequest> findConsumingEvaluations(@Param("userId") Integer userId,
             @Param("free") List<PositionRequestStatus> free);
 
-    @Query("SELECT r FROM PositionRequest r WHERE r.applicant.id = :userId AND r.currentStatus = 'DRAFT'")
-    Optional<PositionRequest> findDraftByApplicantId(@Param("userId") Integer userId);
+    /**
+     * แบบร่างของผู้ยื่น เรียงจากใหม่ไปเก่า
+     *
+     * <p>คืนเป็น List ด้วยเหตุผลเดียวกับ {@link #findActiveByApplicantId} — ระบบ
+     * ตั้งใจให้มีแบบร่างได้ฉบับเดียว แต่ถ้าข้อมูลไปอยู่ในสภาพสองฉบับด้วยเหตุใดก็ตาม
+     * เมธอดนี้ต้องตอบได้ ไม่ใช่ทำให้ทั้งหน้าตอบ 500
+     */
+    @Query("""
+            SELECT r FROM PositionRequest r
+            WHERE r.applicant.id = :userId AND r.currentStatus = 'DRAFT'
+            ORDER BY r.createdAt DESC
+            """)
+    List<PositionRequest> findDraftByApplicantId(@Param("userId") Integer userId);
 
     @Query("SELECT r FROM PositionRequest r ORDER BY r.createdAt DESC")
     List<PositionRequest> findAllOrderByCreatedAtDesc();

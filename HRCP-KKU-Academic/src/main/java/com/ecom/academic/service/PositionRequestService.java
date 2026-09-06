@@ -361,8 +361,9 @@ public class PositionRequestService {
         return requestRepository.searchByNameOrEmail(keyword);
     }
 
+    /** แบบร่างล่าสุดของผู้ยื่น — ปกติมีได้ฉบับเดียว ถ้าเผลอมีมากกว่านั้นให้เอาฉบับใหม่สุด */
     public Optional<PositionRequest> findDraftByApplicant(Integer userId) {
-        return requestRepository.findDraftByApplicantId(userId);
+        return requestRepository.findDraftByApplicantId(userId).stream().findFirst();
     }
 
     /**
@@ -441,7 +442,7 @@ public class PositionRequestService {
         List<PositionRequestStatus> terminal = Arrays.stream(PositionRequestStatus.values())
                 .filter(PositionRequestStatus::isTerminal)
                 .toList();
-        return requestRepository.findActiveByApplicantId(userId, terminal).isPresent();
+        return !requestRepository.findActiveByApplicantId(userId, terminal).isEmpty();
     }
 
     @Transactional

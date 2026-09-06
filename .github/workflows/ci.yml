@@ -1,0 +1,61 @@
+name: Tests
+
+# เดิมมีแต่ deploy.yml ที่ทำงานเฉพาะตอน push เข้า branch "deploy"
+# งานที่ยังไม่ถึงขั้น deploy จึงไม่มีอะไรตรวจเลย และการเทสมือกลายเป็นตาข่ายชั้นเดียว
+#
+# ตั้งไว้ที่ branch "test" ให้เป็นด่านก่อนถึง "deploy": push ขึ้น test แล้วเทสรันครบทุกชั้น
+# ถ้าเขียวค่อยส่งต่อไป deploy ซึ่งจะรันเทสอีกรอบก่อนขึ้นเซิร์ฟเวอร์จริง
+on:
+  push:
+    branches: [test]
+  pull_request:
+    branches: [test]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: temurin
+          cache: maven
+
+      # ชั้นเอกสารแปลง DOCX เป็น PDF ด้วย LibreOffice ถ้าไม่มี เทสชั้นนั้นจะถูกข้าม
+      # ซึ่งเป็นสิ่งที่ -Dhrcp.tools.required=true ด้านล่างไม่ยอมให้เกิด
+      - name: Install LibreOffice
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libreoffice-writer
+
+      # Playwright โหลดเบราว์เซอร์เองในการรันครั้งแรก แคชไว้จะได้ไม่โหลดซ้ำทุกครั้ง
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('HRCP-KKU-Academic/pom.xml') }}
+
+      # -Pci ตั้ง hrcp.tools.required=true — เครื่องมือที่ขาดไปจะทำให้ build พัง
+      # แทนที่จะข้ามเทสทั้งชั้นเงียบ ๆ แล้วขึ้นเขียว ซึ่งเคยเกิดขึ้นจริงมาแล้ว:
+      # MigrationOnPostgresTest ขึ้นเป็น skipped=9 อยู่นาน และซ่อนไว้ว่า V16
+      # รันไม่ผ่านบนฐานข้อมูลที่สร้างใหม่
+      #
+      # Docker มีอยู่แล้วบน ubuntu-latest ชั้น Testcontainers จึงรันได้
+      - name: Run tests
+        working-directory: HRCP-KKU-Academic
+        run: ./mvnw test -Pci -DskipTests=false
+
+      # ผลเทสและ trace ของเบราว์เซอร์ ต้องเก็บไว้ให้เปิดดูได้ตอน build พัง
+      # ไม่อย่างนั้นเหลือแค่ stack trace ในล็อกซึ่งไม่พอสำหรับบั๊กชั้น UI
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: |
+            HRCP-KKU-Academic/target/surefire-reports/
+            HRCP-KKU-Academic/target/playwright/
+          if-no-files-found: ignore
+          retention-days: 14

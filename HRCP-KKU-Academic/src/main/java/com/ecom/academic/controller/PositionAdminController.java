@@ -261,8 +261,12 @@ public class PositionAdminController {
         PositionRequest request = positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
+        // แบบร่างยังเป็นของผู้ยื่น เจ้าหน้าที่จึงยังเปิดแบบฟอร์มไม่ได้ — แต่ต้องบอก
+        // เหตุผลนั้นตรง ๆ เดิมใช้ error=status_update_failed ซึ่งขึ้นข้อความว่า
+        // "ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง" ทั้งที่ไม่มีการอัปเดตสถานะใด ๆ
+        // เกิดขึ้นเลย และการ "ลองใหม่" ก็ได้ผลเดิมทุกครั้งไม่ว่าจะกดกี่หน
         if (request.getCurrentStatus().isDraft()) {
-            return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
+            return "redirect:/admin/position/request/" + id + "?error=still_a_draft";
         }
 
         List<PositionDocument> existing = positionService.getDocumentsByType(id, type);
@@ -313,7 +317,7 @@ public class PositionAdminController {
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
         if (request.getCurrentStatus().isDraft()) {
-            return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
+            return "redirect:/admin/position/request/" + id + "?error=still_a_draft";
         }
 
         // เอกสารที่กำลังเวียนลงนามอยู่ (หรือลงนามครบแล้ว) ห้ามแก้ — ดูเหตุผลใน

@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.ecom.academic.model.AcademicRequest;
@@ -39,9 +38,8 @@ import com.ecom.support.TestDataFactory;
  * state to the right person, and that the request really does end up with
  * กองทรัพยากรบุคคล.
  */
-@EnabledIfDockerAvailable
 @DisplayName("E2E: เส้นทางผู้ใช้จริงบนเบราว์เซอร์ ตั้งแต่ต้นจนจบ")
-class FullJourneyE2ETest extends PlaywrightTestBase {
+class FullJourneyBrowserTest extends PlaywrightTestBase {
 
     @Autowired
     private AcademicRequestService academicService;

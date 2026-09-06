@@ -30,6 +30,7 @@ import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureKind;
 import com.ecom.academic.model.UserSignature;
+import com.ecom.academic.service.UserDigitalCertificateService;
 import com.ecom.academic.service.UserSignatureService;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
@@ -80,6 +81,7 @@ public class TestDataFactory {
     private final NotificationRepository notifications;
     private final JdbcTemplate jdbc;
     private final UserSignatureService signatureService;
+    private final UserDigitalCertificateService certificateService;
     private final PasswordEncoder passwordEncoder;
 
     public TestDataFactory(UserRepository userRepository,
@@ -93,10 +95,12 @@ public class TestDataFactory {
             NotificationRepository notifications,
             JdbcTemplate jdbc,
             UserSignatureService signatureService,
+            UserDigitalCertificateService certificateService,
             PasswordEncoder passwordEncoder) {
         this.notifications = notifications;
         this.jdbc = jdbc;
         this.signatureService = signatureService;
+        this.certificateService = certificateService;
         this.userRepository = userRepository;
         this.academicRequests = academicRequests;
         this.academicDocuments = academicDocuments;
@@ -145,7 +149,8 @@ public class TestDataFactory {
                 "academic_document_edit_log", "academic_attachment",
                 "request_status_history", "academic_document", "academic_request",
                 // Standalone
-                "user_signature", "notifications", "scopus_publication", "fs_faculty")) {
+                "user_signature", "user_digital_certificate",
+                "notifications", "scopus_publication", "fs_faculty")) {
             if (present.contains(table)) {
                 jdbc.execute("DELETE FROM " + table);
             } else {
@@ -321,6 +326,36 @@ public class TestDataFactory {
             throw new IllegalStateException("สร้างลายเซ็นทดสอบไม่สำเร็จ: " + result.error());
         }
         return result.signature();
+    }
+
+    /**
+     * ติดตั้งใบรับรอง Digital ID (.p12) ให้ผู้ใช้ แบบเดียวกับที่หน้า "ลายเซ็นของฉัน" ทำ
+     *
+     * <p>จำเป็นสำหรับทุกเทสที่เดินเส้นทางลงนามผ่าน controller —
+     * {@code SigningController.sign} ตรวจว่ามีใบรับรองที่ยังไม่หมดอายุเป็นอย่างแรกสุด
+     * ก่อนจะแตะ workflow ใด ๆ ถ้าไม่มี จะถูกเด้งกลับพร้อมข้อความให้ไปติดตั้งก่อน
+     *
+     * <p>ข้อกำหนดนี้ถูกเพิ่มเข้ามาทีหลัง ({@code Require .p12}) โดยไม่มีใครแก้
+     * {@code FullJourneyMockMvcTest} ตาม เทสเส้นทางเต็มเส้นจึงแดงมาตั้งแต่วันนั้น
+     * และเส้นทาง "ลงนามสำเร็จ" ก็ไม่มีเทสคุมเลยแม้แต่ตัวเดียว
+     *
+     * @return รหัสผ่านของไฟล์ .p12 ที่ติดตั้งไป — ต้องส่งเป็น {@code digitalCertPin}
+     *         ไปกับ POST ลงนาม
+     */
+    public String digitalCertificateFor(UserDtls owner) {
+        byte[] p12;
+        try {
+            p12 = TestCertificates.validP12(owner.getName() != null ? owner.getName() : "ผู้ทดสอบ");
+        } catch (Exception e) {
+            throw new IllegalStateException("สร้างไฟล์ .p12 ทดสอบไม่สำเร็จ", e);
+        }
+
+        UserDigitalCertificateService.SaveResult result = certificateService.registerCertificate(
+                owner, p12, "kku_digital_id_test.p12", TestCertificates.PIN, true);
+        if (!result.ok()) {
+            throw new IllegalStateException("ติดตั้งใบรับรองทดสอบไม่สำเร็จ: " + result.error());
+        }
+        return TestCertificates.PIN;
     }
 
     private static String tinyPngBase64() {

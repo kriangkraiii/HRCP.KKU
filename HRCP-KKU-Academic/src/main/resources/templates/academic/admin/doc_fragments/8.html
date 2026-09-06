@@ -178,7 +178,6 @@
         <input type="hidden" id="currentDocType" th:value="${documentType}">
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
         <link rel="stylesheet" href="/css/doc_preview.css">
-        <script src="/js/doc_preview.js"></script>
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
         <script>
             // Auto-calculate expiration date (+3 years from evaluation date)

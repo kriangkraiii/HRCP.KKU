@@ -537,6 +537,11 @@
             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
           </div>
           <form id="resignForm" method="post" action="">
+            <!-- action ถูกตั้งด้วย JavaScript ตอนเปิด modal จึงใช้ th:action ไม่ได้
+                 และ Thymeleaf จะเติม CSRF token ให้เฉพาะฟอร์มที่มี th:action เท่านั้น
+                 ถ้าไม่ใส่เอง CsrfFilter จะปฏิเสธแล้วเด้งไป /signin?expired=true
+                 ซึ่งผู้ใช้จะเห็นเป็น "จู่ ๆ ก็หลุดออกจากระบบ" โดยไม่มีคำอธิบาย -->
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
             <div class="modal-body">
               <p class="mb-2"><strong>เอกสาร:</strong> <span id="resignDocTitle" class="text-primary">-</span></p>
               <div class="mb-3">

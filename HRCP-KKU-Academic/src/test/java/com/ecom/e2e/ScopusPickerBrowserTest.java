@@ -4,7 +4,6 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.testcontainers.junit.jupiter.EnabledIfDockerAvailable;
 
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.model.UserDtls;
@@ -22,9 +21,8 @@ import com.microsoft.playwright.options.AriaRole;
  * test can prove a button is absent from the markup; only this can prove the
  * buttons that are present actually work.
  */
-@EnabledIfDockerAvailable
 @DisplayName("E2E: เลือกงานวิจัยจาก Scopus ในแบบ ก.พ.ว.มข.03")
-class ScopusPickerE2ETest extends PlaywrightTestBase {
+class ScopusPickerBrowserTest extends PlaywrightTestBase {
 
     private static final long FS_ID = 9001L;
 
@@ -244,8 +242,31 @@ class ScopusPickerE2ETest extends PlaywrightTestBase {
      * measures a login page.
      */
     private void saveDocumentOne() {
+        // position_form_validate.js เรียก preventDefault() แล้วขึ้นแถบเตือน เมื่อช่องที่
+        // มี required ยังว่าง ในแบบนี้มีสามช่อง: applicant_name, title และ target_position
+        // ผู้ใช้จริงกรอกครบก่อนกดบันทึกเสมอ เทสจึงต้องทำแบบเดียวกัน ไม่อย่างนั้น
+        // การกดบันทึกจะไม่เกิดอะไรขึ้นเลย แล้วไปล้มที่ assertion ถัดไปโดยชี้ผิดที่
+        fillIfEmpty("applicant_name", "ผศ.ดร.สมชาย ทดสอบ");
+        fillIfEmpty("title", "ผู้ช่วยศาสตราจารย์");
+
+        String before = page.url();
         page.locator("button[name='action'][value='submit']").first().click();
         page.waitForLoadState();
+
+        com.microsoft.playwright.assertions.PlaywrightAssertions
+                .assertThat(page.locator("#validationAlert"))
+                .not().isVisible();
+        org.assertj.core.api.Assertions.assertThat(page.url())
+                .as("กดบันทึกแล้วต้องมีการส่งฟอร์มจริง ไม่ใช่ถูกกันไว้ที่หน้าเดิม")
+                .isNotEqualTo(before);
+    }
+
+    /** กรอกให้เฉพาะช่องที่ยังว่าง เพื่อไม่ทับค่าที่ autofill หรือเทสใส่ไว้แล้ว */
+    private void fillIfEmpty(String fieldName, String value) {
+        com.microsoft.playwright.Locator field = page.locator("[name='" + fieldName + "']").first();
+        if (field.count() > 0 && field.inputValue().isBlank()) {
+            field.fill(value);
+        }
     }
 
     @Test

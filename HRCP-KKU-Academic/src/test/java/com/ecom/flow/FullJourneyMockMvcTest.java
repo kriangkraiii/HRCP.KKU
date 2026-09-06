@@ -77,6 +77,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
     private UserDtls professor;
     private UserDtls officer;
     private UserSignature professorSignature;
+    private String professorCertPin;
 
     @Test
     @DisplayName("อาจารย์ยื่นประเมินการสอน → ผ่าน → ยื่นขอตำแหน่ง ผศ. → ส่งออกกองทรัพยากรบุคคล")
@@ -84,6 +85,9 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         professor = data.applicant();
         officer = data.admin();
         professorSignature = data.signatureFor(professor);
+        // ภาพลายเซ็นอย่างเดียวไม่พออีกต่อไป — ระบบบังคับให้ต้องมีใบรับรอง
+        // Digital ID (.p12) ติดตั้งไว้ก่อนจึงจะลงนามได้
+        professorCertPin = data.digitalCertificateFor(professor);
 
         Long evaluationId = phase1_teachingEvaluation();
         phase2_positionRequest(evaluationId);
@@ -373,10 +377,25 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .findFirst()
                 .orElseThrow(() -> new AssertionError("ซองลงนามไม่มีช่องของผู้ยื่น"));
 
-        expectAccepted(mvc.perform(post("/esign/sign/" + myStep.getId())
+        // ปลายทางต้องไม่ใช่ /esign/sign/{id} ซึ่งเป็นที่ที่ระบบเด้งกลับมาเมื่อ
+        // ปฏิเสธการลงนาม เดิมตรวจด้วยคำนำหน้า "/" ซึ่งเป็นคำนำหน้าของ *ทุก* path
+        // การถูกปฏิเสธจึงผ่านด่านนี้ไปได้ แล้วไปโผล่เป็น assertion ที่ล้มอีกสามบรรทัดถัดมา
+        // โดยชี้ไปผิดที่ ตอนที่ระบบเริ่มบังคับใช้ .p12
+        String landedOn = mvc.perform(post("/esign/sign/" + myStep.getId())
                 .param("userSignatureId", String.valueOf(professorSignature.getId()))
+                .param("digitalCertPin", professorCertPin)
                 .param("consent", "true")
-                .with(csrf()).with(asProfessor())), "/");
+                .with(csrf()).with(asProfessor()))
+                .andExpect(status().is3xxRedirection())
+                .andReturn().getResponse().getRedirectedUrl();
+
+        assertThat(landedOn)
+                .as("ถูกเด้งกลับมาที่หน้าลงนามเดิม แปลว่าระบบปฏิเสธการลงนามเอกสารที่ "
+                        + docType)
+                .doesNotStartWith("/esign/sign/" + myStep.getId());
+        assertThat(landedOn)
+                .as("ถูกเด้งไปหน้าเข้าสู่ระบบ แปลว่า POST ไม่ผ่าน")
+                .doesNotStartWith("/signin");
 
         assertThat(signatureWorkflow.isApplicantSignatureCompleted(module, requestId, docType))
                 .as("ลงนามเอกสารที่ " + docType + " แล้วต้องถูกบันทึกว่าลงนามเสร็จ")

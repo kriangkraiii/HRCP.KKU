@@ -9,14 +9,23 @@
 ## วิธีรัน
 
 ```bash
-# ชุดหลัก — ไม่ต้องใช้ Docker ไม่ต้องใช้เบราว์เซอร์ (~2 นาที)
+# ทั้งหมด รวมชั้นเบราว์เซอร์จริง — ไม่ต้องใช้ Docker
 ./mvnw test -DskipTests=false
 
-# ชุดเบราว์เซอร์จริง + PostgreSQL จริง — ต้องเปิด Docker ก่อน
-./mvnw verify -Pe2e -DskipTests=false
+# แบบที่ CI รัน: เครื่องมือที่ขาดไปจะ fail แทนที่จะถูก skip เงียบ ๆ
+./mvnw test -Pci -DskipTests=false
 ```
 
-> `skipTests` ตั้งค่าเริ่มต้นเป็น `true` ใน `pom.xml` — ต้องส่ง `-DskipTests=false` เสมอ
+> `skipTests` เป็น `false` อยู่แล้วใน `pom.xml:19` การส่ง `-DskipTests=false` จึงไม่จำเป็น
+> แต่ใส่ไว้ก็ไม่เสียหาย
+
+**ชั้นเบราว์เซอร์ (`*BrowserTest`) รันไปพร้อมชุดปกติแล้ว** เดิมมันถูกกันออกจาก
+`mvn test` ด้วย `<exclude>**/*E2ETest.java</exclude>` ให้ไปรันในโปรไฟล์ `e2e` ซึ่ง CI
+ไม่เคยเรียก ซ้ำยังมี `@EnabledIfDockerAvailable` ที่ข้ามตัวเองเมื่อ Docker ไม่ได้เปิด
+สามชั้นนี้ทับกันจนชั้นเบราว์เซอร์ไม่เคยรันจริงเลย ตอนนี้ใช้ H2 เหมือนเทสอื่นแล้ว
+
+**สิ่งที่ยังต้องใช้ Docker** มีอย่างเดียวคือ `MigrationOnPostgresTest` ซึ่งข้ามตัวเองได้
+เมื่อไม่มี Docker — ยกเว้นตอนรันด้วย `-Pci` ที่จะบังคับให้ fail แทน
 
 ---
 

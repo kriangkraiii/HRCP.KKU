@@ -2,22 +2,24 @@ package com.ecom.e2e;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestInfo;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.context.annotation.Import;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.postgresql.PostgreSQLContainer;
+import org.springframework.test.context.TestPropertySource;
 
 import com.ecom.support.NoRealMailConfig;
 import com.ecom.support.RecordingMailSender;
+import com.ecom.support.RequiredTools;
 import com.ecom.support.TestDataFactory;
 import com.microsoft.playwright.Browser;
 import com.microsoft.playwright.BrowserContext;
@@ -27,95 +29,49 @@ import com.microsoft.playwright.Playwright;
 import com.microsoft.playwright.Tracing;
 
 /**
- * A real browser against a real PostgreSQL, on a real port.
+ * เบราว์เซอร์จริง บนพอร์ตจริง
  *
- * <p>Everything else in the suite stops at the controller. That leaves the layer
- * this application actually lives in untested: the Scopus picker modal, the rows
- * that grow on demand, the auto-draft listener, the signature canvas, the
- * Content-Security-Policy that forbids inline handlers, and Thymeleaf templates
- * that compile perfectly and only fail when somebody opens the page. Those are
- * where the reported faults are.
+ * <p>ทุกอย่างที่เหลือในชุดทดสอบหยุดอยู่ที่ชั้น controller ซึ่งทิ้งชั้นที่แอปพลิเคชันนี้
+ * ใช้ชีวิตอยู่จริงไว้โดยไม่มีอะไรตรวจ: modal เลือกงานวิจัยจาก Scopus, แถวที่งอกตามการกด,
+ * ตัวบันทึกแบบร่างอัตโนมัติ, canvas วาดลายเซ็น, Content-Security-Policy ที่ห้าม inline handler
+ * และเทมเพลตที่คอมไพล์ผ่านฉลุยแล้วไปพังตอนมีคนเปิดหน้า
  *
- * <p><b>PostgreSQL, not H2.</b> Production runs PostgreSQL and builds its schema
- * with Flyway, while the ordinary test profile builds it from the entities on
- * H2. Anything that depends on the database being the real one — a partial
- * index, a check constraint, an enum column, case folding on identifiers — is
- * invisible everywhere except here.
+ * <p><b>ทำไมถึงเลิกใช้ Docker</b> — เดิมชั้นนี้ผูกกับ PostgreSQL ผ่าน Testcontainers
+ * และมี {@code @EnabledIfDockerAvailable} กำกับ ผลคือมันข้ามตัวเองเงียบ ๆ ทุกครั้งที่
+ * Docker ไม่ได้เปิด และเนื่องจาก {@code pom.xml} ยังกันมันออกจาก {@code mvn test}
+ * ด้วย ในขณะที่ CI ไม่เคยส่ง {@code -Pe2e} เลย <b>ชั้นเบราว์เซอร์จึงไม่เคยรันจริง
+ * แม้แต่ครั้งเดียว</b> ทั้งที่บั๊กที่รายงานเข้ามาเกือบทั้งหมดอยู่ในชั้นนี้
  *
- * <p><b>Skips instead of failing when Docker is down.</b>
- * {@code @EnabledIfDockerAvailable} means a developer without Docker Desktop
- * running gets a skipped test with a reason, not a wall of connection errors.
+ * <p>ตอนนี้ใช้ H2 ชุดเดียวกับที่ {@code AbstractFlowTest} ใช้ จึงรันใน {@code mvn test}
+ * ได้ทุกครั้งโดยไม่ต้องมี Docker ส่วนเรื่องที่ต้องใช้ PostgreSQL จริง — partial index,
+ * check constraint, การพับตัวพิมพ์ของชื่อ identifier — ยังมี
+ * {@code MigrationOnPostgresTest} รับผิดชอบอยู่ตามเดิม
  *
- * <p>On failure a Playwright trace is written to {@code target/playwright/} —
- * open it with {@code npx playwright show-trace <file>} to step through the run
- * frame by frame.
+ * <p>เมื่อ trace ถูกเขียนไว้ที่ {@code target/playwright/} เปิดดูทีละเฟรมได้ด้วย
+ * {@code npx playwright show-trace <file>}
  */
+@Tag("browser")
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Import({ NoRealMailConfig.class, TestDataFactory.class })
+@TestPropertySource(properties = {
+        "spring.datasource.url=jdbc:h2:mem:browserdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE",
+        "spring.datasource.driver-class-name=org.h2.Driver",
+        "spring.jpa.properties.hibernate.dialect=org.hibernate.dialect.H2Dialect",
+        "spring.jpa.hibernate.ddl-auto=create-drop",
+        "spring.flyway.enabled=false",
+        "server.ssl.enabled=false",
+        "spring.main.allow-bean-definition-overriding=true",
+        "fs.api.enabled=false",
+        "fs.sync.on-startup=false",
+        "cp.web.enabled=false",
+        "cp.sync.on-startup=false",
+        "app.alert.email.enabled=false",
+        // ดู GAP-13 — ทางลัดบัญชีทดสอบต้องปิดไว้ ไม่อย่างนั้นการตรวจขอบเขต
+        // การมองเห็นผลงานจะผ่านด้วยเหตุผลที่ผิด
+        "app.user.email=__no_universal_access__@example.invalid",
+        "app.upload.certificate-dir=${java.io.tmpdir}/hrcp-test-certificates"
+})
 public abstract class PlaywrightTestBase {
-
-    // NOTE: @EnabledIfDockerAvailable belongs on each concrete subclass, not
-    // here. Its condition resolves the *test class* from the extension context,
-    // and on an abstract base there is none — the whole class errors out with
-    // "required test class is not present" instead of skipping.
-
-
-    /**
-     * One container for every E2E class in the run.
-     *
-     * <p>Started once and never stopped: Ryuk removes it when the JVM exits.
-     * Starting a database per class would add roughly ten seconds each time and
-     * buy nothing, because {@link TestDataFactory#reset()} already isolates the
-     * tests from one another.
-     */
-    private static final PostgreSQLContainer POSTGRES =
-            new PostgreSQLContainer("postgres:16-alpine")
-                    .withDatabaseName("hrcp_e2e")
-                    .withUsername("hrcp")
-                    .withPassword("hrcp");
-
-    static {
-        if (dockerIsAvailable()) {
-            POSTGRES.start();
-        }
-    }
-
-    private static boolean dockerIsAvailable() {
-        try {
-            return org.testcontainers.DockerClientFactory.instance().isDockerAvailable();
-        } catch (Throwable t) {
-            return false;
-        }
-    }
-
-    @DynamicPropertySource
-    static void datasource(DynamicPropertyRegistry registry) {
-        if (POSTGRES != null && POSTGRES.isRunning()) {
-            registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-            registry.add("spring.datasource.username", POSTGRES::getUsername);
-            registry.add("spring.datasource.password", POSTGRES::getPassword);
-            registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-            registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
-        } else {
-            registry.add("spring.datasource.url", () -> "jdbc:h2:mem:playwrightfallbackdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE");
-            registry.add("spring.datasource.username", () -> "sa");
-            registry.add("spring.datasource.password", () -> "");
-            registry.add("spring.datasource.driver-class-name", () -> "org.h2.Driver");
-            registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.H2Dialect");
-        }
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
-        // The migrations get their own dedicated test against this same image;
-        // running them here as well would collide with ddl-auto building the
-        // schema from the entities, which is what the running application does.
-        registry.add("spring.flyway.enabled", () -> "false");
-        registry.add("server.ssl.enabled", () -> "false");
-        registry.add("spring.main.allow-bean-definition-overriding", () -> "true");
-        registry.add("fs.api.enabled", () -> "false");
-        registry.add("cp.web.enabled", () -> "false");
-        registry.add("cp.sync.on-startup", () -> "false");
-        registry.add("app.alert.email.enabled", () -> "false");
-        registry.add("app.user.email", () -> "__no_universal_access__@example.invalid");
-    }
 
     private static Playwright playwright;
     private static Browser browser;
@@ -137,10 +93,32 @@ public abstract class PlaywrightTestBase {
     protected BrowserContext browserContext;
     protected Page page;
 
+    /** ข้อผิดพลาดที่เบราว์เซอร์รายงานระหว่างเทสหนึ่งตัว */
+    private final List<String> browserComplaints = new ArrayList<>();
+
+    /** เทสที่ตั้งใจให้เกิดข้อผิดพลาด เรียกตัวนี้เพื่อยกเว้นตัวเอง */
+    protected void toleratingBrowserErrors() {
+        browserComplaints.clear();
+        toleratingErrors = true;
+    }
+
+    private boolean toleratingErrors;
+
+    /**
+     * Playwright ดาวน์โหลดเบราว์เซอร์เองในการรันครั้งแรก ซึ่งต้องต่อเน็ตได้
+     * เครื่องที่ออฟไลน์จึงข้ามชั้นนี้ไป ส่วน CI ตั้ง {@code -Dhrcp.tools.required=true}
+     * ไว้ การข้ามจึงกลายเป็นความล้มเหลวที่นั่น
+     */
     @BeforeAll
     static void launchBrowser() {
-        playwright = Playwright.create();
-        browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+        try {
+            playwright = Playwright.create();
+            browser = playwright.chromium()
+                    .launch(new BrowserType.LaunchOptions().setHeadless(true));
+        } catch (Throwable t) {
+            closeBrowser();
+            RequiredTools.require(false, "เบราว์เซอร์ของ Playwright (" + t.getMessage() + ")");
+        }
     }
 
     @AfterAll
@@ -157,12 +135,63 @@ public abstract class PlaywrightTestBase {
     void openPage() {
         data.reset();
         mail().clear();
+        browserComplaints.clear();
+        toleratingErrors = false;
+
         browserContext = browser.newContext(new Browser.NewContextOptions()
                 .setBaseURL(baseUrl())
                 .setIgnoreHTTPSErrors(true));
         browserContext.tracing().start(new Tracing.StartOptions()
                 .setScreenshots(true).setSnapshots(true).setSources(true));
         page = browserContext.newPage();
+        watchForBrowserErrors(page);
+    }
+
+    /**
+     * ดักทุกอย่างที่เบราว์เซอร์บ่น แล้วทำให้มันเป็นความล้มเหลวของเทส
+     *
+     * <p><b>นี่คือส่วนที่ให้ผลมากที่สุดของชั้นนี้ทั้งชั้น</b> บั๊กหมวด "กดปุ่มแล้วไม่มีอะไรเกิดขึ้น"
+     * เกือบทั้งหมดมีร่องรอยอยู่ใน console อยู่แล้ว — {@code TypeError} จากตัวแปรที่เป็น null,
+     * สคริปต์ที่โหลดไม่สำเร็จ, การละเมิด Content-Security-Policy — แต่ไม่มีอะไรอ่านมัน
+     * เพราะไม่เคยมีใครเปิดเบราว์เซอร์ตอนรันเทส
+     *
+     * <p>ผลคือเทสเบราว์เซอร์ทุกตัว ทั้งที่มีอยู่และที่จะเขียนใหม่ กลายเป็นเครื่องดักบั๊ก
+     * ในตัวโดยที่คนเขียนไม่ต้องเพิ่ม assertion อะไรเลย
+     */
+    private void watchForBrowserErrors(Page target) {
+        target.onConsoleMessage(message -> {
+            if ("error".equals(message.type()) && !isKnownTranslateWidgetNoise(message.text())) {
+                browserComplaints.add("console error: " + message.text());
+            }
+        });
+        target.onPageError(error -> browserComplaints.add("JavaScript ตาย: " + error));
+
+        target.onResponse(response -> {
+            if (response.status() >= 400 && response.url().startsWith(baseUrl())) {
+                browserComplaints.add("โหลด " + response.url() + " ไม่สำเร็จ (HTTP "
+                        + response.status() + ")");
+            }
+        });
+    }
+
+    /**
+     * เสียงรบกวนจาก widget แปลภาษาของ Google ที่ไม่ใช่ความผิดของโค้ดในโปรเจกต์
+     *
+     * <p>widget ตัวนี้ยัด inline style เข้ามาเองและโหลด stylesheet จาก
+     * {@code www.gstatic.com} ซึ่ง {@code style-src} ของแอปไม่ได้อนุญาต ผลคือทุกหน้า
+     * พ่น CSP violation ออกมาหลายสิบบรรทัด ถ้านับเป็นความล้มเหลวด้วย ด่านนี้จะ
+     * ใช้งานไม่ได้เลยเพราะบั๊กจริงจะจมหายไปในกองเดียวกัน
+     *
+     * <p><b>ไม่ได้แปลว่าเรื่องนี้ไม่สำคัญ</b> — มันคือบั๊ก UI-07 ในรายงาน
+     * {@code docs/reports/bug-report-2026-09-06.md}: ปุ่มเปลี่ยนภาษาแสดงผลไม่ถูกต้อง
+     * ทุกหน้าเพราะ stylesheet ของมันถูกบล็อก การกรองที่นี่คือการแยก "เรื่องที่รู้แล้ว
+     * และมีเจ้าของ" ออกจาก "เรื่องใหม่ที่ต้องรู้ทันที" ไม่ใช่การกวาดไว้ใต้พรม
+     * เมื่อ UI-07 ถูกแก้แล้ว ให้ลบเมธอดนี้ทิ้ง
+     */
+    private static boolean isKnownTranslateWidgetNoise(String text) {
+        return text.contains("gstatic.com")
+                || text.contains("translate.googleapis.com") && text.contains("Applying inline style")
+                || text.contains("Applying inline style violates");
     }
 
     @AfterEach
@@ -173,6 +202,12 @@ public abstract class PlaywrightTestBase {
             browserContext.tracing().stop(new Tracing.StopOptions().setPath(trace));
         } finally {
             browserContext.close();
+        }
+
+        if (!toleratingErrors && !browserComplaints.isEmpty()) {
+            throw new AssertionError("เบราว์เซอร์รายงานข้อผิดพลาดระหว่างเทสนี้:\n  - "
+                    + String.join("\n  - ", browserComplaints.stream().distinct().toList())
+                    + "\n(เปิดดูทีละเฟรมได้ที่ " + trace + ")");
         }
     }
 
