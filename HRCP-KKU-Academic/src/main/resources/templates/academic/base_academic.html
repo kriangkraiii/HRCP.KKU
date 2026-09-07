@@ -838,7 +838,7 @@
 
         <div class="content-wrapper" id="main-content" th:replace="${content}"></div>
         <footer class="main-footer" role="contentinfo">
-            © <span th:text="${T(java.time.Year).now().getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น — ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ
+            © <span th:text="${T(java.time.Year).now(T(java.time.ZoneId).of('Asia/Bangkok')).getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น — ระบบเอกสารและการติดตามผลการยื่นขอกำหนดตำแหน่งทางวิชาการ
         </footer>
     </div>
 
