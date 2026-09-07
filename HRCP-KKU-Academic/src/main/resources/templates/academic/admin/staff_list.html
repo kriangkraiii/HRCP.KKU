@@ -70,7 +70,7 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr th:each="s, stat : ${staffMembers}">
+                                <tr th:each="s, stat : ${staffMembers}" th:id="'staff-' + ${s.id}">
                                     <td th:text="${stat.count}"></td>
                                     <td th:text="${s.academicTitle}"></td>
                                     <td th:text="${s.firstName}"></td>

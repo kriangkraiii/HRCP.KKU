@@ -86,7 +86,7 @@
                                 <p class="small mb-0">กดปุ่ม "เพิ่มผู้ทรงคุณวุฒิใหม่" เพื่อบันทึกข้อมูลเข้าสู่ฐานข้อมูล</p>
                             </td>
                         </tr>
-                        <tr th:each="m, iter : ${members}">
+                        <tr th:each="m, iter : ${members}" th:id="'committee-' + ${m.id}">
                             <td class="text-center text-muted fw-semibold" th:text="${iter.count}">1</td>
                             <td>
                                 <div class="fw-bold text-dark" th:text="${m.fullName}">ศ.ดร. สมชาย ใจดี</div>

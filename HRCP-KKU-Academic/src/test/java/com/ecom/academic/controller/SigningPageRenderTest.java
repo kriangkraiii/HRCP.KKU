@@ -313,7 +313,7 @@ class SigningPageRenderTest {
     }
 
     @Test
-    @DisplayName("ผู้ลงนามเลือกลายเซ็น — การ์ดลายเซ็นต้องมีตัวบอกสถานะชัดเจน (⭐ ค่าเริ่มต้น, กำลังเลือกใช้อันนี้, active notice)")
+    @DisplayName("ผู้ลงนามเลือกลายเซ็น — การ์ดลายเซ็นต้องมีตัวบอกสถานะชัดเจน (ค่าเริ่มต้น, กำลังเลือกใช้อันนี้, active notice)")
     void signatureSelectionCardsRenderClearlyWithDefaultAndActiveIndicators() throws Exception {
         com.ecom.academic.model.UserDigitalCertificate cert = new com.ecom.academic.model.UserDigitalCertificate();
         cert.setUser(applicant);

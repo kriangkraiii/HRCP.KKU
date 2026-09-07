@@ -50,7 +50,7 @@
 							</tr>
 						</thead>
 						<tbody>
-							<tr th:each="u,c:${users}">
+							<tr th:each="u,c:${users}" th:id="'user-' + ${u.id}">
 								<th scope="row">[[${c.count}]]</th>
 								<td th:if="${userType==1}"><span class="badge bg-secondary">[[${u.applicantId != null ? u.applicantId : '-'}]]</span></td>
 								<td><img th:src="@{'/img/profile_img/' + ${u.profileImage}}" 

@@ -239,7 +239,7 @@
 
                                             <!-- Snooze Options -->
                                             <li th:if="${!n.isDeleted and !n.isSnoozed()}">
-                                                <h6 class="dropdown-header">⏰ เลื่อนการแจ้งเตือน</h6>
+                                                <h6 class="dropdown-header"><i class="far fa-clock me-1"></i>เลื่อนการแจ้งเตือน</h6>
                                             </li>
                                             <li th:if="${!n.isDeleted and !n.isSnoozed()}">
                                                 <a class="dropdown-item" href="#" data-notif-action="snooze" data-notif-duration="1h" th:data-notif-id="${n.id}">

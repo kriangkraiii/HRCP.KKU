@@ -212,8 +212,8 @@ public class SearchDocumentFactory {
         d.setBadge(roleThai);
         d.setBadgeClass("bg-secondary");
         d.setVisibility(SearchVisibility.ADMIN);
-        d.setUrl(isAdmin ? "/admin/users?type=2" : "/admin/users?type=1");
-        d.setAdminUrl(isAdmin ? "/admin/users?type=2" : "/admin/users?type=1");
+        d.setUrl((isAdmin ? "/admin/users?type=2" : "/admin/users?type=1") + "#user-" + u.getId());
+        d.setAdminUrl((isAdmin ? "/admin/users?type=2" : "/admin/users?type=1") + "#user-" + u.getId());
         return d;
     }
 

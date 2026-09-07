@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+
+                    <!-- Page Header -->
+                    <div class="page-header">
+                        <div class="page-header-text">
+                            <h3 class="page-header-title"><i class="fas fa-comment-dots"></i> รายงานปัญหาและข้อเสนอแนะ</h3>
+                            <p class="page-header-sub">แจ้งปัญหาการใช้งานหรือเสนอแนะเพื่อพัฒนาระบบ ระบบจะส่งรายงานไปยังผู้ดูแลระบบและส่งสำเนาถึงอีเมลของท่าน</p>
+                        </div>
+                    </div>
+
+                    <!-- Success/Error Alerts (แสดงในกรณีที่ base template ไม่ได้แสดง) -->
+                    <div th:if="${success != null and succMsg == null}" class="alert alert-success alert-dismissible fade show">
+                        <i class="fas fa-check-circle me-1"></i> [[${success}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${error != null and errorMsg == null}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-circle me-1"></i> [[${error}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- Feedback Form Card -->
+                    <div class="card">
+                        <div class="card-header bg-white">
+                            <h5 class="mb-0"><i class="fas fa-paper-plane text-primary"></i> ส่งรายงาน</h5>
+                        </div>
+                        <div class="card-body">
+                            <form id="feedbackForm" method="post" action="/user/feedback" enctype="multipart/form-data">
+                                <!-- CSRF token -->
+                                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
+
+                                <!-- Category -->
+                                <div class="mb-3">
+                                    <label for="category" class="form-label fw-semibold">
+                                        <i class="fas fa-tag text-primary"></i> ประเภท <span class="text-danger">*</span>
+                                    </label>
+                                    <select class="form-select" id="category" name="category" required>
+                                        <option value="" disabled selected>-- เลือกประเภท --</option>
+                                        <option th:each="cat : ${categories}" th:value="${cat}" th:text="${cat}"></option>
+                                    </select>
+                                </div>
+
+                                <!-- Subject -->
+                                <div class="mb-3">
+                                    <label for="subject" class="form-label fw-semibold">
+                                        <i class="fas fa-heading text-primary"></i> หัวข้อ <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="subject" name="subject"
+                                           maxlength="200" required
+                                           placeholder="เช่น ปุ่มบันทึกไม่ทำงาน, เสนอให้เพิ่มฟีเจอร์...">
+                                    <div class="form-text text-end">
+                                        <span id="subjectCount">0</span>/200
+                                    </div>
+                                </div>
+
+                                <!-- Detail -->
+                                <div class="mb-3">
+                                    <label for="detail" class="form-label fw-semibold">
+                                        <i class="fas fa-align-left text-primary"></i> รายละเอียด <span class="text-danger">*</span>
+                                    </label>
+                                    <textarea class="form-control" id="detail" name="detail" rows="6"
+                                              maxlength="2000" required
+                                              placeholder="อธิบายปัญหาหรือข้อเสนอแนะของท่านอย่างละเอียด..."></textarea>
+                                    <div class="form-text text-end">
+                                        <span id="detailCount">0</span>/2,000
+                                    </div>
+                                </div>
+
+                                <!-- Auto recipient notice -->
+                                <div class="alert alert-light border d-flex align-items-center mb-3 text-muted small py-2 px-3">
+                                    <i class="fas fa-info-circle text-primary me-2"></i>
+                                    <span>รายงานจะถูกส่งไปยังผู้ดูแลระบบที่เกี่ยวข้องทุกคน และส่งสำเนา (CC) ไปยังอีเมลของท่านโดยอัตโนมัติ</span>
+                                </div>
+
+                                <!-- Image Attachments -->
+                                <div class="mb-4">
+                                    <label class="form-label fw-semibold">
+                                        <i class="fas fa-images text-primary"></i> แนบภาพประกอบ
+                                        <small class="text-muted fw-normal">(ไม่บังคับ, สูงสุด <span th:text="${maxImages}">3</span> ภาพ, ไม่เกิน 5MB/ภาพ)</small>
+                                    </label>
+
+                                    <!-- Drop zone -->
+                                    <div id="dropZone" class="feedback-drop-zone">
+                                        <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
+                                        <p class="mb-1 text-muted">ลากไฟล์มาวางตรงนี้ หรือคลิกเพื่อเลือกไฟล์</p>
+                                        <small class="text-muted">รองรับ JPG, PNG, GIF, WEBP</small>
+                                        <input type="file" id="imageInput" name="images" multiple
+                                               accept="image/jpeg,image/png,image/gif,image/webp"
+                                               class="d-none">
+                                    </div>
+
+                                    <!-- Preview area -->
+                                    <div id="imagePreviewArea" class="feedback-preview-area d-none">
+                                    </div>
+                                </div>
+
+                                <!-- Submit -->
+                                <div class="d-flex justify-content-end gap-2">
+                                    <a href="/user/academic/dashboard" class="btn btn-outline-secondary">
+                                        <i class="fas fa-times"></i> ยกเลิก
+                                    </a>
+                                    <button type="submit" class="btn btn-academic" id="submitBtn">
+                                        <i class="fas fa-paper-plane"></i> ส่งรายงาน
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <style>
+            .feedback-drop-zone {
+                border: 2px dashed var(--border-color, #dee2e6);
+                border-radius: 12px;
+                padding: 32px 20px;
+                text-align: center;
+                cursor: pointer;
+                transition: all 0.2s ease;
+                background: var(--card-bg, #f8f9fa);
+            }
+            .feedback-drop-zone:hover,
+            .feedback-drop-zone.drag-over {
+                border-color: #2563eb;
+                background: rgba(37, 99, 235, 0.04);
+            }
+            .feedback-preview-area {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 12px;
+                margin-top: 12px;
+            }
+            .feedback-preview-item {
+                position: relative;
+                width: 120px;
+                height: 120px;
+                border-radius: 10px;
+                overflow: hidden;
+                border: 2px solid var(--border-color, #dee2e6);
+                background: var(--card-bg, #f8f9fa);
+            }
+            .feedback-preview-item img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+            .feedback-preview-item .remove-btn {
+                position: absolute;
+                top: 4px;
+                right: 4px;
+                width: 24px;
+                height: 24px;
+                border-radius: 50%;
+                background: rgba(220, 38, 38, 0.85);
+                color: #fff;
+                border: none;
+                font-size: 12px;
+                cursor: pointer;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition: background 0.15s;
+                line-height: 1;
+            }
+            .feedback-preview-item .remove-btn:hover {
+                background: #dc2626;
+            }
+            .feedback-preview-item .file-info {
+                position: absolute;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                background: rgba(0, 0, 0, 0.6);
+                color: #fff;
+                font-size: 10px;
+                padding: 2px 6px;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+                overflow: hidden;
+            }
+        </style>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const dropZone = document.getElementById('dropZone');
+                const imageInput = document.getElementById('imageInput');
+                const previewArea = document.getElementById('imagePreviewArea');
+                const submitBtn = document.getElementById('submitBtn');
+                const form = document.getElementById('feedbackForm');
+                const maxImages = parseInt('[[${maxImages}]]') || 3;
+
+                let selectedFiles = [];
+
+                // Character counters
+                const subjectInput = document.getElementById('subject');
+                const detailInput = document.getElementById('detail');
+                const subjectCount = document.getElementById('subjectCount');
+                const detailCount = document.getElementById('detailCount');
+
+                subjectInput.addEventListener('input', function () {
+                    subjectCount.textContent = this.value.length;
+                });
+                detailInput.addEventListener('input', function () {
+                    detailCount.textContent = this.value.length;
+                });
+
+                // Drop zone click
+                dropZone.addEventListener('click', function () {
+                    imageInput.click();
+                });
+
+                // Drag & drop
+                dropZone.addEventListener('dragover', function (e) {
+                    e.preventDefault();
+                    dropZone.classList.add('drag-over');
+                });
+                dropZone.addEventListener('dragleave', function () {
+                    dropZone.classList.remove('drag-over');
+                });
+                dropZone.addEventListener('drop', function (e) {
+                    e.preventDefault();
+                    dropZone.classList.remove('drag-over');
+                    handleFiles(e.dataTransfer.files);
+                });
+
+                // File input change
+                imageInput.addEventListener('change', function () {
+                    handleFiles(this.files);
+                    this.value = '';
+                });
+
+                function handleFiles(fileList) {
+                    for (let i = 0; i < fileList.length; i++) {
+                        if (selectedFiles.length >= maxImages) {
+                            alert('แนบภาพได้สูงสุด ' + maxImages + ' ภาพ');
+                            break;
+                        }
+                        const file = fileList[i];
+                        if (!file.type.startsWith('image/')) {
+                            alert('ไฟล์ "' + file.name + '" ไม่ใช่รูปภาพ');
+                            continue;
+                        }
+                        if (file.size > 5 * 1024 * 1024) {
+                            alert('ไฟล์ "' + file.name + '" มีขนาดเกิน 5MB');
+                            continue;
+                        }
+                        selectedFiles.push(file);
+                    }
+                    renderPreviews();
+                }
+
+                function renderPreviews() {
+                    previewArea.innerHTML = '';
+                    if (selectedFiles.length === 0) {
+                        previewArea.classList.add('d-none');
+                        return;
+                    }
+                    previewArea.classList.remove('d-none');
+
+                    selectedFiles.forEach(function (file, index) {
+                        const item = document.createElement('div');
+                        item.className = 'feedback-preview-item';
+
+                        const img = document.createElement('img');
+                        img.src = URL.createObjectURL(file);
+                        img.alt = file.name;
+
+                        const removeBtn = document.createElement('button');
+                        removeBtn.type = 'button';
+                        removeBtn.className = 'remove-btn';
+                        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
+                        removeBtn.addEventListener('click', function () {
+                            selectedFiles.splice(index, 1);
+                            renderPreviews();
+                        });
+
+                        const info = document.createElement('div');
+                        info.className = 'file-info';
+                        info.textContent = file.name;
+
+                        item.appendChild(img);
+                        item.appendChild(removeBtn);
+                        item.appendChild(info);
+                        previewArea.appendChild(item);
+                    });
+                }
+
+                // Form submit — populate file input with selected files and allow native submit
+                form.addEventListener('submit', function () {
+                    if (window.DataTransfer) {
+                        const dt = new DataTransfer();
+                        selectedFiles.forEach(function (file) {
+                            dt.items.add(file);
+                        });
+                        imageInput.files = dt.files;
+                    }
+
+                    setTimeout(function () {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> กำลังส่งรายงาน...';
+                    }, 0);
+                });
+            });
+        </script>
+    </section>
+</body>
+
+</html>
