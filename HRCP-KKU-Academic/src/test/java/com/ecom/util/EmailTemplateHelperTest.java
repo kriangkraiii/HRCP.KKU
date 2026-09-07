@@ -73,4 +73,39 @@ class EmailTemplateHelperTest {
                 .contains("รับคำร้องแล้ว")
                 .contains("วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น");
     }
+
+    @Test
+    @DisplayName("สร้างอีเมลรายงานปัญหา/ข้อเสนอแนะต้องมีรายละเอียดครบถ้วน")
+    void buildsFeedbackEmailCorrectly() {
+        String html = EmailTemplateHelper.buildFeedbackEmail(
+                "อาจารย์ใจดี", "teacher@kku.ac.th", "ปัญหาระบบ",
+                "กดปุ่มไม่ทำงาน", "รายละเอียดทดสอบ", 2);
+
+        assertThat(html)
+                .contains(EmailTemplateHelper.LOGO_KKU_URL)
+                .contains(EmailTemplateHelper.LOGO_CP_URL)
+                .contains("อาจารย์ใจดี")
+                .contains("teacher@kku.ac.th")
+                .contains("ปัญหาระบบ")
+                .contains("กดปุ่มไม่ทำงาน")
+                .contains("รายละเอียดทดสอบ")
+                .contains("2 ไฟล์");
+    }
+
+    @Test
+    @DisplayName("attachLogos ต้องแนบรูปภาพ inline logo โดยไม่เกิดข้อผิดพลาด")
+    void attachLogosWithoutException() throws Exception {
+        org.springframework.mail.javamail.JavaMailSenderImpl sender = new org.springframework.mail.javamail.JavaMailSenderImpl();
+        jakarta.mail.internet.MimeMessage message = sender.createMimeMessage();
+        org.springframework.mail.javamail.MimeMessageHelper helper =
+                new org.springframework.mail.javamail.MimeMessageHelper(message, true, "UTF-8");
+
+        helper.setText("<html><body>Hello</body></html>", true);
+        EmailTemplateHelper.attachLogos(helper);
+
+        // Verify that inline parts were added inside the multipart/related container
+        jakarta.mail.Multipart rootMp = (jakarta.mail.Multipart) message.getContent();
+        jakarta.mail.Multipart relatedMp = (jakarta.mail.Multipart) rootMp.getBodyPart(0).getContent();
+        assertThat(relatedMp.getCount()).isEqualTo(3); // HTML body + 2 inline logos
+    }
 }

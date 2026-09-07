@@ -128,7 +128,7 @@
                                     </thead>
                                     <tbody>
                                         <th:block th:each="req, iter : ${requests}">
-                                        <tr>
+                                        <tr th:id="'req-' + ${req.id}">
                                             <td class="at-date" th:text="${iter.index + 1}"></td>
                                             <td><span class="at-code" style="color:#1565c0" th:text="${req.requestCode}"></span></td>
                                             <td class="at-name" th:text="${req.applicant.name}"></td>
@@ -201,7 +201,7 @@
                                     </thead>
                                     <tbody>
                                         <th:block th:each="req, iter : ${pendingRequests}">
-                                        <tr>
+                                        <tr th:id="'req-' + ${req.id}" th:attr="data-request-id=${req.id}">
                                             <td class="at-date" th:text="${iter.index + 1}"></td>
                                             <td><span class="at-code" style="color:#1565c0" th:text="${req.requestCode}"></span></td>
                                             <td class="at-name" th:text="${req.applicant.name}"></td>
@@ -338,7 +338,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr th:each="req, iter : ${positionRequests}">
+                                    <tr th:each="req, iter : ${positionRequests}" th:id="'pos-req-' + ${req.id}">
                                         <td class="at-date" th:text="${iter.index + 1}"></td>
                                         <td><span class="at-code" style="color:#2e7d32" th:text="${req.requestCode}"></span></td>
                                         <td class="at-name" th:text="${req.applicant.name}"></td>

@@ -1151,6 +1151,103 @@ body,
     color: #f1f5f9 !important;
 }
 
+[data-theme="dark"] .table > tbody > tr.search-target-highlight > *,
+[data-theme="dark"] .table > tbody > tr:target > *,
+[data-theme="dark"] .admin-table tbody tr.search-target-highlight td,
+[data-theme="dark"] .admin-table tbody tr:target td {
+    --bs-table-bg: transparent !important;
+    --bs-table-accent-bg: transparent !important;
+    background-color: transparent !important;
+}
+
+[data-theme="dark"] tr.search-target-highlight,
+[data-theme="dark"] tr:target {
+    outline: 3px solid #facc15 !important;
+    outline-offset: -2px !important;
+    animation: searchTargetRowOutlinePulseDark 3.5s ease-out !important;
+}
+
+[data-theme="dark"] .search-target-highlight:not(tr),
+[data-theme="dark"] :target:not(tr) {
+    animation-name: searchTargetPulseDark !important;
+    animation-duration: 3.5s !important;
+}
+
+[data-theme="dark"] .search-target-highlight > td,
+[data-theme="dark"] .search-target-highlight > th,
+[data-theme="dark"] :target > td,
+[data-theme="dark"] :target > th,
+[data-theme="dark"] .search-target-highlight-cell {
+    animation-name: searchTargetCellPulseDark !important;
+    animation-duration: 3.5s !important;
+}
+
+[data-theme="dark"] .search-target-highlight > td:first-child,
+[data-theme="dark"] .search-target-highlight > th:first-child,
+[data-theme="dark"] :target > td:first-child,
+[data-theme="dark"] :target > th:first-child {
+    animation-name: searchTargetFirstCellPulseDark !important;
+    animation-duration: 3.5s !important;
+}
+
+[data-theme="dark"] .search-target-highlight > td:last-child,
+[data-theme="dark"] .search-target-highlight > th:last-child,
+[data-theme="dark"] :target > td:last-child,
+[data-theme="dark"] :target > th:last-child {
+    animation-name: searchTargetLastCellPulseDark !important;
+    animation-duration: 3.5s !important;
+}
+
+@keyframes searchTargetRowOutlinePulseDark {
+    0%   { outline-color: #facc15; box-shadow: 0 0 18px rgba(250, 204, 21, 0.7); }
+    15%  { outline-color: rgba(250, 204, 21, 0.2); box-shadow: none; }
+    30%  { outline-color: #facc15; box-shadow: 0 0 18px rgba(250, 204, 21, 0.7); }
+    45%  { outline-color: rgba(250, 204, 21, 0.2); box-shadow: none; }
+    60%  { outline-color: #facc15; box-shadow: 0 0 14px rgba(250, 204, 21, 0.5); }
+    80%  { outline-color: rgba(250, 204, 21, 0.35); box-shadow: none; }
+    100% { outline-color: transparent; box-shadow: none; }
+}
+
+@keyframes searchTargetPulseDark {
+    0%   { background-color: rgba(234, 179, 8, 0.55); box-shadow: 0 0 0 4px #facc15, 0 0 20px rgba(250, 204, 21, 0.6); }
+    15%  { background-color: rgba(234, 179, 8, 0.15); box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.25); }
+    30%  { background-color: rgba(234, 179, 8, 0.55); box-shadow: 0 0 0 4px #facc15, 0 0 20px rgba(250, 204, 21, 0.6); }
+    45%  { background-color: rgba(234, 179, 8, 0.15); box-shadow: 0 0 0 2px rgba(250, 204, 21, 0.25); }
+    60%  { background-color: rgba(234, 179, 8, 0.45); box-shadow: 0 0 0 3px #facc15, 0 0 14px rgba(250, 204, 21, 0.45); }
+    80%  { background-color: rgba(234, 179, 8, 0.25); box-shadow: 0 0 0 1px rgba(250, 204, 21, 0.2); }
+    100% { background-color: transparent; box-shadow: none; }
+}
+
+@keyframes searchTargetCellPulseDark {
+    0%   { background-color: rgba(234, 179, 8, 0.55); box-shadow: inset 0 3px 0 0 #facc15, inset 0 -3px 0 0 #facc15; }
+    15%  { background-color: rgba(234, 179, 8, 0.15); box-shadow: inset 0 1px 0 0 rgba(250, 204, 21, 0.3), inset 0 -1px 0 0 rgba(250, 204, 21, 0.3); }
+    30%  { background-color: rgba(234, 179, 8, 0.55); box-shadow: inset 0 3px 0 0 #facc15, inset 0 -3px 0 0 #facc15; }
+    45%  { background-color: rgba(234, 179, 8, 0.15); box-shadow: inset 0 1px 0 0 rgba(250, 204, 21, 0.3), inset 0 -1px 0 0 rgba(250, 204, 21, 0.3); }
+    60%  { background-color: rgba(234, 179, 8, 0.40); box-shadow: inset 0 2px 0 0 #facc15, inset 0 -2px 0 0 #facc15; }
+    80%  { background-color: rgba(234, 179, 8, 0.25); box-shadow: inset 0 1px 0 0 rgba(250, 204, 21, 0.2), inset 0 -1px 0 0 rgba(250, 204, 21, 0.2); }
+    100% { background-color: transparent; box-shadow: none; }
+}
+
+@keyframes searchTargetFirstCellPulseDark {
+    0%   { background-color: rgba(234, 179, 8, 0.55); box-shadow: inset 4px 3px 0 0 #facc15, inset 0 -3px 0 0 #facc15; }
+    15%  { background-color: rgba(234, 179, 8, 0.15); box-shadow: inset 2px 1px 0 0 rgba(250, 204, 21, 0.3), inset 0 -1px 0 0 rgba(250, 204, 21, 0.3); }
+    30%  { background-color: rgba(234, 179, 8, 0.55); box-shadow: inset 4px 3px 0 0 #facc15, inset 0 -3px 0 0 #facc15; }
+    45%  { background-color: rgba(234, 179, 8, 0.15); box-shadow: inset 2px 1px 0 0 rgba(250, 204, 21, 0.3), inset 0 -1px 0 0 rgba(250, 204, 21, 0.3); }
+    60%  { background-color: rgba(234, 179, 8, 0.40); box-shadow: inset 3px 2px 0 0 #facc15, inset 0 -2px 0 0 #facc15; }
+    80%  { background-color: rgba(234, 179, 8, 0.25); box-shadow: inset 2px 1px 0 0 rgba(250, 204, 21, 0.2), inset 0 -1px 0 0 rgba(250, 204, 21, 0.2); }
+    100% { background-color: transparent; box-shadow: none; }
+}
+
+@keyframes searchTargetLastCellPulseDark {
+    0%   { background-color: rgba(234, 179, 8, 0.55); box-shadow: inset -4px 3px 0 0 #facc15, inset 0 -3px 0 0 #facc15; }
+    15%  { background-color: rgba(234, 179, 8, 0.15); box-shadow: inset -2px 1px 0 0 rgba(250, 204, 21, 0.3), inset 0 -1px 0 0 rgba(250, 204, 21, 0.3); }
+    30%  { background-color: rgba(234, 179, 8, 0.55); box-shadow: inset -4px 3px 0 0 #facc15, inset 0 -3px 0 0 #facc15; }
+    45%  { background-color: rgba(234, 179, 8, 0.15); box-shadow: inset -2px 1px 0 0 rgba(250, 204, 21, 0.3), inset 0 -1px 0 0 rgba(250, 204, 21, 0.3); }
+    60%  { background-color: rgba(234, 179, 8, 0.40); box-shadow: inset -3px 2px 0 0 #facc15, inset 0 -2px 0 0 #facc15; }
+    80%  { background-color: rgba(234, 179, 8, 0.25); box-shadow: inset -2px 1px 0 0 rgba(250, 204, 21, 0.2), inset 0 -1px 0 0 rgba(250, 204, 21, 0.2); }
+    100% { background-color: transparent; box-shadow: none; }
+}
+
 /* Error page */
 [data-theme="dark"] .error-page {
     background: var(--bg-body) !important;

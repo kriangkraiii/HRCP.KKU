@@ -187,7 +187,7 @@ public class GlobalSearchService {
                     "คำร้องประเมินผลการสอน",
                     title,
                     subtitle,
-                    "/admin/academic/requests?type=evaluation",
+                    "/admin/academic/requests?type=evaluation#req-" + req.getId(),
                     "fas fa-clipboard-check text-primary",
                     statusBadge,
                     "bg-primary"
@@ -205,7 +205,7 @@ public class GlobalSearchService {
                     "คำร้องขอตำแหน่งทางวิชาการ",
                     title,
                     subtitle,
-                    "/admin/academic/requests?type=position",
+                    "/admin/academic/requests?type=position#pos-req-" + req.getId(),
                     "fas fa-university text-info",
                     statusBadge,
                     "bg-info"
@@ -221,7 +221,7 @@ public class GlobalSearchService {
                     "จัดการบุคลากร",
                     title,
                     subtitle,
-                    "/admin/academic/staff",
+                    "/admin/academic/staff#staff-" + s.getId(),
                     "fas fa-user-tie text-success",
                     "บุคลากร",
                     "bg-success"
@@ -236,7 +236,7 @@ public class GlobalSearchService {
                     "ผู้ใช้งานระบบ",
                     u.getName() + " (" + u.getEmail() + ")",
                     "สิทธิ์: " + roleThai + " | โทร: " + (u.getMobileNumber() != null ? u.getMobileNumber() : "-"),
-                    "ROLE_ADMIN".equals(u.getRole()) ? "/admin/users?type=2" : "/admin/users?type=1",
+                    ("ROLE_ADMIN".equals(u.getRole()) ? "/admin/users?type=2" : "/admin/users?type=1") + "#user-" + u.getId(),
                     "fas fa-users-cog text-secondary",
                     roleThai,
                     "bg-secondary"
@@ -250,7 +250,7 @@ public class GlobalSearchService {
                     "ไฟล์ระบบ",
                     f.getOriginalFilename(),
                     "ขนาด: " + formatFileSize(f.getFileSize()),
-                    "/admin/file-manager",
+                    "/admin/file-manager#row-" + f.getId(),
                     "fas fa-folder-open text-warning",
                     "Storage",
                     "bg-warning text-dark"

@@ -55,6 +55,11 @@
   --space-2xl: 48px;
 }
 
+/* ===== Utilities ===== */
+.min-width-0 {
+  min-width: 0 !important;
+}
+
 /* ===== Skip to Content Link ===== */
 .skip-link {
   position: absolute;
@@ -820,22 +825,142 @@ body {
 
 .global-search-dropdown {
   top: 100%;
+  left: 0;
+  width: 440px;
+  min-width: 100%;
+  max-width: calc(100vw - 32px);
   border-radius: 12px !important;
   background: #ffffff;
   border: 1px solid rgba(0, 0, 0, 0.08) !important;
   box-shadow:
     0 10px 25px -5px rgba(0, 0, 0, 0.1),
     0 8px 10px -6px rgba(0, 0, 0, 0.1) !important;
+  overflow-x: hidden !important;
+}
+
+@media (max-width: 768px) {
+  .global-search-dropdown {
+    width: min(420px, calc(100vw - 24px));
+    right: 0;
+    left: auto;
+  }
 }
 
 .global-search-dropdown .search-result-item {
   transition: background-color 0.15s ease;
   border-bottom: 1px solid rgba(0, 0, 0, 0.03);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .global-search-dropdown .search-result-item:hover,
 .global-search-dropdown .search-result-item.active {
   background-color: rgba(13, 71, 161, 0.06) !important;
+}
+
+/* ===== Search Deep Link Target Highlight Animation ===== */
+.search-target-highlight,
+:target {
+  scroll-margin-top: 100px;
+}
+
+/* Reset Bootstrap and admin-table cell backgrounds on target row so animation is fully visible */
+.table > tbody > tr.search-target-highlight > *,
+.table > tbody > tr:target > *,
+.admin-table tbody tr.search-target-highlight td,
+.admin-table tbody tr:target td {
+  --bs-table-bg: transparent !important;
+  --bs-table-accent-bg: transparent !important;
+  background-color: transparent !important;
+}
+
+/* Whole-row golden amber flashing outline */
+tr.search-target-highlight,
+tr:target {
+  outline: 3px solid #f59e0b !important;
+  outline-offset: -2px !important;
+  animation: searchTargetRowOutlinePulse 3.5s ease-out !important;
+}
+
+/* For non-table elements (cards, list-group-items, divs) */
+.search-target-highlight:not(tr),
+:target:not(tr) {
+  animation: searchTargetPulse 3.5s ease-out !important;
+}
+
+/* For table rows: animate all td/th cells directly so Bootstrap table bg doesn't conceal it */
+.search-target-highlight > td,
+.search-target-highlight > th,
+:target > td,
+:target > th,
+.search-target-highlight-cell {
+  animation: searchTargetCellPulse 3.5s ease-out !important;
+}
+
+.search-target-highlight > td:first-child,
+.search-target-highlight > th:first-child,
+:target > td:first-child,
+:target > th:first-child {
+  animation: searchTargetFirstCellPulse 3.5s ease-out !important;
+}
+
+.search-target-highlight > td:last-child,
+.search-target-highlight > th:last-child,
+:target > td:last-child,
+:target > th:last-child {
+  animation: searchTargetLastCellPulse 3.5s ease-out !important;
+}
+
+/* Row outline pulse keyframes: 3 distinct flash cycles */
+@keyframes searchTargetRowOutlinePulse {
+  0%   { outline-color: #f59e0b; box-shadow: 0 0 16px rgba(245, 158, 11, 0.6); }
+  15%  { outline-color: rgba(245, 158, 11, 0.2); box-shadow: none; }
+  30%  { outline-color: #f59e0b; box-shadow: 0 0 16px rgba(245, 158, 11, 0.6); }
+  45%  { outline-color: rgba(245, 158, 11, 0.2); box-shadow: none; }
+  60%  { outline-color: #f59e0b; box-shadow: 0 0 12px rgba(245, 158, 11, 0.4); }
+  80%  { outline-color: rgba(245, 158, 11, 0.35); box-shadow: none; }
+  100% { outline-color: transparent; box-shadow: none; }
+}
+
+@keyframes searchTargetPulse {
+  0%   { background-color: rgba(251, 191, 36, 0.75); box-shadow: 0 0 0 4px #d97706, 0 0 18px rgba(245, 158, 11, 0.6); }
+  15%  { background-color: rgba(254, 243, 199, 0.25); box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.3); }
+  30%  { background-color: rgba(251, 191, 36, 0.75); box-shadow: 0 0 0 4px #d97706, 0 0 18px rgba(245, 158, 11, 0.6); }
+  45%  { background-color: rgba(254, 243, 199, 0.25); box-shadow: 0 0 0 2px rgba(217, 119, 6, 0.3); }
+  60%  { background-color: rgba(251, 191, 36, 0.65); box-shadow: 0 0 0 3px #d97706, 0 0 14px rgba(245, 158, 11, 0.5); }
+  80%  { background-color: rgba(254, 243, 199, 0.35); box-shadow: 0 0 0 1px rgba(217, 119, 6, 0.2); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+
+@keyframes searchTargetCellPulse {
+  0%   { background-color: #fde047; box-shadow: inset 0 3px 0 0 #d97706, inset 0 -3px 0 0 #d97706; }
+  15%  { background-color: rgba(254, 240, 138, 0.25); box-shadow: inset 0 1px 0 0 rgba(217, 119, 6, 0.3), inset 0 -1px 0 0 rgba(217, 119, 6, 0.3); }
+  30%  { background-color: #fde047; box-shadow: inset 0 3px 0 0 #d97706, inset 0 -3px 0 0 #d97706; }
+  45%  { background-color: rgba(254, 240, 138, 0.25); box-shadow: inset 0 1px 0 0 rgba(217, 119, 6, 0.3), inset 0 -1px 0 0 rgba(217, 119, 6, 0.3); }
+  60%  { background-color: #fef08a; box-shadow: inset 0 2px 0 0 #d97706, inset 0 -2px 0 0 #d97706; }
+  80%  { background-color: rgba(254, 240, 138, 0.40); box-shadow: inset 0 1px 0 0 rgba(217, 119, 6, 0.2), inset 0 -1px 0 0 rgba(217, 119, 6, 0.2); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+
+@keyframes searchTargetFirstCellPulse {
+  0%   { background-color: #fde047; box-shadow: inset 4px 3px 0 0 #d97706, inset 0 -3px 0 0 #d97706; }
+  15%  { background-color: rgba(254, 240, 138, 0.25); box-shadow: inset 2px 1px 0 0 rgba(217, 119, 6, 0.3), inset 0 -1px 0 0 rgba(217, 119, 6, 0.3); }
+  30%  { background-color: #fde047; box-shadow: inset 4px 3px 0 0 #d97706, inset 0 -3px 0 0 #d97706; }
+  45%  { background-color: rgba(254, 240, 138, 0.25); box-shadow: inset 2px 1px 0 0 rgba(217, 119, 6, 0.3), inset 0 -1px 0 0 rgba(217, 119, 6, 0.3); }
+  60%  { background-color: #fef08a; box-shadow: inset 3px 2px 0 0 #d97706, inset 0 -2px 0 0 #d97706; }
+  80%  { background-color: rgba(254, 240, 138, 0.40); box-shadow: inset 2px 1px 0 0 rgba(217, 119, 6, 0.2), inset 0 -1px 0 0 rgba(217, 119, 6, 0.2); }
+  100% { background-color: transparent; box-shadow: none; }
+}
+
+@keyframes searchTargetLastCellPulse {
+  0%   { background-color: #fde047; box-shadow: inset -4px 3px 0 0 #d97706, inset 0 -3px 0 0 #d97706; }
+  15%  { background-color: rgba(254, 240, 138, 0.25); box-shadow: inset -2px 1px 0 0 rgba(217, 119, 6, 0.3), inset 0 -1px 0 0 rgba(217, 119, 6, 0.3); }
+  30%  { background-color: #fde047; box-shadow: inset -4px 3px 0 0 #d97706, inset 0 -3px 0 0 #d97706; }
+  45%  { background-color: rgba(254, 240, 138, 0.25); box-shadow: inset -2px 1px 0 0 rgba(217, 119, 6, 0.3), inset 0 -1px 0 0 rgba(217, 119, 6, 0.3); }
+  60%  { background-color: #fef08a; box-shadow: inset -3px 2px 0 0 #d97706, inset 0 -2px 0 0 #d97706; }
+  80%  { background-color: rgba(254, 240, 138, 0.40); box-shadow: inset -2px 1px 0 0 rgba(217, 119, 6, 0.2), inset 0 -1px 0 0 rgba(217, 119, 6, 0.2); }
+  100% { background-color: transparent; box-shadow: none; }
 }
 
 #topbar-breadcrumb .breadcrumb-item {

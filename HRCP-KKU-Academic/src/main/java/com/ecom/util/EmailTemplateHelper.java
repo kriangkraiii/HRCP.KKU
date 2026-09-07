@@ -15,15 +15,21 @@ public final class EmailTemplateHelper {
     public static final String SENDER_NAME = "วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
     public static final String SENDER_SYSTEM_NAME = "ระบบตำแหน่งทางวิชาการ วิทยาลัยการคอมพิวเตอร์ มข.";
 
-    // High-speed CDN endpoints (no MIME attachment, 0ms instant render in Gmail/Apple/Outlook)
-    public static final String LOGO_KKU_URL = "https://files.catbox.moe/gdy1c7.png";
-    public static final String LOGO_CP_URL = "https://files.catbox.moe/2z3z1x.png";
+    public static final String CID_KKU_LOGO = "cid:kku_logo";
+    public static final String CID_CP_LOGO = "cid:cp_logo";
+    public static final String LOGO_KKU_URL = CID_KKU_LOGO;
+    public static final String LOGO_CP_URL = CID_CP_LOGO;
 
     /**
-     * No-op helper kept for backward compatibility so no multipart attachment chips appear in email inboxes.
+     * Attaches the bundled KKU Emblem and College of Computing logo as inline CID resources.
      */
     public static void attachLogos(MimeMessageHelper helper) {
-        // Direct CDN URLs used in HTML body - no MIME attachment needed to avoid [inline] chip in Gmail inbox
+        try {
+            helper.addInline("kku_logo", new org.springframework.core.io.ClassPathResource("static/img/kku_logo_email.png"), "image/png");
+            helper.addInline("cp_logo", new org.springframework.core.io.ClassPathResource("static/img/cp_logo_email.png"), "image/png");
+        } catch (Exception e) {
+            log.warn("Could not attach inline email logos: {}", e.getMessage());
+        }
     }
 
     private static final org.slf4j.Logger log =
@@ -133,7 +139,7 @@ public final class EmailTemplateHelper {
         sb.append("</div>");
 
         sb.append("<div style='background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:12px 16px;border-radius:6px;margin:20px 0;font-size:13px;color:#92400e;'>");
-        sb.append("⏱ รหัสนี้มีอายุการใช้งาน <strong>").append(expiryMinutes).append(" นาที</strong> เพื่อความปลอดภัย กรุณาอย่าเปิดเผยรหัสนี้แก่ผู้อื่น");
+        sb.append("รหัสนี้มีอายุการใช้งาน <strong>").append(expiryMinutes).append(" นาที</strong> เพื่อความปลอดภัย กรุณาอย่าเปิดเผยรหัสนี้แก่ผู้อื่น");
         sb.append("</div>");
 
         sb.append("<p style='font-size:12px;color:#94a3b8;margin:20px 0 0 0;'>หากท่านไม่ได้เป็นผู้ทำรายการดังกล่าว กรุณาเพิกเฉยต่ออีเมลฉบับนี้ หรือติดต่อผู้ดูแลระบบทันที</p>");
@@ -286,6 +292,65 @@ public final class EmailTemplateHelper {
         sb.append("</div>");
 
         return wrapLayout("แจ้งเตือนระบบ: " + heading, source, sb.toString());
+    }
+
+    /**
+     * Builds Feedback / Issue Report email body.
+     *
+     * @param senderName  display name of the person filing the report
+     * @param senderEmail their email address
+     * @param category    ปัญหาระบบ / ข้อเสนอแนะ / อื่นๆ
+     * @param subject     free-text subject
+     * @param detail      full description of the issue or suggestion
+     * @param imageCount  number of attached images (shown as info, actual files are MIME attachments)
+     */
+    public static String buildFeedbackEmail(String senderName, String senderEmail,
+            String category, String subject, String detail, int imageCount) {
+        StringBuilder sb = new StringBuilder();
+
+        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>ผู้รับเรื่อง</strong>,</p>");
+        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>มีรายงานปัญหา/ข้อเสนอแนะจากผู้ใช้งานในระบบ HRCP.KKU ดังมีรายละเอียดต่อไปนี้:</p>");
+
+        // Info card
+        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:8px;padding:16px 20px;margin-bottom:20px;'>");
+        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='5' style='font-size:14px;'>");
+        sb.append("<tr><td width='30%' style='color:#64748b;font-weight:600;'>ผู้แจ้ง:</td><td style='color:#1e293b;font-weight:600;'>")
+          .append(escapeHtml(senderName)).append("</td></tr>");
+        sb.append("<tr><td style='color:#64748b;font-weight:600;'>อีเมลผู้แจ้ง:</td><td style='color:#2563eb;'>")
+          .append(escapeHtml(senderEmail)).append("</td></tr>");
+        sb.append("<tr><td style='color:#64748b;font-weight:600;'>ประเภท:</td><td><span style='display:inline-block;background:");
+
+        // Color-code the category badge
+        String badgeColor;
+        if ("ปัญหาระบบ".equals(category)) {
+            badgeColor = "#dc2626";
+        } else if ("ข้อเสนอแนะ".equals(category)) {
+            badgeColor = "#2563eb";
+        } else {
+            badgeColor = "#64748b";
+        }
+        sb.append(badgeColor).append(";color:#ffffff;font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px;'>")
+          .append(escapeHtml(category)).append("</span></td></tr>");
+
+        sb.append("<tr><td style='color:#64748b;font-weight:600;'>หัวข้อ:</td><td style='color:#1e293b;font-weight:600;'>")
+          .append(escapeHtml(subject)).append("</td></tr>");
+        if (imageCount > 0) {
+            sb.append("<tr><td style='color:#64748b;font-weight:600;'>ภาพแนบ:</td><td style='color:#1e293b;'>")
+              .append(imageCount).append(" ไฟล์ (ดูไฟล์แนบท้ายอีเมล)</td></tr>");
+        }
+        sb.append("</table>");
+        sb.append("</div>");
+
+        // Detail box
+        sb.append("<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-bottom:20px;'>");
+        sb.append("<div style='font-weight:700;color:#1e293b;margin-bottom:8px;font-size:14px;'>รายละเอียด:</div>");
+        sb.append("<div style='color:#334155;font-size:14px;white-space:pre-wrap;line-height:1.7;'>")
+          .append(escapeHtml(detail)).append("</div>");
+        sb.append("</div>");
+
+        sb.append("<p style='font-size:12px;color:#94a3b8;margin:20px 0 0 0;'>อีเมลฉบับนี้ถูกส่งจากระบบ HRCP.KKU โดยผู้ใช้งานข้างต้น ท่านสามารถตอบกลับอีเมลนี้เพื่อติดต่อผู้แจ้งโดยตรง</p>");
+
+        return wrapLayout("รายงานปัญหา/ข้อเสนอแนะ", category, sb.toString());
     }
 
     private static String escapeHtml(String text) {

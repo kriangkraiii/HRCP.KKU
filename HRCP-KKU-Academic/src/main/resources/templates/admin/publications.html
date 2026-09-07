@@ -152,7 +152,7 @@
                             </tr>
                             </thead>
                             <tbody>
-                            <tr th:each="row, st : ${publications.content}" th:with="p=${row.publication}">
+                            <tr th:each="row, st : ${publications.content}" th:with="p=${row.publication}" th:id="'pub-' + ${p.id}">
                                 <td th:text="${p.year != null ? p.year : '-'}">-</td>
                                 <td>
                                     <a class="fw-semibold text-decoration-none"

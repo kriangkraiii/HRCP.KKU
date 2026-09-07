@@ -29,4 +29,22 @@ public record SearchHit(
         boolean external,
         LocalDateTime occurredAt,
         double score) {
+
+    @Override
+    public String url() {
+        if (url == null || url.contains("#") || entityType == null || entityId == null) {
+            return url;
+        }
+        return switch (entityType) {
+            case "STAFF_MEMBER" -> url + "#staff-" + entityId;
+            case "SYSTEM_USER" -> url + "#user-" + entityId;
+            case "COMMITTEE_MEMBER" -> url + "#committee-" + entityId;
+            case "ACADEMIC_REQUEST" -> url + "#req-" + entityId;
+            case "POSITION_REQUEST" -> url + "#pos-req-" + entityId;
+            case "ADMIN_FILE" -> url + "#row-" + entityId;
+            case "PUBLICATION" -> url + "#pub-" + entityId;
+            default -> url;
+        };
+    }
 }
+

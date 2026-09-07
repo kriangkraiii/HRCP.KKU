@@ -23,10 +23,10 @@ package com.ecom.search.model;
 public enum SearchEntityType {
 
     ACADEMIC_REQUEST("คำร้องขอประเมินผลการสอน", "fas fa-clipboard-check text-primary", 1.4f,
-            "/user/academic/dashboard", "/admin/academic/requests?type=evaluation"),
+            "/user/academic/dashboard#req-{id}", "/admin/academic/requests?type=evaluation#req-{id}"),
 
     POSITION_REQUEST("คำร้องขอตำแหน่งทางวิชาการ", "fas fa-university text-info", 1.4f,
-            "/user/position/request/{id}", "/admin/academic/requests?type=position"),
+            "/user/position/request/{id}", "/admin/academic/requests?type=position#pos-req-{id}"),
 
     ACADEMIC_DOCUMENT("เอกสารประกอบคำร้องประเมิน", "fas fa-file-lines text-primary", 1.0f,
             "/user/academic/dashboard", "/admin/academic/requests/{parentId}"),
@@ -44,22 +44,22 @@ public enum SearchEntityType {
             "/user/academic/history", "/admin/academic/requests"),
 
     COMMITTEE_MEMBER("คณะกรรมการ / ผู้ทรงคุณวุฒิ", "fas fa-user-graduate text-success", 1.2f,
-            null, "/admin/academic/committee"),
+            null, "/admin/academic/committee#committee-{id}"),
 
     STAFF_MEMBER("จัดการบุคลากร", "fas fa-user-tie text-success", 1.2f,
-            null, "/admin/academic/staff"),
+            null, "/admin/academic/staff#staff-{id}"),
 
     SYSTEM_USER("ผู้ใช้งานระบบ", "fas fa-users-cog text-secondary", 1.1f,
-            null, "/admin/users?type=1"),
+            null, "/admin/users?type=1#user-{id}"),
 
     NOTIFICATION("การแจ้งเตือน", "fas fa-bell text-warning", 0.6f,
             "/notifications/open/{id}", "/notifications/open/{id}"),
 
     ADMIN_FILE("ไฟล์ระบบ", "fas fa-folder-open text-warning", 0.8f,
-            null, "/admin/file-manager"),
+            null, "/admin/file-manager#row-{id}"),
 
     PUBLICATION("ผลงานตีพิมพ์", "fas fa-book text-primary", 1.0f,
-            "/user/position/dashboard", "/admin/publications"),
+            "/user/position/dashboard", "/admin/publications/{id}#pub-{id}"),
 
     REGULATION_DOC("คลังเอกสาร / ข้อบังคับ", "fas fa-book-open text-primary", 1.0f,
             "/user/academic/documents", "/user/academic/documents"),

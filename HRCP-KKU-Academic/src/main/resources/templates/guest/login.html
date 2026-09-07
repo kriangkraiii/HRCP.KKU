@@ -121,7 +121,7 @@
 						<span th:if="${session.errorMessage}" th:text="${session.errorMessage}"></span>
 						<span th:unless="${session.errorMessage}">อีเมลหรือรหัสผ่านไม่ถูกต้อง</span>
 						<div class="lockout-timer" id="countdownTimer">
-							⏳ เหลือเวลาอีก <span id="countdownText"></span>
+							<i class="far fa-clock me-1"></i>เหลือเวลาอีก <span id="countdownText"></span>
 						</div>
 					</div>
 				</div>

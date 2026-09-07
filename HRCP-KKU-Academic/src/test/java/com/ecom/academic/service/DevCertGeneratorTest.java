@@ -32,24 +32,31 @@ class DevCertGeneratorTest {
     public static final String DEV_PASSWORD = "KkuDev1234!";
 
     @Test
-    @DisplayName("Generate test .p12 certificates for development")
+    @DisplayName("Generate test .p12 certificates for development (All Roles)")
     void generateDevCertificates() throws Exception {
-        // 1. Valid certificate (2 years validity)
         long now = System.currentTimeMillis();
         Date validFrom = new Date(now - (24L * 60 * 60 * 1000)); // 1 day ago
         Date validTo = new Date(now + (2L * 365 * 24 * 60 * 60 * 1000)); // 2 years later
-        byte[] validP12 = createP12(
-                "CN=ผศ.ดร.เกรียงไกร เกียรติบูรณกุล, OU=ODT KKU, O=Khon Kaen University, C=TH",
-                "CN=ODT KKU CA, O=Khon Kaen University, C=TH",
-                DEV_PASSWORD, validFrom, validTo);
 
-        // 2. Expired certificate (expired 1 day ago)
         Date expiredFrom = new Date(now - (2L * 365 * 24 * 60 * 60 * 1000)); // 2 years ago
         Date expiredTo = new Date(now - (24L * 60 * 60 * 1000)); // 1 day ago
-        byte[] expiredP12 = createP12(
-                "CN=ผศ.ดร.เกรียงไกร เกียรติบูรณกุล (หมดอายุ), OU=ODT KKU, O=Khon Kaen University, C=TH",
-                "CN=ODT KKU CA, O=Khon Kaen University, C=TH",
-                DEV_PASSWORD, expiredFrom, expiredTo);
+
+        String issuer = "CN=ODT KKU CA, O=Khon Kaen University, C=TH";
+
+        // Map of filename -> Subject DN
+        java.util.Map<String, String> validCerts = new java.util.LinkedHashMap<>();
+        validCerts.put("kku-digital-id-dev.p12", "CN=ผศ.ดร.เกรียงไกร เกียรติบูรณกุล, OU=ODT KKU, O=Khon Kaen University, C=TH");
+        validCerts.put("kku-digital-id-admin.p12", "CN=ผู้ดูแลระบบ (Admin), OU=HR Division, O=Khon Kaen University, C=TH");
+        validCerts.put("kku-digital-id-dean.p12", "CN=ศ.ดร.สมชาย ใจดี (คณบดี), OU=Faculty of Science, O=Khon Kaen University, C=TH");
+        validCerts.put("kku-digital-id-head.p12", "CN=รศ.ดร.วิชัย มั่นคง (หัวหน้าสาขาวิชา), OU=Department of Computer Science, O=Khon Kaen University, C=TH");
+        validCerts.put("kku-digital-id-committee.p12", "CN=ศ.ดร.ประเสริฐ ดีเลิศ (กรรมการผู้ทรงคุณวุฒิ), OU=Academic Committee, O=Khon Kaen University, C=TH");
+        validCerts.put("kku-digital-id-hr.p12", "CN=นางสาวกานดา นามดี (เจ้าหน้าที่ HR), OU=Human Resources, O=Khon Kaen University, C=TH");
+        validCerts.put("kku-digital-id-applicant.p12", "CN=ผศ.ดร.เกรียงไกร เกียรติบูรณกุล (ผู้ยื่นคำร้อง), OU=Faculty of Science, O=Khon Kaen University, C=TH");
+        validCerts.put("kku-digital-id-staff.p12", "CN=นายสมศักดิ์ รักงาน (เจ้าหน้าที่ทั่วไป), OU=Faculty of Science, O=Khon Kaen University, C=TH");
+
+        // Expired certs for negative testing
+        java.util.Map<String, String> expiredCerts = new java.util.LinkedHashMap<>();
+        expiredCerts.put("kku-digital-id-expired-dev.p12", "CN=ผศ.ดร.เกรียงไกร เกียรติบูรณกุล (หมดอายุ), OU=ODT KKU, O=Khon Kaen University, C=TH");
 
         // Target directories
         Path[] targets = new Path[] {
@@ -59,15 +66,37 @@ class DevCertGeneratorTest {
 
         for (Path dir : targets) {
             Files.createDirectories(dir);
-            Files.write(dir.resolve("kku-digital-id-dev.p12"), validP12);
-            Files.write(dir.resolve("kku-digital-id-expired-dev.p12"), expiredP12);
         }
 
         System.out.println("==========================================================");
-        System.out.println("  Dev Certificates Generated Successfully!");
-        System.out.println("  1. Valid Cert:   dev-certs/kku-digital-id-dev.p12");
-        System.out.println("  2. Expired Cert: dev-certs/kku-digital-id-expired-dev.p12");
+        System.out.println("  Generating Dev Certificates for All Roles...");
         System.out.println("  Digital ID Password: " + DEV_PASSWORD);
+        System.out.println("==========================================================");
+
+        // Generate and write valid certs
+        for (var entry : validCerts.entrySet()) {
+            String filename = entry.getKey();
+            String dn = entry.getValue();
+            byte[] p12 = createP12(dn, issuer, DEV_PASSWORD, validFrom, validTo);
+            for (Path dir : targets) {
+                Files.write(dir.resolve(filename), p12);
+            }
+            System.out.println("  [VALID]   " + filename + " -> " + dn);
+        }
+
+        // Generate and write expired certs
+        for (var entry : expiredCerts.entrySet()) {
+            String filename = entry.getKey();
+            String dn = entry.getValue();
+            byte[] p12 = createP12(dn, issuer, DEV_PASSWORD, expiredFrom, expiredTo);
+            for (Path dir : targets) {
+                Files.write(dir.resolve(filename), p12);
+            }
+            System.out.println("  [EXPIRED] " + filename + " -> " + dn);
+        }
+
+        System.out.println("==========================================================");
+        System.out.println("  All role certificates generated successfully in dev-certs/ !");
         System.out.println("==========================================================");
     }
 

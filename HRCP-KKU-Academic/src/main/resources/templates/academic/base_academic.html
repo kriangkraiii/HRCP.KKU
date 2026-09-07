@@ -14,8 +14,8 @@
     <link rel="preconnect" href="https://translate.googleapis.com">
     <meta name="_csrf" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
-    <link rel="stylesheet" href="/css/style.css?v=3.1">
-    <link rel="stylesheet" href="/css/dark-theme.css?v=3.1">
+    <link rel="stylesheet" href="/css/style.css?v=3.3">
+    <link rel="stylesheet" href="/css/dark-theme.css?v=3.3">
     <link rel="stylesheet" href="/css/doc_preview.css?v=3.0">
     <link rel="stylesheet" href="/css/esign.css?v=3.2">
     <link rel="stylesheet" href="/css/searchable_select.css?v=1.0">
@@ -181,6 +181,10 @@
                 <a href="/user/academic/settings" class="sidebar-link" id="nav-settings" data-title="การตั้งค่า">
                     <i class="fas fa-cog"></i>
                     <span class="sidebar-link-text">การตั้งค่า</span>
+                </a>
+                <a href="/user/feedback" class="sidebar-link" id="nav-feedback" data-title="รายงานปัญหา/ข้อเสนอแนะ">
+                    <i class="fas fa-comment-dots"></i>
+                    <span class="sidebar-link-text">รายงานปัญหา/ข้อเสนอแนะ</span>
                 </a>
             </th:block>
         </nav>
@@ -779,8 +783,8 @@
                     </div>
 
                     <!-- Search Results Dropdown -->
-                    <div id="globalSearchResults" class="global-search-dropdown shadow-lg border-0 rounded-3 position-absolute start-0 end-0 mt-1 d-none"
-                         style="z-index: 1050; max-height: 400px; overflow-y: auto; background: var(--bg-card, #ffffff);">
+                    <div id="globalSearchResults" class="global-search-dropdown shadow-lg border-0 rounded-3 position-absolute start-0 mt-1 d-none"
+                         style="z-index: 1050; max-height: 400px; overflow-y: auto; overflow-x: hidden; background: var(--bg-card, #ffffff);">
                     </div>
                 </div>
 
@@ -804,22 +808,6 @@
                     <i class="far fa-question-circle fa-lg"></i>
                 </a>
 
-                <!-- Profile Avatar -->
-                <a th:href="${user != null and user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}"
-                   class="topbar-avatar-link"
-                   th:title="${user != null ? user.name : ''}">
-                    <div class="topbar-avatar rounded-circle overflow-hidden shadow-sm d-flex align-items-center justify-content-center"
-                         style="background: rgba(13, 71, 161, 0.08); width: 36px; height: 36px; min-width: 36px; max-width: 36px; flex-shrink: 0;">
-                        <img th:if="${user != null and user.profileImage != null and user.profileImage != 'default.png'}"
-                             th:src="'/img/profile_img/' + ${user.profileImage}"
-                             th:alt="${user != null ? user.name : ''}"
-                             style="width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block;"
-                             data-fallback="/img/profile_img/default.png">
-                        <i class="fa-solid fa-user"
-                           style="color: var(--color-primary, #0d47a1); font-size: 0.95rem;"
-                           th:if="${user == null or user.profileImage == null or user.profileImage == 'default.png'}"></i>
-                    </div>
-                </a>
             </div>
         </header>
 
@@ -1269,7 +1257,7 @@
     }, 1000);
 })();
 </script>
-<script src="/js/global-search.js"></script>
+<script src="/js/global-search.js?v=3.3"></script>
 <script src="/js/form_loading.js"></script>
 <script src="/js/notification.js"></script>
 <script src="/js/searchable_select.js?v=1.0"></script>
