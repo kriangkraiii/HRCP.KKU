@@ -41,7 +41,6 @@ public class PositionDocumentPreviewController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public static final Map<Integer, String> POSITION_DOC_TITLES = Map.of(
-            0, "บันทึกข้อความ_ขอรับการประเมินผลการสอน",
             1, "แบบ_ก.พ.ว._มข._03_ประวัติและผลงาน",
             2, "หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูล",
             3, "แบบรับรองจริยธรรมและจรรยาบรรณ",
