@@ -22,10 +22,8 @@
                     <div class="card-header bg-white"><h5 class="mb-0">หัวบันทึกข้อความ</h5></div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">เลขที่</label>
-                                <input type="text" name="memo_no" class="form-control" placeholder="เลขที่หนังสือ">
-                            </div>
+                            <!-- เลขที่หนังสือ: แอดมินเป็นผู้กรอก ผู้ยื่นไม่ต้องกรอก -->
+                            <input type="hidden" name="memo_no" value="อว 660301.26.8/">
                             <div class="col-md-4">
                                 <label class="form-label">วันที่ <span class="text-danger">*</span></label>
                                 <input type="text" name="date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙" required>
