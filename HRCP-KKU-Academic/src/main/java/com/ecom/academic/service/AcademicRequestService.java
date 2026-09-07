@@ -24,6 +24,7 @@ import java.util.Map;
 import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.repository.AcademicDocumentEditLogRepository;
 import com.ecom.model.UserDtls;
+import com.ecom.search.service.SearchQueryNormalizer;
 
 @Service
 public class AcademicRequestService {
@@ -687,9 +688,16 @@ public class AcademicRequestService {
 
     /**
      * ค้นหาคำร้องตามชื่อผู้ยื่น
+     *
+     * <p>คำค้นสั้นกว่า {@link SearchQueryNormalizer#MIN_QUERY_LENGTH} ตัวอักษร
+     * คืนลิสต์ว่าง ไม่ใช่ทุกแถว — อักษรไทยตัวเดียวเป็นสับสตริงของข้อมูลแทบทั้งหมด
      */
     public List<AcademicRequest> searchByApplicantName(String name) {
-        return requestRepository.searchByNameOrEmail(name);
+        String pattern = SearchQueryNormalizer.likePattern(name);
+        if (pattern == null) {
+            return List.of();
+        }
+        return requestRepository.searchByNameOrEmail(pattern);
     }
 
     /**

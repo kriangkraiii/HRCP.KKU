@@ -5,6 +5,7 @@ import java.time.OffsetDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -20,6 +21,7 @@ import jakarta.persistence.UniqueConstraint;
  * natural key is {@code (fsUserId, eid)} — enforced below and used as the
  * upsert target by the sync.
  */
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "scopus_publication",
         uniqueConstraints = @UniqueConstraint(

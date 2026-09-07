@@ -183,13 +183,23 @@ class MigrationOnPostgresTest {
     }
 
     private static MigrateResult migrate() {
-        return Flyway.configure()
+        return migrateUpTo(null);
+    }
+
+    /**
+     * @param target the last version to apply, or null for everything — lets a
+     *               test stand the database up as it was at a past release
+     */
+    private static MigrateResult migrateUpTo(String target) {
+        var configuration = Flyway.configure()
                 .dataSource(POSTGRES.getJdbcUrl(), POSTGRES.getUsername(), POSTGRES.getPassword())
                 .locations("classpath:db/migration")
                 .baselineOnMigrate(true)
-                .baselineVersion("0")
-                .load()
-                .migrate();
+                .baselineVersion("0");
+        if (target != null) {
+            configuration = configuration.target(org.flywaydb.core.api.MigrationVersion.fromVersion(target));
+        }
+        return configuration.load().migrate();
     }
 
     /**
@@ -260,6 +270,148 @@ class MigrationOnPostgresTest {
         assertThat(columnLength("academic_attachment", "original_filename"))
                 .as("ชื่อลิงก์ที่ผู้ใช้ตั้งเองก็ยาวกว่าชื่อไฟล์ทั่วไป")
                 .isEqualTo(500);
+    }
+
+    /**
+     * The search index is entirely PostgreSQL-shaped, so H2 can say nothing
+     * about it: two generated columns, a GIN trigram index and a GIN tsvector
+     * index, none of which H2 can express. If the generated columns silently
+     * failed to be generated, every search would return nothing and no other
+     * test in the repository would notice.
+     */
+    @Test
+    @DisplayName("V21: ตาราง search_document พร้อม generated column และ GIN index ครบ")
+    void v21CreatesTheSearchIndex() throws SQLException {
+        migrate();
+
+        assertThat(tableNames()).contains("search_document");
+
+        assertThat(isGenerated("search_document", "search_text"))
+                .as("ถ้าไม่ใช่ generated column จะไม่มีอะไรเขียนค่าลงไป และการค้นหาจะว่างเปล่าเสมอ")
+                .isTrue();
+        assertThat(isGenerated("search_document", "tsv")).isTrue();
+
+        assertThat(indexNames())
+                .as("ไม่มี GIN trigram ก็ยังค้นได้ แต่กลายเป็น seq scan ทุกครั้ง")
+                .contains("idx_search_doc_trgm", "idx_search_doc_tsv", "ux_search_doc_entity");
+
+        try (Connection c = connect(); Statement st = c.createStatement()) {
+            assertThat(singleInt(st, "SELECT count(*) FROM pg_extension WHERE extname = 'pg_trgm'"))
+                    .as("pg_trgm คือตัวจับคู่หลักของภาษาไทย")
+                    .isEqualTo(1);
+
+            st.execute("""
+                    INSERT INTO search_document
+                        (entity_type, entity_id, title, keywords, body, category, url, visibility)
+                    VALUES ('ACADEMIC_REQUEST', 1,
+                            'คำร้องขอประเมินผลการสอน', 'KKU-ACAD-256801-0001',
+                            'Machine Learning', 'คำร้อง', '/user/academic/dashboard', 'OWNER_OR_ADMIN')
+                    """);
+
+            // ไทยเขียนติดกันไม่เว้นวรรค คำค้นจึงต้องจับกลางคำได้
+            assertThat(singleInt(st,
+                    "SELECT count(*) FROM search_document WHERE search_text LIKE '%ประเมิน%'"))
+                    .as("trigram/LIKE ต้องเจอคำที่อยู่กลางวลีภาษาไทย")
+                    .isEqualTo(1);
+
+            // ส่วนภาษาอังกฤษที่ปนอยู่ยังแตกเป็น token ให้ tsvector ใช้ได้
+            assertThat(singleInt(st,
+                    "SELECT count(*) FROM search_document "
+                            + "WHERE tsv @@ plainto_tsquery('simple', 'machine learning')"))
+                    .as("to_tsvector('simple') แยกคำอังกฤษออกจากข้อความไทยได้")
+                    .isEqualTo(1);
+
+            // และคำที่พิมพ์ผิดหนึ่งตัวยังต้องอยู่เหนือ threshold ของชั้น fuzzy
+            try (ResultSet rs = st.executeQuery(
+                    "SELECT word_similarity('ประเมิณ', search_text) FROM search_document")) {
+                rs.next();
+                assertThat(rs.getDouble(1))
+                        .as("word_similarity เทียบกับช่วงที่ตรงที่สุด ต่างจาก similarity ที่หารด้วยทั้งข้อความ")
+                        .isGreaterThanOrEqualTo(0.45);
+            }
+        }
+    }
+
+    /**
+     * The check that stands between a deploy and an application that will not
+     * start.
+     *
+     * <p>Production runs {@code ddl-auto=validate}, and deploy is a Windows
+     * Service restart with no easy way back. One column whose mapped type
+     * disagrees with V21 — the exact failure V16/V18 above records — and the jar
+     * refuses to boot after the service has already been stopped.
+     *
+     * <p>Validating the whole persistence unit is not possible here: the core
+     * tables were built by Hibernate before Flyway existed and no migration
+     * creates them, so most entities have nothing to validate against on a
+     * migrations-only database. This validates the one entity V21 does create,
+     * which is the only mapping this change introduces.
+     */
+    @Test
+    @DisplayName("V21: mapping ของ SearchDocument ผ่าน ddl-auto=validate กับสคีมาจริง")
+    void v21MatchesTheEntityMapping() {
+        migrate();
+
+        org.hibernate.cfg.Configuration cfg = new org.hibernate.cfg.Configuration()
+                .setProperty("hibernate.connection.url", POSTGRES.getJdbcUrl())
+                .setProperty("hibernate.connection.username", POSTGRES.getUsername())
+                .setProperty("hibernate.connection.password", POSTGRES.getPassword())
+                .setProperty("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")
+                .setProperty("hibernate.hbm2ddl.auto", "validate")
+                .addAnnotatedClass(com.ecom.search.model.SearchDocument.class);
+
+        // buildSessionFactory runs the validation and throws if the schema and
+        // the mapping disagree, naming the offending column.
+        try (org.hibernate.SessionFactory factory = cfg.buildSessionFactory()) {
+            assertThat(factory).isNotNull();
+        }
+    }
+
+    /**
+     * The deploy itself.
+     *
+     * <p>Every other test here starts from an empty database and runs the whole
+     * set at once. That is not what a release does: production already has V0–V20
+     * recorded, and the new jar arrives carrying one more file. The interesting
+     * question is whether that increment applies to a database that has already
+     * lived through the earlier ones — which is a different question, and the one
+     * that gets answered for the first time during the deploy window if nothing
+     * asks it here.
+     *
+     * <p>The deploy is a Windows Service stop, a jar swap and a start, so a
+     * migration that fails takes the application down with it and there is no
+     * quick way back.
+     */
+    @Test
+    @DisplayName("อัปเกรดจากรีลีสก่อนหน้า: ฐานที่มี V0–V20 อยู่แล้ว ต้องรับ V21 ได้")
+    void upgradingFromThePreviousReleaseApplies() throws SQLException, IOException {
+        List<String> onDisk = versionsOnDisk();
+        String previous = onDisk.get(onDisk.size() - 2);
+        String latest = onDisk.get(onDisk.size() - 1);
+
+        // ยกฐานให้เป็นสภาพเดียวกับ production ก่อน deploy
+        MigrateResult beforeRelease = migrateUpTo(previous);
+        assertThat(beforeRelease.success).isTrue();
+        assertThat(tableNames())
+                .as("ก่อน deploy ต้องยังไม่มีตารางของรีลีสใหม่")
+                .doesNotContain("search_document");
+
+        // แล้ว jar ใหม่ก็มาถึง
+        MigrateResult release = migrate();
+
+        assertThat(release.success).isTrue();
+        assertThat(release.migrationsExecuted)
+                .as("ต้องรันเฉพาะไฟล์ที่เพิ่มเข้ามา ไม่ใช่รันซ้ำทั้งชุด")
+                .isEqualTo(onDisk.size() - Integer.parseInt(previous));
+        assertThat(release.migrations)
+                .extracting(m -> m.version)
+                .as("V%s ต้องถูกรันในรอบนี้", latest)
+                .contains(latest);
+        assertThat(tableNames()).contains("search_document");
+
+        // และหลังอัปเกรด mapping ของ entity ต้องยังตรงกับสคีมา ไม่งั้นแอปไม่บูต
+        assertThat(isGenerated("search_document", "search_text")).isTrue();
+        assertThat(indexNames()).contains("idx_search_doc_trgm");
     }
 
     @Test
@@ -489,6 +641,16 @@ class MigrationOnPostgresTest {
                         + "AND column_name = '" + column + "'");
         assertThat(found).as("ไม่พบคอลัมน์ %s.%s", table, column).hasSize(1);
         return found.get(0);
+    }
+
+    /** คอลัมน์นี้เป็น GENERATED ALWAYS ... STORED หรือไม่ */
+    private boolean isGenerated(String table, String column) throws SQLException {
+        List<String> found = queryStrings(
+                "SELECT is_generated FROM information_schema.columns "
+                        + "WHERE table_schema = 'public' AND table_name = '" + table + "' "
+                        + "AND column_name = '" + column + "'");
+        assertThat(found).as("ไม่พบคอลัมน์ %s.%s", table, column).hasSize(1);
+        return "ALWAYS".equals(found.get(0));
     }
 
     /** ความยาวสูงสุดของคอลัมน์ชนิดตัวอักษร */

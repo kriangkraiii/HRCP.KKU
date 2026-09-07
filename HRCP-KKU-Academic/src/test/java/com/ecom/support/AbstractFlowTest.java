@@ -53,6 +53,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "cp.web.enabled=false",
         "cp.sync.on-startup=false",
         "app.alert.email.enabled=false",
+        // Index writes run on the calling thread, so a test can assert on the
+        // index row straight after the save instead of racing the executor.
+        // This belongs here rather than in the search tests: overriding it in a
+        // subclass would fork the Spring context and cost the whole suite
+        // another boot, which is the thing this base class exists to avoid.
+        "app.search.async=false",
         // The universal-access shortcut is off unless a test asks for it: with a
         // real address here every publication-scoping assertion would pass for
         // the wrong reason. See GAP-13 in docs/GAP-REPORT-flow-vs-implementation.md.

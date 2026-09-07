@@ -135,6 +135,16 @@ class EveryPageRendersTest extends AbstractFlowTest {
         pages.add(asStaff("/admin/profile"));
         pages.add(asStaff("/admin/notifications"));
 
+        // --- ค้นหา ---
+        // สามสถานะของหน้าเดียวกัน เพราะแต่ละอันเดินคนละกิ่งของเทมเพลต:
+        // ไม่มีคำค้น, คำค้นที่สั้นเกินไป, และผลลัพธ์พร้อมตัวกรองกับการแบ่งหน้า
+        pages.add(asApplicant("/search"));
+        pages.add(asApplicant("/search?q=%E0%B8%A8"));
+        pages.add(asApplicant("/search?q=%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B9%80%E0%B8%A1%E0%B8%B4%E0%B8%99"));
+        pages.add(asStaff("/search?q=%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B9%80%E0%B8%A1%E0%B8%B4%E0%B8%99"));
+        pages.add(asStaff("/search?q=%E0%B8%AA%E0%B8%A1%E0%B8%8A%E0%B8%B2%E0%B8%A2"
+                + "&types=ACADEMIC_REQUEST&sort=NEWEST"));
+
         // --- หน้าฝั่งผู้ดูแลระบบ ---
         pages.add(asStaff("/admin/"));
         pages.add(asStaff("/admin/users"));

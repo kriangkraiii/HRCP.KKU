@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic::layout(~{::section})}">
+
+<head>
+    <meta charset="UTF-8">
+    <title>ค้นหา</title>
+</head>
+
+<body>
+<section>
+    <div class="container-fluid py-4">
+
+        <!-- คำค้นและการเรียงลำดับ -->
+        <form method="get" action="/search" id="searchForm" class="mb-4">
+            <div class="row g-2 align-items-center">
+                <div class="col-12 col-lg-7">
+                    <div class="input-group input-group-lg">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-magnifying-glass text-muted"></i>
+                        </span>
+                        <input type="text" name="q" class="form-control border-start-0"
+                               th:value="${q}" autocomplete="off"
+                               placeholder="ค้นหาคำร้อง เอกสาร บุคลากร หรือเมนู..."
+                               aria-label="คำค้นหา">
+                        <button class="btn btn-primary px-4" type="submit">ค้นหา</button>
+                    </div>
+                </div>
+                <div class="col-6 col-lg-3">
+                    <select name="sort" class="form-select" aria-label="เรียงลำดับ"
+                            data-call-change="submitSearchForm">
+                        <option value="RELEVANCE" th:selected="${sort == 'RELEVANCE'}">เรียงตามความเกี่ยวข้อง</option>
+                        <option value="NEWEST"    th:selected="${sort == 'NEWEST'}">ใหม่ล่าสุดก่อน</option>
+                        <option value="OLDEST"    th:selected="${sort == 'OLDEST'}">เก่าที่สุดก่อน</option>
+                        <option value="TITLE"     th:selected="${sort == 'TITLE'}">เรียงตามชื่อ</option>
+                    </select>
+                </div>
+                <div class="col-6 col-lg-2 text-lg-end">
+                    <a href="/search" class="btn btn-outline-secondary w-100">ล้างตัวกรอง</a>
+                </div>
+            </div>
+
+            <!-- ตัวกรองซ้ายต้องอยู่ในฟอร์มเดียวกัน ไม่งั้นกดค้นหาแล้วตัวกรองจะหลุด -->
+            <div class="row mt-4 g-4">
+
+                <!-- ตัวกรอง -->
+                <aside class="col-12 col-lg-3">
+                    <div class="card border-0 shadow-sm">
+                        <div class="card-body">
+                            <h2 class="h6 fw-bold mb-3">
+                                <i class="fas fa-filter me-2 text-muted"></i>กรองผลลัพธ์
+                            </h2>
+
+                            <div th:if="${#lists.isEmpty(result.typeFacets)}"
+                                 class="text-muted small">ยังไม่มีตัวกรองสำหรับคำค้นนี้</div>
+
+                            <div th:unless="${#lists.isEmpty(result.typeFacets)}" class="mb-4">
+                                <div class="text-uppercase text-muted fw-semibold mb-2"
+                                     style="font-size:.72rem; letter-spacing:.5px;">ประเภท</div>
+                                <div class="form-check" th:each="facet : ${result.typeFacets}">
+                                    <input class="form-check-input" type="checkbox" name="types"
+                                           th:id="'type-' + ${facet.key}" th:value="${facet.key}"
+                                           th:checked="${facet.selected}"
+                                           data-call-change="submitSearchForm">
+                                    <label class="form-check-label d-flex justify-content-between"
+                                           th:for="'type-' + ${facet.key}">
+                                        <span th:text="${facet.label}">ประเภท</span>
+                                        <span class="badge bg-light text-dark border"
+                                              th:text="${facet.count}">0</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div th:unless="${#lists.isEmpty(result.statusFacets)}" class="mb-4">
+                                <div class="text-uppercase text-muted fw-semibold mb-2"
+                                     style="font-size:.72rem; letter-spacing:.5px;">สถานะ</div>
+                                <div class="form-check" th:each="facet : ${result.statusFacets}">
+                                    <input class="form-check-input" type="checkbox" name="statuses"
+                                           th:id="'status-' + ${facet.key}" th:value="${facet.key}"
+                                           th:checked="${facet.selected}"
+                                           data-call-change="submitSearchForm">
+                                    <label class="form-check-label d-flex justify-content-between"
+                                           th:for="'status-' + ${facet.key}">
+                                        <span th:text="${facet.label}">สถานะ</span>
+                                        <span class="badge bg-light text-dark border"
+                                              th:text="${facet.count}">0</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="text-uppercase text-muted fw-semibold mb-2"
+                                     style="font-size:.72rem; letter-spacing:.5px;">ช่วงวันที่</div>
+                                <label class="form-label small text-muted mb-1" for="from">ตั้งแต่</label>
+                                <input type="date" id="from" name="from" class="form-control form-control-sm mb-2"
+                                       th:value="${from}">
+                                <label class="form-label small text-muted mb-1" for="to">ถึง</label>
+                                <input type="date" id="to" name="to" class="form-control form-control-sm mb-3"
+                                       th:value="${to}">
+                                <button type="submit" class="btn btn-sm btn-outline-primary w-100">
+                                    ใช้ช่วงวันที่
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </aside>
+
+                <!-- ผลลัพธ์ -->
+                <div class="col-12 col-lg-9">
+
+                    <div th:if="${tooShort}" class="alert alert-warning border-0 shadow-sm">
+                        <i class="fas fa-circle-info me-2"></i>
+                        <span>กรุณาพิมพ์อย่างน้อย <strong th:text="${minQueryLength}">2</strong> ตัวอักษร
+                            — ตัวอักษรเดียวปรากฏอยู่ในข้อมูลแทบทุกรายการ</span>
+                    </div>
+
+                    <div th:if="${q == null or #strings.isEmpty(q)}"
+                         class="text-center text-muted py-5">
+                        <i class="fas fa-magnifying-glass fa-2x mb-3 d-block opacity-50"></i>
+                        <p class="mb-0">พิมพ์คำค้นเพื่อค้นหาคำร้อง เอกสาร บุคลากร และเมนูทั้งระบบ</p>
+                    </div>
+
+                    <div th:if="${q != null and not #strings.isEmpty(q) and not tooShort}">
+
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <p class="mb-0 text-muted small">
+                                <span th:if="${result.total > 0}">
+                                    พบ <strong th:text="${result.total}">0</strong> รายการ
+                                    (<span th:text="${result.tookMs}">0</span> ms)
+                                </span>
+                                <span th:if="${result.total == 0}">ไม่พบผลลัพธ์</span>
+                            </p>
+                        </div>
+
+                        <!-- ชั้น fuzzy: ต้องบอกให้ชัดว่าไม่ใช่ผลที่ตรงคำค้น -->
+                        <div th:if="${result.approximate}" class="alert alert-info border-0 shadow-sm py-2">
+                            <i class="fas fa-lightbulb me-2"></i>
+                            ไม่พบผลลัพธ์ที่ตรงกับ
+                            <strong th:text="${q}">คำค้น</strong> — กำลังแสดงรายการที่ใกล้เคียง
+                        </div>
+
+                        <div th:if="${result.total == 0}" class="text-center text-muted py-5">
+                            <i class="fas fa-inbox fa-2x mb-3 d-block opacity-50"></i>
+                            <p class="mb-1">ไม่พบรายการที่ตรงกับ
+                                <strong th:text="${q}">คำค้น</strong></p>
+                            <p class="small mb-0">ลองใช้คำที่สั้นลง หรือถอดตัวกรองบางอย่างออก</p>
+                        </div>
+
+                        <div class="list-group shadow-sm" th:unless="${#lists.isEmpty(result.hits)}">
+                            <a th:each="hit : ${result.hits}"
+                               th:href="${hit.url}"
+                               th:target="${hit.external} ? '_blank' : null"
+                               th:rel="${hit.external} ? 'noopener noreferrer' : null"
+                               class="list-group-item list-group-item-action py-3">
+                                <div class="d-flex justify-content-between align-items-start gap-3">
+                                    <div class="min-width-0 flex-grow-1">
+                                        <div class="d-flex align-items-center gap-2 mb-1">
+                                            <i th:class="${hit.icon}" aria-hidden="true"></i>
+                                            <span class="text-uppercase text-muted fw-semibold"
+                                                  style="font-size:.7rem; letter-spacing:.5px;"
+                                                  th:text="${hit.category}">หมวด</span>
+                                            <i th:if="${hit.external}"
+                                               class="fas fa-arrow-up-right-from-square text-muted"
+                                               style="font-size:.7rem;" aria-label="ลิงก์ภายนอก"></i>
+                                        </div>
+                                        <div class="fw-semibold text-dark" th:text="${hit.title}">ชื่อรายการ</div>
+                                        <div class="small text-muted" th:if="${hit.subtitle}"
+                                             th:text="${hit.subtitle}">คำอธิบาย</div>
+                                        <div class="small text-muted fst-italic mt-1" th:if="${hit.snippet}"
+                                             th:text="${hit.snippet}">ข้อความที่ตรงกับคำค้น</div>
+                                    </div>
+                                    <span th:if="${hit.badge}" class="badge rounded-pill flex-shrink-0"
+                                          th:classappend="${hit.badgeClass}" th:text="${hit.badge}">สถานะ</span>
+                                </div>
+                            </a>
+                        </div>
+
+                        <!-- แบ่งหน้า — ต้องพาตัวกรองไปด้วย ไม่งั้นหน้า 2 จะกลายเป็นผลลัพธ์คนละชุด -->
+                        <nav th:if="${result.totalPages() > 1}" class="mt-3">
+                            <ul class="pagination pagination-sm mb-0 justify-content-center">
+                                <li class="page-item" th:classappend="${result.page == 0} ? 'disabled'">
+                                    <a class="page-link"
+                                       th:href="@{'/search?page=' + ${result.page - 1} + ${filterQuery}}">ก่อนหน้า</a>
+                                </li>
+                                <li class="page-item disabled">
+                                    <span class="page-link"
+                                          th:text="${result.page + 1} + ' / ' + ${result.totalPages()}">1</span>
+                                </li>
+                                <li class="page-item"
+                                    th:classappend="${result.page + 1 >= result.totalPages()} ? 'disabled'">
+                                    <a class="page-link"
+                                       th:href="@{'/search?page=' + ${result.page + 1} + ${filterQuery}}">ถัดไป</a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script th:src="@{/js/search-page.js}"></script>
+</section>
+</body>
+</html>

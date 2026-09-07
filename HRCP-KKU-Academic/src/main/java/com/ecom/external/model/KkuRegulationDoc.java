@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,6 +17,7 @@ import jakarta.persistence.Table;
  * Entity representing a synchronized KKU HR regulation / announcement document.
  * Sourced automatically from https://hr2.kku.ac.th/?page_id=5546
  */
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "kku_regulation_docs", indexes = {
     @Index(name = "idx_kku_doc_category", columnList = "category"),

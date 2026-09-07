@@ -33,16 +33,55 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
 
     List<AcademicRequest> findByApplicantIdAndCurrentStatus(Integer applicantId, RequestStatus status);
 
-    List<AcademicRequest> findByApplicantNameContainingIgnoreCaseOrderByCreatedAtDesc(String name);
+    /**
+     * Requests whose applicant matches by name or e-mail.
+     *
+     * <p>Backs the admin request-queue filter. Every name column is listed
+     * because {@code applicant.name} is the legacy combined column and SSO never
+     * writes it — searching it alone returns nothing for anyone the directory
+     * provisioned. See {@link com.ecom.repository.UserRepository#searchUsers}.
+     *
+     * @param pattern a {@code %term%} pattern from
+     *                {@link com.ecom.search.service.SearchQueryNormalizer#likePattern}
+     */
+    @Query("""
+            SELECT r FROM AcademicRequest r
+            WHERE LOWER(COALESCE(r.applicant.firstName, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.lastName, '')) LIKE :pattern
+               OR LOWER(CONCAT(COALESCE(r.applicant.firstName, ''), ' ', COALESCE(r.applicant.lastName, ''))) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.firstNameEn, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.lastNameEn, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.name, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.email, '')) LIKE :pattern
+            ORDER BY r.createdAt DESC
+            """)
+    List<AcademicRequest> searchByNameOrEmail(@Param("pattern") String pattern);
 
-    @org.springframework.data.jpa.repository.Query("SELECT r FROM AcademicRequest r WHERE (LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
-    List<AcademicRequest> searchByNameOrEmail(@org.springframework.data.repository.query.Param("keyword") String keyword);
+    /** One applicant's own requests, matched on request code or id. */
+    @Query("""
+            SELECT r FROM AcademicRequest r
+            WHERE r.applicant.id = :userId
+              AND (LOWER(COALESCE(r.requestCode, '')) LIKE :pattern
+                OR LOWER(CAST(r.id AS string)) LIKE :pattern)
+            ORDER BY r.createdAt DESC
+            """)
+    List<AcademicRequest> searchByApplicant(@Param("userId") Integer userId, @Param("pattern") String pattern);
 
-    @org.springframework.data.jpa.repository.Query("SELECT r FROM AcademicRequest r WHERE r.applicant.id = :userId AND (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
-    List<AcademicRequest> searchByApplicant(@org.springframework.data.repository.query.Param("userId") Integer userId, @org.springframework.data.repository.query.Param("keyword") String keyword);
-
-    @org.springframework.data.jpa.repository.Query("SELECT r FROM AcademicRequest r WHERE (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
-    List<AcademicRequest> searchForAdmin(@org.springframework.data.repository.query.Param("keyword") String keyword);
+    /** Every request, matched on code, id, or any of the applicant's names. */
+    @Query("""
+            SELECT r FROM AcademicRequest r
+            WHERE LOWER(COALESCE(r.requestCode, '')) LIKE :pattern
+               OR LOWER(CAST(r.id AS string)) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.firstName, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.lastName, '')) LIKE :pattern
+               OR LOWER(CONCAT(COALESCE(r.applicant.firstName, ''), ' ', COALESCE(r.applicant.lastName, ''))) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.firstNameEn, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.lastNameEn, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.name, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.email, '')) LIKE :pattern
+            ORDER BY r.createdAt DESC
+            """)
+    List<AcademicRequest> searchForAdmin(@Param("pattern") String pattern);
 
     /**
      * Finished evaluations whose result lapses before a given moment.

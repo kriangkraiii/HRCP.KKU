@@ -17,6 +17,7 @@ import com.ecom.model.Notification;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.NotificationRepository;
 import com.ecom.repository.UserRepository;
+import com.ecom.search.service.SearchQueryNormalizer;
 
 @Service
 public class GlobalSearchService {
@@ -72,30 +73,40 @@ public class GlobalSearchService {
         public String getBadgeClass() { return badgeClass; }
     }
 
+    /**
+     * Searches everything this user is allowed to see.
+     *
+     * <p>Queries shorter than {@link SearchQueryNormalizer#MIN_QUERY_LENGTH}
+     * return nothing rather than everything. Thai has no word boundaries, so a
+     * single character is a substring of a large share of the corpus — {@code ศ}
+     * alone appears in ศาสตราจารย์, เอกสาร, ประกาศ and การศึกษา — and matching on
+     * one would drown the result list in noise.
+     */
     public List<SearchResultItem> search(String query, UserDtls user) {
         List<SearchResultItem> results = new ArrayList<>();
-        if (user == null || query == null) return results;
+        if (user == null) return results;
 
-        String kw = query.trim().toLowerCase();
-        if (kw.isEmpty()) return results;
+        String kw = SearchQueryNormalizer.normalize(query);
+        if (kw == null) return results;
 
+        String pattern = SearchQueryNormalizer.likePattern(query);
         boolean isAdmin = "ROLE_ADMIN".equals(user.getRole());
 
         if (isAdmin) {
-            searchForAdmin(kw, user, results);
+            searchForAdmin(kw, pattern, user, results);
         } else {
-            searchForUser(kw, user, results);
+            searchForUser(kw, pattern, user, results);
         }
 
         return results;
     }
 
-    private void searchForUser(String kw, UserDtls user, List<SearchResultItem> results) {
+    private void searchForUser(String kw, String pattern, UserDtls user, List<SearchResultItem> results) {
         // 1. Navigation & Quick Links (User Scope only)
         matchUserNavigation(kw, results);
 
         // 2. Academic Requests (Applicant Scope Only)
-        List<AcademicRequest> acadRequests = academicRequestRepository.searchByApplicant(user.getId(), kw);
+        List<AcademicRequest> acadRequests = academicRequestRepository.searchByApplicant(user.getId(), pattern);
         for (AcademicRequest req : acadRequests) {
             String title = "คำร้องขอประเมินการสอน (" + (req.getRequestCode() != null ? req.getRequestCode() : "#" + req.getId()) + ")";
             String subtitle = "สถานะ: " + (req.getCurrentStatus() != null ? req.getCurrentStatus().getThaiLabel() : "-");
@@ -112,7 +123,7 @@ public class GlobalSearchService {
         }
 
         // 3. Position Requests (Applicant Scope Only)
-        List<PositionRequest> posRequests = positionRequestRepository.searchByApplicant(user.getId(), kw);
+        List<PositionRequest> posRequests = positionRequestRepository.searchByApplicant(user.getId(), pattern);
         for (PositionRequest req : posRequests) {
             String title = "คำร้องขอตำแหน่ง (" + (req.getRequestCode() != null ? req.getRequestCode() : "#" + req.getId()) + ") " + (req.getTargetPosition() != null ? req.getTargetPosition() : "");
             String subtitle = "สาขา: " + (req.getMajor() != null ? req.getMajor() : "-") + " | สถานะ: " + (req.getCurrentStatus() != null ? req.getCurrentStatus().getThaiLabel() : "-");
@@ -161,12 +172,12 @@ public class GlobalSearchService {
         }
     }
 
-    private void searchForAdmin(String kw, UserDtls user, List<SearchResultItem> results) {
+    private void searchForAdmin(String kw, String pattern, UserDtls user, List<SearchResultItem> results) {
         // 1. Navigation & Quick Links (Admin Scope)
         matchAdminNavigation(kw, results);
 
         // 2. Academic Requests (All Applicants)
-        List<AcademicRequest> acadRequests = academicRequestRepository.searchForAdmin(kw);
+        List<AcademicRequest> acadRequests = academicRequestRepository.searchForAdmin(pattern);
         for (AcademicRequest req : acadRequests) {
             String applicantName = req.getApplicant() != null ? req.getApplicant().getName() : "-";
             String title = "คำร้องประเมิน (" + (req.getRequestCode() != null ? req.getRequestCode() : "#" + req.getId()) + ") - " + applicantName;
@@ -184,7 +195,7 @@ public class GlobalSearchService {
         }
 
         // 3. Position Requests (All Applicants)
-        List<PositionRequest> posRequests = positionRequestRepository.searchForAdmin(kw);
+        List<PositionRequest> posRequests = positionRequestRepository.searchForAdmin(pattern);
         for (PositionRequest req : posRequests) {
             String applicantName = req.getApplicant() != null ? req.getApplicant().getName() : "-";
             String title = "คำร้องขอตำแหน่ง (" + (req.getRequestCode() != null ? req.getRequestCode() : "#" + req.getId()) + ") - " + applicantName;
@@ -218,7 +229,7 @@ public class GlobalSearchService {
         }
 
         // 5. System Users
-        List<UserDtls> users = userRepository.searchUsers(kw);
+        List<UserDtls> users = userRepository.searchUsers(pattern);
         for (UserDtls u : users) {
             String roleThai = "ROLE_ADMIN".equals(u.getRole()) ? "ผู้ดูแลระบบ" : "ผู้ยื่นคำร้อง";
             results.add(new SearchResultItem(
@@ -271,7 +282,18 @@ public class GlobalSearchService {
         if (containsAny(kw, "ยื่นคำร้อง", "ขอประเมิน", "ประเมินการสอน", "new request", "สอน", "การสอน")) {
             results.add(new SearchResultItem("เมนูระบบ", "ยื่นคำร้องขอรับการประเมินการสอน", "แบบฟอร์มยื่นขอประเมินผลการสอนใหม่", "/user/academic/new-request", "fas fa-clipboard-check text-success", "บริการ", "bg-success"));
         }
-        if (containsAny(kw, "ขอตำแหน่ง", "ตำแหน่ง", "กำหนดตำแหน่ง", "position", "ผศ", "รศ", "ศ")) {
+        // "ศ" เปล่า ๆ เคยอยู่ในลิสต์นี้ และเพราะ containsAny เทียบด้วย contains
+        // อักษรตัวเดียวนั้นจึง match ประกาศ, การศึกษา, ศาสตราจารย์ ฯลฯ เมนูนี้เลยโผล่
+        // แทบทุกคำค้นภาษาไทย ลบทิ้งอย่างเดียวไม่พอ เพราะ min length ก็ไม่ช่วย —
+        // "ประกาศ" ยาวหกตัวอักษรและยัง contains "ศ"
+        //
+        // คำย่อแบบไม่มีจุดก็เอามา contains ไม่ได้เหมือนกัน ไทยเขียนติดกันไม่เว้นวรรค
+        // "การศึกษา" มี ร ต่อด้วย ศ ติดกันพอดี จึง contains "รศ" — คำที่ใช้บ่อยมาก
+        // จึงเทียบแบบทั้งคำแทน คนพิมพ์คำย่อพวกนี้เป็นคำค้นทั้งคำอยู่แล้ว ไม่ได้ฝังกลางประโยค
+        // ("ศ" ตัวเดียวไม่ต้องใส่ — สั้นกว่า MIN_QUERY_LENGTH จึงมาไม่ถึงตรงนี้ "ศ." ครอบให้แล้ว)
+        if (equalsAny(kw, "ผศ", "รศ")
+                || containsAny(kw, "ขอตำแหน่ง", "ตำแหน่ง", "กำหนดตำแหน่ง", "position",
+                        "ผศ.", "รศ.", "ศ.", "ศาสตราจารย์")) {
             results.add(new SearchResultItem("เมนูระบบ", "ยื่นขอกำหนดตำแหน่งทางวิชาการ", "ยื่นขอ ผศ. / รศ. / ศ. (Phase 2)", "/user/position/dashboard", "fas fa-university text-info", "บริการ", "bg-info"));
         }
         if (containsAny(kw, "เอกสาร", "ข้อบังคับ", "แบบฟอร์ม", "doc", "document")) {
@@ -334,6 +356,22 @@ public class GlobalSearchService {
     private boolean containsAny(String input, String... terms) {
         for (String term : terms) {
             if (input.contains(term.toLowerCase())) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Matches a term only when it is the whole query.
+     *
+     * <p>For short Thai abbreviations, {@code contains} is the wrong test. Thai
+     * runs words together with no spaces, so a two-character abbreviation turns
+     * up inside ordinary words: การศึกษา has ร immediately followed by ศ and
+     * therefore contains รศ. Whole-query matching is also how people use these —
+     * they type ผศ or รศ on its own, not buried in a sentence.
+     */
+    private boolean equalsAny(String input, String... terms) {
+        for (String term : terms) {
+            if (input.equals(term.toLowerCase())) return true;
         }
         return false;
     }

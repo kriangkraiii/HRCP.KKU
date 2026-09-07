@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.*;
 
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "admin_file", indexes = {
         @Index(name = "idx_adminfile_folder_del", columnList = "folder_id, is_deleted"),

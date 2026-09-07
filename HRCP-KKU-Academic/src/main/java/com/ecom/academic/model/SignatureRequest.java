@@ -11,6 +11,7 @@ import com.ecom.model.UserDtls;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -37,6 +38,7 @@ import jakarta.persistence.Version;
  * dean signed it and the dean's signature would silently transfer to text they
  * never saw.
  */
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "signature_request", indexes = {
         @Index(name = "idx_sig_req_document", columnList = "module, request_id, document_type"),

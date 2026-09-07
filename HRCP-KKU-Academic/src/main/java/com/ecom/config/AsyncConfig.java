@@ -77,6 +77,45 @@ public class AsyncConfig implements AsyncConfigurer {
     }
 
     /**
+     * Keeps the search index up to date without holding up the request that
+     * changed something.
+     *
+     * <p>Shaped after {@link #auditLogExecutor}, including the switch: with
+     * {@code app.search.async=false} the work runs on the calling thread, so a
+     * test can assert on the index row straight after the save instead of
+     * racing the pool. {@code CallerRunsPolicy} means a burst — a bulk import,
+     * a directory sync — slows the importer down rather than silently dropping
+     * index updates and leaving the index quietly wrong until the nightly
+     * reconcile.
+     *
+     * @param async when false, index writes run on the calling thread
+     */
+    @Bean("searchIndexExecutor")
+    public Executor searchIndexExecutor(
+            @org.springframework.beans.factory.annotation.Value("${app.search.async:true}") boolean async) {
+        if (!async) {
+            return Runnable::run;
+        }
+
+        // One thread, not a pool. Index writes are ~1 ms each, so there is no
+        // throughput to gain, and running two at once buys a whole class of
+        // problem: two events for the same row — an insert and the update a
+        // moment later — arriving on different threads, both finding no row and
+        // both inserting. The unique key catches that, but only after one
+        // transaction has already failed. A single writer makes the situation
+        // impossible instead of merely survivable.
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(1);
+        executor.setMaxPoolSize(1);
+        executor.setQueueCapacity(500);
+        executor.setThreadNamePrefix("search-index-");
+        executor.setThreadPriority(Thread.NORM_PRIORITY - 1);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
+        executor.initialize();
+        return executor;
+    }
+
+    /**
      * Dedicated executor for background PDF pre-generation and cache warming.
      * Runs at slightly reduced thread priority so user-facing web requests have precedence.
      */

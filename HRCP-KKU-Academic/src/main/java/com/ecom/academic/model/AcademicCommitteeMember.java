@@ -6,6 +6,7 @@ import com.ecom.model.UserDtls;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EntityListeners;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
@@ -22,6 +23,7 @@ import jakarta.persistence.Table;
 /**
  * ผู้ทรงคุณวุฒิภายนอก / External Expert / Reader / Assessor data stored in DB.
  */
+@EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity
 @Table(name = "academic_committee_member", indexes = {
         @Index(name = "idx_comm_email", columnList = "email"),

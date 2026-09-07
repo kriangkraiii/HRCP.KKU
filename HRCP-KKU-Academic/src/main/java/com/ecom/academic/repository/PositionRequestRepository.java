@@ -105,12 +105,57 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
     @Query("SELECT MAX(r.id) FROM PositionRequest r")
     Optional<Long> findMaxId();
 
-    @Query("SELECT r FROM PositionRequest r WHERE (LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
-    List<PositionRequest> searchByNameOrEmail(@Param("keyword") String keyword);
+    /**
+     * Requests whose applicant matches by name or e-mail.
+     *
+     * <p>Every name column is listed because {@code applicant.name} is the
+     * legacy combined column and SSO never writes it — searching it alone
+     * returns nothing for anyone the directory provisioned. See
+     * {@link com.ecom.repository.UserRepository#searchUsers}.
+     *
+     * @param pattern a {@code %term%} pattern from
+     *                {@link com.ecom.search.service.SearchQueryNormalizer#likePattern}
+     */
+    @Query("""
+            SELECT r FROM PositionRequest r
+            WHERE LOWER(COALESCE(r.applicant.firstName, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.lastName, '')) LIKE :pattern
+               OR LOWER(CONCAT(COALESCE(r.applicant.firstName, ''), ' ', COALESCE(r.applicant.lastName, ''))) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.firstNameEn, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.lastNameEn, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.name, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.email, '')) LIKE :pattern
+            ORDER BY r.createdAt DESC
+            """)
+    List<PositionRequest> searchByNameOrEmail(@Param("pattern") String pattern);
 
-    @Query("SELECT r FROM PositionRequest r WHERE r.applicant.id = :userId AND (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.targetPosition) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.major) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
-    List<PositionRequest> searchByApplicant(@Param("userId") Integer userId, @Param("keyword") String keyword);
+    /** One applicant's own requests, matched on code, id, target position or major. */
+    @Query("""
+            SELECT r FROM PositionRequest r
+            WHERE r.applicant.id = :userId
+              AND (LOWER(COALESCE(r.requestCode, '')) LIKE :pattern
+                OR LOWER(CAST(r.id AS string)) LIKE :pattern
+                OR LOWER(COALESCE(r.targetPosition, '')) LIKE :pattern
+                OR LOWER(COALESCE(r.major, '')) LIKE :pattern)
+            ORDER BY r.createdAt DESC
+            """)
+    List<PositionRequest> searchByApplicant(@Param("userId") Integer userId, @Param("pattern") String pattern);
 
-    @Query("SELECT r FROM PositionRequest r WHERE (LOWER(r.requestCode) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(CAST(r.id AS string)) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.name) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.applicant.email) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.targetPosition) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(r.major) LIKE LOWER(CONCAT('%', :keyword, '%'))) ORDER BY r.createdAt DESC")
-    List<PositionRequest> searchForAdmin(@Param("keyword") String keyword);
+    /** Every request, matched on code, id, applicant names, target position or major. */
+    @Query("""
+            SELECT r FROM PositionRequest r
+            WHERE LOWER(COALESCE(r.requestCode, '')) LIKE :pattern
+               OR LOWER(CAST(r.id AS string)) LIKE :pattern
+               OR LOWER(COALESCE(r.targetPosition, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.major, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.firstName, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.lastName, '')) LIKE :pattern
+               OR LOWER(CONCAT(COALESCE(r.applicant.firstName, ''), ' ', COALESCE(r.applicant.lastName, ''))) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.firstNameEn, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.lastNameEn, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.name, '')) LIKE :pattern
+               OR LOWER(COALESCE(r.applicant.email, '')) LIKE :pattern
+            ORDER BY r.createdAt DESC
+            """)
+    List<PositionRequest> searchForAdmin(@Param("pattern") String pattern);
 }

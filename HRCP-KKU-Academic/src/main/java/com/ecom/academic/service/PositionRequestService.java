@@ -37,6 +37,7 @@ import com.ecom.academic.repository.PositionRequestPublicationRepository;
 import com.ecom.academic.repository.PositionRequestRepository;
 import com.ecom.academic.repository.PositionStatusHistoryRepository;
 import com.ecom.model.UserDtls;
+import com.ecom.search.service.SearchQueryNormalizer;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -357,8 +358,18 @@ public class PositionRequestService {
         return requestRepository.findAllOrderByCreatedAtDesc();
     }
 
+    /**
+     * ค้นหาคำร้องขอตำแหน่งจากชื่อหรืออีเมลผู้ยื่น
+     *
+     * <p>คำค้นสั้นกว่า {@link SearchQueryNormalizer#MIN_QUERY_LENGTH} ตัวอักษร
+     * คืนลิสต์ว่าง ไม่ใช่ทุกแถว — อักษรไทยตัวเดียวเป็นสับสตริงของข้อมูลแทบทั้งหมด
+     */
     public List<PositionRequest> searchByNameOrEmail(String keyword) {
-        return requestRepository.searchByNameOrEmail(keyword);
+        String pattern = SearchQueryNormalizer.likePattern(keyword);
+        if (pattern == null) {
+            return List.of();
+        }
+        return requestRepository.searchByNameOrEmail(pattern);
     }
 
     /** แบบร่างล่าสุดของผู้ยื่น — ปกติมีได้ฉบับเดียว ถ้าเผลอมีมากกว่านั้นให้เอาฉบับใหม่สุด */
