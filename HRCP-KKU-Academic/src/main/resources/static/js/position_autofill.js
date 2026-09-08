@@ -137,19 +137,37 @@
         }
     }
 
+    /** เทียบค่าแบบไม่สนช่องว่าง — ทะเบียนบุคลากรเขียน "ผศ. ดร." บ้าง "ผศ.ดร." บ้าง */
+    function squash(value) {
+        return String(value == null ? '' : value).replace(/\s+/g, '');
+    }
+
     function fillSelect(name, value) {
         var el = document.querySelector('[name="' + name + '"]');
-        if (el && el.tagName === 'SELECT' && !el.value) {
-            // Try exact match
+        if (!el) return;
+
+        if (el.tagName === 'SELECT') {
+            if (el.value) return;
+            var wanted = squash(value);
             for (var i = 0; i < el.options.length; i++) {
-                if (el.options[i].value === value) {
-                    el.value = value;
-                    el.dispatchEvent(new Event('change'));
+                if (squash(el.options[i].value) === wanted) {
+                    el.value = el.options[i].value;
+                    el.dispatchEvent(new Event('change', { bubbles: true }));
                     return;
                 }
             }
-        } else if (el && el.tagName === 'INPUT' && !el.value) {
+            // คำนำหน้าในทะเบียนบุคลากรเป็นข้อความอิสระ (เช่น "ผศ.ดร." "ดร." "ว่าที่ ร.ต.")
+            // รายการในฟอร์มจึงไม่ครบทุกแบบ — เติมตัวเลือกที่ดึงมาให้เลย
+            // มิฉะนั้นช่องคำนำหน้าจะค้างที่ "-- เลือก --" ทั้งที่ดึงข้อมูลมาได้แล้ว
+            var opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = value;
+            el.appendChild(opt);
             el.value = value;
+            el.dispatchEvent(new Event('change', { bubbles: true }));
+        } else if (el.tagName === 'INPUT' && !el.value) {
+            el.value = value;
+            el.dispatchEvent(new Event('input', { bubbles: true }));
         }
     }
 })();
