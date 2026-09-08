@@ -104,6 +104,44 @@
                     </div>
                 </div>
 
+                <!-- ========== ส่วนที่ 1.4: การศึกษาระดับอุดมศึกษา ========== -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">๑.๓ การศึกษาระดับอุดมศึกษา</h5>
+                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addEduRow">
+                            <i class="fas fa-plus"></i> เพิ่มแถว
+                        </button>
+                    </div>
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle" id="eduTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ลำดับ</th>
+                                        <th>วุฒิการศึกษา</th>
+                                        <th>สาขาวิชา</th>
+                                        <th>ปี พ.ศ. ที่จบ</th>
+                                        <th>สถาบัน</th>
+                                        <th>ประเทศ</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="eduRows">
+                                    <tr>
+                                        <td><input type="text" name="education_no_1" class="form-control form-control-sm" value="๑.๓.๑"></td>
+                                        <td><input type="text" name="education_degree_1" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="education_major_1" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="education_year_1" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="education_institution_1" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="education_country_1" class="form-control form-control-sm"></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- ========== ส่วนที่ 1.5: ประวัติการรับราชการ ========== -->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">๒. ประวัติการรับราชการ</h5></div>
@@ -188,6 +226,36 @@
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">๓. ภาระงานย้อนหลัง ๓ ปี</h5></div>
                     <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="fw-bold mb-0">๓.๑ งานสอน</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-call="addTeachRow">
+                                <i class="fas fa-plus"></i> เพิ่มแถว
+                            </button>
+                        </div>
+                        <p class="text-muted small">ระบุระดับว่าปริญญาตรี หรือบัณฑิตศึกษา</p>
+                        <div class="table-responsive mb-3">
+                            <table class="table table-bordered align-middle" id="teachTable">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>ระดับ</th>
+                                        <th>รายวิชาที่สอน</th>
+                                        <th>ช.ม./สัปดาห์</th>
+                                        <th>เปิดสอนภาค/ปีการศึกษา</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="teachRows">
+                                    <tr>
+                                        <td><input type="text" name="teaching_level_1" class="form-control form-control-sm" placeholder="เช่น ป.ตรี"></td>
+                                        <td><input type="text" name="teaching_subject_1" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="teaching_hours_per_week_1" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="teaching_semester_1" class="form-control form-control-sm"></td>
+                                        <td></td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
                         <h6 class="fw-bold">๓.๒ งานวิจัย</h6>
                         <p class="text-muted small">ระบุเรื่องที่ได้รับทุนวิจัยในฐานะหัวหน้าโครงการ แหล่งทุน ระยะเวลา</p>
                         <textarea name="reseach" class="form-control mb-3" rows="4"></textarea>
@@ -203,78 +271,6 @@
                         <h6 class="fw-bold">๓.๕ งานอื่นๆ ที่เกี่ยวข้อง</h6>
                         <p class="text-muted small">ระบุประเภทของงานและปริมาณเวลาที่ใช้ต่อสัปดาห์</p>
                         <textarea name="other" class="form-control" rows="4"></textarea>
-                    </div>
-                </div>
-
-                <!-- ========== ส่วนที่ 2: ประวัติการศึกษา ========== -->
-                <div class="card card-academic mb-4">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">๑.๓ ประวัติการศึกษา</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addEduRow">
-                            <i class="fas fa-plus"></i> เพิ่มแถว
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle" id="eduTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>ลำดับ</th>
-                                        <th>วุฒิการศึกษา</th>
-                                        <th>สาขาวิชา</th>
-                                        <th>สถาบัน</th>
-                                        <th>ประเทศ</th>
-                                        <th>ปี พ.ศ.</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="eduRows">
-                                    <tr>
-                                        <td><input type="text" name="education_no_1" class="form-control form-control-sm" value="๑.๓.๑"></td>
-                                        <td><input type="text" name="education_degree_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="education_major_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="education_institution_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="education_country_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="education_year_1" class="form-control form-control-sm"></td>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ========== ส่วนที่ 3: ประสบการณ์การสอน ========== -->
-                <div class="card card-academic mb-4">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">๒. ประสบการณ์ด้านการสอน</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addTeachRow">
-                            <i class="fas fa-plus"></i> เพิ่มแถว
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-bordered align-middle" id="teachTable">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>ชื่อวิชา</th>
-                                        <th>ระดับ</th>
-                                        <th>ภาคเรียน</th>
-                                        <th>ชม./สัปดาห์</th>
-                                        <th></th>
-                                    </tr>
-                                </thead>
-                                <tbody id="teachRows">
-                                    <tr>
-                                        <td><input type="text" name="teaching_subject_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="teaching_level_1" class="form-control form-control-sm" placeholder="เช่น ป.ตรี"></td>
-                                        <td><input type="text" name="teaching_semester_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="teaching_hours_per_week_1" class="form-control form-control-sm"></td>
-                                        <td></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
                     </div>
                 </div>
 
@@ -712,9 +708,9 @@
                 row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm" value="๑.๓.${toThaiNum(n)}"></td>
                     <td><input type="text" name="education_degree_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_major_${n}" class="form-control form-control-sm"></td>
+                    <td><input type="text" name="education_year_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_institution_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_country_${n}" class="form-control form-control-sm"></td>
-                    <td><input type="text" name="education_year_${n}" class="form-control form-control-sm"></td>
                     <td><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest="tr"><i class="fas fa-times"></i></button></td>`;
                 document.getElementById('eduRows').appendChild(row);
             }
@@ -723,10 +719,10 @@
                 counters.teach++;
                 const n = counters.teach;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" name="teaching_subject_${n}" class="form-control form-control-sm"></td>
-                    <td><input type="text" name="teaching_level_${n}" class="form-control form-control-sm"></td>
-                    <td><input type="text" name="teaching_semester_${n}" class="form-control form-control-sm"></td>
+                row.innerHTML = `<td><input type="text" name="teaching_level_${n}" class="form-control form-control-sm"></td>
+                    <td><input type="text" name="teaching_subject_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="teaching_hours_per_week_${n}" class="form-control form-control-sm"></td>
+                    <td><input type="text" name="teaching_semester_${n}" class="form-control form-control-sm"></td>
                     <td><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest="tr"><i class="fas fa-times"></i></button></td>`;
                 document.getElementById('teachRows').appendChild(row);
             }

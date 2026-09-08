@@ -360,13 +360,18 @@ public class DocumentGenerationService {
                         for (Map.Entry<String, String> ph : placeholders.entrySet()) {
                             String token = "{{" + ph.getKey() + "}}";
                             if (xml.contains(token)) {
-                                String value = ph.getValue() != null ? escapeXml(ph.getValue()) : "";
+                                String raw = ph.getValue();
+                                String value = (raw == null || raw.isBlank())
+                                        ? blankFormFiller(ph.getKey())
+                                        : escapeXml(raw);
                                 xml = xml.replace(token, value);
                             }
                         }
 
-                        // Step 2.5: Cleanup - ลบ {{...}} ที่เหลือซึ่งไม่มีค่าจากฟอร์ม
-                        xml = xml.replaceAll("\\{\\{[^}]+\\}\\}", "");
+                        // Step 2.5: Cleanup - {{...}} ที่เหลือซึ่งไม่มีค่าจากฟอร์ม
+                        // ช่องผลงานที่ผู้ขอไม่ได้ใช้จะคืนเป็นจุดไข่ปลา/ช่องติ๊กว่าง
+                        // ให้เหมือนแบบฟอร์มเปล่า ส่วนที่เหลือลบทิ้งตามเดิม
+                        xml = fillRemainingPlaceholders(xml);
 
                         // Step 3: Checkbox rendering
                         if (docType == 4) {
@@ -1970,6 +1975,67 @@ public class DocumentGenerationService {
         }
 
         return xml;
+    }
+
+    // =====================================================================
+    // Blank-form fillers — ช่องที่ผู้ขอไม่ได้กรอก
+    // =====================================================================
+
+    /**
+     * ช่องผลงานของตำแหน่งที่ผู้ขอไม่ได้เสนอ (เช่น ยื่น ผศ. แต่แบบฟอร์มมีหัวข้อของ
+     * รศ./ศ. อยู่ด้วย) เดิมถูกลบทิ้งจนเหลือบรรทัดว่างเปล่า ทำให้เอกสารที่พิมพ์ออกมา
+     * ไม่เหมือนแบบฟอร์มเปล่าที่ยังมีจุดไข่ปลาและช่องติ๊กให้กรอกด้วยมือ
+     * ตัวเติมชุดนี้จึงคืนจุดไข่ปลา/ช่องติ๊กว่างให้เฉพาะช่องเหล่านั้น
+     * ส่วน placeholder อื่นยังคืนค่าว่างเหมือนเดิม
+     */
+    private static final String LONG_BLANK = ".".repeat(45);
+    private static final String SHORT_BLANK = ".".repeat(12);
+
+    /** ช่องติ๊ก "เคยใช้/ไม่เคยใช้" และช่องติ๊กของวิธีที่ ๓ */
+    private static final java.util.regex.Pattern CHECKBOX_BLANK_KEY = java.util.regex.Pattern.compile(
+            "^(asst|assoc|prof)_(not_used|is_used)_(reseach|research|other|book)_[0-9]+$"
+                    + "|^(assoc|prof)_m3_(q1|q2|first|corresp)(_[0-9]+)?$");
+
+    /** ช่องยาวที่กินทั้งบรรทัด — ชื่อผลงาน/ชื่อโครงการ/แหล่งทุน */
+    private static final java.util.regex.Pattern LONG_BLANK_KEY = java.util.regex.Pattern.compile(
+            "^(asst|assoc|prof)_(research|other|book)_working_[0-9]+$"
+                    + "|^(assoc|prof)_method3_research_[0-9]+$"
+                    + "|^(assoc|prof)_pi_(project|source)(_[0-9]+)?$");
+
+    /** ช่องสั้นที่แทรกกลางประโยค — ปี พ.ศ./ระดับคุณภาพ/จำนวนอ้างอิง */
+    private static final java.util.regex.Pattern SHORT_BLANK_KEY = java.util.regex.Pattern.compile(
+            "^(asst|assoc|prof)_used_(research|other|book)_(year|level)_[0-9]+$"
+                    + "|^(assoc|prof)_(scopus_stories_count|scopus_citation_count|h_index)$");
+
+    private static final java.util.regex.Pattern LEFTOVER_PLACEHOLDER = java.util.regex.Pattern.compile(
+            "\\{\\{([^}]+)\\}\\}");
+
+    /** ค่าที่ใช้แทน placeholder ซึ่งผู้ขอไม่ได้กรอก */
+    private String blankFormFiller(String key) {
+        if (CHECKBOX_BLANK_KEY.matcher(key).matches()) {
+            return "\u2610";
+        }
+        if (LONG_BLANK_KEY.matcher(key).matches()) {
+            return LONG_BLANK;
+        }
+        if (SHORT_BLANK_KEY.matcher(key).matches()) {
+            return SHORT_BLANK;
+        }
+        return "";
+    }
+
+    /**
+     * แทน {{...}} ที่ยังเหลือหลัง step 2 (ไม่มี key นั้นในข้อมูลฟอร์มเลย)
+     * ด้วยตัวเติมเดียวกับ step 2 — ช่องที่ไม่เข้าเกณฑ์จะถูกลบทิ้งเหมือนเดิม
+     */
+    private String fillRemainingPlaceholders(String xml) {
+        java.util.regex.Matcher m = LEFTOVER_PLACEHOLDER.matcher(xml);
+        StringBuilder out = new StringBuilder();
+        while (m.find()) {
+            m.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(blankFormFiller(m.group(1))));
+        }
+        m.appendTail(out);
+        return out.toString();
     }
 
     // =====================================================================
