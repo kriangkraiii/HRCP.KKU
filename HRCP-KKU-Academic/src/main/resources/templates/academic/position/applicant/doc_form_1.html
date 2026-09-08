@@ -18,9 +18,9 @@
             <form th:action="'/user/position/request/' + ${request.id} + '/document/1'" method="post" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/1'" id="doc1Form">
 
                 
-                <!-- ========== ส่วนที่ 1: ข้อมูลพื้นฐาน ========== -->
+                <!-- ========== ส่วนที่ 0: หน้าปกคำขอ ========== -->
                 <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">๑. ข้อมูลส่วนบุคคล</h5></div>
+                    <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลคำขอและผู้เสนอขอ</h5></div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
@@ -68,10 +68,6 @@
                                 <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
                                 <input type="text" name="applicant_name" class="form-control" required>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">ตำแหน่งปัจจุบัน</label>
-                                <input type="text" name="current_position" class="form-control" placeholder="เช่น อาจารย์">
-                            </div>
                             <div class="col-md-6">
                                 <label class="form-label">ภาค/สาขาวิชา</label>
                                 <input type="text" name="department" class="form-control">
@@ -84,35 +80,33 @@
                                 <label class="form-label">มหาวิทยาลัย</label>
                                 <input type="text" name="university" class="form-control" value="มหาวิทยาลัยขอนแก่น">
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">เกิดวันที่</label>
-                                <input type="text" name="birth_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๓๐">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">อายุ (ปี)</label>
-                                <input type="text" name="age" class="form-control">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">อายุราชการ (ปี)</label>
-                                <input type="text" name="years" class="form-control">
-                            </div>
-                            <div class="col-md-2">
-                                <label class="form-label">เดือน</label>
-                                <input type="text" name="months" class="form-control">
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 1.4: การศึกษาระดับอุดมศึกษา ========== -->
+                <!-- ========== ส่วนที่ 1.1-1.3: ประวัติส่วนตัว ========== -->
                 <div class="card card-academic mb-4">
-                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">๑.๓ การศึกษาระดับอุดมศึกษา</h5>
-                        <button type="button" class="btn btn-sm btn-outline-primary" data-call="addEduRow">
-                            <i class="fas fa-plus"></i> เพิ่มแถว
-                        </button>
-                    </div>
+                    <div class="card-header bg-white"><h5 class="mb-0">๑. ประวัติส่วนตัว</h5></div>
                     <div class="card-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-5">
+                                <label class="form-label">๑.๑ เกิดเมื่อ</label>
+                                <input type="text" name="birth_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๓๐">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">๑.๒ อายุ (ปี)</label>
+                                <input type="text" name="age" class="form-control" data-age-of="birth_date">
+                                <div class="form-text">คำนวณจากวันเกิดให้อัตโนมัติ แก้ไขเองได้</div>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <h6 class="fw-bold mb-0">๑.๓ การศึกษาระดับอุดมศึกษา</h6>
+                            <button type="button" class="btn btn-sm btn-outline-primary" data-call="addEduRow">
+                                <i class="fas fa-plus"></i> เพิ่มแถว
+                            </button>
+                        </div>
+                        <p class="text-muted small">ระบุชื่อคุณวุฒิเต็มพร้อมสาขาวิชา เรียงจากคุณวุฒิสูงสุดตามลำดับ</p>
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle" id="eduTable">
                                 <thead class="table-light">
@@ -142,20 +136,24 @@
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 1.5: ประวัติการรับราชการ ========== -->
+                <!-- ========== ส่วนที่ 2: ประวัติการรับราชการ ========== -->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">๒. ประวัติการรับราชการ</h5></div>
                     <div class="card-body">
                         <div class="row g-3">
-                            <div class="col-md-4">
-                                <label class="form-label">เงินเดือนปัจจุบัน (บาท)</label>
+                            <div class="col-md-5">
+                                <label class="form-label">๒.๑ ปัจจุบันดำรงตำแหน่ง</label>
+                                <input type="text" name="current_position" class="form-control" placeholder="เช่น อาจารย์">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">รับเงินเดือน (บาท)</label>
                                 <input type="text" name="current_salary" class="form-control">
                             </div>
-                            <div class="col-md-8">
-                                <label class="form-label">วันที่ได้รับแต่งตั้งให้ดำรงตำแหน่งอาจารย์</label>
+                            <div class="col-md-4">
+                                <label class="form-label">๒.๒ วันที่ได้รับแต่งตั้งให้ดำรงตำแหน่งอาจารย์</label>
                                 <input type="text" name="lecturer_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๐">
                             </div>
-                            <div class="col-12"><hr><h6 class="fw-bold">ตำแหน่งผู้ช่วยศาสตราจารย์</h6></div>
+                            <div class="col-12"><hr><h6 class="fw-bold">๒.๓ ตำแหน่งผู้ช่วยศาสตราจารย์</h6></div>
                             <div class="col-md-3">
                                 <label class="form-label">วิธีแต่งตั้ง</label>
                                 <select name="assistant_method" class="form-select">
@@ -172,7 +170,7 @@
                                 <label class="form-label">วันที่แต่งตั้ง</label>
                                 <input type="text" name="assistant_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๓">
                             </div>
-                            <div class="col-12"><hr><h6 class="fw-bold">ตำแหน่งรองศาสตราจารย์</h6></div>
+                            <div class="col-12"><hr><h6 class="fw-bold">๒.๔ ตำแหน่งรองศาสตราจารย์</h6></div>
                             <div class="col-md-3">
                                 <label class="form-label">วิธีแต่งตั้ง</label>
                                 <select name="associate_method" class="form-select">
@@ -189,11 +187,20 @@
                                 <label class="form-label">วันที่แต่งตั้ง</label>
                                 <input type="text" name="associate_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๖">
                             </div>
+                            <div class="col-12"><hr></div>
+                            <div class="col-md-3">
+                                <label class="form-label">อายุราชการ (ปี)</label>
+                                <input type="text" name="years" class="form-control">
+                            </div>
+                            <div class="col-md-3">
+                                <label class="form-label">อายุราชการ (เดือน)</label>
+                                <input type="text" name="months" class="form-control">
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 1.6: ตำแหน่งอื่นๆ & วิทยากร ========== -->
+                <!-- ========== ส่วนที่ 2.5-2.6: ตำแหน่งอื่นๆ & วิทยากร ========== -->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">๒.๕ ตำแหน่งอื่นๆ</h5>
@@ -222,7 +229,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 1.7: ภาระงานย้อนหลัง ========== -->
+                <!-- ========== ส่วนที่ 3: ภาระงานย้อนหลัง ========== -->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">๓. ภาระงานย้อนหลัง ๓ ปี</h5></div>
                     <div class="card-body">
@@ -274,7 +281,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 4: ผลงานทางวิชาการ (ผศ) ========== -->
+                <!-- ========== ส่วนที่ 4.1: ผลงานทางวิชาการ (ผศ) ========== -->
                 <div class="card card-academic mb-4" id="sectionAsst">
                     <div class="card-header bg-white"><h5 class="mb-0">๔. ผลงานทางวิชาการ</h5></div>
                     <div class="card-body">

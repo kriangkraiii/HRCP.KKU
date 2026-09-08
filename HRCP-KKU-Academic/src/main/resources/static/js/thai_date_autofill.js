@@ -46,12 +46,66 @@
         return /date/i.test(name);
     }
 
+    function toArabicDigits(text) {
+        return String(text).replace(/[\u0E50-\u0E59]/g, function (d) {
+            return String(d.charCodeAt(0) - 0x0E50);
+        });
+    }
+
+    /** อ่านข้อความวันที่ไทย เช่น "วันที่ ๒๑ สิงหาคม พ.ศ. ๒๕๖๙" กลับเป็น Date */
+    function parseThaiDate(text) {
+        if (!text) return null;
+        var plain = toArabicDigits(text);
+        var m = plain.match(/(\d{1,2})\s*([\u0E00-\u0E7F]+)\s*(?:\u0E1E\.\u0E28\.)?\s*(\d{4})/);
+        if (!m) return null;
+        var month = THAI_MONTHS.indexOf(m[2]);
+        if (month < 0) return null;
+        var year = parseInt(m[3], 10) - 543; // พ.ศ. → ค.ศ.
+        var d = new Date(year, month, parseInt(m[1], 10));
+        return isNaN(d.getTime()) ? null : d;
+    }
+
+    function yearsSince(birth, now) {
+        var age = now.getFullYear() - birth.getFullYear();
+        var beforeBirthday = now.getMonth() < birth.getMonth()
+            || (now.getMonth() === birth.getMonth() && now.getDate() < birth.getDate());
+        return beforeBirthday ? age - 1 : age;
+    }
+
+    /**
+     * ช่องอายุคำนวณจากวันเกิดให้เอง ผู้ขอไม่ต้องนับเอง
+     * เขียนทับทุกครั้งที่วันเกิดเปลี่ยน (แก้ทับเองภายหลังได้ตามปกติ)
+     */
+    function updateAgeFrom(birthInput) {
+        var form = birthInput.form || birthInput.closest('form');
+        if (!form) return;
+        var ageInput = form.querySelector('[data-age-of="birth_date"]')
+            || form.querySelector('input[name="age"]');
+        if (!ageInput || ageInput.readOnly || ageInput.disabled) return;
+
+        var birth = parseThaiDate(birthInput.value);
+        if (!birth) return;
+        var age = yearsSince(birth, new Date());
+        if (age < 0 || age > 120) return;
+
+        var next = toThaiDigits(age);
+        if (ageInput.value === next) return;
+        ageInput.value = next;
+        // ให้ auto-draft รู้ว่าค่าเปลี่ยน
+        ageInput.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    function isBirthDateField(input) {
+        return (input.name || '').indexOf('birth_date') >= 0;
+    }
+
     function syncPickerToText(picker, textInput) {
         if (!picker.value) return;
         var parts = picker.value.split('-');
         if (parts.length !== 3) return;
         var selected = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         textInput.value = formatThaiDate(selected);
+        if (isBirthDateField(textInput)) updateAgeFrom(textInput);
     }
 
     // หาทุก form ในหน้า
@@ -141,6 +195,15 @@
 
             // ใส่ picker ข้าง input
             input.parentNode.insertBefore(picker, input.nextSibling);
+
+            // ช่องวันเกิด: คำนวณอายุให้ทั้งตอนพิมพ์เองและตอนโหลดค่าจากแบบร่าง
+            if (isBirthDateField(input)) {
+                input.addEventListener('change', function () { updateAgeFrom(input); });
+                input.addEventListener('blur', function () { updateAgeFrom(input); });
+                if (input.value) updateAgeFrom(input);
+                // ค่าที่ restore จากแบบร่างถูกเซ็ตหลังสคริปต์นี้รัน จึงเช็คซ้ำอีกครั้ง
+                setTimeout(function () { updateAgeFrom(input); }, 300);
+            }
         });
     });
 })();
