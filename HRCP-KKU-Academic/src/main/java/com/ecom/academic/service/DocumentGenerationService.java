@@ -2002,10 +2002,16 @@ public class DocumentGenerationService {
                     + "|^(assoc|prof)_method3_research_[0-9]+$"
                     + "|^(assoc|prof)_pi_(project|source)(_[0-9]+)?$");
 
-    /** ช่องสั้นที่แทรกกลางประโยค — ปี พ.ศ./ระดับคุณภาพ/จำนวนอ้างอิง */
+    /**
+     * ช่องสั้นที่แทรกกลางประโยค — ปี พ.ศ./ระดับคุณภาพ/จำนวนอ้างอิง และข้อ ๒.๓/๒.๔
+     * ของแบบ ก.พ.ว. มข. ๐๓ (วิธี/สาขาวิชา/วันที่แต่งตั้ง ผศ. และ รศ.) ซึ่งผู้ขอที่
+     * ยังไม่เคยดำรงตำแหน่งนั้นจะไม่ได้กรอก
+     */
     private static final java.util.regex.Pattern SHORT_BLANK_KEY = java.util.regex.Pattern.compile(
             "^(asst|assoc|prof)_used_(research|other|book)_(year|level)_[0-9]+$"
-                    + "|^(assoc|prof)_(scopus_stories_count|scopus_citation_count|h_index)$");
+                    + "|^(assoc|prof)_(scopus_stories_count|scopus_citation_count|h_index)$"
+                    + "|^(assistant|associate)_(method|department|appointment_date)$"
+                    + "|^(lecturer_appointment_date|current_salary|birth_date|age|years|months)$");
 
     private static final java.util.regex.Pattern LEFTOVER_PLACEHOLDER = java.util.regex.Pattern.compile(
             "\\{\\{([^}]+)\\}\\}");

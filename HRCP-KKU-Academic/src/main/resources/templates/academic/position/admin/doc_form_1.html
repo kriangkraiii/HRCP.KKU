@@ -156,8 +156,8 @@
                                 <label class="form-label">๒.๒ วันที่ได้รับแต่งตั้งให้ดำรงตำแหน่งอาจารย์</label>
                                 <input type="text" name="lecturer_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๐">
                             </div>
-                            <div class="col-12"><hr><h6 class="fw-bold">๒.๓ ตำแหน่งผู้ช่วยศาสตราจารย์</h6></div>
-                            <div class="col-md-3">
+                            <div class="col-12 svc-asst"><hr><h6 class="fw-bold">๒.๓ ตำแหน่งผู้ช่วยศาสตราจารย์</h6></div>
+                            <div class="col-md-3 svc-asst">
                                 <label class="form-label">วิธีแต่งตั้ง</label>
                                 <select name="assistant_method" class="form-select">
                                     <option value="">-- เลือก --</option>
@@ -165,16 +165,16 @@
                                     <option value="พิเศษ">พิเศษ</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4 svc-asst">
                                 <label class="form-label">สาขาวิชา</label>
                                 <input type="text" name="assistant_department" class="form-control">
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-5 svc-asst">
                                 <label class="form-label">วันที่แต่งตั้ง</label>
                                 <input type="text" name="assistant_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๓">
                             </div>
-                            <div class="col-12"><hr><h6 class="fw-bold">๒.๔ ตำแหน่งรองศาสตราจารย์</h6></div>
-                            <div class="col-md-3">
+                            <div class="col-12 svc-assoc"><hr><h6 class="fw-bold">๒.๔ ตำแหน่งรองศาสตราจารย์</h6></div>
+                            <div class="col-md-3 svc-assoc">
                                 <label class="form-label">วิธีแต่งตั้ง</label>
                                 <select name="associate_method" class="form-select">
                                     <option value="">-- เลือก --</option>
@@ -182,11 +182,11 @@
                                     <option value="พิเศษ">พิเศษ</option>
                                 </select>
                             </div>
-                            <div class="col-md-4">
+                            <div class="col-md-4 svc-assoc">
                                 <label class="form-label">สาขาวิชา</label>
                                 <input type="text" name="associate_department" class="form-control">
                             </div>
-                            <div class="col-md-5">
+                            <div class="col-md-5 svc-assoc">
                                 <label class="form-label">วันที่แต่งตั้ง</label>
                                 <input type="text" name="associate_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๖">
                             </div>
@@ -888,6 +888,18 @@
                 document.getElementById('sectionAsst').style.display = (val === 'ผู้ช่วยศาสตราจารย์') ? '' : 'none';
                 document.getElementById('sectionAssoc').style.display = (val === 'รองศาสตราจารย์') ? '' : 'none';
                 document.getElementById('sectionProf').style.display = (val === 'ศาสตราจารย์') ? '' : 'none';
+
+                // ๒.๓/๒.๔ ถามถึงตำแหน่งที่ "เคยดำรง" มาแล้ว ผู้ขอ ผศ. จึงยังไม่เคยเป็น
+                // ทั้ง ผศ. และ รศ. — ซ่อนข้อที่ไม่เกี่ยวไว้ ช่องที่ไม่ได้กรอกจะพิมพ์
+                // เป็นจุดไข่ปลาในเอกสารเหมือนแบบฟอร์มเปล่า
+                var showAsst = (val === 'รองศาสตราจารย์' || val === 'ศาสตราจารย์');
+                var showAssoc = (val === 'ศาสตราจารย์');
+                document.querySelectorAll('.svc-asst').forEach(function (el) {
+                    el.style.display = showAsst ? '' : 'none';
+                });
+                document.querySelectorAll('.svc-assoc').forEach(function (el) {
+                    el.style.display = showAssoc ? '' : 'none';
+                });
             });
 
             // Load existing data — including dynamic rows
