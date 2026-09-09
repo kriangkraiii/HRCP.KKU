@@ -9,6 +9,7 @@ import java.io.UncheckedIOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.nio.file.StandardOpenOption;
 import java.security.MessageDigest;
 import java.util.ArrayDeque;
@@ -2211,6 +2212,7 @@ public class DocumentGenerationService {
         Path profileDir = BASE_PROFILE_DIR.resolve("slot-" + slot);
         try {
             Files.createDirectories(profileDir);
+            ensureFontsInProfile(profileDir);
         } catch (IOException ignored) {
         }
         
@@ -2334,6 +2336,68 @@ public class DocumentGenerationService {
                 "Windows: https://www.libreoffice.org/download | " +
                 "Mac: brew install --cask libreoffice | " +
                 "Linux: sudo apt install libreoffice");
+    }
+
+    private static final String[] THAI_FONT_RESOURCES = {
+            "THSarabunNew.ttf",
+            "THSarabunNew Bold.ttf",
+            "THSarabunNew Italic.ttf",
+            "THSarabunNew BoldItalic.ttf"
+    };
+
+    /**
+     * ติดตั้งฟอนต์ภาษาไทยลงใน User Profile ของ LibreOffice (<profileDir>/user/fonts/)
+     * เพื่อให้ LibreOffice เรนเดอร์ภาษาไทยได้ถูกต้อง 100% บนทุกระบบปฏิบัติการ
+     * (macOS Local Dev, Linux Server/Docker, และ Windows Server)
+     */
+    private void ensureFontsInProfile(Path profileDir) {
+        Path userFontsDir = profileDir.resolve("user").resolve("fonts");
+        try {
+            Files.createDirectories(userFontsDir);
+            for (String fontName : THAI_FONT_RESOURCES) {
+                Path targetFont = userFontsDir.resolve(fontName);
+                if (!Files.exists(targetFont) || Files.size(targetFont) == 0) {
+                    // 1. อ่านจาก classpath: fonts/th-sarabun/<fontName>
+                    ClassPathResource cpr = new ClassPathResource("fonts/th-sarabun/" + fontName);
+                    if (cpr.exists()) {
+                        try (InputStream in = cpr.getInputStream()) {
+                            Files.copy(in, targetFont, StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    } else {
+                        // 2. Fallback: อ่านจากโฟลเดอร์ docker/fonts/<fontName>
+                        Path fallbackFont = Path.of("docker", "fonts", fontName);
+                        if (Files.exists(fallbackFont)) {
+                            Files.copy(fallbackFont, targetFont, StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Failed to inject Thai fonts into LibreOffice profile {}: {}", profileDir, e.getMessage());
+        }
+    }
+
+    /**
+     * ล้างแคช PDF ทั้งหมด (L1 Memory Cache และ L2 Disk Cache)
+     */
+    public void clearPdfCache() {
+        pdfCache.clear();
+        try {
+            if (Files.exists(DISK_CACHE_DIR)) {
+                try (Stream<Path> stream = Files.walk(DISK_CACHE_DIR)) {
+                    stream.filter(Files::isRegularFile)
+                            .forEach(f -> {
+                                try {
+                                    Files.deleteIfExists(f);
+                                } catch (IOException ignored) {
+                                }
+                            });
+                }
+            }
+            log.info("Cleared PDF cache (memory and disk)");
+        } catch (Exception e) {
+            log.warn("Failed to clear PDF disk cache: {}", e.getMessage());
+        }
     }
 
     // =====================================================================

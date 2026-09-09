@@ -78,11 +78,11 @@
             (สถานะ: <span th:text="${step.status.thaiLabel}">—</span>)
         </div>
 
-        <div class="row g-3">
+        <div class="row g-3 align-items-start">
 
-            <!-- ========== ฝั่งซ้าย: เอกสารตัวจริงที่กำลังจะลงนาม ========== -->
-            <div class="col-lg-7">
-                <div class="card card-academic h-100 shadow-sm">
+            <!-- ========== ฝั่งซ้าย: เอกสารตัวจริงที่กำลังจะลงนาม (Sticky Preview) ========== -->
+            <div class="col-lg-7 esign-preview-sticky-col">
+                <div class="card card-academic shadow-sm esign-preview-card">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
                         <span class="fw-semibold text-primary"><i class="fas fa-file-pdf me-1"></i> เอกสารที่จะลงนาม (ฉบับจริง)</span>
                         <div class="d-flex align-items-center gap-2">
@@ -93,7 +93,7 @@
                             </a>
                         </div>
                     </div>
-                    <div class="card-body p-0">
+                    <div class="card-body p-0 esign-preview-card-body">
                         <!-- เนื้อหาที่แสดงคือฉบับที่ถูก freeze ไว้ตอนส่งลงนาม
                              ไม่ใช่ฟอร์มปัจจุบัน — สิ่งที่เห็นคือสิ่งที่จะถูกลงนามจริง -->
                         <!-- วงเล็บที่ต่อท้าย @{...} ถูก Thymeleaf อ่านเป็น "รายการพารามิเตอร์ของ URL"
@@ -397,8 +397,8 @@
     <div th:replace="~{academic/esign/_p12_guide_modal :: p12GuideModal}"></div>
 
     <!-- Interactive PDF Viewer Assets -->
-    <link rel="stylesheet" href="/css/esign_pdf_viewer.css?v=3.1">
-    <script src="/js/esign_pdf_viewer.js?v=3.1"></script>
+    <link rel="stylesheet" href="/css/esign_pdf_viewer.css?v=3.2">
+    <script src="/js/esign_pdf_viewer.js?v=3.2"></script>
     <script>
         (function() {
             function initSignViewer() {
