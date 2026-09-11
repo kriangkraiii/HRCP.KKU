@@ -259,6 +259,8 @@
 
     /* -------------------------------------------------------------- preview */
 
+    let lastInkDataUrl = null;
+
     function setPreview(dataUrl) {
         imageDataField.value = dataUrl || '';
         if (dataUrl) {
@@ -270,27 +272,129 @@
             previewImg.classList.add('d-none');
             previewEmpty.classList.remove('d-none');
         }
+        const typeNotice = document.getElementById('sigTypeNotice');
+        if (typeNotice) {
+            typeNotice.classList.toggle('d-none', !dataUrl);
+        }
         saveButton.disabled = !dataUrl;
     }
 
     function refreshPreview() {
         if (activeKind === 'DRAW') {
-            setPreview(hasStrokes ? trimToInk(canvas) : null);
+            if (hasStrokes) {
+                const trimmed = trimToInk(canvas);
+                if (trimmed) {
+                    renderStampFromInk(trimmed);
+                } else {
+                    setPreview(null);
+                }
+            } else {
+                setPreview(null);
+            }
         } else if (activeKind === 'TYPE') {
             renderTypedSignature();
         }
-        // UPLOAD sets its preview when the file finishes loading.
     }
 
-    /* ----------------------------------------------------------------- type */
+    /* ------------------------------------------------------------- stamp utils */
+
+    function getResolvedUserName() {
+        const nameFromData = root.dataset.userName || document.body.dataset.userName || (typedTextInput?.dataset?.userName);
+        return nameFromData && nameFromData.trim() ? nameFromData.trim() : 'สุธน เจริญศิริ';
+    }
+
+    function getResolvedUserTitle() {
+        const titleFromData = root.dataset.userTitle || document.body.dataset.userTitle;
+        return titleFromData && titleFromData.trim() ? titleFromData.trim() : '';
+    }
+
+    function getResolvedUserPosition() {
+        const posFromData = root.dataset.userPosition || document.body.dataset.userPosition;
+        return posFromData && posFromData.trim() ? posFromData.trim() : '';
+    }
+
+    function getResolvedUserEmail() {
+        const emailFromData = root.dataset.userEmail || document.body.dataset.userEmail || (typedTextInput?.dataset?.userEmail);
+        return emailFromData && emailFromData.trim() ? emailFromData.trim() : 'sutoch@kku.ac.th';
+    }
+
+    function toThaiDigits(str) {
+        if (!str) return '';
+        const thaiZeroCode = 0x0E50;
+        return String(str).replace(/[0-9]/g, ch => String.fromCharCode(thaiZeroCode + (ch.charCodeAt(0) - 48)));
+    }
+
+    function formatSignerNameWithPosition(rawName, position, title) {
+        let clean = (rawName || '').trim();
+        if (!clean) clean = 'ผู้ใช้งานระบบ';
+        let ttl = (title || '').trim();
+        const pos = (position || '').trim();
+
+        // If title is not set, but pos is already an abbreviation (e.g. ผศ., รศ., ศ., ดร., อาจารย์)
+        if (!ttl && pos && /^(ผศ\.|รศ\.|ศ\.|อาจารย์|ดร\.|ศ\.\s*ดร|รศ\.\s*ดร|ผศ\.\s*ดร|อ\.ดร\.)/i.test(pos)) {
+            ttl = pos;
+        }
+
+        // กรณีที่ 2: มีคำนำหน้าทางวิชาการ (เช่น ผศ.ดร., รศ.ดร., ศ.ดร., ผศ., รศ., ศ., ดร., อาจารย์, อ.ดร.)
+        if (ttl && /^(ผศ\.|รศ\.|ศ\.|อาจารย์|ดร\.|ศ\.\s*ดร|รศ\.\s*ดร|ผศ\.\s*ดร|อ\.ดร\.)/i.test(ttl)) {
+            if (!clean.startsWith(ttl)) {
+                clean = clean.replace(/^(นาย|นางสาว|นาง)\s*/, '');
+                clean = ttl + (ttl.endsWith('.') ? '' : ' ') + clean;
+            }
+            return clean;
+        }
+
+        // กรณีที่ 3: ไม่มีคำนำหน้าทางวิชาการ -> แสดงเฉพาะชื่อ-นามสกุล โดยไม่ใส่คำนำหน้าทั่วไป (นาย/นาง/นางสาว) และไม่ใส่ตำแหน่งเต็ม (เช่น ผู้ช่วยศาสตราจารย์)
+        clean = clean.replace(/^(นาย|นางสาว|นาง)\s*/, '');
+        return clean;
+    }
+
+    function drawRightMetadata(ctx, signerName, signerPosition, signerEmail, dateObj, rightX, maxRightW) {
+        const title = getResolvedUserTitle();
+        const formattedName = formatSignerNameWithPosition(signerName, signerPosition, title);
+
+        // Date formatting: Bangkok +07'00' with Thai numerals
+        const d = dateObj || new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        const secs = String(d.getSeconds()).padStart(2, '0');
+
+        const rawDate = `${year}.${month}.${day} ${hours}:${mins}:${secs}`;
+        const dateLine = `Date: ${toThaiDigits(rawDate)}`;
+        const timeLine = `+${toThaiDigits('07')}'${toThaiDigits('00')}'`;
+
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'alphabetic';
+        ctx.fillStyle = '#141414';
+
+        function drawFittedText(str, x, y, baseSize) {
+            ctx.font = baseSize + 'px ' + TYPED_FONT;
+            const w = ctx.measureText(str).width;
+            if (w > maxRightW && w > 0) {
+                const scale = maxRightW / w;
+                ctx.font = Math.max(Math.floor(baseSize * scale), 10) + 'px ' + TYPED_FONT;
+            }
+            ctx.fillText(str, x, y);
+        }
+
+        const email = signerEmail || 'sutoch@kku.ac.th';
+
+        // 6 lines layout (Option 3 - position prefixed directly in signer name)
+        drawFittedText('Digitally signed by ' + formattedName, rightX, 38, 16);
+        drawFittedText('DN: c=TH, o=Khon Kaen', rightX, 64, 16);
+        drawFittedText('University, cn=' + formattedName + ',', rightX, 88, 16);
+        drawFittedText('email=' + email, rightX, 112, 16);
+        drawFittedText(dateLine, rightX, 142, 16);
+        drawFittedText(timeLine, rightX, 166, 16);
+    }
 
     /**
-     * Draws a digital signature stamp:
-     * - Left: Signer's Thai name in large font (wrapped across 1-2 lines)
-     * - Right: "Digitally signed by", Name, "Date: YYYY.MM.DD", "HH:mm:ss +07'00'"
-     * - Surrounding clean light-gray border
+     * Draws an Adobe Acrobat style digital signature stamp embedding ink (DRAW or UPLOAD).
      */
-    function drawDigitalSignatureStamp(canvas, text, dateObj) {
+    function drawDigitalSignatureStampWithInk(canvas, inkSource, signerName, dateObj, email) {
         const width = 540;
         const height = 185;
         canvas.width = width;
@@ -301,82 +405,100 @@
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, width, height);
 
-        // Outer border: crisp light-gray
-        ctx.strokeStyle = '#c8c8c8';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(1, 1, width - 2, height - 2);
+        // Left Column: Draw the ink (canvas or image)
+        const inkW = inkSource.width || inkSource.naturalWidth || 1;
+        const inkH = inkSource.height || inkSource.naturalHeight || 1;
+        const maxW = 200;
+        const maxH = 135;
+        const scale = Math.min(maxW / inkW, maxH / inkH, 1.0);
+        const drawW = Math.round(inkW * scale);
+        const drawH = Math.round(inkH * scale);
+        const drawX = 115 - Math.round(drawW / 2);
+        const drawY = 92 - Math.round(drawH / 2);
 
-        // Date formatting: Bangkok +07'00'
-        const d = dateObj || new Date();
-        const year = d.getFullYear();
-        const month = String(d.getMonth() + 1).padStart(2, '0');
-        const day = String(d.getDate()).padStart(2, '0');
-        const hours = String(d.getHours()).padStart(2, '0');
-        const mins = String(d.getMinutes()).padStart(2, '0');
-        const secs = String(d.getSeconds()).padStart(2, '0');
+        ctx.drawImage(inkSource, drawX, drawY, drawW, drawH);
 
-        const dateLine = `Date: ${year}.${month}.${day}`;
-        const timeLine = `${hours}:${mins}:${secs} +07'00'`;
+        // Right Column: Metadata
+        const rightX = 260;
+        const maxRightW = 265;
+        const resolvedEmail = email || getResolvedUserEmail();
+        const resolvedName = signerName || getResolvedUserName();
+        const resolvedPosition = getResolvedUserPosition();
+        drawRightMetadata(ctx, resolvedName, resolvedPosition, resolvedEmail, dateObj, rightX, maxRightW);
+    }
+
+    /**
+     * Draws an Adobe Acrobat style digital signature stamp with typed Thai text.
+     */
+    function drawDigitalSignatureStamp(canvas, text, dateObj, email) {
+        const width = 540;
+        const height = 185;
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+
+        // Background: clean white
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+
+        const clean = (text || '').trim();
 
         // Left Column: Large Thai Name
         ctx.fillStyle = '#0a0a0a';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
 
-        const leftCenterX = 120;
-        const words = text.split(/\s+/).filter(Boolean);
+        const leftCenterX = 115;
+        const words = clean.split(/\s+/).filter(Boolean);
         if (words.length >= 2) {
             const line1 = words.slice(0, Math.ceil(words.length / 2)).join(' ');
             const line2 = words.slice(Math.ceil(words.length / 2)).join(' ');
 
             ctx.font = 'bold 36px ' + TYPED_FONT;
-            const maxW = 210;
+            const maxW = 200;
             const w1 = ctx.measureText(line1).width;
             const w2 = ctx.measureText(line2).width;
             if (w1 > maxW || w2 > maxW) {
                 const scale = Math.min(maxW / Math.max(w1, w2), 1.0);
-                ctx.font = 'bold ' + Math.max(Math.floor(36 * scale), 20) + 'px ' + TYPED_FONT;
+                ctx.font = 'bold ' + Math.max(Math.floor(36 * scale), 18) + 'px ' + TYPED_FONT;
             }
-            ctx.fillText(line1, leftCenterX, 65);
-            ctx.fillText(line2, leftCenterX, 120);
+            ctx.fillText(line1, leftCenterX, 75);
+            ctx.fillText(line2, leftCenterX, 125);
         } else {
-            ctx.font = 'bold 38px ' + TYPED_FONT;
-            const w = ctx.measureText(text).width;
-            if (w > 215) {
-                const scale = 215 / w;
-                ctx.font = 'bold ' + Math.max(Math.floor(38 * scale), 20) + 'px ' + TYPED_FONT;
+            ctx.font = 'bold 36px ' + TYPED_FONT;
+            const w = ctx.measureText(clean).width;
+            const maxW = 200;
+            if (w > maxW) {
+                const scale = maxW / w;
+                ctx.font = 'bold ' + Math.max(Math.floor(36 * scale), 18) + 'px ' + TYPED_FONT;
             }
-            ctx.fillText(text, leftCenterX, 92);
+            ctx.fillText(clean, leftCenterX, 100);
         }
 
-        // Right Column: Metadata
-        const rightX = 265;
-        ctx.textAlign = 'left';
-        ctx.textBaseline = 'alphabetic';
+        // Right Column: Metadata (Adobe Acrobat format)
+        const rightX = 260;
+        const maxRightW = 265;
+        const resolvedEmail = email || getResolvedUserEmail();
+        const resolvedPosition = getResolvedUserPosition();
+        drawRightMetadata(ctx, clean, resolvedPosition, resolvedEmail, dateObj, rightX, maxRightW);
+    }
 
-        // Line 1: "Digitally signed by"
-        ctx.font = 'bold 22px ' + TYPED_FONT;
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillText('Digitally signed by', rightX, 48);
-
-        // Line 2: Signer Full Name
-        ctx.font = '20px ' + TYPED_FONT;
-        ctx.fillStyle = '#222222';
-        let rightName = text;
-        if (ctx.measureText(rightName).width > 250) {
-            ctx.font = '17px ' + TYPED_FONT;
+    /**
+     * Composites the raw ink (from DRAW or UPLOAD) into a 540x185 digital signature stamp.
+     */
+    function renderStampFromInk(inkDataUrl) {
+        if (!inkDataUrl) {
+            setPreview(null);
+            return;
         }
-        ctx.fillText(rightName, rightX, 82);
-
-        // Line 3: "Date: YYYY.MM.DD"
-        ctx.font = '22px ' + TYPED_FONT;
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillText(dateLine, rightX, 122);
-
-        // Line 4: "HH:mm:ss +07'00'"
-        ctx.font = '22px ' + TYPED_FONT;
-        ctx.fillStyle = '#0a0a0a';
-        ctx.fillText(timeLine, rightX, 156);
+        lastInkDataUrl = inkDataUrl;
+        const img = new Image();
+        img.onload = function () {
+            const out = document.createElement('canvas');
+            drawDigitalSignatureStampWithInk(out, img, getResolvedUserName(), new Date(), getResolvedUserEmail());
+            setPreview(out.toDataURL('image/png'));
+        };
+        img.src = inkDataUrl;
     }
 
     /**
@@ -389,9 +511,11 @@
             return;
         }
 
+        const userEmail = getResolvedUserEmail();
+
         const draw = function () {
             const out = document.createElement('canvas');
-            drawDigitalSignatureStamp(out, text, new Date());
+            drawDigitalSignatureStamp(out, text, new Date(), userEmail);
             typedFontField.value = TYPED_FONT;
             setPreview(out.toDataURL('image/png'));
         };
@@ -406,20 +530,39 @@
     /* --------------------------------------------------------------- upload */
 
     function ensurePdfJs() {
-        if (window.pdfjsLib) return Promise.resolve(window.pdfjsLib);
+        if (window.pdfjsLib) {
+            if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
+            }
+            return Promise.resolve(window.pdfjsLib);
+        }
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.src = '/vendor/pdfjs/pdf.min.js';
             script.onload = () => {
                 if (window.pdfjsLib) {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
                     resolve(window.pdfjsLib);
                 } else {
-                    reject(new Error('PDF.js failed'));
+                    reject(new Error('PDF.js failed to initialize'));
                 }
             };
-            script.onerror = () => reject(new Error('Failed to load PDF.js'));
+            script.onerror = () => {
+                // Fallback to CDN
+                const cdn = document.createElement('script');
+                cdn.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                cdn.onload = () => {
+                    if (window.pdfjsLib) {
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                        resolve(window.pdfjsLib);
+                    } else {
+                        reject(new Error('PDF.js CDN failed'));
+                    }
+                };
+                cdn.onerror = () => reject(new Error('Failed to load PDF.js'));
+                document.head.appendChild(cdn);
+            };
             document.head.appendChild(script);
         });
     }
@@ -447,11 +590,17 @@
                 window.alert('ไม่พบลายเซ็นหรือเนื้อหาในหน้าแรกของไฟล์ PDF');
                 setPreview(null);
             } else {
-                setPreview(trimmed);
+                renderStampFromInk(trimmed);
             }
         } catch (err) {
             console.error('PDF parsing error:', err);
-            window.alert('ไม่สามารถอ่านไฟล์ PDF นี้ได้ กรุณาลองใช้ไฟล์รูปภาพ PNG / JPG แทน');
+            let msg = 'ไม่สามารถอ่านไฟล์ PDF นี้ได้';
+            if (err.name === 'PasswordException') {
+                msg = 'ไฟล์ PDF นี้ติดรหัสผ่าน กรุณาใช้ไฟล์ PDF ที่ไม่มีการตั้งรหัสผ่าน';
+            } else {
+                msg = 'ไม่สามารถอ่านไฟล์ PDF นี้ได้ (' + (err.message || 'เกิดข้อผิดพลาด') + ') กรุณาลองใช้ไฟล์รูปภาพ PNG / JPG แทน';
+            }
+            window.alert(msg);
             setPreview(null);
         } finally {
             previewEmpty.textContent = 'ยังไม่มีลายเซ็น — วาด อัปโหลด หรือพิมพ์ชื่อทางด้านซ้าย';
@@ -484,7 +633,12 @@
             const img = new Image();
             img.onload = function () {
                 const canvas = canvasFromImage(img, 1500, 500);
-                setPreview(trimToInk(canvas));
+                const trimmed = trimToInk(canvas);
+                if (trimmed) {
+                    renderStampFromInk(trimmed);
+                } else {
+                    setPreview(null);
+                }
             };
             img.onerror = function () {
                 window.alert('ไม่สามารถอ่านไฟล์รูปภาพนี้ได้');
@@ -511,20 +665,17 @@
             }
         });
 
-        const typeNotice = document.getElementById('sigTypeNotice');
-        if (typeNotice) {
-            typeNotice.classList.toggle('d-none', kind !== 'TYPE');
-        }
-
-        // Each tab owns its own artwork, so switching clears what the previous
-        // one produced rather than saving a signature the user is no longer
-        // looking at.
+        // Refresh preview for the newly activated tab
         if (kind === 'DRAW') {
             refreshPreview();
         } else if (kind === 'TYPE') {
             renderTypedSignature();
         } else {
-            setPreview(null);
+            if (lastInkDataUrl) {
+                renderStampFromInk(lastInkDataUrl);
+            } else {
+                setPreview(null);
+            }
             uploadInput.value = '';
         }
     }
@@ -537,7 +688,19 @@
 
     typedTextInput.addEventListener('input', renderTypedSignature);
 
+    const sigNameInput = document.getElementById('sigName') || document.querySelector('input[name="name"]');
+    if (sigNameInput) {
+        sigNameInput.addEventListener('input', function () {
+            if (activeKind === 'DRAW' || activeKind === 'UPLOAD') {
+                if (lastInkDataUrl) {
+                    renderStampFromInk(lastInkDataUrl);
+                }
+            }
+        });
+    }
+
     clearButton.addEventListener('click', function () {
+        lastInkDataUrl = null;
         if (activeKind === 'DRAW') {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             hasStrokes = false;

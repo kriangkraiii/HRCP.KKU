@@ -217,13 +217,14 @@ public class SecurityHeadersFilter implements Filter {
         private String contentSecurityPolicy(String nonce) {
                 return "default-src 'self'; "
                                 + "script-src 'self' 'nonce-" + nonce + "' https://translate.google.com "
-                                + "https://translate.googleapis.com https://translate-pa.googleapis.com; "
-                                + "style-src 'self' 'nonce-" + nonce + "' https://translate.googleapis.com; "
-                                + "font-src 'self' data:; "
+                                + "https://translate.googleapis.com https://translate-pa.googleapis.com https://cdnjs.cloudflare.com; "
+                                + "style-src 'self' 'nonce-" + nonce + "' https://translate.googleapis.com https://cdnjs.cloudflare.com; "
+                                + "font-src 'self' data: https://cdnjs.cloudflare.com; "
                                 + "img-src 'self' data: blob: https://translate.google.com "
                                 + "https://www.google.com https://*.gstatic.com; "
                                 + "connect-src 'self' https://translate.googleapis.com "
-                                + "https://translate-pa.googleapis.com; "
+                                + "https://translate-pa.googleapis.com https://cdnjs.cloudflare.com; "
+                                + "worker-src 'self' blob: https://cdnjs.cloudflare.com; "
                                 // blob: is required by the PDF preview iframe (doc_preview.js)
                                 + "frame-src 'self' blob: https://translate.google.com "
                                 + "https://docs.google.com https://hr2.kku.ac.th"

@@ -56,6 +56,7 @@ public class UserSignatureController {
     public String mySignatures(Principal principal, Model model,
             @RequestParam(value = "edit", required = false) Long editId) {
         UserDtls me = currentUser(principal);
+        model.addAttribute("currentUser", me);
         model.addAttribute("signatures", signatureService.findMine(me));
         model.addAttribute("maxSignatures", UserSignatureService.MAX_PER_USER);
         model.addAttribute("signatureKinds", SignatureKind.values());

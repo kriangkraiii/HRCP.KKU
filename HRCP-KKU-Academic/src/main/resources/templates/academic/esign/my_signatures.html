@@ -179,7 +179,11 @@
                     <form th:unless="${editing == null && #lists.size(signatures) >= maxSignatures}"
                           th:action="@{/esign/my-signatures}" method="post"
                           id="signatureEditor"
-                          th:attr="data-initial-kind=${editing != null} ? ${editing.kind.name()} : 'DRAW'">
+                          th:attr="data-initial-kind=${editing != null} ? ${editing.kind.name()} : 'DRAW'"
+                          th:data-user-name="${currentUser != null ? (currentUser.name != null && !currentUser.name.isBlank() ? currentUser.name : (currentUser.firstName + ' ' + (currentUser.lastName != null ? currentUser.lastName : ''))) : ''}"
+                          th:data-user-title="${currentUser != null ? (currentUser.title ?: '') : ''}"
+                          th:data-user-position="${currentUser != null ? (currentUser.academicPosition ?: '') : ''}"
+                          th:data-user-email="${currentUser != null ? currentUser.email : ''}">
 
                         <input type="hidden" name="id" th:if="${editing != null}" th:value="${editing.id}">
                         <input type="hidden" name="imageData" id="sigImageData">
@@ -223,6 +227,7 @@
                                     <input type="text" id="sigTypedText" name="typedText" class="form-control"
                                            maxlength="120"
                                            th:value="${editing != null} ? ${editing.typedText} : ''"
+                                           th:data-user-email="${currentUser != null ? currentUser.email : ''}"
                                            placeholder="เช่น เกรียงไกร ประเสริฐ">
                                     <div class="form-text">ระบบจะแปลงข้อความเป็นรูปลายเซ็นให้อัตโนมัติ</div>
                                 </div>
@@ -258,7 +263,7 @@
                         <div class="row g-3 mt-1">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อ</label>
-                                <input type="text" name="name" class="form-control" maxlength="100"
+                                <input type="text" name="name" id="sigName" class="form-control" maxlength="100"
                                        th:value="${editing != null} ? ${editing.name} : ''"
                                        placeholder="เช่น ลายเซ็นของฉัน">
                             </div>
@@ -447,6 +452,7 @@
     <!-- Reusable P12 Guide Modal -->
     <div th:replace="~{academic/esign/_p12_guide_modal :: p12GuideModal}"></div>
 
+    <script src="/vendor/pdfjs/pdf.min.js"></script>
     <script src="/js/signature_pad.js"></script>
 
     <script>

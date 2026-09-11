@@ -125,21 +125,39 @@ class EsignPdfViewer {
     }
 
     async ensurePdfJsLoaded() {
-        if (window.pdfjsLib) return;
+        if (window.pdfjsLib) {
+            if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+                window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
+            }
+            return;
+        }
 
         return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+            script.src = '/vendor/pdfjs/pdf.min.js';
             script.onload = () => {
                 if (window.pdfjsLib) {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                        'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
                     resolve();
                 } else {
                     reject(new Error('PDF.js library failed to initialize'));
                 }
             };
-            script.onerror = () => reject(new Error('Failed to load PDF.js from CDN'));
+            script.onerror = () => {
+                const cdn = document.createElement('script');
+                cdn.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                cdn.onload = () => {
+                    if (window.pdfjsLib) {
+                        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
+                            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                        resolve();
+                    } else {
+                        reject(new Error('PDF.js library failed to initialize'));
+                    }
+                };
+                cdn.onerror = () => reject(new Error('Failed to load PDF.js from CDN'));
+                document.head.appendChild(cdn);
+            };
             document.head.appendChild(script);
         });
     }

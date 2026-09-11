@@ -217,7 +217,15 @@ public class SignedDocumentRenderer {
                 byte[] png = null;
                 if (previewSig.getKind() == com.ecom.academic.model.SignatureKind.TYPE
                         && previewSig.getTypedText() != null && !previewSig.getTypedText().isBlank()) {
-                    png = userSignatureService.generateDigitalStampPng(previewSig.getTypedText(), java.time.LocalDateTime.now());
+                    String signerEmail = previewStep.getSigner() != null ? previewStep.getSigner().getEmail() : null;
+                    if (signerEmail == null && previewSig.getUser() != null) {
+                        signerEmail = previewSig.getUser().getEmail();
+                    }
+                    String signerPosition = previewStep.getSignerPositionSnapshot();
+                    if ((signerPosition == null || signerPosition.isBlank()) && previewSig.getUser() != null) {
+                        signerPosition = previewSig.getUser().getAcademicPosition();
+                    }
+                    png = userSignatureService.generateDigitalStampPng(previewSig.getTypedText(), signerPosition, signerEmail, java.time.LocalDateTime.now());
                 } else if (previewSig.getImagePath() != null && !previewSig.getImagePath().isBlank()) {
                     png = signatureImageStorage.read(previewSig.getImagePath());
                 }

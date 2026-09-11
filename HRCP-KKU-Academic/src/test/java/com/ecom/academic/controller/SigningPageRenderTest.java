@@ -469,6 +469,16 @@ class SigningPageRenderTest {
     @Test
     @DisplayName("ระบบสร้างตราประทับ Digital Signature Stamp สำหรับพิมพ์ชื่อ (TYPE) ได้ถูกต้อง")
     void generateDigitalStampProducesValidPng() throws Exception {
+        // Test Thai digits conversion
+        String thaiConverted = com.ecom.academic.service.UserSignatureService.toThaiDigits("2026.08.24 15:47:09 +07'00'");
+        org.assertj.core.api.Assertions.assertThat(thaiConverted).isEqualTo("๒๐๒๖.๐๘.๒๔ ๑๕:๔๗:๐๙ +๐๗'๐๐'");
+
+        // Test generation with email
+        byte[] pngWithEmail = signatureService.generateDigitalStampPng("สุธน เจริญศิริ", "sutoch@kku.ac.th", java.time.LocalDateTime.now());
+        org.assertj.core.api.Assertions.assertThat(pngWithEmail).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(pngWithEmail.length).isGreaterThan(1000);
+
+        // Test generation with overload
         byte[] png = signatureService.generateDigitalStampPng("สมโภช พิมพ์พงษ์ต้อน", java.time.LocalDateTime.now());
         org.assertj.core.api.Assertions.assertThat(png).isNotNull();
         org.assertj.core.api.Assertions.assertThat(png.length).isGreaterThan(1000);
@@ -477,6 +487,59 @@ class SigningPageRenderTest {
         org.assertj.core.api.Assertions.assertThat(img).isNotNull();
         org.assertj.core.api.Assertions.assertThat(img.getWidth()).isEqualTo(540);
         org.assertj.core.api.Assertions.assertThat(img.getHeight()).isEqualTo(185);
+
+        // Test generation from raw ink image (for DRAW and UPLOAD)
+        java.awt.image.BufferedImage inkImg = new java.awt.image.BufferedImage(200, 80, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D g2 = inkImg.createGraphics();
+        g2.setColor(java.awt.Color.BLACK);
+        g2.drawLine(10, 10, 190, 70);
+        g2.dispose();
+        java.io.ByteArrayOutputStream inkBaos = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(inkImg, "PNG", inkBaos);
+
+        byte[] pngFromInk = signatureService.generateDigitalStampFromImage(
+                inkBaos.toByteArray(), "สมโภช พิมพ์พงษ์ต้อน", "somphot@kku.ac.th", java.time.LocalDateTime.now());
+        org.assertj.core.api.Assertions.assertThat(pngFromInk).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(pngFromInk.length).isGreaterThan(1000);
+
+        java.awt.image.BufferedImage compositeImg = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(pngFromInk));
+        org.assertj.core.api.Assertions.assertThat(compositeImg.getWidth()).isEqualTo(540);
+        org.assertj.core.api.Assertions.assertThat(compositeImg.getHeight()).isEqualTo(185);
+
+        // กรณีที่ 2: มีคำนำหน้าทางวิชาการ (ผศ.ดร. หรือ ผศ.)
+        String formattedCase2 = com.ecom.academic.service.UserSignatureService.formatSignerNameWithPosition(
+                "เกรียงไกร เกียรติบูรณกุล", "ผู้ช่วยศาสตราจารย์", "ผศ.ดร.");
+        org.assertj.core.api.Assertions.assertThat(formattedCase2).isEqualTo("ผศ.ดร.เกรียงไกร เกียรติบูรณกุล");
+
+        String formattedCase2Abbr = com.ecom.academic.service.UserSignatureService.formatSignerNameWithPosition(
+                "กอเอ๋ยกอไก่ อ้ายยังจำได้มั้ย", null, "ผศ.");
+        org.assertj.core.api.Assertions.assertThat(formattedCase2Abbr).isEqualTo("ผศ.กอเอ๋ยกอไก่ อ้ายยังจำได้มั้ย");
+
+        // กรณีที่ 3: ไม่มีคำนำหน้าทางวิชาการ (ไม่ใส่คำนำหน้าทั่วไป และไม่ใส่คำว่า ผู้ช่วยศาสตราจารย์ นำหน้า)
+        String formattedCase3 = com.ecom.academic.service.UserSignatureService.formatSignerNameWithPosition(
+                "กอเอ๋ยกอไก่ อ้ายยังจำได้มั้ย", "ผู้ช่วยศาสตราจารย์");
+        org.assertj.core.api.Assertions.assertThat(formattedCase3).isEqualTo("กอเอ๋ยกอไก่ อ้ายยังจำได้มั้ย");
+
+        String formattedCase3Civil = com.ecom.academic.service.UserSignatureService.formatSignerNameWithPosition(
+                "นายสมชาย ใจดี", "ผู้ช่วยศาสตราจารย์", "นาย");
+        org.assertj.core.api.Assertions.assertThat(formattedCase3Civil).isEqualTo("สมชาย ใจดี");
+
+        byte[] pngWithPosition = signatureService.generateDigitalStampPng(
+                "เกรียงไกร เกียรติบูรณกุล", "ผู้ช่วยศาสตราจารย์", "kriangkrai@kku.ac.th", java.time.LocalDateTime.now());
+        org.assertj.core.api.Assertions.assertThat(pngWithPosition).isNotNull();
+        org.assertj.core.api.Assertions.assertThat(pngWithPosition.length).isGreaterThan(1000);
+
+        java.awt.image.BufferedImage imgWithPos = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(pngWithPosition));
+        org.assertj.core.api.Assertions.assertThat(imgWithPos.getWidth()).isEqualTo(540);
+        org.assertj.core.api.Assertions.assertThat(imgWithPos.getHeight()).isEqualTo(185);
+
+        // Test generation from image with position
+        byte[] pngFromInkWithPos = signatureService.generateDigitalStampFromImage(
+                inkBaos.toByteArray(), "เกรียงไกร เกียรติบูรณกุล", "ผู้ช่วยศาสตราจารย์", "kriangkrai@kku.ac.th", java.time.LocalDateTime.now());
+        org.assertj.core.api.Assertions.assertThat(pngFromInkWithPos).isNotNull();
+        java.awt.image.BufferedImage compositeImgWithPos = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(pngFromInkWithPos));
+        org.assertj.core.api.Assertions.assertThat(compositeImgWithPos.getWidth()).isEqualTo(540);
+        org.assertj.core.api.Assertions.assertThat(compositeImgWithPos.getHeight()).isEqualTo(185);
     }
 
     @Test

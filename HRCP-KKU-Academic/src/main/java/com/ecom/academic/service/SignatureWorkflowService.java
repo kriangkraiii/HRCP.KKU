@@ -723,8 +723,19 @@ public class SignatureWorkflowService {
         String imagePathSnapshot = signature.getImagePath();
         if (signature.getKind() == SignatureKind.TYPE && signature.getTypedText() != null && !signature.getTypedText().isBlank()) {
             try {
+                String signerName = step.getSigner() != null
+                        ? (step.getSigner().getName() != null ? step.getSigner().getName() : signature.getUser().getName())
+                        : (signature.getUser() != null ? signature.getUser().getName() : signature.getTypedText());
+                String signerEmail = step.getSigner() != null ? step.getSigner().getEmail() : null;
+                if (signerEmail == null && signature.getUser() != null) {
+                    signerEmail = signature.getUser().getEmail();
+                }
+                String signerPosition = step.getSignerPositionSnapshot();
+                if ((signerPosition == null || signerPosition.isBlank()) && signature.getUser() != null) {
+                    signerPosition = signature.getUser().getAcademicPosition();
+                }
                 String freshStampPath = userSignatureService.generateAndStoreDigitalStamp(
-                        signature.getTypedText(), step.getSignedAt());
+                        signerName, signerPosition, signerEmail, step.getSignedAt());
                 if (freshStampPath != null) {
                     imagePathSnapshot = freshStampPath;
                 }
