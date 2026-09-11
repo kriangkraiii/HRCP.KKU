@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container py-4">
+            <div class="mb-3">
+                <a th:href="'/user/academic/request/' + ${request.id}" class="btn-back-pill">
+                    <i class="fas fa-arrow-left"></i> กลับ
+                </a>
+            </div>
+            <div class="card card-academic">
+                <div class="card-header bg-white">
+                    <h4 class="mb-0"><i class="fas fa-clipboard-check"></i> เอกสารที่ 2: แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน</h4>
+                    <small class="text-muted">คำร้องของ [[${request.applicant.name}]]</small>
+                </div>
+                <div class="card-body">
+
+                    <!-- Flash alerts -->
+                    <div th:if="${success != null}" class="alert alert-success alert-dismissible fade show">
+                        <i class="fas fa-check-circle me-1"></i> [[${success}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-circle me-1"></i> [[${error}]]
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${param.error != null and param.error[0] == 'no_attachments'}" class="alert alert-danger alert-dismissible fade show">
+                        <i class="fas fa-exclamation-circle me-1"></i> กรุณาแนบไฟล์เอกสารประกอบการประเมินผลการสอนอย่างน้อย 1 ไฟล์ก่อนบันทึกเอกสาร
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+                    <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show">
+                        <i class="fas fa-save me-1"></i> บันทึกแบบร่างสำเร็จ
+                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                    </div>
+
+                    <!-- ส่งคำร้องแล้ว: ฟอร์มอ่านอย่างเดียว แต่ยังเข้ามาลงนามได้ -->
+                    <div th:unless="${editable}" class="alert alert-secondary d-flex align-items-start gap-2">
+                        <i class="fas fa-lock mt-1"></i>
+                        <div>
+                            <strong>เอกสารถูกล็อก</strong> — ส่งคำร้องแล้วจึงแก้ไขไม่ได้
+                            จะแก้ไขได้ต่อเมื่อแอดมินส่งเอกสารกลับมาให้แก้ไขเท่านั้น
+                        </div>
+                    </div>
+                    <div th:if="${editable and revisionRequested}" class="alert alert-warning d-flex align-items-start gap-2">
+                        <i class="fas fa-pen-to-square mt-1"></i>
+                        <div>
+                            <strong>แอดมินส่งเอกสารกลับมาให้แก้ไข</strong>
+                            <span th:if="${revisionNote}"> — เหตุผล: [[${revisionNote}]]</span>
+                            <div class="small">แก้ไขข้อมูลแล้วกดบันทึกเอกสาร จากนั้น<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ที่แผงลงนามด้านล่าง</div>
+                        </div>
+                    </div>
+
+                    <form th:action="'/user/academic/request/' + ${request.id} + '/document-2'" method="post"
+                        th:attr="data-auto-draft=${editable ? '/api/draft/academic/' + request.id + '/2' : null}"
+                        id="doc2Form"
+                        th:with="dData=${doc2Data != null ? doc2Data : doc1Data}">
+                        <fieldset th:disabled="${!editable}" class="border-0 p-0 m-0">
+
+                        <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ ผู้ยื่น -->
+                        <input type="hidden" name="chk_app_1" id="chk_app_1"
+                            th:value="${dData != null ? dData.getOrDefault('chk_app_1', '') : ''}">
+                        <input type="hidden" name="chk_app_2" id="chk_app_2"
+                            th:value="${dData != null ? dData.getOrDefault('chk_app_2', '') : ''}">
+                        <input type="hidden" name="chk_app_3" id="chk_app_3"
+                            th:value="${dData != null ? dData.getOrDefault('chk_app_3', '') : ''}">
+                        <input type="hidden" name="chk_app_4" id="chk_app_4"
+                            th:value="${dData != null ? dData.getOrDefault('chk_app_4', '') : ''}">
+                        <input type="hidden" name="chk_app_5" id="chk_app_5"
+                            th:value="${dData != null ? dData.getOrDefault('chk_app_5', '') : ''}">
+
+                        <!-- ฝั่งเจ้าหน้าที่ ส่งค่าว่างไปก่อน (จะถูกกรอกโดยแอดมิน) -->
+                        <input type="hidden" name="chk_off_1" th:value="${dData != null ? dData.getOrDefault('chk_off_1', '') : ''}">
+                        <input type="hidden" name="chk_off_2" th:value="${dData != null ? dData.getOrDefault('chk_off_2', '') : ''}">
+                        <input type="hidden" name="chk_off_3" th:value="${dData != null ? dData.getOrDefault('chk_off_3', '') : ''}">
+                        <input type="hidden" name="chk_off_4" th:value="${dData != null ? dData.getOrDefault('chk_off_4', '') : ''}">
+                        <input type="hidden" name="chk_off_5" th:value="${dData != null ? dData.getOrDefault('chk_off_5', '') : ''}">
+                        <input type="hidden" name="text_1" th:value="${dData != null ? dData.getOrDefault('text_1', '') : ''}">
+                        <input type="hidden" name="text_2" th:value="${dData != null ? dData.getOrDefault('text_2', '') : ''}">
+                        <input type="hidden" name="text_3" th:value="${dData != null ? dData.getOrDefault('text_3', '') : ''}">
+                        <input type="hidden" name="text_4" th:value="${dData != null ? dData.getOrDefault('text_4', '') : ''}">
+                        <input type="hidden" name="text_5" th:value="${dData != null ? dData.getOrDefault('text_5', '') : ''}">
+                        <input type="hidden" name="hr_staff_name" th:value="${dData != null ? dData.getOrDefault('hr_staff_name', '') : ''}">
+
+                        <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> ข้อมูลผู้ยื่นคำร้อง</h5>
+                        <div class="row mb-3">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
+                                <!-- currentTitle: อ่านผ่าน map['key'] เพราะ map.key จะโยน
+                                     exception ถ้าไม่มีคีย์นั้น ซึ่งเกิดกับผู้ใช้ที่ยังไม่ได้ตั้งคำนำหน้า -->
+                                <select name="title" class="form-select" id="titleSelect" required
+                                        th:with="currentTitle=${(dData != null ? dData['title'] : null) ?: request.applicant.title}">
+                                    <option value="">-- เลือก --</option>
+                                    <option value="นาย" th:selected="${currentTitle == 'นาย'}">นาย</option>
+                                    <option value="นาง" th:selected="${currentTitle == 'นาง'}">นาง</option>
+                                    <option value="นางสาว" th:selected="${currentTitle == 'นางสาว'}">นางสาว</option>
+                                    <option value="ดร." th:selected="${currentTitle == 'ดร.'}">ดร.</option>
+                                    <option value="อาจารย์" th:selected="${currentTitle == 'อาจารย์' or currentTitle == 'อ.'}">อาจารย์</option>
+                                    <option value="อ.ดร." th:selected="${currentTitle == 'อ.ดร.' or currentTitle == 'อาจารย์ ดร.'}">อาจารย์ ดร.</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์" th:selected="${currentTitle == 'ผู้ช่วยศาสตราจารย์' or currentTitle == 'ผศ.'}">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="ผศ.ดร." th:selected="${currentTitle == 'ผศ.ดร.' or currentTitle == 'ผู้ช่วยศาสตราจารย์ ดร.' or currentTitle == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผู้ช่วยศาสตราจารย์ ดร.</option>
+                                    <option value="รองศาสตราจารย์" th:selected="${currentTitle == 'รองศาสตราจารย์' or currentTitle == 'รศ.'}">รองศาสตราจารย์</option>
+                                    <option value="รศ.ดร." th:selected="${currentTitle == 'รศ.ดร.' or currentTitle == 'รองศาสตราจารย์ ดร.' or currentTitle == 'รองศาสตราจารย์ดร.'}">รองศาสตราจารย์ ดร.</option>
+                                    <option value="ศาสตราจารย์" th:selected="${currentTitle == 'ศาสตราจารย์' or currentTitle == 'ศ.'}">ศาสตราจารย์</option>
+                                    <option value="ศ.ดร." th:selected="${currentTitle == 'ศ.ดร.' or currentTitle == 'ศาสตราจารย์ ดร.' or currentTitle == 'ศาสตราจารย์ดร.'}">ศาสตราจารย์ ดร.</option>
+                                </select>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น <span class="text-danger">*</span></label>
+                                <input type="text" name="applicant_name" class="form-control" required placeholder="เช่น สมชาย ใจดี"
+                                    th:value="${dData != null ? dData.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}">
+                            </div>
+                        </div>
+
+                        <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-clipboard-check"></i> รายการตรวจสอบเอกสาร</h5>
+                        <div class="table-responsive">
+                            <table class="table table-bordered align-middle">
+                                <thead class="table-light text-center">
+                                    <tr>
+                                        <th style="width:5%">ลำดับ</th>
+                                        <th>เอกสาร</th>
+                                        <th style="width:8%">จำนวน</th>
+                                        <th style="width:12%">ผู้ยื่น (เจ้าตัว)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr>
+                                        <td class="text-center">1</td>
+                                        <td>บันทึกนำส่งเอกสารประกอบประเมินผลการสอน</td>
+                                        <td class="text-center">1</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                <input type="checkbox" class="form-check-input chk-toggle-app"
+                                                    id="chk_app_1_cb" data-target="chk_app_1"
+                                                    th:checked="${dData != null && dData.getOrDefault('chk_app_1', '') == '✓'}">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                         <td class="text-center">2</td>
+                                        <td>แผนการสอน พร้อมเกณฑ์และวิธีวัดประเมินผลผู้เรียน</td>
+                                        <td class="text-center">3</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                 <input type="checkbox" class="form-check-input chk-toggle-app"
+                                                    id="chk_app_2_cb" data-target="chk_app_2"
+                                                    th:checked="${dData != null && dData.getOrDefault('chk_app_2', '') == '✓'}">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                         <td class="text-center">3</td>
+                                        <td>สาระสำคัญของเนื้อหาวิชาประกอบการบรรยายหรือการจัดกิจกรรมการเรียนรู้ (เอกสารประกอบการสอน)</td>
+                                        <td class="text-center">3</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                 <input type="checkbox" class="form-check-input chk-toggle-app"
+                                                    id="chk_app_3_cb" data-target="chk_app_3"
+                                                    th:checked="${dData != null && dData.getOrDefault('chk_app_3', '') == '✓'}">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                         <td class="text-center">4</td>
+                                        <td>สื่อการสอน เช่น ชีทเอกสาร PowerPoint แผ่นใส สื่อปฏิสัมพันธ์แบบดิจิทัล และอื่นๆ เป็นต้น</td>
+                                        <td class="text-center">3</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                 <input type="checkbox" class="form-check-input chk-toggle-app"
+                                                    id="chk_app_4_cb" data-target="chk_app_4"
+                                                    th:checked="${dData != null && dData.getOrDefault('chk_app_4', '') == '✓'}">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                         <td class="text-center">5</td>
+                                        <td>ผลการประเมินการสอนโดยนักศึกษา</td>
+                                        <td class="text-center">3</td>
+                                        <td class="text-center">
+                                            <div class="form-check d-flex justify-content-center">
+                                                 <input type="checkbox" class="form-check-input chk-toggle-app"
+                                                    id="chk_app_5_cb" data-target="chk_app_5"
+                                                    th:checked="${dData != null && dData.getOrDefault('chk_app_5', '') == '✓'}">
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Validation status -->
+                        <div id="doc2ValidationAlert" class="alert alert-warning mt-3" style="border-radius:10px">
+                            <i class="fas fa-exclamation-triangle me-1"></i>
+                            <span id="doc2ValidationMsg">กรุณาติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc2CheckedCount">0</span>/5)</span>
+                        </div>
+
+                        </fieldset>
+                        <div class="d-flex gap-2 mt-4">
+                            <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
+                                <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
+                            </button>
+                            <button th:if="${editable}" type="submit" name="action" value="submit" class="btn btn-academic" id="doc2SubmitBtn" disabled>
+                                <i class="fas fa-paper-plane"></i> บันทึกเอกสาร
+                            </button>
+                            <a th:href="'/user/academic/request/' + ${request.id}"
+                                class="btn-back-pill"><i class="fas fa-arrow-left"></i> กลับ</a>
+                        </div>
+                    </form>
+
+                    <!-- Single Unified Attachment Box -->
+                    <div class="card card-academic border shadow-sm my-4">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 fw-semibold text-primary">
+                                <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอน
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">จำเป็นต้องแนบ (อย่างน้อย 1 รายการ)</span>
+                            </h6>
+                            <div class="d-flex align-items-center gap-2">
+                                <small class="text-muted" id="totalSizeDisplay" th:text="${totalSizeFormatted != null ? totalSizeFormatted + ' / 75.0 MB' : '0.0 / 75.0 MB'}">0.0 / 75.0 MB</small>
+                                <span class="badge bg-primary rounded-pill px-3" id="attachmentCountBadge" th:text="${(attachmentCount != null ? attachmentCount : 0) + ' รายการ'}">0 รายการ</span>
+                            </div>
+                        </div>
+                        <div class="card-body p-3">
+
+                            <!-- Upload & Link Toggle and Forms (if editable) -->
+                            <div th:if="${editable}" class="mb-3">
+                                <!-- Mode Switch Buttons -->
+                                <div class="btn-group btn-group-sm mb-3" role="group">
+                                    <button type="button" class="btn btn-primary active" id="tabUploadBtn" data-target="upload">
+                                        <i class="fas fa-file-upload me-1"></i> อัปโหลดไฟล์
+                                    </button>
+                                    <button type="button" class="btn btn-outline-primary" id="tabLinkBtn" data-target="link">
+                                        <i class="fas fa-link me-1"></i> แนบลิงก์ (URL)
+                                    </button>
+                                </div>
+
+                                <!-- Upload Form -->
+                                <form th:action="'/user/academic/request/' + ${request.id} + '/document-2/attachments'"
+                                      method="post" enctype="multipart/form-data" id="attachmentForm" class="mb-2">
+                                    <label for="fileInput"
+                                           class="upload-dropzone p-4 border border-2 border-dashed rounded-3 text-center d-block"
+                                           id="dropzone"
+                                           th:data-current-bytes="${totalBytes != null ? totalBytes : 0}"
+                                           style="cursor:pointer; background: #fafbfc;">
+                                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2 d-block"></i>
+                                        <span class="fs-6 fw-semibold d-block">คลิกเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</span>
+                                        <span class="text-muted small d-block mt-1">รองรับไฟล์: .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)</span>
+                                        <input type="file" name="files" id="fileInput" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
+                                    </label>
+
+                                    <!-- Queue preview -->
+                                    <div id="queue" class="mt-3 d-none">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+                                            <small class="fw-semibold text-muted">ไฟล์ที่เลือกเตรียมอัปโหลด:</small>
+                                            <small class="text-primary fw-semibold" id="queueTotalSize"></small>
+                                        </div>
+                                        <ul class="list-group list-group-flush mb-2 border rounded" id="queueList"></ul>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-sm btn-academic rounded-pill px-3">
+                                                <i class="fas fa-upload me-1"></i> อัปโหลดไฟล์ที่เลือก
+                                            </button>
+                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="clearQueueBtn">ยกเลิก</button>
+                                        </div>
+                                    </div>
+                                </form>
+
+                                <!-- Link Form -->
+                                <form th:action="'/user/academic/request/' + ${request.id} + '/document-2/links'"
+                                      method="post" id="linkForm" class="p-3 border rounded-3 bg-white mb-2 d-none">
+                                    <div class="row g-2 align-items-center">
+                                        <div class="col-md-7">
+                                            <div class="input-group input-group-sm">
+                                                <span class="input-group-text bg-light text-muted"><i class="fas fa-link"></i></span>
+                                                <input type="url" name="url" id="linkUrl" class="form-control"
+                                                       placeholder="https://drive.google.com/... หรือ OneDrive / Cloud URL" required>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-3">
+                                            <input type="text" name="title" id="linkTitle" class="form-control form-control-sm"
+                                                   placeholder="ชื่อเรียก/คำอธิบาย (ถ้ามี)">
+                                        </div>
+                                        <div class="col-md-2 d-grid">
+                                            <button type="submit" class="btn btn-sm btn-academic rounded-pill">
+                                                <i class="fas fa-plus me-1"></i> เพิ่มลิงก์
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <div class="text-muted small mt-2" style="font-size:0.8rem;">
+                                        <i class="fas fa-info-circle me-1"></i> สามารถแนบลิงก์แชร์เอกสาร โฟลเดอร์ หรือวิดีโอจาก Google Drive, OneDrive, CMU/KKU Cloud, YouTube ฯลฯ
+                                    </div>
+                                </form>
+                            </div>
+
+                            <!-- Uploaded Files & Links List -->
+                            <div th:if="${attachments != null and !attachments.isEmpty()}" class="mt-2">
+                                <h6 class="text-secondary fw-semibold small mb-2"><i class="fas fa-list-ul me-1"></i> รายการเอกสารและลิงก์ที่แนบแล้ว</h6>
+                                <div class="border rounded-2 overflow-hidden">
+                                    <div th:each="att, attIter : ${attachments}"
+                                         class="d-flex align-items-center justify-content-between py-2 px-3 border-bottom"
+                                         th:classappend="${attIter.last ? 'border-bottom-0' : ''}"
+                                         style="background: #fafbfc;">
+                                        <div class="d-flex align-items-center gap-2 text-break" style="min-width:0; flex:1;">
+                                            <span th:if="${att.fileType == 'PDF'}" class="text-danger"><i class="fas fa-file-pdf fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'DOCX'}" class="text-primary"><i class="fas fa-file-word fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'ZIP'}" class="text-secondary"><i class="fas fa-file-archive fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'LINK'}" class="text-info"><i class="fas fa-link fa-lg"></i></span>
+                                            <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt fa-lg"></i></span>
+                                            <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">file.pdf</span>
+                                            <span th:if="${att.fileType != 'LINK'}" class="badge bg-white text-secondary border" style="font-size:0.75rem;"
+                                                  th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
+                                            <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle" style="font-size:0.75rem;">
+                                                <i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก
+                                            </span>
+                                        </div>
+                                        <div class="btn-group btn-group-sm ms-2">
+                                            <a th:if="${att.fileType == 'LINK'}"
+                                               th:href="${att.storedFilePath}"
+                                               target="_blank" rel="noopener noreferrer" class="btn btn-outline-info btn-sm" title="เปิดลิงก์ในแท็บใหม่">
+                                               <i class="fas fa-external-link-alt me-1"></i> เปิดลิงก์
+                                            </a>
+                                            <a th:if="${att.fileType != 'LINK' and att.fileType != 'ZIP' and att.fileExtension != 'ZIP'}"
+                                               th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/view'"
+                                               target="_blank" class="btn btn-outline-info btn-sm" title="ดู"><i class="fas fa-eye"></i></a>
+                                            <a th:if="${att.fileType != 'LINK'}"
+                                               th:href="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/download'"
+                                               class="btn btn-outline-primary btn-sm" title="ดาวน์โหลด"><i class="fas fa-download"></i></a>
+                                            <form th:if="${editable}" th:action="'/user/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
+                                                  method="post" class="d-inline" th:data-confirm="${att.fileType == 'LINK' ? 'คุณต้องการลบลิงก์นี้หรือไม่?' : 'คุณต้องการลบไฟล์นี้หรือไม่?'}">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm" title="ลบ"><i class="fas fa-trash-alt"></i></button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div th:if="${attachments == null or attachments.isEmpty()}" class="text-center py-4 text-muted">
+                                <i class="fas fa-folder-open fa-2x mb-2 opacity-50 d-block"></i>
+                                <span class="small">ยังไม่มีเอกสารหรือลิงก์แนบ กรุณาอัปโหลดไฟล์หรือแนบลิงก์อย่างน้อย 1 รายการ</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+                    <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
+
+                    <!-- เอกสารที่สร้างแล้ว -->
+                    <div th:if="${existingDocs != null && !existingDocs.isEmpty()}" class="mt-4">
+                        <h6 class="text-success"><i class="fas fa-check-circle"></i> เอกสารที่สร้างแล้ว</h6>
+                        <div th:each="doc : ${existingDocs}" class="card doc-card generated mb-2 p-3">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <small class="text-success"><i class="fas fa-check"></i>
+                                    [[${doc.documentLabel}]]</small>
+                                <div class="btn-group btn-group-sm">
+                                    <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=docx'"
+                                        class="btn btn-outline-primary" title="ดาวน์โหลด DOCX">
+                                        <i class="fas fa-file-word"></i> DOCX
+                                    </a>
+                                    <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=pdf'"
+                                        class="btn btn-outline-danger" title="ดาวน์โหลด PDF">
+                                        <i class="fas fa-file-pdf"></i> PDF
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Preview CSS & JS -->
+                    <link rel="stylesheet" href="/css/doc_preview.css">
+
+                    <input type="hidden" id="currentDocType" value="2">
+                    <input type="hidden" id="attachmentCountHolder" th:value="${attachmentCount != null ? attachmentCount : 0}">
+                    <input type="hidden" id="totalBytesHolder" th:value="${totalBytes != null ? totalBytes : 0}">
+                    <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
+
+                    <script>
+                        // Checkbox toggle สำหรับผู้ยื่น ✔️
+                        document.querySelectorAll('.chk-toggle-app').forEach(function (cb) {
+                            cb.addEventListener('change', function () {
+                                const targetId = this.getAttribute('data-target');
+                                const hiddenInput = document.getElementById(targetId);
+                                if (hiddenInput) {
+                                    hiddenInput.value = this.checked ? '✓' : '';
+                                }
+                            });
+                        });
+
+                        // โหลดข้อมูลเดิม (ถ้ามี)
+                        var existingJson = document.getElementById('existingDataHolder') ? document.getElementById('existingDataHolder').value : null;
+                        if (existingJson) {
+                            try {
+                                var data = JSON.parse(existingJson);
+                                var form = document.getElementById('doc2Form') || document.getElementById('doc1Form');
+                                if (form && data) {
+                                    Object.keys(data).forEach(function (key) {
+                                        var el = form.querySelector('[name="' + key + '"]');
+                                        if (el && !el.value) el.value = data[key];
+                                    });
+                                    // ติ๊ก checkbox ตามข้อมูลเดิม
+                                    for (var i = 1; i <= 5; i++) {
+                                        if (data['chk_app_' + i] === '✓') {
+                                            var cb = document.getElementById('chk_app_' + i + '_cb');
+                                            if (cb) cb.checked = true;
+                                        }
+                                    }
+                                }
+                            } catch (e) { console.warn('Failed to load existing data:', e); }
+                        }
+
+                        // Initialize real-time preview for Doc 2
+                        initDocPreview('doc2Form', 2);
+
+                        // === Checkbox & Attachment Validation: ต้องติ๊กครบ 5 ข้อ, แนบไฟล์/ลิงก์อย่างน้อย 1 รายการ, และขนาดรวมไม่เกิน 75 MB ===
+                        (function() {
+                            var checkboxes = document.querySelectorAll('.chk-toggle-app');
+                            var submitBtn = document.getElementById('doc2SubmitBtn') || document.getElementById('doc1SubmitBtn');
+                            if (!submitBtn) return;
+                            var alertBox = document.getElementById('doc2ValidationAlert') || document.getElementById('doc1ValidationAlert');
+                            var countSpan = document.getElementById('doc2CheckedCount') || document.getElementById('doc1CheckedCount');
+                            var attCountHolder = document.getElementById('attachmentCountHolder');
+                            var attCount = attCountHolder ? parseInt(attCountHolder.value, 10) : 0;
+                            var totalBytesHolder = document.getElementById('totalBytesHolder');
+                            var totalBytes = totalBytesHolder ? parseInt(totalBytesHolder.value, 10) : 0;
+                            var MAX_TOTAL_BYTES = 75 * 1024 * 1024; // 75 MB
+
+                            function validateDoc2() {
+                                var checked = document.querySelectorAll('.chk-toggle-app:checked').length;
+                                var total = checkboxes.length;
+                                if (countSpan) countSpan.textContent = checked;
+
+                                var allChecked = (checked === total);
+                                var hasAttachment = (attCount > 0);
+                                var noOverQuota = (totalBytes <= MAX_TOTAL_BYTES);
+
+                                if (allChecked && hasAttachment && noOverQuota) {
+                                    submitBtn.disabled = false;
+                                    alertBox.classList.remove('alert-warning', 'alert-danger');
+                                    alertBox.classList.add('alert-success');
+                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบเอกสารแล้ว (' + attCount + ' รายการ, ขนาดรวม ' + (totalBytes / (1024 * 1024)).toFixed(1) + ' MB) ✓ พร้อมบันทึกเอกสาร';
+                                } else {
+                                    submitBtn.disabled = true;
+                                    alertBox.classList.remove('alert-success');
+                                    var reasons = [];
+                                    if (!allChecked) {
+                                        reasons.push('ติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc2CheckedCount">' + checked + '</span>/' + total + ')');
+                                    }
+                                    if (!hasAttachment) {
+                                        reasons.push('แนบไฟล์หรือลิงก์เอกสารประกอบอย่างน้อย 1 รายการ');
+                                    }
+                                    if (!noOverQuota) {
+                                        var curMb = (totalBytes / (1024 * 1024)).toFixed(1);
+                                        reasons.push('ลดขนาดไฟล์เนื่องจากขนาดรวมเกิน 75 MB (ปัจจุบัน ' + curMb + ' MB)');
+                                    }
+                                    alertBox.classList.remove('alert-warning', 'alert-danger');
+                                    alertBox.classList.add('alert-danger');
+                                    alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> กรุณา' + reasons.join(' และ ');
+                                    countSpan = document.getElementById('doc2CheckedCount') || document.getElementById('doc1CheckedCount');
+                                }
+                            }
+
+                            checkboxes.forEach(function(cb) {
+                                cb.addEventListener('change', validateDoc2);
+                            });
+
+                            var docForm = document.getElementById('doc2Form') || document.getElementById('doc1Form');
+                            if (docForm) {
+                                docForm.addEventListener('submit', function(e) {
+                                    var submitter = e.submitter;
+                                    if (submitter && submitter.value === 'submit' && submitBtn.disabled) {
+                                        e.preventDefault();
+                                        alert('ไม่สามารถบันทึกเอกสารได้: กรุณาตรวจสอบว่าติ๊กครบ 5 ข้อ, แนบไฟล์/ลิงก์อย่างน้อย 1 รายการ และขนาดรวมไม่เกิน 75 MB');
+                                        return false;
+                                    }
+                                });
+                            }
+
+                            validateDoc2();
+                        })();
+
+                        // === Single Unified Drag & Drop, File Queue & Link Form Handling ===
+                        (function() {
+                            var ALLOWED_EXTS = ['.pdf', '.docx', '.doc', '.zip'];
+                            var MAX_TOTAL_BYTES = 75 * 1024 * 1024; // 75MB total
+
+                            function escapeHtml(str) {
+                                return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+                            }
+
+                            var dropzone = document.getElementById('dropzone');
+                            var fileInput = document.getElementById('fileInput');
+                            var queueContainer = document.getElementById('queue');
+                            var queueList = document.getElementById('queueList');
+                            var queueTotalSize = document.getElementById('queueTotalSize');
+                            var clearQueueBtn = document.getElementById('clearQueueBtn');
+
+                            if (dropzone && fileInput) {
+                                ['dragenter', 'dragover'].forEach(function(ev) {
+                                    dropzone.addEventListener(ev, function(e) {
+                                        e.preventDefault(); e.stopPropagation();
+                                        dropzone.classList.add('border-primary');
+                                        dropzone.style.background = '#fff';
+                                    });
+                                });
+                                ['dragleave', 'drop'].forEach(function(ev) {
+                                    dropzone.addEventListener(ev, function(e) {
+                                        e.preventDefault(); e.stopPropagation();
+                                        dropzone.classList.remove('border-primary');
+                                        dropzone.style.background = '#fafbfc';
+                                    });
+                                });
+
+                                dropzone.addEventListener('drop', function(e) {
+                                    if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+                                        fileInput.files = e.dataTransfer.files;
+                                        updateQueue();
+                                    }
+                                });
+
+                                fileInput.addEventListener('change', function() {
+                                    updateQueue();
+                                });
+
+                                function updateQueue() {
+                                    if (!fileInput.files || fileInput.files.length === 0) {
+                                        if (queueContainer) queueContainer.classList.add('d-none');
+                                        if (queueList) queueList.innerHTML = '';
+                                        return;
+                                    }
+
+                                    var invalidFiles = [];
+                                    var incomingBytes = 0;
+                                    Array.from(fileInput.files).forEach(function(file) {
+                                        incomingBytes += file.size;
+                                        var lower = file.name.toLowerCase();
+                                        if (!ALLOWED_EXTS.some(function(ext) { return lower.endsWith(ext); })) {
+                                            invalidFiles.push(file.name);
+                                        }
+                                    });
+
+                                    if (invalidFiles.length > 0) {
+                                        alert('พบไฟล์ที่ไม่รองรับ: ' + invalidFiles.join(', ') + '\nอนุญาตเฉพาะ .pdf, .docx, .doc, .zip');
+                                        fileInput.value = '';
+                                        if (queueContainer) queueContainer.classList.add('d-none');
+                                        if (queueList) queueList.innerHTML = '';
+                                        return;
+                                    }
+
+                                    var currentBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
+                                    if (currentBytes + incomingBytes > MAX_TOTAL_BYTES) {
+                                        var newMb = (incomingBytes / (1024 * 1024)).toFixed(1);
+                                        var curMb = (currentBytes / (1024 * 1024)).toFixed(1);
+                                        var totalMb = ((currentBytes + incomingBytes) / (1024 * 1024)).toFixed(1);
+                                        alert('ขนาดไฟล์รวมจะเกินขีดจำกัด 75 MB ต่อคำร้อง!\n\n' +
+                                              '• ไฟล์เดิมที่มีอยู่: ' + curMb + ' MB\n' +
+                                              '• ไฟล์ใหม่ที่เลือก: ' + newMb + ' MB\n' +
+                                              '• ขนาดรวมทั้งหมด: ' + totalMb + ' MB (จำกัด 75.0 MB)\n\n' +
+                                              'กรุณาลดขนาดไฟล์หรือเลือกไฟล์ใหม่อีกครั้ง');
+                                        fileInput.value = '';
+                                        if (queueContainer) queueContainer.classList.add('d-none');
+                                        if (queueList) queueList.innerHTML = '';
+                                        return;
+                                    }
+
+                                    if (queueList) queueList.innerHTML = '';
+                                    if (queueTotalSize) {
+                                        queueTotalSize.textContent = 'รวม ' + fileInput.files.length + ' ไฟล์ (' + (incomingBytes / (1024 * 1024)).toFixed(2) + ' MB)';
+                                    }
+                                    Array.from(fileInput.files).forEach(function(file) {
+                                        var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+                                        var lower = file.name.toLowerCase();
+                                        var iconClass = lower.endsWith('.zip') ? 'fas fa-file-archive text-secondary' :
+                                                       (lower.endsWith('.pdf') ? 'fas fa-file-pdf text-danger' : 'fas fa-file-word text-primary');
+                                        var li = document.createElement('li');
+                                        li.className = 'list-group-item d-flex justify-content-between align-items-center py-2 px-3';
+                                        li.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="' + iconClass + '"></i><span class="small fw-semibold text-break">' + escapeHtml(file.name) + '</span></div><span class="badge bg-secondary rounded-pill" style="font-size:0.75rem;">' + sizeMB + ' MB</span>';
+                                        if (queueList) queueList.appendChild(li);
+                                    });
+                                    if (queueContainer) queueContainer.classList.remove('d-none');
+                                }
+
+                                var form = document.getElementById('attachmentForm');
+                                if (form) {
+                                    form.addEventListener('submit', function(e) {
+                                        var incomingBytes = 0;
+                                        if (fileInput.files) {
+                                            Array.from(fileInput.files).forEach(function(f) { incomingBytes += f.size; });
+                                        }
+                                        var curBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
+                                        if (curBytes + incomingBytes > MAX_TOTAL_BYTES) {
+                                            e.preventDefault();
+                                            var totalMb = ((curBytes + incomingBytes) / (1024 * 1024)).toFixed(1);
+                                            alert('ไม่สามารถอัปโหลดได้: ขนาดรวม (' + totalMb + ' MB) จะเกินขีดจำกัด 75 MB ต่อคำร้อง');
+                                            return false;
+                                        }
+                                    });
+                                }
+
+                                if (clearQueueBtn) {
+                                    clearQueueBtn.addEventListener('click', function() {
+                                        fileInput.value = '';
+                                        if (queueContainer) queueContainer.classList.add('d-none');
+                                        if (queueList) queueList.innerHTML = '';
+                                    });
+                                }
+                            }
+
+                            // Toggle between File Upload and Link Attachment tabs
+                            var tabUploadBtn = document.getElementById('tabUploadBtn');
+                            var tabLinkBtn = document.getElementById('tabLinkBtn');
+                            var uploadForm = document.getElementById('attachmentForm');
+                            var linkForm = document.getElementById('linkForm');
+
+                            if (tabUploadBtn && tabLinkBtn) {
+                                tabUploadBtn.addEventListener('click', function() {
+                                    if (uploadForm) uploadForm.classList.remove('d-none');
+                                    if (linkForm) linkForm.classList.add('d-none');
+                                    tabUploadBtn.classList.add('active', 'btn-primary');
+                                    tabUploadBtn.classList.remove('btn-outline-primary');
+                                    tabLinkBtn.classList.remove('active', 'btn-primary');
+                                    tabLinkBtn.classList.add('btn-outline-primary');
+                                });
+                                tabLinkBtn.addEventListener('click', function() {
+                                    if (uploadForm) uploadForm.classList.add('d-none');
+                                    if (linkForm) linkForm.classList.remove('d-none');
+                                    tabLinkBtn.classList.add('active', 'btn-primary');
+                                    tabLinkBtn.classList.remove('btn-outline-primary');
+                                    tabUploadBtn.classList.remove('active', 'btn-primary');
+                                    tabUploadBtn.classList.add('btn-outline-primary');
+                                });
+                            }
+                        })();
+                    </script>
+                </div>
+            </div>
+        </div>
+    </section>
+</body>
+
+</html>

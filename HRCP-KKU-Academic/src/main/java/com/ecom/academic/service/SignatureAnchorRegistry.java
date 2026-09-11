@@ -60,17 +60,17 @@ public class SignatureAnchorRegistry {
     private static final Map<DocKey, List<SignatureSlot>> SLOTS = Map.ofEntries(
 
             // ---------------------------------------------------------- Phase 1
-            Map.entry(new DocKey(SignatureModule.ACADEMIC, 0), List.of(
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 1), List.of(
                     new SignatureSlot("applicant", "ผู้ขอประเมินผลการสอน",
                             "applicant_name", APPLICANT, 1))),
 
-            Map.entry(new DocKey(SignatureModule.ACADEMIC, 1), List.of(
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 2), List.of(
                     new SignatureSlot("applicant", "ผู้ขอรับการประเมิน",
                             "applicant_name", APPLICANT, 1),
                     new SignatureSlot("hr", "นักทรัพยากรบุคคล",
                             "hr_staff_name", "HR", 2))),
 
-            Map.entry(new DocKey(SignatureModule.ACADEMIC, 2), List.of(
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 3), List.of(
                     new SignatureSlot("head", "หัวหน้าสาขาวิชา",
                             "department_head", "HEAD", 1),
                     new SignatureSlot("associate_dean", "รองคณบดี",
@@ -80,24 +80,24 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("hr", "เจ้าหน้าที่บริหารงาน",
                             "hr_staff_name", "HR", 4))),
 
-            Map.entry(new DocKey(SignatureModule.ACADEMIC, 3), List.of(
-                    new SignatureSlot("dean", "คณบดี", "dean_name", "DEAN", 1))),
-
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 4), List.of(
                     new SignatureSlot("dean", "คณบดี", "dean_name", "DEAN", 1))),
 
-            // Phase 1 doc 5 is a bare suggestions textbox ({{suggestions_text}})
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 5), List.of(
+                    new SignatureSlot("dean", "คณบดี", "dean_name", "DEAN", 1))),
+
+            // Phase 1 doc 6 (formerly doc 5) is a bare suggestions textbox ({{suggestions_text}})
             // with no signature block at all, so it is deliberately absent.
 
-            Map.entry(new DocKey(SignatureModule.ACADEMIC, 6), List.of(
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 7), List.of(
                     new SignatureSlot("committee_chair", "ประธานคณะกรรมการประเมิน",
                             "committee_1_name", "COMMITTEE", 1))),
 
-            Map.entry(new DocKey(SignatureModule.ACADEMIC, 7), List.of(
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 8), List.of(
                     new SignatureSlot("committee_chair", "ประธานคณะอนุกรรมการ",
                             "committee_president_name", "COMMITTEE", 1))),
 
-            Map.entry(new DocKey(SignatureModule.ACADEMIC, 8), List.of(
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 9), List.of(
                     new SignatureSlot("dean", "คณบดี", "dean_name", "DEAN", 1))),
 
             // ---------------------------------------------------------- Phase 2

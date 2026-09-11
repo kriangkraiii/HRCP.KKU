@@ -116,8 +116,8 @@ public class AcademicApplicantController {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    /** เอกสารที่ผู้ยื่นสามารถเห็นได้ (doc type 0, 1, 8) */
-    private static final List<Integer> APPLICANT_VISIBLE_DOC_TYPES = Arrays.asList(0, 1, 8);
+    /** เอกสารที่ผู้ยื่นสามารถเห็นได้ (doc type 1, 2, 9 และรองรับ 0, 8 เดิม) */
+    private static final List<Integer> APPLICANT_VISIBLE_DOC_TYPES = Arrays.asList(1, 2, 9, 0, 8);
 
     private static final String EDIT_LOCKED_MESSAGE =
             "ไม่สามารถแก้ไขเอกสารได้ เนื่องจากส่งคำร้องไปแล้ว — จะแก้ไขได้ต่อเมื่อแอดมินส่งเอกสารกลับมาให้แก้ไขเท่านั้น";
@@ -153,19 +153,23 @@ public class AcademicApplicantController {
         model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
         model.addAttribute("hasActiveRequest", requestService.hasActiveRequest(user.getId()));
 
-        // ดึงข้อมูลรายวิชาจาก doc_0 สำหรับทุกคำร้อง
-        Map<Long, Map<String, String>> doc0DataMap = new java.util.HashMap<>();
+        // ดึงข้อมูลรายวิชาจาก doc_1 (เดิม doc_0) สำหรับทุกคำร้อง
+        Map<Long, Map<String, String>> doc1DataMap = new java.util.HashMap<>();
         for (AcademicRequest req : requests) {
-            List<AcademicDocument> doc0List = requestService.getDocumentsByType(req.getId(), 0);
-            if (!doc0List.isEmpty()) {
+            List<AcademicDocument> doc1List = requestService.getDocumentsByType(req.getId(), 1);
+            if (doc1List.isEmpty()) {
+                doc1List = requestService.getDocumentsByType(req.getId(), 0);
+            }
+            if (!doc1List.isEmpty()) {
                 try {
-                    Map<String, String> doc0Data = objectMapper.readValue(doc0List.get(0).getJsonData(),
+                    Map<String, String> doc1Data = objectMapper.readValue(doc1List.get(0).getJsonData(),
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
-                    doc0DataMap.put(req.getId(), doc0Data);
+                    doc1DataMap.put(req.getId(), doc1Data);
                 } catch (Exception e) { /* ignore */ }
             }
         }
-        model.addAttribute("doc0DataMap", doc0DataMap);
+        model.addAttribute("doc1DataMap", doc1DataMap);
+        model.addAttribute("doc0DataMap", doc1DataMap);
 
         // ============ Position Requests ============
         List<PositionRequest> allPositionRequests = positionRequestService.findByApplicant(user.getId());
@@ -232,36 +236,40 @@ public class AcademicApplicantController {
             draftRequest = requestService.createDraftRequest(user);
         }
 
-        // เช็คว่ามี doc 0 และ doc 1 แล้วหรือยัง
+        // เช็คว่ามี doc 1 และ doc 2 แล้วหรือยัง (เดิม 0 และ 1)
         List<AcademicDocument> allDocs = requestService.getDocumentsSorted(draftRequest.getId());
-        boolean hasDoc0 = isDoc0Complete(allDocs);
         boolean hasDoc1 = isDoc1Complete(allDocs);
+        boolean hasDoc2 = isDoc2Complete(allDocs);
 
-        // เช็คการลงนามของผู้ยื่นใน doc 0 และ doc 1
-        boolean doc0Signed = signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 0);
-        boolean doc1Signed = signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 1);
-        List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), List.of(0, 1));
+        // เช็คการลงนามของผู้ยื่นใน doc 1 และ doc 2
+        boolean doc1Signed = signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 1)
+                || signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 0);
+        boolean doc2Signed = signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 2)
+                || signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 1);
+        List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), List.of(1, 2));
         boolean applicantSignaturesComplete = unsignedSigDocs.isEmpty();
 
         model.addAttribute("user", user);
         model.addAttribute("request", draftRequest);
-        model.addAttribute("hasDoc0", hasDoc0);
         model.addAttribute("hasDoc1", hasDoc1);
-        model.addAttribute("doc0Signed", doc0Signed);
+        model.addAttribute("hasDoc2", hasDoc2);
+        model.addAttribute("hasDoc0", hasDoc1); // legacy alias
         model.addAttribute("doc1Signed", doc1Signed);
+        model.addAttribute("doc2Signed", doc2Signed);
+        model.addAttribute("doc0Signed", doc1Signed); // legacy alias
         model.addAttribute("unsignedSigDocs", unsignedSigDocs);
         model.addAttribute("applicantSignaturesComplete", applicantSignaturesComplete);
 
         return "academic/applicant/new_request";
     }
 
-    // ==================== เอกสารที่ 0: บันทึกข้อความ ====================
+    // ==================== เอกสารที่ 1: บันทึกข้อความ ====================
 
     /**
-     * ฟอร์มกรอกเอกสารที่ 0: บันทึกข้อความ ขอรับการประเมินผลการสอน
+     * ฟอร์มกรอกเอกสารที่ 1: บันทึกข้อความ ขอรับการประเมินผลการสอน (เดิมเอกสารที่ 0)
      */
-    @GetMapping({"/request/{id}/document-0", "/request/{id}/document/0"})
-    public String document0Form(@PathVariable Long id, Principal principal, Model model) {
+    @GetMapping({"/request/{id}/document-1", "/request/{id}/document/1", "/request/{id}/document-0", "/request/{id}/document/0"})
+    public String document1Form(@PathVariable Long id, Principal principal, Model model) {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
@@ -270,27 +278,31 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
-        List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 0);
+        List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 1);
+        if (existingDocs.isEmpty()) {
+            existingDocs = requestService.getDocumentsByType(id, 0);
+        }
         String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
-        Map<String, String> doc0Data = autoFillHelper.getPreFilledAcademicDocData(request, 0, existingJson);
+        Map<String, String> doc1Data = autoFillHelper.getPreFilledAcademicDocData(request, 1, existingJson);
 
         model.addAttribute("request", request);
         model.addAttribute("existingDocs", existingDocs);
         model.addAttribute("existingData", existingJson);
-        model.addAttribute("doc0Data", doc0Data);
-        addEditGate(model, request, 0);
+        model.addAttribute("doc1Data", doc1Data);
+        model.addAttribute("doc0Data", doc1Data); // legacy alias
+        addEditGate(model, request, 1);
 
         // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
-        model.addAttribute("documentType", 0);
+        model.addAttribute("documentType", 1);
         model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.ACADEMIC);
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
-                com.ecom.academic.model.SignatureModule.ACADEMIC, id, 0, user));
+                com.ecom.academic.model.SignatureModule.ACADEMIC, id, 1, user));
 
-        return "academic/applicant/document_0_form";
+        return "academic/applicant/document_1_form";
     }
 
-    @PostMapping({"/request/{id}/document-0", "/request/{id}/document/0"})
-    public String submitDocument0(@PathVariable Long id,
+    @PostMapping({"/request/{id}/document-1", "/request/{id}/document/1", "/request/{id}/document-0", "/request/{id}/document/0"})
+    public String submitDocument1(@PathVariable Long id,
             @RequestParam Map<String, String> formData,
             @RequestParam(value = "action", defaultValue = "submit") String action,
             Principal principal,
@@ -303,48 +315,54 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
-        if (!requestService.canApplicantEditDocument(request, 0)) {
+        if (!requestService.canApplicantEditDocument(request, 1) && !requestService.canApplicantEditDocument(request, 0)) {
             redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
-            return "redirect:/user/academic/request/" + id + "/document-0";
+            return "redirect:/user/academic/request/" + id + "/document-1";
+        }
+
+        if (formData.containsKey("chk_app_1") || formData.containsKey("chk_app_2")) {
+            return submitDocument2(id, formData, action, principal, redirectAttributes);
         }
 
         formData.remove("action");
         formData.remove("_csrf");
         String jsonData = objectMapper.writeValueAsString(formData);
 
-        boolean isNew0 = requestService.getDocumentsByType(id, 0).isEmpty();
+        boolean isNew1 = requestService.getDocumentsByType(id, 1).isEmpty() && requestService.getDocumentsByType(id, 0).isEmpty();
 
         if ("draft".equals(action)) {
             // บันทึกแบบร่าง
-            requestService.saveDraft(request, 0, jsonData,
-                    "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", null);
-            requestService.logDocumentEdit(request, 0,
-                    "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", user,
+            requestService.saveDraft(request, 1, jsonData,
+                    AcademicRequestService.getDocLabel(1), null);
+            requestService.logDocumentEdit(request, 1,
+                    AcademicRequestService.getDocLabel(1), user,
                     AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
-            return "redirect:/user/academic/request/" + id + "/document-0?saved=draft";
+            return "redirect:/user/academic/request/" + id + "/document-1?saved=draft";
         }
 
-        String filePath = documentService.generateDocument(request.getId(), 0, jsonData, null);
+        String filePath = documentService.generateDocument(request.getId(), 1, jsonData, null);
 
-        requestService.saveDocument(request, 0, jsonData, filePath,
-                "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", null);
-        requestService.logDocumentEdit(request, 0,
-                "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน", user,
-                isNew0 ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
+        requestService.saveDocument(request, 1, jsonData, filePath,
+                AcademicRequestService.getDocLabel(1), null);
+        requestService.logDocumentEdit(request, 1,
+                AcademicRequestService.getDocLabel(1), user,
+                isNew1 ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
 
         // Async prewarm PDF to cache
-        documentPrewarmService.prewarmAcademicDocument(id, 0, jsonData);
+        documentPrewarmService.prewarmAcademicDocument(id, 1, jsonData);
 
-        return "redirect:/user/academic/request/" + id + "?success=doc0_submitted";
+        String uri1 = (httpRequest != null && httpRequest.getRequestURI() != null) ? httpRequest.getRequestURI() : "";
+        String successKey1 = (uri1.contains("document-0") || uri1.endsWith("/0")) ? "doc0_submitted" : "doc1_submitted";
+        return "redirect:/user/academic/request/" + id + "?success=" + successKey1;
     }
 
-    // ==================== เอกสารที่ 1: แบบตรวจสอบเบื้องต้น ====================
+    // ==================== เอกสารที่ 2: แบบตรวจสอบเบื้องต้น ====================
 
     /**
-     * ฟอร์มกรอกเอกสารที่ 1: แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน
+     * ฟอร์มกรอกเอกสารที่ 2: แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน (เดิมเอกสารที่ 1)
      */
-    @GetMapping({"/request/{id}/document-1", "/request/{id}/document/1"})
-    public String document1Form(@PathVariable Long id, Principal principal, Model model) {
+    @GetMapping({"/request/{id}/document-2", "/request/{id}/document/2"})
+    public String document2Form(@PathVariable Long id, Principal principal, Model model) {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
@@ -353,9 +371,12 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
-        List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 1);
+        List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 2);
+        if (existingDocs.isEmpty()) {
+            existingDocs = requestService.getDocumentsByType(id, 1);
+        }
         String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
-        Map<String, String> doc1Data = autoFillHelper.getPreFilledAcademicDocData(request, 1, existingJson);
+        Map<String, String> doc2Data = autoFillHelper.getPreFilledAcademicDocData(request, 2, existingJson);
 
         // Slot-based attachments (1-5) for backward compatibility
         Map<Integer, List<AcademicAttachment>> attachmentsBySlot = requestService.getAttachmentsGroupedBySlot(id);
@@ -381,7 +402,8 @@ public class AcademicApplicantController {
         model.addAttribute("request", request);
         model.addAttribute("existingDocs", existingDocs);
         model.addAttribute("existingData", existingJson);
-        model.addAttribute("doc1Data", doc1Data);
+        model.addAttribute("doc2Data", doc2Data);
+        model.addAttribute("doc1Data", doc2Data); // legacy alias
         model.addAttribute("attachments", attachments);
         model.addAttribute("totalBytes", totalBytes);
         model.addAttribute("totalSizeFormatted", totalSizeFormatted);
@@ -390,19 +412,19 @@ public class AcademicApplicantController {
         model.addAttribute("slotCounts", slotCounts);
         model.addAttribute("slotBytes", slotBytes);
         model.addAttribute("attachmentCount", totalAttachmentCount);
-        addEditGate(model, request, 1);
+        addEditGate(model, request, 2);
 
         // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
-        model.addAttribute("documentType", 1);
+        model.addAttribute("documentType", 2);
         model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.ACADEMIC);
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
-                com.ecom.academic.model.SignatureModule.ACADEMIC, id, 1, user));
+                com.ecom.academic.model.SignatureModule.ACADEMIC, id, 2, user));
 
-        return "academic/applicant/document_1_form";
+        return "academic/applicant/document_2_form";
     }
 
-    @PostMapping({"/request/{id}/document-1", "/request/{id}/document/1"})
-    public String submitDocument1(@PathVariable Long id,
+    @PostMapping({"/request/{id}/document-2", "/request/{id}/document/2"})
+    public String submitDocument2(@PathVariable Long id,
             @RequestParam Map<String, String> formData,
             @RequestParam(value = "action", defaultValue = "submit") String action,
             Principal principal,
@@ -415,24 +437,24 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
-        if (!requestService.canApplicantEditDocument(request, 1)) {
+        if (!requestService.canApplicantEditDocument(request, 2) && !requestService.canApplicantEditDocument(request, 1)) {
             redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
-            return "redirect:/user/academic/request/" + id + "/document-1";
+            return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         formData.remove("action");
         formData.remove("_csrf");
         String jsonData = objectMapper.writeValueAsString(formData);
 
-        boolean isNew1 = requestService.getDocumentsByType(id, 1).isEmpty();
+        boolean isNew2 = requestService.getDocumentsByType(id, 2).isEmpty() && requestService.getDocumentsByType(id, 1).isEmpty();
 
         if ("draft".equals(action)) {
-            requestService.saveDraft(request, 1, jsonData,
-                    "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", null);
-            requestService.logDocumentEdit(request, 1,
-                    "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", user,
+            requestService.saveDraft(request, 2, jsonData,
+                    AcademicRequestService.getDocLabel(2), null);
+            requestService.logDocumentEdit(request, 2,
+                    AcademicRequestService.getDocLabel(2), user,
                     AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
-            return "redirect:/user/academic/request/" + id + "/document-1?saved=draft";
+            return "redirect:/user/academic/request/" + id + "/document-2?saved=draft";
         }
 
         if ("submit".equals(action)) {
@@ -442,38 +464,44 @@ public class AcademicApplicantController {
 
             if (activeAttachments == 0) {
                 redirectAttributes.addFlashAttribute("error", "กรุณาแนบไฟล์หรือลิงก์เอกสารประกอบอย่างน้อย 1 รายการก่อนบันทึก");
-                return "redirect:/user/academic/request/" + id + "/document-1?error=no_attachments";
+                return "redirect:/user/academic/request/" + id + "/document-2?error=no_attachments";
             }
             if (totalSize > MAX_TOTAL_BYTES) {
                 String usedMB = String.format("%.1f", totalSize / (1024.0 * 1024.0));
                 redirectAttributes.addFlashAttribute("error", "ขนาดไฟล์แนบรวมทั้งหมด (" + usedMB + " MB) เกินขีดจำกัด 75 MB ต่อคำร้อง");
-                return "redirect:/user/academic/request/" + id + "/document-1";
+                return "redirect:/user/academic/request/" + id + "/document-2";
             }
         }
 
-        String filePath = documentService.generateDocument(request.getId(), 1, jsonData, null);
+        String filePath = documentService.generateDocument(request.getId(), 2, jsonData, null);
 
-        requestService.saveDocument(request, 1, jsonData, filePath,
-                "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", null);
-        requestService.logDocumentEdit(request, 1,
-                "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน", user,
-                isNew1 ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
+        requestService.saveDocument(request, 2, jsonData, filePath,
+                AcademicRequestService.getDocLabel(2), null);
+        requestService.logDocumentEdit(request, 2,
+                AcademicRequestService.getDocLabel(2), user,
+                isNew2 ? AcademicDocumentEditLog.EditAction.CREATED : AcademicDocumentEditLog.EditAction.UPDATED);
 
         // Async prewarm PDF to cache
-        documentPrewarmService.prewarmAcademicDocument(id, 1, jsonData);
+        documentPrewarmService.prewarmAcademicDocument(id, 2, jsonData);
 
-        return "redirect:/user/academic/request/" + id + "?success=doc1_submitted";
+        String uri2 = (httpRequest != null && httpRequest.getRequestURI() != null) ? httpRequest.getRequestURI() : "";
+        String successKey2 = (uri2.contains("document-1") || uri2.endsWith("/1")) ? "doc1_submitted" : "doc2_submitted";
+        return "redirect:/user/academic/request/" + id + "?success=" + successKey2;
     }
 
-    // ==================== แนบไฟล์ประกอบการประเมินผลการสอน (เอกสารที่ 1) ====================
+    // ==================== แนบไฟล์ประกอบการประเมินผลการสอน (เอกสารที่ 2) ====================
 
     @PostMapping({
+            "/request/{id}/document-2/attachments/{slot}",
+            "/request/{id}/document/2/attachments/{slot}",
+            "/request/{id}/document-2/attachments",
+            "/request/{id}/document/2/attachments",
             "/request/{id}/document-1/attachments/{slot}",
             "/request/{id}/document/1/attachments/{slot}",
             "/request/{id}/document-1/attachments",
             "/request/{id}/document/1/attachments"
     })
-    public String uploadDocument1Attachments(
+    public String uploadDocument2Attachments(
             @PathVariable Long id,
             @PathVariable(required = false) Integer slot,
             @RequestParam("files") MultipartFile[] files,
@@ -487,13 +515,13 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
-        if (!requestService.canApplicantEditDocument(request, 1)) {
+        if (!requestService.canApplicantEditDocument(request, 2) && !requestService.canApplicantEditDocument(request, 1)) {
             redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
-            return "redirect:/user/academic/request/" + id + "/document-1";
+            return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         if (files == null || files.length == 0) {
-            return "redirect:/user/academic/request/" + id + "/document-1";
+            return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         int targetSlot = (slot != null && slot >= 1 && slot <= 5) ? slot : 1;
@@ -565,16 +593,20 @@ public class AcademicApplicantController {
         if (uploadedCount > 0) {
             redirectAttributes.addFlashAttribute("success", "อัปโหลดไฟล์แนบเรียบร้อยแล้ว " + uploadedCount + " ไฟล์");
         }
-        return "redirect:/user/academic/request/" + id + "/document-1";
+        return "redirect:/user/academic/request/" + id + "/document-2";
     }
 
     @PostMapping({
+            "/request/{id}/document-2/links/{slot}",
+            "/request/{id}/document/2/links/{slot}",
+            "/request/{id}/document-2/links",
+            "/request/{id}/document/2/links",
             "/request/{id}/document-1/links/{slot}",
             "/request/{id}/document/1/links/{slot}",
             "/request/{id}/document-1/links",
             "/request/{id}/document/1/links"
     })
-    public String attachDocument1Link(
+    public String attachDocument2Link(
             @PathVariable Long id,
             @PathVariable(required = false) Integer slot,
             @RequestParam("url") String url,
@@ -589,25 +621,25 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
-        if (!requestService.canApplicantEditDocument(request, 1)) {
+        if (!requestService.canApplicantEditDocument(request, 2) && !requestService.canApplicantEditDocument(request, 1)) {
             redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
-            return "redirect:/user/academic/request/" + id + "/document-1";
+            return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         if (url == null || url.isBlank()) {
             redirectAttributes.addFlashAttribute("error", "กรุณาระบุ URL ลิงก์ไฟล์");
-            return "redirect:/user/academic/request/" + id + "/document-1";
+            return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         String trimmedUrl = url.trim();
         if (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) {
             redirectAttributes.addFlashAttribute("error", "รูปแบบ URL ไม่ถูกต้อง (ต้องขึ้นต้นด้วย http:// หรือ https://)");
-            return "redirect:/user/academic/request/" + id + "/document-1";
+            return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         if (trimmedUrl.length() > 2048) {
             redirectAttributes.addFlashAttribute("error", "ความยาวของ URL เกินขีดจำกัด (สูงสุด 2,048 ตัวอักษร)");
-            return "redirect:/user/academic/request/" + id + "/document-1";
+            return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         int targetSlot = (slot != null && slot >= 1 && slot <= 5) ? slot : 1;
@@ -630,7 +662,25 @@ public class AcademicApplicantController {
                 (slot != null && slot >= 1 && slot <= 5)
                         ? "แนบลิงก์ไฟล์สำหรับช่องที่ " + slot + " เรียบร้อยแล้ว"
                         : "แนบลิงก์ไฟล์เรียบร้อยแล้ว");
-        return "redirect:/user/academic/request/" + id + "/document-1";
+        return "redirect:/user/academic/request/" + id + "/document-2";
+    }
+
+    /**
+     * Backward-compatibility alias for tests and legacy callers.
+     */
+    @Deprecated
+    public String uploadDocument1Attachments(Long id, Integer slot, MultipartFile[] files,
+            Principal principal, RedirectAttributes redirectAttributes) throws IOException {
+        return uploadDocument2Attachments(id, slot, files, principal, redirectAttributes);
+    }
+
+    /**
+     * Backward-compatibility alias for tests and legacy callers.
+     */
+    @Deprecated
+    public String attachDocument1Link(Long id, Integer slot, String url, String title,
+            Principal principal, RedirectAttributes redirectAttributes) {
+        return attachDocument2Link(id, slot, url, title, principal, redirectAttributes);
     }
 
     @GetMapping("/request/{id}/attachment/{attachmentId}/download")
@@ -763,7 +813,11 @@ public class AcademicApplicantController {
                 .body(new FileSystemResource(path));
     }
 
-    @PostMapping("/request/{id}/attachment/{attachmentId}/delete")
+    @PostMapping({
+            "/request/{id}/attachment/{attachmentId}/delete",
+            "/request/{id}/document-2/attachments/{attachmentId}/delete",
+            "/request/{id}/document-1/attachments/{attachmentId}/delete"
+    })
     public String deleteAttachment(
             @PathVariable Long id,
             @PathVariable Long attachmentId,
@@ -775,9 +829,9 @@ public class AcademicApplicantController {
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/academic/dashboard";
         }
-        if (!requestService.canApplicantEditDocument(request, 1)) {
+        if (!requestService.canApplicantEditDocument(request, 2) && !requestService.canApplicantEditDocument(request, 1)) {
             redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
-            return "redirect:/user/academic/request/" + id + "/document-1";
+            return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         AcademicAttachment attachment = requestService.findAttachmentById(attachmentId).orElse(null);
@@ -793,7 +847,7 @@ public class AcademicApplicantController {
             requestService.deleteAttachment(attachmentId);
             redirectAttributes.addFlashAttribute("success", isLink ? "ลบลิงก์เรียบร้อยแล้ว" : "ลบไฟล์แนบเรียบร้อยแล้ว");
         }
-        return "redirect:/user/academic/request/" + id + "/document-1";
+        return "redirect:/user/academic/request/" + id + "/document-2";
     }
 
     // ==================== ส่งคำร้องทั้งหมด ====================
@@ -815,22 +869,22 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/request/" + id + "?error=already_submitted";
         }
 
-        // ตรวจสอบความครบถ้วนสมบูรณ์ของเอกสารที่ 0 และเอกสารที่ 1
+        // ตรวจสอบความครบถ้วนสมบูรณ์ของเอกสารที่ 1 และเอกสารที่ 2 (เดิม 0 และ 1)
         List<AcademicDocument> allDocs = requestService.getDocumentsSorted(id);
-        if (!isDoc0Complete(allDocs) || !isDoc1Complete(allDocs)) {
-            redirectAttributes.addFlashAttribute("error", "กรุณากรอกเอกสารที่ 0 และแบบตรวจสอบเอกสารที่ 1 ให้ครบถ้วนสมบูรณ์ก่อนส่งคำร้อง");
+        if (!isDoc1Complete(allDocs) || !isDoc2Complete(allDocs)) {
+            redirectAttributes.addFlashAttribute("error", "กรุณากรอกเอกสารที่ 1 และแบบตรวจสอบเอกสารที่ 2 ให้ครบถ้วนสมบูรณ์ก่อนส่งคำร้อง");
             return "redirect:/user/academic/new-request";
         }
 
-        // ตรวจสอบว่ามีไฟล์แนบในเอกสารที่ 1 หรือยัง
+        // ตรวจสอบว่ามีไฟล์แนบในเอกสารที่ 2 หรือยัง
         if (requestService.countAttachments(id) == 0) {
-            redirectAttributes.addFlashAttribute("error", "กรุณาแนบไฟล์เอกสารประกอบการประเมินผลการสอนอย่างน้อย 1 ไฟล์ในแบบฟอร์มเอกสารที่ 1 ก่อนส่งคำร้อง");
+            redirectAttributes.addFlashAttribute("error", "กรุณาแนบไฟล์เอกสารประกอบการประเมินผลการสอนอย่างน้อย 1 ไฟล์ในแบบฟอร์มเอกสารที่ 2 ก่อนส่งคำร้อง");
             return "redirect:/user/academic/new-request";
         }
 
-        // ตรวจสอบว่าผู้ยื่นได้ลงนามครบทั้งเอกสาร 0 และ 1 หรือยัง
+        // ตรวจสอบว่าผู้ยื่นได้ลงนามครบทั้งเอกสาร 1 และ 2 หรือยัง
         List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
-                com.ecom.academic.model.SignatureModule.ACADEMIC, id, List.of(0, 1));
+                com.ecom.academic.model.SignatureModule.ACADEMIC, id, List.of(1, 2));
         if (!unsignedSigDocs.isEmpty()) {
             String missingStr = unsignedSigDocs.stream().map(String::valueOf).collect(Collectors.joining(", "));
             redirectAttributes.addFlashAttribute("error", "กรุณาลงนามอิเล็กทรอนิกส์ในเอกสารที่ " + missingStr + " ให้ครบถ้วนก่อนส่งคำร้อง");
@@ -928,26 +982,39 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/new-request";
         }
 
-        // เช็คว่า doc 0, doc 1 ถูกกรอกแล้วหรือยัง
-        boolean hasDoc0 = isDoc0Complete(allDocuments);
+        // เช็คว่า doc 1, doc 2 ถูกกรอกแล้วหรือยัง (เดิม 0, 1)
         boolean hasDoc1 = isDoc1Complete(allDocuments);
-        model.addAttribute("hasDoc0", hasDoc0);
+        boolean hasDoc2 = isDoc2Complete(allDocuments);
         model.addAttribute("hasDoc1", hasDoc1);
+        model.addAttribute("hasDoc2", hasDoc2);
+        model.addAttribute("hasDoc0", hasDoc1); // legacy alias
 
         // หลังส่งคำร้องแล้วปุ่มแก้ไขจะโผล่เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น
-        model.addAttribute("canEditDoc0", requestService.canApplicantEditDocument(request, 0));
-        model.addAttribute("canEditDoc1", requestService.canApplicantEditDocument(request, 1));
-        model.addAttribute("revisionNoteDoc0", requestService.getRevisionNote(id, 0));
-        model.addAttribute("revisionNoteDoc1", requestService.getRevisionNote(id, 1));
+        boolean canEditDoc1 = requestService.canApplicantEditDocument(request, 1) || requestService.canApplicantEditDocument(request, 0);
+        boolean canEditDoc2 = requestService.canApplicantEditDocument(request, 2) || requestService.canApplicantEditDocument(request, 1);
+        model.addAttribute("canEditDoc1", canEditDoc1);
+        model.addAttribute("canEditDoc2", canEditDoc2);
+        model.addAttribute("canEditDoc0", canEditDoc1); // legacy alias
+        String rev1 = requestService.getRevisionNote(id, 1);
+        if (rev1 == null) rev1 = requestService.getRevisionNote(id, 0);
+        String rev2 = requestService.getRevisionNote(id, 2);
+        if (rev2 == null) rev2 = requestService.getRevisionNote(id, 1);
+        model.addAttribute("revisionNoteDoc1", rev1);
+        model.addAttribute("revisionNoteDoc2", rev2);
+        model.addAttribute("revisionNoteDoc0", rev1); // legacy alias
 
-        // ดึงข้อมูลจาก doc_0 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
-        List<AcademicDocument> doc0List = requestService.getDocumentsByType(id, 0);
-        if (!doc0List.isEmpty()) {
+        // ดึงข้อมูลจาก doc_1 (เดิม doc_0) เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
+        List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
+        if (doc1List.isEmpty()) {
+            doc1List = requestService.getDocumentsByType(id, 0);
+        }
+        if (!doc1List.isEmpty()) {
             try {
-                String doc0Json = doc0List.get(0).getJsonData();
-                Map<String, String> doc0Data = objectMapper.readValue(doc0Json,
+                String doc1Json = doc1List.get(0).getJsonData();
+                Map<String, String> doc1Data = objectMapper.readValue(doc1Json,
                         new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
-                model.addAttribute("doc0Data", doc0Data);
+                model.addAttribute("doc1Data", doc1Data);
+                model.addAttribute("doc0Data", doc1Data); // legacy alias
             } catch (Exception e) {
                 // ignore parse errors
             }
@@ -1160,11 +1227,11 @@ public class AcademicApplicantController {
     }
 
     /**
-     * เช็คว่าเอกสารที่ 1 สมบูรณ์หรือไม่ (ผู้ยื่นติ๊ก ✓ ครบทุก 5 ข้อ)
+     * เช็คว่าเอกสารที่ 2 สมบูรณ์หรือไม่ (ผู้ยื่นติ๊ก ✓ ครบทุก 5 ข้อ) - เดิมเอกสารที่ 1
      */
-    private boolean isDoc1Complete(List<AcademicDocument> docs) {
+    private boolean isDoc2Complete(List<AcademicDocument> docs) {
         return docs.stream()
-                .filter(d -> d.getDocumentType() == 1)
+                .filter(d -> d.getDocumentType() == 2 || (d.getDocumentType() == 1 && d.getJsonData() != null && d.getJsonData().contains("chk_app_1")))
                 .findFirst()
                 .map(doc -> {
                     try {
@@ -1183,11 +1250,11 @@ public class AcademicApplicantController {
     }
 
     /**
-     * เช็คว่าเอกสารที่ 0 สมบูรณ์หรือไม่ (กรอกครบทุกช่องที่จำเป็น)
+     * เช็คว่าเอกสารที่ 1 สมบูรณ์หรือไม่ (กรอกครบทุกช่องที่จำเป็น) - เดิมเอกสารที่ 0
      */
-    private boolean isDoc0Complete(List<AcademicDocument> docs) {
+    private boolean isDoc1Complete(List<AcademicDocument> docs) {
         return docs.stream()
-                .filter(d -> d.getDocumentType() == 0)
+                .filter(d -> d.getDocumentType() == 0 || (d.getDocumentType() == 1 && d.getJsonData() != null && !d.getJsonData().contains("chk_app_1")))
                 .findFirst()
                 .map(doc -> {
                     try {
@@ -1207,6 +1274,11 @@ public class AcademicApplicantController {
                     }
                 })
                 .orElse(false);
+    }
+
+    /** Alias for backward compatibility */
+    private boolean isDoc0Complete(List<AcademicDocument> docs) {
+        return isDoc1Complete(docs);
     }
 
     private boolean hasValue(Map<String, String> data, String key) {

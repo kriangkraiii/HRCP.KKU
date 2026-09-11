@@ -185,19 +185,22 @@ public class PositionAdminController {
             } catch (Exception e) { /* ignore */ }
         }
 
-        // ดึงเอกสารที่ 8 (ผลประเมินการสอน) จากคำร้องประเมินผลการสอน (AcademicRequest) ของผู้ยื่นคนเดียวกัน
+        // ดึงเอกสารที่ 9 (ผลประเมินการสอน - เดิม 8) จากคำร้องประเมินผลการสอน (AcademicRequest) ของผู้ยื่นคนเดียวกัน
         Integer applicantId = request.getApplicant().getId();
         List<com.ecom.academic.model.AcademicRequest> evalRequests = academicRequestRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId);
         for (com.ecom.academic.model.AcademicRequest evalReq : evalRequests) {
-            List<com.ecom.academic.model.AcademicDocument> evalDoc8List = academicDocumentRepository.findByRequestIdAndDocumentType(evalReq.getId(), 8);
-            if (!evalDoc8List.isEmpty() && evalDoc8List.get(0).getJsonData() != null) {
+            List<com.ecom.academic.model.AcademicDocument> evalDoc9List = academicDocumentRepository.findByRequestIdAndDocumentType(evalReq.getId(), 9);
+            if (evalDoc9List.isEmpty()) {
+                evalDoc9List = academicDocumentRepository.findByRequestIdAndDocumentType(evalReq.getId(), 8);
+            }
+            if (!evalDoc9List.isEmpty() && evalDoc9List.get(0).getJsonData() != null) {
                 try {
                     java.util.Map<String, String> evalDoc8Data = objectMapper.readValue(
-                            evalDoc8List.get(0).getJsonData(),
+                            evalDoc9List.get(0).getJsonData(),
                             new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
                     model.addAttribute("evalDoc8Data", evalDoc8Data);
                     model.addAttribute("linkedEvalRequest", evalReq);
-                    model.addAttribute("evalDoc8GeneratedFile", evalDoc8List.get(0).getGeneratedFilePath());
+                    model.addAttribute("evalDoc8GeneratedFile", evalDoc9List.get(0).getGeneratedFilePath());
                     break;
                 } catch (Exception e) { /* ignore parse error */ }
             }

@@ -233,7 +233,7 @@ class DocumentRenderTest {
     void noPlaceholderSurvivesIntoThePdf() throws IOException {
         RequiredTools.require(service.isPdfConversionAvailable(), "LibreOffice (แปลง DOCX เป็น PDF)");
 
-        String text = textOf(service.generatePreviewDocx(6, """
+        String text = textOf(service.generatePreviewDocx(7, """
                 {"committee_1_name":"ศ.ดร.ทดสอบ หนึ่ง",
                  "committee_2_name":"รศ.ดร.ทดสอบ สอง",
                  "committee_3_name":"ผศ.ดร.ทดสอบ สาม",

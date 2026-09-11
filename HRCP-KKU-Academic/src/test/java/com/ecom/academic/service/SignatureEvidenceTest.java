@@ -248,7 +248,7 @@ class SignatureEvidenceTest {
     @Test
     @DisplayName("ผู้ยื่นคำร้องลงนามในชื่อตนเองและไม่มีการลงนามแทน")
     void applicantSlotSignsInTheirOwnName() {
-        Result r = workflow.createEnvelope(SignatureModule.ACADEMIC, REQUEST_ID, 0, "ก.พ.ว. 01",
+        Result r = workflow.createEnvelope(SignatureModule.ACADEMIC, REQUEST_ID, 1, "ก.พ.ว. 01",
                 FROZEN_JSON,
                 List.of(new SignerAssignment("applicant", admin.getId())),
                 null, admin, ActorContext.none());

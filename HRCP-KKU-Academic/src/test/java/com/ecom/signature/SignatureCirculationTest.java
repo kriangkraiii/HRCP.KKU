@@ -37,7 +37,7 @@ import com.ecom.support.AbstractFlowTest;
  *
  * <p>Every document in this system that matters is signed, and both flows stop
  * dead without it: a teaching-evaluation request cannot be submitted until the
- * applicant has signed documents 0 and 1, and a position request cannot be
+ * applicant has signed documents 1 and 2, and a position request cannot be
  * submitted until they have signed all six of theirs. Steps 4, 17 and 18 of the
  * flow document are signatures and nothing else — คณบดีลงนามคำสั่งแต่งตั้ง,
  * ผู้บังคับบัญชาลงความเห็น, คณบดีลงความเห็น.
@@ -119,7 +119,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
     class Sequencing {
 
         /**
-         * Academic document 1 has two slots in order: the applicant, then HR.
+         * Academic document 2 has two slots in order: the applicant, then HR.
          * The whole point of a chain is that the second cannot go first.
          */
         @Test
@@ -129,7 +129,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 1,
+                    request.getId(), 2,
                     List.of(new SignerAssignment("applicant", applicant.getId()),
                             new SignerAssignment("hr", hrOfficer.getId()))).request();
 
@@ -158,7 +158,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 1,
+                    request.getId(), 2,
                     List.of(new SignerAssignment("applicant", applicant.getId()),
                             new SignerAssignment("hr", hrOfficer.getId()))).request();
 
@@ -183,7 +183,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 1,
+                    request.getId(), 2,
                     List.of(new SignerAssignment("applicant", applicant.getId()),
                             new SignerAssignment("hr", hrOfficer.getId()))).request();
             signAs(applicant, stepFor(envelope, "applicant"));
@@ -205,7 +205,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 1,
+                    request.getId(), 2,
                     List.of(new SignerAssignment("applicant", applicant.getId()),
                             new SignerAssignment("hr", hrOfficer.getId()))).request();
 
@@ -230,7 +230,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             UserDtls outsider = data.otherApplicant();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 0,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
 
             Result result = signAs(outsider, stepFor(envelope, "applicant"));
@@ -245,7 +245,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 0,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
 
             Result result = workflow.sign(stepFor(envelope, "applicant").getId(), applicant,
@@ -263,7 +263,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             UserSignature theirSignature = data.signatureFor(otherPerson);
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 0,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
 
             Result result = workflow.sign(stepFor(envelope, "applicant").getId(), applicant,
@@ -278,7 +278,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
         void inboxShowsOnlyYourOwnSteps() {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
-            sendForSignature(SignatureModule.ACADEMIC, request.getId(), 1,
+            sendForSignature(SignatureModule.ACADEMIC, request.getId(), 2,
                     List.of(new SignerAssignment("applicant", applicant.getId()),
                             new SignerAssignment("hr", hrOfficer.getId())));
 
@@ -308,16 +308,16 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            assertThat(workflow.isDocumentLocked(SignatureModule.ACADEMIC, request.getId(), 0))
+            assertThat(workflow.isDocumentLocked(SignatureModule.ACADEMIC, request.getId(), 1))
                     .as("ก่อนส่งลงนาม ยังแก้ได้ตามปกติ")
                     .isFalse();
 
-            sendForSignature(SignatureModule.ACADEMIC, request.getId(), 0,
+            sendForSignature(SignatureModule.ACADEMIC, request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId())));
 
-            assertThat(workflow.isDocumentLocked(SignatureModule.ACADEMIC, request.getId(), 0))
+            assertThat(workflow.isDocumentLocked(SignatureModule.ACADEMIC, request.getId(), 1))
                     .isTrue();
-            assertThat(academicService.canApplicantEditDocument(request, 0))
+            assertThat(academicService.canApplicantEditDocument(request, 1))
                     .as("ผู้ยื่นต้องแก้เอกสารที่กำลังเวียนลงนามไม่ได้")
                     .isFalse();
         }
@@ -327,10 +327,10 @@ class SignatureCirculationTest extends AbstractFlowTest {
         void cannotOpenASecondEnvelopeForTheSameDocument() {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
-            sendForSignature(SignatureModule.ACADEMIC, request.getId(), 0,
+            sendForSignature(SignatureModule.ACADEMIC, request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId())));
 
-            Result second = sendForSignature(SignatureModule.ACADEMIC, request.getId(), 0,
+            Result second = sendForSignature(SignatureModule.ACADEMIC, request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId())));
 
             assertThat(second.ok()).isFalse();
@@ -348,7 +348,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 0,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
 
             SignatureRequest stored = envelopes.findById(envelope.getId()).orElseThrow();
@@ -375,7 +375,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 1,
+                    request.getId(), 2,
                     List.of(new SignerAssignment("applicant", applicant.getId()),
                             new SignerAssignment("hr", hrOfficer.getId()))).request();
 
@@ -396,7 +396,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 0,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
 
             academicService.updateStatus(request.getId(), RequestStatus.REJECTED, hrOfficer,
@@ -485,7 +485,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 0,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
             signAs(applicant, stepFor(envelope, "applicant"));
 
@@ -500,7 +500,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 0,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
 
             signAs(applicant, stepFor(envelope, "applicant"));
@@ -524,7 +524,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
-                    request.getId(), 0,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
 
             assertThat(envelope.getVerificationCode()).isNotBlank();
@@ -565,7 +565,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            Result created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 3,
+            Result created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 4,
                     "คำสั่งแต่งตั้งคณะอนุกรรมการ", "{\"order_no\":\"123/2569\"}",
                     List.of(new SignerAssignment("dean", dean.getId())),
                     null, hrOfficer, ActorContext.none());
@@ -580,7 +580,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            Result created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 5,
+            Result created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 6,
                     "ข้อเสนอแนะจากคณะอนุกรรมการ", "{\"suggestions_text\":\"ควรเพิ่มสื่อการสอน\"}",
                     List.of(new SignerAssignment("dean", dean.getId())),
                     null, hrOfficer, ActorContext.none());

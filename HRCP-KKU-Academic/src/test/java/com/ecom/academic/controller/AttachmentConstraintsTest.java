@@ -68,7 +68,7 @@ class AttachmentConstraintsTest {
 
         when(requestService.findById(1L)).thenReturn(Optional.of(sampleRequest));
         when(userRepository.findByEmail("applicant@kku.ac.th")).thenReturn(applicantUser);
-        when(requestService.canApplicantEditDocument(any(AcademicRequest.class), eq(1))).thenReturn(true);
+        when(requestService.canApplicantEditDocument(any(AcademicRequest.class), any(Integer.class))).thenReturn(true);
 
         applicantController = new AcademicApplicantController(
                 requestService,
@@ -101,7 +101,7 @@ class AttachmentConstraintsTest {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.uploadDocument1Attachments(
+        String result = applicantController.uploadDocument2Attachments(
                 1L,
                 1,
                 new MultipartFile[]{filePdf, fileDocx, fileDoc, fileZip},
@@ -109,7 +109,7 @@ class AttachmentConstraintsTest {
                 redirectAttributes
         );
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat(redirectAttributes.getFlashAttributes().get("success")).isNotNull();
         verify(requestService, org.mockito.Mockito.times(4)).saveAttachment(any(AcademicAttachment.class));
     }
@@ -126,7 +126,7 @@ class AttachmentConstraintsTest {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.uploadDocument1Attachments(
+        String result = applicantController.uploadDocument2Attachments(
                 1L,
                 1,
                 new MultipartFile[]{fileXlsx, filePng, fileRar},
@@ -134,7 +134,7 @@ class AttachmentConstraintsTest {
                 redirectAttributes
         );
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isNotNull();
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("ประเภทไฟล์ที่ไม่รองรับ");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
@@ -154,7 +154,7 @@ class AttachmentConstraintsTest {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.uploadDocument1Attachments(
+        String result = applicantController.uploadDocument2Attachments(
                 1L,
                 1,
                 new MultipartFile[]{largeFile},
@@ -162,7 +162,7 @@ class AttachmentConstraintsTest {
                 redirectAttributes
         );
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat(redirectAttributes.getFlashAttributes().get("error")).isNotNull();
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("75 MB");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
@@ -172,13 +172,14 @@ class AttachmentConstraintsTest {
     @DisplayName("ส่งคำร้องแล้วและแอดมินยังไม่ได้ส่งกลับ: อัปโหลดไฟล์แนบไม่ได้")
     void uploadAfterSubmit_withoutAdminSendBack_shouldBeRejected() throws Exception {
         sampleRequest.setCurrentStatus(RequestStatus.RECEIVED);
+        when(requestService.canApplicantEditDocument(any(AcademicRequest.class), eq(2))).thenReturn(false);
         when(requestService.canApplicantEditDocument(any(AcademicRequest.class), eq(1))).thenReturn(false);
 
         MockMultipartFile file = new MockMultipartFile("files", "test.pdf", "application/pdf", "pdf content".getBytes());
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.uploadDocument1Attachments(
+        String result = applicantController.uploadDocument2Attachments(
                 1L,
                 1,
                 new MultipartFile[]{file},
@@ -186,7 +187,7 @@ class AttachmentConstraintsTest {
                 redirectAttributes
         );
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("แอดมิน");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
     }
@@ -195,6 +196,7 @@ class AttachmentConstraintsTest {
     @DisplayName("ส่งคำร้องแล้วและแอดมินยังไม่ได้ส่งกลับ: ลบไฟล์แนบไม่ได้")
     void deleteAfterSubmit_withoutAdminSendBack_shouldBeRejected() {
         sampleRequest.setCurrentStatus(RequestStatus.RECEIVED);
+        when(requestService.canApplicantEditDocument(any(AcademicRequest.class), eq(2))).thenReturn(false);
         when(requestService.canApplicantEditDocument(any(AcademicRequest.class), eq(1))).thenReturn(false);
 
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
@@ -202,14 +204,14 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.deleteAttachment(1L, 5L, principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("แอดมิน");
         verify(requestService, never()).deleteAttachment(any(Long.class));
     }
 
     @Test
-    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อยังไม่มีไฟล์แนบเลย จะถูกปฏิเสธ")
-    void submitDoc1_missingSlots_shouldBeRejected() throws Exception {
+    @DisplayName("บันทึกเอกสารที่ 2 (submit) เมื่อยังไม่มีไฟล์แนบเลย จะถูกปฏิเสธ")
+    void submitDoc2_missingSlots_shouldBeRejected() throws Exception {
         when(requestService.countActiveAttachments(1L)).thenReturn(0L);
 
         Map<String, String> formData = new java.util.HashMap<>();
@@ -220,18 +222,18 @@ class AttachmentConstraintsTest {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
+        String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1?error=no_attachments");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2?error=no_attachments");
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("อย่างน้อย 1 รายการ");
     }
 
     @Test
-    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อมีไฟล์แนบและขนาดไม่เกิน 75 MB จะสำเร็จ")
-    void submitDoc1_all5SlotsPresent_shouldSucceed() throws Exception {
+    @DisplayName("บันทึกเอกสารที่ 2 (submit) เมื่อมีไฟล์แนบและขนาดไม่เกิน 75 MB จะสำเร็จ")
+    void submitDoc2_all5SlotsPresent_shouldSucceed() throws Exception {
         when(requestService.countActiveAttachments(1L)).thenReturn(1L);
         when(requestService.getTotalAttachmentSize(1L)).thenReturn(10L * 1024L * 1024L);
-        when(documentService.generateDocument(eq(1L), eq(1), anyString(), any())).thenReturn("generated/doc1.docx");
+        when(documentService.generateDocument(eq(1L), eq(2), anyString(), any())).thenReturn("generated/doc2.docx");
 
         Map<String, String> formData = new java.util.HashMap<>();
         formData.put("action", "submit");
@@ -241,15 +243,15 @@ class AttachmentConstraintsTest {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
+        String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc1_submitted");
-        verify(requestService).saveDocument(eq(sampleRequest), eq(1), anyString(), eq("generated/doc1.docx"), anyString(), any());
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc2_submitted");
+        verify(requestService).saveDocument(eq(sampleRequest), eq(2), anyString(), eq("generated/doc2.docx"), anyString(), any());
     }
 
     @Test
-    @DisplayName("บันทึกเอกสารที่ 1 (submit) เมื่อขนาดไฟล์แนบรวมเกิน 75 MB จะถูกปฏิเสธ")
-    void submitDoc1_slotOver75MB_shouldBeRejected() throws Exception {
+    @DisplayName("บันทึกเอกสารที่ 2 (submit) เมื่อขนาดไฟล์แนบรวมเกิน 75 MB จะถูกปฏิเสธ")
+    void submitDoc2_slotOver75MB_shouldBeRejected() throws Exception {
         when(requestService.countActiveAttachments(1L)).thenReturn(1L);
         when(requestService.getTotalAttachmentSize(1L)).thenReturn(76L * 1024L * 1024L); // 76 MB > 75 MB
 
@@ -261,25 +263,25 @@ class AttachmentConstraintsTest {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
+        String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("เกินขีดจำกัด 75 MB");
-        verify(requestService, never()).saveDocument(any(), eq(1), anyString(), anyString(), anyString(), any());
+        verify(requestService, never()).saveDocument(any(), eq(2), anyString(), anyString(), anyString(), any());
     }
 
     @Test
     @DisplayName("แนบลิงก์ URL ในช่องที่ 3 สำเร็จและบันทึกประเภท LINK")
-    void attachDocument1Link_validUrl_shouldSucceed() {
+    void attachDocument2Link_validUrl_shouldSucceed() {
         org.mockito.ArgumentCaptor<AcademicAttachment> captor = org.mockito.ArgumentCaptor.forClass(AcademicAttachment.class);
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.attachDocument1Link(
+        String result = applicantController.attachDocument2Link(
                 1L, 3, "https://drive.google.com/file/d/123/view", "บันทึกการสอน Google Drive",
                 principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat((String) redirectAttributes.getFlashAttributes().get("success")).contains("เรียบร้อยแล้ว");
         verify(requestService).saveAttachment(captor.capture());
 
@@ -293,25 +295,25 @@ class AttachmentConstraintsTest {
 
     @Test
     @DisplayName("แนบลิงก์ URL ที่ไม่ถูกต้อง (ไม่ใช่ http/https) จะถูกปฏิเสธ")
-    void attachDocument1Link_invalidUrl_shouldBeRejected() {
+    void attachDocument2Link_invalidUrl_shouldBeRejected() {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.attachDocument1Link(
+        String result = applicantController.attachDocument2Link(
                 1L, 1, "javascript:alert('xss')", "Invalid Link",
                 principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("รูปแบบ URL ไม่ถูกต้อง");
         verify(requestService, never()).saveAttachment(any());
     }
 
     @Test
-    @DisplayName("การยื่นเอกสารที่ 1 โดยมีลิงก์แนบ นับเป็นรายการที่ผ่านเกณฑ์")
-    void submitDoc1_withLinkAttachments_shouldSucceed() throws Exception {
+    @DisplayName("การยื่นเอกสารที่ 2 โดยมีลิงก์แนบ นับเป็นรายการที่ผ่านเกณฑ์")
+    void submitDoc2_withLinkAttachments_shouldSucceed() throws Exception {
         when(requestService.countActiveAttachments(1L)).thenReturn(2L);
         when(requestService.getTotalAttachmentSize(1L)).thenReturn(1024L * 1024L);
-        when(documentService.generateDocument(eq(1L), eq(1), anyString(), any())).thenReturn("generated/doc1.docx");
+        when(documentService.generateDocument(eq(1L), eq(2), anyString(), any())).thenReturn("generated/doc2.docx");
 
         Map<String, String> formData = new java.util.HashMap<>();
         formData.put("action", "submit");
@@ -321,10 +323,10 @@ class AttachmentConstraintsTest {
         RedirectAttributes redirectAttributes = new RedirectAttributesModelMap();
         Principal principal = () -> "applicant@kku.ac.th";
 
-        String result = applicantController.submitDocument1(1L, formData, "submit", principal, redirectAttributes);
+        String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc1_submitted");
-        verify(requestService).saveDocument(eq(sampleRequest), eq(1), anyString(), eq("generated/doc1.docx"), anyString(), any());
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc2_submitted");
+        verify(requestService).saveDocument(eq(sampleRequest), eq(2), anyString(), eq("generated/doc2.docx"), anyString(), any());
     }
 
     @Test
@@ -342,7 +344,7 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.deleteAttachment(1L, 99L, principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-1");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
         assertThat((String) redirectAttributes.getFlashAttributes().get("success")).isEqualTo("ลบลิงก์เรียบร้อยแล้ว");
         verify(requestService).deleteAttachment(99L);
     }

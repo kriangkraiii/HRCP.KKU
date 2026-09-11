@@ -213,11 +213,11 @@ class SignatureStampingTest {
     @DisplayName("เซ็นช่องเดียว: ช่องที่ยังไม่เซ็นต้องได้บรรทัดเว้นระยะ ชื่อจึงอยู่ระดับเดียวกัน")
     void theUnsignedHalfOfTheRowIsPaddedToMatch() throws IOException {
         byte[] png = samplePng();
-        byte[] docx = render(SignatureModule.ACADEMIC, 1,
+        byte[] docx = render(SignatureModule.ACADEMIC, 2,
                 List.of(new StampedSignature("applicant_name", png, 300, 100)));
 
         List<String> cells = signatureRowCells(text(unzip(docx), "word/document.xml"));
-        assertThat(cells).as("doc_1 signature row has two columns").hasSize(2);
+        assertThat(cells).as("doc_2 signature row has two columns").hasSize(2);
 
         String signed = cells.stream().filter(c -> c.contains("<w:drawing>")).findFirst().orElseThrow();
         String unsigned = cells.stream().filter(c -> !c.contains("<w:drawing>")).findFirst().orElseThrow();
@@ -239,7 +239,7 @@ class SignatureStampingTest {
     @DisplayName("เซ็นครบทั้งแถว: ไม่ต้องมีบรรทัดเว้นระยะเกินมา")
     void aFullySignedRowGetsNoPadding() throws IOException {
         byte[] png = samplePng();
-        byte[] docx = render(SignatureModule.ACADEMIC, 1, List.of(
+        byte[] docx = render(SignatureModule.ACADEMIC, 2, List.of(
                 new StampedSignature("applicant_name", png, 300, 100),
                 new StampedSignature("hr_staff_name", png, 300, 100)));
 
@@ -257,9 +257,9 @@ class SignatureStampingTest {
     @DisplayName("หลายคนลงนามในแถวเดียวกัน ช่องที่เหลือต้องได้บรรทัดเว้นระยะอันเดียว")
     void twoSignersInOneRowDoNotDoublePadTheThird() throws IOException {
         byte[] png = samplePng();
-        // doc_2 puts หัวหน้าสาขา and คณบดี in the same row. Each of them padding
+        // doc_3 puts หัวหน้าสาขา and คณบดี in the same row. Each of them padding
         // the other's neighbour independently would stack blank lines.
-        byte[] docx = render(SignatureModule.ACADEMIC, 2,
+        byte[] docx = render(SignatureModule.ACADEMIC, 3,
                 List.of(new StampedSignature("department_head", png, 300, 100)));
 
         String document = text(unzip(docx), "word/document.xml");
@@ -277,8 +277,8 @@ class SignatureStampingTest {
     @DisplayName("ชื่อที่ไม่ได้อยู่ในตาราง ไม่ต้องเว้นระยะให้ใคร")
     void namesOutsideATableAreLeftAlone() throws IOException {
         byte[] png = samplePng();
-        // doc_8's dean name is loose body text with no table around it.
-        byte[] docx = render(SignatureModule.ACADEMIC, 8,
+        // doc_9's dean name is loose body text with no table around it.
+        byte[] docx = render(SignatureModule.ACADEMIC, 9,
                 List.of(new StampedSignature("dean_name", png, 300, 100)));
 
         String document = text(unzip(docx), "word/document.xml");
@@ -316,16 +316,16 @@ class SignatureStampingTest {
     @Test
     @DisplayName("ลายเซ็นของผู้ขอต้องไปอยู่ใต้บรรทัด 'ลงชื่อ' ไม่ใช่กลางเนื้อความ")
     void anchorsOnTheSignatureBlockNotTheProse() throws IOException {
-        // doc_0 mentions {{applicant_name}} twice: once inside the sentence
+        // doc_1 mentions {{applicant_name}} twice: once inside the sentence
         // "ข้าพเจ้า ..." and once under the signature rule. Landing on the first
         // would stamp a signature into the middle of a paragraph of prose.
-        byte[] docx = render(SignatureModule.ACADEMIC, 0,
+        byte[] docx = render(SignatureModule.ACADEMIC, 1,
                 List.of(new StampedSignature("applicant_name", samplePng(), 300, 100)));
 
         String document = text(unzip(docx), "word/document.xml");
 
         // Locate the signature by its own relationship, not by the first
-        // <w:drawing> in the file: doc_0 already carries a logo image whose
+        // <w:drawing> in the file: doc_1 already carries a logo image whose
         // drawing appears earlier in the body.
         int signatureAt = document.indexOf("r:embed=\"rIdHrcpSig1\"");
         int signLabelAt = document.indexOf("ลงชื่อ");
@@ -355,12 +355,12 @@ class SignatureStampingTest {
     @Test
     @DisplayName("เอกสารที่ไม่มีจุดลงนาม ไม่ถูกนับว่าลงนามได้")
     void unsignableDocumentsAreExcluded() {
-        // Phase 1 doc 5 is only a suggestions textbox; Phase 2 has no doc 0 file.
-        assertThat(registry.isSignable(SignatureModule.ACADEMIC, 5)).isFalse();
+        // Phase 1 doc 6 is only a suggestions textbox; Phase 2 has no doc 0 file.
+        assertThat(registry.isSignable(SignatureModule.ACADEMIC, 6)).isFalse();
         assertThat(registry.isSignable(SignatureModule.POSITION, 0)).isFalse();
 
         assertThat(registry.signableDocumentTypes(SignatureModule.ACADEMIC))
-                .containsExactly(0, 1, 2, 3, 4, 6, 7, 8);
+                .containsExactly(1, 2, 3, 4, 5, 7, 8, 9);
         assertThat(registry.signableDocumentTypes(SignatureModule.POSITION))
                 .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9);
     }

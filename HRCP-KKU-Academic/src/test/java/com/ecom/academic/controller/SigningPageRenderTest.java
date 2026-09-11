@@ -135,15 +135,15 @@ class SigningPageRenderTest {
     void adminSeesTheForwardFormWhenSlotsAreStillUnfilled() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
 
-        // เอกสารที่ 1 มีสองช่อง: ผู้ยื่น และนักทรัพยากรบุคคล
+        // เอกสารที่ 2 มีสองช่อง: ผู้ยื่น และนักทรัพยากรบุคคล
         // ผู้ยื่นส่งไปโดยเลือกเฉพาะช่องของตัวเอง ช่อง hr จึงยังว่าง
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 2,
                 "แบบตรวจสอบเอกสาร", "{\"applicant_name\":\"ทดสอบ\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 null, applicant, ActorContext.none());
         org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
 
-        mockMvc.perform(get("/admin/academic/request/" + request.getId() + "/document/1")
+        mockMvc.perform(get("/admin/academic/request/" + request.getId() + "/document/2")
                         .with(user(admin.getEmail()).roles("ADMIN")))
                 .andExpect(status().isOk())
                 // ก่อนแก้: แผงถูกล็อก ไม่มีทางเติมผู้ลงนามที่เหลือได้เลย
@@ -155,7 +155,7 @@ class SigningPageRenderTest {
     @DisplayName("หน้าลงนาม render ได้ และ URL ตัวอย่างเอกสารต้องเรียกได้จริง")
     void signPageBuildsAWorkingPreviewUrl() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ ขอรับการประเมินผลการสอน", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 null, applicant, ActorContext.none());
@@ -186,7 +186,7 @@ class SigningPageRenderTest {
     @DisplayName("เลยกำหนดที่ตั้งเตือนไว้เอง: หน้าลงนามต้องเป็นป้ายเตือน ไม่ใช่ปุ่มขอขยายเวลา")
     void anAdvisoryDeadlineRendersAReminderNotAGate() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 java.time.LocalDateTime.now().minusDays(1), applicant, ActorContext.none());
@@ -211,7 +211,7 @@ class SigningPageRenderTest {
     void theApplicantCanSetTheirOwnReminderDate() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
 
-        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/0")
+        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/1")
                         .with(user(applicant.getEmail()).roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(
@@ -224,13 +224,13 @@ class SigningPageRenderTest {
     @DisplayName("แผงลงนามต้องบอกว่ากำหนดที่เลยไปเป็นเพียงการแจ้งเตือน ไม่ใช่ป้ายแดง")
     void thePanelMarksAnAdvisoryDeadlineAsAReminder() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 java.time.LocalDateTime.now().minusDays(1), applicant, ActorContext.none());
         org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
 
-        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/0")
+        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/1")
                         .with(user(applicant.getEmail()).roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(
@@ -243,7 +243,7 @@ class SigningPageRenderTest {
     @DisplayName("รอบที่ถูกปิดเพราะเลยกำหนด แอดมินต้องมีปุ่มตั้งกำหนดใหม่เพื่อเวียนต่อ")
     void anExpiredRoundOffersAWayBack() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 2,
                 "แบบตรวจสอบเอกสาร", "{\"applicant_name\":\"ทดสอบ\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId()),
                         new SignerAssignment("hr", admin.getId())),
@@ -254,7 +254,7 @@ class SigningPageRenderTest {
 
         // ก่อนแก้: ซองที่ EXPIRED ไม่ปรากฏบนหน้าไหนเลย ปุ่ม "ขอขยายเวลา"
         // ที่ผู้ลงนามกดจึงไม่มีใครกดรับได้
-        mockMvc.perform(get("/admin/academic/request/" + request.getId() + "/document/1")
+        mockMvc.perform(get("/admin/academic/request/" + request.getId() + "/document/2")
                         .with(user(admin.getEmail()).roles("ADMIN")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(
@@ -287,7 +287,7 @@ class SigningPageRenderTest {
         Long signatureId = newSignature(applicant);
 
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ ขอรับการประเมินผลการสอน", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 null, applicant, ActorContext.none());
@@ -336,7 +336,7 @@ class SigningPageRenderTest {
         signatureService.create(applicant, dataUrl, SignatureKind.DRAW, "ลายเซ็น 2 (แบบทางการ)", null, null, false);
 
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ ขอรับการประเมินผลการสอน", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 null, applicant, ActorContext.none());
@@ -360,7 +360,7 @@ class SigningPageRenderTest {
     @DisplayName("ผู้ลงนามที่ยังไม่มี Digital ID (.p12) — หน้าลงนามต้องแสดงกล่องแจ้งเตือนบังคับติดตั้งและมีคู่มือ Modal")
     void signingPageShowsP12RequirementAlertAndModalGuideWhenNoCert() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 null, applicant, ActorContext.none());
@@ -383,7 +383,7 @@ class SigningPageRenderTest {
         Long signatureId = newSignature(applicant);
 
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 null, applicant, ActorContext.none());
@@ -414,7 +414,7 @@ class SigningPageRenderTest {
         certificateRepository.save(expiredCert);
 
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 null, applicant, ActorContext.none());
@@ -449,7 +449,7 @@ class SigningPageRenderTest {
         certificateRepository.save(expiredCert);
 
         AcademicRequest request = requestService.createDraftRequest(applicant);
-        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 0,
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
                 "บันทึกข้อความ", "{\"applicant_name\":\"สมชาย\"}",
                 java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
                 null, applicant, ActorContext.none());

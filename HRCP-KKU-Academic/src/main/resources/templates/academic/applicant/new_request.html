@@ -46,27 +46,27 @@
 
             <!-- Step Progress -->
             <div class="step-progress">
-                <div class="step-progress-item" th:classappend="${hasDoc0} ? 'sp-completed' : 'sp-active'" id="stepInd1">
+                <div class="step-progress-item" th:classappend="${(hasDoc1 != null ? hasDoc1 : hasDoc0)} ? 'sp-completed' : 'sp-active'" id="stepInd1">
                     <span class="step-num">
-                        <i th:if="${hasDoc0}" class="fas fa-check"></i>
-                        <span th:unless="${hasDoc0}">1</span>
+                        <i th:if="${(hasDoc1 != null ? hasDoc1 : hasDoc0)}" class="fas fa-check"></i>
+                        <span th:unless="${(hasDoc1 != null ? hasDoc1 : hasDoc0)}">1</span>
                     </span>
                     <span>บันทึกข้อความ</span>
                 </div>
 
                 <div class="step-progress-connector"></div>
 
-                <div class="step-progress-item" th:classappend="${hasDoc1} ? 'sp-completed' : (${hasDoc0} ? 'sp-active' : '')" id="stepInd2">
+                <div class="step-progress-item" th:classappend="${(hasDoc2 != null ? hasDoc2 : hasDoc1)} ? 'sp-completed' : (${(hasDoc1 != null ? hasDoc1 : hasDoc0)} ? 'sp-active' : '')" id="stepInd2">
                     <span class="step-num">
-                        <i th:if="${hasDoc1}" class="fas fa-check"></i>
-                        <span th:unless="${hasDoc1}">2</span>
+                        <i th:if="${(hasDoc2 != null ? hasDoc2 : hasDoc1)}" class="fas fa-check"></i>
+                        <span th:unless="${(hasDoc2 != null ? hasDoc2 : hasDoc1)}">2</span>
                     </span>
                     <span>แบบตรวจสอบ</span>
                 </div>
 
                 <div class="step-progress-connector"></div>
 
-                <div class="step-progress-item" th:classappend="${hasDoc0 and hasDoc1} ? 'sp-active' : ''" id="stepInd3">
+                <div class="step-progress-item" th:classappend="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and (hasDoc2 != null ? hasDoc2 : hasDoc1)} ? 'sp-active' : ''" id="stepInd3">
                     <span class="step-num">3</span>
                     <span>ตรวจสอบและส่ง</span>
                 </div>
@@ -75,66 +75,66 @@
             <!-- Document Checklist -->
             <div class="doc-checklist">
 
-                <!-- เอกสารที่ 0 -->
-                <div class="doc-checklist-item" th:classappend="${hasDoc0} ? 'dci-done' : ''">
+                <!-- เอกสารที่ 1 -->
+                <div class="doc-checklist-item" th:classappend="${(hasDoc1 != null ? hasDoc1 : hasDoc0)} ? 'dci-done' : ''">
                     <div class="doc-checklist-icon">
-                        <i th:if="${hasDoc0 and doc0Signed}" class="fas fa-check"></i>
-                        <i th:if="${hasDoc0 and !doc0Signed}" class="fas fa-pen-nib text-warning"></i>
-                        <i th:unless="${hasDoc0}" class="fas fa-file-signature"></i>
+                        <i th:if="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and (doc1Signed != null ? doc1Signed : doc0Signed)}" class="fas fa-check"></i>
+                        <i th:if="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and !(doc1Signed != null ? doc1Signed : doc0Signed)}" class="fas fa-pen-nib text-warning"></i>
+                        <i th:unless="${(hasDoc1 != null ? hasDoc1 : hasDoc0)}" class="fas fa-file-signature"></i>
                     </div>
                     <div class="doc-checklist-body">
                         <div class="d-flex align-items-center flex-wrap gap-2">
-                            <h6 class="mb-0">เอกสารที่ 0: บันทึกข้อความ ขอรับการประเมินผลการสอน</h6>
-                            <span th:if="${hasDoc0 and doc0Signed}" class="badge bg-success-subtle text-success border border-success-subtle">
+                            <h6 class="mb-0">เอกสารที่ 1: บันทึกข้อความ ขอรับการประเมินผลการสอน</h6>
+                            <span th:if="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and (doc1Signed != null ? doc1Signed : doc0Signed)}" class="badge bg-success-subtle text-success border border-success-subtle">
                                 <i class="fas fa-check me-1"></i> ลงนามแล้ว
                             </span>
-                            <span th:if="${hasDoc0 and !doc0Signed}" class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                            <span th:if="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and !(doc1Signed != null ? doc1Signed : doc0Signed)}" class="badge bg-warning-subtle text-warning border border-warning-subtle">
                                 <i class="fas fa-pen-nib me-1"></i> รอผู้ยื่นลงนาม
                             </span>
                         </div>
                         <p class="mb-0 mt-1">บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน</p>
                     </div>
                     <div class="doc-checklist-action">
-                        <a th:href="'/user/academic/request/' + ${request.id} + '/document-0'"
-                           class="btn btn-sm" th:classappend="${hasDoc0} ? 'btn-outline-success' : 'btn-academic'">
-                            <i th:class="${hasDoc0} ? 'fas fa-edit' : 'fas fa-plus-circle'" class="me-1"></i>
-                            [[${hasDoc0} ? 'แก้ไข/ลงนาม' : 'กรอก']]
+                        <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'"
+                           class="btn btn-sm" th:classappend="${(hasDoc1 != null ? hasDoc1 : hasDoc0)} ? 'btn-outline-success' : 'btn-academic'">
+                            <i th:class="${(hasDoc1 != null ? hasDoc1 : hasDoc0)} ? 'fas fa-edit' : 'fas fa-plus-circle'" class="me-1"></i>
+                            [[${(hasDoc1 != null ? hasDoc1 : hasDoc0)} ? 'แก้ไข/ลงนาม' : 'กรอก']]
                         </a>
                     </div>
                 </div>
 
-                <!-- เอกสารที่ 1 -->
-                <div class="doc-checklist-item" th:classappend="${hasDoc1} ? 'dci-done' : ''">
+                <!-- เอกสารที่ 2 -->
+                <div class="doc-checklist-item" th:classappend="${(hasDoc2 != null ? hasDoc2 : hasDoc1)} ? 'dci-done' : ''">
                     <div class="doc-checklist-icon">
-                        <i th:if="${hasDoc1 and doc1Signed}" class="fas fa-check"></i>
-                        <i th:if="${hasDoc1 and !doc1Signed}" class="fas fa-pen-nib text-warning"></i>
-                        <i th:unless="${hasDoc1}" class="fas fa-clipboard-check"></i>
+                        <i th:if="${(hasDoc2 != null ? hasDoc2 : hasDoc1) and (doc2Signed != null ? doc2Signed : doc1Signed)}" class="fas fa-check"></i>
+                        <i th:if="${(hasDoc2 != null ? hasDoc2 : hasDoc1) and !(doc2Signed != null ? doc2Signed : doc1Signed)}" class="fas fa-pen-nib text-warning"></i>
+                        <i th:unless="${(hasDoc2 != null ? hasDoc2 : hasDoc1)}" class="fas fa-clipboard-check"></i>
                     </div>
                     <div class="doc-checklist-body">
                         <div class="d-flex align-items-center flex-wrap gap-2">
-                            <h6 class="mb-0">เอกสารที่ 1: แบบตรวจสอบเบื้องต้น</h6>
-                            <span th:if="${hasDoc1 and doc1Signed}" class="badge bg-success-subtle text-success border border-success-subtle">
+                            <h6 class="mb-0">เอกสารที่ 2: แบบตรวจสอบเบื้องต้น</h6>
+                            <span th:if="${(hasDoc2 != null ? hasDoc2 : hasDoc1) and (doc2Signed != null ? doc2Signed : doc1Signed)}" class="badge bg-success-subtle text-success border border-success-subtle">
                                 <i class="fas fa-check me-1"></i> ลงนามแล้ว
                             </span>
-                            <span th:if="${hasDoc1 and !doc1Signed}" class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                            <span th:if="${(hasDoc2 != null ? hasDoc2 : hasDoc1) and !(doc2Signed != null ? doc2Signed : doc1Signed)}" class="badge bg-warning-subtle text-warning border border-warning-subtle">
                                 <i class="fas fa-pen-nib me-1"></i> รอผู้ยื่นลงนาม
                             </span>
                         </div>
                         <p class="mb-0 mt-1">แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน</p>
                     </div>
                     <div class="doc-checklist-action">
-                        <a th:href="'/user/academic/request/' + ${request.id} + '/document-1'"
-                           class="btn btn-sm" th:classappend="${hasDoc1} ? 'btn-outline-success' : 'btn-academic'">
-                            <i th:class="${hasDoc1} ? 'fas fa-edit' : 'fas fa-plus-circle'" class="me-1"></i>
-                            [[${hasDoc1} ? 'แก้ไข/ลงนาม' : 'กรอก']]
+                        <a th:href="'/user/academic/request/' + ${request.id} + '/document-2'"
+                           class="btn btn-sm" th:classappend="${(hasDoc2 != null ? hasDoc2 : hasDoc1)} ? 'btn-outline-success' : 'btn-academic'">
+                            <i th:class="${(hasDoc2 != null ? hasDoc2 : hasDoc1)} ? 'fas fa-edit' : 'fas fa-plus-circle'" class="me-1"></i>
+                            [[${(hasDoc2 != null ? hasDoc2 : hasDoc1)} ? 'แก้ไข/ลงนาม' : 'กรอก']]
                         </a>
                     </div>
                 </div>
             </div>
 
             <!-- Submit Section -->
-            <div class="submit-section" th:classappend="${hasDoc0 and hasDoc1 and applicantSignaturesComplete} ? 'submit-section-ready' : ''">
-                <th:block th:if="${hasDoc0 and hasDoc1 and applicantSignaturesComplete}">
+            <div class="submit-section" th:classappend="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and (hasDoc2 != null ? hasDoc2 : hasDoc1) and applicantSignaturesComplete} ? 'submit-section-ready' : ''">
+                <th:block th:if="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and (hasDoc2 != null ? hasDoc2 : hasDoc1) and applicantSignaturesComplete}">
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <i class="fas fa-check-circle text-success fs-5"></i>
                         <span class="fw-600">เอกสารและลายเซ็นครบถ้วน พร้อมส่งคำร้อง</span>
@@ -148,7 +148,7 @@
                         </a>
                     </div>
                 </th:block>
-                <th:block th:if="${hasDoc0 and hasDoc1 and !applicantSignaturesComplete}">
+                <th:block th:if="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and (hasDoc2 != null ? hasDoc2 : hasDoc1) and !applicantSignaturesComplete}">
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <i class="fas fa-exclamation-triangle text-warning fs-5"></i>
                         <span class="text-dark">กรุณาลงนามอิเล็กทรอนิกส์ในเอกสาร (ที่ระบุว่ารอลงนาม) ให้ครบถ้วนก่อนส่งคำร้อง</span>
@@ -162,7 +162,7 @@
                         </a>
                     </div>
                 </th:block>
-                <th:block th:unless="${hasDoc0 and hasDoc1}">
+                <th:block th:unless="${(hasDoc1 != null ? hasDoc1 : hasDoc0) and (hasDoc2 != null ? hasDoc2 : hasDoc1)}">
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <i class="fas fa-exclamation-triangle text-warning fs-5"></i>
                         <span>กรุณากรอกเอกสารให้ครบทั้ง 2 รายการก่อนส่งคำร้อง</span>

@@ -258,12 +258,16 @@ public class TestDataFactory {
     public AcademicRequest evaluationForCourse(UserDtls applicant, String courseCode,
             String academicYear) {
         AcademicRequest r = evaluation(applicant, RequestStatus.COMPLETED);
-        academicDocument(r, 0, "{\"course_code\":\"" + courseCode
+        String doc1Json = "{\"course_code\":\"" + courseCode
                 + "\",\"course_name\":\"วิชาทดสอบ " + courseCode
-                + "\",\"academic_year\":\"" + academicYear + "\"}");
-        academicDocument(r, 8, "{\"evaluation_result\":\"ผ่าน\",\"course_code\":\"" + courseCode
+                + "\",\"academic_year\":\"" + academicYear + "\"}";
+        academicDocument(r, 1, doc1Json);
+        academicDocument(r, 0, doc1Json);
+        String doc9Json = "{\"evaluation_result\":\"ผ่าน\",\"course_code\":\"" + courseCode
                 + "\",\"course_name\":\"วิชาทดสอบ " + courseCode
-                + "\",\"result_level\":\"ชำนาญ\",\"semester\":\"1/" + academicYear + "\"}");
+                + "\",\"result_level\":\"ชำนาญ\",\"semester\":\"1/" + academicYear + "\"}";
+        academicDocument(r, 9, doc9Json);
+        academicDocument(r, 8, doc9Json);
         return r;
     }
 

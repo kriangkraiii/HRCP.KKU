@@ -3287,6 +3287,7 @@ tr:target {
   color: #fff;
   text-decoration: none;
   cursor: pointer;
+  white-space: nowrap;
   transition:
     transform var(--duration-fast) var(--ease-out-quart),
     box-shadow var(--duration-fast);

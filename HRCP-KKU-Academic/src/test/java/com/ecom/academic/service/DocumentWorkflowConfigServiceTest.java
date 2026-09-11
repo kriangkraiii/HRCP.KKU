@@ -53,10 +53,10 @@ class DocumentWorkflowConfigServiceTest {
     @Test
     @DisplayName("เมื่อไม่มีข้อมูลในฐานข้อมูล ต้องคืนค่าเริ่มต้นจาก SignatureAnchorRegistry (Fallback)")
     void fallbackToRegistryWhenNoDbConfig() {
-        when(repository.findByModuleAndDocumentType(SignatureModule.ACADEMIC, 1))
+        when(repository.findByModuleAndDocumentType(SignatureModule.ACADEMIC, 2))
                 .thenReturn(List.of());
 
-        List<SignatureSlot> slots = service.effectiveSlotsFor(SignatureModule.ACADEMIC, 1);
+        List<SignatureSlot> slots = service.effectiveSlotsFor(SignatureModule.ACADEMIC, 2);
 
         assertThat(slots).hasSize(2);
         assertThat(slots.get(0).slotKey()).isEqualTo("applicant");

@@ -32,7 +32,7 @@ import com.ecom.support.TestDataFactory;
  * them: the requirement stated before the applicant starts, the server refusing
  * the save, and the page explaining the refusal when they land back on it.
  */
-@DisplayName("เอกสารที่ 1: ต้องบอกล่วงหน้าว่าจำเป็นต้องแนบไฟล์ (GAP-37)")
+@DisplayName("เอกสารที่ 2: ต้องบอกล่วงหน้าว่าจำเป็นต้องแนบไฟล์ (GAP-37)")
 class RequiredAttachmentNoticeTest extends AbstractFlowTest {
 
     @Autowired
@@ -48,7 +48,7 @@ class RequiredAttachmentNoticeTest extends AbstractFlowTest {
         UserDtls applicant = data.applicant();
         AcademicRequest draft = draftFor(applicant);
 
-        String page = mvc.perform(get("/user/academic/request/" + draft.getId() + "/document-1")
+        String page = mvc.perform(get("/user/academic/request/" + draft.getId() + "/document-2")
                 .with(user(TestDataFactory.APPLICANT_EMAIL)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
@@ -74,12 +74,12 @@ class RequiredAttachmentNoticeTest extends AbstractFlowTest {
         UserDtls applicant = data.applicant();
         AcademicRequest draft = draftFor(applicant);
 
-        expectAccepted(mvc.perform(post("/user/academic/request/" + draft.getId() + "/document-1")
+        expectAccepted(mvc.perform(post("/user/academic/request/" + draft.getId() + "/document-2")
                 .with(user(TestDataFactory.APPLICANT_EMAIL)).with(csrf())
                 .param("action", "submit")),
-                "/user/academic/request/" + draft.getId() + "/document-1?error=no_attachments");
+                "/user/academic/request/" + draft.getId() + "/document-2?error=no_attachments");
 
-        assertThat(academicRequestService.getDocumentsByType(draft.getId(), 1))
+        assertThat(academicRequestService.getDocumentsByType(draft.getId(), 2))
                 .as("ถูกปฏิเสธแล้วต้องไม่มีเอกสารถูกบันทึกไว้")
                 .isEmpty();
     }
@@ -90,7 +90,7 @@ class RequiredAttachmentNoticeTest extends AbstractFlowTest {
         UserDtls applicant = data.applicant();
         AcademicRequest draft = draftFor(applicant);
 
-        String page = mvc.perform(get("/user/academic/request/" + draft.getId() + "/document-1")
+        String page = mvc.perform(get("/user/academic/request/" + draft.getId() + "/document-2")
                 .param("error", "no_attachments")
                 .with(user(TestDataFactory.APPLICANT_EMAIL)))
                 .andExpect(status().isOk())

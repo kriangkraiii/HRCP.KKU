@@ -123,7 +123,7 @@
                                             <th>วันที่ยื่น</th>
                                             <th>อัปเดตล่าสุด</th>
                                             <th>สถานะ</th>
-                                            <th style="width:100px">จัดการ</th>
+                                            <th style="width:125px">จัดการ</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -146,18 +146,18 @@
                                             <td>
                                                 <a th:href="'/admin/academic/request/' + ${req.id}"
                                                    class="btn-admin-manage bam-blue">
-                                                    <i class="fas fa-cog"></i> จัดการ
+                                                    <i class="fas fa-cog"></i> จัดการคำร้อง
                                                 </a>
                                             </td>
                                         </tr>
-                                        <tr th:if="${doc0DataMap.containsKey(req.id)}" class="course-detail-row">
+                                        <tr th:if="${doc1DataMap != null and doc1DataMap.containsKey(req.id)}" class="course-detail-row">
                                             <td></td>
                                             <td colspan="7">
                                                 <div class="course-detail">
                                                     <i class="fas fa-book"></i>
-                                                    <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
-                                                    <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
-                                                    <span class="cd-year">ปีการศึกษา <span th:text="${doc0DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
+                                                    <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
+                                                    <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
+                                                    <span class="cd-year">ปีการศึกษา <span th:text="${doc1DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
                                                 </div>
                                             </td>
                                         </tr>
@@ -196,7 +196,7 @@
                                             <th>วันที่ยื่น</th>
                                             <th>อัปเดตล่าสุด</th>
                                             <th>สถานะ</th>
-                                            <th style="width:100px">จัดการ</th>
+                                            <th style="width:125px">จัดการ</th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -219,18 +219,18 @@
                                             <td>
                                                 <a th:href="'/admin/academic/request/' + ${req.id}"
                                                    class="btn-admin-manage bam-blue">
-                                                    <i class="fas fa-cog"></i> จัดการ
+                                                    <i class="fas fa-cog"></i> จัดการคำร้อง
                                                 </a>
                                             </td>
                                         </tr>
-                                        <tr th:if="${doc0DataMap.containsKey(req.id)}" class="course-detail-row">
+                                        <tr th:if="${doc1DataMap != null and doc1DataMap.containsKey(req.id)}" class="course-detail-row">
                                             <td></td>
                                             <td colspan="7">
                                                 <div class="course-detail">
                                                     <i class="fas fa-book"></i>
-                                                    <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
-                                                    <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
-                                                    <span class="cd-year">ปีการศึกษา <span th:text="${doc0DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
+                                                    <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
+                                                    <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
+                                                    <span class="cd-year">ปีการศึกษา <span th:text="${doc1DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
                                                 </div>
                                             </td>
                                         </tr>
@@ -334,7 +334,7 @@
                                         <th>วันที่ยื่น</th>
                                         <th>อัปเดตล่าสุด</th>
                                         <th>สถานะ</th>
-                                        <th style="width:100px">จัดการ</th>
+                                        <th style="width:125px">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -357,7 +357,7 @@
                                         <td>
                                             <a th:href="'/admin/position/request/' + ${req.id}"
                                                class="btn-admin-manage bam-green">
-                                                <i class="fas fa-cog"></i> จัดการ
+                                                <i class="fas fa-cog"></i> จัดการคำร้อง
                                             </a>
                                         </td>
                                     </tr>

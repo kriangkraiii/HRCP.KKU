@@ -29,32 +29,33 @@
                     th:text="${request.currentStatus.thaiLabel}"></span>
             </div>
 
-            <!-- ข้อมูลรายวิชา จากเอกสารที่ 0 -->
-            <div th:if="${doc0Data != null}" class="request-card-v2-course" style="margin-bottom:var(--space-lg);">
+            <!-- ข้อมูลรายวิชา จากเอกสารที่ 1 -->
+            <div th:if="${doc1Data != null or doc0Data != null}" class="request-card-v2-course" style="margin-bottom:var(--space-lg);"
+                 th:with="courseDoc=${doc1Data != null ? doc1Data : doc0Data}">
                 <div class="row g-3">
                     <div class="col-12 mb-1">
-                        <small class="text-muted"><i class="fas fa-book me-1"></i> ข้อมูลรายวิชา (จากเอกสารที่ 0)</small>
+                        <small class="text-muted"><i class="fas fa-book me-1"></i> ข้อมูลรายวิชา (จากเอกสารที่ 1)</small>
                     </div>
                     <div class="col-md-3">
                         <small class="text-muted d-block">รหัสวิชา</small>
-                        <strong th:text="${doc0Data.getOrDefault('course_code', '-')}">-</strong>
+                        <strong th:text="${courseDoc.getOrDefault('course_code', '-')}">-</strong>
                     </div>
                     <div class="col-md-5">
                         <small class="text-muted d-block">รายวิชา</small>
-                        <strong th:text="${doc0Data.getOrDefault('course_name', '-')}">-</strong>
+                        <strong th:text="${courseDoc.getOrDefault('course_name', '-')}">-</strong>
                     </div>
                     <div class="col-md-2">
                         <small class="text-muted d-block">ปีการศึกษา</small>
-                        <strong th:text="${doc0Data.getOrDefault('academic_year', '-')}">-</strong>
+                        <strong th:text="${courseDoc.getOrDefault('academic_year', '-')}">-</strong>
                     </div>
                     <div class="col-md-2">
                         <small class="text-muted d-block">ตำแหน่งที่ขอ</small>
                         <strong>
-                            <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk1', '') == '✓'}">ผู้ช่วยศาสตราจารย์</span>
-                            <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk2', '') == '✓'}">รองศาสตราจารย์</span>
-                            <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk3', '') == '✓'}">ศาสตราจารย์</span>
+                            <span th:if="${courseDoc != null and courseDoc.getOrDefault('chk1', '') == '✓'}">ผู้ช่วยศาสตราจารย์</span>
+                            <span th:if="${courseDoc != null and courseDoc.getOrDefault('chk2', '') == '✓'}">รองศาสตราจารย์</span>
+                            <span th:if="${courseDoc != null and courseDoc.getOrDefault('chk3', '') == '✓'}">ศาสตราจารย์</span>
                             <span
-                                th:if="${doc0Data == null or (doc0Data.getOrDefault('chk1', '') != '✓' and doc0Data.getOrDefault('chk2', '') != '✓' and doc0Data.getOrDefault('chk3', '') != '✓')}">-</span>
+                                th:if="${courseDoc == null or (courseDoc.getOrDefault('chk1', '') != '✓' and courseDoc.getOrDefault('chk2', '') != '✓' and courseDoc.getOrDefault('chk3', '') != '✓')}">-</span>
                         </strong>
                     </div>
                 </div>
@@ -130,13 +131,13 @@
             </div>
 
             <!-- แอดมินส่งเอกสารกลับมาให้แก้ไข -->
-            <div th:if="${canEditDoc0 or canEditDoc1}" class="result-alert ra-revise">
+            <div th:if="${(canEditDoc1 != null and canEditDoc1) or (canEditDoc2 != null and canEditDoc2) or (canEditDoc0 != null and canEditDoc0)}" class="result-alert ra-revise">
                 <i class="fas fa-pen-to-square"></i>
                 <div>
                     <span>แอดมินส่งเอกสารกลับมาให้ท่านแก้ไข</span>
                     <div class="ra-detail">
-                        <span th:if="${canEditDoc0}">เอกสารที่ 0<span th:if="${revisionNoteDoc0}"> — เหตุผล: [[${revisionNoteDoc0}]]</span><br></span>
-                        <span th:if="${canEditDoc1}">เอกสารที่ 1<span th:if="${revisionNoteDoc1}"> — เหตุผล: [[${revisionNoteDoc1}]]</span><br></span>
+                        <span th:if="${(canEditDoc1 != null and canEditDoc1) or (canEditDoc0 != null and canEditDoc0)}">เอกสารที่ 1<span th:if="${revisionNoteDoc1 != null ? revisionNoteDoc1 : revisionNoteDoc0}"> — เหตุผล: [[${revisionNoteDoc1 != null ? revisionNoteDoc1 : revisionNoteDoc0}]]</span><br></span>
+                        <span th:if="${canEditDoc2 != null and canEditDoc2}">เอกสารที่ 2<span th:if="${revisionNoteDoc2 != null ? revisionNoteDoc2 : revisionNoteDoc1}"> — เหตุผล: [[${revisionNoteDoc2 != null ? revisionNoteDoc2 : revisionNoteDoc1}]]</span><br></span>
                         กรุณาแก้ไขข้อมูลให้เรียบร้อย แล้ว<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ในหน้าเอกสารนั้น
                     </div>
                 </div>
@@ -148,17 +149,17 @@
                     <h5><i class="fas fa-file-word me-2"></i>เอกสารของฉัน</h5>
                     <!-- ปุ่มแก้ไขโผล่เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น -->
                     <div>
-                        <a th:if="${canEditDoc0}"
-                           th:href="'/user/academic/request/' + ${request.id} + '/document-0'"
-                           class="btn btn-sm btn-warning me-1">
-                            <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 0
-                        </a>
-                        <a th:if="${canEditDoc1}"
+                        <a th:if="${(canEditDoc1 != null and canEditDoc1) or (canEditDoc0 != null and canEditDoc0)}"
                            th:href="'/user/academic/request/' + ${request.id} + '/document-1'"
-                           class="btn btn-sm btn-warning">
+                           class="btn btn-sm btn-warning me-1">
                             <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 1
                         </a>
-                        <span th:if="${!canEditDoc0 and !canEditDoc1}" class="text-muted small">
+                        <a th:if="${canEditDoc2 != null and canEditDoc2}"
+                           th:href="'/user/academic/request/' + ${request.id} + '/document-2'"
+                           class="btn btn-sm btn-warning">
+                            <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 2
+                        </a>
+                        <span th:if="${!(canEditDoc1 != null and canEditDoc1) and !(canEditDoc2 != null and canEditDoc2) and !(canEditDoc0 != null and canEditDoc0)}" class="text-muted small">
                             <i class="fas fa-lock me-1"></i> ส่งคำร้องแล้ว 
                         </span>
                     </div>

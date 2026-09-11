@@ -373,8 +373,8 @@ class SignatureWorkflowServiceTest {
     @Test
     @DisplayName("เอกสารที่ไม่มีจุดลงนาม ส่งไปลงนามไม่ได้")
     void cannotSendAnUnsignableDocument() {
-        // Phase 1 doc 5 is a bare suggestions box with no signature block.
-        Result result = workflow.createEnvelope(SignatureModule.ACADEMIC, REQUEST_ID, 5, "ข้อเสนอแนะ",
+        // Phase 1 doc 6 is a bare suggestions box with no signature block.
+        Result result = workflow.createEnvelope(SignatureModule.ACADEMIC, REQUEST_ID, 6, "ข้อเสนอแนะ",
                 FROZEN_JSON, List.of(new SignerAssignment("dean", dean.getId())), null, admin,
                 ActorContext.none());
 

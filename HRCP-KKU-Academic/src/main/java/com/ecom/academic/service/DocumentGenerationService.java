@@ -102,7 +102,7 @@ public class DocumentGenerationService {
         return outputPath;
     }
 
-    public List<String> generateDocument4Copies(Long requestId, String jsonData,
+    public List<String> generateDocument5Copies(Long requestId, String jsonData,
             List<Map<String, String>> committeeMembers) throws IOException {
         Map<String, Object> baseDataMap = parseJsonData(jsonData);
         List<String> generatedPaths = new ArrayList<>();
@@ -114,11 +114,18 @@ public class DocumentGenerationService {
             copyData.put("committee_position", member.get("position"));
 
             String copyJson = objectMapper.writeValueAsString(copyData);
-            String path = generateDocument(requestId, 4, copyJson, i + 1);
+            String path = generateDocument(requestId, 5, copyJson, i + 1);
             generatedPaths.add(path);
         }
 
         return generatedPaths;
+    }
+
+    /** @deprecated Use {@link #generateDocument5Copies(Long, String, List)} */
+    @Deprecated
+    public List<String> generateDocument4Copies(Long requestId, String jsonData,
+            List<Map<String, String>> committeeMembers) throws IOException {
+        return generateDocument5Copies(requestId, jsonData, committeeMembers);
     }
 
     public byte[] generatePreviewDocx(int documentType, String jsonData) throws IOException {
@@ -1722,24 +1729,28 @@ public class DocumentGenerationService {
 
     /** จุดเดียวสำหรับปรับ placeholder ก่อนแทนค่าลงเทมเพลต */
     private void preprocessPlaceholders(int documentType, Map<String, String> placeholders) {
-        if (documentType == 4) {
-            preprocessDoc4Placeholders(placeholders);
-        } else if (documentType == 7) {
-            preprocessDoc7Placeholders(placeholders);
+        if (documentType == 5 || documentType == 4) {
+            preprocessDoc5Placeholders(placeholders);
+        } else if (documentType == 8 || documentType == 7) {
+            preprocessDoc8Placeholders(placeholders);
         }
     }
 
     /**
-     * เอกสารที่ 7: ครั้งที่ประชุมและวันที่ต้องพิมพ์เป็นเลขไทยในเอกสาร
+     * เอกสารที่ 8: ครั้งที่ประชุมและวันที่ต้องพิมพ์เป็นเลขไทยในเอกสาร
      * แปลงตอนสร้างไฟล์เท่านั้น ข้อมูลที่บันทึกไว้ยังเป็นเลขอาราบิกเพื่อให้ฟอร์มแก้ไขได้ตามปกติ
      */
-    private void preprocessDoc7Placeholders(Map<String, String> placeholders) {
+    private void preprocessDoc8Placeholders(Map<String, String> placeholders) {
         for (String key : new String[] { "meeting_no", "meeting_date", "sign_date" }) {
             String val = placeholders.get(key);
             if (val != null && !val.isBlank()) {
                 placeholders.put(key, toThaiDigits(val));
             }
         }
+    }
+
+    private void preprocessDoc7Placeholders(Map<String, String> placeholders) {
+        preprocessDoc8Placeholders(placeholders);
     }
 
     /** แปลงตัวเลข Arabic เป็นเลขไทย เช่น "1/2569" → "๑/๒๕๖๙" */
@@ -1752,7 +1763,7 @@ public class DocumentGenerationService {
     }
 
     /**
-     * เอกสารที่ 4: Remap form field names → DOCX template placeholder names
+     * เอกสารที่ 5: Remap form field names → DOCX template placeholder names
      * 
      * form: paper_title_1, paper_title_2 → template: research_title1,
      * research_title2
@@ -1760,7 +1771,7 @@ public class DocumentGenerationService {
      * research_title_2
      * auto-generate: index1, index2... and index, index_2...
      */
-    private void preprocessDoc4Placeholders(Map<String, String> placeholders) {
+    private void preprocessDoc5Placeholders(Map<String, String> placeholders) {
         // Section 1: Academic Papers
         // Template: {{index1}}{{research_title1}} — รวมทุกบทความเป็น text เดียว
         // เพราะ Word fragment placeholder ทำให้จับคู่ไม่ได้ถ้าแยกทีละรายการ
@@ -1825,6 +1836,10 @@ public class DocumentGenerationService {
             placeholders.put("index", "1. ");
             placeholders.put("research_title", titleValue.toString());
         }
+    }
+
+    private void preprocessDoc4Placeholders(Map<String, String> placeholders) {
+        preprocessDoc5Placeholders(placeholders);
     }
 
     // =====================================================================

@@ -63,18 +63,24 @@ public class DocumentDataAutoFillHelper {
         if (request != null && request.getDocuments() != null) {
             Map<Integer, Map<String, String>> docsMap = parseAllAcademicDocs(request.getDocuments());
 
-            // Inherit from Doc 0 (Course Info & Basic Request)
-            Map<String, String> doc0 = docsMap.get(0);
-            if (doc0 != null) {
-                copyIfPresent(doc0, data, "course_code", "course_name", "academic_year",
+            // Inherit from Doc 1 (Course Info & Basic Request) - fallback to Doc 0 for legacy records
+            Map<String, String> doc1 = docsMap.get(1);
+            if (doc1 == null) {
+                doc1 = docsMap.get(0);
+            }
+            if (doc1 != null) {
+                copyIfPresent(doc1, data, "course_code", "course_name", "academic_year",
                         "title", "applicant_name", "employee_type", "current_position",
                         "chk1", "chk2", "department", "faculty");
             }
 
-            // Inherit Committee & Meeting info from Doc 2 or Doc 3 (Appointed Committee)
-            Map<String, String> doc2 = docsMap.get(2);
+            // Inherit Committee & Meeting info from Doc 4 or Doc 3 (Appointed Committee)
+            Map<String, String> doc4 = docsMap.get(4);
             Map<String, String> doc3 = docsMap.get(3);
-            Map<String, String> committeeSource = doc3 != null ? doc3 : doc2;
+            Map<String, String> committeeSource = doc4 != null ? doc4 : doc3;
+            if (committeeSource == null) {
+                committeeSource = docsMap.get(2); // legacy fallback
+            }
             if (committeeSource != null) {
                 copyIfPresent(committeeSource, data,
                         "committee_1_name", "committee_2_name", "committee_3_name",
@@ -83,10 +89,15 @@ public class DocumentDataAutoFillHelper {
                         "meeting_no", "subject_code", "subject_name");
             }
 
-            // Inherit Meeting summary info from Doc 7 (Evaluation Result) into Doc 8
-            if (docType == 8 && docsMap.containsKey(7)) {
-                Map<String, String> doc7 = docsMap.get(7);
-                copyIfPresent(doc7, data, "meeting_no", "meeting_date", "eval_result", "total_score", "eval_level");
+            // Inherit Meeting summary info from Doc 8 (Evaluation Result) into Doc 9 (or Doc 7 into Doc 8)
+            if ((docType == 9 || docType == 8) && (docsMap.containsKey(8) || docsMap.containsKey(7))) {
+                Map<String, String> evalResultDoc = docsMap.get(8);
+                if (evalResultDoc == null) {
+                    evalResultDoc = docsMap.get(7);
+                }
+                if (evalResultDoc != null) {
+                    copyIfPresent(evalResultDoc, data, "meeting_no", "meeting_date", "eval_result", "total_score", "eval_level");
+                }
             }
         }
 

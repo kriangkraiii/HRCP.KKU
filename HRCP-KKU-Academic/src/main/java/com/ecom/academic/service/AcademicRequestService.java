@@ -33,15 +33,15 @@ public class AcademicRequestService {
 
     private static final Map<Integer, String> DOC_LABELS = new LinkedHashMap<>();
     static {
-        DOC_LABELS.put(0, "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน");
-        DOC_LABELS.put(1, "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน");
-        DOC_LABELS.put(2, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ");
-        DOC_LABELS.put(3, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน");
-        DOC_LABELS.put(4, "บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ");
-        DOC_LABELS.put(5, "ข้อเสนอแนะจากคณะอนุกรรมการ");
-        DOC_LABELS.put(6, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66");
-        DOC_LABELS.put(7, "ส่วนที่ 3 แบบประเมินผลการสอน");
-        DOC_LABELS.put(8, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
+        DOC_LABELS.put(1, "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน");
+        DOC_LABELS.put(2, "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน");
+        DOC_LABELS.put(3, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ");
+        DOC_LABELS.put(4, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน");
+        DOC_LABELS.put(5, "บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ");
+        DOC_LABELS.put(6, "ข้อเสนอแนะจากคณะอนุกรรมการ");
+        DOC_LABELS.put(7, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66");
+        DOC_LABELS.put(8, "ส่วนที่ 3 แบบประเมินผลการสอน");
+        DOC_LABELS.put(9, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
     }
 
     private final AcademicRequestRepository requestRepository;
@@ -308,19 +308,32 @@ public class AcademicRequestService {
 
     /** เอกสารกำลังเวียนลงนาม หรือลงนามครบแล้ว */
     private boolean isDocumentSignatureLocked(Long requestId, int documentType) {
-        return !signatureRequestRepository.findBlockingEnvelopes(
-                com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType).isEmpty();
+        var blocking = signatureRequestRepository.findBlockingEnvelopes(
+                com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType);
+        if (blocking.isEmpty() && (documentType == 1 || documentType == 2)) {
+            blocking = signatureRequestRepository.findBlockingEnvelopes(
+                    com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType - 1);
+        }
+        return !blocking.isEmpty();
     }
 
     /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
     public boolean isRevisionRequested(Long requestId, int documentType) {
-        return documentRepository.findByRequestIdAndDocumentType(requestId, documentType).stream()
+        var docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
+        if (docs.isEmpty() && (documentType == 1 || documentType == 2)) {
+            docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType - 1);
+        }
+        return docs.stream()
                 .anyMatch(AcademicDocument::isRevisionRequested);
     }
 
     /** เหตุผลที่แอดมินส่งเอกสารฉบับนี้กลับมาให้แก้ไข (ถ้ามี) */
     public String getRevisionNote(Long requestId, int documentType) {
-        return documentRepository.findByRequestIdAndDocumentType(requestId, documentType).stream()
+        var docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
+        if (docs.isEmpty() && (documentType == 1 || documentType == 2)) {
+            docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType - 1);
+        }
+        return docs.stream()
                 .filter(AcademicDocument::isRevisionRequested)
                 .map(AcademicDocument::getRevisionNote)
                 .filter(note -> note != null && !note.isBlank())
@@ -635,22 +648,33 @@ public class AcademicRequestService {
 
         switch (documentType) {
             case 3 -> {
+                // Legacy Doc 3: คำสั่งแต่งตั้งอนุกรรมการ
                 if (request.getCurrentStatus().canMoveTo(RequestStatus.SUB_COMMITTEE_APPOINTED)
                         && namesThreeSubCommitteeMembers(jsonData)) {
                     updateStatus(requestId, RequestStatus.SUB_COMMITTEE_APPOINTED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ", sendNotify);
                 }
             }
-            case 5 -> {
-                // Doc 5 auto-status is handled separately via /send-suggestion endpoint
-            }
             case 4 -> {
+                // New Doc 4: คำสั่งแต่งตั้งอนุกรรมการ; Legacy Doc 4: บันทึกนัดวันประชุม
+                if (namesThreeSubCommitteeMembers(jsonData)
+                        && request.getCurrentStatus().canMoveTo(RequestStatus.SUB_COMMITTEE_APPOINTED)) {
+                    updateStatus(requestId, RequestStatus.SUB_COMMITTEE_APPOINTED, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ", sendNotify);
+                } else if (request.getCurrentStatus().canMoveTo(RequestStatus.MEETING_SCHEDULED)) {
+                    updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
+                            "อัพเดตอัตโนมัติ: บันทึกเอกสารขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", sendNotify);
+                }
+            }
+            case 5 -> {
+                // New Doc 5: บันทึกนัดวันประชุม
                 if (request.getCurrentStatus().canMoveTo(RequestStatus.MEETING_SCHEDULED)) {
                     updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", sendNotify);
                 }
             }
-            case 6 -> {
+            case 6, 7 -> {
+                // New Doc 7: แบบประเมินผลการสอน; Legacy Doc 6: แบบประเมินผลการสอน
                 try {
                     var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                     java.util.Map<String, Object> data = objectMapper.readValue(jsonData,
@@ -672,12 +696,8 @@ public class AcademicRequestService {
                     }
                 }
             }
-            case 8 -> {
-                // Unconditional until now, so saving this document on a request
-                // that had been refused turned that refusal into "เสร็จสิ้น" and
-                // mailed the applicant to say so (GAP-31). It also has to wait
-                // for the college board's endorsement (ข้อ 9-10) — the document
-                // is still saved either way, only the status holds back.
+            case 8, 9 -> {
+                // New Doc 9: บันทึกแจ้งผลการประเมิน; Legacy Doc 8: บันทึกแจ้งผลการประเมิน
                 if (request.getCurrentStatus().canMoveTo(RequestStatus.COMPLETED)) {
                     updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน", sendNotify);
@@ -869,29 +889,35 @@ public class AcademicRequestService {
         if (request == null) {
             return null;
         }
-        Map<String, String> doc8 = documentData(request.getId(), 8);
-        Map<String, String> doc0 = documentData(request.getId(), 0);
+        Map<String, String> doc9 = documentData(request.getId(), 9);
+        if (doc9.isEmpty()) {
+            doc9 = documentData(request.getId(), 8); // Legacy fallback
+        }
+        Map<String, String> doc1 = documentData(request.getId(), 1);
+        if (doc1.isEmpty()) {
+            doc1 = documentData(request.getId(), 0); // Legacy fallback
+        }
 
-        String semester = firstNonBlank(doc8.get("semester"), doc0.get("semester"));
-        String evaluationDate = firstNonBlank(doc8.get("evaluation_date"),
-                doc8.get("faculty_board_meeting_date"));
+        String semester = firstNonBlank(doc9.get("semester"), doc1.get("semester"));
+        String evaluationDate = firstNonBlank(doc9.get("evaluation_date"),
+                doc9.get("faculty_board_meeting_date"));
 
-        LocalDateTime expiryAt = resolveExpiry(request, doc8, evaluationDate);
+        LocalDateTime expiryAt = resolveExpiry(request, doc9, evaluationDate);
         Long daysLeft = expiryAt == null ? null
                 : java.time.temporal.ChronoUnit.DAYS.between(LocalDateTime.now(), expiryAt);
 
         return new EvaluationSummary(
                 request.getId(),
                 request.getRequestCode(),
-                firstNonBlank(doc8.get("course_code"), doc0.get("course_code")),
-                firstNonBlank(doc8.get("course_name"), doc0.get("course_name")),
-                firstNonBlank(doc0.get("academic_year"), yearOf(semester),
+                firstNonBlank(doc9.get("course_code"), doc1.get("course_code")),
+                firstNonBlank(doc9.get("course_name"), doc1.get("course_name")),
+                firstNonBlank(doc1.get("academic_year"), yearOf(semester),
                         yearOf(evaluationDate)),
                 semester,
-                firstNonBlank(doc8.get("result_level"), doc8.get("eval_result_level"),
-                        doc8.get("evaluation_result")),
+                firstNonBlank(doc9.get("result_level"), doc9.get("eval_result_level"),
+                        doc9.get("evaluation_result")),
                 evaluationDate,
-                doc8.get("expiration_date"),
+                doc9.get("expiration_date"),
                 expiryAt,
                 daysLeft);
     }

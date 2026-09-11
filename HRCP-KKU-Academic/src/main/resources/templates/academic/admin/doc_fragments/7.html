@@ -19,104 +19,209 @@
                         method="post" id="docForm"
                         th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
-                        <div th:if="${doc6Data != null}" class="alert alert-info mb-3">
-                            <i class="fas fa-info-circle"></i> ข้อมูลด้านล่างถูกดึงจากผลการประเมิน (เอกสารที่ 6) โดยอัตโนมัติ สามารถแก้ไขได้
-                        </div>
-                        <h5 class="border-bottom pb-2 mb-3">ข้อมูลการประชุม</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-4"><label class="form-label">ครั้งที่/ปี</label><input type="text"
-                                    name="meeting_no" class="form-control" placeholder="เช่น 1/2569"></div>
-                            <div class="col-md-4"><label class="form-label">วันที่ประชุม</label>
-                                <div class="input-group">
-                                    <input type="text" name="meeting_date" class="form-control thai-full-date">
-                                    <input type="date" class="thai-date-picker">
-                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
-                                </div>
+
+                        <!-- ข้อมูลผู้เสนอขอ -->
+                        <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้เสนอขอ</h5>
+                        <div class="row mb-4">
+                            <div class="col-md-3">
+                                <label class="form-label">คำนำหน้า / ตำแหน่งวิชาการ</label>
+                                <input type="text" name="title" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('title',' ') : ' '}"
+                                    placeholder="เช่น นาย / ผศ.ดร.">
                             </div>
-                        </div>
-                        <h5 class="border-bottom pb-2 mb-3">ข้อมูลวิชา</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6"><label class="form-label">รหัสวิชา</label><input type="text"
-                                    name="course_code" class="form-control" placeholder="เช่น CP 123 456"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_code', '') : ''}"></div>
-                            <div class="col-md-6"><label class="form-label">ชื่อวิชา</label><input type="text"
-                                    name="course_name" class="form-control" placeholder="เช่น Introduction to Computer Science"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('course_name', '') : ''}"></div>
-                        </div>
-                        <div class="row mb-3">
+                            <div class="col-md-5">
+                                <label class="form-label">ชื่อ-สกุล</label>
+                                <input type="text" name="applicant_name" class="form-control"
+                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
+                                    placeholder="เช่น สมชาย ใจดี">
+                            </div>
                             <div class="col-md-4">
-                                <label class="form-label">คำนำหน้า</label>
-                                <input type="text" name="applicant_title" class="form-control" list="titleList7" placeholder="คำนำหน้า"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('title', (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)) : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)}">
-                                <datalist id="titleList7">
-                                    <option value="นาย">
-                                    <option value="นาง">
-                                    <option value="นางสาว">
+                                <label class="form-label">ขอกำหนดตำแหน่ง</label>
+                                <input type="text" name="requested_position" class="form-control" list="positionList6"
+                                    th:value="${doc0Data != null ? (doc0Data.getOrDefault('chk1','') == '✓' ? 'ผู้ช่วยศาสตราจารย์' : (doc0Data.getOrDefault('chk2','') == '✓' ? 'รองศาสตราจารย์' : (doc0Data.getOrDefault('chk3','') == '✓' ? 'ศาสตราจารย์' : ' '))) : ' '}"
+                                    placeholder="เลือกหรือพิมพ์...">
+                                <datalist id="positionList6">
                                     <option value="ผู้ช่วยศาสตราจารย์">
                                     <option value="รองศาสตราจารย์">
                                     <option value="ศาสตราจารย์">
                                 </datalist>
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">ชื่อผู้ยื่น</label>
-                                <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}">
-                            </div>
                         </div>
-                        <h5 class="border-bottom pb-2 mb-3">ผลการประเมิน</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">คะแนนรวม (จาก doc6)</label>
-                                <input type="text" class="form-control" readonly
-                                    th:value="${doc6Data != null ? doc6Data.getOrDefault('scorex', '-') : '-'}">
+
+                        <p class="text-muted mb-3">กรอกคะแนน 1 ค่าต่อส่วน (0-5) ระบบจะคำนวณคะแนนถ่วงน้ำหนักและจัดวางช่วงคะแนนให้อัตโนมัติ</p>
+
+                        <!-- ส่วนที่ ๑ -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">๑. ปริมาณคุณภาพของเอกสารและหลักฐานที่ใช้ในการประเมินการสอน <span class="badge bg-secondary">ค่าน้ำหนัก ๒๐</span></h6>
                             </div>
-                        </div>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk" id="fl1" data-hidden="fl1_val"
-                                        th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญ'}"
-                                        style="pointer-events:none;" data-action="noop">
-                                    <input type="hidden" name="final_level_1" id="fl1_val"
-                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญ' ? '✓' : ' '}">
-                                    <label class="form-check-label" for="fl1">ชำนาญ</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk" id="fl2" data-hidden="fl2_val"
-                                        th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ'}"
-                                        style="pointer-events:none;" data-action="noop">
-                                    <input type="hidden" name="final_level_2" id="fl2_val"
-                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ' ? '✓' : ' '}">
-                                    <label class="form-check-label" for="fl2">ชำนาญพิเศษ</label>
-                                </div>
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk" id="fl3" data-hidden="fl3_val"
-                                        th:checked="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ'}"
-                                        style="pointer-events:none;" data-action="noop">
-                                    <input type="hidden" name="final_level_3" id="fl3_val"
-                                        th:value="${doc6Data != null && doc6Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ' ? '✓' : ' '}">
-                                    <label class="form-check-label" for="fl3">เชี่ยวชาญ</label>
+                            <div class="card-body">
+                                <div class="row align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label">คะแนน <small class="text-muted">(0-5)</small></label>
+                                        <input type="number" name="sec_score_1" class="form-control sec-score-single" data-section="1"
+                                            min="0" max="5" step="0.01" placeholder="0">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">ช่วงที่ตกอยู่</label>
+                                        <input type="text" class="form-control" id="rangeDisplay1" readonly>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                        <input type="text" name="score1x" class="form-control fw-bold" id="totalScore1" readonly>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                        <h5 class="border-bottom pb-2 mb-3">ประธานคณะกรรมการ</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">ชื่อประธานคณะกรรมการ</label>
-                                <input type="text" name="committee_president_name" class="form-control" readonly
-                                    th:value="${defaultCommittee1 != null ? defaultCommittee1 : ''}">
-                                <small class="text-muted">ดึงจากกรรมการคนที่ 1 (เอกสารที่ 2)</small>
+
+                        <!-- ส่วนที่ ๒ -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">๒. ความสามารถด้านการวางแผนการสอนและการประเมินผลการเรียนการสอน <span class="badge bg-secondary">ค่าน้ำหนัก ๓๐</span></h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label">คะแนน <small class="text-muted">(0-5)</small></label>
+                                        <input type="number" name="sec_score_2" class="form-control sec-score-single" data-section="2"
+                                            min="0" max="5" step="0.01" placeholder="0">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">ช่วงที่ตกอยู่</label>
+                                        <input type="text" class="form-control" id="rangeDisplay2" readonly>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                        <input type="text" name="score2x" class="form-control fw-bold" id="totalScore2" readonly>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                        <h5 class="border-bottom pb-2 mb-3">วันที่ลงนาม</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">วันที่ลงนาม</label>
-                                <div class="input-group">
-                                    <input type="text" name="sign_date" class="form-control thai-full-date">
-                                    <input type="date" class="thai-date-picker">
-                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+
+                        <!-- ส่วนที่ ๓ -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">๓. ความสามารถด้านการจัดการเรียนการสอน <span class="badge bg-secondary">ค่าน้ำหนัก 30</span></h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label">คะแนน <small class="text-muted">(0-5)</small></label>
+                                        <input type="number" name="sec_score_3" class="form-control sec-score-single" data-section="3"
+                                            min="0" max="5" step="0.01" placeholder="0">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">ช่วงที่ตกอยู่</label>
+                                        <input type="text" class="form-control" id="rangeDisplay3" readonly>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                        <input type="text" name="score3x" class="form-control fw-bold" id="totalScore3" readonly>
+                                    </div>
                                 </div>
+                            </div>
+                        </div>
+
+                        <!-- ส่วนที่ ๔ -->
+                        <div class="card mb-3">
+                            <div class="card-header bg-light">
+                                <h6 class="mb-0">๔. ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู <span class="badge bg-secondary">ค่าน้ำหนัก 20</span></h6>
+                            </div>
+                            <div class="card-body">
+                                <div class="row align-items-end">
+                                    <div class="col-md-4">
+                                        <label class="form-label">คะแนน <small class="text-muted">(0-5)</small></label>
+                                        <input type="number" name="sec_score_4" class="form-control sec-score-single" data-section="4"
+                                            min="0" max="5" step="0.01" placeholder="0">
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label">ช่วงที่ตกอยู่</label>
+                                        <input type="text" class="form-control" id="rangeDisplay4" readonly>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">คะแนนถ่วงน้ำหนัก</label>
+                                        <input type="text" name="score4x" class="form-control fw-bold" id="totalScore4" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- สรุปคะแนนรวม -->
+                        <div class="card bg-light mb-4">
+                            <div class="card-body">
+                                <div class="row align-items-center">
+                                    <div class="col-md-6">
+                                        <h5 class="mb-0">รวมผลการประเมิน 4 ด้าน</h5>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <label class="form-label fw-bold">คะแนนรวม (เต็ม 100)</label>
+                                        <input type="text" name="scorex" class="form-control fw-bold fs-4 text-center" id="grandTotal" readonly>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- สรุปผลการประเมิน (Checkboxes) -->
+                        <div class="card border-primary mb-4">
+                            <div class="card-header bg-primary text-white">
+                                <h5 class="mb-0">สรุปผลการประเมิน ผู้ถูกประเมินมีผลการสอนอยู่ในระดับ</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input eval-check" id="chk1" style="pointer-events:none;" data-action="noop">
+                                            <input type="hidden" name="ch1" id="ch1_val" value="">
+                                            <label class="form-check-label" for="chk1">ไม่ผ่าน <small class="text-muted">(ต่ำกว่า 56)</small></label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input eval-check" id="chk2" style="pointer-events:none;" data-action="noop">
+                                            <input type="hidden" name="ch2" id="ch2_val" value="">
+                                            <label class="form-check-label" for="chk2">ชำนาญ <small class="text-muted">(57-70)</small></label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input eval-check" id="chk3" style="pointer-events:none;" data-action="noop">
+                                            <input type="hidden" name="ch3" id="ch3_val" value="">
+                                            <label class="form-check-label" for="chk3">ชำนาญพิเศษ <small class="text-muted">(71-85)</small></label>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-3">
+                                        <div class="form-check">
+                                            <input type="checkbox" class="form-check-input eval-check" id="chk4" style="pointer-events:none;" data-action="noop">
+                                            <input type="hidden" name="ch4" id="ch4_val" value="">
+                                            <label class="form-check-label" for="chk4">เชี่ยวชาญ <small class="text-muted">(86-100)</small></label>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="mt-2">
+                                    <small class="text-muted">
+                                        <strong>เกณฑ์:</strong> ต่ำกว่า 56 = ไม่ผ่าน | 57-70 = ชำนาญ | 71-85 = ชำนาญพิเศษ | 86-100 = เชี่ยวชาญ
+                                    </small>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- กรรมการ -->
+                        <h5 class="border-bottom pb-2 mb-3">กรรมการ</h5>
+                        <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
+                            <div class="col-md-5">
+                                <label class="form-label">กรรมการคนที่ [[${i}]]</label>
+                                <div class="combo-input">
+                                    <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control" th:list="'committeeList6_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
+                                        th:value="${i == 1 ? defaultCommittee1 : (i == 2 ? defaultCommittee2 : defaultCommittee3)}">
+                                    <datalist th:id="'committeeList6_' + ${i}">
+                                        <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
+                                    </datalist>
+                                </div>
+                            </div>
+                            <div class="col-md-5">
+                                <label class="form-label">ตำแหน่ง</label>
+                                <input type="text" th:name="'committee_position' + ${i}" class="form-control" readonly
+                                    th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')}">
                             </div>
                         </div>
 
@@ -139,42 +244,6 @@
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
         <link rel="stylesheet" href="/css/doc_preview.css">
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
-        <script>
-            // แปลงเลขอาราบิกเป็นเลขไทยจะทำฝั่ง server ตอนสร้างเอกสารเท่านั้น
-            // ไม่แปลงเลขในฟอร์มเพื่อไม่ให้สับสนตอนกรอก
-            (function() {
-                var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
-                    'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
-
-                // meeting_date: ใช้รูปแบบ "7 มีนาคม 2569" (เลขอาราบิก)
-                var meetingInput = document.querySelector('input[name="meeting_date"]');
-                if (meetingInput) {
-                    var meetingPicker = meetingInput.closest('.input-group').querySelector('.thai-date-picker');
-                    if (meetingPicker) {
-                        meetingPicker.addEventListener('change', function() {
-                            if (this.value) {
-                                var d = new Date(this.value);
-                                meetingInput.value = d.getDate() + ' ' + thaiMonths[d.getMonth()] + ' ' + (d.getFullYear() + 543);
-                            }
-                        });
-                    }
-                }
-
-                // sign_date: ใช้รูปแบบ "7 เดือน มีนาคม พ.ศ. 2569" (เลขอาราบิก)
-                var signInput = document.querySelector('input[name="sign_date"]');
-                if (signInput) {
-                    var signPicker = signInput.closest('.input-group').querySelector('.thai-date-picker');
-                    if (signPicker) {
-                        signPicker.addEventListener('change', function() {
-                            if (this.value) {
-                                var d = new Date(this.value);
-                                signInput.value = d.getDate() + ' เดือน ' + thaiMonths[d.getMonth()] + ' พ.ศ. ' + (d.getFullYear() + 543);
-                            }
-                        });
-                    }
-                }
-            })();
-        </script>
     </section>
 </body>
 

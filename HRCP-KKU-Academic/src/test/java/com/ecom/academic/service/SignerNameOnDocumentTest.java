@@ -29,23 +29,23 @@ class SignerNameOnDocumentTest {
     }
 
     @Test
-    @DisplayName("เอกสารที่ 1: ไม่มีชื่อนักทรัพยากรบุคคล จะได้วงเล็บว่าง")
+    @DisplayName("เอกสารที่ 2: ไม่มีชื่อนักทรัพยากรบุคคล จะได้วงเล็บว่าง")
     void withoutHrName_leavesEmptyParentheses() throws Exception {
         String json = "{\"title\":\"นาย\",\"applicant_name\":\"สมชาย ใจดีวิชาการ\"}";
 
-        String text = textOf(service.generatePreviewDocx(1, json));
+        String text = textOf(service.generatePreviewDocx(2, json));
 
         assertThat(text).contains("(นายสมชาย ใจดีวิชาการ)");
         assertThat(text).contains("()");
     }
 
     @Test
-    @DisplayName("เอกสารที่ 1: เติมชื่อแล้วต้องขึ้นในวงเล็บใต้เส้นลงนามของนักทรัพยากรบุคคล")
+    @DisplayName("เอกสารที่ 2: เติมชื่อแล้วต้องขึ้นในวงเล็บใต้เส้นลงนามของนักทรัพยากรบุคคล")
     void withHrName_printsItUnderTheSignatureLine() throws Exception {
         String json = "{\"title\":\"นาย\",\"applicant_name\":\"สมชาย ใจดีวิชาการ\","
                 + "\"hr_staff_name\":\"นางสาวสมหญิง รักงาน\"}";
 
-        String text = textOf(service.generatePreviewDocx(1, json));
+        String text = textOf(service.generatePreviewDocx(2, json));
 
         assertThat(text).contains("(นางสาวสมหญิง รักงาน)");
         assertThat(text).doesNotContain("{{hr_staff_name}}");

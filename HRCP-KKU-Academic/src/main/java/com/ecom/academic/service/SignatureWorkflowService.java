@@ -368,6 +368,13 @@ public class SignatureWorkflowService {
      */
     public boolean isApplicantSignatureCompleted(SignatureModule module, Long requestId, int documentType) {
         List<SignatureRequest> envelopes = requestRepository.findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, documentType);
+        if (envelopes.isEmpty() && module == SignatureModule.ACADEMIC) {
+            if (documentType == 1) {
+                envelopes = requestRepository.findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, 0);
+            } else if (documentType == 2) {
+                envelopes = requestRepository.findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, 1);
+            }
+        }
         if (envelopes.isEmpty()) {
             return false;
         }

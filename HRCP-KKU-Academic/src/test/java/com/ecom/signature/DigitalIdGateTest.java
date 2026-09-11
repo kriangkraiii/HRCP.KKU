@@ -51,12 +51,12 @@ class DigitalIdGateTest extends AbstractFlowTest {
     @Autowired
     private UserDigitalCertificateService certificateService;
 
-    /** ซองลงนามเอกสารที่ 0 พร้อมช่องของผู้ยื่น รอให้เซ็น */
+    /** ซองลงนามเอกสารที่ 1 พร้อมช่องของผู้ยื่น รอให้เซ็น */
     private SignatureStep aStepWaitingForTheApplicant(UserDtls applicant) {
         AcademicRequest draft = data.evaluation(applicant, RequestStatus.DRAFT);
 
         var created = signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC,
-                draft.getId(), 0, "บันทึกข้อความ ขอรับการประเมินผลการสอน",
+                draft.getId(), 1, "บันทึกข้อความ ขอรับการประเมินผลการสอน",
                 "{\"applicant_name\":\"" + applicant.getName() + "\"}",
                 List.of(new SignatureWorkflowService.SignerAssignment("applicant", applicant.getId())),
                 null, applicant, SignatureWorkflowService.ActorContext.none());
