@@ -179,7 +179,7 @@ public class FsSyncWriter {
                 continue;
             }
 
-            ScopusPublication p = publicationRepo.findByFsUserIdAndEid(fsUserId, eid)
+            ScopusPublication p = publicationRepo.findFirstByFsUserIdAndEid(fsUserId, eid)
                     .orElseGet(ScopusPublication::new);
             p.setFsUserId(fsUserId);
             p.setEid(eid);

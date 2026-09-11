@@ -44,7 +44,7 @@ public class DblpAdapter implements PublicationSourceAdapter {
         this.props = harvestProperties.getDblp();
         this.restClient = RestClient.builder()
                 .baseUrl(props.getBaseUrl())
-                .defaultHeader(HttpHeaders.USER_AGENT, "HRCP-KKU-Academic/1.0")
+                .defaultHeader(HttpHeaders.USER_AGENT, "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36 (HRCP-KKU-Academic)")
                 .defaultHeader(HttpHeaders.ACCEPT, "application/json")
                 .requestFactory(requestFactory(props))
                 .build();
@@ -53,7 +53,7 @@ public class DblpAdapter implements PublicationSourceAdapter {
     private static ClientHttpRequestFactory requestFactory(HarvestProperties.DblpProps props) {
         SimpleClientHttpRequestFactory factory = new SimpleClientHttpRequestFactory();
         int connectSec = props.getConnectTimeoutSeconds() > 0 ? Math.min(props.getConnectTimeoutSeconds(), 3) : 3;
-        int readSec = props.getReadTimeoutSeconds() > 0 ? Math.min(props.getReadTimeoutSeconds(), 5) : 5;
+        int readSec = props.getReadTimeoutSeconds() > 0 ? Math.min(props.getReadTimeoutSeconds(), 4) : 4;
         factory.setConnectTimeout(Duration.ofSeconds(connectSec));
         factory.setReadTimeout(Duration.ofSeconds(readSec));
         return factory;
@@ -77,16 +77,35 @@ public class DblpAdapter implements PublicationSourceAdapter {
 
         long startedAt = System.currentTimeMillis();
         int requestsMade = 0;
-        int consecutiveErrors = 0;
-        final int MAX_CONSECUTIVE_ERRORS = 3;
         List<RawPublication> harvested = new ArrayList<>();
 
+        // 1. Fast Pre-flight probe: Check if DBLP is accessible or blocked by Cloudflare Bot Challenge
         try {
-            for (FsFaculty faculty : context.targetFaculty()) {
-                if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                    break;
-                }
+            requestsMade++;
+            String probe = restClient.get()
+                    .uri("/search/publ/api?q=test&format=json&h=1")
+                    .retrieve()
+                    .body(String.class);
 
+            if (probe != null) {
+                String trimmed = probe.trim();
+                if (trimmed.startsWith("<") || trimmed.contains("cloudflare") || trimmed.contains("cf-browser-verification") || trimmed.contains("not a bot")) {
+                    long durationMs = System.currentTimeMillis() - startedAt;
+                    log.info("DBLP is currently protected by Cloudflare Bot Challenge. Fast-skipping DBLP adapter in {} ms.", durationMs);
+                    return HarvestResult.ok(SOURCE_NAME, List.of(), OffsetDateTime.now(), requestsMade, durationMs,
+                            "DBLP skipped: Cloudflare Bot Challenge active on dblp.org");
+                }
+            }
+        } catch (Exception probeEx) {
+            long durationMs = System.currentTimeMillis() - startedAt;
+            log.info("DBLP pre-flight check failed ({}). Fast-skipping DBLP adapter in {} ms.", probeEx.getMessage(), durationMs);
+            return HarvestResult.ok(SOURCE_NAME, List.of(), OffsetDateTime.now(), requestsMade, durationMs,
+                    "DBLP skipped: unreachable or timed out (" + probeEx.getMessage() + ")");
+        }
+
+        try {
+            facultyLoop:
+            for (FsFaculty faculty : context.targetFaculty()) {
                 Long fsUserId = faculty.getFsUserId();
                 List<ExternalAuthorMapping> mappings = context.authorMappingsByUserId() != null
                         ? context.authorMappingsByUserId().getOrDefault(fsUserId, List.of())
@@ -128,16 +147,10 @@ public class DblpAdapter implements PublicationSourceAdapter {
 
                         if (responseBody != null && !responseBody.isBlank()) {
                             String trimmed = responseBody.trim();
-                            if (trimmed.startsWith("<") || trimmed.contains("cloudflare") || trimmed.contains("cf-browser-verification")) {
-                                log.warn("DBLP returned HTML / Cloudflare challenge page for query '{}'. Skipping.", q);
-                                consecutiveErrors++;
-                                if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                                    log.warn("DBLP is currently Cloudflare-blocked ({} consecutive challenges/timeouts). Circuit breaker activated — skipping remaining DBLP queries.", consecutiveErrors);
-                                    break;
-                                }
-                                continue;
+                            if (trimmed.startsWith("<") || trimmed.contains("cloudflare") || trimmed.contains("cf-browser-verification") || trimmed.contains("not a bot")) {
+                                log.warn("DBLP returned HTML / Cloudflare challenge page. Circuit breaker activated — fast skipping remaining DBLP queries.");
+                                break facultyLoop;
                             }
-                            consecutiveErrors = 0;
                             JsonNode root = mapper.readTree(responseBody);
                             JsonNode hits = root.path("result").path("hits").path("hit");
                             if (hits.isArray()) {
@@ -147,12 +160,8 @@ public class DblpAdapter implements PublicationSourceAdapter {
                             }
                         }
                     } catch (Exception e) {
-                        log.warn("DBLP query failed for user {} query '{}': {}", fsUserId, q, e.getMessage());
-                        consecutiveErrors++;
-                        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
-                            log.warn("DBLP connection failing ({} consecutive errors). Circuit breaker activated — skipping remaining DBLP queries.", consecutiveErrors);
-                            break;
-                        }
+                        log.warn("DBLP query failed for user {} query '{}': {}. Circuit breaker activated — fast skipping.", fsUserId, q, e.getMessage());
+                        break facultyLoop;
                     }
 
                     throttle(props.getThrottleMs());

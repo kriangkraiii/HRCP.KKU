@@ -29,8 +29,10 @@ import com.ecom.external.model.ScopusPublication;
  */
 public interface ScopusPublicationRepository extends JpaRepository<ScopusPublication, Long> {
 
-    /** Upsert target for the sync — matches the {@code (fs_user_id, eid)} unique key. */
+    /** Upsert target for the sync — matches the {@code (fs_user_id, eid)} key. */
     Optional<ScopusPublication> findByFsUserIdAndEid(Long fsUserId, String eid);
+
+    Optional<ScopusPublication> findFirstByFsUserIdAndEid(Long fsUserId, String eid);
 
     List<ScopusPublication> findByFsUserIdOrderByPublicationYearDescCitedByDesc(Long fsUserId);
 
@@ -138,11 +140,17 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
 
     // ---- Multi-source harvesting and deduplication queries (V14) ----
 
-    Optional<ScopusPublication> findByFsUserIdAndDoiIgnoreCase(Long fsUserId, String doi);
+    Optional<ScopusPublication> findFirstByFsUserIdAndDoiIgnoreCase(Long fsUserId, String doi);
 
-    Optional<ScopusPublication> findByFsUserIdAndDedupHash(Long fsUserId, String dedupHash);
+    List<ScopusPublication> findByFsUserIdAndDoiIgnoreCase(Long fsUserId, String doi);
 
-    Optional<ScopusPublication> findByFsUserIdAndExternalId(Long fsUserId, String externalId);
+    Optional<ScopusPublication> findFirstByFsUserIdAndDedupHash(Long fsUserId, String dedupHash);
+
+    List<ScopusPublication> findByFsUserIdAndDedupHash(Long fsUserId, String dedupHash);
+
+    Optional<ScopusPublication> findFirstByFsUserIdAndExternalId(Long fsUserId, String externalId);
+
+    List<ScopusPublication> findByFsUserIdAndExternalId(Long fsUserId, String externalId);
 
     long countByDataSource(String dataSource);
 

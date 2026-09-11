@@ -44,7 +44,7 @@ class PublicationDeduplicatorTest {
         existing.setFsUserId(userId);
         existing.setDoi(doi);
 
-        when(publicationRepo.findByFsUserIdAndDoiIgnoreCase(userId, doi)).thenReturn(Optional.of(existing));
+        when(publicationRepo.findFirstByFsUserIdAndDoiIgnoreCase(userId, doi)).thenReturn(Optional.of(existing));
 
         RawPublication raw = RawPublication.builder()
                 .targetFsUserId(userId)
@@ -77,8 +77,8 @@ class PublicationDeduplicatorTest {
         existing.setFsUserId(userId);
         existing.setDedupHash(hash);
 
-        when(publicationRepo.findByFsUserIdAndDoiIgnoreCase(eq(userId), anyString())).thenReturn(Optional.empty());
-        when(publicationRepo.findByFsUserIdAndDedupHash(userId, hash)).thenReturn(Optional.of(existing));
+        when(publicationRepo.findFirstByFsUserIdAndDoiIgnoreCase(eq(userId), anyString())).thenReturn(Optional.empty());
+        when(publicationRepo.findFirstByFsUserIdAndDedupHash(userId, hash)).thenReturn(Optional.of(existing));
 
         RawPublication raw = RawPublication.builder()
                 .targetFsUserId(userId)
@@ -107,8 +107,8 @@ class PublicationDeduplicatorTest {
         existing.setTitle("Deep Reinforcement Learning for Autonomous Drone Navigation System");
         existing.setPublicationYear(year);
 
-        when(publicationRepo.findByFsUserIdAndDoiIgnoreCase(eq(userId), anyString())).thenReturn(Optional.empty());
-        when(publicationRepo.findByFsUserIdAndDedupHash(eq(userId), anyString())).thenReturn(Optional.empty());
+        when(publicationRepo.findFirstByFsUserIdAndDoiIgnoreCase(eq(userId), anyString())).thenReturn(Optional.empty());
+        when(publicationRepo.findFirstByFsUserIdAndDedupHash(eq(userId), anyString())).thenReturn(Optional.empty());
         when(fuzzyMatcher.findSimilarTitleId(eq(userId), anyString(), eq(year), anyDouble())).thenReturn(Optional.of(3L));
         when(publicationRepo.findById(3L)).thenReturn(Optional.of(existing));
 

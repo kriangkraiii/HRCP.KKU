@@ -70,7 +70,7 @@ public class PublicationDeduplicator {
         // Level 1: DOI Exact match
         String normalizedDoi = PublicationHarmonizer.normalizeDoi(raw.doi());
         if (normalizedDoi != null && !normalizedDoi.isBlank()) {
-            Optional<ScopusPublication> byDoi = publicationRepo.findByFsUserIdAndDoiIgnoreCase(fsUserId, normalizedDoi);
+            Optional<ScopusPublication> byDoi = publicationRepo.findFirstByFsUserIdAndDoiIgnoreCase(fsUserId, normalizedDoi);
             if (byDoi.isPresent()) {
                 log.debug("Dedup L1 (DOI) hit for user {}: DOI {}", fsUserId, normalizedDoi);
                 return new DedupResult(byDoi, MatchLevel.LEVEL_1_DOI, dedupHash);
@@ -79,7 +79,7 @@ public class PublicationDeduplicator {
 
         // Level 2: Normalized Hash match
         if (dedupHash != null) {
-            Optional<ScopusPublication> byHash = publicationRepo.findByFsUserIdAndDedupHash(fsUserId, dedupHash);
+            Optional<ScopusPublication> byHash = publicationRepo.findFirstByFsUserIdAndDedupHash(fsUserId, dedupHash);
             if (byHash.isPresent()) {
                 log.debug("Dedup L2 (Hash) hit for user {}: Hash {}", fsUserId, dedupHash);
                 return new DedupResult(byHash, MatchLevel.LEVEL_2_HASH, dedupHash);

@@ -45,12 +45,17 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
 
     public OpenAlexAdapter(HarvestProperties harvestProperties) {
         this.props = harvestProperties.getOpenalex();
-        this.restClient = RestClient.builder()
+        var builder = RestClient.builder()
                 .baseUrl(props.getBaseUrl())
                 .defaultHeader(HttpHeaders.USER_AGENT, "HRCP-KKU-Academic/1.0 (mailto:" + props.getMailto() + ")")
                 .defaultHeader(HttpHeaders.ACCEPT, "application/json")
-                .requestFactory(requestFactory(props))
-                .build();
+                .requestFactory(requestFactory(props));
+
+        if (props.getApiKey() != null && !props.getApiKey().isBlank()) {
+            builder.defaultHeader("api-key", props.getApiKey().trim());
+        }
+
+        this.restClient = builder.build();
     }
 
     private static ClientHttpRequestFactory requestFactory(HarvestProperties.OpenAlexProps props) {
@@ -86,6 +91,7 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
             // Search directly per faculty member using clean English name
             long maxDurationMs = 420_000L; // 7 minutes soft deadline
 
+            facultyLoop:
             for (FsFaculty faculty : context.targetFaculty()) {
                 if (System.currentTimeMillis() - startedAt > maxDurationMs) {
                     log.warn("OpenAlex harvest deadline reached ({} ms); stopping early with {} works harvested",
@@ -105,10 +111,12 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
                     String queryAuthorName = queries.get(qIdx);
 
                     // Strategy: Search OpenAlex works with raw_author_name and date filter
-                    String filterParam = "raw_author_name.search:" + java.net.URLEncoder.encode(queryAuthorName, StandardCharsets.UTF_8)
-                            + ",from_publication_date:" + fromYear + "-01-01";
+                    // Note: 'from_updated_date' requires a paid plan on OpenAlex. Free tier supports 'from_publication_date'.
+                    String filterParam = "raw_author_name.search:" + java.net.URLEncoder.encode(queryAuthorName, StandardCharsets.UTF_8);
                     if (context.since() != null) {
-                        filterParam += ",from_updated_date:" + context.since().toLocalDate().toString();
+                        filterParam += ",from_publication_date:" + context.since().toLocalDate().toString();
+                    } else if (fromYear > 0) {
+                        filterParam += ",from_publication_date:" + fromYear + "-01-01";
                     }
 
                     int pageNum = 1;
@@ -142,7 +150,12 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
                                 break;
                             }
                         } catch (Exception ex) {
-                            log.warn("OpenAlex author query failed for {}: {}", queryAuthorName, ex.getMessage());
+                            String msg = ex.getMessage() != null ? ex.getMessage() : "";
+                            if (msg.contains("429") || msg.contains("Plan upgrade") || msg.contains("Rate limit") || msg.contains("Insufficient budget")) {
+                                log.warn("OpenAlex quota or plan restriction encountered (429): {}. Fast-skipping remaining OpenAlex queries for this harvest.", msg);
+                                break facultyLoop;
+                            }
+                            log.warn("OpenAlex author query failed for {}: {}", queryAuthorName, msg);
                             break;
                         }
 
