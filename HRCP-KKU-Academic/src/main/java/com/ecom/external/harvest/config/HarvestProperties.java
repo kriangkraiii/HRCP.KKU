@@ -210,7 +210,7 @@ public class HarvestProperties {
 
     public static class ThaijoProps {
         private boolean enabled = true;
-        private String oaiEndpoint = "https://tci-thaijo.org/index.php/index/oai";
+        private String oaiEndpoint = "https://sc01.tci-thaijo.org/index.php/index/oai";
         private long throttleMs = 500;
         private int connectTimeoutSeconds = 15;
         private int readTimeoutSeconds = 60;
@@ -238,8 +238,8 @@ public class HarvestProperties {
 
     public static class KkuIrProps {
         private boolean enabled = true;
-        private String oaiEndpoint = "https://repository.kku.ac.th/oai/request";
-        private String set = "col_123456789_1";
+        private String oaiEndpoint = "https://kkuir.kku.ac.th/oai/request";
+        private String set = "col_123456789_37199,col_123456789_37198,col_123456789_37197";
         private long throttleMs = 1000;
         private int connectTimeoutSeconds = 15;
         private int readTimeoutSeconds = 60;

@@ -94,8 +94,6 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
         int requestsMade = 0;
         List<RawPublication> harvested = new ArrayList<>();
 
-        Map<String, FsFaculty> facultyByName = buildFacultyNameIndex(context.targetFaculty());
-
         String baseUrl = props.getOaiEndpoint();
         String fromDate = context.yearFrom() + "-01-01";
 
@@ -109,7 +107,8 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
             }
         }
         if (targetSets.isEmpty()) {
-            targetSets.add(null);
+            targetSets.add("col_123456789_37199");
+            targetSets.add("col_123456789_37197");
         }
 
         try {
@@ -140,10 +139,16 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
                     log.debug("KKU IR OAI-PMH harvest set={} page {}: {}", currentSet, page, requestUrl);
                     requestsMade++;
 
-                    String xml = restClient.get()
-                            .uri(requestUrl)
-                            .retrieve()
-                            .body(String.class);
+                    String xml = null;
+                    try {
+                        xml = restClient.get()
+                                .uri(requestUrl)
+                                .retrieve()
+                                .body(String.class);
+                    } catch (Exception e) {
+                        log.warn("KKU IR request failed for set {}: {}", currentSet, e.getMessage());
+                        break;
+                    }
 
                     if (xml == null || xml.isBlank()) {
                         break;
@@ -160,13 +165,14 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
                     if (errorNodes.getLength() > 0) {
                         String errCode = ((Element) errorNodes.item(0)).getAttribute("code");
                         String errText = errorNodes.item(0).getTextContent();
-                        if ("noRecordsMatch".equalsIgnoreCase(errCode)) {
-                            log.debug("KKU IR OAI-PMH: no records match for set={}", currentSet);
-                            break;
-                        } else {
-                            log.warn("KKU IR OAI-PMH notice: code={}, message={}", errCode, errText);
-                            break;
+                        log.debug("KKU IR OAI-PMH notice: code={}, message={}", errCode, errText);
+
+                        // If OAI index has lag, attempt direct collection RSS fallback
+                        if (currentSet != null && currentSet.contains("_")) {
+                            String cid = currentSet.substring(currentSet.lastIndexOf('_') + 1);
+                            harvestRssFallback(cid, context.targetFaculty(), harvested);
                         }
+                        break;
                     }
 
                     NodeList recordNodes = doc.getElementsByTagNameNS("http://www.openarchives.org/OAI/2.0/", "record");
@@ -176,7 +182,7 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
 
                     for (int i = 0; i < recordNodes.getLength(); i++) {
                         Element record = (Element) recordNodes.item(i);
-                        processRecord(record, facultyByName, harvested);
+                        processRecord(record, context.targetFaculty(), harvested);
                     }
 
                     NodeList tokenNodes = doc.getElementsByTagNameNS("http://www.openarchives.org/OAI/2.0/", "resumptionToken");
@@ -214,7 +220,7 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
         }
     }
 
-    private void processRecord(Element record, Map<String, FsFaculty> facultyByName, List<RawPublication> out) {
+    private void processRecord(Element record, List<FsFaculty> targetFaculty, List<RawPublication> out) {
         Element header = (Element) record.getElementsByTagName("header").item(0);
         if (header != null && "deleted".equals(header.getAttribute("status"))) {
             return;
@@ -233,7 +239,10 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
             return;
         }
 
-        List<String> creators = getTextsByTagName(metadata, "dc:creator", "creator");
+        List<String> creators = getTextsByTagName(metadata,
+                "dc:creator", "creator",
+                "dc:contributor", "contributor",
+                "dc.contributor.advisor", "dc.contributor.author");
         List<String> dates = getTextsByTagName(metadata, "dc:date", "date");
         List<String> identifiers = getTextsByTagName(metadata, "dc:identifier", "identifier");
         List<String> descriptions = getTextsByTagName(metadata, "dc:description", "description");
@@ -267,9 +276,12 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
 
         List<FsFaculty> matchedFaculty = new ArrayList<>();
         for (String creator : creators) {
-            FsFaculty match = matchFaculty(creator, facultyByName);
-            if (match != null && !matchedFaculty.contains(match)) {
-                matchedFaculty.add(match);
+            for (FsFaculty f : targetFaculty) {
+                if (com.ecom.external.harvest.service.FacultyNameResolver.matchesAuthor(creator, f)) {
+                    if (!matchedFaculty.contains(f)) {
+                        matchedFaculty.add(f);
+                    }
+                }
             }
         }
 
@@ -299,6 +311,94 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
         }
     }
 
+    private void harvestRssFallback(String collectionId, List<FsFaculty> targetFaculty, List<RawPublication> out) {
+        try {
+            String rssUrl = "https://kkuir.kku.ac.th/jspui/feed/rss_2.0/123456789/" + collectionId;
+            log.debug("KKU IR attempting RSS fallback for collection {}: {}", collectionId, rssUrl);
+            String xml = restClient.get().uri(rssUrl).retrieve().body(String.class);
+            if (xml == null || !xml.contains("<item>")) {
+                return;
+            }
+
+            DocumentBuilder builder = xmlFactory.newDocumentBuilder();
+            Document doc = builder.parse(new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8)));
+            NodeList items = doc.getElementsByTagName("item");
+
+            for (int i = 0; i < items.getLength(); i++) {
+                Element item = (Element) items.item(i);
+                String title = getTextChild(item, "title");
+                String link = getTextChild(item, "link");
+                String dateStr = getTextChild(item, "dc:date");
+                if (dateStr == null) dateStr = getTextChild(item, "pubDate");
+                Integer pubYear = null;
+                if (dateStr != null && dateStr.length() >= 4) {
+                    try {
+                        pubYear = Integer.parseInt(dateStr.replaceAll("^.*?(\\d{4}).*$", "$1"));
+                    } catch (Exception ignored) {}
+                }
+
+                List<String> creators = getTextsByTagName(item, "dc:creator", "creator", "dc:contributor", "contributor");
+                if (link != null && link.contains("/handle/123456789/")) {
+                    enrichCreatorsFromItemPage(link, creators);
+                }
+
+                List<FsFaculty> matchedFaculty = new ArrayList<>();
+                for (String creator : creators) {
+                    for (FsFaculty f : targetFaculty) {
+                        if (com.ecom.external.harvest.service.FacultyNameResolver.matchesAuthor(creator, f)) {
+                            if (!matchedFaculty.contains(f)) {
+                                matchedFaculty.add(f);
+                            }
+                        }
+                    }
+                }
+
+                for (FsFaculty faculty : matchedFaculty) {
+                    RawPublication raw = RawPublication.builder()
+                            .targetFsUserId(faculty.getFsUserId())
+                            .externalId(link)
+                            .title(title)
+                            .publicationName("Khon Kaen University Institutional Repository")
+                            .publicationYear(pubYear)
+                            .authorNames(String.join(" | ", creators))
+                            .aggregationType("Thesis")
+                            .url(link)
+                            .dataSource(SOURCE_NAME)
+                            .rawMetadataJson("{\"url\":\"" + link + "\",\"title\":\"" + (title != null ? title.replace("\"", "\\\"") : "") + "\"}")
+                            .build();
+                    out.add(raw);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("KKU IR RSS fallback notice for collection {}: {}", collectionId, e.getMessage());
+        }
+    }
+
+    private void enrichCreatorsFromItemPage(String handleUrl, List<String> creators) {
+        try {
+            String fullUrl = handleUrl.replace("http://", "https://") + "?mode=full";
+            String html = restClient.get().uri(fullUrl).retrieve().body(String.class);
+            if (html != null && html.contains("dc.contributor.advisor")) {
+                html.lines().forEach(line -> {
+                    if (line.contains("dc.contributor.advisor") || line.contains("dc.contributor.author")) {
+                        int valIdx = line.indexOf("metadataFieldValue\">");
+                        if (valIdx >= 0) {
+                            int endIdx = line.indexOf("</td>", valIdx);
+                            if (endIdx > valIdx) {
+                                String val = line.substring(valIdx + 20, endIdx).trim();
+                                val = org.springframework.web.util.HtmlUtils.htmlUnescape(val);
+                                if (!val.isBlank() && !creators.contains(val)) {
+                                    creators.add(val);
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+        } catch (Exception ignored) {
+        }
+    }
+
     private static List<String> getTextsByTagName(Element parent, String... tagNames) {
         List<String> list = new ArrayList<>();
         for (String tag : tagNames) {
@@ -319,51 +419,6 @@ public class KkuIrAdapter implements PublicationSourceAdapter {
             return nodes.item(0).getTextContent();
         }
         return null;
-    }
-
-    private static Map<String, FsFaculty> buildFacultyNameIndex(List<FsFaculty> facultyList) {
-        Map<String, FsFaculty> map = new HashMap<>();
-        if (facultyList == null) {
-            return map;
-        }
-        for (FsFaculty f : facultyList) {
-            if (f.getDisplayName() != null) {
-                map.put(normalize(f.getDisplayName()), f);
-            }
-            if (f.getFirstName() != null && f.getLastName() != null) {
-                map.put(normalize(f.getFirstName() + " " + f.getLastName()), f);
-            }
-            if (f.getNameEn() != null && !f.getNameEn().isBlank()) {
-                map.put(normalize(f.getNameEn()), f);
-                EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(f.getNameEn());
-                if (parts.firstName() != null && parts.lastName() != null) {
-                    map.put(normalize(parts.lastName() + " " + parts.firstName()), f);
-                    map.put(normalize(parts.firstName() + " " + parts.lastName()), f);
-                }
-            }
-        }
-        return map;
-    }
-
-    private static FsFaculty matchFaculty(String authorName, Map<String, FsFaculty> index) {
-        if (authorName == null) {
-            return null;
-        }
-        String norm = normalize(authorName);
-        FsFaculty direct = index.get(norm);
-        if (direct != null) {
-            return direct;
-        }
-        for (Map.Entry<String, FsFaculty> entry : index.entrySet()) {
-            if (entry.getKey().contains(norm) || norm.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return null;
-    }
-
-    private static String normalize(String s) {
-        return s.toLowerCase().replaceAll("[^a-z0-9\\u0E00-\\u0E7F]", "");
     }
 
     private static void throttle(long ms) {

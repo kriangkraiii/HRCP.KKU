@@ -19,6 +19,7 @@ import com.ecom.external.harvest.config.HarvestProperties;
 import com.ecom.external.harvest.model.HarvestContext;
 import com.ecom.external.harvest.model.HarvestResult;
 import com.ecom.external.harvest.model.RawPublication;
+import com.ecom.external.harvest.service.FacultyNameResolver;
 import com.ecom.external.model.ExternalAuthorMapping;
 import com.ecom.external.model.FsFaculty;
 import com.ecom.external.service.EnglishNameSplitter;
@@ -76,10 +77,16 @@ public class DblpAdapter implements PublicationSourceAdapter {
 
         long startedAt = System.currentTimeMillis();
         int requestsMade = 0;
+        int consecutiveErrors = 0;
+        final int MAX_CONSECUTIVE_ERRORS = 3;
         List<RawPublication> harvested = new ArrayList<>();
 
         try {
             for (FsFaculty faculty : context.targetFaculty()) {
+                if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                    break;
+                }
+
                 Long fsUserId = faculty.getFsUserId();
                 List<ExternalAuthorMapping> mappings = context.authorMappingsByUserId() != null
                         ? context.authorMappingsByUserId().getOrDefault(fsUserId, List.of())
@@ -87,25 +94,22 @@ public class DblpAdapter implements PublicationSourceAdapter {
 
                 // Find DBLP PID if seeded
                 List<String> queries = new ArrayList<>();
+                boolean isPid = false;
                 for (ExternalAuthorMapping m : mappings) {
                     if ("DBLP".equalsIgnoreCase(m.getProvider()) && m.getExternalPid() != null && !m.getExternalPid().isBlank()) {
                         queries.add("author:" + m.getExternalPid() + ":");
+                        isPid = true;
                     }
                 }
 
-                // If no DBLP PID seeded, query by English name (clean without academic titles)
+                // If no DBLP PID seeded, query using FacultyNameResolver (English only)
                 if (queries.isEmpty() && faculty.getNameEn() != null && !faculty.getNameEn().isBlank()) {
-                    EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(faculty.getNameEn());
-                    if (parts.firstName() != null && parts.lastName() != null) {
-                        queries.add(parts.firstName() + " " + parts.lastName());
-                        // If compound surname (e.g. Runapongsa Sae-ung), also add primary surname query
-                        String[] lastTokens = parts.lastName().split("[\\s\\-]+");
-                        if (lastTokens.length > 1) {
-                            queries.add(parts.firstName() + " " + lastTokens[0]);
+                    for (String q : FacultyNameResolver.generateEnglishQueries(faculty)) {
+                        if (!q.contains(",")) {
+                            queries.add(q);
                         }
-                    } else if (parts.firstName() != null) {
-                        queries.add(parts.firstName());
-                    } else {
+                    }
+                    if (queries.isEmpty()) {
                         queries.add(faculty.getNameEn().trim());
                     }
                 }
@@ -123,16 +127,32 @@ public class DblpAdapter implements PublicationSourceAdapter {
                                 .body(String.class);
 
                         if (responseBody != null && !responseBody.isBlank()) {
+                            String trimmed = responseBody.trim();
+                            if (trimmed.startsWith("<") || trimmed.contains("cloudflare") || trimmed.contains("cf-browser-verification")) {
+                                log.warn("DBLP returned HTML / Cloudflare challenge page for query '{}'. Skipping.", q);
+                                consecutiveErrors++;
+                                if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                                    log.warn("DBLP is currently Cloudflare-blocked ({} consecutive challenges/timeouts). Circuit breaker activated — skipping remaining DBLP queries.", consecutiveErrors);
+                                    break;
+                                }
+                                continue;
+                            }
+                            consecutiveErrors = 0;
                             JsonNode root = mapper.readTree(responseBody);
                             JsonNode hits = root.path("result").path("hits").path("hit");
                             if (hits.isArray()) {
                                 for (JsonNode hit : hits) {
-                                    processHit(hit, faculty, context.yearFrom(), harvested);
+                                    processHit(hit, faculty, context.yearFrom(), isPid, harvested);
                                 }
                             }
                         }
                     } catch (Exception e) {
                         log.warn("DBLP query failed for user {} query '{}': {}", fsUserId, q, e.getMessage());
+                        consecutiveErrors++;
+                        if (consecutiveErrors >= MAX_CONSECUTIVE_ERRORS) {
+                            log.warn("DBLP connection failing ({} consecutive errors). Circuit breaker activated — skipping remaining DBLP queries.", consecutiveErrors);
+                            break;
+                        }
                     }
 
                     throttle(props.getThrottleMs());
@@ -152,7 +172,7 @@ public class DblpAdapter implements PublicationSourceAdapter {
         }
     }
 
-    private void processHit(JsonNode hit, FsFaculty faculty, int minYear, List<RawPublication> out) {
+    private void processHit(JsonNode hit, FsFaculty faculty, int minYear, boolean isPidQuery, List<RawPublication> out) {
         JsonNode info = hit.path("info");
         if (info.isMissingNode() || info.isNull()) {
             return;
@@ -202,6 +222,19 @@ public class DblpAdapter implements PublicationSourceAdapter {
         }
 
         String combinedAuthors = String.join(" | ", authorNames);
+
+        if (!isPidQuery) {
+            boolean matched = false;
+            for (String aName : authorNames) {
+                if (FacultyNameResolver.matchesAuthor(aName, faculty)) {
+                    matched = true;
+                    break;
+                }
+            }
+            if (!matched) {
+                return;
+            }
+        }
 
         RawPublication raw = RawPublication.builder()
                 .targetFsUserId(faculty.getFsUserId())

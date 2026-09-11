@@ -80,13 +80,6 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
         int requestsMade = 0;
         List<RawPublication> harvested = new ArrayList<>();
 
-        // Build name lookup map for faculty matching
-        Map<String, FsFaculty> facultyByName = buildFacultyNameIndex(context.targetFaculty());
-
-        String cursor = "*";
-        int page = 1;
-        int maxPages = 50; // Safety guard
-
         try {
             int fromYear = context.yearFrom();
 
@@ -100,47 +93,62 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
                     break;
                 }
 
-                if (faculty.getNameEn() == null || faculty.getNameEn().isBlank()) {
+                List<String> queries = com.ecom.external.harvest.service.FacultyNameResolver.generateEnglishQueries(faculty);
+                if (queries.isEmpty()) {
                     continue;
                 }
 
-                EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(faculty.getNameEn());
-                if (parts.firstName() == null || parts.lastName() == null) {
-                    continue;
-                }
+                int queryLimit = Math.min(2, queries.size());
+                int pageSize = props.getPageSize() > 0 ? props.getPageSize() : 100;
 
-                String cleanAuthorName = parts.firstName() + " " + parts.lastName();
-                String filterParam = "raw_author_name.search:" + java.net.URLEncoder.encode(cleanAuthorName, StandardCharsets.UTF_8)
-                        + ",from_publication_date:" + fromYear + "-01-01";
-                if (context.since() != null) {
-                    filterParam += ",from_updated_date:" + context.since().toLocalDate().toString();
-                }
+                for (int qIdx = 0; qIdx < queryLimit; qIdx++) {
+                    String queryAuthorName = queries.get(qIdx);
 
-                String url = "/works?filter=" + filterParam + "&per_page=" + props.getPageSize();
-
-                log.debug("OpenAlex author harvest request for user {} ({}: {})", faculty.getFsUserId(), faculty.getNameEn(), url);
-                requestsMade++;
-
-                try {
-                    String responseBody = restClient.get()
-                            .uri(url)
-                            .retrieve()
-                            .body(String.class);
-
-                    if (responseBody != null && !responseBody.isBlank()) {
-                        JsonNode root = mapper.readTree(responseBody);
-                        JsonNode results = root.path("results");
-                        if (results.isArray() && !results.isEmpty()) {
-                            for (JsonNode workNode : results) {
-                                processWork(workNode, facultyByName, harvested);
-                            }
-                        }
+                    // Strategy: Search OpenAlex works with raw_author_name and date filter
+                    String filterParam = "raw_author_name.search:" + java.net.URLEncoder.encode(queryAuthorName, StandardCharsets.UTF_8)
+                            + ",from_publication_date:" + fromYear + "-01-01";
+                    if (context.since() != null) {
+                        filterParam += ",from_updated_date:" + context.since().toLocalDate().toString();
                     }
-                } catch (Exception ex) {
-                    log.warn("OpenAlex author query failed for {}: {}", faculty.getNameEn(), ex.getMessage());
-                }
 
-                throttle(props.getThrottleMs());
+                    int pageNum = 1;
+                    int maxPagesForUser = 3; // Up to 300 works per author
+
+                    while (pageNum <= maxPagesForUser) {
+                        String url = "/works?filter=" + filterParam + "&per_page=" + pageSize + "&page=" + pageNum;
+                        log.debug("OpenAlex author harvest user {} ('{}', page {}): {}", faculty.getFsUserId(), queryAuthorName, pageNum, url);
+                        requestsMade++;
+
+                        try {
+                            String responseBody = restClient.get()
+                                    .uri(url)
+                                    .retrieve()
+                                    .body(String.class);
+
+                            if (responseBody != null && !responseBody.isBlank()) {
+                                JsonNode root = mapper.readTree(responseBody);
+                                JsonNode results = root.path("results");
+                                if (results.isArray() && !results.isEmpty()) {
+                                    for (JsonNode workNode : results) {
+                                        processWork(workNode, context.targetFaculty(), harvested);
+                                    }
+                                }
+                                int count = root.path("meta").path("count").asInt(0);
+                                if (pageNum * pageSize >= count || results.size() < pageSize) {
+                                    break; // Reached end of results for this query
+                                }
+                                pageNum++;
+                            } else {
+                                break;
+                            }
+                        } catch (Exception ex) {
+                            log.warn("OpenAlex author query failed for {}: {}", queryAuthorName, ex.getMessage());
+                            break;
+                        }
+
+                        throttle(props.getThrottleMs());
+                    }
+                }
             }
 
             long durationMs = System.currentTimeMillis() - startedAt;
@@ -156,7 +164,7 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
         }
     }
 
-    private void processWork(JsonNode work, Map<String, FsFaculty> facultyByName, List<RawPublication> out) {
+    private void processWork(JsonNode work, List<FsFaculty> targetFaculty, List<RawPublication> out) {
         String workId = work.path("id").asText(null);
         String doi = work.path("doi").asText(null);
         String title = work.path("title").asText(null);
@@ -195,9 +203,12 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
             String authorDisplayName = auth.path("author").path("display_name").asText(null);
             if (authorDisplayName != null && !authorDisplayName.isBlank()) {
                 authorNamesList.add(authorDisplayName.trim());
-                FsFaculty matched = matchFaculty(authorDisplayName, facultyByName);
-                if (matched != null && !matchedFacultyList.contains(matched)) {
-                    matchedFacultyList.add(matched);
+                for (FsFaculty f : targetFaculty) {
+                    if (com.ecom.external.harvest.service.FacultyNameResolver.matchesAuthor(authorDisplayName, f)) {
+                        if (!matchedFacultyList.contains(f)) {
+                            matchedFacultyList.add(f);
+                        }
+                    }
                 }
             }
         }
@@ -229,53 +240,6 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
 
             out.add(raw);
         }
-    }
-
-    private static Map<String, FsFaculty> buildFacultyNameIndex(List<FsFaculty> facultyList) {
-        Map<String, FsFaculty> map = new HashMap<>();
-        if (facultyList == null) {
-            return map;
-        }
-        for (FsFaculty f : facultyList) {
-            if (f.getDisplayName() != null) {
-                map.put(normalize(f.getDisplayName()), f);
-            }
-            if (f.getFirstName() != null && f.getLastName() != null) {
-                map.put(normalize(f.getFirstName() + " " + f.getLastName()), f);
-            }
-            if (f.getNameEn() != null && !f.getNameEn().isBlank()) {
-                map.put(normalize(f.getNameEn()), f);
-                EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(f.getNameEn());
-                if (parts.firstName() != null && parts.lastName() != null) {
-                    map.put(normalize(parts.lastName() + " " + parts.firstName()), f);
-                    map.put(normalize(parts.firstName() + " " + parts.lastName()), f);
-                }
-            }
-        }
-        return map;
-    }
-
-    private static FsFaculty matchFaculty(String authorName, Map<String, FsFaculty> index) {
-        if (authorName == null) {
-            return null;
-        }
-        String norm = normalize(authorName);
-        FsFaculty direct = index.get(norm);
-        if (direct != null) {
-            return direct;
-        }
-
-        // Try fuzzy token match (given name + surname match)
-        for (Map.Entry<String, FsFaculty> entry : index.entrySet()) {
-            if (entry.getKey().contains(norm) || norm.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return null;
-    }
-
-    private static String normalize(String s) {
-        return s.toLowerCase().replaceAll("[^a-z0-9\\u0E00-\\u0E7F]", "");
     }
 
     private static void throttle(long ms) {

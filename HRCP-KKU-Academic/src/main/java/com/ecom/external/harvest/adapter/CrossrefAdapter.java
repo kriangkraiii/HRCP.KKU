@@ -78,12 +78,6 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
         int requestsMade = 0;
         List<RawPublication> harvested = new ArrayList<>();
 
-        Map<String, FsFaculty> facultyByName = buildFacultyNameIndex(context.targetFaculty());
-
-        String cursor = "*";
-        int page = 1;
-        int maxPages = 50;
-
         try {
             int fromYear = context.yearFrom();
             String filterParam = "from-pub-date:" + fromYear + "-01-01";
@@ -99,48 +93,65 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
                     break;
                 }
 
-                if (faculty.getNameEn() == null || faculty.getNameEn().isBlank()) {
+                List<String> searchQueries = com.ecom.external.harvest.service.FacultyNameResolver.generateEnglishQueries(faculty);
+                if (searchQueries.isEmpty()) {
                     continue;
                 }
 
-                EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(faculty.getNameEn());
-                if (parts.firstName() == null || parts.lastName() == null) {
-                    continue;
-                }
+                // Query with top variants (e.g. First Last, and Full Name if different)
+                int queryLimit = Math.min(2, searchQueries.size());
+                for (int qIdx = 0; qIdx < queryLimit; qIdx++) {
+                    String queryName = searchQueries.get(qIdx);
+                    log.debug("Crossref harvest request for user {} ('{}')", faculty.getFsUserId(), queryName);
 
-                String fullName = parts.firstName() + " " + parts.lastName();
-                log.debug("Crossref harvest request for user {} ({})", faculty.getFsUserId(), fullName);
-                requestsMade++;
+                    int offset = 0;
+                    int pageSize = props.getPageSize() > 0 ? props.getPageSize() : 50;
+                    int maxPagesForUser = 2; // Up to 100-200 works per author
 
-                try {
-                    String responseBody = restClient.get()
-                            .uri(uriBuilder -> uriBuilder
-                                    .path("/works")
-                                    .queryParam("query.author", fullName)
-                                    .queryParam("filter", filterParam)
-                                    .queryParam("rows", props.getPageSize())
-                                    .build())
-                            .retrieve()
-                            .body(String.class);
+                    for (int p = 0; p < maxPagesForUser; p++) {
+                        requestsMade++;
+                        final int currentOffset = offset;
+                        try {
+                            String responseBody = restClient.get()
+                                    .uri(uriBuilder -> uriBuilder
+                                            .path("/works")
+                                            .queryParam("query.author", queryName)
+                                            .queryParam("filter", filterParam)
+                                            .queryParam("rows", pageSize)
+                                            .queryParam("offset", currentOffset)
+                                            .build())
+                                    .retrieve()
+                                    .body(String.class);
 
-                    if (responseBody != null && !responseBody.isBlank()) {
-                        JsonNode root = mapper.readTree(responseBody);
-                        JsonNode message = root.path("message");
-                        JsonNode items = message.path("items");
-                        if (items.isArray() && !items.isEmpty()) {
-                            for (JsonNode item : items) {
-                                processItem(item, facultyByName, harvested);
+                            if (responseBody != null && !responseBody.isBlank()) {
+                                JsonNode root = mapper.readTree(responseBody);
+                                JsonNode message = root.path("message");
+                                JsonNode items = message.path("items");
+                                if (items.isArray() && !items.isEmpty()) {
+                                    for (JsonNode item : items) {
+                                        processItem(item, context.targetFaculty(), harvested);
+                                    }
+                                }
+                                int totalResults = message.path("total-results").asInt(0);
+                                if (offset + pageSize >= totalResults || items.size() < pageSize) {
+                                    break; // Reached end of results for this query
+                                }
+                                offset += pageSize;
+                            } else {
+                                break;
                             }
+                        } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests ex) {
+                            log.warn("Crossref rate limit (429) hit for {}: backing off 2s", queryName);
+                            throttle(2000);
+                            break;
+                        } catch (Exception ex) {
+                            log.warn("Crossref author query failed for {}: {}", queryName, ex.getMessage());
+                            break;
                         }
-                    }
-                } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests ex) {
-                    log.warn("Crossref rate limit (429) hit for {}: backing off 2s", faculty.getNameEn());
-                    throttle(2000);
-                } catch (Exception ex) {
-                    log.warn("Crossref author query failed for {}: {}", faculty.getNameEn(), ex.getMessage());
-                }
 
-                throttle(props.getThrottleMs());
+                        throttle(props.getThrottleMs());
+                    }
+                }
             }
 
             long durationMs = System.currentTimeMillis() - startedAt;
@@ -156,7 +167,7 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
         }
     }
 
-    private void processItem(JsonNode item, Map<String, FsFaculty> facultyByName, List<RawPublication> out) {
+    private void processItem(JsonNode item, List<FsFaculty> targetFaculty, List<RawPublication> out) {
         String doi = item.path("DOI").asText(null);
 
         // Title
@@ -208,9 +219,12 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
             }
             if (full != null && !full.isBlank()) {
                 authorNamesList.add(full);
-                FsFaculty matched = matchFaculty(full, facultyByName);
-                if (matched != null && !matchedFacultyList.contains(matched)) {
-                    matchedFacultyList.add(matched);
+                for (FsFaculty f : targetFaculty) {
+                    if (com.ecom.external.harvest.service.FacultyNameResolver.matchesAuthor(full, f)) {
+                        if (!matchedFacultyList.contains(f)) {
+                            matchedFacultyList.add(f);
+                        }
+                    }
                 }
             }
         }
@@ -240,51 +254,6 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
 
             out.add(raw);
         }
-    }
-
-    private static Map<String, FsFaculty> buildFacultyNameIndex(List<FsFaculty> facultyList) {
-        Map<String, FsFaculty> map = new HashMap<>();
-        if (facultyList == null) {
-            return map;
-        }
-        for (FsFaculty f : facultyList) {
-            if (f.getDisplayName() != null) {
-                map.put(normalize(f.getDisplayName()), f);
-            }
-            if (f.getFirstName() != null && f.getLastName() != null) {
-                map.put(normalize(f.getFirstName() + " " + f.getLastName()), f);
-            }
-            if (f.getNameEn() != null && !f.getNameEn().isBlank()) {
-                map.put(normalize(f.getNameEn()), f);
-                EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(f.getNameEn());
-                if (parts.firstName() != null && parts.lastName() != null) {
-                    map.put(normalize(parts.lastName() + " " + parts.firstName()), f);
-                    map.put(normalize(parts.firstName() + " " + parts.lastName()), f);
-                }
-            }
-        }
-        return map;
-    }
-
-    private static FsFaculty matchFaculty(String authorName, Map<String, FsFaculty> index) {
-        if (authorName == null) {
-            return null;
-        }
-        String norm = normalize(authorName);
-        FsFaculty direct = index.get(norm);
-        if (direct != null) {
-            return direct;
-        }
-        for (Map.Entry<String, FsFaculty> entry : index.entrySet()) {
-            if (entry.getKey().contains(norm) || norm.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return null;
-    }
-
-    private static String normalize(String s) {
-        return s.toLowerCase().replaceAll("[^a-z0-9\\u0E00-\\u0E7F]", "");
     }
 
     private static void throttle(long ms) {

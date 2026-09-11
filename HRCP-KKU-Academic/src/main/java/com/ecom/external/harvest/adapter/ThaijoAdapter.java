@@ -93,8 +93,6 @@ public class ThaijoAdapter implements PublicationSourceAdapter {
         int requestsMade = 0;
         List<RawPublication> harvested = new ArrayList<>();
 
-        Map<String, FsFaculty> facultyByName = buildFacultyNameIndex(context.targetFaculty());
-
         String resumptionToken = null;
         int page = 1;
         int maxPages = 30;
@@ -140,7 +138,7 @@ public class ThaijoAdapter implements PublicationSourceAdapter {
 
                 for (int i = 0; i < recordNodes.getLength(); i++) {
                     Element record = (Element) recordNodes.item(i);
-                    processRecord(record, facultyByName, harvested);
+                    processRecord(record, context.targetFaculty(), harvested);
                 }
 
                 // Check resumption token
@@ -173,7 +171,7 @@ public class ThaijoAdapter implements PublicationSourceAdapter {
         }
     }
 
-    private void processRecord(Element record, Map<String, FsFaculty> facultyByName, List<RawPublication> out) {
+    private void processRecord(Element record, List<FsFaculty> targetFaculty, List<RawPublication> out) {
         // Skip deleted records
         Element header = (Element) record.getElementsByTagName("header").item(0);
         if (header != null && "deleted".equals(header.getAttribute("status"))) {
@@ -231,14 +229,17 @@ public class ThaijoAdapter implements PublicationSourceAdapter {
         String language = languages.isEmpty() ? null : languages.get(0);
         String type = types.isEmpty() ? null : types.get(0);
 
-        // Filter and match authors
+        // Filter and match authors using high-precision FacultyNameResolver
         boolean affiliationMatched = isAffiliationMatched(abstractText, pubName);
         List<FsFaculty> matchedFaculty = new ArrayList<>();
 
         for (String creator : creators) {
-            FsFaculty match = matchFaculty(creator, facultyByName);
-            if (match != null && !matchedFaculty.contains(match)) {
-                matchedFaculty.add(match);
+            for (FsFaculty f : targetFaculty) {
+                if (com.ecom.external.harvest.service.FacultyNameResolver.matchesAuthor(creator, f)) {
+                    if (!matchedFaculty.contains(f)) {
+                        matchedFaculty.add(f);
+                    }
+                }
             }
         }
 
@@ -301,51 +302,6 @@ public class ThaijoAdapter implements PublicationSourceAdapter {
             return nodes.item(0).getTextContent();
         }
         return null;
-    }
-
-    private static Map<String, FsFaculty> buildFacultyNameIndex(List<FsFaculty> facultyList) {
-        Map<String, FsFaculty> map = new HashMap<>();
-        if (facultyList == null) {
-            return map;
-        }
-        for (FsFaculty f : facultyList) {
-            if (f.getDisplayName() != null) {
-                map.put(normalize(f.getDisplayName()), f);
-            }
-            if (f.getFirstName() != null && f.getLastName() != null) {
-                map.put(normalize(f.getFirstName() + " " + f.getLastName()), f);
-            }
-            if (f.getNameEn() != null && !f.getNameEn().isBlank()) {
-                map.put(normalize(f.getNameEn()), f);
-                EnglishNameSplitter.Parts parts = EnglishNameSplitter.split(f.getNameEn());
-                if (parts.firstName() != null && parts.lastName() != null) {
-                    map.put(normalize(parts.lastName() + " " + parts.firstName()), f);
-                    map.put(normalize(parts.firstName() + " " + parts.lastName()), f);
-                }
-            }
-        }
-        return map;
-    }
-
-    private static FsFaculty matchFaculty(String authorName, Map<String, FsFaculty> index) {
-        if (authorName == null) {
-            return null;
-        }
-        String norm = normalize(authorName);
-        FsFaculty direct = index.get(norm);
-        if (direct != null) {
-            return direct;
-        }
-        for (Map.Entry<String, FsFaculty> entry : index.entrySet()) {
-            if (entry.getKey().contains(norm) || norm.contains(entry.getKey())) {
-                return entry.getValue();
-            }
-        }
-        return null;
-    }
-
-    private static String normalize(String s) {
-        return s.toLowerCase().replaceAll("[^a-z0-9\\u0E00-\\u0E7F]", "");
     }
 
     private static void throttle(long ms) {
