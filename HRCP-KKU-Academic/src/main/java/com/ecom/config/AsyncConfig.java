@@ -42,15 +42,24 @@ public class AsyncConfig implements AsyncConfigurer {
     @Override
     public java.util.concurrent.Executor getAsyncExecutor() {
         AsyncTaskExecutor delegate = applicationTaskExecutor
-                .getIfAvailable(() -> new SimpleAsyncTaskExecutor("task-"));
+                .getIfAvailable(() -> {
+                    org.springframework.boot.task.SimpleAsyncTaskExecutorBuilder builder = simpleAsyncTaskExecutorBuilder.getIfAvailable();
+                    if (builder != null) {
+                        return builder.threadNamePrefix("task-").build();
+                    }
+                    return new SimpleAsyncTaskExecutor("task-");
+                });
         return new DelegatingSecurityContextAsyncTaskExecutor(delegate);
     }
 
     private final ObjectProvider<AsyncTaskExecutor> applicationTaskExecutor;
+    private final ObjectProvider<org.springframework.boot.task.SimpleAsyncTaskExecutorBuilder> simpleAsyncTaskExecutorBuilder;
 
     public AsyncConfig(
-            @Qualifier("applicationTaskExecutor") ObjectProvider<AsyncTaskExecutor> applicationTaskExecutor) {
+            @Qualifier("applicationTaskExecutor") ObjectProvider<AsyncTaskExecutor> applicationTaskExecutor,
+            ObjectProvider<org.springframework.boot.task.SimpleAsyncTaskExecutorBuilder> simpleAsyncTaskExecutorBuilder) {
         this.applicationTaskExecutor = applicationTaskExecutor;
+        this.simpleAsyncTaskExecutorBuilder = simpleAsyncTaskExecutorBuilder;
     }
 
     /**

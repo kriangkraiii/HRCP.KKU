@@ -102,8 +102,15 @@ public class ThaijoAdapter implements PublicationSourceAdapter {
         try {
             String baseUrl = props.getOaiEndpoint();
             String fromDate = context.yearFrom() + "-01-01";
+            long maxDurationMs = 420_000L; // 7 minutes soft deadline
 
             while (page <= maxPages) {
+                if (System.currentTimeMillis() - startedAt > maxDurationMs) {
+                    log.warn("ThaiJO harvest deadline reached ({} ms); stopping early with {} works harvested",
+                            System.currentTimeMillis() - startedAt, harvested.size());
+                    break;
+                }
+
                 String requestUrl;
                 if (resumptionToken == null || resumptionToken.isBlank()) {
                     requestUrl = baseUrl + "?verb=ListRecords&metadataPrefix=oai_dc&from=" + fromDate;

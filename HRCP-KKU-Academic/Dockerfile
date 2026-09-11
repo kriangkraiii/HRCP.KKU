@@ -29,6 +29,7 @@ RUN set -eux; \
 
 # soffice ต้องเขียน user profile ได้ — เก็บไว้ใน /tmp
 ENV HOME=/tmp
+ENV JAVA_TOOL_OPTIONS="-Djdk.tracePinnedThreads=short"
 
 COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080

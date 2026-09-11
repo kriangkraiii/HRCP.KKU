@@ -541,6 +541,20 @@ public class ExternalSyncPageController {
     }
 
     /**
+     * Manually resets any stale/zombie sync jobs left in RUNNING status.
+     */
+    @PostMapping("/harvest/reset-stale")
+    public String resetStaleJobs(RedirectAttributes redirect) {
+        int resetCount = harvestService.resetStaleJobs();
+        if (resetCount > 0) {
+            redirect.addFlashAttribute("succMsg", "รีเซ็ตสถานะงานที่ค้างเรียบร้อยแล้ว (" + resetCount + " รายการ)");
+        } else {
+            redirect.addFlashAttribute("warnMsg", "ไม่พบงานที่มีสถานะค้างในระบบ");
+        }
+        return REDIRECT;
+    }
+
+    /**
      * Manually triggers immediate synchronization of KKU HR Regulations & Announcements.
      */
     @PostMapping("/kku-docs/run")

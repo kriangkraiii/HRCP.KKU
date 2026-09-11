@@ -7,13 +7,18 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -138,58 +143,94 @@ public class PublicationHarvestService {
             List<HarvestResult> results = new ArrayList<>();
             int totalWritten = 0;
 
+            int adapterTimeoutSeconds = Math.max(30, props.getAdapterTimeoutSeconds());
             try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
                 List<Callable<HarvestResult>> tasks = new ArrayList<>();
+                List<String> taskSources = new ArrayList<>();
 
                 for (PublicationSourceAdapter adapter : adapters) {
                     if (!adapter.isEnabled()) {
                         continue;
                     }
 
+                    String source = adapter.sourceName();
+                    taskSources.add(source);
+
                     tasks.add(() -> {
-                        String source = adapter.sourceName();
                         String syncType = source.toLowerCase();
+                        long taskStart = System.currentTimeMillis();
                         writer.markRunning(syncType);
-                        OffsetDateTime cursor = loadCursor(syncType);
+                        try {
+                            OffsetDateTime cursor = loadCursor(syncType);
+                            progressTracker.updateSource(source, "RUNNING", 15, 0, "กำลังดึงข้อมูล...");
 
-                        progressTracker.updateSource(source, "RUNNING", 15, 0, "กำลังดึงข้อมูล...");
+                            HarvestContext context = HarvestContext.of(
+                                    cursor,
+                                    props.getYearFrom(),
+                                    facultyList,
+                                    mappingsByUserId
+                            );
 
-                        HarvestContext context = HarvestContext.of(
-                                cursor,
-                                props.getYearFrom(),
-                                facultyList,
-                                mappingsByUserId
-                        );
+                            log.info("Adapter [{}] starting harvest...", source);
+                            HarvestResult result = adapter.harvest(context);
 
-                        log.info("Adapter [{}] starting harvest...", source);
-                        HarvestResult result = adapter.harvest(context);
+                            // Batch write harvested publications to database
+                            int writtenForSource = 0;
+                            if (result.success() && !result.publications().isEmpty()) {
+                                try {
+                                    writtenForSource = writeInBatches(result.publications(), source);
+                                } catch (Exception wex) {
+                                    log.error("Failed to write harvested batches for {}: {}", source, wex.getMessage(), wex);
+                                    writer.recordFailure(syncType, wex);
+                                    progressTracker.updateSource(source, "FAILED", 100, 0, "บันทึกล้มเหลว: " + wex.getMessage());
+                                    return HarvestResult.failed(source, result.requestsMade(), System.currentTimeMillis() - taskStart, wex.getMessage());
+                                }
+                                writer.recordSuccess(syncType, writtenForSource, result.requestsMade(),
+                                        result.durationMs(), result.newCursor(), result.message());
+                                log.info("Adapter [{}] wrote {} publication(s)", source, writtenForSource);
+                                progressTracker.updateSource(source, "SUCCESS", 100, result.publications().size(),
+                                        String.format("สำเร็จ (%d รายการ, บันทึก %d)", result.publications().size(), writtenForSource));
+                            } else if (result.success()) {
+                                writer.recordSuccess(syncType, 0, result.requestsMade(),
+                                        result.durationMs(), result.newCursor(), result.message());
+                                progressTracker.updateSource(source, "SUCCESS", 100, 0, "สำเร็จ (ไม่พบรายการใหม่)");
+                            } else {
+                                writer.recordFailure(syncType, new RuntimeException(result.message()));
+                                progressTracker.updateSource(source, "FAILED", 100, 0, result.message());
+                            }
 
-                        // Batch write harvested publications to database
-                        int writtenForSource = 0;
-                        if (result.success() && !result.publications().isEmpty()) {
-                            writtenForSource = writeInBatches(result.publications(), source);
-                            writer.recordSuccess(syncType, writtenForSource, result.requestsMade(),
-                                    result.durationMs(), result.newCursor(), result.message());
-                            log.info("Adapter [{}] wrote {} publication(s)", source, writtenForSource);
-                            progressTracker.updateSource(source, "SUCCESS", 100, result.publications().size(),
-                                    String.format("สำเร็จ (%d รายการ, บันทึก %d)", result.publications().size(), writtenForSource));
-                        } else if (result.success()) {
-                            writer.recordSuccess(syncType, 0, result.requestsMade(),
-                                    result.durationMs(), result.newCursor(), result.message());
-                            progressTracker.updateSource(source, "SUCCESS", 100, 0, "สำเร็จ (ไม่พบรายการใหม่)");
-                        } else {
-                            writer.recordFailure(syncType, new RuntimeException(result.message()));
-                            progressTracker.updateSource(source, "FAILED", 100, 0, result.message());
+                            progressTracker.advance(source, "ประมวลผล " + source + " เสร็จสิ้น");
+                            return result;
+                        } catch (Throwable t) {
+                            String err = t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName();
+                            log.error("Fatal unhandled exception in adapter [{}]: {}", source, err, t);
+                            writer.recordFailure(syncType, t instanceof Exception ? (Exception) t : new RuntimeException(err));
+                            progressTracker.updateSource(source, "FAILED", 100, 0, "ข้อผิดพลาด: " + err);
+                            progressTracker.advance(source, "ประมวลผล " + source + " ล้มเหลว");
+                            return HarvestResult.failed(source, 0, System.currentTimeMillis() - taskStart, err);
                         }
-
-                        progressTracker.advance(source, "ประมวลผล " + source + " เสร็จสิ้น");
-                        return result;
                     });
                 }
 
-                List<Future<HarvestResult>> futures = executor.invokeAll(tasks);
-                for (Future<HarvestResult> f : futures) {
-                    results.add(f.get());
+                List<Future<HarvestResult>> futures = executor.invokeAll(tasks, adapterTimeoutSeconds, TimeUnit.SECONDS);
+                for (int i = 0; i < futures.size(); i++) {
+                    Future<HarvestResult> f = futures.get(i);
+                    String sourceName = taskSources.get(i);
+                    String syncType = sourceName.toLowerCase();
+                    if (f.isCancelled()) {
+                        log.warn("Adapter [{}] timed out after {}s", sourceName, adapterTimeoutSeconds);
+                        writer.recordFailure(syncType, new TimeoutException("หมดเวลาการดึงข้อมูล (Timeout " + adapterTimeoutSeconds + "s)"));
+                        progressTracker.updateSource(sourceName, "FAILED", 100, 0, "หมดเวลาเชื่อมต่อ (Timeout)");
+                        results.add(HarvestResult.failed(sourceName, 0, adapterTimeoutSeconds * 1000L, "Timed out after " + adapterTimeoutSeconds + "s"));
+                    } else {
+                        try {
+                            results.add(f.get());
+                        } catch (Exception e) {
+                            log.error("Failed to retrieve result for {}: {}", sourceName, e.getMessage());
+                            writer.recordFailure(syncType, e);
+                            results.add(HarvestResult.failed(sourceName, 0, 0, e.getMessage()));
+                        }
+                    }
                 }
             }
 
@@ -218,8 +259,42 @@ public class PublicationHarvestService {
         return progressTracker;
     }
 
+    @PostConstruct
+    public void onStartup() {
+        // Automatically recover any stale RUNNING states on application startup
+        resetStaleJobs();
+    }
+
     /**
-     * Executes a single specific adapter manually by source name.
+     * Resets any jobs that have been left in RUNNING status for longer than staleThresholdMinutes,
+     * marking them as FAILED so they do not show an endless spinner on the UI.
+     */
+    public int resetStaleJobs() {
+        int resetCount = 0;
+        int thresholdMins = Math.max(5, props.getStaleThresholdMinutes());
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(thresholdMins);
+
+        for (FsSyncState s : syncStateRepo.findAll()) {
+            if (FsSyncState.STATUS_RUNNING.equalsIgnoreCase(s.getLastStatus())) {
+                boolean isHarvestJob = adapters.stream().anyMatch(a -> a.sourceName().equalsIgnoreCase(s.getSyncType()));
+                boolean isStale = s.getLastRunAt() == null || s.getLastRunAt().isBefore(cutoff);
+                if (isStale || (isHarvestJob && !isRunning())) {
+                    s.setLastStatus(FsSyncState.STATUS_FAILED);
+                    s.setMessage("งานค้างเกินกำหนด (ระบบรีเซ็ตให้อัตโนมัติ)");
+                    syncStateRepo.save(s);
+                    resetCount++;
+                    log.info("Reset stale RUNNING job for syncType: {}", s.getSyncType());
+                }
+            }
+        }
+        if (!isRunning() && progressTracker != null) {
+            progressTracker.finish(List.of(), 0);
+        }
+        return resetCount;
+    }
+
+    /**
+     * Executes a single specific adapter manually by source name with timeout protection.
      */
     public HarvestResult harvestSource(String sourceName) {
         if (sourceName == null || sourceName.isBlank()) {
@@ -247,27 +322,43 @@ public class PublicationHarvestService {
         Map<Long, List<ExternalAuthorMapping>> mappings = loadMappingsGroupedByUser();
 
         writer.markRunning(syncType);
-        OffsetDateTime cursor = loadCursor(syncType);
+        long startMs = System.currentTimeMillis();
+        try {
+            OffsetDateTime cursor = loadCursor(syncType);
+            HarvestContext context = HarvestContext.of(cursor, props.getYearFrom(), facultyList, mappings);
 
-        HarvestContext context = HarvestContext.of(cursor, props.getYearFrom(), facultyList, mappings);
-        HarvestResult result = adapter.harvest(context);
+            int timeoutSec = Math.max(30, props.getAdapterTimeoutSeconds());
+            CompletableFuture<HarvestResult> future = CompletableFuture.supplyAsync(() -> adapter.harvest(context),
+                    Executors.newVirtualThreadPerTaskExecutor());
+            HarvestResult result = future.get(timeoutSec, TimeUnit.SECONDS);
 
-        int written = 0;
-        if (result.success() && !result.publications().isEmpty()) {
-            written = writeInBatches(result.publications(), source);
-            writer.recordSuccess(syncType, written, result.requestsMade(), result.durationMs(), result.newCursor(), result.message());
-            progressTracker.updateSource(source, "SUCCESS", 100, result.publications().size(),
-                    String.format("สำเร็จ (%d รายการ, บันทึก %d)", result.publications().size(), written));
-        } else if (result.success()) {
-            writer.recordSuccess(syncType, 0, result.requestsMade(), result.durationMs(), result.newCursor(), result.message());
-            progressTracker.updateSource(source, "SUCCESS", 100, 0, "สำเร็จ (ไม่พบรายการใหม่)");
-        } else {
-            writer.recordFailure(syncType, new RuntimeException(result.message()));
-            progressTracker.updateSource(source, "FAILED", 100, 0, result.message());
+            int written = 0;
+            if (result.success() && !result.publications().isEmpty()) {
+                written = writeInBatches(result.publications(), source);
+                writer.recordSuccess(syncType, written, result.requestsMade(), result.durationMs(), result.newCursor(), result.message());
+                progressTracker.updateSource(source, "SUCCESS", 100, result.publications().size(),
+                        String.format("สำเร็จ (%d รายการ, บันทึก %d)", result.publications().size(), written));
+            } else if (result.success()) {
+                writer.recordSuccess(syncType, 0, result.requestsMade(), result.durationMs(), result.newCursor(), result.message());
+                progressTracker.updateSource(source, "SUCCESS", 100, 0, "สำเร็จ (ไม่พบรายการใหม่)");
+            } else {
+                writer.recordFailure(syncType, new RuntimeException(result.message()));
+                progressTracker.updateSource(source, "FAILED", 100, 0, result.message());
+            }
+
+            progressTracker.finish(List.of(result), written);
+            return result;
+        } catch (Throwable t) {
+            String msg = (t instanceof TimeoutException)
+                    ? "หมดเวลาเชื่อมต่อ (Timeout " + props.getAdapterTimeoutSeconds() + "s)"
+                    : (t.getMessage() != null ? t.getMessage() : t.getClass().getSimpleName());
+            log.error("Single-source harvest failed for {}: {}", source, msg, t);
+            writer.recordFailure(syncType, t instanceof Exception ? (Exception) t : new RuntimeException(msg));
+            progressTracker.updateSource(source, "FAILED", 100, 0, msg);
+            HarvestResult failRes = HarvestResult.failed(source, 0, System.currentTimeMillis() - startMs, msg);
+            progressTracker.finish(List.of(failRes), 0);
+            return failRes;
         }
-
-        progressTracker.finish(List.of(result), written);
-        return result;
     }
 
     private int writeInBatches(List<RawPublication> publications) {

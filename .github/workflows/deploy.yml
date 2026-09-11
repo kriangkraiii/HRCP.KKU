@@ -35,20 +35,57 @@ jobs:
 
       # 3) หยุด Windows Service "MyWebApp" ก่อน เพื่อปลดล็อกไฟล์ app.jar ที่กำลังถูกใช้งานอยู่
       #    -ErrorAction SilentlyContinue กันพังกรณี service ยังไม่เคยรัน/ไม่พบ service
+      #    พร้อมรอจนกว่าสถานะจะ Stopped จริงเพื่อป้องกัน file lock ตอน Copy-Item
       - name: Stop MyWebApp service
         shell: powershell
         run: |
           Write-Host "Stopping service $env:SERVICE_NAME ..."
           Stop-Service -Name $env:SERVICE_NAME -Force -ErrorAction SilentlyContinue
-          Write-Host "Service stopped (or was not running)."
+          $waited = 0
+          while ((Get-Service -Name $env:SERVICE_NAME -ErrorAction SilentlyContinue).Status -eq 'Running' -and $waited -lt 20) {
+              Start-Sleep -Seconds 1
+              $waited++
+          }
+          Start-Sleep -Seconds 2
+          Write-Host "Service stopped and file lock released."
 
-      # 4) คัดลอกไฟล์ .jar ที่ build ได้ ไปทับไฟล์ปลายทางเดิม (บังคับทับด้วย -Force)
+      # 4) คัดลอกไฟล์ .jar ที่ build ได้ ไปทับไฟล์ปลายทางเดิม (เลือก Fat JAR ตัวจริง ไม่เอา .original)
       - name: Copy new jar to deployment path
         shell: powershell
         run: |
-          $jarFile = Get-ChildItem -Path "${{ env.PROJECT_DIR }}\target" -Filter "*.jar" | Select-Object -First 1
-          Write-Host "Copying $($jarFile.FullName) -> $env:DEPLOY_PATH"
+          $jarFile = Get-ChildItem -Path "${{ env.PROJECT_DIR }}\target\*.jar" |
+              Where-Object { $_.Name -notlike "*.original*" -and $_.Name -notlike "original-*" } |
+              Sort-Object Length -Descending |
+              Select-Object -First 1
+
+          if (-not $jarFile) {
+              throw "No executable fat jar found in ${{ env.PROJECT_DIR }}\target!"
+          }
+          Write-Host "Copying $($jarFile.FullName) ($([math]::Round($jarFile.Length/1MB, 2)) MB) -> $env:DEPLOY_PATH"
           Copy-Item -Path $jarFile.FullName -Destination $env:DEPLOY_PATH -Force
+
+      # 4.1) ตั้งค่า JVM Options เพื่อตรวจจับ Virtual Thread Pinning บนเซิร์ฟเวอร์
+      - name: Configure JVM options for Virtual Threads
+        shell: powershell
+        continue-on-error: true
+        run: |
+          try {
+            $optName = "JAVA_TOOL_OPTIONS"
+            $flag = "-Djdk.tracePinnedThreads=short"
+            $current = [Environment]::GetEnvironmentVariable($optName, "Machine")
+            if (-not $current) {
+              [Environment]::SetEnvironmentVariable($optName, $flag, "Machine")
+              Write-Host "Set $optName = $flag"
+            } elseif (-not $current.Contains("-Djdk.tracePinnedThreads")) {
+              $newVal = "$current $flag".Trim()
+              [Environment]::SetEnvironmentVariable($optName, $newVal, "Machine")
+              Write-Host "Updated $optName = $newVal"
+            } else {
+              Write-Host "$optName already contains -Djdk.tracePinnedThreads"
+            }
+          } catch {
+            Write-Warning "Could not update Machine-level JAVA_TOOL_OPTIONS (insufficient permission): $($_.Exception.Message)"
+          }
 
       # 5) สั่งรัน Windows Service "MyWebApp" กลับขึ้นมาใหม่ด้วยไฟล์ .jar ตัวล่าสุด
       - name: Start MyWebApp service
@@ -56,4 +93,10 @@ jobs:
         run: |
           Write-Host "Starting service $env:SERVICE_NAME ..."
           Start-Service -Name $env:SERVICE_NAME
-          Write-Host "Service started."
+          Start-Sleep -Seconds 3
+          $svc = Get-Service -Name $env:SERVICE_NAME
+          Write-Host "Service status: $($svc.Status)"
+          if ($svc.Status -ne 'Running') {
+              throw "Service $env:SERVICE_NAME failed to start (current status: $($svc.Status))"
+          }
+          Write-Host "Service started successfully."

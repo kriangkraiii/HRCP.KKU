@@ -1,5 +1,6 @@
 package com.ecom.external.service;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.HashMap;
 import java.util.List;
@@ -308,7 +309,23 @@ public class FsSyncService {
 
     public Map<String, FsSyncState> currentState() {
         Map<String, FsSyncState> byType = new HashMap<>();
-        syncStateRepo.findAll().forEach(s -> byType.put(s.getSyncType(), s));
+        LocalDateTime cutoff = LocalDateTime.now().minusMinutes(30);
+        for (FsSyncState s : syncStateRepo.findAll()) {
+            if (FsSyncState.STATUS_RUNNING.equalsIgnoreCase(s.getLastStatus())) {
+                boolean isStale = s.getLastRunAt() == null || s.getLastRunAt().isBefore(cutoff);
+                if (isStale) {
+                    s.setLastStatus(FsSyncState.STATUS_FAILED);
+                    s.setMessage("งานค้างเกินกำหนด 30 นาที (ระบบรีเซ็ตให้อัตโนมัติ)");
+                    try {
+                        syncStateRepo.save(s);
+                        log.warn("Auto-healed stale RUNNING job '{}' (started at {})", s.getSyncType(), s.getLastRunAt());
+                    } catch (Exception e) {
+                        log.error("Failed to save auto-healed state for '{}': {}", s.getSyncType(), e.getMessage());
+                    }
+                }
+            }
+            byType.put(s.getSyncType(), s);
+        }
         return byType;
     }
 

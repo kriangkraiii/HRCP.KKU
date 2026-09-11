@@ -135,4 +135,39 @@ class PublicationHarvestServiceTest {
         verify(adapter1).harvest(any());
         verify(adapter2, times(0)).harvest(any());
     }
+
+    @Test
+    @DisplayName("resetStaleJobs marks any jobs stuck in RUNNING as FAILED")
+    void resetStaleJobsRecoversZombieJobs() {
+        com.ecom.external.model.FsSyncState staleJob = new com.ecom.external.model.FsSyncState("crossref");
+        staleJob.setLastStatus(com.ecom.external.model.FsSyncState.STATUS_RUNNING);
+        staleJob.setLastRunAt(java.time.LocalDateTime.now().minusHours(2));
+
+        when(syncStateRepo.findAll()).thenReturn(List.of(staleJob));
+
+        int resetCount = service.resetStaleJobs();
+
+        assertThat(resetCount).isEqualTo(1);
+        assertThat(staleJob.getLastStatus()).isEqualTo(com.ecom.external.model.FsSyncState.STATUS_FAILED);
+        assertThat(staleJob.getMessage()).contains("งานค้างเกินกำหนด");
+        verify(syncStateRepo).save(staleJob);
+    }
+
+    @Test
+    @DisplayName("harvestSource records failure to writer when adapter throws exception")
+    void harvestSourceRecordsFailureOnException() {
+        FsFaculty faculty = new FsFaculty();
+        faculty.setFsUserId(1L);
+        when(facultyRepo.findAll()).thenReturn(List.of(faculty));
+        when(mappingRepo.findAll()).thenReturn(List.of());
+
+        when(adapter1.harvest(any(HarvestContext.class)))
+                .thenThrow(new RuntimeException("Simulated network outage"));
+
+        HarvestResult result = service.harvestSource("OPENALEX");
+
+        assertThat(result.success()).isFalse();
+        assertThat(result.message()).contains("Simulated network outage");
+        verify(writer).recordFailure(eq("openalex"), any(Exception.class));
+    }
 }

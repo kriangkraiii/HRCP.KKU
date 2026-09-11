@@ -24,6 +24,7 @@ services:
       db:
         condition: service_healthy
     environment:
+      JAVA_TOOL_OPTIONS: ${JAVA_TOOL_OPTIONS:--Djdk.tracePinnedThreads=short}
       DB_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-hrcp}
       DB_USERNAME: ${POSTGRES_USER:-postgres}
       DB_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD must be set in .env}

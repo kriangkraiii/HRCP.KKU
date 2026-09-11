@@ -111,4 +111,26 @@ class AdapterTest {
         assertThat(result.success()).isTrue(); // soft recovery
         assertThat(result.publications()).isEmpty();
     }
+
+    @Test
+    @DisplayName("Crossref adapter handles connection errors safely without throwing uncaught exceptions")
+    void crossrefHandlesExternalErrorSafely() {
+        HarvestProperties props = new HarvestProperties();
+        props.getCrossref().setEnabled(true);
+        props.getCrossref().setBaseUrl("http://127.0.0.1:54321"); // unroutable
+
+        CrossrefAdapter adapter = new CrossrefAdapter(props);
+
+        FsFaculty faculty = new FsFaculty();
+        faculty.setFsUserId(10L);
+        faculty.setFirstName("Somchai");
+        faculty.setLastName("Jaidee");
+        faculty.setNameEn("Somchai Jaidee");
+
+        HarvestContext context = HarvestContext.of(null, 2020, List.of(faculty), Map.of());
+
+        HarvestResult result = adapter.harvest(context);
+        assertThat(result.success()).isTrue();
+        assertThat(result.publications()).isEmpty();
+    }
 }

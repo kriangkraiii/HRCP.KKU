@@ -18,6 +18,9 @@ public class HarvestProperties {
     private int yearFrom = 2015;
     private int userBatchSize = 25;
     private double fuzzyThreshold = 0.70;
+    private int adapterTimeoutSeconds = 480; // 8 minutes (allows sources taking ~210s to complete with safe headroom)
+    private int globalTimeoutSeconds = 900;  // 15 minutes overall process ceiling
+    private int staleThresholdMinutes = 30;  // 30 minutes before declaring a RUNNING job as zombie
 
     private CrossrefProps crossref = new CrossrefProps();
     private OpenAlexProps openalex = new OpenAlexProps();
@@ -63,6 +66,30 @@ public class HarvestProperties {
 
     public void setFuzzyThreshold(double fuzzyThreshold) {
         this.fuzzyThreshold = fuzzyThreshold;
+    }
+
+    public int getAdapterTimeoutSeconds() {
+        return adapterTimeoutSeconds;
+    }
+
+    public void setAdapterTimeoutSeconds(int adapterTimeoutSeconds) {
+        this.adapterTimeoutSeconds = adapterTimeoutSeconds;
+    }
+
+    public int getGlobalTimeoutSeconds() {
+        return globalTimeoutSeconds;
+    }
+
+    public void setGlobalTimeoutSeconds(int globalTimeoutSeconds) {
+        this.globalTimeoutSeconds = globalTimeoutSeconds;
+    }
+
+    public int getStaleThresholdMinutes() {
+        return staleThresholdMinutes;
+    }
+
+    public void setStaleThresholdMinutes(int staleThresholdMinutes) {
+        this.staleThresholdMinutes = staleThresholdMinutes;
     }
 
     public CrossrefProps getCrossref() {
@@ -113,7 +140,7 @@ public class HarvestProperties {
         private boolean enabled = true;
         private String baseUrl = "https://api.crossref.org";
         private String mailto = "admin@computing.kku.ac.th";
-        private long throttleMs = 100;
+        private long throttleMs = 250;
         private int pageSize = 100;
         private int connectTimeoutSeconds = 10;
         private int readTimeoutSeconds = 30;

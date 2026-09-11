@@ -89,7 +89,16 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
             String filterParam = "from-pub-date:" + fromYear + "-01-01";
 
             // Query Crossref per faculty member to ensure complete individual coverage
+            // Max execution deadline: 420s (7 minutes) to ensure clean completion within 8-minute adapter timeout
+            long maxDurationMs = 420_000L;
+
             for (FsFaculty faculty : context.targetFaculty()) {
+                if (System.currentTimeMillis() - startedAt > maxDurationMs) {
+                    log.warn("Crossref harvest deadline reached ({} ms); stopping early with {} works harvested",
+                            System.currentTimeMillis() - startedAt, harvested.size());
+                    break;
+                }
+
                 if (faculty.getNameEn() == null || faculty.getNameEn().isBlank()) {
                     continue;
                 }
@@ -99,15 +108,18 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
                     continue;
                 }
 
-                String authorQuery = java.net.URLEncoder.encode(parts.firstName() + " " + parts.lastName(), StandardCharsets.UTF_8);
-                String url = "/works?query.author=" + authorQuery + "&filter=" + filterParam + "&rows=" + props.getPageSize();
-
-                log.debug("Crossref harvest request for user {} ({}: {})", faculty.getFsUserId(), faculty.getNameEn(), url);
+                String fullName = parts.firstName() + " " + parts.lastName();
+                log.debug("Crossref harvest request for user {} ({})", faculty.getFsUserId(), fullName);
                 requestsMade++;
 
                 try {
                     String responseBody = restClient.get()
-                            .uri(url)
+                            .uri(uriBuilder -> uriBuilder
+                                    .path("/works")
+                                    .queryParam("query.author", fullName)
+                                    .queryParam("filter", filterParam)
+                                    .queryParam("rows", props.getPageSize())
+                                    .build())
                             .retrieve()
                             .body(String.class);
 
@@ -121,6 +133,9 @@ public class CrossrefAdapter implements PublicationSourceAdapter {
                             }
                         }
                     }
+                } catch (org.springframework.web.client.HttpClientErrorException.TooManyRequests ex) {
+                    log.warn("Crossref rate limit (429) hit for {}: backing off 2s", faculty.getNameEn());
+                    throttle(2000);
                 } catch (Exception ex) {
                     log.warn("Crossref author query failed for {}: {}", faculty.getNameEn(), ex.getMessage());
                 }

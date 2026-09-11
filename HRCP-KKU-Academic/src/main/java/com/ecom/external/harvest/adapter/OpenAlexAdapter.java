@@ -91,7 +91,15 @@ public class OpenAlexAdapter implements PublicationSourceAdapter {
             int fromYear = context.yearFrom();
 
             // Search directly per faculty member using clean English name
+            long maxDurationMs = 420_000L; // 7 minutes soft deadline
+
             for (FsFaculty faculty : context.targetFaculty()) {
+                if (System.currentTimeMillis() - startedAt > maxDurationMs) {
+                    log.warn("OpenAlex harvest deadline reached ({} ms); stopping early with {} works harvested",
+                            System.currentTimeMillis() - startedAt, harvested.size());
+                    break;
+                }
+
                 if (faculty.getNameEn() == null || faculty.getNameEn().isBlank()) {
                     continue;
                 }
