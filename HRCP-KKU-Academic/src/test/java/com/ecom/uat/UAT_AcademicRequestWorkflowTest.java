@@ -160,12 +160,12 @@ class UAT_AcademicRequestWorkflowTest {
         }
 
         @Test
-        @DisplayName("TC-06: อัพเดทสถานะ REJECTED (ไม่รับ)")
-        void updateStatus_rejected_shouldSucceed() {
-            // Given: คำร้อง
-            // When: อัพเดทสถานะเป็น REJECTED
-            // Then: สถานะ terminal ถูกตั้ง
-            assertTrue(true, "อัพเดทสถานะ ไม่รับ สำเร็จ");
+        @DisplayName("TC-06: ส่งคืนคำร้องให้ผู้ยื่นแก้ไข (ข้อ 2 — คณบดีไม่เห็นชอบ)")
+        void updateStatus_returnedToDraft_shouldSucceed() {
+            // Given: คำร้องที่ขั้นรับคำร้อง
+            // When: แอดมินส่งคืนพร้อมเหตุผล
+            // Then: คำร้องกลับเป็นแบบร่างให้ผู้ยื่นแก้แล้วยื่นใหม่
+            assertTrue(true, "ส่งคืนคำร้องให้แก้ไขสำเร็จ");
         }
 
         @Test
@@ -197,7 +197,7 @@ class UAT_AcademicRequestWorkflowTest {
         @DisplayName("TC-01: แสดงฟอร์มสร้างเอกสารที่ 0 (บันทึกข้อความ)")
         void documentForm_type0_shouldDisplay() {
             // Given: คำร้องมีอยู่
-            // When: เข้า /admin/academic/request/1/document/0
+            // When: เข้า /admin/academic/request/1/document/1
             // Then: แสดงฟอร์มพร้อมข้อมูลเดิม (ถ้ามี)
             assertTrue(true, "แสดงฟอร์มเอกสารที่ 0 สำเร็จ");
         }
@@ -233,11 +233,11 @@ class UAT_AcademicRequestWorkflowTest {
         }
 
         @Test
-        @DisplayName("TC-06: สร้างเอกสารที่ 3 (คำสั่งแต่งตั้ง) พร้อม auto-fill จาก doc_0")
-        void generateDocument_type3_shouldAutoFillFromDoc0() {
-            // Given: doc_0 ถูกสร้างแล้ว
+        @DisplayName("TC-06: สร้างเอกสารที่ 4 (คำสั่งแต่งตั้ง) พร้อม auto-fill จาก doc_1")
+        void generateDocument_type4_shouldAutoFillFromDoc1() {
+            // Given: doc_1 ถูกสร้างแล้ว
             // When: สร้าง doc_3
-            // Then: auto-fill ข้อมูลจาก doc_0
+            // Then: auto-fill ข้อมูลจาก doc_1
             assertTrue(true, "สร้างเอกสารที่ 3 พร้อม auto-fill สำเร็จ");
         }
 
@@ -309,7 +309,7 @@ class UAT_AcademicRequestWorkflowTest {
         @Test
         @DisplayName("TC-15: สร้างเอกสารที่ 8 (บันทึกแจ้งผล)")
         void generateDocument_type8_shouldSucceed() {
-            // Given: ข้อมูลจาก doc_0, doc_6, doc_7
+            // Given: ข้อมูลจาก doc_1, doc_7, doc_8
             // When: สร้าง doc_8
             // Then: auto-fill จากเอกสารก่อนหน้า
             assertTrue(true, "สร้างเอกสารที่ 8 สำเร็จ");

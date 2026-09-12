@@ -107,28 +107,28 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         Long id = draft.getId();
         assertThat(draft.getRequestCode()).as("แบบร่างต้องมีรหัสคำร้อง").isNotBlank();
 
-        // --- กรอกเอกสารที่ 0: บันทึกข้อความ ขอรับการประเมินผลการสอน ---
-        expectAccepted(mvc.perform(formPost("/user/academic/request/" + id + "/document-0",
-                document0Fields()).with(asProfessor())),
-                "/user/academic/request/" + id + "?success=doc0_submitted");
+        // --- กรอกเอกสารที่ 1: บันทึกข้อความ ขอรับการประเมินผลการสอน ---
+        expectAccepted(mvc.perform(formPost("/user/academic/request/" + id + "/document-1",
+                document1Fields()).with(asProfessor())),
+                "/user/academic/request/" + id + "?success=doc1_submitted");
 
         // --- แนบไฟล์ประกอบ 7 หมวดตามที่เอกสารกำหนด ---
         //
-        // Before เอกสารที่ 1, not after: the form refuses to be submitted while
+        // Before เอกสารที่ 2, not after: the form refuses to be submitted while
         // the request has no attachments (?error=no_attachments). That is the
         // order the real page imposes too — the upload control lives on the
-        // เอกสารที่ 1 page, above its submit button.
+        // เอกสารที่ 2 page, above its submit button.
         uploadTheSevenRequiredAttachments(id);
         assertThat(academicService.countAttachments(id))
                 .as("เอกสารประกอบการประเมินการสอนตามข้อ 1 มี 7 หมวด")
                 .isEqualTo(7);
 
-        // --- กรอกเอกสารที่ 1: แบบตรวจสอบเบื้องต้นเอกสารประกอบการประเมิน ---
-        expectAccepted(mvc.perform(formPost("/user/academic/request/" + id + "/document-1",
-                document1Fields()).with(asProfessor())),
-                "/user/academic/request/" + id + "?success=doc1_submitted");
-        assertThat(academicService.getDocumentsByType(id, 1))
-                .as("เอกสารที่ 1 ต้องถูกบันทึกจริง ไม่ใช่แค่ถูก redirect กลับ")
+        // --- กรอกเอกสารที่ 2: แบบตรวจสอบเบื้องต้นเอกสารประกอบการประเมิน ---
+        expectAccepted(mvc.perform(formPost("/user/academic/request/" + id + "/document-2",
+                document2Fields()).with(asProfessor())),
+                "/user/academic/request/" + id + "?success=doc2_submitted");
+        assertThat(academicService.getDocumentsByType(id, 2))
+                .as("เอกสารที่ 2 ต้องถูกบันทึกจริง ไม่ใช่แค่ถูก redirect กลับ")
                 .isNotEmpty();
 
         // --- ยังไม่ลงนาม: ส่งคำร้องต้องไม่ผ่าน ---
@@ -140,9 +140,9 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .as("ยังไม่ลงนาม จึงต้องยังเป็นแบบร่างอยู่")
                 .isEqualTo(RequestStatus.DRAFT);
 
-        // --- ลงนามอิเล็กทรอนิกส์ในเอกสารที่ 0 และ 1 ---
-        signAsApplicant(SignatureModule.ACADEMIC, id, 0, "บันทึกข้อความ ขอรับการประเมินผลการสอน");
-        signAsApplicant(SignatureModule.ACADEMIC, id, 1, "แบบตรวจสอบเบื้องต้น");
+        // --- ลงนามอิเล็กทรอนิกส์ในเอกสารที่ 1 และ 2 ---
+        signAsApplicant(SignatureModule.ACADEMIC, id, 1, "บันทึกข้อความ ขอรับการประเมินผลการสอน");
+        signAsApplicant(SignatureModule.ACADEMIC, id, 2, "แบบตรวจสอบเบื้องต้น");
 
         // --- ข้อ 1: ส่งคำร้อง — หน่วยสารบรรณรับเรื่อง ---
         expectAccepted(mvc.perform(post("/user/academic/request/" + id + "/submit")
@@ -160,16 +160,16 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .as("คำร้องที่ส่งแล้วต้องปรากฏในรายการของเจ้าหน้าที่")
                 .contains(draft.getRequestCode());
 
-        // --- ข้อ 3-4: คำสั่งแต่งตั้งคณะอนุกรรมการประเมินการสอน 3 คน (เอกสารที่ 3) ---
-        expectAccepted(mvc.perform(formPost("/admin/academic/request/" + id + "/document/3",
+        // --- ข้อ 3-4: คำสั่งแต่งตั้งคณะอนุกรรมการประเมินการสอน 3 คน (เอกสารที่ 4) ---
+        expectAccepted(mvc.perform(formPost("/admin/academic/request/" + id + "/document/4",
                 subCommitteeOrderFields()).with(asOfficer())),
                 "/admin/academic/request/" + id);
         assertThat(academicService.findById(id).orElseThrow().getCurrentStatus())
                 .as("ข้อ 4 — แต่งตั้งคณะอนุกรรมการ")
                 .isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
 
-        // --- ข้อ 6: นัดหมายวันประชุม (เอกสารที่ 4) ---
-        mvc.perform(formPost("/admin/academic/request/" + id + "/document/4",
+        // --- ข้อ 6: นัดหมายวันประชุม (เอกสารที่ 5) ---
+        mvc.perform(formPost("/admin/academic/request/" + id + "/document/5",
                 officerFields(Map.of("meeting_date", "15 กันยายน 2569",
                         "meeting_place", "ห้องประชุมวิทยาลัยการคอมพิวเตอร์")))
                 .with(asOfficer())).andExpect(status().is3xxRedirection());
@@ -177,14 +177,14 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .as("ข้อ 6 — นัดหมายวันประชุม")
                 .isEqualTo(RequestStatus.MEETING_SCHEDULED);
 
-        // --- ข้อ 8: ที่ประชุมคณะอนุกรรมการมีมติ 'ผ่าน' (เอกสารที่ 6) ---
-        expectAccepted(mvc.perform(formPost("/admin/academic/request/" + id + "/document/6",
+        // --- ข้อ 8: ที่ประชุมคณะอนุกรรมการมีมติ 'ผ่าน' (เอกสารที่ 7) ---
+        expectAccepted(mvc.perform(formPost("/admin/academic/request/" + id + "/document/7",
                 evaluationScoreFields()).with(asOfficer())),
                 "/admin/academic/request/" + id);
         assertThat(academicService.findById(id).orElseThrow().getCurrentStatus())
                 .as("ข้อ 8 — ผลการประเมินจากคณะอนุกรรมการ")
                 .isEqualTo(RequestStatus.COMPLETED_PASS);
-        assertThat(academicService.getDocumentsByType(id, 6).get(0).getJsonData())
+        assertThat(academicService.getDocumentsByType(id, 7).get(0).getJsonData())
                 .as("คะแนน 4.5 ทั้งสี่ส่วน = 90 คะแนน ต้องได้ระดับ 'เชี่ยวชาญ'")
                 .contains("\"eval_result_level\":\"เชี่ยวชาญ\"");
 
@@ -198,8 +198,8 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .as("ข้อ 9-10 — รับรองผลโดยกรรมการประจำวิทยาลัยฯ")
                 .isEqualTo(RequestStatus.COLLEGE_ENDORSED);
 
-        // --- ข้อ 11: แจ้งผลให้ผู้ขอกำหนดตำแหน่งทราบ (เอกสารที่ 8) ---
-        mvc.perform(formPost("/admin/academic/request/" + id + "/document/8",
+        // --- ข้อ 11: แจ้งผลให้ผู้ขอกำหนดตำแหน่งทราบ (เอกสารที่ 9) ---
+        mvc.perform(formPost("/admin/academic/request/" + id + "/document/9",
                 officerFields(Map.of("evaluation_date", "20 กันยายน 2569",
                         "evaluation_result", "ผ่าน")))
                 .with(asOfficer()))
@@ -415,7 +415,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
 
         for (String filename : categories) {
             expectAccepted(mvc.perform(
-                    multipart("/user/academic/request/" + requestId + "/document-1/attachments")
+                    multipart("/user/academic/request/" + requestId + "/document-2/attachments")
                             .file(new MockMultipartFile("files", filename, "application/pdf",
                                     ("%PDF-1.4 " + filename).getBytes(StandardCharsets.UTF_8)))
                             .with(csrf()).with(asProfessor())),
@@ -423,8 +423,8 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         }
     }
 
-    /** Exactly the fields {@code isDoc0Complete} demands, and nothing spare. */
-    private Map<String, String> document0Fields() {
+    /** Exactly the fields {@code isDoc1Complete} demands, and nothing spare. */
+    private Map<String, String> document1Fields() {
         Map<String, String> fields = new LinkedHashMap<>();
         fields.put("date", "1 กันยายน 2569");
         fields.put("title", "ขอรับการประเมินผลการสอน");
@@ -438,8 +438,8 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         return fields;
     }
 
-    /** The five confirmations {@code isDoc1Complete} demands. */
-    private Map<String, String> document1Fields() {
+    /** The five confirmations {@code isDoc2Complete} demands. */
+    private Map<String, String> document2Fields() {
         Map<String, String> fields = new LinkedHashMap<>();
         for (int i = 1; i <= 5; i++) {
             fields.put("chk_app_" + i, "✓");

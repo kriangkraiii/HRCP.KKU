@@ -6,7 +6,6 @@ public enum StatusType {
     MEETING_SCHEDULED("นัดหมายวันประชุม", "purple", "fa-calendar"),
     RESULT_APPROVED("แจ้งผล - ผ่าน", "green", "fa-check-circle"),
     RESULT_REVISION("แจ้งผล - แก้ไข", "yellow", "fa-edit"),
-    REJECTED("ไม่รับคำร้อง", "red", "fa-times-circle"),
     COMPLETED("เสร็จสิ้น", "dark-green", "fa-check");
 
     private final String displayName;

@@ -260,14 +260,11 @@ public class AcademicAdminController {
         long evalTotal = allRequests.stream().filter(r -> !r.getCurrentStatus().isDraft()).count();
         model.addAttribute("evaluationTotalCount", evalTotal);
 
-        // ดึงข้อมูลรายวิชาจาก doc_1 (เดิม doc_0) สำหรับทุกคำร้องประเมินผล
+        // ดึงข้อมูลรายวิชาจาก doc_1 สำหรับทุกคำร้องประเมินผล
         Map<Long, Map<String, String>> doc1DataMap = new HashMap<>();
         for (AcademicRequest req : allRequests) {
             if (!req.getCurrentStatus().isDraft()) {
                 List<AcademicDocument> doc1List = requestService.getDocumentsByType(req.getId(), 1);
-                if (doc1List.isEmpty()) {
-                    doc1List = requestService.getDocumentsByType(req.getId(), 0);
-                }
                 if (!doc1List.isEmpty()) {
                     try {
                         Map<String, String> doc1Data = objectMapper.readValue(doc1List.get(0).getJsonData(),
@@ -278,7 +275,6 @@ public class AcademicAdminController {
             }
         }
         model.addAttribute("doc1DataMap", doc1DataMap);
-        model.addAttribute("doc0DataMap", doc1DataMap);
 
         // Build autocomplete suggestions from all applicants
         java.util.Set<String> suggestionsSet = new java.util.LinkedHashSet<>();
@@ -352,18 +348,14 @@ public class AcademicAdminController {
                 .collect(Collectors.toMap(AcademicDocument::getDocumentType, AcademicDocument::getId, (existing, replacement) -> existing));
         model.addAttribute("docTypeToId", docTypeToId);
 
-        // ดึงข้อมูลจาก doc_1 (เดิม doc_0) เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
+        // ดึงข้อมูลจาก doc_1 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
         List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
-        if (doc1List.isEmpty()) {
-            doc1List = requestService.getDocumentsByType(id, 0);
-        }
         if (!doc1List.isEmpty()) {
             try {
                 String doc1Json = doc1List.get(0).getJsonData();
                 Map<String, String> doc1Data = objectMapper.readValue(doc1Json,
                         new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
                 model.addAttribute("doc1Data", doc1Data);
-                model.addAttribute("doc0Data", doc1Data);
             } catch (Exception e) {
                 // ignore parse errors
             }
@@ -423,8 +415,8 @@ public class AcademicAdminController {
     @GetMapping("/request/{id}/document/{type}")
     public String documentForm(@PathVariable Long id, @PathVariable int type, Model model,
             Principal principal) {
-        if (type == 0) {
-            return "redirect:/admin/academic/request/" + id + "/document/1";
+        if (!DOC_LABELS.containsKey(type)) {
+            return "redirect:/admin/academic/request/" + id;
         }
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
@@ -446,12 +438,9 @@ public class AcademicAdminController {
         model.addAttribute("committee", staffMemberService.findCommittee());
         model.addAttribute("hrStaff", staffMemberService.findHR());
 
-        // ดึงรายชื่อกรรมการ 3 คนจาก doc_3 (เดิม doc_2) เพื่อ auto-fill ในเอกสารถัดไป
-        if (type != 3 && type != 2) {
+        // ดึงรายชื่อกรรมการ 3 คนจาก doc_3 เพื่อ auto-fill ในเอกสารถัดไป
+        if (type != 3) {
             List<AcademicDocument> doc3List = requestService.getDocumentsByType(id, 3);
-            if (doc3List.isEmpty()) {
-                doc3List = requestService.getDocumentsByType(id, 2);
-            }
             if (!doc3List.isEmpty()) {
                 try {
                     String doc3Json = doc3List.get(0).getJsonData();
@@ -470,12 +459,9 @@ public class AcademicAdminController {
             }
         }
 
-        // สำหรับ doc_4, doc_7, doc_8, doc_9: ดึงข้อมูลจาก doc_1 (เดิม doc_0) มา auto-fill
-        if (type == 4 || type == 7 || type == 8 || type == 9 || type == 3 || type == 6) {
+        // สำหรับ doc_4, doc_7, doc_8, doc_9: ดึงข้อมูลจาก doc_1 มา auto-fill
+        if (type == 4 || type == 7 || type == 8 || type == 9) {
             List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
-            if (doc1List.isEmpty()) {
-                doc1List = requestService.getDocumentsByType(id, 0);
-            }
             if (!doc1List.isEmpty()) {
                 try {
                     String doc1Json = doc1List.get(0).getJsonData();
@@ -483,19 +469,15 @@ public class AcademicAdminController {
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
                             });
                     model.addAttribute("doc1Data", doc1Data);
-                    model.addAttribute("doc0Data", doc1Data);
                 } catch (Exception e) {
                     // ignore
                 }
             }
         }
 
-        // สำหรับ doc_5 (เดิม doc_4): ดึงข้อมูลจาก doc_4 (เดิม doc_3) มา auto-fill (applicant info)
-        if (type == 5 || type == 4) {
+        // สำหรับ doc_5: ดึงข้อมูลจาก doc_4 มา auto-fill (applicant info)
+        if (type == 5) {
             List<AcademicDocument> doc4List = requestService.getDocumentsByType(id, 4);
-            if (doc4List.isEmpty()) {
-                doc4List = requestService.getDocumentsByType(id, 3);
-            }
             if (!doc4List.isEmpty()) {
                 try {
                     String doc4Json = doc4List.get(0).getJsonData();
@@ -503,7 +485,6 @@ public class AcademicAdminController {
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
                             });
                     model.addAttribute("doc4Data", doc4Data);
-                    model.addAttribute("doc3Data", doc4Data);
                 } catch (Exception e) {
                     // ignore
                 }
@@ -514,12 +495,9 @@ public class AcademicAdminController {
         model.addAttribute("attachments", attachments);
         model.addAttribute("attachmentCount", attachments != null ? attachments.size() : 0);
 
-        // สำหรับ doc_9 (เดิม doc_8): ดึงข้อมูลจาก doc_8 (เดิม doc_7) มา auto-fill (meeting_date, meeting_no)
-        if (type == 9 || type == 8) {
+        // สำหรับ doc_9: ดึงข้อมูลจาก doc_8 มา auto-fill (meeting_date, meeting_no)
+        if (type == 9) {
             List<AcademicDocument> doc8List = requestService.getDocumentsByType(id, 8);
-            if (doc8List.isEmpty()) {
-                doc8List = requestService.getDocumentsByType(id, 7);
-            }
             if (!doc8List.isEmpty()) {
                 try {
                     String doc8Json = doc8List.get(0).getJsonData();
@@ -533,12 +511,9 @@ public class AcademicAdminController {
             }
         }
 
-        // สำหรับ doc_8 หรือ doc_9 (เดิม doc_7 หรือ doc_8): ดึงผลจาก doc_7 (เดิม doc_6) มา auto-fill (default)
-        if (type == 8 || type == 9 || type == 7) {
+        // สำหรับ doc_8 หรือ doc_9: ดึงผลจาก doc_7 มา auto-fill (default)
+        if (type == 8 || type == 9) {
             List<AcademicDocument> doc7List = requestService.getDocumentsByType(id, 7);
-            if (doc7List.isEmpty()) {
-                doc7List = requestService.getDocumentsByType(id, 6);
-            }
             if (!doc7List.isEmpty()) {
                 try {
                     String doc7Json = doc7List.get(0).getJsonData();
@@ -554,19 +529,15 @@ public class AcademicAdminController {
                             doc7Data.put("eval_result_level", level);
                     }
                     model.addAttribute("doc7Data", doc7Data);
-                    model.addAttribute("doc6Data", doc7Data);
                 } catch (Exception e) {
                     // ignore
                 }
             }
         }
 
-        // สำหรับ doc_2 (เดิม doc_1) (admin): ดึงข้อมูลที่ผู้ยื่นกรอกมาแสดง
-        if (type == 2 || type == 1) {
+        // สำหรับ doc_2 (admin): ดึงข้อมูลที่ผู้ยื่นกรอกมาแสดง
+        if (type == 2) {
             List<AcademicDocument> doc2List = requestService.getDocumentsByType(id, 2);
-            if (doc2List.isEmpty()) {
-                doc2List = requestService.getDocumentsByType(id, 1);
-            }
             if (!doc2List.isEmpty()) {
                 try {
                     String doc2Json = doc2List.get(0).getJsonData();
@@ -574,7 +545,6 @@ public class AcademicAdminController {
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
                             });
                     model.addAttribute("doc2Data", doc2Data);
-                    model.addAttribute("doc1Data", doc2Data);
                 } catch (Exception e) {
                     // ignore parse errors
                 }
@@ -583,12 +553,9 @@ public class AcademicAdminController {
             model.addAttribute("attachmentsBySlot", attachmentsBySlot);
         }
 
-        // สำหรับ doc_1 (เดิม doc_0) (admin): ดึงข้อมูลที่ผู้ยื่นกรอกมาแสดง
-        if (type == 1 || type == 0) {
+        // สำหรับ doc_1 (admin): ดึงข้อมูลที่ผู้ยื่นกรอกมาแสดง
+        if (type == 1) {
             List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
-            if (doc1List.isEmpty()) {
-                doc1List = requestService.getDocumentsByType(id, 0);
-            }
             if (!doc1List.isEmpty()) {
                 try {
                     String doc1Json = doc1List.get(0).getJsonData();
@@ -596,7 +563,6 @@ public class AcademicAdminController {
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
                             });
                     model.addAttribute("doc1Data", doc1Data);
-                    model.addAttribute("doc0Data", doc1Data);
                 } catch (Exception e) {
                     // ignore parse errors
                 }
@@ -617,8 +583,8 @@ public class AcademicAdminController {
             @RequestParam Map<String, String> formData,
             Principal principal,
             RedirectAttributes redirectAttributes) throws IOException {
-        if (type == 0) {
-            type = 1;
+        if (!DOC_LABELS.containsKey(type)) {
+            return "redirect:/admin/academic/request/" + id;
         }
 
         AcademicRequest request = requestService.findById(id)
@@ -663,8 +629,8 @@ public class AcademicAdminController {
             }
         }
 
-        // ============ Document 7 (เดิม 6): คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
-        if (type == 7 || type == 6) {
+        // ============ Document 7: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
+        if (type == 7) {
             // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1=20, 2=30, 3=30, 4=20
             int[] weights = { 20, 30, 30, 20 };
             double grandTotal = 0;
@@ -734,9 +700,6 @@ public class AcademicAdminController {
             // ไม่ได้ส่งมา
             if (formData.getOrDefault("title", " ").isBlank()) {
                 List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
-                if (doc1List.isEmpty()) {
-                    doc1List = requestService.getDocumentsByType(id, 0);
-                }
                 if (!doc1List.isEmpty()) {
                     try {
                         Map<String, String> doc1Data = objectMapper.readValue(
@@ -759,8 +722,8 @@ public class AcademicAdminController {
             }
         }
 
-        // Document 8 (เดิม 7): แปลงเลขอาราบิกเป็นเลขไทยสำหรับ DOCX (ทำฝั่ง server เท่านั้น)
-        if (type == 8 || type == 7) {
+        // Document 8: แปลงเลขอาราบิกเป็นเลขไทยสำหรับ DOCX (ทำฝั่ง server เท่านั้น)
+        if (type == 8) {
             String[] thaiConvertFields = {"meeting_no"};
             for (String field : thaiConvertFields) {
                 String val = formData.get(field);
@@ -782,8 +745,8 @@ public class AcademicAdminController {
 
         boolean isNew = requestService.getDocumentsByType(id, type).isEmpty();
 
-        if (type == 5 || type == 4) {
-            // Document 5 (เดิม 4): Generate 3 copies for committee members
+        if (type == 5) {
+            // Document 5: Generate 3 copies for committee members
             List<Map<String, String>> committeeMembers = new ArrayList<>();
             for (int i = 1; i <= 3; i++) {
                 Map<String, String> member = new HashMap<>();
@@ -884,12 +847,9 @@ public class AcademicAdminController {
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         UserDtls admin = getUser(principal);
 
-        // ดึงข้อเสนอแนะจาก doc_6 (เดิม doc_5) JSON
+        // ดึงข้อเสนอแนะจาก doc_6 JSON
         String suggestionsText = "";
         List<AcademicDocument> docList = requestService.getDocumentsByType(id, 6);
-        if (docList.isEmpty()) {
-            docList = requestService.getDocumentsByType(id, 5);
-        }
         if (!docList.isEmpty()) {
             try {
                 Map<String, String> docData = objectMapper.readValue(docList.get(0).getJsonData(),

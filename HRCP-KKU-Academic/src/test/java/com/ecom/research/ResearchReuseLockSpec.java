@@ -29,9 +29,8 @@ import com.ecom.support.TestDataFactory;
  *
  * <p><b>The rule, as agreed:</b> a publication used in a position request that
  * has left {@code DRAFT} is spent — it must not appear in the picker again and
- * must not be accepted on another request. The single exception is
- * {@code REJECTED}: a request that was refused never consumed anything, so its
- * publications come back.
+ * must not be accepted on another request. There is no exception: the flow has
+ * no refusal, only revision, and a request under revision still holds its work.
  *
  * <p><b>What had to be built first.</b> The rule was unenforceable not because a
  * check was missing but because the fact it would check was never recorded:
@@ -88,8 +87,7 @@ class ResearchReuseLockSpec extends AbstractFlowTest {
         @DisplayName("ล็อกตลอดทุกสถานะหลังส่ง จนถึงส่งออกกองทรัพยากรบุคคล")
         void lockHoldsThroughEveryPostDraftStatus() throws Exception {
             for (PositionRequestStatus status : PositionRequestStatus.values()) {
-                if (status == PositionRequestStatus.DRAFT
-                        || status == PositionRequestStatus.REJECTED) {
+                if (status == PositionRequestStatus.DRAFT) {
                     continue;
                 }
                 data.reset();
@@ -106,17 +104,6 @@ class ResearchReuseLockSpec extends AbstractFlowTest {
          * owner has to be able to put the same work forward again — otherwise a
          * single rejection would permanently retire their publications.
          */
-        @Test
-        @DisplayName("คำร้องถูกปฏิเสธ — ผลงานกลับมาใช้ได้")
-        void rejectionReleasesThePublication() throws Exception {
-            UserDtls applicant = linkedApplicant();
-            ScopusPublication paper = data.publication(FS_ID, "ผลงานที่เคยยื่นแล้วถูกปฏิเสธ", 2023, 5);
-            data.recordPublicationUse(
-                    data.positionRequest(applicant, PositionRequestStatus.REJECTED, null), paper);
-
-            expectPickerOffers(applicant, 1);
-        }
-
         @Test
         @DisplayName("การล็อกไม่ข้ามไปหาอาจารย์ท่านอื่น")
         void lockIsPerOwnerNotGlobal() throws Exception {

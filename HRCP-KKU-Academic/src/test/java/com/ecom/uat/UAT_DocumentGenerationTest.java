@@ -70,8 +70,8 @@ class UAT_DocumentGenerationTest {
     @Nested
     @DisplayName("UAT-DOC-05: Auto-fill ข้อมูลข้ามเอกสาร")
     class AutoFillTests {
-        @Test @DisplayName("TC-01: Auto-fill จาก doc_0 → doc_3, 6, 7, 8")
-        void autoFillFromDoc0() { assertTrue(true, "auto-fill จาก doc_0 สำเร็จ"); }
+        @Test @DisplayName("TC-01: Auto-fill จาก doc_1 → doc_4, 7, 8, 9")
+        void autoFillFromDoc1() { assertTrue(true, "auto-fill จาก doc_1 สำเร็จ"); }
 
         @Test @DisplayName("TC-02: Auto-fill committee จาก doc_2 → doc อื่น")
         void autoFillCommittee() { assertTrue(true, "auto-fill committee สำเร็จ"); }

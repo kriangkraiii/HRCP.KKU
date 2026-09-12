@@ -11,11 +11,26 @@
             </div>
             <h3 class="mb-4"><i class="fas fa-university"></i> การยื่นขอตำแหน่งทางวิชาการ — เลือกผลประเมินการสอน</h3>
 
+            <!-- ขอ ศ. ไม่ต้องใช้ผลประเมินการสอน -->
+            <div th:if="${canApplyForProfessor}" class="card card-academic mb-4">
+                <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
+                    <div>
+                        <h5 class="mb-1"><i class="fas fa-landmark me-2"></i> ขอกำหนดตำแหน่งศาสตราจารย์</h5>
+                        <div class="small text-muted">การขอตำแหน่งศาสตราจารย์ไม่ต้องใช้ผลการประเมินผลการสอน</div>
+                    </div>
+                    <form th:action="@{/user/position/create-professor-request}" method="post">
+                        <button type="submit" class="btn btn-academic">
+                            <i class="fas fa-arrow-right me-1"></i> สร้างคำร้องขอตำแหน่งศาสตราจารย์
+                        </button>
+                    </form>
+                </div>
+            </div>
+
             <!-- ไม่มีผลประเมินที่ใช้ได้เลย -->
             <div th:unless="${hasAny}" class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <strong>ไม่พบผลการประเมินผลการสอนที่ใช้ได้</strong>
-                <p class="mb-0 mt-2">คุณต้องมีผลการประเมินผลการสอนที่ <strong>ผ่านและยังไม่หมดอายุ</strong> จึงจะยื่นขอตำแหน่งทางวิชาการได้</p>
+                <p class="mb-0 mt-2">การขอตำแหน่งผู้ช่วยศาสตราจารย์และรองศาสตราจารย์ ต้องมีผลการประเมินผลการสอนที่ <strong>ผ่านและยังไม่หมดอายุ</strong></p>
                 <a href="/user/academic/dashboard" class="btn-back-pill mt-3">
                     <i class="fas fa-arrow-left"></i> กลับไปยื่นขอประเมินการสอน
                 </a>
@@ -26,11 +41,11 @@
                 <i class="fas fa-lock me-2"></i>
                 <strong>ผลการประเมินทุกรายการถูกใช้ยื่นขอตำแหน่งไปแล้ว</strong>
                 <p class="mb-0 mt-2">
-                    แต่ละรายวิชาในแต่ละปีการศึกษา ใช้ยื่นขอกำหนดตำแหน่งได้เพียงครั้งเดียว
-                    หากต้องการยื่นใหม่ ต้องขอรับการประเมินการสอนในรายวิชาหรือปีการศึกษาอื่นก่อน
+                    ผลการประเมินผลการสอน 1 ฉบับ ใช้ยื่นขอกำหนดตำแหน่งได้ 1 คำร้องเท่านั้น
+                    หากต้องการยื่นใหม่ ต้องขอรับการประเมินการสอนใหม่ก่อน (ใช้รายวิชาเดิมได้ แต่ต้องปรับเนื้อหาในรายวิชาใหม่)
                 </p>
                 <a href="/user/academic/dashboard" class="btn-back-pill mt-3">
-                    <i class="fas fa-arrow-left"></i> ไปขอประเมินการสอนรายวิชาใหม่
+                    <i class="fas fa-arrow-left"></i> ไปขอประเมินการสอนใหม่
                 </a>
             </div>
 
@@ -40,7 +55,8 @@
                     กรุณาตรวจสอบรายละเอียดแล้วเลือกผลการประเมินผลการสอนที่ต้องการใช้ยื่นขอตำแหน่งทางวิชาการ
                     <div class="small mt-2 mb-0">
                         <i class="fas fa-triangle-exclamation me-1"></i>
-                        เมื่อกดยื่นคำร้องแล้ว <strong>รายวิชาและปีการศึกษานั้นจะใช้ยื่นซ้ำอีกไม่ได้</strong>
+                        เมื่อสร้างคำร้องแล้ว <strong>ผลการประเมินฉบับนั้นจะใช้กับคำร้องอื่นไม่ได้</strong>
+                        และตำแหน่งที่ขอจะเป็นตามที่ระบุไว้ในผลการประเมิน
                     </div>
                 </div>
 
@@ -55,6 +71,9 @@
                                 </h5>
                                 <div class="text-muted small mb-3">
                                     คำร้องประเมิน <span th:text="${choice.summary.requestCode()}"></span>
+                                    <span th:if="${choice.summary.targetRank() != null}">
+                                        · ขอตำแหน่ง <span class="fw-semibold" th:text="${choice.summary.targetRank().thaiLabel()}"></span>
+                                    </span>
                                 </div>
 
                                 <div class="row g-3 small">
@@ -104,7 +123,7 @@
                                         <i class="fas fa-lock me-1"></i> ใช้ยื่นไปแล้ว
                                     </span>
                                     <div class="small text-muted" style="max-width: 16rem;">
-                                        รายวิชาและปีการศึกษานี้ถูกใช้ในคำร้อง
+                                        ผลการประเมินฉบับนี้ถูกใช้ในคำร้อง
                                         <span class="fw-semibold" th:text="${choice.spentBy()}"></span>
                                         จึงใช้ยื่นซ้ำไม่ได้
                                     </div>

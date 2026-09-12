@@ -72,18 +72,18 @@ class DocumentPreviewAccessTest {
     }
 
     @Test
-    @DisplayName("M-08: ผู้ยื่นต้อง preview เอกสารฝั่งแอดมิน (Doc 6) ไม่ได้")
+    @DisplayName("M-08: ผู้ยื่นต้อง preview เอกสารฝั่งแอดมิน (Doc 7) ไม่ได้")
     void applicant_cannotPreviewAdminOnlyDocument() throws Exception {
-        ResponseEntity<byte[]> response = controller.previewDocument(6, "docx", formData(), applicant);
+        ResponseEntity<byte[]> response = controller.previewDocument(7, "docx", formData(), applicant);
 
         assertThat(response.getStatusCode().value()).isEqualTo(403);
         verify(documentService, never()).generatePreviewDocx(anyInt(), anyString());
     }
 
     @Test
-    @DisplayName("M-08: ผู้ยื่นยัง preview เอกสารของตัวเอง (Doc 0) ได้")
+    @DisplayName("M-08: ผู้ยื่นยัง preview เอกสารของตัวเอง (Doc 1) ได้")
     void applicant_canPreviewOwnDocument() throws Exception {
-        ResponseEntity<byte[]> response = controller.previewDocument(0, "docx", formData(), applicant);
+        ResponseEntity<byte[]> response = controller.previewDocument(1, "docx", formData(), applicant);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
     }
@@ -91,7 +91,7 @@ class DocumentPreviewAccessTest {
     @Test
     @DisplayName("M-08: แอดมิน preview ได้ทุกชนิดเอกสาร")
     void admin_canPreviewAnyDocument() throws Exception {
-        ResponseEntity<byte[]> response = controller.previewDocument(6, "docx", formData(), admin);
+        ResponseEntity<byte[]> response = controller.previewDocument(7, "docx", formData(), admin);
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
     }
@@ -99,7 +99,7 @@ class DocumentPreviewAccessTest {
     @Test
     @DisplayName("M-08: ผู้ที่ไม่ได้ล็อกอินต้องถูกปฏิเสธ")
     void anonymous_isRejected() throws Exception {
-        ResponseEntity<byte[]> response = controller.previewDocument(0, "docx", formData(), null);
+        ResponseEntity<byte[]> response = controller.previewDocument(1, "docx", formData(), null);
 
         assertThat(response.getStatusCode().value()).isEqualTo(401);
     }

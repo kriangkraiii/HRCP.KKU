@@ -59,16 +59,16 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls staff = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            // ข้อ 4 — คำสั่งแต่งตั้งคณะอนุกรรมการ (เอกสารที่ 3)
-            service.autoUpdateStatusByDocument(request.getId(), 3, staff, APPOINTMENT_ORDER, false);
+            // ข้อ 4 — คำสั่งแต่งตั้งคณะอนุกรรมการ (เอกสารที่ 4)
+            service.autoUpdateStatusByDocument(request.getId(), 4, staff, APPOINTMENT_ORDER, false);
             assertThat(statusOf(request)).isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
 
-            // ข้อ 6 — นัดหมายวันประชุม (เอกสารที่ 4)
-            service.autoUpdateStatusByDocument(request.getId(), 4, staff, null, false);
+            // ข้อ 6 — นัดหมายวันประชุม (เอกสารที่ 5)
+            service.autoUpdateStatusByDocument(request.getId(), 5, staff, null, false);
             assertThat(statusOf(request)).isEqualTo(RequestStatus.MEETING_SCHEDULED);
 
-            // ข้อ 8 — ผลจากที่ประชุมคณะอนุกรรมการ (เอกสารที่ 6)
-            service.autoUpdateStatusByDocument(request.getId(), 6, staff,
+            // ข้อ 8 — ผลจากที่ประชุมคณะอนุกรรมการ (เอกสารที่ 7)
+            service.autoUpdateStatusByDocument(request.getId(), 7, staff,
                     "{\"eval_result_level\":\"ดี\"}", false);
             assertThat(statusOf(request)).isEqualTo(RequestStatus.COMPLETED_PASS);
 
@@ -77,8 +77,8 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
                     "ที่ประชุมกรรมการประจำวิทยาลัยฯ รับรองผล", false);
             assertThat(statusOf(request)).isEqualTo(RequestStatus.COLLEGE_ENDORSED);
 
-            // ข้อ 11 — แจ้งผลให้ผู้ขอกำหนดตำแหน่งทราบ (เอกสารที่ 8)
-            service.autoUpdateStatusByDocument(request.getId(), 8, staff, null, false);
+            // ข้อ 11 — แจ้งผลให้ผู้ขอกำหนดตำแหน่งทราบ (เอกสารที่ 9)
+            service.autoUpdateStatusByDocument(request.getId(), 9, staff, null, false);
             assertThat(statusOf(request)).isEqualTo(RequestStatus.COMPLETED);
 
             assertThat(historyOf(request.getId()))
@@ -89,12 +89,12 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("ข้อ 11 ต้องรอข้อ 9-10 ก่อน — บันทึกเอกสารที่ 8 ก่อนกรรมการวิทยาลัยฯ รับรอง สถานะยังไม่ขยับ")
+        @DisplayName("ข้อ 11 ต้องรอข้อ 9-10 ก่อน — บันทึกเอกสารที่ 9 ก่อนกรรมการวิทยาลัยฯ รับรอง สถานะยังไม่ขยับ")
         void document8WaitsForTheCollegeEndorsement() {
             UserDtls applicant = data.applicant();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.COMPLETED_PASS);
 
-            service.autoUpdateStatusByDocument(request.getId(), 8, data.admin(), null, false);
+            service.autoUpdateStatusByDocument(request.getId(), 9, data.admin(), null, false);
 
             assertThat(statusOf(request))
                     .as("เอกสารยังถูกบันทึก แต่สถานะรอการรับรองตามข้อ 9-10")
@@ -102,12 +102,12 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("ผลประเมิน 'ไม่ผ่าน' ในเอกสารที่ 6 → COMPLETED_FAIL")
+        @DisplayName("ผลประเมิน 'ไม่ผ่าน' ในเอกสารที่ 7 → COMPLETED_FAIL")
         void failingResultEndsTheProcess() {
             UserDtls applicant = data.applicant();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 6, data.admin(),
+            service.autoUpdateStatusByDocument(request.getId(), 7, data.admin(),
                     "{\"eval_result_level\":\"ไม่ผ่าน\"}", false);
 
             assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
@@ -121,10 +121,10 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls staff = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 3, staff, null, false);
+            service.autoUpdateStatusByDocument(request.getId(), 4, staff, null, false);
 
             assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .as("แก้เอกสารที่ 3 ทีหลัง ต้องไม่ดึงสถานะกลับไปเป็นแต่งตั้งอนุกรรมการ")
+                    .as("แก้เอกสารที่ 4 ทีหลัง ต้องไม่ดึงสถานะกลับไปเป็นแต่งตั้งอนุกรรมการ")
                     .isEqualTo(RequestStatus.MEETING_SCHEDULED);
         }
     }
@@ -144,7 +144,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
 
         /**
          * The one case where asking again is the entire point. This was broken
-         * once: the "finished" list named REJECTED and COMPLETED but not
+         * once: the "finished" list named COMPLETED but not
          * COMPLETED_FAIL, so a professor told their teaching did not pass could
          * never ask to be evaluated again.
          */
@@ -158,10 +158,10 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("ไม่รับคำร้อง / เสร็จสิ้น — ยื่นใหม่ได้")
-        void rejectedOrCompletedAllowsANewRequest() {
+        @DisplayName("ไม่ผ่าน / เสร็จสิ้น — ยื่นใหม่ได้")
+        void closedRequestsAllowANewRequest() {
             UserDtls applicant = data.applicant();
-            data.evaluation(applicant, RequestStatus.REJECTED);
+            data.evaluation(applicant, RequestStatus.COMPLETED_FAIL);
             data.evaluation(applicant, RequestStatus.COMPLETED);
 
             assertThat(service.hasActiveRequest(applicant.getId())).isFalse();
@@ -203,7 +203,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
             expectAccepted(mvc.perform(post("/admin/academic/request/" + request.getId()
-                    + "/document/3")
+                    + "/document/4")
                     .param("order_no", "123/2569")
                     .param("order_date", "5 กันยายน 2569")
                     .param("committee_1_name", "รศ.ดร. หนึ่ง")
@@ -226,7 +226,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls officer = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 3, officer, APPOINTMENT_ORDER, false);
+            service.autoUpdateStatusByDocument(request.getId(), 4, officer, APPOINTMENT_ORDER, false);
 
             settle();
             assertThat(mail().to(TestDataFactory.APPLICANT_EMAIL))
@@ -241,7 +241,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls officer = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 3, officer, APPOINTMENT_ORDER, true);
+            service.autoUpdateStatusByDocument(request.getId(), 4, officer, APPOINTMENT_ORDER, true);
 
             awaitCondition("อีเมลถึงผู้ยื่น",
                     () -> !mail().to(TestDataFactory.APPLICANT_EMAIL).isEmpty());
@@ -276,7 +276,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
         void terminalRequestsCannotBeRewound() {
             UserDtls applicant = data.applicant();
             for (RequestStatus closed : List.of(RequestStatus.COMPLETED,
-                    RequestStatus.COMPLETED_FAIL, RequestStatus.REJECTED)) {
+                    RequestStatus.COMPLETED_FAIL)) {
                 AcademicRequest request = data.evaluation(applicant, closed);
 
                 assertThatThrownBy(() -> service.updateStatus(request.getId(),
@@ -288,19 +288,19 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
 
         /**
          * GAP-31, fixed. Every other case in {@code autoUpdateStatusByDocument}
-         * checked where the request stood; document 8 did not, so saving it on a
+         * checked where the request stood; document 9 did not, so saving it on a
          * refused request turned that refusal into "เสร็จสิ้น" and mailed the
          * applicant to say so.
          */
         @Test
-        @DisplayName("GAP-31: บันทึกเอกสารที่ 8 บนคำร้องที่ปิดไปแล้ว ไม่ปลุกคำร้องกลับมา")
+        @DisplayName("GAP-31: บันทึกเอกสารที่ 9 บนคำร้องที่ปิดไปแล้ว ไม่ปลุกคำร้องกลับมา")
         void closedRequestsStayClosed() {
             UserDtls applicant = data.applicant();
-            for (RequestStatus closed : List.of(RequestStatus.REJECTED,
+            for (RequestStatus closed : List.of(RequestStatus.COMPLETED,
                     RequestStatus.COMPLETED_FAIL)) {
                 AcademicRequest request = data.evaluation(applicant, closed);
 
-                service.autoUpdateStatusByDocument(request.getId(), 8, data.admin(), null, false);
+                service.autoUpdateStatusByDocument(request.getId(), 9, data.admin(), null, false);
 
                 assertThat(statusOf(request))
                         .as("คำร้องที่ %s ต้องอยู่อย่างนั้น", closed.getThaiLabel())
@@ -309,18 +309,23 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("ไม่รับคำร้องทำได้ทุกจุดที่ยังไม่ปิด")
-        void rejectionIsAlwaysAvailableWhileOpen() {
+        @DisplayName("ส่งคืนให้ผู้ยื่นแก้ได้เฉพาะขั้นรับคำร้อง (ข้อ 2) หลังจากนั้นเป็นวงจรแก้ไขของอนุกรรมการ")
+        void returningToDraftIsOnlyAvailableAtReception() {
             UserDtls applicant = data.applicant();
-            for (RequestStatus open : List.of(RequestStatus.RECEIVED,
-                    RequestStatus.SUB_COMMITTEE_APPOINTED, RequestStatus.MEETING_SCHEDULED,
-                    RequestStatus.COMPLETED_PASS, RequestStatus.COLLEGE_ENDORSED)) {
-                AcademicRequest request = data.evaluation(applicant, open);
+            AcademicRequest atReception = data.evaluation(applicant, RequestStatus.RECEIVED);
+            service.updateStatus(atReception.getId(), RequestStatus.DRAFT, data.admin(),
+                    "คณบดีไม่เห็นชอบ", false);
+            assertThat(statusOf(atReception)).isEqualTo(RequestStatus.DRAFT);
 
-                service.updateStatus(request.getId(), RequestStatus.REJECTED, data.admin(),
-                        "ตีกลับ", false);
+            for (RequestStatus later : List.of(RequestStatus.SUB_COMMITTEE_APPOINTED,
+                    RequestStatus.MEETING_SCHEDULED, RequestStatus.COMPLETED_PASS,
+                    RequestStatus.COLLEGE_ENDORSED)) {
+                AcademicRequest request = data.evaluation(data.otherApplicant(), later);
 
-                assertThat(statusOf(request)).isEqualTo(RequestStatus.REJECTED);
+                assertThatThrownBy(() -> service.updateStatus(request.getId(), RequestStatus.DRAFT,
+                        data.admin(), "ตีกลับ", false))
+                        .as("คำร้องที่ %s ต้องส่งคืนเป็นแบบร่างไม่ได้", later.getThaiLabel())
+                        .isInstanceOf(IllegalStateException.class);
             }
         }
 
@@ -336,7 +341,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls applicant = data.applicant();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 3, data.admin(), null, false);
+            service.autoUpdateStatusByDocument(request.getId(), 4, data.admin(), null, false);
 
             assertThat(statusOf(request)).isEqualTo(RequestStatus.MEETING_SCHEDULED);
         }
@@ -384,11 +389,11 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
                     "นัดประชุมพิจารณาเอกสารที่แก้ไข", false);
 
             // แล้ววนตามกรณีไม่มีแก้ไข: ข้อ 9 → 10 → 11
-            service.autoUpdateStatusByDocument(request.getId(), 6, staff,
+            service.autoUpdateStatusByDocument(request.getId(), 7, staff,
                     "{\"eval_result_level\":\"ดี\"}", false);
             service.updateStatus(request.getId(), RequestStatus.COLLEGE_ENDORSED, staff,
                     "กรรมการวิทยาลัยฯ รับรอง", false);
-            service.autoUpdateStatusByDocument(request.getId(), 8, staff, null, false);
+            service.autoUpdateStatusByDocument(request.getId(), 9, staff, null, false);
 
             assertThat(statusOf(request))
                     .as("เดิมค้างอยู่ที่ 'แจ้งผล - แก้ไข' ไปต่อไม่ได้และยื่นใหม่ก็ไม่ได้")
@@ -407,7 +412,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls applicant = data.applicant();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 3, data.admin(),
+            service.autoUpdateStatusByDocument(request.getId(), 4, data.admin(),
                     "{\"committee_1_name\":\"รศ.ดร. หนึ่ง\",\"committee_2_name\":\"\"}", false);
 
             assertThat(statusOf(request))
@@ -421,7 +426,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls applicant = data.applicant();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 3, data.admin(),
+            service.autoUpdateStatusByDocument(request.getId(), 4, data.admin(),
                     "{\"committee_1_name\":\"รศ.ดร. หนึ่ง\",\"committee_2_name\":\"รศ.ดร. สอง\","
                             + "\"committee_3_name\":\"ผศ.ดร. สาม\"}",
                     false);

@@ -54,13 +54,12 @@ public class ScopusQueryService {
     private final PositionRequestPublicationRepository publicationLinkRepo;
 
     /**
-     * Statuses that consume nothing. A draft has not been submitted, and a
-     * rejected request never got anywhere — its author has to be able to put the
-     * same work forward again, or a single refusal would retire their papers for
-     * good.
+     * Statuses that consume nothing: a draft has not been submitted. There is no
+     * refusal status — the flow only ever sends a request back for revision, and
+     * a request under revision is still putting its papers forward.
      */
     private static final Set<PositionRequestStatus> STATUSES_THAT_FREE_A_PUBLICATION =
-            EnumSet.of(PositionRequestStatus.DRAFT, PositionRequestStatus.REJECTED);
+            EnumSet.of(PositionRequestStatus.DRAFT);
 
     /**
      * Stands in for "nothing is spent". {@code NOT IN ()} is not valid SQL, so the

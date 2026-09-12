@@ -45,13 +45,13 @@ class DocumentDataAutoFillHelperTest {
     }
 
     @Test
-    void testPreFilledAcademicDoc0_fromUserProfile() {
+    void testPreFilledAcademicDoc1_fromUserProfile() {
         AcademicRequest request = new AcademicRequest();
         request.setId(101L);
         request.setApplicant(testUser);
         request.setDocuments(new ArrayList<>());
 
-        Map<String, String> data = autoFillHelper.getPreFilledAcademicDocData(request, 0, null);
+        Map<String, String> data = autoFillHelper.getPreFilledAcademicDocData(request, 1, null);
 
         assertNotNull(data);
         assertEquals("ผู้ช่วยศาสตราจารย์", data.get("title"));
@@ -64,19 +64,19 @@ class DocumentDataAutoFillHelperTest {
     }
 
     @Test
-    void testPreFilledAcademicDoc1_inheritsFromDoc0() {
+    void testPreFilledAcademicDoc2_inheritsFromDoc1() {
         AcademicRequest request = new AcademicRequest();
         request.setId(102L);
         request.setApplicant(testUser);
 
         List<AcademicDocument> docs = new ArrayList<>();
-        AcademicDocument doc0 = new AcademicDocument();
-        doc0.setDocumentType(0);
-        doc0.setJsonData("{\"course_code\":\"CP351101\",\"course_name\":\"Software Architecture\",\"academic_year\":\"2568\",\"chk1\":\"✓\"}");
-        docs.add(doc0);
+        AcademicDocument doc1 = new AcademicDocument();
+        doc1.setDocumentType(1);
+        doc1.setJsonData("{\"course_code\":\"CP351101\",\"course_name\":\"Software Architecture\",\"academic_year\":\"2568\",\"chk1\":\"✓\"}");
+        docs.add(doc1);
         request.setDocuments(docs);
 
-        Map<String, String> data = autoFillHelper.getPreFilledAcademicDocData(request, 1, null);
+        Map<String, String> data = autoFillHelper.getPreFilledAcademicDocData(request, 2, null);
 
         assertNotNull(data);
         assertEquals("CP351101", data.get("course_code"));
@@ -87,24 +87,24 @@ class DocumentDataAutoFillHelperTest {
     }
 
     @Test
-    void testPreFilledAcademicDoc4_inheritsCommitteeFromDoc2AndDoc3() {
+    void testPreFilledAcademicDoc5_inheritsCommitteeFromDoc3AndDoc4() {
         AcademicRequest request = new AcademicRequest();
         request.setId(103L);
         request.setApplicant(testUser);
 
         List<AcademicDocument> docs = new ArrayList<>();
-        AcademicDocument doc0 = new AcademicDocument();
-        doc0.setDocumentType(0);
-        doc0.setJsonData("{\"course_code\":\"CP351102\",\"course_name\":\"Cloud Computing\",\"academic_year\":\"2568\"}");
-        docs.add(doc0);
+        AcademicDocument doc1 = new AcademicDocument();
+        doc1.setDocumentType(1);
+        doc1.setJsonData("{\"course_code\":\"CP351102\",\"course_name\":\"Cloud Computing\",\"academic_year\":\"2568\"}");
+        docs.add(doc1);
 
-        AcademicDocument doc3 = new AcademicDocument();
-        doc3.setDocumentType(3);
-        doc3.setJsonData("{\"committee_1_name\":\"ศ.ดร.วิชาการ ดีเด่น\",\"committee_2_name\":\"รศ.ดร.นวัตกรรม ก้าวหน้า\",\"committee_3_name\":\"ผศ.ดร.เทคโนโลยี มั่นคง\",\"meeting_date\":\"15 กันยายน 2568\",\"meeting_room\":\"ห้องประชุม 1\"}");
-        docs.add(doc3);
+        AcademicDocument doc4 = new AcademicDocument();
+        doc4.setDocumentType(4);
+        doc4.setJsonData("{\"committee_1_name\":\"ศ.ดร.วิชาการ ดีเด่น\",\"committee_2_name\":\"รศ.ดร.นวัตกรรม ก้าวหน้า\",\"committee_3_name\":\"ผศ.ดร.เทคโนโลยี มั่นคง\",\"meeting_date\":\"15 กันยายน 2568\",\"meeting_room\":\"ห้องประชุม 1\"}");
+        docs.add(doc4);
         request.setDocuments(docs);
 
-        Map<String, String> data = autoFillHelper.getPreFilledAcademicDocData(request, 4, null);
+        Map<String, String> data = autoFillHelper.getPreFilledAcademicDocData(request, 5, null);
 
         assertNotNull(data);
         assertEquals("ศ.ดร.วิชาการ ดีเด่น", data.get("committee_1_name"));
@@ -122,7 +122,7 @@ class DocumentDataAutoFillHelperTest {
         request.setApplicant(testUser);
 
         String savedJson = "{\"applicant_name\":\"ศ.เกียรติคุณ ดร.สมชาย พิเศษ\",\"custom_note\":\"หมายเหตุเฉพาะฉบับนี้\"}";
-        Map<String, String> data = autoFillHelper.getPreFilledAcademicDocData(request, 0, savedJson);
+        Map<String, String> data = autoFillHelper.getPreFilledAcademicDocData(request, 1, savedJson);
 
         assertNotNull(data);
         // Saved user input takes priority over profile defaults

@@ -56,7 +56,10 @@ class ApplicantDocumentEditGateTest {
                 mock(AcademicDocumentEditLogRepository.class),
                 mock(AcademicEmailService.class),
                 mock(com.ecom.service.AfterCommitRunner.class),
-                signatureRequestRepository);
+                signatureRequestRepository,
+                event -> {
+                    /* การส่งคืนให้แก้ไขมีเทสต์ของตัวเองใน ReturnToDraftTest */
+                });
 
         request = new AcademicRequest();
         request.setId(1L);
@@ -124,7 +127,7 @@ class ApplicantDocumentEditGateTest {
                 .thenReturn(List.of(document(true)));
 
         for (RequestStatus closed : List.of(RequestStatus.COMPLETED, RequestStatus.COMPLETED_PASS,
-                RequestStatus.COMPLETED_REVISE, RequestStatus.COMPLETED_FAIL, RequestStatus.REJECTED)) {
+                RequestStatus.COMPLETED_REVISE, RequestStatus.COMPLETED_FAIL)) {
             request.setCurrentStatus(closed);
             assertThat(service.canApplicantEditDocument(request, 0))
                     .as("status %s", closed)

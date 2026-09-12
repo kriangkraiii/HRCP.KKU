@@ -123,7 +123,7 @@ public class PositionApplicantController {
         model.addAttribute("doc2DataMap", doc2DataMap);
 
         // ดึงข้อมูลรายวิชาและผลประเมินจากเอกสารที่ 9 (Phase 1 เดิม 8) ผ่าน linkedEvaluation
-        java.util.Map<Long, java.util.Map<String, String>> evalDoc8DataMap = new java.util.HashMap<>();
+        java.util.Map<Long, java.util.Map<String, String>> evalDoc9DataMap = new java.util.HashMap<>();
         java.util.Map<Long, String> evalRequestCodeMap = new java.util.HashMap<>();
         for (PositionRequest req : requests) {
             if (req.getLinkedEvaluation() != null) {
@@ -131,14 +131,11 @@ public class PositionApplicantController {
                 try {
                     List<com.ecom.academic.model.AcademicDocument> doc9List = academicService
                             .getDocumentsByType(req.getLinkedEvaluation().getId(), 9);
-                    if (doc9List.isEmpty()) {
-                        doc9List = academicService.getDocumentsByType(req.getLinkedEvaluation().getId(), 8);
-                    }
                     if (!doc9List.isEmpty() && doc9List.get(0).getJsonData() != null) {
-                        java.util.Map<String, String> doc8Data = objectMapper.readValue(
+                        java.util.Map<String, String> doc9Data = objectMapper.readValue(
                                 doc9List.get(0).getJsonData(),
                                 new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
-                        evalDoc8DataMap.put(req.getId(), doc8Data);
+                        evalDoc9DataMap.put(req.getId(), doc9Data);
                     }
                 } catch (Exception e) { /* ignore */ }
             }
@@ -150,18 +147,15 @@ public class PositionApplicantController {
             try {
                 List<com.ecom.academic.model.AcademicDocument> doc9List = academicService
                         .getDocumentsByType(draftRequest.get().getLinkedEvaluation().getId(), 9);
-                if (doc9List.isEmpty()) {
-                    doc9List = academicService.getDocumentsByType(draftRequest.get().getLinkedEvaluation().getId(), 8);
-                }
                 if (!doc9List.isEmpty() && doc9List.get(0).getJsonData() != null) {
-                    java.util.Map<String, String> doc8Data = objectMapper.readValue(
+                    java.util.Map<String, String> doc9Data = objectMapper.readValue(
                             doc9List.get(0).getJsonData(),
                             new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
-                    evalDoc8DataMap.put(draftRequest.get().getId(), doc8Data);
+                    evalDoc9DataMap.put(draftRequest.get().getId(), doc9Data);
                 }
             } catch (Exception e) { /* ignore */ }
         }
-        model.addAttribute("evalDoc8DataMap", evalDoc8DataMap);
+        model.addAttribute("evalDoc9DataMap", evalDoc9DataMap);
         model.addAttribute("evalRequestCodeMap", evalRequestCodeMap);
 
         return "academic/position/applicant/dashboard";
@@ -187,8 +181,8 @@ public class PositionApplicantController {
             return "redirect:/user/position/dashboard?error=active_exists";
         }
 
-        // Every usable result from Phase 1, including the ones whose course this
-        // applicant has already spent — those are shown, and explained, rather
+        // Every usable result from Phase 1, including the ones this applicant has
+        // already used on a request — those are shown, and explained, rather
         // than quietly left out.
         List<com.ecom.academic.dto.EvaluationChoice> choices =
                 positionService.getEvaluationChoices(user.getId());
@@ -196,6 +190,9 @@ public class PositionApplicantController {
         model.addAttribute("hasEligible", choices.stream()
                 .anyMatch(com.ecom.academic.dto.EvaluationChoice::selectable));
         model.addAttribute("hasAny", !choices.isEmpty());
+        // ขอ ศ. ไม่ต้องใช้ผลประเมินการสอน — เสนอทางนี้ให้เฉพาะคนที่ยังไม่เป็น ศ.
+        model.addAttribute("canApplyForProfessor",
+                positionService.rankProblemForProfessor(user).isEmpty());
 
         return "academic/position/applicant/new_request";
     }
@@ -209,14 +206,44 @@ public class PositionApplicantController {
             return "redirect:/user/position/dashboard?error=active_exists";
         }
 
-        // The selection screen already leaves out a course this applicant has
-        // spent, but a screen is not the enforcement: a stale tab or a
+        // The selection screen already marks an evaluation this applicant has
+        // used, but a screen is not the enforcement: a stale tab or a
         // hand-built POST arrives with an id the screen would no longer offer.
         if (!positionService.canUseEvaluation(user.getId(), evaluationId)) {
-            return "redirect:/user/position/dashboard?error=course_already_used";
+            return "redirect:/user/position/dashboard?error=evaluation_already_used";
         }
 
-        PositionRequest request = positionService.createDraftRequest(user, evaluationId);
+        Optional<String> rankProblem = positionService.rankProblemForEvaluation(user, evaluationId);
+        if (rankProblem.isPresent()) {
+            return "redirect:/user/position/dashboard?error=" + rankProblem.get();
+        }
+
+        PositionRequest request;
+        try {
+            request = positionService.createDraftRequest(user, evaluationId);
+        } catch (org.springframework.dao.DataIntegrityViolationException e) {
+            // Two tabs can both pass the check above; the unique key on
+            // linked_evaluation_id lets only one of them through.
+            return "redirect:/user/position/dashboard?error=evaluation_already_used";
+        }
+        return "redirect:/user/position/request/" + request.getId();
+    }
+
+    /** เริ่มคำร้องขอ ศ. — ไม่ต้องใช้ผลประเมินการสอน */
+    @PostMapping("/create-professor-request")
+    public String createProfessorRequest(Principal principal) {
+        UserDtls user = getUser(principal);
+
+        if (positionService.hasActiveRequest(user.getId())) {
+            return "redirect:/user/position/dashboard?error=active_exists";
+        }
+
+        Optional<String> rankProblem = positionService.rankProblemForProfessor(user);
+        if (rankProblem.isPresent()) {
+            return "redirect:/user/position/dashboard?error=" + rankProblem.get();
+        }
+
+        PositionRequest request = positionService.createProfessorDraftRequest(user);
         return "redirect:/user/position/request/" + request.getId();
     }
 
@@ -393,6 +420,8 @@ public class PositionApplicantController {
         // applicant save untouched — the applicant may neither forge nor erase them.
         positionService.preserveStaffOnlyFields(type, formData,
                 positionService.getLatestDocumentData(id, type));
+        // The position asked for was fixed when the request was created.
+        positionService.pinTargetPosition(request, formData);
 
         try {
             String jsonData = objectMapper.writeValueAsString(formData);
@@ -435,12 +464,13 @@ public class PositionApplicantController {
             return "redirect:/user/position/request/" + id;
         }
 
-        // Asked before the document checks on purpose. A course taken by another
-        // request in the meantime is not something filling in more documents can
-        // fix, so reporting "documents incomplete" would send the applicant off
-        // to do work that cannot help.
-        if (!positionService.isEvaluationStillAvailable(request)) {
-            return "redirect:/user/position/request/" + id + "?error=course_already_used";
+        // Asked before the document checks on purpose. Asking for a position the
+        // rules do not allow is not something filling in more documents can fix,
+        // so reporting "documents incomplete" would send the applicant off to do
+        // work that cannot help.
+        Optional<String> rankProblem = positionService.submissionProblem(request);
+        if (rankProblem.isPresent()) {
+            return "redirect:/user/position/request/" + id + "?error=" + rankProblem.get();
         }
 
         // Check all applicant docs are completed

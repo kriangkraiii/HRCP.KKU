@@ -51,7 +51,7 @@
                     <form th:action="'/user/academic/request/' + ${request.id} + '/document-1'" method="post"
                         th:attr="data-auto-draft=${editable ? '/api/draft/academic/' + request.id + '/1' : null}"
                         id="doc1Form"
-                        th:with="dData=${doc1Data != null ? doc1Data : doc0Data}">
+                        th:with="dData=${doc1Data}">
                         <fieldset th:disabled="${!editable}" class="border-0 p-0 m-0">
 
                         <!-- ข้อมูลบันทึกข้อความ -->
@@ -157,15 +157,23 @@
                                     <div class="form-check">
                                         <input class="form-check-input target-pos-radio" type="radio" name="target_position_choice" id="targetPos1"
                                             value="chk1"
-                                            th:checked="${dData != null && dData.getOrDefault('chk1', '') == '✓'}" required>
+                                            th:checked="${dData != null && dData.getOrDefault('chk1', '') == '✓'}" required
+                                            th:disabled="${assistantBlocked}">
                                         <label class="form-check-label fw-semibold" for="targetPos1">ผู้ช่วยศาสตราจารย์</label>
                                     </div>
                                     <div class="form-check">
                                         <input class="form-check-input target-pos-radio" type="radio" name="target_position_choice" id="targetPos2"
                                             value="chk2"
-                                            th:checked="${dData != null && dData.getOrDefault('chk2', '') == '✓'}" required>
+                                            th:checked="${dData != null && dData.getOrDefault('chk2', '') == '✓'}" required
+                                            th:disabled="${associateBlocked}">
                                         <label class="form-check-label fw-semibold" for="targetPos2">รองศาสตราจารย์</label>
                                     </div>
+                                </div>
+                                <div class="form-text text-muted" th:if="${assistantBlocked}">
+                                    <i class="fas fa-info-circle"></i>
+                                    ท่านดำรงตำแหน่ง<span th:text="${currentRank.thaiLabel()}"></span>อยู่แล้ว
+                                    จึงขอประเมินได้เฉพาะตำแหน่งที่สูงกว่า
+                                    <span th:if="${associateBlocked}">(ขอตำแหน่งศาสตราจารย์ไม่ต้องประเมินการสอน)</span>
                                 </div>
                                 <!-- Hidden inputs for backend binding -->
                                 <input type="hidden" name="chk1" id="chk1"
@@ -305,7 +313,7 @@
                         if (existingJson) {
                             try {
                                 var data = JSON.parse(existingJson);
-                                var form = document.getElementById('doc1Form') || document.getElementById('doc0Form');
+                                var form = document.getElementById('doc1Form');
                                 if (form && data) {
                                     Object.keys(data).forEach(function(key) {
                                         var el = form.querySelector('[name="' + key + '"]');
@@ -376,7 +384,7 @@
 
                         // === Form Validation ===
                         (function() {
-                            var form = document.getElementById('doc1Form') || document.getElementById('doc0Form');
+                            var form = document.getElementById('doc1Form');
                             var alert = document.getElementById('doc1ValidationAlert');
                             var alertMsg = document.getElementById('doc1ValidationMsg');
 

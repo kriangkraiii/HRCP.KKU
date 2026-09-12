@@ -108,7 +108,7 @@ class SigningPageRenderTest {
     void applicantDocumentFormRendersTheSignaturePanel() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
 
-        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/0")
+        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/1")
                         .with(user(applicant.getEmail()).roles("USER")))
                 .andExpect(status().isOk())
                 .andExpect(content().string(
@@ -122,7 +122,7 @@ class SigningPageRenderTest {
     void flashMessagesAreRenderedByTheSharedLayout() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
 
-        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/0")
+        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/1")
                         .with(user(applicant.getEmail()).roles("USER"))
                         .flashAttr("errorMsg", "ยังไม่มีข้อมูลในเอกสาร"))
                 .andExpect(status().isOk())

@@ -20,6 +20,7 @@ import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.OneToOne;
 import jakarta.persistence.OrderBy;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -46,8 +47,12 @@ public class PositionRequest {
     @JoinColumn(name = "applicant_id", nullable = false)
     private UserDtls applicant;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "linked_evaluation_id")
+    /**
+     * ผลประเมินการสอนที่คำร้องนี้ใช้ — หนึ่งต่อหนึ่ง (Flow ข้อ 30: เอกสารประเมินการสอน 1 ชุด)
+     * ว่างได้เฉพาะการขอ ศ. ซึ่งไม่ต้องประเมินการสอน
+     */
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "linked_evaluation_id", unique = true)
     private AcademicRequest linkedEvaluation;
 
     @Enumerated(EnumType.STRING)

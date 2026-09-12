@@ -6,7 +6,6 @@ public enum PositionRequestStatus {
     DOCUMENT_VERIFICATION("ตรวจสอบความถูกต้อง/ครบถ้วน", "fa-clipboard-check", "#0277bd"),
     SCREENING_COMMITTEE("เสนอวาระกลั่นกรองฯ", "fa-users-cog", "#e65100"),
     REVISION_REQUESTED("ส่งแก้ไข", "fa-circle-exclamation", "#f57f17"),
-    REJECTED("ไม่รับคำร้อง", "fa-circle-xmark", "#c62828"),
     SCREENING_APPROVED("รับรองมติกลั่นกรองฯ", "fa-stamp", "#2e7d32"),
     COLLEGE_COMMITTEE("เสนอวาระคณะกรรมการวิทยาลัยฯ", "fa-landmark", "#7b1fa2"),
     COLLEGE_APPROVED("รับรองมติคณะกรรมการวิทยาลัยฯ", "fa-file-circle-check", "#1b5e20"),
@@ -41,8 +40,6 @@ public enum PositionRequestStatus {
                 return "secondary";
             case REVISION_REQUESTED:
                 return "warning";
-            case REJECTED:
-                return "danger";
             case SENT_TO_HR:
                 return "dark";
             default:
@@ -70,25 +67,25 @@ public enum PositionRequestStatus {
      * กระโดดจาก "รับคำร้อง" ไป "ส่งออกกองทรัพยากรบุคคล" ข้ามทั้งการกลั่นกรองและ
      * คณะกรรมการประจำวิทยาลัยฯ ได้ (GAP-30)
      *
-     * <p>{@code REJECTED} ออกได้จากทุกสถานะที่ยังไม่ปิด และ
+     * <p>ไม่มีสถานะปฏิเสธ — ใน Flow ข้อ 22 และ 27 คำตอบ "NO" คือการตีกลับให้แก้
      * {@code REVISION_REQUESTED} ออกได้จากทุกจุดที่มีการพิจารณา แล้วกลับเข้า
      * ขั้นตรวจสอบเอกสารอีกครั้ง
      */
     public java.util.Set<PositionRequestStatus> allowedNext() {
         return switch (this) {
             case DRAFT -> java.util.EnumSet.of(DOCUMENT_RECEIVED);
-            case DOCUMENT_RECEIVED -> java.util.EnumSet.of(DOCUMENT_VERIFICATION, REJECTED);
+            case DOCUMENT_RECEIVED -> java.util.EnumSet.of(DOCUMENT_VERIFICATION);
             case DOCUMENT_VERIFICATION ->
-                java.util.EnumSet.of(SCREENING_COMMITTEE, REVISION_REQUESTED, REJECTED);
+                java.util.EnumSet.of(SCREENING_COMMITTEE, REVISION_REQUESTED);
             case SCREENING_COMMITTEE ->
-                java.util.EnumSet.of(SCREENING_APPROVED, REVISION_REQUESTED, REJECTED);
-            case SCREENING_APPROVED -> java.util.EnumSet.of(COLLEGE_COMMITTEE, REJECTED);
+                java.util.EnumSet.of(SCREENING_APPROVED, REVISION_REQUESTED);
+            case SCREENING_APPROVED -> java.util.EnumSet.of(COLLEGE_COMMITTEE);
             case COLLEGE_COMMITTEE ->
-                java.util.EnumSet.of(COLLEGE_APPROVED, REVISION_REQUESTED, REJECTED);
-            case COLLEGE_APPROVED -> java.util.EnumSet.of(SENT_TO_HR, REJECTED);
+                java.util.EnumSet.of(COLLEGE_APPROVED, REVISION_REQUESTED);
+            case COLLEGE_APPROVED -> java.util.EnumSet.of(SENT_TO_HR);
             // ผู้ยื่นแก้แล้วส่งกลับ เข้าสู่การตรวจสอบเอกสารอีกรอบ
-            case REVISION_REQUESTED -> java.util.EnumSet.of(DOCUMENT_VERIFICATION, REJECTED);
-            case SENT_TO_HR, REJECTED -> java.util.EnumSet.noneOf(PositionRequestStatus.class);
+            case REVISION_REQUESTED -> java.util.EnumSet.of(DOCUMENT_VERIFICATION);
+            case SENT_TO_HR -> java.util.EnumSet.noneOf(PositionRequestStatus.class);
         };
     }
 
@@ -98,12 +95,12 @@ public enum PositionRequestStatus {
     }
 
     /**
-     * ตำแหน่งบนแถบความคืบหน้า (0-based) หรือ -1 เมื่อยังไม่เริ่ม/ถูกปฏิเสธ
+     * ตำแหน่งบนแถบความคืบหน้า (0-based) หรือ -1 เมื่อยังไม่เริ่ม
      * แทนการเทียบ {@code ordinal()} — ดูเหตุผลใน {@code RequestStatus} (GAP-32)
      */
     public int progressIndex() {
         PositionRequestStatus onMainPath = switch (this) {
-            case DRAFT, REJECTED -> null;
+            case DRAFT -> null;
             // ส่งแก้ไขคือการถอยกลับมาที่ขั้นตรวจสอบเอกสาร
             case REVISION_REQUESTED -> DOCUMENT_VERIFICATION;
             default -> this;
@@ -122,7 +119,7 @@ public enum PositionRequestStatus {
 
     /** Terminal status — process is finished */
     public boolean isTerminal() {
-        return this == SENT_TO_HR || this == REJECTED;
+        return this == SENT_TO_HR;
     }
 
     /** Draft — not yet submitted */

@@ -54,7 +54,7 @@
                     <form th:action="'/user/academic/request/' + ${request.id} + '/document-2'" method="post"
                         th:attr="data-auto-draft=${editable ? '/api/draft/academic/' + request.id + '/2' : null}"
                         id="doc2Form"
-                        th:with="dData=${doc2Data != null ? doc2Data : doc1Data}">
+                        th:with="dData=${doc2Data}">
                         <fieldset th:disabled="${!editable}" class="border-0 p-0 m-0">
 
                         <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ ผู้ยื่น -->

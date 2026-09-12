@@ -77,11 +77,11 @@ class UAT_AcademicApplicantTest {
         }
 
         @Test
-        @DisplayName("TC-04: แสดงสถานะ hasDoc0, hasDoc1")
+        @DisplayName("TC-04: แสดงสถานะ hasDoc1, hasDoc2")
         void newRequest_shouldShowDocStatus() {
-            // Given: draft มี doc_0 แล้วแต่ยังไม่มี doc_1
+            // Given: draft มี doc_1 แล้วแต่ยังไม่มี doc_2
             // When: เข้าหน้า new-request
-            // Then: hasDoc0=true, hasDoc1=false
+            // Then: hasDoc1=true, hasDoc2=false
             assertTrue(true, "แสดงสถานะเอกสารถูกต้อง");
         }
     }
@@ -94,7 +94,7 @@ class UAT_AcademicApplicantTest {
         @DisplayName("TC-01: แสดงฟอร์มเอกสารที่ 0")
         void document0Form_shouldDisplay() {
             // Given: คำร้อง draft
-            // When: เข้า /user/academic/request/{id}/document-0
+            // When: เข้า /user/academic/request/{id}/document-1
             // Then: แสดงฟอร์มพร้อมข้อมูลเดิม (ถ้ามี)
             assertTrue(true, "แสดงฟอร์มเอกสารที่ 0 สำเร็จ");
         }
@@ -157,7 +157,7 @@ class UAT_AcademicApplicantTest {
         @Test
         @DisplayName("TC-01: ส่งคำร้อง (DRAFT → RECEIVED) สำเร็จ")
         void submitRequest_shouldChangeStatus() {
-            // Given: คำร้องสถานะ DRAFT พร้อม doc_0 และ doc_1
+            // Given: คำร้องสถานะ DRAFT พร้อม doc_1 และ doc_2
             // When: กดส่งคำร้อง
             // Then: สถานะเปลี่ยนเป็น RECEIVED พร้อมส่งอีเมลแจ้งแอดมิน
             assertTrue(true, "ส่งคำร้องเปลี่ยนสถานะสำเร็จ");

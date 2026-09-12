@@ -65,7 +65,7 @@ class FullJourneyBrowserTest extends PlaywrightTestBase {
         assertThat(draft).as("เปิดหน้ายื่นคำร้องแล้วต้องได้แบบร่าง").isNotNull();
 
         // ---------- ฟอร์มเอกสารที่ 0 ต้อง render ได้และมีช่องให้กรอกจริง ----------
-        page.navigate(baseUrl() + "/user/academic/request/" + draft.getId() + "/document-0");
+        page.navigate(baseUrl() + "/user/academic/request/" + draft.getId() + "/document-1");
         assertThat(page.locator("input[name='applicant_name']").count())
                 .as("ฟอร์มเอกสารที่ 0 ต้องมีช่องชื่อผู้ยื่น")
                 .isPositive();
@@ -87,7 +87,7 @@ class FullJourneyBrowserTest extends PlaywrightTestBase {
                 officer, "ข้อ 9-10 — กรรมการประจำวิทยาลัยฯ รับรองผล", false);
         academicService.updateStatus(draft.getId(), RequestStatus.COMPLETED,
                 officer, "ข้อ 11 — แจ้งผลการประเมิน", false);
-        data.academicDocument(draft, 8, "{\"evaluation_result\":\"ผ่าน\"}");
+        data.academicDocument(draft, 9, "{\"evaluation_result\":\"ผ่าน\"}");
 
         // ---------- อาจารย์เห็นผลบนแดชบอร์ด ----------
         page.navigate(baseUrl() + "/user/academic/dashboard");

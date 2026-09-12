@@ -28,11 +28,17 @@
             <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
                 <i class="fas fa-exclamation-circle me-1"></i>
                 <span th:if="${param.error[0] == 'incomplete_docs'}">กรุณากรอกเอกสารให้ครบทุกรายการก่อนส่งคำร้อง</span>
-                <span th:if="${param.error[0] == 'course_already_used'}">
-                    ยื่นคำร้องนี้ไม่ได้ เพราะผลการประเมินการสอนรายวิชาและปีการศึกษานี้
-                    ถูกใช้ในคำร้องอื่นที่ยื่นไปแล้ว จึงใช้<strong>ยื่นซ้ำ</strong>อีกไม่ได้
+                <span th:if="${param.error[0] == 'rank_not_higher'}">
+                    ยื่นคำร้องนี้ไม่ได้ เพราะตำแหน่งที่ขอไม่สูงกว่าตำแหน่งที่ท่านดำรงอยู่
                 </span>
-                <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'course_already_used'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
+                <span th:if="${param.error[0] == 'evaluation_required'}">
+                    ยื่นคำร้องนี้ไม่ได้ เพราะการขอตำแหน่งผู้ช่วยศาสตราจารย์และรองศาสตราจารย์ต้องใช้ผลการประเมินผลการสอน
+                </span>
+                <span th:if="${param.error[0] == 'position_mismatch'}">
+                    ยื่นคำร้องนี้ไม่ได้ เพราะตำแหน่งที่ขอไม่ตรงกับตำแหน่งที่ระบุไว้ในผลการประเมินผลการสอน
+                </span>
+                <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'rank_not_higher'
+                        or param.error[0] == 'evaluation_required' or param.error[0] == 'position_mismatch'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 

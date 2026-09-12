@@ -73,39 +73,39 @@
       </div>
 
       <!-- Course Info -->
-      <div th:if="${doc0Data != null}" class="detail-info-card" style="--_accent: #1976d2">
+      <div th:if="${doc1Data != null}" class="detail-info-card" style="--_accent: #1976d2">
         <h6>
           <i class="fas fa-book" style="color: var(--color-primary-medium)"></i>
           ข้อมูลรายวิชา
-          <small style="color: var(--text-muted); font-weight: 400">(จากเอกสารที่ 0: บันทึกข้อความ)</small>
+          <small style="color: var(--text-muted); font-weight: 400">(จากเอกสารที่ 1: บันทึกข้อความ)</small>
         </h6>
         <div class="detail-info-row">
           <div class="detail-info-item">
             <small>รหัสวิชา</small>
-            <div class="di-value" th:text="${doc0Data.getOrDefault('course_code', '-')}">
+            <div class="di-value" th:text="${doc1Data.getOrDefault('course_code', '-')}">
               -
             </div>
           </div>
           <div class="detail-info-item" style="flex: 2">
             <small>รายวิชา</small>
-            <div class="di-value" th:text="${doc0Data.getOrDefault('course_name', '-')}">
+            <div class="di-value" th:text="${doc1Data.getOrDefault('course_name', '-')}">
               -
             </div>
           </div>
           <div class="detail-info-item">
             <small>ปีการศึกษา</small>
-            <div class="di-value" th:text="${doc0Data.getOrDefault('academic_year', '-')}">
+            <div class="di-value" th:text="${doc1Data.getOrDefault('academic_year', '-')}">
               -
             </div>
           </div>
           <div class="detail-info-item">
             <small>ตำแหน่งที่ขอ</small>
             <div class="di-value">
-              <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk1', '') == '✓'}">ผู้ช่วยศาสตราจารย์</span>
-              <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk2', '') == '✓'}">รองศาสตราจารย์</span>
-              <span th:if="${doc0Data != null and doc0Data.getOrDefault('chk3', '') == '✓'}">ศาสตราจารย์</span>
+              <span th:if="${doc1Data != null and doc1Data.getOrDefault('chk1', '') == '✓'}">ผู้ช่วยศาสตราจารย์</span>
+              <span th:if="${doc1Data != null and doc1Data.getOrDefault('chk2', '') == '✓'}">รองศาสตราจารย์</span>
+              <span th:if="${doc1Data != null and doc1Data.getOrDefault('chk3', '') == '✓'}">ศาสตราจารย์</span>
               <span
-                th:if="${doc0Data == null or (doc0Data.getOrDefault('chk1', '') != '✓' and doc0Data.getOrDefault('chk2', '') != '✓' and doc0Data.getOrDefault('chk3', '') != '✓')}">-</span>
+                th:if="${doc1Data == null or (doc1Data.getOrDefault('chk1', '') != '✓' and doc1Data.getOrDefault('chk2', '') != '✓' and doc1Data.getOrDefault('chk3', '') != '✓')}">-</span>
             </div>
           </div>
         </div>
@@ -130,8 +130,9 @@
                     <option value="">-- เลือกสถานะ --</option>
                     <!-- เฉพาะสถานะที่เปลี่ยนไปได้จริงจากสถานะปัจจุบัน ตามลำดับใน flow
                          เดิมแสดงทุกสถานะ ทำให้กดข้ามขั้นตอนได้โดยไม่มีอะไรห้าม -->
+                    <!-- ข้อ 2 — คณบดีไม่เห็นชอบ: ส่งคืนคือการย้ายกลับไปเป็นแบบร่าง ป้ายจึงต้องบอกสิ่งที่เกิดขึ้นจริง -->
                     <option th:each="s : ${allowedNextStatuses}" th:value="${s.name()}"
-                      th:text="${s.thaiLabel}"></option>
+                      th:text="${s.name() == 'DRAFT'} ? 'ส่งคืนให้ผู้ยื่นแก้ไข (คณบดีไม่เห็นชอบ)' : ${s.thaiLabel}"></option>
                   </select>
                 </div>
                 <div class="mb-3 js-hidden" id="meetingFields">
@@ -143,8 +144,8 @@
                     placeholder="เช่น ห้องประชุมสารบรรณ ชั้น 1" />
                 </div>
                 <div class="mb-3">
-                  <label class="form-label">หมายเหตุ</label>
-                  <textarea name="note" class="form-control" rows="2"></textarea>
+                  <label class="form-label" id="noteLabel">หมายเหตุ</label>
+                  <textarea name="note" id="statusNote" class="form-control" rows="2"></textarea>
                 </div>
                 <button type="submit" class="btn-save-status bss-blue">
                   <i class="fas fa-save"></i> บันทึกสถานะ
@@ -453,6 +454,14 @@
         .addEventListener("change", function () {
           document.getElementById("meetingFields").style.display =
             this.value === "MEETING_SCHEDULED" ? "block" : "none";
+
+          // ส่งคืนโดยไม่บอกเหตุผล = ให้ผู้ยื่นเดาว่าต้องแก้อะไร ฝั่ง server ก็ปฏิเสธเช่นกัน
+          const returning = this.value === "DRAFT";
+          const note = document.getElementById("statusNote");
+          note.required = returning;
+          document.getElementById("noteLabel").textContent = returning
+            ? "เหตุผลที่ส่งคืน (จำเป็น)"
+            : "หมายเหตุ";
         });
 
       document.querySelectorAll(".btn-pdf-print").forEach((btn) => {

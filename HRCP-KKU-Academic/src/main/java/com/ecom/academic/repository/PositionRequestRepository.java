@@ -34,9 +34,9 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
      * สองฉบับได้จริงโดยไม่ต้องผ่าน {@code createRequest} เลย เช่น
      *
      * <ol>
-     *   <li>คำร้อง A ถูกปฏิเสธ → {@code REJECTED} ซึ่งเป็นสถานะปลายทาง</li>
+     *   <li>คำร้อง A ถูกส่งออกกองทรัพยากรบุคคล → {@code SENT_TO_HR} ซึ่งเป็นสถานะปลายทาง</li>
      *   <li>ด่านจึงตอบว่าไม่มีคำร้องค้าง ผู้ยื่นสร้างคำร้อง B ได้ตามปกติ</li>
-     *   <li>เจ้าหน้าที่ย้อนสถานะ A ออกจาก {@code REJECTED} กลับมาเป็นสถานะที่ยังเดินอยู่</li>
+     *   <li>เจ้าหน้าที่ย้อนสถานะ A ออกจากสถานะปลายทาง กลับมาเป็นสถานะที่ยังเดินอยู่</li>
      * </ol>
      *
      * <p>ตอนนั้นทั้ง A และ B ต่างก็ยังเดินอยู่ และถ้าเมธอดนี้คืน {@code Optional}
@@ -57,27 +57,18 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
             @Param("terminalStatuses") List<PositionRequestStatus> terminalStatuses);
 
     /**
-     * This applicant's requests that have actually spent the evaluation they
-     * were built on, with that evaluation already fetched.
+     * คำร้องทุกฉบับของผู้ยื่นที่ผูกผลประเมินการสอนไว้ ทุกสถานะ พร้อม fetch ผลประเมินมาด้วย
      *
-     * <p>Scoped to one applicant deliberately, not asked faculty-wide. The rule
-     * it feeds removes courses from what a person may choose, and a question
-     * asked across everyone would let one applicant's request take a course away
-     * from a colleague who happened to be evaluated on the same one.
-     *
-     * @param free statuses that consume nothing — {@code DRAFT}, which has not
-     *             been submitted, and {@code REJECTED}, which has to give its
-     *             course back
+     * <p>ไม่กรองสถานะ เพราะผลประเมินหนึ่งฉบับเป็นของคำร้องหนึ่งฉบับตลอดไป แบบร่างก็ถือไว้
+     * (UNIQUE ใน DB ก็ไม่ยอมให้ผูกซ้ำอยู่แล้ว) ผลประเมินจะว่างลงได้ทางเดียวคือแบบร่างถูกลบทิ้ง
      */
     @Query("""
             SELECT r FROM PositionRequest r
             JOIN FETCH r.linkedEvaluation
             WHERE r.applicant.id = :userId
-              AND r.currentStatus NOT IN :free
             ORDER BY r.createdAt ASC
             """)
-    List<PositionRequest> findConsumingEvaluations(@Param("userId") Integer userId,
-            @Param("free") List<PositionRequestStatus> free);
+    List<PositionRequest> findLinkedByApplicant(@Param("userId") Integer userId);
 
     /**
      * แบบร่างของผู้ยื่น เรียงจากใหม่ไปเก่า

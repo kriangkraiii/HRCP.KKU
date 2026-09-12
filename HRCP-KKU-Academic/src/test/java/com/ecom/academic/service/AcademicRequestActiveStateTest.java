@@ -21,7 +21,7 @@ import com.ecom.repository.UserRepository;
  * somebody opening a second one.
  *
  * <p>Written because the rule had drifted from the enum that defines it:
- * {@code hasActiveRequest} listed REJECTED and COMPLETED but not
+ * {@code hasActiveRequest} listed COMPLETED but not
  * COMPLETED_FAIL, so an applicant told their teaching evaluation did not pass
  * could never ask to be evaluated again — with no way out, since the block is
  * on the only page that starts a new request.
@@ -102,9 +102,9 @@ class AcademicRequestActiveStateTest {
     }
 
     @Test
-    @DisplayName("คำร้องที่ไม่ถูกรับ และที่เสร็จสิ้นแล้ว ก็ยื่นใหม่ได้")
-    void rejectedAndCompletedDoNotBlockEither() {
-        requestAt(RequestStatus.REJECTED);
+    @DisplayName("คำร้องที่ไม่ผ่าน และที่เสร็จสิ้นแล้ว ก็ยื่นใหม่ได้")
+    void failedAndCompletedDoNotBlockEither() {
+        requestAt(RequestStatus.COMPLETED_FAIL);
         assertThat(requestService.hasActiveRequest(applicant.getId())).isFalse();
 
         requestRepository.deleteAll();

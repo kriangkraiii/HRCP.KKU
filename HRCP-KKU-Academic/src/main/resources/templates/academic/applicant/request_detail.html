@@ -30,8 +30,8 @@
             </div>
 
             <!-- ข้อมูลรายวิชา จากเอกสารที่ 1 -->
-            <div th:if="${doc1Data != null or doc0Data != null}" class="request-card-v2-course" style="margin-bottom:var(--space-lg);"
-                 th:with="courseDoc=${doc1Data != null ? doc1Data : doc0Data}">
+            <div th:if="${doc1Data != null}" class="request-card-v2-course" style="margin-bottom:var(--space-lg);"
+                 th:with="courseDoc=${doc1Data}">
                 <div class="row g-3">
                     <div class="col-12 mb-1">
                         <small class="text-muted"><i class="fas fa-book me-1"></i> ข้อมูลรายวิชา (จากเอกสารที่ 1)</small>
@@ -93,12 +93,6 @@
                                 <div class="timeline-v2-label">แจ้งผล - ไม่ผ่าน</div>
                             </div>
                         </th:block>
-                        <th:block th:if="${request.currentStatus.name() == 'REJECTED'}">
-                            <div class="timeline-v2-step t-rejected">
-                                <div class="timeline-v2-icon"><i class="fas fa-circle-xmark"></i></div>
-                                <div class="timeline-v2-label">ไม่รับคำร้อง</div>
-                            </div>
-                        </th:block>
                     </div>
                 </div>
             </div>
@@ -123,21 +117,18 @@
                     <div class="ra-detail">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</div>
                 </div>
             </div>
-            <div th:if="${request.currentStatus.name() == 'REJECTED'}" class="result-alert ra-rejected">
-                <i class="fas fa-times-circle"></i> <span>ไม่รับคำร้อง</span>
-            </div>
             <div th:if="${request.currentStatus.name() == 'COMPLETED'}" class="result-alert ra-completed">
                 <i class="fas fa-flag-checkered"></i> <span>เสร็จสิ้น — คำร้องได้ดำเนินการเสร็จสิ้นแล้ว</span>
             </div>
 
             <!-- แอดมินส่งเอกสารกลับมาให้แก้ไข -->
-            <div th:if="${(canEditDoc1 != null and canEditDoc1) or (canEditDoc2 != null and canEditDoc2) or (canEditDoc0 != null and canEditDoc0)}" class="result-alert ra-revise">
+            <div th:if="${(canEditDoc1 != null and canEditDoc1) or (canEditDoc2 != null and canEditDoc2)}" class="result-alert ra-revise">
                 <i class="fas fa-pen-to-square"></i>
                 <div>
                     <span>แอดมินส่งเอกสารกลับมาให้ท่านแก้ไข</span>
                     <div class="ra-detail">
-                        <span th:if="${(canEditDoc1 != null and canEditDoc1) or (canEditDoc0 != null and canEditDoc0)}">เอกสารที่ 1<span th:if="${revisionNoteDoc1 != null ? revisionNoteDoc1 : revisionNoteDoc0}"> — เหตุผล: [[${revisionNoteDoc1 != null ? revisionNoteDoc1 : revisionNoteDoc0}]]</span><br></span>
-                        <span th:if="${canEditDoc2 != null and canEditDoc2}">เอกสารที่ 2<span th:if="${revisionNoteDoc2 != null ? revisionNoteDoc2 : revisionNoteDoc1}"> — เหตุผล: [[${revisionNoteDoc2 != null ? revisionNoteDoc2 : revisionNoteDoc1}]]</span><br></span>
+                        <span th:if="${(canEditDoc1 != null and canEditDoc1)}">เอกสารที่ 1<span th:if="${revisionNoteDoc1}"> — เหตุผล: [[${revisionNoteDoc1}]]</span><br></span>
+                        <span th:if="${canEditDoc2 != null and canEditDoc2}">เอกสารที่ 2<span th:if="${revisionNoteDoc2}"> — เหตุผล: [[${revisionNoteDoc2}]]</span><br></span>
                         กรุณาแก้ไขข้อมูลให้เรียบร้อย แล้ว<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ในหน้าเอกสารนั้น
                     </div>
                 </div>
@@ -149,7 +140,7 @@
                     <h5><i class="fas fa-file-word me-2"></i>เอกสารของฉัน</h5>
                     <!-- ปุ่มแก้ไขโผล่เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น -->
                     <div>
-                        <a th:if="${(canEditDoc1 != null and canEditDoc1) or (canEditDoc0 != null and canEditDoc0)}"
+                        <a th:if="${(canEditDoc1 != null and canEditDoc1)}"
                            th:href="'/user/academic/request/' + ${request.id} + '/document-1'"
                            class="btn btn-sm btn-warning me-1">
                             <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 1
@@ -159,7 +150,7 @@
                            class="btn btn-sm btn-warning">
                             <i class="fas fa-edit me-1"></i> แก้ไขเอกสารที่ 2
                         </a>
-                        <span th:if="${!(canEditDoc1 != null and canEditDoc1) and !(canEditDoc2 != null and canEditDoc2) and !(canEditDoc0 != null and canEditDoc0)}" class="text-muted small">
+                        <span th:if="${!(canEditDoc1 != null and canEditDoc1) and !(canEditDoc2 != null and canEditDoc2)}" class="text-muted small">
                             <i class="fas fa-lock me-1"></i> ส่งคำร้องแล้ว 
                         </span>
                     </div>

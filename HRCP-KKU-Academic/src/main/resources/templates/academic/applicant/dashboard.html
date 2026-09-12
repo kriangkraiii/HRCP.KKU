@@ -63,11 +63,22 @@
                         <span>คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องใหม่ได้จนกว่าจะเสร็จสิ้น</span>
                     </div>
 
+                    <!-- ข้อ 2 — คณบดีไม่เห็นชอบ: คำร้องถูกส่งคืนมาเป็นแบบร่างพร้อมเหตุผล -->
+                    <div th:if="${draftRequest != null and returnNote != null}"
+                         class="alert alert-warning d-flex align-items-start gap-2">
+                        <i class="fas fa-rotate-left mt-1"></i>
+                        <div>
+                            <strong>คำร้องถูกส่งคืนให้ท่านแก้ไข</strong>
+                            <div>เหตุผล: <span th:text="${returnNote}"></span></div>
+                            <div class="small">แก้ไขเอกสาร ลงนามอิเล็กทรอนิกส์ใหม่ แล้วกดยื่นคำร้องอีกครั้ง</div>
+                        </div>
+                    </div>
+
                     <!-- Draft Banner -->
                     <div th:if="${draftRequest != null}" class="draft-banner">
                         <div class="draft-banner-text">
                             <strong><i class="fas fa-edit text-warning me-2"></i>คำร้องฉบับร่าง</strong>
-                            <span>กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง</span>
+                            <span th:text="${returnNote != null} ? 'แก้ไขตามเหตุผลด้านบน แล้วส่งคำร้องอีกครั้ง' : 'กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง'"></span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
                             <button type="button" class="btn btn-outline-danger btn-sm"
@@ -110,12 +121,12 @@
                                 th:text="${req.currentStatus.thaiLabel}"></span>
                         </div>
 
-                        <!-- ข้อมูลรายวิชา (จากเอกสารที่ 0) -->
-                        <div th:if="${doc0DataMap.containsKey(req.id)}" class="request-card-v2-course">
+                        <!-- ข้อมูลรายวิชา (จากเอกสารที่ 1) -->
+                        <div th:if="${doc1DataMap.containsKey(req.id)}" class="request-card-v2-course">
                             <i class="fas fa-book me-1" style="color:var(--color-primary-medium)"></i>
-                            <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
-                            <span th:text="${doc0DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
-                            <span class="text-muted ms-2">ปีการศึกษา <span th:text="${doc0DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
+                            <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
+                            <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
+                            <span class="text-muted ms-2">ปีการศึกษา <span th:text="${doc1DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
                         </div>
 
                         <!-- Progress Tracker -->
@@ -144,12 +155,6 @@
                                     <div class="timeline-v2-label">แจ้งผล - ไม่ผ่าน</div>
                                 </div>
                             </th:block>
-                            <th:block th:if="${req.currentStatus.name() == 'REJECTED'}">
-                                <div class="timeline-v2-step t-rejected">
-                                    <div class="timeline-v2-icon"><i class="fas fa-circle-xmark"></i></div>
-                                    <div class="timeline-v2-label">ไม่รับคำร้อง</div>
-                                </div>
-                            </th:block>
                         </div>
 
                         <!-- Meeting Date -->
@@ -171,9 +176,6 @@
                                 <span>ต้องแก้ไขเอกสาร</span>
                                 <div class="ra-detail">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</div>
                             </div>
-                        </div>
-                        <div th:if="${req.currentStatus.name() == 'REJECTED'}" class="result-alert ra-rejected">
-                            <i class="fas fa-times-circle"></i> <span>ไม่รับคำร้อง</span>
                         </div>
                         <div th:if="${req.currentStatus.name() == 'COMPLETED'}" class="result-alert ra-completed">
                             <i class="fas fa-flag-checkered"></i> <span>เสร็จสิ้น — คำร้องได้ดำเนินการเสร็จสิ้นแล้ว</span>

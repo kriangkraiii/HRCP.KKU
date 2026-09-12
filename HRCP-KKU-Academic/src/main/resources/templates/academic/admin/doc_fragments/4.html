@@ -31,7 +31,7 @@
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
                                 <input type="text" name="applicant_title" class="form-control" list="titleList3" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('title', request.applicant.title) : request.applicant.title}" >
+                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('title', request.applicant.title) : request.applicant.title}" >
                                 <datalist id="titleList3">
                                     <option value="นาย">
                                     <option value="นาง">
@@ -42,7 +42,7 @@
                                 <label class="form-label">ชื่อผู้ยื่น</label>
                                 <div class="combo-input">
                                     <input type="text" name="applicant_name" class="form-control" list="staffList3" placeholder="เลือกหรือพิมพ์ชื่อ..."
-                                        th:value="${doc0Data != null ? doc0Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}" >
+                                        th:value="${doc1Data != null ? doc1Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}" >
                                     <datalist id="staffList3">
                                         <option th:each="s : ${staffMembers}" th:value="${s.displayName}"></option>
                                     </datalist>
@@ -51,7 +51,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ประเภทตำแหน่ง</label>
                                 <input type="text" name="employee_type" class="form-control" list="staffTypeList3" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('employee_type', '') : ''}">
+                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('employee_type', '') : ''}">
                                 <datalist id="staffTypeList3">
                                     <option value="พนักงานมหาวิทยาลัย">
                                     <option value="ข้าราชการ">
@@ -62,7 +62,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งปัจจุบัน</label>
                                 <input type="text" name="current_position" class="form-control" list="posList3" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${doc0Data != null ? doc0Data.getOrDefault('current_position', request.applicant.academicPosition) : request.applicant.academicPosition}">
+                                    th:value="${doc1Data != null ? doc1Data.getOrDefault('current_position', request.applicant.academicPosition) : request.applicant.academicPosition}">
                                 <datalist id="posList3">
                                     <option value="อาจารย์">
                                     <option value="ผู้ช่วยศาสตราจารย์">
@@ -72,7 +72,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งที่ขอ</label>
                                 <input type="text" name="requested_position" class="form-control" list="posReqList3" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${doc0Data != null ? (doc0Data.getOrDefault('chk1','') == '✓' ? 'ผู้ช่วยศาสตราจารย์' : (doc0Data.getOrDefault('chk2','') == '✓' ? 'รองศาสตราจารย์' : '')) : ''}">
+                                    th:value="${doc1Data != null ? (doc1Data.getOrDefault('chk1','') == '✓' ? 'ผู้ช่วยศาสตราจารย์' : (doc1Data.getOrDefault('chk2','') == '✓' ? 'รองศาสตราจารย์' : '')) : ''}">
                                 <datalist id="posReqList3">
                                     <option value="ผู้ช่วยศาสตราจารย์">
                                     <option value="รองศาสตราจารย์">

@@ -39,9 +39,7 @@ public enum RequestStatus {
     COMPLETED("เสร็จสิ้น", "fa-flag-checkered", "#1b5e20"),
 
     /** ข้อ 8 — มติที่ประชุมคณะอนุกรรมการ: ไม่ผ่าน */
-    COMPLETED_FAIL("แจ้งผล - ไม่ผ่าน", "fa-times-circle", "#d32f2f"),
-
-    REJECTED("ไม่รับคำร้อง", "fa-times-circle", "#c62828");
+    COMPLETED_FAIL("แจ้งผล - ไม่ผ่าน", "fa-times-circle", "#d32f2f");
 
     private final String thaiLabel;
     private final String icon;
@@ -72,23 +70,25 @@ public enum RequestStatus {
      * "รับคำร้อง" ไป "เสร็จสิ้น" ข้ามการแต่งตั้งอนุกรรมการ การประชุม และการรับรอง
      * ของกรรมการประจำวิทยาลัยฯ ได้ทั้งหมด และดึงคำร้องที่ปิดไปแล้วกลับมาก็ได้ (GAP-30)
      *
-     * <p>{@code REJECTED} ออกได้จากทุกสถานะที่ยังไม่ปิด — คำร้องอาจถูกตีกลับ
-     * ได้ทุกจุดของกระบวนการ
+     * <p>ไม่มีสถานะปฏิเสธ — ใน Flow ทุกคำตอบ "NO" คือการตีกลับให้แก้ ข้อ 2 คณบดีไม่เห็นชอบ
+     * ส่งคำร้องกลับเป็น {@code DRAFT} ให้ผู้ยื่นแก้แล้วยื่นใหม่ (ต้องมีเหตุผล) ส่วนหลังแต่งตั้ง
+     * อนุกรรมการแล้ว การตีกลับคือวงจร {@code COMPLETED_REVISE} ของข้อ 12-15
      */
     public Set<RequestStatus> allowedNext() {
         return switch (this) {
             case DRAFT -> EnumSet.of(RECEIVED);
-            case RECEIVED -> EnumSet.of(SUB_COMMITTEE_APPOINTED, REJECTED);
-            case SUB_COMMITTEE_APPOINTED -> EnumSet.of(MEETING_SCHEDULED, REJECTED);
+            // ข้อ 2 — คณบดีไม่เห็นชอบ: ส่งคืนให้ผู้ยื่นแก้แล้วยื่นใหม่ (กลับไปข้อ 1)
+            case RECEIVED -> EnumSet.of(SUB_COMMITTEE_APPOINTED, DRAFT);
+            case SUB_COMMITTEE_APPOINTED -> EnumSet.of(MEETING_SCHEDULED);
             case MEETING_SCHEDULED ->
-                EnumSet.of(COMPLETED_PASS, COMPLETED_REVISE, COMPLETED_FAIL, REJECTED);
+                EnumSet.of(COMPLETED_PASS, COMPLETED_REVISE, COMPLETED_FAIL);
             // ข้อ 9-10 — ผลจากอนุกรรมการต้องผ่านการรับรองของกรรมการประจำวิทยาลัยฯ ก่อนแจ้งผล
-            case COMPLETED_PASS -> EnumSet.of(COLLEGE_ENDORSED, REJECTED);
+            case COMPLETED_PASS -> EnumSet.of(COLLEGE_ENDORSED);
             // ข้อ 12-15 — วงจรแก้ไข: ผู้ยื่นส่งกลับ แล้ววนเข้าที่ประชุมอนุกรรมการอีกรอบ
-            case COMPLETED_REVISE -> EnumSet.of(REVISION_SUBMITTED, REJECTED);
-            case REVISION_SUBMITTED -> EnumSet.of(MEETING_SCHEDULED, REJECTED);
-            case COLLEGE_ENDORSED -> EnumSet.of(COMPLETED, REJECTED);
-            case COMPLETED, COMPLETED_FAIL, REJECTED -> EnumSet.noneOf(RequestStatus.class);
+            case COMPLETED_REVISE -> EnumSet.of(REVISION_SUBMITTED);
+            case REVISION_SUBMITTED -> EnumSet.of(MEETING_SCHEDULED);
+            case COLLEGE_ENDORSED -> EnumSet.of(COMPLETED);
+            case COMPLETED, COMPLETED_FAIL -> EnumSet.noneOf(RequestStatus.class);
         };
     }
 
@@ -109,7 +109,7 @@ public enum RequestStatus {
     }
 
     /**
-     * ตำแหน่งบนแถบความคืบหน้า (0-based) หรือ -1 เมื่อยังไม่เริ่ม/ถูกปฏิเสธ
+     * ตำแหน่งบนแถบความคืบหน้า (0-based) หรือ -1 เมื่อยังไม่เริ่ม
      *
      * <p>แทนการเทียบ {@code ordinal()} ซึ่งผูกกับลำดับการประกาศ ไม่ใช่ลำดับของ
      * กระบวนการ — สลับบรรทัดใน enum ทีเดียวแถบความคืบหน้าก็เพี้ยนเงียบ ๆ (GAP-32)
@@ -117,7 +117,7 @@ public enum RequestStatus {
      */
     public int progressIndex() {
         RequestStatus onMainPath = switch (this) {
-            case DRAFT, REJECTED -> null;
+            case DRAFT -> null;
             case COMPLETED_REVISE, REVISION_SUBMITTED, COMPLETED_FAIL -> MEETING_SCHEDULED;
             default -> this;
         };
@@ -135,7 +135,7 @@ public enum RequestStatus {
 
     /** สถานะที่ถือว่าเสร็จสิ้นแล้ว (ยื่นคำร้องใหม่ได้) */
     public boolean isTerminal() {
-        return this == REJECTED || this == COMPLETED || this == COMPLETED_FAIL;
+        return this == COMPLETED || this == COMPLETED_FAIL;
     }
 
     /** สถานะ draft - ยังไม่ส่งคำร้อง */

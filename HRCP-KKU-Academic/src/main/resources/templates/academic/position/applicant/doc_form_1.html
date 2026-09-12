@@ -25,12 +25,16 @@
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">ตำแหน่งที่ขอ <span class="text-danger">*</span></label>
-                                <select name="target_position" class="form-select" required id="targetPos">
+                                <select name="target_position" class="form-select" required
+                                        th:disabled="${request.targetPosition != null}" id="targetPos">
                                     <option value="">-- เลือก --</option>
-                                    <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
-                                    <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
-                                    <option value="ศาสตราจารย์">ศาสตราจารย์</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์" th:selected="${request.targetPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์" th:selected="${request.targetPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
+                                    <option value="ศาสตราจารย์" th:selected="${request.targetPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
                                 </select>
+                                <!-- ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ -->
+                                <input type="hidden" name="target_position" th:if="${request.targetPosition != null}" th:value="${request.targetPosition}">
+                                <div class="form-text" th:if="${request.targetPosition != null}">ตำแหน่งที่ขอกำหนดไว้ตั้งแต่สร้างคำร้อง จึงแก้ไขในแบบฟอร์มไม่ได้</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วิธีการ</label>

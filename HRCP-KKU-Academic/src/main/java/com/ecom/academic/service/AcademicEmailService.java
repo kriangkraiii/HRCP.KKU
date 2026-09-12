@@ -53,6 +53,14 @@ public class AcademicEmailService {
 
     @Async
     public void sendStatusChangeEmail(Long requestId, RequestStatus oldStatus, RequestStatus newStatus) {
+        sendStatusChangeEmail(requestId, oldStatus, newStatus, null);
+    }
+
+    /**
+     * @param note หมายเหตุที่แอดมินใส่ตอนเปลี่ยนสถานะ — ใช้เป็นเหตุผลเมื่อคำร้องถูกส่งคืนให้แก้ไข (Flow ข้อ 2)
+     */
+    @Async
+    public void sendStatusChangeEmail(Long requestId, RequestStatus oldStatus, RequestStatus newStatus, String note) {
         try {
             AcademicRequest request = reload(requestId);
             if (request == null) {
@@ -60,13 +68,21 @@ public class AcademicEmailService {
             }
             // 1. Create in-app notification for applicant
             if (request != null && request.getApplicant() != null) {
-                boolean isImportant = newStatus == RequestStatus.COMPLETED_REVISE
+                boolean isImportant = isReturn(oldStatus, newStatus)
+                        || newStatus == RequestStatus.COMPLETED_REVISE
                         || newStatus == RequestStatus.COMPLETED_PASS
-                        || newStatus == RequestStatus.COMPLETED_FAIL
-                        || newStatus == RequestStatus.REJECTED;
-                String notifTitle = "อัปเดตสถานะการประเมิน: " + newStatus.getThaiLabel();
-                String notifMsg = "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel();
-                String notifLink = "/user/academic/request/" + request.getId();
+                        || newStatus == RequestStatus.COMPLETED_FAIL;
+                String notifTitle = isReturn(oldStatus, newStatus)
+                        ? "คำร้องขอประเมินผลการสอนถูกส่งคืนให้แก้ไข"
+                        : "อัปเดตสถานะการประเมิน: " + newStatus.getThaiLabel();
+                String notifMsg = isReturn(oldStatus, newStatus)
+                        ? "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") ของท่านถูกส่งคืนให้แก้ไข เหตุผล: "
+                                + (note != null ? note : "-")
+                        : "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel();
+                // คำร้องที่ถูกส่งคืนเป็นแบบร่างแล้ว หน้ารายละเอียดจะพาไปที่หน้าแก้แบบร่างอยู่ดี
+                String notifLink = isReturn(oldStatus, newStatus)
+                        ? "/user/academic/new-request"
+                        : "/user/academic/request/" + request.getId();
                 notificationService.sendNotification(request.getApplicant(), null, notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.ACADEMIC_STATUS_UPDATE, isImportant);
             }
 
@@ -78,8 +94,10 @@ public class AcademicEmailService {
             if (applicantEmail == null || applicantEmail.isEmpty() || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail))
                 return;
 
-            String subject = "อัปเดตสถานะคำร้องขอประเมินผลการสอน (#" + request.getId() + ") - " + newStatus.getThaiLabel();
-            String body = buildEmailBody(request, oldStatus, newStatus);
+            String subject = isReturn(oldStatus, newStatus)
+                    ? "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") ถูกส่งคืนให้แก้ไข"
+                    : "อัปเดตสถานะคำร้องขอประเมินผลการสอน (#" + request.getId() + ") - " + newStatus.getThaiLabel();
+            String body = buildEmailBody(request, oldStatus, newStatus, note);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -154,11 +172,17 @@ public class AcademicEmailService {
         }
     }
 
-    private String buildEmailBody(AcademicRequest request, RequestStatus oldStatus, RequestStatus newStatus) {
+    /** Flow ข้อ 2 — คณบดีไม่เห็นชอบ คำร้องถูกส่งคืนเป็นแบบร่าง */
+    private static boolean isReturn(RequestStatus oldStatus, RequestStatus newStatus) {
+        return oldStatus == RequestStatus.RECEIVED && newStatus == RequestStatus.DRAFT;
+    }
+
+    private String buildEmailBody(AcademicRequest request, RequestStatus oldStatus, RequestStatus newStatus,
+            String note) {
         String statusColor = switch (newStatus) {
             case COMPLETED_PASS, COMPLETED -> "#16a34a";
-            case COMPLETED_REVISE -> "#d97706";
-            case COMPLETED_FAIL, REJECTED -> "#dc2626";
+            case COMPLETED_REVISE, DRAFT -> "#d97706";
+            case COMPLETED_FAIL -> "#dc2626";
             case RECEIVED -> "#2563eb";
             default -> newStatus.getColor() != null ? newStatus.getColor() : "#1e3a8a";
         };
@@ -169,6 +193,13 @@ public class AcademicEmailService {
                     + "<div style='font-weight:600;color:#1e293b;margin-bottom:4px;'>รายละเอียดการนัดหมาย:</div>"
                     + "<div>วันประชุม: <strong>" + request.getMeetingDate() + "</strong></div>"
                     + (request.getMeetingLocation() != null ? "<div>สถานที่: " + request.getMeetingLocation() + "</div>" : "")
+                    + "</div>";
+        }
+        if (isReturn(oldStatus, newStatus)) {
+            extraDetails = "<div style='background:#fffbeb;border:1px solid #fcd34d;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
+                    + "<div style='font-weight:600;color:#92400e;margin-bottom:4px;'>เหตุผลที่ส่งคืน:</div>"
+                    + "<div>" + org.springframework.web.util.HtmlUtils.htmlEscape(note != null ? note : "-") + "</div>"
+                    + "<div style='margin-top:8px;'>กรุณาแก้ไขเอกสาร ลงนามอิเล็กทรอนิกส์ใหม่ แล้วยื่นคำร้องอีกครั้ง</div>"
                     + "</div>";
         }
 

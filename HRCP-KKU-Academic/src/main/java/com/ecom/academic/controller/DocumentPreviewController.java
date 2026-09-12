@@ -31,7 +31,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class DocumentPreviewController {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentPreviewController.class);
-    private static final Set<Integer> APPLICANT_ALLOWED_DOCS = Set.of(0, 1, 8);
+    private static final Set<Integer> APPLICANT_ALLOWED_DOCS = Set.of(1, 2, 9);
 
     private final DocumentGenerationService documentService;
 
@@ -46,15 +46,15 @@ public class DocumentPreviewController {
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public static final Map<Integer, String> DOC_TITLES = Map.of(
-            0, "บันทึกข้อความ_ขอรับการประเมินผลการสอน",
-            1, "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน",
-            2, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ",
-            3, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน",
-            4, "บันทึกข้อความ_ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ",
-            5, "ข้อเสนอแนะจากคณะอนุกรรมการ",
-            6, "แบบฟอร์มประเมินการสอน_ตามประกาศ_มข_1607-66",
-            7, "ส่วนที่_3_แบบประเมินผลการสอน",
-            8, "บันทึกข้อความ_แจ้งผลการประเมินผลการสอน"
+            1, "บันทึกข้อความ_ขอรับการประเมินผลการสอน",
+            2, "แบบตรวจสอบเบื้องต้นเอกสารประกอบประเมินผลการสอน",
+            3, "การขอรายชื่อเพื่อแต่งตั้งคณะกรรมการ",
+            4, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน",
+            5, "บันทึกข้อความ_ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ",
+            6, "ข้อเสนอแนะจากคณะอนุกรรมการ",
+            7, "แบบฟอร์มประเมินการสอน_ตามประกาศ_มข_1607-66",
+            8, "ส่วนที่_3_แบบประเมินผลการสอน",
+            9, "บันทึกข้อความ_แจ้งผลการประเมินผลการสอน"
     );
 
     public static String getDocTitle(int docType) {
@@ -88,8 +88,8 @@ public class DocumentPreviewController {
         }
 
         try {
-            // ============ Document 6: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
-            if (docType == 6) {
+            // ============ Document 7: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
+            if (docType == 7) {
                 int[] weights = { 20, 30, 30, 20 };
                 double grandTotal = 0;
 
@@ -154,7 +154,7 @@ public class DocumentPreviewController {
 
             byte[] docxBytes;
             String baseFilename = "เอกสารที่_" + docType + "_" + getDocTitle(docType);
-            if (docType == 4) {
+            if (docType == 5) {
                 String committeeIdx = formData.getOrDefault("committee_index", "1");
                 String committeeName = formData.getOrDefault("committee_name_" + committeeIdx, "");
                 String committeePosition = formData.getOrDefault("committee_position_" + committeeIdx, "");

@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.ecom.academic.dto.EvaluationChoice;
 import com.ecom.academic.dto.EvaluationSummary;
 import com.ecom.academic.model.AcademicDocument;
+import com.ecom.academic.model.AcademicRank;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionAttachment;
 import com.ecom.academic.model.PositionDocument;
@@ -223,16 +224,15 @@ public class PositionRequestService {
      * meant expiry was effectively never enforced (GAP-21).
      */
     public List<AcademicRequest> getEligibleEvaluations(Integer userId) {
-        Set<String> spent = getSpentCourses(userId).keySet();
+        Set<Long> spent = getSpentEvaluations(userId).keySet();
         return academicRequestService.findUsableEvaluations(userId).stream()
-                .filter(evaluation -> !spent.contains(
-                        academicRequestService.summarize(evaluation).courseKey()))
+                .filter(evaluation -> !spent.contains(evaluation.getId()))
                 .toList();
     }
 
     /**
      * Every teaching evaluation this applicant could put forward, each marked
-     * with whether its course has already been spent.
+     * with whether it has already been used by a position request.
      *
      * <p>The unmarked ones are exactly {@link #getEligibleEvaluations}; this adds
      * the ones the rule excludes, and why, so the screen can say so. Anything
@@ -240,79 +240,36 @@ public class PositionRequestService {
      * choice being withheld, it is not a choice.
      */
     public List<EvaluationChoice> getEvaluationChoices(Integer applicantId) {
-        Map<String, String> spent = getSpentCourses(applicantId);
+        Map<Long, String> spent = getSpentEvaluations(applicantId);
         return academicRequestService.findUsableEvaluations(applicantId).stream()
                 .map(academicRequestService::summarize)
                 .map(summary -> new EvaluationChoice(summary,
-                        spent.containsKey(summary.courseKey()),
-                        spent.get(summary.courseKey())))
+                        spent.containsKey(summary.evaluationId()),
+                        spent.get(summary.evaluationId())))
                 .toList();
     }
 
     /**
-     * Statuses that consume nothing. A draft has not been submitted, and a
-     * rejected request never got anywhere — its author has to be able to put the
-     * same teaching result forward again, or one refusal would burn an evaluation
-     * that is still perfectly valid. Same rule, and the same reasoning, as
-     * {@code ScopusQueryService.STATUSES_THAT_FREE_A_PUBLICATION}.
-     */
-    private static final List<PositionRequestStatus> STATUSES_THAT_FREE_A_COURSE =
-            List.of(PositionRequestStatus.DRAFT, PositionRequestStatus.REJECTED);
-
-    /**
-     * The courses this applicant has already spent, each mapped to the request
-     * that spent it.
+     * ผลประเมินการสอนของผู้ยื่นที่ผูกกับคำร้องขอตำแหน่งไปแล้ว → รหัสคำร้องที่ผูกไว้
      *
-     * <p>Keyed by {@link EvaluationSummary#courseKey()} — course code plus
-     * academic year — so that a second evaluation of the same course in the same
-     * year is caught too, and so that the same course in a <em>later</em> year is
-     * not. The request code rides along because a screen that merely hides a
-     * choice leaves the applicant guessing; it can now say which request took it.
+     * <p>ผลประเมินหนึ่งฉบับเป็นของคำร้องหนึ่งฉบับ ทุกสถานะ (Flow ข้อ 30: เอกสารประเมินการสอน 1 ชุด)
+     * Flow ไม่มีการปฏิเสธที่ทำให้คำร้องตกไป มีแต่ตีกลับให้แก้ จึงไม่มีสถานะไหนคืนสิทธิ์
+     * ผลประเมินจะว่างลงได้ทางเดียวคือแบบร่างถูกลบ
      *
-     * <p>Derived from {@code linked_evaluation_id} rather than stored in a table
-     * of its own: the link is already in the database, the course and the year are
-     * already in the evaluation's documents, and a stored copy could only drift
-     * from them.
+     * <p>กุญแจคือตัวผลประเมิน ไม่ใช่วิชา ใช้วิชาเดิมยื่นตำแหน่งใหม่ได้ถ้าประเมินใหม่พร้อมเนื้อหาใหม่
+     * รหัสคำร้องแนบมาด้วยเพื่อให้หน้าจอบอกได้ว่าคำร้องไหนใช้ไป
      */
-    public Map<String, String> getSpentCourses(Integer applicantId) {
+    public Map<Long, String> getSpentEvaluations(Integer applicantId) {
         if (applicantId == null) {
             return Map.of();
         }
-        Map<String, String> spent = new LinkedHashMap<>();
-        for (PositionRequest request : requestRepository.findConsumingEvaluations(
-                applicantId, STATUSES_THAT_FREE_A_COURSE)) {
-            EvaluationSummary summary = academicRequestService.summarize(request.getLinkedEvaluation());
-            if (summary != null) {
-                spent.putIfAbsent(summary.courseKey(),
-                        request.getRequestCode() != null ? request.getRequestCode()
-                                : String.valueOf(request.getId()));
-            }
+        Map<Long, String> spent = new LinkedHashMap<>();
+        for (PositionRequest request : requestRepository.findLinkedByApplicant(applicantId)) {
+            spent.put(request.getLinkedEvaluation().getId(),
+                    request.getRequestCode() != null ? request.getRequestCode()
+                            : String.valueOf(request.getId()));
         }
         return spent;
-    }
-
-    /**
-     * Whether the evaluation behind this request is still free to be spent.
-     *
-     * <p>Asked again at submission, not only when the draft was created. A draft
-     * can sit for weeks, and in the meantime another request of the same
-     * applicant's may have gone in on the same course — the draft was legal when
-     * it was made and is not legal now.
-     *
-     * <p>A request carrying no evaluation is left alone: whether that is
-     * allowed is a different rule, and answering "no" here would report the
-     * wrong reason.
-     */
-    public boolean isEvaluationStillAvailable(PositionRequest request) {
-        if (request == null || request.getLinkedEvaluation() == null) {
-            return true;
-        }
-        EvaluationSummary summary = academicRequestService.summarize(request.getLinkedEvaluation());
-        if (summary == null) {
-            return true;
-        }
-        // getSpentCourses skips DRAFT, so a draft never reads as blocking itself.
-        return !getSpentCourses(request.getApplicant().getId()).containsKey(summary.courseKey());
     }
 
     /** Whether this applicant may still start a request on this evaluation. */
@@ -324,17 +281,133 @@ public class PositionRequestService {
                 .anyMatch(evaluation -> evaluationId.equals(evaluation.getId()));
     }
 
+    // ================== Rank rules ==================
+
+    public static final String ERROR_RANK_NOT_HIGHER = "rank_not_higher";
+    public static final String ERROR_EVALUATION_REQUIRED = "evaluation_required";
+    public static final String ERROR_POSITION_MISMATCH = "position_mismatch";
+
+    /**
+     * ปัญหาของการเริ่มคำร้องด้วยผลประเมินฉบับนี้ ถ้ามี — ตำแหน่งที่ผลประเมินขอต้องสูงกว่าตำแหน่งปัจจุบัน
+     * ซึ่งยึดตามเอกสารที่ 1 ของผลประเมินก่อนโปรไฟล์
+     */
+    public Optional<String> rankProblemForEvaluation(UserDtls applicant, Long evaluationId) {
+        EvaluationSummary summary = academicRequestRepository.findById(evaluationId)
+                .map(academicRequestService::summarize)
+                .orElse(null);
+        if (summary == null || summary.targetRank() == null) {
+            return Optional.empty();
+        }
+        AcademicRank current = AcademicRankPolicy.currentRank(applicant, summary.currentPosition());
+        return AcademicRankPolicy.rankViolation(current, summary.targetRank())
+                .map(message -> ERROR_RANK_NOT_HIGHER);
+    }
+
+    /** ปัญหาของการเริ่มคำร้องขอ ศ. ถ้ามี — ยังไม่มีเอกสาร จึงดูตำแหน่งจากโปรไฟล์ */
+    public Optional<String> rankProblemForProfessor(UserDtls applicant) {
+        return AcademicRankPolicy.rankViolation(AcademicRankPolicy.currentRank(applicant),
+                AcademicRank.PROFESSOR).map(message -> ERROR_RANK_NOT_HIGHER);
+    }
+
+    /**
+     * ตรวจกติกาตำแหน่งอีกรอบตอนยื่น — แบบร่างค้างได้เป็นสัปดาห์ และข้อมูลเก่าอาจสร้างก่อนมีกติกานี้
+     *
+     * <ul>
+     * <li>ขอ ผศ./รศ. ต้องมีผลประเมินการสอน (ขอ ศ. ไม่ต้อง)
+     * <li>ตำแหน่งที่ขอต้องตรงกับที่ผลประเมินระบุ
+     * <li>ต้องสูงกว่าตำแหน่งปัจจุบัน — ยึดเอกสารแรกที่กรอก: เอกสารที่ 1 ของผลประเมิน แล้วเอกสารที่ 1
+     * ของคำร้องนี้ แล้วค่อยโปรไฟล์
+     * </ul>
+     *
+     * คำร้องที่ยังไม่รู้ว่าขอตำแหน่งอะไรจะถูกปล่อยผ่าน เพราะยังไม่มีอะไรให้เทียบ
+     *
+     * @return error code สำหรับหน้าจอ ถ้าผิดกติกา
+     */
+    public Optional<String> submissionProblem(PositionRequest request) {
+        AcademicRank target = AcademicRank.of(request.getTargetPosition());
+        if (target == null) {
+            return Optional.empty();
+        }
+        EvaluationSummary evaluation = academicRequestService.summarize(request.getLinkedEvaluation());
+        if (evaluation == null && target.requiresTeachingEvaluation()) {
+            return Optional.of(ERROR_EVALUATION_REQUIRED);
+        }
+        if (evaluation != null && evaluation.targetRank() != null && evaluation.targetRank() != target) {
+            return Optional.of(ERROR_POSITION_MISMATCH);
+        }
+        Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
+        AcademicRank current = AcademicRankPolicy.currentRank(request.getApplicant(),
+                evaluation == null ? null : evaluation.currentPosition(),
+                doc1 == null ? null : doc1.get("current_position"));
+        return AcademicRankPolicy.rankViolation(current, target).map(message -> ERROR_RANK_NOT_HIGHER);
+    }
+
+    /** ชื่อช่องตำแหน่งที่ขอในแบบฟอร์มฝั่งผู้ยื่น — เอกสาร 1, 6 ใช้ชื่อหนึ่ง เอกสาร 2, 4 อีกชื่อหนึ่ง */
+    private static final List<String> TARGET_POSITION_FIELDS = List.of("target_position", "request_position");
+
+    /**
+     * ตรึงตำแหน่งที่ขอในข้อมูลฟอร์มให้เป็นตำแหน่งของคำร้อง — ตำแหน่งมาจากผลประเมินการสอน
+     * (หรือเป็น ศ.) ตั้งแต่ตอนสร้าง ช่องในฟอร์มแค่แสดง ไม่ใช่ที่เปลี่ยนมัน
+     */
+    public void pinTargetPosition(PositionRequest request, Map<String, String> formData) {
+        String target = request.getTargetPosition();
+        if (target == null || formData == null) {
+            return;
+        }
+        for (String field : TARGET_POSITION_FIELDS) {
+            if (formData.containsKey(field)) {
+                formData.put(field, target);
+            }
+        }
+    }
+
+    /** JSON-in/JSON-out variant of {@link #pinTargetPosition} for the auto-draft endpoint. */
+    public String pinTargetPositionInJson(Long requestId, String jsonData) {
+        PositionRequest request = requestRepository.findById(requestId).orElse(null);
+        if (request == null || request.getTargetPosition() == null || jsonData == null) {
+            return jsonData;
+        }
+        try {
+            Map<String, String> submitted = objectMapper.readValue(jsonData,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                    });
+            pinTargetPosition(request, submitted);
+            return objectMapper.writeValueAsString(submitted);
+        } catch (Exception e) {
+            return jsonData;
+        }
+    }
+
     // ================== Request CRUD ==================
 
+    /**
+     * สร้างแบบร่างคำร้อง ตำแหน่งที่ขอดึงมาจากผลประเมินการสอน (เอกสารที่ 1 ช่อง chk1/chk2)
+     *
+     * <p>ผลประเมินที่ผูกไว้แล้วจะชนกับ UNIQUE ของ {@code linked_evaluation_id} และได้
+     * {@link org.springframework.dao.DataIntegrityViolationException} — ผู้เรียกต้องรับไว้
+     */
     @Transactional
     public PositionRequest createDraftRequest(UserDtls applicant, Long linkedEvaluationId) {
+        AcademicRequest evaluation = linkedEvaluationId == null ? null
+                : academicRequestRepository.findById(linkedEvaluationId).orElse(null);
+        AcademicRank target = evaluation == null ? null
+                : academicRequestService.summarize(evaluation).targetRank();
+        return newDraft(applicant, evaluation, target);
+    }
+
+    /** สร้างแบบร่างคำร้องขอ ศ. — ไม่ต้องใช้ผลประเมินการสอน */
+    @Transactional
+    public PositionRequest createProfessorDraftRequest(UserDtls applicant) {
+        return newDraft(applicant, null, AcademicRank.PROFESSOR);
+    }
+
+    private PositionRequest newDraft(UserDtls applicant, AcademicRequest evaluation, AcademicRank target) {
         PositionRequest request = new PositionRequest();
         request.setApplicant(applicant);
         request.setCurrentStatus(PositionRequestStatus.DRAFT);
-
-        if (linkedEvaluationId != null) {
-            AcademicRequest eval = academicRequestRepository.findById(linkedEvaluationId).orElse(null);
-            request.setLinkedEvaluation(eval);
+        request.setLinkedEvaluation(evaluation);
+        if (target != null) {
+            request.setTargetPosition(target.thaiLabel());
         }
 
         request = requestRepository.save(request);
@@ -513,25 +586,6 @@ public class PositionRequestService {
 
         addStatusHistory(request, oldStatus, newStatus, changedBy, note);
 
-        if (newStatus == PositionRequestStatus.REJECTED) {
-            List<com.ecom.academic.model.SignatureRequest> rejectedEnvelopes = signatureRequestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(com.ecom.academic.model.SignatureModule.POSITION, requestId);
-            for (com.ecom.academic.model.SignatureRequest env : rejectedEnvelopes) {
-                if (env.getStatus().isOpen()) {
-                    env.setStatus(com.ecom.academic.model.SignatureRequestStatus.CANCELLED);
-                    env.setCancelledAt(LocalDateTime.now());
-                    env.setCancelReason("คำร้องขอตำแหน่งถูกปฏิเสธ: " + (note != null ? note : "-"));
-                    if (env.getSteps() != null) {
-                        env.getSteps().forEach(s -> {
-                            if (s.getStatus() == com.ecom.academic.model.SignatureStepStatus.WAITING || s.getStatus() == com.ecom.academic.model.SignatureStepStatus.ACTIVE) {
-                                s.setStatus(com.ecom.academic.model.SignatureStepStatus.SKIPPED);
-                            }
-                        });
-                    }
-                    signatureRequestRepository.save(env);
-                }
-            }
-        }
-
         // Send email notification to applicant if requested
         if (sendNotify) {
             Long notifyId = request.getId();
@@ -706,8 +760,10 @@ public class PositionRequestService {
         try {
             Map<String, String> data = objectMapper.readValue(jsonData,
                     new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+            // ตำแหน่งที่ขอตั้งไว้ตอนสร้างคำร้อง (จากผลประเมินการสอน หรือ ศ.) เอกสารที่ 2 เติมให้ได้
+            // เฉพาะคำร้องที่ยังไม่มี ไม่ใช่ที่เปลี่ยนมัน
             String pos = data.get("request_position");
-            if (pos != null && !pos.isBlank()) {
+            if (pos != null && !pos.isBlank() && request.getTargetPosition() == null) {
                 request.setTargetPosition(pos);
             }
             String major = data.get("major");

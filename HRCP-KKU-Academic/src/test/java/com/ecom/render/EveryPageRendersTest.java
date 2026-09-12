@@ -79,8 +79,10 @@ class EveryPageRendersTest extends AbstractFlowTest {
         // และฝั่งเจ้าหน้าที่ยังเปิดแบบฟอร์มไม่ได้จนกว่าคำร้องจะถูกส่งเข้ามาจริง
         AcademicRequest draftEvaluation = data.evaluation(applicant, RequestStatus.DRAFT);
         AcademicRequest liveEvaluation = data.evaluation(applicant, RequestStatus.RECEIVED);
+        // ผลประเมินหนึ่งฉบับผูกได้กับคำร้องขอตำแหน่งเดียว แบบร่างจึงต้องมีผลประเมินของตัวเอง
+        AcademicRequest evaluationForDraft = data.evaluation(applicant, RequestStatus.COMPLETED);
         PositionRequest draftPosition =
-                data.positionRequest(applicant, PositionRequestStatus.DRAFT, liveEvaluation);
+                data.positionRequest(applicant, PositionRequestStatus.DRAFT, evaluationForDraft);
         PositionRequest livePosition = data.positionRequest(
                 applicant, PositionRequestStatus.DOCUMENT_RECEIVED, liveEvaluation);
 
@@ -93,8 +95,8 @@ class EveryPageRendersTest extends AbstractFlowTest {
         // ผู้ที่ยังไม่มีคำร้องค้างอยู่ ไม่อย่างนั้นระบบจะพากลับไปที่คำร้องเดิม
         pages.add(asOtherApplicant("/user/academic/new-request"));
         pages.add(asApplicant("/user/academic/request/" + liveEvaluation.getId()));
-        pages.add(asApplicant("/user/academic/request/" + draftEvaluation.getId() + "/document-0"));
         pages.add(asApplicant("/user/academic/request/" + draftEvaluation.getId() + "/document-1"));
+        pages.add(asApplicant("/user/academic/request/" + draftEvaluation.getId() + "/document-2"));
 
         pages.add(asStaff("/admin/academic/requests"));
         pages.add(asStaff("/admin/academic/request/" + liveEvaluation.getId()));

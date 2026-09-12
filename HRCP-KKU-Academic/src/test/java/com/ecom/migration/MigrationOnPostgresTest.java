@@ -75,7 +75,8 @@ class MigrationOnPostgresTest {
             """
             CREATE TABLE IF NOT EXISTS position_request (
                 id BIGSERIAL PRIMARY KEY,
-                current_status VARCHAR(50))
+                current_status VARCHAR(50),
+                linked_evaluation_id BIGINT REFERENCES academic_request(id))
             """,
             """
             CREATE TABLE IF NOT EXISTS staff_member (
@@ -86,13 +87,17 @@ class MigrationOnPostgresTest {
             """
             CREATE TABLE IF NOT EXISTS academic_document (
                 id BIGSERIAL PRIMARY KEY,
-                request_id BIGINT REFERENCES academic_request(id))
+                request_id BIGINT REFERENCES academic_request(id),
+                document_type INTEGER,
+                document_label VARCHAR(500),
+                generated_file_path VARCHAR(2048))
             """,
             // V7 drops a check constraint on this one, so it has to be there.
             """
             CREATE TABLE IF NOT EXISTS notifications (
                 id BIGSERIAL PRIMARY KEY,
-                type VARCHAR(50))
+                type VARCHAR(50),
+                link VARCHAR(255))
             """,
             // V12 drops the enum checks on these. They carry a CHECK here so the
             // test proves the migration removes a constraint that really exists,
@@ -121,7 +126,20 @@ class MigrationOnPostgresTest {
             """
             CREATE TABLE IF NOT EXISTS position_document_edit_log (
                 id BIGSERIAL PRIMARY KEY,
+                request_id BIGINT REFERENCES position_request(id),
+                document_type INTEGER,
                 action VARCHAR(50))
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS position_document (
+                id BIGSERIAL PRIMARY KEY,
+                request_id BIGINT REFERENCES position_request(id),
+                document_type INTEGER)
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS position_attachment (
+                id BIGSERIAL PRIMARY KEY,
+                request_id BIGINT REFERENCES position_request(id))
             """,
             """
             CREATE TABLE IF NOT EXISTS scopus_publication (

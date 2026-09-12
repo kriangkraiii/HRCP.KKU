@@ -753,7 +753,7 @@ public class DocumentGenerationService {
      * <p>An anchor such as {@code {{applicant_name}}} usually appears more than
      * once — once in the body prose and once under the signature line. The
      * signature one is always the parenthesised form, {@code ({{name}})}, which
-     * is what this picks out. Without that test doc_0 and p2doc_1 would be
+     * is what this picks out. Without that test doc_1 and p2doc_1 would be
      * stamped in the middle of a sentence.
      *
      * @return {@code {start, end}} of the paragraph, or null if there is none

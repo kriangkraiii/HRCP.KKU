@@ -22,6 +22,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.AcademicDocument;
+import com.ecom.academic.model.AcademicRank;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionRequest;
@@ -228,10 +229,10 @@ public class TestDataFactory {
     }
 
     /**
-     * A finished evaluation with the document 8 the position flow reads.
+     * A finished evaluation with the document 9 the position flow reads.
      *
      * @param expirationDate value for the {@code expiration_date} key, exactly as
-     *                       a real document 8 would carry it — Thai month names
+     *                       a real document 9 would carry it — Thai month names
      *                       included, which is the case {@code isExpired} gets
      *                       wrong (GAP-21). Pass null to omit the key.
      */
@@ -241,33 +242,52 @@ public class TestDataFactory {
         String json = expirationDate == null
                 ? "{\"evaluation_result\":\"ผ่าน\"}"
                 : "{\"evaluation_result\":\"ผ่าน\",\"expiration_date\":\"" + expirationDate + "\"}";
-        academicDocument(r, 8, json);
+        academicDocument(r, 9, json);
         return r;
     }
 
     /**
-     * A finished, passed evaluation for one named course in one academic year —
-     * the pair that decides whether a position request may reuse it.
+     * A finished, passed evaluation for one named course in one academic year,
+     * asked for by a lecturer (อาจารย์) applying for ผศ.
      *
-     * <p>Writes both documents a real evaluation carries: document 0, where the
-     * applicant names the course and the year, and document 8, the notification
-     * of the result. The two disagree by design in one respect — document 8 has
-     * no year field of its own, only {@code semester} — and that is exactly the
-     * gap the course key has to bridge.
+     * <p>Writes both documents a real evaluation carries: document 1, where the
+     * applicant names the course, the year, their current position and the
+     * position they are applying for, and document 9, the notification of the
+     * result. Document 9 has no year field of its own, only {@code semester}.
      */
     public AcademicRequest evaluationForCourse(UserDtls applicant, String courseCode,
             String academicYear) {
+        return passedEvaluation(applicant, courseCode, academicYear,
+                AcademicRank.ASSISTANT_PROFESSOR, "อาจารย์");
+    }
+
+    /**
+     * A finished, passed evaluation that asked for {@code target}, filed by
+     * someone who wrote {@code currentPosition} as their position on document 1.
+     */
+    public AcademicRequest evaluationFor(UserDtls applicant, AcademicRank target,
+            String currentPosition) {
+        return passedEvaluation(applicant, "CP001101", "2568", target, currentPosition);
+    }
+
+    private AcademicRequest passedEvaluation(UserDtls applicant, String courseCode,
+            String academicYear, AcademicRank target, String currentPosition) {
+        String tick = switch (target) {
+            case ASSISTANT_PROFESSOR -> "chk1";
+            case ASSOCIATE_PROFESSOR -> "chk2";
+            default -> "chk3";
+        };
         AcademicRequest r = evaluation(applicant, RequestStatus.COMPLETED);
         String doc1Json = "{\"course_code\":\"" + courseCode
                 + "\",\"course_name\":\"วิชาทดสอบ " + courseCode
-                + "\",\"academic_year\":\"" + academicYear + "\"}";
+                + "\",\"academic_year\":\"" + academicYear
+                + "\",\"current_position\":\"" + currentPosition
+                + "\",\"" + tick + "\":\"✓\"}";
         academicDocument(r, 1, doc1Json);
-        academicDocument(r, 0, doc1Json);
         String doc9Json = "{\"evaluation_result\":\"ผ่าน\",\"course_code\":\"" + courseCode
                 + "\",\"course_name\":\"วิชาทดสอบ " + courseCode
                 + "\",\"result_level\":\"ชำนาญ\",\"semester\":\"1/" + academicYear + "\"}";
         academicDocument(r, 9, doc9Json);
-        academicDocument(r, 8, doc9Json);
         return r;
     }
 
@@ -288,10 +308,16 @@ public class TestDataFactory {
 
     public PositionRequest positionRequest(UserDtls applicant, PositionRequestStatus status,
             AcademicRequest linkedEvaluation) {
+        return positionRequest(applicant, status, linkedEvaluation, null);
+    }
+
+    public PositionRequest positionRequest(UserDtls applicant, PositionRequestStatus status,
+            AcademicRequest linkedEvaluation, String targetPosition) {
         PositionRequest r = new PositionRequest();
         r.setApplicant(applicant);
         r.setCurrentStatus(status);
         r.setLinkedEvaluation(linkedEvaluation);
+        r.setTargetPosition(targetPosition);
         if (status != PositionRequestStatus.DRAFT) {
             r.setSubmissionDate(LocalDateTime.now());
         }

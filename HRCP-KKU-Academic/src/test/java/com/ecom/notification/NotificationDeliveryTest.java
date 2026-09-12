@@ -85,27 +85,44 @@ class NotificationDeliveryTest extends AbstractFlowTest {
         }
 
         /**
-         * The four outcomes an applicant must not miss are flagged important, so
-         * they survive a full inbox. A routine step forward is not.
+         * The outcomes an applicant must not miss are flagged important, so they
+         * survive a full inbox. A routine step forward is not.
          */
         @Test
-        @DisplayName("ผลลัพธ์ปลายทาง (ผ่าน/แก้ไข/ไม่ผ่าน/ไม่รับคำร้อง) ถูกทำเครื่องหมายว่าสำคัญ")
+        @DisplayName("ผลลัพธ์ปลายทาง (ผ่าน/แก้ไข/ไม่ผ่าน) ถูกทำเครื่องหมายว่าสำคัญ")
         void terminalOutcomesAreMarkedImportant() {
             UserDtls applicant = data.applicant();
 
             for (RequestStatus outcome : List.of(RequestStatus.COMPLETED_PASS,
-                    RequestStatus.COMPLETED_REVISE, RequestStatus.COMPLETED_FAIL,
-                    RequestStatus.REJECTED)) {
+                    RequestStatus.COMPLETED_REVISE, RequestStatus.COMPLETED_FAIL)) {
 
                 AcademicRequest request = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
                 academicEmail.sendStatusChangeEmail(request.getId(),
                         RequestStatus.MEETING_SCHEDULED, outcome);
             }
 
-            awaitCondition("การแจ้งเตือนครบ 4 รายการ", () -> inboxOf(applicant).size() >= 4);
+            awaitCondition("การแจ้งเตือนครบ 3 รายการ", () -> inboxOf(applicant).size() >= 3);
             assertThat(inboxOf(applicant))
-                    .as("ทั้งสี่สถานะปลายทางต้องเป็น important")
+                    .as("ทั้งสามสถานะปลายทางต้องเป็น important")
                     .allSatisfy(n -> assertThat(n.getIsImportant()).isTrue());
+        }
+
+        @Test
+        @DisplayName("ส่งคืนให้แก้ไข (ข้อ 2) เป็นการแจ้งเตือนสำคัญ พร้อมเหตุผล")
+        void aReturnToDraftIsImportant() {
+            UserDtls applicant = data.applicant();
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+
+            academicEmail.sendStatusChangeEmail(request.getId(),
+                    RequestStatus.RECEIVED, RequestStatus.DRAFT, "รายวิชาไม่ตรงกับสาขาที่ขอ");
+
+            awaitCondition("การแจ้งเตือน", () -> !inboxOf(applicant).isEmpty());
+            assertThat(inboxOf(applicant))
+                    .singleElement()
+                    .satisfies(n -> {
+                        assertThat(n.getIsImportant()).isTrue();
+                        assertThat(n.getMessage()).contains("รายวิชาไม่ตรงกับสาขาที่ขอ");
+                    });
         }
 
         @Test

@@ -26,9 +26,9 @@ import jakarta.persistence.UniqueConstraint;
  * against (GAP-11).
  *
  * <p>The rule itself is GAP-12: a publication on a request that has left
- * {@code DRAFT} is spent and disappears from the picker, unless that request was
- * {@code REJECTED} — a refused request consumed nothing, and its owner must be
- * able to put the same work forward again.
+ * {@code DRAFT} is spent and disappears from the picker. There is no refusal
+ * status to give it back: the flow only sends a request back for revision, and a
+ * request under revision still holds the work it put forward.
  *
  * <p>{@code publicationId} is a plain number, not a {@code @ManyToOne} to
  * {@code ScopusPublication}. That entity belongs to the {@code external} module,

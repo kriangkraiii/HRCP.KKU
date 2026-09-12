@@ -37,8 +37,8 @@
                     <small class="text-muted mt-1 d-block" id="expiryWarning"></small>
 
                     <!-- ส่วนที่ 2: ข้อมูลรายวิชาและผลการประเมินจากเอกสารที่ 8 -->
-                    <th:block th:if="${evalDoc8DataMap != null && !evalDoc8DataMap.isEmpty()}">
-                        <div th:each="entry : ${evalDoc8DataMap}">
+                    <th:block th:if="${evalDoc9DataMap != null && !evalDoc9DataMap.isEmpty()}">
+                        <div th:each="entry : ${evalDoc9DataMap}">
                             <hr class="my-3">
                             <div class="d-flex justify-content-between align-items-center mb-3">
                                 <h6 class="mb-0"><i class="fas fa-graduation-cap text-primary"></i> ข้อมูลรายวิชา</h6>
@@ -156,8 +156,11 @@
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <span th:if="${param.error[0] == 'active_exists'}">ไม่สามารถยื่นคำร้องใหม่ได้ มีคำร้องที่กำลังดำเนินการอยู่</span>
-                <span th:if="${param.error[0] == 'course_already_used'}">
-                    ผลการประเมินการสอนรายวิชาและปีการศึกษานี้ ถูกใช้ยื่นขอกำหนดตำแหน่งไปแล้ว จึงใช้<strong>ยื่นซ้ำ</strong>อีกไม่ได้
+                <span th:if="${param.error[0] == 'evaluation_already_used'}">
+                    ผลประเมินการสอนฉบับนี้ถูกใช้ยื่นขอตำแหน่งไปแล้ว ผลประเมิน 1 ฉบับใช้ได้กับคำร้องเดียวเท่านั้น
+                </span>
+                <span th:if="${param.error[0] == 'rank_not_higher'}">
+                    ตำแหน่งที่ขอต้องสูงกว่าตำแหน่งที่ท่านดำรงอยู่ ไม่สามารถขอตำแหน่งเดิมหรือต่ำกว่าได้
                 </span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>

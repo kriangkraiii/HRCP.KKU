@@ -89,10 +89,9 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
 
         @Test
         @DisplayName("ไม่ผ่าน / ไม่รับคำร้อง — ใช้ยื่นไม่ได้")
-        void failedOrRejectedIsNotEligible() {
+        void aFailedEvaluationIsNotEligible() {
             UserDtls applicant = data.applicant();
             data.completedEvaluation(applicant, RequestStatus.COMPLETED_FAIL, null);
-            data.completedEvaluation(applicant, RequestStatus.REJECTED, null);
 
             assertThat(positionService.getEligibleEvaluations(applicant.getId())).isEmpty();
         }

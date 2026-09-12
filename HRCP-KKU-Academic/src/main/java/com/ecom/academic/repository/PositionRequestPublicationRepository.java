@@ -32,9 +32,8 @@ public interface PositionRequestPublicationRepository
      * professor's own work vanish from their picker. Scoping the answer to the
      * asker means a forged id can only ever cost the person who forged it.
      *
-     * @param free the statuses that do not consume anything — {@code DRAFT},
-     *             because nothing has been submitted yet, and {@code REJECTED},
-     *             because a refused request must give its work back
+     * @param free the statuses that do not consume anything — only {@code DRAFT},
+     *             because nothing has been submitted yet
      */
     @Query("""
             SELECT l.publicationId FROM PositionRequestPublication l

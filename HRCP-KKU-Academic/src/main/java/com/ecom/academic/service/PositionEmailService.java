@@ -62,7 +62,6 @@ public class PositionEmailService {
             // 1. Create in-app notification for applicant
             if (request != null && request.getApplicant() != null) {
                 boolean isImportant = newStatus == PositionRequestStatus.REVISION_REQUESTED
-                        || newStatus == PositionRequestStatus.REJECTED
                         || newStatus == PositionRequestStatus.SCREENING_APPROVED
                         || newStatus == PositionRequestStatus.COLLEGE_APPROVED
                         || newStatus == PositionRequestStatus.SENT_TO_HR;
@@ -160,7 +159,6 @@ public class PositionEmailService {
             case SCREENING_APPROVED, COLLEGE_APPROVED -> "#16a34a";
             case REVISION_REQUESTED -> "#d97706";
             case SENT_TO_HR -> "#0d9488";
-            case REJECTED -> "#dc2626";
             case DRAFT -> "#64748b";
             default -> newStatus.getColor() != null ? newStatus.getColor() : "#1e3a8a";
         };

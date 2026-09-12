@@ -59,6 +59,8 @@ public class AcademicRequestService {
 
     private final com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository;
 
+    private final org.springframework.context.ApplicationEventPublisher events;
+
     public AcademicRequestService(
             AcademicRequestRepository requestRepository,
             AcademicDocumentRepository documentRepository,
@@ -67,7 +69,8 @@ public class AcademicRequestService {
             AcademicDocumentEditLogRepository editLogRepository,
             AcademicEmailService emailService,
             com.ecom.service.AfterCommitRunner afterCommit,
-            com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository) {
+            com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository,
+            org.springframework.context.ApplicationEventPublisher events) {
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.attachmentRepository = attachmentRepository;
@@ -76,6 +79,7 @@ public class AcademicRequestService {
         this.emailService = emailService;
         this.afterCommit = afterCommit;
         this.signatureRequestRepository = signatureRequestRepository;
+        this.events = events;
     }
 
     public AcademicRequest createRequest(UserDtls applicant) {
@@ -143,6 +147,11 @@ public class AcademicRequestService {
 
         RequestStatus oldStatus = request.getCurrentStatus();
         requireLegalTransition(oldStatus, newStatus, requestId);
+        boolean returnedToApplicant = oldStatus == RequestStatus.RECEIVED && newStatus == RequestStatus.DRAFT;
+        if (returnedToApplicant && (note == null || note.isBlank())) {
+            // ผู้ยื่นต้องรู้ว่าต้องแก้อะไร การส่งคืนโดยไม่มีเหตุผลเท่ากับให้เดา
+            throw new IllegalArgumentException("กรุณาระบุเหตุผลที่ส่งคืนคำร้องให้ผู้ยื่นแก้ไข");
+        }
         request.setCurrentStatus(newStatus);
         requestRepository.save(request);
 
@@ -154,30 +163,16 @@ public class AcademicRequestService {
         history.setNote(note);
         historyRepository.save(history);
 
-        if (newStatus == RequestStatus.REJECTED) {
-            List<com.ecom.academic.model.SignatureRequest> rejectedEnvelopes = signatureRequestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(com.ecom.academic.model.SignatureModule.ACADEMIC, requestId);
-            for (com.ecom.academic.model.SignatureRequest env : rejectedEnvelopes) {
-                if (env.getStatus().isOpen()) {
-                    env.setStatus(com.ecom.academic.model.SignatureRequestStatus.CANCELLED);
-                    env.setCancelledAt(LocalDateTime.now());
-                    env.setCancelReason("คำร้องถูกปฏิเสธ: " + (note != null ? note : "-"));
-                    if (env.getSteps() != null) {
-                        env.getSteps().forEach(s -> {
-                            if (s.getStatus() == com.ecom.academic.model.SignatureStepStatus.WAITING || s.getStatus() == com.ecom.academic.model.SignatureStepStatus.ACTIVE) {
-                                s.setStatus(com.ecom.academic.model.SignatureStepStatus.SKIPPED);
-                            }
-                        });
-                    }
-                    signatureRequestRepository.save(env);
-                }
-            }
+        if (returnedToApplicant) {
+            // Flow ข้อ 2 → ข้อ 1: เอกสารจะถูกแก้ ลายเซ็นที่ให้ไว้กับเนื้อหาเดิมจึงใช้ไม่ได้อีก
+            events.publishEvent(new AcademicRequestReturnedToDraft(requestId, changedBy, note));
         }
 
         if (sendNotification) {
             // Announced only once the new status is actually committed, and by
             // id so the background thread reads its own copy of the row.
             Long notifyId = request.getId();
-            afterCommit.run(() -> emailService.sendStatusChangeEmail(notifyId, oldStatus, newStatus));
+            afterCommit.run(() -> emailService.sendStatusChangeEmail(notifyId, oldStatus, newStatus, note));
         }
 
         return request;
@@ -278,7 +273,7 @@ public class AcademicRequestService {
      */
     private static final java.util.EnumSet<RequestStatus> CLOSED_STATUSES = java.util.EnumSet.of(
             RequestStatus.COMPLETED, RequestStatus.COMPLETED_PASS, RequestStatus.COMPLETED_REVISE,
-            RequestStatus.COMPLETED_FAIL, RequestStatus.REJECTED);
+            RequestStatus.COMPLETED_FAIL);
 
     /**
      * ผู้ยื่นแก้ไขเอกสารฉบับนี้ได้หรือไม่
@@ -310,19 +305,12 @@ public class AcademicRequestService {
     private boolean isDocumentSignatureLocked(Long requestId, int documentType) {
         var blocking = signatureRequestRepository.findBlockingEnvelopes(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType);
-        if (blocking.isEmpty() && (documentType == 1 || documentType == 2)) {
-            blocking = signatureRequestRepository.findBlockingEnvelopes(
-                    com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType - 1);
-        }
         return !blocking.isEmpty();
     }
 
     /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
     public boolean isRevisionRequested(Long requestId, int documentType) {
         var docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
-        if (docs.isEmpty() && (documentType == 1 || documentType == 2)) {
-            docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType - 1);
-        }
         return docs.stream()
                 .anyMatch(AcademicDocument::isRevisionRequested);
     }
@@ -330,9 +318,6 @@ public class AcademicRequestService {
     /** เหตุผลที่แอดมินส่งเอกสารฉบับนี้กลับมาให้แก้ไข (ถ้ามี) */
     public String getRevisionNote(Long requestId, int documentType) {
         var docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
-        if (docs.isEmpty() && (documentType == 1 || documentType == 2)) {
-            docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType - 1);
-        }
         return docs.stream()
                 .filter(AcademicDocument::isRevisionRequested)
                 .map(AcademicDocument::getRevisionNote)
@@ -395,6 +380,24 @@ public class AcademicRequestService {
         }
     }
 
+    /**
+     * เหตุผลที่คำร้องถูกส่งคืนให้ผู้ยื่นแก้ไข (Flow ข้อ 2) หรือ null ถ้าคำร้องไม่ได้อยู่ในสภาพถูกส่งคืน
+     *
+     * <p>อ่านจากประวัติสถานะล่าสุดที่ {@code RECEIVED → DRAFT} เฉพาะตอนคำร้องยังเป็นแบบร่างอยู่
+     * พอผู้ยื่นยื่นใหม่แล้ว เหตุผลเก่าก็ไม่ต้องแสดงอีก
+     */
+    public String getReturnNote(Long requestId) {
+        AcademicRequest request = requestRepository.findById(requestId).orElse(null);
+        if (request == null || request.getCurrentStatus() != RequestStatus.DRAFT) {
+            return null;
+        }
+        return historyRepository.findByRequestIdOrderByChangedAtDesc(requestId).stream()
+                .filter(h -> h.getOldStatus() == RequestStatus.RECEIVED && h.getNewStatus() == RequestStatus.DRAFT)
+                .map(RequestStatusHistory::getNote)
+                .findFirst()
+                .orElse(null);
+    }
+
     public List<RequestStatusHistory> getStatusHistory(Long requestId) {
         return historyRepository.findByRequestIdOrderByChangedAtDesc(requestId);
     }
@@ -436,7 +439,7 @@ public class AcademicRequestService {
      *
      * <p>Which statuses count as finished is asked of {@link
      * RequestStatus#isTerminal()} rather than listed here. Listing them is how
-     * this went wrong before: the list named REJECTED and COMPLETED but not
+     * this went wrong before: the list named COMPLETED and a since-removed refusal status but not
      * COMPLETED_FAIL, so an applicant told their teaching evaluation did not
      * pass could never ask to be evaluated again — the one situation where
      * asking again is the whole point.
@@ -630,10 +633,10 @@ public class AcademicRequestService {
 
     /**
      * อัพเดตสถานะอัตโนมัติตามเอกสารที่กรอกเสร็จ
-     * - Doc 3 saved → SUB_COMMITTEE_APPOINTED
-     * - Doc 4 saved → MEETING_SCHEDULED
-     * - Doc 6 saved → COMPLETED_PASS or COMPLETED_REVISE (based on score)
-     * - Doc 8 saved → COMPLETED
+     * - Doc 4 saved → SUB_COMMITTEE_APPOINTED
+     * - Doc 5 saved → MEETING_SCHEDULED
+     * - Doc 7 saved → COMPLETED_PASS or COMPLETED_FAIL (based on score)
+     * - Doc 9 saved → COMPLETED
      */
     @Transactional
     public void autoUpdateStatusByDocument(Long requestId, int documentType, UserDtls changedBy, String jsonData) {
@@ -647,34 +650,23 @@ public class AcademicRequestService {
                 .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
 
         switch (documentType) {
-            case 3 -> {
-                // Legacy Doc 3: คำสั่งแต่งตั้งอนุกรรมการ
+            case 4 -> {
                 if (request.getCurrentStatus().canMoveTo(RequestStatus.SUB_COMMITTEE_APPOINTED)
                         && namesThreeSubCommitteeMembers(jsonData)) {
                     updateStatus(requestId, RequestStatus.SUB_COMMITTEE_APPOINTED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ", sendNotify);
                 }
             }
-            case 4 -> {
-                // New Doc 4: คำสั่งแต่งตั้งอนุกรรมการ; Legacy Doc 4: บันทึกนัดวันประชุม
-                if (namesThreeSubCommitteeMembers(jsonData)
-                        && request.getCurrentStatus().canMoveTo(RequestStatus.SUB_COMMITTEE_APPOINTED)) {
-                    updateStatus(requestId, RequestStatus.SUB_COMMITTEE_APPOINTED, changedBy,
-                            "อัพเดตอัตโนมัติ: บันทึกเอกสารคำสั่งแต่งตั้งอนุกรรมการ", sendNotify);
-                } else if (request.getCurrentStatus().canMoveTo(RequestStatus.MEETING_SCHEDULED)) {
-                    updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
-                            "อัพเดตอัตโนมัติ: บันทึกเอกสารขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", sendNotify);
-                }
+            case 6 -> {
+                // Doc 6 auto-status is handled separately via /send-suggestion endpoint
             }
             case 5 -> {
-                // New Doc 5: บันทึกนัดวันประชุม
                 if (request.getCurrentStatus().canMoveTo(RequestStatus.MEETING_SCHEDULED)) {
                     updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", sendNotify);
                 }
             }
-            case 6, 7 -> {
-                // New Doc 7: แบบประเมินผลการสอน; Legacy Doc 6: แบบประเมินผลการสอน
+            case 7 -> {
                 try {
                     var objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
                     java.util.Map<String, Object> data = objectMapper.readValue(jsonData,
@@ -696,8 +688,12 @@ public class AcademicRequestService {
                     }
                 }
             }
-            case 8, 9 -> {
-                // New Doc 9: บันทึกแจ้งผลการประเมิน; Legacy Doc 8: บันทึกแจ้งผลการประเมิน
+            case 9 -> {
+                // Unconditional until now, so saving this document on a request
+                // that had been refused turned that refusal into "เสร็จสิ้น" and
+                // mailed the applicant to say so (GAP-31). It also has to wait
+                // for the college board's endorsement (ข้อ 9-10) — the document
+                // is still saved either way, only the status holds back.
                 if (request.getCurrentStatus().canMoveTo(RequestStatus.COMPLETED)) {
                     updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน", sendNotify);
@@ -729,7 +725,7 @@ public class AcademicRequestService {
 
     /**
      * ค้นหาวันหมดอายุผลประเมินล่าสุดของผู้ใช้
-     * คำนวณ: วันอนุมัติใน Doc 8 + 5 ปี
+     * คำนวณ: วันอนุมัติใน Doc 9 + 5 ปี
      */
     public LocalDateTime getLatestEvaluationExpiry(Integer applicantId) {
         // Find completed requests (COMPLETED_PASS or COMPLETED)
@@ -744,15 +740,15 @@ public class AcademicRequestService {
                     return req.getEvaluationExpiryDate();
                 }
 
-                // Try to extract from Doc 8 JSON
+                // Try to extract from Doc 9 JSON
                 try {
-                    Optional<AcademicDocument> doc8 = documentRepository
-                            .findByRequestIdAndDocumentTypeAndCopyNumber(req.getId(), 8, 0);
-                    if (doc8.isPresent() && doc8.get().getJsonData() != null) {
+                    Optional<AcademicDocument> doc9 = documentRepository
+                            .findByRequestIdAndDocumentTypeAndCopyNumber(req.getId(), 9, 0);
+                    if (doc9.isPresent() && doc9.get().getJsonData() != null) {
                         com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
                         @SuppressWarnings("unchecked")
                         java.util.Map<String, String> data = mapper.readValue(
-                                doc8.get().getJsonData(), java.util.Map.class);
+                                doc9.get().getJsonData(), java.util.Map.class);
 
                         // Try evaluation_date or faculty_board_meeting_date
                         String dateStr = data.getOrDefault("evaluation_date",
@@ -793,7 +789,7 @@ public class AcademicRequestService {
      * <p>Accepts a month name ({@code "17 กุมภาพันธ์ 2569"}) and the all-numeric
      * form ({@code "17/2/2569"}, {@code "17-2-2569"}), with Thai or Arabic
      * digits, and converts a Buddhist year. Both forms are needed: staff type the
-     * month name into most documents, while the expiry field on document 8 has
+     * month name into most documents, while the expiry field on document 9 has
      * been filled both ways.
      *
      * <p>This is the single date reader for the whole evaluation-expiry rule.
@@ -871,13 +867,13 @@ public class AcademicRequestService {
      * Flattens one evaluation into the facts the position flow needs — the
      * course, the year, the result and when it lapses.
      *
-     * <p>Reads document 8, the notification of the result, and falls back to
-     * document 0 for anything it does not carry. The split is not arbitrary:
-     * document 8 is the authoritative record of the *result*, but it has no
+     * <p>Reads document 9, the notification of the result, and falls back to
+     * document 1 for anything it does not carry. The split is not arbitrary:
+     * document 9 is the authoritative record of the *result*, but it has no
      * academic-year field at all — only {@code semester}, written "1/2568" — while
-     * document 0 is where the applicant states the year outright, and states it as
-     * a required field. So the course code comes from document 8 where present
-     * and document 0 otherwise, and the year comes from document 0 first, then
+     * document 1 is where the applicant states the year outright, and states it as
+     * a required field. So the course code comes from document 9 where present
+     * and document 1 otherwise, and the year comes from document 1 first, then
      * from the semester's second half, then from the year the evaluation was
      * carried out.
      *
@@ -890,13 +886,7 @@ public class AcademicRequestService {
             return null;
         }
         Map<String, String> doc9 = documentData(request.getId(), 9);
-        if (doc9.isEmpty()) {
-            doc9 = documentData(request.getId(), 8); // Legacy fallback
-        }
         Map<String, String> doc1 = documentData(request.getId(), 1);
-        if (doc1.isEmpty()) {
-            doc1 = documentData(request.getId(), 0); // Legacy fallback
-        }
 
         String semester = firstNonBlank(doc9.get("semester"), doc1.get("semester"));
         String evaluationDate = firstNonBlank(doc9.get("evaluation_date"),
@@ -919,19 +909,21 @@ public class AcademicRequestService {
                 evaluationDate,
                 doc9.get("expiration_date"),
                 expiryAt,
-                daysLeft);
+                daysLeft,
+                doc1.get("current_position"),
+                com.ecom.academic.model.AcademicRank.fromDoc1Checks(doc1));
     }
 
     /**
-     * When this result lapses: the date on document 8 if it names one, otherwise
+     * When this result lapses: the date on document 9 if it names one, otherwise
      * the stored expiry, otherwise three years from the evaluation or, failing
      * that, from the submission — the same ladder
      * {@link #getLatestEvaluationExpiry} walks, so the countdown on the dashboard
      * and the one beside each choice cannot disagree.
      */
-    private LocalDateTime resolveExpiry(AcademicRequest request, Map<String, String> doc8,
+    private LocalDateTime resolveExpiry(AcademicRequest request, Map<String, String> doc9,
             String evaluationDate) {
-        LocalDateTime stated = parseThaiDate(doc8.get("expiration_date"));
+        LocalDateTime stated = parseThaiDate(doc9.get("expiration_date"));
         if (stated != null) {
             return stated;
         }
@@ -998,26 +990,26 @@ public class AcademicRequestService {
         if (!request.getCurrentStatus().carriesAPassedResult()) {
             return false;
         }
-        // The result is evidenced by document 8, the notification of the result.
-        List<AcademicDocument> doc8s = documentRepository
-                .findByRequestIdAndDocumentType(request.getId(), 8);
-        if (doc8s.isEmpty() || doc8s.get(0).getJsonData() == null) {
+        // The result is evidenced by document 9, the notification of the result.
+        List<AcademicDocument> doc9s = documentRepository
+                .findByRequestIdAndDocumentType(request.getId(), 9);
+        if (doc9s.isEmpty() || doc9s.get(0).getJsonData() == null) {
             return false;
         }
-        return !isEvaluationExpired(doc8s.get(0).getJsonData());
+        return !isEvaluationExpired(doc9s.get(0).getJsonData());
     }
 
     /**
-     * Whether document 8 names an expiry date that has passed.
+     * Whether document 9 names an expiry date that has passed.
      *
      * <p>No date means no expiry, which is the historical behaviour and the
      * right default: an older document that simply never carried the field must
      * not be treated as lapsed.
      */
-    private boolean isEvaluationExpired(String doc8Json) {
+    private boolean isEvaluationExpired(String doc9Json) {
         try {
             Map<String, Object> data = new com.fasterxml.jackson.databind.ObjectMapper()
-                    .readValue(doc8Json,
+                    .readValue(doc9Json,
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
                             });
             Object raw = data.get("expiration_date");
@@ -1027,7 +1019,7 @@ public class AcademicRequestService {
             LocalDateTime expiry = parseThaiDate(raw.toString());
             return expiry != null && expiry.isBefore(LocalDateTime.now());
         } catch (Exception e) {
-            log.warn("Could not read the expiry date on document 8: {}", e.getMessage());
+            log.warn("Could not read the expiry date on document 9: {}", e.getMessage());
             return false;
         }
     }

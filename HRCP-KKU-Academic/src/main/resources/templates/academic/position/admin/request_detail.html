@@ -168,7 +168,7 @@
 
         <!-- Evaluation Results (Doc 8 from eval request) -->
         <div
-          th:if="${evalDoc8Data != null}"
+          th:if="${evalDoc9Data != null}"
           class="detail-info-card"
           style="--_accent: #1565c0"
         >
@@ -185,8 +185,8 @@
               <div>
                 <span
                   class="badge fs-6 mt-1"
-                  th:classappend="${evalDoc8Data.getOrDefault('result_level', '') == 'ไม่ผ่าน' ? 'bg-danger' : 'bg-success'}"
-                  th:text="${evalDoc8Data.getOrDefault('result_level', '-')}"
+                  th:classappend="${evalDoc9Data.getOrDefault('result_level', '') == 'ไม่ผ่าน' ? 'bg-danger' : 'bg-success'}"
+                  th:text="${evalDoc9Data.getOrDefault('result_level', '-')}"
                   >-</span
                 >
               </div>
@@ -195,21 +195,21 @@
               <small>คุณภาพ</small>
               <div
                 class="di-value"
-                th:text="${evalDoc8Data.getOrDefault('is_qualified', '-')}"
+                th:text="${evalDoc9Data.getOrDefault('is_qualified', '-')}"
               ></div>
             </div>
             <div class="detail-info-item" style="flex: 1.5">
               <small>วิชา</small>
               <div
                 class="di-value"
-                th:text="${evalDoc8Data.getOrDefault('course_name', '-') + ' (' + evalDoc8Data.getOrDefault('course_code', '') + ')'}"
+                th:text="${evalDoc9Data.getOrDefault('course_name', '-') + ' (' + evalDoc9Data.getOrDefault('course_code', '') + ')'}"
               ></div>
             </div>
             <div class="detail-info-item">
               <small>ภาค/ปี</small>
               <div
                 class="di-value"
-                th:text="${evalDoc8Data.getOrDefault('semester', '-')}"
+                th:text="${evalDoc9Data.getOrDefault('semester', '-')}"
               ></div>
             </div>
             <div class="detail-info-item">
@@ -217,7 +217,7 @@
               <div
                 class="di-value"
                 style="color: var(--color-danger)"
-                th:text="${evalDoc8Data.getOrDefault('expiration_date', '-')}"
+                th:text="${evalDoc9Data.getOrDefault('expiration_date', '-')}"
               ></div>
             </div>
           </div>
@@ -231,8 +231,8 @@
               <i class="fas fa-external-link-alt"></i> ดูคำร้องต้นทาง
             </a>
             <a
-              th:if="${evalDoc8GeneratedFile != null}"
-              th:href="@{/admin/academic/document/download(path=${evalDoc8GeneratedFile})}"
+              th:if="${evalDoc9GeneratedFile != null}"
+              th:href="@{/admin/academic/document/download(path=${evalDoc9GeneratedFile})}"
               class="btn btn-sm btn-outline-success"
               target="_blank"
             >
@@ -253,7 +253,7 @@
           </div>
         </div>
         <div
-          th:if="${evalDoc8Data == null}"
+          th:if="${evalDoc9Data == null}"
           class="draft-banner"
           style="border-color: #e3a008; background: #fffbeb; color: #854d0e"
         >

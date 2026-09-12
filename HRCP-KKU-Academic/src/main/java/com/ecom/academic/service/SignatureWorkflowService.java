@@ -238,6 +238,43 @@ public class SignatureWorkflowService {
     }
 
     /**
+     * Voids every envelope still holding a document locked — in circulation or
+     * already fully signed — so the document can be edited and signed again.
+     *
+     * <p>Unlike {@link #cancelAllForRequest}, which leaves a finished round
+     * alone, this also cancels {@code COMPLETED} envelopes: the signatures were
+     * given to content the applicant is about to change, and keeping them would
+     * let an edited document go forward under signatures nobody gave it.
+     */
+    @Transactional
+    public void releaseAllForRequest(SignatureModule module, Long requestId, UserDtls actingUser, String reason) {
+        String why = truncate(reason, 500);
+        for (SignatureRequest envelope : requestRepository.findByModuleAndRequestIdOrderByDocumentTypeAsc(module, requestId)) {
+            if (!envelope.getStatus().locksDocument()) {
+                continue;
+            }
+            envelope.setStatus(SignatureRequestStatus.CANCELLED);
+            envelope.setCancelledAt(LocalDateTime.now());
+            envelope.setCancelReason(why);
+            if (envelope.getSteps() != null) {
+                envelope.getSteps().stream()
+                        .filter(s -> s.getStatus() == SignatureStepStatus.WAITING
+                                || s.getStatus() == SignatureStepStatus.ACTIVE)
+                        .forEach(s -> s.setStatus(SignatureStepStatus.SKIPPED));
+            }
+            requestRepository.save(envelope);
+            audit(envelope, null, SignatureAuditEventType.CANCELLED, actingUser, ActorContext.none(), why);
+        }
+    }
+
+    /** Flow ข้อ 2: คำร้องที่ถูกส่งคืนต้องลงนามใหม่หลังแก้เอกสาร */
+    @org.springframework.context.event.EventListener
+    public void onAcademicRequestReturnedToDraft(AcademicRequestReturnedToDraft event) {
+        releaseAllForRequest(SignatureModule.ACADEMIC, event.requestId(), event.returnedBy(),
+                "ส่งคืนให้ผู้ยื่นแก้ไข: " + event.reason());
+    }
+
+    /**
      * Extends the due date of a signature envelope, reviving it if the clock
      * already closed it.
      *
@@ -368,13 +405,6 @@ public class SignatureWorkflowService {
      */
     public boolean isApplicantSignatureCompleted(SignatureModule module, Long requestId, int documentType) {
         List<SignatureRequest> envelopes = requestRepository.findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, documentType);
-        if (envelopes.isEmpty() && module == SignatureModule.ACADEMIC) {
-            if (documentType == 1) {
-                envelopes = requestRepository.findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, 0);
-            } else if (documentType == 2) {
-                envelopes = requestRepository.findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, 1);
-            }
-        }
         if (envelopes.isEmpty()) {
             return false;
         }

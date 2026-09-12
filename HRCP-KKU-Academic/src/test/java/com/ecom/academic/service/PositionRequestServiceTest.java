@@ -295,12 +295,6 @@ public class PositionRequestServiceTest {
         }
 
         @Test
-        void hasActiveRequest_ReturnsFalse_WhenRejected() {
-            requestAt(PositionRequestStatus.REJECTED);
-            assertThat(positionService.hasActiveRequest(testUser.getId())).isFalse();
-        }
-
-        @Test
         void hasActiveRequest_ReturnsTrue_WhenRevisionRequested() {
             requestAt(PositionRequestStatus.REVISION_REQUESTED);
             assertThat(positionService.hasActiveRequest(testUser.getId())).isTrue();
@@ -309,7 +303,7 @@ public class PositionRequestServiceTest {
         /**
          * Ties this method to the enum, so a status added later cannot quietly
          * mean two different things in two places — which is exactly how
-         * REJECTED came to lock people out for good.
+         * a since-removed refusal status came to lock people out for good.
          */
         @Test
         void everyTerminalStatusEndsTheRequest() {

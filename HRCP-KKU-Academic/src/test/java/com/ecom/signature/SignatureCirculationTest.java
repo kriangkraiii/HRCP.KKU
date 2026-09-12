@@ -391,41 +391,50 @@ class SignatureCirculationTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("คำร้องประเมินถูกปฏิเสธ — ซองลงนามที่ค้างอยู่ถูกยกเลิกตามไปด้วย")
-        void rejectingAnEvaluationCancelsItsOpenEnvelopes() {
+        @DisplayName("ส่งคืนคำร้องประเมินให้ผู้ยื่นแก้ — ซองที่ค้างลงนามถูกยกเลิก พร้อมเหตุผลและร่องรอยตรวจสอบ")
+        void returningAnEvaluationCancelsItsOpenEnvelopes() {
             cast();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
                     request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
 
-            academicService.updateStatus(request.getId(), RequestStatus.REJECTED, hrOfficer,
-                    "เอกสารไม่ครบถ้วน", false);
+            academicService.updateStatus(request.getId(), RequestStatus.DRAFT, hrOfficer,
+                    "คณบดีไม่เห็นชอบ ให้แก้รายวิชา", false);
 
             SignatureRequest reloaded = envelopes.findById(envelope.getId()).orElseThrow();
             assertThat(reloaded.getStatus())
-                    .as("ปล่อยให้ค้างไว้ = ยังมีคนถูกทวงให้ลงนามในเรื่องที่ปิดไปแล้ว")
+                    .as("ปล่อยให้ค้างไว้ = ผู้ยื่นถูกทวงให้ลงนามในเนื้อหาที่กำลังจะแก้")
                     .isEqualTo(SignatureRequestStatus.CANCELLED);
-            assertThat(reloaded.getCancelReason()).contains("เอกสารไม่ครบถ้วน");
+            assertThat(reloaded.getCancelReason()).contains("คณบดีไม่เห็นชอบ ให้แก้รายวิชา");
             assertThat(stepFor(reloaded, "applicant").getStatus())
                     .isEqualTo(SignatureStepStatus.SKIPPED);
+            assertThat(workflow.auditTrail(envelope.getId()))
+                    .extracting(SignatureAuditEvent::getEventType)
+                    .contains(SignatureAuditEventType.CANCELLED);
         }
 
         @Test
-        @DisplayName("คำร้องขอตำแหน่งถูกปฏิเสธ — ซองลงนามถูกยกเลิกเช่นกัน")
-        void rejectingAPositionRequestCancelsItsOpenEnvelopes() {
+        @DisplayName("ส่งคืนคำร้องประเมิน — ซองที่ลงนามครบแล้วก็ถูกยกเลิก ผู้ยื่นต้องลงนามใหม่หลังแก้")
+        void returningAnEvaluationVoidsCompletedEnvelopesToo() {
             cast();
-            PositionRequest request = data.positionRequest(applicant,
-                    PositionRequestStatus.DOCUMENT_RECEIVED, null);
-            SignatureRequest envelope = sendForSignature(SignatureModule.POSITION,
-                    request.getId(), 2,
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+            SignatureRequest envelope = sendForSignature(SignatureModule.ACADEMIC,
+                    request.getId(), 1,
                     List.of(new SignerAssignment("applicant", applicant.getId()))).request();
+            signAs(applicant, stepFor(envelope, "applicant"));
+            assertThat(envelopes.findById(envelope.getId()).orElseThrow().getStatus())
+                    .as("เงื่อนไขตั้งต้น: ซองนี้ลงนามครบแล้ว")
+                    .isEqualTo(SignatureRequestStatus.COMPLETED);
 
-            positionService.updateStatus(request.getId(), PositionRequestStatus.REJECTED,
-                    hrOfficer, "คุณสมบัติไม่เข้าข่าย", false);
+            academicService.updateStatus(request.getId(), RequestStatus.DRAFT, hrOfficer,
+                    "เอกสารไม่ครบ", false);
 
             assertThat(envelopes.findById(envelope.getId()).orElseThrow().getStatus())
+                    .as("ลายเซ็นให้ไว้กับเนื้อหาเดิม ซึ่งผู้ยื่นกำลังจะแก้")
                     .isEqualTo(SignatureRequestStatus.CANCELLED);
+            assertThat(workflow.isApplicantSignatureCompleted(SignatureModule.ACADEMIC,
+                    request.getId(), 1)).isFalse();
         }
     }
 

@@ -60,15 +60,6 @@ public class StatusTypeTest {
     }
 
     @Test
-    void rejectedStatus_shouldHaveCorrectConfiguration() {
-        StatusType status = StatusType.REJECTED;
-        
-        assertThat(status.getDisplayName()).isEqualTo("ไม่รับคำร้อง");
-        assertThat(status.getColor()).isEqualTo("red");
-        assertThat(status.getIconClass()).isEqualTo("fa-times-circle");
-    }
-
-    @Test
     void completedStatus_shouldHaveCorrectConfiguration() {
         StatusType status = StatusType.COMPLETED;
         

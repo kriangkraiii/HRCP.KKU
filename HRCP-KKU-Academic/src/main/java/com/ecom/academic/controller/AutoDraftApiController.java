@@ -108,6 +108,10 @@ public class AutoDraftApiController {
                 String sanitized = positionService.preserveStaffOnlyFieldsInJson(requestId, docType, jsonData);
                 if (sanitized != null)
                     jsonData = sanitized;
+                // ...nor change the position asked for, which was fixed at creation
+                String pinned = positionService.pinTargetPositionInJson(requestId, jsonData);
+                if (pinned != null)
+                    jsonData = pinned;
             }
             positionService.saveDraft(request, docType, jsonData, label, filledBy);
 
