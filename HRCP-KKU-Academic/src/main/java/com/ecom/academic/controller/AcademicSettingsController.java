@@ -144,7 +144,7 @@ public class AcademicSettingsController {
      * Sends a diagnostic test email via KKU SMTP Relay.
      * Restricted to ROLE_ADMIN. Originates directly from the deployed server instance (10.198.110.27).
      */
-    @PostMapping("/admin/academic/settings/test-email")
+    @PostMapping({"/admin/academic/settings/test-email", "/user/academic/settings/test-email", "/admin/test-email"})
     @ResponseBody
     public ResponseEntity<Map<String, Object>> sendTestEmail(
             @RequestParam(value = "targetEmail", required = false) String targetEmail,

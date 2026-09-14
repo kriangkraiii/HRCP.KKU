@@ -314,7 +314,7 @@
                                     <input type="email" id="diagnosticTargetEmail" class="form-control"
                                            placeholder="ระบุอีเมลปลายทาง (ค่าเริ่มต้นคืออีเมลของท่าน)"
                                            th:value="${user.email}">
-                                    <button type="button" class="btn btn-primary px-3" id="btnSendTestEmail" onclick="sendDiagnosticTestEmail()">
+                                    <button type="button" class="btn btn-primary px-3" id="btnSendTestEmail" data-call="sendDiagnosticTestEmail">
                                         <i class="fas fa-paper-plane me-1"></i> <span id="btnSendTestEmailText">ส่งอีเมลทดสอบ</span>
                                     </button>
                                 </div>
@@ -895,31 +895,38 @@
                 var alertArea = document.getElementById('diagnosticAlertArea');
 
                 if (!targetEmail) {
-                    alertArea.style.display = 'block';
-                    alertArea.innerHTML = '<div class="alert alert-warning py-2 mb-0 small"><i class="fas fa-exclamation-triangle me-1"></i> กรุณากรอกอีเมลปลายทาง</div>';
+                    if (alertArea) {
+                        alertArea.style.display = 'block';
+                        alertArea.innerHTML = '<div class="alert alert-warning py-2 mb-0 small"><i class="fas fa-exclamation-triangle me-1"></i> กรุณากรอกอีเมลปลายทางที่ต้องการทดสอบ</div>';
+                    }
                     return;
                 }
 
                 // Loading State
-                btn.disabled = true;
-                btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> กำลังส่งผ่าน KKU SMTP...';
-                alertArea.style.display = 'block';
-                alertArea.innerHTML = '<div class="alert alert-info py-2 mb-0 small"><i class="fas fa-spinner fa-spin me-1"></i> กำลังเชื่อมต่อไปยัง smtp.kku.ac.th:587 และทำการส่งอีเมลทดสอบ...</div>';
+                if (btn) btn.disabled = true;
+                if (btnText) btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> กำลังส่งผ่าน KKU SMTP...';
+                if (alertArea) {
+                    alertArea.style.display = 'block';
+                    alertArea.innerHTML = '<div class="alert alert-info py-2 mb-0 small"><i class="fas fa-spinner fa-spin me-1"></i> กำลังเชื่อมต่อไปยัง smtp.kku.ac.th:587 และทำการส่งอีเมลทดสอบ...</div>';
+                }
 
-                fetch(basePath + '/test-email', {
+                var reqUrl = (basePath ? basePath : '/admin/academic/settings') + '/test-email';
+
+                fetch(reqUrl, {
                     method: 'POST',
                     headers: buildHeaders({'Content-Type': 'application/x-www-form-urlencoded'}),
                     body: 'targetEmail=' + encodeURIComponent(targetEmail)
                 })
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
-                    btn.disabled = false;
-                    btnText.innerHTML = 'ส่งอีเมลทดสอบ';
+                    if (btn) btn.disabled = false;
+                    if (btnText) btnText.innerHTML = 'ส่งอีเมลทดสอบ';
+                    if (!alertArea) return;
 
                     if (data.success) {
                         alertArea.innerHTML =
                             '<div class="alert alert-success py-3 mb-0" style="border-radius:10px;">' +
-                            '<div class="fw-bold mb-1"><i class="fas fa-check-circle me-1"></i> ' + data.message + '</div>' +
+                            '<div class="fw-bold mb-1"><i class="fas fa-check-circle me-1"></i> ' + (data.message || 'ส่งอีเมลทดสอบสำเร็จ') + '</div>' +
                             '<div class="small text-muted mt-2 pt-2 border-top border-success-subtle">' +
                             '<div><strong>ผู้รับ (To):</strong> ' + (data.recipient || targetEmail) + '</div>' +
                             '<div><strong>Relay Host:</strong> ' + (data.relayHost || 'smtp.kku.ac.th:587') + '</div>' +
@@ -931,16 +938,27 @@
                         alertArea.innerHTML =
                             '<div class="alert alert-danger py-3 mb-0" style="border-radius:10px;">' +
                             '<div class="fw-bold mb-1"><i class="fas fa-times-circle me-1"></i> ไม่สามารถส่งอีเมลได้</div>' +
-                            '<div class="small mt-1">' + data.message + '</div>' +
+                            '<div class="small mt-1">' + (data.message || 'เกิดข้อผิดพลาดในการเชื่อมต่อ') + '</div>' +
                             '</div>';
                     }
                 })
                 .catch(function(err) {
-                    btn.disabled = false;
-                    btnText.innerHTML = 'ส่งอีเมลทดสอบ';
-                    alertArea.innerHTML =
-                        '<div class="alert alert-danger py-2 mb-0 small"><i class="fas fa-exclamation-circle me-1"></i> ไม่สามารถติดต่อเซิร์ฟเวอร์ได้: ' + err.message + '</div>';
+                    if (btn) btn.disabled = false;
+                    if (btnText) btnText.innerHTML = 'ส่งอีเมลทดสอบ';
+                    if (alertArea) {
+                        alertArea.innerHTML =
+                            '<div class="alert alert-danger py-2 mb-0 small"><i class="fas fa-exclamation-circle me-1"></i> ไม่สามารถติดต่อเซิร์ฟเวอร์ได้: ' + (err.message || err) + '</div>';
+                    }
                 });
+            }
+
+            // Expose globally for csp_fallbacks.js data-call dispatcher
+            window.sendDiagnosticTestEmail = sendDiagnosticTestEmail;
+
+            // Wire direct click event listener
+            var directTestBtn = document.getElementById('btnSendTestEmail');
+            if (directTestBtn) {
+                directTestBtn.addEventListener('click', sendDiagnosticTestEmail);
             }
         </script>
     </section>
