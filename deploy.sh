@@ -5,8 +5,11 @@
 # Usage: ./deploy.sh
 set -e
 
-SSH_KEY="$HOME/deploy_ci_key"
-SERVER="project@10.198.200.84"
+SSH_KEY="${SSH_KEY:-$HOME/deploy_ci_key}"
+if [ ! -f "$SSH_KEY" ] && [ -f "$HOME/.ssh/id_ed25519" ]; then
+    SSH_KEY="$HOME/.ssh/id_ed25519"
+fi
+SERVER="${DEPLOY_SERVER:-project@10.198.110.27}"
 IMAGE="hrcp-academic:latest"
 DB_IMAGE="postgres:16"
 

@@ -20,7 +20,7 @@ public class CommonUtil {
 	private final JavaMailSender mailSender;
 	private final UserRepository userRepository;
 
-	@org.springframework.beans.factory.annotation.Value("${spring.mail.username:noreply@kku.ac.th}")
+	@org.springframework.beans.factory.annotation.Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
 	private String senderEmail;
 
 	public CommonUtil(JavaMailSender mailSender, UserRepository userRepository) {
@@ -35,7 +35,7 @@ public class CommonUtil {
 		MimeMessage message = mailSender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-		helper.setFrom(senderEmail, EmailTemplateHelper.SENDER_NAME);
+		helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
 		helper.setTo(reciepentEmail);
 		helper.setSubject("รีเซ็ตรหัสผ่าน - ระบบตำแหน่งทางวิชาการ (HRCP.KKU)");
 
@@ -54,7 +54,7 @@ public class CommonUtil {
 		MimeMessage message = mailSender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-		helper.setFrom(senderEmail, EmailTemplateHelper.SENDER_NAME);
+		helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
 		helper.setTo(recipientEmail);
 		helper.setSubject("รหัส OTP สำหรับเข้าสู่ระบบครั้งแรก - ระบบตำแหน่งทางวิชาการ (HRCP.KKU)");
 
@@ -73,7 +73,7 @@ public class CommonUtil {
 		MimeMessage message = mailSender.createMimeMessage();
 		MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-		helper.setFrom(senderEmail, EmailTemplateHelper.SENDER_NAME);
+		helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
 		helper.setTo(recipientEmail);
 		helper.setSubject(subject);
 

@@ -1,14 +1,22 @@
 package com.ecom.academic.controller;
 
 import java.security.Principal;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,9 +31,11 @@ import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
 import com.ecom.service.TwoFactorService;
+import com.ecom.util.EmailTemplateHelper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import jakarta.mail.internet.MimeMessage;
 import jakarta.servlet.http.HttpServletRequest;
 
 @Controller
@@ -41,15 +51,40 @@ public class AcademicSettingsController {
 
     private final HttpServletRequest httpRequest;
 
+    private final JavaMailSender mailSender;
+
+    @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
+    private String configSenderEmail;
+
+    @Value("${app.mail.from-name:" + EmailTemplateHelper.SENDER_NAME + "}")
+    private String configSenderName;
+
+    @Value("${spring.mail.host:smtp.kku.ac.th}")
+    private String mailHost;
+
+    @Value("${spring.mail.port:587}")
+    private int mailPort;
+
     public AcademicSettingsController(
             UserRepository userRepository,
             TwoFactorService twoFactorService,
             AdminLogService adminLogService,
             HttpServletRequest httpRequest) {
+        this(userRepository, twoFactorService, adminLogService, httpRequest, null);
+    }
+
+    @Autowired
+    public AcademicSettingsController(
+            UserRepository userRepository,
+            TwoFactorService twoFactorService,
+            AdminLogService adminLogService,
+            HttpServletRequest httpRequest,
+            @Autowired(required = false) JavaMailSender mailSender) {
         this.userRepository = userRepository;
         this.twoFactorService = twoFactorService;
         this.adminLogService = adminLogService;
         this.httpRequest = httpRequest;
+        this.mailSender = mailSender;
     }
 
     /** User settings page */
@@ -101,6 +136,103 @@ public class AcademicSettingsController {
         return saveSettings(principal, autoDraftEnabled, emailNotificationEnabled,
                 expiryAlert6m, expiryAlert3m, expiryAlert1m, expiryAlert1w,
                 redirect, "/admin/academic/settings");
+    }
+
+    // =================== Admin SMTP Diagnostic & Test Email ===================
+
+    /**
+     * Sends a diagnostic test email via KKU SMTP Relay.
+     * Restricted to ROLE_ADMIN. Originates directly from the deployed server instance (10.198.110.27).
+     */
+    @PostMapping("/admin/academic/settings/test-email")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> sendTestEmail(
+            @RequestParam(value = "targetEmail", required = false) String targetEmail,
+            Principal principal) {
+        Map<String, Object> resp = new HashMap<>();
+
+        if (principal == null) {
+            resp.put("success", false);
+            resp.put("message", "กรุณาเข้าสู่ระบบก่อนดำเนินการ");
+            return ResponseEntity.status(401).body(resp);
+        }
+
+        UserDtls admin = userRepository.findByEmail(principal.getName());
+        if (admin == null || !"ROLE_ADMIN".equals(admin.getRole())) {
+            resp.put("success", false);
+            resp.put("message", "ไม่มีสิทธิ์เข้าถึง ฟังก์ชันนี้เปิดให้เฉพาะผู้ดูแลระบบ (Admin) เท่านั้น");
+            return ResponseEntity.status(403).body(resp);
+        }
+
+        String recipient = (targetEmail != null && !targetEmail.trim().isEmpty())
+                ? targetEmail.trim()
+                : admin.getEmail();
+
+        if (!recipient.matches("^[A-Za-z0-9+_.-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            resp.put("success", false);
+            resp.put("message", "รูปแบบอีเมลไม่ถูกต้อง: " + recipient);
+            return ResponseEntity.badRequest().body(resp);
+        }
+
+        if (mailSender == null) {
+            resp.put("success", false);
+            resp.put("message", "ระบบส่งอีเมล (JavaMailSender) ยังไม่พร้อมใช้งาน");
+            return ResponseEntity.status(503).body(resp);
+        }
+
+        try {
+            String sender = EmailTemplateHelper.resolveSenderEmail(configSenderEmail);
+            String senderName = (configSenderName != null && !configSenderName.isBlank())
+                    ? configSenderName
+                    : EmailTemplateHelper.SENDER_NAME;
+
+            ZonedDateTime now = ZonedDateTime.now(ZoneId.of("Asia/Bangkok"));
+            String timestampStr = now.format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss"));
+            String clientIp = ClientIpUtils.resolveClientIp(httpRequest);
+
+            MimeMessage mimeMessage = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(mimeMessage, true, "UTF-8");
+
+            helper.setFrom(sender, senderName);
+            helper.setTo(recipient);
+            helper.setSubject("[HRCP-KKU] ทดสอบการส่งอีเมลผ่าน KKU SMTP Relay (" + timestampStr + ")");
+
+            String htmlBody = EmailTemplateHelper.buildDiagnosticTestEmail(
+                    admin.getName(),
+                    recipient,
+                    "10.198.110.27 (Client IP: " + clientIp + ")",
+                    mailHost + ":" + mailPort + " (STARTTLS)",
+                    timestampStr
+            );
+            helper.setText(htmlBody, true);
+            EmailTemplateHelper.attachLogos(helper);
+
+            mailSender.send(mimeMessage);
+
+            adminLogService.log(
+                    admin.getEmail(),
+                    admin.getName(),
+                    "TEST_EMAIL_RELAY",
+                    "ทดสอบส่งอีเมลผ่าน KKU SMTP Relay ไปยัง " + recipient,
+                    clientIp
+            );
+
+            log.info("Admin {} successfully dispatched test email to {} via KKU SMTP Relay", admin.getEmail(), recipient);
+
+            resp.put("success", true);
+            resp.put("message", "ส่งอีเมลทดสอบไปยัง " + recipient + " สำเร็จแล้ว กรุณาตรวจสอบในกล่องจดหมายเข้า (Inbox) หรือ Junk/Spam");
+            resp.put("recipient", recipient);
+            resp.put("timestamp", timestampStr);
+            resp.put("relayHost", mailHost + ":" + mailPort);
+            resp.put("sender", sender);
+            return ResponseEntity.ok(resp);
+
+        } catch (Exception e) {
+            log.error("Failed to dispatch test email to {}: {}", recipient, e.getMessage(), e);
+            resp.put("success", false);
+            resp.put("message", "เกิดข้อผิดพลาดในการส่งอีเมล: " + (e.getMessage() != null ? e.getMessage() : e.getClass().getSimpleName()));
+            return ResponseEntity.ok(resp);
+        }
     }
 
     // =================== 2FA AJAX Endpoints ===================

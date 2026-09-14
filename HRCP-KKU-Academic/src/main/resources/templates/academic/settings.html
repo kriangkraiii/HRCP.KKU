@@ -278,6 +278,57 @@
                         </div>
                     </div>
 
+                    <!-- Section 4: Admin SMTP Relay Diagnostic (Admin Only) -->
+                    <div class="card mb-4 mt-4" th:if="${user != null and user.role == 'ROLE_ADMIN'}">
+                        <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                            <h5 class="mb-0"><i class="fas fa-paper-plane text-primary"></i> ทดสอบการส่งอีเมล (KKU SMTP Relay Diagnostic)</h5>
+                            <span class="badge bg-primary text-white"><i class="fas fa-shield-alt me-1"></i> เฉพาะผู้ดูแลระบบ</span>
+                        </div>
+                        <div class="card-body">
+                            <p class="text-muted small mb-3">
+                                <i class="fas fa-info-circle text-primary"></i>
+                                ตรวจสอบการเชื่อมต่อและการส่งอีเมลผ่านระบบ <strong>KKU SMTP Relay (IP-Whitelisted)</strong> จากเครื่องเซิร์ฟเวอร์
+                            </p>
+
+                            <div class="row g-2 mb-3">
+                                <div class="col-sm-6">
+                                    <div class="p-2 border rounded bg-light small">
+                                        <div class="text-muted"><i class="fas fa-server me-1"></i> SMTP Server:</div>
+                                        <div class="fw-bold text-dark font-monospace">smtp.kku.ac.th:587 (TLS)</div>
+                                    </div>
+                                </div>
+                                <div class="col-sm-6">
+                                    <div class="p-2 border rounded bg-light small">
+                                        <div class="text-muted"><i class="fas fa-at me-1"></i> Sender (From):</div>
+                                        <div class="fw-bold text-dark font-monospace">noreply@kku.ac.th</div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="diagnosticTargetEmail" class="form-label fw-bold small">
+                                    อีเมลปลายทางที่ต้องการทดสอบส่ง (Target Recipient)
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text bg-white"><i class="fas fa-envelope text-muted"></i></span>
+                                    <input type="email" id="diagnosticTargetEmail" class="form-control"
+                                           placeholder="ระบุอีเมลปลายทาง (ค่าเริ่มต้นคืออีเมลของท่าน)"
+                                           th:value="${user.email}">
+                                    <button type="button" class="btn btn-primary px-3" id="btnSendTestEmail" onclick="sendDiagnosticTestEmail()">
+                                        <i class="fas fa-paper-plane me-1"></i> <span id="btnSendTestEmailText">ส่งอีเมลทดสอบ</span>
+                                    </button>
+                                </div>
+                                <div class="form-text text-muted small mt-2">
+                                    <i class="fas fa-info-circle text-primary me-1"></i>
+                                    ระบบจะใส่ <strong>อีเมลของแอดมินที่เข้าสู่ระบบ</strong> เป็นค่าเริ่มต้นให้อัตโนมัติ และท่านสามารถพิมพ์เปลี่ยนเป็นอีเมลอื่นที่ต้องการทดสอบส่งได้อิสระ
+                                </div>
+                            </div>
+
+                            <!-- Realtime Diagnostic Alert Box -->
+                            <div id="diagnosticAlertArea" style="display:none;" class="mt-3"></div>
+                        </div>
+                    </div>
+
                     <!-- OTP Verification Modal -->
                     <div class="modal fade" id="otpModal" tabindex="-1">
                         <div class="modal-dialog modal-dialog-centered">
@@ -834,6 +885,63 @@
                     });
                 });
             })();
+
+            // === Admin Diagnostic Test Email ===
+            function sendDiagnosticTestEmail() {
+                var emailInput = document.getElementById('diagnosticTargetEmail');
+                var targetEmail = emailInput ? emailInput.value.trim() : '';
+                var btn = document.getElementById('btnSendTestEmail');
+                var btnText = document.getElementById('btnSendTestEmailText');
+                var alertArea = document.getElementById('diagnosticAlertArea');
+
+                if (!targetEmail) {
+                    alertArea.style.display = 'block';
+                    alertArea.innerHTML = '<div class="alert alert-warning py-2 mb-0 small"><i class="fas fa-exclamation-triangle me-1"></i> กรุณากรอกอีเมลปลายทาง</div>';
+                    return;
+                }
+
+                // Loading State
+                btn.disabled = true;
+                btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> กำลังส่งผ่าน KKU SMTP...';
+                alertArea.style.display = 'block';
+                alertArea.innerHTML = '<div class="alert alert-info py-2 mb-0 small"><i class="fas fa-spinner fa-spin me-1"></i> กำลังเชื่อมต่อไปยัง smtp.kku.ac.th:587 และทำการส่งอีเมลทดสอบ...</div>';
+
+                fetch(basePath + '/test-email', {
+                    method: 'POST',
+                    headers: buildHeaders({'Content-Type': 'application/x-www-form-urlencoded'}),
+                    body: 'targetEmail=' + encodeURIComponent(targetEmail)
+                })
+                .then(function(r) { return r.json(); })
+                .then(function(data) {
+                    btn.disabled = false;
+                    btnText.innerHTML = 'ส่งอีเมลทดสอบ';
+
+                    if (data.success) {
+                        alertArea.innerHTML =
+                            '<div class="alert alert-success py-3 mb-0" style="border-radius:10px;">' +
+                            '<div class="fw-bold mb-1"><i class="fas fa-check-circle me-1"></i> ' + data.message + '</div>' +
+                            '<div class="small text-muted mt-2 pt-2 border-top border-success-subtle">' +
+                            '<div><strong>ผู้รับ (To):</strong> ' + (data.recipient || targetEmail) + '</div>' +
+                            '<div><strong>Relay Host:</strong> ' + (data.relayHost || 'smtp.kku.ac.th:587') + '</div>' +
+                            '<div><strong>ผู้ส่ง (From):</strong> ' + (data.sender || 'noreply@kku.ac.th') + '</div>' +
+                            '<div><strong>เวลาที่ส่ง:</strong> ' + (data.timestamp || new Date().toLocaleString('th-TH')) + '</div>' +
+                            '</div>' +
+                            '</div>';
+                    } else {
+                        alertArea.innerHTML =
+                            '<div class="alert alert-danger py-3 mb-0" style="border-radius:10px;">' +
+                            '<div class="fw-bold mb-1"><i class="fas fa-times-circle me-1"></i> ไม่สามารถส่งอีเมลได้</div>' +
+                            '<div class="small mt-1">' + data.message + '</div>' +
+                            '</div>';
+                    }
+                })
+                .catch(function(err) {
+                    btn.disabled = false;
+                    btnText.innerHTML = 'ส่งอีเมลทดสอบ';
+                    alertArea.innerHTML =
+                        '<div class="alert alert-danger py-2 mb-0 small"><i class="fas fa-exclamation-circle me-1"></i> ไม่สามารถติดต่อเซิร์ฟเวอร์ได้: ' + err.message + '</div>';
+                });
+            }
         </script>
     </section>
 </body>

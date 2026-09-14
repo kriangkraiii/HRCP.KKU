@@ -12,8 +12,20 @@ public final class EmailTemplateHelper {
     private EmailTemplateHelper() {
     }
 
+    public static final String DEFAULT_SENDER_EMAIL = "noreply@kku.ac.th";
     public static final String SENDER_NAME = "วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
     public static final String SENDER_SYSTEM_NAME = "ระบบตำแหน่งทางวิชาการ วิทยาลัยการคอมพิวเตอร์ มข.";
+
+    /**
+     * Resolves the sender email address safely.
+     * If the configured email is null, blank, or improperly set, returns the official default (noreply@kku.ac.th).
+     */
+    public static String resolveSenderEmail(String configuredEmail) {
+        if (configuredEmail == null || configuredEmail.isBlank()) {
+            return DEFAULT_SENDER_EMAIL;
+        }
+        return configuredEmail.trim();
+    }
 
     public static final String CID_KKU_LOGO = "cid:kku_logo";
     public static final String CID_CP_LOGO = "cid:cp_logo";
@@ -351,6 +363,31 @@ public final class EmailTemplateHelper {
         sb.append("<p style='font-size:12px;color:#94a3b8;margin:20px 0 0 0;'>อีเมลฉบับนี้ถูกส่งจากระบบ HRCP.KKU โดยผู้ใช้งานข้างต้น ท่านสามารถตอบกลับอีเมลนี้เพื่อติดต่อผู้แจ้งโดยตรง</p>");
 
         return wrapLayout("รายงานปัญหา/ข้อเสนอแนะ", category, sb.toString());
+    }
+
+    /**
+     * Builds SMTP Relay Diagnostic Test email.
+     */
+    public static String buildDiagnosticTestEmail(String adminName, String targetEmail, String serverIp, String smtpHost, String timestamp) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
+          .append(escapeHtml(adminName != null ? adminName : "ผู้ดูแลระบบ")).append("</strong>,</p>");
+        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>อีเมลนี้เป็นการทดสอบการทำงานของระบบส่งอีเมล <strong>KKU SMTP Relay</strong> ในระบบบริหารตำแหน่งทางวิชาการ (HRCP.KKU)</p>");
+
+        sb.append("<div style='background:#ecfdf5;border:1px solid #a7f3d0;border-left:4px solid #10b981;border-radius:10px;padding:18px 20px;margin-bottom:20px;'>");
+        sb.append("<div style='font-weight:700;color:#065f46;font-size:15px;margin-bottom:8px;'><span style='font-size:18px;margin-right:6px;'>✓</span> เชื่อมต่อและส่งผ่าน KKU SMTP Relay สำเร็จ</div>");
+        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='6' style='font-size:13px;'>");
+        sb.append("<tr><td width='35%' style='color:#047857;font-weight:600;'>เซิร์ฟเวอร์ SMTP:</td><td style='color:#1e293b;font-family:monospace;'>").append(escapeHtml(smtpHost)).append("</td></tr>");
+        sb.append("<tr><td style='color:#047857;font-weight:600;'>เซิร์ฟเวอร์ต้นทาง (Server IP):</td><td style='color:#1e293b;font-family:monospace;'>").append(escapeHtml(serverIp)).append("</td></tr>");
+        sb.append("<tr><td style='color:#047857;font-weight:600;'>ผู้ส่ง (From):</td><td style='color:#1e293b;font-family:monospace;'>").append(escapeHtml(DEFAULT_SENDER_EMAIL)).append("</td></tr>");
+        sb.append("<tr><td style='color:#047857;font-weight:600;'>ผู้รับ (To):</td><td style='color:#1e293b;font-family:monospace;'>").append(escapeHtml(targetEmail)).append("</td></tr>");
+        sb.append("<tr><td style='color:#047857;font-weight:600;'>เวลาที่ส่ง (Timestamp):</td><td style='color:#1e293b;'>").append(escapeHtml(timestamp)).append(" (ICT)</td></tr>");
+        sb.append("</table>");
+        sb.append("</div>");
+
+        sb.append("<p style='font-size:13px;color:#64748b;margin:16px 0 0 0;'>หากท่านได้รับอีเมลนี้ แสดงว่าการตั้งค่า IP-Whitelisted Relay และการจัดส่งอีเมลทั้งภายในและภายนอกมหาวิทยาลัยขอนแก่นทำงานได้อย่างสมบูรณ์</p>");
+
+        return wrapLayout("ทดสอบระบบส่งอีเมล (SMTP Test)", "Diagnostic Check", sb.toString());
     }
 
     private static String escapeHtml(String text) {

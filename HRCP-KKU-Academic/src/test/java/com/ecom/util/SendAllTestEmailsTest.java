@@ -54,25 +54,41 @@ class SendAllTestEmailsTest {
     private final String targetEmail = required("EMAIL_TARGET");
 
     private JavaMailSenderImpl createMailSender() {
-        JavaMailSenderImpl sender = new JavaMailSenderImpl();
-        sender.setHost("smtp.gmail.com");
-        sender.setPort(587);
-        sender.setUsername(required("EMAIL_USERNAME"));
-        sender.setPassword(required("EMAIL_PASSWORD"));
+        String host = System.getenv().getOrDefault("SMTP_HOST",
+                System.getenv().getOrDefault("EMAIL_HOST", "smtp.kku.ac.th"));
+        int port = Integer.parseInt(System.getenv().getOrDefault("SMTP_PORT",
+                System.getenv().getOrDefault("EMAIL_PORT", "587")));
+        String username = System.getenv().getOrDefault("SMTP_USER",
+                System.getenv().getOrDefault("EMAIL_USERNAME", ""));
+        String password = System.getenv().getOrDefault("SMTP_PASS",
+                System.getenv().getOrDefault("EMAIL_PASSWORD", ""));
 
+        JavaMailSenderImpl sender = new JavaMailSenderImpl();
+        sender.setHost(host);
+        sender.setPort(port);
+        if (!username.isBlank()) {
+            sender.setUsername(username);
+        }
+        if (!password.isBlank()) {
+            sender.setPassword(password);
+        }
+
+        boolean auth = !username.isBlank();
         Properties props = sender.getJavaMailProperties();
         props.put("mail.transport.protocol", "smtp");
-        props.put("mail.smtp.auth", "true");
+        props.put("mail.smtp.auth", String.valueOf(auth));
         props.put("mail.smtp.starttls.enable", "true");
-        props.put("mail.smtp.starttls.required", "true");
-        props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+        props.put("mail.smtp.starttls.required", "false");
+        props.put("mail.smtp.ssl.trust", host);
         return sender;
     }
 
     private void send(JavaMailSenderImpl mailSender, String subject, String htmlContent) throws Exception {
+        String fromEmail = System.getenv().getOrDefault("MAILER_FROM",
+                System.getenv().getOrDefault("EMAIL_FROM", EmailTemplateHelper.DEFAULT_SENDER_EMAIL));
         MimeMessage message = mailSender.createMimeMessage();
         MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-        helper.setFrom(mailSender.getUsername(), EmailTemplateHelper.SENDER_NAME);
+        helper.setFrom(EmailTemplateHelper.resolveSenderEmail(fromEmail), EmailTemplateHelper.SENDER_NAME);
         helper.setTo(targetEmail);
         helper.setSubject(subject);
         helper.setText(htmlContent, true);

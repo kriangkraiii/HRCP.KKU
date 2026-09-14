@@ -72,7 +72,7 @@ public class TwoFactorService {
         return otp;
     }
 
-    @org.springframework.beans.factory.annotation.Value("${spring.mail.username:noreply@kku.ac.th}")
+    @org.springframework.beans.factory.annotation.Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
 
     /**
@@ -109,7 +109,7 @@ public class TwoFactorService {
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
+            helper.setFrom(com.ecom.util.EmailTemplateHelper.resolveSenderEmail(senderEmail), com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(user.getEmail());
             helper.setSubject(subject);
             helper.setText(body, true);

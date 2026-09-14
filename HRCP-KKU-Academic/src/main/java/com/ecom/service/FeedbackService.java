@@ -40,7 +40,7 @@ public class FeedbackService {
     @Value("${app.feedback.max-image-bytes:5242880}")
     private long maxImageBytes;
 
-    @Value("${spring.mail.username:noreply@kku.ac.th}")
+    @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
 
     public FeedbackService(JavaMailSender mailSender) {
@@ -97,7 +97,7 @@ public class FeedbackService {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
 
-            helper.setFrom(senderEmail, EmailTemplateHelper.SENDER_NAME);
+            helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
             helper.setTo(recipients.toArray(new String[0]));
 
             // CC back to the sender so they have a copy

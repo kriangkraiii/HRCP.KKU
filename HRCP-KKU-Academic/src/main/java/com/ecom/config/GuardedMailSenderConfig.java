@@ -42,6 +42,17 @@ public class GuardedMailSenderConfig {
      * that into something an operator can see.
      */
     private void warnIfUnconfigured(JavaMailSenderImpl delegate) {
+        String host = delegate.getHost();
+        boolean isKkuRelay = host != null && host.contains("kku.ac.th");
+        String authProp = delegate.getJavaMailProperties().getProperty("mail.smtp.auth", "false");
+        boolean authRequired = "true".equalsIgnoreCase(authProp);
+
+        if (isKkuRelay || !authRequired) {
+            log.info("ระบบส่งอีเมลกำหนดค่าไปยัง SMTP Relay [{}:{}] (IP-Whitelisted, auth={})",
+                    host, delegate.getPort(), authRequired);
+            return;
+        }
+
         boolean noPassword = delegate.getPassword() == null || delegate.getPassword().isBlank();
         boolean noUsername = delegate.getUsername() == null || delegate.getUsername().isBlank();
         if (noPassword || noUsername) {

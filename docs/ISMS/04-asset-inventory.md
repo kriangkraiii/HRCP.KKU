@@ -29,5 +29,5 @@
 
 | Asset ID | ชื่อเครื่อง/โฮสต์ | วัตถุประสงค์ | ระบบปฏิบัติการ | IP Address / Domain |
 |---|---|---|---|---|
-| **INF-01** | Production Server | Application & DB Host | Windows / Linux Container | 10.198.200.84 |
+| **INF-01** | Production Server | Application & DB Host | Linux Container (Docker) | 10.198.110.27 |
 | **INF-02** | Cloud Storage Bucket | จัดเก็บไฟล์เอกสารแนบ | AWS S3 (ap-southeast-1) | Secure Bucket URL |

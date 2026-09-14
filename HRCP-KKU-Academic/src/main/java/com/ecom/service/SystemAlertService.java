@@ -167,7 +167,7 @@ public class SystemAlertService {
                 .toList();
     }
 
-    @Value("${spring.mail.username:noreply@kku.ac.th}")
+    @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail = "noreply@kku.ac.th";
 
     /**
@@ -181,7 +181,7 @@ public class SystemAlertService {
         try {
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(senderEmail, com.ecom.util.EmailTemplateHelper.SENDER_NAME);
+            helper.setFrom(com.ecom.util.EmailTemplateHelper.resolveSenderEmail(senderEmail), com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(admin.getEmail());
             helper.setSubject("[HRCP.KKU] " + level.prefix + " " + source);
             helper.setText(body(admin, level, source, detail, stamp), true);
