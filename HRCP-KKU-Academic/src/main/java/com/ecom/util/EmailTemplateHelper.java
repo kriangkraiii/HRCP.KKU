@@ -13,7 +13,7 @@ public final class EmailTemplateHelper {
     }
 
     public static final String DEFAULT_SENDER_EMAIL = "noreply@kku.ac.th";
-    public static final String SENDER_NAME = "วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
+    public static final String SENDER_NAME = "College of Computing, KKU";
     public static final String SENDER_SYSTEM_NAME = "ระบบตำแหน่งทางวิชาการ วิทยาลัยการคอมพิวเตอร์ มข.";
 
     /**

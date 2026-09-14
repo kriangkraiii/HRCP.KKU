@@ -887,7 +887,12 @@
             })();
 
             // === Admin Diagnostic Test Email ===
+            var isSendingDiagnostic = false;
             function sendDiagnosticTestEmail() {
+                if (isSendingDiagnostic) {
+                    return; // Prevent duplicate concurrent dispatches
+                }
+
                 var emailInput = document.getElementById('diagnosticTargetEmail');
                 var targetEmail = emailInput ? emailInput.value.trim() : '';
                 var btn = document.getElementById('btnSendTestEmail');
@@ -901,6 +906,8 @@
                     }
                     return;
                 }
+
+                isSendingDiagnostic = true;
 
                 // Loading State
                 if (btn) btn.disabled = true;
@@ -949,17 +956,14 @@
                         alertArea.innerHTML =
                             '<div class="alert alert-danger py-2 mb-0 small"><i class="fas fa-exclamation-circle me-1"></i> ไม่สามารถติดต่อเซิร์ฟเวอร์ได้: ' + (err.message || err) + '</div>';
                     }
+                })
+                .finally(function() {
+                    isSendingDiagnostic = false;
                 });
             }
 
             // Expose globally for csp_fallbacks.js data-call dispatcher
             window.sendDiagnosticTestEmail = sendDiagnosticTestEmail;
-
-            // Wire direct click event listener
-            var directTestBtn = document.getElementById('btnSendTestEmail');
-            if (directTestBtn) {
-                directTestBtn.addEventListener('click', sendDiagnosticTestEmail);
-            }
         </script>
     </section>
 </body>

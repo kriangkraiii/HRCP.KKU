@@ -32,7 +32,7 @@ services:
       SMTP_USER: ${SMTP_USER:-}
       SMTP_PASS: ${SMTP_PASS:-}
       MAILER_FROM: ${MAILER_FROM:-noreply@kku.ac.th}
-      MAILER_FROM_NAME: ${MAILER_FROM_NAME:-วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น}
+      MAILER_FROM_NAME: ${MAILER_FROM_NAME:-College of Computing, KKU}
       EMAIL_HOST: ${EMAIL_HOST:-smtp.kku.ac.th}
       EMAIL_PORT: ${EMAIL_PORT:-587}
       EMAIL_USERNAME: ${EMAIL_USERNAME:-}
