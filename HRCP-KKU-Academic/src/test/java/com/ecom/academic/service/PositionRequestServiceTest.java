@@ -437,10 +437,14 @@ public class PositionRequestServiceTest {
         }
 
         @Test
-        void getApplicantDocLabels_Returns6Documents() {
-            assertThat(positionService.getApplicantDocLabels()).hasSize(6);
+        void getApplicantDocLabels_Returns7Documents() {
+            // เอกสารที่ 5 (แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา) ย้ายมาเป็นของผู้ยื่น
+            // ผู้ยื่นกรอกส่วนหัวแล้วส่งเวียนลงนามให้หัวหน้าสาขาวิชาและคณบดีเอง
+            // แอดมินจึงเหลือกรอกแค่เอกสารที่ 7 กับ 8
+            assertThat(positionService.getApplicantDocLabels()).hasSize(7);
             assertThat(positionService.getApplicantDocLabels().keySet())
-                    .containsExactlyInAnyOrder(1, 2, 3, 4, 6, 9);
+                    .containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 9);
+            assertThat(PositionRequestService.ADMIN_DOCS).containsExactly(7, 8);
         }
 
         @Test

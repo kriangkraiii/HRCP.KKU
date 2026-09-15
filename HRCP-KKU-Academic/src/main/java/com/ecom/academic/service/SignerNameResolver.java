@@ -71,7 +71,9 @@ public class SignerNameResolver {
         if (envelope == null || json == null || json.isBlank()) {
             return json;
         }
-        Map<String, String> names = namesForEnvelope(envelope);
+        Map<String, String> names = new LinkedHashMap<>(namesForEnvelope(envelope));
+        // คำตอบของผู้ลงนามเดินทางเส้นเดียวกับชื่อ — เติมตอน render ไม่แตะ frozenJson
+        names.putAll(choicesForEnvelope(envelope));
         if (names.isEmpty()) {
             return json;
         }
@@ -114,6 +116,33 @@ public class SignerNameResolver {
             }
         }
         return names;
+    }
+
+    /**
+     * คำตอบที่ผู้ลงนามเลือกไว้ แยกตามชื่อช่องในเทมเพลต
+     *
+     * <p>ช่องที่ยังไม่มีใครลงนามจะไม่ถูกเติม เอกสารจึงยังว่างตรงนั้นจนกว่าจะมีคนตอบจริง —
+     * ตรงกับความหมายของแบบฟอร์มที่ยังไม่ผ่านการตรวจ
+     */
+    public Map<String, String> choicesForEnvelope(SignatureRequest envelope) {
+        Map<String, SignatureSlot> bySlotKey = new LinkedHashMap<>();
+        for (SignatureSlot slot : workflowConfigService.effectiveSlotsFor(
+                envelope.getModule(), envelope.getDocumentType())) {
+            bySlotKey.put(slot.slotKey(), slot);
+        }
+
+        Map<String, String> answers = new LinkedHashMap<>();
+        for (SignatureStep step : stepRepository.findStepsWithSigner(envelope.getId())) {
+            String answer = step.getSignerChoiceValue();
+            if (answer == null || answer.isBlank() || step.getSlotKey() == null) {
+                continue;
+            }
+            SignatureSlot slot = bySlotKey.get(step.getSlotKey());
+            if (slot != null && slot.choice() != null) {
+                answers.put(slot.choice().fieldKey(), answer);
+            }
+        }
+        return answers;
     }
 
     /**

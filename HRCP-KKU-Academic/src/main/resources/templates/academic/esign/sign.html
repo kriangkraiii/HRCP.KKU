@@ -308,6 +308,30 @@
                             </div>
                         </div>
 
+                        <!-- คำถามของช่องลงนาม — บางแบบฟอร์มขอ "ผลการตรวจสอบ" ไม่ใช่แค่ลายเซ็น
+                             คำตอบผูกกับลายเซ็นของผู้ลงนาม ไม่ใช่ข้อมูลที่ผู้ยื่นกรอกมา จึงถูกเก็บไว้
+                             ที่ขั้นตอนลงนามและเติมลงเอกสารตอนพิมพ์เท่านั้น -->
+                        <div th:if="${signerChoice != null}" class="card card-academic mb-3 border-warning">
+                            <div class="card-header bg-white">
+                                <i class="fas fa-clipboard-check text-warning"></i>
+                                <span th:text="${signerChoice.question()}">ผลการตรวจสอบ</span>
+                                <span class="text-danger">*</span>
+                            </div>
+                            <div class="card-body">
+                                <p class="small text-secondary mb-3">
+                                    คำตอบนี้จะถูกบันทึกคู่กับลายเซ็นของท่านและปรากฏในเอกสารฉบับสมบูรณ์
+                                </p>
+                                <div class="form-check mb-2" th:each="option : ${signerChoice.options()}">
+                                    <input class="form-check-input" type="radio" name="signerChoice"
+                                           th:id="'signerChoice_' + ${optionStat.index}"
+                                           th:value="${option}" required
+                                           th:attrappend="data-alert=${option == signerChoice.alertValue()} ? 'true' : null">
+                                    <label class="form-check-label" th:for="'signerChoice_' + ${optionStat.index}"
+                                           th:text="${option}">ตัวเลือก</label>
+                                </div>
+                            </div>
+                        </div>
+
                         <!-- ความยินยอม — เป็นสาระสำคัญตาม พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์ ม.9
                              ระบบบันทึกทั้งข้อความที่แสดง เวลา IP และอุปกรณ์ไว้เป็นหลักฐาน -->
                         <div class="card card-academic mb-3">

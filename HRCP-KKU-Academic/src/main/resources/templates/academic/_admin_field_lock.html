@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  เอกสารของผู้ยื่นที่แอดมินเปิดดู
+
+  แอดมินแก้เอกสารของผู้ยื่นไม่ได้ กรอกได้เฉพาะช่องของตัวเอง (เลขที่หนังสือ คอลัมน์เจ้าหน้าที่ ฯลฯ)
+  ถ้าต้องแก้ส่วนอื่นต้องส่งกลับให้ผู้ยื่นแก้เอง
+
+  ส่วนนี้เป็นเพียงการบอกผู้ใช้ให้เห็นชัด — ตัวที่บังคับใช้จริงคือ DocumentFieldOwnership.merge
+  ฝั่งเซิร์ฟเวอร์ ปิด JS แล้วยิง POST ตรงก็ยังกันอยู่
+-->
+<div th:fragment="banner(module, requestId, documentType)"
+     th:if="${readOnlyForAdmin}">
+    <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <i class="fas fa-lock"></i>
+            <strong>เอกสารของผู้ยื่น</strong> — แก้ไขข้อมูลของผู้ยื่นไม่ได้
+            <span th:if="${adminEditableFields != null and !adminEditableFields.isEmpty()}">
+                ท่านกรอกได้เฉพาะช่องของเจ้าหน้าที่ที่เปิดไว้
+            </span>
+            <span th:unless="${adminEditableFields != null and !adminEditableFields.isEmpty()}">
+                ดูได้อย่างเดียว
+            </span>
+            <div class="small text-muted mt-1">หากต้องแก้ไข กรุณาส่งกลับให้ผู้ยื่นแก้ไขเอง</div>
+        </div>
+        <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="collapse"
+                data-bs-target="#sendBackPanel">
+            <i class="fas fa-rotate-left"></i> ส่งกลับให้ผู้ยื่นแก้ไข
+        </button>
+    </div>
+
+    <!-- อยู่นอก <form> ของเอกสาร เพราะเป็นการส่ง POST คนละปลายทาง -->
+    <div class="collapse mb-3" id="sendBackPanel">
+        <form th:action="@{'/admin/' + ${module} + '/request/' + ${requestId} + '/document/' + ${documentType} + '/request-resign'}"
+              method="post" class="card card-body">
+            <label class="form-label fw-semibold">เหตุผลที่ส่งกลับ <span class="text-danger">*</span></label>
+            <textarea name="reason" class="form-control mb-2" rows="2" required
+                      placeholder="ระบุสิ่งที่ผู้ยื่นต้องแก้ไข เช่น ชื่อรายวิชาไม่ตรงกับที่ลงทะเบียน"></textarea>
+            <div>
+                <button type="submit" class="btn btn-warning btn-sm">
+                    <i class="fas fa-paper-plane"></i> ยืนยันส่งกลับ
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ปิดช่องที่ไม่ใช่ของแอดมิน ต้องวางหลังฟอร์มใน DOM -->
+<th:block th:fragment="script(formId)">
+    <script th:inline="javascript">
+        (function () {
+            var readOnly = /*[[${readOnlyForAdmin}]]*/ false;
+            if (!readOnly) return;
+            var allowed = /*[[${adminEditableFields}]]*/ [];
+            var form = document.getElementById(/*[[${formId}]]*/ '');
+            if (!form) return;
+
+            var editable = new Set(allowed || []);
+            form.querySelectorAll('input, select, textarea').forEach(function (el) {
+                // ช่องซ่อนไม่ต้องปิด: ผู้ใช้แตะไม่ได้อยู่แล้ว และเซิร์ฟเวอร์ตัดทิ้งเองถ้าไม่ใช่ของแอดมิน
+                if (!el.name || el.type === 'hidden' || editable.has(el.name)) return;
+                el.disabled = true;
+                el.classList.add('bg-light');
+            });
+        })();
+    </script>
+</th:block>
+
+</body>
+</html>

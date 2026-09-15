@@ -291,6 +291,29 @@ public class AcademicRequestService {
         return documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
     }
 
+    /**
+     * ข้อมูลล่าสุดที่บันทึกไว้ของเอกสารฉบับนี้ หรือ null เมื่อยังไม่เคยบันทึก
+     *
+     * <p>{@link DocumentFieldOwnership} ใช้ค่านี้คืนช่องที่ผู้บันทึกไม่ได้เป็นเจ้าของกลับไป
+     */
+    public Map<String, String> getLatestDocumentData(Long requestId, int documentType) {
+        List<AcademicDocument> docs = getDocumentsByType(requestId, documentType);
+        if (docs.isEmpty()) {
+            return null;
+        }
+        String json = docs.get(docs.size() - 1).getJsonData();
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                    });
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     // ================== ประตูแก้ไขเอกสารของผู้ยื่น ==================
 
     /**
@@ -320,14 +343,14 @@ public class AcademicRequestService {
         if (CLOSED_STATUSES.contains(request.getCurrentStatus())) {
             return false;
         }
-        if (isDocumentSignatureLocked(request.getId(), documentType)) {
+        if (isDocumentLockedForSigning(request.getId(), documentType)) {
             return false;
         }
         return isRevisionRequested(request.getId(), documentType);
     }
 
     /** เอกสารกำลังเวียนลงนาม หรือลงนามครบแล้ว */
-    private boolean isDocumentSignatureLocked(Long requestId, int documentType) {
+    public boolean isDocumentLockedForSigning(Long requestId, int documentType) {
         var blocking = signatureRequestRepository.findBlockingEnvelopes(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType);
         return !blocking.isEmpty();

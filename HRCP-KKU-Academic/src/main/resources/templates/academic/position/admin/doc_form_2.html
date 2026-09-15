@@ -11,6 +11,8 @@
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 2: หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูลเกี่ยวกับการขอกำหนดตำแหน่งทางวิชาการ</h3>
             <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>ผู้ยื่นคำร้อง</strong> — แอดมินสามารถดูและแก้ไขได้</div>
 
+            <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+            <div th:replace="~{academic/_admin_field_lock :: banner('position', ${request.id}, ${documentType})}"></div>
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/2'" method="post" id="doc2Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/2'">
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้เสนอขอ</h5></div>
@@ -123,6 +125,7 @@
 
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script>initDocPreview('doc2Form', 2, '/api/position/preview');</script>
+    <th:block th:replace="~{academic/_admin_field_lock :: script('doc2Form')}"></th:block>
     </section>
 </body>
 </html>

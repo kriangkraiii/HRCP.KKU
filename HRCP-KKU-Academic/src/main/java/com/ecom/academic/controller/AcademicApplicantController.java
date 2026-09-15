@@ -38,9 +38,11 @@ import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicEmailService;
 import com.ecom.academic.service.AcademicRankPolicy;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
@@ -347,6 +349,10 @@ public class AcademicApplicantController {
 
         formData.remove("action");
         formData.remove("_csrf");
+        // เลขที่หนังสือเป็นของสำนักงาน ผู้ยื่นแตะไม่ได้ — เดิมกันด้วย hidden input ฝั่งเบราว์เซอร์
+        // อย่างเดียว ซึ่งปิด JS หรือยิง POST ตรงก็ทะลุ
+        formData = DocumentFieldOwnership.merge(SignatureModule.ACADEMIC, 1, false, formData,
+                requestService.getLatestDocumentData(id, 1));
         String jsonData = objectMapper.writeValueAsString(formData);
 
         boolean isNew1 = requestService.getDocumentsByType(id, 1).isEmpty();
@@ -465,6 +471,9 @@ public class AcademicApplicantController {
 
         formData.remove("action");
         formData.remove("_csrf");
+        // คอลัมน์ "เจ้าหน้าที่" และหมายเหตุเป็นของแอดมิน ผู้ยื่นติ๊กได้เฉพาะคอลัมน์ "เจ้าตัว"
+        formData = DocumentFieldOwnership.merge(SignatureModule.ACADEMIC, 2, false, formData,
+                requestService.getLatestDocumentData(id, 2));
         String jsonData = objectMapper.writeValueAsString(formData);
 
         boolean isNew2 = requestService.getDocumentsByType(id, 2).isEmpty();

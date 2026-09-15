@@ -150,6 +150,19 @@ class SignatureEvidenceTest {
         return released.request();
     }
 
+    /**
+     * ลงนาม โดยตอบคำถามของช่องลงนามให้อัตโนมัติถ้าช่องนั้นมีคำถาม
+     *
+     * <p>เทสต์ชุดนี้ทดสอบกลไกการเวียนลงนาม ไม่ได้ทดสอบคำถามของแบบฟอร์มใดฟอร์มหนึ่ง
+     * การอ่านคำถามจากตัวขั้นตอนเองทำให้เพิ่มคำถามให้เอกสารไหนก็ไม่ต้องกลับมาแก้ที่นี่
+     */
+    private Result signStep(Long stepId, UserDtls signer, Long signatureId, boolean consent,
+            ActorContext actor) {
+        var question = workflow.signerChoiceFor(stepId);
+        String answer = question != null ? question.options().get(0) : null;
+        return workflow.sign(stepId, signer, signatureId, consent, actor, null, answer);
+    }
+
     private SignatureStep stepOf(SignatureRequest envelope, String slotKey) {
         return stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId()).stream()
                 .filter(s -> s.getSlotKey().equals(slotKey))
@@ -165,7 +178,7 @@ class SignatureEvidenceTest {
 
         SignatureRequest envelope = createEnvelope(
                 List.of(new SignerAssignment("head", head.getId())), null);
-        workflow.sign(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
 
         SignatureStep signed = stepRepository.findById(stepOf(envelope, "head").getId()).orElseThrow();
         assertThat(signed.getEvidenceHmac()).isNotBlank();
@@ -177,7 +190,7 @@ class SignatureEvidenceTest {
     void tamperingWithEvidenceBreaksTheSeal() {
         SignatureRequest envelope = createEnvelope(
                 List.of(new SignerAssignment("head", head.getId())), null);
-        workflow.sign(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
 
         // Someone edits the record directly — the exact case the seal exists for.
         SignatureStep signed = stepRepository.findById(stepOf(envelope, "head").getId()).orElseThrow();
@@ -201,8 +214,8 @@ class SignatureEvidenceTest {
                         new SignerAssignment("dean", dean.getId())),
                 null);
 
-        workflow.sign(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
-        workflow.sign(stepOf(envelope, "dean").getId(), dean, deanSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "dean").getId(), dean, deanSignature.getId(), true, ActorContext.none());
 
         SignatureVerificationService.VerificationReport report =
                 verification.verify(requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow());
@@ -220,7 +233,7 @@ class SignatureEvidenceTest {
     void editedContentIsReported() {
         SignatureRequest envelope = createEnvelope(
                 List.of(new SignerAssignment("head", head.getId())), null);
-        workflow.sign(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
 
         SignatureRequest stored = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
         stored.setFrozenJson("{\"dean_name\":\"changed\"}");
@@ -302,7 +315,7 @@ class SignatureEvidenceTest {
 
         assertThat(workflow.findInbox(admin)).hasSize(1);
 
-        Result result = workflow.sign(stepOf(envelope, "dean").getId(), admin,
+        Result result = signStep(stepOf(envelope, "dean").getId(), admin,
                 adminSignature.getId(), true, ActorContext.none());
 
         assertThat(result.ok()).as(result.error()).isTrue();
@@ -359,7 +372,7 @@ class SignatureEvidenceTest {
                 List.of(new SignerAssignment("dean", dean.getId())), null);
         SignatureStep step = stepOf(envelope, "dean");
 
-        Result r = workflow.sign(step.getId(), dean, deanSignature.getId(), true, ActorContext.none());
+        Result r = signStep(step.getId(), dean, deanSignature.getId(), true, ActorContext.none());
         assertThat(r.ok()).as(r.error()).isTrue();
 
         byte[] signedDocx = renderer.renderDocx(envelope);

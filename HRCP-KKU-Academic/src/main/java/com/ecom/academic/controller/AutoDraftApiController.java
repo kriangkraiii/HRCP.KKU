@@ -16,7 +16,9 @@ import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
@@ -61,13 +63,29 @@ public class AutoDraftApiController {
             if (!mayEdit(user, request.getApplicant()))
                 return ResponseEntity.status(403).build();
 
+            boolean isAdmin = ROLE_ADMIN.equals(user.getRole());
+
             // บันทึกร่างอัตโนมัติก็คือการเขียนทับเอกสาร จึงต้องผ่านประตูเดียวกับการกดบันทึก:
             // หลังส่งคำร้องแล้วผู้ยื่นแก้ได้เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น
-            if (!ROLE_ADMIN.equals(user.getRole())
-                    && !academicService.canApplicantEditDocument(request, docType)) {
+            if (!isAdmin && !academicService.canApplicantEditDocument(request, docType)) {
                 return ResponseEntity.status(409)
                         .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อแอดมินส่งกลับมาให้แก้ไขเท่านั้น"));
             }
+            // แอดมินเคยข้ามการเช็กล็อกทั้งหมดในทางนี้ ทั้งที่หน้าเว็บปกติห้ามไว้ — เอกสารที่
+            // เวียนลงนามไปแล้วจึงถูกแก้เงียบ ๆ ผ่าน auto-draft ได้ และแฮชของซองก็ไม่ตรงอีกต่อไป
+            if (isAdmin && academicService.isDocumentLockedForSigning(requestId, docType)) {
+                return ResponseEntity.status(409)
+                        .body(Map.of("error", "เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้"));
+            }
+
+            // เจ้าหน้าที่แก้เอกสารของผู้ยื่นไม่ได้ และผู้ยื่นก็แก้ช่องของเจ้าหน้าที่ไม่ได้เช่นกัน
+            String filtered = DocumentFieldOwnership.mergeJson(SignatureModule.ACADEMIC, docType,
+                    isAdmin, jsonData, academicService.getLatestDocumentData(requestId, docType));
+            if (filtered == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
+            }
+            jsonData = filtered;
 
             String label = academicService.getDocLabel(docType);
             academicService.saveDraft(request, docType, jsonData, label, null);
@@ -101,13 +119,31 @@ public class AutoDraftApiController {
             if (!mayEdit(user, request.getApplicant()))
                 return ResponseEntity.status(403).build();
 
+            boolean isAdmin = ROLE_ADMIN.equals(user.getRole());
+
+            // ทางนี้ไม่เคยเช็กเลยว่าเอกสารฉบับนั้นเป็นของใคร ผู้ยื่นจึงยิงร่างทับเอกสารของ
+            // เจ้าหน้าที่ (7, 8) ได้ ทั้งที่หน้าเว็บปกติกันไว้แล้ว
+            if (!isAdmin && !positionService.canApplicantEditDocument(request, docType)) {
+                return ResponseEntity.status(409)
+                        .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อแอดมินส่งกลับมาให้แก้ไขเท่านั้น"));
+            }
+            if (isAdmin && positionService.isDocumentLockedForSigning(requestId, docType)) {
+                return ResponseEntity.status(409)
+                        .body(Map.of("error", "เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้"));
+            }
+
             String label = positionService.getDocLabel(docType);
-            String filledBy = ROLE_ADMIN.equals(user.getRole()) ? "ADMIN" : "APPLICANT";
-            // Applicants may neither forge nor erase staff-filled fields (e.g. doc 7)
-            if (!ROLE_ADMIN.equals(user.getRole())) {
-                String sanitized = positionService.preserveStaffOnlyFieldsInJson(requestId, docType, jsonData);
-                if (sanitized != null)
-                    jsonData = sanitized;
+            String filledBy = isAdmin ? "ADMIN" : "APPLICANT";
+
+            String filtered = DocumentFieldOwnership.mergeJson(SignatureModule.POSITION, docType,
+                    isAdmin, jsonData, positionService.getLatestDocumentData(requestId, docType));
+            if (filtered == null) {
+                return ResponseEntity.badRequest()
+                        .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
+            }
+            jsonData = filtered;
+
+            if (!isAdmin) {
                 // ...nor change the position asked for, which was fixed at creation
                 String pinned = positionService.pinTargetPositionInJson(requestId, jsonData);
                 if (pinned != null)

@@ -28,7 +28,9 @@ import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.model.UserDtls;
@@ -361,7 +363,7 @@ public class PositionApplicantController {
             return "redirect:/user/position/dashboard";
         }
 
-        // Applicant can only fill docs 1,2,3,4,6,7,9
+        // เอกสารของแอดมิน (7, 8) ผู้ยื่นเปิดไม่ได้เลย
         if (!PositionRequestService.APPLICANT_DOCS.contains(type)) {
             return "redirect:/user/position/request/" + id;
         }
@@ -378,6 +380,11 @@ public class PositionApplicantController {
         model.addAttribute("preFilledData", preFilledData);
         model.addAttribute("docData", preFilledData);
         model.addAttribute("user", user);
+
+        // ประตูแก้ไข — เทมเพลตปิดฟอร์มและแสดงเหตุผลที่ถูกส่งกลับจากสามค่านี้
+        model.addAttribute("editable", positionService.canApplicantEditDocument(request, type));
+        model.addAttribute("revisionNote", positionService.getRevisionNote(id, type));
+        model.addAttribute("revisionRequested", positionService.isRevisionRequested(id, type));
 
         // Load doc 1 data for cross-document auto-fill (for docs other than 1)
         if (type != 1) {
@@ -412,19 +419,24 @@ public class PositionApplicantController {
             return "redirect:/user/position/request/" + id;
         }
 
+        // เอกสารที่กำลังเวียนลงนาม หรือที่ยังไม่ถูกส่งกลับมาให้แก้ ผู้ยื่นแตะไม่ได้
+        if (!positionService.canApplicantEditDocument(request, type)) {
+            return "redirect:/user/position/request/" + id + "/document/" + type + "?error=locked";
+        }
+
         // Remove Spring internals
         formData.remove("_csrf");
         formData.remove("action");
 
-        // Staff-only fields (e.g. doc 7 verification result) must survive an
-        // applicant save untouched — the applicant may neither forge nor erase them.
-        positionService.preserveStaffOnlyFields(type, formData,
-                positionService.getLatestDocumentData(id, type));
+        // ช่องที่เป็นของเจ้าหน้าที่หรือของผู้ลงนามต้องรอดจากการบันทึกของผู้ยื่นเสมอ — ผู้ยื่น
+        // จะปลอมหรือลบทิ้งด้วยการส่งค่าว่างก็ไม่ได้
+        Map<String, String> merged = DocumentFieldOwnership.merge(SignatureModule.POSITION, type,
+                false, formData, positionService.getLatestDocumentData(id, type));
         // The position asked for was fixed when the request was created.
-        positionService.pinTargetPosition(request, formData);
+        positionService.pinTargetPosition(request, merged);
 
         try {
-            String jsonData = objectMapper.writeValueAsString(formData);
+            String jsonData = objectMapper.writeValueAsString(merged);
             String label = positionService.getDocLabel(type);
 
             if ("draft".equals(action)) {

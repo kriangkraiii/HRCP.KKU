@@ -39,17 +39,20 @@
             const submitBtn = document.getElementById('btnSubmitDoc');
             const sendNotifyField = document.getElementById('sendNotifyField');
             const currentDocType = parseInt(document.getElementById('currentDocType')?.value) || 0;
-            const notifyDocTypes = [3, 4, 6, 8];
+            // ต้องตรงกับ AcademicRequestService.autoUpdateStatusByDocument
+            // เลขชุดนี้ค้างอยู่ที่ [3,4,6,8] ตั้งแต่ก่อนทีมเลื่อนเอกสารจากเริ่มนับ 0 เป็นเริ่มนับ 1
+            // กล่องยืนยันจึงเด้งผิดเอกสารมาตลอด และเอกสารที่เปลี่ยนสถานะจริงกลับไม่ถาม
+            const notifyDocTypes = [4, 5, 7, 9];
 
             // ---- Create Bootstrap 5 Modal dynamically and append to BODY ----
             var modalEl = document.getElementById('notifyConfirmModal');
             var bsModal = null;
             if (!modalEl && notifyDocTypes.includes(currentDocType)) {
                 var statusInfo = '';
-                if (currentDocType === 3) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>แต่งตั้งคณะอนุกรรมการแล้ว</strong>';
-                else if (currentDocType === 4) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>กำหนดวันประชุมแล้ว</strong>';
-                else if (currentDocType === 6) statusInfo = 'สถานะคำร้องจะเปลี่ยนตามผลประเมิน: <strong>ผลการประเมิน (ผ่าน/ไม่ผ่าน)</strong>';
-                else if (currentDocType === 8) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>เสร็จสิ้น (COMPLETED)</strong>';
+                if (currentDocType === 4) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>แต่งตั้งคณะอนุกรรมการแล้ว</strong>';
+                else if (currentDocType === 5) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>กำหนดวันประชุมแล้ว</strong>';
+                else if (currentDocType === 7) statusInfo = 'สถานะคำร้องจะเปลี่ยนตามผลประเมิน: <strong>ผลการประเมิน (ผ่าน/ไม่ผ่าน)</strong>';
+                else if (currentDocType === 9) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>เสร็จสิ้น (COMPLETED)</strong>';
 
                 modalEl = document.createElement('div');
                 modalEl.className = 'modal fade';
@@ -157,7 +160,9 @@
                 const form = document.getElementById('docForm');
                 if (!form) return;
 
-                const requiredFields = form.querySelectorAll('[required]');
+                // ข้ามช่องที่ถูกปิด — เอกสารของผู้ยื่นจะมีช่อง required ที่แอดมินแก้ไม่ได้
+                // ถ้านับรวมด้วย ปุ่มบันทึกจะค้างอยู่ตลอดและกรอกเลขที่หนังสือไม่ได้เลย
+                const requiredFields = form.querySelectorAll('[required]:not(:disabled)');
                 let allFilled = true;
                 requiredFields.forEach(function(el) {
                     if (el.type === 'radio') {
@@ -405,6 +410,7 @@
             initDocPreview('docForm', currentDocType);
         });
     </script>
+    <th:block th:replace="~{academic/_admin_field_lock :: script('docForm')}"></th:block>
 </th:block>
 
 </body>

@@ -169,6 +169,19 @@ class SignatureWorkflowServiceTest {
                 null, admin, ActorContext.none());
     }
 
+    /**
+     * ลงนาม โดยตอบคำถามของช่องลงนามให้อัตโนมัติถ้าช่องนั้นมีคำถาม
+     *
+     * <p>เทสต์ชุดนี้ทดสอบกลไกการเวียนลงนาม ไม่ได้ทดสอบคำถามของแบบฟอร์มใดฟอร์มหนึ่ง
+     * การอ่านคำถามจากตัวขั้นตอนเองทำให้เพิ่มคำถามให้เอกสารไหนก็ไม่ต้องกลับมาแก้ที่นี่
+     */
+    private Result signStep(Long stepId, UserDtls signer, Long signatureId, boolean consent,
+            ActorContext actor) {
+        var question = workflow.signerChoiceFor(stepId);
+        String answer = question != null ? question.options().get(0) : null;
+        return workflow.sign(stepId, signer, signatureId, consent, actor, null, answer);
+    }
+
     private SignatureStep stepOf(SignatureRequest envelope, String slotKey) {
         return stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId()).stream()
                 .filter(s -> s.getSlotKey().equals(slotKey))
@@ -202,7 +215,7 @@ class SignatureWorkflowServiceTest {
         SignatureRequest envelope = createEnvelope().request();
         SignatureStep deanStep = stepOf(envelope, "dean");
 
-        Result result = workflow.sign(deanStep.getId(), dean, deanSignature.getId(), true, ActorContext.none());
+        Result result = signStep(deanStep.getId(), dean, deanSignature.getId(), true, ActorContext.none());
 
         assertThat(result.ok()).isFalse();
         assertThat(result.error()).contains("ยังไม่ถึงคิว");
@@ -214,7 +227,7 @@ class SignatureWorkflowServiceTest {
     void signingInOrderCompletesTheChain() {
         SignatureRequest envelope = createEnvelope().request();
 
-        Result first = workflow.sign(stepOf(envelope, "head").getId(), head,
+        Result first = signStep(stepOf(envelope, "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none());
         assertThat(first.ok()).isTrue();
 
@@ -224,7 +237,7 @@ class SignatureWorkflowServiceTest {
         assertThat(requestRepository.findById(envelope.getId()).orElseThrow().getStatus())
                 .isEqualTo(SignatureRequestStatus.IN_PROGRESS);
 
-        Result second = workflow.sign(stepOf(envelope, "dean").getId(), dean,
+        Result second = signStep(stepOf(envelope, "dean").getId(), dean,
                 deanSignature.getId(), true, ActorContext.none());
         assertThat(second.ok()).isTrue();
 
@@ -241,7 +254,7 @@ class SignatureWorkflowServiceTest {
         SignatureRequest envelope = createEnvelope().request();
         SignatureStep headStep = stepOf(envelope, "head");
 
-        Result result = workflow.sign(headStep.getId(), head, headSignature.getId(), false, ActorContext.none());
+        Result result = signStep(headStep.getId(), head, headSignature.getId(), false, ActorContext.none());
 
         assertThat(result.ok()).isFalse();
         assertThat(result.error()).contains("ยินยอม");
@@ -254,7 +267,7 @@ class SignatureWorkflowServiceTest {
         SignatureRequest envelope = createEnvelope().request();
         SignatureStep headStep = stepOf(envelope, "head");
 
-        Result result = workflow.sign(headStep.getId(), dean, deanSignature.getId(), true, ActorContext.none());
+        Result result = signStep(headStep.getId(), dean, deanSignature.getId(), true, ActorContext.none());
 
         assertThat(result.ok()).isFalse();
         assertThat(result.error()).contains("ไม่ใช่ผู้ที่ได้รับมอบหมาย");
@@ -267,7 +280,7 @@ class SignatureWorkflowServiceTest {
         SignatureStep headStep = stepOf(envelope, "head");
 
         // The right person, their turn, consent given — but someone else's image.
-        Result result = workflow.sign(headStep.getId(), head, deanSignature.getId(), true, ActorContext.none());
+        Result result = signStep(headStep.getId(), head, deanSignature.getId(), true, ActorContext.none());
 
         assertThat(result.ok()).isFalse();
         assertThat(result.error()).contains("ไม่พบลายเซ็นที่เลือก");
@@ -279,7 +292,7 @@ class SignatureWorkflowServiceTest {
         SignatureRequest envelope = createEnvelope().request();
         SignatureStep headStep = stepOf(envelope, "head");
 
-        workflow.sign(headStep.getId(), head, headSignature.getId(), true,
+        signStep(headStep.getId(), head, headSignature.getId(), true,
                 new ActorContext("10.1.2.3", "Mozilla/5.0 (Test)"));
 
         SignatureStep signed = stepRepository.findById(headStep.getId()).orElseThrow();
@@ -332,8 +345,8 @@ class SignatureWorkflowServiceTest {
         assertThat(workflow.isDocumentLocked(MODULE, REQUEST_ID, DOC_TYPE)).isTrue();
 
         // Still locked once complete: the signatures belong to this content.
-        workflow.sign(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
-        workflow.sign(stepOf(envelope, "dean").getId(), dean, deanSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "dean").getId(), dean, deanSignature.getId(), true, ActorContext.none());
         assertThat(workflow.isDocumentLocked(MODULE, REQUEST_ID, DOC_TYPE)).isTrue();
     }
 
@@ -392,7 +405,7 @@ class SignatureWorkflowServiceTest {
         stored.setFrozenJson("{\"dean_name\":\"someone else entirely\"}");
         requestRepository.saveAndFlush(stored);
 
-        Result result = workflow.sign(stepOf(envelope, "head").getId(), head,
+        Result result = signStep(stepOf(envelope, "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none());
 
         assertThat(result.ok()).isFalse();
@@ -410,7 +423,7 @@ class SignatureWorkflowServiceTest {
         assertThat(created.ok()).isTrue();
         assertThat(workflow.startCirculation(created.request().getId(), admin, ActorContext.none()).ok()).isTrue();
 
-        Result result = workflow.sign(stepOf(created.request(), "head").getId(), head,
+        Result result = signStep(stepOf(created.request(), "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none());
 
         assertThat(result.ok()).isFalse();
@@ -427,7 +440,7 @@ class SignatureWorkflowServiceTest {
         assertThat(workflow.findInbox(dean)).isEmpty();
         assertThat(workflow.countPending(dean)).isZero();
 
-        workflow.sign(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
 
         assertThat(workflow.findInbox(head)).isEmpty();
         assertThat(workflow.findInbox(dean)).hasSize(1);
@@ -438,8 +451,8 @@ class SignatureWorkflowServiceTest {
     @DisplayName("บันทึกร่องรอยทุกเหตุการณ์ไว้เป็นหลักฐาน")
     void everyEventIsAudited() {
         SignatureRequest envelope = createEnvelope().request();
-        workflow.sign(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
-        workflow.sign(stepOf(envelope, "dean").getId(), dean, deanSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(stepOf(envelope, "dean").getId(), dean, deanSignature.getId(), true, ActorContext.none());
 
         List<SignatureAuditEventType> types = workflow.auditTrail(envelope.getId()).stream()
                 .map(e -> e.getEventType())
@@ -555,7 +568,7 @@ class SignatureWorkflowServiceTest {
         SignatureRequest envelope = createDraftEnvelope(request, applicant).request();
         assertThat(envelope.isOverdue()).isTrue();
 
-        Result signed = workflow.sign(stepOf(envelope, "applicant").getId(), applicant,
+        Result signed = signStep(stepOf(envelope, "applicant").getId(), applicant,
                 signature.getId(), true, ActorContext.none());
 
         assertThat(signed.ok()).as("เลยกำหนดที่ตั้งเตือนไว้ แต่ยังต้องลงนามได้").isTrue();
@@ -569,11 +582,11 @@ class SignatureWorkflowServiceTest {
         PositionRequest request = newDraftRequest(applicant);
 
         SignatureRequest envelope = createDraftEnvelope(request, applicant).request();
-        assertThat(workflow.sign(stepOf(envelope, "applicant").getId(), applicant,
+        assertThat(signStep(stepOf(envelope, "applicant").getId(), applicant,
                 signature.getId(), true, ActorContext.none()).ok()).isTrue();
         assertThat(workflow.startCirculation(envelope.getId(), admin, ActorContext.none()).ok()).isTrue();
 
-        Result blocked = workflow.sign(stepOf(envelope, "head").getId(), head,
+        Result blocked = signStep(stepOf(envelope, "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none());
 
         assertThat(blocked.ok()).as("สายเวียนตามลำดับต้องยังใช้กติกาเดิม").isFalse();
@@ -627,7 +640,7 @@ class SignatureWorkflowServiceTest {
 
         // The turn the clock took away is given back, not just the status.
         assertThat(stepOf(reloaded, "head").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
-        assertThat(workflow.sign(stepOf(reloaded, "head").getId(), head,
+        assertThat(signStep(stepOf(reloaded, "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none()).ok()).isTrue();
     }
 
@@ -689,7 +702,7 @@ class SignatureWorkflowServiceTest {
 
         // Sign step
         SignatureStep step1 = stepOf(resDoc1.request(), "applicant");
-        workflow.sign(step1.getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(step1.getId(), head, headSignature.getId(), true, ActorContext.none());
 
         assertThat(workflow.isApplicantSignatureCompleted(MODULE, REQUEST_ID, 1)).isTrue();
         assertThat(workflow.getUnsignedApplicantDocTypes(MODULE, REQUEST_ID, positionDocs)).containsExactly(2);
@@ -699,7 +712,7 @@ class SignatureWorkflowServiceTest {
                 List.of(new SignerAssignment("applicant", head.getId())),
                 null, head, ActorContext.none());
         SignatureStep step2 = stepOf(resDoc2.request(), "applicant");
-        workflow.sign(step2.getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(step2.getId(), head, headSignature.getId(), true, ActorContext.none());
 
         assertThat(workflow.areApplicantSignaturesComplete(MODULE, REQUEST_ID, positionDocs)).isTrue();
         assertThat(workflow.getUnsignedApplicantDocTypes(MODULE, REQUEST_ID, positionDocs)).isEmpty();
@@ -713,7 +726,7 @@ class SignatureWorkflowServiceTest {
                 List.of(new SignerAssignment("applicant", head.getId())),
                 null, head, ActorContext.none());
         SignatureStep step1 = stepOf(resDoc1.request(), "applicant");
-        workflow.sign(step1.getId(), head, headSignature.getId(), true, ActorContext.none());
+        signStep(step1.getId(), head, headSignature.getId(), true, ActorContext.none());
 
         assertThat(workflow.isDocumentLocked(MODULE, REQUEST_ID, 1)).isTrue();
 
@@ -764,7 +777,7 @@ class SignatureWorkflowServiceTest {
                 null, admin, ActorContext.none());
         assertThat(workflow.startCirculation(created.request().getId(), admin, ActorContext.none()).ok()).isTrue();
 
-        Result signed = workflow.sign(stepOf(created.request(), "head").getId(), head,
+        Result signed = signStep(stepOf(created.request(), "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none());
         assertThat(signed.ok()).isTrue();
         assertThat(requestRepository.findById(created.request().getId()).orElseThrow().getStatus())

@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  ประตูแก้ไขเอกสารฝั่งผู้ยื่น (เฟส 2)
+
+  เซิร์ฟเวอร์ปฏิเสธการบันทึกอยู่แล้วเมื่อเอกสารถูกล็อก ส่วนนี้ทำให้ผู้ยื่นรู้ตัวก่อนกรอก
+  ไม่ใช่กรอกเสร็จแล้วค่อยเด้งกลับโดยไม่บอกเหตุผล
+-->
+<div th:fragment="banner">
+    <div th:if="${revisionRequested}" class="alert alert-warning">
+        <i class="fas fa-rotate-left"></i> <strong>เอกสารนี้ถูกส่งกลับมาให้ท่านแก้ไข</strong>
+        <div th:if="${revisionNote != null and !#strings.isEmpty(revisionNote)}" class="mt-1">
+            เหตุผล: <span th:text="${revisionNote}">-</span>
+        </div>
+    </div>
+    <div th:if="${editable != null and !editable}" class="alert alert-secondary">
+        <i class="fas fa-lock"></i> เอกสารนี้แก้ไขไม่ได้ในขณะนี้ —
+        อยู่ระหว่างการเวียนลงนาม หรือยังไม่ได้ถูกส่งกลับมาให้แก้ไข
+        <div class="small text-muted mt-1">หากต้องแก้ไข กรุณาติดต่อเจ้าหน้าที่เพื่อส่งเอกสารกลับมาให้ท่าน</div>
+    </div>
+</div>
+
+<!-- ปิดฟอร์มทั้งใบเมื่อแก้ไม่ได้ ต้องวางหลังฟอร์มใน DOM -->
+<th:block th:fragment="script(formId)">
+    <script th:inline="javascript">
+        (function () {
+            var editable = /*[[${editable}]]*/ true;
+            if (editable !== false) return;
+            var form = document.getElementById(/*[[${formId}]]*/ '');
+            if (!form) return;
+
+            form.querySelectorAll('input, select, textarea, button').forEach(function (el) {
+                if (el.dataset.action === 'docPreviewShow') return; // ดูตัวอย่างยังทำได้
+                el.disabled = true;
+            });
+            form.removeAttribute('data-auto-draft');
+        })();
+    </script>
+</th:block>
+
+</body>
+</html>

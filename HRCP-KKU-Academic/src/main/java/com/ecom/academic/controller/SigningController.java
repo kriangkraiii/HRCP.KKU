@@ -160,6 +160,8 @@ public class SigningController {
         model.addAttribute("queueIndex", queueIndex);
         model.addAttribute("deadlineAdvisory", deadlineAdvisory);
         model.addAttribute("canSign", canSign);
+        // ช่องลงนามบางช่องขอคำตอบด้วย ไม่ใช่แค่ลายเซ็น (เช่น ผลการตรวจสอบคุณสมบัติ)
+        model.addAttribute("signerChoice", workflow.signerChoiceFor(stepId));
         return "academic/esign/sign";
     }
 
@@ -228,6 +230,7 @@ public class SigningController {
             @RequestParam(value = "userSignatureId", required = false) Long userSignatureId,
             @RequestParam(value = "consent", required = false) Boolean consent,
             @RequestParam(value = "digitalCertPin", required = false) String digitalCertPin,
+            @RequestParam(value = "signerChoice", required = false) String signerChoice,
             Principal principal, RedirectAttributes redirectAttributes) {
 
         UserDtls me = currentUser(principal);
@@ -244,7 +247,7 @@ public class SigningController {
         }
 
         Result result = workflow.sign(stepId, me, userSignatureId,
-                Boolean.TRUE.equals(consent), actorContext(), digitalCertPin);
+                Boolean.TRUE.equals(consent), actorContext(), digitalCertPin, signerChoice);
 
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());

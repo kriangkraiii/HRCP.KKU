@@ -55,6 +55,16 @@ public class DocumentWorkflowConfigService {
             return registry.slotsFor(module, documentType);
         }
 
+        // คำถามที่ผู้ลงนามต้องตอบผูกกับ "เอกสาร + ช่องลงนาม" ซึ่งเป็นความรู้ของเทมเพลต
+        // ไม่ใช่สิ่งที่แอดมินตั้งค่าได้ จึงต้องหยิบจากทะเบียนมาแปะกลับ มิฉะนั้นเอกสารที่ถูกตั้งค่า
+        // workflow เองจะทำให้คำถามหายไปเงียบ ๆ และเอกสารจะพิมพ์ผลประเมินออกมาว่าง
+        Map<String, SignatureAnchorRegistry.SignerChoice> choices = new HashMap<>();
+        for (SignatureSlot slot : registry.slotsFor(module, documentType)) {
+            if (slot.choice() != null) {
+                choices.put(slot.slotKey(), slot.choice());
+            }
+        }
+
         return configs.stream()
                 .filter(DocumentWorkflowConfig::isEnabled)
                 .sorted(Comparator.comparingInt(DocumentWorkflowConfig::getStepOrder))
@@ -63,7 +73,8 @@ public class DocumentWorkflowConfigService {
                         c.getRoleLabel(),
                         c.getAnchorPlaceholder(),
                         c.getDefaultStaffRole(),
-                        c.getStepOrder()))
+                        c.getStepOrder(),
+                        choices.get(c.getSlotKey())))
                 .toList();
     }
 

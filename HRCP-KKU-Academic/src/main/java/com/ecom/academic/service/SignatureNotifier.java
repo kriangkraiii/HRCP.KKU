@@ -2,6 +2,7 @@ package com.ecom.academic.service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,6 +155,34 @@ public class SignatureNotifier {
             email(recipient, title, EmailTemplateHelper.wrapLayout("ยกเลิกการเวียนลงนาม", "แจ้งเพื่อทราบ",
                     "<p>การเวียนลงนามในเอกสาร <strong>" + escape(notice.safeDocumentLabel())
                             + "</strong> ถูกยกเลิกโดยผู้ส่งเอกสาร</p>"));
+        }
+    }
+
+    /**
+     * Tells the people waiting on a document that a signer recorded an adverse finding.
+     *
+     * <p>The signature still stands and the round carries on — the supervisor's
+     * job on this form is to record what they found, not to stop the process.
+     * But a "ไม่ครบถ้วน" buried inside a rendered document is a finding nobody
+     * would see until someone opened the file, so it is announced.
+     */
+    @Async
+    public void notifySignerChoiceAlert(List<UserDtls> recipients, SignatureModule module, Long requestId,
+            String documentLabel, String signerName, String question, String answer) {
+        String safeDoc = documentLabel != null && !documentLabel.isBlank() ? documentLabel : "เอกสาร";
+        String who = signerName != null && !signerName.isBlank() ? signerName : "ผู้ลงนาม";
+        String title = "ผลการตรวจสอบ: " + answer + " — " + safeDoc;
+        String message = who + " ลงนามแล้วและบันทึก" + question + "เป็น \"" + answer + "\"";
+        String body = EmailTemplateHelper.wrapLayout("ผลการตรวจสอบจากผู้ลงนาม", "ต้องดำเนินการ",
+                "<p><strong>" + escape(who) + "</strong> ลงนามในเอกสาร <strong>"
+                        + escape(safeDoc) + "</strong> เรียบร้อยแล้ว</p>"
+                        + "<p>" + escape(question) + ": <strong>" + escape(answer) + "</strong></p>"
+                        + "<p>การเวียนลงนามดำเนินต่อไปตามปกติ กรุณาตรวจสอบว่าต้องดำเนินการใดเพิ่มเติมหรือไม่</p>");
+
+        for (UserDtls recipient : recipients) {
+            notify(recipient, title, message, module.adminLink(requestId),
+                    NotificationType.SIGNATURE_DECLINED, true);
+            email(recipient, title, body);
         }
     }
 

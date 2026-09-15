@@ -211,7 +211,32 @@ public class DocumentDataAutoFillHelper {
             }
         }
 
+        // 4. เอกสารที่ 5 พิมพ์ชื่อและตำแหน่งของผู้ยื่นซ้ำอีกรอบในส่วนของผู้บังคับบัญชา
+        //
+        // เดิมแอดมินพิมพ์ซ้ำเอง แต่ตอนนี้เอกสารเป็นของผู้ยื่นและส่วนล่างเป็นของผู้ลงนาม
+        // จึงไม่มีใครกรอกช่องพวกนี้แล้ว — คัดลอกจากส่วนบนให้แทน เพราะมันคือค่าเดียวกันเสมอ
+        // (ผลการตรวจสอบไม่ได้อยู่ในนี้ ค่านั้นมาจากตอนผู้ลงนามเลือก ดู SignerNameResolver)
+        if (docType == 5) {
+            copyWithin(data, "target_position", "checked_position");
+            copyWithin(data, "target_position", "dean_target_position");
+            copyWithin(data, "applicant_title", "checked_applicant_title");
+            copyWithin(data, "applicant_name", "checked_applicant_name");
+            copyWithin(data, "applicant_title", "dean_checked_applicant_title");
+            copyWithin(data, "applicant_name", "dean_checked_applicant_name");
+        }
+
         return data;
+    }
+
+    /** คัดค่าจากช่องหนึ่งไปอีกช่องในชุดเดียวกัน เมื่อปลายทางยังว่าง */
+    private void copyWithin(Map<String, String> data, String from, String to) {
+        String value = data.get(from);
+        if (value != null && !value.isBlank()) {
+            String current = data.get(to);
+            if (current == null || current.isBlank()) {
+                data.put(to, value);
+            }
+        }
     }
 
     /** Writes a value only when there is one and nothing has claimed the key. */

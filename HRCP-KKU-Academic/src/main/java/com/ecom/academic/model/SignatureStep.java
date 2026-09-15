@@ -106,6 +106,18 @@ public class SignatureStep {
     @Column(name = "decline_reason", length = 500)
     private String declineReason;
 
+    /**
+     * คำตอบที่ผู้ลงนามเลือกตอนลงนาม (เช่น "ครบถ้วน" / "ไม่ครบถ้วน")
+     *
+     * <p>มีค่าเฉพาะช่องลงนามที่ {@code SignatureAnchorRegistry} กำหนดคำถามไว้ ที่เหลือเป็น null
+     *
+     * <p>เก็บไว้ที่นี่ ไม่ใช่ใน {@code json_data} ของเอกสาร เพราะซองลายเซ็น freeze เนื้อหาเอกสาร
+     * ไว้ตอนเริ่มเวียน การเขียนคำตอบลงเนื้อหาจะทำให้แฮชไม่ตรงและลายเซ็นทั้งซองเป็นโมฆะ คำตอบ
+     * จึงถูกเติมเข้าเอกสารตอน render เท่านั้น แบบเดียวกับชื่อผู้ลงนาม
+     */
+    @Column(name = "signer_choice_value", length = 100)
+    private String signerChoiceValue;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_signature_id")
     private UserSignature userSignature;
@@ -285,6 +297,14 @@ public class SignatureStep {
 
     public void setDeclineReason(String declineReason) {
         this.declineReason = declineReason;
+    }
+
+    public String getSignerChoiceValue() {
+        return signerChoiceValue;
+    }
+
+    public void setSignerChoiceValue(String signerChoiceValue) {
+        this.signerChoiceValue = signerChoiceValue;
     }
 
     public UserSignature getUserSignature() {

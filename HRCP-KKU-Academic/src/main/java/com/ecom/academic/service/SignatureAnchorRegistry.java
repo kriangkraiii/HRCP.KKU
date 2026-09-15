@@ -31,6 +31,29 @@ import com.ecom.academic.model.SignatureModule;
 public class SignatureAnchorRegistry {
 
     /**
+     * A question the signer must answer as part of signing.
+     *
+     * <p>Some forms ask the signer for a finding, not just a signature — the
+     * supervisor's qualification review is the first of them. The answer belongs
+     * to the signature, not to the body the applicant submitted, so it is
+     * recorded on the step and only merged into the document when it is
+     * rendered. Writing it into the document data instead would change the
+     * content after freezing and void every signature on the envelope.
+     *
+     * @param fieldKey   the {@code {{...}}} placeholder the answer fills
+     * @param question   Thai prompt shown on the signing page
+     * @param options    the permitted answers, in display order
+     * @param alertValue the answer that should raise a notification, or null if
+     *                   none of them is remarkable
+     */
+    public record SignerChoice(
+            String fieldKey,
+            String question,
+            List<String> options,
+            String alertValue) {
+    }
+
+    /**
      * One signature position within a document.
      *
      * @param slotKey            stable identifier for this position, stored on the
@@ -43,13 +66,22 @@ public class SignatureAnchorRegistry {
      *                           first in the picker, or null for the applicant
      * @param order              signing sequence, ascending; equal values may sign
      *                           in parallel
+     * @param choice             a question to answer while signing, or null for
+     *                           the usual case of signing alone
      */
     public record SignatureSlot(
             String slotKey,
             String roleLabel,
             String anchorPlaceholder,
             String defaultStaffRole,
-            int order) {
+            int order,
+            SignerChoice choice) {
+
+        /** A slot that only collects a signature — by far the common case. */
+        public SignatureSlot(String slotKey, String roleLabel, String anchorPlaceholder,
+                String defaultStaffRole, int order) {
+            this(slotKey, roleLabel, anchorPlaceholder, defaultStaffRole, order, null);
+        }
     }
 
     private record DocKey(SignatureModule module, int documentType) {
@@ -121,11 +153,18 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("head", "ผู้บังคับบัญชาชั้นต้น",
                             "department_head_name", "HEAD", 2))),
 
+            // แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา — ผู้ลงนามไม่ได้แค่เซ็น แต่ต้องบันทึกผล
+            // การตรวจสอบด้วย ผู้ยื่นกรอกได้เฉพาะส่วนหัวของฟอร์ม ช่องผลประเมินสองช่องนี้
+            // เป็นของผู้ลงนามเท่านั้น
             Map.entry(new DocKey(SignatureModule.POSITION, 5), List.of(
                     new SignatureSlot("head", "หัวหน้าสาขาวิชา",
-                            "department_head_name", "HEAD", 1),
+                            "department_head_name", "HEAD", 1,
+                            new SignerChoice("qualification_status", "ผลการตรวจสอบคุณสมบัติ",
+                                    List.of("ครบถ้วน", "ไม่ครบถ้วน"), "ไม่ครบถ้วน")),
                     new SignatureSlot("dean", "คณบดี",
-                            "dean_name", "DEAN", 2))),
+                            "dean_name", "DEAN", 2,
+                            new SignerChoice("dean_qualification_status", "ความเห็นคณบดี",
+                                    List.of("ครบถ้วน", "ไม่ครบถ้วน"), "ไม่ครบถ้วน")))),
 
             Map.entry(new DocKey(SignatureModule.POSITION, 6), List.of(
                     new SignatureSlot("dean", "คณบดี",
@@ -151,6 +190,17 @@ public class SignatureAnchorRegistry {
 
     /** The signature positions for a document, in signing order. Empty if unsignable. */
     public List<SignatureSlot> slotsFor(SignatureModule module, int documentType) {
+        return slotsOf(module, documentType);
+    }
+
+    /**
+     * Same as {@link #slotsFor}, reachable without a bean.
+     *
+     * <p>{@link DocumentFieldOwnership} derives the signer-owned field names from
+     * this table so the two can never drift apart, and it is a plain utility with
+     * no Spring lifecycle of its own.
+     */
+    public static List<SignatureSlot> slotsOf(SignatureModule module, int documentType) {
         return SLOTS.getOrDefault(new DocKey(module, documentType), List.of())
                 .stream()
                 .sorted(java.util.Comparator.comparingInt(SignatureSlot::order))

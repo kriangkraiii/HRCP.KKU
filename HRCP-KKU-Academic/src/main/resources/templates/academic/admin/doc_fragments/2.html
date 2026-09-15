@@ -15,16 +15,14 @@
                     <small class="text-muted">คำร้อง [[${request.requestCode}]] — ผู้ยื่น: [[${request.applicant.name}]]</small>
                 </div>
                 <div class="card-body">
+                    <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+                    <div th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}"></div>
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
                         method="post" id="docForm"
                         th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
-                        <!-- Hidden fields สำหรับเก็บค่า ✔️ ของผู้ยื่น (อ่านจาก doc_1 เดิม) -->
-                        <input type="hidden" name="chk_app_1" th:value="${doc2Data != null ? doc2Data.getOrDefault('chk_app_1', '') : ''}">
-                        <input type="hidden" name="chk_app_2" th:value="${doc2Data != null ? doc2Data.getOrDefault('chk_app_2', '') : ''}">
-                        <input type="hidden" name="chk_app_3" th:value="${doc2Data != null ? doc2Data.getOrDefault('chk_app_3', '') : ''}">
-                        <input type="hidden" name="chk_app_4" th:value="${doc2Data != null ? doc2Data.getOrDefault('chk_app_4', '') : ''}">
-                        <input type="hidden" name="chk_app_5" th:value="${doc2Data != null ? doc2Data.getOrDefault('chk_app_5', '') : ''}">
+                        <!-- ติ๊กของผู้ยื่น (chk_app_*) ไม่ต้องเด้งค่ากลับอีกแล้ว เซิร์ฟเวอร์คืนค่าเดิม
+                             ให้เองเพราะเจ้าหน้าที่ไม่ได้เป็นเจ้าของช่องเหล่านั้น -->
 
                         <!-- Hidden fields สำหรับเช็คติ๊ก ✔️ เจ้าหน้าที่ (เริ่มต้นยังไม่ติ๊ก) -->
                         <input type="hidden" name="chk_off_1" id="chk_off_1" th:value="${doc2Data != null ? doc2Data.getOrDefault('chk_off_1', '') : ''}">

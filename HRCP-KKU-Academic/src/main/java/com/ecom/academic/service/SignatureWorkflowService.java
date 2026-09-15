@@ -681,6 +681,17 @@ public class SignatureWorkflowService {
     @Transactional
     public Result sign(Long stepId, UserDtls actingUser, Long userSignatureId,
             boolean consentAccepted, ActorContext actor, String digitalCertPin) {
+        return sign(stepId, actingUser, userSignatureId, consentAccepted, actor, digitalCertPin, null);
+    }
+
+    /**
+     * ลงนาม พร้อมคำตอบของช่องที่มีคำถามให้ผู้ลงนามตอบ
+     *
+     * @param signerChoice คำตอบที่เลือก จำเป็นเฉพาะช่องที่ทะเบียนกำหนดคำถามไว้ ที่เหลือส่ง null
+     */
+    @Transactional
+    public Result sign(Long stepId, UserDtls actingUser, Long userSignatureId,
+            boolean consentAccepted, ActorContext actor, String digitalCertPin, String signerChoice) {
 
         SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
         if (step == null) {
@@ -711,6 +722,18 @@ public class SignatureWorkflowService {
         UserSignature signature = userSignatureService.findMine(userSignatureId, actingUser).orElse(null);
         if (signature == null) {
             return Result.failed("ไม่พบลายเซ็นที่เลือก — กรุณาสร้างลายเซ็นในหน้า \"ลายเซ็นของฉัน\" ก่อน");
+        }
+        // 5b. Some slots ask the signer for a finding as well as a signature.
+        //     Validated against the template's own list so a crafted POST cannot
+        //     record an answer the form never offered.
+        SignatureAnchorRegistry.SignerChoice choice = signerChoiceFor(step);
+        if (choice != null) {
+            if (signerChoice == null || signerChoice.isBlank()) {
+                return Result.failed("กรุณาเลือก" + choice.question() + "ก่อนลงนาม");
+            }
+            if (!choice.options().contains(signerChoice)) {
+                return Result.failed("ตัวเลือกไม่ถูกต้องสำหรับ" + choice.question());
+            }
         }
         // 6. Digital Certificate verification if signer has registered .p12
         var optCert = digitalCertificateService.findActive(actingUser);
@@ -774,6 +797,9 @@ public class SignatureWorkflowService {
             }
         }
         step.setImagePathSnapshot(imagePathSnapshot);
+        if (choice != null) {
+            step.setSignerChoiceValue(signerChoice);
+        }
         step.setConsentAccepted(true);
         step.setConsentTextVersion(SignatureStep.CONSENT_TEXT_VERSION);
         step.setAuthMethod(authMethodToUse);
@@ -788,10 +814,92 @@ public class SignatureWorkflowService {
         stepRepository.save(step);
 
         audit(envelope, step.getId(), SignatureAuditEventType.SIGNED, actingUser, actor,
-                "ลงนามในตำแหน่ง \"" + step.getRoleLabel() + "\"");
+                "ลงนามในตำแหน่ง \"" + step.getRoleLabel() + "\""
+                        + (choice != null ? " — " + choice.question() + ": " + signerChoice : ""));
+
+        if (choice != null && signerChoice.equals(choice.alertValue())) {
+            announceAdverseFinding(envelope, step, choice, signerChoice);
+        }
 
         activateNextStep(envelope, actor);
         return new Result(requestRepository.save(envelope), null);
+    }
+
+    /**
+     * คำถามที่ช่องลงนามนี้ต้องตอบ หรือ null เมื่อเป็นช่องลงนามธรรมดา
+     *
+     * <p>รับ id ไม่ใช่ตัว entity เพราะต้องอ่านซองของขั้นตอนนั้นด้วย ซึ่งเป็น lazy proxy —
+     * ผู้เรียกที่อยู่นอก transaction จะเจอ {@code LazyInitializationException} ถ้าส่ง entity
+     * ที่โหลดมาลอย ๆ เข้ามา
+     */
+    @Transactional(readOnly = true)
+    public SignatureAnchorRegistry.SignerChoice signerChoiceFor(Long stepId) {
+        return stepRepository.findByIdWithRequest(stepId)
+                .map(this::signerChoiceFor)
+                .orElse(null);
+    }
+
+    /** คำถามที่ช่องลงนามนี้ต้องตอบ หรือ null เมื่อเป็นช่องลงนามธรรมดา */
+    SignatureAnchorRegistry.SignerChoice signerChoiceFor(SignatureStep step) {
+        SignatureRequest envelope = step.getSignatureRequest();
+        if (envelope == null || step.getSlotKey() == null) {
+            return null;
+        }
+        return workflowConfigService
+                .effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType()).stream()
+                .filter(slot -> step.getSlotKey().equals(slot.slotKey()))
+                .map(SignatureAnchorRegistry.SignatureSlot::choice)
+                .filter(java.util.Objects::nonNull)
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * บอกคนที่รอเอกสารอยู่ว่าผู้ลงนามบันทึกผลที่ต้องสนใจ
+     *
+     * <p>ไม่หยุดการเวียนลงนาม — ผลที่บันทึกไว้เป็นข้อเท็จจริงที่ผู้บังคับบัญชารายงาน ไม่ใช่การ
+     * ปฏิเสธ (ซึ่งมีปุ่มของตัวเองอยู่แล้ว) แต่ถ้าไม่แจ้ง ผลนั้นจะซ่อนอยู่ในไฟล์จนกว่าจะมีคนเปิดอ่าน
+     */
+    private void announceAdverseFinding(SignatureRequest envelope, SignatureStep step,
+            SignatureAnchorRegistry.SignerChoice choice, String answer) {
+
+        // อ่านค่าที่ต้องใช้ให้หมดตอนนี้ ตอน entity ยังผูกกับ session อยู่
+        SignatureModule module = envelope.getModule();
+        Long requestId = envelope.getRequestId();
+        Long envelopeId = envelope.getId();
+        String label = envelope.getDocumentLabel();
+        String signerName = step.getSignerNameSnapshot();
+        Integer initiatorId = envelope.getInitiatedBy() != null ? envelope.getInitiatedBy().getId() : null;
+
+        // ค้นหาผู้รับและส่งแจ้งเตือนหลัง commit — การ query ระหว่าง transaction ของการลงนาม
+        // ไปรบกวน state ของ Hibernate ที่กำลัง flush ลายเซ็นอยู่ และการแจ้งเตือนที่ล้มเหลว
+        // ต้องไม่ย้อนลายเซ็นที่บันทึกสำเร็จไปแล้ว
+        Runnable announce = () -> {
+            try {
+                java.util.LinkedHashMap<Integer, UserDtls> recipients = new java.util.LinkedHashMap<>();
+                if (initiatorId != null) {
+                    userRepository.findById(initiatorId)
+                            .ifPresent(u -> recipients.putIfAbsent(initiatorId, u));
+                }
+                UserDtls applicant = snapshotProvider.applicantOf(module, requestId);
+                if (applicant != null && applicant.getId() != null) {
+                    recipients.putIfAbsent(applicant.getId(), applicant);
+                }
+                if (recipients.isEmpty()) {
+                    return;
+                }
+                notifier.notifySignerChoiceAlert(List.copyOf(recipients.values()), module, requestId,
+                        label, signerName, choice.question(), answer);
+            } catch (Exception e) {
+                log.warn("Could not announce signer finding on envelope {}: {}", envelopeId, e.toString());
+            }
+        };
+
+        if (afterCommitRunner != null) {
+            afterCommitRunner.run(announce);
+        } else {
+            announce.run();
+        }
     }
 
     /** Notes that the signer opened the document, before they decide. */

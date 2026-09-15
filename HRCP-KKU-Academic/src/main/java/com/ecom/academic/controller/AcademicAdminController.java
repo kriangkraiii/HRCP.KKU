@@ -44,6 +44,7 @@ import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
@@ -432,6 +433,7 @@ public class AcademicAdminController {
         model.addAttribute("existingData", existingJson);
         model.addAttribute("autoFilledData", autoFilledData);
         model.addAttribute("docData", autoFilledData);
+        addOwnershipGate(model, SignatureModule.ACADEMIC, type);
         model.addAttribute("staffMembers", staffMemberService.findAll());
         model.addAttribute("deans", staffMemberService.findDeans());
         model.addAttribute("heads", staffMemberService.findHeads());
@@ -606,7 +608,8 @@ public class AcademicAdminController {
 
         // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
         if ("draft".equals(action)) {
-            String jsonData = objectMapper.writeValueAsString(formData);
+            String jsonData = objectMapper.writeValueAsString(
+                    onlyWhatAnOfficerOwns(id, type, formData));
             requestService.saveDraft(request, type, jsonData,
                     DOC_LABELS.getOrDefault(type, "Document " + type), null);
             return "redirect:/admin/academic/request/" + id + "/document/" + type + "?saved=draft";
@@ -741,6 +744,9 @@ public class AcademicAdminController {
             }
         }
 
+        // กรองท้ายสุด หลังคำนวณคะแนนและเติมวันที่ไทยเสร็จแล้ว เพื่อให้แน่ใจว่าไม่มีค่าที่ฝั่ง
+        // เจ้าหน้าที่คำนวณขึ้นเองหลุดไปทับช่องของผู้ยื่นในเอกสารที่ 1 และ 2
+        formData = onlyWhatAnOfficerOwns(id, type, formData);
         String jsonData = objectMapper.writeValueAsString(formData);
 
         boolean isNew = requestService.getDocumentsByType(id, type).isEmpty();
@@ -1261,6 +1267,30 @@ public class AcademicAdminController {
                 .replace("3", "๓").replace("4", "๔").replace("5", "๕")
                 .replace("6", "๖").replace("7", "๗").replace("8", "๘")
                 .replace("9", "๙");
+    }
+
+    /**
+     * บอกเทมเพลตว่าเอกสารฉบับนี้เจ้าหน้าที่แก้อะไรได้บ้าง
+     *
+     * <p>สคริปต์ร่วมใน {@code _common.html} ปิดช่องที่ไม่อยู่ในรายการ แต่มันเป็นแค่การบอกผู้ใช้
+     * ให้เห็นชัด ตัวที่บังคับใช้จริงคือ {@link #onlyWhatAnOfficerOwns} ฝั่งเซิร์ฟเวอร์
+     */
+    private void addOwnershipGate(Model model, SignatureModule module, int type) {
+        model.addAttribute("readOnlyForAdmin", DocumentFieldOwnership.isApplicantDocument(module, type));
+        model.addAttribute("adminEditableFields", DocumentFieldOwnership.adminFields(module, type));
+    }
+
+    /**
+     * ตัดช่องที่เจ้าหน้าที่ไม่ได้เป็นเจ้าของออก แล้วคืนค่าเดิมของผู้ยื่นกลับ
+     *
+     * <p>เอกสารที่ 1 และ 2 เป็นของผู้ยื่น เจ้าหน้าที่กรอกได้เฉพาะเลขที่หนังสือกับคอลัมน์
+     * "เจ้าหน้าที่" เท่านั้น ที่เหลือดูได้อย่างเดียว ถ้าต้องแก้ให้กดส่งกลับให้ผู้ยื่นแก้
+     * ส่วนเอกสารที่ 3–9 เป็นของเจ้าหน้าที่ทั้งฉบับ ผ่านไปเหมือนเดิม
+     */
+    private Map<String, String> onlyWhatAnOfficerOwns(Long requestId, int type,
+            Map<String, String> formData) {
+        return DocumentFieldOwnership.merge(SignatureModule.ACADEMIC, type, true, formData,
+                requestService.getLatestDocumentData(requestId, type));
     }
 
     private UserDtls getUser(Principal principal) {

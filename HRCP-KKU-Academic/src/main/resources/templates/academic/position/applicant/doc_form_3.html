@@ -15,6 +15,7 @@
 
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 3: แบบรับรองจริยธรรมและจรรยาบรรณทางวิชาการ</h3>
 
+            <div th:replace="~{academic/_applicant_doc_gate :: banner}"></div>
             <form th:action="'/user/position/request/' + ${request.id} + '/document/3'" method="post" id="doc3Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/3'">
                 <!-- ตอนที่ 1: สำหรับผู้ขอ -->
                 <div class="card card-academic mb-4">
@@ -102,6 +103,7 @@
 
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script>initDocPreview('doc3Form', 3, '/api/position/preview');</script>
+    <th:block th:replace="~{academic/_applicant_doc_gate :: script('doc3Form')}"></th:block>
     </section>
 </body>
 </html>

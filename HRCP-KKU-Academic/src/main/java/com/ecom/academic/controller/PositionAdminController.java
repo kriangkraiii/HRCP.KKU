@@ -36,6 +36,7 @@ import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
@@ -279,6 +280,12 @@ public class PositionAdminController {
         model.addAttribute("existingData", existingData);
         model.addAttribute("autoFilledData", autoFilledData);
         model.addAttribute("docData", autoFilledData);
+        // เอกสารของผู้ยื่นแอดมินดูได้อย่างเดียว ยกเว้นช่องของตัวเอง — สคริปต์ร่วมปิดช่องที่เหลือ
+        // ให้เห็นชัด ตัวที่บังคับใช้จริงคือ DocumentFieldOwnership.merge ตอนบันทึก
+        model.addAttribute("readOnlyForAdmin",
+                DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, type));
+        model.addAttribute("adminEditableFields",
+                DocumentFieldOwnership.adminFields(SignatureModule.POSITION, type));
         // Role-specific lists so each signer dropdown offers the right people.
         // These were all one undifferentiated "deans" list, which put the whole
         // staff into the department-head and HR pickers too.
@@ -333,9 +340,10 @@ public class PositionAdminController {
         formData.remove("action");
 
         try {
-            if (type == 7) {
-                formData = mergeWithExistingData(request, type, formData);
-            }
+            // เอกสารของผู้ยื่นแอดมินแก้ไม่ได้ กรอกได้เฉพาะช่องของตัวเอง (เช่น เลขที่หนังสือ)
+            // ส่วนเอกสารของแอดมินเองรวมกับของเดิม เพื่อให้ช่องติ๊กที่ไม่ได้ติ๊กไม่ถูกล้างทิ้ง
+            formData = DocumentFieldOwnership.merge(SignatureModule.POSITION, type, true, formData,
+                    positionService.getLatestDocumentData(id, type));
 
             String jsonData = objectMapper.writeValueAsString(formData);
             String label = positionService.getDocLabel(type);
@@ -402,6 +410,12 @@ public class PositionAdminController {
                 reason,
                 admin,
                 actorContext);
+
+        // ยกเลิกซองลายเซ็นอย่างเดียวไม่พอ — ผู้ยื่นยังแก้เอกสารไม่ได้อยู่ดี ต้องเปิดประตูให้ด้วย
+        // เดิมไม่มีขั้นนี้เพราะฝั่งผู้ยื่นไม่เคยมีประตูล็อก การส่งกลับจึง "ได้ผล" โดยบังเอิญ
+        if (DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, type)) {
+            positionService.openDocumentForRevision(id, type, reason);
+        }
 
         try {
             adminLogService.log(principal.getName(),
@@ -745,24 +759,4 @@ public class PositionAdminController {
         return ClientIpUtils.resolveClientIp(httpRequest);
     }
 
-    @SuppressWarnings("unchecked")
-    private Map<String, String> mergeWithExistingData(PositionRequest request, int type,
-            Map<String, String> formData) {
-        try {
-            List<PositionDocument> existing = positionService.getDocumentsByType(request.getId(), type);
-            if (!existing.isEmpty()) {
-                String existingJson = existing.get(0).getJsonData();
-                if (existingJson != null && !existingJson.isEmpty()) {
-                    Map<String, String> existingData = objectMapper.readValue(existingJson, Map.class);
-                    for (Map.Entry<String, String> entry : formData.entrySet()) {
-                        existingData.put(entry.getKey(), entry.getValue());
-                    }
-                    return new java.util.LinkedHashMap<>(existingData);
-                }
-            }
-        } catch (Exception e) {
-            logger.warn("Merge failed for doc {}: {}", type, e.getMessage());
-        }
-        return formData;
-    }
 }

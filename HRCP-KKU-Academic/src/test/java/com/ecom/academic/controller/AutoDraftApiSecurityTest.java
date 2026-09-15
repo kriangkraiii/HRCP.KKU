@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -90,6 +92,7 @@ class AutoDraftApiSecurityTest {
         positionRequest.setApplicant(owner);
         when(positionService.findById(77L)).thenReturn(Optional.of(positionRequest));
         when(positionService.getDocLabel(anyInt())).thenReturn("เอกสาร");
+        when(positionService.canApplicantEditDocument(any(PositionRequest.class), anyInt())).thenReturn(true);
     }
 
     // ==================== H-02: academic ====================
@@ -159,6 +162,42 @@ class AutoDraftApiSecurityTest {
 
         assertThat(response.getStatusCode().value()).isEqualTo(200);
         verify(positionService).saveDraft(any(), anyInt(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("เอกสารตำแหน่งถูกล็อก: บันทึกร่างอัตโนมัติของผู้ยื่นต้องถูกปฏิเสธ")
+    void positionDraft_whenDocumentLockedForApplicant_isRefused() {
+        // ทางนี้เคยไม่เช็กอะไรเลย ผู้ยื่นจึงยิงร่างทับเอกสารที่ลงนามไปแล้วได้
+        when(positionService.canApplicantEditDocument(any(PositionRequest.class), anyInt())).thenReturn(false);
+
+        ResponseEntity<?> response = controller.positionDraft(77L, 1, "{\"x\":\"1\"}", ownerPrincipal);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(409);
+        verify(positionService, never()).saveDraft(any(), anyInt(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("ผู้ยื่นยิงร่างใส่เอกสารของแอดมิน (7, 8) ไม่ได้")
+    void positionDraft_intoAnAdminDocument_isRefused() {
+        when(positionService.canApplicantEditDocument(any(PositionRequest.class), eq(7))).thenReturn(false);
+
+        ResponseEntity<?> response = controller.positionDraft(77L, 7, "{\"x\":\"1\"}", ownerPrincipal);
+
+        assertThat(response.getStatusCode().value()).isEqualTo(409);
+        verify(positionService, never()).saveDraft(any(), anyInt(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    @DisplayName("ผู้ยื่นแก้เลขที่หนังสือในเอกสารของตัวเองไม่ได้ ค่าที่ส่งมาถูกทิ้ง")
+    void positionDraft_cannotWriteAnOfficerField() {
+        when(positionService.getLatestDocumentData(77L, 4))
+                .thenReturn(java.util.Map.of("memo_no", "อว 1/2569"));
+
+        controller.positionDraft(77L, 4, "{\"memo_no\":\"ผู้ยื่นแต่งเอง\"}", ownerPrincipal);
+
+        verify(positionService).saveDraft(any(), anyInt(),
+                argThat(json -> json.contains("อว 1/2569") && !json.contains("ผู้ยื่นแต่งเอง")),
+                anyString(), anyString());
     }
 
     // ==================== M-05 / M-06 ====================

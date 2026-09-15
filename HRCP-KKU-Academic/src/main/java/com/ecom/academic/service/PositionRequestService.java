@@ -29,6 +29,7 @@ import com.ecom.academic.model.PositionRequestPublication;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatus;
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
 import com.ecom.academic.repository.PositionAttachmentRepository;
@@ -116,61 +117,17 @@ public class PositionRequestService {
         DOC_LABELS.put(9, "ลักษณะการมีส่วนร่วมในผลงาน");
     }
 
-    // Applicant fills these (visible to applicant)
-    public static final List<Integer> APPLICANT_DOCS = Arrays.asList(1, 2, 3, 4, 6, 9);
+    // Who owns which document — and which fields inside it — lives in
+    // DocumentFieldOwnership, shared with Phase 1. These two read from it rather
+    // than keeping a second copy: ADMIN_DOCS used to be a hand-maintained list
+    // that nothing referenced, so it quietly disagreed with the real rule.
+    public static final List<Integer> APPLICANT_DOCS =
+            DocumentFieldOwnership.applicantDocuments(SignatureModule.POSITION);
 
-    // Admin fills these (hidden from applicant)
-    public static final List<Integer> ADMIN_DOCS = Arrays.asList(5, 7, 8);
-
-    // Fields inside an applicant-facing document that only staff/admin may fill.
-    // Applicant submissions must never create or overwrite these — see
-    // preserveStaffOnlyFields(). Keyed by document type.
-    private static final Map<Integer, Set<String>> STAFF_ONLY_FIELDS = Map.of(
-            7, Set.of("hr_officer_name", "hr_officer_position",
-                    "dean_name", "dean_position", "reason_if_none"));
-
-    /**
-     * Strips staff-only fields from an applicant-submitted payload and restores
-     * whatever staff previously recorded, so an applicant can neither forge the
-     * verification result nor wipe it by re-saving the document.
-     *
-     * @param submitted parsed form data posted by the applicant (mutated in place)
-     * @param existing  the currently stored data for this document, may be null
-     */
-    public void preserveStaffOnlyFields(int documentType, Map<String, String> submitted,
-            Map<String, String> existing) {
-        Set<String> protectedKeys = STAFF_ONLY_FIELDS.get(documentType);
-        if (protectedKeys == null)
-            return;
-        for (String key : protectedKeys) {
-            submitted.remove(key);
-            if (existing != null) {
-                String previous = existing.get(key);
-                if (previous != null)
-                    submitted.put(key, previous);
-            }
-        }
-    }
-
-    /**
-     * JSON-in/JSON-out variant of {@link #preserveStaffOnlyFields} for the
-     * auto-draft endpoint, which receives a raw request body. Returns the
-     * original JSON unchanged when the document has no staff-only fields or the
-     * payload cannot be parsed.
-     */
-    public String preserveStaffOnlyFieldsInJson(Long requestId, int documentType, String jsonData) {
-        if (!STAFF_ONLY_FIELDS.containsKey(documentType) || jsonData == null)
-            return jsonData;
-        try {
-            Map<String, String> submitted = objectMapper.readValue(jsonData,
-                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                    });
-            preserveStaffOnlyFields(documentType, submitted, getLatestDocumentData(requestId, documentType));
-            return objectMapper.writeValueAsString(submitted);
-        } catch (Exception e) {
-            return jsonData;
-        }
-    }
+    public static final List<Integer> ADMIN_DOCS = DOC_LABELS.keySet().stream()
+            .filter(type -> !APPLICANT_DOCS.contains(type))
+            .sorted()
+            .toList();
 
     /**
      * Latest stored form data for a document type, or null when nothing saved yet.
@@ -602,7 +559,10 @@ public class PositionRequestService {
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + requestId));
 
         switch (documentType) {
-            case 5, 7, 0 -> {
+            // เหลือเฉพาะเอกสารที่ 7 — เอกสารที่ 5 ย้ายไปเป็นของผู้ยื่นแล้ว การบันทึกเอกสารของ
+            // ตัวเองไม่ควรเลื่อนสถานะคำร้องเป็น "ตรวจสอบเอกสาร" ให้ตัวเอง ส่วน 0 เป็นเลขที่ค้าง
+            // จากตอนเอกสารยังเริ่มนับที่ 0 ไม่มีเอกสารเลขนี้อีกแล้ว
+            case 7 -> {
                 if (request.getCurrentStatus().canMoveTo(PositionRequestStatus.DOCUMENT_VERIFICATION)) {
                     updateStatus(requestId, PositionRequestStatus.DOCUMENT_VERIFICATION, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึก" + getDocLabel(documentType), sendNotify);
@@ -745,6 +705,95 @@ public class PositionRequestService {
 
     public List<PositionDocument> getDocumentsByType(Long requestId, int documentType) {
         return documentRepository.findByRequestIdAndDocType(requestId, documentType);
+    }
+
+    // ================== ประตูแก้ไขเอกสารของผู้ยื่น ==================
+
+    /**
+     * ผู้ยื่นแก้ไขเอกสารฉบับนี้ได้หรือไม่ — กติกาเดียวกับ
+     * {@link AcademicRequestService#canApplicantEditDocument}
+     *
+     * <p>ก่อนหน้านี้เฟส 2 ไม่มีประตูนี้เลย ทั้ง GET และ POST ฝั่งผู้ยื่นไม่เช็กอะไรนอกจากความเป็น
+     * เจ้าของคำร้อง ผู้ยื่นจึงแก้เอกสารที่ลงนามครบแล้วได้ ซึ่งทำให้เนื้อหาไม่ตรงกับแฮชที่ซองลายเซ็น
+     * เก็บไว้ และลายเซ็นทุกใบในซองนั้นเป็นโมฆะย้อนหลังโดยไม่มีใครรู้
+     *
+     * <p>เรื่องนี้จำเป็นขึ้นมากเมื่อแอดมินแก้เอกสารของผู้ยื่นไม่ได้อีกต่อไป เพราะการส่งกลับมาให้
+     * ผู้ยื่นแก้กลายเป็นทางเดียวที่เหลือ มันจึงต้องเปิดสิทธิ์ให้ได้จริง
+     */
+    public boolean canApplicantEditDocument(PositionRequest request, int documentType) {
+        if (request == null || request.getCurrentStatus() == null) {
+            return false;
+        }
+        if (!DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, documentType)) {
+            return false;
+        }
+        if (request.getCurrentStatus().isDraft()) {
+            return true;
+        }
+        if (request.getCurrentStatus().isTerminal()) {
+            return false;
+        }
+        if (isDocumentLockedForSigning(request.getId(), documentType)) {
+            return false;
+        }
+        return isRevisionRequested(request.getId(), documentType);
+    }
+
+    /** เอกสารกำลังเวียนลงนาม หรือลงนามครบแล้ว */
+    public boolean isDocumentLockedForSigning(Long requestId, int documentType) {
+        return !signatureRequestRepository
+                .findBlockingEnvelopes(SignatureModule.POSITION, requestId, documentType)
+                .isEmpty();
+    }
+
+    /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
+    public boolean isRevisionRequested(Long requestId, int documentType) {
+        return getDocumentsByType(requestId, documentType).stream()
+                .anyMatch(PositionDocument::isRevisionRequested);
+    }
+
+    /** เหตุผลที่แอดมินส่งเอกสารฉบับนี้กลับมาให้แก้ไข (ถ้ามี) */
+    public String getRevisionNote(Long requestId, int documentType) {
+        return getDocumentsByType(requestId, documentType).stream()
+                .filter(PositionDocument::isRevisionRequested)
+                .map(PositionDocument::getRevisionNote)
+                .filter(note -> note != null && !note.isBlank())
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * แอดมินส่งเอกสารกลับให้ผู้ยื่นแก้ไข — ปลดล็อกเฉพาะเอกสารฉบับที่ระบุ
+     *
+     * <p>ถ้ายังไม่เคยมีแถวของเอกสารฉบับนั้น (ผู้ยื่นยังไม่เคยกรอก) จะสร้างแถวเปล่าไว้ถือสถานะ
+     * มิฉะนั้นการส่งกลับจะเงียบหายไปเฉย ๆ และผู้ยื่นก็ยังแก้ไม่ได้อยู่ดี
+     */
+    @Transactional
+    public void openDocumentForRevision(Long requestId, int documentType, String note) {
+        String trimmed = (note != null && !note.isBlank()) ? note.trim() : null;
+        if (trimmed != null && trimmed.length() > 500) {
+            trimmed = trimmed.substring(0, 500);
+        }
+
+        List<PositionDocument> docs = getDocumentsByType(requestId, documentType);
+        if (docs.isEmpty()) {
+            PositionRequest request = requestRepository.findById(requestId).orElse(null);
+            if (request == null) {
+                return;
+            }
+            PositionDocument placeholder = new PositionDocument();
+            placeholder.setRequest(request);
+            placeholder.setDocumentType(documentType);
+            placeholder.setDocumentLabel(getDocLabel(documentType));
+            placeholder.setIsDraft(true);
+            docs = List.of(placeholder);
+        }
+
+        for (PositionDocument doc : docs) {
+            doc.setRevisionRequestedAt(LocalDateTime.now());
+            doc.setRevisionNote(trimmed);
+        }
+        documentRepository.saveAll(docs);
     }
 
     public List<Integer> getCompletedDocTypes(Long requestId) {

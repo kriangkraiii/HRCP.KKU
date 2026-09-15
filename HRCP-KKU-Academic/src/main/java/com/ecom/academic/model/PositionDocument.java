@@ -60,6 +60,20 @@ public class PositionDocument {
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;
 
+    /**
+     * เวลาที่แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไข
+     *
+     * <p>null = ผู้ยื่นแก้ไม่ได้ (หลังส่งคำร้องแล้วเอกสารอยู่ในมือแอดมิน) — ค่านี้คือประตูเดียวที่
+     * เปิดให้ผู้ยื่นกลับมาแก้เอกสารหลังส่งคำร้อง เหมือน {@code AcademicDocument} ของเฟส 1
+     * ก่อนหน้านี้เฟส 2 ไม่มีประตูนี้เลย ผู้ยื่นจึงแก้เอกสารของตัวเองได้ตลอดเวลาแม้ลงนามไปแล้ว
+     */
+    @Column(name = "revision_requested_at")
+    private LocalDateTime revisionRequestedAt;
+
+    /** เหตุผลที่แอดมินส่งกลับมาให้แก้ไข — แสดงให้ผู้ยื่นเห็นบนหน้าเอกสาร */
+    @Column(name = "revision_note", length = 500)
+    private String revisionNote;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -180,5 +194,26 @@ public class PositionDocument {
 
     public void setUpdatedAt(LocalDateTime updatedAt) {
         this.updatedAt = updatedAt;
+    }
+
+    public LocalDateTime getRevisionRequestedAt() {
+        return revisionRequestedAt;
+    }
+
+    public void setRevisionRequestedAt(LocalDateTime revisionRequestedAt) {
+        this.revisionRequestedAt = revisionRequestedAt;
+    }
+
+    public String getRevisionNote() {
+        return revisionNote;
+    }
+
+    public void setRevisionNote(String revisionNote) {
+        this.revisionNote = revisionNote;
+    }
+
+    /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้แล้วหรือยัง */
+    public boolean isRevisionRequested() {
+        return revisionRequestedAt != null;
     }
 }

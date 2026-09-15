@@ -14,11 +14,13 @@ function initPositionNotifyConfirm(formId, docType) {
         form.appendChild(sendNotifyField);
     }
 
-    const notifyDocTypes = [0, 5, 7, 8];
+    // ต้องตรงกับ PositionRequestService.autoUpdateStatusByDocument — เอกสารที่ 5 ย้ายไปเป็น
+    // ของผู้ยื่นแล้วจึงไม่เลื่อนสถานะอีก ส่วน 0 เป็นเลขที่ค้างจากตอนเอกสารยังเริ่มนับที่ 0
+    const notifyDocTypes = [7, 8];
     if (!notifyDocTypes.includes(docType)) return;
 
     var statusInfo = '';
-    if (docType === 0 || docType === 5 || docType === 7) {
+    if (docType === 7) {
         statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>ตรวจสอบความถูกต้อง/ครบถ้วน (DOCUMENT_VERIFICATION)</strong>';
     } else if (docType === 8) {
         statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>เสนอวาระกลั่นกรองฯ (SCREENING_COMMITTEE)</strong>';

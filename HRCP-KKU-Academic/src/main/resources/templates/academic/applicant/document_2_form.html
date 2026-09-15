@@ -69,18 +69,9 @@
                         <input type="hidden" name="chk_app_5" id="chk_app_5"
                             th:value="${dData != null ? dData.getOrDefault('chk_app_5', '') : ''}">
 
-                        <!-- ฝั่งเจ้าหน้าที่ ส่งค่าว่างไปก่อน (จะถูกกรอกโดยแอดมิน) -->
-                        <input type="hidden" name="chk_off_1" th:value="${dData != null ? dData.getOrDefault('chk_off_1', '') : ''}">
-                        <input type="hidden" name="chk_off_2" th:value="${dData != null ? dData.getOrDefault('chk_off_2', '') : ''}">
-                        <input type="hidden" name="chk_off_3" th:value="${dData != null ? dData.getOrDefault('chk_off_3', '') : ''}">
-                        <input type="hidden" name="chk_off_4" th:value="${dData != null ? dData.getOrDefault('chk_off_4', '') : ''}">
-                        <input type="hidden" name="chk_off_5" th:value="${dData != null ? dData.getOrDefault('chk_off_5', '') : ''}">
-                        <input type="hidden" name="text_1" th:value="${dData != null ? dData.getOrDefault('text_1', '') : ''}">
-                        <input type="hidden" name="text_2" th:value="${dData != null ? dData.getOrDefault('text_2', '') : ''}">
-                        <input type="hidden" name="text_3" th:value="${dData != null ? dData.getOrDefault('text_3', '') : ''}">
-                        <input type="hidden" name="text_4" th:value="${dData != null ? dData.getOrDefault('text_4', '') : ''}">
-                        <input type="hidden" name="text_5" th:value="${dData != null ? dData.getOrDefault('text_5', '') : ''}">
-                        <input type="hidden" name="hr_staff_name" th:value="${dData != null ? dData.getOrDefault('hr_staff_name', '') : ''}">
+                        <!-- ช่องของเจ้าหน้าที่ (chk_off_*, text_*, hr_staff_name) ไม่ต้องเด้งค่ากลับ
+                             อีกแล้ว เซิร์ฟเวอร์คืนค่าเดิมให้เองเพราะผู้ยื่นไม่ได้เป็นเจ้าของช่องเหล่านั้น
+                             วิธีเดิมพึ่งเบราว์เซอร์ล้วน ๆ ปิด JS หรือยิง POST ตรงก็ลบค่าของเจ้าหน้าที่ได้ -->
 
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> ข้อมูลผู้ยื่นคำร้อง</h5>
                         <div class="row mb-3">
