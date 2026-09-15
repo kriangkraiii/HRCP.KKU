@@ -231,7 +231,32 @@ public class AcademicRequestService {
         }
         doc.setDocumentLabel(label);
         doc.setIsDraft(false);
-        return documentRepository.save(doc);
+        AcademicDocument savedDoc = documentRepository.save(doc);
+
+        if (documentType == 9 && jsonData != null && !jsonData.isBlank()) {
+            try {
+                com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+                @SuppressWarnings("unchecked")
+                Map<String, String> data = mapper.readValue(jsonData, Map.class);
+                String statedExpiry = data.get("expiration_date");
+                LocalDateTime expiry = parseThaiDate(statedExpiry);
+                if (expiry == null) {
+                    String evalDate = firstNonBlank(data.get("evaluation_date"), data.get("faculty_board_meeting_date"));
+                    LocalDateTime parsedEvalDate = parseThaiDate(evalDate);
+                    if (parsedEvalDate != null) {
+                        expiry = parsedEvalDate.plusYears(3);
+                    }
+                }
+                if (expiry != null) {
+                    request.setEvaluationExpiryDate(expiry);
+                    requestRepository.save(request);
+                }
+            } catch (Exception e) {
+                log.warn("Could not parse expiry date from doc 9 jsonData: {}", e.getMessage());
+            }
+        }
+
+        return savedDoc;
     }
 
     /**
@@ -735,37 +760,41 @@ public class AcademicRequestService {
         for (AcademicRequest req : requests) {
             if (req.getCurrentStatus().carriesAPassedResult()) {
 
-                // If expiry is already computed, return it
-                if (req.getEvaluationExpiryDate() != null) {
-                    return req.getEvaluationExpiryDate();
-                }
-
-                // Try to extract from Doc 9 JSON
+                // Try to extract from Doc 9 JSON first
                 try {
-                    Optional<AcademicDocument> doc9 = documentRepository
-                            .findByRequestIdAndDocumentTypeAndCopyNumber(req.getId(), 9, 0);
-                    if (doc9.isPresent() && doc9.get().getJsonData() != null) {
-                        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
-                        @SuppressWarnings("unchecked")
-                        java.util.Map<String, String> data = mapper.readValue(
-                                doc9.get().getJsonData(), java.util.Map.class);
+                    Map<String, String> doc9 = documentData(req.getId(), 9);
+                    if (!doc9.isEmpty()) {
+                        String statedExpiry = doc9.get("expiration_date");
+                        LocalDateTime expiry = parseThaiDate(statedExpiry);
+                        if (expiry != null) {
+                            if (!expiry.equals(req.getEvaluationExpiryDate())) {
+                                req.setEvaluationExpiryDate(expiry);
+                                requestRepository.save(req);
+                            }
+                            return expiry;
+                        }
 
-                        // Try evaluation_date or faculty_board_meeting_date
-                        String dateStr = data.getOrDefault("evaluation_date",
-                                data.getOrDefault("faculty_board_meeting_date", null));
-
+                        String dateStr = firstNonBlank(doc9.get("evaluation_date"),
+                                doc9.get("faculty_board_meeting_date"));
                         if (dateStr != null && !dateStr.isEmpty()) {
                             LocalDateTime approvalDate = parseThaiDate(dateStr);
                             if (approvalDate != null) {
-                                LocalDateTime expiry = approvalDate.plusYears(3);
-                                req.setEvaluationExpiryDate(expiry);
-                                requestRepository.save(req);
-                                return expiry;
+                                LocalDateTime computedExpiry = approvalDate.plusYears(3);
+                                if (!computedExpiry.equals(req.getEvaluationExpiryDate())) {
+                                    req.setEvaluationExpiryDate(computedExpiry);
+                                    requestRepository.save(req);
+                                }
+                                return computedExpiry;
                             }
                         }
                     }
                 } catch (Exception e) {
                     // Fall through
+                }
+
+                // If expiry is already computed and no Doc 9 override found, return it
+                if (req.getEvaluationExpiryDate() != null) {
+                    return req.getEvaluationExpiryDate();
                 }
 
                 // Fallback: use submission date + 3 years
@@ -844,6 +873,20 @@ public class AcademicRequestService {
     }
 
     /**
+     * Formats a LocalDateTime into standard Thai date string (e.g. "17 กุมภาพันธ์ 2572").
+     */
+    public static String formatThaiDate(LocalDateTime dt) {
+        if (dt == null) return null;
+        int day = dt.getDayOfMonth();
+        int monthIdx = dt.getMonthValue() - 1;
+        int year = dt.getYear() + 543;
+        if (monthIdx >= 0 && monthIdx < THAI_MONTHS.length) {
+            return day + " " + THAI_MONTHS[monthIdx] + " " + year;
+        }
+        return day + "/" + dt.getMonthValue() + "/" + year;
+    }
+
+    /**
      * Evaluations this person may put behind a position request.
      *
      * <p>The single definition of "a usable result", so that the dashboard's
@@ -888,7 +931,9 @@ public class AcademicRequestService {
         Map<String, String> doc9 = documentData(request.getId(), 9);
         Map<String, String> doc1 = documentData(request.getId(), 1);
 
-        String semester = firstNonBlank(doc9.get("semester"), doc1.get("semester"));
+        String rawDoc1Year = doc1.get("academic_year");
+        String rawSemester = firstNonBlank(doc9.get("semester"), doc1.get("semester"), rawDoc1Year);
+        String semester = firstNonBlank(semesterOf(rawSemester), rawSemester);
         String evaluationDate = firstNonBlank(doc9.get("evaluation_date"),
                 doc9.get("faculty_board_meeting_date"));
 
@@ -901,13 +946,13 @@ public class AcademicRequestService {
                 request.getRequestCode(),
                 firstNonBlank(doc9.get("course_code"), doc1.get("course_code")),
                 firstNonBlank(doc9.get("course_name"), doc1.get("course_name")),
-                firstNonBlank(doc1.get("academic_year"), yearOf(semester),
+                firstNonBlank(yearOf(rawDoc1Year), rawDoc1Year, yearOf(semester),
                         yearOf(evaluationDate)),
                 semester,
                 firstNonBlank(doc9.get("result_level"), doc9.get("eval_result_level"),
                         doc9.get("evaluation_result")),
                 evaluationDate,
-                doc9.get("expiration_date"),
+                firstNonBlank(doc9.get("expiration_date"), formatThaiDate(expiryAt)),
                 expiryAt,
                 daysLeft,
                 doc1.get("current_position"),
@@ -916,8 +961,8 @@ public class AcademicRequestService {
 
     /**
      * When this result lapses: the date on document 9 if it names one, otherwise
-     * the stored expiry, otherwise three years from the evaluation or, failing
-     * that, from the submission — the same ladder
+     * three years from the evaluation, otherwise the stored expiry, otherwise
+     * three years from the submission — the same ladder
      * {@link #getLatestEvaluationExpiry} walks, so the countdown on the dashboard
      * and the one beside each choice cannot disagree.
      */
@@ -927,12 +972,12 @@ public class AcademicRequestService {
         if (stated != null) {
             return stated;
         }
-        if (request.getEvaluationExpiryDate() != null) {
-            return request.getEvaluationExpiryDate();
-        }
         LocalDateTime evaluated = parseThaiDate(evaluationDate);
         if (evaluated != null) {
             return evaluated.plusYears(3);
+        }
+        if (request.getEvaluationExpiryDate() != null) {
+            return request.getEvaluationExpiryDate();
         }
         return request.getSubmissionDate() == null ? null
                 : request.getSubmissionDate().plusYears(3);
@@ -957,6 +1002,21 @@ public class AcademicRequestService {
             }
         }
         return Map.of();
+    }
+
+    /**
+     * Extracts semester/term from a string like "1/2569", returning "1/2569",
+     * ensuring downstream teaching evaluation forms get the full semester/year format.
+     */
+    private static String semesterOf(String text) {
+        if (text == null || text.isBlank()) {
+            return null;
+        }
+        String arabic = com.ecom.util.ThaiDateUtil.toArabicDigits(text.trim());
+        while (arabic.matches("^\\d+/\\d+/\\d+$")) {
+            arabic = arabic.substring(arabic.indexOf('/') + 1);
+        }
+        return arabic.contains("/") ? arabic : null;
     }
 
     /**

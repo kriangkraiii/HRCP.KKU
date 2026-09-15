@@ -149,6 +149,10 @@ public class AcademicApplicantController {
         List<AcademicRequest> requests = allRequests.stream()
                 .filter(r -> r.getCurrentStatus() != RequestStatus.DRAFT)
                 .collect(Collectors.toList());
+        AcademicRank currentRank = AcademicRankPolicy.currentRank(user);
+        model.addAttribute("currentRank", currentRank);
+        model.addAttribute("isAssociateProfessor", currentRank == AcademicRank.ASSOCIATE_PROFESSOR);
+        model.addAttribute("isProfessor", currentRank == AcademicRank.PROFESSOR);
         model.addAttribute("requests", requests);
         model.addAttribute("draftRequest", draftRequest);
         // ข้อ 2 — เหตุผลที่คณบดีส่งคำร้องกลับมาให้แก้ไข (ถ้ามี)
@@ -157,6 +161,12 @@ public class AcademicApplicantController {
         model.addAttribute("statuses", RequestStatus.values());
         model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
         model.addAttribute("hasActiveRequest", requestService.hasActiveRequest(user.getId()));
+
+        // ตรวจสอบและซิงค์วันหมดอายุผลประเมินล่าสุด
+        java.time.LocalDateTime latestExpiry = requestService.getLatestEvaluationExpiry(user.getId());
+        if (latestExpiry != null) {
+            model.addAttribute("latestEvaluationExpiry", latestExpiry);
+        }
 
         // ดึงข้อมูลรายวิชาจาก doc_1 สำหรับทุกคำร้อง
         Map<Long, Map<String, String>> doc1DataMap = new java.util.HashMap<>();
@@ -225,8 +235,20 @@ public class AcademicApplicantController {
     }
 
     @GetMapping("/new-request")
-    public String newRequestForm(Principal principal, Model model) {
+    public String newRequestForm(Principal principal, Model model, RedirectAttributes redirectAttributes) {
         UserDtls user = getUser(principal);
+        AcademicRank currentRank = AcademicRankPolicy.currentRank(user);
+        if (currentRank == AcademicRank.ASSOCIATE_PROFESSOR) {
+            redirectAttributes.addFlashAttribute("info",
+                    "ท่านดำรงตำแหน่งรองศาสตราจารย์แล้ว การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน ท่านสามารถยื่นคำขอตำแหน่งทางวิชาการได้โดยตรง");
+            return "redirect:/user/position/new-request";
+        }
+        if (currentRank == AcademicRank.PROFESSOR) {
+            redirectAttributes.addFlashAttribute("info",
+                    "ท่านดำรงตำแหน่งศาสตราจารย์อยู่แล้ว ซึ่งเป็นตำแหน่งทางวิชาการระดับสูงสุด");
+            return "redirect:/user/academic/dashboard";
+        }
+
         if (requestService.hasActiveRequest(user.getId())) {
             return "redirect:/user/academic/dashboard?error=active-request";
         }
@@ -292,6 +314,8 @@ public class AcademicApplicantController {
         model.addAttribute("currentRank", currentRank);
         model.addAttribute("assistantBlocked", !AcademicRank.ASSISTANT_PROFESSOR.isAbove(currentRank));
         model.addAttribute("associateBlocked", !AcademicRank.ASSOCIATE_PROFESSOR.isAbove(currentRank));
+        model.addAttribute("isAssociateProfessor", currentRank == AcademicRank.ASSOCIATE_PROFESSOR);
+        model.addAttribute("isProfessor", currentRank == AcademicRank.PROFESSOR);
 
         // แผงลงนามอิเล็กทรอนิกส์ — ผู้ขอส่งเอกสารของตนเองไปลงนามได้
         model.addAttribute("documentType", 1);
@@ -455,14 +479,9 @@ public class AcademicApplicantController {
         }
 
         if ("submit".equals(action)) {
-            long activeAttachments = requestService.countActiveAttachments(id);
             long totalSize = requestService.getTotalAttachmentSize(id);
             final long MAX_TOTAL_BYTES = 75L * 1024L * 1024L;
 
-            if (activeAttachments == 0) {
-                redirectAttributes.addFlashAttribute("error", "กรุณาแนบไฟล์หรือลิงก์เอกสารประกอบอย่างน้อย 1 รายการก่อนบันทึก");
-                return "redirect:/user/academic/request/" + id + "/document-2?error=no_attachments";
-            }
             if (totalSize > MAX_TOTAL_BYTES) {
                 String usedMB = String.format("%.1f", totalSize / (1024.0 * 1024.0));
                 redirectAttributes.addFlashAttribute("error", "ขนาดไฟล์แนบรวมทั้งหมด (" + usedMB + " MB) เกินขีดจำกัด 75 MB ต่อคำร้อง");
@@ -852,12 +871,6 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/new-request";
         }
 
-        // ตรวจสอบว่ามีไฟล์แนบในเอกสารที่ 2 หรือยัง
-        if (requestService.countAttachments(id) == 0) {
-            redirectAttributes.addFlashAttribute("error", "กรุณาแนบไฟล์เอกสารประกอบการประเมินผลการสอนอย่างน้อย 1 ไฟล์ในแบบฟอร์มเอกสารที่ 2 ก่อนส่งคำร้อง");
-            return "redirect:/user/academic/new-request";
-        }
-
         // ตรวจสอบว่าผู้ยื่นได้ลงนามครบทั้งเอกสาร 1 และ 2 หรือยัง
         List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, id, List.of(1, 2));
@@ -1221,6 +1234,12 @@ public class AcademicApplicantController {
     private Optional<String> doc1RankProblem(Map<String, String> doc1, UserDtls user) {
         AcademicRank current = AcademicRankPolicy.currentRank(user,
                 doc1 == null ? null : doc1.get("current_position"));
+        if (current == AcademicRank.ASSOCIATE_PROFESSOR) {
+            return Optional.of("ท่านดำรงตำแหน่งรองศาสตราจารย์แล้ว การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน");
+        }
+        if (current == AcademicRank.PROFESSOR) {
+            return Optional.of("ท่านดำรงตำแหน่งศาสตราจารย์อยู่แล้ว ซึ่งเป็นตำแหน่งทางวิชาการระดับสูงสุด");
+        }
         return AcademicRankPolicy.rankViolation(current, AcademicRank.fromDoc1Checks(doc1));
     }
 

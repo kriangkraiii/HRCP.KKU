@@ -143,10 +143,10 @@
                                     placeholder="เช่น Introduction to Computer Science">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">ปีการศึกษา</label>
+                                <label class="form-label">ภาค/ปีการศึกษา</label>
                                 <input type="text" name="academic_year" class="form-control"
                                     th:value="${doc1Data != null ? doc1Data.getOrDefault('academic_year', '') : ''}"
-                                    placeholder="เช่น 2568">
+                                    placeholder="เช่น 1/2569">
                             </div>
                         </div>
                         <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">

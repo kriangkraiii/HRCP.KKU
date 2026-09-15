@@ -153,6 +153,18 @@
                         </h5>
                         <div class="row mb-3">
                             <div class="col-md-12">
+                                <div th:if="${associateBlocked}" class="alert alert-info d-flex align-items-center justify-content-between p-3 mb-3 border-0 shadow-sm" style="background-color: #e8f5e9; border-left: 4px solid #2e7d32 !important; border-radius: 8px;">
+                                    <div class="d-flex align-items-center">
+                                        <i class="fas fa-info-circle text-success fs-4 me-3"></i>
+                                        <div>
+                                            <div class="fw-bold text-success">ท่านดำรงตำแหน่งรองศาสตราจารย์แล้ว</div>
+                                            <div class="text-muted small">การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน ท่านสามารถยื่นคำขอตำแหน่งทางวิชาการได้โดยตรง</div>
+                                        </div>
+                                    </div>
+                                    <a href="/user/position/new-request" class="btn btn-success btn-sm text-nowrap ms-3">
+                                        <i class="fas fa-arrow-right me-1"></i> ยื่นขอตำแหน่งศาสตราจารย์
+                                    </a>
+                                </div>
                                 <div class="d-flex gap-4">
                                     <div class="form-check">
                                         <input class="form-check-input target-pos-radio" type="radio" name="target_position_choice" id="targetPos1"
@@ -199,10 +211,11 @@
                                     placeholder="เช่น Introduction to Computer Science" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">ปีการศึกษา <span class="text-danger">*</span></label>
+                                <label class="form-label">ภาค/ปีการศึกษา <span class="text-danger">*</span></label>
                                 <input type="text" name="academic_year" class="form-control"
                                     th:value="${dData != null ? dData.getOrDefault('academic_year', '') : ''}"
-                                    placeholder="เช่น 2568" required>
+                                    placeholder="เช่น 1/2569" pattern="^[0-9]+/[0-9]+$" required>
+                                <div class="form-text text-muted small">ระบุในรูปแบบ [ภาคเรียน]/[ปีการศึกษา] เช่น 1/2569</div>
                             </div>
                         </div>
 
@@ -427,7 +440,11 @@
                                 var academicYear = form.querySelector('[name="academic_year"]');
                                 if (!courseCode || !courseCode.value.trim()) errors.push('รหัสวิชา');
                                 if (!courseName || !courseName.value.trim()) errors.push('รายวิชา');
-                                if (!academicYear || !academicYear.value.trim()) errors.push('ปีการศึกษา');
+                                if (!academicYear || !academicYear.value.trim()) {
+                                    errors.push('ภาค/ปีการศึกษา');
+                                } else if (!/^\d+\/\d+$/.test(academicYear.value.trim())) {
+                                    errors.push('ภาค/ปีการศึกษา ต้องอยู่ในรูปแบบ เช่น 1/2569');
+                                }
 
                                 if (errors.length > 0) {
                                     e.preventDefault();

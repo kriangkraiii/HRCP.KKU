@@ -121,6 +121,66 @@ class PositionRankRuleTest extends AbstractFlowTest {
             assertThat(inputTag(html, "targetPos1")).contains("disabled");
             assertThat(inputTag(html, "targetPos2")).doesNotContain("disabled");
         }
+
+        @Test
+        @DisplayName("รศ. เข้าหน้ายื่นประเมินการสอน — redirect ไปหน้ายื่นขอตำแหน่งวิชาการโดยตรง")
+        void anAssociateProfessorIsRedirectedToPositionRequest() throws Exception {
+            UserDtls applicant = applicantHolding("รองศาสตราจารย์");
+
+            mvc.perform(get("/user/academic/new-request")
+                    .with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/user/position/new-request"))
+                    .andExpect(flash().attributeExists("info"));
+        }
+
+        @Test
+        @DisplayName("ศ. เข้าหน้ายื่นประเมินการสอน — redirect กลับ dashboard แจ้งว่าเป็นตำแหน่งสูงสุด")
+        void aProfessorIsRedirectedToDashboard() throws Exception {
+            UserDtls applicant = applicantHolding("ศาสตราจารย์");
+
+            mvc.perform(get("/user/academic/new-request")
+                    .with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/user/academic/dashboard"))
+                    .andExpect(flash().attributeExists("info"));
+        }
+
+        @Test
+        @DisplayName("รศ. ส่งเอกสารที่ 1 ขอประเมิน — ไม่บันทึก แจ้งว่าขอ ศ. ไม่ต้องประเมินการสอน")
+        void anAssociateProfessorSubmittingDocument1IsRefused() throws Exception {
+            UserDtls applicant = applicantHolding("รองศาสตราจารย์");
+            AcademicRequest draft = data.evaluation(applicant, RequestStatus.DRAFT);
+
+            mvc.perform(post("/user/academic/request/" + draft.getId() + "/document-1")
+                    .param("current_position", "รองศาสตราจารย์")
+                    .param("course_code", "CP001101")
+                    .param("course_name", "วิชาทดสอบ")
+                    .param("academic_year", "1/2569")
+                    .param("action", "submit")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().is3xxRedirection())
+                    .andExpect(redirectedUrl("/user/academic/request/" + draft.getId() + "/document-1"))
+                    .andExpect(flash().attributeExists("error"));
+
+            assertThat(academicService.getDocumentsByType(draft.getId(), 1)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("หน้าแดชบอร์ดแสดงปุ่มและแจ้งเตือนให้ รศ. ยื่นขอตำแหน่งศาสตราจารย์โดยตรง")
+        void theDashboardOffersDirectProfessorRouteToAssociateProfessor() throws Exception {
+            UserDtls applicant = applicantHolding("รองศาสตราจารย์");
+
+            String html = mvc.perform(get("/user/academic/dashboard")
+                    .with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            assertThat(html).contains("/user/position/new-request");
+            assertThat(html).contains("ยื่นขอตำแหน่งศาสตราจารย์ (ไม่ต้องประเมินการสอน)");
+            assertThat(html).contains("ท่านดำรงตำแหน่งรองศาสตราจารย์ (รศ.) แล้ว");
+            assertThat(html).contains("การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน");
+        }
     }
 
     @Nested

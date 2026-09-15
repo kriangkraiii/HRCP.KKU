@@ -87,7 +87,20 @@
             <script th:if="${evaluationExpiryDate != null}" th:inline="javascript">
                 (function () {
                     const expiryStr = /*[[${evaluationExpiryDate}]]*/ '';
-                    const expiryDate = new Date(expiryStr);
+                    let expiryDate;
+                    if (expiryStr && expiryStr.indexOf('T') !== -1) {
+                        const dateParts = expiryStr.split('T')[0].split('-');
+                        expiryDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 23, 59, 59);
+                    } else if (expiryStr) {
+                        const dateParts = expiryStr.split('-');
+                        if (dateParts.length === 3) {
+                            expiryDate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 23, 59, 59);
+                        } else {
+                            expiryDate = new Date(expiryStr);
+                        }
+                    } else {
+                        expiryDate = new Date();
+                    }
                     const totalDuration = 3 * 365.25 * 24 * 60 * 60 * 1000; // 3 years in ms
                     const thaiMonths = ['ม.ค.', 'ก.พ.', 'มี.ค.', 'เม.ย.', 'พ.ค.', 'มิ.ย.',
                         'ก.ค.', 'ส.ค.', 'ก.ย.', 'ต.ค.', 'พ.ย.', 'ธ.ค.'];

@@ -284,9 +284,10 @@ public class TestDataFactory {
                 + "\",\"current_position\":\"" + currentPosition
                 + "\",\"" + tick + "\":\"✓\"}";
         academicDocument(r, 1, doc1Json);
+        String sem = academicYear != null && academicYear.contains("/") ? academicYear : "1/" + academicYear;
         String doc9Json = "{\"evaluation_result\":\"ผ่าน\",\"course_code\":\"" + courseCode
                 + "\",\"course_name\":\"วิชาทดสอบ " + courseCode
-                + "\",\"result_level\":\"ชำนาญ\",\"semester\":\"1/" + academicYear + "\"}";
+                + "\",\"result_level\":\"ชำนาญ\",\"semester\":\"" + sem + "\"}";
         academicDocument(r, 9, doc9Json);
         return r;
     }

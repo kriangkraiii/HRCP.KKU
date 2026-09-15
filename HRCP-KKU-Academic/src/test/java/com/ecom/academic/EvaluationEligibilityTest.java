@@ -214,6 +214,48 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
         }
 
         @Test
+        @DisplayName("แดชบอร์ดแสดงวันหมดอายุตรงกับ expiration_date ในเอกสารที่ 9")
+        void expiryHonoursExpirationDateInDocument9() {
+            UserDtls applicant = data.applicant();
+            data.completedEvaluation(applicant, RequestStatus.COMPLETED, "15 กรกฎาคม 2572");
+
+            LocalDateTime expected = LocalDateTime.of(2029, 7, 15, 0, 0);
+            assertThat(academicService.getLatestEvaluationExpiry(applicant.getId()))
+                    .isEqualTo(expected);
+        }
+
+        @Test
+        @DisplayName("formatThaiDate แปลง LocalDateTime เป็นวันที่ภาษาไทยมาตรฐานถูกต้อง")
+        void formatThaiDateProducesCorrectFormat() {
+            LocalDateTime dt = LocalDateTime.of(2029, 8, 10, 0, 0);
+            assertThat(AcademicRequestService.formatThaiDate(dt)).isEqualTo("10 สิงหาคม 2572");
+            assertThat(AcademicRequestService.formatThaiDate(null)).isNull();
+        }
+
+        @Test
+        @DisplayName("วันหมดอายุใน getLatestEvaluationExpiry และ resolveExpiry ตรงกันเสมอเมื่อมี evaluation_date")
+        void expiryCalculationConsistentBetweenLatestAndUsableEvaluations() {
+            UserDtls applicant = data.applicant();
+            AcademicRequest req = data.evaluation(applicant, RequestStatus.COMPLETED);
+            req.setEvaluationExpiryDate(null);
+            req.setSubmissionDate(LocalDateTime.of(2026, 1, 1, 0, 0));
+            data.saveEvaluation(req);
+
+            academicService.saveDocument(req, 9,
+                    "{\"evaluation_date\":\"10 สิงหาคม 2569\",\"result_level\":\"ชำนาญพิเศษ\"}",
+                    null, null, 0);
+
+            LocalDateTime latest = academicService.getLatestEvaluationExpiry(applicant.getId());
+            assertThat(latest).isEqualTo(LocalDateTime.of(2029, 8, 10, 0, 0));
+
+            var usable = academicService.findUsableEvaluations(applicant.getId());
+            assertThat(usable).hasSize(1);
+            var summary = academicService.summarize(usable.get(0));
+            assertThat(summary.expiryAt()).isEqualTo(latest);
+            assertThat(summary.expiryDate()).isEqualTo("10 สิงหาคม 2572");
+        }
+
+        @Test
         @DisplayName("แดชบอร์ดคำนวณวันหมดอายุจากวันยื่น + 3 ปี เมื่อเอกสารที่ 8 ไม่มีวันที่")
         void expiryFallsBackToSubmissionDatePlusThreeYears() {
             UserDtls applicant = data.applicant();

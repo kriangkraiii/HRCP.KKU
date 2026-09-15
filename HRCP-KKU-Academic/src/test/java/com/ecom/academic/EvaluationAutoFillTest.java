@@ -54,6 +54,19 @@ class EvaluationAutoFillTest extends AbstractFlowTest {
     }
 
     @Test
+    @DisplayName("กรณีผู้ยื่นกรอกภาค/ปีการศึกษาในรูปแบบ 1/2569 ระบบแยกเทอมและปีได้อย่างถูกต้อง")
+    void termAndYearFormatSplitsCorrectly() {
+        UserDtls applicant = data.applicant();
+        AcademicRequest evaluation = data.evaluationForCourse(applicant, "CP001102", "1/2569");
+
+        assertThat(prefilledDoc1For(applicant, evaluation))
+                .containsEntry("teaching_eval_course_code", "CP001102")
+                .containsEntry("teaching_eval_academic_year", "2569")
+                .containsEntry("teaching_eval_semester", "1/2569")
+                .containsEntry("teaching_semester_1", "1/2569");
+    }
+
+    @Test
     @DisplayName("ผลการประเมินและรหัสคำร้องประเมิน ติดมาด้วย")
     void theResultTravelsToo() {
         UserDtls applicant = data.applicant();

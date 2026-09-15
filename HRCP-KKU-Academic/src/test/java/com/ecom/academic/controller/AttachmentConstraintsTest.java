@@ -210,9 +210,11 @@ class AttachmentConstraintsTest {
     }
 
     @Test
-    @DisplayName("บันทึกเอกสารที่ 2 (submit) เมื่อยังไม่มีไฟล์แนบเลย จะถูกปฏิเสธ")
-    void submitDoc2_missingSlots_shouldBeRejected() throws Exception {
+    @DisplayName("บันทึกเอกสารที่ 2 (submit) แม้ไม่มีไฟล์แนบก็สามารถบันทึกสำเร็จ (ไม่บังคับแนบ)")
+    void submitDoc2_zeroAttachments_shouldSucceed() throws Exception {
         when(requestService.countActiveAttachments(1L)).thenReturn(0L);
+        when(requestService.getTotalAttachmentSize(1L)).thenReturn(0L);
+        when(documentService.generateDocument(eq(1L), eq(2), anyString(), any())).thenReturn("generated/doc2.docx");
 
         Map<String, String> formData = new java.util.HashMap<>();
         formData.put("action", "submit");
@@ -224,8 +226,8 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2?error=no_attachments");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("อย่างน้อย 1 รายการ");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc2_submitted");
+        verify(requestService).saveDocument(eq(sampleRequest), eq(2), anyString(), eq("generated/doc2.docx"), anyString(), any());
     }
 
     @Test

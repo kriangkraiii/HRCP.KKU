@@ -46,19 +46,54 @@
                 <div class="tab-pane fade show active" id="evalPane" role="tabpanel" aria-labelledby="eval-tab">
 
                     <div class="d-flex justify-content-end mb-3">
-                        <th:block th:if="${!hasActiveRequest}">
-                            <a href="/user/academic/new-request" class="btn btn-academic">
-                                <i class="fas fa-plus-circle me-1"></i> ยื่นคำร้องขอการประเมินการสอน
+                        <th:block th:if="${isAssociateProfessor}">
+                            <a href="/user/position/new-request" class="btn btn-success">
+                                <i class="fas fa-university me-1"></i> ยื่นขอตำแหน่งศาสตราจารย์ (ไม่ต้องประเมินการสอน)
                             </a>
                         </th:block>
-                        <th:block th:if="${hasActiveRequest}">
+                        <th:block th:if="${isProfessor}">
                             <button class="btn btn-secondary" disabled>
-                                <i class="fas fa-plus-circle me-1"></i> ยื่นคำร้องขอการประเมินการสอน
+                                <i class="fas fa-check-circle me-1"></i> ดำรงตำแหน่งสูงสุดแล้ว (ศาสตราจารย์)
                             </button>
+                        </th:block>
+                        <th:block th:if="${!isAssociateProfessor and !isProfessor}">
+                            <th:block th:if="${!hasActiveRequest}">
+                                <a href="/user/academic/new-request" class="btn btn-academic">
+                                    <i class="fas fa-plus-circle me-1"></i> ยื่นคำร้องขอการประเมินการสอน
+                                </a>
+                            </th:block>
+                            <th:block th:if="${hasActiveRequest}">
+                                <button class="btn btn-secondary" disabled>
+                                    <i class="fas fa-plus-circle me-1"></i> ยื่นคำร้องขอการประเมินการสอน
+                                </button>
+                            </th:block>
                         </th:block>
                     </div>
 
-                    <div th:if="${hasActiveRequest}" class="result-alert ra-pass" style="background:color-mix(in srgb, var(--color-primary-medium) 6%, var(--bg-card));color:var(--text-secondary);border:1px solid var(--border-color);">
+                    <!-- แจ้งเตือนสำหรับ รศ. ที่ไม่ต้องประเมินการสอน -->
+                    <div th:if="${isAssociateProfessor}" class="alert alert-success d-flex align-items-center justify-content-between p-3 mb-3 border-0 shadow-sm" style="background-color: #e8f5e9; border-left: 4px solid #2e7d32 !important; border-radius: 8px;">
+                        <div class="d-flex align-items-center">
+                            <i class="fas fa-info-circle text-success fs-4 me-3"></i>
+                            <div>
+                                <div class="fw-bold text-success">ท่านดำรงตำแหน่งรองศาสตราจารย์ (รศ.) แล้ว</div>
+                                <div class="text-muted small">การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน ท่านสามารถยื่นคำขอตำแหน่งทางวิชาการได้โดยตรง</div>
+                            </div>
+                        </div>
+                        <a href="/user/position/new-request" class="btn btn-success btn-sm text-nowrap ms-3">
+                            <i class="fas fa-arrow-right me-1"></i> ยื่นขอตำแหน่งศาสตราจารย์
+                        </a>
+                    </div>
+
+                    <!-- แจ้งเตือนสำหรับ ศ. -->
+                    <div th:if="${isProfessor}" class="alert alert-info d-flex align-items-center p-3 mb-3 border-0 shadow-sm" style="border-radius: 8px;">
+                        <i class="fas fa-award text-primary fs-4 me-3"></i>
+                        <div class="ms-2">
+                            <div class="fw-bold text-primary">ท่านดำรงตำแหน่งศาสตราจารย์ (ศ.)</div>
+                            <div class="text-muted small">ท่านดำรงตำแหน่งทางวิชาการระดับสูงสุดแล้ว</div>
+                        </div>
+                    </div>
+
+                    <div th:if="${hasActiveRequest and !isAssociateProfessor and !isProfessor}" class="result-alert ra-pass" style="background:color-mix(in srgb, var(--color-primary-medium) 6%, var(--bg-card));color:var(--text-secondary);border:1px solid var(--border-color);">
                         <i class="fas fa-info-circle"></i>
                         <span>คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องใหม่ได้จนกว่าจะเสร็จสิ้น</span>
                     </div>
@@ -126,7 +161,7 @@
                             <i class="fas fa-book me-1" style="color:var(--color-primary-medium)"></i>
                             <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
                             <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
-                            <span class="text-muted ms-2">ปีการศึกษา <span th:text="${doc1DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
+                            <span class="text-muted ms-2">ภาค/ปีการศึกษา <span th:text="${doc1DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
                         </div>
 
                         <!-- Progress Tracker -->
@@ -168,7 +203,14 @@
 
                         <!-- Result Alerts -->
                         <div th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}" class="result-alert ra-pass">
-                            <i class="fas fa-check-circle"></i> <span>ผ่านการประเมิน</span>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between w-100 gap-2">
+                                <div>
+                                    <i class="fas fa-check-circle"></i> <span>ผ่านการประเมิน</span>
+                                </div>
+                                <div th:if="${req.evaluationExpiryDate != null}" class="small fw-semibold">
+                                    <i class="fas fa-calendar-check me-1"></i>ผลประเมินหมดอายุ: <span th:text="${@thaiDateUtil.formatDateOnly(req.evaluationExpiryDate)}"></span>
+                                </div>
+                            </div>
                         </div>
                         <div th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}" class="result-alert ra-revise">
                             <i class="fas fa-exclamation-triangle"></i>
@@ -178,7 +220,14 @@
                             </div>
                         </div>
                         <div th:if="${req.currentStatus.name() == 'COMPLETED'}" class="result-alert ra-completed">
-                            <i class="fas fa-flag-checkered"></i> <span>เสร็จสิ้น — คำร้องได้ดำเนินการเสร็จสิ้นแล้ว</span>
+                            <div class="d-flex flex-wrap align-items-center justify-content-between w-100 gap-2">
+                                <div>
+                                    <i class="fas fa-flag-checkered"></i> <span>เสร็จสิ้น — คำร้องได้ดำเนินการเสร็จสิ้นแล้ว</span>
+                                </div>
+                                <div th:if="${req.evaluationExpiryDate != null}" class="small fw-semibold text-muted">
+                                    <i class="fas fa-calendar-check me-1"></i>ผลประเมินหมดอายุ: <span th:text="${@thaiDateUtil.formatDateOnly(req.evaluationExpiryDate)}"></span>
+                                </div>
+                            </div>
                         </div>
 
                         <!-- Footer -->

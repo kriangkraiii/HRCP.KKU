@@ -212,7 +212,7 @@
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 fw-semibold text-primary">
                                 <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอน
-                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">จำเป็นต้องแนบ (อย่างน้อย 1 รายการ)</span>
+                                <span class="badge bg-secondary-subtle text-secondary border ms-1">แนบไฟล์หรือลิงก์เพิ่มเติม (ไม่บังคับ)</span>
                             </h6>
                             <div class="d-flex align-items-center gap-2">
                                 <small class="text-muted" id="totalSizeDisplay" th:text="${totalSizeFormatted != null ? totalSizeFormatted + ' / 75.0 MB' : '0.0 / 75.0 MB'}">0.0 / 75.0 MB</small>
@@ -243,22 +243,26 @@
                                            style="cursor:pointer; background: #fafbfc;">
                                         <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-2 d-block"></i>
                                         <span class="fs-6 fw-semibold d-block">คลิกเลือกไฟล์ หรือลากไฟล์มาวางที่นี่</span>
-                                        <span class="text-muted small d-block mt-1">รองรับไฟล์: .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB ต่อคำร้อง)</span>
+                                        <span class="text-muted small d-block mt-1">ระบบจะเริ่มอัปโหลดทันทีเมื่อเลือกไฟล์ (รองรับ .pdf, .docx, .doc, .zip รวมไม่เกิน 75 MB)</span>
                                         <input type="file" name="files" id="fileInput" multiple class="d-none" accept=".pdf,.docx,.doc,.zip">
                                     </label>
 
-                                    <!-- Queue preview -->
-                                    <div id="queue" class="mt-3 d-none">
+                                    <!-- Auto-upload Progress Indicator -->
+                                    <div id="uploadProgressContainer" class="mt-3 p-3 border rounded-3 bg-white shadow-sm d-none">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
-                                            <small class="fw-semibold text-muted">ไฟล์ที่เลือกเตรียมอัปโหลด:</small>
-                                            <small class="text-primary fw-semibold" id="queueTotalSize"></small>
+                                            <div class="d-flex align-items-center gap-2">
+                                                <div class="spinner-border spinner-border-sm text-primary" role="status" id="uploadSpinner"></div>
+                                                <span class="small fw-semibold text-primary" id="uploadStatusText">กำลังอัปโหลดไฟล์...</span>
+                                            </div>
+                                            <span class="badge bg-primary rounded-pill px-2" id="uploadPercentBadge">0%</span>
                                         </div>
-                                        <ul class="list-group list-group-flush mb-2 border rounded" id="queueList"></ul>
-                                        <div class="d-flex gap-2">
-                                            <button type="submit" class="btn btn-sm btn-academic rounded-pill px-3">
-                                                <i class="fas fa-upload me-1"></i> อัปโหลดไฟล์ที่เลือก
-                                            </button>
-                                            <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="clearQueueBtn">ยกเลิก</button>
+                                        <div class="progress" style="height: 10px; border-radius: 6px; background-color: #e9ecef;">
+                                            <div id="uploadProgressBar" class="progress-bar progress-bar-striped progress-bar-animated bg-success"
+                                                 role="progressbar" style="width: 0%; transition: width 0.2s ease;"></div>
+                                        </div>
+                                        <div class="small text-muted mt-2 d-flex justify-content-between align-items-center">
+                                            <span id="uploadFileName" class="text-truncate" style="max-width: 75%;"></span>
+                                            <span id="uploadFileSize" class="fw-semibold"></span>
                                         </div>
                                     </div>
                                 </form>
@@ -333,7 +337,7 @@
                             </div>
                             <div th:if="${attachments == null or attachments.isEmpty()}" class="text-center py-4 text-muted">
                                 <i class="fas fa-folder-open fa-2x mb-2 opacity-50 d-block"></i>
-                                <span class="small">ยังไม่มีเอกสารหรือลิงก์แนบ กรุณาอัปโหลดไฟล์หรือแนบลิงก์อย่างน้อย 1 รายการ</span>
+                                <span class="small">ยังไม่มีเอกสารหรือลิงก์แนบ (สามารถอัปโหลดไฟล์หรือระบุลิงก์เพิ่มเติมได้ ไม่บังคับ)</span>
                             </div>
                         </div>
                     </div>
@@ -429,20 +433,21 @@
                                 var hasAttachment = (attCount > 0);
                                 var noOverQuota = (totalBytes <= MAX_TOTAL_BYTES);
 
-                                if (allChecked && hasAttachment && noOverQuota) {
+                                if (allChecked && noOverQuota) {
                                     submitBtn.disabled = false;
                                     alertBox.classList.remove('alert-warning', 'alert-danger');
                                     alertBox.classList.add('alert-success');
-                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบเอกสารแล้ว (' + attCount + ' รายการ, ขนาดรวม ' + (totalBytes / (1024 * 1024)).toFixed(1) + ' MB) ✓ พร้อมบันทึกเอกสาร';
+                                    if (hasAttachment) {
+                                        alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบเอกสารแล้ว (' + attCount + ' รายการ, ขนาดรวม ' + (totalBytes / (1024 * 1024)).toFixed(1) + ' MB) ✓ พร้อมบันทึกเอกสาร';
+                                    } else {
+                                        alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ ✓ พร้อมบันทึกเอกสาร (ไม่มีไฟล์แนบเพิ่มเติม)';
+                                    }
                                 } else {
                                     submitBtn.disabled = true;
                                     alertBox.classList.remove('alert-success');
                                     var reasons = [];
                                     if (!allChecked) {
                                         reasons.push('ติ๊กเครื่องหมายถูก ✓ ทุกข้อก่อนบันทึก (<span id="doc2CheckedCount">' + checked + '</span>/' + total + ')');
-                                    }
-                                    if (!hasAttachment) {
-                                        reasons.push('แนบไฟล์หรือลิงก์เอกสารประกอบอย่างน้อย 1 รายการ');
                                     }
                                     if (!noOverQuota) {
                                         var curMb = (totalBytes / (1024 * 1024)).toFixed(1);
@@ -465,7 +470,7 @@
                                     var submitter = e.submitter;
                                     if (submitter && submitter.value === 'submit' && submitBtn.disabled) {
                                         e.preventDefault();
-                                        alert('ไม่สามารถบันทึกเอกสารได้: กรุณาตรวจสอบว่าติ๊กครบ 5 ข้อ, แนบไฟล์/ลิงก์อย่างน้อย 1 รายการ และขนาดรวมไม่เกิน 75 MB');
+                                        alert('ไม่สามารถบันทึกเอกสารได้: กรุณาตรวจสอบว่าติ๊กครบ 5 ข้อ และขนาดรวมไม่เกิน 75 MB');
                                         return false;
                                     }
                                 });
@@ -474,7 +479,7 @@
                             validateDoc2();
                         })();
 
-                        // === Single Unified Drag & Drop, File Queue & Link Form Handling ===
+                        // === Single Unified Drag & Drop, Auto-Upload & Link Form Handling ===
                         (function() {
                             var ALLOWED_EXTS = ['.pdf', '.docx', '.doc', '.zip'];
                             var MAX_TOTAL_BYTES = 75 * 1024 * 1024; // 75MB total
@@ -485,17 +490,23 @@
 
                             var dropzone = document.getElementById('dropzone');
                             var fileInput = document.getElementById('fileInput');
-                            var queueContainer = document.getElementById('queue');
-                            var queueList = document.getElementById('queueList');
-                            var queueTotalSize = document.getElementById('queueTotalSize');
-                            var clearQueueBtn = document.getElementById('clearQueueBtn');
+                            var form = document.getElementById('attachmentForm');
+                            var progressContainer = document.getElementById('uploadProgressContainer');
+                            var progressBar = document.getElementById('uploadProgressBar');
+                            var percentBadge = document.getElementById('uploadPercentBadge');
+                            var statusText = document.getElementById('uploadStatusText');
+                            var fileNameSpan = document.getElementById('uploadFileName');
+                            var fileSizeSpan = document.getElementById('uploadFileSize');
+                            var isUploading = false;
 
-                            if (dropzone && fileInput) {
+                            if (dropzone && fileInput && form) {
                                 ['dragenter', 'dragover'].forEach(function(ev) {
                                     dropzone.addEventListener(ev, function(e) {
                                         e.preventDefault(); e.stopPropagation();
-                                        dropzone.classList.add('border-primary');
-                                        dropzone.style.background = '#fff';
+                                        if (!isUploading) {
+                                            dropzone.classList.add('border-primary');
+                                            dropzone.style.background = '#fff';
+                                        }
                                     });
                                 });
                                 ['dragleave', 'drop'].forEach(function(ev) {
@@ -507,27 +518,30 @@
                                 });
 
                                 dropzone.addEventListener('drop', function(e) {
+                                    if (isUploading) return;
                                     if (e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length > 0) {
                                         fileInput.files = e.dataTransfer.files;
-                                        updateQueue();
+                                        startAutoUpload();
                                     }
                                 });
 
                                 fileInput.addEventListener('change', function() {
-                                    updateQueue();
+                                    if (isUploading) return;
+                                    if (fileInput.files && fileInput.files.length > 0) {
+                                        startAutoUpload();
+                                    }
                                 });
 
-                                function updateQueue() {
-                                    if (!fileInput.files || fileInput.files.length === 0) {
-                                        if (queueContainer) queueContainer.classList.add('d-none');
-                                        if (queueList) queueList.innerHTML = '';
-                                        return;
-                                    }
+                                function startAutoUpload() {
+                                    var files = fileInput.files;
+                                    if (!files || files.length === 0) return;
 
                                     var invalidFiles = [];
                                     var incomingBytes = 0;
-                                    Array.from(fileInput.files).forEach(function(file) {
+                                    var fileNames = [];
+                                    Array.from(files).forEach(function(file) {
                                         incomingBytes += file.size;
+                                        fileNames.push(file.name);
                                         var lower = file.name.toLowerCase();
                                         if (!ALLOWED_EXTS.some(function(ext) { return lower.endsWith(ext); })) {
                                             invalidFiles.push(file.name);
@@ -537,8 +551,7 @@
                                     if (invalidFiles.length > 0) {
                                         alert('พบไฟล์ที่ไม่รองรับ: ' + invalidFiles.join(', ') + '\nอนุญาตเฉพาะ .pdf, .docx, .doc, .zip');
                                         fileInput.value = '';
-                                        if (queueContainer) queueContainer.classList.add('d-none');
-                                        if (queueList) queueList.innerHTML = '';
+                                        if (progressContainer) progressContainer.classList.add('d-none');
                                         return;
                                     }
 
@@ -553,51 +566,83 @@
                                               '• ขนาดรวมทั้งหมด: ' + totalMb + ' MB (จำกัด 75.0 MB)\n\n' +
                                               'กรุณาลดขนาดไฟล์หรือเลือกไฟล์ใหม่อีกครั้ง');
                                         fileInput.value = '';
-                                        if (queueContainer) queueContainer.classList.add('d-none');
-                                        if (queueList) queueList.innerHTML = '';
+                                        if (progressContainer) progressContainer.classList.add('d-none');
                                         return;
                                     }
 
-                                    if (queueList) queueList.innerHTML = '';
-                                    if (queueTotalSize) {
-                                        queueTotalSize.textContent = 'รวม ' + fileInput.files.length + ' ไฟล์ (' + (incomingBytes / (1024 * 1024)).toFixed(2) + ' MB)';
+                                    // Start Upload State
+                                    isUploading = true;
+                                    if (progressContainer) progressContainer.classList.remove('d-none');
+                                    if (progressBar) {
+                                        progressBar.style.width = '0%';
+                                        progressBar.classList.remove('bg-danger');
+                                        progressBar.classList.add('bg-success', 'progress-bar-striped', 'progress-bar-animated');
                                     }
-                                    Array.from(fileInput.files).forEach(function(file) {
-                                        var sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-                                        var lower = file.name.toLowerCase();
-                                        var iconClass = lower.endsWith('.zip') ? 'fas fa-file-archive text-secondary' :
-                                                       (lower.endsWith('.pdf') ? 'fas fa-file-pdf text-danger' : 'fas fa-file-word text-primary');
-                                        var li = document.createElement('li');
-                                        li.className = 'list-group-item d-flex justify-content-between align-items-center py-2 px-3';
-                                        li.innerHTML = '<div class="d-flex align-items-center gap-2"><i class="' + iconClass + '"></i><span class="small fw-semibold text-break">' + escapeHtml(file.name) + '</span></div><span class="badge bg-secondary rounded-pill" style="font-size:0.75rem;">' + sizeMB + ' MB</span>';
-                                        if (queueList) queueList.appendChild(li);
-                                    });
-                                    if (queueContainer) queueContainer.classList.remove('d-none');
-                                }
+                                    if (percentBadge) {
+                                        percentBadge.className = 'badge bg-primary rounded-pill px-2';
+                                        percentBadge.textContent = '0%';
+                                    }
+                                    if (statusText) statusText.textContent = 'กำลังอัปโหลด ' + files.length + ' ไฟล์...';
+                                    if (fileNameSpan) fileNameSpan.textContent = fileNames.join(', ');
+                                    if (fileSizeSpan) fileSizeSpan.textContent = (incomingBytes / (1024 * 1024)).toFixed(2) + ' MB';
 
-                                var form = document.getElementById('attachmentForm');
-                                if (form) {
-                                    form.addEventListener('submit', function(e) {
-                                        var incomingBytes = 0;
-                                        if (fileInput.files) {
-                                            Array.from(fileInput.files).forEach(function(f) { incomingBytes += f.size; });
-                                        }
-                                        var curBytes = parseInt(dropzone.getAttribute('data-current-bytes') || '0', 10);
-                                        if (curBytes + incomingBytes > MAX_TOTAL_BYTES) {
-                                            e.preventDefault();
-                                            var totalMb = ((curBytes + incomingBytes) / (1024 * 1024)).toFixed(1);
-                                            alert('ไม่สามารถอัปโหลดได้: ขนาดรวม (' + totalMb + ' MB) จะเกินขีดจำกัด 75 MB ต่อคำร้อง');
-                                            return false;
+                                    dropzone.style.pointerEvents = 'none';
+                                    dropzone.style.opacity = '0.6';
+
+                                    // Upload via XHR for live progress
+                                    var xhr = new XMLHttpRequest();
+                                    var formData = new FormData(form);
+
+                                    xhr.upload.addEventListener('progress', function(e) {
+                                        if (e.lengthComputable) {
+                                            var percent = Math.round((e.loaded / e.total) * 100);
+                                            if (progressBar) progressBar.style.width = percent + '%';
+                                            if (percentBadge) percentBadge.textContent = percent + '%';
+                                            if (statusText) statusText.textContent = 'กำลังอัปโหลด... ' + percent + '%';
                                         }
                                     });
-                                }
 
-                                if (clearQueueBtn) {
-                                    clearQueueBtn.addEventListener('click', function() {
+                                    xhr.addEventListener('load', function() {
+                                        if (xhr.status >= 200 && xhr.status < 400) {
+                                            if (progressBar) progressBar.style.width = '100%';
+                                            if (percentBadge) percentBadge.textContent = '100%';
+                                            if (statusText) statusText.textContent = 'อัปโหลดสำเร็จ! กำลังรีเฟรชข้อมูล...';
+                                            setTimeout(function() {
+                                                window.location.reload();
+                                            }, 400);
+                                        } else {
+                                            handleUploadError('เกิดข้อผิดพลาดในการอัปโหลด (HTTP ' + xhr.status + ')');
+                                        }
+                                    });
+
+                                    xhr.addEventListener('error', function() {
+                                        handleUploadError('เกิดข้อผิดพลาดในการเชื่อมต่อเครือข่าย');
+                                    });
+
+                                    xhr.addEventListener('abort', function() {
+                                        handleUploadError('การอัปโหลดถูกยกเลิก');
+                                    });
+
+                                    function handleUploadError(msg) {
+                                        isUploading = false;
+                                        if (statusText) statusText.textContent = msg;
+                                        if (percentBadge) {
+                                            percentBadge.className = 'badge bg-danger rounded-pill px-2';
+                                            percentBadge.textContent = 'ล้มเหลว';
+                                        }
+                                        if (progressBar) {
+                                            progressBar.classList.remove('bg-success');
+                                            progressBar.classList.add('bg-danger');
+                                        }
+                                        dropzone.style.pointerEvents = 'auto';
+                                        dropzone.style.opacity = '1';
                                         fileInput.value = '';
-                                        if (queueContainer) queueContainer.classList.add('d-none');
-                                        if (queueList) queueList.innerHTML = '';
-                                    });
+                                        alert(msg);
+                                    }
+
+                                    xhr.open('POST', form.action, true);
+                                    xhr.setRequestHeader('X-Requested-With', 'XMLHttpRequest');
+                                    xhr.send(formData);
                                 }
                             }
 

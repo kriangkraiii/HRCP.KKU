@@ -70,12 +70,12 @@ public class EvaluationExpiryScheduler {
                 continue;
             }
 
-            LocalDateTime expiry = request.getEvaluationExpiryDate();
+            LocalDateTime expiry = academicService.getLatestEvaluationExpiry(user.getId());
             if (expiry == null) {
-                expiry = academicService.getLatestEvaluationExpiry(user.getId());
-                if (expiry == null) {
-                    continue;
-                }
+                expiry = request.getEvaluationExpiryDate();
+            }
+            if (expiry == null) {
+                continue;
             }
 
             long daysLeft = java.time.temporal.ChronoUnit.DAYS.between(now, expiry);

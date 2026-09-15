@@ -11,6 +11,20 @@
             </div>
             <h3 class="mb-4"><i class="fas fa-university"></i> การยื่นขอตำแหน่งทางวิชาการ — เลือกผลประเมินการสอน</h3>
 
+            <!-- Flash alerts -->
+            <div th:if="${info}" class="alert alert-success alert-dismissible fade show mb-4">
+                <i class="fas fa-circle-check me-2"></i> <span th:text="${info}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${error}" class="alert alert-danger alert-dismissible fade show mb-4">
+                <i class="fas fa-circle-exclamation me-2"></i> <span th:text="${error}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+            <div th:if="${success}" class="alert alert-success alert-dismissible fade show mb-4">
+                <i class="fas fa-circle-check me-2"></i> <span th:text="${success}"></span>
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
             <!-- ขอ ศ. ไม่ต้องใช้ผลประเมินการสอน -->
             <div th:if="${canApplyForProfessor}" class="card card-academic mb-4">
                 <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
@@ -26,8 +40,8 @@
                 </div>
             </div>
 
-            <!-- ไม่มีผลประเมินที่ใช้ได้เลย -->
-            <div th:unless="${hasAny}" class="alert alert-warning">
+            <!-- ไม่มีผลประเมินที่ใช้ได้เลย (สำหรับผู้ที่ต้องใช้ผลประเมิน) -->
+            <div th:if="${!hasAny and !canApplyForProfessor}" class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <strong>ไม่พบผลการประเมินผลการสอนที่ใช้ได้</strong>
                 <p class="mb-0 mt-2">การขอตำแหน่งผู้ช่วยศาสตราจารย์และรองศาสตราจารย์ ต้องมีผลการประเมินผลการสอนที่ <strong>ผ่านและยังไม่หมดอายุ</strong></p>
