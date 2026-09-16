@@ -161,6 +161,19 @@ class DocumentFieldOwnershipTest {
         }
 
         @Test
+        @DisplayName("เฟส 2 เอกสาร 6 เลขที่หนังสือเป็นของเจ้าหน้าที่ แต่วันที่เป็นของผู้ยื่น")
+        void phase2DocumentSixKeepsTheMemoNumberWithTheOffice() {
+            Map<String, String> submitted = map("memo_no", "ผู้ยื่นแต่งเอง", "date", "๑๐ มีนาคม ๒๕๖๙");
+            Map<String, String> existing = map("memo_no", "อว 660301.26.3/45");
+
+            Map<String, String> result = DocumentFieldOwnership.merge(P2, 6, false, submitted, existing);
+
+            assertThat(result)
+                    .containsEntry("memo_no", "อว 660301.26.3/45")
+                    .containsEntry("date", "๑๐ มีนาคม ๒๕๖๙");
+        }
+
+        @Test
         @DisplayName("เฟส 2 เอกสาร 3 ช่องคณบดีเป็นของแอดมิน แต่วันที่รับรองเป็นของผู้ยื่น")
         void phase2DocumentThreeSplitsDeanFieldsFromTheApplicants() {
             Map<String, String> submitted = map(

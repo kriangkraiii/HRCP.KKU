@@ -174,6 +174,49 @@ class AdminCannotEditApplicantDocumentTest extends AbstractFlowTest {
         }
 
         @Test
+        @DisplayName("เอกสารที่ 6 ขึ้นเลขที่หนังสือตั้งต้น และเจ้าหน้าที่กรอกทับได้")
+        void documentSixOffersTheMemoNumberDefault() throws Exception {
+            PositionRequest request = data.positionRequest(applicant,
+                    PositionRequestStatus.DOCUMENT_RECEIVED, null);
+            data.positionDocument(request, 6, "{\"applicant_name\":\"ผู้ยื่นกรอกไว้\"}");
+
+            String html = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                    .get("/admin/position/request/" + request.getId() + "/document/6")
+                    .with(as(officer)))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(html).contains("อว 660301.26.3/");
+
+            mvc.perform(post("/admin/position/request/" + request.getId() + "/document/6")
+                    .with(as(officer)).with(csrf())
+                    .param("memo_no", "อว 660301.26.3/45")
+                    .param("applicant_name", "แอดมินแอบแก้"))
+                    .andExpect(status().is3xxRedirection());
+
+            assertThat(positionService.getLatestDocumentData(request.getId(), 6))
+                    .containsEntry("memo_no", "อว 660301.26.3/45")
+                    .containsEntry("applicant_name", "ผู้ยื่นกรอกไว้");
+        }
+
+        @Test
+        @DisplayName("เปิดหน้าเอกสารที่ 4 ซ้ำ เลขที่หนังสือที่บันทึกไว้ต้องไม่ถูกค่าตั้งต้นทับ")
+        void documentFourKeepsTheSavedMemoNumberOnReopen() throws Exception {
+            PositionRequest request = data.positionRequest(applicant,
+                    PositionRequestStatus.DOCUMENT_RECEIVED, null);
+            data.positionDocument(request, 4, "{\"memo_no\":\"อว 660301.26.8/77\"}");
+
+            String html = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                    .get("/admin/position/request/" + request.getId() + "/document/4")
+                    .with(as(officer)))
+                    .andExpect(status().isOk())
+                    .andReturn().getResponse().getContentAsString();
+
+            assertThat(html)
+                    .as("เลขที่บันทึกไว้ต้องขึ้นในช่อง ไม่ใช่ค่าตั้งต้นเปล่า ๆ")
+                    .contains("อว 660301.26.8/77");
+        }
+
+        @Test
         @DisplayName("เอกสารที่ 7 ยังเป็นของแอดมินเต็มฉบับ")
         void documentSevenRemainsTheOfficersOwn() throws Exception {
             PositionRequest request = data.positionRequest(applicant,

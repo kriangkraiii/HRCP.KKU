@@ -54,7 +54,8 @@ public final class DocumentFieldOwnership {
             SignatureModule.POSITION, Map.of(
                     3, Set.of("dean_name", "dean_position", "verify_date"),
                     4, Set.of("memo_no", "department_head_name"),
-                    6, Set.of("applicant_signature_name", "dean_signature_name", "position_title")));
+                    6, Set.of("memo_no", "applicant_signature_name", "dean_signature_name",
+                            "position_title")));
 
     /** เอกสารฉบับนี้เป็นของผู้ยื่นหรือไม่ — ที่ไม่รู้จักถือว่าเป็นของแอดมิน ปลอดภัยไว้ก่อน */
     public static boolean isApplicantDocument(SignatureModule module, int documentType) {
