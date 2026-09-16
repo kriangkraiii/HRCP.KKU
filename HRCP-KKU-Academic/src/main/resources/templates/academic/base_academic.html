@@ -1056,12 +1056,23 @@
                 document.body.appendChild(floatBack);
 
                 // ซ่อนปุ่ม back บนสุดเดิมเพื่อไม่ให้ซ้ำซ้อนกับปุ่มลอย
-                document.querySelectorAll('.container > .mb-3 > .btn-back-pill, .container > .mb-4 > .btn-back-pill, .container > div:first-child > .btn-back-pill').forEach(function(b) {
-                    var parent = b.closest('.mb-3, .mb-4, div');
+                if (backBtn) {
+                    var parent = backBtn.closest('.mb-3, .mb-4, div');
                     if (parent && parent.children.length === 1 && !parent.closest('form')) {
                         parent.style.display = 'none';
                     } else {
-                        b.style.display = 'none';
+                        backBtn.style.display = 'none';
+                    }
+                }
+
+                document.querySelectorAll('.btn-back-pill:not(.floating-doc-btn)').forEach(function(b) {
+                    if (!b.closest('form')) {
+                        var parent = b.closest('.mb-3, .mb-4, div');
+                        if (parent && parent.children.length === 1 && !parent.closest('form')) {
+                            parent.style.display = 'none';
+                        } else {
+                            b.style.display = 'none';
+                        }
                     }
                 });
             }

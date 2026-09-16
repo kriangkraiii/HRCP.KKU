@@ -530,6 +530,11 @@ body {
   }
 }
 
+/* ซ่อนปุ่มกลับเดิม (อันเล็ก) เมื่อมีปุ่มลอยทำงานอยู่ */
+body:has(.floating-doc-btn-back) .btn-back-pill:not(.floating-doc-btn):not(form .btn-back-pill) {
+  display: none !important;
+}
+
 /* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
   *,
