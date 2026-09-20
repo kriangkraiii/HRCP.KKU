@@ -347,7 +347,12 @@ public class PositionAdminController {
                     + "/document/" + type + "?error=document_locked_for_signing";
         }
 
-        boolean sendNotify = "true".equals(formData.getOrDefault("sendNotify", "false"));
+        // กล่องยืนยันเสนอสองทาง: "บันทึกอย่างเดียว" กับ "แจ้งเตือนผู้ยื่นและอัปเดตสถานะ"
+        // ค่านี้คือคำตอบของเจ้าหน้าที่ จึงคุมทั้งการเลื่อนสถานะและการส่งอีเมล ไม่ใช่แค่อีเมล
+        // อย่างที่เคยเป็น — ของเดิมเลื่อนสถานะทุกครั้งที่กดบันทึก สวนกับข้อความในกล่องเอง
+        // ที่เขียนว่า "บันทึกไฟล์โดยยังไม่อัปเดตสถานะได้" เจ้าหน้าที่ที่กรอกไปครึ่งเดียวจึงดัน
+        // คำร้องข้ามขั้นโดยไม่ตั้งใจ แล้วถอยกลับไม่ได้เพราะลำดับสถานะถูกคุมไว้
+        boolean confirmedComplete = "true".equals(formData.getOrDefault("sendNotify", "false"));
         formData.remove("_csrf");
         formData.remove("sendNotify");
         formData.remove("action");
@@ -405,11 +410,12 @@ public class PositionAdminController {
                         getClientIpAddress());
             } catch (Exception logEx) { /* ignore */ }
 
-            // Advance the status; notify only if the officer asked to.
-            // Same reasoning as the Phase 1 controller: the checkbox decides who
-            // gets an e-mail, not whether the step counts as done.
+            // เลื่อนสถานะเฉพาะตอนที่เจ้าหน้าที่ยืนยันว่าเอกสารเสร็จแล้ว การกดบันทึกเฉย ๆ
+            // คือการเก็บงานที่ทำค้างไว้ ไม่ใช่การประกาศว่าขั้นตอนนี้จบ
             try {
-                positionService.autoUpdateStatusByDocument(id, type, admin, jsonData, sendNotify);
+                if (confirmedComplete) {
+                    positionService.autoUpdateStatusByDocument(id, type, admin, jsonData, true);
+                }
             } catch (Exception e) {
                 logger.warn("Phase2 auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
                 redirectAttributes.addFlashAttribute("succMsg", "บันทึก" + label + "เรียบร้อยแล้ว");
