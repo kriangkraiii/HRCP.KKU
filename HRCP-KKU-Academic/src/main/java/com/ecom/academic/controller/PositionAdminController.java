@@ -190,7 +190,7 @@ public class PositionAdminController {
         Integer applicantId = request.getApplicant().getId();
         List<com.ecom.academic.model.AcademicRequest> evalRequests = academicRequestRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId);
         for (com.ecom.academic.model.AcademicRequest evalReq : evalRequests) {
-            List<com.ecom.academic.model.AcademicDocument> evalDoc9List = academicDocumentRepository.findByRequestIdAndDocumentType(evalReq.getId(), 9);
+            List<com.ecom.academic.model.AcademicDocument> evalDoc9List = academicDocumentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(evalReq.getId(), 9);
             if (!evalDoc9List.isEmpty() && evalDoc9List.get(0).getJsonData() != null) {
                 try {
                     java.util.Map<String, String> evalDoc9Data = objectMapper.readValue(

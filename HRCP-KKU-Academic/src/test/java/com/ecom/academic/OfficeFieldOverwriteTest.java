@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.io.ByteArrayInputStream;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
@@ -19,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 
+import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
@@ -30,6 +32,8 @@ import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.SignedDocumentRenderer;
 import com.ecom.model.UserDtls;
 import com.ecom.support.AbstractFlowTest;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
  * เลขที่หนังสือและวันที่เอกสารเขียนทับได้หลังลงนามครบ
@@ -53,6 +57,8 @@ class OfficeFieldOverwriteTest extends AbstractFlowTest {
 
     @Autowired
     private SignedDocumentRenderer renderer;
+
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private UserDtls applicant;
     private UserDtls officer;
@@ -198,6 +204,81 @@ class OfficeFieldOverwriteTest extends AbstractFlowTest {
             assertThat(SignatureWorkflowService.sha256(after.getFrozenJson()))
                     .isEqualTo(after.getFrozenHash());
             assertThat(after.getFrozenJson()).doesNotContain("อว 660301.26.8/13");
+        }
+    }
+
+    /**
+     * เอกสารที่ 5 ของเฟส 1 ถูกบันทึกเป็นสามแถว หนึ่งแถวต่อกรรมการหนึ่งท่าน
+     * ({@link com.ecom.academic.controller.AcademicAdminController} วนเรียก
+     * {@code saveDocument} ทีละสำเนา) และทั้งสามฉบับใช้เลขที่หนังสือและวันที่เดียวกัน
+     *
+     * <p>เจ้าหน้าที่กรอกครั้งเดียว ค่าต้องลงครบทุกแถว ไม่ใช่ลงแถวเดียวแล้วอีกสองแถวค้าง
+     * เลขเก่าไว้ — ซึ่งจะทำให้อ่านได้คนละคำตอบแล้วแต่ว่าใครหยิบแถวไหนไปใช้
+     *
+     * <p>ค่าที่ตั้งให้แต่ละแถวต่างกันในเทสต์นี้เป็นการจงใจ เพื่อพิสูจน์ว่าการลงเลขที่หนังสือ
+     * แตะเฉพาะช่องสารบรรณจริง ๆ ไม่ได้เขียนทับทั้งแถว (ของจริงสามแถวเก็บ JSON ชุดเดียวกัน
+     * ต่างกันแค่ไฟล์ที่สร้างกับป้ายกำกับสำเนา)
+     */
+    @Nested
+    @DisplayName("เอกสารที่มีหลายสำเนา")
+    class AcrossCopies {
+
+        @Test
+        @DisplayName("กรอกครั้งเดียว เลขที่หนังสือต้องลงครบทั้งสามสำเนา")
+        void writesToEveryCopy() throws Exception {
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+            for (int copy = 1; copy <= 3; copy++) {
+                data.academicDocument(request, 5,
+                        "{\"memo_no\":\"อว 660301.26.4/ว.\",\"committee_name\":\"กรรมการคนที่ "
+                                + copy + "\"}",
+                        copy);
+            }
+            envelopeFor(request.getId(), 5, SignatureRequestStatus.COMPLETED);
+
+            mvc.perform(post("/admin/academic/request/" + request.getId() + "/document/5")
+                    .with(as(officer)).with(csrf())
+                    .param("action", "draft")
+                    .param("memo_no", "อว 660301.26.4/ว.77")
+                    .param("date", "๒๑ กันยายน ๒๕๖๙"))
+                    .andExpect(status().is3xxRedirection());
+
+            List<AcademicDocument> copies = academicService.getDocumentsByType(request.getId(), 5);
+            assertThat(copies).hasSize(3);
+            for (AcademicDocument copy : copies) {
+                Map<String, String> stored = objectMapper.readValue(copy.getJsonData(),
+                        new TypeReference<Map<String, String>>() {
+                        });
+                assertThat(stored)
+                        .as("สำเนาที่ %d", copy.getCopyNumber())
+                        .containsEntry("memo_no", "อว 660301.26.4/ว.77")
+                        .containsEntry("date", "๒๑ กันยายน ๒๕๖๙")
+                        // ที่เหลือของแต่ละสำเนาต้องไม่ถูกแตะ
+                        .containsEntry("committee_name", "กรรมการคนที่ " + copy.getCopyNumber());
+            }
+        }
+
+        @Test
+        @DisplayName("auto-draft ก็ต้องลงครบทั้งสามสำเนาเหมือนกัน")
+        void autoDraftWritesToEveryCopyToo() throws Exception {
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+            for (int copy = 1; copy <= 3; copy++) {
+                data.academicDocument(request, 5, "{\"memo_no\":\"อว 660301.26.4/ว.\"}", copy);
+            }
+            envelopeFor(request.getId(), 5, SignatureRequestStatus.COMPLETED);
+
+            mvc.perform(post("/api/draft/academic/" + request.getId() + "/5")
+                    .with(as(officer)).with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"memo_no\":\"อว 660301.26.4/ว.77\"}"))
+                    .andExpect(status().isOk());
+
+            List<AcademicDocument> copies = academicService.getDocumentsByType(request.getId(), 5);
+            assertThat(copies).hasSize(3);
+            for (AcademicDocument copy : copies) {
+                assertThat(copy.getJsonData())
+                        .as("สำเนาที่ %d", copy.getCopyNumber())
+                        .contains("อว 660301.26.4/ว.77");
+            }
         }
     }
 

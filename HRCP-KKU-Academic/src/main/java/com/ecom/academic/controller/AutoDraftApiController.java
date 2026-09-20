@@ -22,6 +22,8 @@ import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @RestController
 @RequestMapping("/api")
@@ -80,21 +82,31 @@ public class AutoDraftApiController {
                         .body(Map.of("error", "เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้"));
             }
 
+            String label = academicService.getDocLabel(docType);
+
+            // ลงนามครบแล้ว: เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่ และต้องลงครบทุกสำเนา
+            // เอกสารที่ 5 มีสามแถว (กรรมการคนละท่าน) แต่เป็นหนังสือฉบับเดียวกัน
+            if (isAdmin && signingComplete) {
+                Map<String, String> submitted = parseFields(jsonData);
+                if (submitted == null) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
+                }
+                academicService.saveOfficeFieldsAcrossCopies(request, docType, submitted, label);
+                academicService.logDocumentEdit(request, docType, label, user,
+                        AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
+                return ResponseEntity.ok(Map.of("status", "saved", "type", "academic"));
+            }
+
             // เจ้าหน้าที่แก้เอกสารของผู้ยื่นไม่ได้ และผู้ยื่นก็แก้ช่องของเจ้าหน้าที่ไม่ได้เช่นกัน
-            // ส่วนเอกสารที่ลงนามครบแล้ว เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่เท่านั้น
-            Map<String, String> existing = academicService.getLatestDocumentData(requestId, docType);
-            String filtered = (isAdmin && signingComplete)
-                    ? DocumentFieldOwnership.mergeOfficeFieldsJson(
-                            SignatureModule.ACADEMIC, docType, jsonData, existing)
-                    : DocumentFieldOwnership.mergeJson(
-                            SignatureModule.ACADEMIC, docType, isAdmin, jsonData, existing);
+            String filtered = DocumentFieldOwnership.mergeJson(SignatureModule.ACADEMIC, docType,
+                    isAdmin, jsonData, academicService.getLatestDocumentData(requestId, docType));
             if (filtered == null) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
             }
             jsonData = filtered;
 
-            String label = academicService.getDocLabel(docType);
             academicService.saveDraft(request, docType, jsonData, label, null);
 
             // Log academic document edit
@@ -151,6 +163,7 @@ public class AutoDraftApiController {
                             SignatureModule.POSITION, docType, jsonData, existing)
                     : DocumentFieldOwnership.mergeJson(
                             SignatureModule.POSITION, docType, isAdmin, jsonData, existing);
+            // เฟส 2 เก็บเอกสารฉบับละแถวเดียว ไม่มีสำเนาแบบเอกสารที่ 5 ของเฟส 1
             if (filtered == null) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
@@ -191,6 +204,20 @@ public class AutoDraftApiController {
             return ResponseEntity.ok(Map.of("enabled", newVal));
         } catch (Exception e) {
             return internalError("auto-draft toggle", null, e);
+        }
+    }
+
+    /** request body ดิบ → map ของช่อง คืน null เมื่ออ่านไม่ออก (ผู้เรียกต้องปฏิเสธ) */
+    private Map<String, String> parseFields(String jsonData) {
+        if (jsonData == null || jsonData.isBlank()) {
+            return null;
+        }
+        try {
+            return new ObjectMapper().readValue(jsonData,
+                    new TypeReference<Map<String, String>>() {
+                    });
+        } catch (Exception e) {
+            return null;
         }
     }
 

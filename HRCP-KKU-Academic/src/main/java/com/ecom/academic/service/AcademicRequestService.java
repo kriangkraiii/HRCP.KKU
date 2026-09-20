@@ -44,6 +44,17 @@ public class AcademicRequestService {
         DOC_LABELS.put(9, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
     }
 
+    /**
+     * เอกสารที่ออกเป็นหลายฉบับ ฉบับละกรรมการหนึ่งท่าน
+     *
+     * <p>อยู่ที่นี่ที่เดียว เพราะตอนทีมเลื่อนเลขเอกสารทั้งชุด (doc0 → doc1) เลขที่ฮาร์ดโค้ด
+     * ไว้ตามเทมเพลตไม่ได้เลื่อนตาม ป้าย "3 สำเนา" จึงไปค้างอยู่ที่เอกสารที่ 4 อยู่นาน
+     */
+    public static final int COMMITTEE_COPIES_DOC_TYPE = 5;
+
+    /** จำนวนฉบับที่ {@link #COMMITTEE_COPIES_DOC_TYPE} ออก — เท่ากับจำนวนอนุกรรมการ */
+    public static final int COMMITTEE_COPIES = 3;
+
     private final AcademicRequestRepository requestRepository;
 
     private final AcademicDocumentRepository documentRepository;
@@ -288,7 +299,7 @@ public class AcademicRequestService {
     }
 
     public List<AcademicDocument> getDocumentsByType(Long requestId, int documentType) {
-        return documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
+        return documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType);
     }
 
     /**
@@ -311,6 +322,67 @@ public class AcademicRequestService {
                     });
         } catch (Exception e) {
             return null;
+        }
+    }
+
+    /**
+     * ลงเลขที่หนังสือและวันที่เอกสารให้ทุกสำเนาของเอกสารฉบับนั้น
+     *
+     * <p>เอกสารที่ 5 ถูกบันทึกเป็นสามแถว หนึ่งแถวต่อกรรมการหนึ่งท่าน แต่ทั้งสามฉบับเป็น
+     * หนังสือฉบับเดียวกัน ใช้เลขที่และวันที่ร่วมกัน เจ้าหน้าที่จึงกรอกครั้งเดียวแล้วต้องลง
+     * ครบทุกแถว — ถ้าเขียนแค่แถวเดียว อีกสองแถวจะค้างเลขเก่าไว้ แล้วคำตอบจะต่างกัน
+     * ไปตามว่าใครหยิบแถวไหนไปใช้ ({@link #getLatestDocumentData} หยิบแถวท้าย ส่วนฟอร์ม
+     * ของเจ้าหน้าที่แสดงแถวแรก)
+     *
+     * <p>ช่องอื่นของแต่ละสำเนา เช่นชื่อกรรมการ ไม่ถูกแตะ เพราะ
+     * {@link DocumentFieldOwnership#mergeOfficeFields} รับเฉพาะช่องสารบรรณเท่านั้น
+     *
+     * @param submitted ค่าที่ส่งมาจากฟอร์ม (จะถูกกรองเหลือเฉพาะช่องสารบรรณ)
+     * @return จำนวนแถวที่เขียนจริง
+     */
+    @Transactional
+    public int saveOfficeFieldsAcrossCopies(AcademicRequest request, int documentType,
+            Map<String, String> submitted, String label) {
+        List<AcademicDocument> docs = getDocumentsByType(request.getId(), documentType);
+        if (docs.isEmpty()) {
+            // ยังไม่มีแถวเลย — เปิดแถวร่างให้ เพื่อไม่ให้เลขที่กรอกไว้หายไปเฉย ๆ
+            Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
+                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, null);
+            saveDraft(request, documentType, writeJson(merged), label, null);
+            return 1;
+        }
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper =
+                new com.fasterxml.jackson.databind.ObjectMapper();
+        int written = 0;
+        for (AcademicDocument doc : docs) {
+            Map<String, String> existing = null;
+            String json = doc.getJsonData();
+            if (json != null && !json.isBlank()) {
+                try {
+                    existing = mapper.readValue(json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                            });
+                } catch (Exception e) {
+                    // แถวที่อ่านไม่ออกก็ยังลงเลขให้ได้ ดีกว่าปล่อยให้ทั้งชุดล้มเพราะแถวเดียว
+                    log.warn("Document {} copy {} holds unreadable JSON; writing office fields onto a fresh map",
+                            doc.getId(), doc.getCopyNumber());
+                }
+            }
+            Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
+                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, existing);
+            doc.setJsonData(writeJson(merged));
+            documentRepository.save(doc);
+            written++;
+        }
+        return written;
+    }
+
+    private String writeJson(Map<String, String> data) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(data);
+        } catch (Exception e) {
+            throw new IllegalStateException("แปลงข้อมูลเอกสารเป็น JSON ไม่ได้", e);
         }
     }
 
@@ -373,14 +445,14 @@ public class AcademicRequestService {
 
     /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
     public boolean isRevisionRequested(Long requestId, int documentType) {
-        var docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
+        var docs = documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType);
         return docs.stream()
                 .anyMatch(AcademicDocument::isRevisionRequested);
     }
 
     /** เหตุผลที่แอดมินส่งเอกสารฉบับนี้กลับมาให้แก้ไข (ถ้ามี) */
     public String getRevisionNote(Long requestId, int documentType) {
-        var docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
+        var docs = documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType);
         return docs.stream()
                 .filter(AcademicDocument::isRevisionRequested)
                 .map(AcademicDocument::getRevisionNote)
@@ -397,7 +469,7 @@ public class AcademicRequestService {
      */
     @Transactional
     public void openDocumentForRevision(Long requestId, int documentType, String note) {
-        List<AcademicDocument> docs = documentRepository.findByRequestIdAndDocumentType(requestId, documentType);
+        List<AcademicDocument> docs = documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType);
         String trimmed = (note != null && !note.isBlank()) ? note.trim() : null;
         if (trimmed != null && trimmed.length() > 500) {
             trimmed = trimmed.substring(0, 500);
@@ -1024,7 +1096,7 @@ public class AcademicRequestService {
     /** The stored form data of one document, or an empty map when there is none. */
     private Map<String, String> documentData(Long requestId, int documentType) {
         List<AcademicDocument> docs = documentRepository
-                .findByRequestIdAndDocumentType(requestId, documentType);
+                .findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType);
         for (AcademicDocument doc : docs) {
             if (doc.getJsonData() == null || doc.getJsonData().isBlank()) {
                 continue;
@@ -1090,7 +1162,7 @@ public class AcademicRequestService {
         }
         // The result is evidenced by document 9, the notification of the result.
         List<AcademicDocument> doc9s = documentRepository
-                .findByRequestIdAndDocumentType(request.getId(), 9);
+                .findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(request.getId(), 9);
         if (doc9s.isEmpty() || doc9s.get(0).getJsonData() == null) {
             return false;
         }

@@ -338,6 +338,12 @@ public class AcademicAdminController {
         model.addAttribute("statusHistory", requestService.getStatusHistory(id));
         model.addAttribute("editHistory", requestService.getEditHistory(id));
         model.addAttribute("docLabels", DOC_LABELS);
+        // เลขเอกสารมาจากที่เดียว ไม่ฮาร์ดโค้ดในเทมเพลต — ตอนเลื่อนเลขเอกสารทั้งชุดครั้งก่อน
+        // ป้าย "3 สำเนา" กับปุ่มขอให้เซ็นใหม่ไม่ได้เลื่อนตาม เลยไปชี้เอกสารผิดฉบับอยู่นาน
+        model.addAttribute("multiCopyDocType", AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE);
+        model.addAttribute("multiCopyCount", AcademicRequestService.COMMITTEE_COPIES);
+        model.addAttribute("applicantDocTypes",
+                DocumentFieldOwnership.applicantDocuments(SignatureModule.ACADEMIC));
         model.addAttribute("attachments", requestService.getAttachments(id));
         model.addAttribute("attachmentCount", requestService.countAttachments(id));
 
@@ -614,11 +620,10 @@ public class AcademicAdminController {
         // ไม่สร้างไฟล์ใหม่ไม่ว่าจะกดปุ่มไหน เพราะเอกสารฉบับจริงคือฉบับที่ลงนามไปแล้ว
         // ค่าที่กรอกตรงนี้ไปโผล่บนเอกสารผ่าน OfficeFieldResolver ตอน render
         if (signingComplete) {
-            String jsonData = objectMapper.writeValueAsString(
-                    DocumentFieldOwnership.mergeOfficeFields(SignatureModule.ACADEMIC, type,
-                            formData, requestService.getLatestDocumentData(id, type)));
-            requestService.saveDraft(request, type, jsonData,
-                    DOC_LABELS.getOrDefault(type, "Document " + type), null);
+            // เขียนลงทุกสำเนา — เอกสารที่ 5 มีสามแถว (กรรมการคนละท่าน) แต่เป็นหนังสือ
+            // ฉบับเดียวกัน ใช้เลขที่และวันที่ร่วมกัน
+            requestService.saveOfficeFieldsAcrossCopies(request, type, formData,
+                    DOC_LABELS.getOrDefault(type, "Document " + type));
             requestService.logDocumentEdit(request, type, DOC_LABELS.get(type), getUser(principal),
                     AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
             return "redirect:/admin/academic/request/" + id + "/document/" + type + "?saved=office";

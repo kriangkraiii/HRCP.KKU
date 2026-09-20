@@ -293,13 +293,26 @@ public class TestDataFactory {
     }
 
     public AcademicDocument academicDocument(AcademicRequest request, int type, String json) {
+        return academicDocument(request, type, json, 0);
+    }
+
+    /**
+     * สำเนาที่ {@code copyNumber} ของเอกสารฉบับหนึ่ง
+     *
+     * <p>เอกสารที่ 5 ของเฟส 1 ถูกบันทึกเป็นสามแถว หนึ่งแถวต่อกรรมการหนึ่งท่าน
+     * ({@code AcademicAdminController} เรียก {@code saveDocument} วนสามรอบ) อะไรที่
+     * ทำงานกับ "เอกสารฉบับหนึ่ง" จึงต้องคิดเผื่อว่ามันมีได้หลายแถว
+     */
+    public AcademicDocument academicDocument(AcademicRequest request, int type, String json,
+            int copyNumber) {
         AcademicDocument d = new AcademicDocument();
         d.setRequest(request);
         d.setDocumentType(type);
-        d.setCopyNumber(0);
+        d.setCopyNumber(copyNumber);
         d.setJsonData(json);
         d.setIsDraft(false);
-        d.setDocumentLabel("เอกสารทดสอบที่ " + type);
+        d.setDocumentLabel("เอกสารทดสอบที่ " + type
+                + (copyNumber > 0 ? " (สำเนาที่ " + copyNumber + ")" : ""));
         return academicDocuments.save(d);
     }
 

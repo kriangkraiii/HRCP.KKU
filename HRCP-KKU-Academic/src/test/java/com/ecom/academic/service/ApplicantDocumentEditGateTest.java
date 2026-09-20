@@ -91,7 +91,7 @@ class ApplicantDocumentEditGateTest {
     @Test
     @DisplayName("ส่งคำร้องแล้วและแอดมินยังไม่ได้ส่งกลับ: แก้ไม่ได้")
     void submittedRequest_isLocked() {
-        when(documentRepository.findByRequestIdAndDocumentType(1L, 0))
+        when(documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(1L, 0))
                 .thenReturn(List.of(document(false)));
 
         assertThat(service.canApplicantEditDocument(request, 0)).isFalse();
@@ -100,9 +100,9 @@ class ApplicantDocumentEditGateTest {
     @Test
     @DisplayName("แอดมินส่งกลับมาให้แก้: แก้ได้เฉพาะเอกสารฉบับนั้น")
     void sentBackByAdmin_isEditable() {
-        when(documentRepository.findByRequestIdAndDocumentType(1L, 0))
+        when(documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(1L, 0))
                 .thenReturn(List.of(document(true)));
-        when(documentRepository.findByRequestIdAndDocumentType(1L, 1))
+        when(documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(1L, 1))
                 .thenReturn(List.of(document(false)));
 
         assertThat(service.canApplicantEditDocument(request, 0)).isTrue();
@@ -112,7 +112,7 @@ class ApplicantDocumentEditGateTest {
     @Test
     @DisplayName("ส่งกลับแล้วแต่ผู้ยื่นลงนามใหม่ไปแล้ว: ล็อกกลับทันที")
     void sentBackButAlreadyResigned_isLockedAgain() {
-        when(documentRepository.findByRequestIdAndDocumentType(1L, 0))
+        when(documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(1L, 0))
                 .thenReturn(List.of(document(true)));
         when(signatureRequestRepository.findBlockingEnvelopes(SignatureModule.ACADEMIC, 1L, 0))
                 .thenReturn(List.of(new SignatureRequest()));
@@ -123,7 +123,7 @@ class ApplicantDocumentEditGateTest {
     @Test
     @DisplayName("คำร้องจบกระบวนการแล้ว: ไม่เปิดให้แก้แม้เคยส่งกลับ")
     void closedRequest_isNeverEditable() {
-        when(documentRepository.findByRequestIdAndDocumentType(1L, 0))
+        when(documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(1L, 0))
                 .thenReturn(List.of(document(true)));
 
         for (RequestStatus closed : List.of(RequestStatus.COMPLETED, RequestStatus.COMPLETED_PASS,
@@ -139,7 +139,7 @@ class ApplicantDocumentEditGateTest {
     @DisplayName("openDocumentForRevision บันทึกเวลาและเหตุผลลงเอกสารฉบับที่ระบุ")
     void openForRevision_stampsDocument() {
         AcademicDocument doc = document(false);
-        when(documentRepository.findByRequestIdAndDocumentType(1L, 1)).thenReturn(List.of(doc));
+        when(documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(1L, 1)).thenReturn(List.of(doc));
 
         service.openDocumentForRevision(1L, 1, "  ข้อมูลไม่ครบถ้วน  ");
 
@@ -152,7 +152,7 @@ class ApplicantDocumentEditGateTest {
     @DisplayName("เหตุผลยาวเกิน 500 ตัวอักษรต้องถูกตัด ไม่ให้ชนขนาดคอลัมน์")
     void openForRevision_truncatesLongReason() {
         AcademicDocument doc = document(false);
-        when(documentRepository.findByRequestIdAndDocumentType(eq(1L), eq(1))).thenReturn(List.of(doc));
+        when(documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(eq(1L), eq(1))).thenReturn(List.of(doc));
 
         service.openDocumentForRevision(1L, 1, "ก".repeat(700));
 

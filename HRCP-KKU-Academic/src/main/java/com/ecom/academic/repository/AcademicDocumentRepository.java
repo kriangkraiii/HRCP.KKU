@@ -14,7 +14,15 @@ public interface AcademicDocumentRepository extends JpaRepository<AcademicDocume
     Optional<AcademicDocument> findByRequestIdAndDocumentTypeAndCopyNumber(Long requestId, Integer documentType,
             Integer copyNumber);
 
-    List<AcademicDocument> findByRequestIdAndDocumentType(Long requestId, Integer documentType);
+    /**
+     * ทุกฉบับของเอกสารประเภทหนึ่ง เรียงตามลำดับที่กรอก
+     *
+     * <p>เอกสารที่ 5 ออกเป็นสามฉบับ ฉบับละกรรมการหนึ่งท่าน และลำดับมีความหมาย —
+     * สำเนาที่ 1 คือประธานอนุกรรมการ ที่ 3 คืออนุกรรมการและเลขานุการ เดิมเมธอดนี้ไม่มี
+     * {@code ORDER BY} เลย ลำดับจึงขึ้นกับฐานข้อมูล และผู้เรียกที่หยิบ {@code get(0)}
+     * กับที่หยิบแถวท้ายได้คนละฉบับกันโดยไม่มีใครรู้
+     */
+    List<AcademicDocument> findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(Long requestId, Integer documentType);
 
     List<AcademicDocument> findByRequestIdOrderByDocumentTypeAscCopyNumberAsc(Long requestId);
 
