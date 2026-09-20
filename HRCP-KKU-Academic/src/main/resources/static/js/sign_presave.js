@@ -82,6 +82,11 @@
           showFailure(form);
           return;
         }
+        // เอกสารที่กรอกไม่ครบ เซิร์ฟเวอร์ก็ปฏิเสธอยู่แล้ว แต่ตอบได้แค่จำนวนช่อง
+        // ดักตรงนี้เพื่อบอกว่าเป็นช่องไหนและพาไปที่ช่องนั้น
+        if (window.DocRequiredFields && !window.DocRequiredFields.check(form)) {
+          return;
+        }
         form._preSaveDone = true;
         if (typeof form.requestSubmit === "function") {
           form.requestSubmit();

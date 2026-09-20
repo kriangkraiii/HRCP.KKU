@@ -508,6 +508,15 @@ public class SignatureWorkflowService {
         if (frozenJson == null || frozenJson.isBlank()) {
             return Result.failed("ยังไม่มีข้อมูลในเอกสาร — กรุณาบันทึกเอกสารก่อนส่งไปลงนาม");
         }
+        // เอกสารที่กรอกไม่ครบห้ามเวียน ไม่อย่างนั้นผู้ลงนามจะเซ็นรับรองช่องที่ยังว่างอยู่
+        // ด่านนี้อยู่ตรงนี้เพราะเป็นทางเดียวที่ซองถูกสร้าง ปิด JS หรือยิง POST ตรงก็ทะลุไม่ได้
+        List<String> missing = DocumentCompleteness.missingApplicantFields(module, documentType,
+                frozenJson, snapshotProvider == null ? null
+                        : snapshotProvider.targetPositionFor(module, requestId));
+        if (!missing.isEmpty()) {
+            return Result.failed("กรอกข้อมูลในเอกสารยังไม่ครบ (ขาดอีก " + missing.size()
+                    + " ช่อง) กรุณากรอกให้ครบแล้วบันทึกก่อนส่งไปลงนาม");
+        }
         if (isDocumentLocked(module, requestId, documentType)) {
             return Result.failed("เอกสารฉบับนี้อยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว");
         }

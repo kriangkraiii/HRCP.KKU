@@ -193,8 +193,9 @@
             window.AUTO_DRAFT_ENABLED = /*[[${user != null && user.autoDraftEnabled != null ? user.autoDraftEnabled : true}]]*/ true;
         </script>
         <script src="/js/auto_draft.js?v=3.0"></script>
-        <!-- บันทึกเอกสารให้ก่อนเสมอเมื่อกดส่งไปลงนาม -->
-        <script src="/js/sign_presave.js?v=1.0"></script>
+        <!-- ตรวจช่องที่ยังไม่ได้กรอก แล้วบันทึกเอกสารให้ก่อนส่งไปลงนาม -->
+        <script src="/js/doc_required_validate.js?v=1.0"></script>
+        <script src="/js/sign_presave.js?v=1.1"></script>
         <!-- พาผู้ใช้จาก "บันทึกแล้ว" ไปยังแผงลงนามท้ายหน้า -->
         <script src="/js/doc_step_guide.js?v=1.0"></script>
         <script src="/js/checkbox_defaults.js"></script>

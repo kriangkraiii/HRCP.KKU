@@ -1,9 +1,12 @@
 package com.ecom.academic.controller;
 
+import org.springframework.ui.Model;
+
 import com.ecom.academic.model.SignatureModule;
+import com.ecom.academic.service.DocumentCompleteness;
 
 /**
- * URL ของหน้าฟอร์มเอกสาร แยกตามเฟสและบทบาท
+ * ชิ้นส่วนที่หน้าฟอร์มเอกสารทุกใบใช้ร่วมกัน — URL ที่ต้องกลับไป และกติกาความครบถ้วน
  *
  * <p>เดิมทุก handler ต่อสตริงเองแล้วลงเอยด้วยการ redirect ออกไปหน้ารายการคำร้องหลัง
  * กดบันทึก ผู้ใช้จึงไม่เห็นแผงลงนามที่อยู่ใต้ฟอร์มและไม่รู้ว่ายังต้องเซ็นต่อ รวมไว้ที่เดียว
@@ -12,9 +15,9 @@ import com.ecom.academic.model.SignatureModule;
  * <p>การส่งผู้ยื่นไปยัง URL ใต้ {@code /admin/**} จะถูกกฎการเข้าถึงเด้งกลับและทำให้
  * flash message หายไปด้วย จึงต้องเลือกเส้นทางตามบทบาทเสมอ
  */
-public final class DocumentFormLinks {
+public final class DocumentFormSupport {
 
-    private DocumentFormLinks() {
+    private DocumentFormSupport() {
     }
 
     /** หน้าฟอร์มของเอกสารฉบับนี้ ตามบทบาทของผู้ใช้ */
@@ -33,5 +36,19 @@ public final class DocumentFormLinks {
     /** {@code redirect:} กลับมาที่ฟอร์มเดิมเฉย ๆ — ใช้คู่กับ flash {@code errorMsg} */
     public static String redirectToForm(SignatureModule module, Long requestId, int documentType, boolean admin) {
         return "redirect:" + formPath(module, requestId, documentType, admin);
+    }
+
+    /**
+     * กติกา "ช่องไหนไม่บังคับ" ให้ฝั่งเบราว์เซอร์เตือนผู้ใช้ก่อนกดส่งลงนาม
+     *
+     * <p>ส่งเป็นสตริงคั่นจุลภาคผ่าน data attribute ของแผงลงนาม เพราะ
+     * {@link DocumentCompleteness} เป็นแหล่งความจริงเดียว ฝั่งเบราว์เซอร์จึงไม่ต้อง
+     * เก็บรายการเดียวกันซ้ำอีกชุด
+     */
+    public static void addCompletenessRules(Model model, SignatureModule module, int documentType) {
+        model.addAttribute("docOptionalFields",
+                String.join(",", DocumentCompleteness.optionalFields(module, documentType)));
+        model.addAttribute("docRepeatablePrefixes",
+                String.join(",", DocumentCompleteness.repeatablePrefixes(module, documentType)));
     }
 }

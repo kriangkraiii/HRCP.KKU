@@ -150,6 +150,25 @@ public class DocumentSnapshotProvider {
     }
 
     /**
+     * ตำแหน่งที่คำร้องนี้เสนอขอ — ใช้ตัดส่วนของระดับตำแหน่งอื่นออกจากการตรวจความครบถ้วน
+     *
+     * @return ชื่อตำแหน่งภาษาไทย หรือ null เมื่อไม่เกี่ยวข้อง (เฟส 1) หรืออ่านไม่ได้
+     */
+    public String targetPositionFor(SignatureModule module, Long requestId) {
+        if (module != SignatureModule.POSITION || requestId == null) {
+            return null;
+        }
+        try {
+            return positionRequestService.findById(requestId)
+                    .map(com.ecom.academic.model.PositionRequest::getTargetPosition)
+                    .orElse(null);
+        } catch (Exception e) {
+            log.warn("Could not read target position for request {}: {}", requestId, e.toString());
+            return null;
+        }
+    }
+
+    /**
      * Checks if the parent request is currently an unsubmitted DRAFT.
      * Returns false if the request is already submitted or if request does not exist (e.g. unit tests).
      */

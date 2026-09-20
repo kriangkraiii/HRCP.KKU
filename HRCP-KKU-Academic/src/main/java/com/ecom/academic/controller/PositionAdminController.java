@@ -314,6 +314,7 @@ public class PositionAdminController {
         model.addAttribute("signaturePanel",
                 signatureWorkflow.buildPanel(SignatureModule.POSITION, id, type, getUser(principal)));
         model.addAttribute("docSaved", positionService.getLatestDocumentData(id, type) != null);
+        DocumentFormSupport.addCompletenessRules(model, SignatureModule.POSITION, type);
 
         return "academic/position/admin/doc_form_" + type;
     }
@@ -384,18 +385,18 @@ public class PositionAdminController {
                 logger.warn("Phase2 auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
                 redirectAttributes.addFlashAttribute("succMsg", "บันทึก" + label + "เรียบร้อยแล้ว");
                 redirectAttributes.addFlashAttribute("warnMsg", "แต่ส่งอีเมลแจ้งเตือนไม่สำเร็จ");
-                return DocumentFormLinks.redirectAfterSave(SignatureModule.POSITION, id, type, true);
+                return DocumentFormSupport.redirectAfterSave(SignatureModule.POSITION, id, type, true);
             }
 
             // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม เจ้าหน้าที่จะได้ส่งเวียนลงนามต่อได้ทันที
             redirectAttributes.addFlashAttribute("succMsg", "บันทึก" + label + "เรียบร้อยแล้ว");
-            return DocumentFormLinks.redirectAfterSave(SignatureModule.POSITION, id, type, true);
+            return DocumentFormSupport.redirectAfterSave(SignatureModule.POSITION, id, type, true);
         } catch (Exception e) {
             // เดิมเด้งออกไปหน้ารายการคำร้อง ทำให้ข้อมูลที่เจ้าหน้าที่พิมพ์ไว้หายไปทั้งหมด
             logger.error("Saving position document {} of request {} failed", type, id, e);
             redirectAttributes.addFlashAttribute("errorMsg",
                     "บันทึกเอกสารไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
-            return DocumentFormLinks.redirectToForm(SignatureModule.POSITION, id, type, true);
+            return DocumentFormSupport.redirectToForm(SignatureModule.POSITION, id, type, true);
         }
     }
 

@@ -384,6 +384,18 @@ class SignatureWorkflowServiceTest {
     }
 
     @Test
+    @DisplayName("เอกสารของผู้ยื่นที่กรอกไม่ครบ ส่งไปลงนามไม่ได้")
+    void cannotSendAnIncompleteApplicantDocument() {
+        String halfFilled = "{\"department_head_name\":\"สุดา\",\"dean_name\":\"\"}";
+
+        Result result = workflow.createEnvelope(MODULE, REQUEST_ID, DOC_TYPE, "เอกสาร", halfFilled,
+                List.of(new SignerAssignment("head", head.getId())), null, admin, ActorContext.none());
+
+        assertThat(result.ok()).isFalse();
+        assertThat(result.error()).contains("กรอกข้อมูลในเอกสารยังไม่ครบ");
+    }
+
+    @Test
     @DisplayName("เอกสารที่ไม่มีจุดลงนาม ส่งไปลงนามไม่ได้")
     void cannotSendAnUnsignableDocument() {
         // Phase 1 doc 6 is a bare suggestions box with no signature block.

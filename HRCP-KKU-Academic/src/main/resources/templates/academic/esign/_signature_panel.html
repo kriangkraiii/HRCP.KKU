@@ -350,6 +350,8 @@
         <!-- data-presave-doc: sign_presave.js บันทึกฟอร์มเอกสารให้ก่อน ซองจะได้ freeze ข้อมูลล่าสุด -->
         <form th:unless="${signaturePanel.locked}" th:action="@{/esign/envelope/create}" method="post"
               data-presave-doc="true"
+              th:attr="data-optional-fields=${docOptionalFields},
+                       data-repeatable-prefixes=${docRepeatablePrefixes}"
               data-confirm="ส่งเอกสารไปลงนาม? ฟอร์มจะถูกล็อกไม่ให้แก้ไขจนกว่าจะลงนามครบหรือยกเลิก">
             <input type="hidden" name="module" th:value="${signatureModule}">
             <input type="hidden" name="requestId" th:value="${request.id}">

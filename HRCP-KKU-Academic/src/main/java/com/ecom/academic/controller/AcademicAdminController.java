@@ -577,6 +577,7 @@ public class AcademicAdminController {
         model.addAttribute("signaturePanel",
                 signatureWorkflow.buildPanel(SignatureModule.ACADEMIC, id, type, getUser(principal)));
         model.addAttribute("docSaved", requestService.getLatestDocumentData(id, type) != null);
+        DocumentFormSupport.addCompletenessRules(model, SignatureModule.ACADEMIC, type);
 
         return "academic/admin/doc_fragments/" + type;
     }
@@ -801,12 +802,12 @@ public class AcademicAdminController {
             logger.warn("Auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
             redirectAttributes.addFlashAttribute("succMsg", savedDocumentMessage(type));
             redirectAttributes.addFlashAttribute("warnMsg", "แต่ส่งอีเมลแจ้งเตือนไม่สำเร็จ");
-            return DocumentFormLinks.redirectAfterSave(SignatureModule.ACADEMIC, id, type, true);
+            return DocumentFormSupport.redirectAfterSave(SignatureModule.ACADEMIC, id, type, true);
         }
 
         // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม เจ้าหน้าที่จะได้ส่งเวียนลงนามต่อได้ทันที
         redirectAttributes.addFlashAttribute("succMsg", savedDocumentMessage(type));
-        return DocumentFormLinks.redirectAfterSave(SignatureModule.ACADEMIC, id, type, true);
+        return DocumentFormSupport.redirectAfterSave(SignatureModule.ACADEMIC, id, type, true);
     }
 
     private String savedDocumentMessage(int type) {

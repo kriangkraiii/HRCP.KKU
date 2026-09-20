@@ -1,0 +1,241 @@
+package com.ecom.academic.service;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+
+import com.ecom.academic.model.SignatureModule;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+@DisplayName("ความครบถ้วนของเอกสารก่อนลงนาม")
+class DocumentCompletenessTest {
+
+    private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private static String json(Map<String, String> data) {
+        try {
+            return MAPPER.writeValueAsString(data);
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
+    /** แบบ ก.พ.ว. มข. 03 ที่กรอกส่วนกลางครบ และเติมส่วนของตำแหน่งตามที่ระบุ */
+    private static Map<String, String> positionDoc1(String rankPrefix) {
+        Map<String, String> data = new LinkedHashMap<>();
+        data.put("target_position", "รองศาสตราจารย์");
+        data.put("title", "ผศ.ดร.");
+        data.put("applicant_name", "สมชาย ใจดี");
+        data.put("major", "วิทยาการคอมพิวเตอร์");
+        data.put("major_code", "0001");
+        data.put("department", "วิทยาการคอมพิวเตอร์");
+        data.put("faculty", "วิทยาศาสตร์");
+        data.put("university", "มหาวิทยาลัยขอนแก่น");
+        data.put("method", "วิธีที่ ๑");
+        data.put("birth_date", "๑ มกราคม ๒๕๒๐");
+        data.put("age", "๔๕");
+        data.put("current_position", "ผู้ช่วยศาสตราจารย์");
+        data.put("current_salary", "๕๐,๐๐๐");
+        data.put("lecturer_appointment_date", "๑ มิถุนายน ๒๕๕๐");
+        data.put("years", "๑๕");
+        data.put("months", "๓");
+        data.put("reseach", "งานวิจัย");
+        data.put("academic_service", "งานบริการวิชาการ");
+        data.put("administration", "งานบริหาร");
+
+        // ส่วนของทุกระดับถูกส่งมาหมดเสมอ เพราะส่วนที่ซ่อนก็ยัง submit
+        for (String prefix : List.of("asst_", "assoc_", "prof_")) {
+            data.put(prefix + "used_research", "");
+            data.put(prefix + "used_book", "");
+        }
+        // ประวัติการดำรงตำแหน่ง
+        data.put("assistant_method", "");
+        data.put("associate_method", "");
+
+        if (rankPrefix != null) {
+            data.put(rankPrefix + "used_research", "๓ เรื่อง");
+            data.put(rankPrefix + "used_book", "๑ เล่ม");
+        }
+        return data;
+    }
+
+    @Nested
+    @DisplayName("ส่วนของตำแหน่งที่ไม่ได้ขอ")
+    class RankSections {
+
+        @Test
+        @DisplayName("ขอ รศ. แล้วปล่อยช่องของ ศ. ว่าง ถือว่ากรอกครบ")
+        void associateApplicantNeedNotFillProfessorFields() {
+            Map<String, String> data = positionDoc1("assoc_");
+            data.put("assistant_method", "วิธีที่ ๑"); // เคยเป็น ผศ. มาก่อน จึงต้องกรอก
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "รองศาสตราจารย์");
+
+            assertThat(missing)
+                    .as("ช่องของ ผศ./ศ. ไม่เกี่ยวกับคำขอ รศ. จึงต้องไม่ถูกนับว่าขาด")
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("ขอ รศ. แล้วเว้นช่องของ รศ. เอง ถือว่ายังไม่ครบ")
+        void associateApplicantMustFillAssociateFields() {
+            Map<String, String> data = positionDoc1("assoc_");
+            data.put("assistant_method", "วิธีที่ ๑");
+            data.put("assoc_used_book", "");
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "รองศาสตราจารย์");
+
+            assertThat(missing).containsExactly("assoc_used_book");
+        }
+
+        @Test
+        @DisplayName("ขอ ศ. ต้องกรอกส่วนของ ศ. และประวัติการเป็น ผศ./รศ.")
+        void professorApplicantMustFillProfessorFields() {
+            Map<String, String> data = positionDoc1(null);
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "ศาสตราจารย์");
+
+            assertThat(missing).contains("prof_used_research", "prof_used_book",
+                    "assistant_method", "associate_method");
+            assertThat(missing)
+                    .as("ส่วนของ ผศ./รศ. ในข้อ ๔ ไม่ใช่ของคำขอ ศ.")
+                    .doesNotContain("asst_used_research", "assoc_used_research");
+        }
+
+        @Test
+        @DisplayName("ขอ ผศ. ไม่ต้องกรอกประวัติการเคยเป็น ผศ./รศ.")
+        void assistantApplicantHasNoPriorAppointments() {
+            Map<String, String> data = positionDoc1("asst_");
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "ผู้ช่วยศาสตราจารย์");
+
+            assertThat(missing).isEmpty();
+        }
+
+        @Test
+        @DisplayName("ไม่รู้ตำแหน่งที่ขอ — ไม่บังคับส่วนของระดับใดเลย ดีกว่ากันคนที่กรอกถูก")
+        void unknownTargetPositionDoesNotBlock() {
+            Map<String, String> data = positionDoc1(null);
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), null);
+
+            assertThat(missing).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("ช่องที่ไม่บังคับ")
+    class OptionalFields {
+
+        @Test
+        @DisplayName("ช่อง 'อื่นๆ' และอนุสาขาที่เว้นไว้ ไม่นับว่าขาด")
+        void optionalFieldsAreSkipped() {
+            Map<String, String> data = positionDoc1("assoc_");
+            data.put("assistant_method", "วิธีที่ ๑");
+            data.put("other", "");
+            data.put("other_position_1", "");
+            data.put("sub_major", "");
+            data.put("international_speaker_last_5_years_1", "");
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "รองศาสตราจารย์");
+
+            assertThat(missing).isEmpty();
+        }
+
+        @Test
+        @DisplayName("ตารางที่เพิ่มแถวได้ — แถวแรกบังคับ แถวถัดไปไม่บังคับ")
+        void onlyTheFirstRepeatedRowIsRequired() {
+            Map<String, String> data = positionDoc1("assoc_");
+            data.put("assistant_method", "วิธีที่ ๑");
+            data.put("education_degree_1", "");
+            data.put("education_degree_2", "");
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "รองศาสตราจารย์");
+
+            assertThat(missing).containsExactly("education_degree_1");
+        }
+    }
+
+    @Nested
+    @DisplayName("ช่องที่ผู้ยื่นแก้ไม่ได้")
+    class FieldsTheApplicantCannotEdit {
+
+        @Test
+        @DisplayName("เลขที่หนังสือเป็นของแอดมิน เว้นว่างก็ยังลงนามได้")
+        void adminOwnedFieldsDoNotBlockTheApplicant() {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("date", "๑ มีนาคม ๒๕๖๙");
+            data.put("title", "ผศ.ดร.");
+            data.put("applicant_name", "สมชาย ใจดี");
+            data.put("current_position", "ผู้ช่วยศาสตราจารย์");
+            data.put("employee_type", "พนักงานมหาวิทยาลัย");
+            data.put("course_code", "SC101");
+            data.put("course_name", "วิทยาการคอมพิวเตอร์เบื้องต้น");
+            data.put("academic_year", "1/2569");
+            data.put("chk1", "✓");
+            data.put("chk2", "☐");
+            data.put("memo_no", ""); // ช่องของแอดมิน
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.ACADEMIC, 1, json(data), null);
+
+            assertThat(missing).isEmpty();
+        }
+
+        @Test
+        @DisplayName("เอกสารของแอดมินไม่ถูกตรวจด้วยกติกาของผู้ยื่น")
+        void adminDocumentsAreNotChecked() {
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.ACADEMIC, 3, json(Map.of("anything", "")), null);
+
+            assertThat(missing).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("ข้อมูลที่อ่านไม่ได้")
+    class BadInput {
+
+        @Test
+        @DisplayName("ยังไม่เคยบันทึก — ปล่อยให้ด่าน frozenJson ว่างเป็นคนตอบ")
+        void blankJsonYieldsNothing() {
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, null, "รองศาสตราจารย์")).isEmpty();
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, "   ", "รองศาสตราจารย์")).isEmpty();
+        }
+
+        @Test
+        @DisplayName("JSON เสีย — ไม่โยน exception และไม่กันการลงนาม")
+        void brokenJsonDoesNotThrow() {
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, "{not json", "รองศาสตราจารย์")).isEmpty();
+        }
+    }
+
+    @Test
+    @DisplayName("requiredFields คืนเฉพาะช่องที่ผู้ยื่นต้องกรอกจริง")
+    void requiredFieldsExcludesOptionalAndOtherRanks() {
+        Map<String, String> data = positionDoc1("assoc_");
+
+        var required = DocumentCompleteness.requiredFields(
+                SignatureModule.POSITION, 1, json(data), "รองศาสตราจารย์");
+
+        assertThat(required).contains("applicant_name", "assoc_used_research", "assistant_method");
+        assertThat(required).doesNotContain("prof_used_research", "asst_used_research",
+                "sub_major", "other");
+    }
+}

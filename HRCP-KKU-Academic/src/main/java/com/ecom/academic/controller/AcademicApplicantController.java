@@ -325,6 +325,7 @@ public class AcademicApplicantController {
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, id, 1, user));
         model.addAttribute("docSaved", requestService.getLatestDocumentData(id, 1) != null);
+        DocumentFormSupport.addCompletenessRules(model, com.ecom.academic.model.SignatureModule.ACADEMIC, 1);
 
         return "academic/applicant/document_1_form";
     }
@@ -388,7 +389,7 @@ public class AcademicApplicantController {
         // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม ถ้าเด้งออกไปหน้ารายการคำร้องผู้ยื่นจะไม่เห็นว่ายังต้องเซ็น
         redirectAttributes.addFlashAttribute("succMsg",
                 "บันทึกเอกสารที่ 1 เรียบร้อยแล้ว");
-        return DocumentFormLinks.redirectAfterSave(SignatureModule.ACADEMIC, id, 1, false);
+        return DocumentFormSupport.redirectAfterSave(SignatureModule.ACADEMIC, id, 1, false);
     }
 
     // ==================== เอกสารที่ 2: แบบตรวจสอบเบื้องต้น ====================
@@ -451,6 +452,7 @@ public class AcademicApplicantController {
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, id, 2, user));
         model.addAttribute("docSaved", requestService.getLatestDocumentData(id, 2) != null);
+        DocumentFormSupport.addCompletenessRules(model, com.ecom.academic.model.SignatureModule.ACADEMIC, 2);
 
         return "academic/applicant/document_2_form";
     }
@@ -516,7 +518,7 @@ public class AcademicApplicantController {
 
         redirectAttributes.addFlashAttribute("succMsg",
                 "บันทึกเอกสารที่ 2 เรียบร้อยแล้ว");
-        return DocumentFormLinks.redirectAfterSave(SignatureModule.ACADEMIC, id, 2, false);
+        return DocumentFormSupport.redirectAfterSave(SignatureModule.ACADEMIC, id, 2, false);
     }
 
     // ==================== แนบไฟล์ประกอบการประเมินผลการสอน (เอกสารที่ 2) ====================
