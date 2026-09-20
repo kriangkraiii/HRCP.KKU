@@ -65,7 +65,21 @@ class MeetingDetailsAreConfidentialTest extends AbstractFlowTest {
                 .andReturn().getResponse().getContentAsString();
     }
 
+    /**
+     * หน้านั้นไม่มีร่องรอยของคอมเมนต์หลุดออกมาเป็นเนื้อหน้า
+     *
+     * <p>คอมเมนต์ที่อธิบายว่าอะไรเป็นความลับ ถ้าหลุดออกมาเองก็เป็นการบอกใบ้ผู้ยื่นว่ามี
+     * อะไรถูกซ่อนไว้ — เคยหลุดมาแล้วจริง จากคอมเมนต์ที่เขียนลำดับปิดคอมเมนต์ซ้อนไว้ข้างใน
+     * จึงปิดคอมเมนต์ก่อนกำหนด
+     */
+    private void assertNoCommentLeaked(String html, String where) {
+        assertThat(html).as("%s มีเศษคอมเมนต์ Thymeleaf หลุดออกมาเป็นเนื้อหน้า", where)
+                .doesNotContain("*/-->")
+                .doesNotContain("<!--/*");
+    }
+
     private void assertHidesTheMeeting(String html, String where) {
+        assertNoCommentLeaked(html, where);
         assertThat(html).as("%s ต้องไม่เปิดเผยสถานที่ประชุม", where)
                 .doesNotContain(SECRET_LOCATION);
         assertThat(html).as("%s ต้องไม่เปิดเผยวันประชุม", where)
