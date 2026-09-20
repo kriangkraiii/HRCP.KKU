@@ -21,7 +21,7 @@ public enum RequestStatus {
     SUB_COMMITTEE_APPOINTED("แต่งตั้งอนุกรรมการ", "fa-users-cog", "#e65100"),
 
     /** ข้อ 6-7 — นัดหมายวันประชุมและจองห้อง */
-    MEETING_SCHEDULED("นัดหมายวันประชุม", "fa-calendar-check", "#7b1fa2"),
+    MEETING_SCHEDULED("นัดหมายคณะอนุกรรมการ", "fa-calendar-check", "#7b1fa2"),
 
     /** ข้อ 8 — มติที่ประชุมคณะอนุกรรมการ: ผ่าน */
     COMPLETED_PASS("แจ้งผล - ผ่าน", "fa-check-circle", "#2e7d32"),

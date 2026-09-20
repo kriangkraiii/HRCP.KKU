@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--/*
+  ช่องเลือกว่าจะส่งอีเมลแจ้งผู้ยื่นหรือไม่
+
+  สถานะของคำร้องคือ source of truth ของกระบวนการ มันเดินตามงานจริงเสมอไม่ว่าจะติ๊กช่องนี้
+  หรือไม่ ช่องนี้คุมเพียงว่าจะส่งอีเมล/แจ้งเตือนไปรบกวนผู้ยื่นด้วยหรือเปล่า
+
+  ของเดิมเป็นกล่องยืนยันที่เด้งขึ้นทุกครั้งตอนกดบันทึก มีสองปุ่มให้เลือก และเขียนกำกับว่า
+  เลือก "ไม่แจ้งเตือน" แล้วจะไม่อัปเดตสถานะ ซึ่งไม่จริงทั้งคู่ — เฟส 1 เลื่อนสถานะทุกครั้ง
+  อยู่แล้ว ส่วนเฟส 2 เลื่อนเฉพาะตอนติ๊ก จนแถบความคืบหน้าของผู้ยื่นค้าง
+
+  แสดงเฉพาะเอกสารที่ทำให้คำร้องเดินไปขั้นถัดไป (advancesStatus) เอกสารอื่นไม่มีอีเมลจะส่ง
+*/-->
+<div th:fragment="checkbox" th:if="${advancesStatus}"
+     class="form-check border rounded-3 p-3 mt-3" style="background: var(--bg-subtle, #f8fafc);">
+    <input class="form-check-input" type="checkbox" name="sendNotify" value="true"
+           id="sendNotifyCheckbox" checked>
+    <label class="form-check-label fw-semibold" for="sendNotifyCheckbox">
+        <i class="fas fa-envelope"></i> ส่งอีเมลแจ้งผู้ยื่นว่าคำร้องเดินมาถึงขั้นนี้แล้ว
+    </label>
+    <div class="form-text mb-0">
+        <span th:if="${statusAdvanceNote}" th:text="${statusAdvanceNote}"></span>
+        <span class="d-block">สถานะคำร้องจะอัปเดตเมื่อบันทึกเสมอ ไม่ว่าจะติ๊กช่องนี้หรือไม่</span>
+    </div>
+</div>
+
+</body>
+</html>

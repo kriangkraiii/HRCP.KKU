@@ -396,7 +396,7 @@
             <div class="detail-section-body">
               <div th:each="entry : ${docLabels}">
                 <div class="doc-grid-item"
-                  th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed' : ''">
+                  th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed' : (${draftDocs.contains(entry.key)} ? 'dgi-draft' : '')">
                   <div class="doc-grid-item-title">
                     เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
                     <span th:if="${entry.key == multiCopyDocType}" class="badge bg-info ms-1"

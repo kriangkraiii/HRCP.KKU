@@ -3835,6 +3835,11 @@ tr:target {
   border-left: 3px solid var(--color-success);
 }
 
+/* บันทึกร่างไว้แต่ยังไม่ได้กดบันทึกเอกสาร — ต้องแยกออกจากที่เสร็จแล้วจริง */
+.doc-grid-item.dgi-draft {
+  border-left: 3px solid var(--color-warning);
+}
+
 .doc-grid-item-title {
   font-size: 0.88rem;
   font-weight: 600;

@@ -2,12 +2,16 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
+<!--/* ช่องแจ้งเตือนผู้ยื่น — วางไว้เหนือปุ่มบันทึก เพราะมันคือสิ่งที่ต้องตัดสินใจก่อนกด */-->
+<th:block th:fragment="notifyCheckbox"
+          th:replace="~{academic/_notify_applicant :: checkbox}"></th:block>
+
 <!-- ==================== Shared Buttons ==================== -->
-<!-- ล็อกปุ่มบันทึกเฉพาะตอนที่ยังเวียนลงนามอยู่ — เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว
+<!--/* ล็อกปุ่มบันทึกเฉพาะตอนที่ยังเวียนลงนามอยู่ — เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว
      แต่ปุ่มที่กดไม่ได้อธิบายเหตุผลได้ดีกว่าปุ่มที่กดแล้วเด้งกลับ
 
      เมื่อลงนามครบแล้วปุ่มต้องกลับมากดได้ เพราะยังเหลือให้สารบรรณลงเลขที่หนังสือ
-     กับวันที่เอกสาร (DocumentFieldOwnership.officeFields) -->
+     กับวันที่เอกสาร (DocumentFieldOwnership.officeFields) */-->
 <div th:fragment="buttons" class="d-flex flex-wrap gap-2 mt-4"
      th:with="signingLocked=${lockedForSigning != null && lockedForSigning && !(signingComplete != null && signingComplete)}">
     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
@@ -21,7 +25,6 @@
     <a th:href="'/admin/academic/request/' + ${request.id}" class="btn-back-pill">
         <i class="fas fa-arrow-left"></i> กลับ
     </a>
-    <input type="hidden" name="sendNotify" id="sendNotifyField" value="false">
 </div>
 
 <!-- ==================== แผงลงนามอิเล็กทรอนิกส์ ==================== -->
@@ -34,106 +37,16 @@
 <!-- ==================== Shared Scripts ==================== -->
 <th:block th:fragment="scripts">
     <script>
-        // ==================== Notification Confirm Logic ====================
+        // ==================== ส่งฟอร์มบันทึกเอกสาร ====================
+        // กล่องยืนยันถูกแทนด้วย checkbox ข้างปุ่มบันทึก — ดู _notify_applicant.html
         (function() {
             const submitBtn = document.getElementById('btnSubmitDoc');
-            const sendNotifyField = document.getElementById('sendNotifyField');
-            const currentDocType = parseInt(document.getElementById('currentDocType')?.value) || 0;
-            // ต้องตรงกับ AcademicRequestService.autoUpdateStatusByDocument
-            // เลขชุดนี้ค้างอยู่ที่ [3,4,6,8] ตั้งแต่ก่อนทีมเลื่อนเอกสารจากเริ่มนับ 0 เป็นเริ่มนับ 1
-            // กล่องยืนยันจึงเด้งผิดเอกสารมาตลอด และเอกสารที่เปลี่ยนสถานะจริงกลับไม่ถาม
-            const notifyDocTypes = [4, 5, 7, 9];
-
-            // ---- Create Bootstrap 5 Modal dynamically and append to BODY ----
-            var modalEl = document.getElementById('notifyConfirmModal');
-            var bsModal = null;
-            if (!modalEl && notifyDocTypes.includes(currentDocType)) {
-                var statusInfo = '';
-                if (currentDocType === 4) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>แต่งตั้งคณะอนุกรรมการแล้ว</strong>';
-                else if (currentDocType === 5) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>กำหนดวันประชุมแล้ว</strong>';
-                else if (currentDocType === 7) statusInfo = 'สถานะคำร้องจะเปลี่ยนตามผลประเมิน: <strong>ผลการประเมิน (ผ่าน/ไม่ผ่าน)</strong>';
-                else if (currentDocType === 9) statusInfo = 'สถานะคำร้องจะเปลี่ยนเป็น: <strong>เสร็จสิ้น (COMPLETED)</strong>';
-
-                modalEl = document.createElement('div');
-                modalEl.className = 'modal fade';
-                modalEl.id = 'notifyConfirmModal';
-                modalEl.tabIndex = -1;
-                modalEl.setAttribute('aria-hidden', 'true');
-                modalEl.style.zIndex = '1065';
-                modalEl.innerHTML =
-                    '<div class="modal-dialog modal-dialog-centered" style="max-width: 500px;">' +
-                        '<div class="modal-content shadow-lg border-0 rounded-4" style="overflow:hidden;">' +
-                            '<div class="modal-header border-0 pb-0 pt-4 px-4 d-flex justify-content-between align-items-center">' +
-                                '<h5 class="modal-title fw-bold" style="font-size: 1.15rem; margin:0;"><i class="fas fa-bell text-warning me-2"></i> อัปเดตสถานะและแจ้งเตือนผู้ยื่นคำร้อง</h5>' +
-                                '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
-                            '</div>' +
-                            '<div class="modal-body px-4 py-3">' +
-                                '<p class="mb-3 text-secondary">ต้องการ<strong>อัปเดตสถานะคำร้อง</strong>และ<strong>ส่งอีเมลแจ้งเตือนผู้ยื่น</strong>หรือไม่?</p>' +
-                                (statusInfo ? '<div class="alert alert-success d-flex align-items-center py-2 px-3 mb-3 border-0 rounded-3" style="font-size: 0.9rem;"><i class="fas fa-arrow-circle-right me-2 fs-5"></i><div>' + statusInfo + '</div></div>' : '') +
-                                '<div class="alert alert-info py-2 px-3 mb-0 border-0 rounded-3" style="font-size: 0.88rem;">' +
-                                    '<i class="fas fa-info-circle me-1"></i> หากเอกสารยังไม่เรียบร้อย สามารถเลือก <strong>"ไม่แจ้งเตือน"</strong> เพื่อบันทึกไฟล์โดยยังไม่อัปเดตสถานะได้' +
-                                '</div>' +
-                            '</div>' +
-                            '<div class="modal-footer border-0 pt-0 pb-4 px-4 d-flex justify-content-end gap-2">' +
-                                '<button type="button" id="btnNoNotify" class="btn btn-outline-secondary px-3">' +
-                                    '<i class="fas fa-bell-slash me-1"></i> ไม่แจ้งเตือน (บันทึกอย่างเดียว)' +
-                                '</button>' +
-                                '<button type="button" id="btnYesNotify" class="btn btn-primary px-3">' +
-                                    '<i class="fas fa-check-circle me-1"></i> แจ้งเตือนผู้ยื่นและอัปเดตสถานะ' +
-                                '</button>' +
-                            '</div>' +
-                        '</div>' +
-                    '</div>';
-                document.body.appendChild(modalEl);
-            }
-
-            function getModalInstance() {
-                if (!modalEl) return null;
-                if (!bsModal && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
-                    bsModal = new bootstrap.Modal(modalEl);
-                }
-                return bsModal;
-            }
-
-            function showModal() {
-                var m = getModalInstance();
-                if (m) m.show();
-            }
-
-            function hideModal() {
-                var m = getModalInstance();
-                if (m) m.hide();
-            }
 
             if (submitBtn) {
                 submitBtn.addEventListener('click', function() {
                     const form = document.getElementById('docForm');
                     if (form && !form.reportValidity()) return;
-                    if (notifyDocTypes.includes(currentDocType) && modalEl) {
-                        showModal();
-                    } else {
-                        sendNotifyField.value = 'false';
-                        submitFormAsSubmit();
-                    }
-                });
-            }
-
-            if (modalEl) {
-                modalEl.addEventListener('click', function(e) {
-                    var btnNo = e.target.closest('#btnNoNotify');
-                    if (btnNo) {
-                        sendNotifyField.value = 'false';
-                        hideModal();
-                        submitFormAsSubmit();
-                        return;
-                    }
-                    var btnYes = e.target.closest('#btnYesNotify');
-                    if (btnYes) {
-                        sendNotifyField.value = 'true';
-                        hideModal();
-                        submitFormAsSubmit();
-                        return;
-                    }
+                    submitFormAsSubmit();
                 });
             }
 

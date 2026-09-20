@@ -39,16 +39,9 @@
                     <!-- สถานะ (แสดงแบบ pill) -->
 
 
-                    <!-- Meeting Date -->
-                    <div th:if="${req.meetingDate != null}" class="alert alert-info d-flex align-items-center mb-3 py-2">
-                        <i class="fas fa-calendar-alt me-2"></i>
-                        <div>
-                            <strong>วันประชุม:</strong> <span
-                                th:text="${@thaiDateUtil.format(req.meetingDate)}"></span>
-                            <span th:if="${req.meetingLocation != null}"> | <strong>สถานที่:</strong>
-                                [[${req.meetingLocation}]]</span>
-                        </div>
-                    </div>
+                    <!--/* ข้อมูลการนัดหมายและรายชื่อกรรมการเป็นความลับทางราชการ ผู้ยื่นไม่ได้ร่วม
+                         จึงไม่แสดงที่นี่ เจ้าหน้าที่ดูได้จากหน้าผู้ดูแลระบบตามเดิม
+                         ใช้ <!--/* */--> เพราะ Thymeleaf ตัดทิ้งก่อนส่ง คอมเมนต์ธรรมดาจะติดไปกับ HTML */-->
 
                     <!-- ข้อความเพิ่มเติมตามสถานะ -->
                     <div th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}" class="alert alert-warning mb-3 py-2">

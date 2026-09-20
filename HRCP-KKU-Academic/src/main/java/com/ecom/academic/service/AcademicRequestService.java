@@ -45,6 +45,16 @@ public class AcademicRequestService {
     }
 
     /**
+     * เอกสารที่การบันทึกทำให้คำร้องเดินไปขั้นถัดไป
+     *
+     * <p>ต้องตรงกับ {@code switch} ใน {@link #autoUpdateStatusByDocument} เสมอ
+     * รายชื่อนี้เคยถูกคัดลอกไว้ใน JavaScript อีกชุดหนึ่งและเพี้ยนกันมาสองรอบตอนทีมเลื่อนเลขเอกสาร
+     * จึงย้ายมาไว้ที่เดียว มี {@code StatusAdvancingDocumentsMatchSwitchTest} เฝ้าให้ตรงกัน
+     */
+    public static final java.util.Set<Integer> STATUS_ADVANCING_DOCUMENTS =
+            java.util.Set.of(4, 5, 7, 9);
+
+    /**
      * เอกสารที่ออกเป็นหลายฉบับ ฉบับละกรรมการหนึ่งท่าน
      *
      * <p>อยู่ที่นี่ที่เดียว เพราะตอนทีมเลื่อนเลขเอกสารทั้งชุด (doc0 → doc1) เลขที่ฮาร์ดโค้ด

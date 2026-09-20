@@ -97,14 +97,9 @@
                 </div>
             </div>
 
-            <!-- Meeting Info -->
-            <div th:if="${request.meetingDate != null}" class="meeting-info">
-                <i class="fas fa-calendar-alt"></i>
-                <span>
-                    <strong>วันประชุม:</strong> <span th:text="${@thaiDateUtil.format(request.meetingDate)}"></span>
-                    <span th:if="${request.meetingLocation != null}"> | <strong>สถานที่:</strong> [[${request.meetingLocation}]]</span>
-                </span>
-            </div>
+            <!--/* ข้อมูลการนัดหมายและรายชื่อกรรมการเป็นความลับทางราชการ ผู้ยื่นไม่ได้ร่วม
+                 จึงไม่แสดงที่นี่ เจ้าหน้าที่ดูได้จากหน้าผู้ดูแลระบบตามเดิม
+                 ใช้ <!--/* */--> เพราะ Thymeleaf ตัดทิ้งก่อนส่ง คอมเมนต์ธรรมดาจะติดไปกับ HTML */-->
 
             <!-- Result Alerts -->
             <div th:if="${request.currentStatus.name() == 'COMPLETED_PASS'}" class="result-alert ra-pass">

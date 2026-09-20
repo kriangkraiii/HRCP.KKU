@@ -347,10 +347,20 @@ public class AcademicAdminController {
         model.addAttribute("attachments", requestService.getAttachments(id));
         model.addAttribute("attachmentCount", requestService.countAttachments(id));
 
+        // สามสถานะบนกล่องเอกสาร: ยังไม่เริ่ม / ร่าง / บันทึกแล้ว
+        // เดิมนับแค่ "มีแถวของเอกสารนี้" = เสร็จ กรอบจึงเขียวทันทีที่ auto-draft ทำงาน
+        // ทั้งที่เจ้าหน้าที่ยังไม่ได้กดบันทึกเอกสารเลย
         Set<Integer> completedDocs = documents.stream()
+                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()))
                 .map(AcademicDocument::getDocumentType)
                 .collect(Collectors.toSet());
+        Set<Integer> draftDocs = documents.stream()
+                .filter(d -> Boolean.TRUE.equals(d.getIsDraft()))
+                .map(AcademicDocument::getDocumentType)
+                .filter(type -> !completedDocs.contains(type))
+                .collect(Collectors.toSet());
         model.addAttribute("completedDocs", completedDocs);
+        model.addAttribute("draftDocs", draftDocs);
 
         Map<Integer, Long> docTypeToId = documents.stream()
                 .collect(Collectors.toMap(AcademicDocument::getDocumentType, AcademicDocument::getId, (existing, replacement) -> existing));
@@ -1262,10 +1272,37 @@ public class AcademicAdminController {
      * <p>ความเป็นเจ้าของกับสถานะลงนามเป็นคนละเรื่องและต้องส่งไปทั้งคู่ — เอกสารของแอดมินเอง
      * ที่ลงนามครบแล้วก็ต้องล็อก ทั้งที่ {@code readOnlyForAdmin} เป็น false
      */
+
+    /**
+     * บอกเจ้าหน้าที่ว่าการบันทึกครั้งนี้จะดันคำร้องไปสถานะไหน
+     *
+     * <p>อ่านชื่อสถานะจาก {@link RequestStatus} โดยตรง ไม่พิมพ์ซ้ำ — ข้อความชุดนี้
+     * เคยอยู่ใน JavaScript แล้วเพี้ยนกับสถานะจริงมารอบหนึ่งแล้ว
+     */
+    private String statusAdvanceNoteFor(int type) {
+        RequestStatus next = switch (type) {
+            case 4 -> RequestStatus.SUB_COMMITTEE_APPOINTED;
+            case 5 -> RequestStatus.MEETING_SCHEDULED;
+            case 9 -> RequestStatus.COMPLETED;
+            default -> null;
+        };
+        if (type == 7) {
+            // เอกสารที่ 7 แยกสองทางตามคะแนน จึงบอกเป็นช่วงแทนที่จะระบุสถานะเดียว
+            return "สถานะคำร้องจะเปลี่ยนตามผลการประเมิน (ผ่าน/ไม่ผ่าน)";
+        }
+        return next == null ? null
+                : "สถานะคำร้องจะเปลี่ยนเป็น: " + next.getThaiLabel();
+    }
+
     private void addOwnershipGate(Model model, SignatureModule module, Long requestId, int type) {
         model.addAttribute("readOnlyForAdmin", DocumentFieldOwnership.isApplicantDocument(module, type));
         model.addAttribute("adminEditableFields", DocumentFieldOwnership.adminFields(module, type));
         model.addAttribute("officeFields", DocumentFieldOwnership.officeFields(module, type));
+
+        // ช่องแจ้งเตือนขึ้นเฉพาะเอกสารที่ทำให้คำร้องเดินไปขั้นถัดไป เอกสารอื่นไม่มีอีเมลจะส่ง
+        model.addAttribute("advancesStatus",
+                AcademicRequestService.STATUS_ADVANCING_DOCUMENTS.contains(type));
+        model.addAttribute("statusAdvanceNote", statusAdvanceNoteFor(type));
 
         boolean locked = requestId != null && signatureWorkflow.isDocumentLocked(module, requestId, type);
         boolean complete = locked && signatureWorkflow.isSigningComplete(module, requestId, type);

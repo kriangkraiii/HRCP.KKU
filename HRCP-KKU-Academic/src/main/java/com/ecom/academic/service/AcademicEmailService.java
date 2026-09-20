@@ -188,13 +188,8 @@ public class AcademicEmailService {
         };
 
         String extraDetails = "";
-        if (newStatus == RequestStatus.MEETING_SCHEDULED && request.getMeetingDate() != null) {
-            extraDetails = "<div style='background:#f1f5f9;border:1px solid #cbd5e1;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
-                    + "<div style='font-weight:600;color:#1e293b;margin-bottom:4px;'>รายละเอียดการนัดหมาย:</div>"
-                    + "<div>วันประชุม: <strong>" + request.getMeetingDate() + "</strong></div>"
-                    + (request.getMeetingLocation() != null ? "<div>สถานที่: " + request.getMeetingLocation() + "</div>" : "")
-                    + "</div>";
-        }
+        // วันประชุมและสถานที่เป็นความลับทางราชการ ผู้ยื่นไม่ได้เข้าประชุมด้วย
+        // อีเมลจึงบอกแค่ว่าคำร้องเดินมาถึงขั้นนี้แล้ว ไม่แนบรายละเอียดการนัดหมาย
         if (isReturn(oldStatus, newStatus)) {
             extraDetails = "<div style='background:#fffbeb;border:1px solid #fcd34d;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
                     + "<div style='font-weight:600;color:#92400e;margin-bottom:4px;'>เหตุผลที่ส่งคืน:</div>"

@@ -1103,7 +1103,7 @@ public class AcademicApplicantController {
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Document not found"));
 
-        // Enforce document visibility for applicant (only doc types 0, 1, 8 allowed)
+        // เอกสารที่ผู้ยื่นเห็นได้: 1, 2 (ของตัวเอง) และ 9 (หนังสือแจ้งผล) ที่เหลือมีรายชื่อกรรมการ
         if (!APPLICANT_VISIBLE_DOC_TYPES.contains(doc.getDocumentType())) {
             return ResponseEntity.status(403).build();
         }
@@ -1156,6 +1156,17 @@ public class AcademicApplicantController {
             @PathVariable int type,
             @RequestParam(value = "format", defaultValue = "docx") String format,
             Principal principal) throws IOException {
+        // ตรวจก่อนแยกเส้นทาง — เส้นที่ render จากซองลายเซ็นข้างล่างเคยข้ามทั้ง
+        // การตรวจเจ้าของคำร้องและการตรวจประเภทเอกสาร เปิดให้โหลดคำสั่งแต่งตั้ง
+        // คณะอนุกรรมการซึ่งมีรายชื่อกรรมการ และเปิดให้ผู้ยื่นคนหนึ่งโหลดคำร้องของคนอื่นได้
+        AcademicRequest owner = requestService.findById(id).orElse(null);
+        UserDtls viewer = getUser(principal);
+        if (owner == null || viewer == null
+                || !owner.getApplicant().getId().equals(viewer.getId())
+                || !APPLICANT_VISIBLE_DOC_TYPES.contains(type)) {
+            return ResponseEntity.status(403).build();
+        }
+
         List<AcademicDocument> docs = requestService.getDocumentsByType(id, type);
         if (docs.isEmpty()) {
             // Check if envelope exists for auto-generated / submitted document

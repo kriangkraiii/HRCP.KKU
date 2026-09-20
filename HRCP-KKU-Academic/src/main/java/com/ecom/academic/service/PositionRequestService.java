@@ -122,6 +122,13 @@ public class PositionRequestService {
     // DocumentFieldOwnership, shared with Phase 1. These two read from it rather
     // than keeping a second copy: ADMIN_DOCS used to be a hand-maintained list
     // that nothing referenced, so it quietly disagreed with the real rule.
+    /**
+     * เอกสารที่การบันทึกทำให้คำร้องเดินไปขั้นถัดไป
+     *
+     * <p>ต้องตรงกับ {@code switch} ใน {@link #autoUpdateStatusByDocument} เสมอ
+     */
+    public static final Set<Integer> STATUS_ADVANCING_DOCUMENTS = Set.of(7, 8);
+
     public static final List<Integer> APPLICANT_DOCS =
             DocumentFieldOwnership.applicantDocuments(SignatureModule.POSITION);
 
@@ -813,6 +820,18 @@ public class PositionRequestService {
 
     public List<Integer> getCompletedDocTypes(Long requestId) {
         return documentRepository.findCompletedDocTypes(requestId);
+    }
+
+    /**
+     * เอกสารที่มีแต่แถวร่าง — เริ่มทำแล้วแต่ยังไม่เสร็จ
+     *
+     * <p>ตัดเอกสารที่บันทึกแล้วออก เพราะแถวร่างเก่าอาจค้างอยู่คู่กัน กล่องเดียวมีสองสีไม่ได้
+     */
+    public List<Integer> getDraftDocTypes(Long requestId) {
+        List<Integer> completed = documentRepository.findCompletedDocTypes(requestId);
+        return documentRepository.findDraftDocTypes(requestId).stream()
+                .filter(type -> !completed.contains(type))
+                .toList();
     }
 
     public PositionRequest save(PositionRequest request) {

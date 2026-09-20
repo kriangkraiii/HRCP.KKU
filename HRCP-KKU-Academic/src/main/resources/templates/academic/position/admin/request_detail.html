@@ -647,7 +647,7 @@
                 <div
                   th:each="entry : ${docLabels}"
                   class="doc-grid-item"
-                  th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed'"
+                  th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed' : (${draftDocs.contains(entry.key)} ? 'dgi-draft' : '')"
                 >
                   <div>
                     <span class="doc-grid-item-title">

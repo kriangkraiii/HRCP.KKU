@@ -507,6 +507,7 @@
                 </div>
 
                 <div class="d-flex gap-2">
+                    <th:block th:replace="~{academic/_notify_applicant :: checkbox}"></th:block>
                     <button type="submit" name="action" value="submit" class="btn btn-academic btn-lg">
                         <i class="fas fa-save"></i> บันทึก
                     </button>
@@ -820,10 +821,8 @@
         </script>
 
         <link rel="stylesheet" href="/css/doc_preview.css">
-        <script src="/js/position_notify_confirm.js"></script>
         <script>
             initDocPreview('doc7Form', 7, '/api/position/preview');
-            initPositionNotifyConfirm('doc7Form', 7);
         </script>
     <th:block th:replace="~{academic/_admin_field_lock :: script('doc7Form')}"></th:block>
     </section>
