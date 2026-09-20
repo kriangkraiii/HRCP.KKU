@@ -110,7 +110,7 @@ class AttachmentConstraintsTest {
         );
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat(redirectAttributes.getFlashAttributes().get("success")).isNotNull();
+        assertThat(redirectAttributes.getFlashAttributes().get("succMsg")).isNotNull();
         verify(requestService, org.mockito.Mockito.times(4)).saveAttachment(any(AcademicAttachment.class));
     }
 
@@ -135,8 +135,8 @@ class AttachmentConstraintsTest {
         );
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isNotNull();
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("ประเภทไฟล์ที่ไม่รองรับ");
+        assertThat(redirectAttributes.getFlashAttributes().get("errorMsg")).isNotNull();
+        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("ประเภทไฟล์ที่ไม่รองรับ");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
     }
 
@@ -163,8 +163,8 @@ class AttachmentConstraintsTest {
         );
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat(redirectAttributes.getFlashAttributes().get("error")).isNotNull();
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("75 MB");
+        assertThat(redirectAttributes.getFlashAttributes().get("errorMsg")).isNotNull();
+        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("75 MB");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
     }
 
@@ -188,7 +188,7 @@ class AttachmentConstraintsTest {
         );
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("แอดมิน");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("แอดมิน");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
     }
 
@@ -205,7 +205,7 @@ class AttachmentConstraintsTest {
         String result = applicantController.deleteAttachment(1L, 5L, principal, redirectAttributes);
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("แอดมิน");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("แอดมิน");
         verify(requestService, never()).deleteAttachment(any(Long.class));
     }
 
@@ -226,7 +226,7 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc2_submitted");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document/2?saved=1");
         verify(requestService).saveDocument(eq(sampleRequest), eq(2), anyString(), eq("generated/doc2.docx"), anyString(), any());
     }
 
@@ -247,7 +247,7 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc2_submitted");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document/2?saved=1");
         verify(requestService).saveDocument(eq(sampleRequest), eq(2), anyString(), eq("generated/doc2.docx"), anyString(), any());
     }
 
@@ -268,7 +268,7 @@ class AttachmentConstraintsTest {
         String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("เกินขีดจำกัด 75 MB");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("เกินขีดจำกัด 75 MB");
         verify(requestService, never()).saveDocument(any(), eq(2), anyString(), anyString(), anyString(), any());
     }
 
@@ -284,7 +284,7 @@ class AttachmentConstraintsTest {
                 principal, redirectAttributes);
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("success")).contains("เรียบร้อยแล้ว");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("succMsg")).contains("เรียบร้อยแล้ว");
         verify(requestService).saveAttachment(captor.capture());
 
         AcademicAttachment saved = captor.getValue();
@@ -306,7 +306,7 @@ class AttachmentConstraintsTest {
                 principal, redirectAttributes);
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("error")).contains("รูปแบบ URL ไม่ถูกต้อง");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("รูปแบบ URL ไม่ถูกต้อง");
         verify(requestService, never()).saveAttachment(any());
     }
 
@@ -327,7 +327,7 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1?success=doc2_submitted");
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document/2?saved=1");
         verify(requestService).saveDocument(eq(sampleRequest), eq(2), anyString(), eq("generated/doc2.docx"), anyString(), any());
     }
 
@@ -347,7 +347,7 @@ class AttachmentConstraintsTest {
         String result = applicantController.deleteAttachment(1L, 99L, principal, redirectAttributes);
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("success")).isEqualTo("ลบลิงก์เรียบร้อยแล้ว");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("succMsg")).isEqualTo("ลบลิงก์เรียบร้อยแล้ว");
         verify(requestService).deleteAttachment(99L);
     }
 

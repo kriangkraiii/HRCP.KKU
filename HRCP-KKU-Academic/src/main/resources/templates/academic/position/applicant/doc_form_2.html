@@ -8,14 +8,14 @@
                     <i class="fas fa-arrow-left"></i> กลับ
                 </a>
             </div>
-            <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show">
-                <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
 
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 2: หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูลเกี่ยวกับการขอกำหนดตำแหน่งทางวิชาการ</h3>
 
             <div th:replace="~{academic/_applicant_doc_gate :: banner}"></div>
+            <!-- ขั้นตอน: กรอก → บันทึก → ลงนาม -->
+            <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
+            <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
+
             <form th:action="'/user/position/request/' + ${request.id} + '/document/2'" method="post" id="doc2Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/2'">
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้เสนอขอ</h5></div>

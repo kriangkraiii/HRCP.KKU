@@ -99,7 +99,43 @@ public class KkuDocumentSyncService {
         if (docRepo.count() == 0) {
             log.info("KkuRegulationDoc table is empty on startup. Triggering initial sync...");
             syncNow();
+        } else {
+            fixStaleIsNewFlags();
         }
+    }
+
+    /**
+     * Reconciles existing database records where isNew was previously hardcoded to true.
+     */
+    @Transactional
+    public void fixStaleIsNewFlags() {
+        List<KkuRegulationDoc> docs = docRepo.findAll();
+        boolean anyChanged = false;
+        for (KkuRegulationDoc doc : docs) {
+            boolean shouldBeNew = isActuallyNew(doc.getTitle(), doc.getPublishedYear());
+            if (doc.getIsNew() == null || !doc.getIsNew().equals(shouldBeNew)) {
+                doc.setIsNew(shouldBeNew);
+                docRepo.save(doc);
+                anyChanged = true;
+            }
+        }
+        if (anyChanged) {
+            log.info("Repaired stale isNew flags for KKU regulation documents in database.");
+        }
+    }
+
+    public static boolean isActuallyNew(String title, String year) {
+        if (title == null) return false;
+        if (title.contains("🆕") || title.contains("NEW") || title.matches(".*\\(\\s*ใหม่\\s*\\).*")) {
+            return true;
+        }
+        if (year != null) {
+            try {
+                int y = Integer.parseInt(year.trim());
+                if (y >= 2569) return true;
+            } catch (NumberFormatException ignored) {}
+        }
+        return title.contains("2569");
     }
 
     /**
@@ -171,13 +207,20 @@ public class KkuDocumentSyncService {
                         existing.setDisplayOrder(parsed.getDisplayOrder());
                         changed = true;
                     }
+                    if (existing.getIsNew() == null || !existing.getIsNew().equals(parsed.getIsNew())) {
+                        existing.setIsNew(parsed.getIsNew());
+                        changed = true;
+                    }
+                    if (parsed.getPublishedYear() != null && !parsed.getPublishedYear().equals(existing.getPublishedYear())) {
+                        existing.setPublishedYear(parsed.getPublishedYear());
+                        changed = true;
+                    }
 
                     if (changed) {
                         docRepo.save(existing);
                         updated++;
                     }
                 } else {
-                    parsed.setIsNew(true);
                     docRepo.save(parsed);
                     added++;
                 }

@@ -100,8 +100,9 @@ public class KkuDocumentParser {
                     docEntity.setDisplayOrder(++globalOrder);
                     docEntity.setPublishedYear(year);
 
-                    // If title contains 🆕 or 2569 / newest tag
-                    if (rawTitle.contains("🆕") || rawTitle.contains("ใหม่") || title.contains("2569")) {
+                    // If title contains 🆕, (ใหม่), or 2569+
+                    if (rawTitle.contains("🆕") || rawTitle.contains("NEW") || rawTitle.matches(".*\\(\\s*ใหม่\\s*\\).*")
+                            || title.contains("2569") || isRecentYear(year)) {
                         docEntity.setIsNew(true);
                     }
 
@@ -118,11 +119,15 @@ public class KkuDocumentParser {
                     if (!rawTitle.isBlank() && href != null && href.toLowerCase().contains(".pdf")) {
                         String title = cleanTitle(rawTitle);
                         String category = guessCategoryFromTitle(title);
+                        String year = extractYear(title);
                         KkuRegulationDoc item = new KkuRegulationDoc(category, title, href, extractFileKey(href), ++globalOrder);
                         item.setCategoryIcon(getCategoryIcon(category));
                         item.setCategoryColor(getCategoryColor(category));
-                        item.setPublishedYear(extractYear(title));
-                        if (rawTitle.contains("🆕") || title.contains("2569")) item.setIsNew(true);
+                        item.setPublishedYear(year);
+                        if (rawTitle.contains("🆕") || rawTitle.contains("NEW") || rawTitle.matches(".*\\(\\s*ใหม่\\s*\\).*")
+                                || title.contains("2569") || isRecentYear(year)) {
+                            item.setIsNew(true);
+                        }
                         results.add(item);
                     }
                 }
@@ -174,8 +179,18 @@ public class KkuDocumentParser {
     private String cleanTitle(String raw) {
         return raw.replace("🆕", "")
                   .replace("NEW", "")
+                  .replaceAll("\\s*\\(\\s*ใหม่\\s*\\)\\s*$", "")
                   .replaceAll("\\s+", " ")
                   .trim();
+    }
+
+    private boolean isRecentYear(String year) {
+        if (year == null) return false;
+        try {
+            return Integer.parseInt(year.trim()) >= 2569;
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private String extractFileKey(String url) {

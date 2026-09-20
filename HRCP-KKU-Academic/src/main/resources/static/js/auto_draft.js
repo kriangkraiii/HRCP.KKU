@@ -42,6 +42,10 @@
     this.timer = null;
     this.lastHash = "";
     this.saving = false;
+    this.inflight = null;
+
+    /* ให้ภายนอกสั่ง flush ได้ — ปุ่มส่งลงนามใช้ทางนี้บันทึกเอกสารก่อนส่ง */
+    form.__autoDraft = this;
 
     /* Build UI elements and keep direct references */
     this.bar = document.createElement("div");
@@ -150,10 +154,17 @@
     return d;
   };
 
-  Engine.prototype._save = function () {
-    if (!window.AUTO_DRAFT_ENABLED) return;
+  /**
+   * เขียนแบบร่างขึ้นเซิร์ฟเวอร์
+   *
+   * @param force บันทึกแม้ผู้ใช้ปิดบันทึกอัตโนมัติไว้ — ใช้ตอนผู้ใช้สั่งเอง (flush)
+   * @return Promise<boolean> true เมื่อข้อมูลบนหน้าจอถึงเซิร์ฟเวอร์แล้ว (รวมกรณีไม่มีอะไรเปลี่ยน)
+   */
+  Engine.prototype._save = function (force) {
+    if (!this.endpoint) return Promise.resolve(true);
+    if (!force && !window.AUTO_DRAFT_ENABLED) return Promise.resolve(true);
     var h = this._hash();
-    if (h === this.lastHash) return;
+    if (h === this.lastHash) return Promise.resolve(true);
 
     this.saving = true;
     this._show("saving");
@@ -168,7 +179,7 @@
     if (!token) {
     }
 
-    fetch(this.endpoint, {
+    this.inflight = fetch(this.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-HRCP-CT": token },
       body: JSON.stringify(this._collect()),
@@ -177,16 +188,54 @@
         if (r.ok) {
           self.lastHash = h;
           self._show("saved", self._timeStr());
-        } else {
-          self._show("error", "เซิร์ฟเวอร์ตอบกลับ " + r.status);
+          return true;
         }
+        self._show("error", "เซิร์ฟเวอร์ตอบกลับ " + r.status);
+        return false;
       })
       .catch(function () {
         self._show("error");
+        return false;
       })
       .finally(function () {
         self.saving = false;
+        self.inflight = null;
       });
+
+    return this.inflight;
+  };
+
+  /**
+   * บันทึกทันทีโดยไม่รอ debounce และไม่สนว่าผู้ใช้ปิดบันทึกอัตโนมัติไว้หรือไม่
+   *
+   * @return Promise<boolean> true เมื่อข้อมูลบนหน้าจอถูกบันทึกเรียบร้อย
+   */
+  Engine.prototype.flush = function () {
+    clearTimeout(this.timer);
+    var self = this;
+    if (this.inflight) {
+      /* มีรอบที่ยิงไปแล้วค้างอยู่ — รอให้จบก่อน แล้วค่อยเก็บส่วนที่พิมพ์ระหว่างนั้น */
+      return this.inflight.then(function () { return self._save(true); });
+    }
+    return this._save(true);
+  };
+
+  /* ---------- Public API ---------- */
+  window.AutoDraft = {
+    /**
+     * บังคับบันทึกทุกฟอร์มที่เปิดบันทึกแบบร่างไว้ในหน้านี้
+     *
+     * @return Promise<boolean> false เมื่อมีอย่างน้อยหนึ่งฟอร์มบันทึกไม่สำเร็จ
+     */
+    flushAll: function () {
+      var pending = [];
+      document.querySelectorAll("form[data-auto-draft]").forEach(function (f) {
+        if (f.__autoDraft) pending.push(f.__autoDraft.flush());
+      });
+      return Promise.all(pending).then(function (results) {
+        return results.every(Boolean);
+      });
+    },
   };
 
   /* ---------- Init ---------- */

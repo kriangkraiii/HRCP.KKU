@@ -56,4 +56,43 @@ class KkuDocumentSyncServiceTest {
         assertEquals("ประกาศ", groups.get(1).getTitle());
         assertEquals(1, groups.get(1).getDocs().size());
     }
+
+    @Test
+    void fixStaleIsNewFlags_correctsErroneouslyMarkedNewDocs() {
+        KkuRegulationDoc oldDoc1 = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ พ.ศ. 2565", "url1", "key1", 1);
+        oldDoc1.setPublishedYear("2565");
+        oldDoc1.setIsNew(true); // Erroneously true in DB
+
+        KkuRegulationDoc oldDoc2 = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ พ.ศ. 2560", "url2", "key2", 2);
+        oldDoc2.setPublishedYear("2560");
+        oldDoc2.setIsNew(true); // Erroneously true in DB
+
+        KkuRegulationDoc newDoc = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ พ.ศ. 2569", "url3", "key3", 3);
+        newDoc.setPublishedYear("2569");
+        newDoc.setIsNew(true); // Should stay true
+
+        when(docRepo.findAll()).thenReturn(List.of(oldDoc1, oldDoc2, newDoc));
+
+        syncService.fixStaleIsNewFlags();
+
+        assertFalse(oldDoc1.getIsNew());
+        assertFalse(oldDoc2.getIsNew());
+        assertTrue(newDoc.getIsNew());
+
+        verify(docRepo).save(oldDoc1);
+        verify(docRepo).save(oldDoc2);
+    }
+
+    @Test
+    void isActuallyNew_identifiesNewDocsAccurately() {
+        assertTrue(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2569", "2569"));
+        assertTrue(KkuDocumentSyncService.isActuallyNew("ประกาศฯ ( ใหม่ )", "2566"));
+        assertTrue(KkuDocumentSyncService.isActuallyNew("ประกาศฯ 🆕", "2565"));
+        assertTrue(KkuDocumentSyncService.isActuallyNew("ประกาศฯ NEW", null));
+
+        assertFalse(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2565", "2565"));
+        assertFalse(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2566", "2566"));
+        assertFalse(KkuDocumentSyncService.isActuallyNew("ข้อบังคับ พ.ศ. 2560", "2560"));
+        assertFalse(KkuDocumentSyncService.isActuallyNew("ลักษณะการมีส่วนร่วมในผลงานทางวิชาการทั่วไป", null));
+    }
 }

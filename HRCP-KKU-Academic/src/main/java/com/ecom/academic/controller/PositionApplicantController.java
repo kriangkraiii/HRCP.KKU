@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -398,6 +399,7 @@ public class PositionApplicantController {
         model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.POSITION);
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
                 com.ecom.academic.model.SignatureModule.POSITION, id, type, user));
+        model.addAttribute("docSaved", positionService.getLatestDocumentData(id, type) != null);
 
         return "academic/position/applicant/doc_form_" + type;
     }
@@ -406,7 +408,8 @@ public class PositionApplicantController {
     public String submitDocument(@PathVariable Long id, @PathVariable int type,
             @RequestParam Map<String, String> formData,
             @RequestParam(value = "action", defaultValue = "submit") String action,
-            Principal principal) {
+            Principal principal,
+            RedirectAttributes redirectAttributes) {
         UserDtls user = getUser(principal);
         PositionRequest request = positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
@@ -421,7 +424,11 @@ public class PositionApplicantController {
 
         // เอกสารที่กำลังเวียนลงนาม หรือที่ยังไม่ถูกส่งกลับมาให้แก้ ผู้ยื่นแตะไม่ได้
         if (!positionService.canApplicantEditDocument(request, type)) {
-            return "redirect:/user/position/request/" + id + "/document/" + type + "?error=locked";
+            // เดิมส่ง ?error=locked ซึ่งไม่มีเทมเพลตไหนเรนเดอร์ ผู้ยื่นจึงเห็นแค่หน้าเดิมเฉย ๆ
+            redirectAttributes.addFlashAttribute("errorMsg",
+                    "บันทึกไม่สำเร็จ — เอกสารนี้แก้ไขไม่ได้ในขณะนี้ อยู่ระหว่างการเวียนลงนาม"
+                            + " หรือยังไม่ได้ถูกส่งกลับมาให้ท่านแก้ไข");
+            return DocumentFormLinks.redirectToForm(SignatureModule.POSITION, id, type, false);
         }
 
         // Remove Spring internals
@@ -453,10 +460,16 @@ public class PositionApplicantController {
                 // Async prewarm PDF to cache
                 documentPrewarmService.prewarmPositionDocument(id, type, jsonData);
 
-                return "redirect:/user/position/request/" + id + "?success=doc_saved";
+                // อยู่หน้าเดิม เพื่อให้ผู้ยื่นเห็นแผงลงนามที่อยู่ใต้ฟอร์มเป็นขั้นตอนถัดไป
+                redirectAttributes.addFlashAttribute("succMsg",
+                        "บันทึก" + label + "เรียบร้อยแล้ว");
+                return DocumentFormLinks.redirectAfterSave(SignatureModule.POSITION, id, type, false);
             }
         } catch (Exception e) {
-            return "redirect:/user/position/request/" + id + "/document/" + type + "?error";
+            log.error("Saving position document {} of request {} failed", type, id, e);
+            redirectAttributes.addFlashAttribute("errorMsg",
+                    "บันทึกเอกสารไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+            return DocumentFormLinks.redirectToForm(SignatureModule.POSITION, id, type, false);
         }
     }
 

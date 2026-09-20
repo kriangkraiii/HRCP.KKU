@@ -68,7 +68,7 @@ class PositionRankRuleTest extends AbstractFlowTest {
                     .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/user/academic/request/" + draft.getId() + "/document-1"))
-                    .andExpect(flash().attributeExists("error"));
+                    .andExpect(flash().attributeExists("errorMsg"));
 
             assertThat(academicService.getDocumentsByType(draft.getId(), 1)).isEmpty();
         }
@@ -85,7 +85,7 @@ class PositionRankRuleTest extends AbstractFlowTest {
                     .param("action", "submit")
                     .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
                     .andExpect(redirectedUrl("/user/academic/request/" + draft.getId() + "/document-1"))
-                    .andExpect(flash().attributeExists("error"));
+                    .andExpect(flash().attributeExists("errorMsg"));
 
             assertThat(academicService.getDocumentsByType(draft.getId(), 1)).isEmpty();
         }
@@ -101,7 +101,7 @@ class PositionRankRuleTest extends AbstractFlowTest {
             mvc.perform(post("/user/academic/request/" + draft.getId() + "/submit")
                     .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
                     .andExpect(redirectedUrl("/user/academic/request/" + draft.getId() + "/document-1"))
-                    .andExpect(flash().attributeExists("error"));
+                    .andExpect(flash().attributeExists("errorMsg"));
 
             assertThat(academicService.findById(draft.getId()).orElseThrow().getCurrentStatus())
                     .isEqualTo(RequestStatus.DRAFT);
@@ -161,7 +161,7 @@ class PositionRankRuleTest extends AbstractFlowTest {
                     .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
                     .andExpect(status().is3xxRedirection())
                     .andExpect(redirectedUrl("/user/academic/request/" + draft.getId() + "/document-1"))
-                    .andExpect(flash().attributeExists("error"));
+                    .andExpect(flash().attributeExists("errorMsg"));
 
             assertThat(academicService.getDocumentsByType(draft.getId(), 1)).isEmpty();
         }

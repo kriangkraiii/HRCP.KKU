@@ -13,6 +13,10 @@
 
             <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
             <div th:replace="~{academic/_admin_field_lock :: banner('position', ${request.id}, ${documentType})}"></div>
+            <!-- ขั้นตอน: กรอก → บันทึก → ลงนาม -->
+            <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
+            <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
+
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/2'" method="post" id="doc2Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/2'">
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้เสนอขอ</h5></div>

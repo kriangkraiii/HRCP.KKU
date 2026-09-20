@@ -192,7 +192,11 @@
         <script th:inline="javascript">
             window.AUTO_DRAFT_ENABLED = /*[[${user != null && user.autoDraftEnabled != null ? user.autoDraftEnabled : true}]]*/ true;
         </script>
-        <script src="/js/auto_draft.js?v=2.9"></script>
+        <script src="/js/auto_draft.js?v=3.0"></script>
+        <!-- บันทึกเอกสารให้ก่อนเสมอเมื่อกดส่งไปลงนาม -->
+        <script src="/js/sign_presave.js?v=1.0"></script>
+        <!-- พาผู้ใช้จาก "บันทึกแล้ว" ไปยังแผงลงนามท้ายหน้า -->
+        <script src="/js/doc_step_guide.js?v=1.0"></script>
         <script src="/js/checkbox_defaults.js"></script>
 
         <div id="google_translate_element" style="display:none;"></div>

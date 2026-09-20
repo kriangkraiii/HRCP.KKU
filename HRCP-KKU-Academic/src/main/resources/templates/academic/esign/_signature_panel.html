@@ -7,6 +7,7 @@
   ต้องการ model attributes: signaturePanel, request (มี id), documentType, signatureModule
 -->
 <div th:fragment="panel" th:if="${signaturePanel != null && signaturePanel.signable}"
+     id="signaturePanel"
      class="card card-academic mt-4 shadow-sm border-0">
 
     <!-- Searchable Select Assets -->
@@ -346,7 +347,9 @@
         <!-- ===================================================================== -->
         <!-- 2. กรณี: ยังไม่ได้ส่ง — ฟอร์มเลือกผู้ลงนาม / ลงนามส่วนตนเอง (UNLOCKED)   -->
         <!-- ===================================================================== -->
+        <!-- data-presave-doc: sign_presave.js บันทึกฟอร์มเอกสารให้ก่อน ซองจะได้ freeze ข้อมูลล่าสุด -->
         <form th:unless="${signaturePanel.locked}" th:action="@{/esign/envelope/create}" method="post"
+              data-presave-doc="true"
               data-confirm="ส่งเอกสารไปลงนาม? ฟอร์มจะถูกล็อกไม่ให้แก้ไขจนกว่าจะลงนามครบหรือยกเลิก">
             <input type="hidden" name="module" th:value="${signatureModule}">
             <input type="hidden" name="requestId" th:value="${request.id}">

@@ -313,13 +313,15 @@ public class PositionAdminController {
         model.addAttribute("signatureModule", SignatureModule.POSITION);
         model.addAttribute("signaturePanel",
                 signatureWorkflow.buildPanel(SignatureModule.POSITION, id, type, getUser(principal)));
+        model.addAttribute("docSaved", positionService.getLatestDocumentData(id, type) != null);
 
         return "academic/position/admin/doc_form_" + type;
     }
 
     @PostMapping("/request/{id}/document/{type}")
     public String saveDocument(@PathVariable Long id, @PathVariable int type,
-            @RequestParam Map<String, String> formData, Principal principal) {
+            @RequestParam Map<String, String> formData, Principal principal,
+            RedirectAttributes redirectAttributes) {
         PositionRequest request = positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
@@ -380,12 +382,20 @@ public class PositionAdminController {
                 positionService.autoUpdateStatusByDocument(id, type, admin, jsonData, sendNotify);
             } catch (Exception e) {
                 logger.warn("Phase2 auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
-                return "redirect:/admin/position/request/" + id + "?success=doc_generated&warn=notify_failed";
+                redirectAttributes.addFlashAttribute("succMsg", "บันทึก" + label + "เรียบร้อยแล้ว");
+                redirectAttributes.addFlashAttribute("warnMsg", "แต่ส่งอีเมลแจ้งเตือนไม่สำเร็จ");
+                return DocumentFormLinks.redirectAfterSave(SignatureModule.POSITION, id, type, true);
             }
 
-            return "redirect:/admin/position/request/" + id + "?success=doc_generated";
+            // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม เจ้าหน้าที่จะได้ส่งเวียนลงนามต่อได้ทันที
+            redirectAttributes.addFlashAttribute("succMsg", "บันทึก" + label + "เรียบร้อยแล้ว");
+            return DocumentFormLinks.redirectAfterSave(SignatureModule.POSITION, id, type, true);
         } catch (Exception e) {
-            return "redirect:/admin/position/request/" + id + "?error=doc_save_failed";
+            // เดิมเด้งออกไปหน้ารายการคำร้อง ทำให้ข้อมูลที่เจ้าหน้าที่พิมพ์ไว้หายไปทั้งหมด
+            logger.error("Saving position document {} of request {} failed", type, id, e);
+            redirectAttributes.addFlashAttribute("errorMsg",
+                    "บันทึกเอกสารไม่สำเร็จ กรุณาลองใหม่อีกครั้ง");
+            return DocumentFormLinks.redirectToForm(SignatureModule.POSITION, id, type, true);
         }
     }
 

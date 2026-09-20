@@ -16,21 +16,9 @@
                 </div>
                 <div class="card-body">
 
-                    <!-- Flash alerts -->
-                    <div th:if="${success != null}" class="alert alert-success alert-dismissible fade show">
-                        <i class="fas fa-check-circle me-1"></i> [[${success}]]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    <div th:if="${error != null}" class="alert alert-danger alert-dismissible fade show">
-                        <i class="fas fa-exclamation-circle me-1"></i> [[${error}]]
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
+                    <!-- ข้อความผลลัพธ์ขึ้นที่บล็อกกลางใน base_academic (succMsg/errorMsg) -->
                     <div th:if="${param.error != null and param.error[0] == 'no_attachments'}" class="alert alert-danger alert-dismissible fade show">
                         <i class="fas fa-exclamation-circle me-1"></i> กรุณาแนบไฟล์เอกสารประกอบการประเมินผลการสอนอย่างน้อย 1 ไฟล์ก่อนบันทึกเอกสาร
-                        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                    </div>
-                    <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show">
-                        <i class="fas fa-save me-1"></i> บันทึกแบบร่างสำเร็จ
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
 
@@ -50,6 +38,10 @@
                             <div class="small">แก้ไขข้อมูลแล้วกดบันทึกเอกสาร จากนั้น<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ที่แผงลงนามด้านล่าง</div>
                         </div>
                     </div>
+
+                    <!-- ขั้นตอน: กรอก → บันทึก → ลงนาม -->
+                    <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
+                    <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
                     <form th:action="'/user/academic/request/' + ${request.id} + '/document-2'" method="post"
                         th:attr="data-auto-draft=${editable ? '/api/draft/academic/' + request.id + '/2' : null}"
@@ -193,8 +185,6 @@
                             <button th:if="${editable}" type="submit" name="action" value="submit" class="btn btn-academic" id="doc2SubmitBtn" disabled>
                                 <i class="fas fa-paper-plane"></i> บันทึกเอกสาร
                             </button>
-                            <a th:href="'/user/academic/request/' + ${request.id}"
-                                class="btn-back-pill"><i class="fas fa-arrow-left"></i> กลับ</a>
                         </div>
                     </form>
 

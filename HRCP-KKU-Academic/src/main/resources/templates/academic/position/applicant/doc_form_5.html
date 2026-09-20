@@ -8,10 +8,6 @@
                     <i class="fas fa-arrow-left"></i> กลับ
                 </a>
             </div>
-            <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show">
-                <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
 
             <h3 class="mb-4"><i class="fas fa-user-shield"></i> เอกสารที่ 5: แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา</h3>
 
@@ -32,6 +28,10 @@
                 ท่านกรอกเฉพาะข้อมูลด้านล่างนี้ แล้ว<strong>ส่งเวียนลงนามไปยังหัวหน้าสาขาวิชาและคณบดี</strong>
                 ส่วนผลการตรวจสอบคุณสมบัติเป็นสิ่งที่ผู้บังคับบัญชาเลือกเองตอนลงนาม
             </div>
+
+            <!-- ขั้นตอน: กรอก → บันทึก → ลงนาม -->
+            <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
+            <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
             <form th:action="'/user/position/request/' + ${request.id} + '/document/5'" method="post" id="doc5Form"
                 th:attr="data-auto-draft=${editable} ? '/api/draft/position/' + ${request.id} + '/5' : null">

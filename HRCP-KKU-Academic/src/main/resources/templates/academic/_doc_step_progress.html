@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  ขั้นตอนของหน้าฟอร์มเอกสาร: กรอก → บันทึก → ลงนาม
+
+  ผู้ใช้กรอกเสร็จแล้วกดบันทึก แล้วไม่รู้ว่ายังต้องลงนามต่อ เพราะไม่มีอะไรบนหน้าบอก
+  ลำดับขั้น แถบนี้ทำให้ "บันทึกแล้วยังไม่จบ" เห็นได้ตั้งแต่ก่อนเริ่มกรอก
+
+  ใช้คลาส .step-progress ชุดเดียวกับหน้าสร้างคำร้อง (style.css) จึงได้ธีมมืดและ
+  การย่อบนจอเล็กมาด้วยโดยไม่ต้องเพิ่ม CSS ใหม่
+
+  ต้องมี model attribute: docSaved (boolean) และ signaturePanel (อาจเป็น null)
+-->
+<div th:fragment="steps"
+     th:with="signed=${signaturePanel != null and signaturePanel.locked}"
+     class="step-progress">
+
+    <div class="step-progress-item"
+         th:classappend="${docSaved} ? 'sp-completed' : 'sp-active'">
+        <span class="step-num">
+            <i th:if="${docSaved}" class="fas fa-check"></i>
+            <span th:unless="${docSaved}">1</span>
+        </span>
+        <span>กรอกข้อมูล</span>
+    </div>
+
+    <div class="step-progress-connector"></div>
+
+    <div class="step-progress-item"
+         th:classappend="${docSaved} ? (${signed} ? 'sp-completed' : 'sp-active') : ''">
+        <span class="step-num">
+            <i th:if="${docSaved}" class="fas fa-check"></i>
+            <span th:unless="${docSaved}">2</span>
+        </span>
+        <span>บันทึกเอกสาร</span>
+    </div>
+
+    <div class="step-progress-connector"></div>
+
+    <div class="step-progress-item"
+         th:classappend="${signed} ? 'sp-completed' : (${docSaved} ? 'sp-active' : '')">
+        <span class="step-num">
+            <i th:if="${signed}" class="fas fa-check"></i>
+            <span th:unless="${signed}">3</span>
+        </span>
+        <span>ลงนามอิเล็กทรอนิกส์</span>
+    </div>
+</div>
+
+<!--
+  กล่องชี้ทางหลังกดบันทึก — ขึ้นเฉพาะตอนเพิ่งบันทึกเสร็จ (?saved=1) และยังไม่ได้ส่งลงนาม
+  ปุ่มพาไปที่แผงลงนามท้ายหน้า ซึ่งเป็นสิ่งที่ผู้ใช้มองไม่เห็นเพราะอยู่ใต้ฟอร์มยาว ๆ
+-->
+<div th:fragment="savedCallout"
+     th:if="${param.saved != null and signaturePanel != null and signaturePanel.signable and !signaturePanel.locked}"
+     class="alert alert-primary bg-primary-subtle border-0 text-dark p-3 rounded-3 mb-3">
+    <div class="d-flex align-items-start gap-2">
+        <i class="fas fa-pen-nib text-primary fa-lg mt-1"></i>
+        <div class="flex-grow-1">
+            <strong class="d-block mb-1">บันทึกเอกสารแล้ว — ขั้นตอนถัดไปคือลงนาม</strong>
+            <p class="small text-secondary mb-2">
+                เอกสารจะยังไม่ถูกส่งต่อจนกว่าท่านจะลงนามอิเล็กทรอนิกส์ที่แผงด้านล่างของหน้านี้
+            </p>
+            <button type="button" class="btn btn-academic btn-sm" data-goto-signature-panel>
+                <i class="fas fa-arrow-down me-1"></i> ไปที่แผงลงนาม
+            </button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>

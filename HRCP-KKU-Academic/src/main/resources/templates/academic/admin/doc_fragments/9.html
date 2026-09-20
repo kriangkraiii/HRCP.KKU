@@ -15,6 +15,10 @@
                     <small class="text-muted">คำร้อง [[${request.requestCode}]] — ผู้ยื่น: [[${request.applicant.name}]]</small>
                 </div>
                 <div class="card-body">
+                    <!-- ขั้นตอน: กรอก → บันทึก → ลงนาม -->
+                    <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
+                    <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
+
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
                         method="post" id="docForm"
                         th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
@@ -160,10 +164,6 @@
                             </div>
                         </div>
 
-                        <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">
-                            <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
-                            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                        </div>
 
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>

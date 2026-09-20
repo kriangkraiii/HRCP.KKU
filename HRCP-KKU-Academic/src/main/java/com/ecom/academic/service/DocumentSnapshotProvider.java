@@ -117,6 +117,11 @@ public class DocumentSnapshotProvider {
     /**
      * The most recently saved form data for a document.
      *
+     * <p>เฟส 2 เก็บได้ทั้งฉบับที่กดบันทึกแล้วและฉบับร่างที่แก้ทีหลัง โดย
+     * {@code findByRequestIdAndDocType} เรียง {@code isDraft ASC} ฉบับร่างจึงอยู่ท้ายแถว
+     * การหยิบ {@code get(0)} ตรง ๆ จะได้ของเก่าไปแช่ในซองทั้งที่ผู้ใช้แก้ไปแล้ว —
+     * ฉบับร่างคือฉบับที่ถูกเขียนทีหลังเสมอ เพราะ {@code saveDocument} ล้างธงร่างทิ้งทุกครั้ง
+     *
      * @return the stored JSON, or null when the document has never been saved —
      *         which is what stops an empty document being sent for signature
      */
@@ -129,7 +134,14 @@ public class DocumentSnapshotProvider {
             }
             List<PositionDocument> documents =
                     positionRequestService.getDocumentsByType(requestId, documentType);
-            return documents.isEmpty() ? null : documents.get(0).getJsonData();
+            if (documents.isEmpty()) {
+                return null;
+            }
+            return documents.stream()
+                    .filter(d -> Boolean.TRUE.equals(d.getIsDraft()))
+                    .findFirst()
+                    .orElse(documents.get(0))
+                    .getJsonData();
         } catch (Exception e) {
             log.warn("Could not read saved data for {} request {} doc {}: {}",
                     module, requestId, documentType, e.toString());

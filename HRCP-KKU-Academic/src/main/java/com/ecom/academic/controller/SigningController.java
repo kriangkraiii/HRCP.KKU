@@ -604,13 +604,8 @@ public class SigningController {
      * bounce them off the access rules and lose the flash message with it.
      */
     private String documentFormLink(SignatureModule module, Long requestId, int documentType, UserDtls user) {
-        boolean admin = "ROLE_ADMIN".equals(user.getRole());
-        if (module == SignatureModule.ACADEMIC) {
-            return (admin ? "/admin/academic/request/" : "/user/academic/request/")
-                    + requestId + "/document/" + documentType;
-        }
-        return (admin ? "/admin/position/request/" : "/user/position/request/")
-                + requestId + "/document/" + documentType;
+        return DocumentFormLinks.formPath(module, requestId, documentType,
+                "ROLE_ADMIN".equals(user.getRole()));
     }
 
     /** Accepts the browser's {@code datetime-local} value; absent means no deadline. */

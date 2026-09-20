@@ -576,6 +576,7 @@ public class AcademicAdminController {
         model.addAttribute("signatureModule", SignatureModule.ACADEMIC);
         model.addAttribute("signaturePanel",
                 signatureWorkflow.buildPanel(SignatureModule.ACADEMIC, id, type, getUser(principal)));
+        model.addAttribute("docSaved", requestService.getLatestDocumentData(id, type) != null);
 
         return "academic/admin/doc_fragments/" + type;
     }
@@ -798,12 +799,19 @@ public class AcademicAdminController {
             requestService.autoUpdateStatusByDocument(id, type, admin, jsonData, sendNotify);
         } catch (Exception e) {
             logger.warn("Auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
-            return "redirect:/admin/academic/request/" + id + "?success=doc_generated&warn=notify_failed";
+            redirectAttributes.addFlashAttribute("succMsg", savedDocumentMessage(type));
+            redirectAttributes.addFlashAttribute("warnMsg", "แต่ส่งอีเมลแจ้งเตือนไม่สำเร็จ");
+            return DocumentFormLinks.redirectAfterSave(SignatureModule.ACADEMIC, id, type, true);
         }
 
-        redirectAttributes.addFlashAttribute("success",
-                "บันทึกและสร้างเอกสารที่ " + type + " (" + DOC_LABELS.getOrDefault(type, "Document " + type) + ") เรียบร้อยแล้ว");
-        return "redirect:/admin/academic/request/" + id;
+        // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม เจ้าหน้าที่จะได้ส่งเวียนลงนามต่อได้ทันที
+        redirectAttributes.addFlashAttribute("succMsg", savedDocumentMessage(type));
+        return DocumentFormLinks.redirectAfterSave(SignatureModule.ACADEMIC, id, type, true);
+    }
+
+    private String savedDocumentMessage(int type) {
+        return "บันทึกและสร้างเอกสารที่ " + type
+                + " (" + DOC_LABELS.getOrDefault(type, "Document " + type) + ") เรียบร้อยแล้ว";
     }
 
     @PostMapping("/request/{id}/document/{type}/request-resign")

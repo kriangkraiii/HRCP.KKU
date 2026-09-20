@@ -110,7 +110,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         // --- กรอกเอกสารที่ 1: บันทึกข้อความ ขอรับการประเมินผลการสอน ---
         expectAccepted(mvc.perform(formPost("/user/academic/request/" + id + "/document-1",
                 document1Fields()).with(asProfessor())),
-                "/user/academic/request/" + id + "?success=doc1_submitted");
+                "/user/academic/request/" + id + "/document/1?saved=1");
 
         // --- แนบไฟล์ประกอบ 7 หมวดตามที่เอกสารกำหนด ---
         //
@@ -126,7 +126,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         // --- กรอกเอกสารที่ 2: แบบตรวจสอบเบื้องต้นเอกสารประกอบการประเมิน ---
         expectAccepted(mvc.perform(formPost("/user/academic/request/" + id + "/document-2",
                 document2Fields()).with(asProfessor())),
-                "/user/academic/request/" + id + "?success=doc2_submitted");
+                "/user/academic/request/" + id + "/document/2?saved=1");
         assertThat(academicService.getDocumentsByType(id, 2))
                 .as("เอกสารที่ 2 ต้องถูกบันทึกจริง ไม่ใช่แค่ถูก redirect กลับ")
                 .isNotEmpty();

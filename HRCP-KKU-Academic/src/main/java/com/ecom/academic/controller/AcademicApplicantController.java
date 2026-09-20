@@ -324,6 +324,7 @@ public class AcademicApplicantController {
         model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.ACADEMIC);
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, id, 1, user));
+        model.addAttribute("docSaved", requestService.getLatestDocumentData(id, 1) != null);
 
         return "academic/applicant/document_1_form";
     }
@@ -343,7 +344,7 @@ public class AcademicApplicantController {
         }
 
         if (!requestService.canApplicantEditDocument(request, 1)) {
-            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
+            redirectAttributes.addFlashAttribute("errorMsg", EDIT_LOCKED_MESSAGE);
             return "redirect:/user/academic/request/" + id + "/document-1";
         }
 
@@ -369,7 +370,7 @@ public class AcademicApplicantController {
 
         Optional<String> rankProblem = doc1RankProblem(formData, user);
         if (rankProblem.isPresent()) {
-            redirectAttributes.addFlashAttribute("error", rankProblem.get());
+            redirectAttributes.addFlashAttribute("errorMsg", rankProblem.get());
             return "redirect:/user/academic/request/" + id + "/document-1";
         }
 
@@ -384,7 +385,10 @@ public class AcademicApplicantController {
         // Async prewarm PDF to cache
         documentPrewarmService.prewarmAcademicDocument(id, 1, jsonData);
 
-        return "redirect:/user/academic/request/" + id + "?success=doc1_submitted";
+        // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม ถ้าเด้งออกไปหน้ารายการคำร้องผู้ยื่นจะไม่เห็นว่ายังต้องเซ็น
+        redirectAttributes.addFlashAttribute("succMsg",
+                "บันทึกเอกสารที่ 1 เรียบร้อยแล้ว");
+        return DocumentFormLinks.redirectAfterSave(SignatureModule.ACADEMIC, id, 1, false);
     }
 
     // ==================== เอกสารที่ 2: แบบตรวจสอบเบื้องต้น ====================
@@ -446,6 +450,7 @@ public class AcademicApplicantController {
         model.addAttribute("signatureModule", com.ecom.academic.model.SignatureModule.ACADEMIC);
         model.addAttribute("signaturePanel", signatureWorkflow.buildPanel(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, id, 2, user));
+        model.addAttribute("docSaved", requestService.getLatestDocumentData(id, 2) != null);
 
         return "academic/applicant/document_2_form";
     }
@@ -465,7 +470,7 @@ public class AcademicApplicantController {
         }
 
         if (!requestService.canApplicantEditDocument(request, 2)) {
-            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
+            redirectAttributes.addFlashAttribute("errorMsg", EDIT_LOCKED_MESSAGE);
             return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
@@ -493,7 +498,7 @@ public class AcademicApplicantController {
 
             if (totalSize > MAX_TOTAL_BYTES) {
                 String usedMB = String.format("%.1f", totalSize / (1024.0 * 1024.0));
-                redirectAttributes.addFlashAttribute("error", "ขนาดไฟล์แนบรวมทั้งหมด (" + usedMB + " MB) เกินขีดจำกัด 75 MB ต่อคำร้อง");
+                redirectAttributes.addFlashAttribute("errorMsg", "ขนาดไฟล์แนบรวมทั้งหมด (" + usedMB + " MB) เกินขีดจำกัด 75 MB ต่อคำร้อง");
                 return "redirect:/user/academic/request/" + id + "/document-2";
             }
         }
@@ -509,7 +514,9 @@ public class AcademicApplicantController {
         // Async prewarm PDF to cache
         documentPrewarmService.prewarmAcademicDocument(id, 2, jsonData);
 
-        return "redirect:/user/academic/request/" + id + "?success=doc2_submitted";
+        redirectAttributes.addFlashAttribute("succMsg",
+                "บันทึกเอกสารที่ 2 เรียบร้อยแล้ว");
+        return DocumentFormLinks.redirectAfterSave(SignatureModule.ACADEMIC, id, 2, false);
     }
 
     // ==================== แนบไฟล์ประกอบการประเมินผลการสอน (เอกสารที่ 2) ====================
@@ -535,7 +542,7 @@ public class AcademicApplicantController {
         }
 
         if (!requestService.canApplicantEditDocument(request, 2)) {
-            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
+            redirectAttributes.addFlashAttribute("errorMsg", EDIT_LOCKED_MESSAGE);
             return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
@@ -574,14 +581,14 @@ public class AcademicApplicantController {
             String lower = originalFilename.toLowerCase();
             boolean isAllowed = lower.endsWith(".pdf") || lower.endsWith(".docx") || lower.endsWith(".doc") || lower.endsWith(".zip");
             if (!isAllowed) {
-                redirectAttributes.addFlashAttribute("error", "ไฟล์ " + originalFilename + " มีประเภทไฟล์ที่ไม่รองรับ (อนุญาตเฉพาะ .pdf, .docx, .doc, .zip)");
+                redirectAttributes.addFlashAttribute("errorMsg", "ไฟล์ " + originalFilename + " มีประเภทไฟล์ที่ไม่รองรับ (อนุญาตเฉพาะ .pdf, .docx, .doc, .zip)");
                 continue;
             }
 
             if (currentTotalSize + file.getSize() > MAX_TOTAL_BYTES) {
                 String usedMB = String.format("%.1f", currentTotalSize / (1024.0 * 1024.0));
                 String fileMB = String.format("%.1f", file.getSize() / (1024.0 * 1024.0));
-                redirectAttributes.addFlashAttribute("error",
+                redirectAttributes.addFlashAttribute("errorMsg",
                         "ขนาดไฟล์แนบเดิมรวม " + usedMB + " MB เมื่อเพิ่มไฟล์ " + originalFilename + " (" + fileMB + " MB) จะเกินขนาดรวมสูงสุด 75 MB ต่อคำร้อง");
                 continue;
             }
@@ -610,7 +617,7 @@ public class AcademicApplicantController {
         }
 
         if (uploadedCount > 0) {
-            redirectAttributes.addFlashAttribute("success", "อัปโหลดไฟล์แนบเรียบร้อยแล้ว " + uploadedCount + " ไฟล์");
+            redirectAttributes.addFlashAttribute("succMsg", "อัปโหลดไฟล์แนบเรียบร้อยแล้ว " + uploadedCount + " ไฟล์");
         }
         return "redirect:/user/academic/request/" + id + "/document-2";
     }
@@ -637,23 +644,23 @@ public class AcademicApplicantController {
         }
 
         if (!requestService.canApplicantEditDocument(request, 2)) {
-            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
+            redirectAttributes.addFlashAttribute("errorMsg", EDIT_LOCKED_MESSAGE);
             return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         if (url == null || url.isBlank()) {
-            redirectAttributes.addFlashAttribute("error", "กรุณาระบุ URL ลิงก์ไฟล์");
+            redirectAttributes.addFlashAttribute("errorMsg", "กรุณาระบุ URL ลิงก์ไฟล์");
             return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         String trimmedUrl = url.trim();
         if (!trimmedUrl.startsWith("http://") && !trimmedUrl.startsWith("https://")) {
-            redirectAttributes.addFlashAttribute("error", "รูปแบบ URL ไม่ถูกต้อง (ต้องขึ้นต้นด้วย http:// หรือ https://)");
+            redirectAttributes.addFlashAttribute("errorMsg", "รูปแบบ URL ไม่ถูกต้อง (ต้องขึ้นต้นด้วย http:// หรือ https://)");
             return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
         if (trimmedUrl.length() > 2048) {
-            redirectAttributes.addFlashAttribute("error", "ความยาวของ URL เกินขีดจำกัด (สูงสุด 2,048 ตัวอักษร)");
+            redirectAttributes.addFlashAttribute("errorMsg", "ความยาวของ URL เกินขีดจำกัด (สูงสุด 2,048 ตัวอักษร)");
             return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
@@ -673,7 +680,7 @@ public class AcademicApplicantController {
         attachment.setChecklistItem(targetSlot);
         requestService.saveAttachment(attachment);
 
-        redirectAttributes.addFlashAttribute("success",
+        redirectAttributes.addFlashAttribute("succMsg",
                 (slot != null && slot >= 1 && slot <= 5)
                         ? "แนบลิงก์ไฟล์สำหรับช่องที่ " + slot + " เรียบร้อยแล้ว"
                         : "แนบลิงก์ไฟล์เรียบร้อยแล้ว");
@@ -826,7 +833,7 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
         if (!requestService.canApplicantEditDocument(request, 2)) {
-            redirectAttributes.addFlashAttribute("error", EDIT_LOCKED_MESSAGE);
+            redirectAttributes.addFlashAttribute("errorMsg", EDIT_LOCKED_MESSAGE);
             return "redirect:/user/academic/request/" + id + "/document-2";
         }
 
@@ -841,7 +848,7 @@ public class AcademicApplicantController {
                 }
             }
             requestService.deleteAttachment(attachmentId);
-            redirectAttributes.addFlashAttribute("success", isLink ? "ลบลิงก์เรียบร้อยแล้ว" : "ลบไฟล์แนบเรียบร้อยแล้ว");
+            redirectAttributes.addFlashAttribute("succMsg", isLink ? "ลบลิงก์เรียบร้อยแล้ว" : "ลบไฟล์แนบเรียบร้อยแล้ว");
         }
         return "redirect:/user/academic/request/" + id + "/document-2";
     }
@@ -869,7 +876,7 @@ public class AcademicApplicantController {
         // (เอกสารที่ 1 อาจบันทึกไว้ก่อนมีกติกานี้ หรือเป็นแบบร่างที่ไม่ผ่านการตรวจตอนบันทึก)
         Optional<String> rankProblem = doc1RankProblem(readDocumentData(id, 1), user);
         if (rankProblem.isPresent()) {
-            redirectAttributes.addFlashAttribute("error", rankProblem.get());
+            redirectAttributes.addFlashAttribute("errorMsg", rankProblem.get());
             return "redirect:/user/academic/request/" + id + "/document-1";
         }
 

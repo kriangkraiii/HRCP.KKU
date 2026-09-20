@@ -266,9 +266,15 @@
             document.querySelectorAll('.thai-date-picker').forEach(picker => {
                 picker.addEventListener('change', function () {
                     const group = this.closest('.input-group');
-                    const textInput = group.querySelector('.thai-full-date');
-                    if (this.value) {
+                    const textInput = group ? group.querySelector('.thai-full-date') : null;
+                    if (this.value && textInput) {
                         textInput.value = toThaiDate(this.value);
+                    }
+                    if (typeof window.dismissDatePicker === 'function') {
+                        window.dismissDatePicker(this);
+                    } else {
+                        this.blur();
+                        if (textInput) textInput.focus();
                     }
                 });
             });

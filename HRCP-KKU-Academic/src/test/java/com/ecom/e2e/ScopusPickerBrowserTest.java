@@ -249,16 +249,17 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
         fillIfEmpty("applicant_name", "ผศ.ดร.สมชาย ทดสอบ");
         fillIfEmpty("title", "ผู้ช่วยศาสตราจารย์");
 
-        String before = page.url();
         page.locator("button[name='action'][value='submit']").first().click();
         page.waitForLoadState();
 
         com.microsoft.playwright.assertions.PlaywrightAssertions
                 .assertThat(page.locator("#validationAlert"))
                 .not().isVisible();
-        org.assertj.core.api.Assertions.assertThat(page.url())
-                .as("กดบันทึกแล้วต้องมีการส่งฟอร์มจริง ไม่ใช่ถูกกันไว้ที่หน้าเดิม")
-                .isNotEqualTo(before);
+        // บันทึกแล้วอยู่หน้าเดิม (แผงลงนามอยู่ใต้ฟอร์ม) URL จึงไม่เปลี่ยน — สิ่งที่บอกว่า
+        // ฟอร์มถูกส่งจริงคือข้อความยืนยันจากเซิร์ฟเวอร์ ไม่ใช่การเปลี่ยนหน้า
+        com.microsoft.playwright.assertions.PlaywrightAssertions
+                .assertThat(page.locator(".alert-success").first())
+                .containsText("บันทึก");
     }
 
     /** กรอกให้เฉพาะช่องที่ยังว่าง เพื่อไม่ทับค่าที่ autofill หรือเทสใส่ไว้แล้ว */

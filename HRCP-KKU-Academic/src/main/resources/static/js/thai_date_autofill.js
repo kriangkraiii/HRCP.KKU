@@ -108,6 +108,43 @@
         if (isBirthDateField(textInput)) updateAgeFrom(textInput);
     }
 
+    /**
+     * ปิดหน้าต่าง Native Date / DateTime / Time Picker (Chromium/Safari Shadow DOM overlay)
+     * อัตโนมัติเมื่อเลือกเสร็จ และคืน Focus กลับไปยัง Text Input คู่กัน (ถ้ามี)
+     * @param {HTMLInputElement} picker
+     */
+    function dismissDatePicker(picker) {
+        if (!picker) return;
+
+        var originalType = picker.getAttribute('type') || picker.type || 'date';
+        var group = picker.closest('.input-group');
+        var textInput = group
+            ? (group.querySelector('.thai-full-date') || group.querySelector('input[type="text"]:not([type="date"]):not([type="datetime-local"]):not([type="time"])'))
+            : null;
+
+        // 1. ปลด focus ทันที
+        picker.blur();
+        if (textInput) {
+            textInput.focus();
+        }
+
+        // 2. เผื่อกรณี Chromium ไม่ยอมทำลาย Floating Popup Overlay จาก blur อย่างเดียว
+        // การสลับ type ชั่วคราวใน tick ถัดไปจะสั่งให้เบราว์เซอร์ทำลาย Popup ทันที
+        setTimeout(function () {
+            var currentVal = picker.value;
+            if (currentVal) {
+                picker.type = 'text';
+                picker.type = originalType;
+                picker.value = currentVal;
+            }
+            picker.blur();
+            if (textInput) {
+                textInput.focus();
+            }
+        }, 10);
+    }
+    window.dismissDatePicker = dismissDatePicker;
+
     // หาทุก form ในหน้า
     var forms = document.querySelectorAll('form');
     if (!forms.length) return;
@@ -160,7 +197,10 @@
             if (!skipAutoFill) picker.value = isoToday;
 
             // Event-based (works on some browsers)
-            picker.addEventListener('change', function() { syncPickerToText(picker, input); });
+            picker.addEventListener('change', function() {
+                syncPickerToText(picker, input);
+                dismissDatePicker(picker);
+            });
             picker.addEventListener('input', function() { syncPickerToText(picker, input); });
 
             // Polling-based fallback (macOS date picker doesn't fire events reliably)
@@ -173,6 +213,7 @@
                     if (picker.value !== lastKnownValue) {
                         lastKnownValue = picker.value;
                         syncPickerToText(picker, input);
+                        dismissDatePicker(picker);
                     }
                 }, 300);
             }
@@ -206,4 +247,18 @@
             }
         });
     });
+
+    // Global Delegated Handler สำหรับ input วันที่/เวลา ทุกประเภทในระบบ
+    // (ครอบคลุม input[type="date"], input[type="datetime-local"], input[type="time"]
+    // ทั้งหน้าค้นหา, ประวัติกิจกรรม, แผงกำหนดเวลาเตือนลงนาม dueAt, และฟอร์มเอกสารทั้งหมด)
+    document.addEventListener('change', function (e) {
+        if (e.target && (
+            (e.target.matches && e.target.matches('input[type="date"], input[type="datetime-local"], input[type="time"]')) ||
+            e.target.type === 'date' ||
+            e.target.type === 'datetime-local' ||
+            e.target.type === 'time'
+        )) {
+            dismissDatePicker(e.target);
+        }
+    }, true);
 })();

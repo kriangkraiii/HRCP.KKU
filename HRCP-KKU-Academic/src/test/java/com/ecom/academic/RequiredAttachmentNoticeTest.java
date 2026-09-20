@@ -59,7 +59,7 @@ class RequiredAttachmentNoticeTest extends AbstractFlowTest {
         expectAccepted(mvc.perform(post("/user/academic/request/" + draft.getId() + "/document-2")
                 .with(user(TestDataFactory.APPLICANT_EMAIL)).with(csrf())
                 .param("action", "submit")),
-                "/user/academic/request/" + draft.getId() + "?success=doc2_submitted");
+                "/user/academic/request/" + draft.getId() + "/document/2?saved=1");
 
         assertThat(academicRequestService.getDocumentsByType(draft.getId(), 2))
                 .as("แม้ไม่มีไฟล์แนบ เอกสารที่ 2 ก็ต้องถูกบันทึกสำเร็จ")

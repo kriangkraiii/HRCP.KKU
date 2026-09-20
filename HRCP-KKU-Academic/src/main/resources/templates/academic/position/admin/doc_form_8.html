@@ -11,6 +11,10 @@
             <h3 class="mb-4"><i class="fas fa-user-shield"></i> เอกสารที่ 8: แบบสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ</h3>
             <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>แอดมิน</strong></div>
 
+            <!-- ขั้นตอน: กรอก → บันทึก → ลงนาม -->
+            <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
+            <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
+
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/8'" method="post" id="doc8Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/8'">
 
                 <!-- ข้อมูลผู้ยื่น -->
