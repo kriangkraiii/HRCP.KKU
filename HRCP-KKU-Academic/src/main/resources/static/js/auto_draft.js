@@ -143,6 +143,9 @@
     this.form.querySelectorAll("input,select,textarea").forEach(function (el) {
       var n = el.name;
       if (!n || n === "_csrf" || n === "action") return;
+      // ช่องที่ถูกปิดไม่ถูกส่งไปกับฟอร์มจริงอยู่แล้ว ร่างอัตโนมัติก็ไม่ควรส่ง — เอกสารที่ล็อก
+      // ทั้งฉบับจะได้ไม่ยิง POST เปล่าทุกครั้งที่มีอะไรขยับบนหน้า
+      if (el.disabled) return;
       if (el.type === "checkbox") {
         d[n] = el.checked ? (el.value || "on") : "☐";
       } else if (el.type === "radio") {
@@ -163,7 +166,10 @@
   Engine.prototype._save = function (force) {
     if (!this.endpoint) return Promise.resolve(true);
     if (!force && !window.AUTO_DRAFT_ENABLED) return Promise.resolve(true);
-    var h = this._hash();
+    var data = this._collect();
+    // ทุกช่องถูกปิด แปลว่าเอกสารล็อกอยู่ ไม่มีอะไรให้บันทึก
+    if (Object.keys(data).length === 0) return Promise.resolve(true);
+    var h = JSON.stringify(data);
     if (h === this.lastHash) return Promise.resolve(true);
 
     this.saving = true;
@@ -182,7 +188,7 @@
     this.inflight = fetch(this.endpoint, {
       method: "POST",
       headers: { "Content-Type": "application/json", "X-HRCP-CT": token },
-      body: JSON.stringify(this._collect()),
+      body: h,
     })
       .then(function (r) {
         if (r.ok) {
@@ -190,8 +196,18 @@
           self._show("saved", self._timeStr());
           return true;
         }
-        self._show("error", "เซิร์ฟเวอร์ตอบกลับ " + r.status);
-        return false;
+        // เซิร์ฟเวอร์ส่งเหตุผลมาให้เป็นภาษาไทยอยู่แล้ว การขึ้นแค่เลขสถานะทำให้ผู้ใช้
+        // เห็น "เซิร์ฟเวอร์ตอบกลับ 409" โดยไม่รู้ว่าเอกสารถูกล็อกเพราะกำลังเวียนลงนาม
+        return r
+          .json()
+          .then(function (body) {
+            self._show("error", (body && body.error) || "เซิร์ฟเวอร์ตอบกลับ " + r.status);
+            return false;
+          })
+          .catch(function () {
+            self._show("error", "เซิร์ฟเวอร์ตอบกลับ " + r.status);
+            return false;
+          });
       })
       .catch(function () {
         self._show("error");

@@ -282,10 +282,20 @@ public class PositionAdminController {
         model.addAttribute("docData", autoFilledData);
         // เอกสารของผู้ยื่นแอดมินดูได้อย่างเดียว ยกเว้นช่องของตัวเอง — สคริปต์ร่วมปิดช่องที่เหลือ
         // ให้เห็นชัด ตัวที่บังคับใช้จริงคือ DocumentFieldOwnership.merge ตอนบันทึก
+        //
+        // ความเป็นเจ้าของกับสถานะลงนามเป็นคนละเรื่องและต้องส่งไปทั้งคู่ — เอกสารของแอดมินเอง
+        // (7, 8) ที่ลงนามครบแล้วก็ต้องล็อก ทั้งที่ readOnlyForAdmin เป็น false
         model.addAttribute("readOnlyForAdmin",
                 DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, type));
         model.addAttribute("adminEditableFields",
                 DocumentFieldOwnership.adminFields(SignatureModule.POSITION, type));
+        model.addAttribute("officeFields",
+                DocumentFieldOwnership.officeFields(SignatureModule.POSITION, type));
+
+        boolean lockedForSigning = signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type);
+        model.addAttribute("lockedForSigning", lockedForSigning);
+        model.addAttribute("signingComplete", lockedForSigning
+                && signatureWorkflow.isSigningComplete(SignatureModule.POSITION, id, type));
         // Role-specific lists so each signer dropdown offers the right people.
         // These were all one undifferentiated "deans" list, which put the whole
         // staff into the department-head and HR pickers too.
@@ -330,9 +340,9 @@ public class PositionAdminController {
             return "redirect:/admin/position/request/" + id + "?error=still_a_draft";
         }
 
-        // เอกสารที่กำลังเวียนลงนามอยู่ (หรือลงนามครบแล้ว) ห้ามแก้ — ดูเหตุผลใน
-        // AcademicAdminController.generateDocument
-        if (signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type)) {
+        // เอกสารที่กำลังเวียนลงนามอยู่ห้ามแก้ — ดูเหตุผลใน AcademicAdminController.generateDocument
+        boolean signingComplete = signatureWorkflow.isSigningComplete(SignatureModule.POSITION, id, type);
+        if (signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type) && !signingComplete) {
             return "redirect:/admin/position/request/" + id
                     + "/document/" + type + "?error=document_locked_for_signing";
         }
@@ -341,6 +351,25 @@ public class PositionAdminController {
         formData.remove("_csrf");
         formData.remove("sendNotify");
         formData.remove("action");
+
+        // ลงนามครบแล้ว: เนื้อความตายตัว เหลือแต่เลขที่หนังสือกับวันที่ที่สารบรรณออกให้ทีหลัง
+        // ไม่สร้างไฟล์ใหม่และไม่เลื่อนสถานะ เพราะเอกสารฉบับจริงคือฉบับที่ลงนามไปแล้ว
+        // ค่าที่กรอกตรงนี้ไปโผล่บนเอกสารผ่าน OfficeFieldResolver ตอน render
+        if (signingComplete) {
+            try {
+                String jsonData = objectMapper.writeValueAsString(
+                        DocumentFieldOwnership.mergeOfficeFields(SignatureModule.POSITION, type,
+                                formData, positionService.getLatestDocumentData(id, type)));
+                positionService.saveDraft(request, type, jsonData,
+                        positionService.getDocLabel(type), "ADMIN");
+                positionService.logDocumentEdit(request, type, positionService.getDocLabel(type),
+                        getUser(principal), PositionDocumentEditLog.EditAction.UPDATED);
+            } catch (Exception e) {
+                return "redirect:/admin/position/request/" + id + "?error=doc_save_failed";
+            }
+            return "redirect:/admin/position/request/" + id
+                    + "/document/" + type + "?saved=office";
+        }
 
         try {
             // เอกสารของผู้ยื่นแอดมินแก้ไม่ได้ กรอกได้เฉพาะช่องของตัวเอง (เช่น เลขที่หนังสือ)

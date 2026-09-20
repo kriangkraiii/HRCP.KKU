@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import com.ecom.util.ThaiDateUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -364,11 +365,22 @@ public class DocumentGenerationService {
                             }
                         }
 
+                        // Step 1.8: เทมเพลตฉบับนี้พิมพ์เป็นเลขไทยหรือเลขอารบิก — ถามตัวเทมเพลต
+                        // เอง ไม่ถือรายชื่อเอกสารไว้ที่นี่ แก้ไฟล์ .docx แล้วพฤติกรรมตามไปเอง
+                        // ต้องดูก่อน Step 2 เพราะหลังแทนค่าแล้วจะแยกไม่ออกว่าเลขไทยที่เจอมาจาก
+                        // ตัวเทมเพลตหรือจากค่าที่เพิ่งเติมเข้าไป
+                        boolean thaiNumeralTemplate = usesThaiNumerals(xml);
+
                         // Step 2: Simple replace - แทนค่า {{placeholder}} ทั้งหมด
                         for (Map.Entry<String, String> ph : placeholders.entrySet()) {
                             String token = "{{" + ph.getKey() + "}}";
                             if (xml.contains(token)) {
                                 String raw = ph.getValue();
+                                // แปลงเลขก่อน escape เสมอ มิฉะนั้นจะไปโดนตัวเลขใน entity
+                                // หรือใน markup ที่ escapeXml แทรกเข้ามาเอง
+                                if (thaiNumeralTemplate && raw != null) {
+                                    raw = ThaiDateUtil.toThaiDigits(raw);
+                                }
                                 String value = (raw == null || raw.isBlank())
                                         ? blankFormFiller(ph.getKey())
                                         : escapeXml(raw);
@@ -1731,35 +1743,35 @@ public class DocumentGenerationService {
     private void preprocessPlaceholders(int documentType, Map<String, String> placeholders) {
         if (documentType == 5 || documentType == 4) {
             preprocessDoc5Placeholders(placeholders);
-        } else if (documentType == 8 || documentType == 7) {
-            preprocessDoc8Placeholders(placeholders);
         }
     }
+
+    /** ข้อความที่มองเห็นในเอกสาร — ไม่รวมชื่อแท็กและ attribute ซึ่งเป็น ASCII ล้วน */
+    private static final java.util.regex.Pattern BODY_TEXT =
+            java.util.regex.Pattern.compile("<w:t(?:\\s[^>]*)?>(.*?)</w:t>", java.util.regex.Pattern.DOTALL);
 
     /**
-     * เอกสารที่ 8: ครั้งที่ประชุมและวันที่ต้องพิมพ์เป็นเลขไทยในเอกสาร
-     * แปลงตอนสร้างไฟล์เท่านั้น ข้อมูลที่บันทึกไว้ยังเป็นเลขอาราบิกเพื่อให้ฟอร์มแก้ไขได้ตามปกติ
+     * เทมเพลตฉบับนี้พิมพ์ตัวเลขเป็นเลขไทยหรือไม่
+     *
+     * <p>ดูจากข้อความที่พิมพ์ไว้ในเทมเพลตเอง เจอเลขไทย ๐–๙ แม้ตัวเดียวก็ถือว่าใช่ เพราะฉบับที่
+     * ตั้งใจใช้เลขไทยจะใช้ตั้งแต่หัวข้อ ("ส่วนที่ ๓", "กลุ่มที่ ๑") ส่วนฉบับที่ใช้เลขอารบิก
+     * ไม่มีเลขไทยหลงอยู่เลยสักตัว — สำรวจเทมเพลตทั้ง 19 ฉบับแล้วแยกกันขาด
+     *
+     * <p>ตั้งใจไม่เก็บเป็นรายชื่อเอกสารในโค้ด เพราะรายชื่อแบบนั้นจะเพี้ยนทันทีที่มีคนแก้ไฟล์
+     * .docx หรือเพิ่มเอกสารใหม่ โดยไม่มีอะไรเตือน
      */
-    private void preprocessDoc8Placeholders(Map<String, String> placeholders) {
-        for (String key : new String[] { "meeting_no", "meeting_date", "sign_date" }) {
-            String val = placeholders.get(key);
-            if (val != null && !val.isBlank()) {
-                placeholders.put(key, toThaiDigits(val));
+    private static boolean usesThaiNumerals(String xml) {
+        java.util.regex.Matcher m = BODY_TEXT.matcher(xml);
+        while (m.find()) {
+            String text = m.group(1);
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
+                if (c >= '๐' && c <= '๙') {
+                    return true;
+                }
             }
         }
-    }
-
-    private void preprocessDoc7Placeholders(Map<String, String> placeholders) {
-        preprocessDoc8Placeholders(placeholders);
-    }
-
-    /** แปลงตัวเลข Arabic เป็นเลขไทย เช่น "1/2569" → "๑/๒๕๖๙" */
-    private static String toThaiDigits(String s) {
-        StringBuilder sb = new StringBuilder(s.length());
-        for (char c : s.toCharArray()) {
-            sb.append(c >= '0' && c <= '9' ? (char) ('๐' + (c - '0')) : c);
-        }
-        return sb.toString();
+        return false;
     }
 
     /**

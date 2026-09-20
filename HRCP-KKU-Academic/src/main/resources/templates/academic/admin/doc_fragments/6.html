@@ -19,6 +19,8 @@
                     <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
+                    <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+                    <div th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}"></div>
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
                         method="post" id="docForm"
                         th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">

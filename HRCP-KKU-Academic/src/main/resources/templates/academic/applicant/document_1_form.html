@@ -49,20 +49,20 @@
                         <!-- ข้อมูลบันทึกข้อความ -->
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-file-signature"></i> ข้อมูลบันทึกข้อความ
                         </h5>
+                        <!--
+                          เลขที่หนังสือและวันที่เอกสารเป็นงานสารบรรณ ออกให้หลังเอกสารลงนามครบ
+                          ผู้ยื่นจึงไม่มีช่องให้กรอกเลย และไม่ต้องส่งอะไรกลับมาด้วย — เซิร์ฟเวอร์
+                          คืนค่าที่เจ้าหน้าที่กรอกไว้ให้เอง (DocumentFieldOwnership)
+
+                          ช่องซ่อนแบบเดิมส่งค่ามาทับทุกครั้งที่กดบันทึก ซึ่งเป็นวิธีที่พังทันทีที่
+                          เบราว์เซอร์ไม่ส่งค่ากลับ หรือมีคนยิง POST ตรง
+                        -->
                         <div class="row mb-3">
-                            <!-- เลขที่หนังสือ: ซ่อนจากผู้ยื่น ให้แอดมินกรอก -->
-                            <input type="hidden" name="memo_no"
-                                th:value="${dData != null ? dData.getOrDefault('memo_no', '') : ''}">
-                            <div class="col-md-4">
-                                <label class="form-label">วันที่เอกสาร <span class="text-danger">*</span></label>
-                                <div class="input-group">
-                                    <input type="text" name="date" class="form-control thai-full-date"
-                                        th:value="${dData != null ? dData.getOrDefault('date', '') : ''}"
-                                        placeholder="เช่น 17 กุมภาพันธ์ 2569" required>
-                                    <input type="date" class="thai-date-picker">
-                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่">
-                                        <i class="fas fa-calendar-alt"></i>
-                                    </button>
+                            <div class="col-md-6">
+                                <label class="form-label">เลขที่หนังสือและวันที่เอกสาร</label>
+                                <div class="form-control-plaintext text-muted">
+                                    <i class="fas fa-building-columns"></i>
+                                    เจ้าหน้าที่สารบรรณเป็นผู้ลงให้หลังเอกสารลงนามครบ
                                 </div>
                             </div>
                         </div>
@@ -409,12 +409,11 @@
                                 var errors = [];
 
                                 // Check required fields
-                                var dateField = form.querySelector('[name="date"]');
                                 var titleField = form.querySelector('[name="title"]');
                                 var nameField = form.querySelector('[name="applicant_name"]');
                                 var posField = form.querySelector('[name="current_position"]');
 
-                                if (!dateField || !dateField.value.trim()) errors.push('วันที่เอกสาร');
+                                // วันที่เอกสารไม่อยู่ในรายการนี้แล้ว — สารบรรณเป็นคนลงให้ทีหลัง
                                 if (!titleField || !titleField.value) errors.push('คำนำหน้า');
                                 if (!nameField || !nameField.value.trim()) errors.push('ชื่อ-นามสกุล');
 

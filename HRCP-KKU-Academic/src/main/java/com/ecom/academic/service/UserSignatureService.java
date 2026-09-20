@@ -13,6 +13,7 @@ import com.ecom.academic.model.UserSignature;
 import com.ecom.academic.repository.UserSignatureRepository;
 import com.ecom.model.UserDtls;
 import com.ecom.service.SignatureImageStorage;
+import com.ecom.util.ThaiDateUtil;
 
 /**
  * Manages each person's reusable signature library.
@@ -239,21 +240,13 @@ public class UserSignatureService {
 
     /**
      * Converts ASCII digits 0-9 into Thai digits ๐-๙.
+     *
+     * <p>Kept as a named entry point here because the signature stamp image wants
+     * Thai numerals whichever template it is pasted onto — everywhere else the
+     * choice belongs to the document being rendered, not to the value.
      */
     public static String toThaiDigits(String input) {
-        if (input == null || input.isEmpty()) {
-            return input;
-        }
-        StringBuilder sb = new StringBuilder(input.length());
-        for (int i = 0; i < input.length(); i++) {
-            char c = input.charAt(i);
-            if (c >= '0' && c <= '9') {
-                sb.append((char) ('\u0E50' + (c - '0')));
-            } else {
-                sb.append(c);
-            }
-        }
-        return sb.toString();
+        return ThaiDateUtil.toThaiDigits(input);
     }
 
     /**

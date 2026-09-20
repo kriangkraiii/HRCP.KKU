@@ -37,6 +37,10 @@ document.addEventListener('DOMContentLoaded', function () {
         if (required) input.required = true;
         if (selectedValue) input.value = selectedValue;
         if (sel.id) input.id = sel.id;
+        // ต้องยกสถานะล็อกมาด้วย มิฉะนั้นช่องที่ถูกปิดไว้จะกลับมาแก้ได้ทันทีที่สคริปต์นี้ทำงาน
+        // เพราะมันสร้าง element ใหม่ทั้งอัน และรันทีหลังสคริปต์ที่ปิดช่อง
+        if (sel.disabled) input.disabled = true;
+        if (sel.readOnly) input.readOnly = true;
 
         // Create datalist
         const datalist = document.createElement('datalist');

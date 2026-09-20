@@ -15,6 +15,7 @@
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
+            <div th:replace="~{academic/_admin_field_lock :: banner('position', ${request.id}, ${documentType})}"></div>
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/8'" method="post" id="doc8Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/8'">
 
                 <!-- ข้อมูลผู้ยื่น -->
@@ -473,6 +474,7 @@
             initDocPreview('doc8Form', 8, '/api/position/preview');
             initPositionNotifyConfirm('doc8Form', 8);
         </script>
+    <th:block th:replace="~{academic/_admin_field_lock :: script('doc8Form')}"></th:block>
     </section>
 </body>
 </html>

@@ -3,10 +3,13 @@
 <body>
 
 <!-- ==================== Shared Buttons ==================== -->
-<!-- ล็อกปุ่มบันทึกเมื่อเอกสารกำลังเวียนลงนาม — เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว
-     แต่ปุ่มที่กดไม่ได้อธิบายเหตุผลได้ดีกว่าปุ่มที่กดแล้วเด้งกลับ -->
+<!-- ล็อกปุ่มบันทึกเฉพาะตอนที่ยังเวียนลงนามอยู่ — เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว
+     แต่ปุ่มที่กดไม่ได้อธิบายเหตุผลได้ดีกว่าปุ่มที่กดแล้วเด้งกลับ
+
+     เมื่อลงนามครบแล้วปุ่มต้องกลับมากดได้ เพราะยังเหลือให้สารบรรณลงเลขที่หนังสือ
+     กับวันที่เอกสาร (DocumentFieldOwnership.officeFields) -->
 <div th:fragment="buttons" class="d-flex flex-wrap gap-2 mt-4"
-     th:with="signingLocked=${signaturePanel != null && signaturePanel.locked}">
+     th:with="signingLocked=${lockedForSigning != null && lockedForSigning && !(signingComplete != null && signingComplete)}">
     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
     </button>
@@ -23,11 +26,8 @@
 
 <!-- ==================== แผงลงนามอิเล็กทรอนิกส์ ==================== -->
 <div th:fragment="signaturePanel">
-    <div th:if="${param.error != null && param.error[0] == 'document_locked_for_signing'}"
-         class="alert alert-warning mt-3">
-        <i class="fas fa-lock"></i>
-        บันทึกไม่สำเร็จ — เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้
-    </div>
+    <!-- ข้อความ "บันทึกไม่สำเร็จเพราะเอกสารถูกล็อก" ย้ายไปอยู่ใน _admin_field_lock :: banner
+         ที่เดียว เพื่อให้เฟส 2 ซึ่งไม่มี fragment ร่วมชุดนี้ได้ข้อความเดียวกันไปด้วย -->
     <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
 </div>
 

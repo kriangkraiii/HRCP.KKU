@@ -72,15 +72,22 @@ public class AutoDraftApiController {
                         .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อแอดมินส่งกลับมาให้แก้ไขเท่านั้น"));
             }
             // แอดมินเคยข้ามการเช็กล็อกทั้งหมดในทางนี้ ทั้งที่หน้าเว็บปกติห้ามไว้ — เอกสารที่
-            // เวียนลงนามไปแล้วจึงถูกแก้เงียบ ๆ ผ่าน auto-draft ได้ และแฮชของซองก็ไม่ตรงอีกต่อไป
-            if (isAdmin && academicService.isDocumentLockedForSigning(requestId, docType)) {
+            // เวียนลงนามไปแล้วจึงถูกแก้เงียบ ๆ ผ่าน auto-draft ได้
+            boolean signingComplete = academicService.isSigningComplete(requestId, docType);
+            if (isAdmin && academicService.isDocumentLockedForSigning(requestId, docType)
+                    && !signingComplete) {
                 return ResponseEntity.status(409)
                         .body(Map.of("error", "เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้"));
             }
 
             // เจ้าหน้าที่แก้เอกสารของผู้ยื่นไม่ได้ และผู้ยื่นก็แก้ช่องของเจ้าหน้าที่ไม่ได้เช่นกัน
-            String filtered = DocumentFieldOwnership.mergeJson(SignatureModule.ACADEMIC, docType,
-                    isAdmin, jsonData, academicService.getLatestDocumentData(requestId, docType));
+            // ส่วนเอกสารที่ลงนามครบแล้ว เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่เท่านั้น
+            Map<String, String> existing = academicService.getLatestDocumentData(requestId, docType);
+            String filtered = (isAdmin && signingComplete)
+                    ? DocumentFieldOwnership.mergeOfficeFieldsJson(
+                            SignatureModule.ACADEMIC, docType, jsonData, existing)
+                    : DocumentFieldOwnership.mergeJson(
+                            SignatureModule.ACADEMIC, docType, isAdmin, jsonData, existing);
             if (filtered == null) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
@@ -127,7 +134,9 @@ public class AutoDraftApiController {
                 return ResponseEntity.status(409)
                         .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อแอดมินส่งกลับมาให้แก้ไขเท่านั้น"));
             }
-            if (isAdmin && positionService.isDocumentLockedForSigning(requestId, docType)) {
+            boolean signingComplete = positionService.isSigningComplete(requestId, docType);
+            if (isAdmin && positionService.isDocumentLockedForSigning(requestId, docType)
+                    && !signingComplete) {
                 return ResponseEntity.status(409)
                         .body(Map.of("error", "เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้"));
             }
@@ -135,8 +144,13 @@ public class AutoDraftApiController {
             String label = positionService.getDocLabel(docType);
             String filledBy = isAdmin ? "ADMIN" : "APPLICANT";
 
-            String filtered = DocumentFieldOwnership.mergeJson(SignatureModule.POSITION, docType,
-                    isAdmin, jsonData, positionService.getLatestDocumentData(requestId, docType));
+            // เอกสารที่ลงนามครบแล้ว เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่เท่านั้น
+            Map<String, String> existing = positionService.getLatestDocumentData(requestId, docType);
+            String filtered = (isAdmin && signingComplete)
+                    ? DocumentFieldOwnership.mergeOfficeFieldsJson(
+                            SignatureModule.POSITION, docType, jsonData, existing)
+                    : DocumentFieldOwnership.mergeJson(
+                            SignatureModule.POSITION, docType, isAdmin, jsonData, existing);
             if (filtered == null) {
                 return ResponseEntity.badRequest()
                         .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));

@@ -43,6 +43,7 @@ public class SignedDocumentRenderer {
     private final SignatureStepRepository stepRepository;
     private final SignatureImageStorage signatureImageStorage;
     private final SignerNameResolver signerNameResolver;
+    private final OfficeFieldResolver officeFieldResolver;
     private final UserDigitalCertificateService digitalCertificateService;
     private final UserSignatureService userSignatureService;
 
@@ -50,12 +51,14 @@ public class SignedDocumentRenderer {
             SignatureStepRepository stepRepository,
             SignatureImageStorage signatureImageStorage,
             SignerNameResolver signerNameResolver,
+            OfficeFieldResolver officeFieldResolver,
             UserDigitalCertificateService digitalCertificateService,
             UserSignatureService userSignatureService) {
         this.documentGenerationService = documentGenerationService;
         this.stepRepository = stepRepository;
         this.signatureImageStorage = signatureImageStorage;
         this.signerNameResolver = signerNameResolver;
+        this.officeFieldResolver = officeFieldResolver;
         this.digitalCertificateService = digitalCertificateService;
         this.userSignatureService = userSignatureService;
     }
@@ -86,6 +89,9 @@ public class SignedDocumentRenderer {
         // ช่องลงนามที่ยังไม่มีใครเซ็นต้องขึ้นชื่อคนที่รอเซ็นอยู่ ไม่ใช่วงเล็บว่าง
         // เติมตอน render เท่านั้น — frozenJson ที่เก็บไว้และแฮชของมันไม่ถูกแตะ
         json = signerNameResolver.fillInto(envelope, json);
+        // เลขที่หนังสือออกหลังเอกสารลงนามครบ จึงไม่มีทางอยู่ใน frozenJson — เติมทับ
+        // ตอน render เหมือนกัน โดยไม่แตะสำเนาที่แช่แข็งไว้และแฮชของมัน
+        json = officeFieldResolver.fillInto(envelope, json);
 
         return envelope.getModule() == SignatureModule.ACADEMIC
                 ? documentGenerationService.generateSignedDocx(

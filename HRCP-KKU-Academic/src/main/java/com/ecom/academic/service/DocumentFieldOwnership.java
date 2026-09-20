@@ -45,17 +45,37 @@ public final class DocumentFieldOwnership {
      */
     private static final Map<SignatureModule, Map<Integer, Set<String>>> ADMIN_FIELDS = Map.of(
             SignatureModule.ACADEMIC, Map.of(
-                    // เลขที่หนังสือออกโดยสำนักงาน ผู้ยื่นไม่รู้เลขตอนกรอก (วันที่เอกสารเป็นของผู้ยื่น)
-                    1, Set.of("memo_no"),
+                    // หัวบันทึกข้อความเป็นงานสารบรรณทั้งคู่ ผู้ยื่นไม่รู้เลขและไม่ใช่คนลงวัน
+                    1, Set.of("memo_no", "date"),
                     // คอลัมน์ "เจ้าหน้าที่" และหมายเหตุ คู่กับคอลัมน์ "เจ้าตัว" ที่ผู้ยื่นติ๊กเอง
                     2, Set.of("chk_off_1", "chk_off_2", "chk_off_3", "chk_off_4", "chk_off_5",
                             "text_1", "text_2", "text_3", "text_4", "text_5",
                             "hr_staff_name")),
             SignatureModule.POSITION, Map.of(
                     3, Set.of("dean_name", "dean_position", "verify_date"),
-                    4, Set.of("memo_no", "department_head_name"),
-                    6, Set.of("memo_no", "applicant_signature_name", "dean_signature_name",
+                    4, Set.of("memo_no", "date", "department_head_name"),
+                    6, Set.of("memo_no", "date", "applicant_signature_name", "dean_signature_name",
                             "position_title")));
+
+    /**
+     * ช่องหัวบันทึกข้อความที่สารบรรณเป็นคนออก
+     *
+     * <p>ต่างจากช่องอื่นตรงจังหวะ: เลขที่หนังสือออก <em>หลัง</em> เอกสารลงนามครบแล้ว
+     * สองช่องนี้จึงต้องเขียนทับได้ตอนที่เนื้อความปิดตายไปหมดแล้ว ดู
+     * {@link #officeFields(SignatureModule, int)}
+     *
+     * <p>รายการนี้ตรงกับ placeholder ที่มีจริงในเทมเพลต {@code .docx} แต่ละฉบับ —
+     * ใส่ชื่อเอกสารที่ไม่มีช่องพวกนี้ลงไปก็ไม่มีผล นอกจากทำให้เข้าใจผิด
+     */
+    private static final Map<SignatureModule, Map<Integer, Set<String>>> OFFICE_FIELDS = Map.of(
+            SignatureModule.ACADEMIC, Map.of(
+                    1, Set.of("memo_no", "date"),
+                    5, Set.of("memo_no", "date"),
+                    9, Set.of("memo_no", "date")),
+            SignatureModule.POSITION, Map.of(
+                    4, Set.of("memo_no", "date"),
+                    6, Set.of("memo_no", "date"),
+                    8, Set.of("date")));
 
     /** เอกสารฉบับนี้เป็นของผู้ยื่นหรือไม่ — ที่ไม่รู้จักถือว่าเป็นของแอดมิน ปลอดภัยไว้ก่อน */
     public static boolean isApplicantDocument(SignatureModule module, int documentType) {
@@ -73,6 +93,18 @@ public final class DocumentFieldOwnership {
             return Set.of();
         }
         return ADMIN_FIELDS.getOrDefault(module, Map.of())
+                .getOrDefault(documentType, Set.of());
+    }
+
+    /**
+     * ช่องหัวบันทึกข้อความที่เจ้าหน้าที่สารบรรณกรอกทีหลังได้ แม้เอกสารลงนามครบไปแล้ว
+     *
+     * <p>ช่องพวกนี้เป็นของแอดมินอยู่แล้วตาม {@link #adminFields} — ที่แยกออกมาเป็นอีกชุด
+     * เพราะมันตอบคำถามคนละข้อ: {@code adminFields} ตอบว่า <em>ใคร</em> กรอกได้
+     * ส่วนชุดนี้ตอบว่า <em>ตอนไหน</em> ยังกรอกได้อยู่
+     */
+    public static Set<String> officeFields(SignatureModule module, int documentType) {
+        return OFFICE_FIELDS.getOrDefault(module, Map.of())
                 .getOrDefault(documentType, Set.of());
     }
 
@@ -129,6 +161,49 @@ public final class DocumentFieldOwnership {
 
         signerFields(module, documentType).forEach(result::remove);
         return result;
+    }
+
+    /**
+     * รวมเฉพาะช่องสารบรรณ สำหรับเอกสารที่ลงนามครบแล้ว
+     *
+     * <p>ใช้แทน {@link #merge} เมื่อซองลายเซ็นปิดไปแล้ว ตอนนั้นเนื้อความทั้งฉบับถือว่าตายตัว
+     * เหลือเพียงเลขที่หนังสือกับวันที่ที่สารบรรณยังมาลงทีหลังได้ ที่เหลือคืนค่าเดิมทั้งหมด
+     * ไม่ว่าใครจะส่งอะไรมา
+     */
+    public static Map<String, String> mergeOfficeFields(SignatureModule module, int documentType,
+            Map<String, String> submitted, Map<String, String> existing) {
+
+        Map<String, String> result = new LinkedHashMap<>();
+        if (existing != null) {
+            result.putAll(existing);
+        }
+        if (submitted != null) {
+            for (String key : officeFields(module, documentType)) {
+                String value = submitted.get(key);
+                if (value != null) {
+                    result.put(key, value);
+                }
+            }
+        }
+        signerFields(module, documentType).forEach(result::remove);
+        return result;
+    }
+
+    /** รูปแบบ JSON ของ {@link #mergeOfficeFields} — คืน null เมื่อ parse ไม่ได้ เหมือน {@link #mergeJson} */
+    public static String mergeOfficeFieldsJson(SignatureModule module, int documentType,
+            String jsonData, Map<String, String> existing) {
+        if (jsonData == null || jsonData.isBlank()) {
+            return null;
+        }
+        try {
+            Map<String, String> submitted = MAPPER.readValue(jsonData,
+                    new TypeReference<Map<String, String>>() {
+                    });
+            return MAPPER.writeValueAsString(
+                    mergeOfficeFields(module, documentType, submitted, existing));
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**

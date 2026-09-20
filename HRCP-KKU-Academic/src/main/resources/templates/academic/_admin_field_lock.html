@@ -3,17 +3,47 @@
 <body>
 
 <!--
-  เอกสารของผู้ยื่นที่แอดมินเปิดดู
+  แถบบอกสถานะของเอกสารที่แอดมินเปิดดู
 
-  แอดมินแก้เอกสารของผู้ยื่นไม่ได้ กรอกได้เฉพาะช่องของตัวเอง (เลขที่หนังสือ คอลัมน์เจ้าหน้าที่ ฯลฯ)
-  ถ้าต้องแก้ส่วนอื่นต้องส่งกลับให้ผู้ยื่นแก้เอง
+  มีสองเหตุผลที่ช่องถูกปิด และต้องแยกจากกันให้ชัด เพราะทางออกคนละทาง:
+
+  1. เอกสารของผู้ยื่น  — แอดมินกรอกได้เฉพาะช่องของตัวเอง ถ้าต้องแก้ส่วนอื่นให้ส่งกลับให้ผู้ยื่น
+  2. เอกสารที่ลงนามแล้ว — เนื้อความปิดตาย เหลือแค่เลขที่หนังสือกับวันที่ที่สารบรรณลงทีหลัง
+     ระหว่างที่ยังเวียนลงนามอยู่ปิดทุกช่องไม่มีข้อยกเว้น เพราะคนที่ยังไม่เซ็นต้องเห็นของเดิม
 
   ส่วนนี้เป็นเพียงการบอกผู้ใช้ให้เห็นชัด — ตัวที่บังคับใช้จริงคือ DocumentFieldOwnership.merge
-  ฝั่งเซิร์ฟเวอร์ ปิด JS แล้วยิง POST ตรงก็ยังกันอยู่
+  และ mergeOfficeFields ฝั่งเซิร์ฟเวอร์ ปิด JS แล้วยิง POST ตรงก็ยังกันอยู่
 -->
-<div th:fragment="banner(module, requestId, documentType)"
-     th:if="${readOnlyForAdmin}">
-    <div class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
+<div th:fragment="banner(module, requestId, documentType)">
+
+    <!-- กำลังเวียนลงนาม: ปิดสนิท ไม่มีช่องไหนแก้ได้ -->
+    <div th:if="${lockedForSigning and !signingComplete}" class="alert alert-warning">
+        <i class="fas fa-lock"></i>
+        <strong>เอกสารอยู่ระหว่างการเวียนลงนาม</strong> — แก้ไขไม่ได้ทั้งฉบับ
+        <div class="small text-muted mt-1">
+            ผู้ลงนามคนถัดไปต้องเห็นเอกสารฉบับเดียวกับคนที่ลงนามไปแล้ว
+            หากต้องแก้ ให้ยกเลิกการเวียนลงนามก่อน
+        </div>
+    </div>
+
+    <!-- ลงนามครบแล้ว: เหลือช่องสารบรรณ -->
+    <div th:if="${signingComplete}" class="alert alert-info">
+        <i class="fas fa-stamp"></i>
+        <strong>เอกสารลงนามครบแล้ว</strong>
+        <span th:if="${officeFields != null and !officeFields.isEmpty()}">
+            — กรอกได้เฉพาะเลขที่หนังสือและวันที่เอกสาร
+        </span>
+        <span th:unless="${officeFields != null and !officeFields.isEmpty()}">
+            — แก้ไขไม่ได้แล้ว
+        </span>
+        <div class="small text-muted mt-1">
+            ค่าที่กรอกจะไปปรากฏบนเอกสารที่ลงนามแล้วทันที โดยไม่กระทบลายเซ็นที่ให้ไว้
+        </div>
+    </div>
+
+    <!-- เอกสารของผู้ยื่น -->
+    <div th:if="${readOnlyForAdmin and !lockedForSigning}"
+         class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <i class="fas fa-lock"></i>
             <strong>เอกสารของผู้ยื่น</strong> — แก้ไขข้อมูลของผู้ยื่นไม่ได้
@@ -32,7 +62,7 @@
     </div>
 
     <!-- อยู่นอก <form> ของเอกสาร เพราะเป็นการส่ง POST คนละปลายทาง -->
-    <div class="collapse mb-3" id="sendBackPanel">
+    <div th:if="${readOnlyForAdmin and !lockedForSigning}" class="collapse mb-3" id="sendBackPanel">
         <form th:action="@{'/admin/' + ${module} + '/request/' + ${requestId} + '/document/' + ${documentType} + '/request-resign'}"
               method="post" class="card card-body">
             <label class="form-label fw-semibold">เหตุผลที่ส่งกลับ <span class="text-danger">*</span></label>
@@ -45,25 +75,82 @@
             </div>
         </form>
     </div>
+
+    <!-- บันทึกไม่สำเร็จเพราะเอกสารถูกล็อก (redirect กลับมาพร้อม param นี้) -->
+    <div th:if="${param.error != null && param.error[0] == 'document_locked_for_signing'}"
+         class="alert alert-danger">
+        <i class="fas fa-triangle-exclamation"></i>
+        บันทึกไม่สำเร็จ — เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้
+    </div>
+
+    <div th:if="${param.saved != null && param.saved[0] == 'office'}" class="alert alert-success">
+        <i class="fas fa-check"></i> บันทึกเลขที่หนังสือ/วันที่เอกสารแล้ว
+    </div>
 </div>
 
-<!-- ปิดช่องที่ไม่ใช่ของแอดมิน ต้องวางหลังฟอร์มใน DOM -->
+<!--
+  ปิดช่องที่ผู้ใช้คนนี้ไม่ได้เป็นเจ้าของ ต้องวางหลังฟอร์มใน DOM
+
+  จุดที่เคยรั่วและกันไว้แล้วตรงนี้:
+    - แถวที่เกิดจากปุ่ม "เพิ่มแถว" ถูกสร้างหลังสคริปต์รันไปแล้ว → ใช้ MutationObserver ตามเก็บ
+    - ปุ่มไม่เคยถูกปิด ทั้งปุ่มเพิ่มแถว ปุ่มปฏิทิน และปุ่มบันทึก → ปิดด้วย
+  ส่วน select_to_datalist.js ที่เปลี่ยน <select> เป็น <input> ใหม่ แก้ที่ตัวมันเองให้ยกสถานะ
+  disabled ติดไปด้วย เพราะมันรันทีหลังและสร้าง element ใหม่ทั้งอัน
+-->
 <th:block th:fragment="script(formId)">
     <script th:inline="javascript">
         (function () {
             var readOnly = /*[[${readOnlyForAdmin}]]*/ false;
-            if (!readOnly) return;
-            var allowed = /*[[${adminEditableFields}]]*/ [];
+            var locked = /*[[${lockedForSigning}]]*/ false;
+            var signed = /*[[${signingComplete}]]*/ false;
+            if (!readOnly && !locked) return;
+
             var form = document.getElementById(/*[[${formId}]]*/ '');
             if (!form) return;
 
-            var editable = new Set(allowed || []);
-            form.querySelectorAll('input, select, textarea').forEach(function (el) {
+            // ลำดับความเข้มจากมากไปน้อย: เวียนลงนามอยู่ → ลงนามครบ → เอกสารของผู้ยื่น
+            var editable;
+            if (locked && !signed) {
+                editable = new Set();
+            } else if (signed) {
+                editable = new Set(/*[[${officeFields}]]*/[] || []);
+            } else {
+                editable = new Set(/*[[${adminEditableFields}]]*/[] || []);
+            }
+
+            // ปุ่มปิดเฉพาะตอนที่ไม่มีอะไรให้กรอกเลย (กำลังเวียนลงนาม หรืออ่านอย่างเดียวทั้งฉบับ)
+            // ถ้ายังเหลือช่องให้กรอกอยู่ ปุ่มบันทึกต้องกดได้ ไม่งั้นกรอกเลขที่หนังสือแล้วบันทึกไม่ได้
+            var nothingToFill = editable.size === 0;
+
+            function lock(el) {
+                if (el.tagName === 'BUTTON') {
+                    if (nothingToFill) el.disabled = true;
+                    return;
+                }
                 // ช่องซ่อนไม่ต้องปิด: ผู้ใช้แตะไม่ได้อยู่แล้ว และเซิร์ฟเวอร์ตัดทิ้งเองถ้าไม่ใช่ของแอดมิน
+                // ช่องที่ไม่มี name ก็เช่นกัน มันไม่เคยถูกส่งไปกับฟอร์ม (เช่นตัวเลือกวันที่ข้างช่องจริง)
                 if (!el.name || el.type === 'hidden' || editable.has(el.name)) return;
                 el.disabled = true;
                 el.classList.add('bg-light');
-            });
+            }
+
+            function lockWithin(root) {
+                if (root.matches && root.matches('input, select, textarea, button')) lock(root);
+                if (root.querySelectorAll) {
+                    root.querySelectorAll('input, select, textarea, button').forEach(lock);
+                }
+            }
+
+            lockWithin(form);
+
+            // แถวที่ถูกเพิ่มทีหลังต้องโดนกติกาเดียวกัน ไม่งั้นล็อกนี้กันได้แค่ตอนเปิดหน้า
+            new MutationObserver(function (records) {
+                records.forEach(function (record) {
+                    record.addedNodes.forEach(function (node) {
+                        if (node.nodeType === 1) lockWithin(node);
+                    });
+                });
+            }).observe(form, { childList: true, subtree: true });
         })();
     </script>
 </th:block>

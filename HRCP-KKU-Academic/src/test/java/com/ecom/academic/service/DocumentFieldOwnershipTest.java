@@ -161,10 +161,11 @@ class DocumentFieldOwnershipTest {
         }
 
         @Test
-        @DisplayName("เฟส 2 เอกสาร 6 เลขที่หนังสือเป็นของเจ้าหน้าที่ แต่วันที่เป็นของผู้ยื่น")
-        void phase2DocumentSixKeepsTheMemoNumberWithTheOffice() {
-            Map<String, String> submitted = map("memo_no", "ผู้ยื่นแต่งเอง", "date", "๑๐ มีนาคม ๒๕๖๙");
-            Map<String, String> existing = map("memo_no", "อว 660301.26.3/45");
+        @DisplayName("เฟส 2 เอกสาร 6 ทั้งเลขที่หนังสือและวันที่เป็นของเจ้าหน้าที่")
+        void phase2DocumentSixKeepsTheMemoNumberAndDateWithTheOffice() {
+            Map<String, String> submitted = map("memo_no", "ผู้ยื่นแต่งเอง", "date", "ผู้ยื่นลงวันเอง");
+            Map<String, String> existing = map(
+                    "memo_no", "อว 660301.26.3/45", "date", "๑๐ มีนาคม ๒๕๖๙");
 
             Map<String, String> result = DocumentFieldOwnership.merge(P2, 6, false, submitted, existing);
 
@@ -279,6 +280,79 @@ class DocumentFieldOwnershipTest {
 
             assertThat(submitted).containsEntry("applicant_name", "แอดมินแอบแก้");
             assertThat(existing).containsEntry("applicant_name", "ผู้ยื่นกรอกไว้");
+        }
+    }
+
+    /**
+     * เลขที่หนังสือกับวันที่เอกสารออกโดยสารบรรณ ซึ่งในทางปฏิบัติทำ <em>หลัง</em> เอกสารลงนาม
+     * ครบแล้ว สองช่องนี้จึงต้องเขียนทับได้ตอนที่ช่องอื่นปิดตายไปแล้ว
+     */
+    @Nested
+    @DisplayName("ช่องสารบรรณ")
+    class OfficeFields {
+
+        @Test
+        @DisplayName("เฟส 1 เอกสาร 1, 5, 9 มีทั้งเลขที่หนังสือและวันที่")
+        void phase1DocumentsWithAMemoHeader() {
+            for (int type : new int[] { 1, 5, 9 }) {
+                assertThat(DocumentFieldOwnership.officeFields(P1, type))
+                        .as("เอกสารเฟส 1 ที่ %d", type)
+                        .containsExactlyInAnyOrder("memo_no", "date");
+            }
+        }
+
+        @Test
+        @DisplayName("เฟส 2 เอกสาร 4 และ 6 มีทั้งสองช่อง ส่วนเอกสาร 8 มีแค่วันที่")
+        void phase2DocumentsWithAMemoHeader() {
+            assertThat(DocumentFieldOwnership.officeFields(P2, 4))
+                    .containsExactlyInAnyOrder("memo_no", "date");
+            assertThat(DocumentFieldOwnership.officeFields(P2, 6))
+                    .containsExactlyInAnyOrder("memo_no", "date");
+            assertThat(DocumentFieldOwnership.officeFields(P2, 8))
+                    .containsExactly("date");
+        }
+
+        @Test
+        @DisplayName("เอกสารที่ไม่มีหัวบันทึกข้อความคืนค่าว่าง")
+        void documentsWithoutAMemoHeaderHaveNone() {
+            for (int type : new int[] { 2, 3, 4, 6, 7, 8 }) {
+                assertThat(DocumentFieldOwnership.officeFields(P1, type))
+                        .as("เอกสารเฟส 1 ที่ %d", type)
+                        .isEmpty();
+            }
+            for (int type : new int[] { 1, 2, 3, 5, 7, 9 }) {
+                assertThat(DocumentFieldOwnership.officeFields(P2, type))
+                        .as("เอกสารเฟส 2 ที่ %d", type)
+                        .isEmpty();
+            }
+        }
+
+        @Test
+        @DisplayName("ทุกช่องสารบรรณต้องเป็นช่องของแอดมินด้วย ไม่งั้นกรอกแล้วถูกตัดทิ้ง")
+        void areAlwaysAdminOwnedOnApplicantDocuments() {
+            for (int type : DocumentFieldOwnership.applicantDocuments(P1)) {
+                assertThat(DocumentFieldOwnership.adminFields(P1, type))
+                        .as("เอกสารเฟส 1 ที่ %d", type)
+                        .containsAll(DocumentFieldOwnership.officeFields(P1, type));
+            }
+            for (int type : DocumentFieldOwnership.applicantDocuments(P2)) {
+                assertThat(DocumentFieldOwnership.adminFields(P2, type))
+                        .as("เอกสารเฟส 2 ที่ %d", type)
+                        .containsAll(DocumentFieldOwnership.officeFields(P2, type));
+            }
+        }
+
+        @Test
+        @DisplayName("เฟส 1 เอกสาร 1 ผู้ยื่นลงวันที่เองไม่ได้แล้ว")
+        void applicantCannotSetTheDocumentDate() {
+            Map<String, String> submitted = map("date", "ผู้ยื่นลงวันเอง", "applicant_name", "ชื่อจริง");
+            Map<String, String> existing = map("date", "๒๑ กันยายน ๒๕๖๙");
+
+            Map<String, String> result = DocumentFieldOwnership.merge(P1, 1, false, submitted, existing);
+
+            assertThat(result)
+                    .containsEntry("date", "๒๑ กันยายน ๒๕๖๙")
+                    .containsEntry("applicant_name", "ชื่อจริง");
         }
     }
 

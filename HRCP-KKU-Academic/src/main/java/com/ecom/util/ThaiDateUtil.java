@@ -34,6 +34,28 @@ public class ThaiDateUtil {
         return out.toString();
     }
 
+    /**
+     * Rewrites Arabic digits as Thai ones, leaving everything else alone.
+     *
+     * <p>The inverse of {@link #toArabicDigits(String)}, and needed for the same
+     * reason read in the other direction: several of the {@code .docx} templates
+     * are typeset entirely in Thai numerals, so a value filled into one of them
+     * has to match or the page reads as two documents stitched together.
+     *
+     * @return the converted text, or null when given null
+     */
+    public static String toThaiDigits(String text) {
+        if (text == null) {
+            return null;
+        }
+        StringBuilder out = new StringBuilder(text.length());
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            out.append(c >= '0' && c <= '9' ? THAI_DIGITS.charAt(c - '0') : c);
+        }
+        return out.toString();
+    }
+
     /** LocalDateTime → "dd/MM/2569 HH:mm" */
     public String format(LocalDateTime dt) {
         if (dt == null) return "-";

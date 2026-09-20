@@ -30,6 +30,7 @@ import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.PositionStatusHistory;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
+import com.ecom.academic.model.SignatureRequestStatus;
 import com.ecom.academic.repository.AcademicDocumentRepository;
 import com.ecom.academic.repository.AcademicRequestRepository;
 import com.ecom.academic.repository.PositionAttachmentRepository;
@@ -744,6 +745,20 @@ public class PositionRequestService {
         return !signatureRequestRepository
                 .findBlockingEnvelopes(SignatureModule.POSITION, requestId, documentType)
                 .isEmpty();
+    }
+
+    /**
+     * ลงนามครบแล้ว รอบเวียนลงนามปิดไปแล้ว
+     *
+     * <p>แคบกว่า {@link #isDocumentLockedForSigning} หนึ่งขั้น: ระหว่างเวียนลงนามห้ามขยับ
+     * อะไรทั้งสิ้นเพราะคนถัดไปต้องเห็นของเดิม แต่เมื่อปิดรอบแล้วไม่มีคนถัดไปให้เข้าใจผิด
+     * จึงเหลือช่องให้สารบรรณลงเลขที่หนังสือและวันที่ซึ่งออกให้หลังเอกสารเสร็จ
+     */
+    public boolean isSigningComplete(Long requestId, int documentType) {
+        return signatureRequestRepository
+                .findBlockingEnvelopes(SignatureModule.POSITION, requestId, documentType)
+                .stream()
+                .anyMatch(envelope -> envelope.getStatus() == SignatureRequestStatus.COMPLETED);
     }
 
     /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */

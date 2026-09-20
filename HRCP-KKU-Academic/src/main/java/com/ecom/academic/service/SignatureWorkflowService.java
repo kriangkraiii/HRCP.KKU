@@ -161,6 +161,23 @@ public class SignatureWorkflowService {
     }
 
     /**
+     * Whether every signature is in and the round is over.
+     *
+     * <p>Both this and {@link #isDocumentLocked} are true once a document is fully
+     * signed, but they are not interchangeable. Mid-circulation the content must
+     * not move at all: the next signer has to be shown exactly what the previous
+     * one put their name to. Once the round has closed there is no next signer to
+     * mislead, which is what lets the registry fill in the memo number and date it
+     * only issues after the fact — see
+     * {@link DocumentFieldOwnership#officeFields(SignatureModule, int)}.
+     */
+    public boolean isSigningComplete(SignatureModule module, Long requestId, int documentType) {
+        return findBlockingEnvelope(module, requestId, documentType)
+                .filter(envelope -> envelope.getStatus() == SignatureRequestStatus.COMPLETED)
+                .isPresent();
+    }
+
+    /**
      * The round the clock closed on this document, if one is waiting to be
      * revived.
      *

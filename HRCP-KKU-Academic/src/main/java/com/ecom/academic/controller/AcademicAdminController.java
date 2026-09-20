@@ -52,6 +52,7 @@ import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.ecom.service.AdminLogService;
 import com.ecom.util.FileUtils;
+import com.ecom.util.ThaiDateUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -433,7 +434,7 @@ public class AcademicAdminController {
         model.addAttribute("existingData", existingJson);
         model.addAttribute("autoFilledData", autoFilledData);
         model.addAttribute("docData", autoFilledData);
-        addOwnershipGate(model, SignatureModule.ACADEMIC, type);
+        addOwnershipGate(model, SignatureModule.ACADEMIC, id, type);
         model.addAttribute("staffMembers", staffMemberService.findAll());
         model.addAttribute("deans", staffMemberService.findDeans());
         model.addAttribute("heads", staffMemberService.findHeads());
@@ -594,9 +595,10 @@ public class AcademicAdminController {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
-        // เอกสารที่กำลังเวียนลงนามอยู่ (หรือลงนามครบแล้ว) ห้ามแก้
-        // มิฉะนั้นลายเซ็นที่ให้ไว้กับเนื้อหาเดิมจะกลายเป็นลายเซ็นบนเนื้อหาใหม่ที่ผู้ลงนามไม่เคยเห็น
-        if (signatureWorkflow.isDocumentLocked(SignatureModule.ACADEMIC, id, type)) {
+        // เอกสารที่กำลังเวียนลงนามอยู่ห้ามแก้ มิฉะนั้นลายเซ็นที่ให้ไว้กับเนื้อหาเดิมจะกลายเป็น
+        // ลายเซ็นบนเนื้อหาใหม่ที่ผู้ลงนามคนก่อนไม่เคยเห็น
+        boolean signingComplete = signatureWorkflow.isSigningComplete(SignatureModule.ACADEMIC, id, type);
+        if (signatureWorkflow.isDocumentLocked(SignatureModule.ACADEMIC, id, type) && !signingComplete) {
             return "redirect:/admin/academic/request/" + id
                     + "/document/" + type + "?error=document_locked_for_signing";
         }
@@ -607,6 +609,20 @@ public class AcademicAdminController {
         formData.remove("action");
         formData.remove("_csrf");
         formData.remove("sendNotify");
+
+        // ลงนามครบแล้ว: เนื้อความตายตัว เหลือแต่เลขที่หนังสือกับวันที่ที่สารบรรณออกให้ทีหลัง
+        // ไม่สร้างไฟล์ใหม่ไม่ว่าจะกดปุ่มไหน เพราะเอกสารฉบับจริงคือฉบับที่ลงนามไปแล้ว
+        // ค่าที่กรอกตรงนี้ไปโผล่บนเอกสารผ่าน OfficeFieldResolver ตอน render
+        if (signingComplete) {
+            String jsonData = objectMapper.writeValueAsString(
+                    DocumentFieldOwnership.mergeOfficeFields(SignatureModule.ACADEMIC, type,
+                            formData, requestService.getLatestDocumentData(id, type)));
+            requestService.saveDraft(request, type, jsonData,
+                    DOC_LABELS.getOrDefault(type, "Document " + type), null);
+            requestService.logDocumentEdit(request, type, DOC_LABELS.get(type), getUser(principal),
+                    AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
+            return "redirect:/admin/academic/request/" + id + "/document/" + type + "?saved=office";
+        }
 
         // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
         if ("draft".equals(action)) {
@@ -677,20 +693,10 @@ public class AcademicAdminController {
                 grandTotal += weighted;
             }
 
-            // คะแนนรวม
-            formData.put("scorex", toThaiDigits("%.2f".formatted(grandTotal)));
-
-            // แปลง score fields ทั้งหมดเป็นเลขไทยสำหรับ DOCX
-            for (int sec = 1; sec <= 4; sec++) {
-                for (int range = 1; range <= 5; range++) {
-                    String key = "score" + sec + range;
-                    String val = formData.get(key);
-                    if (val != null && !val.isEmpty()) {
-                        formData.put(key, toThaiDigits(val));
-                    }
-                }
-                formData.put("score" + sec + "x", toThaiDigits(formData.get("score" + sec + "x")));
-            }
+            // คะแนนรวม — เก็บเป็นเลขอารบิกเสมอ เอกสารที่ 7 พิมพ์เป็นเลขไทยก็จริง แต่การแปลง
+            // เป็นเรื่องของตอนสร้างไฟล์ (DocumentGenerationService ดูจากเทมเพลตเอง) ไม่ใช่ของ
+            // ข้อมูลที่บันทึกไว้ ซึ่งต้องอ่านกลับมาใส่ฟอร์มและคำนวณต่อได้
+            formData.put("scorex", "%.2f".formatted(grandTotal));
 
             // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์ (ใช้คะแนนจริง ไม่ปัดขึ้น)
             formData.put("ch1", grandTotal <= 56 ? "☑" : "☐");
@@ -723,25 +729,6 @@ public class AcademicAdminController {
                         formData.put("requested_position", pos);
                     } catch (Exception ignored) {
                     }
-                }
-            }
-        }
-
-        // Document 8: แปลงเลขอาราบิกเป็นเลขไทยสำหรับ DOCX (ทำฝั่ง server เท่านั้น)
-        if (type == 8) {
-            String[] thaiConvertFields = {"meeting_no"};
-            for (String field : thaiConvertFields) {
-                String val = formData.get(field);
-                if (val != null && !val.isEmpty()) {
-                    formData.put(field + "_thai", toThaiDigits(val));
-                }
-            }
-            // แปลงวันที่เป็นเลขไทยสำหรับเอกสาร
-            String[] dateFields = {"meeting_date", "sign_date"};
-            for (String field : dateFields) {
-                String val = formData.get(field);
-                if (val != null && !val.isEmpty()) {
-                    formData.put(field + "_thai", toThaiDigits(val));
                 }
             }
         }
@@ -1236,21 +1223,11 @@ public class AcademicAdminController {
         return "redirect:/admin/academic/request/" + id + "?success=attachment_deleted";
     }
 
-    /** แปลงเลขไทยเป็น Arabic เช่น "๙๙.๗๔" → "99.74" */
-    private static String toArabicDigits(String s) {
-        if (s == null || s.isEmpty())
-            return s;
-        return s.replace("๐", "0").replace("๑", "1").replace("๒", "2")
-                .replace("๓", "3").replace("๔", "4").replace("๕", "5")
-                .replace("๖", "6").replace("๗", "7").replace("๘", "8")
-                .replace("๙", "9");
-    }
-
     /** สรุประดับผลการประเมินจากคะแนนรวม (รับได้ทั้งเลขไทยและ Arabic) */
     private static String evalLevelFromScore(Object rawScore) {
         if (rawScore == null)
             return "";
-        String s = toArabicDigits(rawScore.toString()).trim();
+        String s = ThaiDateUtil.toArabicDigits(rawScore.toString()).trim();
         if (s.isEmpty())
             return "";
         try {
@@ -1268,25 +1245,27 @@ public class AcademicAdminController {
         }
     }
 
-    /** แปลงตัวเลข Arabic เป็นเลขไทย เช่น "3.50" → "๓.๕๐" */
-    private static String toThaiDigits(String s) {
-        if (s == null || s.isEmpty())
-            return s;
-        return s.replace("0", "๐").replace("1", "๑").replace("2", "๒")
-                .replace("3", "๓").replace("4", "๔").replace("5", "๕")
-                .replace("6", "๖").replace("7", "๗").replace("8", "๘")
-                .replace("9", "๙");
-    }
-
     /**
      * บอกเทมเพลตว่าเอกสารฉบับนี้เจ้าหน้าที่แก้อะไรได้บ้าง
      *
      * <p>สคริปต์ร่วมใน {@code _common.html} ปิดช่องที่ไม่อยู่ในรายการ แต่มันเป็นแค่การบอกผู้ใช้
      * ให้เห็นชัด ตัวที่บังคับใช้จริงคือ {@link #onlyWhatAnOfficerOwns} ฝั่งเซิร์ฟเวอร์
      */
-    private void addOwnershipGate(Model model, SignatureModule module, int type) {
+    /**
+     * บอกเทมเพลตว่าเอกสารฉบับนี้เจ้าหน้าที่แก้อะไรได้บ้าง และตอนนี้ยังแก้ได้อยู่ไหม
+     *
+     * <p>ความเป็นเจ้าของกับสถานะลงนามเป็นคนละเรื่องและต้องส่งไปทั้งคู่ — เอกสารของแอดมินเอง
+     * ที่ลงนามครบแล้วก็ต้องล็อก ทั้งที่ {@code readOnlyForAdmin} เป็น false
+     */
+    private void addOwnershipGate(Model model, SignatureModule module, Long requestId, int type) {
         model.addAttribute("readOnlyForAdmin", DocumentFieldOwnership.isApplicantDocument(module, type));
         model.addAttribute("adminEditableFields", DocumentFieldOwnership.adminFields(module, type));
+        model.addAttribute("officeFields", DocumentFieldOwnership.officeFields(module, type));
+
+        boolean locked = requestId != null && signatureWorkflow.isDocumentLocked(module, requestId, type);
+        boolean complete = locked && signatureWorkflow.isSigningComplete(module, requestId, type);
+        model.addAttribute("lockedForSigning", locked);
+        model.addAttribute("signingComplete", complete);
     }
 
     /**

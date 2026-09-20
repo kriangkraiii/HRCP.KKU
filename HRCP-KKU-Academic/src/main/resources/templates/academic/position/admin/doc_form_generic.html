@@ -20,6 +20,7 @@
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
+            <div th:replace="~{academic/_admin_field_lock :: banner('position', ${request.id}, ${documentType})}"></div>
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/' + ${documentType}" method="post" id="docGenericForm" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/' + ${documentType}">
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลเอกสาร (JSON)</h5></div>
@@ -83,6 +84,7 @@
             });
         </script>
         <script th:inline="javascript">initDocPreview('docGenericForm', /*[[${documentType}]]*/ 0, '/api/position/preview');</script>
+    <th:block th:replace="~{academic/_admin_field_lock :: script('docGenericForm')}"></th:block>
     </section>
 </body>
 </html>

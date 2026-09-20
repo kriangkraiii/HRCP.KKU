@@ -1286,8 +1286,9 @@ public class AcademicApplicantController {
                     try {
                         Map<String, String> data = objectMapper.readValue(doc.getJsonData(),
                                 new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
-                        return hasValue(data, "date")
-                                && hasValue(data, "title")
+                        // วันที่เอกสารไม่อยู่ในนี้แล้ว — เป็นของสารบรรณซึ่งลงให้หลังเอกสาร
+                        // ลงนามครบ ถ้ายังบังคับอยู่ ผู้ยื่นจะส่งคำร้องไม่ได้เลยสักคน
+                        return hasValue(data, "title")
                                 && hasValue(data, "applicant_name")
                                 && hasValue(data, "employee_type")
                                 && hasValue(data, "current_position")
