@@ -1266,30 +1266,50 @@ body,
 }
 
 /* ======================================
-   AUTO-DRAFT BAR — Dark Mode
+   AUTO-DRAFT STATUS CHIP — Dark Mode
+   ชิปโหมดสว่างเป็นกระจกขาว โหมดมืดจึงต้องกลับเป็นกระจกเข้ม
+   ไม่งั้นจะเป็นก้อนขาวลอยอยู่กลางหน้าจอดำ (โครงสร้าง: style.css)
    ====================================== */
+[data-theme="dark"] .adb {
+    box-shadow: 0 10px 34px 0 rgba(0, 0, 0, 0.45),
+                inset 0 1px 1px 0 rgba(255, 255, 255, 0.06) !important;
+}
+
 [data-theme="dark"] .adb--idle,
-[data-theme="dark"] .adb--saved {
-    background: rgba(21, 128, 61, 0.12) !important;
-    color: #86efac !important;
-    border-color: rgba(134, 239, 172, 0.25) !important;
+[data-theme="dark"] .adb--disabled {
+    background: color-mix(in srgb, var(--bg-card) 82%, transparent) !important;
+    color: var(--text-secondary) !important;
+    border-color: var(--border-color) !important;
+}
+
+[data-theme="dark"] .adb--dirty {
+    background: rgba(66, 165, 245, 0.14) !important;
+    color: #90caf9 !important;
+    border-color: rgba(144, 202, 249, 0.32) !important;
 }
 
 [data-theme="dark"] .adb--saving {
-    background: rgba(180, 83, 9, 0.12) !important;
-    color: #fcd34d !important;
-    border-color: rgba(252, 211, 77, 0.25) !important;
+    background: rgba(245, 127, 23, 0.14) !important;
+    color: #ffcc80 !important;
+    border-color: rgba(255, 204, 128, 0.32) !important;
+}
+
+[data-theme="dark"] .adb--saved {
+    background: rgba(46, 125, 50, 0.16) !important;
+    color: #a5d6a7 !important;
+    border-color: rgba(165, 214, 167, 0.32) !important;
 }
 
 [data-theme="dark"] .adb--error {
-    background: rgba(185, 28, 28, 0.12) !important;
-    color: #fca5a5 !important;
-    border-color: rgba(252, 165, 165, 0.25) !important;
+    background: rgba(198, 40, 40, 0.16) !important;
+    color: #ef9a9a !important;
+    border-color: rgba(239, 154, 154, 0.38) !important;
 }
 
-[data-theme="dark"] .adb--disabled {
-    background: var(--bg-card-header) !important;
-    color: var(--text-muted) !important;
+/* เติมทับ .adb--saved จึงต้องอยู่หลังสุด */
+[data-theme="dark"] .adb--quiet {
+    background: color-mix(in srgb, var(--bg-card) 82%, transparent) !important;
+    color: var(--text-secondary) !important;
     border-color: var(--border-color) !important;
 }
 

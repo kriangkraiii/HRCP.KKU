@@ -14,8 +14,8 @@
     <link rel="preconnect" href="https://translate.googleapis.com">
     <meta name="_csrf" th:content="${_csrf.token}">
     <meta name="_csrf_header" th:content="${_csrf.headerName}">
-    <link rel="stylesheet" href="/css/style.css?v=3.3">
-    <link rel="stylesheet" href="/css/dark-theme.css?v=3.3">
+    <link rel="stylesheet" href="/css/style.css?v=3.4">
+    <link rel="stylesheet" href="/css/dark-theme.css?v=3.4">
     <link rel="stylesheet" href="/css/doc_preview.css?v=3.0">
     <link rel="stylesheet" href="/css/esign.css?v=3.2">
     <link rel="stylesheet" href="/css/searchable_select.css?v=1.0">
@@ -192,7 +192,7 @@
         <script th:inline="javascript">
             window.AUTO_DRAFT_ENABLED = /*[[${user != null && user.autoDraftEnabled != null ? user.autoDraftEnabled : true}]]*/ true;
         </script>
-        <script src="/js/auto_draft.js?v=3.0"></script>
+        <script src="/js/auto_draft.js?v=4.0"></script>
         <!-- ตรวจช่องที่ยังไม่ได้กรอก แล้วบันทึกเอกสารให้ก่อนส่งไปลงนาม -->
         <script src="/js/doc_required_validate.js?v=1.0"></script>
         <script src="/js/sign_presave.js?v=1.1"></script>

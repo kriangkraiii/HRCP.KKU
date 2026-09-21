@@ -535,6 +535,168 @@ body:has(.floating-doc-btn-back) .btn-back-pill:not(.floating-doc-btn):not(form 
   display: none !important;
 }
 
+/*
+ * หน้าเอกสารมีแถบลอยด้านบน (ปุ่ม "กลับ" / "ดูตัวอย่าง" และชิปสถานะบันทึกร่าง)
+ * ซึ่งเป็น position:fixed จึงลอยทับหัวเรื่องของหน้า — เว้นที่ให้เนื้อหาเริ่มต่ำกว่าแถบนั้น
+ */
+body:has(.floating-doc-btn) .content-wrapper {
+  padding-top: 56px;
+}
+@media (max-width: 991px) {
+  body:has(.floating-doc-btn) .content-wrapper {
+    padding-top: 52px;
+  }
+}
+
+/* ===== Auto-Draft Status Chip (แถบสถานะบันทึกร่าง) ===== */
+/*
+ * ชิปสร้างจาก /js/auto_draft.js — เดิมเป็นแถบเต็มความกว้างบนหัวฟอร์ม ซึ่งหลุดจอทันทีที่เลื่อนลง
+ * ตอนนี้ลอยอยู่แถวเดียวกับปุ่ม "กลับ" / "ดูตัวอย่าง" (top:70px) แต่จัดกึ่งกลางพื้นที่เนื้อหา
+ * จึงไม่ชนกับปุ่มทั้งสองข้าง และเห็นได้ตลอดเวลาที่กรอกเอกสาร
+ *
+ * โทนสี: สถานะปกติเงียบที่สุด (กระจกขาวชุดเดียวกับ .floating-doc-btn-back)
+ * เด่นเฉพาะตอนกำลังบันทึก / บันทึกสำเร็จ / ผิดพลาด แล้วจางกลับเป็น .adb--quiet
+ */
+.adb {
+  position: fixed;
+  top: 70px;
+  left: calc(50% + var(--sidebar-width, 260px) / 2);
+  transform: translateX(-50%);
+  z-index: 1035;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(440px, 52vw);
+  padding: 7px 18px;
+  border-radius: 9999px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  line-height: 1.4;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  transition: background var(--duration-normal) var(--ease-out-quart),
+              color var(--duration-normal) var(--ease-out-quart),
+              border-color var(--duration-normal) var(--ease-out-quart),
+              box-shadow var(--duration-normal) var(--ease-out-quart);
+  animation: adbChipIn var(--duration-normal) var(--ease-out-quart);
+  user-select: none;
+  /* ไม่ขวางการคลิกเนื้อหาที่อยู่ข้างหลัง — ยกเว้นตอนผิดพลาดที่ต้องให้ชี้อ่านข้อความเต็มได้ */
+  pointer-events: none;
+}
+.adb__icon {
+  font-size: 1rem;
+  flex-shrink: 0;
+  width: 18px;
+  text-align: center;
+}
+.adb__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@keyframes adbChipIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+@keyframes adbPulse {
+  0%, 80%, 100% { opacity: 0.3; }
+  40% { opacity: 1; }
+}
+.adb__dots span { animation: adbPulse 1.4s infinite both; }
+.adb__dots span:nth-child(2) { animation-delay: 0.2s; }
+.adb__dots span:nth-child(3) { animation-delay: 0.4s; }
+
+/* --- สถานะเงียบ: กระจกขาว ตัวอักษรสีรอง --- */
+.adb--idle,
+.adb--disabled,
+.adb--quiet {
+  background: rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  color: #475569;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08),
+              0 2px 6px 0 rgba(0, 0, 0, 0.04),
+              inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.95);
+}
+.adb--disabled { color: #64748b; }
+
+/* --- มีการแก้ไขที่ยังไม่บันทึก: น้ำเงินกรมของระบบ --- */
+.adb--dirty {
+  background: color-mix(in srgb, var(--color-primary) 10%, rgba(255, 255, 255, 0.86));
+  border: 1px solid color-mix(in srgb, var(--color-primary) 26%, transparent);
+  color: var(--color-primary);
+  box-shadow: 0 8px 32px 0 color-mix(in srgb, var(--color-primary) 14%, transparent),
+              inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* --- กำลังบันทึก --- */
+.adb--saving {
+  background: color-mix(in srgb, var(--color-warning) 14%, rgba(255, 255, 255, 0.86));
+  border: 1px solid color-mix(in srgb, var(--color-warning) 34%, transparent);
+  color: #a15c00;
+  box-shadow: 0 8px 32px 0 color-mix(in srgb, var(--color-warning) 16%, transparent),
+              inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* --- บันทึกสำเร็จ (เด่น 4 วินาที แล้ว JS เติม .adb--quiet ทับให้จางลง) --- */
+.adb--saved {
+  background: color-mix(in srgb, var(--color-success) 12%, rgba(255, 255, 255, 0.86));
+  border: 1px solid color-mix(in srgb, var(--color-success) 32%, transparent);
+  color: var(--color-success-dark);
+  box-shadow: 0 8px 32px 0 color-mix(in srgb, var(--color-success) 16%, transparent),
+              inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* --- ผิดพลาด: ค้างไว้จนกว่าจะบันทึกได้ และชี้เพื่ออ่านข้อความเต็มได้ --- */
+.adb--error {
+  background: color-mix(in srgb, var(--color-danger) 12%, rgba(255, 255, 255, 0.9));
+  border: 1px solid color-mix(in srgb, var(--color-danger) 40%, transparent);
+  color: var(--color-danger);
+  box-shadow: 0 10px 34px 0 color-mix(in srgb, var(--color-danger) 24%, transparent),
+              inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.85);
+  pointer-events: auto;
+  cursor: help;
+}
+
+/* .adb--quiet เติมทับ .adb--saved จึงต้องอยู่หลังสุดเพื่อให้ชนะลำดับ */
+.adb--quiet {
+  background: rgba(255, 255, 255, 0.72) !important;
+  border-color: rgba(255, 255, 255, 0.65) !important;
+  color: #475569 !important;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08),
+              0 2px 6px 0 rgba(0, 0, 0, 0.04),
+              inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.95) !important;
+}
+
+/* จอเล็ก: ปุ่มลอยย้ายมาอยู่ที่ top:66px และกินความกว้างเกือบหมด ชิปจึงลงไปอยู่ล่างกลางจอแทน */
+@media (max-width: 991px) {
+  .adb {
+    top: auto;
+    bottom: 16px;
+    left: 50%;
+    max-width: calc(100vw - 32px);
+  }
+  /* ชิปอยู่ล่างจอ ทับปุ่มส่งได้ — บนจอสัมผัสไม่มี hover ให้อ่าน tooltip อยู่แล้ว จึงปล่อยให้แตะทะลุ */
+  .adb--error {
+    pointer-events: none;
+  }
+  @keyframes adbChipIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(8px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .adb { animation: none; transition: none; }
+  .adb__dots span { animation: none; }
+}
+
+@media print {
+  .adb { display: none !important; }
+}
+
 /* ===== Reduced Motion ===== */
 @media (prefers-reduced-motion: reduce) {
   *,

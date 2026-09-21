@@ -6,33 +6,46 @@
  *   2. <script> window.AUTO_DRAFT_ENABLED = true; </script>
  *   3. <script src="/js/auto_draft.js"></script>
  *
- * Debounce: 1.5 seconds after last input change.
+ * Debounce: 1 second after last input change.
  * Dirty tracking: only saves when data actually changed.
+ * UI: ชิปสถานะลอยติดหน้าจอ (.adb — สไตล์อยู่ใน style.css / dark-theme.css)
+ *     และสะท้อนสถานะเดียวกันไปยังทุก element ที่มี [data-autodraft-mirror]
  */
 (function () {
   "use strict";
 
   var DEBOUNCE_MS = 1000;
+  /* บันทึกเสร็จแล้วเน้นสีอยู่เท่านี้ ก่อนจะจางลงเป็นโทนเงียบ */
+  var QUIET_MS = 4000;
 
-  /* ---------- CSS (injected once) ---------- */
-  var styleInjected = false;
-  function injectStyles() {
-    if (styleInjected) return;
-    styleInjected = true;
-    var s = document.createElement("style");
-    s.textContent =
-      ".adb{display:flex;align-items:center;gap:10px;padding:10px 16px;border-radius:8px;font-size:.85rem;font-weight:500;margin-bottom:14px;transition:all .3s;line-height:1.4}" +
-      ".adb--idle{background:#f0fdf4;color:#15803d;border:1px solid #86efac}" +
-      ".adb--saving{background:#fffbeb;color:#b45309;border:1px solid #fcd34d}" +
-      ".adb--saved{background:#f0fdf4;color:#15803d;border:1px solid #86efac}" +
-      ".adb--error{background:#fef2f2;color:#b91c1c;border:1px solid #fca5a5}" +
-      ".adb--disabled{background:#f3f4f6;color:#6b7280;border:1px solid #d1d5db}" +
-      ".adb__icon{font-size:1.05rem;flex-shrink:0;width:20px;text-align:center;position:relative}" +
-      "@keyframes adbPulse{0%,80%,100%{opacity:.3}40%{opacity:1}}" +
-      ".adb__dots span{animation:adbPulse 1.4s infinite both}" +
-      ".adb__dots span:nth-child(2){animation-delay:.2s}" +
-      ".adb__dots span:nth-child(3){animation-delay:.4s}";
-    document.head.appendChild(s);
+  /* ---------- ชิปสถานะ (ลอยติดหน้าจอ ใช้ร่วมกันทั้งหน้า) ----------
+   *
+   * เดิมแถบสถานะถูกแทรกเป็นลูกตัวแรกของฟอร์ม พอผู้ใช้เลื่อนลงไปกรอกข้อมูลก็หลุดจอไป
+   * ตัวชิปจึงย้ายมาเป็น position:fixed อยู่แถวเดียวกับปุ่มลอย "กลับ" / "ดูตัวอย่าง"
+   * และทำเป็นตัวเดียวต่อหน้า เผื่อหน้าไหนมีหลายฟอร์มจะได้ไม่ซ้อนกัน (CSS: style.css)
+   */
+  var dock = null;
+  var quietTimer = null;
+
+  function getDock() {
+    if (dock) return dock;
+    dock = document.createElement("div");
+    dock.className = "adb";
+    dock.setAttribute("role", "status");
+    dock.setAttribute("aria-live", "polite");
+
+    var icon = document.createElement("span");
+    icon.className = "adb__icon";
+    var label = document.createElement("span");
+    label.className = "adb__label";
+
+    dock.appendChild(icon);
+    dock.appendChild(label);
+    dock.iconEl = icon;
+    dock.labelEl = label;
+
+    document.body.appendChild(dock);
+    return dock;
   }
 
   /* ---------- Engine ---------- */
@@ -41,30 +54,22 @@
     this.endpoint = form.getAttribute("data-auto-draft");
     this.timer = null;
     this.lastHash = "";
+    this.lastSavedAt = "";
     this.saving = false;
     this.inflight = null;
 
     /* ให้ภายนอกสั่ง flush ได้ — ปุ่มส่งลงนามใช้ทางนี้บันทึกเอกสารก่อนส่ง */
     form.__autoDraft = this;
 
-    /* Build UI elements and keep direct references */
-    this.bar = document.createElement("div");
-    this.iconEl = document.createElement("span");
-    this.labelEl = document.createElement("span");
-
-    this.iconEl.className = "adb__icon";
-    this.bar.appendChild(this.iconEl);
-    this.bar.appendChild(this.labelEl);
-
     this._setup();
   }
 
   Engine.prototype._setup = function () {
     if (!this.endpoint) return;
-    injectStyles();
 
-    /* Insert bar at top of form */
-    this.form.insertBefore(this.bar, this.form.firstChild);
+    this.bar = getDock();
+    this.iconEl = this.bar.iconEl;
+    this.labelEl = this.bar.labelEl;
 
     /* Check if auto-draft is enabled */
     if (!window.AUTO_DRAFT_ENABLED) {
@@ -85,8 +90,9 @@
         for (var i = 0; i < mutations.length; i++) {
           var m = mutations[i];
           if (!m.addedNodes.length && !m.removedNodes.length) continue;
-          // แถบสถานะเป็นลูกของฟอร์ม การเขียนข้อความลงไปจึงเด้งกลับเข้า observer ตัวเอง
-          // แล้วนับเป็น "ผู้ใช้แก้ข้อมูล" — พอบันทึกเสร็จสถานะเลยพลิกกลับไปเป็นยังไม่บันทึก
+          // ชิปสถานะย้ายออกไปอยู่นอกฟอร์มแล้ว แต่กันไว้อีกชั้น เผื่อมีใครย้ายกลับเข้ามา:
+          // ถ้าการเขียนข้อความลงชิปเด้งกลับเข้า observer ตัวเอง จะถูกนับเป็น "ผู้ใช้แก้ข้อมูล"
+          // แล้วพอบันทึกเสร็จสถานะจะพลิกกลับไปเป็นยังไม่บันทึกทันที
           if (self.bar.contains(m.target)) continue;
           self._onChange();
           return;
@@ -97,8 +103,8 @@
   };
 
   /*
-   * แถบ .adb อยู่บนสุดของฟอร์ม ซึ่งห่างจากปุ่มส่งลงนามท้ายหน้าเป็นหน้าจอ ๆ ผู้ใช้ตอนจะกดส่ง
-   * จึงไม่เห็นว่าข้อมูลบันทึกแล้วหรือยัง — สะท้อนสถานะเดียวกันไปไว้ข้างปุ่มนั้นด้วย
+   * ชิปสถานะลอยอยู่ด้านบนจอ ส่วนแผงลงนามอยู่ท้ายหน้า ผู้ใช้ที่กำลังจะกดส่งจึงมองคนละจุด
+   * — สะท้อนสถานะเดียวกันไปไว้ข้างปุ่มส่งด้วย (ถ้อยคำยาวกว่าเพราะมีที่ว่างมากกว่าบนชิป)
    */
   Engine.prototype._mirror = function (state, extra) {
     var nodes = document.querySelectorAll("[data-autodraft-mirror]");
@@ -112,23 +118,23 @@
         break;
       case "saving":
         icon = "fa-sync-alt fa-spin text-warning";
-        text = "กำลังบันทึก...";
+        text = "กำลังบันทึกร่าง…";
         break;
       case "saved":
         icon = "fa-check-circle text-success";
-        text = "บันทึกข้อมูลล่าสุดแล้ว — " + (extra || "");
+        text = "บันทึกร่างล่าสุด " + (extra || "");
         break;
       case "error":
         icon = "fa-exclamation-triangle text-danger";
-        text = extra || "บันทึกอัตโนมัติล้มเหลว กรุณาลองใหม่";
+        text = extra || "บันทึกร่างไม่สำเร็จ กรุณาลองใหม่";
         break;
       case "disabled":
         icon = "fa-pause-circle text-secondary";
-        text = "ปิดบันทึกอัตโนมัติไว้ ระบบจะบันทึกให้ตอนกดส่ง";
+        text = "ปิดบันทึกร่างอัตโนมัติ — ระบบจะบันทึกให้ตอนกดส่ง";
         break;
       default: /* idle */
         icon = "fa-check-circle text-success";
-        text = "ข้อมูลตรงกับที่บันทึกไว้";
+        text = "ข้อมูลตรงกับที่บันทึกไว้ล่าสุด";
     }
 
     nodes.forEach(function (el) {
@@ -138,43 +144,87 @@
   };
 
   Engine.prototype._show = function (state, extra) {
-    this.bar.className = "adb adb--" + state;
-    this._mirror(state, extra);
+    var bar = this.bar;
+    if (!bar) return;
 
+    var icon, text;
     switch (state) {
-      case "idle":
-        this.iconEl.innerHTML = '<i class="fas fa-cloud"></i>';
-        this.labelEl.textContent = "บันทึกแบบร่างอัตโนมัติเปิดใช้งาน";
+      case "dirty":
+        icon = "fa-pen";
+        text = "มีการแก้ไขที่ยังไม่บันทึก";
         break;
       case "saving":
-        this.iconEl.innerHTML = '<i class="fas fa-sync-alt fa-spin"></i>';
-        this.labelEl.innerHTML = 'กำลังบันทึกข้อมูลแบบร่าง<span class="adb__dots"><span>.</span><span>.</span><span>.</span></span>';
+        icon = "fa-sync-alt fa-spin";
+        text = "กำลังบันทึกร่าง";
         break;
       case "saved":
-        this.iconEl.innerHTML = '<i class="fas fa-check-circle"></i>';
-        this.labelEl.textContent = "บันทึกฉบับร่างแล้ว — " + (extra || "");
+        icon = "fa-check-circle";
+        text = "บันทึกร่างล่าสุด " + (extra || "");
         break;
       case "error":
-        this.iconEl.innerHTML = '<i class="fas fa-exclamation-triangle"></i>';
-        this.labelEl.textContent = extra || "บันทึกอัตโนมัติล้มเหลว กรุณาลองใหม่";
+        icon = "fa-exclamation-triangle";
+        text = extra || "บันทึกร่างไม่สำเร็จ — กรุณาลองใหม่";
         break;
       case "disabled":
-        this.iconEl.innerHTML = '<i class="fas fa-pause-circle"></i>';
-        this.labelEl.textContent = "บันทึกแบบร่างอัตโนมัติปิดอยู่";
+        icon = "fa-pause-circle";
+        text = "ปิดบันทึกร่างอัตโนมัติ";
         break;
+      default: /* idle */
+        icon = "fa-cloud";
+        text = "ระบบบันทึกร่างอัตโนมัติทำงานอยู่";
+    }
+
+    /*
+     * _onChange ยิงทุกคีย์สโตรก ถ้าเขียน DOM ใหม่ทุกครั้งจะเปลืองและ screen reader
+     * (aria-live) จะอ่านข้อความเดิมซ้ำไม่หยุด — ข้ามไปถ้าสถานะกับข้อความยังเหมือนเดิม
+     * ยกเว้นตอนชิปจางเป็นโทนเงียบแล้ว ต้องปล่อยให้เน้นสีใหม่เพื่อยืนยันว่าบันทึกอีกรอบแล้วจริง
+     */
+    if (bar.hrcpState === state && bar.hrcpText === text &&
+        !bar.classList.contains("adb--quiet")) {
+      return;
+    }
+    bar.hrcpState = state;
+    bar.hrcpText = text;
+
+    clearTimeout(quietTimer);
+    bar.className = "adb adb--" + state;
+    this._mirror(state, extra);
+
+    this.iconEl.innerHTML = '<i class="fas ' + icon + '"></i>';
+    if (state === "saving") {
+      /* จุดไข่ปลาเคลื่อนไหว บอกว่ายังทำงานอยู่ ไม่ได้ค้าง */
+      this.labelEl.innerHTML = text +
+        '<span class="adb__dots"><span>.</span><span>.</span><span>.</span></span>';
+    } else {
+      this.labelEl.textContent = text;
+    }
+    /* ข้อความผิดพลาดจากเซิร์ฟเวอร์ยาวกว่าชิป CSS จะตัดท้ายให้ — เก็บฉบับเต็มไว้ใน tooltip */
+    bar.title = text;
+
+    if (state === "saved") {
+      quietTimer = setTimeout(function () { bar.classList.add("adb--quiet"); }, QUIET_MS);
+    }
+  };
+
+  /* กลับไปบอกว่า "ตรงกับที่บันทึกไว้" โดยไม่ต้องเน้นสีใหม่ — ใช้ตอนผู้ใช้แก้แล้วแก้กลับเหมือนเดิม */
+  Engine.prototype._showSynced = function () {
+    if (this.lastSavedAt) {
+      this._show("saved", this.lastSavedAt);
+      this.bar.classList.add("adb--quiet");
+    } else {
+      this._show("idle");
     }
   };
 
   Engine.prototype._timeStr = function () {
     var d = new Date();
-    return "เมื่อเวลา " + d.getHours().toString().padStart(2, "0") + ":" +
-           d.getMinutes().toString().padStart(2, "0") + ":" +
-           d.getSeconds().toString().padStart(2, "0") + " น.";
+    return d.getHours().toString().padStart(2, "0") + ":" +
+           d.getMinutes().toString().padStart(2, "0") + " น.";
   };
 
   Engine.prototype._onChange = function () {
     /* บอกไว้ก่อน debounce — ผู้ใช้ที่เลื่อนลงไปกดส่งทันทีจะได้ไม่เห็น "บันทึกแล้ว" ที่เก่าไป 1 วิ */
-    this._mirror("dirty");
+    this._show("dirty");
     if (this.saving) return;
     var self = this;
     clearTimeout(this.timer);
@@ -222,7 +272,7 @@
     var h = JSON.stringify(data);
     // พิมพ์แล้วลบกลับเป็นเหมือนเดิมก็มาถึงตรงนี้ ต้องล้าง "ยังไม่บันทึก" ที่ _onChange ขึ้นไว้
     if (h === this.lastHash) {
-      this._mirror("idle");
+      this._showSynced();
       return Promise.resolve(true);
     }
 
@@ -247,7 +297,8 @@
       .then(function (r) {
         if (r.ok) {
           self.lastHash = h;
-          self._show("saved", self._timeStr());
+          self.lastSavedAt = self._timeStr();
+          self._show("saved", self.lastSavedAt);
           return true;
         }
         // เซิร์ฟเวอร์ส่งเหตุผลมาให้เป็นภาษาไทยอยู่แล้ว การขึ้นแค่เลขสถานะทำให้ผู้ใช้
