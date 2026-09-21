@@ -19,14 +19,13 @@
     return form.querySelector('button[type="submit"], input[type="submit"]');
   }
 
-  function showFailure(form) {
+  function showFailure(form, msg) {
     var box = form.querySelector(".presave-error");
     if (!box) {
       box = document.createElement("div");
       box.className =
         "presave-error alert alert-danger border-0 small mt-3 mb-0";
       box.setAttribute("role", "alert");
-      box.innerHTML = '<i class="fas fa-triangle-exclamation me-1"></i>' + FAIL_MSG;
       var btn = submitButton(form);
       if (btn && btn.parentNode) {
         btn.parentNode.insertBefore(box, btn);
@@ -34,6 +33,8 @@
         form.appendChild(box);
       }
     }
+    box.innerHTML =
+      '<i class="fas fa-triangle-exclamation me-1"></i>' + (msg || FAIL_MSG);
     box.hidden = false;
   }
 
@@ -80,6 +81,13 @@
         }
         if (!ok) {
           showFailure(form);
+          return;
+        }
+        // ด่านเฉพาะของฟอร์ม (เช่น เอกสารที่ 2 ต้องติ๊กครบ 5 ข้อ) ซึ่งเป็นเงื่อนไขที่ไม่ได้อยู่บน
+        // [required] จึงหลุดจาก DocRequiredFields — ฟอร์มตั้งแอตทริบิวต์นี้ไว้พร้อมเหตุผล
+        var blocked = docForm.getAttribute("data-sign-blocked");
+        if (blocked) {
+          showFailure(form, blocked);
           return;
         }
         // เอกสารที่กรอกไม่ครบ เซิร์ฟเวอร์ก็ปฏิเสธอยู่แล้ว แต่ตอบได้แค่จำนวนช่อง

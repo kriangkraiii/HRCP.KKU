@@ -15,7 +15,7 @@
 
     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
         <span class="fw-bold text-dark fs-6">
-            <i class="fas fa-file-signature text-primary me-2"></i> การลงนามอิเล็กทรอนิกส์ (E-Signature)
+            <i class="fas fa-file-signature text-primary me-2"></i> ขั้นตอนที่ 3 · การลงนามอิเล็กทรอนิกส์ (E-Signature)
         </span>
         <div class="d-flex align-items-center gap-2">
             <span th:if="${signaturePanel.locked}" class="badge rounded-pill px-3 py-2"
@@ -494,11 +494,20 @@
                 และล็อกฟอร์มไม่ให้แก้ไข เพื่อให้ทุกคนลงนามบนเนื้อหาที่ถูกต้องเดียวกัน
             </div>
 
+            <!-- สถานะบันทึกจาก auto_draft.js — ผู้ใช้ตอนจะกดส่งอยู่ไกลจากแถบสถานะบนหัวฟอร์ม -->
+            <div class="small text-secondary mb-2" data-autodraft-mirror hidden></div>
+
             <button type="submit" class="btn btn-academic px-4 py-2">
                 <i class="fas fa-paper-plane me-1"></i>
-                <span th:if="${!signaturePanel.isAdminViewer}">ส่งและลงนามในส่วนของผู้ยื่นคำร้อง</span>
+                <span th:if="${!signaturePanel.isAdminViewer}">บันทึกและส่งลงนามในส่วนของผู้ยื่นคำร้อง</span>
                 <span th:if="${signaturePanel.isAdminViewer}">ยืนยันความถูกต้องและส่งเวียนลงนาม</span>
             </button>
+            <!-- ปุ่มบันทึกกับปุ่มนี้ขึ้นพร้อมกัน ผู้ใช้จึงไม่รู้ว่าต้องกดอันไหนก่อน — sign_presave.js
+                 บันทึกให้อยู่แล้ว บอกออกมาตรง ๆ จะได้ไม่ต้องเดา -->
+            <div class="form-text mt-2 mb-0">
+                <i class="fas fa-circle-info me-1"></i>
+                ระบบจะบันทึกเอกสารฉบับล่าสุดบนหน้าจอให้อัตโนมัติก่อนส่ง — ไม่จำเป็นต้องกด «บันทึกไว้ก่อน» ก่อน
+            </div>
         </form>
     </div>
 </div>

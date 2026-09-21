@@ -169,8 +169,10 @@
 
                 <div class="d-flex gap-2">
                     <th:block th:replace="~{academic/_notify_applicant :: checkbox}"></th:block>
-                    <button type="submit" class="btn btn-academic btn-lg">
-                        <i class="fas fa-save"></i> บันทึกและสร้างเอกสาร
+                    <!-- ปุ่มรอง: ปุ่มหลักคือปุ่มส่งลงนามในแผงด้านล่าง ซึ่งบันทึกให้ก่อนส่งอยู่แล้ว -->
+                    <button type="submit" class="btn btn-outline-secondary btn-lg"
+                            title="เก็บไว้แก้ต่อทีหลัง ยังไม่ส่งเวียน">
+                        <i class="fas fa-save"></i> บันทึกไว้ก่อน (ยังไม่ส่งเวียน)
                     </button>
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร

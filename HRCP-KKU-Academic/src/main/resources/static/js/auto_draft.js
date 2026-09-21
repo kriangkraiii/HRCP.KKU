@@ -83,18 +83,63 @@
     if (window.MutationObserver) {
       var observer = new MutationObserver(function (mutations) {
         for (var i = 0; i < mutations.length; i++) {
-          if (mutations[i].addedNodes.length || mutations[i].removedNodes.length) {
-            self._onChange();
-            return;
-          }
+          var m = mutations[i];
+          if (!m.addedNodes.length && !m.removedNodes.length) continue;
+          // แถบสถานะเป็นลูกของฟอร์ม การเขียนข้อความลงไปจึงเด้งกลับเข้า observer ตัวเอง
+          // แล้วนับเป็น "ผู้ใช้แก้ข้อมูล" — พอบันทึกเสร็จสถานะเลยพลิกกลับไปเป็นยังไม่บันทึก
+          if (self.bar.contains(m.target)) continue;
+          self._onChange();
+          return;
         }
       });
       observer.observe(this.form, { childList: true, subtree: true });
     }
   };
 
+  /*
+   * แถบ .adb อยู่บนสุดของฟอร์ม ซึ่งห่างจากปุ่มส่งลงนามท้ายหน้าเป็นหน้าจอ ๆ ผู้ใช้ตอนจะกดส่ง
+   * จึงไม่เห็นว่าข้อมูลบันทึกแล้วหรือยัง — สะท้อนสถานะเดียวกันไปไว้ข้างปุ่มนั้นด้วย
+   */
+  Engine.prototype._mirror = function (state, extra) {
+    var nodes = document.querySelectorAll("[data-autodraft-mirror]");
+    if (!nodes.length) return;
+
+    var icon, text;
+    switch (state) {
+      case "dirty":
+        icon = "fa-pen text-secondary";
+        text = "มีการแก้ไขที่ยังไม่บันทึก — ระบบจะบันทึกให้ก่อนส่ง";
+        break;
+      case "saving":
+        icon = "fa-sync-alt fa-spin text-warning";
+        text = "กำลังบันทึก...";
+        break;
+      case "saved":
+        icon = "fa-check-circle text-success";
+        text = "บันทึกข้อมูลล่าสุดแล้ว — " + (extra || "");
+        break;
+      case "error":
+        icon = "fa-exclamation-triangle text-danger";
+        text = extra || "บันทึกอัตโนมัติล้มเหลว กรุณาลองใหม่";
+        break;
+      case "disabled":
+        icon = "fa-pause-circle text-secondary";
+        text = "ปิดบันทึกอัตโนมัติไว้ ระบบจะบันทึกให้ตอนกดส่ง";
+        break;
+      default: /* idle */
+        icon = "fa-check-circle text-success";
+        text = "ข้อมูลตรงกับที่บันทึกไว้";
+    }
+
+    nodes.forEach(function (el) {
+      el.innerHTML = '<i class="fas ' + icon + ' me-1"></i>' + text;
+      el.hidden = false;
+    });
+  };
+
   Engine.prototype._show = function (state, extra) {
     this.bar.className = "adb adb--" + state;
+    this._mirror(state, extra);
 
     switch (state) {
       case "idle":
@@ -128,6 +173,8 @@
   };
 
   Engine.prototype._onChange = function () {
+    /* บอกไว้ก่อน debounce — ผู้ใช้ที่เลื่อนลงไปกดส่งทันทีจะได้ไม่เห็น "บันทึกแล้ว" ที่เก่าไป 1 วิ */
+    this._mirror("dirty");
     if (this.saving) return;
     var self = this;
     clearTimeout(this.timer);
@@ -165,12 +212,19 @@
    */
   Engine.prototype._save = function (force) {
     if (!this.endpoint) return Promise.resolve(true);
-    if (!force && !window.AUTO_DRAFT_ENABLED) return Promise.resolve(true);
+    if (!force && !window.AUTO_DRAFT_ENABLED) {
+      this._mirror("disabled");
+      return Promise.resolve(true);
+    }
     var data = this._collect();
     // ทุกช่องถูกปิด แปลว่าเอกสารล็อกอยู่ ไม่มีอะไรให้บันทึก
     if (Object.keys(data).length === 0) return Promise.resolve(true);
     var h = JSON.stringify(data);
-    if (h === this.lastHash) return Promise.resolve(true);
+    // พิมพ์แล้วลบกลับเป็นเหมือนเดิมก็มาถึงตรงนี้ ต้องล้าง "ยังไม่บันทึก" ที่ _onChange ขึ้นไว้
+    if (h === this.lastHash) {
+      this._mirror("idle");
+      return Promise.resolve(true);
+    }
 
     this.saving = true;
     this._show("saving");

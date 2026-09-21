@@ -182,8 +182,10 @@
                             <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                                 <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                             </button>
-                            <button th:if="${editable}" type="submit" name="action" value="submit" class="btn btn-academic" id="doc2SubmitBtn" disabled>
-                                <i class="fas fa-paper-plane"></i> บันทึกเอกสาร
+                            <!-- ปุ่มรอง: ปุ่มหลักคือปุ่มส่งลงนามในแผงด้านล่าง ซึ่งบันทึกให้ก่อนส่งอยู่แล้ว -->
+                            <button th:if="${editable}" type="submit" name="action" value="submit" class="btn btn-outline-secondary" id="doc2SubmitBtn" disabled
+                                    title="เก็บไว้แก้ต่อทีหลัง ยังไม่ส่งให้ใคร">
+                                <i class="fas fa-save"></i> บันทึกไว้ก่อน (ยังไม่ส่ง)
                             </button>
                         </div>
                     </form>
@@ -416,6 +418,8 @@
 
                                 if (allChecked && noOverQuota) {
                                     submitBtn.disabled = false;
+                                    // ปุ่มส่งลงนามอยู่คนละฟอร์ม จึงไม่ถูกด่านนี้กั้น — บอก sign_presave.js ผ่านแอตทริบิวต์
+                                    if (docForm) docForm.removeAttribute('data-sign-blocked');
                                     alertBox.classList.remove('alert-warning', 'alert-danger');
                                     alertBox.classList.add('alert-success');
                                     if (hasAttachment) {
@@ -437,6 +441,12 @@
                                     alertBox.classList.remove('alert-warning', 'alert-danger');
                                     alertBox.classList.add('alert-danger');
                                     alertBox.innerHTML = '<i class="fas fa-exclamation-triangle me-1"></i> กรุณา' + reasons.join(' และ ');
+                                    if (docForm) {
+                                        // ถอดแท็กออก เพราะข้อความนี้ไปโผล่ในกล่องของแผงลงนาม จะได้ไม่มี id ซ้ำในหน้า
+                                        docForm.setAttribute('data-sign-blocked',
+                                            'ยังส่งไปลงนามไม่ได้ — กรุณา'
+                                            + reasons.join(' และ ').replace(/<[^>]*>/g, ''));
+                                    }
                                     countSpan = document.getElementById('doc2CheckedCount') || document.getElementById('doc1CheckedCount');
                                 }
                             }

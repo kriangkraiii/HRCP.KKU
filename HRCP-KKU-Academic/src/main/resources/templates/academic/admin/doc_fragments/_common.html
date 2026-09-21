@@ -17,10 +17,12 @@
     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
     </button>
-    <button type="button" id="btnSubmitDoc" class="btn btn-academic"
+    <!--/* ปุ่มรอง: ปุ่มหลักของหน้าคือปุ่มส่งเวียนลงนามในแผงด้านล่าง ซึ่งบันทึกให้ก่อนส่งอยู่แล้ว
+         สองปุ่มสีเดียวกันทำให้ผู้ใช้เดาไม่ออกว่าต้องกดอันไหนก่อน */-->
+    <button type="button" id="btnSubmitDoc" class="btn btn-outline-secondary"
             th:disabled="${signingLocked}"
-            th:title="${signingLocked} ? 'เอกสารถูกล็อกระหว่างการเวียนลงนาม' : null">
-        <i class="fas fa-save"></i> สร้าง/บันทึกเอกสาร
+            th:title="${signingLocked} ? 'เอกสารถูกล็อกระหว่างการเวียนลงนาม' : 'เก็บไว้แก้ต่อทีหลัง ยังไม่ส่งเวียน'">
+        <i class="fas fa-save"></i> บันทึกไว้ก่อน (ยังไม่ส่งเวียน)
     </button>
     <a th:href="'/admin/academic/request/' + ${request.id}" class="btn-back-pill">
         <i class="fas fa-arrow-left"></i> กลับ
