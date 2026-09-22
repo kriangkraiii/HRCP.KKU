@@ -268,11 +268,14 @@
                             var chk2 = document.getElementById('chk2');
                             if (!r1 || !r2 || !chk1 || !chk2) return;
 
+                            // ตัวที่ไม่ได้เลือกส่งค่าว่างไป เซิร์ฟเวอร์เป็นคนเติมให้เอง
+                            // (DocumentFieldOwnership.normalizeExclusiveTicks) เบราว์เซอร์
+                            // เคยเติม '☐' เองแล้วมันไปโผล่บนเอกสารเป็น [☐] ข้าง ๆ [✓]
                             if (r1.checked) {
                                 chk1.value = '✓';
-                                chk2.value = '☐';
+                                chk2.value = '';
                             } else if (r2.checked) {
-                                chk1.value = '☐';
+                                chk1.value = '';
                                 chk2.value = '✓';
                             } else {
                                 chk1.value = '';

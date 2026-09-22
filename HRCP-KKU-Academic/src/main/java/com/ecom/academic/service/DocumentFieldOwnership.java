@@ -135,6 +135,84 @@ public final class DocumentFieldOwnership {
         return keys;
     }
 
+    // =====================================================================
+    // ตัวเลือกที่เลือกได้อย่างเดียว
+    // =====================================================================
+
+    /**
+     * ช่องติ๊กที่เป็นตัวเลือกชุดเดียวกัน — ติ๊กได้ทีละหนึ่งเท่านั้น
+     *
+     * <p>เอกสารที่ 1 ของเฟส 1 ถามว่าขอประเมินเพื่อไปตำแหน่งใด แล้วเก็บคำตอบเป็นช่องติ๊ก
+     * หลายช่องแทนที่จะเป็นค่าเดียว ตัวที่ไม่ได้เลือกจึงต้องมีค่า "ว่าง" เสมอโดยการออกแบบ
+     *
+     * <p>เอกสารที่ 7 ใช้ {@code ch1}–{@code ch4} ซึ่งเป็นกล่อง ☑/☐ ที่ตั้งใจให้เป็นกล่องจริง
+     * จึงไม่อยู่ในนี้
+     */
+    private static final Map<SignatureModule, Map<Integer, Set<String>>> EXCLUSIVE_TICKS = Map.of(
+            SignatureModule.ACADEMIC, Map.of(1, Set.of("chk1", "chk2", "chk3")),
+            SignatureModule.POSITION, Map.of());
+
+    /** เครื่องหมายของตัวที่ถูกเลือก */
+    private static final String TICKED = "✓";
+
+    /**
+     * ค่าของตัวที่ไม่ได้เลือก
+     *
+     * <p>ช่องว่างสองตัว ไม่ใช่สตริงว่าง — เทมเพลตเขียนวงเล็บไว้เองแล้ว
+     * ({@code [{{chk1}}] ผู้ช่วยศาสตราจารย์}) สตริงว่างจึงพิมพ์ออกมาเป็น {@code []}
+     * ที่แคบกว่า {@code [✓}] ข้าง ๆ กันอย่างเห็นได้ชัด สองช่องให้ความกว้างใกล้เคียงกัน
+     *
+     * <p>ใช้ช่องว่างธรรมดา ไม่ใช่ช่องว่างความกว้างคงที่ของ Unicode เพราะไม่มีหลักประกัน
+     * ว่า TH Sarabun New มีสัญลักษณ์พวกนั้น ถ้าไม่มีจะกลายเป็นกล่อง .notdef ซึ่งแย่กว่าเดิม
+     */
+    private static final String UNTICKED = "  ";
+
+    /**
+     * ทำให้ตัวเลือกที่ไม่ได้เลือกมีค่าเดียวกันเสมอ ไม่ว่าใครเป็นคนบันทึก
+     *
+     * <p>ต้องมีเพราะกติกานี้เคยกระจายอยู่สองที่แล้วเพี้ยนกัน — ฝั่งแอดมินเขียนทับด้วย
+     * ช่องว่าง ส่วนฝั่งผู้ยื่นปล่อยตามที่เบราว์เซอร์ส่งมา เอกสารฉบับเดียวกันจึงหน้าตา
+     * ต่างกันตามว่าใครกดบันทึกคนสุดท้าย
+     *
+     * <p>ถ้ายังไม่มีใครเลือกเลย ไม่แตะอะไร — ค่าว่างตอนนั้นแปลว่า "ยังไม่ได้ตอบ" ซึ่ง
+     * {@code DocumentCompleteness} ต้องมองเห็นเพื่อกันไม่ให้ส่งเอกสารไปลงนาม
+     *
+     * @return map ชุดใหม่ หรือชุดเดิมเมื่อเอกสารนี้ไม่มีตัวเลือกแบบนี้
+     */
+    public static Map<String, String> normalizeExclusiveTicks(SignatureModule module,
+            int documentType, Map<String, String> data) {
+
+        Set<String> ticks = EXCLUSIVE_TICKS.getOrDefault(module, Map.of())
+                .getOrDefault(documentType, Set.of());
+        if (ticks.isEmpty() || data == null) {
+            return data;
+        }
+
+        boolean anyTicked = ticks.stream().anyMatch(key -> isTicked(data.get(key)));
+        if (!anyTicked) {
+            return data;
+        }
+
+        Map<String, String> result = new LinkedHashMap<>(data);
+        for (String key : ticks) {
+            if (!result.containsKey(key)) {
+                continue;
+            }
+            result.put(key, isTicked(result.get(key)) ? TICKED : UNTICKED);
+        }
+        return result;
+    }
+
+    /** ค่าที่นับว่า "ติ๊กแล้ว" — เบราว์เซอร์เคยส่งมาหลายแบบตามยุคของโค้ด */
+    private static boolean isTicked(String value) {
+        if (value == null) {
+            return false;
+        }
+        String trimmed = value.trim();
+        return "✓".equals(trimmed) || "✔".equals(trimmed) || "☑".equals(trimmed)
+                || "on".equalsIgnoreCase(trimmed);
+    }
+
     /**
      * รวมสิ่งที่ส่งมากับสิ่งที่เก็บไว้ โดยรับเฉพาะช่องที่ผู้บันทึกเป็นเจ้าของ
      *
