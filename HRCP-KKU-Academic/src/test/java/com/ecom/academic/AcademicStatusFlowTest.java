@@ -194,10 +194,13 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
          * decides whether an e-mail goes out; it must not decide whether the step
          * counted. An officer who left it unticked used to get the document
          * saved and the request silently left where it was.
+         *
+         * <p>ตอนนี้ช่องติ๊กนั้นไม่มีแล้ว และขั้นตอนนับว่าจบตอนหนังสือลงนามครบ ไม่ใช่ตอน
+         * กดบันทึก เคสนี้จึงเดินทั้งสองจังหวะเพื่อยืนยันว่าจังหวะที่นับคือจังหวะหลัง
          */
         @Test
-        @DisplayName("เจ้าหน้าที่ไม่ติ๊ก 'แจ้งผู้ยื่น' — สถานะยังต้องเดินหน้า")
-        void statusAdvancesEvenWithoutNotifying() throws Exception {
+        @DisplayName("บันทึกยังไม่นับ — ลงนามครบแล้วสถานะจึงเดิน")
+        void statusAdvancesWhenSigningCompletes() throws Exception {
             UserDtls applicant = data.applicant();
             UserDtls officer = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
@@ -209,13 +212,23 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
                     .param("committee_1_name", "รศ.ดร. หนึ่ง")
                     .param("committee_2_name", "รศ.ดร. สอง")
                     .param("committee_3_name", "ผศ.ดร. สาม")
-                    // sendNotify deliberately absent — the officer did not tick it
                     .with(csrf())
                     .with(user(officer.getEmail()).roles("ADMIN"))),
                     "/admin/academic/request/" + request.getId());
 
             assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .as("บันทึกคำสั่งแต่งตั้งแล้ว สถานะต้องเป็น 'แต่งตั้งอนุกรรมการ' เสมอ")
+                    .as("ยังไม่มีใครลงนามคำสั่งแต่งตั้ง จึงยังไม่ได้แต่งตั้ง")
+                    .isEqualTo(RequestStatus.RECEIVED);
+
+            String signed = service.getDocumentsByType(request.getId(), 4).get(0).getJsonData();
+            signEveryStep(circulate(com.ecom.academic.model.SignatureModule.ACADEMIC,
+                    request.getId(), 4, signed, officer,
+                    java.util.List.of(new com.ecom.academic.service.SignatureWorkflowService
+                            .SignerAssignment("dean", officer.getId()))),
+                    officer);
+
+            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
+                    .as("คณบดีลงนามคำสั่งแต่งตั้งแล้ว สถานะต้องเป็น 'แต่งตั้งอนุกรรมการ'")
                     .isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
         }
 
