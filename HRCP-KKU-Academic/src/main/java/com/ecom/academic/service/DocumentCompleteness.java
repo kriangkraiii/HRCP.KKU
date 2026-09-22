@@ -73,7 +73,12 @@ public final class DocumentCompleteness {
                     4, Set.of(
                             // ไม่ใช่ทุกคนจบทั้งโทและเอก และเสนอขอด้วยบทความหรืองานวิจัยอย่างใดอย่างหนึ่ง
                             "master_thesis_title", "doctoral_thesis_title",
-                            "academic_paper_additional_detail", "research_additional_detail"),
+                            "academic_paper_additional_detail", "research_additional_detail",
+                            "academic_paper_not_part_edu", "academic_paper_is_part_edu",
+                            "research_not_part_edu", "research_is_part_edu",
+                            "academic_paper_status", "research_status",
+                            "paper_title_1", "research_title_1",
+                            "academic_paper_count", "research_count"),
                     5, Set.of("sub_major", "sub_major_code"),
                     9, Set.of(
                             // ช. อื่นๆ ในส่วนการมีส่วนร่วม
@@ -174,6 +179,11 @@ public final class DocumentCompleteness {
         Set<String> adminFields = DocumentFieldOwnership.adminFields(module, documentType);
         Set<String> signerFields = DocumentFieldOwnership.signerFields(module, documentType);
 
+        boolean academicDoc1HasChoice = module == SignatureModule.ACADEMIC && documentType == 1;
+        boolean academicDoc1Ticked = academicDoc1HasChoice &&
+                (isTicked(data.get("chk1")) || isTicked(data.get("chk2")) || isTicked(data.get("chk3")));
+        boolean academicDoc1MissingAdded = false;
+
         List<String> missing = new ArrayList<>();
         for (Map.Entry<String, String> entry : data.entrySet()) {
             String key = entry.getKey();
@@ -181,6 +191,16 @@ public final class DocumentCompleteness {
                 continue;
             }
             if (isOptional(module, documentType, key, targetPosition)) {
+                continue;
+            }
+            if (academicDoc1HasChoice && ("chk1".equals(key) || "chk2".equals(key) || "chk3".equals(key))) {
+                if (academicDoc1Ticked) {
+                    continue;
+                }
+                if (!academicDoc1MissingAdded) {
+                    missing.add("target_position_choice");
+                    academicDoc1MissingAdded = true;
+                }
                 continue;
             }
             String value = entry.getValue();
@@ -210,16 +230,36 @@ public final class DocumentCompleteness {
         Set<String> adminFields = DocumentFieldOwnership.adminFields(module, documentType);
         Set<String> signerFields = DocumentFieldOwnership.signerFields(module, documentType);
 
+        boolean academicDoc1HasChoice = module == SignatureModule.ACADEMIC && documentType == 1;
+        boolean academicDoc1Ticked = academicDoc1HasChoice &&
+                (isTicked(data.get("chk1")) || isTicked(data.get("chk2")) || isTicked(data.get("chk3")));
+
         Set<String> required = new LinkedHashSet<>();
         for (String key : data.keySet()) {
             if (adminFields.contains(key) || signerFields.contains(key)) {
                 continue;
+            }
+            if (academicDoc1HasChoice && ("chk1".equals(key) || "chk2".equals(key) || "chk3".equals(key))) {
+                if (academicDoc1Ticked) {
+                    if (isTicked(data.get(key))) {
+                        required.add(key);
+                    }
+                    continue;
+                }
             }
             if (!isOptional(module, documentType, key, targetPosition)) {
                 required.add(key);
             }
         }
         return required;
+    }
+
+    private static boolean isTicked(String val) {
+        if (val == null) {
+            return false;
+        }
+        String t = val.trim();
+        return "✓".equals(t) || "✔".equals(t) || "on".equalsIgnoreCase(t);
     }
 
     /**

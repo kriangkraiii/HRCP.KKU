@@ -167,6 +167,34 @@ class DocumentCompletenessTest {
 
             assertThat(missing).containsExactly("education_degree_1");
         }
+
+        @Test
+        @DisplayName("เอกสารที่ 4 (กำหนดตำแหน่ง) เสนอขอเฉพาะงานวิจัย ไม่กรอกบทความ ไม่ถือว่าขาด")
+        void positionDoc4ResearchOnlyDoesNotBlock() {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("title", "ผศ.ดร.");
+            data.put("applicant_name", "สมชาย ใจดี");
+            data.put("current_position", "ผู้ช่วยศาสตราจารย์");
+            data.put("affiliation", "วิทยาลัยการคอมพิวเตอร์");
+            data.put("request_position", "รองศาสตราจารย์");
+            data.put("academic_paper_status", "");
+            data.put("academic_paper_not_part_edu", "");
+            data.put("academic_paper_is_part_edu", "");
+            data.put("paper_title_1", "");
+            data.put("academic_paper_count", "0");
+            data.put("academic_paper_additional_detail", "");
+            data.put("research_status", "not_part");
+            data.put("research_not_part_edu", "✔");
+            data.put("research_is_part_edu", "");
+            data.put("research_count", "1");
+            data.put("research_title_1", "AI in Education");
+            data.put("research_additional_detail", "");
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 4, json(data), "รองศาสตราจารย์");
+
+            assertThat(missing).isEmpty();
+        }
     }
 
     @Nested
@@ -202,6 +230,62 @@ class DocumentCompletenessTest {
                     SignatureModule.ACADEMIC, 3, json(Map.of("anything", "")), null);
 
             assertThat(missing).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("ตัวเลือกตำแหน่งที่ขอในเอกสารที่ 1 (ประเมินการสอน)")
+    class AcademicDoc1ChoiceFields {
+
+        @Test
+        @DisplayName("เลือก ผศ. แล้วอีกช่องเว้นว่าง (empty string) ต้องถือว่ากรอกครบ")
+        void assistantSelectedWithEmptyAssociateIsComplete() {
+            Map<String, String> data = academicDoc1Base();
+            data.put("chk1", "✓");
+            data.put("chk2", ""); // เบราว์เซอร์ส่งค่าว่างเพราะไม่ได้เลือก
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.ACADEMIC, 1, json(data), null);
+
+            assertThat(missing).isEmpty();
+        }
+
+        @Test
+        @DisplayName("เลือก รศ. แล้วอีกช่องเว้นว่าง (empty string) ต้องถือว่ากรอกครบ")
+        void associateSelectedWithEmptyAssistantIsComplete() {
+            Map<String, String> data = academicDoc1Base();
+            data.put("chk1", "");
+            data.put("chk2", "✓");
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.ACADEMIC, 1, json(data), null);
+
+            assertThat(missing).isEmpty();
+        }
+
+        @Test
+        @DisplayName("ไม่เลือกทั้งสองช่อง ต้องแจ้งเตือนขาดตัวเลือกตำแหน่ง")
+        void neitherSelectedReportsMissing() {
+            Map<String, String> data = academicDoc1Base();
+            data.put("chk1", "");
+            data.put("chk2", "");
+
+            List<String> missing = DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.ACADEMIC, 1, json(data), null);
+
+            assertThat(missing).containsExactly("target_position_choice");
+        }
+
+        private Map<String, String> academicDoc1Base() {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("title", "ผศ.ดร.");
+            data.put("applicant_name", "สมชาย ใจดี");
+            data.put("current_position", "ผู้ช่วยศาสตราจารย์");
+            data.put("employee_type", "พนักงานมหาวิทยาลัย");
+            data.put("course_code", "CP101");
+            data.put("course_name", "Computer Programming");
+            data.put("academic_year", "1/2569");
+            return data;
         }
     }
 

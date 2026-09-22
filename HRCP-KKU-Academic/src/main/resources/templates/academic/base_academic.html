@@ -829,7 +829,7 @@
 
         <!-- ข้อความผลลัพธ์กลาง: หน้าใดก็ตามที่ redirect มาพร้อม flash attribute จะแสดงตรงนี้
              โดยไม่ต้องไปเพิ่มบล็อกซ้ำในทุกเทมเพลต -->
-        <div class="global-flash-alert px-4 pt-3" th:if="${succMsg != null or errorMsg != null or warnMsg != null}">
+        <div class="global-flash-alert px-4" th:if="${succMsg != null or errorMsg != null or warnMsg != null}">
             <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
                 <i class="fas fa-circle-check me-2"></i> <span th:text="${succMsg}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="ปิด"></button>

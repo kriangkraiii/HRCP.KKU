@@ -565,15 +565,18 @@ body:has(.floating-doc-btn-back) .btn-back-pill:not(.floating-doc-btn):not(form 
  * หน้าเอกสารมีแถบลอยด้านบน (ปุ่ม "กลับ" / "ดูตัวอย่าง" และชิปสถานะบันทึกร่าง)
  * ซึ่งเป็น position:fixed จึงลอยทับหัวเรื่องของหน้า — เว้นที่ให้เนื้อหาเริ่มต่ำกว่าแถบนั้น
  */
+.global-flash-alert {
+  padding-top: 1rem;
+}
 body:has(.floating-doc-btn) .global-flash-alert {
-  padding-top: 56px;
+  padding-top: 64px !important;
 }
 body:has(.floating-doc-btn):not(:has(.global-flash-alert)) .content-wrapper {
   padding-top: 56px;
 }
 @media (max-width: 991px) {
   body:has(.floating-doc-btn) .global-flash-alert {
-    padding-top: 52px;
+    padding-top: 60px !important;
   }
   body:has(.floating-doc-btn):not(:has(.global-flash-alert)) .content-wrapper {
     padding-top: 52px;

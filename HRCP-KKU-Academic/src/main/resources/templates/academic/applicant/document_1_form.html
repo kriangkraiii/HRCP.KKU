@@ -270,9 +270,9 @@
 
                             if (r1.checked) {
                                 chk1.value = '✓';
-                                chk2.value = '';
+                                chk2.value = '☐';
                             } else if (r2.checked) {
-                                chk1.value = '';
+                                chk1.value = '☐';
                                 chk2.value = '✓';
                             } else {
                                 chk1.value = '';
@@ -283,6 +283,7 @@
                         document.querySelectorAll('.target-pos-radio').forEach(function(radio) {
                             radio.addEventListener('change', syncTargetPos);
                         });
+                        syncTargetPos();
 
                         // Thai Date Defaults & Picker
                         (function () {
