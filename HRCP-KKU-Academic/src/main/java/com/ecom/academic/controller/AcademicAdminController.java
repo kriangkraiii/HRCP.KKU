@@ -662,6 +662,23 @@ public class AcademicAdminController {
             return "redirect:/admin/academic/request/" + id + "/document/" + type + "?saved=draft";
         }
 
+        // ============ chk checkbox: ติ๊กอันเดียว อันอื่นเป็น " " ============
+        String[] chkKeys = { "chk1", "chk2", "chk3" };
+        boolean hasAnyChk = false;
+        for (String k : chkKeys) {
+            if ("✓".equals(formData.get(k))) {
+                hasAnyChk = true;
+                break;
+            }
+        }
+        if (hasAnyChk) {
+            for (String k : chkKeys) {
+                if (!"✓".equals(formData.get(k))) {
+                    formData.put(k, " ");
+                }
+            }
+        }
+
         // ============ Document 7: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
         if (type == 7) {
             // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1=20, 2=30, 3=30, 4=20
@@ -748,12 +765,6 @@ public class AcademicAdminController {
         // กรองท้ายสุด หลังคำนวณคะแนนและเติมวันที่ไทยเสร็จแล้ว เพื่อให้แน่ใจว่าไม่มีค่าที่ฝั่ง
         // เจ้าหน้าที่คำนวณขึ้นเองหลุดไปทับช่องของผู้ยื่นในเอกสารที่ 1 และ 2
         formData = onlyWhatAnOfficerOwns(id, type, formData);
-        // ตัวเลือกที่ติ๊กได้ทีละหนึ่ง — กติกาอยู่ที่ DocumentFieldOwnership ที่เดียว เดิมเขียน
-        // ไว้ตรงนี้ด้วยและฝั่งผู้ยื่นไม่มีเลย เอกสารฉบับเดียวกันจึงหน้าตาต่างกันตามว่าใครกด
-        // บันทึกคนสุดท้าย วางไว้หลังตัวกรองสิทธิ์เพราะช่องติ๊กของเอกสารที่ 1 เป็นของผู้ยื่น
-        // ค่าที่ใช้จริงจึงมาจากแถวเดิม ไม่ใช่จากฟอร์มของเจ้าหน้าที่
-        formData = new HashMap<>(
-                DocumentFieldOwnership.normalizeExclusiveTicks(SignatureModule.ACADEMIC, type, formData));
         String jsonData = objectMapper.writeValueAsString(formData);
 
         boolean isNew = requestService.getDocumentsByType(id, type).isEmpty();

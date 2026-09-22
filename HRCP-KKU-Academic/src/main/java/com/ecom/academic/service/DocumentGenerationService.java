@@ -2165,7 +2165,7 @@ public class DocumentGenerationService {
             return docxBytes;
         }
 
-        String key = sha256(docxBytes) + "-" + PDF_RECIPE_VERSION;
+        String key = sha256(docxBytes);
         
         // 1. ตรวจสอบ L1 In-Memory Cache (< 1ms)
         byte[] cached = pdfCache.get(key);
@@ -2210,71 +2210,6 @@ public class DocumentGenerationService {
                 && bytes[3] == 'F' && bytes[4] == '-';
     }
 
-    /**
-     * เลข "สูตรการเรนเดอร์" — เปลี่ยนเมื่อวิธีแปลงเป็น PDF เปลี่ยน
-     *
-     * <p>อยู่ในกุญแจของแคชด้วย ไม่อย่างนั้นไฟล์ที่แปลงไว้ด้วยสูตรเก่าจะถูกเสิร์ฟต่อไป
-     * เรื่อย ๆ และการแก้จะเหมือนไม่มีผล จนกว่าจะมีคนไปลบแคชทิ้งเอง
-     */
-    private static final String PDF_RECIPE_VERSION = "jc-both-v1";
-
-    /** ค่าจัดชิดขอบที่ Word ใช้กับภาษาไทย แต่ LibreOffice ไม่รู้จัก */
-    private static final String THAI_JUSTIFY = "w:val=\"thaiDistribute\"";
-
-    /** ค่าจัดชิดขอบมาตรฐานที่ทั้งสองโปรแกรมรองรับ */
-    private static final String STANDARD_JUSTIFY = "w:val=\"both\"";
-
-    /**
-     * สำเนาที่ LibreOffice เรนเดอร์ได้ตรงกับ Word
-     *
-     * <p>เทมเพลตทุกฉบับตั้งจัดชิดขอบเป็น {@code thaiDistribute} ซึ่งเป็นค่าของ Word
-     * สำหรับภาษาที่ไม่มีช่องว่างระหว่างคำ Word เรนเดอร์ถูกต้อง แต่ LibreOffice
-     * <em>ไม่รองรับค่านี้และตกกลับไปชิดซ้ายเงียบ ๆ</em> ไม่มี error ให้เห็น ข้อความไทย
-     * ตัดบรรทัดทีละอักขระอยู่แล้วจึงดูเกือบชิดขอบ พอบรรทัดไหนมีคำอังกฤษซึ่งตัดกลางคำ
-     * ไม่ได้ บรรทัดนั้นจะสั้นกว่าเพื่อนอย่างเห็นได้ชัด
-     *
-     * <p>วัดจากตัวแปลงจริงแล้ว (เอกสารที่ 1 หน้าแรก): ด้วย {@code thaiDistribute}
-     * บรรทัดเนื้อความไปจบที่ 505–522pt กระจายกัน ด้วย {@code both} ไปจบที่ 527pt
-     * เท่ากันทุกบรรทัด
-     *
-     * <p>แปลงเฉพาะสำเนาที่ส่งเข้า LibreOffice — ไฟล์ .docx ที่ผู้ใช้ดาวน์โหลดยังเป็น
-     * {@code thaiDistribute} ตามเดิม เพราะ Word จัดระยะภาษาไทยได้ดีกว่าด้วยค่านั้น
-     * และเจ้าหน้าที่ที่แก้เทมเพลตจาก Word จะได้ไม่ต้องคอยระวังว่าห้ามตั้งค่านี้
-     *
-     * <p>ถ้าอ่านหรือประกอบ zip ไม่สำเร็จ คืนไบต์เดิมไป — เอกสารที่ขอบขวาไม่สวย
-     * ยังดีกว่าเอกสารที่เปิดไม่ขึ้น
-     */
-    // package-private เพื่อให้เทสต์ยืนยันได้ว่าครอบทุกเทมเพลตจริง ไม่ใช่แค่ฉบับที่เรนเดอร์ดู
-    static byte[] forLibreOffice(byte[] docxBytes) {
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream(docxBytes.length + 1024);
-            boolean changed = false;
-            try (ZipInputStream in = new ZipInputStream(new java.io.ByteArrayInputStream(docxBytes));
-                    ZipOutputStream zip = new ZipOutputStream(out)) {
-                ZipEntry entry;
-                while ((entry = in.getNextEntry()) != null) {
-                    byte[] content = in.readAllBytes();
-                    // หัวกระดาษและท้ายกระดาษก็จัดชิดขอบได้เหมือนกัน จึงกวาดทุกไฟล์ XML ใน word/
-                    if (entry.getName().startsWith("word/") && entry.getName().endsWith(".xml")) {
-                        String xml = new String(content, StandardCharsets.UTF_8);
-                        if (xml.contains(THAI_JUSTIFY)) {
-                            content = xml.replace(THAI_JUSTIFY, STANDARD_JUSTIFY)
-                                    .getBytes(StandardCharsets.UTF_8);
-                            changed = true;
-                        }
-                    }
-                    zip.putNextEntry(new ZipEntry(entry.getName()));
-                    zip.write(content);
-                    zip.closeEntry();
-                }
-            }
-            return changed ? out.toByteArray() : docxBytes;
-        } catch (Exception e) {
-            log.warn("ปรับค่าจัดชิดขอบให้ LibreOffice ไม่สำเร็จ ใช้ไฟล์เดิมแปลงต่อ: {}", e.toString());
-            return docxBytes;
-        }
-    }
-
     public byte[] convertDocxToPdf(byte[] docxBytes) throws IOException {
         String soffice = resolveLibreOffice();
         if (soffice.isEmpty()) {
@@ -2308,7 +2243,7 @@ public class DocumentGenerationService {
         } catch (IOException ignored) {
         }
         
-        Files.write(tempDocx, forLibreOffice(docxBytes));
+        Files.write(tempDocx, docxBytes);
 
         Process process = null;
         try {

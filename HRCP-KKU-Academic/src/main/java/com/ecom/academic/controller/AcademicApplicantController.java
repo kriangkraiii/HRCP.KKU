@@ -366,9 +366,6 @@ public class AcademicApplicantController {
         // อย่างเดียว ซึ่งปิด JS หรือยิง POST ตรงก็ทะลุ
         formData = DocumentFieldOwnership.merge(SignatureModule.ACADEMIC, 1, false, formData,
                 requestService.getLatestDocumentData(id, 1));
-        // ตัวเลือกตำแหน่งที่ขอประเมินติ๊กได้ทีละหนึ่ง ตัวที่ไม่ได้เลือกต้องหน้าตาเหมือนกัน
-        // ทุกครั้งไม่ว่าใครบันทึก — กติกาเดียวกับที่ฝั่งแอดมินใช้
-        formData = DocumentFieldOwnership.normalizeExclusiveTicks(SignatureModule.ACADEMIC, 1, formData);
         String jsonData = objectMapper.writeValueAsString(formData);
 
         boolean isNew1 = requestService.getDocumentsByType(id, 1).isEmpty();

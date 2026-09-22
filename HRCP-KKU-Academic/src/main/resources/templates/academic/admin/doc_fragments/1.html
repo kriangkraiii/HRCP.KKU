@@ -177,9 +177,8 @@
                 var chk1 = document.getElementById('chk1');
                 var chk2 = document.getElementById('chk2');
                 if (!r1 || !r2 || !chk1 || !chk2) return;
-                // ตัวที่ไม่ได้เลือกส่งค่าว่าง เซิร์ฟเวอร์เติมให้เอง — ดู document_1_form.html
-                if (r1.checked) { chk1.value = '✓'; chk2.value = ''; }
-                else if (r2.checked) { chk1.value = ''; chk2.value = '✓'; }
+                if (r1.checked) { chk1.value = '✓'; chk2.value = '☐'; }
+                else if (r2.checked) { chk1.value = '☐'; chk2.value = '✓'; }
                 else { chk1.value = ''; chk2.value = ''; }
             }
             document.querySelectorAll('.target-pos-radio').forEach(function(radio) {
