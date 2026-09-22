@@ -97,6 +97,10 @@ public class PositionApplicantController {
                 .toList();
 
         Optional<PositionRequest> draftRequest = positionService.findDraftByApplicant(user.getId());
+        if (draftRequest.isPresent() && positionService.isDraftEmpty(draftRequest.get())) {
+            positionService.deleteDraftRequest(draftRequest.get().getId(), user.getId());
+            draftRequest = Optional.empty();
+        }
         boolean hasActiveRequest = positionService.hasActiveRequest(user.getId());
 
         // Evaluation expiry countdown
@@ -176,7 +180,11 @@ public class PositionApplicantController {
         // instead of being taken back to their own form.
         Optional<PositionRequest> draft = positionService.findDraftByApplicant(user.getId());
         if (draft.isPresent()) {
-            return "redirect:/user/position/request/" + draft.get().getId();
+            if (positionService.isDraftEmpty(draft.get())) {
+                positionService.deleteDraftRequest(draft.get().getId(), user.getId());
+            } else {
+                return "redirect:/user/position/request/" + draft.get().getId();
+            }
         }
 
         // Check if user already has active request

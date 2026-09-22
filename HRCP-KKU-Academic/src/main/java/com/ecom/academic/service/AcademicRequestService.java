@@ -685,6 +685,64 @@ public class AcademicRequestService {
         return false;
     }
 
+    /**
+     * ตรวจสอบว่าคำร้องฉบับร่างเป็นแบบร่างว่างเปล่าหรือไม่ (ยังไม่มีการกรอกข้อมูลและยังไม่มีไฟล์แนบ)
+     * หากเป็นคำร้องที่ถูกส่งกลับมาแก้ไข (มี returnNote) จะไม่ถือว่าเป็นร่างว่างเปล่าเด็ดขาด
+     */
+    public boolean isDraftEmpty(AcademicRequest request) {
+        if (request == null || request.getCurrentStatus() != RequestStatus.DRAFT) {
+            return false;
+        }
+        // 1. คำร้องที่ถูกส่งกลับมาแก้ไข (returnNote) ต้องไม่ถูกมองว่าว่างเปล่า
+        if (getReturnNote(request.getId()) != null) {
+            return false;
+        }
+        // 2. มีไฟล์แนบหรือไม่
+        if (attachmentRepository.countByRequestId(request.getId()) > 0) {
+            return false;
+        }
+        // 3. ตรวจสอบเอกสาร (AcademicDocument)
+        List<AcademicDocument> docs = getDocuments(request.getId());
+        for (AcademicDocument doc : docs) {
+            if (doc.getGeneratedFilePath() != null && !doc.getGeneratedFilePath().isBlank()) {
+                return false;
+            }
+            if (hasNonEmptyDocumentData(doc.getJsonData())) {
+                return false;
+            }
+        }
+        // 4. ตรวจสอบว่ามีการลงนามหรือขอลงนามหรือไม่
+        List<com.ecom.academic.model.SignatureRequest> envelopes = signatureRequestRepository
+                .findByModuleAndRequestIdOrderByDocumentTypeAsc(com.ecom.academic.model.SignatureModule.ACADEMIC, request.getId());
+        if (!envelopes.isEmpty()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private boolean hasNonEmptyDocumentData(String jsonData) {
+        if (jsonData == null || jsonData.isBlank() || jsonData.trim().equals("{}")) {
+            return false;
+        }
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = mapper.readValue(jsonData, Map.class);
+            if (map == null || map.isEmpty()) {
+                return false;
+            }
+            for (Object value : map.values()) {
+                if (value != null && !value.toString().trim().isEmpty()) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
     // ==================== Attachment Methods ====================
 
     public AcademicAttachment saveAttachment(AcademicAttachment attachment) {

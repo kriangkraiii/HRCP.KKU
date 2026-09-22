@@ -222,6 +222,160 @@ class ProfileUpdateSecurityTest {
         }).doesNotThrowAnyException();
     }
 
+    // ==================== ตำแหน่งทางวิชาการ ====================
+    //
+    // ช่องนี้ถูกถอดออกจากหน้าโปรไฟล์ของผู้ยื่นแล้ว แต่ฟอร์มนี้ bind เข้า UserDtls ตรง ๆ
+    // โดยไม่มี DTO และไม่มี @InitBinder กั้น การถอดช่องออกจาก template จึงไม่ได้กันอะไรเลย
+    // เทสต์ชุดนี้ยิงเข้า service ตรง ๆ แบบที่ไม่มีช่องอยู่แล้ว ซึ่งเป็นสิ่งที่วิธีเดิมกันไม่ได้
+
+    @Test
+    @DisplayName("ผู้ยื่นแก้ตำแหน่งทางวิชาการของตัวเองไม่ได้ แม้ยิง POST ตรง")
+    void updateProfile_applicantCannotChangeOwnAcademicPosition() {
+        attacker.setAcademicPosition("อาจารย์");
+        attacker.setAcademicPositionEn("Lecturer");
+        userRepository.save(attacker);
+
+        UserDtls forged = new UserDtls();
+        forged.setFirstName("Attacker");
+        forged.setLastName("One");
+        forged.setAcademicPosition("ศาสตราจารย์");
+        forged.setAcademicPositionEn("Professor");
+
+        userService.updateUserProfile(forged, emptyUpload(), attacker.getEmail());
+
+        UserDtls after = userRepository.findById(attacker.getId()).orElseThrow();
+        assertThat(after.getAcademicPosition())
+                .as("ตำแหน่งวิชาการต้องมาจากทะเบียนบุคลากร ไม่ใช่จากฟอร์มของผู้ยื่น")
+                .isEqualTo("อาจารย์");
+        assertThat(after.getAcademicPositionEn()).isEqualTo("Lecturer");
+    }
+
+    @Test
+    @DisplayName("บันทึกโปรไฟล์ปกติต้องไม่ล้างตำแหน่งวิชาการทิ้ง")
+    void updateProfile_doesNotWipeAcademicPositionWhenFieldIsAbsent() {
+        attacker.setAcademicPosition("รองศาสตราจารย์");
+        attacker.setAcademicPositionEn("Associate Professor");
+        userRepository.save(attacker);
+
+        // หน้าโปรไฟล์ไม่ render ช่องนี้แล้ว Spring จึง bind มาเป็น null — ถ้า service
+        // เซ็ตโดยไม่ดูเงื่อนไข ตำแหน่งจะหายทุกครั้งที่ผู้ใช้แค่มาแก้เบอร์โทร
+        UserDtls fromForm = new UserDtls();
+        fromForm.setFirstName("Attacker");
+        fromForm.setLastName("One");
+        fromForm.setMobileNumber("0812345678");
+
+        userService.updateUserProfile(fromForm, emptyUpload(), attacker.getEmail());
+
+        UserDtls after = userRepository.findById(attacker.getId()).orElseThrow();
+        assertThat(after.getMobileNumber()).isEqualTo("0812345678");
+        assertThat(after.getAcademicPosition()).isEqualTo("รองศาสตราจารย์");
+        assertThat(after.getAcademicPositionEn()).isEqualTo("Associate Professor");
+    }
+
+    @Test
+    @DisplayName("แอดมินแก้ตำแหน่งวิชาการในโปรไฟล์ตัวเองได้ ทั้งไทยและอังกฤษ")
+    void updateProfile_adminMayChangeOwnAcademicPosition() {
+        UserDtls admin = persistUser("admin@test.com", "Admin", "Person");
+        admin.setRole("ROLE_ADMIN");
+        admin.setAcademicPosition("อาจารย์");
+        admin.setAcademicPositionEn("Lecturer");
+        userRepository.save(admin);
+
+        UserDtls fromForm = new UserDtls();
+        fromForm.setFirstName("Admin");
+        fromForm.setLastName("Person");
+        fromForm.setAcademicPosition("ผู้ช่วยศาสตราจารย์");
+        fromForm.setAcademicPositionEn("Assistant Professor");
+
+        userService.updateUserProfile(fromForm, emptyUpload(), admin.getEmail());
+
+        UserDtls after = userRepository.findById(admin.getId()).orElseThrow();
+        assertThat(after.getAcademicPosition()).isEqualTo("ผู้ช่วยศาสตราจารย์");
+        assertThat(after.getAcademicPositionEn()).isEqualTo("Assistant Professor");
+    }
+
+    @Test
+    @DisplayName("role ที่ส่งมาในฟอร์มต้องไม่ปลดล็อกช่องตำแหน่งวิชาการ")
+    void updateProfile_roleInFormDoesNotUnlockAcademicPosition() {
+        attacker.setAcademicPosition("อาจารย์");
+        userRepository.save(attacker);
+
+        UserDtls forged = new UserDtls();
+        forged.setFirstName("Attacker");
+        forged.setLastName("One");
+        forged.setRole("ROLE_ADMIN");            // ฟอร์มบอกเองว่าเป็นแอดมิน
+        forged.setAcademicPosition("ศาสตราจารย์");
+
+        userService.updateUserProfile(forged, emptyUpload(), attacker.getEmail());
+
+        UserDtls after = userRepository.findById(attacker.getId()).orElseThrow();
+        assertThat(after.getAcademicPosition()).isEqualTo("อาจารย์");
+        assertThat(after.getRole()).isEqualTo("ROLE_USER");
+    }
+
+    // ==================== คำนำหน้าชื่อ ====================
+    //
+    // คำนำหน้าฝังตำแหน่งวิชาการไว้ในตัวเอง (ผศ./รศ./ศ.) ล็อกแต่ช่องตำแหน่งแล้วเปิดช่องนี้ไว้
+    // ก็แค่ย้ายที่โกหก เพราะชื่อที่ประทับบนเอกสารและใต้ลายเซ็นอ่านจากคำนำหน้า ไม่ใช่จากช่องตำแหน่ง
+    // (ดู SignerNameResolver.printedName)
+
+    @Test
+    @DisplayName("ผู้ยื่นแก้คำนำหน้าชื่อของตัวเองไม่ได้ แม้ยิง POST ตรง")
+    void updateProfile_applicantCannotChangeOwnTitle() {
+        attacker.setTitle("อ.ดร.");
+        attacker.setAcademicPosition("อาจารย์");
+        userRepository.save(attacker);
+
+        UserDtls forged = new UserDtls();
+        forged.setFirstName("Attacker");
+        forged.setLastName("One");
+        forged.setTitle("ศ.ดร.");
+
+        userService.updateUserProfile(forged, emptyUpload(), attacker.getEmail());
+
+        assertThat(userRepository.findById(attacker.getId()).orElseThrow().getTitle())
+                .as("ตั้งคำนำหน้าเป็น ศ.ดร. เองไม่ได้ ในเมื่อตำแหน่งวิชาการก็แก้เองไม่ได้")
+                .isEqualTo("อ.ดร.");
+    }
+
+    @Test
+    @DisplayName("บันทึกโปรไฟล์ปกติต้องไม่ล้างคำนำหน้าชื่อทิ้ง")
+    void updateProfile_doesNotWipeTitleWhenFieldIsAbsent() {
+        attacker.setTitle("ผศ.ดร.");
+        userRepository.save(attacker);
+
+        // หน้าโปรไฟล์ไม่ render ช่องนี้แล้ว Spring จึง bind มาเป็น null
+        UserDtls fromForm = new UserDtls();
+        fromForm.setFirstName("Attacker");
+        fromForm.setLastName("One");
+        fromForm.setMobileNumber("0898765432");
+
+        userService.updateUserProfile(fromForm, emptyUpload(), attacker.getEmail());
+
+        UserDtls after = userRepository.findById(attacker.getId()).orElseThrow();
+        assertThat(after.getMobileNumber()).isEqualTo("0898765432");
+        assertThat(after.getTitle()).isEqualTo("ผศ.ดร.");
+    }
+
+    @Test
+    @DisplayName("แอดมินแก้คำนำหน้าชื่อในโปรไฟล์ตัวเองได้")
+    void updateProfile_adminMayChangeOwnTitle() {
+        UserDtls admin = persistUser("title-admin@test.com", "Admin", "Person");
+        admin.setRole("ROLE_ADMIN");
+        admin.setTitle("นาย");
+        userRepository.save(admin);
+
+        UserDtls fromForm = new UserDtls();
+        fromForm.setFirstName("Admin");
+        fromForm.setLastName("Person");
+        fromForm.setTitle("รศ.ดร.");
+
+        userService.updateUserProfile(fromForm, emptyUpload(), admin.getEmail());
+
+        assertThat(userRepository.findById(admin.getId()).orElseThrow().getTitle())
+                .isEqualTo("รศ.ดร.");
+    }
+
     /** ProfileImageStorage decodes uploads, so tests need real encoded bytes. */
     private static byte[] pngBytes() {
         try {

@@ -118,6 +118,9 @@ public class NotificationController {
             m.put("isStarred", n.getIsStarred());
             m.put("isImportant", n.getIsImportant());
             m.put("actorName", n.getActor() != null ? n.getActor().getName() : "ระบบ");
+            m.put("actionBtnText", n.getActionBtnText());
+            m.put("actionPromptText", n.getActionPromptText());
+            m.put("actionIconClass", n.getActionIconClass());
             return m;
         }).collect(Collectors.toList());
 
@@ -164,6 +167,9 @@ public class NotificationController {
         data.put("isImportant", n.getIsImportant());
         data.put("actorName", n.getActor() != null ? n.getActor().getName() : "ระบบ");
         data.put("isSnoozed", n.isSnoozed());
+        data.put("actionBtnText", n.getActionBtnText());
+        data.put("actionPromptText", n.getActionPromptText());
+        data.put("actionIconClass", n.getActionIconClass());
 
         resp.put("success", true);
         resp.put("notification", data);

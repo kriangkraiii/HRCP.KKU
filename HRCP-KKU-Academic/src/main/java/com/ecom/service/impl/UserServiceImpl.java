@@ -220,16 +220,35 @@ public class UserServiceImpl implements UserService {
 			return null;
 		}
 
-		dbUser.setTitle(user.getTitle());
 		dbUser.setFirstName(user.getFirstName());
 		dbUser.setLastName(user.getLastName());
 		dbUser.setMobileNumber(user.getMobileNumber());
-		dbUser.setAcademicPosition(user.getAcademicPosition());
-		// English name and position are seeded from the directory by splitting its
-		// combined name_en, which guesses wrong on multi-word family names — so
-		// they stay editable here rather than being sync-only.
+		// English names are seeded from the directory by splitting its combined
+		// name_en, which guesses wrong on multi-word family names — so they stay
+		// editable here rather than being sync-only.
 		dbUser.setFirstNameEn(user.getFirstNameEn());
 		dbUser.setLastNameEn(user.getLastNameEn());
+
+		// ตำแหน่งทางวิชาการมาจากทะเบียนบุคลากร มข. ไม่ใช่ของที่เจ้าตัวกรอกเอง:
+		// AcademicRankPolicy ใช้ค่านี้ตัดสินว่าผู้ยื่นขอตำแหน่งไหนได้ ปล่อยให้แก้เองคือ
+		// ปล่อยให้ลดตำแหน่งตัวเองเพื่อปลดล็อกการขอตำแหน่งที่สูงกว่า ผู้ยื่นที่ข้อมูลผิด
+		// ต้องให้นักทรัพยากรบุคคลแก้ให้ที่ /admin/edit-user แทน
+		//
+		// คำนำหน้าชื่ออยู่ในกลุ่มเดียวกันเพราะมันฝังตำแหน่งวิชาการไว้ในตัวเอง (ผศ./รศ./ศ.)
+		// ล็อกแต่ตำแหน่งแล้วเปิดช่องนี้ไว้ ก็แค่ย้ายที่โกหก — ชื่อที่ประทับบนเอกสารและ
+		// ลายเซ็นอ่านจากคำนำหน้า ไม่ใช่จากช่องตำแหน่ง
+		//
+		// role อ่านจาก dbUser (ค่าใน DB) ไม่ใช่จาก user ที่ bind มาจากฟอร์ม — ฟอร์มนี้
+		// bind เข้า entity ตรง ๆ โดยไม่มี DTO และไม่มี @InitBinder กั้น ใครยิง POST เอง
+		// ก็ใส่ role มาเองได้ การเช็คค่าที่ส่งมาจึงเท่ากับไม่ได้เช็ค
+		//
+		// เงื่อนไขนี้ยังกันค่าเดิมถูกล้างด้วย: หน้าผู้ยื่นไม่ render ช่องพวกนี้แล้ว Spring จึง
+		// bind เป็น null ถ้าเซ็ตโดยไม่ดูเงื่อนไข ค่าจะหายทุกครั้งที่กดบันทึกโปรไฟล์
+		if ("ROLE_ADMIN".equals(dbUser.getRole())) {
+			dbUser.setTitle(user.getTitle());
+			dbUser.setAcademicPosition(user.getAcademicPosition());
+			dbUser.setAcademicPositionEn(user.getAcademicPositionEn());
+		}
 		String oldImage = dbUser.getProfileImage();
 		// Only a file we validated and wrote ourselves may name the profile image.
 		String storedImage = profileImageStorage.store(img);

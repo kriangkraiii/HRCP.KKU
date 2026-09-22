@@ -148,6 +148,13 @@ public class AcademicApplicantController {
         AcademicRequest draftRequest = allRequests.stream()
                 .filter(r -> r.getCurrentStatus() == RequestStatus.DRAFT)
                 .findFirst().orElse(null);
+
+        // หากเป็นแบบร่างว่างเปล่า (ยังไม่กรอกอะไร/ยังไม่อัปโหลดไฟล์) ให้ลบทิ้งและไม่แสดงบนแดชบอร์ด
+        if (draftRequest != null && requestService.isDraftEmpty(draftRequest)) {
+            requestService.deleteDraftRequest(draftRequest.getId(), user.getId());
+            draftRequest = null;
+        }
+
         List<AcademicRequest> requests = allRequests.stream()
                 .filter(r -> r.getCurrentStatus() != RequestStatus.DRAFT)
                 .collect(Collectors.toList());
@@ -189,6 +196,10 @@ public class AcademicApplicantController {
         PositionRequest positionDraft = allPositionRequests.stream()
                 .filter(r -> r.getCurrentStatus() == PositionRequestStatus.DRAFT)
                 .findFirst().orElse(null);
+        if (positionDraft != null && positionRequestService.isDraftEmpty(positionDraft)) {
+            positionRequestService.deleteDraftRequest(positionDraft.getId(), user.getId());
+            positionDraft = null;
+        }
         List<PositionRequest> positionRequests = allPositionRequests.stream()
                 .filter(r -> r.getCurrentStatus() != PositionRequestStatus.DRAFT)
                 .collect(Collectors.toList());

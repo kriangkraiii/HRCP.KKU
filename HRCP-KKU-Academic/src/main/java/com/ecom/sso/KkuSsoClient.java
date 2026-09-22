@@ -135,6 +135,9 @@ public class KkuSsoClient {
                 text(p, "facultyName"),
                 text(p, "positionName"),
                 text(p, "positionTypeName"),
+                text(p, "levelId"),
+                text(p, "levelName"),
+                text(p, "workline"),
                 text(p, "gender"),
                 text(p, "phoneNumber"),
                 text(p, "personStatus")));
@@ -213,7 +216,18 @@ public class KkuSsoClient {
             String employeeId) {
     }
 
-    /** Optional richer profile from {@code /user.profile}. */
+    /**
+     * Optional richer profile from {@code /user.profile}.
+     *
+     * <p>Note what is <b>not</b> here: an English academic position. {@code titleEng}
+     * is the name prefix ("Mr."), not a rank, so the English side of the position
+     * still has to be derived from {@code AcademicRank}, however authoritative this
+     * feed is for the Thai one.
+     *
+     * <p>{@code positionName} and {@code levelName} both have to be read: which of
+     * the two carries the academic rank depends on the person's {@code workline}
+     * (สายวิชาการ / สายสนับสนุน), and the university's docs do not pin it down.
+     */
     public record SsoProfile(String email,
             String userId,
             String type,
@@ -226,6 +240,9 @@ public class KkuSsoClient {
             String facultyName,
             String positionName,
             String positionTypeName,
+            String levelId,
+            String levelName,
+            String workline,
             String gender,
             String phoneNumber,
             String personStatus) {

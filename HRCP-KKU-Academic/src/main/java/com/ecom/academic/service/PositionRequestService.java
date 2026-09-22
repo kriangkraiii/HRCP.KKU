@@ -473,6 +473,58 @@ public class PositionRequestService {
     }
 
     /**
+     * ตรวจสอบว่าคำร้องขอตำแหน่งฉบับร่างเป็นแบบร่างว่างเปล่าหรือไม่
+     */
+    public boolean isDraftEmpty(PositionRequest request) {
+        if (request == null || request.getCurrentStatus() != PositionRequestStatus.DRAFT) {
+            return false;
+        }
+        // 1. มีไฟล์แนบหรือไม่
+        if (attachmentRepository.countActiveByRequestId(request.getId()) > 0) {
+            return false;
+        }
+        // 2. ตรวจสอบเอกสาร (PositionDocument)
+        List<PositionDocument> docs = getDocuments(request.getId());
+        for (PositionDocument doc : docs) {
+            if (doc.getGeneratedFilePath() != null && !doc.getGeneratedFilePath().isBlank()) {
+                return false;
+            }
+            if (hasNonEmptyDocumentData(doc.getJsonData())) {
+                return false;
+            }
+        }
+        // 3. ตรวจสอบว่ามีการลงนามหรือขอลงนามหรือไม่
+        List<com.ecom.academic.model.SignatureRequest> envelopes = signatureRequestRepository
+                .findByModuleAndRequestIdOrderByDocumentTypeAsc(
+                        com.ecom.academic.model.SignatureModule.POSITION, request.getId());
+        if (!envelopes.isEmpty()) {
+            return false;
+        }
+        return true;
+    }
+
+    private boolean hasNonEmptyDocumentData(String jsonData) {
+        if (jsonData == null || jsonData.isBlank() || jsonData.trim().equals("{}")) {
+            return false;
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> map = objectMapper.readValue(jsonData, Map.class);
+            if (map == null || map.isEmpty()) {
+                return false;
+            }
+            for (Object value : map.values()) {
+                if (value != null && !value.toString().trim().isEmpty()) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return true;
+        }
+    }
+
+    /**
      * Whether this person still has a request in flight, which is what stops
      * them opening a second one.
      *

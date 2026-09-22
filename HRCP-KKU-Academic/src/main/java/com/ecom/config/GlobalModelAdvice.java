@@ -6,8 +6,10 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ModelAttribute;
 
+import com.ecom.academic.model.AcademicRank;
 import com.ecom.model.UserDtls;
 import com.ecom.service.UserService;
+import com.ecom.util.NameTitleOption;
 
 import jakarta.servlet.http.HttpSession;
 
@@ -37,6 +39,30 @@ public class GlobalModelAdvice {
     public void addGlobalAttributes(jakarta.servlet.http.HttpServletRequest request, Principal principal, Model model) {
         // Drives which sign-in controls the login page renders.
         model.addAttribute("ssoMode", authProperties.isSsoMode());
+
+        // The four academic ranks, for the position pickers in admin/_academic_position_fields.html.
+        // Serving them from the enum is what keeps the Thai option and its English
+        // counterpart from drifting apart — they used to be hardcoded in five
+        // templates that no longer agreed with each other. It is a constant list,
+        // so there is nothing to look up and no reason to scope it to a few pages.
+        model.addAttribute("academicRanks", java.util.List.of(AcademicRank.values()));
+
+        // The same four, as plain label lists. The fragment needs to ask "is this
+        // stored value one of the four?" so it can keep an off-list value (say
+        // "อาจารย์ ดร." from a directory sync) as an option instead of dropping it
+        // on the next save. A SpEL selection over academicRanks cannot ask that:
+        // inside .?[...] the root becomes the element, so the fragment parameter
+        // holding the stored value is out of scope. #lists.contains over these
+        // works, and is easier to read than what it replaces.
+        model.addAttribute("academicRankThaiLabels",
+                java.util.Arrays.stream(AcademicRank.values()).map(AcademicRank::thaiLabel).toList());
+        model.addAttribute("academicRankEnglishLabels",
+                java.util.Arrays.stream(AcademicRank.values()).map(AcademicRank::englishLabel).toList());
+
+        // คำนำหน้าชื่อ สำหรับ admin/_title_field.html ด้วยเหตุผลเดียวกัน — รายการนี้เคยถูก
+        // hardcode 4 ที่แล้วไม่ตรงกัน จนหน้าโปรไฟล์แอดมินลบคำนำหน้าของตัวเองทิ้งได้
+        model.addAttribute("nameTitleOptions", NameTitleOption.all());
+        model.addAttribute("nameTitleKnownValues", NameTitleOption.knownValues());
 
         // The signed-out page loads this in a hidden frame so the provider's
         // session ends too, without making anyone wait for its app to boot.

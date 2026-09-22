@@ -23,6 +23,13 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
     @Query("SELECT r FROM AcademicRequest r LEFT JOIN FETCH r.applicant WHERE r.id = :id")
     Optional<AcademicRequest> findByIdWithApplicant(@Param("id") Long id);
 
+    /**
+     * Requests matching given statuses with their applicant eagerly fetched.
+     * Prevents LazyInitializationException in scheduled background tasks.
+     */
+    @Query("SELECT r FROM AcademicRequest r LEFT JOIN FETCH r.applicant WHERE r.currentStatus IN :statuses")
+    List<AcademicRequest> findByCurrentStatusInWithApplicant(@Param("statuses") List<RequestStatus> statuses);
+
     List<AcademicRequest> findByApplicantIdOrderByCreatedAtDesc(Integer applicantId);
 
     List<AcademicRequest> findByCurrentStatus(RequestStatus status);

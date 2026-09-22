@@ -44,7 +44,49 @@ class AcademicRankTest {
         void unrecognisedTextIsNull() {
             assertThat(AcademicRank.of("พนักงานมหาวิทยาลัย")).isNull();
             assertThat(AcademicRank.of("   ")).isNull();
-            assertThat(AcademicRank.of(null)).isNull();
+            assertThat(AcademicRank.of((String[]) null)).isNull();
+        }
+
+        @Test
+        @DisplayName("หลายช่อง: ช่องที่ไม่เกี่ยวไม่บังช่องที่ใช่")
+        void laterCandidateWins() {
+            // SSO สายสนับสนุนส่ง positionName เป็นชื่องาน แล้วตำแหน่งวิชาการไปอยู่ levelName
+            assertThat(AcademicRank.of("พนักงานมหาวิทยาลัย", "ผู้ช่วยศาสตราจารย์"))
+                    .isEqualTo(AcademicRank.ASSISTANT_PROFESSOR);
+        }
+
+        @Test
+        @DisplayName("หลายช่อง: ถ้าไม่มีช่องไหนเป็นตำแหน่งวิชาการเลย ต้องคืน null ไม่ใช่ช่องแรก")
+        void noCandidateMatchesIsNull() {
+            assertThat(AcademicRank.of("นักวิชาการคอมพิวเตอร์", "ชำนาญการ")).isNull();
+            assertThat(AcademicRank.of()).isNull();
+        }
+    }
+
+    @Nested
+    @DisplayName("ชื่อตำแหน่งสองภาษา")
+    class Labels {
+
+        @Test
+        @DisplayName("ทุกตำแหน่งมีคู่ไทย-อังกฤษครบ")
+        void everyRankHasBothLabels() {
+            assertThat(AcademicRank.LECTURER.englishLabel()).isEqualTo("Lecturer");
+            assertThat(AcademicRank.ASSISTANT_PROFESSOR.englishLabel()).isEqualTo("Assistant Professor");
+            assertThat(AcademicRank.ASSOCIATE_PROFESSOR.englishLabel()).isEqualTo("Associate Professor");
+            assertThat(AcademicRank.PROFESSOR.englishLabel()).isEqualTo("Professor");
+        }
+
+        @Test
+        @DisplayName("ชื่ออังกฤษอ่านกลับเป็นตำแหน่งเดิมได้ — แปลงไป-กลับไม่เพี้ยน")
+        void englishLabelRoundTrips() {
+            for (AcademicRank rank : AcademicRank.values()) {
+                assertThat(AcademicRank.of(rank.englishLabel()))
+                        .as("อ่าน %s กลับ", rank.englishLabel())
+                        .isEqualTo(rank);
+                assertThat(AcademicRank.of(rank.thaiLabel()))
+                        .as("อ่าน %s กลับ", rank.thaiLabel())
+                        .isEqualTo(rank);
+            }
         }
     }
 

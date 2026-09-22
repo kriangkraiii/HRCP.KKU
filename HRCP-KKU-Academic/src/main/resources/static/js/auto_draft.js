@@ -18,10 +18,102 @@
   /* บันทึกเสร็จแล้วเน้นสีอยู่เท่านี้ ก่อนจะจางลงเป็นโทนเงียบ */
   var QUIET_MS = 4000;
 
+  /* ---------- ระบบสองภาษา (I18N) ---------- */
+  var I18N = {
+    th: {
+      timeSuffix: " น.",
+      chip: {
+        idle: "บันทึกอัตโนมัติ",
+        dirty: "ยังไม่บันทึก",
+        saving: "กำลังบันทึก",
+        saved: "บันทึกแล้ว ",
+        error: "บันทึกไม่สำเร็จ",
+        disabled: "ปิดบันทึกอัตโนมัติ"
+      },
+      mirror: {
+        idle: "บันทึกข้อมูลล่าสุดเรียบร้อยแล้ว",
+        dirty: "มีข้อมูลยังไม่บันทึก (ระบบจะบันทึกให้อัตโนมัติ)",
+        saving: "กำลังบันทึกข้อมูล…",
+        saved: "บันทึกข้อมูลแล้วเมื่อ ",
+        error: "บันทึกไม่สำเร็จ กรุณาลองใหม่อีกครั้ง",
+        disabled: "ปิดบันทึกอัตโนมัติ (จะบันทึกเมื่อกดส่ง)"
+      }
+    },
+    en: {
+      timeSuffix: "",
+      chip: {
+        idle: "Auto-save on",
+        dirty: "Unsaved",
+        saving: "Saving",
+        saved: "Saved ",
+        error: "Save failed",
+        disabled: "Auto-save off"
+      },
+      mirror: {
+        idle: "All changes saved",
+        dirty: "Unsaved changes (will auto-save)",
+        saving: "Saving changes…",
+        saved: "Saved at ",
+        error: "Save failed, please retry",
+        disabled: "Auto-save off (saves on submit)"
+      }
+    }
+  };
+
+  function getCurrentLang() {
+    // 1. ตรวจจาก googtrans cookie
+    var match = document.cookie.match(/(?:^|;\s*)googtrans=([^;]*)/);
+    if (match) {
+      var val = decodeURIComponent(match[1]);
+      if (val.indexOf("/en") !== -1) return "en";
+      if (val.indexOf("/th") !== -1) return "th";
+    }
+    // 2. ตรวจจากป้ายบอกภาษาบน Navbar
+    var label = document.getElementById("langCurrentLabel");
+    if (label) {
+      var txt = label.textContent.trim().toUpperCase();
+      if (txt === "EN") return "en";
+      if (txt === "TH") return "th";
+    }
+    // 3. ตรวจจาก attribute lang หรือ class ของ <html>
+    var html = document.documentElement;
+    var langAttr = (html.getAttribute("lang") || "").toLowerCase();
+    if (langAttr.startsWith("en") || html.classList.contains("translated-ltr")) {
+      return "en";
+    }
+    return "th";
+  }
+
+  var activeEngines = [];
+  function reRenderAllEngines() {
+    activeEngines.forEach(function (e) {
+      e._reRender();
+    });
+  }
+
+  // ดักฟังการสลับภาษาจาก Topbar
+  window.addEventListener("app:language-change", reRenderAllEngines);
+
+  // ดักฟังการเปลี่ยนแปลงจาก Google Translate ที่เปลี่ยน attribute ของ <html>
+  if (window.MutationObserver) {
+    var lastObservedLang = getCurrentLang();
+    var htmlObserver = new MutationObserver(function () {
+      var current = getCurrentLang();
+      if (current !== lastObservedLang) {
+        lastObservedLang = current;
+        reRenderAllEngines();
+      }
+    });
+    htmlObserver.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["lang", "class"]
+    });
+  }
+
   /* ---------- ชิปสถานะ (ลอยติดหน้าจอ ใช้ร่วมกันทั้งหน้า) ----------
    *
    * เดิมแถบสถานะถูกแทรกเป็นลูกตัวแรกของฟอร์ม พอผู้ใช้เลื่อนลงไปกรอกข้อมูลก็หลุดจอไป
-   * ตัวชิปจึงย้ายมาเป็น position:fixed อยู่แถวเดียวกับปุ่มลอย "กลับ" / "ดูตัวอย่าง"
+   * ตัวชิปจึงย้ายมาเป็น position:fixed อยู่มุมขวาล่างเพื่อไม่ให้บังส่วนหัว
    * และทำเป็นตัวเดียวต่อหน้า เผื่อหน้าไหนมีหลายฟอร์มจะได้ไม่ซ้อนกัน (CSS: style.css)
    */
   var dock = null;
@@ -30,7 +122,7 @@
   function getDock() {
     if (dock) return dock;
     dock = document.createElement("div");
-    dock.className = "adb";
+    dock.className = "adb notranslate";
     dock.setAttribute("role", "status");
     dock.setAttribute("aria-live", "polite");
 
@@ -54,12 +146,16 @@
     this.endpoint = form.getAttribute("data-auto-draft");
     this.timer = null;
     this.lastHash = "";
+    this.lastSavedDate = null;
     this.lastSavedAt = "";
+    this.currentState = "idle";
+    this.currentExtra = null;
     this.saving = false;
     this.inflight = null;
 
     /* ให้ภายนอกสั่ง flush ได้ — ปุ่มส่งลงนามใช้ทางนี้บันทึกเอกสารก่อนส่ง */
     form.__autoDraft = this;
+    activeEngines.push(this);
 
     this._setup();
   }
@@ -103,75 +199,85 @@
   };
 
   /*
-   * ชิปสถานะลอยอยู่ด้านบนจอ ส่วนแผงลงนามอยู่ท้ายหน้า ผู้ใช้ที่กำลังจะกดส่งจึงมองคนละจุด
+   * ชิปสถานะลอยอยู่ด้านล่างจอ ส่วนแผงลงนามอยู่ท้ายหน้า ผู้ใช้ที่กำลังจะกดส่งจึงมองคนละจุด
    * — สะท้อนสถานะเดียวกันไปไว้ข้างปุ่มส่งด้วย (ถ้อยคำยาวกว่าเพราะมีที่ว่างมากกว่าบนชิป)
    */
   Engine.prototype._mirror = function (state, extra) {
     var nodes = document.querySelectorAll("[data-autodraft-mirror]");
     if (!nodes.length) return;
 
+    var lang = getCurrentLang();
+    var dict = I18N[lang] || I18N.th;
+
     var icon, text;
     switch (state) {
       case "dirty":
         icon = "fa-pen text-secondary";
-        text = "มีการแก้ไขที่ยังไม่บันทึก — ระบบจะบันทึกให้ก่อนส่ง";
+        text = dict.mirror.dirty;
         break;
       case "saving":
         icon = "fa-sync-alt fa-spin text-warning";
-        text = "กำลังบันทึกร่าง…";
+        text = dict.mirror.saving;
         break;
       case "saved":
         icon = "fa-check-circle text-success";
-        text = "บันทึกร่างล่าสุด " + (extra || "");
+        text = dict.mirror.saved + (extra || "");
         break;
       case "error":
         icon = "fa-exclamation-triangle text-danger";
-        text = extra || "บันทึกร่างไม่สำเร็จ กรุณาลองใหม่";
+        text = extra || dict.mirror.error;
         break;
       case "disabled":
         icon = "fa-pause-circle text-secondary";
-        text = "ปิดบันทึกร่างอัตโนมัติ — ระบบจะบันทึกให้ตอนกดส่ง";
+        text = dict.mirror.disabled;
         break;
       default: /* idle */
         icon = "fa-check-circle text-success";
-        text = "ข้อมูลตรงกับที่บันทึกไว้ล่าสุด";
+        text = dict.mirror.idle;
     }
 
     nodes.forEach(function (el) {
+      el.classList.add("notranslate");
       el.innerHTML = '<i class="fas ' + icon + ' me-1"></i>' + text;
       el.hidden = false;
     });
   };
 
-  Engine.prototype._show = function (state, extra) {
+  Engine.prototype._show = function (state, extra, force) {
     var bar = this.bar;
     if (!bar) return;
+
+    this.currentState = state;
+    this.currentExtra = extra;
+
+    var lang = getCurrentLang();
+    var dict = I18N[lang] || I18N.th;
 
     var icon, text;
     switch (state) {
       case "dirty":
         icon = "fa-pen";
-        text = "มีการแก้ไขที่ยังไม่บันทึก";
+        text = dict.chip.dirty;
         break;
       case "saving":
         icon = "fa-sync-alt fa-spin";
-        text = "กำลังบันทึกร่าง";
+        text = dict.chip.saving;
         break;
       case "saved":
         icon = "fa-check-circle";
-        text = "บันทึกร่างล่าสุด " + (extra || "");
+        text = dict.chip.saved + (extra || "");
         break;
       case "error":
         icon = "fa-exclamation-triangle";
-        text = extra || "บันทึกร่างไม่สำเร็จ — กรุณาลองใหม่";
+        text = extra || dict.chip.error;
         break;
       case "disabled":
         icon = "fa-pause-circle";
-        text = "ปิดบันทึกร่างอัตโนมัติ";
+        text = dict.chip.disabled;
         break;
       default: /* idle */
         icon = "fa-cloud";
-        text = "ระบบบันทึกร่างอัตโนมัติทำงานอยู่";
+        text = dict.chip.idle;
     }
 
     /*
@@ -179,7 +285,7 @@
      * (aria-live) จะอ่านข้อความเดิมซ้ำไม่หยุด — ข้ามไปถ้าสถานะกับข้อความยังเหมือนเดิม
      * ยกเว้นตอนชิปจางเป็นโทนเงียบแล้ว ต้องปล่อยให้เน้นสีใหม่เพื่อยืนยันว่าบันทึกอีกรอบแล้วจริง
      */
-    if (bar.hrcpState === state && bar.hrcpText === text &&
+    if (!force && bar.hrcpState === state && bar.hrcpText === text &&
         !bar.classList.contains("adb--quiet")) {
       return;
     }
@@ -187,7 +293,7 @@
     bar.hrcpText = text;
 
     clearTimeout(quietTimer);
-    bar.className = "adb adb--" + state;
+    bar.className = "adb notranslate adb--" + state;
     this._mirror(state, extra);
 
     this.iconEl.innerHTML = '<i class="fas ' + icon + '"></i>';
@@ -206,20 +312,40 @@
     }
   };
 
+  /* สั่ง render ใหม่ทันทีตามภาษาปัจจุบัน */
+  Engine.prototype._reRender = function () {
+    if (!this.bar) return;
+    var state = this.currentState || "idle";
+    var extra = this.currentExtra;
+    if (state === "saved" && this.lastSavedDate) {
+      extra = this._formatTime(this.lastSavedDate);
+      this.lastSavedAt = extra;
+    }
+    this._show(state, extra, true);
+  };
+
   /* กลับไปบอกว่า "ตรงกับที่บันทึกไว้" โดยไม่ต้องเน้นสีใหม่ — ใช้ตอนผู้ใช้แก้แล้วแก้กลับเหมือนเดิม */
   Engine.prototype._showSynced = function () {
-    if (this.lastSavedAt) {
-      this._show("saved", this.lastSavedAt);
+    if (this.lastSavedDate) {
+      var extra = this._formatTime(this.lastSavedDate);
+      this._show("saved", extra);
       this.bar.classList.add("adb--quiet");
     } else {
       this._show("idle");
     }
   };
 
+  Engine.prototype._formatTime = function (d) {
+    if (!d) d = new Date();
+    var h = d.getHours().toString().padStart(2, "0");
+    var m = d.getMinutes().toString().padStart(2, "0");
+    var lang = getCurrentLang();
+    var suffix = (I18N[lang] || I18N.th).timeSuffix;
+    return h + ":" + m + suffix;
+  };
+
   Engine.prototype._timeStr = function () {
-    var d = new Date();
-    return d.getHours().toString().padStart(2, "0") + ":" +
-           d.getMinutes().toString().padStart(2, "0") + " น.";
+    return this._formatTime(new Date());
   };
 
   Engine.prototype._onChange = function () {
@@ -297,7 +423,8 @@
       .then(function (r) {
         if (r.ok) {
           self.lastHash = h;
-          self.lastSavedAt = self._timeStr();
+          self.lastSavedDate = new Date();
+          self.lastSavedAt = self._formatTime(self.lastSavedDate);
           self._show("saved", self.lastSavedAt);
           return true;
         }
@@ -306,11 +433,17 @@
         return r
           .json()
           .then(function (body) {
-            self._show("error", (body && body.error) || "เซิร์ฟเวอร์ตอบกลับ " + r.status);
+            var msg = (body && body.error);
+            if (!msg) {
+              var lang = getCurrentLang();
+              msg = (lang === "en" ? "Server returned " : "เซิร์ฟเวอร์ตอบกลับ ") + r.status;
+            }
+            self._show("error", msg);
             return false;
           })
           .catch(function () {
-            self._show("error", "เซิร์ฟเวอร์ตอบกลับ " + r.status);
+            var lang = getCurrentLang();
+            self._show("error", (lang === "en" ? "Server returned " : "เซิร์ฟเวอร์ตอบกลับ ") + r.status);
             return false;
           });
       })

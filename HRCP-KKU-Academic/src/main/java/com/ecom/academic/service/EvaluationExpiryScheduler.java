@@ -9,6 +9,7 @@ import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.RequestStatus;
@@ -47,17 +48,15 @@ public class EvaluationExpiryScheduler {
 
     /** Run daily at 8:00 AM */
     @Scheduled(cron = "0 0 8 * * *")
+    @Transactional
     public void checkExpiryAndNotify() {
         log.info("Starting evaluation expiry check...");
 
-        List<AcademicRequest> allRequests = requestRepository.findAll();
+        List<AcademicRequest> completedRequests = requestRepository.findByCurrentStatusInWithApplicant(
+                List.of(RequestStatus.COMPLETED_PASS, RequestStatus.COMPLETED));
         LocalDateTime now = LocalDateTime.now();
 
-        for (AcademicRequest request : allRequests) {
-            if (request.getCurrentStatus() != RequestStatus.COMPLETED_PASS
-                    && request.getCurrentStatus() != RequestStatus.COMPLETED) {
-                continue;
-            }
+        for (AcademicRequest request : completedRequests) {
 
             UserDtls user = request.getApplicant();
             if (user == null || user.getEmail() == null || user.getEmail().isBlank()) {

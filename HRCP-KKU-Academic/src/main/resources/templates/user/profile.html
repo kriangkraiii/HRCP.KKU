@@ -7,7 +7,7 @@
         <div class="col-lg-10">
 
             <div class="mb-3">
-                <a href="/user/academic/dashboard" class="btn-back-pill" onclick="if(window.history.length > 1 && document.referrer) { history.back(); return false; }">
+                <a href="/user/academic/dashboard" class="btn-back-pill no-floating-back" onclick="if(window.history.length > 1 && document.referrer) { history.back(); return false; }">
                     <i class="fas fa-arrow-left"></i> กลับ
                 </a>
             </div>
@@ -74,23 +74,22 @@
                             </div>
                             <div class="profile-section-body">
                                 <div class="row g-3">
+                                    <!-- คำนำหน้าฝังตำแหน่งวิชาการไว้ในตัวเอง (ผศ./รศ./ศ.) จึงล็อกคู่กับ
+                                         ช่องตำแหน่งข้างล่าง ปล่อยให้เลือกเองได้ก็แค่ย้ายที่โกหก เพราะชื่อที่
+                                         ประทับบนเอกสารและลายเซ็นอ่านจากช่องนี้ ไม่ใช่จากช่องตำแหน่ง
+                                         ตัวที่บังคับจริงคือ UserServiceImpl.updateUserProfile ฝั่งเซิร์ฟเวอร์ -->
                                     <div class="col-md-4">
                                         <label class="profile-label">คำนำหน้าชื่อ</label>
-                                        <select name="title" class="form-select profile-input">
-                                            <option value="" th:selected="${user.title == null || user.title == ''}">-- เลือกคำนำหน้า --</option>
-                                            <option value="นาย" th:selected="${user.title == 'นาย'}">นาย</option>
-                                            <option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
-                                            <option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
-                                            <option value="ดร." th:selected="${user.title == 'ดร.'}">ดร.</option>
-                                            <option value="อาจารย์" th:selected="${user.title == 'อาจารย์' or user.title == 'อ.'}">อาจารย์</option>
-                                            <option value="อ.ดร." th:selected="${user.title == 'อ.ดร.' or user.title == 'อาจารย์ ดร.'}">อาจารย์ ดร.</option>
-                                            <option value="ผศ." th:selected="${user.title == 'ผศ.' or user.title == 'ผู้ช่วยศาสตราจารย์'}">ผศ.</option>
-                                            <option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.' or user.title == 'ผู้ช่วยศาสตราจารย์ ดร.' or user.title == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผศ.ดร.</option>
-                                            <option value="รศ." th:selected="${user.title == 'รศ.' or user.title == 'รองศาสตราจารย์'}">รศ.</option>
-                                            <option value="รศ.ดร." th:selected="${user.title == 'รศ.ดร.' or user.title == 'รองศาสตราจารย์ ดร.' or user.title == 'รองศาสตราจารย์ดร.'}">รศ.ดร.</option>
-                                            <option value="ศ." th:selected="${user.title == 'ศ.' or user.title == 'ศาสตราจารย์'}">ศ.</option>
-                                            <option value="ศ.ดร." th:selected="${user.title == 'ศ.ดร.' or user.title == 'ศาสตราจารย์ ดร.' or user.title == 'ศาสตราจารย์ดร.'}">ศ.ดร.</option>
-                                        </select>
+                                        <div class="profile-readonly-field">
+                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <span th:if="${user.title != null and user.title != ''}"
+                                                  th:text="${user.title}">คำนำหน้า</span>
+                                            <span th:unless="${user.title != null and user.title != ''}"
+                                                  class="text-muted">ยังไม่มีข้อมูล</span>
+                                        </div>
+                                        <div class="small text-muted mt-1">
+                                            ดึงจากทะเบียนบุคลากร มข. — หากไม่ถูกต้อง ติดต่อนักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์
+                                        </div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="profile-label">ชื่อ</label>
@@ -106,20 +105,15 @@
                                 <!-- ชื่ออังกฤษถูกเติมอัตโนมัติจากระบบต้นทาง โดยแยกจากชื่อเต็มก้อนเดียว
                                      ซึ่งเดาผิดได้กับนามสกุลหลายคำ จึงให้แก้เองได้ -->
                                 <div class="row g-3 mt-1">
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <label class="profile-label">ชื่อ (อังกฤษ)</label>
                                         <input type="text" name="firstNameEn" class="form-control profile-input"
                                                th:value="${user.firstNameEn}" placeholder="เช่น Somchai">
                                     </div>
-                                    <div class="col-md-4">
+                                    <div class="col-md-6">
                                         <label class="profile-label">นามสกุล (อังกฤษ)</label>
                                         <input type="text" name="lastNameEn" class="form-control profile-input"
                                                th:value="${user.lastNameEn}" placeholder="เช่น Jaidee">
-                                    </div>
-                                    <div class="col-md-4">
-                                        <label class="profile-label">ตำแหน่งวิชาการ (อังกฤษ)</label>
-                                        <input type="text" name="academicPositionEn" class="form-control profile-input"
-                                               th:value="${user.academicPositionEn}" placeholder="เช่น Assistant Professor">
                                     </div>
                                 </div>
                             </div>
@@ -155,17 +149,37 @@
                                 <i class="fas fa-graduation-cap"></i>
                                 <h5>ข้อมูลทางวิชาการ</h5>
                             </div>
+                            <!-- ตำแหน่งทางวิชาการเป็นข้อมูลทะเบียนบุคลากร ไม่ใช่ช่องกรอก:
+                                 AcademicRankPolicy ใช้ค่านี้ตัดสินว่าขอตำแหน่งไหนได้ ที่นี่จึงแสดงอย่างเดียว
+                                 ตัวที่บังคับจริงคือ UserServiceImpl.updateUserProfile ฝั่งเซิร์ฟเวอร์
+                                 ปิด JS แล้วยิง POST ตรงก็ยังกันอยู่ -->
                             <div class="profile-section-body">
                                 <div class="row g-3">
                                     <div class="col-md-6">
                                         <label class="profile-label">ตำแหน่งทางวิชาการ</label>
-                                        <select name="academicPosition" class="form-select profile-input">
-                                            <option value="" th:selected="${user.academicPosition == null || user.academicPosition == ''}">-- เลือกตำแหน่งทางวิชาการ --</option>
-                                            <option value="อาจารย์" th:selected="${user.academicPosition == 'อาจารย์'}">อาจารย์</option>
-                                            <option value="ผู้ช่วยศาสตราจารย์" th:selected="${user.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
-                                            <option value="รองศาสตราจารย์" th:selected="${user.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
-                                            <option value="ศาสตราจารย์" th:selected="${user.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
-                                        </select>
+                                        <div class="profile-readonly-field">
+                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <span th:if="${user.academicPosition != null and user.academicPosition != ''}"
+                                                  th:text="${user.academicPosition}">ตำแหน่งทางวิชาการ</span>
+                                            <span th:unless="${user.academicPosition != null and user.academicPosition != ''}"
+                                                  class="text-muted">ยังไม่มีข้อมูล</span>
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <label class="profile-label">ตำแหน่งวิชาการ (อังกฤษ)</label>
+                                        <div class="profile-readonly-field">
+                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <span th:if="${user.academicPositionEn != null and user.academicPositionEn != ''}"
+                                                  th:text="${user.academicPositionEn}">Academic position</span>
+                                            <span th:unless="${user.academicPositionEn != null and user.academicPositionEn != ''}"
+                                                  class="text-muted">ยังไม่มีข้อมูล</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="alert alert-secondary mt-3 mb-0">
+                                    
+                                    <div class="small text-muted mt-1">
+                                        หากข้อมูลไม่ถูกต้อง กรุณาติดต่อนักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์ เพื่อแก้ไขให้
                                     </div>
                                 </div>
                             </div>

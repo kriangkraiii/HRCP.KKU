@@ -35,17 +35,8 @@
 								<hr class="mt-0">
 
 								<div class="row mb-3">
-									<div class="col-md-4">
-										<label class="form-label fw-bold">คำนำหน้าชื่อ <span
-												class="text-danger">*</span></label>
-										<select name="title" class="form-select" required>
-											<option value="">-- เลือก --</option>
-											<option value="นาย">นาย</option>
-											<option value="นาง">นาง</option>
-											<option value="นางสาว">นางสาว</option>
-											<option value="ดร.">ดร.</option>
-										</select>
-									</div>
+									<div th:replace="~{admin/_title_field :: field(
+											null, 'form-label fw-bold', '', true)}"></div>
 									<div class="col-md-4">
 										<label class="form-label fw-bold">ชื่อ <span
 												class="text-danger">*</span></label>
@@ -60,17 +51,11 @@
 									</div>
 								</div>
 
+								<div class="mb-3"
+									th:replace="~{admin/_academic_position_fields :: fields(
+										null, null, 'form-label fw-bold', '')}"></div>
+
 								<div class="row mb-3">
-									<div class="col-md-6">
-										<label class="form-label fw-bold">ตำแหน่งทางวิชาการ</label>
-										<select name="academicPosition" class="form-select">
-											<option value="">-- ไม่ระบุ --</option>
-											<option value="อาจารย์">อาจารย์</option>
-											<option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
-											<option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
-											<option value="ศาสตราจารย์">ศาสตราจารย์</option>
-										</select>
-									</div>
 									<div class="col-md-6">
 										<label class="form-label fw-bold">เบอร์โทรศัพท์</label>
 										<input type="tel" name="mobileNumber" class="form-control"
@@ -151,6 +136,7 @@
 				}
 			});
 		</script>
+		<th:block th:replace="~{admin/_academic_position_fields :: script}"></th:block>
 	</section>
 </body>
 

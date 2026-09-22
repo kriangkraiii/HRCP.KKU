@@ -148,6 +148,155 @@ public class Notification {
 		return snoozedUntil != null && snoozedUntil.isAfter(LocalDateTime.now());
 	}
 
+	/**
+	 * ข้อความบนปุ่มดำเนินการให้สอดคล้องกับประเภทหรือปลายทางของลิงก์
+	 */
+	public String getActionBtnText() {
+		if (link == null || link.isBlank() || "#".equals(link.trim())) {
+			return "";
+		}
+		String target = link.trim();
+		if (type != null) {
+			switch (type) {
+				case SIGNATURE_REQUESTED:
+				case SIGNATURE_REMINDER:
+					return "ไปยังหน้าลงนามเอกสาร";
+				case SIGNATURE_COMPLETED:
+				case SIGNATURE_DECLINED:
+					return "ดูเอกสารที่ลงนาม";
+				case ACADEMIC_NEW_REQUEST:
+				case ACADEMIC_STATUS_UPDATE:
+					return "ไปยังคำร้องประเมินการสอน";
+				case POSITION_NEW_REQUEST:
+				case POSITION_STATUS_UPDATE:
+					return "ไปยังคำร้องขอตำแหน่ง";
+				case EXPIRY_WARNING:
+					return "ตรวจสอบผลการประเมิน";
+				case SYSTEM:
+					if (target.contains("external-sync")) {
+						return "ไปยังหน้าซิงค์ข้อมูล";
+					}
+					if (target.startsWith("/admin")) {
+						return "ไปยังหน้าจัดการระบบ";
+					}
+					return "ไปยังหน้าที่เกี่ยวข้อง";
+				default:
+					break;
+			}
+		}
+		if (target.contains("external-sync")) {
+			return "ไปยังหน้าซิงค์ข้อมูล";
+		}
+		if (target.contains("/academic/esign") || target.contains("/esign/")) {
+			return "ไปยังหน้าลงนามเอกสาร";
+		}
+		if (target.contains("/position/")) {
+			return "ไปยังคำร้องขอตำแหน่ง";
+		}
+		if (target.contains("/academic/")) {
+			return "ไปยังคำร้องประเมินการสอน";
+		}
+		if (target.contains("/profile")) {
+			return "ไปยังข้อมูลส่วนตัว";
+		}
+		if (target.startsWith("/admin")) {
+			return "ไปยังหน้าจัดการระบบ";
+		}
+		return "ไปยังหน้าที่เกี่ยวข้อง";
+	}
+
+	/**
+	 * ข้อความคำอธิบายในกล่อง Callout ให้สอดคล้องกับเรื่องที่แจ้งเตือน
+	 */
+	public String getActionPromptText() {
+		if (link == null || link.isBlank() || "#".equals(link.trim())) {
+			return "";
+		}
+		String target = link.trim();
+		if (type != null) {
+			switch (type) {
+				case SIGNATURE_REQUESTED:
+				case SIGNATURE_REMINDER:
+					return "คลิกเพื่อเปิดหน้าลงนามเอกสารอิเล็กทรอนิกส์";
+				case SIGNATURE_COMPLETED:
+					return "คลิกเพื่อเปิดดูเอกสารที่ลงนามครบถ้วนแล้ว";
+				case SIGNATURE_DECLINED:
+					return "คลิกเพื่อเปิดดูเอกสารและเหตุผลที่ปฏิเสธ";
+				case ACADEMIC_NEW_REQUEST:
+				case ACADEMIC_STATUS_UPDATE:
+					return "คลิกเพื่อเปิดดูคำร้องประเมินการสอน / ดำเนินการต่อ";
+				case POSITION_NEW_REQUEST:
+				case POSITION_STATUS_UPDATE:
+					return "คลิกเพื่อเปิดดูคำร้องขอกำหนดตำแหน่ง / ดำเนินการต่อ";
+				case EXPIRY_WARNING:
+					return "คลิกเพื่อตรวจสอบผลการประเมินและวางแผนดำเนินการ";
+				case SYSTEM:
+					if (target.contains("external-sync")) {
+						return "คลิกเพื่อตรวจสอบสถานะการซิงค์ข้อมูลภายนอก";
+					}
+					return "คลิกเพื่อเปิดดูรายละเอียดหรือดำเนินการต่อ";
+				default:
+					break;
+			}
+		}
+		if (target.contains("external-sync")) {
+			return "คลิกเพื่อตรวจสอบสถานะการซิงค์ข้อมูลภายนอก";
+		}
+		if (target.contains("/academic/esign") || target.contains("/esign/")) {
+			return "คลิกเพื่อเปิดหน้าลงนามเอกสารอิเล็กทรอนิกส์";
+		}
+		if (target.contains("/position/")) {
+			return "คลิกเพื่อเปิดดูคำร้องขอกำหนดตำแหน่ง / ดำเนินการต่อ";
+		}
+		if (target.contains("/academic/")) {
+			return "คลิกเพื่อเปิดดูคำร้องประเมินการสอน / ดำเนินการต่อ";
+		}
+		return "คลิกเพื่อเปิดดูรายละเอียดหรือดำเนินการต่อ";
+	}
+
+	/**
+	 * ไอคอนสำหรับปุ่มดำเนินการตามบริบท
+	 */
+	public String getActionIconClass() {
+		if (link == null || link.isBlank() || "#".equals(link.trim())) {
+			return "fas fa-arrow-right";
+		}
+		String target = link.trim();
+		if (target.contains("external-sync")) {
+			return "fas fa-sync-alt";
+		}
+		if (type != null) {
+			switch (type) {
+				case SIGNATURE_REQUESTED:
+				case SIGNATURE_REMINDER:
+					return "fas fa-file-signature";
+				case SIGNATURE_COMPLETED:
+				case SIGNATURE_DECLINED:
+					return "fas fa-file-contract";
+				case ACADEMIC_NEW_REQUEST:
+				case ACADEMIC_STATUS_UPDATE:
+					return "fas fa-clipboard-check";
+				case POSITION_NEW_REQUEST:
+				case POSITION_STATUS_UPDATE:
+					return "fas fa-university";
+				case EXPIRY_WARNING:
+					return "fas fa-clock";
+				default:
+					break;
+			}
+		}
+		if (target.contains("/esign/")) {
+			return "fas fa-file-signature";
+		}
+		if (target.contains("/position/")) {
+			return "fas fa-university";
+		}
+		if (target.contains("/academic/")) {
+			return "fas fa-clipboard-check";
+		}
+		return "fas fa-arrow-right";
+	}
+
 	// Getters and Setters
 	public Long getId() {
 		return id;

@@ -445,7 +445,7 @@
     function toast(message) {
         var box = document.createElement('div');
         box.className = 'alert alert-success position-fixed';
-        box.style.cssText = 'bottom:1rem;right:1rem;z-index:2000;box-shadow:0 2px 8px rgba(0,0,0,.2)';
+        box.style.cssText = 'bottom:76px;right:24px;z-index:2000;box-shadow:0 4px 12px rgba(0,0,0,.15);border-radius:10px;';
         box.textContent = message;
         document.body.appendChild(box);
         setTimeout(function () { box.remove(); }, 4000);

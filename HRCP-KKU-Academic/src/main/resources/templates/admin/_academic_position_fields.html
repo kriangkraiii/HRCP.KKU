@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  ช่องตำแหน่งทางวิชาการ ไทย + อังกฤษ คู่กัน สำหรับหน้าที่ยังแก้ค่านี้ได้ (ฝั่งแอดมิน/HR เท่านั้น)
+
+  ทำไมต้องเป็น fragment: ก่อนหน้านี้ options ภาษาไทยถูก hardcode ซ้ำกัน 5 ที่ และเนื้อหาไม่ตรงกัน
+  ส่วนฝั่งอังกฤษเป็น <input type="text"> ที่ไม่มีอะไรผูกกับฝั่งไทยเลย คนแก้ไทยแล้วอังกฤษค้างของเดิม
+
+  options มาจาก AcademicRank.values() (ผ่าน academicRanks ที่ GlobalModelAdvice ใส่ให้ทุกหน้า)
+  คู่ไทย-อังกฤษจึงมาจากคลาสเดียวฝั่งเซิร์ฟเวอร์ ไม่ใช่ตาราง JS ที่จะค่อย ๆ เพี้ยนจากกัน
+
+  หน้าผู้ยื่น (user/profile.html) ไม่ใช้ fragment นี้ — ที่นั่นแสดงอย่างเดียว
+-->
+
+<body>
+  <div th:fragment="fields(positionTh, positionEn, labelClass, controlClass)" class="row g-3">
+    <div class="col-md-6">
+      <label th:class="${labelClass}" class="form-label fw-bold">ตำแหน่งทางวิชาการ</label>
+      <select name="academicPosition" class="form-select js-academic-position-th"
+              th:classappend="${controlClass}">
+        <option value="" th:selected="${positionTh == null or positionTh == ''}">-- ไม่ระบุ --</option>
+        <!-- ค่าเดิมที่ไม่ตรง 4 ตำแหน่งมาตรฐาน (เช่น "อาจารย์ ดร." ที่ sync มาจาก directory)
+             ต้องมีที่ยืนใน list ด้วย ไม่งั้นแค่แอดมินเปิดหน้านี้แล้วกดบันทึก ค่าเดิมก็หาย -->
+        <option th:if="${positionTh != null and positionTh != ''
+                        and !#lists.contains(academicRankThaiLabels, positionTh)}"
+                th:value="${positionTh}" th:text="${positionTh} + ' (ค่าเดิมในระบบ)'" selected>ค่าเดิม</option>
+        <option th:each="rank : ${academicRanks}"
+                th:value="${rank.thaiLabel()}"
+                th:attr="data-en=${rank.englishLabel()}"
+                th:selected="${positionTh == rank.thaiLabel()}"
+                th:text="${rank.thaiLabel()}">ตำแหน่ง</option>
+      </select>
+    </div>
+    <div class="col-md-6">
+      <label th:class="${labelClass}" class="form-label fw-bold">ตำแหน่งวิชาการ (อังกฤษ)</label>
+      <select name="academicPositionEn" class="form-select js-academic-position-en"
+              th:classappend="${controlClass}">
+        <option value="" th:selected="${positionEn == null or positionEn == ''}">-- ไม่ระบุ --</option>
+        <option th:if="${positionEn != null and positionEn != ''
+                        and !#lists.contains(academicRankEnglishLabels, positionEn)}"
+                th:value="${positionEn}" th:text="${positionEn} + ' (ค่าเดิมในระบบ)'" selected>ค่าเดิม</option>
+        <option th:each="rank : ${academicRanks}"
+                th:value="${rank.englishLabel()}"
+                th:selected="${positionEn == rank.englishLabel()}"
+                th:text="${rank.englishLabel()}">Position</option>
+      </select>
+      <div class="form-text">เลือกตำแหน่งภาษาไทยแล้วช่องนี้จะเปลี่ยนตามให้ เลือกทับเองได้</div>
+    </div>
+  </div>
+
+  <!-- วางสคริปต์ไว้ในนี้ด้วย เพื่อให้หน้าที่ include fragment ได้พฤติกรรมติดมาเลย
+       ไม่ต้องไปจำว่าต้องเติม <script> ที่ท้ายหน้าอีกที -->
+  <th:block th:fragment="script">
+    <script src="/js/academic_position_sync.js"></script>
+  </th:block>
+</body>
+
+</html>

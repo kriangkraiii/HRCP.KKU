@@ -161,7 +161,10 @@
                                  th:data-notif-is-read="${n.isRead}"
                                  th:data-notif-is-starred="${n.isStarred}"
                                  th:data-notif-is-important="${n.isImportant}"
-                                 th:data-notif-actor="${n.actor != null ? n.actor.name : 'ระบบ'}">
+                                 th:data-notif-actor="${n.actor != null ? n.actor.name : 'ระบบ'}"
+                                 th:data-notif-action-text="${n.getActionBtnText()}"
+                                 th:data-notif-action-prompt="${n.getActionPromptText()}"
+                                 th:data-notif-action-icon="${n.getActionIconClass()}">
 
                                 <div class="d-flex align-items-start gap-3">
                                     <!-- Star & Important Quick Actions -->
@@ -221,7 +224,7 @@
                                             <!-- Direct Link if available -->
                                             <li th:if="${n.link != null and !n.link.isEmpty()}">
                                                 <a class="dropdown-item text-primary" th:href="${n.link}">
-                                                    <i class="fas fa-external-link-alt me-2"></i>ไปยังคำร้องที่เกี่ยวข้อง
+                                                    <i th:class="${n.getActionIconClass()} + ' me-2'"></i><span th:text="${n.getActionBtnText()}">ไปยังหน้าที่เกี่ยวข้อง</span>
                                                 </a>
                                             </li>
 

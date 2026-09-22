@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.ecom.academic.service.AcademicPositionSyncPolicy;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -22,7 +23,12 @@ class SsoUserProvisionerTest {
 
     private final UserRepository userRepository = mock(UserRepository.class);
     private final PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
-    private final SsoUserProvisioner provisioner = new SsoUserProvisioner(userRepository, passwordEncoder);
+    // ไม่ได้ stub ไว้ จึงคืน false เสมอ = "ห้ามทับตำแหน่ง" ซึ่งเป็นด้านที่ปลอดภัยกว่าสำหรับ
+    // เทสต์ชุดนี้ที่พูดเรื่อง 2FA ล้วน ๆ กติกาการทับตำแหน่งมีเทสต์ของตัวเองที่
+    // SsoAcademicPositionTest
+    private final AcademicPositionSyncPolicy positionSyncPolicy = mock(AcademicPositionSyncPolicy.class);
+    private final SsoUserProvisioner provisioner =
+            new SsoUserProvisioner(userRepository, passwordEncoder, positionSyncPolicy);
 
     private KkuSsoClient.SsoToken token() {
         return new KkuSsoClient.SsoToken("access-token", "somchai@kku.ac.th",

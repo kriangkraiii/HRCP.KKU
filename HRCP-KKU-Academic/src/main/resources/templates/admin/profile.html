@@ -7,7 +7,7 @@
         <div class="col-lg-10">
 
             <div class="mb-3">
-                <a href="/admin/academic/requests" class="btn-back-pill" onclick="if(window.history.length > 1 && document.referrer) { history.back(); return false; }">
+                <a href="/admin/academic/requests" class="btn-back-pill no-floating-back" onclick="if(window.history.length > 1 && document.referrer) { history.back(); return false; }">
                     <i class="fas fa-arrow-left"></i> กลับ
                 </a>
             </div>
@@ -84,19 +84,9 @@
                             </div>
                             <div class="profile-section-body">
                                 <div class="row g-3">
-                                    <div class="col-md-4">
-                                        <label class="profile-label">คำนำหน้าชื่อ</label>
-                                        <select name="title" class="form-select profile-input">
-                                            <option value="" th:selected="${user.title == null || user.title == ''}">-- เลือกคำนำหน้า --</option>
-                                            <option value="นาย" th:selected="${user.title == 'นาย'}">นาย</option>
-                                            <option value="นาง" th:selected="${user.title == 'นาง'}">นาง</option>
-                                            <option value="นางสาว" th:selected="${user.title == 'นางสาว'}">นางสาว</option>
-                                            <option value="ดร." th:selected="${user.title == 'ดร.'}">ดร.</option>
-                                            <option value="ผศ.ดร." th:selected="${user.title == 'ผศ.ดร.'}">ผศ.ดร.</option>
-                                            <option value="รศ.ดร." th:selected="${user.title == 'รศ.ดร.'}">รศ.ดร.</option>
-                                            <option value="ศ.ดร." th:selected="${user.title == 'ศ.ดร.'}">ศ.ดร.</option>
-                                        </select>
-                                    </div>
+                                    <div class="col-md-4"
+                                         th:replace="~{admin/_title_field :: field(
+                                             ${user.title}, 'profile-label', 'profile-input', false)}"></div>
                                     <div class="col-md-4">
                                         <label class="profile-label">ชื่อ</label>
                                         <input type="text" name="firstName" class="form-control profile-input"
@@ -142,18 +132,9 @@
                                 <h5>ข้อมูลทางวิชาการ</h5>
                             </div>
                             <div class="profile-section-body">
-                                <div class="row g-3">
-                                    <div class="col-md-6">
-                                        <label class="profile-label">ตำแหน่งทางวิชาการ</label>
-                                        <select name="academicPosition" class="form-select profile-input">
-                                            <option value="" th:selected="${user.academicPosition == null || user.academicPosition == ''}">-- เลือกตำแหน่งทางวิชาการ --</option>
-                                            <option value="อาจารย์" th:selected="${user.academicPosition == 'อาจารย์'}">อาจารย์</option>
-                                            <option value="ผู้ช่วยศาสตราจารย์" th:selected="${user.academicPosition == 'ผู้ช่วยศาสตราจารย์'}">ผู้ช่วยศาสตราจารย์</option>
-                                            <option value="รองศาสตราจารย์" th:selected="${user.academicPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
-                                            <option value="ศาสตราจารย์" th:selected="${user.academicPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
-                                        </select>
-                                    </div>
-                                </div>
+                                <div th:replace="~{admin/_academic_position_fields :: fields(
+                                        ${user.academicPosition}, ${user.academicPositionEn},
+                                        'profile-label', 'profile-input')}"></div>
                             </div>
                         </div>
 
@@ -287,6 +268,7 @@ function previewAvatar(input) {
 var pwModal = document.getElementById('adminChangePasswordModal');
 if (pwModal) document.body.appendChild(pwModal);
 </script>
+<th:block th:replace="~{admin/_academic_position_fields :: script}"></th:block>
 </section>
 </body>
 </html>

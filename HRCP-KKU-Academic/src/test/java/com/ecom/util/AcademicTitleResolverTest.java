@@ -39,6 +39,24 @@ class AcademicTitleResolverTest {
         assertEquals("นาย", AcademicTitleResolver.resolveShortTitle("นาย", null, null));
     }
 
+    /**
+     * SsoUserProvisioner.shortTitleFor พึ่งกติกาสองข้อนี้ทั้งหมด: ตำแหน่งมาจาก candidate
+     * แรกที่เข้าเค้า ส่วนวุฒิ ดร. เก็บจาก candidate ไหนก็ได้ ถ้าใครมาแก้ resolveShortTitle
+     * แล้วทำข้อใดข้อหนึ่งหาย คำนำหน้าที่ derive ตอนล็อกอิน SSO จะผิดแบบเงียบ ๆ
+     */
+    @Test
+    @DisplayName("ตำแหน่งยึด candidate แรกที่เข้าเค้า ส่วนวุฒิ ดร. เก็บจากทุก candidate")
+    void firstMatchingCandidateWinsTheRankButAnyCandidateCanSupplyTheDoctorate() {
+        // เลื่อนขึ้น: คำนำหน้าเดิมให้วุฒิ ตำแหน่งใหม่ให้ยศ
+        assertEquals("ผศ.ดร.", AcademicTitleResolver.resolveShortTitle("ผู้ช่วยศาสตราจารย์", "อ.ดร."));
+        // ลดลง: ตำแหน่งใหม่ต้องชนะคำนำหน้าเดิมที่สูงเกินจริง
+        assertEquals("ผศ.ดร.", AcademicTitleResolver.resolveShortTitle("ผู้ช่วยศาสตราจารย์", "รศ.ดร."));
+        // ไม่มีวุฒิเดิมก็ไม่เติมให้
+        assertEquals("รศ.", AcademicTitleResolver.resolveShortTitle("รองศาสตราจารย์", "นาย"));
+        // สลับลำดับแล้วพัง — คือเหตุผลที่ลำดับ argument เป็นสาระ ไม่ใช่รสนิยม
+        assertEquals("รศ.ดร.", AcademicTitleResolver.resolveShortTitle("รศ.ดร.", "ผู้ช่วยศาสตราจารย์"));
+    }
+
     @Test
     @DisplayName("Should resolve full Thai academic position")
     void testResolveThaiPosition() {

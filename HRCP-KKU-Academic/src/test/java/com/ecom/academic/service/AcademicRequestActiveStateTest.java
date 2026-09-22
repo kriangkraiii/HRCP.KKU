@@ -161,4 +161,27 @@ class AcademicRequestActiveStateTest {
                     .isFalse();
         }
     }
+
+    @Test
+    @DisplayName("แบบร่างที่สร้างใหม่และยังไม่มีข้อมูลใดๆ ถือว่าเป็นแบบร่างว่างเปล่า (isDraftEmpty = true)")
+    void newDraftWithoutDataIsEmpty() {
+        AcademicRequest draft = requestService.createDraftRequest(applicant);
+        assertThat(requestService.isDraftEmpty(draft)).isTrue();
+    }
+
+    @Test
+    @DisplayName("แบบร่างที่มีการกรอกข้อมูลเอกสารแล้ว ไม่ถือว่าว่างเปล่า (isDraftEmpty = false)")
+    void draftWithDocumentDataIsNotEmpty() {
+        AcademicRequest draft = requestService.createDraftRequest(applicant);
+        requestService.saveDraft(draft, 1, "{\"course_name\":\"Software Engineering\"}", "Doc 1", null);
+        assertThat(requestService.isDraftEmpty(draft)).isFalse();
+    }
+
+    @Test
+    @DisplayName("แบบร่างที่มีเอกสารแต่ข้อมูลว่างเปล่า ถือว่าเป็นแบบร่างว่างเปล่า (isDraftEmpty = true)")
+    void draftWithEmptyJsonDocumentIsEmpty() {
+        AcademicRequest draft = requestService.createDraftRequest(applicant);
+        requestService.saveDraft(draft, 1, "{}", "Doc 1", null);
+        assertThat(requestService.isDraftEmpty(draft)).isTrue();
+    }
 }

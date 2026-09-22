@@ -73,6 +73,21 @@ public class UserDtls {
 	@Column(name = "academic_position_en")
 	private String academicPositionEn;
 
+	/**
+	 * When KKU SSO last confirmed {@link #academicPosition} — null means it never did.
+	 *
+	 * <p>Three feeds write the academic position: the KKU SSO profile (on sign-in),
+	 * the Fund Management directory (nightly) and the college website (weekly). SSO
+	 * is the university's own personnel register and outranks the other two, but it
+	 * only speaks when someone signs in, so the nightly jobs would quietly put the
+	 * stale value back. This stamp is how they know to leave the field alone.
+	 *
+	 * <p>It marks the field, not the row: the same syncs still refresh English
+	 * names, phone and photo as before.
+	 */
+	@Column(name = "academic_position_synced_at")
+	private LocalDateTime academicPositionSyncedAt;
+
 	private String password;
 	private String profileImage;
 	private String role;
@@ -273,6 +288,19 @@ public class UserDtls {
 
 	public void setAcademicPositionEn(String academicPositionEn) {
 		this.academicPositionEn = academicPositionEn;
+	}
+
+	public LocalDateTime getAcademicPositionSyncedAt() {
+		return academicPositionSyncedAt;
+	}
+
+	public void setAcademicPositionSyncedAt(LocalDateTime academicPositionSyncedAt) {
+		this.academicPositionSyncedAt = academicPositionSyncedAt;
+	}
+
+	/** True once KKU SSO has set the academic position, so other feeds must not touch it. */
+	public boolean isAcademicPositionFromSso() {
+		return academicPositionSyncedAt != null;
 	}
 
 	/**

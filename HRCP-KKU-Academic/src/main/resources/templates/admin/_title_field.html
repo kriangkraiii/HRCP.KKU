@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<!--
+  ช่องคำนำหน้าชื่อ สำหรับหน้าที่ยังแก้ค่านี้ได้ (ฝั่งแอดมิน/HR เท่านั้น)
+
+  options มาจาก NameTitleOption ผ่าน nameTitleOptions ที่ GlobalModelAdvice ใส่ให้ทุกหน้า
+  ก่อนหน้านี้รายการนี้ถูก hardcode 4 ที่และไม่ตรงกัน (13 / 8 / 13 / 5 ตัวเลือก) หน้าโปรไฟล์
+  แอดมินที่มีแค่ 8 จึงลบคำนำหน้าของแอดมินที่เป็น "รศ." ทิ้งทุกครั้งที่กดบันทึก
+
+  หน้าผู้ยื่น (user/profile.html) ไม่ใช้ fragment นี้ — ที่นั่นแสดงอย่างเดียว เพราะคำนำหน้า
+  ฝังตำแหน่งวิชาการไว้ในตัวเอง ปล่อยให้ผู้ยื่นเลือกเองก็เท่ากับไม่ได้ล็อกตำแหน่ง
+-->
+
+<body>
+  <!-- root ถือ col-md-4 มาเอง เพราะ th:replace กลืน element ที่เรียกมันทิ้ง คลาสที่เขียนไว้
+       ฝั่งหน้าเรียกจะไม่รอด ทุกหน้าที่ใช้ fragment นี้วางไว้ในคอลัมน์ขนาดเดียวกันอยู่แล้ว -->
+  <div th:fragment="field(titleValue, labelClass, controlClass, required)" class="col-md-4">
+    <label th:class="${labelClass}" class="form-label fw-bold">คำนำหน้าชื่อ
+      <span th:if="${required}" class="text-danger">*</span>
+    </label>
+    <select name="title" class="form-select" th:classappend="${controlClass}"
+            th:required="${required}">
+      <option value="" th:selected="${titleValue == null or titleValue == ''}">-- เลือกคำนำหน้า --</option>
+      <!-- ค่าเดิมที่ไม่ตรง option ไหนเลย (prefix แปลก ๆ ที่ sync มาจาก directory) ต้องมีที่ยืน
+           ไม่งั้นแค่เปิดหน้านี้แล้วกดบันทึก ค่าเดิมก็หาย -->
+      <option th:if="${titleValue != null and titleValue != ''
+                      and !#lists.contains(nameTitleKnownValues, titleValue)}"
+              th:value="${titleValue}" th:text="${titleValue} + ' (ค่าเดิมในระบบ)'" selected>ค่าเดิม</option>
+      <!-- ต้องเช็ค null ก่อนเสมอ: aliases เป็น List.of() ซึ่ง contains(null) โยน NPE
+           ไม่ใช่คืน false และหน้าเพิ่มแอดมินส่ง titleValue เป็น null มาตรง ๆ -->
+      <option th:each="opt : ${nameTitleOptions}"
+              th:value="${opt.value()}"
+              th:selected="${titleValue != null and (titleValue == opt.value()
+                            or #lists.contains(opt.aliases(), titleValue))}"
+              th:text="${opt.label()}">คำนำหน้า</option>
+    </select>
+  </div>
+</body>
+
+</html>

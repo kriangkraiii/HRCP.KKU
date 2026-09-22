@@ -326,7 +326,7 @@
                 background: var(--bg-card, #ffffff);
                 border: 1px solid var(--border-color, #e2e8f0);
                 border-radius: 10px;
-                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+                box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
                 padding: 6px 0;
                 margin-bottom: 0;
                 z-index: 1060;
@@ -569,6 +569,9 @@
                     if (lang === currentLang) return; // Same language
 
                     showLangLoading(lang);
+                    try {
+                        window.dispatchEvent(new CustomEvent('app:language-change', { detail: { lang: lang } }));
+                    } catch (e) {}
 
                     if (_gtTranslateReady) {
                         var gtCombo = document.querySelector('#google_translate_element select');
@@ -583,7 +586,12 @@
                             // Listen for translation DOM change or finish
                             var observer = new MutationObserver(function (mutations, obs) {
                                 obs.disconnect();
-                                setTimeout(hideLangLoading, 300);
+                                setTimeout(function () {
+                                    hideLangLoading();
+                                    try {
+                                        window.dispatchEvent(new CustomEvent('app:language-change', { detail: { lang: lang } }));
+                                    } catch (err) {}
+                                }, 300);
                             });
                             observer.observe(document.documentElement, {
                                 attributes: true,
@@ -818,7 +826,7 @@
 
         <!-- ข้อความผลลัพธ์กลาง: หน้าใดก็ตามที่ redirect มาพร้อม flash attribute จะแสดงตรงนี้
              โดยไม่ต้องไปเพิ่มบล็อกซ้ำในทุกเทมเพลต -->
-        <div class="px-4 pt-3" th:if="${succMsg != null or errorMsg != null or warnMsg != null}">
+        <div class="global-flash-alert px-4 pt-3" th:if="${succMsg != null or errorMsg != null or warnMsg != null}">
             <div th:if="${succMsg}" class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
                 <i class="fas fa-circle-check me-2"></i> <span th:text="${succMsg}"></span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="ปิด"></button>
@@ -1015,7 +1023,7 @@
     // Auto-create floating buttons for doc form pages ONLY (Evaluation & Position docs)
     (function() {
         function findButtons() {
-            var docForm = document.querySelector('form[id^="doc"], form[id$="Form"], form[data-auto-draft], form[action*="/document"], .doc-form-wrapper, .card-doc-form');
+            var docForm = document.querySelector('form[id^="doc"], form[data-auto-draft], form[action*="/document"], .doc-form-wrapper, .card-doc-form');
             if (!docForm) {
                 return { preview: null, back: null };
             }
@@ -1171,12 +1179,12 @@
                 <!-- Action Callout Box (When Link Exists) -->
                 <div id="modalActionCallout" class="notif-modal-action-card d-none">
                     <div class="notif-modal-action-text">
-                        <i class="fas fa-arrow-circle-right fa-lg"></i>
-                        <span>คลิกเพื่อเปิดดูคำร้อง / ดำเนินการต่อ</span>
+                        <i id="modalActionPromptIcon" class="fas fa-arrow-circle-right fa-lg"></i>
+                        <span id="modalActionPromptText">คลิกเพื่อเปิดดูรายละเอียดหรือดำเนินการต่อ</span>
                     </div>
                     <a href="#" id="modalActionLinkBtn" class="notif-modal-action-btn">
-                        <span>ไปยังคำร้อง / เอกสาร</span>
-                        <i class="fas fa-arrow-right"></i>
+                        <span id="modalActionBtnText">ไปยังหน้าที่เกี่ยวข้อง</span>
+                        <i id="modalActionBtnIcon" class="fas fa-arrow-right"></i>
                     </a>
                 </div>
             </div>

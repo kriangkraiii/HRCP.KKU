@@ -131,7 +131,18 @@ public class SsoAuthController {
             return denied(redirect, decision.reason());
         }
 
-        UserDtls user = provisionAllowingForARace(ssoToken, decision.faculty());
+        // The richer profile is a second round trip and a login must not hinge on
+        // it: fetchProfile already answers empty on any failure, and provisioning
+        // falls back to the directory exactly as it did before this call existed.
+        // It is worth asking for because it carries the academic position from the
+        // university's own personnel register, which outranks our synced copy.
+        var profile = client.fetchProfile(ssoToken.accessToken());
+        if (profile.isEmpty()) {
+            log.info("SSO profile lookup returned nothing for {} — falling back to the directory",
+                    ssoToken.email());
+        }
+
+        UserDtls user = provisionAllowingForARace(ssoToken, decision.faculty(), profile);
         if (user == null) {
             log.error("SSO sign-in could not provision a local account for {}", ssoToken.email());
             return denied(redirect, "เกิดข้อผิดพลาดในการเตรียมบัญชีผู้ใช้ในระบบ");
@@ -201,13 +212,14 @@ public class SsoAuthController {
      *
      * @return the account, or null if it could not be provisioned even on retry
      */
-    private UserDtls provisionAllowingForARace(KkuSsoClient.SsoToken token, FsFaculty faculty) {
+    private UserDtls provisionAllowingForARace(KkuSsoClient.SsoToken token, FsFaculty faculty,
+            java.util.Optional<KkuSsoClient.SsoProfile> profile) {
         try {
-            return provisioner.provision(token, faculty);
+            return provisioner.provision(token, faculty, profile);
         } catch (DataIntegrityViolationException firstAttempt) {
             log.info("Concurrent SSO sign-in for the same account; reusing the row that won");
             try {
-                return provisioner.provision(token, faculty);
+                return provisioner.provision(token, faculty, profile);
             } catch (DataIntegrityViolationException secondAttempt) {
                 // Twice means it is not a race, it is data that will not fit.
                 log.error("Provisioning failed twice on a constraint: {}", secondAttempt.getMessage());

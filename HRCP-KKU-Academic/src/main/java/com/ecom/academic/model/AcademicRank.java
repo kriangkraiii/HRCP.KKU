@@ -13,17 +13,19 @@ import com.ecom.util.AcademicTitleResolver;
  */
 public enum AcademicRank {
 
-    LECTURER("อาจารย์"),
-    ASSISTANT_PROFESSOR("ผู้ช่วยศาสตราจารย์"),
-    ASSOCIATE_PROFESSOR("รองศาสตราจารย์"),
-    PROFESSOR("ศาสตราจารย์");
+    LECTURER("อาจารย์", "Lecturer"),
+    ASSISTANT_PROFESSOR("ผู้ช่วยศาสตราจารย์", "Assistant Professor"),
+    ASSOCIATE_PROFESSOR("รองศาสตราจารย์", "Associate Professor"),
+    PROFESSOR("ศาสตราจารย์", "Professor");
 
     private static final String TICK = "✓";
 
     private final String thaiLabel;
+    private final String englishLabel;
 
-    AcademicRank(String thaiLabel) {
+    AcademicRank(String thaiLabel, String englishLabel) {
         this.thaiLabel = thaiLabel;
+        this.englishLabel = englishLabel;
     }
 
     public String thaiLabel() {
@@ -31,10 +33,29 @@ public enum AcademicRank {
     }
 
     /**
-     * @return ตำแหน่งที่ข้อความระบุ หรือ null ถ้าข้อความไม่ได้ระบุตำแหน่งวิชาการ — ไม่เดา
+     * ชื่อตำแหน่งภาษาอังกฤษอย่างเป็นทางการ — ที่เดียวในระบบที่จับคู่ไทยกับอังกฤษ
+     *
+     * <p>ต้นทางทุกทางให้มาแต่ภาษาไทย: {@code fs_faculty.position_en} มีบ้างไม่มีบ้าง
+     * ส่วน SSO ของ มข. ไม่ส่งตำแหน่งวิชาการภาษาอังกฤษมาเลย ({@code titleEng} คือ
+     * คำนำหน้า Mr./Mrs. ไม่ใช่ตำแหน่ง) ค่าฝั่งอังกฤษจึงต้อง derive จากตรงนี้เสมอ
      */
-    public static AcademicRank of(String raw) {
-        if (raw == null || raw.isBlank()) {
+    public String englishLabel() {
+        return englishLabel;
+    }
+
+    /**
+     * รับได้หลายช่องเพื่อลองตามลำดับ สำหรับต้นทางที่ไม่รู้แน่ว่าตำแหน่งวิชาการจะมาอยู่ช่องไหน
+     * — เช่น SSO ที่สายวิชาการได้จาก {@code positionName} แต่บางสายไปโผล่ที่ {@code levelName}
+     *
+     * <p>{@link AcademicTitleResolver#resolveThaiAcademicPosition} วนหา candidate ตัวแรกที่
+     * เข้าเค้าตำแหน่งวิชาการให้อยู่แล้ว ช่องที่ไม่เกี่ยวอย่าง "พนักงานมหาวิทยาลัย" จึงไม่บัง
+     * ตัวที่ใช่ และถ้าไม่มีช่องไหนเข้าเค้าเลย มันจะคืน candidate ตัวแรกมาดื้อ ๆ ซึ่งการเทียบ
+     * กับ {@link #thaiLabel} ข้างล่างกรองทิ้งอีกชั้น
+     *
+     * @return ตำแหน่งที่ข้อความระบุ หรือ null ถ้าไม่มีช่องไหนระบุตำแหน่งวิชาการ — ไม่เดา
+     */
+    public static AcademicRank of(String... raw) {
+        if (raw == null || raw.length == 0) {
             return null;
         }
         String resolved = AcademicTitleResolver.resolveThaiAcademicPosition(raw);

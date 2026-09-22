@@ -288,13 +288,17 @@ public class CpDirectorySyncService {
                 person.academicRank(),
                 person.academicRankEn(),
                 user.getTitle());
-        if (!isBlank(resolvedTitle) && !resolvedTitle.equals(user.getTitle())) {
+        // ...แต่ไม่แตะคำนำหน้าของคนที่ SSO ยืนยันตำแหน่งให้แล้ว คำนำหน้าของคนกลุ่มนั้นถูก
+        // derive มาจากตำแหน่งที่ทะเบียนบุคลากรยืนยัน ส่วนที่นี่คือเว็บประชาสัมพันธ์ซึ่งอัปเดตช้ากว่า
+        // ทับทุกวันอาทิตย์เมื่อไหร่ คำนำหน้ากับตำแหน่งก็ไม่ตรงกันอีกรอบ
+        if (!isBlank(resolvedTitle) && !resolvedTitle.equals(user.getTitle())
+                && !user.isAcademicPositionFromSso()) {
             user.setTitle(resolvedTitle);
             changed = true;
         }
 
         // Resolve Thai academic position (only fill gaps, do not overwrite existing value from HR)
-        if (isBlank(user.getAcademicPosition())) {
+        if (isBlank(user.getAcademicPosition()) && !user.isAcademicPositionFromSso()) {
             String resolvedPosition = com.ecom.util.AcademicTitleResolver.resolveThaiAcademicPosition(
                     person.academicRank(),
                     person.academicRankEn());
@@ -319,8 +323,14 @@ public class CpDirectorySyncService {
             user.setLastNameEn(person.lastNameEn());
             changed = true;
         }
+        // ...ยกเว้นตำแหน่งวิชาการภาษาอังกฤษ ถ้า SSO เคยยืนยันตำแหน่งของคนนี้ไปแล้ว
+        // เหตุผลข้างบนใช้กับ "ชื่อ" อย่างเดียว: เว็บวิทยาลัยเป็นแหล่งเดียวที่มีชื่ออังกฤษ
+        // แยก first/last จริง แต่เรื่องตำแหน่งมันเป็นแค่เว็บประชาสัมพันธ์ที่อัปเดตช้ากว่า
+        // ทะเบียนบุคลากร และค่าฝั่งอังกฤษของเรา derive จากตำแหน่งไทยที่ SSO ยืนยันมาแล้ว
+        // การทับตรงนี้คือการทำให้ไทยกับอังกฤษไม่ตรงกันอีกรอบ ซึ่งเป็นบักที่เพิ่งแก้ไป
         if (!isBlank(person.academicRankEn())
-                && !person.academicRankEn().equals(user.getAcademicPositionEn())) {
+                && !person.academicRankEn().equals(user.getAcademicPositionEn())
+                && !user.isAcademicPositionFromSso()) {
             user.setAcademicPositionEn(person.academicRankEn());
             changed = true;
         }

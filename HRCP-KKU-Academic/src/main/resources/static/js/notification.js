@@ -167,9 +167,17 @@ function openReaderModal(notif) {
     // Action Link Button & Callout Box
     var actionCallout = document.getElementById('modalActionCallout');
     var actionBtn = document.getElementById('modalActionLinkBtn');
+    var promptTextEl = document.getElementById('modalActionPromptText');
+    var btnTextEl = document.getElementById('modalActionBtnText');
+    var btnIconEl = document.getElementById('modalActionBtnIcon');
+
     if (actionBtn) {
         if (link && link.trim() !== '' && link !== '#') {
             actionBtn.href = link;
+            var actionInfo = resolveActionInfo(notif);
+            if (promptTextEl) promptTextEl.textContent = actionInfo.promptText;
+            if (btnTextEl) btnTextEl.textContent = actionInfo.btnText;
+            if (btnIconEl) btnIconEl.className = actionInfo.iconClass;
             if (actionCallout) actionCallout.classList.remove('d-none');
         } else {
             actionBtn.href = '#';
@@ -187,6 +195,91 @@ function openReaderModal(notif) {
     if (!isRead && id) {
         markAsRead(id);
     }
+}
+
+function resolveActionInfo(notif) {
+    var link = (notif && (notif.link || notif.notifLink) || '').trim();
+    var type = (notif && (notif.type || notif.notifType) || '').toUpperCase();
+
+    var btnText = notif && (notif.actionBtnText || notif.notifActionText);
+    var promptText = notif && (notif.actionPromptText || notif.notifActionPrompt);
+    var iconClass = notif && (notif.actionIconClass || notif.notifActionIcon);
+
+    if (btnText && promptText && iconClass) {
+        return { btnText: btnText, promptText: promptText, iconClass: iconClass };
+    }
+
+    if (!btnText) {
+        if (type.indexOf('SIGNATURE_REQUESTED') !== -1 || type.indexOf('SIGNATURE_REMINDER') !== -1) {
+            btnText = 'ไปยังหน้าลงนามเอกสาร';
+        } else if (type.indexOf('SIGNATURE_COMPLETED') !== -1 || type.indexOf('SIGNATURE_DECLINED') !== -1) {
+            btnText = 'ดูเอกสารที่ลงนาม';
+        } else if (type.indexOf('ACADEMIC_') !== -1) {
+            btnText = 'ไปยังคำร้องประเมินการสอน';
+        } else if (type.indexOf('POSITION_') !== -1) {
+            btnText = 'ไปยังคำร้องขอตำแหน่ง';
+        } else if (type === 'EXPIRY_WARNING') {
+            btnText = 'ตรวจสอบผลการประเมิน';
+        } else if (link.indexOf('external-sync') !== -1) {
+            btnText = 'ไปยังหน้าซิงค์ข้อมูล';
+        } else if (link.indexOf('/academic/esign') !== -1 || link.indexOf('/esign/') !== -1) {
+            btnText = 'ไปยังหน้าลงนามเอกสาร';
+        } else if (link.indexOf('/position/') !== -1) {
+            btnText = 'ไปยังคำร้องขอตำแหน่ง';
+        } else if (link.indexOf('/academic/') !== -1) {
+            btnText = 'ไปยังคำร้องประเมินการสอน';
+        } else if (link.indexOf('/profile') !== -1) {
+            btnText = 'ไปยังข้อมูลส่วนตัว';
+        } else if (link.indexOf('/admin') !== -1) {
+            btnText = 'ไปยังหน้าจัดการระบบ';
+        } else {
+            btnText = 'ไปยังหน้าที่เกี่ยวข้อง';
+        }
+    }
+
+    if (!promptText) {
+        if (type.indexOf('SIGNATURE_REQUESTED') !== -1 || type.indexOf('SIGNATURE_REMINDER') !== -1) {
+            promptText = 'คลิกเพื่อเปิดหน้าลงนามเอกสารอิเล็กทรอนิกส์';
+        } else if (type.indexOf('SIGNATURE_COMPLETED') !== -1) {
+            promptText = 'คลิกเพื่อเปิดดูเอกสารที่ลงนามครบถ้วนแล้ว';
+        } else if (type.indexOf('SIGNATURE_DECLINED') !== -1) {
+            promptText = 'คลิกเพื่อเปิดดูเอกสารและเหตุผลที่ปฏิเสธ';
+        } else if (type.indexOf('ACADEMIC_') !== -1) {
+            promptText = 'คลิกเพื่อเปิดดูคำร้องประเมินการสอน / ดำเนินการต่อ';
+        } else if (type.indexOf('POSITION_') !== -1) {
+            promptText = 'คลิกเพื่อเปิดดูคำร้องขอกำหนดตำแหน่ง / ดำเนินการต่อ';
+        } else if (type === 'EXPIRY_WARNING') {
+            promptText = 'คลิกเพื่อตรวจสอบผลการประเมินและวางแผนดำเนินการ';
+        } else if (link.indexOf('external-sync') !== -1) {
+            promptText = 'คลิกเพื่อตรวจสอบสถานะการซิงค์ข้อมูลภายนอก';
+        } else if (link.indexOf('/esign/') !== -1) {
+            promptText = 'คลิกเพื่อเปิดหน้าลงนามเอกสารอิเล็กทรอนิกส์';
+        } else if (link.indexOf('/position/') !== -1) {
+            promptText = 'คลิกเพื่อเปิดดูคำร้องขอกำหนดตำแหน่ง / ดำเนินการต่อ';
+        } else if (link.indexOf('/academic/') !== -1) {
+            promptText = 'คลิกเพื่อเปิดดูคำร้องประเมินการสอน / ดำเนินการต่อ';
+        } else {
+            promptText = 'คลิกเพื่อเปิดดูรายละเอียดหรือดำเนินการต่อ';
+        }
+    }
+
+    if (!iconClass) {
+        if (link.indexOf('external-sync') !== -1) {
+            iconClass = 'fas fa-sync-alt';
+        } else if (type.indexOf('SIGNATURE_') !== -1 || link.indexOf('/esign/') !== -1) {
+            iconClass = 'fas fa-file-signature';
+        } else if (type === 'EXPIRY_WARNING') {
+            iconClass = 'fas fa-clock';
+        } else if (type.indexOf('ACADEMIC_') !== -1 || link.indexOf('/academic/') !== -1) {
+            iconClass = 'fas fa-clipboard-check';
+        } else if (type.indexOf('POSITION_') !== -1 || link.indexOf('/position/') !== -1) {
+            iconClass = 'fas fa-university';
+        } else {
+            iconClass = 'fas fa-arrow-right';
+        }
+    }
+
+    return { btnText: btnText, promptText: promptText, iconClass: iconClass };
 }
 
 function openNotificationById(id) {
@@ -217,13 +310,17 @@ function handleRowClick(e, id, rowEl) {
             title: d.notifTitle,
             message: d.notifMessage,
             link: d.notifLink,
+            type: d.notifType,
             typeLabel: d.notifTypeLabel,
             iconClass: d.notifIcon,
             relativeTime: d.notifRelativeTime,
             formattedDate: d.notifFormattedDate,
             isImportant: d.notifIsImportant,
             isRead: d.notifIsRead,
-            actorName: d.notifActor
+            actorName: d.notifActor,
+            actionBtnText: d.notifActionText,
+            actionPromptText: d.notifActionPrompt,
+            actionIconClass: d.notifActionIcon
         });
     } else {
         openNotificationById(id);

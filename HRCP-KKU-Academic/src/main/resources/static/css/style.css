@@ -539,11 +539,17 @@ body:has(.floating-doc-btn-back) .btn-back-pill:not(.floating-doc-btn):not(form 
  * หน้าเอกสารมีแถบลอยด้านบน (ปุ่ม "กลับ" / "ดูตัวอย่าง" และชิปสถานะบันทึกร่าง)
  * ซึ่งเป็น position:fixed จึงลอยทับหัวเรื่องของหน้า — เว้นที่ให้เนื้อหาเริ่มต่ำกว่าแถบนั้น
  */
-body:has(.floating-doc-btn) .content-wrapper {
+body:has(.floating-doc-btn) .global-flash-alert {
+  padding-top: 56px;
+}
+body:has(.floating-doc-btn):not(:has(.global-flash-alert)) .content-wrapper {
   padding-top: 56px;
 }
 @media (max-width: 991px) {
-  body:has(.floating-doc-btn) .content-wrapper {
+  body:has(.floating-doc-btn) .global-flash-alert {
+    padding-top: 52px;
+  }
+  body:has(.floating-doc-btn):not(:has(.global-flash-alert)) .content-wrapper {
     padding-top: 52px;
   }
 }
@@ -551,17 +557,15 @@ body:has(.floating-doc-btn) .content-wrapper {
 /* ===== Auto-Draft Status Chip (แถบสถานะบันทึกร่าง) ===== */
 /*
  * ชิปสร้างจาก /js/auto_draft.js — เดิมเป็นแถบเต็มความกว้างบนหัวฟอร์ม ซึ่งหลุดจอทันทีที่เลื่อนลง
- * ตอนนี้ลอยอยู่แถวเดียวกับปุ่ม "กลับ" / "ดูตัวอย่าง" (top:70px) แต่จัดกึ่งกลางพื้นที่เนื้อหา
- * จึงไม่ชนกับปุ่มทั้งสองข้าง และเห็นได้ตลอดเวลาที่กรอกเอกสาร
+ * ปัจจุบันลอยอยู่ที่มุมล่างขวาของจอ (bottom:24px, right:24px) ไม่บดบังหัวเรื่องและปุ่มด้านบน
  *
  * โทนสี: สถานะปกติเงียบที่สุด (กระจกขาวชุดเดียวกับ .floating-doc-btn-back)
  * เด่นเฉพาะตอนกำลังบันทึก / บันทึกสำเร็จ / ผิดพลาด แล้วจางกลับเป็น .adb--quiet
  */
 .adb {
   position: fixed;
-  top: 70px;
-  left: calc(50% + var(--sidebar-width, 260px) / 2);
-  transform: translateX(-50%);
+  bottom: 24px;
+  right: 24px;
   z-index: 1035;
   display: inline-flex;
   align-items: center;
@@ -598,8 +602,8 @@ body:has(.floating-doc-btn) .content-wrapper {
 }
 
 @keyframes adbChipIn {
-  from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
-  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 @keyframes adbPulse {
   0%, 80%, 100% { opacity: 0.3; }
@@ -676,6 +680,8 @@ body:has(.floating-doc-btn) .content-wrapper {
     top: auto;
     bottom: 16px;
     left: 50%;
+    right: auto;
+    transform: translateX(-50%);
     max-width: calc(100vw - 32px);
   }
   /* ชิปอยู่ล่างจอ ทับปุ่มส่งได้ — บนจอสัมผัสไม่มี hover ให้อ่าน tooltip อยู่แล้ว จึงปล่อยให้แตะทะลุ */
@@ -879,7 +885,7 @@ body:has(.floating-doc-btn) .content-wrapper {
   border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.07));
   position: sticky;
   top: 0;
-  z-index: 1020;
+  z-index: 1045;
   transition:
     background-color 0.3s ease,
     border-color 0.3s ease;
@@ -1190,7 +1196,11 @@ tr:target {
   position: fixed;
   inset: 0;
   background: rgba(0, 0, 0, 0.4);
-  z-index: 1040;
+  z-index: 1048;
+}
+
+body.modal-open .sidebar-toggle {
+  z-index: 1030 !important;
 }
 
 @media (max-width: 991px) {
