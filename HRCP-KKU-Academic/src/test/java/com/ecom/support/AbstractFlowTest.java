@@ -159,6 +159,65 @@ public abstract class AbstractFlowTest {
         }
     }
 
+    // =====================================================================
+    // เดินรอบลงนามให้จบ
+    // =====================================================================
+
+    @Autowired
+    protected com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+
+    @Autowired
+    protected com.ecom.academic.repository.SignatureStepRepository signatureSteps;
+
+    /**
+     * ส่งเอกสารเวียนลงนาม
+     *
+     * <p>อยู่ตรงนี้เพราะตั้งแต่สถานะคำร้องย้ายไปเลื่อนตอนซองปิด เทสต์ที่พูดเรื่องสถานะ
+     * แทบทุกตัวต้องเดินรอบลงนามให้จบก่อน ไม่ใช่แค่เทสต์ของระบบลงนามอีกต่อไป
+     */
+    protected com.ecom.academic.model.SignatureRequest circulate(
+            com.ecom.academic.model.SignatureModule module, Long requestId, int documentType,
+            String frozenJson, com.ecom.model.UserDtls initiator,
+            java.util.List<com.ecom.academic.service.SignatureWorkflowService.SignerAssignment> signers) {
+        var result = signatureWorkflow.createEnvelope(module, requestId, documentType,
+                "เอกสารที่ " + documentType, frozenJson, signers, null, initiator,
+                com.ecom.academic.service.SignatureWorkflowService.ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(result.request())
+                .as("ส่งเวียนลงนามไม่สำเร็จ: %s", result.error())
+                .isNotNull();
+        return result.request();
+    }
+
+    /**
+     * ลงนามทุกช่องตามลำดับจนซองปิด
+     *
+     * @param releaser เจ้าหน้าที่ผู้ปลดด่านตรวจก่อนส่งต่อให้ผู้ลงนามที่ไม่ใช่ผู้ยื่น
+     */
+    protected void signEveryStep(com.ecom.academic.model.SignatureRequest envelope,
+            com.ecom.model.UserDtls releaser) {
+        // ด่านตรวจของเจ้าหน้าที่: ช่องที่ไม่ใช่ของผู้ยื่นจะไม่ถูกปลุกจนกว่าจะปลดด่านนี้
+        signatureWorkflow.startCirculation(envelope.getId(), releaser,
+                com.ecom.academic.service.SignatureWorkflowService.ActorContext.none());
+
+        for (com.ecom.academic.model.SignatureStep step
+                : signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId())) {
+            com.ecom.model.UserDtls signer = step.getSigner();
+            org.assertj.core.api.Assertions.assertThat(signer)
+                    .as("ช่องลงนาม %s ไม่มีผู้ลงนาม", step.getSlotKey())
+                    .isNotNull();
+            var signature = data.signatureFor(signer);
+            // ช่องที่ถามผลการพิจารณาบังคับตอบ — ตอบตัวเลือกแรกซึ่งเป็นด้านบวกเสมอ
+            var question = signatureWorkflow.signerChoiceFor(step.getId());
+            String answer = question != null ? question.options().get(0) : null;
+            var result = signatureWorkflow.sign(step.getId(), signer, signature.getId(), true,
+                    com.ecom.academic.service.SignatureWorkflowService.ActorContext.none(),
+                    null, answer);
+            org.assertj.core.api.Assertions.assertThat(result.error())
+                    .as("ลงนามช่อง %s ไม่สำเร็จ", step.getSlotKey())
+                    .isNull();
+        }
+    }
+
     @BeforeEach
     void setUpFlowTest() {
         mvc = MockMvcBuilders.webAppContextSetup(webApplicationContext)

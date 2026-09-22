@@ -4,7 +4,7 @@
 
 <!--/* ช่องแจ้งเตือนผู้ยื่น — วางไว้เหนือปุ่มบันทึก เพราะมันคือสิ่งที่ต้องตัดสินใจก่อนกด */-->
 <th:block th:fragment="notifyCheckbox"
-          th:replace="~{academic/_notify_applicant :: checkbox}"></th:block>
+          th:replace="~{academic/_notify_applicant :: note}"></th:block>
 
 <!-- ==================== Shared Buttons ==================== -->
 <!--/* ล็อกปุ่มบันทึกเฉพาะตอนที่ยังเวียนลงนามอยู่ — เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว
@@ -40,7 +40,7 @@
 <th:block th:fragment="scripts">
     <script>
         // ==================== ส่งฟอร์มบันทึกเอกสาร ====================
-        // กล่องยืนยันถูกแทนด้วย checkbox ข้างปุ่มบันทึก — ดู _notify_applicant.html
+        // ไม่มีกล่องยืนยันและไม่มีช่องติ๊กแจ้งเตือนแล้ว — ดู _notify_applicant.html
         (function() {
             const submitBtn = document.getElementById('btnSubmitDoc');
 

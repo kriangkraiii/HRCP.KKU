@@ -107,12 +107,50 @@ class DocumentCardStateTest extends AbstractFlowTest {
         }
 
         @Test
+        @DisplayName("ลงนามแล้วแต่ยังไม่ได้ออกเลขที่หนังสือ — เหลือง ไม่ใช่เขียว")
+        void savedWithoutAMemoNumberIsNotGreen() throws Exception {
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+            data.academicDocument(request, 5, "{\"memo_no\":\"\",\"date\":\"\"}");
+
+            String card = cardFor(page(request), 5);
+            assertThat(card)
+                    .as("งานสารบรรณยังไม่จบ กล่องจึงยังไม่เขียว")
+                    .contains("dgi-draft")
+                    .doesNotContain("dgi-completed")
+                    .contains("รอออกเลข");
+        }
+
+        @Test
+        @DisplayName("ออกเลขและลงวันที่ครบแล้ว — เขียว")
+        void savedWithOfficeFieldsIsGreen() throws Exception {
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+            data.academicDocument(request, 5,
+                    "{\"memo_no\":\"อว 660301.26.4/ว.17\",\"date\":\"๒๑ กันยายน ๒๕๖๙\"}");
+
+            String card = cardFor(page(request), 5);
+            assertThat(card).contains("dgi-completed")
+                    .doesNotContain("dgi-draft")
+                    .doesNotContain("รอออกเลข");
+        }
+
+        @Test
+        @DisplayName("เอกสารที่ไม่มีช่องสารบรรณ — เขียวเหมือนเดิม ไม่ถูกกติกาใหม่ดึงลง")
+        void documentsWithoutOfficeFieldsAreUnaffected() throws Exception {
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+            data.academicDocument(request, 3, "{\"dean_name\":\"บันทึกจริง\"}");
+
+            String card = cardFor(page(request), 3);
+            assertThat(card).contains("dgi-completed").doesNotContain("รอออกเลข");
+        }
+
+        @Test
         @DisplayName("เอกสารที่ 5 มีทั้งแถวร่างและสามสำเนา — ต้องเป็นเขียว")
         void aDraftAlongsideRealCopiesIsStillGreen() throws Exception {
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
             academicService.saveDraft(request, 5, "{\"memo_no\":\"ร่าง\"}", "เอกสารที่ 5", null);
             for (int copy = 1; copy <= 3; copy++) {
-                data.academicDocument(request, 5, "{\"memo_no\":\"จริง\"}", copy);
+                data.academicDocument(request, 5,
+                        "{\"memo_no\":\"อว 660301.26.4/ว.1\",\"date\":\"๑ กันยายน ๒๕๖๙\"}", copy);
             }
 
             String card = cardFor(page(request), 5);
@@ -151,6 +189,35 @@ class DocumentCardStateTest extends AbstractFlowTest {
 
             String card = cardFor(page(request), 7);
             assertThat(card).contains("dgi-completed").doesNotContain("dgi-draft");
+        }
+
+        @Test
+        @DisplayName("ลงนามแล้วแต่ยังไม่ได้ลงวันที่ — เหลือง และป้ายต้องเดินตามกรอบ")
+        void savedWithoutTheDateIsNotGreen() throws Exception {
+            PositionRequest request =
+                    data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
+            data.positionDocument(request, 8, "{\"date\":\"\"}");
+
+            String card = cardFor(page(request), 8);
+            assertThat(card).contains("dgi-draft")
+                    .doesNotContain("dgi-completed")
+                    .contains("รอออกเลข")
+                    .as("กรอบเหลืองแต่ป้ายเขียวคือบอกคนละเรื่องกันในกล่องเดียว")
+                    .doesNotContain("กรอกแล้ว");
+        }
+
+        @Test
+        @DisplayName("ลงวันที่แล้ว — เขียว")
+        void savedWithTheDateIsGreen() throws Exception {
+            PositionRequest request =
+                    data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
+            data.positionDocument(request, 8, "{\"date\":\"๒๑ กันยายน ๒๕๖๙\"}");
+
+            String card = cardFor(page(request), 8);
+            assertThat(card).contains("dgi-completed")
+                    .doesNotContain("dgi-draft")
+                    .doesNotContain("รอออกเลข")
+                    .contains("กรอกแล้ว");
         }
     }
 }

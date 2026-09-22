@@ -164,6 +164,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         expectAccepted(mvc.perform(formPost("/admin/academic/request/" + id + "/document/4",
                 subCommitteeOrderFields()).with(asOfficer())),
                 "/admin/academic/request/" + id);
+        signOffAsOfficer(id, 4, "dean");
         assertThat(academicService.findById(id).orElseThrow().getCurrentStatus())
                 .as("ข้อ 4 — แต่งตั้งคณะอนุกรรมการ")
                 .isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
@@ -173,6 +174,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 officerFields(Map.of("meeting_date", "15 กันยายน 2569",
                         "meeting_place", "ห้องประชุมวิทยาลัยการคอมพิวเตอร์")))
                 .with(asOfficer())).andExpect(status().is3xxRedirection());
+        signOffAsOfficer(id, 5, "dean");
         assertThat(academicService.findById(id).orElseThrow().getCurrentStatus())
                 .as("ข้อ 6 — นัดหมายวันประชุม")
                 .isEqualTo(RequestStatus.MEETING_SCHEDULED);
@@ -181,6 +183,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         expectAccepted(mvc.perform(formPost("/admin/academic/request/" + id + "/document/7",
                 evaluationScoreFields()).with(asOfficer())),
                 "/admin/academic/request/" + id);
+        signOffAsOfficer(id, 7, "committee_chair");
         assertThat(academicService.findById(id).orElseThrow().getCurrentStatus())
                 .as("ข้อ 8 — ผลการประเมินจากคณะอนุกรรมการ")
                 .isEqualTo(RequestStatus.COMPLETED_PASS);
@@ -204,6 +207,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                         "evaluation_result", "ผ่าน")))
                 .with(asOfficer()))
                 .andExpect(status().is3xxRedirection());
+        signOffAsOfficer(id, 9, "dean");
         assertThat(academicService.findById(id).orElseThrow().getCurrentStatus())
                 .as("ข้อ 11 — แจ้งผลการประเมิน กระบวนการเฟส 1 เสร็จสิ้น")
                 .isEqualTo(RequestStatus.COMPLETED);
@@ -448,17 +452,27 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
     }
 
     /**
+     * ส่งเวียนลงนามเอกสารของเจ้าหน้าที่จนซองปิด
+     *
+     * <p>ตั้งแต่สถานะย้ายไปเลื่อนตอนซองลายเซ็นปิด การกดบันทึกอย่างเดียวไม่ทำให้คำร้อง
+     * เดินอีกต่อไป เส้นทางจริงของเจ้าหน้าที่คือ บันทึก → ส่งเวียนลงนาม → ผู้มีอำนาจลงนาม
+     * ซึ่งเป็นสิ่งที่เทสต์เส้นทางเต็มควรเดินตามอยู่แล้ว
+     */
+    private void signOffAsOfficer(Long requestId, int docType, String slotKey) {
+        String savedJson = academicService.getDocumentsByType(requestId, docType).get(0).getJsonData();
+        signEveryStep(circulate(SignatureModule.ACADEMIC, requestId, docType, savedJson, officer,
+                List.of(new SignatureWorkflowService.SignerAssignment(slotKey, officer.getId()))),
+                officer);
+    }
+
+    /**
      * Fields for a document the officer fills in.
      *
-     * <p>{@code sendNotify} now only decides whether the applicant is e-mailed;
-     * the status advances either way. It is set here because that is what an
-     * officer working a real request does — they want the applicant told. The
-     * case where it is left unticked is covered on its own in
-     * {@code AcademicStatusFlowTest}.
+     * <p>ไม่มีช่องแจ้งเตือนให้ติ๊กแล้ว — ผู้ยื่นได้รับแจ้งเสมอเมื่อสถานะเปลี่ยนจริง
+     * ซึ่งเกิดตอนหนังสือลงนามครบ ไม่ใช่ตอนกดบันทึก
      */
     private Map<String, String> officerFields(Map<String, String> fields) {
         Map<String, String> withNotify = new LinkedHashMap<>(fields);
-        withNotify.put("sendNotify", "true");
         return withNotify;
     }
 

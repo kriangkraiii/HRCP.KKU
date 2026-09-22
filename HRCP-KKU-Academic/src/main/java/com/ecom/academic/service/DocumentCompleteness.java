@@ -123,6 +123,38 @@ public final class DocumentCompleteness {
     // =====================================================================
 
     /**
+     * ช่องสารบรรณที่ยังว่างในเอกสารฉบับนี้
+     *
+     * <p>คนละคำถามกับ {@link #missingApplicantFields} ซึ่งตอบว่า "ผู้ยื่นกรอกครบหรือยัง"
+     * และตอบเฉพาะเอกสารของผู้ยื่น ส่วนตัวนี้ตอบว่า "สารบรรณออกเลขให้หรือยัง" ซึ่งเป็น
+     * งานคนละคนคนละจังหวะ — เลขที่หนังสือและวันที่ออกให้ <em>หลัง</em> เอกสารลงนามครบแล้ว
+     *
+     * <p>ตราบใดที่ยังมีช่องว่างอยู่ เอกสารฉบับนั้นยังไม่เสร็จ แม้จะบันทึกและลงนามครบแล้ว
+     * กล่องเอกสารในหน้าผู้ดูแลระบบจึงยังไม่ขึ้นเขียว
+     *
+     * @param json ข้อมูลฟอร์มที่บันทึกไว้ — {@code null} หรือว่างถือว่ายังไม่เคยกรอก
+     * @return ชื่อช่องที่ยังว่าง — ว่างเปล่าเมื่อครบแล้ว หรือเมื่อเอกสารนี้ไม่มีช่องสารบรรณ
+     */
+    public static List<String> missingOfficeFields(SignatureModule module, int documentType,
+            String json) {
+        Set<String> keys = DocumentFieldOwnership.officeFields(module, documentType);
+        if (keys.isEmpty()) {
+            return List.of();
+        }
+
+        Map<String, String> data = parse(json);
+        List<String> missing = new ArrayList<>();
+        for (String key : keys) {
+            String value = data == null ? null : data.get(key);
+            if (value == null || value.isBlank()) {
+                missing.add(key);
+            }
+        }
+        return missing;
+    }
+
+
+    /**
      * ช่องของผู้ยื่นที่ยังว่างในเอกสารฉบับนี้
      *
      * @param json           ข้อมูลฟอร์มที่บันทึกไว้ — {@code null} หรือว่างถือว่ายังไม่เคยกรอก

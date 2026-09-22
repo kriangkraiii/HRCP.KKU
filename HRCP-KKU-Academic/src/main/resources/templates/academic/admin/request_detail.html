@@ -396,11 +396,16 @@
             <div class="detail-section-body">
               <div th:each="entry : ${docLabels}">
                 <div class="doc-grid-item"
-                  th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed' : (${draftDocs.contains(entry.key)} ? 'dgi-draft' : '')">
+                  th:classappend="${completedDocs.contains(entry.key) and !pendingOfficeDocs.contains(entry.key)} ? 'dgi-completed' : (${draftDocs.contains(entry.key) or pendingOfficeDocs.contains(entry.key)} ? 'dgi-draft' : '')">
                   <div class="doc-grid-item-title">
                     เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
                     <span th:if="${entry.key == multiCopyDocType}" class="badge bg-info ms-1"
                       th:text="|${multiCopyCount} สำเนา|">3 สำเนา</span>
+                    <span th:if="${pendingOfficeDocs.contains(entry.key)}"
+                      class="badge bg-warning text-dark ms-1"
+                      title="ยังไม่ได้ลงเลขที่หนังสือหรือวันที่เอกสาร">
+                      <i class="fas fa-hashtag"></i> รอออกเลข
+                    </span>
                   </div>
                   <div class="doc-grid-item-actions">
                     <button th:if="${applicantDocTypes.contains(entry.key)}" type="button"

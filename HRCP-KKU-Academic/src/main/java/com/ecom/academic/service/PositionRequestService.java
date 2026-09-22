@@ -123,9 +123,10 @@ public class PositionRequestService {
     // than keeping a second copy: ADMIN_DOCS used to be a hand-maintained list
     // that nothing referenced, so it quietly disagreed with the real rule.
     /**
-     * เอกสารที่การบันทึกทำให้คำร้องเดินไปขั้นถัดไป
+     * เอกสารที่การ<em>ลงนามครบ</em>ทำให้คำร้องเดินไปขั้นถัดไป
      *
      * <p>ต้องตรงกับ {@code switch} ใน {@link #autoUpdateStatusByDocument} เสมอ
+     * ผู้เรียกคือ {@link SignedDocumentStatusAdvancer} ตอนซองลายเซ็นปิด
      */
     public static final Set<Integer> STATUS_ADVANCING_DOCUMENTS = Set.of(7, 8);
 
@@ -765,6 +766,69 @@ public class PositionRequestService {
 
     public List<PositionDocument> getDocumentsByType(Long requestId, int documentType) {
         return documentRepository.findByRequestIdAndDocType(requestId, documentType);
+    }
+
+    /**
+     * เขียนเลขที่หนังสือและวันที่ลงทุกแถวของเอกสารฉบับนี้ หลังลงนามครบแล้ว
+     *
+     * <p>คู่แฝดของ {@code AcademicRequestService.saveOfficeFieldsAcrossCopies} — สองเฟส
+     * ต้องเขียนแบบเดียวกัน เดิมฝั่งนี้เรียก {@link #saveDraft} ซึ่งเห็นว่ามีแถวที่ส่งแล้วอยู่
+     * จึง<em>เปิดแถวร่างใหม่</em>ขึ้นมาอีกแถวตามกติกาของมัน ("ไม่แตะแถวที่ส่งแล้ว") ผลคือ
+     * ข้อมูลชุดเดียวกันแตกเป็นสองแถว แถวที่ส่งแล้วไม่เคยมีเลขที่หนังสือ และการถามว่า
+     * "ออกเลขหรือยัง" จากแถวที่ไม่ใช่ร่างจะได้คำตอบผิดเสมอ
+     *
+     * <p>กติกา "ไม่แตะแถวที่ส่งแล้ว" ถูกต้องสำหรับการแก้เนื้อเอกสาร แต่ไม่ใช่กรณีนี้ —
+     * เลขที่หนังสือเป็นของที่สารบรรณออกให้ <em>หลัง</em> ลงนาม จึงต้องลงบนฉบับจริง
+     * ช่องอื่นไม่ถูกแตะ เพราะ {@link DocumentFieldOwnership#mergeOfficeFields} รับเฉพาะ
+     * ช่องสารบรรณเท่านั้น
+     *
+     * @param submitted ค่าที่ส่งมาจากฟอร์ม (จะถูกกรองเหลือเฉพาะช่องสารบรรณ)
+     * @return จำนวนแถวที่เขียนจริง
+     */
+    @Transactional
+    public int saveOfficeFieldsAcrossCopies(PositionRequest request, int documentType,
+            Map<String, String> submitted, String label) {
+        List<PositionDocument> docs = getDocumentsByType(request.getId(), documentType);
+        if (docs.isEmpty()) {
+            // ยังไม่มีแถวเลย — เปิดแถวร่างให้ เพื่อไม่ให้เลขที่กรอกไว้หายไปเฉย ๆ
+            Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
+                    SignatureModule.POSITION, documentType, submitted, null);
+            saveDraft(request, documentType, writeOfficeJson(merged), label, "ADMIN");
+            return 1;
+        }
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper =
+                new com.fasterxml.jackson.databind.ObjectMapper();
+        int written = 0;
+        for (PositionDocument doc : docs) {
+            Map<String, String> existing = null;
+            String json = doc.getJsonData();
+            if (json != null && !json.isBlank()) {
+                try {
+                    existing = mapper.readValue(json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                            });
+                } catch (Exception e) {
+                    // แถวที่อ่านไม่ออกก็ยังลงเลขให้ได้ ดีกว่าปล่อยให้ทั้งชุดล้มเพราะแถวเดียว
+                    log.warn("เอกสารตำแหน่ง {} มี JSON ที่อ่านไม่ออก เขียนช่องสารบรรณลงบนแมปใหม่แทน",
+                            doc.getId());
+                }
+            }
+            Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
+                    SignatureModule.POSITION, documentType, submitted, existing);
+            doc.setJsonData(writeOfficeJson(merged));
+            documentRepository.save(doc);
+            written++;
+        }
+        return written;
+    }
+
+    private String writeOfficeJson(Map<String, String> data) {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(data);
+        } catch (Exception e) {
+            throw new IllegalStateException("แปลงข้อมูลเอกสารเป็น JSON ไม่ได้", e);
+        }
     }
 
     // ================== ประตูแก้ไขเอกสารของผู้ยื่น ==================

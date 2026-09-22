@@ -44,6 +44,7 @@ import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -359,8 +360,20 @@ public class AcademicAdminController {
                 .map(AcademicDocument::getDocumentType)
                 .filter(type -> !completedDocs.contains(type))
                 .collect(Collectors.toSet());
+
+        // บันทึกแล้วแต่สารบรรณยังไม่ได้ออกเลขที่หนังสือ/วันที่ = ยังไม่เสร็จ กรอบจึงยังไม่เขียว
+        // อ่านจากแถวที่ไม่ใช่ร่างเท่านั้น เพราะฉบับจริงคือแถวนั้น
+        Set<Integer> pendingOfficeDocs = documents.stream()
+                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()))
+                .filter(d -> !DocumentCompleteness
+                        .missingOfficeFields(SignatureModule.ACADEMIC, d.getDocumentType(), d.getJsonData())
+                        .isEmpty())
+                .map(AcademicDocument::getDocumentType)
+                .collect(Collectors.toSet());
+
         model.addAttribute("completedDocs", completedDocs);
         model.addAttribute("draftDocs", draftDocs);
+        model.addAttribute("pendingOfficeDocs", pendingOfficeDocs);
 
         Map<Integer, Long> docTypeToId = documents.stream()
                 .collect(Collectors.toMap(AcademicDocument::getDocumentType, AcademicDocument::getId, (existing, replacement) -> existing));
@@ -621,9 +634,9 @@ public class AcademicAdminController {
 
         // ดึง action (draft / submit) แล้วเอาออกจาก formData
         String action = formData.getOrDefault("action", "submit");
-        boolean sendNotify = "true".equals(formData.getOrDefault("sendNotify", "false"));
         formData.remove("action");
         formData.remove("_csrf");
+        // ฟอร์มรุ่นเก่ายังอาจส่งช่องนี้มา เอาออกก่อนเสมอเพื่อไม่ให้หลุดลงเนื้อเอกสาร
         formData.remove("sendNotify");
 
         // ลงนามครบแล้ว: เนื้อความตายตัว เหลือแต่เลขที่หนังสือกับวันที่ที่สารบรรณออกให้ทีหลัง
@@ -634,8 +647,9 @@ public class AcademicAdminController {
             // ฉบับเดียวกัน ใช้เลขที่และวันที่ร่วมกัน
             requestService.saveOfficeFieldsAcrossCopies(request, type, formData,
                     DOC_LABELS.getOrDefault(type, "Document " + type));
+            // UPDATED ไม่ใช่ DRAFT_SAVED — การออกเลขที่หนังสือเป็นการเขียนลงฉบับจริง
             requestService.logDocumentEdit(request, type, DOC_LABELS.get(type), getUser(principal),
-                    AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
+                    AcademicDocumentEditLog.EditAction.UPDATED);
             return "redirect:/admin/academic/request/" + id + "/document/" + type + "?saved=office";
         }
 
@@ -790,22 +804,9 @@ public class AcademicAdminController {
                         + id,
                 getClientIpAddress());
 
-        // Advance the status; notify only if the officer asked to.
-        //
-        // These used to be one decision. "แจ้งผู้ยื่น" is about whether to send an
-        // e-mail, but it also gated the status change, so an officer who saved
-        // เอกสารที่ 3 without ticking it got the document stored and the request
-        // left in AWAITING_APPOINTMENT forever. Now we advance the workflow
-        // state unconditionally on the documents that trigger it, and treat
-        // sendNotify as strictly "also deliver an applicant e-mail".
-        try {
-            requestService.autoUpdateStatusByDocument(id, type, admin, jsonData, sendNotify);
-        } catch (Exception e) {
-            logger.warn("Auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
-            redirectAttributes.addFlashAttribute("succMsg", savedDocumentMessage(type));
-            redirectAttributes.addFlashAttribute("warnMsg", "แต่ส่งอีเมลแจ้งเตือนไม่สำเร็จ");
-            return DocumentFormSupport.redirectAfterSave(SignatureModule.ACADEMIC, id, type, true);
-        }
+        // ไม่เลื่อนสถานะตรงนี้ — การบันทึกคือการร่างหนังสือเสร็จ ยังไม่มีใครลงนามและยัง
+        // ไม่ได้ส่งออกไปไหน ขั้นตอนจะนับว่าจบเมื่อซองลายเซ็นปิด ดู
+        // SignedDocumentStatusAdvancer ซึ่งถูกเรียกจาก SignatureWorkflowService
 
         // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม เจ้าหน้าที่จะได้ส่งเวียนลงนามต่อได้ทันที
         redirectAttributes.addFlashAttribute("succMsg", savedDocumentMessage(type));
@@ -1272,26 +1273,46 @@ public class AcademicAdminController {
      * <p>ความเป็นเจ้าของกับสถานะลงนามเป็นคนละเรื่องและต้องส่งไปทั้งคู่ — เอกสารของแอดมินเอง
      * ที่ลงนามครบแล้วก็ต้องล็อก ทั้งที่ {@code readOnlyForAdmin} เป็น false
      */
-
-    /**
-     * บอกเจ้าหน้าที่ว่าการบันทึกครั้งนี้จะดันคำร้องไปสถานะไหน
-     *
-     * <p>อ่านชื่อสถานะจาก {@link RequestStatus} โดยตรง ไม่พิมพ์ซ้ำ — ข้อความชุดนี้
-     * เคยอยู่ใน JavaScript แล้วเพี้ยนกับสถานะจริงมารอบหนึ่งแล้ว
-     */
-    private String statusAdvanceNoteFor(int type) {
-        RequestStatus next = switch (type) {
-            case 4 -> RequestStatus.SUB_COMMITTEE_APPOINTED;
-            case 5 -> RequestStatus.MEETING_SCHEDULED;
-            case 9 -> RequestStatus.COMPLETED;
-            default -> null;
-        };
-        if (type == 7) {
-            // เอกสารที่ 7 แยกสองทางตามคะแนน จึงบอกเป็นช่วงแทนที่จะระบุสถานะเดียว
-            return "สถานะคำร้องจะเปลี่ยนตามผลการประเมิน (ผ่าน/ไม่ผ่าน)";
-        }
-        return next == null ? null
-                : "สถานะคำร้องจะเปลี่ยนเป็น: " + next.getThaiLabel();
+
+
+    /**
+
+     * บอกเจ้าหน้าที่ว่าการบันทึกครั้งนี้จะดันคำร้องไปสถานะไหน
+
+     *
+
+     * <p>อ่านชื่อสถานะจาก {@link RequestStatus} โดยตรง ไม่พิมพ์ซ้ำ — ข้อความชุดนี้
+
+     * เคยอยู่ใน JavaScript แล้วเพี้ยนกับสถานะจริงมารอบหนึ่งแล้ว
+
+     */
+
+    private String statusAdvanceNoteFor(int type) {
+
+        RequestStatus next = switch (type) {
+
+            case 4 -> RequestStatus.SUB_COMMITTEE_APPOINTED;
+
+            case 5 -> RequestStatus.MEETING_SCHEDULED;
+
+            case 9 -> RequestStatus.COMPLETED;
+
+            default -> null;
+
+        };
+
+        if (type == 7) {
+
+            // เอกสารที่ 7 แยกสองทางตามคะแนน จึงบอกเป็นช่วงแทนที่จะระบุสถานะเดียว
+
+            return "สถานะคำร้องจะเปลี่ยนตามผลการประเมิน (ผ่าน/ไม่ผ่าน)";
+
+        }
+
+        return next == null ? null
+
+                : "สถานะคำร้องจะเปลี่ยนเป็น: " + next.getThaiLabel();
+
     }
 
     private void addOwnershipGate(Model model, SignatureModule module, Long requestId, int type) {
