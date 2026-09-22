@@ -7,6 +7,8 @@ import java.nio.file.Path;
 import java.security.Principal;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -36,6 +38,7 @@ import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -155,8 +158,19 @@ public class PositionAdminController {
 
         model.addAttribute("request", request);
         model.addAttribute("documents", documents);
+        // บันทึกแล้วแต่สารบรรณยังไม่ได้ออกเลขที่หนังสือ/วันที่ = ยังไม่เสร็จ กรอบจึงยังไม่เขียว
+        // กติกาเดียวกับเฟส 1 ทุกประการ อ่านจากแถวที่ไม่ใช่ร่างเท่านั้น
+        Set<Integer> pendingOfficeDocs = documents.stream()
+                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()))
+                .filter(d -> !DocumentCompleteness
+                        .missingOfficeFields(SignatureModule.POSITION, d.getDocumentType(), d.getJsonData())
+                        .isEmpty())
+                .map(PositionDocument::getDocumentType)
+                .collect(Collectors.toSet());
+
         model.addAttribute("completedDocs", completedDocs);
         model.addAttribute("draftDocs", positionService.getDraftDocTypes(id));
+        model.addAttribute("pendingOfficeDocs", pendingOfficeDocs);
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
         model.addAttribute("statuses", PositionRequestStatus.values());
         // Only the moves the process allows from where this request stands.
@@ -357,10 +371,8 @@ public class PositionAdminController {
                     + "/document/" + type + "?error=document_locked_for_signing";
         }
 
-        // สถานะคือความจริงของงาน อีเมลคือช่องทางสื่อสาร — คนละเรื่องกัน ค่านี้จึงคุม
-        // เฉพาะว่าจะส่งอีเมลหรือไม่ ไม่ได้คุมว่างานเสร็จหรือยัง
-        boolean sendNotify = "true".equals(formData.getOrDefault("sendNotify", "false"));
         formData.remove("_csrf");
+        // ฟอร์มรุ่นเก่ายังอาจส่งช่องนี้มา เอาออกก่อนเสมอเพื่อไม่ให้หลุดลงเนื้อเอกสาร
         formData.remove("sendNotify");
         formData.remove("action");
 
@@ -369,11 +381,9 @@ public class PositionAdminController {
         // ค่าที่กรอกตรงนี้ไปโผล่บนเอกสารผ่าน OfficeFieldResolver ตอน render
         if (signingComplete) {
             try {
-                String jsonData = objectMapper.writeValueAsString(
-                        DocumentFieldOwnership.mergeOfficeFields(SignatureModule.POSITION, type,
-                                formData, positionService.getLatestDocumentData(id, type)));
-                positionService.saveDraft(request, type, jsonData,
-                        positionService.getDocLabel(type), "ADMIN");
+                // เขียนทับแถวเดิม ไม่เปิดแถวร่างใหม่ — เส้นทางเดียวกับเฟส 1 ทุกประการ
+                positionService.saveOfficeFieldsAcrossCopies(request, type, formData,
+                        positionService.getDocLabel(type));
                 positionService.logDocumentEdit(request, type, positionService.getDocLabel(type),
                         getUser(principal), PositionDocumentEditLog.EditAction.UPDATED);
             } catch (Exception e) {
@@ -417,19 +427,8 @@ public class PositionAdminController {
                         getClientIpAddress());
             } catch (Exception logEx) { /* ignore */ }
 
-            // เลื่อนสถานะเฉพาะตอนที่เจ้าหน้าที่ยืนยันว่าเอกสารเสร็จแล้ว การกดบันทึกเฉย ๆ
-            // คือการเก็บงานที่ทำค้างไว้ ไม่ใช่การประกาศว่าขั้นตอนนี้จบ
-            // เลื่อนสถานะทุกครั้งที่งานขั้นนี้เสร็จ — แถบความคืบหน้าที่ผู้ยื่นเห็นคือ source of
-            // truth ของกระบวนการ จะผูกไว้กับการส่งอีเมลไม่ได้ — เจ้าหน้าที่ที่เลือกไม่รบกวน
-            // ผู้ยื่น ไม่ได้แปลว่างานยังไม่เดินหน้า
-            try {
-                positionService.autoUpdateStatusByDocument(id, type, admin, jsonData, sendNotify);
-            } catch (Exception e) {
-                logger.warn("Phase2 auto status update failed for request #{}, doc type {}: {}", id, type, e.getMessage());
-                redirectAttributes.addFlashAttribute("succMsg", "บันทึก" + label + "เรียบร้อยแล้ว");
-                redirectAttributes.addFlashAttribute("warnMsg", "แต่ส่งอีเมลแจ้งเตือนไม่สำเร็จ");
-                return DocumentFormSupport.redirectAfterSave(SignatureModule.POSITION, id, type, true);
-            }
+            // ไม่เลื่อนสถานะตรงนี้ — ดูเหตุผลเดียวกันใน AcademicAdminController.generateDocument
+            // ขั้นตอนจะนับว่าจบเมื่อซองลายเซ็นปิด ผ่าน SignedDocumentStatusAdvancer
 
             // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม เจ้าหน้าที่จะได้ส่งเวียนลงนามต่อได้ทันที
             redirectAttributes.addFlashAttribute("succMsg", "บันทึก" + label + "เรียบร้อยแล้ว");

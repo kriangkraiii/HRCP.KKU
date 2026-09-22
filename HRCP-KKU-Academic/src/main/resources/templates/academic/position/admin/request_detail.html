@@ -647,20 +647,28 @@
                 <div
                   th:each="entry : ${docLabels}"
                   class="doc-grid-item"
-                  th:classappend="${completedDocs.contains(entry.key)} ? 'dgi-completed' : (${draftDocs.contains(entry.key)} ? 'dgi-draft' : '')"
+                  th:classappend="${completedDocs.contains(entry.key) and !pendingOfficeDocs.contains(entry.key)} ? 'dgi-completed' : (${draftDocs.contains(entry.key) or pendingOfficeDocs.contains(entry.key)} ? 'dgi-draft' : '')"
                 >
                   <div>
                     <span class="doc-grid-item-title">
                       เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
                     </span>
+                    <!--/* ป้ายต้องเดินตามกติกาเดียวกับกรอบ ไม่งั้นกรอบเหลืองแต่ป้ายเขียว */-->
                     <span
-                      th:if="${completedDocs.contains(entry.key)}"
+                      th:if="${completedDocs.contains(entry.key) and !pendingOfficeDocs.contains(entry.key)}"
                       class="badge bg-success ms-1"
                     >
                       <i class="fas fa-check"></i> กรอกแล้ว
                     </span>
                     <span
-                      th:unless="${completedDocs.contains(entry.key)}"
+                      th:if="${pendingOfficeDocs.contains(entry.key)}"
+                      class="badge bg-warning text-dark ms-1"
+                      title="ยังไม่ได้ลงเลขที่หนังสือหรือวันที่เอกสาร"
+                    >
+                      <i class="fas fa-hashtag"></i> รอออกเลข
+                    </span>
+                    <span
+                      th:if="${!completedDocs.contains(entry.key) and !pendingOfficeDocs.contains(entry.key)}"
                       class="badge bg-warning text-dark ms-1"
                     >
                       <i class="fas fa-clock"></i> รอกรอก

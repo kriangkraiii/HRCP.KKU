@@ -66,6 +66,7 @@ public class SignatureWorkflowService {
     private final StaffMemberService staffMemberService;
     private final SignatureVerificationService verificationService;
     private final SignedDocumentArchiver archiver;
+    private final SignedDocumentStatusAdvancer statusAdvancer;
     private final DocumentWorkflowConfigService workflowConfigService;
     private final DocumentRevisionRouter revisionRouter;
     private final DocumentSnapshotProvider snapshotProvider;
@@ -85,6 +86,7 @@ public class SignatureWorkflowService {
             StaffMemberService staffMemberService,
             SignatureVerificationService verificationService,
             SignedDocumentArchiver archiver,
+            SignedDocumentStatusAdvancer statusAdvancer,
             DocumentWorkflowConfigService workflowConfigService,
             DocumentSnapshotProvider snapshotProvider,
             com.ecom.service.AfterCommitRunner afterCommitRunner,
@@ -103,6 +105,7 @@ public class SignatureWorkflowService {
         this.staffMemberService = staffMemberService;
         this.verificationService = verificationService;
         this.archiver = archiver;
+        this.statusAdvancer = statusAdvancer;
         this.workflowConfigService = workflowConfigService;
         this.snapshotProvider = snapshotProvider;
         this.afterCommitRunner = afterCommitRunner;
@@ -1192,10 +1195,17 @@ public class SignatureWorkflowService {
             notifier.notifyCompleted(noticeFor(envelope, null, List.of(envelope.getInitiatedBy())));
             // Archived off-thread: PDF conversion is slow and must not extend
             // the signing transaction. Run after commit to prevent optimistic locking race.
+            //
+            // การเลื่อนสถานะคำร้องเดินหลัง commit ด้วยเหตุผลเดียวกัน แต่คนละเหตุผลกับความเร็ว:
+            // ถ้ามันล้ม ลายเซ็นที่ลงไปแล้วต้องไม่ถูกย้อนกลับตามไปด้วย — ลายเซ็นเรียกคืนไม่ได้
+            // ส่วนสถานะปรับเองทีหลังได้ ขั้นตอนจะนับว่าจบตรงนี้ ไม่ใช่ตอนเจ้าหน้าที่กดบันทึก
+            Long completedId = envelope.getId();
             if (afterCommitRunner != null) {
-                afterCommitRunner.run(() -> archiver.archive(envelope.getId()));
+                afterCommitRunner.run(() -> archiver.archive(completedId));
+                afterCommitRunner.run(() -> statusAdvancer.advanceFor(completedId));
             } else {
-                archiver.archive(envelope.getId());
+                archiver.archive(completedId);
+                statusAdvancer.advanceFor(completedId);
             }
             return;
         }

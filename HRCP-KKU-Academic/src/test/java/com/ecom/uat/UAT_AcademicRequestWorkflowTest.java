@@ -454,12 +454,13 @@ class UAT_AcademicRequestWorkflowTest {
         }
 
         @Test
-        @DisplayName("TC-02: ส่งเอกสารพร้อมแจ้งเตือน (sendNotify=true)")
-        void generateDocument_withNotify_shouldAutoUpdateStatus() {
-            // Given: สร้างเอกสารพร้อม sendNotify=true
-            // When: กดบันทึก
-            // Then: auto-update status ตาม document type
-            assertTrue(true, "สร้างเอกสารพร้อมแจ้งเตือนสำเร็จ");
+        @DisplayName("TC-02: ลงนามครบแล้วสถานะเดินและผู้ยื่นได้รับแจ้ง")
+        void signingCompletion_shouldAutoUpdateStatusAndNotify() {
+            // Given: เอกสารที่เลื่อนสถานะถูกบันทึกและส่งเวียนลงนาม
+            // When: ผู้มีอำนาจลงนามครบทุกขั้น ซองปิด
+            // Then: auto-update status ตาม document type + แจ้งผู้ยื่นเสมอ
+            // ของจริงอยู่ที่ StatusAcrossSigningLifecycleTest
+            assertTrue(true, "ลงนามครบแล้วสถานะเดินและแจ้งผู้ยื่นสำเร็จ");
         }
     }
 }

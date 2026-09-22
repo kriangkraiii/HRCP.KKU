@@ -45,7 +45,7 @@ public class AcademicRequestService {
     }
 
     /**
-     * เอกสารที่การบันทึกทำให้คำร้องเดินไปขั้นถัดไป
+     * เอกสารที่การ<em>ลงนามครบ</em>ทำให้คำร้องเดินไปขั้นถัดไป
      *
      * <p>ต้องตรงกับ {@code switch} ใน {@link #autoUpdateStatusByDocument} เสมอ
      * รายชื่อนี้เคยถูกคัดลอกไว้ใน JavaScript อีกชุดหนึ่งและเพี้ยนกันมาสองรอบตอนทีมเลื่อนเลขเอกสาร
@@ -835,11 +835,14 @@ public class AcademicRequestService {
     }
 
     /**
-     * อัพเดตสถานะอัตโนมัติตามเอกสารที่กรอกเสร็จ
-     * - Doc 4 saved → SUB_COMMITTEE_APPOINTED
-     * - Doc 5 saved → MEETING_SCHEDULED
-     * - Doc 7 saved → COMPLETED_PASS or COMPLETED_FAIL (based on score)
-     * - Doc 9 saved → COMPLETED
+     * อัพเดตสถานะอัตโนมัติตามเอกสารที่ลงนามครบแล้ว
+     * - Doc 4 ลงนามครบ → SUB_COMMITTEE_APPOINTED
+     * - Doc 5 ลงนามครบ → MEETING_SCHEDULED
+     * - Doc 7 ลงนามครบ → COMPLETED_PASS หรือ COMPLETED_FAIL (ตามผลคะแนน)
+     * - Doc 9 ลงนามครบ → COMPLETED
+     *
+     * <p>ผู้เรียกจริงคือ {@link SignedDocumentStatusAdvancer} ตอนซองลายเซ็นปิด ไม่ใช่ตอน
+     * เจ้าหน้าที่กดบันทึกเอกสารอีกต่อไป — การบันทึกคือการร่างเสร็จ ไม่ใช่ขั้นตอนเสร็จ
      */
     @Transactional
     public void autoUpdateStatusByDocument(Long requestId, int documentType, UserDtls changedBy, String jsonData) {

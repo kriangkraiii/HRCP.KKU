@@ -22,12 +22,16 @@ import org.springframework.http.MediaType;
 
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.PositionDocument;
+import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
 import com.ecom.academic.model.SignatureRequestStatus;
 import com.ecom.academic.repository.SignatureRequestRepository;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.SignedDocumentRenderer;
 import com.ecom.model.UserDtls;
@@ -51,6 +55,9 @@ class OfficeFieldOverwriteTest extends AbstractFlowTest {
 
     @Autowired
     private AcademicRequestService academicService;
+
+    @Autowired
+    private PositionRequestService positionService;
 
     @Autowired
     private SignatureRequestRepository envelopes;
@@ -319,6 +326,52 @@ class OfficeFieldOverwriteTest extends AbstractFlowTest {
                     .andReturn().getResponse().getContentAsString();
 
             assertThat(body).contains("เวียนลงนาม");
+        }
+    }
+
+    @Nested
+    @DisplayName("เฟส 2 ต้องเขียนแบบเดียวกับเฟส 1")
+    class Phase2WritesTheSameWay {
+
+        /** ซองที่ปิดแล้วของเฟส 2 */
+        private void completedPositionEnvelope(Long requestId, int docType) {
+            String frozen = "{\"date\":\"๑ กันยายน ๒๕๖๙\"}";
+            SignatureRequest envelope = new SignatureRequest();
+            envelope.setModule(SignatureModule.POSITION);
+            envelope.setRequestId(requestId);
+            envelope.setDocumentType(docType);
+            envelope.setStatus(SignatureRequestStatus.COMPLETED);
+            envelope.setFrozenJson(frozen);
+            envelope.setFrozenHash(SignatureWorkflowService.sha256(frozen));
+            envelope.setVerificationCode("VC" + System.nanoTime());
+            envelope.setCreatedAt(LocalDateTime.now());
+            envelopes.save(envelope);
+        }
+
+        @Test
+        @DisplayName("เขียนทับแถวเดิม ไม่เปิดแถวร่างใหม่ขึ้นมาอีกแถว")
+        void writesInPlaceWithoutSproutingADraftRow() throws Exception {
+            PositionRequest request = data.positionRequest(applicant,
+                    PositionRequestStatus.SCREENING_COMMITTEE, null);
+            data.positionDocument(request, 8, "{\"date\":\"\"}");
+            completedPositionEnvelope(request.getId(), 8);
+
+            int rowsBefore = positionService.getDocumentsByType(request.getId(), 8).size();
+
+            mvc.perform(post("/admin/position/request/" + request.getId() + "/document/8")
+                    .with(as(officer)).with(csrf())
+                    .param("date", "๒๑ กันยายน ๒๕๖๙"))
+                    .andExpect(status().is3xxRedirection());
+
+            List<PositionDocument> rows = positionService.getDocumentsByType(request.getId(), 8);
+            assertThat(rows)
+                    .as("เดิมเรียก saveDraft ซึ่งเห็นว่ามีแถวที่ส่งแล้ว เลยงอกแถวร่างขึ้นมาอีกแถว")
+                    .hasSize(rowsBefore);
+            assertThat(rows).allSatisfy(row -> assertThat(row.getIsDraft())
+                    .as("การออกเลขที่หนังสือไม่ใช่การบันทึกร่าง")
+                    .isNotEqualTo(Boolean.TRUE));
+            assertThat(positionService.getLatestDocumentData(request.getId(), 8))
+                    .containsEntry("date", "๒๑ กันยายน ๒๕๖๙");
         }
     }
 
