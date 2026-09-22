@@ -110,7 +110,12 @@ class SignatureCirculationTest extends AbstractFlowTest {
         UserSignature signature = signer.getId().equals(applicant.getId())
                 ? applicantSignature
                 : data.signatureFor(signer);
-        return workflow.sign(step.getId(), signer, signature.getId(), true, ActorContext.none());
+        // ช่องที่ไม่ใช่ของผู้ยื่นถูกถามผลการพิจารณาและบังคับตอบ ตอบตัวเลือกแรกซึ่งเป็นด้านบวก
+        // เสมอ เพื่อให้เทสต์ที่พูดเรื่องลำดับการเวียนไม่ต้องรู้ว่าเอกสารฉบับไหนถามอะไร
+        var question = workflow.signerChoiceFor(step.getId());
+        String answer = question != null ? question.options().get(0) : null;
+        return workflow.sign(step.getId(), signer, signature.getId(), true,
+                ActorContext.none(), null, answer);
     }
 
     // =================================================================

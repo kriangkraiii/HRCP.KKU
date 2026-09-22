@@ -25,24 +25,13 @@
                         method="post" id="docForm"
                         th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
-                        <!-- Hidden fields สำหรับเช็คติ๊ก (เริ่มต้นยังไม่ติ๊ก) -->
-                        <input type="hidden" name="chk_dean_sign1" id="chk_dean_sign1" value="">
-                        <input type="hidden" name="chk_hr_verify" id="chk_hr_verify" value="">
-                        <input type="hidden" name="chk_cs_head" id="chk_cs_head" value="">
-                        <input type="hidden" name="chk_cs_head2" id="chk_cs_head2" value="">
-                        <input type="hidden" name="chk_dean_sign2" id="chk_dean_sign2" value="">
-                        <input type="hidden" name="chk_dean_sign3" id="chk_dean_sign3" value="">
+                        <!-- ช่องติ๊กความเห็นและ "เพื่อโปรดพิจารณา" ไม่ได้อยู่ที่นี่แล้ว
+                             ความเห็นเป็นคำตอบของคนที่เซ็นช่องนั้น เก็บที่ signature_step และเติมลง
+                             เอกสารตอน render ส่วน "เพื่อโปรดพิจารณา" ติ๊กเองตามผู้ลงนามที่อยู่ในซอง
+                             ดู SignatureAnchorRegistry (ACADEMIC เอกสารที่ 3) -->
 
                         <!-- ส่วนที่ (2) กรุณาบันทึกข้อมูลคณบดีที่เกี่ยวข้อง -->
                         <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (2) กรุณาบันทึกข้อมูลคณบดีที่เกี่ยวข้อง</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-12 mb-2">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input chk-toggle" id="chk_dean_sign1_cb" data-target="chk_dean_sign1">
-                                    <label class="form-check-label" for="chk_dean_sign1_cb">เพื่อโปรดพิจารณา</label>
-                                </div>
-                            </div>
-                        </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อรองคณบดี</label>
@@ -63,14 +52,6 @@
                         <!-- ส่วนที่ (3) สำหรับผู้รับผิดชอบด้านทรัพยากรบุคคล -->
                         <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (3) สำหรับผู้รับผิดชอบด้านทรัพยากรบุคคล</h5>
                         <div class="row mb-3">
-                            <div class="col-md-12 mb-2">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input chk-toggle" id="chk_hr_verify_cb" data-target="chk_hr_verify">
-                                    <label class="form-check-label" for="chk_hr_verify_cb">เห็นควรแต่งตั้งคณะอนุกรรมการประเมินผลการสอนและนัดวันประเมินผลการสอนต่อไป</label>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อเจ้าหน้าที่ (ภารกิจทรัพยากรบุคคล)</label>
                                 <div class="combo-input">
@@ -89,18 +70,6 @@
 
                         <!-- ส่วนที่ (4) สำหรับหัวหน้าสาขาวิชา -->
                         <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (4) สำหรับหัวหน้าสาขาวิชา</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-12 mb-2">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input chk-toggle" id="chk_cs_head_cb" data-target="chk_cs_head">
-                                    <label class="form-check-label" for="chk_cs_head_cb">เพื่อโปรดพิจารณา</label>
-                                </div>
-                                <div class="form-check mt-1">
-                                    <input type="checkbox" class="form-check-input chk-toggle" id="chk_cs_head2_cb" data-target="chk_cs_head2">
-                                    <label class="form-check-label" for="chk_cs_head2_cb">เห็นควรแต่งตั้งคณะอนุกรรมการประเมิน จำนวน 3 รายชื่อ</label>
-                                </div>
-                            </div>
-                        </div>
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อหัวหน้าสาขา</label>
@@ -139,20 +108,12 @@
 
                         <!-- ส่วนที่ (5) ความเห็นคณบดี -->
                         <h5 class="border-bottom pb-2 mb-3">ส่วนที่ (5) ความเห็นคณบดี</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-12 mb-2">
-                                <div class="form-check">
-                                    <input type="checkbox" class="form-check-input chk-toggle" id="chk_dean_sign2_cb" data-target="chk_dean_sign2">
-                                    <label class="form-check-label" for="chk_dean_sign2_cb">เห็นชอบ และดำเนินการนัดวันประเมินผลการสอนต่อไป</label>
-                                </div>
-                                <div class="form-check mt-1">
-                                    <input type="checkbox" class="form-check-input" id="chk_dean_sign3_cb" data-target="chk_dean_sign3"
-                                        data-call-change="toggleDeanComment" data-call-arg="checked">
-                                    <label class="form-check-label" for="chk_dean_sign3_cb">ความเห็นคณบดี</label>
-                                </div>
-                                <div id="dean_comment_wrapper" class="mt-2 ms-4 js-hidden">
-                                    <textarea name="dean_comment" id="dean_comment_input" class="form-control" rows="3" placeholder="พิมพ์ความเห็นคณบดี..."></textarea>
-                                </div>
+                        <div class="alert alert-secondary">
+                            <i class="fas fa-user-pen"></i>
+                            ความเห็นในส่วนนี้เป็นของผู้ลงนามแต่ละท่าน
+                            <div class="small text-muted mt-1">
+                                หัวหน้าสาขาวิชา คณบดี และเจ้าหน้าที่ทรัพยากรบุคคล จะเลือกผลการพิจารณาและเขียนความเห็น
+                                ของตนเองตอนลงนาม แล้วระบบเติมลงเอกสารให้ — เจ้าหน้าที่ไม่ต้องติ๊กแทน
                             </div>
                         </div>
 
@@ -188,20 +149,6 @@
         <input type="hidden" id="currentDocType" th:value="${documentType}">
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
         <link rel="stylesheet" href="/css/doc_preview.css">
-        <script>
-            // Was a long onchange="..." body on the checkbox above; CSP refuses
-            // inline handler attributes, so it lives here and is reached via
-            // data-call-change (see csp_fallbacks.js).
-            function toggleDeanComment(checked) {
-                document.getElementById('dean_comment_wrapper').style.display = checked ? 'block' : 'none';
-                if (!checked) {
-                    document.getElementById('dean_comment_input').value = '';
-                    document.getElementById('chk_dean_sign3').value = '';
-                } else {
-                    document.getElementById('chk_dean_sign3').value = '\u2713';
-                }
-            }
-        </script>
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
     </section>
 </body>

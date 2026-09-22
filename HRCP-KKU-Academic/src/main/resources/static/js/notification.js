@@ -129,7 +129,7 @@ function openReaderModal(notif) {
     var formattedDate = notif.formattedDate || notif.notifFormattedDate || '';
     var isImportant = notif.isImportant === true || notif.notifIsImportant === 'true' || notif.notifIsImportant === true;
     var isRead = notif.isRead === true || notif.notifIsRead === 'true' || notif.notifIsRead === true;
-    var actorName = notif.actorName || notif.notifActor || 'ระบบสารสนเทศ KKU-HRCP';
+    var actorName = notif.actorName || notif.notifActor || 'ระบบสารสนเทศ CP ACAD';
 
     // Populate Modal elements
     var titleEl = document.getElementById('notifReaderModalLabel');

@@ -319,14 +319,8 @@
                 }
             });
 
-            // Special case: chk_dean_sign3 has no chk-toggle class, handle manually
-            var sign3hidden = document.getElementById('chk_dean_sign3');
-            var sign3cb = document.getElementById('chk_dean_sign3_cb');
-            if (sign3hidden && sign3cb && sign3hidden.value === '✓') {
-                sign3cb.checked = true;
-                var wrapper = document.getElementById('dean_comment_wrapper');
-                if (wrapper) wrapper.style.display = 'block';
-            }
+            // เอกสารที่ 3 เคยมีเคสพิเศษของ chk_dean_sign3 อยู่ตรงนี้ ตอนนี้ความเห็นคณบดีเป็น
+            // คำตอบของผู้ลงนามที่เก็บใน signature_step แล้ว ฟอร์มจึงไม่มีช่องนั้นให้คืนค่าอีก
 
             initDocPreview('docForm', currentDocType);
         });

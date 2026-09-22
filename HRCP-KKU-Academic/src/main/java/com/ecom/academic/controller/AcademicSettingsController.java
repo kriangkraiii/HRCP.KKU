@@ -195,7 +195,7 @@ public class AcademicSettingsController {
 
             helper.setFrom(sender, senderName);
             helper.setTo(recipient);
-            helper.setSubject("[HRCP-KKU] ทดสอบการส่งอีเมลผ่าน KKU SMTP Relay (" + timestampStr + ")");
+            helper.setSubject("[CP ACAD] ทดสอบการส่งอีเมลผ่าน KKU SMTP Relay (" + timestampStr + ")");
 
             String htmlBody = EmailTemplateHelper.buildDiagnosticTestEmail(
                     admin.getName(),

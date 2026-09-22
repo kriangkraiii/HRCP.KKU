@@ -322,12 +322,33 @@
                                     คำตอบนี้จะถูกบันทึกคู่กับลายเซ็นของท่านและปรากฏในเอกสารฉบับสมบูรณ์
                                 </p>
                                 <div class="form-check mb-2" th:each="option : ${signerChoice.options()}">
-                                    <input class="form-check-input" type="radio" name="signerChoice"
+                                    <input class="form-check-input js-signer-choice" type="radio" name="signerChoice"
                                            th:id="'signerChoice_' + ${optionStat.index}"
                                            th:value="${option}" required
-                                           th:attrappend="data-alert=${option == signerChoice.alertValue()} ? 'true' : null">
+                                           th:attrappend="data-alert=${option == signerChoice.alertValue()} ? 'true' : null"
+                                           th:attr="data-stops=${option == notApprovedValue} ? 'true' : null">
                                     <label class="form-check-label" th:for="'signerChoice_' + ${optionStat.index}"
                                            th:text="${option}">ตัวเลือก</label>
+                                </div>
+
+                                <label class="form-label small mt-3 mb-1">
+                                    ความเห็นเพิ่มเติม
+                                    <span class="text-danger" id="commentRequiredMark" hidden>*</span>
+                                </label>
+                                <textarea name="signerComment" id="signerComment" class="form-control"
+                                          rows="3" maxlength="1000"
+                                          placeholder="ระบุข้อสังเกตหรือเหตุผลประกอบการพิจารณา (ถ้ามี)"></textarea>
+                                <div class="form-text" id="commentHelp">
+                                    ความเห็นจะถูกบันทึกเป็นหลักฐานคู่กับผลการพิจารณา และผู้เกี่ยวข้องมองเห็นได้
+                                </div>
+
+                                <!-- เลือกไม่เห็นควร = หยุดการเวียนและตีเอกสารกลับ ไม่ใช่การลงนาม
+                                     จึงเตือนให้ชัดก่อน แล้วฝั่งเซิร์ฟเวอร์แยกทางเองที่ SigningController -->
+                                <div class="alert alert-warning mt-3 mb-0" id="notApprovedWarning" hidden>
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                    เลือก <strong th:text="${notApprovedValue}">ไม่เห็นควร</strong>
+                                    แล้วการเวียนลงนามฉบับนี้จะหยุดทันที และเอกสารจะถูกส่งกลับไปแก้ไข
+                                    — ท่านไม่ต้องลงลายมือชื่อ แต่ต้องระบุความเห็น
                                 </div>
                             </div>
                         </div>
@@ -356,13 +377,18 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-academic w-100">
+                        <!-- ข้อความของปุ่มตอนเลือกไม่เห็นควรอยู่ใน data- ไม่ใช่ในสคริปต์ เพื่อให้
+                             หน้าที่ไม่ได้แสดงปุ่มนี้ไม่มีข้อความปุ่มติดไปกับ HTML -->
+                        <button type="submit" class="btn btn-academic w-100" id="signSubmitBtn"
+                                data-stop-label="ยืนยันไม่เห็นควร และส่งกลับไปแก้ไข"
+                                th:attr="data-stop-confirm='ยืนยันผลการพิจารณา &quot;' + ${notApprovedValue} + '&quot;? การเวียนลงนามฉบับนี้จะหยุดและเอกสารถูกส่งกลับไปแก้ไข'">
                             <i class="fas fa-signature"></i> ยืนยันการลงนาม
                         </button>
                     </form>
 
-                    <!-- ปฏิเสธการลงนาม — ต้องมีทางเลือกนี้เสมอ ไม่ใช่มีแต่ปุ่มเซ็น -->
-                    <div class="card card-academic mt-3">
+                    <!-- ปฏิเสธการลงนาม — เหลือไว้เฉพาะช่องที่ไม่ได้ถูกถามผลการพิจารณา
+                         ช่องที่ถูกถามมีทางปฏิเสธอยู่ในคำถามแล้ว (เลือกไม่เห็นควร) -->
+                    <div class="card card-academic mt-3" th:if="${showDeclineForm}">
                         <div class="card-header bg-white">
                             <i class="fas fa-circle-xmark"></i> ปฏิเสธการลงนาม
                         </div>
@@ -423,6 +449,7 @@
     <!-- Interactive PDF Viewer Assets -->
     <link rel="stylesheet" href="/css/esign_pdf_viewer.css?v=3.2">
     <script src="/js/esign_pdf_viewer.js?v=3.2"></script>
+    <script src="/js/esign_consideration.js?v=1.0"></script>
     <script>
         (function() {
             function initSignViewer() {
@@ -468,6 +495,7 @@
                 initSignViewer();
             }
         })();
+
     </script>
 </section>
 </body>

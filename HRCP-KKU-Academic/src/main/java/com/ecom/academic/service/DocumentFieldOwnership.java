@@ -109,6 +109,16 @@ public final class DocumentFieldOwnership {
     }
 
     /**
+     * เอกสารฉบับนี้เป็นของผู้ยื่นหรือไม่ — นอกรายการถือเป็นของแอดมินทั้งฉบับ
+     *
+     * <p>ใช้ตัดสินว่าการตีเอกสารกลับควรไปถึงใคร: ตีกลับผู้ยื่นในเอกสารที่ผู้ยื่นแก้ไม่ได้
+     * ก็เท่ากับไม่ได้ตีกลับ เพราะเอกสารของแอดมินนั้นผู้ยื่นมองไม่เห็นด้วยซ้ำ
+     */
+    public static boolean isApplicantOwned(SignatureModule module, int documentType) {
+        return APPLICANT_DOCUMENTS.getOrDefault(module, Set.of()).contains(documentType);
+    }
+
+    /**
      * ช่องที่เป็นของผู้ลงนาม ไม่ใช่ของทั้งแอดมินและผู้ยื่น
      *
      * <p>อ่านจาก {@link SignatureAnchorRegistry} โดยตรง ไม่ตั้งรายการซ้ำ — เพิ่มคำถามให้ผู้ลงนาม

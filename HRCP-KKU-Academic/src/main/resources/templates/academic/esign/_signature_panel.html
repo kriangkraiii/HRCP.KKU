@@ -63,8 +63,19 @@
                                     <span th:if="${s.signedAt != null}" class="text-success fw-medium"
                                           th:text="' · ลงนามเมื่อ ' + ${#temporals.format(s.signedAt, 'd MMM yyyy HH:mm')}"></span>
                                 </div>
-                                <div class="small text-danger mt-1" th:if="${s.declineReason != null}"
-                                     th:text="'เหตุผลที่ปฏิเสธ: ' + ${s.declineReason}"></div>
+                                <!-- ผลการพิจารณาและความเห็น — เหตุผลของการปฏิเสธอยู่ในความเห็น
+                                     ด้วยแล้ว (displayComment อ่าน signerComment ก่อน แล้วค่อย
+                                     ตกไป declineReason สำหรับแถวเก่าที่ยังไม่มีคอลัมน์ใหม่) -->
+                                <div class="small mt-1" th:if="${s.signerChoiceValue != null}">
+                                    <span class="fw-medium">ผลการพิจารณา:</span>
+                                    <span th:text="${s.signerChoiceValue}"
+                                          th:classappend="${s.status.name() == 'DECLINED'} ? 'text-danger fw-semibold' : 'text-success'">ผล</span>
+                                </div>
+                                <div class="small mt-1"
+                                     th:with="comment=${s.displayComment()}"
+                                     th:if="${comment != null}"
+                                     th:classappend="${s.status.name() == 'DECLINED'} ? 'text-danger' : 'text-secondary'"
+                                     th:text="'ความเห็น: ' + ${comment}"></div>
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2">

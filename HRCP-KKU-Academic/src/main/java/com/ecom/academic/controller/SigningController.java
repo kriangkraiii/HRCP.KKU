@@ -26,6 +26,7 @@ import com.ecom.academic.model.SignatureRequest;
 import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.SignatureStepStatus;
 import com.ecom.academic.model.UserSignature;
+import com.ecom.academic.service.SignatureAnchorRegistry;
 import com.ecom.academic.service.SignatureVerificationService;
 import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.SignatureWorkflowService.ActorContext;
@@ -161,7 +162,14 @@ public class SigningController {
         model.addAttribute("deadlineAdvisory", deadlineAdvisory);
         model.addAttribute("canSign", canSign);
         // ช่องลงนามบางช่องขอคำตอบด้วย ไม่ใช่แค่ลายเซ็น (เช่น ผลการตรวจสอบคุณสมบัติ)
-        model.addAttribute("signerChoice", workflow.signerChoiceFor(stepId));
+        SignatureAnchorRegistry.SignerChoice choice = workflow.signerChoiceFor(stepId);
+        model.addAttribute("signerChoice", choice);
+        model.addAttribute("notApprovedValue", SignatureAnchorRegistry.NOT_APPROVED);
+
+        // ช่องที่ถูกถาม "ผลการพิจารณา" มีทางปฏิเสธอยู่ในคำถามแล้ว (เลือกไม่เห็นควร) การโชว์
+        // ฟอร์มปฏิเสธแยกอีกอันทำให้หน้าเดียวมีสองปุ่มที่ทำเรื่องเดียวกัน ส่วนช่องที่ถูกถาม
+        // คำถามเฉพาะของเอกสาร (เช่น ครบถ้วน/ไม่ครบถ้วน) ยังต้องมีทางปฏิเสธของตัวเอง
+        model.addAttribute("showDeclineForm", choice != SignatureAnchorRegistry.CONSIDERATION);
         return "academic/esign/sign";
     }
 
@@ -231,9 +239,25 @@ public class SigningController {
             @RequestParam(value = "consent", required = false) Boolean consent,
             @RequestParam(value = "digitalCertPin", required = false) String digitalCertPin,
             @RequestParam(value = "signerChoice", required = false) String signerChoice,
+            @RequestParam(value = "signerComment", required = false) String signerComment,
             Principal principal, RedirectAttributes redirectAttributes) {
 
         UserDtls me = currentUser(principal);
+
+        // "ไม่เห็นควร" ไม่ใช่การลงนาม แต่เป็นการวินิจฉัยว่าเรื่องไม่ควรเดินต่อ จึงแยกทางก่อน
+        // ด่านใบรับรอง: การบังคับให้คนติดตั้ง Digital ID ก่อนถึงจะปฏิเสธเอกสารได้ ทำให้คนที่
+        // ยังไม่มีใบรับรองค้างอยู่ในคิวโดยบอกใครไม่ได้ว่าไม่เห็นด้วย
+        if (SignatureAnchorRegistry.NOT_APPROVED.equals(signerChoice)) {
+            Result outcome = workflow.notApproved(stepId, me, signerComment, actorContext());
+            if (!outcome.ok()) {
+                redirectAttributes.addFlashAttribute("errorMsg", outcome.error());
+                return "redirect:/esign/sign/" + stepId;
+            }
+            redirectAttributes.addFlashAttribute("succMsg",
+                    "บันทึกผลการพิจารณา \"ไม่เห็นควร\" แล้ว — หยุดการเวียนและส่งเอกสารกลับไปแก้ไข");
+            return "redirect:/esign/inbox";
+        }
+
         var certOpt = digitalCertificateService.findActive(me);
         if (certOpt.isEmpty()) {
             redirectAttributes.addFlashAttribute("errorMsg",
@@ -247,7 +271,8 @@ public class SigningController {
         }
 
         Result result = workflow.sign(stepId, me, userSignatureId,
-                Boolean.TRUE.equals(consent), actorContext(), digitalCertPin, signerChoice);
+                Boolean.TRUE.equals(consent), actorContext(), digitalCertPin, signerChoice,
+                signerComment);
 
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());

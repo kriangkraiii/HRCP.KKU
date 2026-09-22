@@ -132,14 +132,40 @@ public class SignerNameResolver {
         }
 
         Map<String, String> answers = new LinkedHashMap<>();
+
+        // "เพื่อโปรดพิจารณา" ไม่ใช่ความเห็น แต่เป็นคำสั่งเสนอเรื่อง คนติ๊กคือคนที่ส่งต่อ ไม่ใช่คนรับ
+        // และถ้าเอกสารถูกเวียนไปถึงช่องนั้นจริง ข้อความก็เป็นจริงโดยนิยามแล้ว การให้แอดมินติ๊กเอง
+        // เป็นการกรอกซ้ำที่ขัดกับความจริงได้ — ลืมติ๊ก แต่เอกสารเวียนไปหาคณบดีจริง แล้วฉบับที่
+        // พิมพ์ออกมากลับว่าง ติ๊กตามรายการช่องลงนามที่เปิดใช้จริงของซองนี้จึงตรงกว่า
+        for (SignatureSlot slot : bySlotKey.values()) {
+            if (slot.marks() != null && slot.marks().forwardedTickFieldKey() != null) {
+                answers.put(slot.marks().forwardedTickFieldKey(), SignatureAnchorRegistry.TICK);
+            }
+        }
+
         for (SignatureStep step : stepRepository.findStepsWithSigner(envelope.getId())) {
-            String answer = step.getSignerChoiceValue();
-            if (answer == null || answer.isBlank() || step.getSlotKey() == null) {
+            if (step.getSlotKey() == null) {
                 continue;
             }
             SignatureSlot slot = bySlotKey.get(step.getSlotKey());
-            if (slot != null && slot.choice() != null) {
-                answers.put(slot.choice().fieldKey(), answer);
+            if (slot == null) {
+                continue;
+            }
+
+            String answer = step.getSignerChoiceValue();
+            if (slot.choice() != null && answer != null && !answer.isBlank()) {
+                answers.put(slot.choice().fieldKey(), slot.choice().renderedValue(answer));
+            }
+
+            // ความเห็นของช่องที่เอกสารเผื่อบรรทัดไว้ให้ พร้อมติ๊กหน้าบรรทัดเมื่อมีข้อความจริง
+            if (slot.marks() != null && slot.marks().commentFieldKey() != null) {
+                String comment = step.getSignerComment();
+                if (comment != null && !comment.isBlank()) {
+                    answers.put(slot.marks().commentFieldKey(), comment);
+                    if (slot.marks().commentTickFieldKey() != null) {
+                        answers.put(slot.marks().commentTickFieldKey(), SignatureAnchorRegistry.TICK);
+                    }
+                }
             }
         }
         return answers;

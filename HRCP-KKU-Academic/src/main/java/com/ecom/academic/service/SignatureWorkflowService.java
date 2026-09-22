@@ -67,6 +67,7 @@ public class SignatureWorkflowService {
     private final SignatureVerificationService verificationService;
     private final SignedDocumentArchiver archiver;
     private final DocumentWorkflowConfigService workflowConfigService;
+    private final DocumentRevisionRouter revisionRouter;
     private final DocumentSnapshotProvider snapshotProvider;
     private final com.ecom.service.AfterCommitRunner afterCommitRunner;
     private final UserDigitalCertificateService digitalCertificateService;
@@ -89,7 +90,9 @@ public class SignatureWorkflowService {
             com.ecom.service.AfterCommitRunner afterCommitRunner,
             UserDigitalCertificateService digitalCertificateService,
             DigitalCertificateStorage digitalCertificateStorage,
-            PdfDigitalSignatureService pdfDigitalSignatureService) {
+            PdfDigitalSignatureService pdfDigitalSignatureService,
+            DocumentRevisionRouter revisionRouter) {
+        this.revisionRouter = revisionRouter;
         this.requestRepository = requestRepository;
         this.stepRepository = stepRepository;
         this.auditRepository = auditRepository;
@@ -718,6 +721,20 @@ public class SignatureWorkflowService {
     @Transactional
     public Result sign(Long stepId, UserDtls actingUser, Long userSignatureId,
             boolean consentAccepted, ActorContext actor, String digitalCertPin, String signerChoice) {
+        return sign(stepId, actingUser, userSignatureId, consentAccepted, actor, digitalCertPin,
+                signerChoice, null);
+    }
+
+    /**
+     * ลงนาม พร้อมคำตอบและความเห็นเพิ่มเติมที่ผู้ลงนามพิมพ์เอง
+     *
+     * @param signerComment ความเห็น ไม่บังคับบนเส้นทางนี้ — คนที่ไม่เห็นด้วยไปทาง
+     *                      {@link #notApproved} ซึ่งบังคับให้เขียนเหตุผล
+     */
+    @Transactional
+    public Result sign(Long stepId, UserDtls actingUser, Long userSignatureId,
+            boolean consentAccepted, ActorContext actor, String digitalCertPin, String signerChoice,
+            String signerComment) {
 
         SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
         if (step == null) {
@@ -826,6 +843,7 @@ public class SignatureWorkflowService {
         if (choice != null) {
             step.setSignerChoiceValue(signerChoice);
         }
+        step.setSignerComment(blankToNull(truncate(signerComment, 1000)));
         step.setConsentAccepted(true);
         step.setConsentTextVersion(SignatureStep.CONSENT_TEXT_VERSION);
         step.setAuthMethod(authMethodToUse);
@@ -841,7 +859,10 @@ public class SignatureWorkflowService {
 
         audit(envelope, step.getId(), SignatureAuditEventType.SIGNED, actingUser, actor,
                 "ลงนามในตำแหน่ง \"" + step.getRoleLabel() + "\""
-                        + (choice != null ? " — " + choice.question() + ": " + signerChoice : ""));
+                        + (choice != null ? " — " + choice.question() + ": " + signerChoice : "")
+                        + (step.getSignerComment() != null
+                                ? " — ความเห็น: " + step.getSignerComment()
+                                : ""));
 
         if (choice != null && signerChoice.equals(choice.alertValue())) {
             announceAdverseFinding(envelope, step, choice, signerChoice);
@@ -865,19 +886,33 @@ public class SignatureWorkflowService {
                 .orElse(null);
     }
 
-    /** คำถามที่ช่องลงนามนี้ต้องตอบ หรือ null เมื่อเป็นช่องลงนามธรรมดา */
+    /**
+     * คำถามที่ช่องลงนามนี้ต้องตอบ หรือ null เมื่อไม่ต้องตอบอะไร
+     *
+     * <p>ลำดับ: เอกสารที่กำหนดคำถามเฉพาะไว้ใช้ของตัวเอง (เช่น เฟส 2 เอกสารที่ 5 ถาม
+     * ครบถ้วน/ไม่ครบถ้วน ซึ่งพิมพ์ลงเอกสารจริงตามแบบฟอร์มราชการ) ช่องที่เหลือได้
+     * {@link SignatureAnchorRegistry#CONSIDERATION} — <b>ถามอันใดอันหนึ่ง ไม่ถามซ้ำสองรอบ</b>
+     *
+     * <p>ช่องของผู้ยื่นไม่ถูกถาม: คนยื่นเอกสารของตัวเองไม่ได้ "พิจารณา" คำร้องตัวเอง
+     * ({@code defaultStaffRole()} เป็น null คือช่องผู้ยื่น ตามที่ทะเบียนนิยามไว้)
+     */
     SignatureAnchorRegistry.SignerChoice signerChoiceFor(SignatureStep step) {
         SignatureRequest envelope = step.getSignatureRequest();
         if (envelope == null || step.getSlotKey() == null) {
             return null;
         }
-        return workflowConfigService
+        SignatureAnchorRegistry.SignatureSlot slot = workflowConfigService
                 .effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType()).stream()
-                .filter(slot -> step.getSlotKey().equals(slot.slotKey()))
-                .map(SignatureAnchorRegistry.SignatureSlot::choice)
-                .filter(java.util.Objects::nonNull)
+                .filter(s -> step.getSlotKey().equals(s.slotKey()))
                 .findFirst()
                 .orElse(null);
+        if (slot == null) {
+            return null;
+        }
+        if (slot.choice() != null) {
+            return slot.choice();
+        }
+        return slot.defaultStaffRole() == null ? null : SignatureAnchorRegistry.CONSIDERATION;
     }
 
     /**
@@ -949,6 +984,41 @@ public class SignatureWorkflowService {
      */
     @Transactional
     public Result decline(Long stepId, UserDtls actingUser, String reason, ActorContext actor) {
+        return stopCirculation(stepId, actingUser, reason, actor,
+                "กรุณาระบุเหตุผลที่ปฏิเสธการลงนาม", null, "ปฏิเสธการลงนาม: ");
+    }
+
+    /**
+     * ผู้ลงนามพิจารณาแล้ว <b>ไม่เห็นควร</b> — หยุดการเวียนและตีเอกสารกลับไปให้แก้
+     *
+     * <p>ต่างจาก {@link #decline} ตรงเจตนา ไม่ใช่ตรงผลลัพธ์: ปฏิเสธคือ "ยังไม่พร้อมเซ็น"
+     * ส่วนไม่เห็นควรคือคำวินิจฉัยที่ต้องบันทึกไว้ในหลักฐานว่าคนนี้ตัดสินว่าอะไร กลไกที่ตามมา
+     * เหมือนกันทุกอย่าง จึงใช้แกนเดียวกันแทนที่จะเขียนคู่ขนาน
+     *
+     * <p>เอกสารถูกตีกลับ <b>ตามเจ้าของเอกสารฉบับนั้น</b> ผ่าน {@link DocumentRevisionRouter}
+     * — เอกสารของผู้ยื่นเปิดให้ผู้ยื่นกลับมาแก้ได้จริง ส่วนเอกสารของแอดมินตีกลับแอดมิน
+     * เพราะผู้ยื่นมองไม่เห็นเอกสารพวกนั้นด้วยซ้ำ
+     */
+    @Transactional
+    public Result notApproved(Long stepId, UserDtls actingUser, String comment, ActorContext actor) {
+        return stopCirculation(stepId, actingUser, comment, actor,
+                "กรุณาระบุความเห็นเมื่อเลือกไม่เห็นควร",
+                SignatureAnchorRegistry.NOT_APPROVED,
+                "พิจารณาแล้วไม่เห็นควร: ");
+    }
+
+    /**
+     * แกนร่วมของการหยุดการเวียน
+     *
+     * <p>หยุดทั้งสายไม่ใช่ข้ามไปคนถัดไป เพราะคนที่อยู่หลังจากนี้กำลังจะเซ็นบนสมมติฐานว่า
+     * ทุกคนก่อนหน้าเห็นด้วยแล้ว
+     *
+     * @param choiceValue ค่าที่จะบันทึกลง {@code signer_choice_value} หรือ null ถ้าไม่บันทึก
+     */
+    private Result stopCirculation(Long stepId, UserDtls actingUser, String reason,
+            ActorContext actor, String missingReasonMessage, String choiceValue,
+            String auditPrefix) {
+
         SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
         if (step == null) {
             return Result.failed("ไม่พบรายการลงนาม");
@@ -962,12 +1032,20 @@ public class SignatureWorkflowService {
             return Result.failed("ขั้นตอนนี้ถูกดำเนินการไปแล้ว");
         }
         if (reason == null || reason.isBlank()) {
-            return Result.failed("กรุณาระบุเหตุผลที่ปฏิเสธการลงนาม");
+            return Result.failed(missingReasonMessage);
         }
 
+        String trimmed = reason.trim();
         step.setStatus(SignatureStepStatus.DECLINED);
         step.setDeclinedAt(LocalDateTime.now());
-        step.setDeclineReason(truncate(reason.trim(), 500));
+        step.setDeclineReason(truncate(trimmed, 500));
+        // เขียนคู่กับ declineReason โดยตั้งใจ — ตัวนั้นยาวได้ 500 และมีโค้ดเดิมอ่านอยู่
+        // ส่วนตัวนี้เป็นช่องเดียวที่หน้าจอใหม่อ่าน ไม่ว่าจะมาจากเส้นทางไหน
+        step.setSignerComment(truncate(trimmed, 1000));
+        if (choiceValue != null) {
+            // คอลัมน์เดียวตอบได้ว่าคนนี้ตัดสินว่าอะไร ไม่ต้องไปไล่ดูว่า step เป็น DECLINED ไหม
+            step.setSignerChoiceValue(choiceValue);
+        }
         step.setIpAddress(actor.ipAddress());
         step.setUserAgent(truncate(actor.userAgent(), 500));
         stepRepository.save(step);
@@ -978,7 +1056,12 @@ public class SignatureWorkflowService {
                 .forEach(s -> s.setStatus(SignatureStepStatus.SKIPPED));
 
         audit(envelope, step.getId(), SignatureAuditEventType.DECLINED, actingUser, actor,
-                "ปฏิเสธการลงนาม: " + step.getDeclineReason());
+                auditPrefix + step.getDeclineReason());
+
+        // เปิดประตูให้เจ้าของเอกสารกลับมาแก้ — ถ้าไม่เปิด การตีกลับก็เป็นแค่การแจ้งเตือน
+        // ที่ปลายทางทำอะไรต่อไม่ได้
+        revisionRouter.openForRevision(envelope.getModule(), envelope.getRequestId(),
+                envelope.getDocumentType(), trimmed);
 
         notifier.notifyDeclined(noticeFor(envelope, step, List.of(envelope.getInitiatedBy())));
         return new Result(requestRepository.save(envelope), null);
@@ -1276,6 +1359,15 @@ public class SignatureWorkflowService {
             return null;
         }
         return value.length() <= max ? value : value.substring(0, max);
+    }
+
+    /** ช่องความเห็นที่เว้นว่างไว้คือ "ไม่มีความเห็น" ไม่ใช่ความเห็นที่เป็นช่องว่าง */
+    private static String blankToNull(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     /**

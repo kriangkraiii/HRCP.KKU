@@ -118,6 +118,19 @@ public class SignatureStep {
     @Column(name = "signer_choice_value", length = 100)
     private String signerChoiceValue;
 
+    /**
+     * ความเห็นที่ผู้ลงนามพิมพ์เองตอนพิจารณา ไม่บังคับเมื่อเห็นควร บังคับเมื่อไม่เห็นควร
+     *
+     * <p>อยู่ที่นี่ด้วยเหตุผลเดียวกับ {@link #signerChoiceValue} — ซองลายเซ็น freeze เนื้อหาเอกสาร
+     * ไว้ เขียนลง {@code json_data} หลังเริ่มเวียนแล้วลายเซ็นทั้งซองเป็นโมฆะ
+     *
+     * <p>ต่างจาก {@link #declineReason} ตรงที่ตัวนั้นมีเฉพาะตอนปฏิเสธ ส่วนตัวนี้มีได้ทั้งสองทาง
+     * ตอนไม่เห็นควรจะเขียนทั้งคู่ด้วยข้อความเดียวกัน เพื่อให้โค้ดเดิมที่อ่าน declineReason
+     * (การแจ้งเตือน, แถวเก่าในฐานข้อมูล) ทำงานต่อได้โดยไม่ต้องย้ายข้อมูล
+     */
+    @Column(name = "signer_comment", length = 1000)
+    private String signerComment;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_signature_id")
     private UserSignature userSignature;
@@ -305,6 +318,27 @@ public class SignatureStep {
 
     public void setSignerChoiceValue(String signerChoiceValue) {
         this.signerChoiceValue = signerChoiceValue;
+    }
+
+    public String getSignerComment() {
+        return signerComment;
+    }
+
+    public void setSignerComment(String signerComment) {
+        this.signerComment = signerComment;
+    }
+
+    /**
+     * ความเห็นที่ควรแสดงของขั้นตอนนี้ — {@code null} เมื่อไม่มีใครเขียนอะไรไว้
+     *
+     * <p>แถวที่ปฏิเสธก่อนจะมีคอลัมน์ {@code signer_comment} มีข้อความอยู่ใน
+     * {@link #declineReason} อย่างเดียว การอ่านผ่านเมธอดนี้ทำให้หน้าจอไม่ต้องรู้เรื่องนั้น
+     */
+    public String displayComment() {
+        if (signerComment != null && !signerComment.isBlank()) {
+            return signerComment;
+        }
+        return (declineReason != null && !declineReason.isBlank()) ? declineReason : null;
     }
 
     public UserSignature getUserSignature() {

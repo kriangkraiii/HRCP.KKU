@@ -37,7 +37,7 @@ public class CommonUtil {
 
 		helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
 		helper.setTo(reciepentEmail);
-		helper.setSubject("รีเซ็ตรหัสผ่าน - ระบบตำแหน่งทางวิชาการ (HRCP.KKU)");
+		helper.setSubject("รีเซ็ตรหัสผ่าน - ระบบ CP ACAD (วิทยาลัยการคอมพิวเตอร์ มข.)");
 
 		String content = EmailTemplateHelper.buildPasswordResetEmail(url);
 		helper.setText(content, true);
@@ -56,7 +56,7 @@ public class CommonUtil {
 
 		helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
 		helper.setTo(recipientEmail);
-		helper.setSubject("รหัส OTP สำหรับเข้าสู่ระบบครั้งแรก - ระบบตำแหน่งทางวิชาการ (HRCP.KKU)");
+		helper.setSubject("รหัส OTP สำหรับเข้าสู่ระบบครั้งแรก - ระบบ CP ACAD (วิทยาลัยการคอมพิวเตอร์ มข.)");
 
 		String content = EmailTemplateHelper.buildOtpEmail(recipientEmail, otp, "เข้าสู่ระบบครั้งแรก", 5);
 		helper.setText(content, true);

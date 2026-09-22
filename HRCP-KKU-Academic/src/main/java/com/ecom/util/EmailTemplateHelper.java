@@ -103,7 +103,7 @@ public final class EmailTemplateHelper {
 
         // --- Official Hero Header ---
         sb.append("<tr><td style='background:linear-gradient(135deg,#0b1f44 0%,#172554 50%,#1e3a8a 100%);padding:26px 24px;text-align:center;border-bottom:4px solid #d97706;'>");
-        sb.append("<div style='color:#cbd5e1;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;'>ระบบบริหารจัดการตำแหน่งทางวิชาการ (HRCP.KKU)</div>");
+        sb.append("<div style='color:#cbd5e1;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;'>CP ACAD (CP Academic Evaluation &amp; Promotion System)</div>");
         sb.append("<h1 style='color:#ffffff;margin:0 0 6px 0;font-size:20px;font-weight:700;line-height:1.4;'>").append(escapeHtml(headingTitle)).append("</h1>");
         if (badgeText != null && !badgeText.isBlank()) {
             sb.append("<div style='display:inline-block;background:rgba(217,119,6,0.22);border:1px solid #d97706;color:#fef3c7;font-size:12px;font-weight:500;padding:3px 12px;border-radius:20px;margin-top:4px;'>")
@@ -321,7 +321,7 @@ public final class EmailTemplateHelper {
         StringBuilder sb = new StringBuilder();
 
         sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>ผู้รับเรื่อง</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>มีรายงานปัญหา/ข้อเสนอแนะจากผู้ใช้งานในระบบ HRCP.KKU ดังมีรายละเอียดต่อไปนี้:</p>");
+        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>มีรายงานปัญหา/ข้อเสนอแนะจากผู้ใช้งานในระบบ CP ACAD ดังมีรายละเอียดต่อไปนี้:</p>");
 
         // Info card
         sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:8px;padding:16px 20px;margin-bottom:20px;'>");
@@ -360,7 +360,7 @@ public final class EmailTemplateHelper {
           .append(escapeHtml(detail)).append("</div>");
         sb.append("</div>");
 
-        sb.append("<p style='font-size:12px;color:#94a3b8;margin:20px 0 0 0;'>อีเมลฉบับนี้ถูกส่งจากระบบ HRCP.KKU โดยผู้ใช้งานข้างต้น ท่านสามารถตอบกลับอีเมลนี้เพื่อติดต่อผู้แจ้งโดยตรง</p>");
+        sb.append("<p style='font-size:12px;color:#94a3b8;margin:20px 0 0 0;'>อีเมลฉบับนี้ถูกส่งจากระบบ CP ACAD โดยผู้ใช้งานข้างต้น ท่านสามารถตอบกลับอีเมลนี้เพื่อติดต่อผู้แจ้งโดยตรง</p>");
 
         return wrapLayout("รายงานปัญหา/ข้อเสนอแนะ", category, sb.toString());
     }
@@ -372,7 +372,7 @@ public final class EmailTemplateHelper {
         StringBuilder sb = new StringBuilder();
         sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
           .append(escapeHtml(adminName != null ? adminName : "ผู้ดูแลระบบ")).append("</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>อีเมลนี้เป็นการทดสอบการทำงานของระบบส่งอีเมล <strong>KKU SMTP Relay</strong> ในระบบบริหารตำแหน่งทางวิชาการ (HRCP.KKU)</p>");
+        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>อีเมลนี้เป็นการทดสอบการทำงานของระบบส่งอีเมล <strong>KKU SMTP Relay</strong> ในระบบ CP ACAD (วิทยาลัยการคอมพิวเตอร์ มข.)</p>");
 
         sb.append("<div style='background:#ecfdf5;border:1px solid #a7f3d0;border-left:4px solid #10b981;border-radius:10px;padding:18px 20px;margin-bottom:20px;'>");
         sb.append("<div style='font-weight:700;color:#065f46;font-size:15px;margin-bottom:8px;'><span style='font-size:18px;margin-right:6px;'>✓</span> เชื่อมต่อและส่งผ่าน KKU SMTP Relay สำเร็จ</div>");

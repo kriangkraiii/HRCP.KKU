@@ -50,7 +50,45 @@ public class SignatureAnchorRegistry {
             String fieldKey,
             String question,
             List<String> options,
-            String alertValue) {
+            String alertValue,
+            boolean renderAsTick) {
+
+        /** คำถามที่คำตอบถูกพิมพ์ลงเอกสารเป็นข้อความตรง ๆ เช่น "ครบถ้วน" ในช่องเติมคำ */
+        public SignerChoice(String fieldKey, String question, List<String> options, String alertValue) {
+            this(fieldKey, question, options, alertValue, false);
+        }
+
+        /**
+         * ค่าที่จะถูกเขียนลงเอกสารสำหรับคำตอบนี้
+         *
+         * <p>บันทึกข้อความราชการส่วนใหญ่พิมพ์ข้อความไว้แล้วและเหลือวงเล็บว่างไว้ให้ติ๊ก
+         * ({@code ( {{chk_hr_verify}} ) เห็นควรแต่งตั้ง...}) การเขียนคำว่า "เห็นควร" ลงในวงเล็บนั้น
+         * จะได้ประโยคที่อ่านไม่รู้เรื่อง ช่องแบบนั้นจึงรับได้แค่เครื่องหมายถูกหรือความว่างเปล่า
+         */
+        public String renderedValue(String answer) {
+            if (!renderAsTick) {
+                return answer;
+            }
+            return options.get(0).equals(answer) ? TICK : "";
+        }
+    }
+
+    /** เครื่องหมายที่ใส่ในวงเล็บของแบบฟอร์มราชการ */
+    public static final String TICK = "✓";
+
+    /**
+     * ช่องในเอกสารที่เป็นของผู้ลงนามช่องนี้ นอกเหนือจากลายเซ็นและคำตอบของคำถาม
+     *
+     * @param forwardedTickFieldKey ช่อง "เพื่อโปรดพิจารณา" — ติ๊กเองเมื่อช่องลงนามนี้อยู่ในซอง
+     *                              จริง ไม่ใช่ให้แอดมินติ๊กแทน เพราะถ้าเอกสารเวียนไปถึงคนนี้
+     *                              ข้อความนั้นก็เป็นจริงโดยนิยามอยู่แล้ว
+     * @param commentFieldKey       ช่องความเห็นแบบข้อความ เติมจากความเห็นที่ผู้ลงนามพิมพ์
+     * @param commentTickFieldKey   ช่องกากบาทหน้าบรรทัดความเห็น ติ๊กเมื่อมีความเห็นจริง
+     */
+    public record SignerMarks(
+            String forwardedTickFieldKey,
+            String commentFieldKey,
+            String commentTickFieldKey) {
     }
 
     /**
@@ -75,14 +113,41 @@ public class SignatureAnchorRegistry {
             String anchorPlaceholder,
             String defaultStaffRole,
             int order,
-            SignerChoice choice) {
+            SignerChoice choice,
+            SignerMarks marks) {
 
         /** A slot that only collects a signature — by far the common case. */
         public SignatureSlot(String slotKey, String roleLabel, String anchorPlaceholder,
                 String defaultStaffRole, int order) {
-            this(slotKey, roleLabel, anchorPlaceholder, defaultStaffRole, order, null);
+            this(slotKey, roleLabel, anchorPlaceholder, defaultStaffRole, order, null, null);
+        }
+
+        /** ช่องที่มีคำถามให้ตอบ แต่ไม่มีช่องกากบาทหรือช่องความเห็นอื่นในเอกสาร */
+        public SignatureSlot(String slotKey, String roleLabel, String anchorPlaceholder,
+                String defaultStaffRole, int order, SignerChoice choice) {
+            this(slotKey, roleLabel, anchorPlaceholder, defaultStaffRole, order, choice, null);
         }
     }
+
+    /** คำตอบที่แปลว่าผู้ลงนามไม่เห็นด้วย — เส้นทางนี้หยุดการเวียนและตีเอกสารกลับ */
+    public static final String NOT_APPROVED = "ไม่เห็นควร";
+
+    /** คำตอบที่แปลว่าผู้ลงนามเห็นด้วย ให้เดินต่อไปยังผู้ลงนามลำดับถัดไป */
+    public static final String APPROVED = "เห็นควร";
+
+    /**
+     * คำถามเริ่มต้นของทุกช่องลงนามที่ไม่ใช่ของผู้ยื่น และเอกสารไม่ได้กำหนดคำถามเฉพาะไว้
+     *
+     * <p>ไม่ได้ใส่ลงใน {@link #SLOTS} ทีละช่อง — {@code SignatureWorkflowService.signerChoiceFor}
+     * เติมให้ตอนจะลงนามแทน เพราะ {@code DocumentFieldOwnership.signerFields} อ่าน slot ที่มี
+     * {@code choice()} แล้วลบ {@code fieldKey} นั้นทิ้งจากข้อมูลที่ฟอร์มส่งมา และ
+     * {@code SignerNameResolver.choicesForEnvelope} จะพยายาม render มันลงเอกสาร ซึ่งไม่มี
+     * เทมเพลต docx ฉบับไหนมีช่อง {@code {{consideration_result}}} รออยู่ การเติมที่ปลายทาง
+     * การลงนามจึงได้สิ่งที่ต้องการพอดี: ถามผู้ลงนาม เก็บลงฐานข้อมูล แต่ไม่ไปยุ่งกับเนื้อเอกสาร
+     */
+    public static final SignerChoice CONSIDERATION = new SignerChoice(
+            "consideration_result", "ผลการพิจารณา",
+            List.of(APPROVED, NOT_APPROVED), NOT_APPROVED);
 
     private record DocKey(SignatureModule module, int documentType) {
     }
@@ -102,15 +167,32 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("hr", "นักทรัพยากรบุคคล",
                             "hr_staff_name", "HR", 2))),
 
+            // คำสั่งแต่งตั้งคณะอนุกรรมการ — ฉบับเดียวในระบบที่มีช่อง "เห็นควร/เห็นชอบ" ของจริง
+            // พิมพ์อยู่ในเนื้อเอกสาร เดิมแอดมินติ๊กแทนทุกช่องก่อนปล่อยเวียน แล้วเจ้าของความเห็น
+            // ค่อยมาเซ็นทับสิ่งที่ตัวเองไม่ได้เลือก ตอนนี้แต่ละช่องเป็นคำตอบของคนที่เซ็นช่องนั้น
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 3), List.of(
                     new SignatureSlot("head", "หัวหน้าสาขาวิชา",
-                            "department_head", "HEAD", 1),
+                            "department_head", "HEAD", 1,
+                            new SignerChoice("chk_cs_head2",
+                                    "เห็นควรแต่งตั้งคณะอนุกรรมการประเมิน จำนวน 3 รายชื่อ",
+                                    List.of(APPROVED, NOT_APPROVED), NOT_APPROVED, true),
+                            // หัวหน้าสาขาเสนอเรื่องต่อคณบดี
+                            new SignerMarks("chk_cs_head", null, null)),
                     new SignatureSlot("associate_dean", "รองคณบดี",
-                            "associate_dean_name", "DEAN", 2),
+                            "associate_dean_name", "DEAN", 2, null,
+                            // รองคณบดีเสนอเรื่องต่อหัวหน้าสาขาวิชา
+                            new SignerMarks("chk_dean_sign1", null, null)),
                     new SignatureSlot("dean", "คณบดี",
-                            "dean_name", "DEAN", 3),
+                            "dean_name", "DEAN", 3,
+                            new SignerChoice("chk_dean_sign2",
+                                    "เห็นชอบ และดำเนินการนัดวันประเมินผลการสอนต่อไป",
+                                    List.of(APPROVED, NOT_APPROVED), NOT_APPROVED, true),
+                            new SignerMarks(null, "dean_comment", "chk_dean_sign3")),
                     new SignatureSlot("hr", "เจ้าหน้าที่บริหารงาน",
-                            "hr_staff_name", "HR", 4))),
+                            "hr_staff_name", "HR", 4,
+                            new SignerChoice("chk_hr_verify",
+                                    "เห็นควรแต่งตั้งคณะอนุกรรมการประเมินผลการสอนและนัดวันประเมินผลการสอนต่อไป",
+                                    List.of(APPROVED, NOT_APPROVED), NOT_APPROVED, true)))),
 
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 4), List.of(
                     new SignatureSlot("dean", "คณบดี", "dean_name", "DEAN", 1))),

@@ -183,7 +183,7 @@ public class SystemAlertService {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
             helper.setFrom(com.ecom.util.EmailTemplateHelper.resolveSenderEmail(senderEmail), com.ecom.util.EmailTemplateHelper.SENDER_NAME);
             helper.setTo(admin.getEmail());
-            helper.setSubject("[HRCP.KKU] " + level.prefix + " " + source);
+            helper.setSubject("[CP ACAD] " + level.prefix + " " + source);
             helper.setText(body(admin, level, source, detail, stamp), true);
             com.ecom.util.EmailTemplateHelper.attachLogos(helper);
             mailSender.send(message);

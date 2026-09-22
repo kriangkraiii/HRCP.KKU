@@ -24,7 +24,7 @@ function initBreadcrumbs() {
     if (!currentPageEl) return;
 
     var path = window.location.pathname;
-    var title = document.title ? document.title.replace(' - HRCP KKU', '').replace('HRCP KKU - ', '').trim() : '';
+    var title = document.title ? document.title.replace(' - CP ACAD', '').replace('CP ACAD - ', '').replace(' - HRCP KKU', '').replace('HRCP KKU - ', '').trim() : '';
 
     var pathMap = {
         '/user/academic/dashboard': 'แดชบอร์ดงานวิชาการ',
@@ -56,7 +56,7 @@ function initBreadcrumbs() {
             matched = 'รายละเอียดคำร้องขอตำแหน่ง';
         } else if (path.includes('/academic/requests/')) {
             matched = 'รายละเอียดคำร้องประเมิน';
-        } else if (title && title !== 'HRCP.KKU' && title !== 'Academic') {
+        } else if (title && title !== 'CP ACAD' && title !== 'CP-ACAD' && title !== 'HRCP.KKU' && title !== 'Academic') {
             matched = title;
         } else {
             matched = 'ระบบงานวิชาการ';
