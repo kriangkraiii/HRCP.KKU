@@ -279,13 +279,14 @@ body {
 
 .sidebar-brand-logo {
   width: auto;
-  max-width: 140px;
-  height: 46px;
-  margin-bottom: 10px;
+  max-width: 90px;
+  height: 48px;
+  margin-bottom: 8px;
   object-fit: contain;
   background: transparent;
   padding: 0;
   box-shadow: none;
+  filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.4));
 }
 
 .sidebar-brand .brand-icon {
@@ -304,18 +305,43 @@ body {
 .sidebar-brand h6 {
   color: #fff;
   margin: 0;
-  font-size: 0.85rem;
-  font-weight: 600;
-  line-height: 1.4;
+  font-family: 'Prompt', 'Sarabun', sans-serif;
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
   word-break: break-word;
   overflow-wrap: break-word;
 }
 
+.sidebar-brand h6 .brand-cp {
+  color: #5b92e5;
+  font-weight: 850;
+  text-shadow: 0 0 16px rgba(91, 146, 229, 0.4);
+}
+
+.sidebar-brand h6 .brand-acad {
+  color: #ffffff;
+  font-weight: 750;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
 .sidebar-brand small {
-  color: var(--sidebar-text-faint);
-  font-size: 0.7rem;
+  color: rgba(226, 232, 240, 0.72);
+  font-family: 'Prompt', 'Sarabun', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   word-break: break-word;
   overflow-wrap: break-word;
+  display: block;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.sidebar-brand-collapsed-label {
+  display: none;
 }
 
 .sidebar-nav {
@@ -1264,6 +1290,18 @@ body.modal-open .sidebar-toggle {
     height: 38px;
     object-fit: contain;
     margin: 0 auto;
+  }
+
+  html.sidebar-collapsed .sidebar-brand-collapsed-label {
+    display: block !important;
+    font-family: 'Prompt', 'Sarabun', sans-serif;
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #5b92e5;
+    line-height: 1;
+    letter-spacing: 0.05em;
+    text-align: center;
+    margin: 4px auto;
   }
 
   /* Section Titles as Subtle Divider Lines */

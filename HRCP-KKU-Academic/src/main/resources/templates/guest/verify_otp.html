@@ -5,18 +5,20 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ยืนยัน OTP - CP ACAD | CP Academic Evaluation & Promotion System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="/vendor/fonts/sarabun.css" rel="stylesheet">
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
-    <link rel="icon" type="image/png" href="/img/favicon.png">
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=2.0">
     <link rel="stylesheet" href="/css/guest.css">
 </head>
 
 <body>
     <div class="guest-split">
         <div class="guest-brand">
-            <img class="guest-brand-logo" src="/img/cphr_new.png" alt="Logo">
-            <div class="guest-brand-title">CP ACAD</div>
-            <div class="guest-brand-sub">CP Academic Evaluation &amp; Promotion System</div>
+            <div class="guest-brand-title"><span class="brand-cp">CP</span> <span class="brand-acad">ACAD</span></div>
+            <div class="guest-brand-sub">CP ACADEMIC EVALUATION &amp; PROMOTION SYSTEM</div>
             <div class="guest-footer">© <span th:text="${T(java.time.Year).now(T(java.time.ZoneId).of('Asia/Bangkok')).getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
         </div>
 

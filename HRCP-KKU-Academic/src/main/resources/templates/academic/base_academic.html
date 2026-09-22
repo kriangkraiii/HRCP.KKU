@@ -7,9 +7,12 @@
     <title>CP ACAD - ระบบประเมินผลการสอนและกำหนดตำแหน่งทางวิชาการ | วิทยาลัยการคอมพิวเตอร์ มข.</title>
     <link href="/vendor/bootstrap/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="/vendor/fonts/sarabun.css"
         rel="stylesheet">
-    <link rel="icon" type="image/png" href="/img/favicon.png">
+    <link rel="icon" type="image/png" href="/img/favicon.png?v=2.0">
     <link rel="preconnect" href="https://translate.google.com">
     <link rel="preconnect" href="https://translate.googleapis.com">
     <meta name="_csrf" th:content="${_csrf.token}">
@@ -48,9 +51,9 @@
     <!-- ===== Left Sidebar ===== -->
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="เมนูหลัก">
         <div class="sidebar-brand">
-            <img src="/img/cphr_new.png" alt="วิทยาลัยการคอมพิวเตอร์ มข." class="sidebar-brand-logo">
-            <h6>CP ACAD</h6>
-            <small>CP Academic Evaluation & Promotion System</small>
+            <span class="sidebar-brand-collapsed-label" aria-hidden="true">CP</span>
+            <h6><span class="brand-cp">CP</span> <span class="brand-acad">ACAD</span></h6>
+            <small>CP ACADEMIC EVALUATION &amp; PROMOTION SYSTEM</small>
         </div>
 
         <nav class="sidebar-nav">
