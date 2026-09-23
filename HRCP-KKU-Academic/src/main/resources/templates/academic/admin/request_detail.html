@@ -58,8 +58,7 @@
         <div class="detail-progress-steps" th:with="pIdx=${request.currentStatus.progressIndex()}">
           <th:block th:each="step, iterStat : ${progressSteps}">
             <div class="detail-progress-step"
-                 th:classappend="${pIdx > iterStat.index} ? 'dp-done' : (${pIdx == iterStat.index} ? 'dp-done dp-active' : '')"
-                 th:style="'--step-c:' + ${step.color}">
+                 th:classappend="${pIdx > iterStat.index} ? 'dp-done' : (${pIdx == iterStat.index} ? (${iterStat.last} ? 'dp-done dp-final' : 'dp-active') : '')">
               <div th:if="${!iterStat.last}" class="detail-step-line"
                    th:classappend="${pIdx > iterStat.index} ? 'line-done' : ''"></div>
               <div class="detail-progress-dot">

@@ -3877,20 +3877,53 @@ body.modal-open .sidebar-toggle {
 }
 
 /* Step States */
+/* Completed Steps: Success Green */
 .detail-progress-step.dp-done .detail-progress-dot {
-  background: var(--step-c, #1565c0) !important;
-  border-color: var(--step-c, #1565c0) !important;
+  background: var(--color-success, #2e7d32) !important;
+  border-color: var(--color-success, #2e7d32) !important;
   color: #ffffff !important;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 3px 8px rgba(46, 125, 50, 0.25);
 }
 
 .detail-progress-step.dp-done .detail-progress-dot i {
   color: #ffffff !important;
 }
 
+.detail-progress-step.dp-done .detail-progress-step-label {
+  font-weight: 700;
+  color: var(--color-success, #2e7d32);
+}
+
+/* Active Step: Primary Blue with Infinite stepPulse Animation */
 .detail-progress-step.dp-active .detail-progress-dot {
-  box-shadow: 0 0 0 5px rgba(21, 101, 192, 0.22), 0 4px 12px rgba(0, 0, 0, 0.18) !important;
+  background: var(--color-primary-medium, #1565c0) !important;
+  border-color: var(--color-primary-medium, #1565c0) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(21, 101, 192, 0.25);
   transform: scale(1.12);
+  animation: stepPulse 2s var(--ease-out-quart) infinite;
+}
+
+.detail-progress-step.dp-active .detail-progress-dot i {
+  color: #ffffff !important;
+}
+
+.detail-progress-step.dp-active .detail-progress-step-label {
+  font-weight: 800;
+  color: var(--color-primary-medium, #1565c0);
+}
+
+/* Terminal Finished Step */
+.detail-progress-step.dp-final .detail-progress-dot {
+  background: var(--color-success-dark, #1b5e20) !important;
+  border-color: var(--color-success-dark, #1b5e20) !important;
+  color: #ffffff !important;
+  box-shadow: 0 4px 10px rgba(27, 94, 32, 0.3);
+}
+
+.detail-progress-step.dp-final .detail-progress-step-label {
+  font-weight: 800;
+  color: var(--color-success-dark, #1b5e20);
 }
 
 .detail-progress-step-label {
@@ -3902,16 +3935,6 @@ body.modal-open .sidebar-toggle {
   max-width: 105px;
   word-break: break-word;
   transition: color 0.3s ease;
-}
-
-.detail-progress-step.dp-done .detail-progress-step-label {
-  font-weight: 700;
-  color: var(--step-c, #1565c0);
-}
-
-.detail-progress-step.dp-active .detail-progress-step-label {
-  font-weight: 800;
-  color: var(--step-c, #1565c0);
 }
 
 /* ===== Draft Banner ===== */

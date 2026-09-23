@@ -1681,7 +1681,9 @@ body,
     color: #94a3b8;
 }
 
-[data-theme="dark"] .detail-progress-step.dp-done .detail-progress-dot {
+[data-theme="dark"] .detail-progress-step.dp-done .detail-progress-dot,
+[data-theme="dark"] .detail-progress-step.dp-active .detail-progress-dot,
+[data-theme="dark"] .detail-progress-step.dp-final .detail-progress-dot {
     color: #ffffff !important;
 }
 
