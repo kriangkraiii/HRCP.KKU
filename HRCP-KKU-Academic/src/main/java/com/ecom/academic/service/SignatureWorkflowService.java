@@ -1141,6 +1141,85 @@ public class SignatureWorkflowService {
         return new Result(requestRepository.save(envelope), null);
     }
 
+    // =====================================================================
+    // ผู้ยื่นถอนออกเพื่อกลับไปแก้เอกสารของตัวเอง
+    // =====================================================================
+
+    /**
+     * เหตุผลที่ผู้ยื่นยังถอนซองนี้ไม่ได้ หรือ empty เมื่อถอนได้
+     *
+     * <p>ผู้ยื่นลงนามเอกสารของตัวเองได้ตั้งแต่ยังไม่ส่งคำร้อง และซองล็อกฟอร์มทันทีที่กด
+     * "ส่งและลงนาม" — ถูกต้อง เพราะลายเซ็นรับรองเนื้อหาที่แช่แข็งไว้ แก้ใต้ลายเซ็นไม่ได้
+     * แต่เดิมไม่มีทางถอยให้ผู้ยื่นเลย: ปุ่มยกเลิกขึ้นเฉพาะเจ้าหน้าที่ และเอกสารที่ผู้ยื่นเซ็นคนเดียว
+     * ปิดซองเป็น {@code COMPLETED} ทันทีซึ่ง {@link #cancel} ไม่รับ ทางเดียวบนหน้าลงนามคือปุ่ม
+     * "ปฏิเสธการลงนาม" ที่ออกแบบมาให้ผู้ลงนามคนอื่น — บังคับเหตุผล ส่งอีเมลหาตัวเอง และลง
+     * บันทึกว่าเอกสารถูกปฏิเสธ
+     *
+     * <p>ถอนได้เมื่อครบทุกข้อ:
+     * <ul>
+     *   <li>เป็นผู้ยื่นของคำร้องนั้น</li>
+     *   <li>เอกสารยังอยู่ในมือผู้ยื่น — คำร้องยังไม่ส่ง หรือถูกส่งกลับมาให้แก้ฉบับนี้</li>
+     *   <li>ยังไม่มีใครนอกจากผู้ยื่นลงนามในซองนี้ — ด่านตรวจของเจ้าหน้าที่กักผู้ลงนามคนอื่นไว้
+     *       จนกว่าจะส่งคำร้องอยู่แล้ว แต่ตรวจซ้ำตรงนี้เพราะนี่คือจุดที่ทำให้ลายเซ็นเป็นโมฆะ</li>
+     * </ul>
+     *
+     * <p>ใช้ทั้งตอนตัดสินว่าจะแสดงปุ่มและตอนกดจริง สองที่จึงไม่มีทางเพี้ยนกัน
+     */
+    public Optional<String> applicantWithdrawBlocker(SignatureRequest envelope, UserDtls user) {
+        if (envelope == null) {
+            return Optional.of("ไม่พบคำขอลงนาม");
+        }
+        if (user == null || snapshotProvider == null
+                || !snapshotProvider.isApplicantOf(envelope.getModule(), envelope.getRequestId(), user.getId())) {
+            return Optional.of("เฉพาะผู้ยื่นคำร้องเท่านั้นที่ถอนลายเซ็นของตัวเองได้");
+        }
+        if (envelope.getStatus() != SignatureRequestStatus.IN_PROGRESS
+                && envelope.getStatus() != SignatureRequestStatus.COMPLETED) {
+            return Optional.of("คำขอลงนามนี้ปิดไปแล้ว");
+        }
+        if (!snapshotProvider.isOpenForApplicant(envelope.getModule(), envelope.getRequestId(),
+                envelope.getDocumentType())) {
+            return Optional.of("ส่งคำร้องไปแล้ว หากต้องแก้ไขเอกสาร กรุณาติดต่อเจ้าหน้าที่ให้ส่งกลับมาแก้ไข");
+        }
+        // อ่านจาก repository ไม่ใช่ envelope.getSteps() — ตัวเรียกบางทางได้ซองที่หลุดจาก session แล้ว
+        boolean othersSigned = stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId())
+                .stream()
+                .anyMatch(step -> !"applicant".equalsIgnoreCase(step.getSlotKey()) && step.getSignedAt() != null);
+        if (othersSigned) {
+            return Optional.of("มีผู้ลงนามท่านอื่นลงนามในเอกสารนี้แล้ว กรุณาติดต่อเจ้าหน้าที่ให้ส่งกลับมาแก้ไข");
+        }
+        return Optional.empty();
+    }
+
+    /**
+     * ผู้ยื่นถอนออกจากซองของเอกสารตัวเองเพื่อกลับไปแก้ — ทั้งก่อนและหลังเซ็น
+     *
+     * <p>ซองเปลี่ยนเป็น {@code CANCELLED} แต่ไม่ถูกลบ หลักฐานว่าเคยเซ็นและถอนเมื่อไรต้องอยู่ครบ
+     *
+     * <p><b>ไม่แจ้งเตือนใคร</b> ต่างจาก {@link #cancel}: ผู้ลงนามคนอื่นยังไม่เคยถูกแจ้งให้เซ็น
+     * (ติดด่านตรวจอยู่) ถ้าส่ง "ยกเลิกแล้ว" ไปหา เขาจะงงว่ายกเลิกอะไร ส่วนผู้ยื่นเป็นคนกดเอง
+     */
+    @Transactional
+    public Result withdrawByApplicant(Long envelopeId, UserDtls applicant, ActorContext actor) {
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(envelopeId).orElse(null);
+        Optional<String> blocker = applicantWithdrawBlocker(envelope, applicant);
+        if (blocker.isPresent()) {
+            return Result.failed(blocker.get());
+        }
+
+        envelope.setStatus(SignatureRequestStatus.CANCELLED);
+        envelope.setCancelledAt(LocalDateTime.now());
+        envelope.setCancelReason("ผู้ยื่นถอนเพื่อกลับไปแก้ไขเอกสาร");
+        envelope.getSteps().stream()
+                .filter(s -> s.getStatus() == SignatureStepStatus.WAITING
+                        || s.getStatus() == SignatureStepStatus.ACTIVE)
+                .forEach(s -> s.setStatus(SignatureStepStatus.SKIPPED));
+
+        audit(envelope, null, SignatureAuditEventType.WITHDRAWN, applicant, actor,
+                "ผู้ยื่นถอนเพื่อกลับไปแก้ไขเอกสาร");
+        return new Result(requestRepository.save(envelope), null);
+    }
+
     /**
      * Admin requests document correction and re-signing by the applicant.
      * Cancels any active/completed blocking envelope, releases the edit lock on the document,
@@ -1488,6 +1567,10 @@ public class SignatureWorkflowService {
                 ? findRevivableEnvelope(module, requestId, documentType).orElse(null)
                 : null;
 
+        // ปุ่มถอนของผู้ยื่นใช้กติกาเดียวกับตอนกดจริง ปุ่มกับด่านจึงไม่มีทางเพี้ยนกัน
+        boolean applicantMayWithdraw = activeEnvelope != null && !isAdminViewer
+                && applicantWithdrawBlocker(activeEnvelope, viewer).isEmpty();
+
         return new com.ecom.academic.dto.SignaturePanelView(
                 slots, recommended, others, defaultSignerUserIds,
                 applicantOption,
@@ -1496,7 +1579,8 @@ public class SignatureWorkflowService {
                 true,
                 isAdminViewer,
                 deadlineAdvisory,
-                revivableEnvelope);
+                revivableEnvelope,
+                applicantMayWithdraw);
     }
 
     /** Signed steps carrying the images to stamp, in order. */

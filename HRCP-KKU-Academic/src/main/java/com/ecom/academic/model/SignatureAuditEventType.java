@@ -18,6 +18,8 @@ public enum SignatureAuditEventType {
     SIGNED("ลงนาม", "fas fa-signature"),
     DECLINED("ปฏิเสธการลงนาม", "fas fa-circle-xmark"),
     CANCELLED("ยกเลิกการเวียน", "fas fa-ban"),
+    /** ผู้ยื่นถอนออกเองเพื่อกลับไปแก้เอกสารของตัวเอง — ไม่ใช่การปฏิเสธและไม่ใช่การยกเลิกของเจ้าหน้าที่ */
+    WITHDRAWN("ผู้ยื่นถอนเพื่อแก้ไข", "fas fa-rotate-left"),
     FORWARDED("ส่งเวียนลงนามต่อ", "fas fa-share"),
     EXTENSION_REQUESTED("ขอขยายเวลาลงนาม", "fas fa-clock-rotate-left"),
     DUE_EXTENDED("ขยายกำหนดเวลาลงนาม", "fas fa-calendar-plus"),

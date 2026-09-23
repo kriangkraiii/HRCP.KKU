@@ -185,7 +185,13 @@ public class SigningController {
         // ช่องที่ถูกถาม "ผลการพิจารณา" มีทางปฏิเสธอยู่ในคำถามแล้ว (เลือกไม่เห็นควร) การโชว์
         // ฟอร์มปฏิเสธแยกอีกอันทำให้หน้าเดียวมีสองปุ่มที่ทำเรื่องเดียวกัน ส่วนช่องที่ถูกถาม
         // คำถามเฉพาะของเอกสาร (เช่น ครบถ้วน/ไม่ครบถ้วน) ยังต้องมีทางปฏิเสธของตัวเอง
-        model.addAttribute("showDeclineForm", choice != SignatureAnchorRegistry.CONSIDERATION);
+        //
+        // ช่องของผู้ยื่นเองไม่มีปุ่มปฏิเสธ: "ปฏิเสธ" คือการตีเอกสารกลับไปหาเจ้าของ แต่ผู้ยื่นคือ
+        // เจ้าของเอง สิ่งที่ผู้ยื่นต้องการจริงคือกลับไปแก้ ซึ่งมีปุ่มของมันเองด้านล่าง
+        boolean applicantSlot = "applicant".equalsIgnoreCase(step.getSlotKey());
+        model.addAttribute("showDeclineForm", !applicantSlot && choice != SignatureAnchorRegistry.CONSIDERATION);
+        model.addAttribute("canApplicantWithdraw",
+                applicantSlot && workflow.applicantWithdrawBlocker(envelope, me).isEmpty());
         return "academic/esign/sign";
     }
 
@@ -469,7 +475,14 @@ public class SigningController {
             @RequestParam(value = "reason", required = false) String reason,
             Principal principal, RedirectAttributes redirectAttributes) {
 
-        Result result = workflow.decline(stepId, currentUser(principal), reason, actorContext());
+        UserDtls me = currentUser(principal);
+        SignatureStep step = workflow.findStep(stepId).orElse(null);
+        if (step != null && "applicant".equalsIgnoreCase(step.getSlotKey())) {
+            return withdrawAsApplicant(step.getSignatureRequest(), me, redirectAttributes,
+                    "redirect:/esign/sign/" + stepId);
+        }
+
+        Result result = workflow.decline(stepId, me, reason, actorContext());
 
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());
@@ -718,6 +731,14 @@ public class SigningController {
             redirectAttributes.addFlashAttribute("errorMsg", "ไม่พบคำขอลงนาม");
             return "redirect:/esign/inbox";
         }
+        // ผู้ใช้ทั่วไป (ผู้ยื่น) ถอนได้ตามกติกาของผู้ยื่นเท่านั้น — จำกัดไว้ก่อนส่งคำร้อง
+        // เดิมผู้ยื่นยิง POST ตรงมาที่นี่ได้ทุกเมื่อ รวมถึงหลังยื่นแล้วขณะที่คณบดีเซ็นไปแล้ว
+        // ซึ่งทำให้ลายเซ็นของคนอื่นเป็นโมฆะ ปุ่มแค่ซ่อนไว้ ฝั่งเซิร์ฟเวอร์ไม่ได้กัน
+        if (!isOfficer(me)) {
+            return withdrawAsApplicant(envelope, me, redirectAttributes,
+                    "redirect:" + documentFormLink(envelope.getModule(), envelope.getRequestId(),
+                            envelope.getDocumentType(), me));
+        }
         if (!mayManage(envelope, me)) {
             redirectAttributes.addFlashAttribute("errorMsg", "คุณไม่มีสิทธิ์ยกเลิกการเวียนลงนามนี้");
             return "redirect:/esign/inbox";
@@ -732,6 +753,29 @@ public class SigningController {
         redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกการเวียนลงนามแล้ว เอกสารกลับมาแก้ไขได้");
         return "redirect:" + documentFormLink(envelope.getModule(), envelope.getRequestId(),
                 envelope.getDocumentType(), me);
+    }
+
+    /**
+     * ผู้ยื่นถอนออกจากซองของเอกสารตัวเอง แล้วกลับไปที่ฟอร์มเพื่อแก้
+     *
+     * @param onFailure ปลายทางเมื่อถอนไม่ได้ — กลับไปที่เดิมพร้อมเหตุผล
+     */
+    private String withdrawAsApplicant(SignatureRequest envelope, UserDtls me,
+            RedirectAttributes redirectAttributes, String onFailure) {
+        Result result = workflow.withdrawByApplicant(envelope.getId(), me, actorContext());
+        if (!result.ok()) {
+            redirectAttributes.addFlashAttribute("errorMsg", result.error());
+            return onFailure;
+        }
+        redirectAttributes.addFlashAttribute("succMsg",
+                "ยกเลิกการลงนามแล้ว แก้ไขเอกสารได้ — แก้เสร็จแล้วกดส่งลงนามใหม่ก่อนส่งคำร้อง");
+        return "redirect:" + documentFormLink(envelope.getModule(), envelope.getRequestId(),
+                envelope.getDocumentType(), me);
+    }
+
+    /** เจ้าหน้าที่ — กติกาเดียวกับที่หน้าลงนามและแผงลงนามใช้แยกมุมมองแอดมิน */
+    private static boolean isOfficer(UserDtls user) {
+        return user != null && ("ROLE_ADMIN".equals(user.getRole()) || "ROLE_STAFF".equals(user.getRole()));
     }
 
     /** Who may withdraw a round: its initiator, an administrator, or the applicant. */

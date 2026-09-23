@@ -46,7 +46,8 @@ public record SignaturePanelView(
         boolean signable,
         boolean isAdminViewer,
         boolean deadlineAdvisory,
-        SignatureRequest revivableEnvelope) {
+        SignatureRequest revivableEnvelope,
+        boolean applicantMayWithdraw) {
 
     public SignaturePanelView(
             List<SignatureSlot> slots,
@@ -57,7 +58,7 @@ public record SignaturePanelView(
             SignerOptionDTO currentUserOption,
             SignatureRequest activeEnvelope,
             boolean signable) {
-        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null);
+        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false);
     }
 
     /** True while the document is out for signature or already fully signed. */
@@ -198,6 +199,6 @@ public record SignaturePanelView(
 
     /** An empty panel, for documents with no signature block. */
     public static SignaturePanelView unsignable() {
-        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false, false, null);
+        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false, false, null, false);
     }
 }

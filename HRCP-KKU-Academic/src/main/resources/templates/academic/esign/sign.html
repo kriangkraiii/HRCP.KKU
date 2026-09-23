@@ -465,6 +465,23 @@
                         </div>
                     </div>
                 </div>
+
+                <!--/* ช่องของผู้ยื่นเอง: เห็นที่ผิดก่อนเซ็นก็กลับไปแก้ได้ ไม่ต้องใส่เหตุผลให้ตัวเอง
+                     อยู่นอกบล็อก "มีใบรับรองที่ใช้ได้" โดยตั้งใจ — ผู้ยื่นที่ยังไม่มี .p12 หรือหมดอายุ
+                     เซ็นไม่ได้อยู่แล้ว ถ้าปุ่มนี้ถูกซ่อนไปด้วยจะติดอยู่หน้านี้ ถอยกลับไปแก้เอกสารไม่ได้ */-->
+                <div class="card card-academic mt-3" th:if="${canApplicantWithdraw}">
+                    <div class="card-body">
+                        <p class="small text-muted mb-2">
+                            พบข้อผิดพลาดในเอกสาร? ยกเลิกแล้วกลับไปแก้ไขได้ แก้เสร็จแล้วกดส่งลงนามใหม่อีกครั้ง
+                        </p>
+                        <form th:action="@{'/esign/envelope/' + ${envelope.id} + '/cancel'}" method="post"
+                              data-confirm="ยกเลิกการลงนามแล้วกลับไปแก้ไขเอกสาร?">
+                            <button type="submit" class="btn btn-outline-secondary w-100">
+                                <i class="fas fa-pen-to-square"></i> ยกเลิก กลับไปแก้ไข
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

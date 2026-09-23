@@ -288,6 +288,21 @@
                 </div>
             </div>
 
+            <!--/* ผู้ยื่นกลับไปแก้เอกสารของตัวเองได้ จนกว่าจะส่งคำร้อง — กติกาอยู่ที่
+                 SignatureWorkflowService.applicantWithdrawBlocker */-->
+            <div class="d-flex align-items-center gap-3 flex-wrap mt-2" th:if="${signaturePanel.applicantMayWithdraw}">
+                <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/cancel'}" method="post"
+                      th:attr="data-confirm=${signaturePanel.applicantSigned}
+                          ? 'ถอนลายเซ็นเพื่อแก้ไขเอกสาร? เมื่อแก้เสร็จต้องลงนามใหม่ก่อนส่งคำร้อง'
+                          : 'ยกเลิกการลงนามแล้วกลับไปแก้ไขเอกสาร?'">
+                    <button type="submit" class="btn btn-sm btn-outline-warning">
+                        <i class="fas fa-rotate-left me-1"></i>
+                        <span th:text="${signaturePanel.applicantSigned} ? 'ถอนลายเซ็นเพื่อแก้ไข' : 'ยกเลิก กลับไปแก้ไข'">ถอนลายเซ็นเพื่อแก้ไข</span>
+                    </button>
+                </form>
+                <span class="small text-muted">ทำได้จนกว่าจะส่งคำร้อง</span>
+            </div>
+
             <!-- ปุ่มยกเลิกการเวียนลงนาม (Admin Only) -->
             <div class="d-flex align-items-center gap-3 flex-wrap" th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer}">
                 <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/cancel'}"

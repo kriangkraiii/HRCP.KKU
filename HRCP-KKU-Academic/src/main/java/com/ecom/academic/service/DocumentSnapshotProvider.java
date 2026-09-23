@@ -267,6 +267,27 @@ public class DocumentSnapshotProvider {
     }
 
     /**
+     * เอกสารฉบับนี้ยังอยู่ในมือผู้ยื่นหรือไม่ — คำร้องยังไม่ส่ง หรือเจ้าหน้าที่ส่งเอกสาร
+     * ฉบับนี้กลับมาให้แก้แล้วแต่ยังไม่ได้ยื่นกลับ
+     *
+     * <p>ทั้งสองกรณีคือช่วงที่ผู้ยื่นยังแก้เอกสารของตัวเองได้ ถ้าไม่ติดลายเซ็น
+     */
+    public boolean isOpenForApplicant(SignatureModule module, Long requestId, int documentType) {
+        if (isDraftRequest(module, requestId)) {
+            return true;
+        }
+        try {
+            return module == SignatureModule.ACADEMIC
+                    ? academicRequestService.isRevisionRequested(requestId, documentType)
+                    : positionRequestService.isRevisionRequested(requestId, documentType);
+        } catch (Exception e) {
+            log.warn("Could not check revision state for {} request {} doc {}: {}",
+                    module, requestId, documentType, e.toString());
+            return false;
+        }
+    }
+
+    /**
      * ข้อมูลหัวคำร้องสำหรับแสดงบนหน้าลงนาม
      *
      * @return null เมื่อหาคำร้องไม่เจอหรืออ่านไม่ได้ — หน้าลงนามแค่ไม่แสดงการ์ดนั้น
