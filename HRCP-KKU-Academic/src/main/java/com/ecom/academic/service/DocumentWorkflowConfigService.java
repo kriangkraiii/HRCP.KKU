@@ -3,8 +3,11 @@ package com.ecom.academic.service;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -58,24 +61,42 @@ public class DocumentWorkflowConfigService {
         // คำถามที่ผู้ลงนามต้องตอบผูกกับ "เอกสาร + ช่องลงนาม" ซึ่งเป็นความรู้ของเทมเพลต
         // ไม่ใช่สิ่งที่แอดมินตั้งค่าได้ จึงต้องหยิบจากทะเบียนมาแปะกลับ มิฉะนั้นเอกสารที่ถูกตั้งค่า
         // workflow เองจะทำให้คำถามหายไปเงียบ ๆ และเอกสารจะพิมพ์ผลประเมินออกมาว่าง
-        Map<String, SignatureAnchorRegistry.SignerChoice> choices = new HashMap<>();
+        // ช่องวันที่ลงนาม/ช่องติ๊กของผู้ลงนามก็เป็นความรู้ของเทมเพลตเหมือนกัน
+        Map<String, SignatureSlot> fromRegistry = new LinkedHashMap<>();
         for (SignatureSlot slot : registry.slotsFor(module, documentType)) {
-            if (slot.choice() != null) {
-                choices.put(slot.slotKey(), slot.choice());
-            }
+            fromRegistry.put(slot.slotKey(), slot);
         }
 
-        return configs.stream()
-                .filter(DocumentWorkflowConfig::isEnabled)
+        List<SignatureSlot> slots = new ArrayList<>();
+        Set<String> configured = new HashSet<>();
+        configs.stream()
                 .sorted(Comparator.comparingInt(DocumentWorkflowConfig::getStepOrder))
-                .map(c -> new SignatureSlot(
-                        c.getSlotKey(),
-                        c.getRoleLabel(),
-                        c.getAnchorPlaceholder(),
-                        c.getDefaultStaffRole(),
-                        c.getStepOrder(),
-                        choices.get(c.getSlotKey())))
-                .toList();
+                .forEach(c -> {
+                    configured.add(c.getSlotKey());
+                    if (!c.isEnabled()) {
+                        return;
+                    }
+                    SignatureSlot known = fromRegistry.get(c.getSlotKey());
+                    slots.add(new SignatureSlot(
+                            c.getSlotKey(),
+                            c.getRoleLabel(),
+                            c.getAnchorPlaceholder(),
+                            c.getDefaultStaffRole(),
+                            c.getStepOrder(),
+                            known == null ? null : known.choice(),
+                            known == null ? null : known.marks()));
+                });
+
+        // ช่องลงนามที่เทมเพลตเพิ่มเข้ามาทีหลังการตั้งค่า (เช่น แบบ ก.พ.ว. มข. ๐๓ ที่รวมส่วนของ
+        // ผู้บังคับบัญชาเข้ามา) ยังไม่มีแถวตั้งค่า — ถ้าไม่เติมจากทะเบียน ช่องนั้นจะหายไปเงียบ ๆ
+        // จนกว่าแอดมินจะเข้าไปกดบันทึกหน้าตั้งค่าผู้ลงนามอีกรอบ
+        for (SignatureSlot slot : fromRegistry.values()) {
+            if (!configured.contains(slot.slotKey())) {
+                slots.add(slot);
+            }
+        }
+        slots.sort(Comparator.comparingInt(SignatureSlot::order));
+        return slots;
     }
 
     /**

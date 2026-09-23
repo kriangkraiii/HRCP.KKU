@@ -57,7 +57,8 @@ import com.ecom.repository.UserRepository;
 class SignatureEvidenceTest {
 
     private static final SignatureModule MODULE = SignatureModule.POSITION;
-    private static final int DOC_TYPE = 5;
+    // แบบ ก.พ.ว. มข. 03 — ส่วนที่ ๒ มีช่องหัวหน้าสาขาวิชาและคณบดีต่อจากผู้ยื่น
+    private static final int DOC_TYPE = 1;
     private static final Long REQUEST_ID = 9001L;
     private static final String FROZEN_JSON = "{\"department_head_name\":\"สุดา\",\"dean_name\":\"สมชาย\"}";
 

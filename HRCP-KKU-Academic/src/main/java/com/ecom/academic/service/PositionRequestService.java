@@ -76,6 +76,8 @@ public class PositionRequestService {
     /** Which publications each request puts forward — see {@link PositionRequestPublication}. */
     private final PositionRequestPublicationRepository publicationLinkRepository;
 
+    private final com.ecom.service.UploadPaths uploadPaths;
+
     public PositionRequestService(
             PositionRequestRepository requestRepository,
             PositionDocumentRepository documentRepository,
@@ -87,7 +89,9 @@ public class PositionRequestService {
             com.ecom.service.AfterCommitRunner afterCommit,
             PositionAttachmentRepository attachmentRepository,
             com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository,
-            PositionRequestPublicationRepository publicationLinkRepository) {
+            PositionRequestPublicationRepository publicationLinkRepository,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.statusHistoryRepository = statusHistoryRepository;
@@ -107,11 +111,11 @@ public class PositionRequestService {
 
     private static final Map<Integer, String> DOC_LABELS = new LinkedHashMap<>();
     static {
-        DOC_LABELS.put(1, "แบบ ก.พ.ว. มข. 03 (ประวัติและผลงาน)");
+        DOC_LABELS.put(1, "แบบ ก.พ.ว. มข. 03 (ส่วนที่ 1–5)");
         DOC_LABELS.put(2, "หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูล");
         DOC_LABELS.put(3, "แบบรับรองจริยธรรมและจรรยาบรรณ");
         DOC_LABELS.put(4, "บันทึกรับรองผลงานทางวิชาการ (วิทยานิพนธ์)");
-        DOC_LABELS.put(5, "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา");
+        // 5 (แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา) รวมเข้าเป็นส่วนที่ ๒ ของเอกสารที่ 1 แล้ว
         DOC_LABELS.put(6, "บันทึกข้อความจริยธรรมการวิจัย (Exemption)");
         DOC_LABELS.put(7, "แบบฟอร์มตรวจสอบคุณสมบัติ (Checklist)");
         DOC_LABELS.put(8, "แบบสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ");
@@ -435,11 +439,15 @@ public class PositionRequestService {
                     attachmentRepository.deleteAll(attachments);
                 }
 
-                // Delete entire position request folder from disk
+                // Delete entire position request folder from disk — attachments live under
+                // position/{id}, generated Phase 2 documents under academic/position/{id}
                 try {
-                    java.nio.file.Path requestDir = java.nio.file.Path.of("uploads/position/" + requestId);
-                    if (java.nio.file.Files.exists(requestDir)) {
-                        org.springframework.util.FileSystemUtils.deleteRecursively(requestDir);
+                    for (java.nio.file.Path requestDir : List.of(
+                            uploadPaths.dir("position", String.valueOf(requestId)),
+                            uploadPaths.dir("academic", "position", String.valueOf(requestId)))) {
+                        if (java.nio.file.Files.exists(requestDir)) {
+                            org.springframework.util.FileSystemUtils.deleteRecursively(requestDir);
+                        }
                     }
                 } catch (Exception e) {
                     log.warn("Could not delete position request folder for #{}: {}", requestId, e.getMessage());
@@ -796,11 +804,22 @@ public class PositionRequestService {
     @Transactional
     public int saveOfficeFieldsAcrossCopies(PositionRequest request, int documentType,
             Map<String, String> submitted, String label) {
+        return saveOfficeFieldsAcrossCopies(request, documentType, submitted, label, false);
+    }
+
+    /**
+     * เหมือนข้างบน แต่เมื่อ {@code includeAdminFields} รับช่องของแอดมินทั้งหมดด้วย
+     * ({@link DocumentFieldOwnership#lateFields}) — ใช้ตอนผู้ยื่นลงนามแล้วแต่ยังไม่ได้ส่งต่อ
+     * ให้ผู้ลงนามคนถัดไป ดู {@link SignatureWorkflowService#awaitsMoreSigners}
+     */
+    @Transactional
+    public int saveOfficeFieldsAcrossCopies(PositionRequest request, int documentType,
+            Map<String, String> submitted, String label, boolean includeAdminFields) {
         List<PositionDocument> docs = getDocumentsByType(request.getId(), documentType);
         if (docs.isEmpty()) {
             // ยังไม่มีแถวเลย — เปิดแถวร่างให้ เพื่อไม่ให้เลขที่กรอกไว้หายไปเฉย ๆ
             Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
-                    SignatureModule.POSITION, documentType, submitted, null);
+                    SignatureModule.POSITION, documentType, submitted, null, includeAdminFields);
             saveDraft(request, documentType, writeOfficeJson(merged), label, "ADMIN");
             return 1;
         }
@@ -823,8 +842,10 @@ public class PositionRequestService {
                 }
             }
             Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
-                    SignatureModule.POSITION, documentType, submitted, existing);
+                    SignatureModule.POSITION, documentType, submitted, existing, includeAdminFields);
             doc.setJsonData(writeOfficeJson(merged));
+            // ไฟล์ที่สร้างไว้จากข้อมูลชุดก่อนไม่มีค่าที่เพิ่งกรอก — ทิ้งไป ทางสำรองจะได้สร้างใหม่
+            doc.setGeneratedFilePath(null);
             documentRepository.save(doc);
             written++;
         }
@@ -1166,8 +1187,14 @@ public class PositionRequestService {
 
     private void deletePhysicalFile(String filePath) {
         if (filePath != null && !filePath.isBlank()) {
+            if (filePath.startsWith("http://") || filePath.startsWith("https://")) {
+                return;
+            }
             try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(filePath));
+                java.nio.file.Path path = uploadPaths.resolve(filePath);
+                if (path != null) {
+                    java.nio.file.Files.deleteIfExists(path);
+                }
             } catch (Exception e) {
                 log.warn("Failed to delete position physical file {}: {}", filePath, e.getMessage());
             }

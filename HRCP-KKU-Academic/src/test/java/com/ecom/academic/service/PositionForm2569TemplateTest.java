@@ -2,23 +2,33 @@ package com.ecom.academic.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import java.awt.image.BufferedImage;
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+
+import javax.imageio.ImageIO;
 
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.springframework.core.io.ClassPathResource;
 
+import com.ecom.academic.service.DocumentGenerationService.StampedSignature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 /**
- * เทมเพลตเฟส 2 ตามแบบฟอร์มข้อบังคับ พ.ศ. 2569 — เอกสารที่ 1 (แบบ ก.พ.ว. มข.๐๓) และ
+ * เทมเพลตเฟส 2 ตามแบบฟอร์มข้อบังคับ พ.ศ. 2569 — เอกสารที่ 1 (แบบ ก.พ.ว. มข.๐๓ ฉบับเต็ม ส่วนที่ ๑–๕) และ
  * เอกสารที่ 9 (แบบแสดงหลักฐานการมีส่วนร่วมในผลงานทางวิชาการ)
  *
  * <p>แบบฟอร์มที่ได้มาเป็นฉบับเปล่า ไม่มี placeholder สักตัว ทุกช่องจึงถูกฝังเข้าไปใหม่ทั้งหมด
@@ -38,6 +48,25 @@ class PositionForm2569TemplateTest {
                 XWPFWordExtractor extractor = new XWPFWordExtractor(document)) {
             return extractor.getText();
         }
+    }
+
+    private static byte[] samplePng() throws IOException {
+        BufferedImage image = new BufferedImage(30, 10, BufferedImage.TYPE_INT_ARGB);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", out);
+        return out.toByteArray();
+    }
+
+    private static String documentXml(byte[] docx) throws IOException {
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(docx))) {
+            ZipEntry entry;
+            while ((entry = zip.getNextEntry()) != null) {
+                if ("word/document.xml".equals(entry.getName())) {
+                    return new String(zip.readAllBytes(), StandardCharsets.UTF_8);
+                }
+            }
+        }
+        throw new AssertionError("ไม่พบ word/document.xml");
     }
 
     private static int count(String haystack, String needle) {
@@ -124,15 +153,153 @@ class PositionForm2569TemplateTest {
         }
 
         @Test
-        @DisplayName("ตัดส่วนที่ ๒–๕ ออก เหลือเฉพาะส่วนที่ผู้ยื่นกรอก")
-        void onlyPartOneRemains() throws IOException {
+        @DisplayName("เป็นแบบฟอร์มฉบับเต็ม ครบทั้งส่วนที่ ๑–๕")
+        void allFivePartsArePresent() throws IOException {
             String doc = render(1, associateApplicant());
 
-            assertThat(doc).contains("ส่วนที่ ๑");
             assertThat(doc)
-                    .as("ส่วนที่ ๒ คือเอกสารที่ 5 อยู่แล้ว ส่วนที่ ๓–๕ กรรมการกับสภาเป็นผู้กรอก")
-                    .doesNotContain("ส่วนที่ ๒").doesNotContain("ส่วนที่ ๓")
-                    .doesNotContain("ส่วนที่ ๔").doesNotContain("ส่วนที่  ๕");
+                    .contains("ส่วนที่ ๑")
+                    .contains("ส่วนที่ ๒")
+                    .contains("แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา")
+                    .contains("ส่วนที่ ๓")
+                    .contains("แบบประเมินผลการสอน")
+                    .contains("ส่วนที่ ๔")
+                    .contains("ส่วนที่  ๕ มติสภามหาวิทยาลัยขอนแก่น");
+        }
+
+        @Test
+        @DisplayName("ส่วนที่ ๒ ส่วนหัวมาจากข้อมูลของผู้ยื่นชุดเดียวกับส่วนที่ ๑")
+        void partTwoHeaderRepeatsTheApplicant() throws IOException {
+            String doc = partTwoOf(render(1, associateApplicant()));
+
+            assertThat(doc)
+                    .contains("แบบประเมินแต่งตั้งให้ดำรงตำแหน่ง รองศาสตราจารย์")
+                    .contains("(โดยวิธีปกติ)")
+                    .contains("ในสาขาวิชา วิทยาการคอมพิวเตอร์  (รหัส ๐๑๐๓)")
+                    .contains("ของ ผศ.ดร.สมชาย ใจดีวิชาการ")
+                    .contains("ได้ตรวจสอบคุณสมบัติเฉพาะสำหรับตำแหน่ง รองศาสตราจารย์ แล้วเห็นว่า ผศ.ดร.สมชาย ใจดีวิชาการ");
+        }
+
+        @Test
+        @DisplayName("ส่วนที่ ๒ ก่อนผู้บังคับบัญชาลงนาม ยังเป็นแบบฟอร์มเปล่า")
+        void partTwoIsBlankUntilTheSupervisorsSign() throws IOException {
+            String doc = partTwoOf(render(1, associateApplicant()));
+
+            assertThat(doc)
+                    .contains("เป็นผู้มีคุณสมบัติ (ครบถ้วน / ไม่ครบถ้วน) ตามหลักเกณฑ์")
+                    .contains("เป็นผู้มีคุณสมบัติ ...(เข้าข่าย/ไม่เข้าข่าย) ที่จะได้รับการแต่งตั้ง")
+                    .contains("วันที่ ........เดือน.................พ.ศ......");
+        }
+
+        @Test
+        @DisplayName("ส่วนที่ ๒ ผลการตรวจและวันที่ลงนามของผู้บังคับบัญชาขึ้นบนเอกสาร")
+        void partTwoCarriesTheSupervisorsAnswers() throws IOException {
+            Map<String, String> data = associateApplicant();
+            data.put("qualification_status", "ครบถ้วน");
+            data.put("dean_qualification_status", "เข้าข่าย");
+            data.put("department_head_name", "รศ.ดร.หัวหน้า สาขาวิชา");
+            data.put("dean_name", "ศ.ดร.คณบดี วิทยาลัย");
+            data.put("head_sign_date", "1 ตุลาคม 2569");
+            data.put("dean_sign_date", "3 ตุลาคม 2569");
+
+            String doc = partTwoOf(render(1, data));
+
+            assertThat(doc)
+                    .contains("เป็นผู้มีคุณสมบัติ ครบถ้วน ตามหลักเกณฑ์")
+                    .contains("เป็นผู้มีคุณสมบัติ เข้าข่าย ที่จะได้รับการแต่งตั้งให้ดำรงตำแหน่ง รองศาสตราจารย์")
+                    .contains("(รศ.ดร.หัวหน้า สาขาวิชา)")
+                    .contains("(ศ.ดร.คณบดี วิทยาลัย)")
+                    .as("แบบฟอร์มพิมพ์เลขไทย วันที่ที่ระบบเติมต้องเป็นเลขไทยด้วย")
+                    .contains("วันที่ ๑ ตุลาคม ๒๕๖๙")
+                    .contains("วันที่ ๓ ตุลาคม ๒๕๖๙");
+        }
+
+        @Test
+        @DisplayName("ส่วนที่ ๓ เติมจากผลประเมินการสอน")
+        void partThreeCarriesTheTeachingEvaluation() throws IOException {
+            Map<String, String> data = associateApplicant();
+            data.put("s3_meeting_no", "3/2568");
+            data.put("s3_meeting_date", "15 มกราคม 2569");
+            data.put("s3_university", "มหาวิทยาลัยขอนแก่น");
+            data.put("s3_course_code", "CP353001");
+            data.put("s3_course_name", "โครงสร้างข้อมูล");
+            data.put("s3_level", "ชำนาญพิเศษ");
+            data.put("s3_quality", "อยู่");
+            data.put("s3_chair_name", "ศ.ดร.ประธาน อนุกรรมการ");
+            data.put("s3_sign_date", "20 มกราคม 2569");
+
+            String doc = render(1, data);
+
+            assertThat(doc)
+                    .contains("ในการประชุมครั้งที่ ๓/๒๕๖๘ เมื่อวันที่ ๑๕ มกราคม ๒๕๖๙")
+                    .contains("คณะกรรมการพิจารณาตำแหน่งทางวิชาการ มหาวิทยาลัยขอนแก่น")
+                    .contains("รหัสวิชา CP๓๕๓๐๐๑ รายวิชา โครงสร้างข้อมูล")
+                    .contains("เป็นผู้มีความชำนาญพิเศษ ในการสอนมีคุณภาพอยู่ในหลักเกณฑ์")
+                    .contains("(ศ.ดร.ประธาน อนุกรรมการ)")
+                    .contains("วันที่ ๒๐ มกราคม ๒๕๖๙");
+        }
+
+        @Test
+        @DisplayName("ส่วนที่ ๓ เมื่อไม่มีผลประเมินให้ดึง ยังเป็นแบบฟอร์มเปล่า")
+        void partThreeIsBlankWithoutAnEvaluation() throws IOException {
+            String doc = render(1, associateApplicant());
+
+            assertThat(doc)
+                    .contains("ในการประชุมครั้งที่ ....... เมื่อวันที่ ................")
+                    .contains("เป็นผู้มีความ....(ชำนาญ/ชำนาญพิเศษ/เชี่ยวชาญ).....")
+                    .contains("ในการสอนมีคุณภาพ..(อยู่/ไม่อยู่).....ในหลักเกณฑ์");
+        }
+
+        @Test
+        @DisplayName("ส่วนที่ ๔–๕ ของกองทรัพยากรบุคคลและสภามหาวิทยาลัย ตรงกับแบบฟอร์มเปล่าทุกตัวอักษร")
+        void partsFourAndFiveMatchTheBlankForm() throws IOException {
+            String doc = render(1, associateApplicant());
+            String blank;
+            try (XWPFDocument document = new XWPFDocument(new ClassPathResource(
+                    "templates/docx/Phase2/แบบ-ก.พ.ว.-มข.๐๓.docx").getInputStream());
+                    XWPFWordExtractor extractor = new XWPFWordExtractor(document)) {
+                blank = extractor.getText();
+            }
+
+            assertThat(fromPartFour(doc)).isEqualTo(fromPartFour(blank));
+        }
+
+        @Test
+        @DisplayName("ช่องลงนามของแต่ละคนมีที่เดียว ลายเซ็นจะได้ไม่ไปลงผิดส่วน")
+        void everySignatureAnchorAppearsOnce() throws IOException {
+            String template;
+            try (XWPFDocument document = new XWPFDocument(new ClassPathResource(
+                    "templates/docx/Phase2/p2doc_1.docx").getInputStream());
+                    XWPFWordExtractor extractor = new XWPFWordExtractor(document)) {
+                template = extractor.getText();
+            }
+
+            assertThat(count(template, "({{title}}{{applicant_name}})")).isEqualTo(1);
+            assertThat(count(template, "({{department_head_name}})")).isEqualTo(1);
+            assertThat(count(template, "({{dean_name}})")).isEqualTo(1);
+            assertThat(count(template, "({{s3_chair_name}})")).isEqualTo(1);
+        }
+
+        @Test
+        @DisplayName("ลายเซ็นประธานอนุกรรมการลงที่ส่วนที่ ๓ ไม่ใช่ที่อื่น")
+        void theChairSignatureLandsInPartThree() throws IOException {
+            byte[] docx = service.generateSignedP2Docx(1, mapper.writeValueAsString(associateApplicant()),
+                    List.of(new StampedSignature(TeachingEvaluationPartResolver.CHAIR_ANCHOR, samplePng(), 300, 100)));
+            String xml = documentXml(docx);
+
+            int partThree = xml.indexOf("แบบประเมินผลการสอน");
+            int partFour = xml.indexOf("แบบสรุปผลการประเมินผลงานทางวิชาการ");
+            int signature = xml.indexOf("r:embed=\"rIdHrcpSig1\"");
+
+            assertThat(signature).isGreaterThan(partThree).isLessThan(partFour);
+        }
+
+        private String partTwoOf(String doc) {
+            return doc.substring(doc.indexOf("แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา"), doc.indexOf("แบบประเมินผลการสอน"));
+        }
+
+        private String fromPartFour(String doc) {
+            return doc.substring(doc.indexOf("แบบสรุปผลการประเมินผลงานทางวิชาการ"));
         }
 
         @Test

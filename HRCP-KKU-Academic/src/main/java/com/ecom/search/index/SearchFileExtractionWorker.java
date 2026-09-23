@@ -116,13 +116,13 @@ public class SearchFileExtractionWorker {
      * Size and last-modified, so a replaced file is read again and an unchanged
      * one is not.
      */
-    private static String fingerprintOf(String storedPath) {
+    private String fingerprintOf(String storedPath) {
         if (storedPath == null || storedPath.isBlank()) {
             return null;
         }
         try {
-            Path path = Path.of(storedPath);
-            if (!Files.isRegularFile(path)) {
+            Path path = extractor.locate(storedPath);
+            if (path == null || !Files.isRegularFile(path)) {
                 return null;
             }
             return Files.size(path) + ":" + Files.getLastModifiedTime(path).toMillis();

@@ -49,15 +49,18 @@ class DocumentFieldOwnershipTest {
         }
 
         @Test
-        @DisplayName("เฟส 2 แอดมินเหลือแค่เอกสาร 7 กับ 8 — เอกสาร 5 ย้ายมาเป็นของผู้ยื่น")
+        @DisplayName("เฟส 2 แอดมินเหลือแค่เอกสาร 7 กับ 8 — เอกสาร 5 รวมเข้าเอกสาร 1 แล้ว")
         void phase2AdminKeepsOnlySevenAndEight() {
-            for (int type : new int[] { 1, 2, 3, 4, 5, 6, 9 }) {
+            for (int type : new int[] { 1, 2, 3, 4, 6, 9 }) {
                 assertThat(DocumentFieldOwnership.isApplicantDocument(P2, type))
                         .as("เอกสารเฟส 2 ที่ %d ต้องเป็นของผู้ยื่น", type)
                         .isTrue();
             }
             assertThat(DocumentFieldOwnership.isApplicantDocument(P2, 7)).isFalse();
             assertThat(DocumentFieldOwnership.isApplicantDocument(P2, 8)).isFalse();
+            assertThat(DocumentFieldOwnership.isApplicantDocument(P2, 5))
+                    .as("แบบประเมินโดยผู้บังคับบัญชาเป็นส่วนที่ ๒ ของเอกสาร 1 ไม่ใช่เอกสารแยกอีกต่อไป")
+                    .isFalse();
         }
 
         @Test
@@ -195,9 +198,9 @@ class DocumentFieldOwnershipTest {
     class SignerOwnedFields {
 
         @Test
-        @DisplayName("ผลประเมินของเอกสาร 5 เฟส 2 มาจากทะเบียนช่องลงนาม ไม่ได้ตั้งรายการซ้ำ")
+        @DisplayName("ผลประเมินในส่วนที่ ๒ ของเอกสาร 1 เฟส 2 มาจากทะเบียนช่องลงนาม ไม่ได้ตั้งรายการซ้ำ")
         void areDerivedFromTheSignatureRegistry() {
-            assertThat(DocumentFieldOwnership.signerFields(P2, 5))
+            assertThat(DocumentFieldOwnership.signerFields(P2, 1))
                     .containsExactlyInAnyOrder("qualification_status", "dean_qualification_status");
         }
 
@@ -213,8 +216,8 @@ class DocumentFieldOwnershipTest {
         void areWritableByNeitherSide() {
             Map<String, String> forged = map("qualification_status", "ครบถ้วน", "major", "วิทยาการคอมพิวเตอร์");
 
-            Map<String, String> byApplicant = DocumentFieldOwnership.merge(P2, 5, false, forged, map());
-            Map<String, String> byAdmin = DocumentFieldOwnership.merge(P2, 5, true, forged, map());
+            Map<String, String> byApplicant = DocumentFieldOwnership.merge(P2, 1, false, forged, map());
+            Map<String, String> byAdmin = DocumentFieldOwnership.merge(P2, 1, true, forged, map());
 
             assertThat(byApplicant).doesNotContainKey("qualification_status");
             assertThat(byAdmin).doesNotContainKey("qualification_status");
@@ -226,7 +229,7 @@ class DocumentFieldOwnershipTest {
         void areNotRestoredFromExistingEither() {
             Map<String, String> existing = map("qualification_status", "ครบถ้วน");
 
-            Map<String, String> result = DocumentFieldOwnership.merge(P2, 5, false, map(), existing);
+            Map<String, String> result = DocumentFieldOwnership.merge(P2, 1, false, map(), existing);
 
             assertThat(result).doesNotContainKey("qualification_status");
         }
@@ -340,6 +343,36 @@ class DocumentFieldOwnershipTest {
                         .as("เอกสารเฟส 2 ที่ %d", type)
                         .containsAll(DocumentFieldOwnership.officeFields(P2, type));
             }
+        }
+
+        @Test
+        @DisplayName("ช่องที่เติมทีหลังได้ = ช่องสารบรรณรวมกับช่องของแอดมินในเอกสารของผู้ยื่น")
+        void lateFieldsAreOfficeAndAdminFields() {
+            assertThat(DocumentFieldOwnership.lateFields(P2, 3))
+                    .containsExactlyInAnyOrder("dean_name", "dean_position", "verify_date");
+            assertThat(DocumentFieldOwnership.lateFields(P2, 4))
+                    .containsExactlyInAnyOrder("memo_no", "date", "department_head_name");
+            assertThat(DocumentFieldOwnership.lateFields(P2, 8))
+                    .as("เอกสารของแอดมินเองมีแค่ช่องสารบรรณ").containsExactly("date");
+        }
+
+        @Test
+        @DisplayName("ก่อนส่งต่อ แอดมินกรอกช่องของตัวเองได้ แต่ยังแตะช่องของผู้ยื่นและผู้ลงนามไม่ได้")
+        void beforeForwardingAdminFieldsAreWritable() {
+            Map<String, String> submitted = map("verify_date", "๓ ตุลาคม ๒๕๖๙",
+                    "applicant_name", "แอดมินแอบแก้");
+            Map<String, String> existing = map("applicant_name", "ผู้ยื่นกรอกไว้");
+
+            Map<String, String> open = DocumentFieldOwnership.mergeOfficeFields(P2, 3, submitted, existing, true);
+            Map<String, String> closed = DocumentFieldOwnership.mergeOfficeFields(P2, 3, submitted, existing, false);
+
+            assertThat(open).containsEntry("verify_date", "๓ ตุลาคม ๒๕๖๙")
+                    .containsEntry("applicant_name", "ผู้ยื่นกรอกไว้");
+            assertThat(closed).as("ส่งต่อแล้วเหลือแค่ช่องสารบรรณ").doesNotContainKey("verify_date");
+
+            Map<String, String> signer = DocumentFieldOwnership.mergeOfficeFields(P2, 1,
+                    map("qualification_status", "ครบถ้วน"), map(), true);
+            assertThat(signer).doesNotContainKey("qualification_status");
         }
 
         @Test

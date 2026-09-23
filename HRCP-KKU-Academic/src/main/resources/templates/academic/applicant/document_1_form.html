@@ -234,10 +234,6 @@
                                 <small class="text-success"><i class="fas fa-check"></i>
                                     [[${doc.documentLabel}]]</small>
                                 <div class="btn-group btn-group-sm">
-                                    <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=docx'"
-                                        class="btn btn-outline-primary" title="ดาวน์โหลด DOCX">
-                                        <i class="fas fa-file-word"></i> DOCX
-                                    </a>
                                     <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=pdf'"
                                         class="btn btn-outline-danger" title="ดาวน์โหลด PDF">
                                         <i class="fas fa-file-pdf"></i> PDF

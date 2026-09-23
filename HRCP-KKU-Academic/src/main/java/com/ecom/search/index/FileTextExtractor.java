@@ -35,12 +35,30 @@ public class FileTextExtractor {
 
     private final long maxFileBytes;
     private final int maxChars;
+    private final com.ecom.service.UploadPaths uploadPaths;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public FileTextExtractor(
             @Value("${app.search.file-text.max-file-bytes:52428800}") long maxFileBytes,
-            @Value("${app.search.file-text.max-chars:200000}") int maxChars) {
+            @Value("${app.search.file-text.max-chars:200000}") int maxChars,
+            com.ecom.service.UploadPaths uploadPaths) {
         this.maxFileBytes = maxFileBytes;
         this.maxChars = maxChars;
+        this.uploadPaths = uploadPaths;
+    }
+
+    /** For tests that build the extractor by hand. */
+    public FileTextExtractor(long maxFileBytes, int maxChars) {
+        this(maxFileBytes, maxChars, com.ecom.service.UploadPaths.workingDirectoryDefault());
+    }
+
+    /** Where a stored path points on disk, or null when it cannot be resolved. */
+    public Path locate(String storedPath) {
+        try {
+            return uploadPaths.resolve(storedPath);
+        } catch (RuntimeException e) {
+            return null;
+        }
     }
 
     /**
@@ -70,10 +88,8 @@ public class FileTextExtractor {
             return Extraction.skipped("ไม่มีพาธไฟล์");
         }
 
-        Path path;
-        try {
-            path = Path.of(storedPath);
-        } catch (RuntimeException e) {
+        Path path = locate(storedPath);
+        if (path == null) {
             return Extraction.skipped("พาธไฟล์ไม่ถูกต้อง");
         }
 

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
-import com.ecom.academic.model.SignatureRequestStatus;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -22,6 +21,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * <p>แต่งานสารบรรณเดินคนละจังหวะ: เลขที่หนังสือออกให้ <em>หลัง</em> เอกสารลงนามครบแล้ว
  * ถ้าไม่เติมทับตอน render เลขที่เจ้าหน้าที่กรอกจะบันทึกลงฐานข้อมูลสำเร็จแต่ไม่ปรากฏบนเอกสาร
+ *
+ * <p>ช่องอื่นของแอดมินในเอกสารของผู้ยื่นก็เดินจังหวะเดียวกัน ({@link DocumentFieldOwnership#lateFields})
+ * — ผู้ยื่นลงนามก่อนส่งคำร้องเสมอ แอดมินจึงกรอกช่องของตัวเองได้หลังจากนั้นเท่านั้น
  *
  * <p>เดินเส้นทางเดียวกับ {@link SignerNameResolver} ทุกประการ — เติมลง JSON ที่กำลังจะ
  * ส่งเข้าเครื่องสร้างเอกสาร ไม่แตะ {@code frozenJson} ที่เก็บไว้และไม่แตะแฮชของมัน
@@ -56,16 +58,19 @@ public class OfficeFieldResolver {
         if (envelope == null || json == null || json.isBlank()) {
             return json;
         }
-        // เฉพาะซองที่ลงนามครบแล้วเท่านั้น
+        // เฉพาะซองที่ยังถือเอกสารอยู่ — ลงนามครบแล้ว หรือกำลังเวียนต่อ
         //
-        // ซองที่ยังเวียนอยู่ไม่มีทางมีเลขใหม่ให้เติมอยู่แล้ว เพราะเซิร์ฟเวอร์ห้ามเขียนทับ
-        // แต่ซองเก่าที่ถูกปฏิเสธหรือยกเลิกไปแล้วมีได้ — เอกสารถูกปลดล็อกให้แก้ต่อ แล้วเลขที่
-        // เจ้าหน้าที่กรอกทีหลังจะไปโผล่บนภาพของซองเก่า ทั้งที่ตอนนั้นยังไม่มีเลขนั้น
-        // ซองที่เป็นหลักฐานของรอบที่ล้มเหลวต้องแสดงตามที่มันเป็นตอนนั้นจริง ๆ
-        if (envelope.getStatus() != SignatureRequestStatus.COMPLETED) {
+        // ซองที่กำลังเวียนต้องเติมด้วย: ผู้ยื่นเซ็นเสร็จ ซองเป็น COMPLETED แอดมินกรอกเลขที่
+        // หนังสือหรือช่องของตัวเองแล้วส่งต่อ ซองกลับเป็น IN_PROGRESS ถ้าไม่เติมตรงนี้ ค่าที่เพิ่ง
+        // เห็นจะหายไปจากทุกคนรวมทั้งผู้ลงนามคนถัดไปจนกว่าจะเซ็นครบ ระหว่างเวียนเซิร์ฟเวอร์ห้าม
+        // เขียนอยู่แล้ว ค่าที่เติมจึงเป็นค่าก่อนส่งต่อ ซึ่งคือสิ่งที่ผู้ลงนามคนถัดไปเห็นและเซ็น
+        //
+        // ซองที่ถูกปฏิเสธหรือยกเลิกไม่เติม — เอกสารถูกปลดล็อกให้แก้ต่อ ค่าที่กรอกทีหลังจะไปโผล่
+        // บนภาพของซองเก่า ซองที่เป็นหลักฐานของรอบที่ล้มเหลวต้องแสดงตามที่มันเป็นตอนนั้นจริง ๆ
+        if (envelope.getStatus() == null || !envelope.getStatus().locksDocument()) {
             return json;
         }
-        Set<String> keys = DocumentFieldOwnership.officeFields(
+        Set<String> keys = DocumentFieldOwnership.lateFields(
                 envelope.getModule(), envelope.getDocumentType());
         if (keys.isEmpty()) {
             return json;

@@ -22,8 +22,12 @@ public class FileManagementService {
     private final AcademicDocumentRepository documentRepository;
     private final AcademicAttachmentRepository attachmentRepository;
 
+    private final com.ecom.service.UploadPaths uploadPaths;
+
     public FileManagementService(AcademicDocumentRepository documentRepository,
-            AcademicAttachmentRepository attachmentRepository) {
+            AcademicAttachmentRepository attachmentRepository,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.documentRepository = documentRepository;
         this.attachmentRepository = attachmentRepository;
     }
@@ -144,7 +148,10 @@ public class FileManagementService {
         if (filePath == null)
             return;
         try {
-            Files.deleteIfExists(Path.of(filePath));
+            Path path = uploadPaths.resolve(filePath);
+            if (path != null) {
+                Files.deleteIfExists(path);
+            }
         } catch (IOException e) {
             // Log but don't fail
         }
@@ -221,8 +228,8 @@ public class FileManagementService {
         if (filePath == null)
             return 0L;
         try {
-            Path path = Path.of(filePath);
-            if (Files.exists(path))
+            Path path = uploadPaths.resolve(filePath);
+            if (path != null && Files.exists(path))
                 return Files.size(path);
         } catch (IOException e) {
             // ignore

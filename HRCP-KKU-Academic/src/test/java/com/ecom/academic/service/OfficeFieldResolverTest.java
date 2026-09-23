@@ -49,14 +49,14 @@ class OfficeFieldResolverTest {
     }
 
     @Test
-    @DisplayName("ซองที่ยังไม่ปิดรอบไม่ถูกเติม — ภาพของรอบที่ล้มเหลวต้องตรงกับตอนนั้น")
-    void onlyTouchesCompletedEnvelopes() {
+    @DisplayName("ซองของรอบที่ล้มเหลวไม่ถูกเติม — ภาพของรอบนั้นต้องตรงกับตอนนั้น")
+    void leavesFailedRoundsAsTheyWere() {
         when(academicService.getLatestDocumentData(7L, 1))
                 .thenReturn(Map.of("memo_no", "อว 660301.26.8/13"));
         String frozen = "{\"memo_no\":\"อว 660301.26.8/\"}";
 
         for (SignatureRequestStatus status : SignatureRequestStatus.values()) {
-            if (status == SignatureRequestStatus.COMPLETED) {
+            if (status.locksDocument()) {
                 continue;
             }
             envelope.setStatus(status);
@@ -64,6 +64,33 @@ class OfficeFieldResolverTest {
                     .as("ซองสถานะ %s", status)
                     .isEqualTo(frozen);
         }
+    }
+
+    @Test
+    @DisplayName("ส่งต่อแล้ว (ซองกลับมาเวียน) เลขที่หนังสือต้องยังอยู่ ไม่หายจนกว่าจะเซ็นครบ")
+    void keepsTheMemoNumberWhileTheRoundIsForwarded() {
+        envelope.setStatus(SignatureRequestStatus.IN_PROGRESS);
+        when(academicService.getLatestDocumentData(7L, 1))
+                .thenReturn(Map.of("memo_no", "อว 660301.26.8/13"));
+
+        assertThat(resolver.fillInto(envelope, "{\"memo_no\":\"อว 660301.26.8/\"}"))
+                .contains("อว 660301.26.8/13");
+    }
+
+    @Test
+    @DisplayName("ช่องของแอดมินที่กรอกหลังผู้ยื่นลงนาม ขึ้นบนเอกสารให้ทุกคนเห็น")
+    void fillsAdminFieldsAddedAfterTheApplicantSigned() {
+        envelope.setModule(SignatureModule.POSITION);
+        envelope.setDocumentType(3);
+        envelope.setStatus(SignatureRequestStatus.IN_PROGRESS);
+        when(positionService.getLatestDocumentData(7L, 3))
+                .thenReturn(Map.of("verify_date", "๓ ตุลาคม ๒๕๖๙", "applicant_name", "ชื่อที่แก้ทีหลัง"));
+
+        String json = resolver.fillInto(envelope, "{\"applicant_name\":\"สมชาย ใจดี\"}");
+
+        assertThat(json).contains("๓ ตุลาคม ๒๕๖๙");
+        // ช่องของผู้ยื่นต้องเป็นฉบับที่ลงนามไว้เสมอ
+        assertThat(json).contains("สมชาย ใจดี").doesNotContain("ชื่อที่แก้ทีหลัง");
     }
 
     @Test
@@ -103,13 +130,14 @@ class OfficeFieldResolverTest {
     }
 
     @Test
-    @DisplayName("เอกสารที่ไม่มีช่องสารบรรณ ไม่ถูกแตะเลย")
-    void leavesDocumentsWithoutOfficeFieldsAlone() {
-        envelope.setDocumentType(2);
-        when(academicService.getLatestDocumentData(7L, 2))
-                .thenReturn(Map.of("memo_no", "ไม่ควรถูกใช้", "hr_staff_name", "ชื่อใหม่"));
+    @DisplayName("เอกสารที่ไม่มีช่องให้เติมทีหลัง ไม่ถูกแตะเลย")
+    void leavesDocumentsWithoutLateFieldsAlone() {
+        // เอกสารที่ 3 เฟส 1 เป็นของแอดมินทั้งฉบับ ไม่มีช่องสารบรรณและไม่ใช่เอกสารของผู้ยื่น
+        envelope.setDocumentType(3);
+        when(academicService.getLatestDocumentData(7L, 3))
+                .thenReturn(Map.of("memo_no", "ไม่ควรถูกใช้", "committee_1_name", "ชื่อใหม่"));
 
-        String original = "{\"hr_staff_name\":\"ชื่อที่ลงนามไว้\"}";
+        String original = "{\"committee_1_name\":\"ชื่อที่ลงนามไว้\"}";
 
         assertThat(resolver.fillInto(envelope, original)).isEqualTo(original);
     }

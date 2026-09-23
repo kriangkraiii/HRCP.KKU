@@ -317,9 +317,9 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsByteArray();
         assertThat(document).as("ไฟล์ที่ดาวน์โหลดต้องไม่ว่าง").isNotEmpty();
-        assertThat(new String(document, 0, 2, StandardCharsets.ISO_8859_1))
-                .as("DOCX เป็นไฟล์ ZIP จึงต้องขึ้นต้นด้วย PK")
-                .isEqualTo("PK");
+        assertThat(new String(document, 0, 4, StandardCharsets.ISO_8859_1))
+                .as("ผู้ยื่นที่ส่งคำร้องแล้วต้องได้ไฟล์ PDF เท่านั้น (ขึ้นต้นด้วย %PDF)")
+                .isEqualTo("%PDF");
     }
 
     // =====================================================================

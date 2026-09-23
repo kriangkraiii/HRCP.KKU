@@ -560,17 +560,18 @@ class SignatureCirculationTest extends AbstractFlowTest {
             PositionRequest request = data.positionRequest(applicant,
                     PositionRequestStatus.DOCUMENT_RECEIVED, null);
 
-            // Document 5 = แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา
-            Result created = workflow.createEnvelope(SignatureModule.POSITION, request.getId(), 5,
-                    "แบบประเมินคุณสมบัติ", "{\"applicant_name\":\"สมชาย\"}",
-                    List.of(new SignerAssignment("head", dean.getId()),
+            // แบบประเมินคุณสมบัติโดยผู้บังคับบัญชาคือส่วนที่ ๒ ของเอกสารที่ 1 (แบบ ก.พ.ว. มข. ๐๓)
+            Result created = workflow.createEnvelope(SignatureModule.POSITION, request.getId(), 1,
+                    "แบบ ก.พ.ว. มข. 03", "{\"applicant_name\":\"สมชาย\"}",
+                    List.of(new SignerAssignment("applicant", applicant.getId()),
+                            new SignerAssignment("head", dean.getId()),
                             new SignerAssignment("dean", hrOfficer.getId())),
                     null, applicant, ActorContext.none());
 
             assertThat(created.ok()).isTrue();
             assertThat(slotKeysOf(created.request()))
-                    .as("ข้อ 16 = หัวหน้าสาขาวิชา, ข้อ 18 = คณบดี — ต้องมีครบทั้งสอง ตามลำดับ")
-                    .containsExactly("head", "dean");
+                    .as("เจ้าของประวัติก่อน แล้วข้อ 16 = หัวหน้าสาขาวิชา, ข้อ 18 = คณบดี ตามลำดับ")
+                    .containsExactly("applicant", "head", "dean");
         }
 
         @Test

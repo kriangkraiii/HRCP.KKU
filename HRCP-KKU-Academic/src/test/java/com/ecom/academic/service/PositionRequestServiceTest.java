@@ -432,30 +432,30 @@ public class PositionRequestServiceTest {
     class DocLabels {
 
         @Test
-        void getDocLabels_Returns9Documents() {
-            assertThat(positionService.getDocLabels()).hasSize(9);
+        void getDocLabels_Returns8Documents() {
+            // เอกสารที่ 5 รวมเข้าเป็นส่วนที่ ๒ ของแบบ ก.พ.ว. มข. 03 (เอกสารที่ 1) แล้ว
+            assertThat(positionService.getDocLabels()).hasSize(8).doesNotContainKey(5);
         }
 
         @Test
-        void getApplicantDocLabels_Returns7Documents() {
-            // เอกสารที่ 5 (แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา) ย้ายมาเป็นของผู้ยื่น
-            // ผู้ยื่นกรอกส่วนหัวแล้วส่งเวียนลงนามให้หัวหน้าสาขาวิชาและคณบดีเอง
-            // แอดมินจึงเหลือกรอกแค่เอกสารที่ 7 กับ 8
-            assertThat(positionService.getApplicantDocLabels()).hasSize(7);
+        void getApplicantDocLabels_Returns6Documents() {
+            // แบบประเมินคุณสมบัติโดยผู้บังคับบัญชาเป็นส่วนที่ ๒ ของเอกสารที่ 1 แล้ว หัวหน้าสาขาวิชา
+            // และคณบดีลงนามต่อจากผู้ยื่นในซองเดียวกัน แอดมินยังกรอกแค่เอกสารที่ 7 กับ 8
+            assertThat(positionService.getApplicantDocLabels()).hasSize(6);
             assertThat(positionService.getApplicantDocLabels().keySet())
-                    .containsExactlyInAnyOrder(1, 2, 3, 4, 5, 6, 9);
+                    .containsExactlyInAnyOrder(1, 2, 3, 4, 6, 9);
             assertThat(PositionRequestService.ADMIN_DOCS).containsExactly(7, 8);
         }
 
         @Test
-        void getAdminDocLabels_Returns9Documents() {
-            assertThat(positionService.getAdminDocLabels()).hasSize(9);
+        void getAdminDocLabels_Returns8Documents() {
+            assertThat(positionService.getAdminDocLabels()).hasSize(8);
         }
 
         @Test
         void getDocLabel_ReturnsCorrectLabel() {
-            assertThat(positionService.getDocLabel(1)).contains("ก.พ.ว.");
-            assertThat(positionService.getDocLabel(5)).contains("ผู้บังคับบัญชา");
+            assertThat(positionService.getDocLabel(1)).contains("ก.พ.ว.").contains("ส่วนที่ 1–5");
+            assertThat(positionService.getDocLabel(5)).isEqualTo("เอกสารที่ 5");
         }
 
         @Test

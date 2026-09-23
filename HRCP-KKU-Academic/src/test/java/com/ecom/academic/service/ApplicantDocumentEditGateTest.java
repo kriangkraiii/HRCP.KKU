@@ -59,7 +59,8 @@ class ApplicantDocumentEditGateTest {
                 signatureRequestRepository,
                 event -> {
                     /* การส่งคืนให้แก้ไขมีเทสต์ของตัวเองใน ReturnToDraftTest */
-                });
+                },
+                com.ecom.service.UploadPaths.workingDirectoryDefault());
 
         request = new AcademicRequest();
         request.setId(1L);

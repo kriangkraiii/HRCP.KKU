@@ -48,7 +48,6 @@ public class ChunkedUploadController {
     private static final Logger log = LoggerFactory.getLogger(ChunkedUploadController.class);
 
     private static final long CHUNK_SIZE = 5L * 1024 * 1024; // 5MB
-    private static final String TEMP_DIR = "uploads/chunks";
     private static final String ADMIN_STORAGE = "admin";
     private static final int MAX_CHUNKS = 200_000; // 200k * 5MB ≈ 1TB, well past any real upload
     private static final Duration SESSION_TTL = Duration.ofHours(6);
@@ -72,11 +71,23 @@ public class ChunkedUploadController {
 
     private final UserRepository userRepository;
 
+    private final com.ecom.service.UploadPaths uploadPaths;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public ChunkedUploadController(
+            AdminStorageService adminStorageService,
+            UserRepository userRepository,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.adminStorageService = adminStorageService;
+        this.userRepository = userRepository;
+        this.uploadPaths = uploadPaths;
+    }
+
+    /** For tests that build the controller by hand. */
     public ChunkedUploadController(
             AdminStorageService adminStorageService,
             UserRepository userRepository) {
-        this.adminStorageService = adminStorageService;
-        this.userRepository = userRepository;
+        this(adminStorageService, userRepository, com.ecom.service.UploadPaths.workingDirectoryDefault());
     }
 
     // ==================== Init Upload ====================
@@ -140,7 +151,7 @@ public class ChunkedUploadController {
         }
 
         String uploadId = UUID.randomUUID().toString();
-        Path chunkDir = Path.of(TEMP_DIR, uploadId);
+        Path chunkDir = uploadPaths.dir("chunks", uploadId);
 
         try {
             Files.createDirectories(chunkDir);
@@ -234,7 +245,7 @@ public class ChunkedUploadController {
         }
 
         try {
-            Path storageDir = Path.of("uploads/admin-storage");
+            Path storageDir = uploadPaths.dir("admin-storage");
             Files.createDirectories(storageDir);
 
             // Determine file extension
@@ -259,7 +270,7 @@ public class ChunkedUploadController {
 
             // Save to DB
             AdminFile saved = adminStorageService.saveUploadedFile(
-                    session.filename, finalPath.toString(), actualSize,
+                    session.filename, uploadPaths.toStored(finalPath), actualSize,
                     detectContentType(session.filename), session.folderId, session.ownerEmail);
             String savedName = saved.getOriginalFilename();
 

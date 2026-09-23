@@ -9,7 +9,7 @@
                 </a>
             </div>
 
-            <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 1: แบบ ก.พ.ว. มข. 03 (ประวัติและผลงาน)</h3>
+            <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 1: แบบ ก.พ.ว. มข. 03 (ส่วนที่ 1–5)</h3>
             <p class="small text-secondary mb-3"><i class="fas fa-user-pen me-1"></i> ผู้กรอก: ผู้ยื่นคำร้อง (เจ้าหน้าที่แก้ไขได้)</p>
 
             <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
@@ -18,7 +18,7 @@
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
-            <form th:action="'/admin/position/request/' + ${request.id} + '/document/1'" method="post" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/1'" id="doc1Form">
+            <form th:action="'/admin/position/request/' + ${request.id} + '/document/1'" method="post" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/1'" th:data-request-id="${request.id}" id="doc1Form">
 
                 <!-- ========== ส่วนที่ 0: หน้าปกคำขอ ========== -->
                 <div class="card card-academic mb-4">
@@ -553,6 +553,31 @@
                                 <input type="text" name="sign_date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙">
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ========== ส่วนที่ ๒–๕ (ไม่มีช่องให้กรอก) ========== -->
+                <!-- ห้ามใส่ input ในการ์ดนี้ — ช่องที่อยู่ในฟอร์มจะถูกบันทึกลง JSON แล้ว DocumentCompleteness นับเป็นช่องบังคับ -->
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ส่วนที่ ๒–๕ ของแบบ ก.พ.ว. มข. ๐๓</h5></div>
+                    <div class="card-body small">
+                        <p class="mb-2"><strong>ส่วนที่ ๒ แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา</strong> —
+                            หัวหน้าสาขาวิชาและคณบดีบันทึกผลตอนลงนามต่อจากผู้ยื่นในเอกสารฉบับนี้ วันที่ลงนามเติมให้อัตโนมัติ</p>
+                        <p class="mb-1"><strong>ส่วนที่ ๓ แบบประเมินผลการสอน</strong> —
+                            ดึงจากผลประเมินการสอนที่คำร้องนี้ผูกไว้ พร้อมลายเซ็นประธานคณะอนุกรรมการ</p>
+                        <table class="table table-sm table-borderless mb-2 ms-3" style="max-width:640px" th:if="${partThree != null and !partThree.isEmpty()}">
+                            <tr><td class="text-secondary" style="width:40%">การประชุมครั้งที่ / วันที่</td>
+                                <td><span th:text="${partThree['s3_meeting_no'] ?: '-'}"></span> / <span th:text="${partThree['s3_meeting_date'] ?: '-'}"></span></td></tr>
+                            <tr><td class="text-secondary">รายวิชา</td>
+                                <td><span th:text="${partThree['s3_course_code'] ?: '-'}"></span> <span th:text="${partThree['s3_course_name'] ?: ''}"></span></td></tr>
+                            <tr><td class="text-secondary">ระดับ / คุณภาพ</td>
+                                <td><span th:text="${partThree['s3_level'] ?: '-'}"></span> / <span th:text="${partThree['s3_quality'] ?: '-'}"></span></td></tr>
+                            <tr><td class="text-secondary">ประธานคณะอนุกรรมการ</td>
+                                <td th:text="${partThree['s3_chair_name'] ?: '-'}"></td></tr>
+                        </table>
+                        <p class="text-secondary ms-3 mb-2" th:if="${partThree == null or partThree.isEmpty()}">
+                            คำร้องนี้ไม่ได้ผูกผลประเมินการสอนไว้ ส่วนที่ ๓ จะเป็นแบบฟอร์มเปล่า</p>
+                        <p class="mb-0"><strong>ส่วนที่ ๔–๕</strong> — เป็นของกองทรัพยากรบุคคลและสภามหาวิทยาลัยขอนแก่น เอกสารจึงเว้นว่างไว้ตามแบบฟอร์ม</p>
                     </div>
                 </div>
 

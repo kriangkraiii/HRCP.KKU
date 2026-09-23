@@ -10,6 +10,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.SignatureKind;
 import com.ecom.academic.model.UserSignature;
+import com.ecom.academic.repository.SignatureStepRepository;
 import com.ecom.academic.repository.UserSignatureRepository;
 import com.ecom.model.UserDtls;
 import com.ecom.service.SignatureImageStorage;
@@ -39,10 +40,13 @@ public class UserSignatureService {
 
     private final UserSignatureRepository repository;
     private final SignatureImageStorage storage;
+    private final SignatureStepRepository stepRepository;
 
-    public UserSignatureService(UserSignatureRepository repository, SignatureImageStorage storage) {
+    public UserSignatureService(UserSignatureRepository repository, SignatureImageStorage storage,
+            SignatureStepRepository stepRepository) {
         this.repository = repository;
         this.storage = storage;
+        this.stepRepository = stepRepository;
     }
 
     public List<UserSignature> findMine(UserDtls owner) {
@@ -173,7 +177,7 @@ public class UserSignatureService {
         UserSignature saved = repository.save(signature);
 
         if (replacedImage != null) {
-            storage.deleteIfPresent(replacedImage);
+            deleteImageUnlessSigned(replacedImage);
         }
         return new SaveResult(saved, null);
     }
@@ -181,9 +185,10 @@ public class UserSignatureService {
     /**
      * Soft-deletes a signature and removes its image file.
      *
-     * <p>The row survives because signed documents reference it as evidence; the
-     * file goes because the owner asked for their image to be gone, and every
-     * document that already used it holds its own copy of the stamped image.
+     * <p>The row survives because signed documents reference it as evidence. The
+     * file goes because the owner asked for their image to be gone — unless a
+     * document signed before signing started taking its own copy still points at
+     * it, in which case removing it would blank that signature out of the document.
      */
     @Transactional
     public boolean delete(Long id, UserDtls owner) {
@@ -194,9 +199,47 @@ public class UserSignatureService {
         signature.setIsDeleted(true);
         signature.setIsDefault(false);
         repository.save(signature);
-        storage.deleteIfPresent(signature.getImagePath());
+        deleteImageUnlessSigned(signature.getImagePath());
         log.info("Signature {} soft-deleted by its owner", id);
         return true;
+    }
+
+    /**
+     * Copies a library image into a file of its own for one signing.
+     *
+     * <p>The copy is what the signed step points at, so the owner can later
+     * replace or delete the library entry without the document changing.
+     *
+     * @return the copy's filename, or null when the source is missing or unreadable
+     */
+    public String copyImageForSigning(UserSignature signature) {
+        if (signature == null || signature.getImagePath() == null || signature.getImagePath().isBlank()) {
+            return null;
+        }
+        byte[] png = storage.read(signature.getImagePath());
+        if (png == null) {
+            return null;
+        }
+        SignatureImageStorage.StoredImage copy = storage.store(png);
+        return copy != null ? copy.filename() : null;
+    }
+
+    /**
+     * Deletes a library image file, unless a signed step still uses it.
+     *
+     * <p>Steps signed before {@link #copyImageForSigning} existed point straight at
+     * the library file, and their evidence seal covers that filename — so the
+     * file cannot be moved, only kept.
+     */
+    private void deleteImageUnlessSigned(String filename) {
+        if (filename == null || filename.isBlank()) {
+            return;
+        }
+        if (stepRepository.existsByImagePathSnapshot(filename)) {
+            log.info("Keeping signature image {}: a signed document still uses it", filename);
+            return;
+        }
+        storage.deleteIfPresent(filename);
     }
 
     /** Makes one signature the owner's default, clearing any previous one. */

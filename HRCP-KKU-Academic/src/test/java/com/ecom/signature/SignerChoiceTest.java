@@ -22,6 +22,7 @@ import com.ecom.academic.model.SignatureStepStatus;
 import com.ecom.academic.model.UserSignature;
 import com.ecom.academic.repository.SignatureRequestRepository;
 import com.ecom.academic.repository.SignatureStepRepository;
+import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.SignatureWorkflowService.ActorContext;
@@ -34,8 +35,9 @@ import com.ecom.support.AbstractFlowTest;
 /**
  * ผู้ลงนามตอบคำถามของแบบฟอร์มได้ โดยลายเซ็นในซองไม่เป็นโมฆะ
  *
- * <p>แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา (เฟส 2 เอกสารที่ 5) ไม่ได้ขอแค่ลายเซ็น แต่ขอผลการ
- * ตรวจสอบว่า "ครบถ้วน" หรือ "ไม่ครบถ้วน" ซึ่งเป็นคำตัดสินของผู้ลงนาม ไม่ใช่ข้อมูลที่ผู้ยื่นกรอก
+ * <p>แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา (ส่วนที่ ๒ ของแบบ ก.พ.ว. มข. ๐๓ — เฟส 2 เอกสารที่ 1)
+ * ไม่ได้ขอแค่ลายเซ็น แต่ขอผลการตรวจสอบว่า "ครบถ้วน" หรือ "ไม่ครบถ้วน" และความเห็นคณบดีว่า
+ * "เข้าข่าย" หรือ "ไม่เข้าข่าย" ซึ่งเป็นคำตัดสินของผู้ลงนาม ไม่ใช่ข้อมูลที่ผู้ยื่นกรอก
  *
  * <p><strong>ข้อที่สำคัญที่สุดคือเรื่องแฮช</strong> — ซองลายเซ็น freeze เนื้อหาเอกสารไว้ตอนเริ่ม
  * เวียน ถ้าคำตอบถูกเขียนลงเนื้อหาเอกสาร แฮชจะไม่ตรงและ {@code sign()} จะประกาศให้ลายเซ็นทั้งซอง
@@ -44,7 +46,7 @@ import com.ecom.support.AbstractFlowTest;
 @DisplayName("ตัวเลือกของผู้ลงนาม")
 class SignerChoiceTest extends AbstractFlowTest {
 
-    private static final int DOC_SUPERVISOR_REVIEW = 5;
+    private static final int DOC_SUPERVISOR_REVIEW = 1;
     private static final String FROZEN = "{\"applicant_name\":\"สมชาย ใจดี\",\"major\":\"วิทยาการคอมพิวเตอร์\"}";
 
     @Autowired
@@ -73,19 +75,21 @@ class SignerChoiceTest extends AbstractFlowTest {
     /**
      * ซองที่พร้อมให้หัวหน้าสาขาวิชาลงนามจริง
      *
-     * <p>ต้องปล่อยเวียนก่อน เพราะขั้นตอนที่ไม่ใช่ของผู้ยื่นจะรอเจ้าหน้าที่ตรวจแล้วปล่อยเสมอ
-     * (ดูประตูใน {@code SignatureWorkflowService.activateNextStep}) — เอกสารที่ 5 ผู้ยื่นเป็น
-     * คนส่ง แต่ไม่มีช่องลงนามของผู้ยื่นเลย ทั้งซองจึงรอการปล่อยทั้งหมด
+     * <p>ผู้ยื่นเซ็นส่วนที่ ๑ ก่อน แล้วต้องปล่อยเวียนอีกที เพราะขั้นตอนที่ไม่ใช่ของผู้ยื่นจะรอ
+     * เจ้าหน้าที่ตรวจแล้วปล่อยเสมอ (ดูประตูใน {@code SignatureWorkflowService.activateNextStep})
      */
     private SignatureRequest supervisorReviewSentForSignature() {
         PositionRequest request = data.positionRequest(applicant,
                 PositionRequestStatus.DOCUMENT_RECEIVED, null);
         data.positionDocument(request, DOC_SUPERVISOR_REVIEW, FROZEN);
         SignatureRequest envelope = workflow.createEnvelope(SignatureModule.POSITION, request.getId(),
-                DOC_SUPERVISOR_REVIEW, "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา", FROZEN,
-                List.of(new SignerAssignment("head", head.getId()),
+                DOC_SUPERVISOR_REVIEW, "แบบ ก.พ.ว. มข. 03", FROZEN,
+                List.of(new SignerAssignment("applicant", applicant.getId()),
+                        new SignerAssignment("head", head.getId()),
                         new SignerAssignment("dean", dean.getId())),
                 null, applicant, ActorContext.none()).request();
+        Result applicantSigned = signAs(applicant, stepFor(envelope, "applicant"), null);
+        assertThat(applicantSigned.ok()).as("ผู้ยื่นลงนามส่วนที่ ๑").isTrue();
         return workflow.startCirculation(envelope.getId(), data.admin(), ActorContext.none()).request();
     }
 
@@ -114,7 +118,7 @@ class SignerChoiceTest extends AbstractFlowTest {
             Result first = signAs(head, stepFor(envelope, "head"), "ครบถ้วน");
             assertThat(first.ok()).as("หัวหน้าสาขาวิชาลงนาม").isTrue();
 
-            Result second = signAs(dean, stepFor(envelope, "dean"), "ครบถ้วน");
+            Result second = signAs(dean, stepFor(envelope, "dean"), "เข้าข่าย");
 
             assertThat(second.ok())
                     .as("ถ้าคำตอบถูกเขียนลงเนื้อหาเอกสาร แฮชจะไม่ตรงและขั้นนี้จะถูกปฏิเสธ")
@@ -173,7 +177,23 @@ class SignerChoiceTest extends AbstractFlowTest {
             Map<String, String> answers = signerNameResolver.choicesForEnvelope(
                     envelopes.findById(envelope.getId()).orElseThrow());
 
-            assertThat(answers).containsOnlyKeys("qualification_status");
+            assertThat(answers)
+                    .as("มีแค่คำตอบและวันที่ของหัวหน้าสาขา — ของคณบดียังไม่มีเพราะยังไม่ได้เซ็น")
+                    .containsOnlyKeys("qualification_status", "head_sign_date");
+        }
+
+        @Test
+        @DisplayName("วันที่ใต้เส้นลงนามคือวันที่เซ็นจริง")
+        void theSigningDateIsTheDayItWasSigned() {
+            SignatureRequest envelope = supervisorReviewSentForSignature();
+            signAs(head, stepFor(envelope, "head"), "ครบถ้วน");
+
+            SignatureStep signed = steps.findById(stepFor(envelope, "head").getId()).orElseThrow();
+            Map<String, String> answers = signerNameResolver.choicesForEnvelope(
+                    envelopes.findById(envelope.getId()).orElseThrow());
+
+            assertThat(answers.get("head_sign_date"))
+                    .isEqualTo(AcademicRequestService.formatThaiDate(signed.getSignedAt()));
         }
     }
 
@@ -210,6 +230,17 @@ class SignerChoiceTest extends AbstractFlowTest {
                     .get()
                     .extracting(SignatureStep::getSignerChoiceValue)
                     .isNull();
+        }
+
+        @Test
+        @DisplayName("คณบดีตอบตามถ้อยคำของแบบฟอร์ม: เข้าข่าย/ไม่เข้าข่าย ไม่ใช่ ครบถ้วน")
+        void theDeanAnswersInTheFormsOwnWords() {
+            SignatureRequest envelope = supervisorReviewSentForSignature();
+            signAs(head, stepFor(envelope, "head"), "ครบถ้วน");
+
+            Result result = signAs(dean, stepFor(envelope, "dean"), "ครบถ้วน");
+
+            assertThat(result.ok()).isFalse();
         }
 
         @Test

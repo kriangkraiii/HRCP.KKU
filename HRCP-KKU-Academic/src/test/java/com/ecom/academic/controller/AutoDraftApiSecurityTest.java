@@ -27,6 +27,7 @@ import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.PositionRequestService;
+import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 
@@ -50,6 +51,9 @@ class AutoDraftApiSecurityTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private SignatureWorkflowService signatureWorkflow;
+
     private AutoDraftApiController controller;
 
     private final Principal attackerPrincipal = () -> "attacker@test.com";
@@ -60,7 +64,8 @@ class AutoDraftApiSecurityTest {
 
     @BeforeEach
     void setUp() {
-        controller = new AutoDraftApiController(academicService, positionService, userRepository);
+        controller = new AutoDraftApiController(academicService, positionService, userRepository,
+                signatureWorkflow);
 
         UserDtls attacker = new UserDtls();
         attacker.setId(1);

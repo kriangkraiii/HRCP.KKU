@@ -1,10 +1,6 @@
 package com.ecom.controller;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.security.Principal;
 import java.util.HashMap;
 import java.util.List;
@@ -36,7 +32,6 @@ import com.ecom.service.AdminLogService;
 import com.ecom.service.ImageSyncAuditService;
 import com.ecom.service.UserService;
 import com.ecom.util.CommonUtil;
-import com.ecom.util.FileUtils;
 import com.ecom.util.PasswordValidator;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -61,6 +56,7 @@ public class AdminController {
 	private final ImageSyncAuditService imageSyncAuditService;
 
 	private final com.ecom.service.DataRetentionService dataRetentionService;
+	private final com.ecom.service.ProfileImageStorage profileImageStorage;
 
 	public AdminController(
 			HttpServletRequest request,
@@ -69,7 +65,9 @@ public class AdminController {
 			PasswordEncoder passwordEncoder,
 			AdminLogService adminLogService,
 			ImageSyncAuditService imageSyncAuditService,
-			com.ecom.service.DataRetentionService dataRetentionService) {
+			com.ecom.service.DataRetentionService dataRetentionService,
+			com.ecom.service.ProfileImageStorage profileImageStorage) {
+		this.profileImageStorage = profileImageStorage;
 		this.request = request;
 		this.userService = userService;
 		this.commonUtil = commonUtil;
@@ -586,21 +584,15 @@ public class AdminController {
 			return "redirect:/admin/add-admin";
 		}
 
-		String imageName = file.isEmpty() ? "default.png" : file.getOriginalFilename();
-		user.setProfileImage(imageName);
+		// เก็บผ่าน ProfileImageStorage เหมือนการอัปโหลดรูปทางอื่น — ได้ไฟล์ใน app.upload.dir
+		// และชื่อในฐานข้อมูลตรงกับชื่อไฟล์จริง เดิมเขียนลง user.dir ด้วยชื่อที่ sanitize แล้ว
+		// แต่เก็บชื่อดิบไว้ในฐาน ImageSyncAuditService จึงหาไม่เจอแล้วรีเซ็ตเป็น default.png
+		String storedImage = profileImageStorage.store(file);
+		user.setProfileImage(storedImage != null ? storedImage : "default.png");
 
 		UserDtls saveUser = userService.saveAdmin(user);
 
 		if (!ObjectUtils.isEmpty(saveUser)) {
-			if (!file.isEmpty()) {
-				String uploadDir = System.getProperty("user.dir") + "/uploads/profile_img/";
-				File uploadFolder = new File(uploadDir);
-				if (!uploadFolder.exists()) {
-					uploadFolder.mkdirs();
-				}
-				Path path = Path.of(uploadDir + FileUtils.sanitizeFilename(file.getOriginalFilename()));
-				Files.copy(file.getInputStream(), path, StandardCopyOption.REPLACE_EXISTING);
-			}
 			session.setAttribute("succMsg", "เพิ่มบัญชีสำเร็จ");
 			Principal p = request.getUserPrincipal();
 			if (p != null) {

@@ -266,7 +266,7 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 .orElseThrow(() -> new AssertionError("ไม่พบแบบร่างคำร้องขอตำแหน่ง")).getId();
 
         // ---------- ข้อ 16-17, 19: เอกสารของผู้เสนอขอ ----------
-        for (int doc : new int[] { 1, 2, 3, 4, 5, 6, 9 }) {
+        for (int doc : new int[] { 1, 2, 3, 4, 6, 9 }) {
             String who = "ผู้เสนอขอ เอกสารตำแหน่งที่ " + doc;
             openAndFill("/user/position/request/" + id + "/document/" + doc, null);
             boolean applicantSigns = com.ecom.academic.service.SignatureAnchorRegistry.slotsOf(SignatureModule.POSITION, doc).stream()
@@ -290,7 +290,7 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         // ---------- ส่งคำร้อง ----------
         page.navigate(baseUrl() + "/user/position/request/" + id);
         assertThat(page.locator("body").innerText())
-                .as("ลงนามทุกฉบับที่ผู้ยื่นต้องลงแล้ว — ต้องไม่มีป้าย \"รอผู้ยื่นลงนาม\" (เอกสาร 5/6 ผู้ยื่นไม่ได้ลงนาม)")
+                .as("ลงนามทุกฉบับที่ผู้ยื่นต้องลงแล้ว — ต้องไม่มีป้าย \"รอผู้ยื่นลงนาม\" (เอกสาร 6 ผู้ยื่นไม่ได้ลงนาม)")
                 .doesNotContain("รอผู้ยื่นลงนาม");
         Locator openConfirm = page.locator("button[data-bs-target='#confirmSubmitModal']");
         if (openConfirm.count() == 0) {
@@ -306,9 +306,9 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
 
         // ---------- เจ้าหน้าที่ส่งเวียนต่อ แต่ละตำแหน่งลงนาม ----------
         Map<Integer, Map<String, UserDtls>> plan = new java.util.LinkedHashMap<>();
+        plan.put(1, Map.of("head", head, "dean", dean));                     // ข้อ 16, 18 ก.พ.ว. 03 ส่วนที่ ๒ ครบถ้วน/เข้าข่าย
         plan.put(3, Map.of("dean", dean));                                   // ข้อ 17 บันทึกเสนอคณบดี
         plan.put(4, Map.of("head", head));                                   // ข้อ 16 หัวหน้าสาขา
-        plan.put(5, Map.of("head", head, "dean", dean));                     // ข้อ 16, 18 ครบถ้วน/เข้าข่าย
         plan.put(6, Map.of("dean", dean));
         plan.put(7, Map.of("hr", officer, "dean", dean));                    // ข้อ 20 ตรวจสอบคุณสมบัติ
         plan.put(8, Map.of("hr", officer));                                  // ข้อ 21 เสนอกลั่นกรอง
@@ -319,7 +319,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
             signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
             circulateAsOfficer(SignatureModule.POSITION, id, doc, entry.getValue());
             signOut();
-            signEveryActiveStep(SignatureModule.POSITION, id, doc, doc == 5 ? "ครบถ้วน" : null);
+            // null = ตัวเลือกแรกของแต่ละช่อง: หัวหน้าสาขา "ครบถ้วน" คณบดี "เข้าข่าย"
+            signEveryActiveStep(SignatureModule.POSITION, id, doc, null);
             expectCompleted(SignatureModule.POSITION, id, doc);
             if (doc == 7) {
                 awaitPositionStatus(id, PositionRequestStatus.DOCUMENT_VERIFICATION, "ข้อ 20 — เอกสารที่ 7 ลงนามครบ");
@@ -397,26 +398,37 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
     }
 
     @Test
-    @DisplayName("ข้อ 18: คณบดีปฏิเสธลงนามแบบประเมินคุณสมบัติ → ผู้เสนอขอแก้เอกสารที่ 5 ได้อีกครั้ง")
+    @DisplayName("ข้อ 18: คณบดีปฏิเสธลงนามแบบประเมินคุณสมบัติ → ผู้เสนอขอแก้เอกสารที่ 1 ได้อีกครั้ง")
     void deanDeclinesQualificationFormAndApplicantCanFixIt() {
         AcademicRequest evaluation = data.evaluationForCourse(professor, "CP001101", "2568");
         PositionRequest request = data.positionRequest(professor, PositionRequestStatus.DOCUMENT_RECEIVED,
                 evaluation, "ผู้ช่วยศาสตราจารย์");
         Long id = request.getId();
-        data.positionDocument(request, 5, "{\"target_position\":\"ผู้ช่วยศาสตราจารย์\",\"applicant_name\":\"สมชาย ใจดี\"}");
+        data.positionDocument(request, 1, "{\"target_position\":\"ผู้ช่วยศาสตราจารย์\",\"applicant_name\":\"สมชาย ใจดี\"}");
 
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
-        circulateAsOfficer(SignatureModule.POSITION, id, 5, Map.of("head", head, "dean", dean));
+        circulateAsOfficer(SignatureModule.POSITION, id, 1, Map.of("head", head, "dean", dean));
         signOut();
 
-        SignatureRequest env = workflow.findEnvelope(SignatureModule.POSITION, id, 5).orElseThrow();
+        SignatureRequest env = workflow.findEnvelope(SignatureModule.POSITION, id, 1).orElseThrow();
         SignatureStep headStep = stepFor(env, "head");
         SignatureStep deanStep = stepFor(env, "dean");
+
+        // เจ้าของประวัติลงนามส่วนที่ ๑ ก่อน ถ้าเจ้าหน้าที่ใส่ช่องของผู้ยื่นไว้ในซอง
+        steps.findBySignatureRequestIdOrderByStepOrderAsc(env.getId()).stream()
+                .filter(st -> "applicant".equals(st.getSlotKey()))
+                .findFirst()
+                .ifPresent(applicantStep -> {
+                    signIn(TestDataFactory.APPLICANT_EMAIL, TestDataFactory.PASSWORD);
+                    page.navigate(baseUrl() + "/esign/sign/" + applicantStep.getId());
+                    signHere("เจ้าของประวัติ เอกสารตำแหน่งที่ 1", null);
+                    signOut();
+                });
 
         // หัวหน้าสาขาลงนาม "ครบถ้วน"
         signIn(HEAD_EMAIL, TestDataFactory.PASSWORD);
         page.navigate(baseUrl() + "/esign/sign/" + headStep.getId());
-        signHere("หัวหน้าสาขา เอกสารตำแหน่งที่ 5", "ครบถ้วน");
+        signHere("หัวหน้าสาขา เอกสารตำแหน่งที่ 1", "ครบถ้วน");
         signOut();
 
         // คณบดีปฏิเสธ
@@ -424,10 +436,10 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         page.navigate(baseUrl() + "/esign/sign/" + deanStep.getId());
         Locator decline = page.locator("form[action$='/esign/sign/" + deanStep.getId() + "/decline']");
         if (decline.count() == 0) {
-            // ช่องนี้ใช้คำถาม ครบถ้วน/ไม่ครบถ้วน — ตัวเลือก "ไม่ครบถ้วน" คือทางปฏิเสธ
-            page.locator("input[name='signerChoice'][value='ไม่ครบถ้วน']").check();
+            // ช่องนี้ใช้คำถาม เข้าข่าย/ไม่เข้าข่าย — ตัวเลือก "ไม่เข้าข่าย" คือทางปฏิเสธ
+            page.locator("input[name='signerChoice'][value='ไม่เข้าข่าย']").check();
             page.locator("#signerComment").fill("ขาดหลักฐานผลงานตีพิมพ์");
-            clickAndSettle(page.locator("#signSubmitBtn"), "คณบดี ไม่ครบถ้วน");
+            clickAndSettle(page.locator("#signSubmitBtn"), "คณบดี ไม่เข้าข่าย");
         } else {
             decline.locator("textarea[name='reason']").fill("ขาดหลักฐานผลงานตีพิมพ์");
             clickAndSettle(decline.locator("button[type='submit']"), "คณบดีปฏิเสธ");
@@ -440,11 +452,11 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
 
         // ผู้เสนอขอต้องกลับมาแก้เอกสารได้
         signIn(TestDataFactory.APPLICANT_EMAIL, TestDataFactory.PASSWORD);
-        page.navigate(baseUrl() + "/user/position/request/" + id + "/document/5");
+        page.navigate(baseUrl() + "/user/position/request/" + id + "/document/1");
         Locator field = page.locator("form[data-auto-draft] input[name='applicant_name']");
-        assertThat(field.count()).as("ต้องเปิดฟอร์มเอกสารที่ 5 ได้").isPositive();
+        assertThat(field.count()).as("ต้องเปิดฟอร์มเอกสารที่ 1 ได้").isPositive();
         assertThat(field.first().isEditable())
-                .as("คณบดีตีกลับแล้ว ผู้เสนอขอต้องแก้เอกสารที่ 5 ได้ — ซอง: " + after.getStatus())
+                .as("คณบดีตีกลับแล้ว ผู้เสนอขอต้องแก้เอกสารที่ 1 ได้ — ซอง: " + after.getStatus())
                 .isTrue();
     }
 

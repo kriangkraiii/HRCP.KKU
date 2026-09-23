@@ -84,7 +84,8 @@ class AttachmentConstraintsTest {
                 mock(com.ecom.academic.service.DocumentPrewarmService.class),
                 mock(com.ecom.academic.service.SignatureWorkflowService.class),
                 mock(com.ecom.academic.service.SignedDocumentRenderer.class),
-                mock(com.ecom.external.service.KkuDocumentSyncService.class)
+                mock(com.ecom.external.service.KkuDocumentSyncService.class),
+                com.ecom.service.UploadPaths.workingDirectoryDefault()
         );
     }
 

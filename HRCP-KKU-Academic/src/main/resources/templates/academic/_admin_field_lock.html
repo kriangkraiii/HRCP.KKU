@@ -30,7 +30,11 @@
     <div th:if="${signingComplete}" class="alert alert-info">
         <i class="fas fa-stamp"></i>
         <strong>เอกสารลงนามครบแล้ว</strong>
-        <span th:if="${officeFields != null and !officeFields.isEmpty()}">
+        <span th:if="${adminFieldsStillOpen != null and adminFieldsStillOpen}">
+            — ยังไม่ได้ส่งต่อให้ผู้ลงนามคนถัดไป กรอกช่องของเจ้าหน้าที่ได้จนกว่าจะส่งต่อ
+        </span>
+        <span th:if="${officeFields != null and !officeFields.isEmpty()
+                       and !(adminFieldsStillOpen != null and adminFieldsStillOpen)}">
             — กรอกได้เฉพาะเลขที่หนังสือและวันที่เอกสาร
         </span>
         <span th:unless="${officeFields != null and !officeFields.isEmpty()}">

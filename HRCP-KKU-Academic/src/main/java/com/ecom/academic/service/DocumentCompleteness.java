@@ -79,7 +79,6 @@ public final class DocumentCompleteness {
                             "academic_paper_status", "research_status",
                             "paper_title_1", "research_title_1",
                             "academic_paper_count", "research_count"),
-                    5, Set.of("sub_major", "sub_major_code"),
                     9, Set.of(
                             // ช. อื่นๆ ในส่วนการมีส่วนร่วม
                             "role_des7",

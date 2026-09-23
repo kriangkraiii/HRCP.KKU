@@ -82,6 +82,8 @@ public class AcademicRequestService {
 
     private final org.springframework.context.ApplicationEventPublisher events;
 
+    private final com.ecom.service.UploadPaths uploadPaths;
+
     public AcademicRequestService(
             AcademicRequestRepository requestRepository,
             AcademicDocumentRepository documentRepository,
@@ -91,7 +93,9 @@ public class AcademicRequestService {
             AcademicEmailService emailService,
             com.ecom.service.AfterCommitRunner afterCommit,
             com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository,
-            org.springframework.context.ApplicationEventPublisher events) {
+            org.springframework.context.ApplicationEventPublisher events,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.attachmentRepository = attachmentRepository;
@@ -363,11 +367,22 @@ public class AcademicRequestService {
     @Transactional
     public int saveOfficeFieldsAcrossCopies(AcademicRequest request, int documentType,
             Map<String, String> submitted, String label) {
+        return saveOfficeFieldsAcrossCopies(request, documentType, submitted, label, false);
+    }
+
+    /**
+     * เหมือนข้างบน แต่เมื่อ {@code includeAdminFields} รับช่องของแอดมินทั้งหมดด้วย
+     * ({@link DocumentFieldOwnership#lateFields}) — ใช้ตอนผู้ยื่นลงนามแล้วแต่ยังไม่ได้ส่งต่อ
+     * ให้ผู้ลงนามคนถัดไป ดู {@link SignatureWorkflowService#awaitsMoreSigners}
+     */
+    @Transactional
+    public int saveOfficeFieldsAcrossCopies(AcademicRequest request, int documentType,
+            Map<String, String> submitted, String label, boolean includeAdminFields) {
         List<AcademicDocument> docs = getDocumentsByType(request.getId(), documentType);
         if (docs.isEmpty()) {
             // ยังไม่มีแถวเลย — เปิดแถวร่างให้ เพื่อไม่ให้เลขที่กรอกไว้หายไปเฉย ๆ
             Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
-                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, null);
+                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, null, includeAdminFields);
             saveDraft(request, documentType, writeJson(merged), label, null);
             return 1;
         }
@@ -390,8 +405,10 @@ public class AcademicRequestService {
                 }
             }
             Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
-                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, existing);
+                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, existing, includeAdminFields);
             doc.setJsonData(writeJson(merged));
+            // ไฟล์ที่สร้างไว้จากข้อมูลชุดก่อนไม่มีค่าที่เพิ่งกรอก — ทิ้งไป ทางสำรองจะได้สร้างใหม่
+            doc.setGeneratedFilePath(null);
             documentRepository.save(doc);
             written++;
         }
@@ -751,7 +768,7 @@ public class AcademicRequestService {
 
                 // Delete entire request folder from disk
                 try {
-                    java.nio.file.Path requestDir = java.nio.file.Path.of("uploads/academic/" + requestId);
+                    java.nio.file.Path requestDir = uploadPaths.dir("academic", String.valueOf(requestId));
                     if (java.nio.file.Files.exists(requestDir)) {
                         org.springframework.util.FileSystemUtils.deleteRecursively(requestDir);
                     }
@@ -863,7 +880,10 @@ public class AcademicRequestService {
                 return;
             }
             try {
-                java.nio.file.Files.deleteIfExists(java.nio.file.Path.of(filePath));
+                java.nio.file.Path path = uploadPaths.resolve(filePath);
+                if (path != null) {
+                    java.nio.file.Files.deleteIfExists(path);
+                }
             } catch (Exception e) {
                 log.warn("Failed to delete physical file {}: {}", filePath, e.getMessage());
             }

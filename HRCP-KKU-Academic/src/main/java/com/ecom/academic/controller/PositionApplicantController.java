@@ -57,7 +57,9 @@ public class PositionApplicantController {
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
     private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
+    private final com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart;
     private final jakarta.servlet.http.HttpServletRequest httpRequest;
+    private final com.ecom.service.UploadPaths uploadPaths;
 
     private static final org.slf4j.Logger log =
             org.slf4j.LoggerFactory.getLogger(PositionApplicantController.class);
@@ -71,7 +73,10 @@ public class PositionApplicantController {
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
             com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
             com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer,
-            jakarta.servlet.http.HttpServletRequest httpRequest) {
+            com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart,
+            jakarta.servlet.http.HttpServletRequest httpRequest,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.academicService = academicService;
@@ -80,6 +85,7 @@ public class PositionApplicantController {
         this.documentPrewarmService = documentPrewarmService;
         this.signatureWorkflow = signatureWorkflow;
         this.signedDocumentRenderer = signedDocumentRenderer;
+        this.teachingEvaluationPart = teachingEvaluationPart;
         this.httpRequest = httpRequest;
     }
 
@@ -405,6 +411,11 @@ public class PositionApplicantController {
         model.addAttribute("revisionNote", positionService.getRevisionNote(id, type));
         model.addAttribute("revisionRequested", positionService.isRevisionRequested(id, type));
 
+        // ส่วนที่ ๓ ของแบบ ก.พ.ว. มข. ๐๓ ไม่มีช่องให้กรอก แสดงค่าที่จะดึงมาใส่ให้ดูเฉย ๆ
+        if (type == 1) {
+            model.addAttribute("partThree", teachingEvaluationPart.partThreeFields(request));
+        }
+
         // Load doc 1 data for cross-document auto-fill (for docs other than 1)
         if (type != 1) {
             List<PositionDocument> doc1Docs = positionService.getDocumentsByType(id, 1);
@@ -543,7 +554,7 @@ public class PositionApplicantController {
     public ResponseEntity<byte[]> downloadDocument(
             @PathVariable Long id,
             @PathVariable int type,
-            @RequestParam(value = "format", defaultValue = "docx") String format,
+            @RequestParam(value = "format", defaultValue = "pdf") String format,
             Principal principal) throws IOException {
         UserDtls user = getUser(principal);
         PositionRequest request = positionService.findById(id)
@@ -552,6 +563,10 @@ public class PositionApplicantController {
         if (!request.getApplicant().getId().equals(user.getId())) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+
+        // ผู้ยื่นโหลดเอกสารได้เฉพาะ PDF เสมอ ไม่ว่าคำร้องจะอยู่สถานะไหน — ไฟล์ Word แก้ต่อได้
+        // ซึ่งไม่ใช่สิ่งที่ผู้ยื่นควรได้ไปจากระบบ เอกสารฉบับจริงคือฉบับที่ระบบสร้าง
+        format = "pdf";
 
         List<PositionDocument> docs = positionService.getDocumentsByType(id, type);
         PositionDocument doc = docs.isEmpty() ? null : docs.get(0);
@@ -566,29 +581,26 @@ public class PositionApplicantController {
         if (optEnvelope.isPresent()) {
             com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
             try {
-                if ("pdf".equalsIgnoreCase(format)) {
-                    data = signedDocumentRenderer.renderPdf(envelope);
-                } else {
-                    data = signedDocumentRenderer.renderDocx(envelope);
-                }
+                data = signedDocumentRenderer.renderForDownload(envelope, format);
             } catch (Exception e) {
                 // fall through to saved draft file if render fails
             }
         }
 
         if (data == null && doc != null && doc.getGeneratedFilePath() != null) {
-            Path filePath = Path.of(doc.getGeneratedFilePath());
-            if (Files.exists(filePath)) {
+            Path filePath = uploadPaths.resolve(doc.getGeneratedFilePath());
+            if (filePath != null && Files.exists(filePath)) {
                 data = Files.readAllBytes(filePath);
             }
         }
 
         if (data == null && doc != null && doc.getJsonData() != null) {
             try {
-                String generatedPath = documentService.generateP2Document(request, type, doc.getJsonData());
+                String generatedPath = documentService.generateP2Document(request, type,
+                        teachingEvaluationPart.fillInto(request, type, doc.getJsonData()));
                 if (generatedPath != null) {
-                    Path filePath = Path.of(generatedPath);
-                    if (Files.exists(filePath)) {
+                    Path filePath = uploadPaths.resolve(generatedPath);
+                    if (filePath != null && Files.exists(filePath)) {
                         data = Files.readAllBytes(filePath);
                         doc.setGeneratedFilePath(generatedPath);
                         positionService.saveDocument(request, type, doc.getJsonData(),
@@ -603,7 +615,8 @@ public class PositionApplicantController {
         if (data == null && docs.isEmpty()) {
             Map<String, String> autoData = autoFillHelper.getPreFilledPositionDocData(request, type, null);
             String jsonData = objectMapper.writeValueAsString(autoData);
-            data = documentService.generateP2PreviewDocx(type, jsonData);
+            data = documentService.generateP2PreviewDocx(type,
+                    teachingEvaluationPart.fillInto(request, type, jsonData));
         }
 
         if (data == null) {

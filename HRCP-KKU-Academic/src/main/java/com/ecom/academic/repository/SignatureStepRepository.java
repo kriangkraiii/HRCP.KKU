@@ -71,6 +71,12 @@ public interface SignatureStepRepository extends JpaRepository<SignatureStep, Lo
             """)
     List<SignatureStep> findSignedSteps(@Param("requestId") Long requestId);
 
+    /** Whether any step's stamped image is this file — such a file must not be deleted. */
+    boolean existsByImagePathSnapshot(String imagePathSnapshot);
+
+    /** The most recently signed step with an image, for the startup storage check. */
+    Optional<SignatureStep> findFirstByImagePathSnapshotIsNotNullOrderByIdDesc();
+
     /**
      * All active signature steps across in-progress signature requests,
      * with envelope and signer loaded for analytics.

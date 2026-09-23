@@ -35,7 +35,7 @@ public final class DocumentFieldOwnership {
     /** เอกสารที่ผู้ยื่นเป็นเจ้าของ นอกรายการนี้ถือเป็นของแอดมินทั้งหมด */
     private static final Map<SignatureModule, Set<Integer>> APPLICANT_DOCUMENTS = Map.of(
             SignatureModule.ACADEMIC, Set.of(1, 2),
-            SignatureModule.POSITION, Set.of(1, 2, 3, 4, 5, 6, 9));
+            SignatureModule.POSITION, Set.of(1, 2, 3, 4, 6, 9));
 
     /**
      * ช่องที่เป็นของแอดมิน <em>ภายในเอกสารของผู้ยื่น</em> เท่านั้น
@@ -106,6 +106,19 @@ public final class DocumentFieldOwnership {
     public static Set<String> officeFields(SignatureModule module, int documentType) {
         return OFFICE_FIELDS.getOrDefault(module, Map.of())
                 .getOrDefault(documentType, Set.of());
+    }
+
+    /**
+     * ช่องของแอดมินที่มาเติมทีหลังผู้ยื่นลงนามแล้ว — ช่องสารบรรณรวมกับช่องของแอดมินในเอกสารของผู้ยื่น
+     *
+     * <p>ผู้ยื่นต้องลงนามก่อนส่งคำร้อง ซองจึงมีอยู่แล้วตั้งแต่แอดมินเปิดเอกสารครั้งแรก ช่องของ
+     * แอดมิน (เช่น ช่องตรวจของเจ้าหน้าที่ หรือวันที่ตรวจ) จึงถูกกรอกหลังการลงนามเสมอ และต้องถูก
+     * เติมลงเอกสารตอน render เหมือนเลขที่หนังสือ ไม่อย่างนั้นทั้งผู้ยื่นและผู้ลงนามคนถัดไปไม่มีทางเห็น
+     */
+    public static Set<String> lateFields(SignatureModule module, int documentType) {
+        Set<String> late = new java.util.LinkedHashSet<>(officeFields(module, documentType));
+        late.addAll(adminFields(module, documentType));
+        return late;
     }
 
     /**
@@ -182,13 +195,26 @@ public final class DocumentFieldOwnership {
      */
     public static Map<String, String> mergeOfficeFields(SignatureModule module, int documentType,
             Map<String, String> submitted, Map<String, String> existing) {
+        return mergeOfficeFields(module, documentType, submitted, existing, false);
+    }
+
+    /**
+     * เหมือนข้างบน แต่เมื่อ {@code includeAdminFields} รับช่องของแอดมินทั้งหมด ({@link #lateFields})
+     * ด้วย — ใช้ตอนผู้ยื่นลงนามแล้วแต่ยังไม่ได้ส่งต่อให้ผู้ลงนามคนถัดไป ช่วงนั้นช่องของแอดมิน
+     * ยังไม่มีใครเซ็นรับรอง แอดมินจึงยังกรอกได้ พอส่งต่อแล้วจะกลับเหลือแค่ช่องสารบรรณ
+     */
+    public static Map<String, String> mergeOfficeFields(SignatureModule module, int documentType,
+            Map<String, String> submitted, Map<String, String> existing, boolean includeAdminFields) {
 
         Map<String, String> result = new LinkedHashMap<>();
         if (existing != null) {
             result.putAll(existing);
         }
         if (submitted != null) {
-            for (String key : officeFields(module, documentType)) {
+            Set<String> writable = includeAdminFields
+                    ? lateFields(module, documentType)
+                    : officeFields(module, documentType);
+            for (String key : writable) {
                 String value = submitted.get(key);
                 if (value != null) {
                     result.put(key, value);
@@ -202,6 +228,12 @@ public final class DocumentFieldOwnership {
     /** รูปแบบ JSON ของ {@link #mergeOfficeFields} — คืน null เมื่อ parse ไม่ได้ เหมือน {@link #mergeJson} */
     public static String mergeOfficeFieldsJson(SignatureModule module, int documentType,
             String jsonData, Map<String, String> existing) {
+        return mergeOfficeFieldsJson(module, documentType, jsonData, existing, false);
+    }
+
+    /** รูปแบบ JSON ของ {@link #mergeOfficeFields(SignatureModule, int, Map, Map, boolean)} */
+    public static String mergeOfficeFieldsJson(SignatureModule module, int documentType,
+            String jsonData, Map<String, String> existing, boolean includeAdminFields) {
         if (jsonData == null || jsonData.isBlank()) {
             return null;
         }
@@ -210,7 +242,7 @@ public final class DocumentFieldOwnership {
                     new TypeReference<Map<String, String>>() {
                     });
             return MAPPER.writeValueAsString(
-                    mergeOfficeFields(module, documentType, submitted, existing));
+                    mergeOfficeFields(module, documentType, submitted, existing, includeAdminFields));
         } catch (Exception e) {
             return null;
         }

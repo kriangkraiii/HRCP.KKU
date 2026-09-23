@@ -120,4 +120,16 @@ class ApplicantCannotDownloadCommitteeDocumentsTest extends AbstractFlowTest {
                 .with(as(applicant)))
                 .andExpect(status().isOk());
     }
+
+    @Test
+    @DisplayName("ผู้ยื่นที่ส่งคำร้องแล้ว ขอโหลด docx จะได้ผลลัพธ์ปกติ (ถูกบังคับเป็น PDF)")
+    void submittedApplicantForcedToPdfEvenIfDocxRequested() throws Exception {
+        AcademicRequest request = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
+        var doc = data.academicDocument(request, 1, "{\"applicant_name\":\"สมชาย ใจดีวิชาการ\"}");
+
+        mvc.perform(get("/user/academic/download/" + request.getId() + "/" + doc.getId())
+                .param("format", "docx")
+                .with(as(applicant)))
+                .andExpect(status().isOk());
+    }
 }

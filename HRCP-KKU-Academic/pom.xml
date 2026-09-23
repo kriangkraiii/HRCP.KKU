@@ -349,6 +349,15 @@
                     <!-- true = เครื่องมือที่ขาดไป (เบราว์เซอร์, LibreOffice, Docker)
                          ต้องทำให้เทส fail ไม่ใช่ถูกข้ามเงียบ ๆ — CI ตั้งค่านี้เสมอ -->
                     <hrcp.tools.required>${hrcp.tools.required}</hrcp.tools.required>
+                    <!-- deploy.yml รันเทสต์บนเครื่อง production เอง environment variable ของเครื่อง
+                         (SPRING_DATASOURCE_URL, APP_UPLOAD_DIR) มีลำดับสูงกว่า application-test.yml
+                         เทสต์ที่ไม่ได้ระบุฐานข้อมูลเองจึงอาจไปต่อฐานจริงด้วย create-drop หรือลบรูปจริง
+                         system property ชนะ environment variable แต่แพ้ @TestPropertySource
+                         ค่าที่ตั้งตรงนี้จึงกันเครื่องไว้ โดยเทสต์ที่กำหนดฐานเองยังใช้ของตัวเองได้ -->
+                    <spring.datasource.url>jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=false;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE</spring.datasource.url>
+                    <spring.datasource.username>sa</spring.datasource.username>
+                    <spring.jpa.hibernate.ddl-auto>create-drop</spring.jpa.hibernate.ddl-auto>
+                    <app.upload.dir>${project.basedir}/uploads/</app.upload.dir>
                 </systemPropertyVariables>
             </configuration>
         </plugin>

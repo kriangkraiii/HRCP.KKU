@@ -80,6 +80,8 @@ public class PositionAdminController {
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
     private final com.ecom.academic.service.AcademicCommitteeService committeeService;
     private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
+    private final com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart;
+    private final com.ecom.service.UploadPaths uploadPaths;
 
     public PositionAdminController(
             PositionRequestService positionService,
@@ -94,7 +96,10 @@ public class PositionAdminController {
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
             com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
             com.ecom.academic.service.AcademicCommitteeService committeeService,
-            com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer) {
+            com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer,
+            com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.positionService = positionService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -108,6 +113,7 @@ public class PositionAdminController {
         this.signatureWorkflow = signatureWorkflow;
         this.committeeService = committeeService;
         this.signedDocumentRenderer = signedDocumentRenderer;
+        this.teachingEvaluationPart = teachingEvaluationPart;
     }
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -310,8 +316,12 @@ public class PositionAdminController {
                 DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, type));
         model.addAttribute("adminEditableFields",
                 DocumentFieldOwnership.adminFields(SignatureModule.POSITION, type));
-        model.addAttribute("officeFields",
-                DocumentFieldOwnership.officeFields(SignatureModule.POSITION, type));
+        // ช่องที่ยังกรอกได้หลังลงนาม — ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ ช่องของแอดมินยังกรอกได้ด้วย
+        boolean adminFieldsStillOpen = signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type);
+        model.addAttribute("adminFieldsStillOpen", adminFieldsStillOpen);
+        model.addAttribute("officeFields", adminFieldsStillOpen
+                ? DocumentFieldOwnership.lateFields(SignatureModule.POSITION, type)
+                : DocumentFieldOwnership.officeFields(SignatureModule.POSITION, type));
 
         // ช่องแจ้งเตือนขึ้นเฉพาะเอกสารที่ทำให้คำร้องเดินไปขั้นถัดไป
         model.addAttribute("advancesStatus",
@@ -336,10 +346,9 @@ public class PositionAdminController {
         model.addAttribute("hrStaff", staffMemberService.findByRoleOrAll("HR"));
         model.addAttribute("externalExperts", committeeService.findAllActive());
 
-        if (type == 5) {
-            List<PositionDocument> doc1List = positionService.getDocumentsByType(id, 1);
-            String doc1Data = doc1List.isEmpty() ? null : doc1List.get(0).getJsonData();
-            model.addAttribute("doc1Data", doc1Data);
+        // ส่วนที่ ๓ ของแบบ ก.พ.ว. มข. ๐๓ ไม่มีช่องให้กรอก แสดงค่าที่จะดึงมาใส่ให้ดูเฉย ๆ
+        if (type == 1) {
+            model.addAttribute("partThree", teachingEvaluationPart.partThreeFields(request));
         }
 
         if (type == 8) {
@@ -388,8 +397,10 @@ public class PositionAdminController {
         if (signingComplete) {
             try {
                 // เขียนทับแถวเดิม ไม่เปิดแถวร่างใหม่ — เส้นทางเดียวกับเฟส 1 ทุกประการ
+                // ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ: ช่องของแอดมินยังไม่มีใครเซ็นรับรอง จึงยังกรอกได้
                 positionService.saveOfficeFieldsAcrossCopies(request, type, formData,
-                        positionService.getDocLabel(type));
+                        positionService.getDocLabel(type),
+                        signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type));
                 positionService.logDocumentEdit(request, type, positionService.getDocLabel(type),
                         getUser(principal), PositionDocumentEditLog.EditAction.UPDATED);
             } catch (Exception e) {
@@ -410,7 +421,8 @@ public class PositionAdminController {
 
             String filePath = null;
             try {
-                filePath = documentService.generateP2Document(request, type, jsonData);
+                filePath = documentService.generateP2Document(request, type,
+                        teachingEvaluationPart.fillInto(request, type, jsonData));
             } catch (Exception e) {
                 logger.warn("Phase2 doc generation failed for type {}: {}", type, e.getMessage());
             }
@@ -510,11 +522,7 @@ public class PositionAdminController {
         if (optEnvelope.isPresent()) {
             com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
             try {
-                if ("pdf".equalsIgnoreCase(format)) {
-                    data = signedDocumentRenderer.renderPdf(envelope);
-                } else {
-                    data = signedDocumentRenderer.renderDocx(envelope);
-                }
+                data = signedDocumentRenderer.renderForDownload(envelope, format);
             } catch (Exception e) {
                 // fall through to saved draft file if render fails
             }
@@ -522,8 +530,8 @@ public class PositionAdminController {
 
         // Try using existing generated file first
         if (data == null && doc != null && doc.getGeneratedFilePath() != null) {
-            Path filePath = Path.of(doc.getGeneratedFilePath());
-            if (Files.exists(filePath)) {
+            Path filePath = uploadPaths.resolve(doc.getGeneratedFilePath());
+            if (filePath != null && Files.exists(filePath)) {
                 data = Files.readAllBytes(filePath);
             }
         }
@@ -531,10 +539,11 @@ public class PositionAdminController {
         // If no file exists, generate on-the-fly from jsonData + template
         if (data == null && doc != null && doc.getJsonData() != null) {
             try {
-                String generatedPath = documentService.generateP2Document(request, type, doc.getJsonData());
+                String generatedPath = documentService.generateP2Document(request, type,
+                        teachingEvaluationPart.fillInto(request, type, doc.getJsonData()));
                 if (generatedPath != null) {
-                    Path filePath = Path.of(generatedPath);
-                    if (Files.exists(filePath)) {
+                    Path filePath = uploadPaths.resolve(generatedPath);
+                    if (filePath != null && Files.exists(filePath)) {
                         data = Files.readAllBytes(filePath);
                         // Save the path for future downloads
                         doc.setGeneratedFilePath(generatedPath);
@@ -550,7 +559,8 @@ public class PositionAdminController {
         if (data == null && docs.isEmpty()) {
             Map<String, String> autoData = autoFillHelper.getPreFilledPositionDocData(request, type, null);
             String jsonData = objectMapper.writeValueAsString(autoData);
-            data = documentService.generateP2PreviewDocx(type, jsonData);
+            data = documentService.generateP2PreviewDocx(type,
+                    teachingEvaluationPart.fillInto(request, type, jsonData));
         }
 
         if (data == null) {
@@ -579,7 +589,7 @@ public class PositionAdminController {
                         signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.POSITION, id, doc.getDocumentType());
                 if (optEnvelope.isPresent()) {
                     try {
-                        docBytes = signedDocumentRenderer.renderDocx(optEnvelope.get());
+                        docBytes = signedDocumentRenderer.renderForDownload(optEnvelope.get(), "docx");
                     } catch (Exception e) {
                         // ignore
                     }
@@ -587,8 +597,8 @@ public class PositionAdminController {
 
                 // Try existing file
                 if (docBytes == null && doc.getGeneratedFilePath() != null) {
-                    Path filePath = Path.of(doc.getGeneratedFilePath());
-                    if (Files.exists(filePath)) {
+                    Path filePath = uploadPaths.resolve(doc.getGeneratedFilePath());
+                    if (filePath != null && Files.exists(filePath)) {
                         docBytes = Files.readAllBytes(filePath);
                     }
                 }
@@ -597,10 +607,11 @@ public class PositionAdminController {
                 if (docBytes == null && doc.getJsonData() != null) {
                     try {
                         String generatedPath = documentService.generateP2Document(
-                                request, doc.getDocumentType(), doc.getJsonData());
+                                request, doc.getDocumentType(), teachingEvaluationPart.fillInto(
+                                        request, doc.getDocumentType(), doc.getJsonData()));
                         if (generatedPath != null) {
-                            Path filePath = Path.of(generatedPath);
-                            if (Files.exists(filePath)) {
+                            Path filePath = uploadPaths.resolve(generatedPath);
+                            if (filePath != null && Files.exists(filePath)) {
                                 docBytes = Files.readAllBytes(filePath);
                             }
                         }
@@ -663,10 +674,10 @@ public class PositionAdminController {
                 return "redirect:/admin/position/request/" + id + "?error=invalid_file_type";
             }
 
-            String uploadDir = "uploads/position/" + id + "/attachments/";
-            Files.createDirectories(Path.of(uploadDir));
+            Path uploadDir = uploadPaths.dir("position", String.valueOf(id), "attachments");
+            Files.createDirectories(uploadDir);
             String storedName = System.currentTimeMillis() + "_" + FileUtils.sanitizeFilename(originalFilename);
-            Path storedPath = Path.of(uploadDir, storedName);
+            Path storedPath = uploadDir.resolve(storedName);
             file.transferTo(storedPath.toFile());
 
             String fileType = "OTHER";
@@ -677,7 +688,7 @@ public class PositionAdminController {
             PositionAttachment attachment = new PositionAttachment();
             attachment.setRequest(request);
             attachment.setOriginalFilename(originalFilename);
-            attachment.setStoredFilePath(storedPath.toString());
+            attachment.setStoredFilePath(uploadPaths.toStored(storedPath));
             attachment.setFileType(fileType);
             attachment.setFileSize(file.getSize());
             positionService.saveAttachment(attachment);
@@ -708,8 +719,8 @@ public class PositionAdminController {
         PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("ไม่พบเอกสาร"));
 
-        Path path = Path.of(attachment.getStoredFilePath());
-        if (!Files.exists(path)) {
+        Path path = uploadPaths.resolve(attachment.getStoredFilePath());
+        if (path == null || !Files.exists(path)) {
             return ResponseEntity.notFound().build();
         }
 
@@ -737,8 +748,8 @@ public class PositionAdminController {
         PositionAttachment attachment = positionService.findAttachmentById(attachmentId)
                 .orElseThrow(() -> new RuntimeException("ไม่พบเอกสาร"));
 
-        Path path = Path.of(attachment.getStoredFilePath());
-        if (!Files.exists(path)) {
+        Path path = uploadPaths.resolve(attachment.getStoredFilePath());
+        if (path == null || !Files.exists(path)) {
             return ResponseEntity.notFound().build();
         }
 

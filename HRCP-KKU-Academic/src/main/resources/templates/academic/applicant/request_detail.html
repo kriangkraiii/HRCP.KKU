@@ -141,7 +141,7 @@
             <!-- Documents List -->
             <div class="section-card">
                 <div class="section-card-header">
-                    <h5><i class="fas fa-file-word me-2"></i>เอกสารของฉัน</h5>
+                    <h5><i class="fas fa-file-alt me-2"></i>เอกสารของฉัน</h5>
                     <!-- ปุ่มแก้ไขโผล่เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น -->
                     <div>
                         <a th:if="${(canEditDoc1 != null and canEditDoc1)}"
@@ -176,10 +176,6 @@
                                 title="ดูตัวอย่างเอกสาร (PDF)">
                                 <i class="fas fa-eye me-1"></i> ดูตัวอย่าง
                             </button>
-                            <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=docx'"
-                                class="btn btn-sm btn-outline-primary" title="ดาวน์โหลด DOCX">
-                                <i class="fas fa-file-word me-1"></i> DOCX
-                            </a>
                             <a th:href="'/user/academic/download/' + ${request.id} + '/' + ${doc.id} + '?format=pdf'"
                                 class="btn btn-sm btn-outline-danger" title="ดาวน์โหลด PDF">
                                 <i class="fas fa-file-pdf me-1"></i> PDF

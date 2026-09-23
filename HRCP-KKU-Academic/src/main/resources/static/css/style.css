@@ -305,26 +305,32 @@ body {
 .sidebar-brand h6 {
   color: #fff;
   margin: 0;
-  font-family: 'Prompt', 'Sarabun', sans-serif;
-  font-size: 1.25rem;
-  font-weight: 800;
-  letter-spacing: 0.04em;
-  line-height: 1.2;
+  /* ชื่อระบบ CP HRD — ตัวย่อหน่วยงานตัวหนา ชื่อระบบน้ำหนักเบากว่า คั่นด้วยเส้นตั้งบาง
+     แบบเดียวกับตระกูล KKU Academy / KKU Req / KKU Exam (ดู guest.css --g-font-wordmark) */
+  font-family: 'IBM Plex Sans Thai', 'Prompt', 'Sarabun', sans-serif;
+  font-size: 1.4rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.1;
   word-break: break-word;
   overflow-wrap: break-word;
 }
 
 .sidebar-brand h6 .brand-cp {
   color: #5b92e5;
-  font-weight: 850;
-  text-shadow: 0 0 16px rgba(91, 146, 229, 0.4);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .sidebar-brand h6 .brand-acad,
 .sidebar-brand h6 .brand-hrd {
   color: #ffffff;
-  font-weight: 750;
-  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  display: inline-block;
+  margin-left: 0.08em;
+  padding-left: 0.3em;
+  border-left: 0.06em solid rgba(255, 255, 255, 0.38);
 }
 
 .sidebar-brand small {
@@ -1312,12 +1318,12 @@ body.modal-open .sidebar-toggle {
 
   html.sidebar-collapsed .sidebar-brand-collapsed-label {
     display: block !important;
-    font-family: 'Prompt', 'Sarabun', sans-serif;
-    font-size: 1.25rem;
-    font-weight: 800;
+    font-family: 'IBM Plex Sans Thai', 'Prompt', 'Sarabun', sans-serif;
+    font-size: 1.3rem;
+    font-weight: 700;
     color: #5b92e5;
     line-height: 1;
-    letter-spacing: 0.05em;
+    letter-spacing: -0.02em;
     text-align: center;
     margin: 4px auto;
   }

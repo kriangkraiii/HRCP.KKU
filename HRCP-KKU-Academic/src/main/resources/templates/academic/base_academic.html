@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="/vendor/fontawesome/css/all.min.css">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Prompt:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@500;600;700&family=Prompt:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link href="/vendor/fonts/sarabun.css"
         rel="stylesheet">
     <link rel="icon" type="image/png" href="/img/favicon.png?v=2.0">
@@ -37,7 +37,8 @@
     </script>
 </head>
 
-<body>
+<!-- ผู้ยื่น (ROLE_USER) โหลดเอกสารได้เฉพาะ PDF — doc_preview.js อ่านค่านี้เพื่อซ่อนปุ่ม Word -->
+<body th:attr="data-pdf-only=${user != null and user.role == 'ROLE_USER'}">
 
     <!-- Skip to Content -->
     <a href="#main-content" class="skip-link">ข้ามไปยังเนื้อหา</a>
@@ -854,7 +855,7 @@
              เรียกได้ทัน ผลคือเบราว์เซอร์โหลดสองรอบแล้วรอบที่สองโยน
              "SyntaxError: Identifier 'DocPreviewEngine' has already been declared"
              ทิ้งไว้ใน console ทุกหน้า -->
-        <script src="/js/doc_preview.js?v=3.0"></script>
+        <script src="/js/doc_preview.js?v=3.1"></script>
 
         <div class="content-wrapper" id="main-content" th:replace="${content}"></div>
         <footer class="main-footer" role="contentinfo">

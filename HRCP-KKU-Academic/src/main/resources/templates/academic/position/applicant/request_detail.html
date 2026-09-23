@@ -155,9 +155,9 @@
                             [[${completedDocs.contains(entry.key)} ? 'แก้ไข/ลงนาม' : 'กรอกเอกสาร']]
                         </a>
                         <th:block th:if="${completedDocs.contains(entry.key)}">
-                            <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download'"
-                                class="btn btn-outline-primary" title="ดาวน์โหลด DOCX">
-                                <i class="fas fa-file-word me-1"></i> DOCX
+                            <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${entry.key} + '/download?format=pdf'"
+                                class="btn btn-outline-danger" title="ดาวน์โหลด PDF">
+                                <i class="fas fa-file-pdf me-1"></i> PDF
                             </a>
                         </th:block>
                     </div>

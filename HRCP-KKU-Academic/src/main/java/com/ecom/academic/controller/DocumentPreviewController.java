@@ -86,6 +86,10 @@ public class DocumentPreviewController {
             logger.warn("Applicant {} attempted to preview admin document type {}", user.getEmail(), docType);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
+        // ผู้ยื่นได้เฉพาะ PDF — ปุ่ม Word ถูกซ่อนแล้ว แต่ยิง URL ตรงก็ต้องไม่ได้ไฟล์ Word
+        if ("ROLE_USER".equals(user.getRole())) {
+            format = "pdf";
+        }
 
         try {
             // ============ Document 7: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============

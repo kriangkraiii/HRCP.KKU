@@ -100,7 +100,9 @@ public class AcademicAdminController {
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
             com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
             com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer,
-            DashboardAnalyticsService dashboardAnalytics) {
+            DashboardAnalyticsService dashboardAnalytics,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -116,6 +118,8 @@ public class AcademicAdminController {
     }
 
     private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
+
+    private final com.ecom.service.UploadPaths uploadPaths;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -747,8 +751,10 @@ public class AcademicAdminController {
         if (signingComplete) {
             // เขียนลงทุกสำเนา — เอกสารที่ 5 มีสามแถว (กรรมการคนละท่าน) แต่เป็นหนังสือ
             // ฉบับเดียวกัน ใช้เลขที่และวันที่ร่วมกัน
+            // ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ: ช่องของแอดมินยังไม่มีใครเซ็นรับรอง จึงยังกรอกได้
             requestService.saveOfficeFieldsAcrossCopies(request, type, formData,
-                    DOC_LABELS.getOrDefault(type, "Document " + type));
+                    DOC_LABELS.getOrDefault(type, "Document " + type),
+                    signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, id, type));
             // UPDATED ไม่ใช่ DRAFT_SAVED — การออกเลขที่หนังสือเป็นการเขียนลงฉบับจริง
             requestService.logDocumentEdit(request, type, DOC_LABELS.get(type), getUser(principal),
                     AcademicDocumentEditLog.EditAction.UPDATED);
@@ -967,11 +973,7 @@ public class AcademicAdminController {
         if (optEnvelope.isPresent()) {
             com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
             try {
-                if ("pdf".equalsIgnoreCase(format)) {
-                    data = signedDocumentRenderer.renderPdf(envelope);
-                } else {
-                    data = signedDocumentRenderer.renderDocx(envelope);
-                }
+                data = signedDocumentRenderer.renderForDownload(envelope, format);
             } catch (Exception e) {
                 // fall through to saved draft file if render fails
             }
@@ -1019,9 +1021,7 @@ public class AcademicAdminController {
         if (optEnvelope.isPresent()) {
             com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
             try {
-                byte[] data = "pdf".equalsIgnoreCase(format)
-                        ? signedDocumentRenderer.renderPdf(envelope)
-                        : signedDocumentRenderer.renderDocx(envelope);
+                byte[] data = signedDocumentRenderer.renderForDownload(envelope, format);
                 if (data != null && data.length > 0) {
                     String docLabel = DOC_LABELS.getOrDefault(type, "เอกสารที่ " + type);
                     String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
@@ -1056,14 +1056,14 @@ public class AcademicAdminController {
                         signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.ACADEMIC, id, doc.getDocumentType());
                 if (optEnvelope.isPresent()) {
                     try {
-                        docxBytes = signedDocumentRenderer.renderDocx(optEnvelope.get());
+                        docxBytes = signedDocumentRenderer.renderForDownload(optEnvelope.get(), "docx");
                     } catch (Exception e) {
                         // ignore
                     }
                 }
                 if (docxBytes == null && doc.getGeneratedFilePath() != null) {
-                    Path filePath = Path.of(doc.getGeneratedFilePath());
-                    if (Files.exists(filePath)) {
+                    Path filePath = uploadPaths.resolve(doc.getGeneratedFilePath());
+                    if (filePath != null && Files.exists(filePath)) {
                         docxBytes = Files.readAllBytes(filePath);
                     }
                 }
@@ -1127,13 +1127,15 @@ public class AcademicAdminController {
             return "redirect:/admin/academic/request/" + id + "?error=invalid_file_type";
         }
 
-        String uploadDir = "uploads/academic/" + id + "/attachments/";
-        Files.createDirectories(Path.of(uploadDir));
+        Path uploadDir = uploadPaths.dir("academic", String.valueOf(id), "attachments");
+        Files.createDirectories(uploadDir);
 
-        // สร้างชื่อไฟล์ไม่ซ้ำ (sanitize เพื่อป้องกัน Path Traversal)
-        String storedFilename = FileUtils.sanitizeFilename(originalFilename);
-        String filePath = uploadDir + storedFilename;
-        file.transferTo(Path.of(filePath));
+        // สร้างชื่อไฟล์ไม่ซ้ำ (sanitize เพื่อป้องกัน Path Traversal) — ขึ้นต้นด้วยเวลาเหมือนฝั่งผู้ยื่น
+        // ไม่งั้นอัปโหลดชื่อซ้ำจะเขียนทับไฟล์ที่แถวเดิมยังชี้อยู่
+        String storedFilename = System.currentTimeMillis() + "_" + FileUtils.sanitizeFilename(originalFilename);
+        Path target = uploadDir.resolve(storedFilename);
+        file.transferTo(target);
+        String filePath = uploadPaths.toStored(target);
 
         String fileType = "OTHER";
         if (lower.endsWith(".pdf")) fileType = "PDF";
@@ -1170,10 +1172,10 @@ public class AcademicAdminController {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         String stored = request.getRevisionFilePath();
-        if (stored == null || stored.isBlank() || !Files.exists(Path.of(stored))) {
+        Path path = uploadPaths.resolve(stored);
+        if (path == null || !Files.exists(path)) {
             return ResponseEntity.notFound().build();
         }
-        Path path = Path.of(stored);
         String rawFilename = path.getFileName().toString();
         String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
                 .replace("+", "%20");
@@ -1199,7 +1201,10 @@ public class AcademicAdminController {
                     .build();
         }
 
-        Path path = Path.of(attachment.getStoredFilePath());
+        Path path = uploadPaths.resolve(attachment.getStoredFilePath());
+        if (path == null || !Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
 
         String contentType = attachment.getFileType().equalsIgnoreCase("PDF")
                 ? "application/pdf"
@@ -1230,8 +1235,8 @@ public class AcademicAdminController {
                     .build();
         }
 
-        Path path = Path.of(attachment.getStoredFilePath());
-        if (!Files.exists(path)) {
+        Path path = uploadPaths.resolve(attachment.getStoredFilePath());
+        if (path == null || !Files.exists(path)) {
             return ResponseEntity.notFound().build();
         }
 
@@ -1296,7 +1301,10 @@ public class AcademicAdminController {
             // ลบไฟล์จริง (ถ้าไม่ใช่ลิงก์)
             if (!"LINK".equalsIgnoreCase(attachment.getFileType())) {
                 try {
-                    Files.deleteIfExists(Path.of(attachment.getStoredFilePath()));
+                    Path stored = uploadPaths.resolve(attachment.getStoredFilePath());
+                    if (stored != null) {
+                        Files.deleteIfExists(stored);
+                    }
                 } catch (Exception e) {
                     // ignore
                 }
@@ -1372,7 +1380,12 @@ public class AcademicAdminController {
     private void addOwnershipGate(Model model, SignatureModule module, Long requestId, int type) {
         model.addAttribute("readOnlyForAdmin", DocumentFieldOwnership.isApplicantDocument(module, type));
         model.addAttribute("adminEditableFields", DocumentFieldOwnership.adminFields(module, type));
-        model.addAttribute("officeFields", DocumentFieldOwnership.officeFields(module, type));
+        // ช่องที่ยังกรอกได้หลังลงนาม — ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ ช่องของแอดมินยังกรอกได้ด้วย
+        boolean adminFieldsStillOpen = signatureWorkflow.awaitsMoreSigners(module, requestId, type);
+        model.addAttribute("adminFieldsStillOpen", adminFieldsStillOpen);
+        model.addAttribute("officeFields", adminFieldsStillOpen
+                ? DocumentFieldOwnership.lateFields(module, type)
+                : DocumentFieldOwnership.officeFields(module, type));
 
         // ช่องแจ้งเตือนขึ้นเฉพาะเอกสารที่ทำให้คำร้องเดินไปขั้นถัดไป เอกสารอื่นไม่มีอีเมลจะส่ง
         model.addAttribute("advancesStatus",

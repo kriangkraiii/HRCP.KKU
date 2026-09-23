@@ -167,6 +167,13 @@ public class SignerNameResolver {
                     }
                 }
             }
+
+            // วันที่ใต้เส้นลงนามคือวันที่เซ็นจริง ยังไม่เซ็นก็ยังไม่มีวันที่ — ปล่อยให้แบบฟอร์มขึ้นจุดไข่ปลา
+            if (slot.marks() != null && slot.marks().signedDateFieldKey() != null
+                    && step.getStatus() == SignatureStepStatus.SIGNED && step.getSignedAt() != null) {
+                answers.put(slot.marks().signedDateFieldKey(),
+                        AcademicRequestService.formatThaiDate(step.getSignedAt()));
+            }
         }
         return answers;
     }

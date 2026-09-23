@@ -184,6 +184,29 @@ public class SignatureWorkflowService {
     }
 
     /**
+     * รอบที่ลงนามครบแล้ว แต่ยังมีช่องลงนามที่ยังไม่ได้ส่งต่อ — ปกติคือผู้ยื่นเซ็นแล้ว รอเจ้าหน้าที่
+     * ตรวจแล้วส่งต่อให้หัวหน้าสาขาหรือคณบดี
+     *
+     * <p>ช่วงนี้ช่องของแอดมินยังไม่มีใครเซ็นรับรอง แอดมินจึงยังกรอกได้ พอส่งต่อไปแล้ว ช่องพวกนั้น
+     * กลายเป็นเนื้อความที่ผู้ลงนามคนถัดไปเซ็นรับรอง จึงเหลือแค่ช่องสารบรรณที่กรอกได้ ใช้ตรรกะเดียวกับ
+     * {@link com.ecom.academic.dto.SignaturePanelView#unfilledSlots()} ที่หน้าจอใช้ตัดสินว่าปุ่มส่งต่อ
+     * ยังขึ้นหรือไม่
+     */
+    public boolean awaitsMoreSigners(SignatureModule module, Long requestId, int documentType) {
+        SignatureRequest envelope = findBlockingEnvelope(module, requestId, documentType)
+                .filter(e -> e.getStatus() == SignatureRequestStatus.COMPLETED)
+                .orElse(null);
+        if (envelope == null) {
+            return false;
+        }
+        List<SignatureStep> steps = stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId());
+        return slotsFor(module, documentType).stream()
+                .anyMatch(slot -> steps.stream().noneMatch(step ->
+                        slot.slotKey().equalsIgnoreCase(step.getSlotKey())
+                                && step.getStatus() != SignatureStepStatus.SKIPPED));
+    }
+
+    /**
      * The round the clock closed on this document, if one is waiting to be
      * revived.
      *
@@ -840,6 +863,16 @@ public class SignatureWorkflowService {
                 }
             } catch (Exception e) {
                 log.warn("Could not generate fresh digital stamp for step {}: {}", step.getId(), e.toString());
+            }
+        } else {
+            // Drawn or uploaded: take a copy, so replacing or deleting the library
+            // entry later cannot blank this signature out of the document.
+            String copy = userSignatureService.copyImageForSigning(signature);
+            if (copy != null) {
+                imagePathSnapshot = copy;
+            } else {
+                log.warn("Could not copy signature image {} for step {}; using the library file",
+                        signature.getImagePath(), step.getId());
             }
         }
         step.setImagePathSnapshot(imagePathSnapshot);

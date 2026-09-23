@@ -38,6 +38,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import com.ecom.academic.model.AcademicRank;
 import com.ecom.util.ThaiDateUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -56,9 +57,20 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 public class DocumentGenerationService {
 
     private static final String TEMPLATE_DIR = "templates/docx/";
-    private static final String OUTPUT_BASE_DIR = "uploads/academic/";
 
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    private final com.ecom.service.UploadPaths uploadPaths;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    public DocumentGenerationService(com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
+    }
+
+    /** For tests that build the service by hand; writes under the working directory's uploads/. */
+    public DocumentGenerationService() {
+        this(com.ecom.service.UploadPaths.workingDirectoryDefault());
+    }
 
     private Map<String, Object> parseJsonData(String jsonData) {
         if (jsonData == null || jsonData.isBlank()) {
@@ -84,21 +96,20 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        String outputDir = OUTPUT_BASE_DIR + requestId + "/";
-        Files.createDirectories(Path.of(outputDir));
+        Path outputDir = uploadPaths.dir("academic", String.valueOf(requestId));
+        Files.createDirectories(outputDir);
 
         String outputFileName = (copyNumber != null && copyNumber > 0)
                 ? "doc_" + documentType + "_copy_" + copyNumber + ".docx"
                 : "doc_" + documentType + ".docx";
-        String outputPath = outputDir + outputFileName;
+        Path outputFile = outputDir.resolve(outputFileName);
+        String outputPath = uploadPaths.toStored(outputFile);
 
         preprocessPlaceholders(documentType, placeholders);
 
         byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
 
-        try (FileOutputStream fos = new FileOutputStream(outputPath)) {
-            fos.write(result);
-        }
+        Files.write(outputFile, result);
 
         return outputPath;
     }
@@ -217,15 +228,16 @@ public class DocumentGenerationService {
         if (filePath == null || filePath.isBlank()) {
             return null;
         }
-        Path path = Path.of(filePath);
-        if (!Files.exists(path)) {
+        Path path = uploadPaths.resolve(filePath);
+        if (path == null || !Files.exists(path)) {
             return null;
         }
         return Files.readAllBytes(path);
     }
 
     public File getDocumentFile(String filePath) {
-        return new File(filePath);
+        Path path = uploadPaths.resolve(filePath);
+        return path != null ? path.toFile() : new File(filePath);
     }
 
     // =====================================================================
@@ -259,18 +271,17 @@ public class DocumentGenerationService {
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
-        String outputDir = OUTPUT_BASE_DIR + "position/" + request.getId() + "/";
-        Files.createDirectories(Path.of(outputDir));
+        Path outputDir = uploadPaths.dir("academic", "position", String.valueOf(request.getId()));
+        Files.createDirectories(outputDir);
 
-        String outputPath = outputDir + "p2doc_" + documentType + ".docx";
+        Path outputFile = outputDir.resolve("p2doc_" + documentType + ".docx");
+        String outputPath = uploadPaths.toStored(outputFile);
 
         preprocessPlaceholders(documentType, placeholders);
 
         byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
 
-        try (FileOutputStream fos = new FileOutputStream(outputPath)) {
-            fos.write(result);
-        }
+        Files.write(outputFile, result);
 
         return outputPath;
     }
@@ -328,6 +339,11 @@ public class DocumentGenerationService {
                     // แสดงกรอบสี่เหลี่ยมรอบรูปภาพใน PDF
                     xml = xml.replaceAll(" descr=\"https://[^\"]*\"", "");
                     xml = xml.replaceAll("<w:bdr[^>]*w:frame=\"1\"[^/]*/>", "");
+
+                    // จัดแนวแบบกระจายแบบไทย (Thai Distributed) — LibreOffice กระจายช่องไฟระหว่าง
+                    // ตัวอักษรแล้วขอบซ้ายของแต่ละบรรทัดไม่ตรงกัน ใช้อยู่ในเทมเพลตแทบทุกฉบับรวมทั้งใน
+                    // styles.xml จึงแปลงเป็นจัดเต็มแนวปกติตรงนี้ทีเดียว ทุกเอกสารทุกเส้นทางผ่านจุดนี้
+                    xml = xml.replace("w:val=\"thaiDistribute\"", "w:val=\"both\"");
 
                     // Declare the image part and its relationship. Deliberately
                     // outside the {{ }} branch below: neither of these two parts
@@ -1703,6 +1719,27 @@ public class DocumentGenerationService {
         if (documentType == 5 || documentType == 4) {
             preprocessDoc5Placeholders(placeholders);
         }
+        if (documentType == 1) {
+            putRequestedRank(placeholders);
+        }
+    }
+
+    /**
+     * ตำแหน่งที่ขอในบันทึกข้อความเอกสารที่ 1 ของเฟส 1 — พิมพ์เป็นชื่อตำแหน่งที่เลือกเท่านั้น
+     *
+     * <p>เดิมเอกสารพิมพ์ "[☐] ผู้ช่วยศาสตราจารย์ [✓] รองศาสตราจารย์" ซึ่งบันทึกข้อความราชการ
+     * ไม่เขียนกันแบบนั้น ตำแหน่งที่ไม่ได้ขอไม่ต้องปรากฏเลย ฟอร์มยังเก็บเป็น chk1/chk2/chk3
+     * เหมือนเดิม (ทั้งระบบอ่านค่านี้ผ่าน {@link AcademicRank#fromDoc1Checks}) จึงแปลงตรงนี้ที่เดียว
+     *
+     * <p>เอกสารที่ 1 ของเฟส 2 ไม่มีช่อง chk พวกนี้ จึงไม่ถูกแตะ
+     */
+    private static void putRequestedRank(Map<String, String> placeholders) {
+        if (!placeholders.containsKey("chk1") && !placeholders.containsKey("chk2")
+                && !placeholders.containsKey("chk3")) {
+            return;
+        }
+        AcademicRank rank = AcademicRank.fromDoc1Checks(placeholders);
+        placeholders.put("requested_rank", rank == null ? "" : rank.thaiLabel());
     }
 
     /** ข้อความที่มองเห็นในเอกสาร — ไม่รวมชื่อแท็กและ attribute ซึ่งเป็น ASCII ล้วน */
@@ -2006,8 +2043,33 @@ public class DocumentGenerationService {
     private static final java.util.regex.Pattern LEFTOVER_PLACEHOLDER = java.util.regex.Pattern.compile(
             "\\{\\{([^}]+)\\}\\}");
 
+    /**
+     * ส่วนที่ ๒ และ ๓ ของแบบ ก.พ.ว. มข. ๐๓ — ค่ามาจากผู้ลงนามและจากผลประเมินการสอน ไม่ใช่
+     * จากผู้ยื่น ก่อนถึงคิวของคนเหล่านั้นเอกสารต้องยังเป็นแบบฟอร์มเปล่า มีจุดไข่ปลาและตัวเลือก
+     * ในวงเล็บเหมือนต้นฉบับทุกตัวอักษร ไม่ใช่ประโยคที่มีรูโหว่
+     */
+    private static final Map<String, String> SIGNER_PART_BLANKS = Map.ofEntries(
+            Map.entry("requested_rank", "...................................."),
+            Map.entry("qualification_status", "(ครบถ้วน / ไม่ครบถ้วน)"),
+            Map.entry("dean_qualification_status", "...(เข้าข่าย/ไม่เข้าข่าย)"),
+            Map.entry("head_sign_date", "........เดือน.................พ.ศ......"),
+            Map.entry("dean_sign_date", "........เดือน.................พ.ศ. ........"),
+            Map.entry("s3_meeting_no", "......."),
+            Map.entry("s3_meeting_date", "................"),
+            Map.entry("s3_university", "................(มหาวิทยาลัย/สถาบัน)................................"),
+            Map.entry("s3_course_code", "......................"),
+            Map.entry("s3_course_name", "........................................"),
+            Map.entry("s3_level", "....(ชำนาญ/ชำนาญพิเศษ/เชี่ยวชาญ)....."),
+            Map.entry("s3_quality", "..(อยู่/ไม่อยู่)....."),
+            Map.entry("s3_chair_name", "..................................................."),
+            Map.entry("s3_sign_date", "......เดือน...................พ.ศ......"));
+
     /** ค่าที่ใช้แทน placeholder ซึ่งผู้ขอไม่ได้กรอก */
     private String blankFormFiller(String key) {
+        String signerPart = SIGNER_PART_BLANKS.get(key);
+        if (signerPart != null) {
+            return signerPart;
+        }
         if (CHECKBOX_BLANK_KEY.matcher(key).matches()) {
             return "\u2610";
         }

@@ -342,8 +342,8 @@ class SignatureStampingTest {
     @Test
     @DisplayName("บรรทัดจุดไข่ปลาถูกแทนที่ด้วยลายเซ็น")
     void dotLeaderIsReplaced() throws IOException {
-        byte[] before = render(SignatureModule.POSITION, 5, List.of());
-        byte[] after = render(SignatureModule.POSITION, 5,
+        byte[] before = render(SignatureModule.POSITION, 1, List.of());
+        byte[] after = render(SignatureModule.POSITION, 1,
                 List.of(new StampedSignature("department_head_name", samplePng(), 300, 100)));
 
         String plain = text(unzip(before), "word/document.xml");
@@ -361,17 +361,18 @@ class SignatureStampingTest {
 
         assertThat(registry.signableDocumentTypes(SignatureModule.ACADEMIC))
                 .containsExactly(1, 2, 3, 4, 5, 7, 8, 9);
+        // เอกสารที่ 5 (แบบประเมินโดยผู้บังคับบัญชา) รวมเข้าเป็นส่วนที่ ๒ ของเอกสารที่ 1 แล้ว
         assertThat(registry.signableDocumentTypes(SignatureModule.POSITION))
-                .containsExactly(1, 2, 3, 4, 5, 6, 7, 8, 9);
+                .containsExactly(1, 2, 3, 4, 6, 7, 8, 9);
     }
 
     @Test
-    @DisplayName("รวมทั้งระบบต้องลงนามได้ 17 ฉบับ")
-    void seventeenSignableDocumentsInTotal() {
+    @DisplayName("รวมทั้งระบบต้องลงนามได้ 16 ฉบับ")
+    void sixteenSignableDocumentsInTotal() {
         int total = registry.modules().stream()
                 .mapToInt(m -> registry.signableDocumentTypes(m).size())
                 .sum();
-        assertThat(total).isEqualTo(17);
+        assertThat(total).isEqualTo(16);
     }
 
     @Test

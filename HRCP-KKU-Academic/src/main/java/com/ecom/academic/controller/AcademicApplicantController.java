@@ -101,7 +101,9 @@ public class AcademicApplicantController {
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
             com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
             com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer,
-            com.ecom.external.service.KkuDocumentSyncService kkuDocSyncService) {
+            com.ecom.external.service.KkuDocumentSyncService kkuDocSyncService,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -117,6 +119,8 @@ public class AcademicApplicantController {
         this.signedDocumentRenderer = signedDocumentRenderer;
         this.kkuDocSyncService = kkuDocSyncService;
     }
+
+    private final com.ecom.service.UploadPaths uploadPaths;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -566,8 +570,8 @@ public class AcademicApplicantController {
         int targetSlot = (slot != null && slot >= 1 && slot <= 5) ? slot : 1;
 
         int uploadedCount = 0;
-        String uploadDir = "uploads/academic/" + id + "/attachments/";
-        Files.createDirectories(Path.of(uploadDir));
+        Path uploadDir = uploadPaths.dir("academic", String.valueOf(id), "attachments");
+        Files.createDirectories(uploadDir);
 
         for (MultipartFile file : files) {
             if (file.isEmpty()) continue;
@@ -609,8 +613,9 @@ public class AcademicApplicantController {
             String sanitized = FileUtils.sanitizeFilename(originalFilename);
             String uniquePrefix = System.currentTimeMillis() + "_" + (uploadedCount + 1) + "_";
             String storedFilename = uniquePrefix + sanitized;
-            String filePath = uploadDir + storedFilename;
-            file.transferTo(Path.of(filePath));
+            Path target = uploadDir.resolve(storedFilename);
+            file.transferTo(target);
+            String filePath = uploadPaths.toStored(target);
 
             String fileType = "OTHER";
             if (lower.endsWith(".pdf")) fileType = "PDF";
@@ -721,8 +726,8 @@ public class AcademicApplicantController {
                     .build();
         }
 
-        Path path = Path.of(attachment.getStoredFilePath());
-        if (!Files.exists(path)) {
+        Path path = uploadPaths.resolve(attachment.getStoredFilePath());
+        if (path == null || !Files.exists(path)) {
             return ResponseEntity.notFound().build();
         }
 
@@ -775,8 +780,8 @@ public class AcademicApplicantController {
                     .build();
         }
 
-        Path path = Path.of(attachment.getStoredFilePath());
-        if (!Files.exists(path)) {
+        Path path = uploadPaths.resolve(attachment.getStoredFilePath());
+        if (path == null || !Files.exists(path)) {
             return ResponseEntity.notFound().build();
         }
 
@@ -855,7 +860,10 @@ public class AcademicApplicantController {
             boolean isLink = "LINK".equalsIgnoreCase(attachment.getFileType());
             if (!isLink) {
                 try {
-                    Files.deleteIfExists(Path.of(attachment.getStoredFilePath()));
+                    Path stored = uploadPaths.resolve(attachment.getStoredFilePath());
+                    if (stored != null) {
+                        Files.deleteIfExists(stored);
+                    }
                 } catch (Exception e) {
                     log.warn("Failed to delete file on disk: {}", e.getMessage());
                 }
@@ -1054,11 +1062,12 @@ public class AcademicApplicantController {
 
         String oldRevisionPath = request.getRevisionFilePath();
 
-        String uploadDir = "uploads/academic/" + id + "/revisions/";
-        Files.createDirectories(Path.of(uploadDir));
+        Path uploadDir = uploadPaths.dir("academic", String.valueOf(id), "revisions");
+        Files.createDirectories(uploadDir);
         String safeFilename = FileUtils.sanitizeFilename(file.getOriginalFilename());
-        String filePath = uploadDir + safeFilename;
-        file.transferTo(Path.of(filePath));
+        Path target = uploadDir.resolve(safeFilename);
+        file.transferTo(target);
+        String filePath = uploadPaths.toStored(target);
 
         requestService.setRevisionFile(id, filePath);
 
@@ -1076,7 +1085,10 @@ public class AcademicApplicantController {
         // Delete old revision file from disk
         if (oldRevisionPath != null && !oldRevisionPath.isBlank() && !oldRevisionPath.equals(filePath)) {
             try {
-                Files.deleteIfExists(Path.of(oldRevisionPath));
+                Path oldRevision = uploadPaths.resolve(oldRevisionPath);
+                if (oldRevision != null) {
+                    Files.deleteIfExists(oldRevision);
+                }
             } catch (Exception e) {
                 log.warn("Failed to delete previous revision file: {}", e.getMessage());
             }
@@ -1098,7 +1110,7 @@ public class AcademicApplicantController {
     @GetMapping("/download/{id}/{docId}")
     public ResponseEntity<byte[]> downloadDocument(@PathVariable Long id,
             @PathVariable Long docId,
-            @RequestParam(value = "format", defaultValue = "docx") String format,
+            @RequestParam(value = "format", defaultValue = "pdf") String format,
             Principal principal) throws IOException {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
@@ -1107,6 +1119,10 @@ public class AcademicApplicantController {
         if (!request.getApplicant().getId().equals(user.getId())) {
             return ResponseEntity.status(403).build();
         }
+
+        // ผู้ยื่นโหลดเอกสารได้เฉพาะ PDF เสมอ ไม่ว่าคำร้องจะอยู่สถานะไหน — ไฟล์ Word แก้ต่อได้
+        // ซึ่งไม่ใช่สิ่งที่ผู้ยื่นควรได้ไปจากระบบ เอกสารฉบับจริงคือฉบับที่ระบบสร้าง
+        format = "pdf";
 
         List<AcademicDocument> docs = requestService.getDocuments(id);
         AcademicDocument doc = docs.stream()
@@ -1127,11 +1143,7 @@ public class AcademicApplicantController {
         if (optEnvelope.isPresent()) {
             com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
             try {
-                if ("pdf".equalsIgnoreCase(format)) {
-                    data = signedDocumentRenderer.renderPdf(envelope);
-                } else {
-                    data = signedDocumentRenderer.renderDocx(envelope);
-                }
+                data = signedDocumentRenderer.renderForDownload(envelope, format);
             } catch (Exception e) {
                 // fall through to saved draft file if render fails
             }
@@ -1165,7 +1177,7 @@ public class AcademicApplicantController {
     @GetMapping("/request/{id}/document/{type}/download")
     public ResponseEntity<byte[]> downloadDocumentByType(@PathVariable Long id,
             @PathVariable int type,
-            @RequestParam(value = "format", defaultValue = "docx") String format,
+            @RequestParam(value = "format", defaultValue = "pdf") String format,
             Principal principal) throws IOException {
         // ตรวจก่อนแยกเส้นทาง — เส้นที่ render จากซองลายเซ็นข้างล่างเคยข้ามทั้ง
         // การตรวจเจ้าของคำร้องและการตรวจประเภทเอกสาร เปิดให้โหลดคำสั่งแต่งตั้ง
@@ -1178,6 +1190,10 @@ public class AcademicApplicantController {
             return ResponseEntity.status(403).build();
         }
 
+        // ผู้ยื่นโหลดเอกสารได้เฉพาะ PDF เสมอ ไม่ว่าคำร้องจะอยู่สถานะไหน — ไฟล์ Word แก้ต่อได้
+        // ซึ่งไม่ใช่สิ่งที่ผู้ยื่นควรได้ไปจากระบบ เอกสารฉบับจริงคือฉบับที่ระบบสร้าง
+        format = "pdf";
+
         List<AcademicDocument> docs = requestService.getDocumentsByType(id, type);
         if (docs.isEmpty()) {
             // Check if envelope exists for auto-generated / submitted document
@@ -1186,9 +1202,7 @@ public class AcademicApplicantController {
             if (optEnvelope.isPresent()) {
                 com.ecom.academic.model.SignatureRequest envelope = optEnvelope.get();
                 try {
-                    byte[] data = "pdf".equalsIgnoreCase(format)
-                            ? signedDocumentRenderer.renderPdf(envelope)
-                            : signedDocumentRenderer.renderDocx(envelope);
+                    byte[] data = signedDocumentRenderer.renderForDownload(envelope, format);
                     if (data != null && data.length > 0) {
                         AcademicRequest req = requestService.findById(id).orElse(null);
                         String code = req != null ? req.getRequestCode() : "REQ";
@@ -1220,7 +1234,10 @@ public class AcademicApplicantController {
             return ResponseEntity.notFound().build();
         }
 
-        Path path = Path.of(request.getResultFilePath());
+        Path path = uploadPaths.resolve(request.getResultFilePath());
+        if (path == null || !Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
         byte[] data = Files.readAllBytes(path);
         ByteArrayResource resource = new ByteArrayResource(data);
         String ext = path.getFileName().toString().toLowerCase().endsWith(".pdf") ? ".pdf" : ".docx";

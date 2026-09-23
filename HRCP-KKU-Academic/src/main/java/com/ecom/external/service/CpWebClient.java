@@ -51,10 +51,18 @@ public class CpWebClient {
     private final CpWebProperties props;
     private final ObjectMapper mapper = new ObjectMapper();
     private final RestClient http;
+    private final com.ecom.service.UploadPaths uploadPaths;
 
-    public CpWebClient(CpWebProperties props) {
+    @org.springframework.beans.factory.annotation.Autowired
+    public CpWebClient(CpWebProperties props, com.ecom.service.UploadPaths uploadPaths) {
         this.props = props;
+        this.uploadPaths = uploadPaths;
         this.http = RestClient.builder().requestFactory(requestFactory(props)).build();
+    }
+
+    /** For tests that build the client by hand. */
+    public CpWebClient(CpWebProperties props) {
+        this(props, com.ecom.service.UploadPaths.workingDirectoryDefault());
     }
 
     private static ClientHttpRequestFactory requestFactory(CpWebProperties props) {
@@ -311,9 +319,12 @@ public class CpWebClient {
 
     private Path resolveSnapshotPath() {
         if (props != null && props.getSnapshotFilePath() != null && !props.getSnapshotFilePath().isBlank()) {
-            return Path.of(props.getSnapshotFilePath()).toAbsolutePath().normalize();
+            Path configured = uploadPaths.resolve(props.getSnapshotFilePath());
+            if (configured != null) {
+                return configured;
+            }
         }
-        return Path.of("uploads/cache/cp_directory_snapshot.json").toAbsolutePath().normalize();
+        return uploadPaths.dir("cache", "cp_directory_snapshot.json");
     }
 
     /**

@@ -73,6 +73,7 @@ public class SigningController {
     private final HttpServletRequest httpRequest;
     private final UserDigitalCertificateService digitalCertificateService;
     private final DocumentGenerationService documentService;
+    private final com.ecom.service.UploadPaths uploadPaths;
 
     public SigningController(SignatureWorkflowService workflow,
             SignedDocumentRenderer renderer,
@@ -82,7 +83,9 @@ public class SigningController {
             DocumentSnapshotProvider documentLabelResolver,
             HttpServletRequest httpRequest,
             UserDigitalCertificateService digitalCertificateService,
-            DocumentGenerationService documentService) {
+            DocumentGenerationService documentService,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.workflow = workflow;
         this.renderer = renderer;
         this.signatureService = signatureService;
@@ -289,8 +292,8 @@ public class SigningController {
                     .build();
         }
 
-        Path path = Path.of(attachment.storedPath());
-        if (!Files.exists(path)) {
+        Path path = uploadPaths.resolve(attachment.storedPath());
+        if (path == null || !Files.exists(path)) {
             return ResponseEntity.notFound().build();
         }
 

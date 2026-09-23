@@ -30,4 +30,7 @@ public interface AcademicDocumentRepository extends JpaRepository<AcademicDocume
     List<AcademicDocument> findByIsDeletedFalseOrIsDeletedIsNull();
 
     List<AcademicDocument> findByIsDeletedTrue();
+
+    /** The most recently generated file, for the startup storage check. */
+    Optional<AcademicDocument> findFirstByGeneratedFilePathIsNotNullOrderByIdDesc();
 }

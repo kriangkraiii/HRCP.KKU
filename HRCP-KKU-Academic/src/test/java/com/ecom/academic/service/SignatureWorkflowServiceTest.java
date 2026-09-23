@@ -59,7 +59,8 @@ import com.ecom.repository.UserRepository;
 class SignatureWorkflowServiceTest {
 
     private static final SignatureModule MODULE = SignatureModule.POSITION;
-    private static final int DOC_TYPE = 5;
+    // แบบ ก.พ.ว. มข. 03 — ส่วนที่ ๒ มีช่องหัวหน้าสาขาวิชาและคณบดีต่อจากผู้ยื่น
+    private static final int DOC_TYPE = 1;
     private static final Long REQUEST_ID = 4242L;
     private static final String FROZEN_JSON = "{\"department_head_name\":\"สุดา\",\"dean_name\":\"สมชาย\"}";
 
@@ -86,6 +87,12 @@ class SignatureWorkflowServiceTest {
 
     @Autowired
     private SignatureReminderScheduler reminderScheduler;
+
+    @Autowired
+    private com.ecom.service.SignatureImageStorage imageStorage;
+
+    @Autowired
+    private SignatureVerificationService verificationService;
 
     private UserDtls admin;
     private UserDtls head;
@@ -305,8 +312,51 @@ class SignatureWorkflowServiceTest {
         assertThat(signed.getAuthMethod()).isEqualTo(SignatureStep.AUTH_METHOD_SESSION);
         // The image is copied, so deleting it from the library later cannot
         // change what this document was signed with.
-        assertThat(signed.getImagePathSnapshot()).isEqualTo(headSignature.getImagePath());
+        assertThat(signed.getImagePathSnapshot()).isNotBlank().isNotEqualTo(headSignature.getImagePath());
+        assertThat(imageStorage.read(signed.getImagePathSnapshot()))
+                .isEqualTo(imageStorage.read(headSignature.getImagePath()));
         assertThat(signed.getSignerNameSnapshot()).isEqualTo(head.getName());
+    }
+
+    @Test
+    @DisplayName("ลบหรือเปลี่ยนรูปลายเซ็นในคลังทีหลัง เอกสารที่ลงนามแล้วต้องยังมีลายเซ็นเดิม")
+    void libraryChangesLeaveSignedDocumentsAlone() {
+        SignatureRequest envelope = createEnvelope().request();
+        SignatureStep headStep = stepOf(envelope, "head");
+        signStep(headStep.getId(), head, headSignature.getId(), true, ActorContext.none());
+        SignatureStep signed = stepRepository.findById(headStep.getId()).orElseThrow();
+        byte[] original = imageStorage.read(signed.getImagePathSnapshot());
+
+        assertThat(signatureService.delete(headSignature.getId(), head)).isTrue();
+
+        assertThat(imageStorage.read(signed.getImagePathSnapshot())).isEqualTo(original);
+        assertThat(verificationService.sealIntact(signed)).isTrue();
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ลงนามก่อนมีการคัดลอกรูป (ชี้ไฟล์ในคลังตรง ๆ) ลบลายเซ็นแล้วไฟล์ต้องไม่หาย")
+    void libraryFileStillUsedByAnOlderStepIsKept() {
+        SignatureRequest envelope = createEnvelope().request();
+        SignatureStep headStep = stepOf(envelope, "head");
+        signStep(headStep.getId(), head, headSignature.getId(), true, ActorContext.none());
+        // Rows signed by earlier builds point straight at the library file.
+        SignatureStep legacy = stepRepository.findById(headStep.getId()).orElseThrow();
+        legacy.setImagePathSnapshot(headSignature.getImagePath());
+        stepRepository.save(legacy);
+
+        assertThat(signatureService.delete(headSignature.getId(), head)).isTrue();
+
+        assertThat(imageStorage.read(headSignature.getImagePath())).isNotNull();
+    }
+
+    @Test
+    @DisplayName("ลบลายเซ็นที่ไม่เคยใช้ลงนาม ไฟล์รูปต้องถูกลบจริง")
+    void unusedLibraryFileIsDeleted() {
+        String image = deanSignature.getImagePath();
+
+        assertThat(signatureService.delete(deanSignature.getId(), dean)).isTrue();
+
+        assertThat(imageStorage.read(image)).isNull();
     }
 
     @Test

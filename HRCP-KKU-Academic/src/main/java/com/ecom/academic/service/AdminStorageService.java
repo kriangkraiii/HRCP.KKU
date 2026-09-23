@@ -24,18 +24,19 @@ import com.ecom.academic.repository.AdminFolderRepository;
 @Service
 public class AdminStorageService {
 
-    private static final String STORAGE_ROOT = "uploads/admin-storage";
-
     private final long maxStorageBytes;
     private final Set<String> allowedExtensions;
     private final AdminFolderRepository folderRepository;
     private final AdminFileRepository fileRepository;
+    private final com.ecom.service.UploadPaths uploadPaths;
 
     public AdminStorageService(
             AdminFolderRepository folderRepository,
             AdminFileRepository fileRepository,
             @Value("${app.storage.admin.max-bytes:0}") long maxStorageBytes,
-            @Value("${app.storage.admin.allowed-extensions:pdf,doc,docx,zip}") String allowedExtensionsStr) {
+            @Value("${app.storage.admin.allowed-extensions:pdf,doc,docx,zip}") String allowedExtensionsStr,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.folderRepository = folderRepository;
         this.fileRepository = fileRepository;
         this.maxStorageBytes = maxStorageBytes;
@@ -174,7 +175,7 @@ public class AdminStorageService {
         validateFileType(originalFilename);
         validateStorageQuota(multipartFile.getSize());
 
-        Path storageDir = Path.of(STORAGE_ROOT);
+        Path storageDir = uploadPaths.dir("admin-storage");
         Files.createDirectories(storageDir);
 
         // Generate unique stored filename
@@ -189,7 +190,7 @@ public class AdminStorageService {
 
         AdminFile file = new AdminFile();
         file.setOriginalFilename(originalFilename != null ? originalFilename : "unnamed");
-        file.setStoredFilePath(targetPath.toString());
+        file.setStoredFilePath(uploadPaths.toStored(targetPath));
         file.setFileSize(multipartFile.getSize());
         file.setContentType(multipartFile.getContentType());
         file.setCreatedBy(uploadedBy);
@@ -336,7 +337,10 @@ public class AdminStorageService {
     private void deleteFileFromDisk(String filePath) {
         if (filePath == null) return;
         try {
-            Files.deleteIfExists(Path.of(filePath));
+            Path path = uploadPaths.resolve(filePath);
+            if (path != null) {
+                Files.deleteIfExists(path);
+            }
         } catch (IOException e) {
             // Log but don't fail
         }

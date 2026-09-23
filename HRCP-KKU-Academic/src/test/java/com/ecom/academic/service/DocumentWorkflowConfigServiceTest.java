@@ -93,6 +93,41 @@ class DocumentWorkflowConfigServiceTest {
     }
 
     @Test
+    @DisplayName("ช่องลงนามที่เทมเพลตเพิ่มทีหลังการตั้งค่า ยังอยู่ครบพร้อมคำถามและช่องวันที่")
+    void slotsAddedAfterConfigurationAreKept() {
+        // ตั้งค่าไว้ตอนเอกสารที่ 1 เฟส 2 มีแค่ผู้ยื่น ก่อนรวมส่วนของผู้บังคับบัญชาเข้ามา
+        DocumentWorkflowConfig applicantOnly = new DocumentWorkflowConfig(
+                SignatureModule.POSITION, 1, "applicant", "เจ้าของประวัติ",
+                "applicant_name", null, 1, true, null);
+        when(repository.findByModuleAndDocumentType(SignatureModule.POSITION, 1))
+                .thenReturn(List.of(applicantOnly));
+
+        List<SignatureSlot> slots = service.effectiveSlotsFor(SignatureModule.POSITION, 1);
+
+        assertThat(slots).extracting(SignatureSlot::slotKey).containsExactly("applicant", "head", "dean");
+        assertThat(slots.get(1).choice().fieldKey()).isEqualTo("qualification_status");
+        assertThat(slots.get(2).choice().options()).containsExactly("เข้าข่าย", "ไม่เข้าข่าย");
+        assertThat(slots.get(2).marks().signedDateFieldKey()).isEqualTo("dean_sign_date");
+    }
+
+    @Test
+    @DisplayName("ช่องที่ตั้งค่าไว้แล้วยังได้ช่องวันที่ลงนามจากทะเบียน ไม่หายเพราะมีแถวตั้งค่า")
+    void configuredSlotsKeepTheirMarks() {
+        DocumentWorkflowConfig head = new DocumentWorkflowConfig(
+                SignatureModule.POSITION, 1, "head", "หัวหน้าสาขาวิชา",
+                "department_head_name", "HEAD", 2, true, null);
+        when(repository.findByModuleAndDocumentType(SignatureModule.POSITION, 1))
+                .thenReturn(List.of(head));
+
+        SignatureSlot configured = service.effectiveSlotsFor(SignatureModule.POSITION, 1).stream()
+                .filter(slot -> "head".equals(slot.slotKey()))
+                .findFirst()
+                .orElseThrow();
+
+        assertThat(configured.marks().signedDateFieldKey()).isEqualTo("head_sign_date");
+    }
+
+    @Test
     @DisplayName("บันทึกการตั้งค่าลงฐานข้อมูลสำเร็จ")
     void savesConfigurationSuccessfully() {
         UserDtls signer = new UserDtls();

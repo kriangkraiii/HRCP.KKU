@@ -102,15 +102,15 @@
 
 	<div class="guest-split">
 		<!-- Brand Panel -->
-		<div class="guest-brand">
+		<div class="guest-brand" data-signin-particles data-particles-dark>
 			<div class="guest-brand-title"><span class="brand-cp">CP</span> <span class="brand-hrd">HRD</span></div>
 			<div class="guest-brand-sub">COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM</div>
 			<div class="guest-footer">© <span th:text="${T(java.time.Year).now(T(java.time.ZoneId).of('Asia/Bangkok')).getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
 		</div>
 
 		<!-- Form Panel -->
-		<div class="guest-form">
-			<div class="guest-card">
+		<div class="guest-form" data-signin-particles>
+			<div class="guest-card" data-particles-quiet>
 				<h1 class="guest-card-heading">เข้าสู่ระบบ</h1>
 				<p class="guest-card-sub" th:if="${ssoMode}">เข้าใช้งานด้วยบัญชี KKU ของมหาวิทยาลัยขอนแก่น</p>
 				<p class="guest-card-sub" th:unless="${ssoMode}">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน</p>
@@ -392,6 +392,7 @@
 		}
 	</script>
 	<script src="/js/guest-alert.js"></script>
+	<script src="/js/signin-particles.js" defer></script>
 </body>
 
 </html>

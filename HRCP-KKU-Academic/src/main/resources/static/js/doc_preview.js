@@ -35,11 +35,10 @@ class DocPreviewEngine {
         if (isPosition) {
             const posTitles = {
                 0: 'บันทึกข้อความ ขอรับการประเมินผลการสอน',
-                1: 'แบบ ก.พ.ว. มข. 03 (ประวัติและผลงาน)',
+                1: 'แบบ ก.พ.ว. มข. 03 (ส่วนที่ 1–5)',
                 2: 'หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูล',
                 3: 'แบบรับรองจริยธรรมและจรรยาบรรณ',
                 4: 'บันทึกรับรองผลงานทางวิชาการ (วิทยานิพนธ์)',
-                5: 'แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา',
                 6: 'บันทึกข้อความจริยธรรมการวิจัย (Exemption)',
                 7: 'แบบฟอร์มตรวจสอบคุณสมบัติ (Checklist)',
                 8: 'แบบสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ',
@@ -143,9 +142,9 @@ class DocPreviewEngine {
                         <button class="docx-toolbar-btn" id="docxDownloadPdfBtn" title="ดาวน์โหลด PDF">
                             <i class="fas fa-file-pdf"></i> PDF
                         </button>
-                        <button class="docx-toolbar-btn" id="docxDownloadBtn" title="ดาวน์โหลด Word">
+                        ${DocPreviewEngine.pdfOnly() ? '' : `<button class="docx-toolbar-btn" id="docxDownloadBtn" title="ดาวน์โหลด Word">
                             <i class="fas fa-download"></i> Word
-                        </button>
+                        </button>`}
                         <button class="docx-toolbar-btn docx-toolbar-close" id="docxCloseBtn" title="ปิด">
                             <i class="fas fa-times"></i> ปิด
                         </button>
@@ -180,7 +179,10 @@ class DocPreviewEngine {
 
         document.getElementById('docxCloseBtn').addEventListener('click', () => this.hide());
         document.getElementById('docxRefreshBtn').addEventListener('click', () => this.loadPreview());
-        document.getElementById('docxDownloadBtn').addEventListener('click', () => this.download('docx'));
+        const wordBtn = document.getElementById('docxDownloadBtn');
+        if (wordBtn) {
+            wordBtn.addEventListener('click', () => this.download('docx'));
+        }
         document.getElementById('docxDownloadPdfBtn').addEventListener('click', () => this.download('pdf'));
 
         this.overlay.addEventListener('click', (e) => {
@@ -291,7 +293,11 @@ class DocPreviewEngine {
 
     /** POST ข้อมูลฟอร์มไป server */
     fetchPreview(format) {
-        const url = `${this.previewBasePath}/${this.docType}?format=${format}`;
+        // บางเอกสารดึงข้อมูลนอกฟอร์มมาประกอบด้วย (เช่น ส่วนที่ ๓ ของ ก.พ.ว. มข. 03 มาจากผลประเมินการสอน)
+        // ฟอร์มที่ต้องการบอกเลขคำร้องไว้ที่ data-request-id แล้ว server ตรวจสิทธิ์เอง
+        const requestId = this.form && this.form.dataset ? this.form.dataset.requestId : null;
+        const url = `${this.previewBasePath}/${this.docType}?format=${format}`
+            + (requestId ? `&requestId=${encodeURIComponent(requestId)}` : '');
         return fetch(url, {
             method: 'POST',
             headers: {
@@ -560,6 +566,10 @@ class DocPreviewEngine {
 
     /** ดาวน์โหลดเอกสารปัจจุบัน (docx = ไฟล์ต้นฉบับ, pdf = ที่แปลงแล้ว) */
     async download(format) {
+        // ผู้ยื่นได้แค่ PDF — server บังคับอยู่แล้ว ตรงนี้กันไม่ให้ขอ Word ตั้งแต่ต้น
+        if (DocPreviewEngine.pdfOnly()) {
+            format = 'pdf';
+        }
         if (this.standaloneUrl) {
             try {
                 let downloadUrl = this.standaloneUrl;
@@ -653,6 +663,11 @@ class DocPreviewEngine {
         this.releaseBlobUrl();
         this.loadedHash = null;
         if (this.frame) this.frame.src = 'about:blank';
+    }
+
+    /** ผู้ยื่น (ROLE_USER) โหลดได้เฉพาะ PDF — base_academic.html ใส่ data-pdf-only ไว้ที่ body */
+    static pdfOnly() {
+        return document.body && document.body.dataset.pdfOnly === 'true';
     }
 
     /** Helper static method สำหรับเปิด preview จากภายนอก */

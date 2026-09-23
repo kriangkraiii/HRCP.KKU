@@ -84,11 +84,23 @@ public class SignatureAnchorRegistry {
      *                              ข้อความนั้นก็เป็นจริงโดยนิยามอยู่แล้ว
      * @param commentFieldKey       ช่องความเห็นแบบข้อความ เติมจากความเห็นที่ผู้ลงนามพิมพ์
      * @param commentTickFieldKey   ช่องกากบาทหน้าบรรทัดความเห็น ติ๊กเมื่อมีความเห็นจริง
+     * @param signedDateFieldKey    ช่อง "วันที่" ใต้เส้นลงนาม เติมจากวันที่ผู้ลงนามเซ็นจริง
+     *                              แทนที่จะให้ใครพิมพ์เอง ซึ่งไม่มีทางรู้ล่วงหน้าว่าจะเซ็นวันไหน
      */
     public record SignerMarks(
             String forwardedTickFieldKey,
             String commentFieldKey,
-            String commentTickFieldKey) {
+            String commentTickFieldKey,
+            String signedDateFieldKey) {
+
+        public SignerMarks(String forwardedTickFieldKey, String commentFieldKey, String commentTickFieldKey) {
+            this(forwardedTickFieldKey, commentFieldKey, commentTickFieldKey, null);
+        }
+
+        /** ช่องลงนามที่เอกสารมีแค่บรรทัดวันที่ให้เติม */
+        public static SignerMarks signedDate(String signedDateFieldKey) {
+            return new SignerMarks(null, null, null, signedDateFieldKey);
+        }
     }
 
     /**
@@ -215,9 +227,23 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("dean", "คณบดี", "dean_name", "DEAN", 1))),
 
             // ---------------------------------------------------------- Phase 2
+            // แบบ ก.พ.ว. มข. ๐๓ ฉบับเต็ม — ส่วนที่ ๒ (แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา) อยู่ในไฟล์
+            // เดียวกันแล้ว จึงเวียนต่อจากผู้ยื่นไปหัวหน้าสาขาและคณบดีในซองเดียว ผู้ลงนามสองคนหลังไม่ได้
+            // แค่เซ็น แต่ต้องบันทึกผลการตรวจสอบด้วย ช่องผลประเมินสองช่องนี้เป็นของผู้ลงนามเท่านั้น
+            // ถ้อยคำตัวเลือกตามแบบฟอร์มทางการ: หัวหน้าตอบ ครบถ้วน/ไม่ครบถ้วน คณบดีตอบ เข้าข่าย/ไม่เข้าข่าย
             Map.entry(new DocKey(SignatureModule.POSITION, 1), List.of(
                     new SignatureSlot("applicant", "เจ้าของประวัติ",
-                            "applicant_name", APPLICANT, 1))),
+                            "applicant_name", APPLICANT, 1),
+                    new SignatureSlot("head", "หัวหน้าสาขาวิชา",
+                            "department_head_name", "HEAD", 2,
+                            new SignerChoice("qualification_status", "ผลการตรวจสอบคุณสมบัติ",
+                                    List.of("ครบถ้วน", "ไม่ครบถ้วน"), "ไม่ครบถ้วน"),
+                            SignerMarks.signedDate("head_sign_date")),
+                    new SignatureSlot("dean", "คณบดี",
+                            "dean_name", "DEAN", 3,
+                            new SignerChoice("dean_qualification_status", "ความเห็นคณบดี",
+                                    List.of("เข้าข่าย", "ไม่เข้าข่าย"), "ไม่เข้าข่าย"),
+                            SignerMarks.signedDate("dean_sign_date")))),
 
             Map.entry(new DocKey(SignatureModule.POSITION, 2), List.of(
                     new SignatureSlot("applicant", "ผู้เสนอขอ",
@@ -234,19 +260,6 @@ public class SignatureAnchorRegistry {
                             "applicant_name", APPLICANT, 1),
                     new SignatureSlot("head", "ผู้บังคับบัญชาชั้นต้น",
                             "department_head_name", "HEAD", 2))),
-
-            // แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา — ผู้ลงนามไม่ได้แค่เซ็น แต่ต้องบันทึกผล
-            // การตรวจสอบด้วย ผู้ยื่นกรอกได้เฉพาะส่วนหัวของฟอร์ม ช่องผลประเมินสองช่องนี้
-            // เป็นของผู้ลงนามเท่านั้น
-            Map.entry(new DocKey(SignatureModule.POSITION, 5), List.of(
-                    new SignatureSlot("head", "หัวหน้าสาขาวิชา",
-                            "department_head_name", "HEAD", 1,
-                            new SignerChoice("qualification_status", "ผลการตรวจสอบคุณสมบัติ",
-                                    List.of("ครบถ้วน", "ไม่ครบถ้วน"), "ไม่ครบถ้วน")),
-                    new SignatureSlot("dean", "คณบดี",
-                            "dean_name", "DEAN", 2,
-                            new SignerChoice("dean_qualification_status", "ความเห็นคณบดี",
-                                    List.of("ครบถ้วน", "ไม่ครบถ้วน"), "ไม่ครบถ้วน")))),
 
             Map.entry(new DocKey(SignatureModule.POSITION, 6), List.of(
                     new SignatureSlot("dean", "คณบดี",

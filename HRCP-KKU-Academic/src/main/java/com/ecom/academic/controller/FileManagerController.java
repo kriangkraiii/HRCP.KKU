@@ -50,13 +50,16 @@ public class FileManagerController {
     private final AdminLogService adminLogService;
 
     private final HttpServletRequest httpRequest;
+    private final com.ecom.service.UploadPaths uploadPaths;
 
     public FileManagerController(
             FileManagementService fileManagementService,
             AdminStorageService adminStorageService,
             UserRepository userRepository,
             AdminLogService adminLogService,
-            HttpServletRequest httpRequest) {
+            HttpServletRequest httpRequest,
+            com.ecom.service.UploadPaths uploadPaths) {
+        this.uploadPaths = uploadPaths;
         this.fileManagementService = fileManagementService;
         this.adminStorageService = adminStorageService;
         this.userRepository = userRepository;
@@ -172,8 +175,8 @@ public class FileManagerController {
                 return ResponseEntity.notFound().build();
             }
 
-            Path filePath = Path.of(fileItem.getFilePath());
-            if (!Files.exists(filePath)) {
+            Path filePath = uploadPaths.resolve(fileItem.getFilePath());
+            if (filePath == null || !Files.exists(filePath)) {
                 return ResponseEntity.notFound().build();
             }
 
@@ -380,8 +383,8 @@ public class FileManagerController {
                 return ResponseEntity.notFound().build();
             }
 
-            Path filePath = Path.of(file.getStoredFilePath());
-            if (!Files.exists(filePath)) {
+            Path filePath = uploadPaths.resolve(file.getStoredFilePath());
+            if (filePath == null || !Files.exists(filePath)) {
                 return ResponseEntity.notFound().build();
             }
 

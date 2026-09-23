@@ -16,6 +16,10 @@ jobs:
       PROJECT_DIR: HRCP-KKU-Academic
       SERVICE_NAME: MyWebApp
       DEPLOY_PATH: C:\apps\myspringboot\app.jar
+      # โฟลเดอร์ uploads ที่แอปใช้จริง (อยู่ใต้ working directory ของ service) — ถ้า service
+      # ตั้ง working directory ไว้ที่อื่น ให้แก้ค่านี้ให้ตรง ไม่งั้นขั้นสำรองจะข้ามไปพร้อมคำเตือน
+      UPLOADS_PATH: C:\apps\myspringboot\uploads
+      BACKUP_ROOT: C:\apps\backups
 
     steps:
       # 1) ดึงโค้ดล่าสุดจาก branch ที่ถูก push (deploy) ลงมาบน runner
@@ -32,6 +36,27 @@ jobs:
         working-directory: ${{ env.PROJECT_DIR }}
         run: mvn dependency-check:check -DfailBuildOnCVSS=7 -DfailOnError=false
         continue-on-error: true
+
+      # 2.2) สำรองก่อนแตะ production: ไฟล์ผู้ใช้ (ลายเซ็น เอกสาร ไฟล์แนบ) และ jar ตัวเดิมไว้ย้อนกลับ
+      #      robocopy แบบสะสม (/E ไม่ใช่ /MIR) — ไฟล์ที่เคยสำรองไว้จะไม่ถูกลบตามแม้ต้นทางหายไป
+      #      และคัดลอกเฉพาะไฟล์ใหม่/เปลี่ยน รอบหลัง ๆ จึงเร็ว
+      - name: Back up uploads and current jar
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force -Path $env:BACKUP_ROOT | Out-Null
+          if (Test-Path $env:DEPLOY_PATH) {
+              Copy-Item -Path $env:DEPLOY_PATH -Destination "$env:BACKUP_ROOT\app.jar.previous" -Force
+              Write-Host "Saved current jar -> $env:BACKUP_ROOT\app.jar.previous"
+          }
+          if (Test-Path $env:UPLOADS_PATH) {
+              robocopy $env:UPLOADS_PATH "$env:BACKUP_ROOT\uploads" /E /R:2 /W:2 /NP /NFL /NDL /XD chunks
+              # robocopy: 0-7 = สำเร็จ (มี/ไม่มีไฟล์ที่คัดลอก), 8 ขึ้นไป = ล้มเหลว
+              if ($LASTEXITCODE -ge 8) { throw "Backup of $env:UPLOADS_PATH failed (robocopy exit $LASTEXITCODE)" }
+              $global:LASTEXITCODE = 0
+              Write-Host "Backed up $env:UPLOADS_PATH -> $env:BACKUP_ROOT\uploads"
+          } else {
+              Write-Host "::warning::$env:UPLOADS_PATH not found — uploads were NOT backed up. Set UPLOADS_PATH to the service's real uploads folder."
+          }
 
       # 3) หยุด Windows Service "MyWebApp" ก่อน เพื่อปลดล็อกไฟล์ app.jar ที่กำลังถูกใช้งานอยู่
       #    -ErrorAction SilentlyContinue กันพังกรณี service ยังไม่เคยรัน/ไม่พบ service

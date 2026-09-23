@@ -169,9 +169,10 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
         void documentsWithTheirOwnQuestionKeepIt() {
             PositionRequest request = data.positionRequest(applicant,
                     PositionRequestStatus.DOCUMENT_RECEIVED, null);
-            data.positionDocument(request, 5, FROZEN);
+            // ส่วนที่ ๒ ของแบบ ก.พ.ว. มข. 03 (เอกสารที่ 1) — หัวหน้าสาขาวิชามีคำถามของตัวเอง
+            data.positionDocument(request, 1, FROZEN);
             SignatureRequest envelope = workflow.createEnvelope(SignatureModule.POSITION,
-                    request.getId(), 5, "แบบประเมินคุณสมบัติ", FROZEN,
+                    request.getId(), 1, "แบบ ก.พ.ว. มข. 03", FROZEN,
                     List.of(new SignerAssignment("head", head.getId())),
                     null, applicant, ActorContext.none()).request();
 

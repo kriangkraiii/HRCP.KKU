@@ -21,6 +21,7 @@ import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.Doc7Scoring;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.PositionRequestService;
+import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.model.UserDtls;
 import com.ecom.repository.UserRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -39,13 +40,17 @@ public class AutoDraftApiController {
 
     private final UserRepository userRepository;
 
+    private final SignatureWorkflowService signatureWorkflow;
+
     public AutoDraftApiController(
             AcademicRequestService academicService,
             PositionRequestService positionService,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            SignatureWorkflowService signatureWorkflow) {
         this.academicService = academicService;
         this.positionService = positionService;
         this.userRepository = userRepository;
+        this.signatureWorkflow = signatureWorkflow;
     }
 
     /** Auto-draft for Phase 1 (Teaching Evaluation) */
@@ -93,7 +98,9 @@ public class AutoDraftApiController {
                     return ResponseEntity.badRequest()
                             .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
                 }
-                academicService.saveOfficeFieldsAcrossCopies(request, docType, submitted, label);
+                // ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ: ช่องของแอดมินยังไม่มีใครเซ็นรับรอง จึงยังกรอกได้
+                academicService.saveOfficeFieldsAcrossCopies(request, docType, submitted, label,
+                        signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, requestId, docType));
                 academicService.logDocumentEdit(request, docType, label, user,
                         AcademicDocumentEditLog.EditAction.DRAFT_SAVED);
                 return ResponseEntity.ok(Map.of("status", "saved", "type", "academic"));
@@ -168,13 +175,25 @@ public class AutoDraftApiController {
             String label = positionService.getDocLabel(docType);
             String filledBy = isAdmin ? "ADMIN" : "APPLICANT";
 
-            // เอกสารที่ลงนามครบแล้ว เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่เท่านั้น
+            // เอกสารที่ลงนามครบแล้ว: เขียนทับแถวเดิมเหมือนการกดบันทึก ไม่เปิดแถวร่างใหม่ข้างแถวที่ส่งแล้ว
+            // (แถวร่างที่งอกออกมาคือแถวที่หน้าดาวน์โหลดไม่เคยอ่าน ค่าที่กรอกจึงไม่ไปถึงผู้ยื่น)
+            // ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ: ช่องของแอดมินยังกรอกได้ ส่งต่อแล้วเหลือแค่ช่องสารบรรณ
+            if (isAdmin && signingComplete) {
+                Map<String, String> submitted = parseFields(jsonData);
+                if (submitted == null) {
+                    return ResponseEntity.badRequest()
+                            .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
+                }
+                positionService.saveOfficeFieldsAcrossCopies(request, docType, submitted, label,
+                        signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, requestId, docType));
+                positionService.logDocumentEdit(request, docType, label, user,
+                        PositionDocumentEditLog.EditAction.DRAFT_SAVED);
+                return ResponseEntity.ok(Map.of("status", "saved", "type", "position"));
+            }
+
             Map<String, String> existing = positionService.getLatestDocumentData(requestId, docType);
-            String filtered = (isAdmin && signingComplete)
-                    ? DocumentFieldOwnership.mergeOfficeFieldsJson(
-                            SignatureModule.POSITION, docType, jsonData, existing)
-                    : DocumentFieldOwnership.mergeJson(
-                            SignatureModule.POSITION, docType, isAdmin, jsonData, existing);
+            String filtered = DocumentFieldOwnership.mergeJson(
+                    SignatureModule.POSITION, docType, isAdmin, jsonData, existing);
             // เฟส 2 เก็บเอกสารฉบับละแถวเดียว ไม่มีสำเนาแบบเอกสารที่ 5 ของเฟส 1
             if (filtered == null) {
                 return ResponseEntity.badRequest()
