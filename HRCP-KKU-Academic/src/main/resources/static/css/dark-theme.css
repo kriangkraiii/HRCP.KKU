@@ -1520,7 +1520,6 @@ body,
     color: #94a3b8;
 }
 
-/* Floating doc buttons */
 /* Floating doc buttons - Liquid Obsidian Glass */
 [data-theme="dark"] .floating-doc-btn {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;

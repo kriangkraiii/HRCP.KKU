@@ -1055,6 +1055,12 @@
             // ลบปุ่มลอยเก่าถ้ามี
             document.querySelectorAll('.floating-doc-btn').forEach(function(el) { el.remove(); });
 
+            if (backBtn || previewBtn) {
+                document.body.classList.add('has-floating-doc-btn');
+            } else {
+                document.body.classList.remove('has-floating-doc-btn');
+            }
+
             if (backBtn) {
                 var floatBack = document.createElement('a');
                 floatBack.className = 'btn-back-pill floating-doc-btn floating-doc-btn-back';

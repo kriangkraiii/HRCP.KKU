@@ -470,10 +470,9 @@ body {
 
 /* ===== Floating Document Buttons ===== */
 /*
- * วางไว้ด้านบน ใต้แถบหัวเรื่องพอดี
- *
- * .top-navbar สูงอย่างน้อย 54px และเป็น sticky อยู่ที่ top:0 ปุ่มชุดนี้เป็น
- * position:fixed จึงต้องเผื่อระยะนั้นเอง ไม่งั้นจะไปทับแถบหัวเรื่อง
+ * ปุ่มลอยนำทางสำหรับหน้าเอกสาร (ปุ่ม "← กลับ" และ "👁️ ดูตัวอย่าง")
+ * เป็น position: fixed ลอยอยู่ใต้ .top-navbar (navbar สูง 54px)
+ * สไตล์ Frosted Liquid Glass นุ่มนวล สวยงาม ลอยอิสระ ไม่ทับซ้อนเนื้อหา
  */
 .floating-doc-btn {
   position: fixed;
@@ -481,8 +480,8 @@ body {
   bottom: auto !important;
   z-index: 1040;
   border-radius: 9999px !important;
-  padding: 9px 22px !important;
-  font-size: 0.9rem !important;
+  padding: 8px 20px !important;
+  font-size: 0.875rem !important;
   font-weight: 500;
   letter-spacing: 0.2px;
   backdrop-filter: blur(20px) saturate(180%);
@@ -502,11 +501,12 @@ body {
 .floating-doc-btn:active {
   transform: translateY(0) scale(0.98);
 }
+
 .floating-doc-btn-back {
   left: calc(var(--sidebar-width, 260px) + 24px);
   top: 70px !important;
   bottom: auto !important;
-  background: rgba(255, 255, 255, 0.72) !important;
+  background: rgba(255, 255, 255, 0.78) !important;
   border: 1px solid rgba(255, 255, 255, 0.65) !important;
   color: #1e293b !important;
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.08),
@@ -515,13 +515,14 @@ body {
               inset 0 -1px 1px 0 rgba(0, 0, 0, 0.03);
 }
 .floating-doc-btn-back:hover {
-  background: rgba(255, 255, 255, 0.9) !important;
+  background: rgba(255, 255, 255, 0.92) !important;
   border-color: rgba(255, 255, 255, 0.95) !important;
   color: #0f172a !important;
   box-shadow: 0 12px 36px 0 rgba(0, 0, 0, 0.12),
               0 4px 12px 0 rgba(0, 0, 0, 0.06),
               inset 0 1px 2px 0 #ffffff;
 }
+
 .floating-doc-btn-preview {
   right: 24px;
   top: 70px !important;
@@ -530,7 +531,7 @@ body {
   border: 1px solid rgba(13, 71, 161, 0.3) !important;
   color: #0d47a1 !important;
   box-shadow: 0 8px 32px 0 rgba(13, 71, 161, 0.12),
-              0 2px 6px 0 rgba(0, 0, 0, 0.04),
+              0 2px 6px 0 rgba(13, 71, 161, 0.04),
               inset 0 1px 1.5px 0 rgba(255, 255, 255, 0.85),
               inset 0 -1px 1px 0 rgba(13, 71, 161, 0.05);
 }
@@ -542,6 +543,7 @@ body {
               0 4px 12px 0 rgba(13, 71, 161, 0.1),
               inset 0 1px 2px 0 rgba(255, 255, 255, 0.95);
 }
+
 @media (max-width: 991px) {
   .floating-doc-btn {
     top: 66px !important;
@@ -558,29 +560,41 @@ body {
 }
 
 /* ซ่อนปุ่มกลับเดิม (อันเล็ก) เมื่อมีปุ่มลอยทำงานอยู่ */
-body:has(.floating-doc-btn-back) .btn-back-pill:not(.floating-doc-btn):not(form .btn-back-pill) {
+body:has(.floating-doc-btn-back) .btn-back-pill:not(.floating-doc-btn):not(form .btn-back-pill),
+body.has-floating-doc-btn .btn-back-pill:not(.floating-doc-btn):not(form .btn-back-pill) {
   display: none !important;
 }
 
 /*
- * หน้าเอกสารมีแถบลอยด้านบน (ปุ่ม "กลับ" / "ดูตัวอย่าง" และชิปสถานะบันทึกร่าง)
- * ซึ่งเป็น position:fixed จึงลอยทับหัวเรื่องของหน้า — เว้นที่ให้เนื้อหาเริ่มต่ำกว่าแถบนั้น
+ * ขยายช่องว่างด้านบนในหน้าเอกสารที่มีปุ่มลอย
+ * ให้เนื้อหาและหัวเรื่องเอกสาร (Card Header) เริ่มต้นต่ำลงมาอย่างพอดี
+ * ไม่ถูกปุ่มลอยบัง และมีระยะช่องว่าง (Whitespace) ที่โปร่งโล่งสบายตา
  */
 .global-flash-alert {
   padding-top: 1rem;
 }
-body:has(.floating-doc-btn) .global-flash-alert {
+body:has(.floating-doc-btn) .global-flash-alert:has(.alert),
+body.has-floating-doc-btn .global-flash-alert:has(.alert) {
   padding-top: 64px !important;
 }
-body:has(.floating-doc-btn):not(:has(.global-flash-alert)) .content-wrapper {
-  padding-top: 56px;
+
+body:has(.floating-doc-btn):not(:has(.global-flash-alert .alert)) .main-content > section,
+body:has(.floating-doc-btn):not(:has(.global-flash-alert .alert)) .content-wrapper,
+body.has-floating-doc-btn:not(:has(.global-flash-alert .alert)) .main-content > section,
+body.has-floating-doc-btn:not(:has(.global-flash-alert .alert)) .content-wrapper {
+  padding-top: 52px;
 }
+
 @media (max-width: 991px) {
-  body:has(.floating-doc-btn) .global-flash-alert {
-    padding-top: 60px !important;
+  body:has(.floating-doc-btn) .global-flash-alert:has(.alert),
+  body.has-floating-doc-btn .global-flash-alert:has(.alert) {
+    padding-top: 56px !important;
   }
-  body:has(.floating-doc-btn):not(:has(.global-flash-alert)) .content-wrapper {
-    padding-top: 52px;
+  body:has(.floating-doc-btn):not(:has(.global-flash-alert .alert)) .main-content > section,
+  body:has(.floating-doc-btn):not(:has(.global-flash-alert .alert)) .content-wrapper,
+  body.has-floating-doc-btn:not(:has(.global-flash-alert .alert)) .main-content > section,
+  body.has-floating-doc-btn:not(:has(.global-flash-alert .alert)) .content-wrapper {
+    padding-top: 46px;
   }
 }
 
