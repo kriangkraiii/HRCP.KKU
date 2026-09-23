@@ -55,9 +55,10 @@ class ScopusPickerCoverageTest {
             // ผู้ช่วยศาสตราจารย์
             "asstResearchRows", "asstOtherRows", "asstBookRows",
             // รองศาสตราจารย์
-            "assocResearchRows", "assocOtherRows", "assocBookRows", "assocM3ResearchRows",
+            "assocResearchRows", "assocOtherRows", "assocBookRows",
             // ศาสตราจารย์
-            "profResearchRows", "profOtherRows", "profBookRows", "profM3ResearchRows");
+            "profResearchRows", "profOtherRows", "profBookRows");
+    // หัวข้อ "วิธีที่ ๓" (assocM3/profM3) ถูกตัดออกตามแบบ ก.พ.ว. มข.๐๓ พ.ศ. 2569
 
     private static String source;
 

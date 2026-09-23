@@ -290,6 +290,61 @@ class DocumentCompletenessTest {
     }
 
     @Nested
+    @DisplayName("ช่องที่แบบฟอร์ม พ.ศ. 2569 ตัดออก — ร่างเก่าที่ยังมีคีย์ค้างอยู่")
+    class RetiredFields {
+
+        /**
+         * ฟอร์มบนเว็บเอาช่องพวกนี้ออกแล้ว แต่ร่างที่บันทึกก่อนหน้ายังมีคีย์ว่างค้างใน JSON
+         * ถ้าด่านนี้นับว่าขาด ผู้ยื่นจะส่งไปลงนามไม่ได้ และไม่มีช่องให้กรอกเพื่อแก้เลย
+         */
+        @Test
+        @DisplayName("เอกสารที่ 1: หัวข้อวิธีที่ ๓ ที่ค้างว่างอยู่ ไม่นับว่าขาด")
+        void methodThreeLeftoversDoNotBlock() {
+            Map<String, String> data = positionDoc1("assoc_");
+            data.put("assistant_method", "วิธีที่ ๑");
+            for (String key : List.of("assoc_h_index", "assoc_scopus_stories_count",
+                    "assoc_scopus_citation_count", "assoc_method3_research_1",
+                    "assoc_method3_research_no_1", "assoc_m3_quartile_1", "assoc_m3_first_1",
+                    "assoc_pi_project_1", "assoc_pi_project_no_1", "assoc_pi_source_1")) {
+                data.put(key, "");
+            }
+
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 1, json(data), "รองศาสตราจารย์"))
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("เอกสารที่ 9: กลุ่ม ๒–๓ ส่วนที่ ๒ และผู้มีส่วนสำคัญทางปัญญาที่ค้างว่างอยู่ ไม่นับว่าขาด")
+        void documentNineLeftoversDoNotBlock() {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("title_name", "ผลงานวิจัย");
+            data.put("role_des1", "ริเริ่ม");
+            data.put("applicant_name", "สมชาย ใจดี");
+            for (String key : List.of("chk_essen", "group1_research", "chkgroup2_1", "chkgroup3_book",
+                    "des_journal", "des_ patent", "des_poster")) {
+                data.put(key, "");
+            }
+
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 9, json(data), null))
+                    .isEmpty();
+        }
+
+        @Test
+        @DisplayName("ช่องที่ยังใช้อยู่ ถ้าว่างก็ยังต้องนับว่าขาดเหมือนเดิม")
+        void liveFieldsStillCount() {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("title_name", "");
+            data.put("des_journal", "");
+
+            assertThat(DocumentCompleteness.missingApplicantFields(
+                    SignatureModule.POSITION, 9, json(data), null))
+                    .containsExactly("title_name");
+        }
+    }
+
+    @Nested
     @DisplayName("ข้อมูลที่อ่านไม่ได้")
     class BadInput {
 

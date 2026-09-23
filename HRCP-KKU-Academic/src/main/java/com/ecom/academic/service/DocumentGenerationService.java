@@ -181,7 +181,6 @@ public class DocumentGenerationService {
         Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
-        mapMethod3Fields(placeholders);
         aliasFirstRowFields(placeholders);
 
         ClassPathResource resource = new ClassPathResource(TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx");
@@ -195,7 +194,6 @@ public class DocumentGenerationService {
         Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
-        mapMethod3Fields(placeholders);
         aliasFirstRowFields(placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
@@ -239,7 +237,6 @@ public class DocumentGenerationService {
         Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
-        mapMethod3Fields(placeholders);
         aliasFirstRowFields(placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
@@ -257,7 +254,6 @@ public class DocumentGenerationService {
         // ต้องประมวลผลชุดเดียวกับ generateP2PreviewDocx มิฉะนั้นเอกสารที่บันทึกจริง
         // จะไม่ตรงกับที่ผู้ใช้เห็นในหน้า "ดูตัวอย่างเอกสาร"
         mapUsedCheckboxes(placeholders);
-        mapMethod3Fields(placeholders);
         aliasFirstRowFields(placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
@@ -1433,53 +1429,13 @@ public class DocumentGenerationService {
                 String type = m.group(2);
                 String n = m.group(3);
                 boolean notUsed = "not_used".equals(entry.getValue());
-                if ("research".equals(type)) {
-                    // Generate both spellings — DOCX template is inconsistent:
-                    // ASST section uses typo "reseach", ASSOC/PROF use correct "research"
-                    toAdd.put(prefix + "_not_used_reseach_" + n, notUsed ? "☑" : "☐");
-                    toAdd.put(prefix + "_is_used_reseach_" + n, notUsed ? "☐" : "☑");
-                    toAdd.put(prefix + "_not_used_research_" + n, notUsed ? "☑" : "☐");
-                    toAdd.put(prefix + "_is_used_research_" + n, notUsed ? "☐" : "☑");
-                } else {
-                    toAdd.put(prefix + "_not_used_" + type + "_" + n, notUsed ? "☑" : "☐");
-                    toAdd.put(prefix + "_is_used_" + type + "_" + n, notUsed ? "☐" : "☑");
-                }
+                // เทมเพลตเดิมของ ผศ. สะกด "reseach" จึงเคยต้องสร้างสองชื่อ ฉบับ 2569 ใช้ชื่อที่
+                // สะกดถูกทุกระดับแล้ว
+                toAdd.put(prefix + "_not_used_" + type + "_" + n, notUsed ? "☑" : "☐");
+                toAdd.put(prefix + "_is_used_" + type + "_" + n, notUsed ? "☐" : "☑");
             }
         }
         placeholders.putAll(toAdd);
-    }
-
-    private void mapMethod3Fields(Map<String, String> placeholders) {
-        for (String prefix : new String[] { "assoc", "prof" }) {
-            // Quartile radio: {prefix}_m3_quartile_N → {prefix}_m3_q1 / {prefix}_m3_q2
-            for (int n = 1; n <= 10; n++) {
-                String radioKey = prefix + "_m3_quartile_" + n;
-                String val = placeholders.get(radioKey);
-                if (val != null || n == 1) {
-                    boolean q1 = "Q1".equals(val);
-                    boolean q2 = "Q2".equals(val);
-                    if (n == 1) {
-                        placeholders.put(prefix + "_m3_q1", q1 ? "☑" : "☐");
-                        placeholders.put(prefix + "_m3_q2", q2 ? "☑" : "☐");
-                    }
-                    placeholders.put(prefix + "_m3_q1_" + n, q1 ? "☑" : "☐");
-                    placeholders.put(prefix + "_m3_q2_" + n, q2 ? "☑" : "☐");
-                    if (val == null)
-                        break;
-                }
-            }
-            // First / Corresp checkboxes: alias _1 → no suffix, default ☐
-            for (String field : new String[] { "m3_first", "m3_corresp" }) {
-                String v = placeholders.getOrDefault(prefix + "_" + field + "_1", "☐");
-                placeholders.put(prefix + "_" + field, v);
-            }
-            // PI fields: alias _1 → no suffix
-            for (String field : new String[] { "pi_project_no", "pi_project", "pi_source" }) {
-                String v = placeholders.get(prefix + "_" + field + "_1");
-                if (v != null)
-                    placeholders.put(prefix + "_" + field, v);
-            }
-        }
     }
 
     private String expandDynamicRows(String xml, Map<String, String> placeholders) {
@@ -1581,9 +1537,9 @@ public class DocumentGenerationService {
         // Each logical "row" = 3 consecutive <w:p>: title row, not-used checkbox, used
         // checkbox+year+level
         String[][][] workSections = {
-                // ASST (DOCX has typo "reseach" for research)
+                // ASST
                 { { "asst_research_working_1" }, { "asst_research_working_no_1", "asst_research_working_1",
-                        "asst_not_used_reseach_1", "asst_is_used_reseach_1",
+                        "asst_not_used_research_1", "asst_is_used_research_1",
                         "asst_used_research_year_1", "asst_used_research_level_1" } },
                 { { "asst_other_working_1" }, { "asst_other_working_no_1", "asst_other_working_1",
                         "asst_not_used_other_1", "asst_is_used_other_1",
@@ -1718,21 +1674,24 @@ public class DocumentGenerationService {
         if (paraRanges.isEmpty())
             return xml;
 
-        // Insert clones after the last matched paragraph
-        int insertAt = paraRanges.get(paraRanges.size() - 1)[1];
+        // โคลนทั้งช่วง ตั้งแต่ย่อหน้าแรกถึงย่อหน้าสุดท้ายที่มี placeholder — รวมย่อหน้าที่ไม่มี
+        // placeholder ซึ่งคั่นอยู่ตรงกลางด้วย เช่น บรรทัดคำถาม "งานวิจัยนี้เคยใช้...มาแล้วหรือไม่"
+        // เดิมโคลนเฉพาะย่อหน้าที่มี placeholder ผลงานเรื่องที่ ๒ เป็นต้นไปจึงขึ้นช่องติ๊กมาลอย ๆ
+        // โดยไม่มีคำถามว่าติ๊กเพื่อตอบอะไร
+        int spanStart = paraRanges.get(0)[0];
+        int spanEnd = paraRanges.get(paraRanges.size() - 1)[1];
+        String block = xml.substring(spanStart, spanEnd);
         StringBuilder cloned = new StringBuilder();
         for (int n = 2; n <= maxN; n++) {
-            for (int[] range : paraRanges) {
-                String paraXml = xml.substring(range[0], range[1]);
-                for (String f : fields1) {
-                    // Replace {{field_1}} → {{field_N}} by stripping trailing _1
-                    String base = f.substring(0, f.lastIndexOf('_')); // e.g. "assoc_research_working_no"
-                    paraXml = paraXml.replace("{{" + f + "}}", "{{" + base + "_" + n + "}}");
-                }
-                cloned.append(paraXml);
+            String copy = block;
+            for (String f : fields1) {
+                // Replace {{field_1}} → {{field_N}} by stripping trailing _1
+                String base = f.substring(0, f.lastIndexOf('_')); // e.g. "assoc_research_working_no"
+                copy = copy.replace("{{" + f + "}}", "{{" + base + "_" + n + "}}");
             }
+            cloned.append(copy);
         }
-        return xml.substring(0, insertAt) + cloned + xml.substring(insertAt);
+        return xml.substring(0, spanEnd) + cloned + xml.substring(spanEnd);
     }
 
     // =====================================================================
@@ -1947,12 +1906,10 @@ public class DocumentGenerationService {
             String block = fullBlock;
             // แทนชื่อ: {{corres_name}} → {{coauthor_name_N}}
             block = block.replace("{{corres_name}}", "{{coauthor_name_" + i + "}}");
-            // แทนตำแหน่ง: "Corresponding author" → "Co-author"
+            // แทนบทบาท: "ผู้ประพันธ์บรรณกิจ (Corresponding author)" → "ผู้นิพนธ์ร่วม (Co-author)"
+            // ใช้คำตามแบบฟอร์ม พ.ศ. 2569 ซึ่งเรียกผู้ร่วมงานว่า "ผู้นิพนธ์ร่วม (co-author)"
             block = block.replace("Corresponding author", "Co-author");
-            // แทนตำแหน่งภาษาไทย: "ผู้ประพันธ์บรรณกิจ" → "ผู้ร่วมประพันธ์"
-            block = block.replace(
-                    "\u0E1C\u0E39\u0E49\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C\u0E1A\u0E23\u0E23\u0E13\u0E01\u0E34\u0E08",
-                    "\u0E1C\u0E39\u0E49\u0E23\u0E48\u0E27\u0E21\u0E1B\u0E23\u0E30\u0E1E\u0E31\u0E19\u0E18\u0E4C");
+            block = block.replace("ผู้ประพันธ์บรรณกิจ", "ผู้นิพนธ์ร่วม");
             coauthorBlocks.append(block);
         }
 
@@ -2019,16 +1976,22 @@ public class DocumentGenerationService {
     private static final String LONG_BLANK = ".".repeat(45);
     private static final String SHORT_BLANK = ".".repeat(12);
 
-    /** ช่องติ๊ก "เคยใช้/ไม่เคยใช้" และช่องติ๊กของวิธีที่ ๓ */
+    /** ช่องติ๊ก "เคยใช้/ไม่เคยใช้" */
     private static final java.util.regex.Pattern CHECKBOX_BLANK_KEY = java.util.regex.Pattern.compile(
-            "^(asst|assoc|prof)_(not_used|is_used)_(reseach|research|other|book)_[0-9]+$"
-                    + "|^(assoc|prof)_m3_(q1|q2|first|corresp)(_[0-9]+)?$");
+            "^(asst|assoc|prof)_(not_used|is_used)_(research|other|book)_[0-9]+$");
 
-    /** ช่องยาวที่กินทั้งบรรทัด — ชื่อผลงาน/ชื่อโครงการ/แหล่งทุน */
+    /** ช่องยาวที่กินทั้งบรรทัด — ชื่อผลงาน */
     private static final java.util.regex.Pattern LONG_BLANK_KEY = java.util.regex.Pattern.compile(
-            "^(asst|assoc|prof)_(research|other|book)_working_[0-9]+$"
-                    + "|^(assoc|prof)_method3_research_[0-9]+$"
-                    + "|^(assoc|prof)_pi_(project|source)(_[0-9]+)?$");
+            "^(asst|assoc|prof)_(research|other|book)_working_[0-9]+$");
+
+    /**
+     * เลขลำดับของเรื่อง — แบบฟอร์ม พ.ศ. 2569 พิมพ์เลขหัวข้อเต็ม เช่น ๔.๒.๑.๑ เทมเพลตจึงเขียน
+     * ส่วนหน้า "๔.๒.๑." ไว้เองและเติมแค่เลขท้าย ถ้าผู้ขอไม่ได้กรอกหัวข้อนั้นเลย เลขท้ายก็ต้อง
+     * ยังขึ้น ไม่งั้นจะเหลือ "๔.๒.๑." ห้อยอยู่ต่างจากแบบฟอร์มเปล่า
+     */
+    private static final java.util.regex.Pattern NUMBER_BLANK_KEY = java.util.regex.Pattern.compile(
+            "^(?:(?:asst|assoc|prof)_(?:research|other|book)_working"
+                    + "|other_position|international_speaker_last_5_years)_no_([0-9]+)$");
 
     /**
      * ช่องสั้นที่แทรกกลางประโยค — ปี พ.ศ./ระดับคุณภาพ/จำนวนอ้างอิง และข้อ ๒.๓/๒.๔
@@ -2037,7 +2000,6 @@ public class DocumentGenerationService {
      */
     private static final java.util.regex.Pattern SHORT_BLANK_KEY = java.util.regex.Pattern.compile(
             "^(asst|assoc|prof)_used_(research|other|book)_(year|level)_[0-9]+$"
-                    + "|^(assoc|prof)_(scopus_stories_count|scopus_citation_count|h_index)$"
                     + "|^(assistant|associate)_(method|department|appointment_date)$"
                     + "|^(lecturer_appointment_date|current_salary|birth_date|age|years|months)$");
 
@@ -2048,6 +2010,10 @@ public class DocumentGenerationService {
     private String blankFormFiller(String key) {
         if (CHECKBOX_BLANK_KEY.matcher(key).matches()) {
             return "\u2610";
+        }
+        java.util.regex.Matcher number = NUMBER_BLANK_KEY.matcher(key);
+        if (number.matches()) {
+            return ThaiDateUtil.toThaiDigits(number.group(1));
         }
         if (LONG_BLANK_KEY.matcher(key).matches()) {
             return LONG_BLANK;

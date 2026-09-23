@@ -121,6 +121,22 @@ public final class DocumentCompleteness {
     private record RankGroup(String prefix, Set<String> appliesTo) {
     }
 
+    /**
+     * ช่องที่แบบฟอร์ม พ.ศ. 2569 ตัดออกไปแล้ว — ไม่นับว่า "ยังไม่กรอก" ไม่ว่าจะว่างหรือไม่
+     *
+     * <p>ฟอร์มบนเว็บเอาช่องพวกนี้ออกไปแล้ว แต่ร่างที่บันทึกไว้ก่อนหน้ายังมีคีย์ค้างอยู่ใน JSON
+     * เพราะการบันทึกรวมค่าใหม่ทับค่าเดิม ไม่ได้ลบคีย์ที่ไม่ได้ส่งมา ถ้าคีย์ที่ค้างนั้นว่าง ด่านนี้จะ
+     * ฟ้องว่ากรอกไม่ครบ ทั้งที่หน้าฟอร์มไม่มีช่องให้กรอกแล้ว ผู้ยื่นที่มีร่างเก่าจะส่งไปลงนามไม่ได้เลย
+     *
+     * <ul>
+     *   <li>เอกสารที่ 1 — หัวข้อ "วิธีที่ ๓" ของ รศ./ศ. (Scopus, h-index, หัวหน้าโครงการวิจัย)</li>
+     *   <li>เอกสารที่ 9 — กลุ่มที่ ๒–๓, ส่วนที่ ๒ การเผยแพร่ และ "ผู้มีส่วนสำคัญทางปัญญา"</li>
+     * </ul>
+     */
+    private static final Map<Integer, Pattern> RETIRED_POSITION_FIELDS = Map.of(
+            1, Pattern.compile("^(assoc|prof)_(h_index|scopus_\\w+|m3_\\w+|method3_\\w+|pi_\\w+)$"),
+            9, Pattern.compile("^(chk_essen|group1_research|chkgroup[23]_.*|des_.*)$"));
+
     private static final Pattern TRAILING_INDEX = Pattern.compile("(\\d+)$");
 
     // =====================================================================
@@ -287,6 +303,10 @@ public final class DocumentCompleteness {
                 .getOrDefault(module, Map.of())
                 .getOrDefault(documentType, Set.of());
         if (optional.contains(key)) {
+            return true;
+        }
+        if (module == SignatureModule.POSITION && RETIRED_POSITION_FIELDS.containsKey(documentType)
+                && RETIRED_POSITION_FIELDS.get(documentType).matcher(key).matches()) {
             return true;
         }
         if (isExtraRepeatedRow(module, documentType, key)) {

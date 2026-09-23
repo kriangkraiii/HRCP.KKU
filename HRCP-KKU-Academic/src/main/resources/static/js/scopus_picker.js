@@ -10,11 +10,11 @@
  *
  * Usage from a form:
  *   ScopusPicker.open({
- *     container:      'assocM3ResearchRows',   // element holding the rows
- *     titlePrefix:    'assoc_method3_research',// <input name="{prefix}_{n}">
- *     quartilePrefix: 'assoc_m3_quartile',     // optional radio group
+ *     container:      'assocResearchRows',      // element holding the rows
+ *     titlePrefix:    'assoc_research_working', // <input name="{prefix}_{n}">
+ *     quartilePrefix: 'assoc_m3_quartile',      // optional radio group
  *     yearPrefix:     'assoc_used_research_year', // optional year input
- *     addRow: addAssocM3Row                    // called when more rows are needed
+ *     addRow: function () { ... }               // called when more rows are needed
  *   });
  */
 (function (window, document) {
