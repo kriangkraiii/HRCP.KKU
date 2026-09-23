@@ -95,7 +95,8 @@ class AttachmentPreviewTest {
                 mock(com.ecom.academic.service.DocumentDataAutoFillHelper.class),
                 mock(com.ecom.academic.service.DocumentPrewarmService.class),
                 mock(com.ecom.academic.service.SignatureWorkflowService.class),
-                mock(com.ecom.academic.service.SignedDocumentRenderer.class)
+                mock(com.ecom.academic.service.SignedDocumentRenderer.class),
+                mock(com.ecom.academic.service.DashboardAnalyticsService.class)
         );
     }
 

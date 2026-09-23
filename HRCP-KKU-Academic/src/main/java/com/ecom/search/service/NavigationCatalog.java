@@ -76,6 +76,9 @@ public class NavigationCatalog {
                     "/user/academic/settings", "fas fa-cog text-secondary", false),
 
             // ---------- admin ----------
+            new Entry("แดชบอร์ดงานวิชาการ (แอดมิน)", "ภาพรวมการติดตามและวิเคราะห์ข้อมูลวิชาการ",
+                    "แดชบอร์ด หน้าหลัก dashboard analytics admin ภาพรวม",
+                    "/admin/academic/dashboard", "fas fa-chart-line text-primary", true),
             new Entry("คำร้องประเมินผลการสอน (แอดมิน)", "จัดการและตรวจสอบคำร้องประเมินผลการสอน",
                     "คำร้องประเมิน ประเมินการสอน evaluation แดชบอร์ด dashboard จัดการคำร้อง",
                     "/admin/academic/requests?type=evaluation", "fas fa-clipboard-check text-primary", true),

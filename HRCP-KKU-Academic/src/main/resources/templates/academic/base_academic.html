@@ -50,19 +50,23 @@
 
     <!-- ===== Left Sidebar ===== -->
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="เมนูหลัก">
-        <div class="sidebar-brand">
+        <a th:href="${user != null && user.role == 'ROLE_ADMIN' ? '/admin/academic/dashboard' : '/user/academic/dashboard'}" class="sidebar-brand text-decoration-none d-block">
             <span class="sidebar-brand-collapsed-label" aria-hidden="true">CP</span>
             <h6><span class="brand-cp">CP</span> <span class="brand-hrd">HRD</span></h6>
             <small>COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM</small>
-        </div>
+        </a>
 
         <nav class="sidebar-nav">
             <!-- ADMIN Navigation -->
             <th:block th:if="${user != null && user.role == 'ROLE_ADMIN'}">
                 <div class="sidebar-section-title">งานวิชาการ & คำร้อง</div>
-                <a href="/admin/academic/requests" class="sidebar-link" id="nav-dashboard" data-title="แดชบอร์ด">
-                    <i class="fas fa-tachometer-alt"></i>
-                    <span class="sidebar-link-text">แดชบอร์ด</span>
+                <a href="/admin/academic/dashboard" class="sidebar-link" id="nav-dashboard" data-title="Dashboard">
+                    <i class="fas fa-chart-line"></i>
+                    <span class="sidebar-link-text">Dashboard</span>
+                </a>
+                <a href="/admin/academic/requests" class="sidebar-link" id="nav-requests" data-title="คำร้องทั้งหมด">
+                    <i class="fas fa-list-alt"></i>
+                    <span class="sidebar-link-text">คำร้องทั้งหมด</span>
                 </a>
                 <a href="/admin/academic/staff" class="sidebar-link" id="nav-staff" data-title="จัดการบุคลากร">
                     <i class="fas fa-users-cog"></i>
@@ -710,7 +714,7 @@
                 <nav aria-label="breadcrumb" class="d-none d-md-block">
                     <ol class="breadcrumb mb-0 py-0" id="topbar-breadcrumb">
                         <li class="breadcrumb-item">
-                            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/academic/requests' : '/user/academic/dashboard'}" class="text-decoration-none text-muted">
+                            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/academic/dashboard' : '/user/academic/dashboard'}" class="text-decoration-none text-muted">
                                 <i class="fas fa-home me-1"></i>หน้าหลัก
                             </a>
                         </li>

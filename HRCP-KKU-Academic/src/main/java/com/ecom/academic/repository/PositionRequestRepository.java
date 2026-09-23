@@ -149,4 +149,51 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
             ORDER BY r.createdAt DESC
             """)
     List<PositionRequest> searchForAdmin(@Param("pattern") String pattern);
+
+    // ── Dashboard Analytics ──────────────────────────────────────────────
+
+    long countByCurrentStatus(PositionRequestStatus status);
+
+    long countByCurrentStatusIn(java.util.List<PositionRequestStatus> statuses);
+
+    @Query("""
+            SELECT YEAR(r.createdAt), MONTH(r.createdAt), COUNT(r)
+            FROM PositionRequest r
+            WHERE r.createdAt >= :since
+            GROUP BY YEAR(r.createdAt), MONTH(r.createdAt)
+            ORDER BY YEAR(r.createdAt), MONTH(r.createdAt)
+            """)
+    java.util.List<Object[]> countByMonthSince(@Param("since") java.time.LocalDateTime since);
+
+    @Query("""
+            SELECT r.linkedEvaluation.id FROM PositionRequest r
+            WHERE r.linkedEvaluation IS NOT NULL
+            """)
+    List<Long> findLinkedEvaluationIds();
+
+    @Query("""
+            SELECT r.targetPosition, COUNT(r) FROM PositionRequest r
+            WHERE r.targetPosition IS NOT NULL AND r.targetPosition != ''
+              AND r.currentStatus <> com.ecom.academic.model.PositionRequestStatus.DRAFT
+            GROUP BY r.targetPosition
+            """)
+    List<Object[]> countByTargetPosition();
+
+    @Query("""
+            SELECT r.major, COUNT(r) FROM PositionRequest r
+            WHERE r.major IS NOT NULL AND r.major != ''
+              AND r.currentStatus <> com.ecom.academic.model.PositionRequestStatus.DRAFT
+            GROUP BY r.major
+            ORDER BY COUNT(r) DESC
+            """)
+    List<Object[]> countByMajor();
+
+    @Query("""
+            SELECT r FROM PositionRequest r
+            LEFT JOIN FETCH r.applicant
+            WHERE r.currentStatus <> com.ecom.academic.model.PositionRequestStatus.DRAFT
+            ORDER BY r.createdAt DESC
+            """)
+    List<PositionRequest> findAllNonDraftWithApplicant();
 }
+

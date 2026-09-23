@@ -1,0 +1,866 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+    <section>
+        <div class="container-fluid py-4 dash">
+            <!-- ========== Header ========== -->
+            <div class="admin-header mb-4">
+                <div>
+                    <h3 class="mb-1"><i class="fas fa-chart-line text-primary"></i> แดชบอร์ดงานวิชาการ</h3>
+                    <small class="text-muted">
+                        ติดตามคำร้องประเมินผลการสอนและขอกำหนดตำแหน่ง วิทยาลัยการคอมพิวเตอร์ มข.
+                        <span class="dash-asof" th:if="${generatedAt}">ข้อมูล ณ <span th:text="${generatedAt}">-</span></span>
+                    </small>
+                </div>
+                <div class="admin-header-actions">
+                    <a href="/admin/academic/dashboard" class="btn btn-outline-secondary btn-sm" title="โหลดข้อมูลล่าสุด">
+                        <i class="fas fa-rotate-right"></i> รีเฟรช
+                    </a>
+                    <a href="/admin/academic/requests" class="btn btn-primary btn-sm">
+                        <i class="fas fa-list-check"></i> ทะเบียนคำร้องทั้งหมด
+                    </a>
+                </div>
+            </div>
+
+            <!-- ========== Needs attention: every item jumps to the table that lists it ========== -->
+            <div class="attention-strip mb-4" aria-label="งานที่ต้องดำเนินการ">
+                <h2 class="attention-title">ต้องดำเนินการ</h2>
+                <div class="attention-items"
+                     th:with="hasAttention=${totalCritical30 > 0 or totalStalled14 > 0 or overdueSignatures > 0 or expirySummary.expiringSoon30Count > 0 or expirySummary.expiredCount > 0}">
+                    <button type="button" class="attention-item is-danger" th:if="${totalCritical30 > 0}"
+                            data-jump-tab="pane-stalled" data-jump-filter="critical30">
+                        <span class="attention-count" th:text="${totalCritical30}">0</span>
+                        <span class="attention-label">คำร้องค้างเกิน 30 วัน</span>
+                    </button>
+                    <button type="button" class="attention-item is-warning" th:if="${totalStalled14 - totalCritical30 > 0}"
+                            data-jump-tab="pane-stalled" data-jump-filter="all">
+                        <span class="attention-count" th:text="${totalStalled14 - totalCritical30}">0</span>
+                        <span class="attention-label">คำร้องค้าง 14–29 วัน</span>
+                    </button>
+                    <button type="button" class="attention-item is-danger" th:if="${overdueSignatures > 0}"
+                            data-jump-tab="pane-signatures" data-jump-filter="overdue">
+                        <span class="attention-count" th:text="${overdueSignatures}">0</span>
+                        <span class="attention-label">เอกสารลงนามเกินกำหนด</span>
+                    </button>
+                    <button type="button" class="attention-item is-warning" th:if="${expirySummary.expiringSoon30Count > 0}"
+                            data-jump-tab="pane-expiry" data-jump-filter="urgent30">
+                        <span class="attention-count" th:text="${expirySummary.expiringSoon30Count}">0</span>
+                        <span class="attention-label">ผลประเมินหมดอายุใน 30 วัน</span>
+                    </button>
+                    <button type="button" class="attention-item is-info" th:if="${expirySummary.expiredCount > 0}"
+                            data-jump-tab="pane-expiry" data-jump-filter="expired">
+                        <span class="attention-count" th:text="${expirySummary.expiredCount}">0</span>
+                        <span class="attention-label">ผลประเมินหมดอายุแล้ว</span>
+                    </button>
+                    <p class="attention-clear" th:unless="${hasAttention}">
+                        <i class="fas fa-circle-check"></i> ไม่มีงานเร่งด่วน ไม่มีคำร้องค้างเกิน 14 วันและไม่มีเอกสารลงนามเกินกำหนด
+                    </p>
+                </div>
+            </div>
+
+            <!-- ========== KPI cards (each opens the list behind the number) ========== -->
+            <div class="dashboard-kpi-row">
+                <a href="/admin/academic/requests" class="kpi-card kpi-total">
+                    <div class="kpi-card-body">
+                        <div class="kpi-icon"><i class="fas fa-folder-open"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-value" th:text="${kpi.totalRequests}">0</span>
+                            <span class="kpi-label">คำร้องทั้งหมด</span>
+                        </div>
+                    </div>
+                    <div class="kpi-detail">
+                        <span>ประเมินการสอน <b th:text="${kpi.totalAcad}">0</b></span>
+                        <span>ขอตำแหน่ง <b th:text="${kpi.totalPos}">0</b></span>
+                    </div>
+                </a>
+
+                <a href="/admin/academic/requests" class="kpi-card kpi-active">
+                    <div class="kpi-card-body">
+                        <div class="kpi-icon"><i class="fas fa-bars-progress"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-value" th:text="${kpi.activeRequests}">0</span>
+                            <span class="kpi-label">กำลังดำเนินการ</span>
+                        </div>
+                    </div>
+                    <div class="kpi-detail">
+                        <span>แบบร่างที่ยังไม่ส่ง <b th:text="${kpi.draftRequests}">0</b></span>
+                    </div>
+                </a>
+
+                <a href="#tab=expiry" class="kpi-card kpi-passed" data-jump-tab="pane-expiry" data-jump-filter="all">
+                    <div class="kpi-card-body">
+                        <div class="kpi-icon"><i class="fas fa-clipboard-check"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-value" th:text="${kpi.passedEval}">0</span>
+                            <span class="kpi-label">ผ่านการประเมินการสอน</span>
+                        </div>
+                    </div>
+                    <div class="kpi-detail"
+                         th:with="evaluated=${qualityMetrics.passedCount + qualityMetrics.failedCount}">
+                        <span th:if="${evaluated > 0}">อัตราผ่าน <b th:text="${qualityMetrics.passRate + '%'}">0%</b>
+                            (ไม่ผ่าน <b th:text="${qualityMetrics.failedCount}">0</b>)</span>
+                        <span th:unless="${evaluated > 0}">ยังไม่มีคำร้องที่แจ้งผลแล้ว</span>
+                    </div>
+                </a>
+
+                <a href="/admin/academic/requests?type=position" class="kpi-card kpi-sent">
+                    <div class="kpi-card-body">
+                        <div class="kpi-icon"><i class="fas fa-paper-plane"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-value" th:text="${kpi.sentToHr}">0</span>
+                            <span class="kpi-label">ส่งกองทรัพยากรบุคคล มข.</span>
+                        </div>
+                    </div>
+                    <div class="kpi-detail">
+                        <span>คำร้องขอตำแหน่งที่ส่งออกแล้ว</span>
+                    </div>
+                </a>
+
+                <a href="#tab=expiry" class="kpi-card kpi-expiry" data-jump-tab="pane-expiry" data-jump-filter="warning90"
+                        th:classappend="${expirySummary.expiringSoon90Count > 0 ? ' alert-urgent' : ''}">
+                    <div class="kpi-card-body">
+                        <div class="kpi-icon"><i class="fas fa-hourglass-half"></i></div>
+                        <div class="kpi-info">
+                            <span class="kpi-value" th:text="${expirySummary.expiringSoon90Count}">0</span>
+                            <span class="kpi-label">ผลประเมินใกล้หมดอายุ</span>
+                        </div>
+                    </div>
+                    <div class="kpi-detail">
+                        <span th:if="${expirySummary.expiringSoon90Count > 0}" class="kpi-detail-warn">หมดอายุภายใน 90 วัน ควรแจ้งผู้ยื่น</span>
+                        <span th:unless="${expirySummary.expiringSoon90Count > 0}">ไม่มีรายการใน 90 วันข้างหน้า</span>
+                    </div>
+                </a>
+            </div>
+
+            <!-- ========== Trend & faculty profile ========== -->
+            <div class="dashboard-charts-row">
+                <div class="chart-card chart-card-wide">
+                    <div class="chart-card-header">
+                        <h5><i class="fas fa-chart-column text-primary"></i> คำร้องที่ยื่นรายเดือน (12 เดือนล่าสุด)</h5>
+                    </div>
+                    <div class="chart-card-body">
+                        <div class="chart-box chart-box-tall">
+                            <canvas id="chartMonthly" role="img" aria-label="กราฟจำนวนคำร้องรายเดือน แยกประเมินผลการสอนและขอกำหนดตำแหน่ง"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h5><i class="fas fa-users-viewfinder text-primary"></i> ตำแหน่งวิชาการของคณาจารย์ปัจจุบัน</h5>
+                    </div>
+                    <div class="chart-card-body">
+                        <div class="chart-box">
+                            <canvas id="chartFacultyRank" role="img" aria-label="สัดส่วนตำแหน่งวิชาการของคณาจารย์"></canvas>
+                        </div>
+                        <div class="faculty-stat-summary">
+                            <div class="d-flex justify-content-between align-items-center w-100 mb-2">
+                                <span class="text-muted small">คณาจารย์ทั้งหมด <strong class="text-body" th:text="${facultyRankStat.totalFaculty + ' คน'}">0 คน</strong></span>
+                                <span class="text-muted small">มีตำแหน่งวิชาการ <strong class="text-success" th:text="${facultyRankStat.totalPromoted() + ' คน (' + facultyRankStat.promotedPercentage + '%)'}">0 (0%)</strong></span>
+                            </div>
+                            <div class="d-flex flex-wrap gap-1 w-100 justify-content-between">
+                                <span class="faculty-rank-badge" title="ศาสตราจารย์">ศ. <b th:text="${facultyRankStat.professorCount}">0</b></span>
+                                <span class="faculty-rank-badge" title="รองศาสตราจารย์">รศ. <b th:text="${facultyRankStat.associateProfessorCount}">0</b></span>
+                                <span class="faculty-rank-badge" title="ผู้ช่วยศาสตราจารย์">ผศ. <b th:text="${facultyRankStat.assistantProfessorCount}">0</b></span>
+                                <span class="faculty-rank-badge" title="อาจารย์">อ. <b th:text="${facultyRankStat.lecturerCount}">0</b></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== Operational overview ========== -->
+            <div class="dashboard-charts-row dashboard-charts-row-secondary">
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h5><i class="fas fa-award text-primary"></i> ตำแหน่งที่ขอในคำร้อง</h5>
+                    </div>
+                    <div class="chart-card-body">
+                        <div class="chart-box">
+                            <canvas id="chartPositionRank" role="img" aria-label="จำนวนคำร้องขอกำหนดตำแหน่งแยกตามตำแหน่งที่ขอ"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h5><i class="fas fa-stopwatch text-danger"></i> ระยะเวลาดำเนินการ</h5>
+                    </div>
+                    <div class="chart-card-body">
+                        <div class="sla-metric-grid">
+                            <div class="sla-metric-item">
+                                <div class="sla-val"><span th:text="${avgTurnaroundDays}">0</span> <small>วัน</small></div>
+                                <div class="sla-lbl">เฉลี่ยจนแจ้งผลประเมิน</div>
+                            </div>
+                            <div class="sla-metric-item">
+                                <div class="sla-val" th:classappend="${totalStalled14 > 0 ? 'text-warning' : ''}" th:text="${totalStalled14}">0</div>
+                                <div class="sla-lbl">ค้าง &ge;14 วัน</div>
+                            </div>
+                            <div class="sla-metric-item">
+                                <div class="sla-val" th:classappend="${totalCritical30 > 0 ? 'text-danger' : ''}" th:text="${totalCritical30}">0</div>
+                                <div class="sla-lbl">ค้าง &ge;30 วัน</div>
+                            </div>
+                        </div>
+                        <p class="dash-note">นับจากวันที่สถานะคำร้องเปลี่ยนครั้งล่าสุด เกณฑ์ติดตามคือ 14 วัน</p>
+                        <button type="button" class="btn btn-outline-danger btn-sm w-100" data-jump-tab="pane-stalled" data-jump-filter="all">
+                            <i class="fas fa-table-list"></i> ดูคำร้องที่ค้าง (<span th:text="${totalStalled14}">0</span>)
+                        </button>
+                    </div>
+                </div>
+
+                <div class="chart-card">
+                    <div class="chart-card-header">
+                        <h5><i class="fas fa-signature text-teal"></i> เอกสารรอลงนามอิเล็กทรอนิกส์</h5>
+                    </div>
+                    <div class="chart-card-body">
+                        <div class="sig-summary">
+                            <div>
+                                <span class="d-block small text-muted">รอลงนาม</span>
+                                <span class="fs-4 fw-bold text-primary" th:text="${totalPendingSignatures}">0</span>
+                            </div>
+                            <div class="text-end">
+                                <span class="d-block small text-muted">เกินกำหนด</span>
+                                <span class="fs-4 fw-bold" th:classappend="${overdueSignatures > 0 ? 'text-danger' : 'text-success'}" th:text="${overdueSignatures}">0</span>
+                            </div>
+                        </div>
+                        <div class="role-count-list mb-3">
+                            <div class="role-count-item" th:each="entry : ${signaturesByRole}">
+                                <span><i class="fas fa-user-pen text-secondary me-1"></i> <span th:text="${entry.key}">คณบดี</span></span>
+                                <span class="badge bg-light text-dark border" th:text="${entry.value + ' ฉบับ'}">0 ฉบับ</span>
+                            </div>
+                            <div class="role-count-item justify-content-center text-muted" th:if="${#maps.isEmpty(signaturesByRole)}">
+                                <span><i class="fas fa-check-circle text-success me-1"></i> ไม่มีเอกสารรอลงนาม</span>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-outline-primary btn-sm w-100" data-jump-tab="pane-signatures" data-jump-filter="all">
+                            <i class="fas fa-file-signature"></i> ดูเอกสารรอลงนาม (<span th:text="${totalPendingSignatures}">0</span>)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========== Work tables ========== -->
+            <div class="analytics-card mt-4" id="dashHub">
+                <div class="lifecycle-tab-bar" role="tablist" aria-label="ตารางติดตามงาน">
+                    <button type="button" class="lifecycle-tab-btn active" role="tab" id="tab-expiry"
+                            aria-selected="true" aria-controls="pane-expiry" data-tab="pane-expiry">
+                        <i class="fas fa-hourglass-half text-warning"></i> อายุผลประเมิน
+                        <span class="tab-count tab-count-warning" th:if="${expirySummary.expiringSoon90Count > 0}" th:text="${expirySummary.expiringSoon90Count}">0</span>
+                    </button>
+                    <button type="button" class="lifecycle-tab-btn" role="tab" id="tab-subjects"
+                            aria-selected="false" aria-controls="pane-subjects" data-tab="pane-subjects" tabindex="-1">
+                        <i class="fas fa-book-open text-primary"></i> รายวิชาที่ยื่นประเมิน
+                    </button>
+                    <button type="button" class="lifecycle-tab-btn" role="tab" id="tab-signatures"
+                            aria-selected="false" aria-controls="pane-signatures" data-tab="pane-signatures" tabindex="-1">
+                        <i class="fas fa-file-signature text-teal"></i> รอลงนาม
+                        <span class="tab-count" th:classappend="${overdueSignatures > 0 ? 'tab-count-danger' : ''}" th:if="${totalPendingSignatures > 0}" th:text="${totalPendingSignatures}">0</span>
+                    </button>
+                    <button type="button" class="lifecycle-tab-btn" role="tab" id="tab-stalled"
+                            aria-selected="false" aria-controls="pane-stalled" data-tab="pane-stalled" tabindex="-1">
+                        <i class="fas fa-traffic-light text-danger"></i> คำร้องค้าง
+                        <span class="tab-count tab-count-danger" th:if="${totalStalled14 > 0}" th:text="${totalStalled14}">0</span>
+                    </button>
+                </div>
+
+                <!-- Search applies to whichever table is showing -->
+                <div class="hub-toolbar">
+                    <label class="hub-search">
+                        <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
+                        <input type="search" id="hubSearch" placeholder="ค้นหาชื่อผู้ยื่น รหัสคำร้อง หรือรายวิชา" aria-label="ค้นหาในตาราง" autocomplete="off">
+                    </label>
+                    <span class="hub-count" id="hubCount" aria-live="polite"></span>
+                </div>
+
+                <!-- Pane 1: Evaluation expiry -->
+                <div class="lifecycle-tab-pane active" id="pane-expiry" role="tabpanel" aria-labelledby="tab-expiry">
+                    <div class="pane-head">
+                        <div class="expiry-alert-cards">
+                            <div class="expiry-alert-card">
+                                <div class="expiry-icon expiry-icon-valid"><i class="fas fa-circle-check"></i></div>
+                                <div class="expiry-card-info">
+                                    <h4 th:text="${expirySummary.activeCount}">0</h4>
+                                    <p>ยังมีผลมากกว่า 90 วัน</p>
+                                </div>
+                            </div>
+                            <div class="expiry-alert-card" th:classappend="${expirySummary.expiringSoon90Count > 0 ? ' alert-urgent' : ''}">
+                                <div class="expiry-icon expiry-icon-warning"><i class="fas fa-circle-exclamation"></i></div>
+                                <div class="expiry-card-info">
+                                    <h4 th:text="${expirySummary.expiringSoon90Count}">0</h4>
+                                    <p>หมดอายุภายใน 90 วัน</p>
+                                </div>
+                            </div>
+                            <div class="expiry-alert-card" th:classappend="${expirySummary.expiredCount > 0 ? ' alert-expired' : ''}">
+                                <div class="expiry-icon expiry-icon-expired"><i class="fas fa-circle-xmark"></i></div>
+                                <div class="expiry-card-info">
+                                    <h4 th:text="${expirySummary.expiredCount}">0</h4>
+                                    <p>หมดอายุแล้ว</p>
+                                </div>
+                            </div>
+                            <div class="expiry-alert-card">
+                                <div class="expiry-icon expiry-icon-unused"><i class="fas fa-clock"></i></div>
+                                <div class="expiry-card-info">
+                                    <h4 th:text="${expirySummary.unusedCount}">0</h4>
+                                    <p>ยังไม่ได้ยื่นขอตำแหน่ง</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="filter-pills-bar" role="group" aria-label="กรองตามอายุผลประเมิน">
+                            <button type="button" class="filter-pill-btn active" aria-pressed="true" data-filter="all">
+                                ทั้งหมด <span class="pill-count" th:text="${expirySummary.totalPassed}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="urgent30">
+                                ภายใน 30 วัน <span class="pill-count" th:text="${expirySummary.expiringSoon30Count}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="warning90">
+                                ภายใน 90 วัน <span class="pill-count" th:text="${expirySummary.expiringSoon90Count}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="warning180">
+                                ภายใน 180 วัน <span class="pill-count" th:text="${expirySummary.expiringSoon180Count}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="expired">
+                                หมดอายุแล้ว <span class="pill-count" th:text="${expirySummary.expiredCount}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="unused">
+                                ยังไม่ยื่นขอตำแหน่ง <span class="pill-count" th:text="${expirySummary.unusedCount}">0</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="analytics-table-wrapper">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัสคำร้อง</th>
+                                    <th>ผู้ยื่น</th>
+                                    <th>รายวิชาที่ประเมิน</th>
+                                    <th>ตำแหน่งที่ขอ</th>
+                                    <th>วันที่ผ่านการประเมิน</th>
+                                    <th>วันหมดอายุ</th>
+                                    <th>คงเหลือ</th>
+                                    <th>ขอตำแหน่ง</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="item : ${allExpiryItems}" class="hub-row"
+                                    th:data-days="${item.daysLeft != null ? item.daysLeft : 9999}"
+                                    th:data-has-pos="${item.hasPositionRequest}">
+                                    <td>
+                                        <a th:href="@{/admin/academic/request/{id}(id=${item.requestId})}" class="row-link" th:text="${item.requestCode}">KKU-ACAD-...</a>
+                                    </td>
+                                    <td><span class="fw-semibold" th:text="${item.applicantName}">อาจารย์</span></td>
+                                    <td>
+                                        <span th:text="${item.courseLabel()}">CP001 — วิชา</span>
+                                        <small class="d-block text-muted" th:if="${item.semester}" th:text="'ภาคเรียน ' + ${item.semester}">ภาคเรียน 1/2569</small>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border" th:text="${item.targetRank}">ผศ.</span></td>
+                                    <td class="text-nowrap" th:text="${item.evaluationDate != null ? item.evaluationDate : '-'}">-</td>
+                                    <td class="text-nowrap fw-medium" th:text="${item.expiryDateFormatted != null ? item.expiryDateFormatted : '-'}">-</td>
+                                    <td class="text-nowrap">
+                                        <span th:if="${item.daysLeft != null && item.daysLeft < 0}" class="badge-countdown badge-countdown-danger">
+                                            <i class="fas fa-circle-xmark"></i> หมดอายุแล้ว
+                                        </span>
+                                        <span th:if="${item.daysLeft != null && item.daysLeft >= 0 && item.daysLeft <= 90}" class="badge-countdown badge-countdown-warning">
+                                            <i class="fas fa-circle-exclamation"></i> <span th:text="${item.daysLeft}">0</span> วัน
+                                        </span>
+                                        <span th:if="${item.daysLeft != null && item.daysLeft > 90}" class="badge-countdown badge-countdown-valid">
+                                            <span th:text="${item.daysLeft}">0</span> วัน
+                                        </span>
+                                        <span th:if="${item.daysLeft == null}" class="text-muted">-</span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${item.hasPositionRequest}" class="badge-pos-linked"><i class="fas fa-check"></i> ยื่นแล้ว</span>
+                                        <span th:unless="${item.hasPositionRequest}" class="badge-pos-none">ยังไม่ยื่น</span>
+                                    </td>
+                                </tr>
+                                <tr class="hub-empty">
+                                    <td colspan="8">ไม่มีผลประเมินที่ตรงกับตัวกรองนี้</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pane 2: Subjects by academic year -->
+                <div class="lifecycle-tab-pane" id="pane-subjects" role="tabpanel" aria-labelledby="tab-subjects" hidden>
+                    <div class="pane-head">
+                        <div class="filter-pills-bar" role="group" aria-label="กรองตามปีการศึกษา">
+                            <span class="text-muted small fw-semibold me-1">ปีการศึกษา</span>
+                            <button type="button" class="filter-pill-btn active" aria-pressed="true" data-filter="ALL">ทุกปี</button>
+                            <button type="button" th:each="y : ${availableYears}" class="filter-pill-btn" aria-pressed="false"
+                                    th:data-filter="${y}" th:text="${y}">2569</button>
+                        </div>
+                    </div>
+
+                    <div class="top-subjects-row" th:if="${!#maps.isEmpty(topSubjects)}">
+                        <span class="text-muted fw-semibold me-1">ยื่นประเมินมากที่สุด</span>
+                        <span th:each="entry : ${topSubjects}" class="top-subject-tag">
+                            <span th:text="${entry.key}">CP351001</span>
+                            <b th:text="${entry.value}">1</b>
+                        </span>
+                    </div>
+
+                    <div class="analytics-table-wrapper">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัสคำร้อง</th>
+                                    <th>ปีการศึกษา</th>
+                                    <th>ภาคเรียน</th>
+                                    <th>รหัสวิชา</th>
+                                    <th>ชื่อรายวิชา</th>
+                                    <th>ผู้ยื่น</th>
+                                    <th>สถานะ</th>
+                                    <th>ระดับผลประเมิน</th>
+                                    <th>วันที่ผ่านการประเมิน</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="sub : ${subjectItems}" class="hub-row" th:data-year="${sub.academicYear}">
+                                    <td>
+                                        <a th:href="@{/admin/academic/request/{id}(id=${sub.requestId})}" class="row-link" th:text="${sub.requestCode}">KKU-ACAD-...</a>
+                                    </td>
+                                    <td th:text="${sub.academicYear}">2569</td>
+                                    <td th:text="${sub.semester != null ? sub.semester : '-'}">-</td>
+                                    <td><code class="fw-bold" th:text="${sub.courseCode != null ? sub.courseCode : '-'}">-</code></td>
+                                    <td><span class="fw-medium" th:text="${sub.courseName != null ? sub.courseName : 'ไม่ระบุรายวิชา'}">-</span></td>
+                                    <td th:text="${sub.applicantName}">อาจารย์</td>
+                                    <td><span class="badge status-chip" th:data-color="${sub.statusColor}" th:text="${sub.statusLabel}">รับคำร้อง</span></td>
+                                    <td>
+                                        <span th:if="${sub.resultLevel}" class="badge bg-success-subtle text-success border border-success-subtle" th:text="${sub.resultLevel}">ดีมาก</span>
+                                        <span th:unless="${sub.resultLevel}" class="text-muted">-</span>
+                                    </td>
+                                    <td class="text-nowrap" th:text="${sub.passDate != null ? sub.passDate : '-'}">-</td>
+                                </tr>
+                                <tr class="hub-empty">
+                                    <td colspan="9">ไม่มีรายวิชาที่ยื่นประเมินในปีการศึกษานี้</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pane 3: Pending e-signatures -->
+                <div class="lifecycle-tab-pane" id="pane-signatures" role="tabpanel" aria-labelledby="tab-signatures" hidden>
+                    <div class="pane-head">
+                        <div class="filter-pills-bar" role="group" aria-label="กรองเอกสารรอลงนาม">
+                            <button type="button" class="filter-pill-btn active" aria-pressed="true" data-filter="all">
+                                ทั้งหมด <span class="pill-count" th:text="${totalPendingSignatures}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="overdue">
+                                เกินกำหนด <span class="pill-count" th:text="${overdueSignatures}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="urgent3">
+                                รอ 3 วันขึ้นไป
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="dean">
+                                รอคณบดี <span class="pill-count" th:text="${signaturesByRole != null ? signaturesByRole.getOrDefault('คณบดี', 0) : 0}">0</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="analytics-table-wrapper">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัสคำร้อง</th>
+                                    <th>เอกสาร</th>
+                                    <th>ผู้ลงนาม</th>
+                                    <th>บทบาท</th>
+                                    <th>วันที่ส่งให้ลงนาม</th>
+                                    <th>รอมาแล้ว</th>
+                                    <th>สถานะ</th>
+                                    <th><span class="visually-hidden">การจัดการ</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="sig : ${pendingSignatureItems}" class="hub-row"
+                                    th:data-overdue="${sig.isOverdue}"
+                                    th:data-days="${sig.waitingDays}"
+                                    th:data-role="${sig.signerRole}">
+                                    <td>
+                                        <a th:if="${sig.detailUrl}" th:href="${sig.detailUrl}" class="row-link" th:text="${sig.requestCode}">KKU-...</a>
+                                        <span th:unless="${sig.detailUrl}" class="fw-bold" th:text="${sig.requestCode}">-</span>
+                                    </td>
+                                    <td><span class="fw-medium" th:text="${sig.documentTitle}">แบบฟอร์ม</span></td>
+                                    <td><span class="fw-semibold" th:text="${sig.signerName}">ผู้ลงนาม</span></td>
+                                    <td><span class="badge bg-light text-dark border" th:text="${sig.signerRole}">คณบดี</span></td>
+                                    <td class="text-nowrap" th:text="${sig.requestedDateFormatted}">-</td>
+                                    <td class="text-nowrap">
+                                        <span class="badge-countdown" th:classappend="${sig.waitingBadgeClass()}">
+                                            <span th:text="${sig.waitingDays}">0</span> วัน
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span th:if="${sig.isOverdue}" class="badge bg-danger">เกินกำหนด</span>
+                                        <span th:unless="${sig.isOverdue}" class="badge bg-primary-subtle text-primary border border-primary-subtle">รอลงนาม</span>
+                                    </td>
+                                    <td>
+                                        <a th:if="${sig.detailUrl}" th:href="${sig.detailUrl}" class="btn btn-outline-primary btn-sm py-0 px-2 text-nowrap">
+                                            เปิดคำร้อง
+                                        </a>
+                                    </td>
+                                </tr>
+                                <tr class="hub-empty">
+                                    <td colspan="8">ไม่มีเอกสารรอลงนามที่ตรงกับตัวกรองนี้</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Pane 4: Stalled requests -->
+                <div class="lifecycle-tab-pane" id="pane-stalled" role="tabpanel" aria-labelledby="tab-stalled" hidden>
+                    <div class="pane-head">
+                        <div class="filter-pills-bar" role="group" aria-label="กรองคำร้องค้าง">
+                            <button type="button" class="filter-pill-btn active" aria-pressed="true" data-filter="all">
+                                ทั้งหมด <span class="pill-count" th:text="${totalStalled14}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="critical30">
+                                ค้างเกิน 30 วัน <span class="pill-count" th:text="${totalCritical30}">0</span>
+                            </button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="acad">ประเมินผลการสอน</button>
+                            <button type="button" class="filter-pill-btn" aria-pressed="false" data-filter="pos">ขอกำหนดตำแหน่ง</button>
+                        </div>
+                    </div>
+
+                    <div class="analytics-table-wrapper">
+                        <table class="analytics-table">
+                            <thead>
+                                <tr>
+                                    <th>รหัสคำร้อง</th>
+                                    <th>ประเภท</th>
+                                    <th>ผู้ยื่น</th>
+                                    <th>สถานะปัจจุบัน</th>
+                                    <th>เปลี่ยนสถานะล่าสุด</th>
+                                    <th>ค้างมาแล้ว</th>
+                                    <th><span class="visually-hidden">การจัดการ</span></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="st : ${stalledItems}" class="hub-row"
+                                    th:data-critical="${st.isCritical}"
+                                    th:data-type="${st.requestType}"
+                                    th:data-days="${st.stalledDays}">
+                                    <td>
+                                        <a th:href="${st.detailUrl}" class="row-link" th:text="${st.requestCode}">KKU-...</a>
+                                    </td>
+                                    <td><span class="badge bg-light text-dark border" th:text="${st.requestType}">ประเมินการสอน</span></td>
+                                    <td><span class="fw-semibold" th:text="${st.applicantName}">อาจารย์</span></td>
+                                    <td><span class="badge status-chip" th:data-color="${st.statusColor}" th:text="${st.currentStatusLabel}">สถานะ</span></td>
+                                    <td class="text-nowrap" th:text="${st.lastUpdatedFormatted}">-</td>
+                                    <td class="text-nowrap">
+                                        <span class="badge-countdown" th:classappend="${st.stalledBadgeClass()}">
+                                            <i class="fas" th:classappend="${st.isCritical ? 'fa-triangle-exclamation' : 'fa-clock'}"></i>
+                                            <span th:text="${st.stalledDays}">0</span> วัน
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a th:href="${st.detailUrl}" class="btn btn-outline-primary btn-sm py-0 px-2 text-nowrap">เปิดคำร้อง</a>
+                                    </td>
+                                </tr>
+                                <tr class="hub-empty">
+                                    <td colspan="7">ไม่มีคำร้องค้างที่ตรงกับตัวกรองนี้</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Served locally: the CSP allows scripts from 'self' and cdnjs only, so the
+             old cdn.jsdelivr.net tag was blocked and took every button down with it. -->
+        <script src="/vendor/chartjs/chart.umd.min.js"></script>
+
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            (function() {
+                'use strict';
+
+                /* ── Tables: tabs, filter pills, search ─────────────────────────
+                 * Wired up before any chart code so a chart failure can never
+                 * leave the page without working controls again. */
+
+                var ACAD = 'ประเมินการสอน';
+                var search = document.getElementById('hubSearch');
+                var countEl = document.getElementById('hubCount');
+
+                // One predicate per pane: does this row pass the pane's active pill?
+                var matchers = {
+                    'pane-expiry': function(row, f) {
+                        var days = parseInt(row.getAttribute('data-days'), 10);
+                        switch (f) {
+                            case 'urgent30':   return days >= 0 && days <= 30;
+                            case 'warning90':  return days >= 0 && days <= 90;
+                            case 'warning180': return days >= 0 && days <= 180;
+                            case 'expired':    return days < 0;
+                            case 'unused':     return row.getAttribute('data-has-pos') !== 'true';
+                            default:           return true;
+                        }
+                    },
+                    'pane-subjects': function(row, f) {
+                        return f === 'ALL' || row.getAttribute('data-year') === f;
+                    },
+                    'pane-signatures': function(row, f) {
+                        switch (f) {
+                            case 'overdue': return row.getAttribute('data-overdue') === 'true';
+                            case 'urgent3': return parseInt(row.getAttribute('data-days'), 10) >= 3;
+                            // Exact match, the same rule as the pill's count — a substring
+                            // test also caught รองคณบดี, so the list and the count disagreed.
+                            case 'dean':    return row.getAttribute('data-role') === 'คณบดี';
+                            default:        return true;
+                        }
+                    },
+                    'pane-stalled': function(row, f) {
+                        var type = row.getAttribute('data-type');
+                        switch (f) {
+                            case 'critical30': return row.getAttribute('data-critical') === 'true';
+                            case 'acad':       return type === ACAD;
+                            case 'pos':        return type !== ACAD;
+                            default:           return true;
+                        }
+                    }
+                };
+
+                function activePane() {
+                    return document.querySelector('.lifecycle-tab-pane.active');
+                }
+
+                function applyFilters(pane) {
+                    if (!pane) return;
+                    var pill = pane.querySelector('.filter-pill-btn.active');
+                    var filter = pill ? pill.getAttribute('data-filter') : 'all';
+                    var q = (search.value || '').trim().toLowerCase();
+                    var match = matchers[pane.id];
+                    var rows = pane.querySelectorAll('.hub-row');
+                    var shown = 0;
+                    rows.forEach(function(row) {
+                        var ok = match(row, filter) && (!q || row.textContent.toLowerCase().indexOf(q) !== -1);
+                        row.hidden = !ok;
+                        if (ok) shown++;
+                    });
+                    var empty = pane.querySelector('.hub-empty');
+                    if (empty) empty.hidden = shown > 0;
+                    countEl.textContent = rows.length ? ('แสดง ' + shown + ' จาก ' + rows.length + ' รายการ') : '';
+                }
+
+                function showTab(tabId, focus) {
+                    var target = document.getElementById(tabId);
+                    if (!target) return;
+                    document.querySelectorAll('.lifecycle-tab-btn').forEach(function(b) {
+                        var on = b.getAttribute('data-tab') === tabId;
+                        b.classList.toggle('active', on);
+                        b.setAttribute('aria-selected', on ? 'true' : 'false');
+                        b.tabIndex = on ? 0 : -1;
+                        if (on && focus) b.focus();
+                    });
+                    document.querySelectorAll('.lifecycle-tab-pane').forEach(function(p) {
+                        var on = p === target;
+                        p.classList.toggle('active', on);
+                        p.hidden = !on;
+                    });
+                    // Keep the tab in the URL so refresh and shared links land on it. Not the
+                    // bare pane id: that would make the pane :target and fire the global
+                    // search-highlight pulse on every switch.
+                    try { history.replaceState(null, '', '#tab=' + tabId.replace('pane-', '')); } catch (e) { /* ignore */ }
+                    applyFilters(target);
+                }
+
+                function setPill(pane, filter) {
+                    var found = false;
+                    pane.querySelectorAll('.filter-pill-btn').forEach(function(b) {
+                        var on = b.getAttribute('data-filter') === filter;
+                        if (on) found = true;
+                        b.classList.toggle('active', on);
+                        b.setAttribute('aria-pressed', on ? 'true' : 'false');
+                    });
+                    return found;
+                }
+
+                document.querySelectorAll('.lifecycle-tab-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() { showTab(btn.getAttribute('data-tab')); });
+                });
+
+                // Arrow keys move between tabs (WAI-ARIA tabs pattern).
+                document.querySelector('.lifecycle-tab-bar').addEventListener('keydown', function(e) {
+                    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+                    var tabs = Array.prototype.slice.call(document.querySelectorAll('.lifecycle-tab-btn'));
+                    var i = tabs.indexOf(document.activeElement);
+                    if (i < 0) return;
+                    var next = tabs[(i + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length];
+                    showTab(next.getAttribute('data-tab'), true);
+                    e.preventDefault();
+                });
+
+                document.querySelectorAll('.lifecycle-tab-pane .filter-pill-btn').forEach(function(btn) {
+                    btn.addEventListener('click', function() {
+                        var pane = btn.closest('.lifecycle-tab-pane');
+                        setPill(pane, btn.getAttribute('data-filter'));
+                        applyFilters(pane);
+                    });
+                });
+
+                search.addEventListener('input', function() { applyFilters(activePane()); });
+
+                // Status colours come from the enum. A style="" attribute is refused by
+                // the CSP (style-src has no 'unsafe-inline'), but setting it from script is not.
+                document.querySelectorAll('.status-chip[data-color]').forEach(function(el) {
+                    el.style.backgroundColor = el.getAttribute('data-color');
+                });
+
+                // Attention items, KPI cards and summary buttons: open a tab with a filter set.
+                document.addEventListener('click', function(e) {
+                    var el = e.target.closest('[data-jump-tab]');
+                    if (!el) return;
+                    e.preventDefault();
+                    var tabId = el.getAttribute('data-jump-tab');
+                    var pane = document.getElementById(tabId);
+                    if (!pane) return;
+                    setPill(pane, el.getAttribute('data-jump-filter') || 'all');
+                    search.value = '';
+                    showTab(tabId);
+                    document.getElementById('dashHub').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+
+                var initial = 'pane-' + (location.hash || '').replace(/^#tab=/, '');
+                showTab(matchers[initial] ? initial : 'pane-expiry');
+
+                /* ── Charts ───────────────────────────────────────────────────── */
+
+                if (typeof Chart === 'undefined') {
+                    console.error('[dashboard] Chart.js did not load; charts are skipped.');
+                    document.querySelectorAll('.chart-box').forEach(function(box) {
+                        box.innerHTML = '<p class="chart-unavailable">แสดงกราฟไม่ได้ ลองรีเฟรชหน้านี้</p>';
+                    });
+                    return;
+                }
+
+                var monthlyLabels      = /*[[${monthlyLabels}]]*/ [];
+                var evalSeries         = /*[[${evalSeries}]]*/ [];
+                var posSeries          = /*[[${posSeries}]]*/ [];
+                var posRankLabels      = /*[[${posRankLabels}]]*/ [];
+                var posRankValues      = /*[[${posRankValues}]]*/ [];
+                var facultyRankLabels  = /*[[${facultyRankLabels}]]*/ [];
+                var facultyRankValues  = /*[[${facultyRankValues}]]*/ [];
+
+                var charts = [];
+
+                function themeColors() {
+                    var dark = document.documentElement.getAttribute('data-theme') === 'dark';
+                    return {
+                        dark: dark,
+                        text: dark ? 'rgba(255,255,255,0.72)' : 'rgba(0,0,0,0.62)',
+                        grid: dark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)',
+                        surface: dark ? '#1e1e2e' : '#ffffff',
+                        empty: dark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)'
+                    };
+                }
+
+                var palette = {
+                    blue:   '#1565c0',
+                    teal:   '#00897b',
+                    purple: '#6a1b9a',
+                    green:  '#2e7d32',
+                    grey:   '#9e9e9e'
+                };
+                var rankColors = [palette.purple, palette.blue, palette.teal, palette.grey];
+
+                function applyTheme() {
+                    var c = themeColors();
+                    Chart.defaults.color = c.text;
+                    Chart.defaults.borderColor = c.grid;
+                    Chart.defaults.font.family = "'Sarabun', 'Prompt', sans-serif";
+                    // Options already resolved on a live chart do not follow Chart.defaults,
+                    // so set the theme-dependent colours on each chart explicitly.
+                    charts.forEach(function(ch) {
+                        var o = ch.options;
+                        if (o.plugins && o.plugins.legend) o.plugins.legend.labels.color = c.text;
+                        if (ch.config.type === 'doughnut') {
+                            ch.data.datasets[0].borderColor = c.surface;
+                            if (ch.$empty) ch.data.datasets[0].backgroundColor = [c.empty];
+                        } else {
+                            ['x', 'y'].forEach(function(k) {
+                                o.scales[k].ticks.color = c.text;
+                                o.scales[k].grid.color = c.grid;
+                                o.scales[k].border.color = c.grid;
+                            });
+                        }
+                        ch.update('none');
+                    });
+                }
+
+                function doughnut(id, labels, values, colors, emptyLabel) {
+                    var el = document.getElementById(id);
+                    if (!el) return;
+                    var total = values.reduce(function(a, b) { return a + Number(b || 0); }, 0);
+                    var empty = total === 0;
+                    var c = themeColors();
+                    var ch = new Chart(el, {
+                        type: 'doughnut',
+                        data: {
+                            labels: empty ? [emptyLabel] : labels,
+                            datasets: [{
+                                data: empty ? [1] : values,
+                                backgroundColor: empty ? [c.empty] : colors,
+                                borderWidth: 2,
+                                borderColor: c.surface
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '62%',
+                            plugins: {
+                                legend: { position: 'bottom', labels: { usePointStyle: true, padding: 10, font: { size: 12 } } },
+                                tooltip: { enabled: !empty }
+                            }
+                        }
+                    });
+                    ch.$empty = empty;
+                    charts.push(ch);
+                }
+
+                applyTheme();
+
+                var monthlyEl = document.getElementById('chartMonthly');
+                if (monthlyEl) {
+                    charts.push(new Chart(monthlyEl, {
+                        type: 'bar',
+                        data: {
+                            labels: monthlyLabels,
+                            datasets: [
+                                { label: 'ประเมินผลการสอน', data: evalSeries, backgroundColor: palette.blue, borderRadius: 3, maxBarThickness: 28 },
+                                { label: 'ขอกำหนดตำแหน่ง', data: posSeries, backgroundColor: palette.teal, borderRadius: 3, maxBarThickness: 28 }
+                            ]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            interaction: { mode: 'index', intersect: false },
+                            plugins: { legend: { position: 'top', align: 'end', labels: { usePointStyle: true, padding: 14 } } },
+                            scales: {
+                                x: { stacked: true, grid: { display: false } },
+                                y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }
+                            }
+                        }
+                    }));
+                }
+
+                doughnut('chartFacultyRank', facultyRankLabels, facultyRankValues, rankColors, 'ไม่มีข้อมูลบุคลากร');
+                doughnut('chartPositionRank', posRankLabels, posRankValues,
+                         [palette.blue, palette.teal, palette.green, palette.purple], 'ยังไม่มีคำร้อง');
+
+                applyTheme();
+
+                // The theme switcher flips data-theme on <html>; follow it without a reload.
+                new MutationObserver(applyTheme).observe(document.documentElement,
+                        { attributes: true, attributeFilter: ['data-theme'] });
+            })();
+            /*]]>*/
+        </script>
+    </section>
+</body>
+</html>

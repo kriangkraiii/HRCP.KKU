@@ -106,4 +106,28 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
     List<AcademicRequest> findExpiringBefore(
             @org.springframework.data.repository.query.Param("before") java.time.LocalDateTime before,
             @org.springframework.data.repository.query.Param("statuses") List<RequestStatus> statuses);
+
+    // ── Dashboard Analytics ──────────────────────────────────────────────
+
+    long countByCurrentStatus(RequestStatus status);
+
+    long countByCurrentStatusIn(List<RequestStatus> statuses);
+
+    @Query("""
+            SELECT YEAR(r.createdAt), MONTH(r.createdAt), COUNT(r)
+            FROM AcademicRequest r
+            WHERE r.createdAt >= :since
+            GROUP BY YEAR(r.createdAt), MONTH(r.createdAt)
+            ORDER BY YEAR(r.createdAt), MONTH(r.createdAt)
+            """)
+    List<Object[]> countByMonthSince(@Param("since") java.time.LocalDateTime since);
+
+    @Query("""
+            SELECT r FROM AcademicRequest r
+            LEFT JOIN FETCH r.applicant
+            WHERE r.currentStatus <> com.ecom.academic.model.RequestStatus.DRAFT
+            ORDER BY r.createdAt DESC
+            """)
+    List<AcademicRequest> findAllNonDraftWithApplicant();
 }
+

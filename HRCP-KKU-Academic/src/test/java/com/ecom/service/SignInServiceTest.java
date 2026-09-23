@@ -139,7 +139,7 @@ class SignInServiceTest {
         String landing = signInService.completeSignIn(request, response, u,
                 SignInService.Method.PASSWORD, null);
 
-        assertThat(landing).isEqualTo("/admin/academic/requests");
+        assertThat(landing).isEqualTo("/admin/academic/dashboard");
         assertThat(request.getSession().getAttribute(SignInService.SESSION_SSO_ACCESS_TOKEN)).isNull();
     }
 

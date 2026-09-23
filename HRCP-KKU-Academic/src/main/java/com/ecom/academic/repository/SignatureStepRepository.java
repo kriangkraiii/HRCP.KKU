@@ -70,4 +70,18 @@ public interface SignatureStepRepository extends JpaRepository<SignatureStep, Lo
             ORDER BY s.stepOrder ASC
             """)
     List<SignatureStep> findSignedSteps(@Param("requestId") Long requestId);
+
+    /**
+     * All active signature steps across in-progress signature requests,
+     * with envelope and signer loaded for analytics.
+     */
+    @Query("""
+            SELECT s FROM SignatureStep s
+            JOIN FETCH s.signatureRequest r
+            LEFT JOIN FETCH s.signer
+            WHERE s.status = com.ecom.academic.model.SignatureStepStatus.ACTIVE
+              AND r.status = com.ecom.academic.model.SignatureRequestStatus.IN_PROGRESS
+            ORDER BY r.createdAt ASC
+            """)
+    List<SignatureStep> findAllActivePendingSteps();
 }

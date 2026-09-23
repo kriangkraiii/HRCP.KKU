@@ -316,7 +316,7 @@ public class GlobalSearchService {
 
     private void matchAdminNavigation(String kw, List<SearchResultItem> results) {
         if (containsAny(kw, "แดชบอร์ด", "หน้าหลัก", "dashboard", "home")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "แดชบอร์ดงานวิชาการ", "ภาพรวมคำร้องและการประเมินทั้งหมด", "/admin/academic/requests", "fas fa-tachometer-alt text-primary", "Admin", "bg-primary"));
+            results.add(new SearchResultItem("เมนูแอดมิน", "แดชบอร์ดงานวิชาการ", "ภาพรวมคำร้องและการประเมินทั้งหมด", "/admin/academic/dashboard", "fas fa-tachometer-alt text-primary", "Admin", "bg-primary"));
         }
         if (containsAny(kw, "คำร้องประเมิน", "ประเมินการสอน", "evaluation")) {
             results.add(new SearchResultItem("เมนูแอดมิน", "คำร้องประเมินผลการสอน", "จัดการและตรวจสอบคำร้องประเมินผลการสอน", "/admin/academic/requests?type=evaluation", "fas fa-clipboard-check text-primary", "Admin", "bg-primary"));

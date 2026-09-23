@@ -66,7 +66,7 @@ public class SignInService {
     public static final String VERIFY_PATH = "/2fa/verify";
 
     private static final String ROLE_ADMIN = "ROLE_ADMIN";
-    private static final String ADMIN_LANDING = "/admin/academic/requests";
+    private static final String ADMIN_LANDING = "/admin/academic/dashboard";
     private static final String USER_LANDING = "/user/academic/dashboard";
 
     /** How a sign-in started. Decides what has to be restored once OTP passes. */

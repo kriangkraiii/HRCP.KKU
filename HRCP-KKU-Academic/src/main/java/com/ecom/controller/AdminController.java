@@ -130,20 +130,9 @@ public class AdminController {
 
 	// ====== Dashboard ======
 
-	@GetMapping("/")
-	public String index(Model m) {
-		try {
-			List<UserDtls> allUsers = userService.getUsers("ROLE_USER");
-			m.addAttribute("totalUsers", allUsers.size());
-			m.addAttribute("newUsersToday", userService.getNewUsersToday());
-			List<UserDtls> recentUsers = userService.getRecentUsers(5);
-			m.addAttribute("recentUsers", recentUsers);
-		} catch (Exception e) {
-			logger.error("Error loading admin dashboard stats: {}", e.getMessage(), e);
-			m.addAttribute("totalUsers", 0);
-			m.addAttribute("newUsersToday", 0);
-		}
-		return "admin/index";
+	@GetMapping({"", "/"})
+	public String index() {
+		return "redirect:/admin/academic/dashboard";
 	}
 
 	// ====== User Management ======

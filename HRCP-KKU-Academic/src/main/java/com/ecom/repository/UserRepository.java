@@ -67,4 +67,15 @@ public interface UserRepository extends JpaRepository<UserDtls, Integer> {
 
 	List<UserDtls> findByFirstNameIgnoreCaseAndLastNameIgnoreCase(String firstName, String lastName);
 	List<UserDtls> findByFirstNameEnIgnoreCaseAndLastNameEnIgnoreCase(String firstNameEn, String lastNameEn);
+
+	// ── Dashboard Analytics ──────────────────────────────────────────────
+
+	@Query("""
+			SELECT YEAR(u.createdDate), MONTH(u.createdDate), COUNT(u)
+			FROM UserDtls u
+			WHERE u.createdDate >= :since
+			GROUP BY YEAR(u.createdDate), MONTH(u.createdDate)
+			ORDER BY YEAR(u.createdDate), MONTH(u.createdDate)
+			""")
+	List<Object[]> countNewUsersByMonth(@org.springframework.data.repository.query.Param("since") java.util.Date since);
 }

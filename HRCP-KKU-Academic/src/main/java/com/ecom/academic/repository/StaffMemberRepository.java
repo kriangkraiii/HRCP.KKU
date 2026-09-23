@@ -68,4 +68,14 @@ public interface StaffMemberRepository extends JpaRepository<StaffMember, Long> 
 
     @org.springframework.data.jpa.repository.Query("SELECT s FROM StaffMember s WHERE LOWER(s.firstName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.lastName) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.department) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(s.academicTitle) LIKE LOWER(CONCAT('%', :keyword, '%'))")
     List<StaffMember> searchStaff(@org.springframework.data.repository.query.Param("keyword") String keyword);
+
+    // ── Dashboard Analytics ──────────────────────────────────────────────
+
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT s.academicTitle, COUNT(s)
+            FROM StaffMember s
+            WHERE s.isActive = true AND s.academicTitle IS NOT NULL AND s.academicTitle <> ''
+            GROUP BY s.academicTitle
+            """)
+    List<Object[]> countByAcademicTitle();
 }

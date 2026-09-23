@@ -45,6 +45,7 @@ import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.Doc7Scoring;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.DashboardAnalyticsService;
 import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
@@ -85,6 +86,8 @@ public class AcademicAdminController {
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
 
+    private final DashboardAnalyticsService dashboardAnalytics;
+
     public AcademicAdminController(
             AcademicRequestService requestService,
             DocumentGenerationService documentService,
@@ -96,7 +99,8 @@ public class AcademicAdminController {
             com.ecom.academic.service.DocumentDataAutoFillHelper autoFillHelper,
             com.ecom.academic.service.DocumentPrewarmService documentPrewarmService,
             com.ecom.academic.service.SignatureWorkflowService signatureWorkflow,
-            com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer) {
+            com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer,
+            DashboardAnalyticsService dashboardAnalytics) {
         this.requestService = requestService;
         this.documentService = documentService;
         this.staffMemberService = staffMemberService;
@@ -108,6 +112,7 @@ public class AcademicAdminController {
         this.httpRequest = httpRequest;
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
+        this.dashboardAnalytics = dashboardAnalytics;
     }
 
     private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
@@ -128,6 +133,96 @@ public class AcademicAdminController {
         DOC_LABELS.put(8, "ส่วนที่ 3 แบบประเมินผลการสอน");
         DOC_LABELS.put(9, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
     }
+
+    // ── Dashboard Analytics ──────────────────────────────────────────────
+
+    @GetMapping("/dashboard")
+    public String dashboard(
+            @RequestParam(value = "expiryFilter", required = false) String expiryFilter,
+            @RequestParam(value = "year", required = false) String selectedYear,
+            Model model) {
+        Map<String, Long> kpi = dashboardAnalytics.getKpiSummary();
+        model.addAttribute("kpi", kpi);
+
+        Map<String, Object> monthlyTrend = dashboardAnalytics.getMonthlyRequestTrend(12);
+        model.addAttribute("monthlyLabels", monthlyTrend.get("labels"));
+        model.addAttribute("evalSeries", monthlyTrend.get("evalSeries"));
+        model.addAttribute("posSeries", monthlyTrend.get("posSeries"));
+
+        Map<String, Long> statusDist = dashboardAnalytics.getStatusDistribution();
+        model.addAttribute("statusLabels", new ArrayList<>(statusDist.keySet()));
+        model.addAttribute("statusValues", new ArrayList<>(statusDist.values()));
+
+        Map<String, Long> rankDist = dashboardAnalytics.getAcademicRankDistribution();
+        model.addAttribute("rankLabels", new ArrayList<>(rankDist.keySet()));
+        model.addAttribute("rankValues", new ArrayList<>(rankDist.values()));
+
+        // Expiry Tracker Analytics
+        Map<String, Object> expiryData = dashboardAnalytics.getEvaluationExpiryAnalytics(expiryFilter);
+        model.addAttribute("expirySummary", expiryData.get("summary"));
+        model.addAttribute("expiryItems", expiryData.get("items"));
+        model.addAttribute("allExpiryItems", expiryData.get("allItems"));
+        model.addAttribute("selectedExpiryFilter", expiryData.get("selectedFilter"));
+
+        // Yearly Subject Submissions Analytics
+        Map<String, Object> subjectData = dashboardAnalytics.getYearlySubjectAnalytics(selectedYear);
+        model.addAttribute("subjectItems", subjectData.get("items"));
+        model.addAttribute("topSubjects", subjectData.get("topSubjects"));
+        model.addAttribute("availableYears", subjectData.get("availableYears"));
+        model.addAttribute("selectedYear", subjectData.get("selectedYear"));
+        model.addAttribute("totalSubmissionsInYear", subjectData.get("totalSubmissions"));
+
+        // Position Pipeline Analytics
+        Map<String, Object> pipelineData = dashboardAnalytics.getPositionPipelineAnalytics();
+        model.addAttribute("positionPipeline", pipelineData);
+        @SuppressWarnings("unchecked")
+        Map<String, Long> byRank = (Map<String, Long>) pipelineData.get("byRank");
+        @SuppressWarnings("unchecked")
+        Map<String, Long> byMajor = (Map<String, Long>) pipelineData.get("byMajor");
+        model.addAttribute("posRankLabels", byRank != null ? new ArrayList<>(byRank.keySet()) : List.of());
+        model.addAttribute("posRankValues", byRank != null ? new ArrayList<>(byRank.values()) : List.of());
+        model.addAttribute("posMajorLabels", byMajor != null ? new ArrayList<>(byMajor.keySet()) : List.of());
+        model.addAttribute("posMajorValues", byMajor != null ? new ArrayList<>(byMajor.values()) : List.of());
+
+        // Evaluation Quality & Pass Rate
+        Map<String, Object> qualityData = dashboardAnalytics.getEvaluationQualityMetrics();
+        model.addAttribute("qualityMetrics", qualityData);
+        @SuppressWarnings("unchecked")
+        Map<String, Long> levelCounts = (Map<String, Long>) qualityData.get("levelCounts");
+        model.addAttribute("qualityLabels", levelCounts != null ? new ArrayList<>(levelCounts.keySet()) : List.of());
+        model.addAttribute("qualityValues", levelCounts != null ? new ArrayList<>(levelCounts.values()) : List.of());
+
+        // Stalled & SLA Bottlenecks
+        Map<String, Object> stalledData = dashboardAnalytics.getStalledRequestAnalytics();
+        model.addAttribute("stalledData", stalledData);
+        model.addAttribute("stalledItems", stalledData.get("items"));
+        model.addAttribute("totalStalled14", stalledData.get("totalStalled14"));
+        model.addAttribute("totalCritical30", stalledData.get("totalCritical30"));
+        model.addAttribute("avgTurnaroundDays", stalledData.get("avgTurnaroundDays"));
+
+        // Pending E-Signatures
+        Map<String, Object> signatureData = dashboardAnalytics.getPendingSignatureAnalytics();
+        model.addAttribute("signatureData", signatureData);
+        model.addAttribute("pendingSignatureItems", signatureData.get("items"));
+        model.addAttribute("totalPendingSignatures", signatureData.get("totalPending"));
+        model.addAttribute("overdueSignatures", signatureData.get("overdueCount"));
+        model.addAttribute("signaturesByRole", signatureData.get("byRole"));
+
+        // Faculty Academic Rank Distribution
+        Map<String, Object> facultyRankData = dashboardAnalytics.getFacultyRankAnalytics();
+        model.addAttribute("facultyRankData", facultyRankData);
+        model.addAttribute("facultyRankStat", facultyRankData.get("stat"));
+        model.addAttribute("facultyRankLabels", facultyRankData.get("labels"));
+        model.addAttribute("facultyRankValues", facultyRankData.get("values"));
+
+        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+        model.addAttribute("generatedAt", AcademicRequestService.formatThaiDate(now)
+                + " เวลา " + now.format(java.time.format.DateTimeFormatter.ofPattern("HH:mm")) + " น.");
+
+        return "academic/admin/dashboard";
+    }
+
+
 
     @GetMapping("/requests")
     public String listRequests(@RequestParam(value = "search", required = false) String search,
