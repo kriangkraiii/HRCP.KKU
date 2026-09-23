@@ -373,4 +373,14 @@ class SignatureStampingTest {
                 .sum();
         assertThat(total).isEqualTo(17);
     }
+
+    @Test
+    @DisplayName("ขนาดลายเซ็นที่ฝังในเอกสารต้องได้รับการขยายเป็น 5.0 ซม. (1,800,000 EMU)")
+    void stampedSignatureHasEnlargedDimensions() throws IOException {
+        byte[] docx = render(SignatureModule.ACADEMIC, 1,
+                List.of(new StampedSignature("applicant_name", samplePng(), 540, 185)));
+
+        String document = text(unzip(docx), "word/document.xml");
+        assertThat(document).contains("cx=\"1800000\"");
+    }
 }

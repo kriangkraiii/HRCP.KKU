@@ -410,7 +410,7 @@
         const inkH = inkSource.height || inkSource.naturalHeight || 1;
         const maxW = 200;
         const maxH = 135;
-        const scale = Math.min(maxW / inkW, maxH / inkH, 1.0);
+        const scale = Math.min(Math.min(maxW / inkW, maxH / inkH), 2.5);
         const drawW = Math.round(inkW * scale);
         const drawH = Math.round(inkH * scale);
         const drawX = 115 - Math.round(drawW / 2);
@@ -598,7 +598,7 @@
             if (err.name === 'PasswordException') {
                 msg = 'ไฟล์ PDF นี้ติดรหัสผ่าน กรุณาใช้ไฟล์ PDF ที่ไม่มีการตั้งรหัสผ่าน';
             } else {
-                msg = 'ไม่สามารถอ่านไฟล์ PDF นี้ได้ (' + (err.message || 'เกิดข้อผิดพลาด') + ') กรุณาลองใช้ไฟล์รูปภาพ PNG / JPG แทน';
+                msg = 'ไม่สามารถอ่านไฟล์ PDF นี้ได้ (' + (err.message || 'เกิดข้อผิดพลาด') + ') กรุณาใช้ไฟล์รูปภาพ PNG หรือ JPG แทน';
             }
             window.alert(msg);
             setPreview(null);

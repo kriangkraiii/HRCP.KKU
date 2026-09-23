@@ -1,6 +1,11 @@
 package com.ecom.academic.controller;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.security.Principal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
@@ -9,6 +14,8 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -30,6 +37,7 @@ import com.ecom.academic.service.SignatureAnchorRegistry;
 import com.ecom.academic.service.SignatureVerificationService;
 import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.SignatureWorkflowService.ActorContext;
+import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.DocumentSnapshotProvider;
 import com.ecom.academic.service.SignatureWorkflowService.Result;
 import com.ecom.academic.service.SignatureWorkflowService.SignerAssignment;
@@ -64,6 +72,7 @@ public class SigningController {
     private final DocumentSnapshotProvider documentLabelResolver;
     private final HttpServletRequest httpRequest;
     private final UserDigitalCertificateService digitalCertificateService;
+    private final DocumentGenerationService documentService;
 
     public SigningController(SignatureWorkflowService workflow,
             SignedDocumentRenderer renderer,
@@ -72,7 +81,8 @@ public class SigningController {
             SignatureVerificationService verificationService,
             DocumentSnapshotProvider documentLabelResolver,
             HttpServletRequest httpRequest,
-            UserDigitalCertificateService digitalCertificateService) {
+            UserDigitalCertificateService digitalCertificateService,
+            DocumentGenerationService documentService) {
         this.workflow = workflow;
         this.renderer = renderer;
         this.signatureService = signatureService;
@@ -81,6 +91,7 @@ public class SigningController {
         this.documentLabelResolver = documentLabelResolver;
         this.httpRequest = httpRequest;
         this.digitalCertificateService = digitalCertificateService;
+        this.documentService = documentService;
     }
 
     /** Everything waiting on the signed-in person + sent envelopes tracking. */
@@ -161,6 +172,11 @@ public class SigningController {
         model.addAttribute("queueIndex", queueIndex);
         model.addAttribute("deadlineAdvisory", deadlineAdvisory);
         model.addAttribute("canSign", canSign);
+        // ผู้ลงนามต้องรู้ว่ากำลังพิจารณาคำร้องของใคร และเห็นหลักฐานประกอบก่อนเลือกเห็นควรหรือไม่
+        model.addAttribute("requestSummary",
+                documentLabelResolver.summaryOf(envelope.getModule(), envelope.getRequestId()));
+        model.addAttribute("attachments",
+                documentLabelResolver.attachmentsOf(envelope.getModule(), envelope.getRequestId()));
         // ช่องลงนามบางช่องขอคำตอบด้วย ไม่ใช่แค่ลายเซ็น (เช่น ผลการตรวจสอบคุณสมบัติ)
         SignatureAnchorRegistry.SignerChoice choice = workflow.signerChoiceFor(stepId);
         model.addAttribute("signerChoice", choice);
@@ -233,6 +249,91 @@ public class SigningController {
         }
     }
 
+    /**
+     * เปิดไฟล์แนบของคำร้องจากหน้าลงนาม
+     *
+     * <p>ไฟล์แนบเดิมเปิดได้เฉพาะใต้ {@code /admin/**} ผู้ลงนามที่เป็น ROLE_USER จึงไม่เห็น
+     * หลักฐานที่ตัวเองกำลังพิจารณา สิทธิ์ที่นี่มาจากขั้นลงนาม: เป็นผู้ลงนามขั้นนี้หรือแอดมิน และไฟล์
+     * ต้องเป็นของคำร้องที่ซองนี้ผูกอยู่ ไม่เข้าเงื่อนไขตอบ 404 เหมือน {@link #preview}
+     */
+    @GetMapping("/sign/{stepId}/attachment/{attachmentId}")
+    public ResponseEntity<?> attachment(@PathVariable Long stepId, @PathVariable Long attachmentId,
+            Principal principal) throws IOException {
+        UserDtls me = currentUser(principal);
+        SignatureStep step = workflow.findStep(stepId).orElse(null);
+
+        boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
+        boolean isSigner = step != null && step.getSigner() != null && me != null && step.getSigner().getId().equals(me.getId());
+
+        if (step == null || step.getSigner() == null || (!isSigner && !isAdmin)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        SignatureRequest envelope = step.getSignatureRequest();
+        DocumentSnapshotProvider.SignerAttachment attachment = documentLabelResolver
+                .attachmentOf(envelope.getModule(), envelope.getRequestId(), attachmentId)
+                .orElse(null);
+        if (attachment == null) {
+            return ResponseEntity.notFound().build();
+        }
+
+        if (attachment.link()) {
+            return ResponseEntity.status(HttpStatus.FOUND)
+                    .location(URI.create(attachment.storedPath()))
+                    .build();
+        }
+
+        Path path = Path.of(attachment.storedPath());
+        if (!Files.exists(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String filename = attachment.filename() != null ? attachment.filename() : "attachment";
+        String ext = attachment.extension() != null ? attachment.extension().toUpperCase() : "";
+
+        // DOCX เปิดในเบราว์เซอร์ไม่ได้ แปลงเป็น PDF ให้อ่านได้ทันทีเหมือนหน้าแอดมิน
+        if ("DOCX".equals(ext)) {
+            try {
+                byte[] pdf = documentService.convertDocxToPdfCached(Files.readAllBytes(path));
+                if (pdf != null && pdf.length > 0) {
+                    String pdfName = filename.toLowerCase().endsWith(".docx")
+                            ? filename.substring(0, filename.length() - 5) + ".pdf"
+                            : filename + ".pdf";
+                    return ResponseEntity.ok()
+                            .header(HttpHeaders.CONTENT_DISPOSITION, inlineDisposition(pdfName))
+                            .contentType(MediaType.APPLICATION_PDF)
+                            .body(pdf);
+                }
+            } catch (Exception e) {
+                log.warn("Could not convert attachment {} to PDF, serving the original: {}",
+                        attachmentId, e.toString());
+            }
+        }
+
+        String contentType = switch (ext) {
+            case "PDF" -> "application/pdf";
+            case "PNG" -> "image/png";
+            case "JPG", "JPEG" -> "image/jpeg";
+            case "DOCX" -> "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+            case "XLSX" -> "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+            case "PPTX" -> "application/vnd.openxmlformats-officedocument.presentationml.presentation";
+            default -> "application/octet-stream";
+        };
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, inlineDisposition(filename))
+                .contentType(MediaType.parseMediaType(contentType))
+                .contentLength(Files.size(path))
+                .body(new org.springframework.core.io.FileSystemResource(path));
+    }
+
+    /** ชื่อไฟล์ทั้งแบบ ASCII สำหรับเบราว์เซอร์เก่าและ UTF-8 สำหรับชื่อภาษาไทย */
+    private static String inlineDisposition(String filename) {
+        String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
+        String ascii = filename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        return "inline; filename=\"" + ascii + "\"; filename*=UTF-8''" + encoded;
+    }
+
     @PostMapping("/sign/{stepId}")
     public String sign(@PathVariable Long stepId,
             @RequestParam(value = "userSignatureId", required = false) Long userSignatureId,
@@ -292,9 +393,18 @@ public class SigningController {
         // Back to the request they came from, so they can see where it now
         // stands and carry on with it — the inbox is empty by definition at
         // this point and says nothing useful.
+        //
+        // Only the applicant can open the /user/ page and only an admin the
+        // /admin/ one — sending the head of department or the dean to either
+        // answered a successful signature with a 403.
         SignatureRequest envelope = result.request();
         if (envelope != null) {
-            return "redirect:" + envelope.getModule().userLink(envelope.getRequestId());
+            if ("ROLE_ADMIN".equals(me.getRole())) {
+                return "redirect:" + envelope.getModule().adminLink(envelope.getRequestId());
+            }
+            if (documentLabelResolver.isApplicantOf(envelope.getModule(), envelope.getRequestId(), me.getId())) {
+                return "redirect:" + envelope.getModule().userLink(envelope.getRequestId());
+            }
         }
         return "redirect:/esign/inbox";
     }
@@ -415,6 +525,21 @@ public class SigningController {
 
         Result result = workflow.createEnvelope(module, requestId, documentType, documentLabel,
                 frozenJson, assignments, parseDueAt(dueAt), me, actorContext());
+
+        if (result.ok()) {
+            documentLabelResolver.markSavedForSigning(module, requestId, documentType, frozenJson);
+        }
+
+        // ปุ่มของเจ้าหน้าที่คือ "ยืนยันความถูกต้องและส่งเวียนลงนาม" — กดแล้วคือตรวจแล้ว ปล่อยเวียน
+        // ในตัว เหมือนการส่งต่อ (forward) เดิมซองถูกพักรอปุ่ม "เริ่มเวียนลงนาม" อีกปุ่ม ซึ่ง
+        // เจ้าหน้าที่ไม่รู้ว่ามี คณบดีจึงไม่เคยได้รับแจ้ง ประตูตรวจยังกั้นซองที่ผู้ยื่นสร้างเองเหมือนเดิม
+        if (isAdmin && result.ok() && result.request() != null
+                && !result.request().isCirculationStarted()) {
+            Result released = workflow.startCirculation(result.request().getId(), me, actorContext());
+            if (released.ok()) {
+                result = released;
+            }
+        }
 
         flashOutcome(result, redirectAttributes);
 

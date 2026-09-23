@@ -92,7 +92,7 @@ function deleteFolderPrompt(card) {
     var id = card.getAttribute('data-id');
     var name = card.getAttribute('data-name');
     showConfirm('ลบโฟลเดอร์',
-        'ต้องการลบโฟลเดอร์ <strong>' + name + '</strong> และไฟล์ทั้งหมดข้างในหรือไม่?<br><small class="text-danger">การดำเนินการนี้ไม่สามารถกู้คืนได้!</small>',
+        'ยืนยันการลบโฟลเดอร์ <strong>' + name + '</strong> และไฟล์ทั้งหมดในโฟลเดอร์?<br><small class="text-danger">กู้คืนไม่ได้</small>',
         function() {
             var fd = new FormData();
             fd.append('id', id);
@@ -165,7 +165,7 @@ function permanentDeleteStorageFile(btn) {
     var id = btn.getAttribute('data-id');
     var name = btn.getAttribute('data-name');
     showConfirm('ลบถาวร',
-        'ลบ <strong>' + name + '</strong> ถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+        'ยืนยันการลบ <strong>' + name + '</strong> ถาวร?<br><small class="text-danger">กู้คืนไม่ได้</small>',
         function() {
             var fd = new FormData();
             fd.append('id', id);
@@ -184,7 +184,7 @@ function permanentDeleteStorageFile(btn) {
 
 function emptyStorageTrash() {
     showConfirm('ล้างถังขยะทั้งหมด',
-        'ลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+        'ยืนยันการลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">กู้คืนไม่ได้</small>',
         function() {
             fetch('/admin/file-manager/storage/empty-trash', { method: 'POST', headers: getCsrfHeaders() })
                 .then(function(r) { return r.json(); })

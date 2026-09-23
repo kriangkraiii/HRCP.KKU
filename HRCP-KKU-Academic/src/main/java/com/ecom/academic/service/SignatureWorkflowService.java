@@ -1427,13 +1427,18 @@ public class SignatureWorkflowService {
         java.util.Map<String, List<com.ecom.academic.dto.SignerOptionDTO>> recommended =
                 new java.util.LinkedHashMap<>();
         for (SignatureSlot slot : slots) {
-            if (slot.defaultStaffRole() == null || "applicant".equalsIgnoreCase(slot.slotKey())) {
+            if ("applicant".equalsIgnoreCase(slot.slotKey())) {
                 if (applicantUser != null && Boolean.TRUE.equals(applicantUser.getIsEnable())
                         && (applicantUser.getAccountNonLocked() == null || Boolean.TRUE.equals(applicantUser.getAccountNonLocked()))) {
                     recommended.put(slot.slotKey(), List.of(com.ecom.academic.dto.SignerOptionDTO.fromUser(applicantUser)));
                 } else {
                     recommended.put(slot.slotKey(), List.of());
                 }
+                continue;
+            }
+            // ผู้ร่วมประพันธ์ไม่มีบทบาทบุคลากรให้แนะนำ — เจ้าหน้าที่เลือกจาก "บุคลากรอื่นในระบบ"
+            if (slot.defaultStaffRole() == null) {
+                recommended.put(slot.slotKey(), List.of());
                 continue;
             }
             recommended.put(slot.slotKey(),

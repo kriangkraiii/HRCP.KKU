@@ -2425,3 +2425,13 @@ body,
     background: #283244 !important;
     color: #ffffff !important;
 }
+/* ปุ่ม (i) และ popover */
+[data-theme="dark"] .info-tip {
+    color: var(--text-secondary);
+}
+
+[data-theme="dark"] .popover {
+    --bs-popover-bg: var(--bg-dropdown);
+    --bs-popover-border-color: var(--border-color);
+    --bs-popover-body-color: var(--text-primary);
+}

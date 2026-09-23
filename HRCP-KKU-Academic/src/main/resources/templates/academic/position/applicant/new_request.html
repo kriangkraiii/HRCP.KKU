@@ -55,8 +55,8 @@
                 <i class="fas fa-lock me-2"></i>
                 <strong>ผลการประเมินทุกรายการถูกใช้ยื่นขอตำแหน่งไปแล้ว</strong>
                 <p class="mb-0 mt-2">
-                    ผลการประเมินผลการสอน 1 ฉบับ ใช้ยื่นขอกำหนดตำแหน่งได้ 1 คำร้องเท่านั้น
-                    หากต้องการยื่นใหม่ ต้องขอรับการประเมินการสอนใหม่ก่อน (ใช้รายวิชาเดิมได้ แต่ต้องปรับเนื้อหาในรายวิชาใหม่)
+                    ผลการประเมิน 1 ฉบับใช้ยื่นได้ 1 คำร้อง กรุณาขอรับการประเมินการสอนใหม่ก่อน
+                    <span th:replace="~{academic/_info_tip :: tip('ใช้รายวิชาเดิมได้ แต่ต้องปรับปรุงเนื้อหาในรายวิชา')}"></span>
                 </p>
                 <a href="/user/academic/dashboard" class="btn-back-pill mt-3">
                     <i class="fas fa-arrow-left"></i> ไปขอประเมินการสอนใหม่
@@ -65,13 +65,9 @@
 
             <div th:if="${hasAny}">
                 <div th:if="${hasEligible}" class="alert alert-info mb-4">
-                    <i class="fas fa-info-circle me-2"></i>
-                    กรุณาตรวจสอบรายละเอียดแล้วเลือกผลการประเมินผลการสอนที่ต้องการใช้ยื่นขอตำแหน่งทางวิชาการ
-                    <div class="small mt-2 mb-0">
-                        <i class="fas fa-triangle-exclamation me-1"></i>
-                        เมื่อสร้างคำร้องแล้ว <strong>ผลการประเมินฉบับนั้นจะใช้กับคำร้องอื่นไม่ได้</strong>
-                        และตำแหน่งที่ขอจะเป็นตามที่ระบุไว้ในผลการประเมิน
-                    </div>
+                    <i class="fas fa-triangle-exclamation me-2"></i>
+                    เมื่อสร้างคำร้องแล้ว <strong>ผลการประเมินฉบับนั้นจะใช้กับคำร้องอื่นไม่ได้</strong>
+                    และตำแหน่งที่ขอจะเป็นไปตามผลการประเมิน
                 </div>
 
                 <div th:each="choice : ${choices}" class="card card-academic mb-3"

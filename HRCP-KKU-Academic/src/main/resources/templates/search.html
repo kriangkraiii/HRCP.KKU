@@ -110,8 +110,7 @@
 
                     <div th:if="${tooShort}" class="alert alert-warning border-0 shadow-sm">
                         <i class="fas fa-circle-info me-2"></i>
-                        <span>กรุณาพิมพ์อย่างน้อย <strong th:text="${minQueryLength}">2</strong> ตัวอักษร
-                            — ตัวอักษรเดียวปรากฏอยู่ในข้อมูลแทบทุกรายการ</span>
+                        <span>กรุณาพิมพ์อย่างน้อย <strong th:text="${minQueryLength}">2</strong> ตัวอักษร</span>
                     </div>
 
                     <div th:if="${q == null or #strings.isEmpty(q)}"
@@ -126,7 +125,6 @@
                             <p class="mb-0 text-muted small">
                                 <span th:if="${result.total > 0}">
                                     พบ <strong th:text="${result.total}">0</strong> รายการ
-                                    (<span th:text="${result.tookMs}">0</span> ms)
                                 </span>
                                 <span th:if="${result.total == 0}">ไม่พบผลลัพธ์</span>
                             </p>
@@ -143,7 +141,7 @@
                             <i class="fas fa-inbox fa-2x mb-3 d-block opacity-50"></i>
                             <p class="mb-1">ไม่พบรายการที่ตรงกับ
                                 <strong th:text="${q}">คำค้น</strong></p>
-                            <p class="small mb-0">ลองใช้คำที่สั้นลง หรือถอดตัวกรองบางอย่างออก</p>
+                            <p class="small mb-0">กรุณาใช้คำที่สั้นลง หรือลดตัวกรอง</p>
                         </div>
 
                         <div class="list-group shadow-sm" th:unless="${#lists.isEmpty(result.hits)}">

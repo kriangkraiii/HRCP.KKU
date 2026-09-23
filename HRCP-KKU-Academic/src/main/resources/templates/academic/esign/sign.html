@@ -30,7 +30,7 @@
                         <i class="fas fa-layer-group me-1"></i> โหมดลงนามต่อเนื่อง
                     </span>
                     <span class="fw-semibold text-dark">
-                        เอกสารที่ <span class="text-primary fw-bold" th:text="${queueIndex}">1</span> จากทั้งหมด <span th:text="${queueTotal}">3</span> ฉบับในคิวของคุณ
+                        เอกสารที่ <span class="text-primary fw-bold" th:text="${queueIndex}">1</span> จากทั้งหมด <span th:text="${queueTotal}">3</span> ฉบับที่รอท่านลงนาม
                     </span>
                 </div>
                 <div class="progress flex-grow-1 mx-3 d-none d-md-block" style="height: 8px; max-width: 200px;">
@@ -39,7 +39,7 @@
                          th:style="'width: ' + (${queueIndex} * 100 / ${queueTotal}) + '%;'"></div>
                 </div>
                 <span class="small text-muted d-none d-sm-inline">
-                    เมื่อเซ็นเสร็จจะนำไปฉบับถัดไปอัตโนมัติ
+                    ลงนามแล้วระบบจะเปิดฉบับถัดไปให้
                 </span>
             </div>
         </div>
@@ -48,12 +48,12 @@
         <div th:if="${envelope.overdue and deadlineAdvisory}" class="alert alert-warning d-flex align-items-center flex-wrap gap-2 mb-3 shadow-sm">
             <div>
                 <i class="fas fa-bell fa-lg me-2"></i>
-                <strong>เลยกำหนดที่คุณตั้งเตือนไว้แล้ว</strong>
+                <strong>เลยกำหนดที่ตั้งเตือนไว้แล้ว</strong>
                 <span class="ms-1" th:if="${envelope.dueAt != null}">
                     (ตั้งเตือนไว้: <span th:text="${#temporals.format(envelope.dueAt, 'd MMM yyyy HH:mm')}"></span>)
                 </span>
                 <div class="small mt-1">
-                    กำหนดนี้เป็นเพียงการแจ้งเตือน — คุณยังลงนามได้ตามปกติ
+                    กำหนดนี้เป็นการแจ้งเตือนเท่านั้น ท่านยังลงนามได้ตามปกติ
                 </div>
             </div>
         </div>
@@ -84,9 +84,8 @@
             <div class="col-lg-7 esign-preview-sticky-col">
                 <div class="card card-academic shadow-sm esign-preview-card">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
-                        <span class="fw-semibold text-primary"><i class="fas fa-file-pdf me-1"></i> เอกสารที่จะลงนาม (ฉบับจริง)</span>
+                        <span class="fw-semibold text-primary"><i class="fas fa-file-pdf me-1"></i> เอกสารที่จะลงนาม<span th:replace="~{academic/_info_tip :: tip('เอกสารนี้เป็นฉบับที่ล็อกไว้ตอนส่งเวียนลงนาม การแก้ไขฟอร์มภายหลังไม่มีผลกับฉบับนี้')}"></span></span>
                         <div class="d-flex align-items-center gap-2">
-                            <span class="badge bg-light text-secondary border">Freeze Snapshot</span>
                             <a th:href="@{'/esign/sign/' + ${step.id} + '/preview'}" target="_blank"
                                class="btn btn-sm btn-outline-secondary">
                                 <i class="fas fa-arrow-up-right-from-square"></i> เปิดแท็บใหม่
@@ -115,6 +114,76 @@
 
             <!-- ========== ฝั่งขวา: ลำดับการลงนาม + ยินยอม + ลงนาม ========== -->
             <div class="col-lg-5">
+
+                <!-- ข้อมูลคำร้อง — ผู้ลงนามต้องรู้ว่ากำลังพิจารณาเรื่องของใครก่อนเลือกเห็นควรหรือไม่ -->
+                <div th:if="${requestSummary != null}" class="card card-academic mb-3">
+                    <div class="card-header bg-white">
+                        <i class="fas fa-folder-open"></i> ข้อมูลคำร้อง
+                    </div>
+                    <div class="card-body py-2">
+                        <dl class="row small mb-0">
+                            <dt class="col-5 text-secondary fw-normal">เลขที่คำร้อง</dt>
+                            <dd class="col-7 fw-semibold text-break" th:text="${requestSummary.requestCode() ?: '-'}">-</dd>
+
+                            <dt class="col-5 text-secondary fw-normal">ผู้ยื่นคำร้อง</dt>
+                            <dd class="col-7 text-break" th:text="${requestSummary.applicantName() ?: '-'}">-</dd>
+
+                            <th:block th:if="${requestSummary.targetPosition() != null}">
+                                <dt class="col-5 text-secondary fw-normal">ตำแหน่งที่เสนอขอ</dt>
+                                <dd class="col-7 text-break" th:text="${requestSummary.targetPosition()}">-</dd>
+                            </th:block>
+
+                            <th:block th:if="${requestSummary.major() != null}">
+                                <dt class="col-5 text-secondary fw-normal">สาขาวิชา</dt>
+                                <dd class="col-7 text-break" th:text="${requestSummary.major()}">-</dd>
+                            </th:block>
+
+                            <dt class="col-5 text-secondary fw-normal">วันที่ยื่น</dt>
+                            <dd class="col-7"
+                                th:text="${requestSummary.submissionDate() != null
+                                        ? #temporals.format(requestSummary.submissionDate(), 'd MMM yyyy')
+                                        : 'ยังไม่ได้ยื่น'}">-</dd>
+
+                            <dt class="col-5 text-secondary fw-normal">สถานะคำร้อง</dt>
+                            <dd class="col-7 mb-0" th:text="${requestSummary.statusLabel() ?: '-'}">-</dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- ไฟล์แนบประกอบการพิจารณา — เปิดผ่าน /esign ที่ตรวจสิทธิ์ด้วยขั้นลงนาม
+                     ไม่ใช่ /admin ที่ผู้ลงนามซึ่งเป็น ROLE_USER เข้าไม่ได้ -->
+                <div class="card card-academic mb-3">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-paperclip"></i> ไฟล์แนบประกอบการพิจารณา<span th:replace="~{academic/_info_tip :: tip('ไฟล์แนบเป็นฉบับล่าสุดของคำร้อง ไม่ได้ถูกล็อกไว้พร้อมกับเอกสารที่ลงนาม')}"></span></span>
+                        <span class="badge bg-light text-secondary border"
+                              th:text="${#lists.size(attachments)} + ' ไฟล์'">0 ไฟล์</span>
+                    </div>
+                    <div th:if="${#lists.isEmpty(attachments)}" class="card-body py-2 small text-secondary">
+                        ไม่มีไฟล์แนบ
+                    </div>
+                    <ul th:unless="${#lists.isEmpty(attachments)}" class="list-group list-group-flush">
+                        <li class="list-group-item" th:each="att : ${attachments}">
+                            <a th:href="@{/esign/sign/{stepId}/attachment/{attId}(stepId=${step.id}, attId=${att.id()})}"
+                               target="_blank" rel="noopener"
+                               class="d-flex align-items-start gap-2 text-decoration-none">
+                                <i class="fas fa-link text-info mt-1" th:if="${att.link()}"></i>
+                                <i class="fas fa-file-pdf text-danger mt-1" th:if="${!att.link() and att.extension() == 'PDF'}"></i>
+                                <i class="fas fa-file-word text-primary mt-1" th:if="${!att.link() and att.extension() == 'DOCX'}"></i>
+                                <i class="fas fa-file text-secondary mt-1"
+                                   th:if="${!att.link() and att.extension() != 'PDF' and att.extension() != 'DOCX'}"></i>
+                                <span class="flex-grow-1 text-break">
+                                    <span class="small" th:text="${att.filename()}">ชื่อไฟล์</span>
+                                    <span class="d-block text-muted" style="font-size: 0.75rem;">
+                                        <span th:text="${att.link() ? 'ลิงก์' : (att.fileSize() != null ? (att.fileSize() > 1048576 ? #numbers.formatDecimal(att.fileSize() / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize() / 1024.0, 1, 1) + ' KB') : '-')}">-</span>
+                                        <span th:if="${att.uploadedAt() != null}"
+                                              th:text="' · ' + ${#temporals.format(att.uploadedAt(), 'd MMM yy')}"></span>
+                                    </span>
+                                </span>
+                                <i class="fas fa-arrow-up-right-from-square text-secondary small mt-1"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
 
                 <!-- ลำดับขั้นการลงนาม -->
                 <div class="card card-academic mb-3">
@@ -149,19 +218,19 @@
                             </h6>
                             <p class="mb-2 small text-secondary">
                                 <span th:if="${myCert == null}">
-                                    คุณยังไม่ได้ติดตั้งใบรับรอง <strong>Digital ID (.p12)</strong> ของมหาวิทยาลัยขอนแก่นในระบบ 
-                                    — ตามนโยบายความปลอดภัยและ พ.ร.บ.ธุรกรรมอิเล็กทรอนิกส์ ผู้ลงนามต้องติดตั้งใบรับรองดิจิทัลส่วนบุคคลก่อน จึงจะได้รับอนุญาตให้ลงนามในเอกสารนี้
+                                    กรุณาติดตั้งใบรับรอง Digital ID (.p12) ที่หน้าลายเซ็นของฉันก่อนลงนาม
+                                    <span th:replace="~{academic/_info_tip :: tip('ตามนโยบายความปลอดภัยและ พ.ร.บ.ว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์ ผู้ลงนามต้องใช้ใบรับรองดิจิทัลส่วนบุคคลของมหาวิทยาลัยขอนแก่น')}"></span>
                                 </span>
                                 <span th:if="${myCert != null and myCert.expired}">
-                                    ใบรับรอง <strong>Digital ID (.p12)</strong> ของคุณหมดอายุแล้ว (เมื่อ <strong th:text="${#temporals.format(myCert.validTo, 'd MMM yyyy HH:mm')}">-</strong>) 
-                                    ตามกฎหมายธุรกรรมอิเล็กทรอนิกส์และนโยบายความปลอดภัย <strong>จะไม่สามารถใช้ลงนามในเอกสารได้</strong> กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" class="fw-bold">https://i.kku.ac.th</a> แล้วอัปเดตไฟล์ใหม่ที่หน้า "ลายเซ็นของฉัน"
+                                    ใบรับรองหมดอายุเมื่อ <strong th:text="${#temporals.format(myCert.validTo, 'd MMM yyyy HH:mm')}">-</strong>
+                                    กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener" class="fw-bold">i.kku.ac.th</a> แล้วติดตั้งที่หน้าลายเซ็นของฉัน
                                 </span>
                             </p>
                             <div class="d-flex flex-wrap gap-2 mt-2">
                                 <a href="/esign/my-signatures" class="btn btn-danger btn-sm">
                                     <i class="fas fa-rotate me-1" th:if="${myCert != null and myCert.expired}"></i>
                                     <i class="fas fa-upload me-1" th:if="${myCert == null}"></i>
-                                    <span th:text="${myCert != null and myCert.expired ? 'ไปอัปเดตไฟล์ .p12 ใหม่ (ที่หน้าลายเซ็นของฉัน)' : 'ไปติดตั้งไฟล์ .p12 (ที่หน้าลายเซ็นของฉัน)'}">ไปติดตั้งไฟล์ .p12</span>
+                                    <span th:text="${myCert != null and myCert.expired ? 'อัปเดตไฟล์ .p12' : 'ติดตั้งไฟล์ .p12'}">ไปติดตั้งไฟล์ .p12</span>
                                 </a>
                                 <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
                                     <i class="fas fa-book-open me-1"></i> วิธีขอรับไฟล์ .p12 และรหัสผ่าน
@@ -176,9 +245,9 @@
                     <!-- ไม่มีลายเซ็นเก็บไว้ ต้องไปสร้างก่อน -->
                     <div th:if="${#lists.isEmpty(mySignatures)}" class="alert alert-warning">
                         <i class="fas fa-triangle-exclamation"></i>
-                        คุณยังไม่มีลายเซ็นที่บันทึกไว้
-                        <a href="/esign/my-signatures" class="alert-link">สร้างลายเซ็นของคุณก่อน</a>
-                        จึงจะลงนามได้
+                        ยังไม่มีลายเซ็นที่บันทึกไว้ กรุณา
+                        <a href="/esign/my-signatures" class="alert-link">สร้างลายเซ็น</a>
+                        ก่อนลงนาม
                     </div>
 
                     <form th:unless="${#lists.isEmpty(mySignatures)}"
@@ -187,15 +256,12 @@
                         <div class="card card-academic mb-3">
                             <div class="card-header bg-white d-flex justify-content-between align-items-center">
                                 <span class="fw-semibold text-dark">
-                                    <i class="fas fa-signature text-primary me-2"></i> เลือกลายเซ็นที่จะประทับลงในเอกสาร
+                                    <i class="fas fa-signature text-primary me-2"></i> เลือกลายเซ็น<span th:replace="~{academic/_info_tip :: tip('ตัวอย่างลายเซ็นบนเอกสารด้านซ้ายจะเปลี่ยนตามลายเซ็นที่เลือก')}"></span>
                                 </span>
                                 <span class="badge bg-light text-secondary border"
                                       th:text="${#lists.size(mySignatures)} + ' รายการ'">0 รายการ</span>
                             </div>
                             <div class="card-body">
-                                <p class="small text-secondary mb-3">
-                                    <i class="fas fa-info-circle text-primary me-1"></i> เลือกลายเซ็นที่คุณต้องการประทับลงในตำแหน่ง <strong class="text-dark" th:text="${step.roleLabel}">ตำแหน่ง</strong> (ระบบจะแสดงตัวอย่างบนเอกสารทางด้านซ้ายอัตโนมัติ)
-                                </p>
 
                                 <!-- Radio Cards: แสดงสถานะการเลือกชัดเจน พร้อมป้ายกำกับและขอบสีน้ำเงิน -->
                                 <div class="row g-2" th:with="noDefault=${#lists.isEmpty(mySignatures.?[isDefault])}">
@@ -218,7 +284,7 @@
                                                         <i class="fas fa-circle-check me-1"></i> ค่าเริ่มต้น
                                                     </span>
                                                     <span class="badge bg-primary sig-badge-selected rounded-pill">
-                                                        <i class="fas fa-check-circle me-1"></i> กำลังเลือกใช้อันนี้
+                                                        <i class="fas fa-check-circle me-1"></i> ที่เลือก
                                                     </span>
                                                 </div>
                                             </div>
@@ -247,7 +313,7 @@
                                             <i class="fas fa-file-signature fa-sm"></i>
                                         </div>
                                         <div class="small">
-                                            <span class="text-secondary">ลายเซ็นที่จะใช้ประทับ:</span>
+                                            <span class="text-secondary">ลายเซ็นที่ใช้:</span>
                                             <strong class="text-primary fw-bold ms-1" id="selectedSigLabel"
                                                     th:text="${defaultSignature != null ? defaultSignature.displayName : (!#lists.isEmpty(mySignatures) ? mySignatures[0].displayName : 'ลายเซ็นที่เลือก')}">ลายเซ็น</strong>
                                             <span class="text-muted ms-1" th:if="${step.roleLabel != null}" th:text="'(ตำแหน่ง ' + ${step.roleLabel} + ')'"></span>
@@ -259,8 +325,7 @@
                                 </div>
 
                                 <div class="d-flex justify-content-between align-items-center mt-2 pt-1 border-top">
-                                    <span class="small text-muted">ต้องการเพิ่มหรือแก้ไขลายเซ็น?</span>
-                                    <a href="/esign/my-signatures" class="small text-primary text-decoration-none">
+                                    <a href="/esign/my-signatures" class="small text-primary text-decoration-none ms-auto">
                                         <i class="fas fa-cog me-1"></i> จัดการลายเซ็นของฉัน
                                     </a>
                                 </div>
@@ -270,7 +335,7 @@
                         <!-- Digital ID (.p12) Verification Status -->
                         <div class="card card-academic mb-3 border-success">
                             <div class="card-header bg-success bg-opacity-10 text-success fw-semibold py-2 d-flex justify-content-between align-items-center">
-                                <span><i class="fas fa-id-card me-1"></i> ลงนามด้วย Digital ID (.p12) มข.</span>
+                                <span><i class="fas fa-id-card me-1"></i> ลงนามด้วย Digital ID (.p12)</span>
                                 <button type="button" class="btn btn-link btn-sm text-success p-0 text-decoration-none" data-bs-toggle="modal" data-bs-target="#p12GuideModal">
                                     <i class="fas fa-circle-question me-1"></i> คู่มือ
                                 </button>
@@ -282,28 +347,26 @@
                                         <strong th:text="${myCert.commonName}">ชื่อผู้ลงนาม</strong>
                                     </div>
                                     <span class="badge bg-success bg-opacity-75">
-                                        <i class="fas fa-shield-halved me-1"></i> PAdES Certified
+                                        <i class="fas fa-shield-halved me-1"></i> ลายมือชื่อดิจิทัล
                                     </span>
                                 </div>
                                 <div class="small text-muted mb-2">
                                     ออกโดย: <span th:text="${myCert.issuerDn}">Thai University Consortium CA</span>
                                 </div>
 
-                                <!-- One-Click Sign -->
+                                <!-- รหัสผ่านบันทึกไว้แล้ว ลงนามได้โดยไม่ต้องกรอก -->
                                 <div th:if="${myCert.hasSavedPin()}" class="alert alert-success border py-1 px-2 mb-0 small">
-                                    <i class="fas fa-key text-success me-1"></i> <strong>One-Click Sign:</strong> ระบบจะใช้ Digital ID Password ที่บันทึกไว้เข้ารหัสเอกสารอัตโนมัติ
+                                    <i class="fas fa-key text-success me-1"></i> ใช้รหัสผ่าน Digital ID ที่บันทึกไว้ ไม่ต้องกรอกใหม่
                                 </div>
 
                                 <!-- Fallback if old cert without saved password -->
                                 <div th:unless="${myCert.hasSavedPin()}" class="mb-1">
                                     <label class="form-label small fw-semibold text-dark mb-1" for="digitalCertPin">
-                                        <i class="fas fa-key text-primary me-1"></i> Digital ID Password ของคุณ:
+                                        <i class="fas fa-key text-primary me-1"></i> รหัสผ่าน Digital ID
+                                        <span th:replace="~{academic/_info_tip :: tip('ใช้ปลดล็อกใบรับรองเฉพาะครั้งนี้ ระบบไม่เก็บรหัสผ่านไว้')}"></span>
                                     </label>
                                     <input type="password" class="form-control form-control-sm" id="digitalCertPin" name="digitalCertPin"
-                                           placeholder="ระบุ Digital ID Password เพื่อปลดล็อกใบรับรอง" autocomplete="off">
-                                    <div class="form-text small" style="font-size: 0.75rem;">
-                                        รหัสผ่านใช้ปลดล็อกใบรับรองในหน่วยความจำชั่วคราวและทำลายทิ้งทันที
-                                    </div>
+                                           placeholder="รหัสผ่านของไฟล์ .p12" autocomplete="off">
                                 </div>
                             </div>
                         </div>
@@ -316,11 +379,9 @@
                                 <i class="fas fa-clipboard-check text-warning"></i>
                                 <span th:text="${signerChoice.question()}">ผลการตรวจสอบ</span>
                                 <span class="text-danger">*</span>
+                                <span th:replace="~{academic/_info_tip :: tip('คำตอบจะบันทึกคู่กับลายมือชื่อของท่านและแสดงในเอกสารฉบับสมบูรณ์')}"></span>
                             </div>
                             <div class="card-body">
-                                <p class="small text-secondary mb-3">
-                                    คำตอบนี้จะถูกบันทึกคู่กับลายเซ็นของท่านและปรากฏในเอกสารฉบับสมบูรณ์
-                                </p>
                                 <div class="form-check mb-2" th:each="option : ${signerChoice.options()}">
                                     <input class="form-check-input js-signer-choice" type="radio" name="signerChoice"
                                            th:id="'signerChoice_' + ${optionStat.index}"
@@ -334,21 +395,19 @@
                                 <label class="form-label small mt-3 mb-1">
                                     ความเห็นเพิ่มเติม
                                     <span class="text-danger" id="commentRequiredMark" hidden>*</span>
+                                    <span th:replace="~{academic/_info_tip :: tip('ความเห็นจะบันทึกเป็นหลักฐานคู่กับผลการพิจารณา และผู้เกี่ยวข้องในการเวียนลงนามมองเห็นได้')}"></span>
                                 </label>
                                 <textarea name="signerComment" id="signerComment" class="form-control"
                                           rows="3" maxlength="1000"
                                           placeholder="ระบุข้อสังเกตหรือเหตุผลประกอบการพิจารณา (ถ้ามี)"></textarea>
-                                <div class="form-text" id="commentHelp">
-                                    ความเห็นจะถูกบันทึกเป็นหลักฐานคู่กับผลการพิจารณา และผู้เกี่ยวข้องมองเห็นได้
-                                </div>
 
                                 <!-- เลือกไม่เห็นควร = หยุดการเวียนและตีเอกสารกลับ ไม่ใช่การลงนาม
                                      จึงเตือนให้ชัดก่อน แล้วฝั่งเซิร์ฟเวอร์แยกทางเองที่ SigningController -->
                                 <div class="alert alert-warning mt-3 mb-0" id="notApprovedWarning" hidden>
                                     <i class="fas fa-triangle-exclamation"></i>
-                                    เลือก <strong th:text="${notApprovedValue}">ไม่เห็นควร</strong>
-                                    แล้วการเวียนลงนามฉบับนี้จะหยุดทันที และเอกสารจะถูกส่งกลับไปแก้ไข
-                                    — ท่านไม่ต้องลงลายมือชื่อ แต่ต้องระบุความเห็น
+                                    เมื่อเลือก <strong th:text="${notApprovedValue}">ไม่เห็นควร</strong>
+                                    การเวียนลงนามจะหยุดและเอกสารจะถูกส่งกลับไปแก้ไข
+                                    ไม่ต้องลงลายมือชื่อ แต่ต้องระบุความเห็น
                                 </div>
                             </div>
                         </div>
@@ -424,7 +483,7 @@
                     </div>
                     <div class="modal-body p-4">
                         <p class="text-secondary mb-3">
-                            ระบบจะส่งการแจ้งเตือนไปยังผู้ส่งเอกสาร/แอดมิน เพื่อพิจารณาขยายกำหนดวันลงนามให้แก่คุณ
+                            ระบบจะแจ้งผู้ส่งเอกสารและเจ้าหน้าที่เพื่อพิจารณาขยายกำหนดลงนาม
                         </p>
                         <div class="mb-3">
                             <label class="form-label fw-semibold">ระบุเหตุผลในการขอขยายเวลา (ถ้ามี)</label>

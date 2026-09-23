@@ -366,6 +366,42 @@ class SignatureEvidenceTest {
     }
 
     @Test
+    @DisplayName("ระหว่างเวียน ผู้ลงนามลำดับถัดไปต้องเห็นลายเซ็นของผู้ที่ลงนามก่อนหน้าในตัวอย่าง")
+    void nextSignerSeesEarlierSignaturesInPreview() throws IOException {
+        SignatureRequest envelope = createEnvelope(List.of(
+                new SignerAssignment("head", head.getId()),
+                new SignerAssignment("dean", dean.getId())), null);
+
+        Result r = signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true,
+                ActorContext.none());
+        assertThat(r.ok()).as(r.error()).isTrue();
+
+        SignatureStep deanStep = stepOf(envelope, "dean");
+        assertThat(deanStep.getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
+
+        // ยังไม่เลือกลายเซ็นของตัวเอง: มีเฉพาะของหัวหน้าที่ลงไปแล้ว
+        byte[] beforeChoosing = renderer.renderDocx(envelope, deanStep, null);
+        assertThat(mediaCount(beforeChoosing)).isEqualTo(1);
+
+        // เลือกลายเซ็นของตัวเองแล้ว: ของหัวหน้ายังอยู่ + ของตัวเองเพิ่มเข้ามา
+        byte[] withOwn = renderer.renderDocx(envelope, deanStep, deanSignature);
+        assertThat(mediaCount(withOwn)).isEqualTo(2);
+    }
+
+    private static int mediaCount(byte[] docx) throws IOException {
+        int count = 0;
+        try (var zis = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(docx))) {
+            java.util.zip.ZipEntry e;
+            while ((e = zis.getNextEntry()) != null) {
+                if (e.getName().startsWith("word/media/hrcpsig")) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    @Test
     @DisplayName("เมื่อลงนามแล้ว เอกสารที่ดึงผ่าน renderer จะมีลายเซ็นฝังอยู่จริง")
     void signedDocumentCarriesSignatureAfterSigning() throws IOException {
         SignatureRequest envelope = createEnvelope(

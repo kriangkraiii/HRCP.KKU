@@ -14,7 +14,6 @@
                 <h4 class="fw-bold mb-1">
                     <i class="fas fa-folder-open me-2" style="color: var(--accent-color);"></i>จัดการไฟล์
                 </h4>
-                <small class="text-muted">จัดการไฟล์เอกสารทั้งหมดในระบบ</small>
             </div>
         </div>
 
@@ -44,9 +43,10 @@
                         <div style="flex: 1; min-width: 0;">
                             <div class="d-flex align-items-center gap-2">
                                 <h5 class="mb-0 fw-bold" th:text="${totalSize}">0 B</h5>
-                                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem; padding: 2px 6px;">ไม่จำกัด</span>
+                                <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem; padding: 2px 6px;"
+                                      th:text="${isUnlimited == false} ? 'โควตา ' + ${maxStorageSize} : 'ไม่จำกัดโควตา'">ไม่จำกัดโควตา</span>
                             </div>
-                            <small class="text-muted">พื้นที่ใช้งาน <span class="text-success-emphasis">(ไม่จำกัดโควตา)</span></small>
+                            <small class="text-muted">พื้นที่ใช้งาน</small>
                         </div>
                     </div>
                 </div>
@@ -298,7 +298,7 @@
                     <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
                 </div>
                 <div class="modal-body" id="confirmBody">
-                    คุณแน่ใจหรือไม่?
+                    ยืนยันการดำเนินการ?
                 </div>
                 <div class="modal-footer border-0 pt-0">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">ยกเลิก</button>
@@ -396,7 +396,7 @@
             const isActive = row && row.getAttribute('data-active') === 'true';
             const statusLabel = row ? row.getAttribute('data-status') : '';
 
-            let bodyMsg = 'ต้องการย้าย <strong>' + fileName + '</strong> ไปถังขยะหรือไม่?<br><small class="text-muted">สามารถกู้คืนได้ภายหลัง</small>';
+            let bodyMsg = 'ยืนยันการย้าย <strong>' + fileName + '</strong> ไปถังขยะ?<br><small class="text-muted">กู้คืนได้ภายหลัง</small>';
 
             if (isActive) {
                 bodyMsg = '<div class="alert alert-warning py-2 px-3 mb-3" style="border-radius:10px;">' +
@@ -459,7 +459,7 @@
             const fileName = btn.getAttribute('data-filename');
             showConfirm(
                 'ลบถาวร',
-                'ต้องการลบ <strong>' + fileName + '</strong> ถาวรหรือไม่?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+                'ยืนยันการลบ <strong>' + fileName + '</strong> ถาวร?<br><small class="text-danger">กู้คืนไม่ได้</small>',
                 function() {
                     const { type, id } = parseFileId(fileId);
                     fetch('/admin/file-manager/permanent-delete/' + type + '/' + id, {
@@ -485,7 +485,7 @@
         function emptyTrash() {
             showConfirm(
                 'ล้างถังขยะทั้งหมด',
-                'ลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',
+                'ยืนยันการลบไฟล์ทั้งหมดในถังขยะถาวร?<br><small class="text-danger">กู้คืนไม่ได้</small>',
                 function() {
                     fetch('/admin/file-manager/empty-trash', {
                         method: 'POST',

@@ -11,11 +11,8 @@
             <div>
                 <h3 class="mb-1 fw-bold">
                     <i class="fas fa-file-signature text-primary me-2"></i>
-                    กล่องเอกสารลงนามอิเล็กทรอนิกส์ (E-Signature Inbox)
+                    กล่องเอกสารลงนามอิเล็กทรอนิกส์
                 </h3>
-                <p class="text-secondary mb-0">
-                    จัดการเอกสารที่รอคุณลงนาม และติดตามสถานะเอกสารที่กำลังเวียนลงนามในระบบ
-                </p>
             </div>
             <div class="d-flex align-items-center flex-wrap gap-2">
                 <button type="button" id="btnOpenVerifyModal" class="btn btn-outline-secondary d-flex align-items-center gap-2"
@@ -126,7 +123,7 @@
                                         <i class="fas fa-search"></i>
                                     </span>
                                     <input type="text" id="inboxSearchInput" class="form-control border-start-0"
-                                           placeholder="ค้นหาตามชื่อเอกสาร, ประเภทคำร้อง หรือตำแหน่งที่เซ็น...">
+                                           placeholder="ค้นหาชื่อเอกสาร ประเภทคำร้อง หรือตำแหน่ง">
                                 </div>
                             </div>
                             <div class="col-md-6 col-lg-5">
@@ -152,9 +149,9 @@
                         <div class="rounded-circle bg-light d-inline-flex p-4 mb-3">
                             <i class="fas fa-clipboard-check fa-3x text-success opacity-75"></i>
                         </div>
-                        <h5 class="fw-bold text-dark mb-1">ไม่มีเอกสารรอคุณลงนามในขณะนี้</h5>
+                        <h5 class="fw-bold text-dark mb-1">ไม่มีเอกสารรอท่านลงนาม</h5>
                         <p class="text-secondary mb-0 max-w-md mx-auto">
-                            ระบบเวียนลงนามแบบเรียงตามลำดับ (Sequential) เอกสารจะปรากฏในหน้านี้เมื่อถึงคิวลงนามของคุณ
+                            เอกสารจะแสดงที่นี่เมื่อถึงลำดับลงนามของท่าน
                         </p>
                     </div>
                 </div>
@@ -288,9 +285,9 @@
                         <div class="rounded-circle bg-light d-inline-flex p-4 mb-3">
                             <i class="fas fa-paper-plane fa-3x text-secondary opacity-50"></i>
                         </div>
-                        <h5 class="fw-bold text-dark mb-1">ยังไม่มีเอกสารที่คุณส่งเวียนลงนาม</h5>
+                        <h5 class="fw-bold text-dark mb-1">ยังไม่มีเอกสารที่ท่านส่งเวียนลงนาม</h5>
                         <p class="text-secondary mb-0">
-                            เมื่อคุณกด "ส่งเอกสารไปลงนาม" จากหน้าแบบฟอร์ม รายการความคืบหน้าจะแสดงที่นี่
+                            เอกสารที่ส่งไปลงนามจากหน้าแบบฟอร์มจะแสดงที่นี่
                         </p>
                     </div>
                 </div>
@@ -341,7 +338,7 @@
                                                     <div class="fw-semibold small text-dark" th:text="${st.roleLabel}">ตำแหน่ง</div>
                                                     <small class="text-secondary d-block" th:text="${st.signerNameSnapshot}">ชื่อผู้ลงนาม</small>
                                                     <span th:if="${st.status.name() == 'SIGNED'}" class="badge bg-success-subtle text-success py-0 px-1 font-monospace" style="font-size: 10px;">
-                                                        <i class="fas fa-check"></i> เซ็นแล้ว
+                                                        <i class="fas fa-check"></i> ลงนามแล้ว
                                                     </span>
                                                     <span th:if="${st.status.name() == 'ACTIVE'}" class="badge bg-primary-subtle text-primary py-0 px-1 font-monospace" style="font-size: 10px;">
                                                         <i class="fas fa-clock"></i> ถึงคิวเซ็น
@@ -417,7 +414,7 @@
                                                     <div class="fw-semibold small text-dark" th:text="${st.roleLabel}">ตำแหน่ง</div>
                                                     <small class="text-secondary d-block" th:text="${st.signerNameSnapshot}">ชื่อ</small>
                                                     <span th:if="${st.status.name() == 'SIGNED'}" class="badge bg-success-subtle text-success py-0 px-1 font-monospace" style="font-size: 10px;">
-                                                        <i class="fas fa-check"></i> เซ็นแล้ว
+                                                        <i class="fas fa-check"></i> ลงนามแล้ว
                                                     </span>
                                                     <span th:if="${st.status.name() == 'ACTIVE'}" class="badge bg-primary-subtle text-primary py-0 px-1 font-monospace" style="font-size: 10px;">
                                                         <i class="fas fa-clock"></i> ถึงคิวเซ็น
@@ -581,7 +578,7 @@
                 <form id="verifyCodeForm" action="/esign/verify" method="GET">
                     <div class="modal-body pt-3">
                         <p class="text-secondary small mb-3">
-                            กรอกรหัสตรวจสอบเอกสาร (Verification Code) 10 หลัก ที่ปรากฏบริเวณมุมล่างของเอกสารฉบับจริง หรือในอีเมลแจ้งเตือน
+                            รหัส 10 หลักอยู่ที่มุมล่างของเอกสาร หรือในอีเมลแจ้งเตือน
                         </p>
 
                         <!-- Alert Box for Non-existent / Error Codes -->
@@ -599,10 +596,6 @@
                                        style="font-family: monospace; letter-spacing: 1px; font-size: 1.1rem;"
                                        autocomplete="off" required>
                             </div>
-                        </div>
-                        <div class="alert alert-light border py-2 px-3 mb-0 small text-muted">
-                            <i class="fas fa-info-circle text-primary me-1"></i>
-                            ระบบจะตรวจสอบความครบถ้วนของเนื้อหา (SHA-256 Checksum) และรายชื่อผู้ลงนามตาม พ.ร.บ.ธุรกรรมอิเล็กทรอนิกส์
                         </div>
                     </div>
                     <div class="modal-footer border-0 pt-0">

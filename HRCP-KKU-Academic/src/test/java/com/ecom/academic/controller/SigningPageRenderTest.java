@@ -114,7 +114,9 @@ class SigningPageRenderTest {
                 .andExpect(content().string(
                         org.hamcrest.Matchers.containsString("/esign/envelope/create")))
                 .andExpect(content().string(
-                        org.hamcrest.Matchers.containsString("ส่งและลงนามในส่วนของผู้ยื่นคำร้อง")));
+                        org.hamcrest.Matchers.containsString("บันทึกและส่งลงนามในส่วนของผู้ยื่นคำร้อง")))
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.containsString("บันทึกฉบับร่าง")));
     }
 
     @Test
@@ -183,6 +185,50 @@ class SigningPageRenderTest {
     }
 
     @Test
+    @DisplayName("เอกสารในซองลงนาม ปุ่มดูตัวอย่างในฟอร์มต้องเรนเดอร์จากซอง (มีลายเซ็น) ไม่ใช่จากค่าในฟอร์ม")
+    void lockedFormPreviewsFromTheEnvelope() throws Exception {
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+
+        // ยังไม่ส่งลงนาม: พรีวิวจากค่าในฟอร์มตามเดิม
+        mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/1")
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(
+                        org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("data-signed-preview-url"))));
+
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,
+                "บันทึกข้อความ ขอรับการประเมินผลการสอน", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
+
+        String html = mockMvc.perform(get("/user/academic/request/" + request.getId() + "/document/1")
+                        .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        String marker = "data-signed-preview-url=\"";
+        int at = html.indexOf(marker);
+        org.assertj.core.api.Assertions.assertThat(at).as("ต้องมี data-signed-preview-url").isNotNegative();
+        String previewUrl = html.substring(at + marker.length(), html.indexOf('"', at + marker.length()))
+                .replace("&amp;", "&");
+
+        org.assertj.core.api.Assertions.assertThat(previewUrl)
+                .isEqualTo("/user/academic/request/" + request.getId() + "/document/1/download?format=pdf");
+
+        mockMvc.perform(get(previewUrl).with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk());
+
+        // ฝั่งแอดมินชี้ไป endpoint ของแอดมิน
+        mockMvc.perform(get("/admin/academic/request/" + request.getId() + "/document/1")
+                        .with(user(admin.getEmail()).roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(
+                        "data-signed-preview-url=\"/admin/academic/request/" + request.getId()
+                                + "/document/1/download?format=pdf\"")));
+    }
+
+    @Test
     @DisplayName("เลยกำหนดที่ตั้งเตือนไว้เอง: หน้าลงนามต้องเป็นป้ายเตือน ไม่ใช่ปุ่มขอขยายเวลา")
     void anAdvisoryDeadlineRendersAReminderNotAGate() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);
@@ -199,7 +245,7 @@ class SigningPageRenderTest {
                 .andReturn().getResponse().getContentAsString();
 
         org.assertj.core.api.Assertions.assertThat(html)
-                .contains("เลยกำหนดที่คุณตั้งเตือนไว้แล้ว")
+                .contains("เลยกำหนดที่ตั้งเตือนไว้แล้ว")
                 .doesNotContain("เอกสารนี้เลยกำหนดลงนามแล้ว")
                 .doesNotContain("requestExtensionModal")
                 // ปุ่มลงนามต้องยังกดได้จริง ไม่ใช่ถูกปิดเงียบ ๆ
@@ -350,7 +396,7 @@ class SigningPageRenderTest {
         org.assertj.core.api.Assertions.assertThat(html)
                 .contains("sig-choice-card")
                 .contains("ค่าเริ่มต้น")
-                .contains("กำลังเลือกใช้อันนี้")
+                .contains("sig-badge-selected")
                 .contains("activeSigNotice")
                 .contains("selectedSigLabel")
                 .contains("ลายเซ็น 2 (แบบทางการ)");
@@ -427,8 +473,8 @@ class SigningPageRenderTest {
 
         org.assertj.core.api.Assertions.assertThat(html)
                 .contains("ใบรับรอง Digital ID (.p12) หมดอายุแล้ว")
-                .contains("จะไม่สามารถใช้ลงนามในเอกสารได้")
-                .contains("ไปอัปเดตไฟล์ .p12 ใหม่")
+                .contains("ใบรับรองหมดอายุเมื่อ")
+                .contains("อัปเดตไฟล์ .p12")
                 .doesNotContain("ยืนยันการลงนาม");
     }
 
@@ -540,6 +586,23 @@ class SigningPageRenderTest {
         java.awt.image.BufferedImage compositeImgWithPos = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(pngFromInkWithPos));
         org.assertj.core.api.Assertions.assertThat(compositeImgWithPos.getWidth()).isEqualTo(540);
         org.assertj.core.api.Assertions.assertThat(compositeImgWithPos.getHeight()).isEqualTo(185);
+
+        // Test auto-scale up for small ink signature (e.g. 40x20)
+        java.awt.image.BufferedImage smallInk = new java.awt.image.BufferedImage(40, 20, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        java.awt.Graphics2D gSmall = smallInk.createGraphics();
+        gSmall.setColor(java.awt.Color.BLACK);
+        gSmall.fillRect(0, 0, 40, 20);
+        gSmall.dispose();
+        java.io.ByteArrayOutputStream smallBaos = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(smallInk, "PNG", smallBaos);
+
+        byte[] smallStamp = signatureService.generateDigitalStampFromImage(
+                smallBaos.toByteArray(), "สมโภช พิมพ์พงษ์ต้อน", "somphot@kku.ac.th", java.time.LocalDateTime.now());
+        java.awt.image.BufferedImage smallComposite = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(smallStamp));
+        // With scale capped at 1.0, drawn width was 40 (x: 95..135), so x=70 would be white (255)
+        // With scale 2.5x, drawn width is 100 (x: 65..165), so x=70 is covered by ink (black, red < 100)
+        int pixelAtLeftWing = smallComposite.getRGB(70, 92);
+        org.assertj.core.api.Assertions.assertThat(new java.awt.Color(pixelAtLeftWing).getRed()).isLessThan(100);
     }
 
     @Test
@@ -552,7 +615,7 @@ class SigningPageRenderTest {
 
         org.assertj.core.api.Assertions.assertThat(html)
                 .contains("ขั้นตอนที่ 1")
-                .contains("ติดตั้งใบรับรองดิจิทัล Digital ID (.p12) ของท่านก่อน")
+                .contains("ติดตั้งใบรับรอง Digital ID (.p12)")
                 .contains("ขั้นตอนที่ 2: สร้างและบันทึกลายเซ็น")
                 .contains("รอการติดตั้ง Digital ID (.p12)")
                 .doesNotContain("id=\"signatureEditor\"")

@@ -142,8 +142,8 @@
                                 <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
                                     <h6 class="fw-bold"><i class="fas fa-users text-primary me-1"></i> ข้อมูลอาจารย์</h6>
                                     <p class="text-muted small flex-grow-1 mb-3">
-                                        อ่านข้อมูลอาจารย์จากต้นทางมาเทียบกับของเรา
-                                        <strong>ถ้ามีอะไรเปลี่ยน จะพักไว้ให้ยืนยันก่อน</strong>
+                                        เทียบข้อมูลอาจารย์กับระบบต้นทาง
+                                        <strong>รายการที่เปลี่ยนจะรอการยืนยันก่อนนำไปใช้</strong>
                                     </p>
                                     <form th:action="@{/admin/external-sync/users}" method="post"
                                           data-lock-button="1">
@@ -164,8 +164,8 @@
                                 <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
                                     <h6 class="fw-bold"><i class="fas fa-book text-success me-1"></i> ผลงาน Scopus เดิม</h6>
                                     <p class="text-muted small flex-grow-1 mb-3">
-                                        ดึงผลงานวิจัยของอาจารย์ทุกคนจาก Scopus API
-                                        ผลงานที่หายจากต้นทางจะไม่ถูกลบ
+                                        ดึงผลงานวิจัยของอาจารย์ทุกคนจาก Scopus
+                                        ผลงานที่ไม่พบในต้นทางจะไม่ถูกลบ
                                     </p>
                                     <form th:action="@{/admin/external-sync/scopus}" method="post"
                                           data-lock-button="1">
@@ -186,8 +186,7 @@
                                 <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
                                     <h6 class="fw-bold"><i class="fas fa-image text-info me-1"></i> รูป/ข้อมูลเว็บคณะ</h6>
                                     <p class="text-muted small flex-grow-1 mb-3">
-                                        อ่านจาก <span class="text-nowrap">computing.kku.ac.th</span>
-                                        มาเติม <strong>รูปโปรไฟล์</strong> และข้อมูลตำแหน่ง
+                                        ดึงรูปโปรไฟล์และข้อมูลตำแหน่งจาก <span class="text-nowrap">computing.kku.ac.th</span>
                                     </p>
                                     <form th:action="@{/admin/external-sync/college-web}" method="post"
                                           data-lock-button="1">
@@ -205,7 +204,8 @@
                                         <h6 class="fw-bold mb-0"><i class="fas fa-network-wired text-primary me-1"></i> ดึงงานวิจัย 5 แหล่งใหม่</h6>
                                     </div>
                                     <p class="text-muted small flex-grow-1 mb-3">
-                                        ดึงจาก <strong>OpenAlex, Crossref, DBLP, ThaiJO, KKU IR</strong> พร้อม Deduplication 2.5 ชั้น และเติม Tier
+                                        ดึงจาก OpenAlex, Crossref, DBLP, ThaiJO และ KKU IR
+                                        <span th:replace="~{academic/_info_tip :: tip('ระบบตัดผลงานที่ซ้ำกันระหว่างแหล่งข้อมูล และจัดระดับวารสาร (Tier) ให้')}"></span>
                                     </p>
                                     <div class="d-flex flex-column gap-2">
                                         <button type="button" class="btn btn-primary w-100 fw-semibold"
@@ -288,9 +288,9 @@
                             <div class="col-12 mt-3">
                                 <div class="border rounded-3 p-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between shadow-sm bg-white border-warning">
                                     <div class="me-md-3 mb-2 mb-md-0">
-                                        <h6 class="fw-bold mb-1"><i class="fas fa-landmark text-warning me-1"></i> คลังข้อบังคับ & ประกาศ กองทรัพยากรบุคคล มข. (hr2.kku.ac.th)</h6>
+                                        <h6 class="fw-bold mb-1"><i class="fas fa-landmark text-warning me-1"></i> คลังข้อบังคับและประกาศ กองทรัพยากรบุคคล มข.</h6>
                                         <p class="text-muted small mb-0">
-                                            ดึงข้อบังคับ ประกาศ และคำจำกัดความผลงานทางวิชาการล่าสุดจาก <a href="https://hr2.kku.ac.th/?page_id=5546" target="_blank" class="text-primary text-decoration-none">hr2.kku.ac.th/?page_id=5546 <i class="fas fa-external-link-alt small"></i></a> อัตโนมัติทุก 1 เดือน (หรือกดสั่งซิงค์ทันที)
+                                            ดึงข้อบังคับ ประกาศ และคำจำกัดความผลงานทางวิชาการล่าสุดจาก <a href="https://hr2.kku.ac.th/?page_id=5546" target="_blank" class="text-primary text-decoration-none">hr2.kku.ac.th/?page_id=5546 <i class="fas fa-external-link-alt small"></i></a> ทุกเดือนโดยอัตโนมัติ
                                         </p>
                                     </div>
                                     <form th:action="@{/admin/external-sync/kku-docs/run}" method="post" data-lock-button="1">
@@ -375,8 +375,8 @@
 
                         <!-- Schedule (All 9 Background Jobs Grouped by Category) -->
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
-                            <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-check text-primary me-2"></i>ตารางเวลาอัตโนมัติทั้งโปรเจกต์ (All Scheduled Background Jobs)</h5>
-                            <small class="text-muted"><i class="fas fa-globe-asia me-1"></i>เวลาไทย (Asia/Bangkok)</small>
+                            <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-check text-primary me-2"></i>ตารางเวลางานอัตโนมัติ</h5>
+                            <small class="text-muted"><i class="fas fa-globe-asia me-1"></i>เวลาประเทศไทย</small>
                         </div>
 
                         <div class="d-flex flex-column gap-3 mb-4" th:if="${scheduleCategories != null}">
@@ -423,13 +423,8 @@
 
                         <div class="alert alert-info mt-3 mb-0 small">
                             <i class="fas fa-info-circle"></i>
-                            ระบบจะดึงข้อมูลและประมวลผลให้อัตโนมัติตามเวลาข้างต้นทุกวัน/สัปดาห์
-                            และจะดึงให้ทันทีตอนเปิดระบบครั้งแรกถ้ายังไม่มีข้อมูลเลย
-                            ปุ่มด้านบนมีไว้สำหรับกรณีที่ต้องการข้อมูลล่าสุดทันทีโดยไม่รอรอบถัดไป
-                            <br>
-                            <i class="fas fa-shield-alt mt-1"></i>
-                            หลังกดแล้วจะกดซ้ำไม่ได้ทันที เพื่อไม่ให้จำนวนคำขอเกินโควตาของระบบต้นทาง
-                            ซึ่งจะทำให้การดึงอัตโนมัติตอนกลางคืนพลอยใช้ไม่ได้ไปด้วย
+                            ระบบดึงข้อมูลอัตโนมัติตามตารางเวลาข้างต้น ใช้ปุ่มด้านบนเมื่อต้องการข้อมูลล่าสุดทันที
+                            <span th:replace="~{academic/_info_tip :: tip('หากยังไม่มีข้อมูล ระบบจะดึงให้ทันทีเมื่อเริ่มระบบครั้งแรก หลังกดปุ่มแล้วต้องรอสักครู่จึงกดซ้ำได้ เพื่อไม่ให้เกินโควตาของระบบต้นทาง ซึ่งจะกระทบการดึงอัตโนมัติ')}"></span>
                         </div>
                     </div>
                 </div>
@@ -448,7 +443,7 @@
                             <div>
                                 <h4 class="mb-1 fw-bold"><i class="fas fa-user-pen text-primary me-2"></i>ตรวจสอบการเปลี่ยนแปลงข้อมูลอาจารย์</h4>
                                 <small class="text-muted">
-                                    ข้อมูลจากระบบ Fund Management ที่เปลี่ยนไป จะรอการยืนยันที่นี่ก่อน จึงจะถูกนำไปใช้ในระบบ
+                                    ข้อมูลที่เปลี่ยนในระบบ Fund Management ต้องได้รับการยืนยันก่อนนำไปใช้
                                 </small>
                             </div>
                             <div class="text-end">
@@ -549,7 +544,7 @@
                                     </div>
                                 </div>
                                 <small class="text-muted d-block mt-2">
-                                    * ไม่อนุมัติ = เก็บค่าเดิมไว้ ข้อมูลในระบบจะไม่ถูกแก้
+                                    หากไม่อนุมัติ ระบบจะคงค่าเดิมไว้
                                 </small>
                             </div>
                         </div>

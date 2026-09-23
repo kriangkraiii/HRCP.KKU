@@ -41,10 +41,10 @@ function initBreadcrumbs() {
         '/admin/academic/requests': 'แดชบอร์ดคำร้อง',
         '/admin/academic/staff': 'จัดการบุคลากร',
         '/admin/users': 'จัดการผู้ใช้งาน',
-        '/admin/add-admin': 'เพิ่มผู้ใช้ / แอดมิน',
+        '/admin/add-admin': 'เพิ่มผู้ใช้ / ผู้ดูแลระบบ',
         '/admin/activity-logs': 'ประวัติกิจกรรมระบบ',
         '/admin/file-manager': 'จัดการไฟล์ระบบ (Storage)',
-        '/admin/academic/guide': 'คู่มือแอดมิน',
+        '/admin/academic/guide': 'คู่มือผู้ดูแลระบบ',
         '/admin/academic/settings': 'การตั้งค่าระบบ',
         '/admin/notifications': 'ศูนย์การแจ้งเตือน',
         '/admin/profile': 'โปรไฟล์ผู้ดูแลระบบ'

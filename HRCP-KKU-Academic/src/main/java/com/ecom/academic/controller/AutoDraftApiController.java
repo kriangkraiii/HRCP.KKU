@@ -18,6 +18,7 @@ import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.Doc7Scoring;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.model.UserDtls;
@@ -106,6 +107,17 @@ public class AutoDraftApiController {
                         .body(Map.of("error", "ข้อมูลที่ส่งมาไม่ถูกต้อง"));
             }
             jsonData = filtered;
+
+            // เอกสารที่ 7: ปุ่ม "ส่งเวียนลงนาม" บันทึกผ่านทางนี้ ไม่ใช่ปุ่มบันทึก — ถ้าไม่คำนวณผล
+            // ตรงนี้ด้วย ซองจะแช่แข็งเอกสารที่ไม่มีระดับผลประเมิน และสถานะไม่เลื่อนเมื่อลงนามครบ
+            if (isAdmin && docType == 7) {
+                Map<String, String> fields = parseFields(jsonData);
+                if (fields != null && Doc7Scoring.hasAllSectionScores(fields)) {
+                    Map<String, String> derived = new java.util.LinkedHashMap<>(fields);
+                    Doc7Scoring.derive(derived);
+                    jsonData = new ObjectMapper().writeValueAsString(derived);
+                }
+            }
 
             academicService.saveDraft(request, docType, jsonData, label, null);
 

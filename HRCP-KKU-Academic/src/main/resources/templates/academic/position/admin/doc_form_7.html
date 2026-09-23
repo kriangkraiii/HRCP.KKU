@@ -10,7 +10,7 @@
             </div>
 
             <h3 class="mb-4"><i class="fas fa-user-shield"></i> เอกสารที่ 7: แบบฟอร์มตรวจสอบคุณสมบัติและเอกสารประกอบ</h3>
-            <div class="alert alert-info"><i class="fas fa-info-circle"></i> เอกสารนี้กรอกโดย <strong>แอดมิน</strong></div>
+            <p class="small text-secondary mb-3"><i class="fas fa-user-pen me-1"></i> ผู้กรอก: เจ้าหน้าที่</p>
 
             <!-- ขั้นตอน: กรอก → บันทึก → ลงนาม -->
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
@@ -471,7 +471,7 @@
                 <hr class="my-4 border-2 border-warning">
                 <div class="alert alert-warning d-flex align-items-center mb-4">
                     <i class="fas fa-user-shield me-2 fa-lg"></i>
-                    <div><strong>ส่วนของเจ้าหน้าที่</strong> — ข้อมูลด้านล่างนี้กรอกโดยเจ้าหน้าที่/แอดมินเท่านั้น</div>
+                    <div><strong>ส่วนของเจ้าหน้าที่</strong> — กรอกโดยเจ้าหน้าที่เท่านั้น</div>
                 </div>
 
                 <!-- ========== ส่วนที่ 3: ผู้ตรวจสอบ ========== -->
@@ -508,11 +508,6 @@
 
                 <div class="d-flex gap-2">
                     <th:block th:replace="~{academic/_notify_applicant :: note}"></th:block>
-                    <!-- ปุ่มรอง: ปุ่มหลักคือปุ่มส่งลงนามในแผงด้านล่าง ซึ่งบันทึกให้ก่อนส่งอยู่แล้ว -->
-                    <button type="submit" name="action" value="submit" class="btn btn-outline-secondary btn-lg"
-                            title="เก็บไว้แก้ต่อทีหลัง ยังไม่ส่งเวียน">
-                        <i class="fas fa-save"></i> บันทึกไว้ก่อน (ยังไม่ส่งเวียน)
-                    </button>
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>

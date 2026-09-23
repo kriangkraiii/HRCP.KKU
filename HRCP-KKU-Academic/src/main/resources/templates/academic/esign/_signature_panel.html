@@ -6,8 +6,13 @@
   ส่งเอกสารไปลงนาม — ใช้ร่วมกันทั้ง Phase 1 และ Phase 2
   ต้องการ model attributes: signaturePanel, request (มี id), documentType, signatureModule
 -->
+<!--
+  data-signed-preview-url: ตอนเอกสารอยู่ในซองลงนาม ปุ่มดูตัวอย่างในฟอร์มต้องเรนเดอร์จากซอง
+  (มีลายเซ็น) ไม่ใช่จากค่าในฟอร์ม — doc_preview.js อ่าน attribute นี้
+-->
 <div th:fragment="panel" th:if="${signaturePanel != null && signaturePanel.signable}"
      id="signaturePanel"
+     th:data-signed-preview-url="${signaturePanel.locked} ? |/${signaturePanel.isAdminViewer ? 'admin' : 'user'}/${signatureModule.name().toLowerCase()}/request/${request.id}/document/${documentType != null ? documentType : currentDocType}/download?format=pdf| : null"
      class="card card-academic mt-4 shadow-sm border-0">
 
     <!-- Searchable Select Assets -->
@@ -15,7 +20,7 @@
 
     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
         <span class="fw-bold text-dark fs-6">
-            <i class="fas fa-file-signature text-primary me-2"></i> ขั้นตอนที่ 3 · การลงนามอิเล็กทรอนิกส์ (E-Signature)
+            <i class="fas fa-file-signature text-primary me-2"></i> ขั้นตอนที่ 3 · การลงนามอิเล็กทรอนิกส์
         </span>
         <div class="d-flex align-items-center gap-2">
             <span th:if="${signaturePanel.locked}" class="badge rounded-pill px-3 py-2"
@@ -36,10 +41,8 @@
             <div class="alert alert-warning border-0 bg-warning-subtle text-dark d-flex align-items-center gap-3 p-3 rounded-3 mb-3">
                 <i class="fas fa-lock fa-2x text-warning flex-shrink-0"></i>
                 <div class="small">
-                    <strong>เอกสารฉบับนี้ถูกล็อกไม่ให้แก้ไข</strong> เนื่องจากอยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว
-                    <div class="text-secondary mt-1">
-                        หากพบข้อผิดพลาด เจ้าหน้าที่สามารถกด <em>"ส่งกลับให้แก้ไขและลงนามใหม่"</em> เพื่อให้ผู้ยื่นแก้ไขและลงนามใหม่
-                    </div>
+                    <strong>เอกสารถูกล็อก</strong> เนื่องจากอยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว
+                    <span th:replace="~{academic/_info_tip :: tip('หากพบข้อผิดพลาด เจ้าหน้าที่ส่งเอกสารกลับให้ผู้ยื่นแก้ไขและลงนามใหม่ได้')}"></span>
                 </div>
             </div>
 
@@ -101,12 +104,10 @@
                     <strong>รอเจ้าหน้าที่ตรวจสอบก่อนเวียนลงนาม</strong>
                     <div class="text-secondary mt-1">
                         <span th:unless="${signaturePanel.isAdminViewer}">
-                            เจ้าหน้าที่/นักทรัพยากรบุคคลจะตรวจความถูกต้องของเอกสารและไฟล์แนบก่อน
-                            แล้วจึงเริ่มเวียนลงนามไปยังผู้บริหารตามลำดับ
+                            เจ้าหน้าที่จะตรวจเอกสารและไฟล์แนบ แล้วเวียนลงนามไปยังผู้บริหารตามลำดับ
                         </span>
                         <span th:if="${signaturePanel.isAdminViewer}">
-                            ผู้ลงนามถูกเลือกไว้แล้ว เมื่อตรวจเอกสารและไฟล์แนบเรียบร้อย กด
-                            <strong>“ตรวจสอบแล้ว — เริ่มเวียนลงนาม”</strong> เพื่อส่งต่อ
+                            กรุณาตรวจเอกสารและไฟล์แนบ แล้วกดเริ่มเวียนลงนาม
                         </span>
                     </div>
                 </div>
@@ -116,7 +117,7 @@
             <form th:if="${signaturePanel.isAdminViewer and signaturePanel.startable}"
                   th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/start'}"
                   method="post" class="mb-3"
-                  data-confirm="ตรวจสอบเอกสารเรียบร้อยแล้วใช่ไหม? ระบบจะแจ้งเตือนผู้ลงนามลำดับถัดไปทันที">
+                  data-confirm="ยืนยันว่าตรวจสอบเอกสารแล้ว? ระบบจะแจ้งผู้ลงนามลำดับถัดไปทันที">
                 <button type="submit" class="btn btn-academic px-4 py-2">
                     <i class="fas fa-shield-check me-1"></i> ตรวจสอบแล้ว — เริ่มเวียนลงนาม
                 </button>
@@ -131,11 +132,7 @@
                     <i class="fas fa-share me-1"></i> ตรวจสอบแล้ว — ส่งเวียนลงนามต่อ
                 </div>
                 <div class="card-body p-3">
-                    <p class="text-secondary small mb-3">
-                        <i class="fas fa-shield-check text-success me-1"></i>
-                        เมื่อตรวจสอบความถูกต้องของเอกสารและไฟล์แนบแล้ว เลือกผู้ลงนามในตำแหน่งที่เหลือ
-                        ระบบจะส่งให้ลงนาม<strong>ตามลำดับขั้นตอน</strong>
-                    </p>
+                    <p class="text-secondary small mb-3">เลือกผู้ลงนามในตำแหน่งที่เหลือ</p>
 
                     <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/forward'}"
                           method="post"
@@ -241,7 +238,7 @@
                             <div class="modal-body p-4">
                                 <div class="mb-3">
                                     <p class="small text-secondary mb-2">
-                                        ระบบจะยกเลิกการเวียนลงนามรอบปัจจุบัน ปลดล็อกเอกสารให้แก้ไขได้ และส่งการแจ้งเตือน (Email + In-App) ไปยังผู้ยื่นคำร้องพร้อมเหตุผล
+                                        ระบบจะยกเลิกการเวียนลงนามรอบนี้ ปลดล็อกเอกสาร และแจ้งเหตุผลให้ผู้ยื่นทางอีเมลและในระบบ
                                     </p>
                                     <label class="form-label fw-semibold">ระบุเหตุผล / สิ่งที่ต้องแก้ไข</label>
                                     <textarea name="reason" class="form-control" rows="3" required
@@ -312,10 +309,10 @@
              class="alert alert-secondary border d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
             <div>
                 <i class="fas fa-clock text-secondary me-2"></i>
-                <strong>รอบเวียนลงนามก่อนหน้าถูกปิดเพราะเลยกำหนด</strong>
+                <strong>รอบเวียนลงนามก่อนหน้าปิดแล้วเนื่องจากเลยกำหนด</strong>
                 <div class="small text-secondary mt-1">
-                    ลายเซ็นที่ลงไว้แล้ว <span th:text="${signaturePanel.revivableEnvelope.progressLabel}">0 / 0</span> ยังอยู่ครบ
-                    — ตั้งกำหนดเวลาใหม่เพื่อเวียนต่อจากเดิม หรือเริ่มรอบใหม่จากฟอร์มด้านล่าง
+                    ลายเซ็นที่ลงไว้แล้ว <span th:text="${signaturePanel.revivableEnvelope.progressLabel}">0 / 0</span> ยังใช้ได้
+                    กรุณาตั้งกำหนดใหม่เพื่อเวียนต่อ หรือเริ่มรอบใหม่จากฟอร์มด้านล่าง
                 </div>
             </div>
             <button type="button" class="btn btn-sm btn-outline-primary bg-white"
@@ -338,10 +335,7 @@
                             <div class="mb-3">
                                 <label class="form-label fw-semibold">กำหนดวันเวลาลงนามใหม่</label>
                                 <input type="datetime-local" name="dueAt" class="form-control" required>
-                                <div class="form-text">
-                                    ระบบจะเปิดรอบเดิมขึ้นมาใหม่ ลายเซ็นที่ลงไว้แล้วยังอยู่ครบ
-                                    และจะแจ้งเตือนผู้ลงนามลำดับถัดไปให้ทราบ
-                                </div>
+                                <div class="form-text">ระบบจะแจ้งผู้ลงนามลำดับถัดไป</div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -359,7 +353,31 @@
         <!-- 2. กรณี: ยังไม่ได้ส่ง — ฟอร์มเลือกผู้ลงนาม / ลงนามส่วนตนเอง (UNLOCKED)   -->
         <!-- ===================================================================== -->
         <!-- data-presave-doc: sign_presave.js บันทึกฟอร์มเอกสารให้ก่อน ซองจะได้ freeze ข้อมูลล่าสุด -->
-        <form th:unless="${signaturePanel.locked}" th:action="@{/esign/envelope/create}" method="post"
+        <!-- ผู้ยื่นกรอกเอกสารฉบับนี้แต่ไม่ได้ลงนามเอง (เช่น แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา)
+             เดิมเห็นปุ่ม "ส่งลงนามในส่วนของผู้ยื่นคำร้อง" ซึ่งกดแล้วได้ "กรุณาเลือกผู้ลงนาม" ทั้งที่
+             ผู้ยื่นเลือกผู้ลงนามไม่ได้ ทางไปต่อทางเดียวคือบันทึก แล้วเจ้าหน้าที่ส่งเวียนหลังส่งคำร้อง -->
+        <div th:if="${!signaturePanel.locked and !signaturePanel.isAdminViewer and !signaturePanel.hasApplicantSlot()}">
+            <div class="alert alert-primary bg-primary-subtle border-0 text-dark p-3 rounded-3 mb-3">
+                <div class="d-flex align-items-start gap-2">
+                    <i class="fas fa-circle-info text-primary fa-lg mt-1"></i>
+                    <div>
+                        <strong class="d-block mb-1">ท่านไม่ต้องลงนามในเอกสารฉบับนี้</strong>
+                        <p class="small text-secondary mb-0">
+                            กรอกข้อมูลให้ครบแล้วกดบันทึก เมื่อท่านส่งคำร้อง เจ้าหน้าที่จะส่งเวียนให้
+                            <span th:each="slot, iter : ${signaturePanel.slots}"><span th:text="${slot.roleLabel}">ตำแหน่ง</span><span th:unless="${iter.last}"> และ</span></span>
+                            ลงนาม
+                        </p>
+                    </div>
+                </div>
+            </div>
+            <div class="small text-secondary mb-2" data-autodraft-mirror hidden></div>
+            <button type="button" class="btn btn-academic px-4 py-2" id="panelSaveDocBtn" data-action="save-doc-draft">
+                <i class="fas fa-save me-1"></i> บันทึกเอกสาร
+            </button>
+        </div>
+
+        <form th:unless="${signaturePanel.locked or (!signaturePanel.isAdminViewer and !signaturePanel.hasApplicantSlot())}"
+              th:action="@{/esign/envelope/create}" method="post"
               data-presave-doc="true"
               th:attr="data-optional-fields=${docOptionalFields},
                        data-repeatable-prefixes=${docRepeatablePrefixes}"
@@ -374,11 +392,10 @@
                     <div class="d-flex align-items-start gap-2">
                         <i class="fas fa-pen-nib text-primary fa-lg mt-1"></i>
                         <div>
-                            <strong class="d-block mb-1">การลงนามในส่วนของผู้ยื่นคำร้อง</strong>
-                            <p class="small text-secondary mb-0">
-                                ท่านจะลงนามเฉพาะในส่วนของผู้ขอรับการประเมิน เมื่อท่านลงนามและ<strong>กดยื่นคำร้อง</strong>ในระบบแล้ว
-                                เจ้าหน้าที่/นักทรัพยากรบุคคลจะเข้าตรวจสอบความถูกต้องของเอกสาร และจัดการส่งเวียนลงนามไปยังผู้บริหาร (หัวหน้าสาขาวิชา/คณบดี) ตามลำดับขั้นตอน
-                            </p>
+                            <strong class="d-block mb-1">การลงนามในส่วนของผู้ยื่นคำร้อง
+                                <span th:replace="~{academic/_info_tip :: tip('เมื่อท่านลงนามและยื่นคำร้องแล้ว เจ้าหน้าที่จะตรวจเอกสาร แล้วเวียนลงนามไปยังหัวหน้าสาขาวิชาและคณบดีตามลำดับ')}"></span>
+                            </strong>
+                            <p class="small text-secondary mb-0">ท่านลงนามเฉพาะในส่วนของผู้ยื่นคำร้อง</p>
                         </div>
                     </div>
                 </div>
@@ -387,23 +404,24 @@
             <!-- คำอธิบายสำหรับเจ้าหน้าที่ (Admin View) -->
             <div th:if="${signaturePanel.isAdminViewer}" class="mb-3">
                 <p class="text-secondary small mb-2">
-                    <i class="fas fa-shield-check text-success me-1"></i>
-                    <strong>ระบบตรวจสอบก่อนเวียนลงนาม:</strong> กรุณาตรวจสอบความถูกต้องของเอกสาร จากนั้นเลือกผู้ลงนามแต่ละตำแหน่ง ระบบจะส่งให้ลงนาม<strong>ตามลำดับขั้นตอน</strong>
+                    กรุณาตรวจสอบเอกสาร แล้วเลือกผู้ลงนามแต่ละตำแหน่ง
                 </p>
             </div>
 
             <div class="row g-3">
                 <div class="col-md-6" th:each="slot, iter : ${signaturePanel.slots}">
                     
-                    <!-- ============ 1. ผู้ยื่นคำร้อง (Applicant) — เซ็นด้วยตนเองเท่านั้น ไม่ต้องเลือก ============ -->
-                    <div th:if="${slot.slotKey == 'applicant' or slot.defaultStaffRole == null}">
+                    <!-- ============ 1. ผู้ยื่นคำร้อง (Applicant) — เซ็นด้วยตนเองเท่านั้น ไม่ต้องเลือก ============
+                         เฉพาะช่อง applicant — ช่องผู้ร่วมประพันธ์ (ไม่มีบทบาทบุคลากร) เป็นคนละคนกับผู้ยื่น
+                         ต้องให้เจ้าหน้าที่เลือกตัวผู้ประพันธ์จริง ไม่ใช่ผูกกับบัญชีผู้ยื่นแล้วให้ผู้ยื่นเซ็นแทน -->
+                    <div th:if="${slot.slotKey == 'applicant'}">
                         <label class="form-label d-flex justify-content-between align-items-center mb-1">
                             <span>
                                 <span class="badge bg-primary me-1" th:text="${iter.count}">1</span>
                                 <span th:text="${slot.roleLabel}">ผู้ขอรับการประเมิน</span>
                             </span>
                             <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                <i class="fas fa-user-check me-1"></i> ผู้ยื่นคำร้อง (เซ็นด้วยตนเอง)
+                                <i class="fas fa-user-check me-1"></i> ผู้ยื่นคำร้อง (ลงนามด้วยตนเอง)
                             </span>
                         </label>
                         <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
@@ -435,7 +453,7 @@
                     </div>
 
                     <!-- ============ 2. ตำแหน่งผู้บริหาร / เจ้าหน้าที่อื่นๆ (Admin View เท่านั้นที่สามารถเลือกและส่งได้) ============ -->
-                    <div th:unless="${slot.slotKey == 'applicant' or slot.defaultStaffRole == null}">
+                    <div th:unless="${slot.slotKey == 'applicant'}">
                         <label class="form-label mb-1">
                             <span class="badge bg-secondary me-1" th:text="${iter.count}">1</span>
                             <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
@@ -478,7 +496,7 @@
                         <div th:unless="${signaturePanel.isAdminViewer}" class="p-2 border rounded bg-light text-secondary small">
                             <i class="fas fa-user-clock text-muted me-1"></i>
                             <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
-                            <span class="text-muted">(เจ้าหน้าที่จะเป็นผู้ตรวจสอบและส่งเวียนต่อหลังยื่นคำร้อง)</span>
+                            <span class="text-muted">(เจ้าหน้าที่เป็นผู้เลือก)</span>
                             <input type="hidden" name="signerUserIds" value="">
                         </div>
                     </div>
@@ -504,13 +522,17 @@
             <!-- สถานะบันทึกจาก auto_draft.js — สะท้อนสถานะเดียวกับชิปลอยด้านบน มาไว้ตรงจุดที่ผู้ใช้กำลังจะกดส่ง -->
             <div class="small text-secondary mb-2" data-autodraft-mirror hidden></div>
 
-            <button type="submit" class="btn btn-academic px-4 py-2">
-                <i class="fas fa-paper-plane me-1"></i>
-                <span th:if="${!signaturePanel.isAdminViewer}">บันทึกและส่งลงนามในส่วนของผู้ยื่นคำร้อง</span>
-                <span th:if="${signaturePanel.isAdminViewer}">ยืนยันความถูกต้องและส่งเวียนลงนาม</span>
-            </button>
-            <!-- ปุ่มบันทึกกับปุ่มนี้ขึ้นพร้อมกัน ผู้ใช้จึงไม่รู้ว่าต้องกดอันไหนก่อน — sign_presave.js
-                 บันทึกให้อยู่แล้ว บอกออกมาตรง ๆ จะได้ไม่ต้องเดา -->
+            <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
+                <button type="button" class="btn btn-outline-secondary px-4 py-2" id="panelSaveDraftBtn" data-action="save-doc-draft"
+                        title="บันทึกข้อมูลแบบร่างไว้ก่อน ยังไม่ส่งเวียนลงนาม">
+                    <i class="fas fa-save me-1"></i> บันทึกฉบับร่าง
+                </button>
+                <button type="submit" class="btn btn-academic px-4 py-2">
+                    <i class="fas fa-paper-plane me-1"></i>
+                    <span th:if="${!signaturePanel.isAdminViewer}">บันทึกและส่งลงนามในส่วนของผู้ยื่นคำร้อง</span>
+                    <span th:if="${signaturePanel.isAdminViewer}">ยืนยันความถูกต้องและส่งเวียนลงนาม</span>
+                </button>
+            </div>
 
         </form>
     </div>

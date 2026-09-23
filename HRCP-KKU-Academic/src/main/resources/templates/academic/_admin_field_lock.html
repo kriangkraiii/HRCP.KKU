@@ -21,8 +21,8 @@
         <i class="fas fa-lock"></i>
         <strong>เอกสารอยู่ระหว่างการเวียนลงนาม</strong> — แก้ไขไม่ได้ทั้งฉบับ
         <div class="small text-muted mt-1">
-            ผู้ลงนามคนถัดไปต้องเห็นเอกสารฉบับเดียวกับคนที่ลงนามไปแล้ว
-            หากต้องแก้ ให้ยกเลิกการเวียนลงนามก่อน
+            หากต้องแก้ไข กรุณายกเลิกการเวียนลงนามก่อน
+            <span th:replace="~{academic/_info_tip :: tip('ผู้ลงนามลำดับถัดไปต้องเห็นเอกสารฉบับเดียวกับผู้ที่ลงนามไปแล้ว')}"></span>
         </div>
     </div>
 
@@ -36,9 +36,7 @@
         <span th:unless="${officeFields != null and !officeFields.isEmpty()}">
             — แก้ไขไม่ได้แล้ว
         </span>
-        <div class="small text-muted mt-1">
-            ค่าที่กรอกจะไปปรากฏบนเอกสารที่ลงนามแล้วทันที โดยไม่กระทบลายเซ็นที่ให้ไว้
-        </div>
+        <span th:replace="~{academic/_info_tip :: tip('ค่าที่กรอกจะแสดงบนเอกสารที่ลงนามแล้วทันที โดยไม่กระทบลายมือชื่อที่ลงไว้')}"></span>
     </div>
 
     <!-- เอกสารของผู้ยื่น -->
@@ -61,8 +59,23 @@
         </button>
     </div>
 
+    <!-- เอกสารของผู้ยื่นที่ลงนามครบแล้ว — ที่ประชุม (เช่น กลั่นกรองฯ ข้อ 22) ยังสั่งแก้ได้
+         เดิมปุ่มส่งกลับหายไปทันทีที่ลงนามครบ เจ้าหน้าที่จึงตีกลับเอกสารฉบับนั้นไม่ได้เลย -->
+    <div th:if="${readOnlyForAdmin and signingComplete}"
+         class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
+        <div>
+            <i class="fas fa-rotate-left"></i>
+            <strong>ต้องให้ผู้ยื่นแก้เอกสารที่ลงนามแล้ว?</strong>
+            <div class="small text-muted mt-1">ส่งกลับแล้วลายเซ็นเดิมจะถูกยกเลิก ผู้ยื่นต้องแก้และลงนามใหม่</div>
+        </div>
+        <button type="button" class="btn btn-outline-warning btn-sm" data-bs-toggle="collapse"
+                data-bs-target="#sendBackPanel">
+            <i class="fas fa-rotate-left"></i> ส่งกลับให้ผู้ยื่นแก้ไข
+        </button>
+    </div>
+
     <!-- อยู่นอก <form> ของเอกสาร เพราะเป็นการส่ง POST คนละปลายทาง -->
-    <div th:if="${readOnlyForAdmin and !lockedForSigning}" class="collapse mb-3" id="sendBackPanel">
+    <div th:if="${readOnlyForAdmin and (!lockedForSigning or signingComplete)}" class="collapse mb-3" id="sendBackPanel">
         <form th:action="@{'/admin/' + ${module} + '/request/' + ${requestId} + '/document/' + ${documentType} + '/request-resign'}"
               method="post" class="card card-body">
             <label class="form-label fw-semibold">เหตุผลที่ส่งกลับ <span class="text-danger">*</span></label>
@@ -129,7 +142,13 @@
                 }
                 // ช่องซ่อนไม่ต้องปิด: ผู้ใช้แตะไม่ได้อยู่แล้ว และเซิร์ฟเวอร์ตัดทิ้งเองถ้าไม่ใช่ของแอดมิน
                 // ช่องที่ไม่มี name ก็เช่นกัน มันไม่เคยถูกส่งไปกับฟอร์ม (เช่นตัวเลือกวันที่ข้างช่องจริง)
-                if (!el.name || el.type === 'hidden' || editable.has(el.name)) return;
+                // ยกเว้นตอนที่ไม่มีอะไรให้กรอกเลย: สคริปต์ของหน้าเติมค่าช่องซ่อนตอนโหลด (จำนวนแถว ฯลฯ)
+                // บันทึกร่างอัตโนมัติเห็นว่ามีการเปลี่ยนแล้วยิงไปโดน 409 "อยู่ระหว่างเวียนลงนาม" ทุกครั้งที่เปิดหน้า
+                if (!el.name || editable.has(el.name)) return;
+                if (el.type === 'hidden') {
+                    if (nothingToFill) el.disabled = true;
+                    return;
+                }
                 el.disabled = true;
                 el.classList.add('bg-light');
             }

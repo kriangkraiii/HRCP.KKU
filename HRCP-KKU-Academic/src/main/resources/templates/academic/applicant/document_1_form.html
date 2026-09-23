@@ -23,16 +23,16 @@
                     <div th:unless="${editable}" class="alert alert-secondary d-flex align-items-start gap-2">
                         <i class="fas fa-lock mt-1"></i>
                         <div>
-                            <strong>เอกสารถูกล็อก</strong> — ส่งคำร้องแล้วจึงแก้ไขไม่ได้
-                            จะแก้ไขได้ต่อเมื่อแอดมินส่งเอกสารกลับมาให้แก้ไขเท่านั้น
+                            <strong>เอกสารถูกล็อก</strong> เนื่องจากส่งคำร้องแล้ว
+                            จะแก้ไขได้เมื่อเจ้าหน้าที่ส่งเอกสารกลับมาให้แก้ไข
                         </div>
                     </div>
                     <div th:if="${editable and revisionRequested}" class="alert alert-warning d-flex align-items-start gap-2">
                         <i class="fas fa-pen-to-square mt-1"></i>
                         <div>
-                            <strong>แอดมินส่งเอกสารกลับมาให้แก้ไข</strong>
+                            <strong>เจ้าหน้าที่ส่งเอกสารกลับมาให้แก้ไข</strong>
                             <span th:if="${revisionNote}"> — เหตุผล: [[${revisionNote}]]</span>
-                            <div class="small">แก้ไขข้อมูลแล้วกดบันทึกเอกสาร จากนั้น<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ที่แผงลงนามด้านล่าง</div>
+                            <div class="small">กรุณาแก้ไขและบันทึกเอกสาร แล้ว<strong>ลงนามใหม่</strong>ที่แผงลงนามด้านล่าง</div>
                         </div>
                     </div>
 
@@ -62,7 +62,7 @@
                                 <label class="form-label">เลขที่หนังสือและวันที่เอกสาร</label>
                                 <div class="form-control-plaintext text-muted">
                                     <i class="fas fa-building-columns"></i>
-                                    เจ้าหน้าที่สารบรรณเป็นผู้ลงให้หลังเอกสารลงนามครบ
+                                    เจ้าหน้าที่สารบรรณเป็นผู้กรอกหลังลงนามครบ
                                 </div>
                             </div>
                         </div>
@@ -150,7 +150,7 @@
                                         <i class="fas fa-info-circle text-success fs-4 me-3"></i>
                                         <div>
                                             <div class="fw-bold text-success">ท่านดำรงตำแหน่งรองศาสตราจารย์แล้ว</div>
-                                            <div class="text-muted small">การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน ท่านสามารถยื่นคำขอตำแหน่งทางวิชาการได้โดยตรง</div>
+                                            <div class="text-muted small">การขอตำแหน่งศาสตราจารย์ไม่ต้องผ่านการประเมินผลการสอน</div>
                                         </div>
                                     </div>
                                     <a href="/user/position/new-request" class="btn btn-success btn-sm text-nowrap ms-3">
@@ -207,7 +207,6 @@
                                 <input type="text" name="academic_year" class="form-control"
                                     th:value="${dData != null ? dData.getOrDefault('academic_year', '') : ''}"
                                     placeholder="เช่น 1/2569" pattern="^[0-9]+/[0-9]+$" required>
-                                <div class="form-text text-muted small">ระบุในรูปแบบ [ภาคเรียน]/[ปีการศึกษา] เช่น 1/2569</div>
                             </div>
                         </div>
 
@@ -220,11 +219,6 @@
                         <div class="d-flex gap-2 mt-4">
                             <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                                 <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
-                            </button>
-                            <!-- ปุ่มรอง: ปุ่มหลักคือปุ่มส่งลงนามในแผงด้านล่าง ซึ่งบันทึกให้ก่อนส่งอยู่แล้ว -->
-                            <button th:if="${editable}" type="submit" name="action" value="submit" class="btn btn-outline-secondary" id="doc1SubmitBtn"
-                                    title="เก็บไว้แก้ต่อทีหลัง ยังไม่ส่งให้ใคร">
-                                <i class="fas fa-save"></i> บันทึกไว้ก่อน (ยังไม่ส่ง)
                             </button>
                         </div>
                     </form>

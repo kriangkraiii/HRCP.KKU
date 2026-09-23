@@ -467,10 +467,10 @@ public class DocumentGenerationService {
     private static final long EMU_PER_CM = 360000L;
 
     /** Printed width of a stamped signature. Fits the dotted line in every template. */
-    private static final long SIGNATURE_WIDTH_EMU = (long) (3.2 * EMU_PER_CM);
+    private static final long SIGNATURE_WIDTH_EMU = (long) (5.0 * EMU_PER_CM);
 
     /** Ceiling on printed height, so a tall image cannot push the following line down. */
-    private static final long SIGNATURE_MAX_HEIGHT_EMU = (long) (1.2 * EMU_PER_CM);
+    private static final long SIGNATURE_MAX_HEIGHT_EMU = (long) (1.8 * EMU_PER_CM);
 
     /** EMUs per twip, the unit Word measures line heights in. 1 twip = 1/1440 inch. */
     private static final long EMU_PER_TWIP = 635L;

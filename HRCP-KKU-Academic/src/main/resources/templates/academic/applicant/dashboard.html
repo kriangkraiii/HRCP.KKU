@@ -9,14 +9,13 @@
             <div class="page-header">
                 <div class="page-header-text">
                     <h3 class="page-header-title">แดชบอร์ดผู้ยื่นคำร้อง</h3>
-                    <p class="page-header-sub">ติดตามสถานะและจัดการคำร้องทั้งหมดของคุณ</p>
                 </div>
             </div>
 
             <!-- Alert -->
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                <strong>ไม่สามารถยื่นคำร้องได้</strong> คุณมีคำร้องที่กำลังดำเนินการอยู่
+                <strong>ยื่นคำร้องไม่ได้</strong> เนื่องจากท่านมีคำร้องที่กำลังดำเนินการอยู่
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
@@ -76,7 +75,7 @@
                             <i class="fas fa-info-circle text-success fs-4 me-3"></i>
                             <div>
                                 <div class="fw-bold text-success">ท่านดำรงตำแหน่งรองศาสตราจารย์ (รศ.) แล้ว</div>
-                                <div class="text-muted small">การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน ท่านสามารถยื่นคำขอตำแหน่งทางวิชาการได้โดยตรง</div>
+                                <div class="text-muted small">การขอตำแหน่งศาสตราจารย์ไม่ต้องผ่านการประเมินผลการสอน</div>
                             </div>
                         </div>
                         <a href="/user/position/new-request" class="btn btn-success btn-sm text-nowrap ms-3">
@@ -95,7 +94,7 @@
 
                     <div th:if="${hasActiveRequest and !isAssociateProfessor and !isProfessor}" class="result-alert ra-pass" style="background:color-mix(in srgb, var(--color-primary-medium) 6%, var(--bg-card));color:var(--text-secondary);border:1px solid var(--border-color);">
                         <i class="fas fa-info-circle"></i>
-                        <span>คุณมีคำร้องที่กำลังดำเนินการอยู่ ไม่สามารถยื่นคำร้องใหม่ได้จนกว่าจะเสร็จสิ้น</span>
+                        <span>ท่านมีคำร้องที่กำลังดำเนินการอยู่ จะยื่นคำร้องใหม่ได้เมื่อคำร้องนี้เสร็จสิ้น</span>
                     </div>
 
                     <!-- ข้อ 2 — คณบดีไม่เห็นชอบ: คำร้องถูกส่งคืนมาเป็นแบบร่างพร้อมเหตุผล -->
@@ -216,7 +215,7 @@
                         <div th:if="${req.currentStatus.name() == 'COMPLETED'}" class="result-alert ra-completed">
                             <div class="d-flex flex-wrap align-items-center justify-content-between w-100 gap-2">
                                 <div>
-                                    <i class="fas fa-flag-checkered"></i> <span>เสร็จสิ้น — คำร้องได้ดำเนินการเสร็จสิ้นแล้ว</span>
+                                    <i class="fas fa-flag-checkered"></i> <span>คำร้องดำเนินการเสร็จสิ้นแล้ว</span>
                                 </div>
                                 <div th:if="${req.evaluationExpiryDate != null}" class="small fw-semibold text-muted">
                                     <i class="fas fa-calendar-check me-1"></i>ผลประเมินหมดอายุ: <span th:text="${@thaiDateUtil.formatDateOnly(req.evaluationExpiryDate)}"></span>
@@ -375,7 +374,7 @@
                             <div class="mb-3 text-danger">
                                 <i class="fas fa-trash-alt fa-3x"></i>
                             </div>
-                            <h5 class="fw-bold mb-2">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกแบบร่างนี้?</h5>
+                            <h5 class="fw-bold mb-2">ยืนยันการยกเลิกแบบร่างนี้?</h5>
                             <p class="text-muted mb-3">ข้อมูลเอกสารและไฟล์แนบที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมดอย่างถาวร</p>
                             <form id="cancelEvalDraftForm" method="post" th:action="@{/user/academic/request/0/cancel-draft}">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
@@ -413,7 +412,7 @@
                             <div class="mb-3 text-danger">
                                 <i class="fas fa-trash-alt fa-3x"></i>
                             </div>
-                            <h5 class="fw-bold mb-2">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกแบบร่างคำร้องขอตำแหน่ง?</h5>
+                            <h5 class="fw-bold mb-2">ยืนยันการยกเลิกแบบร่างคำร้องขอตำแหน่ง?</h5>
                             <p class="text-muted mb-3">ข้อมูลเอกสารและไฟล์แนบที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมดอย่างถาวร</p>
                             <form id="cancelPosDraftForm" method="post" th:action="@{/user/position/request/0/cancel-draft}">
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />

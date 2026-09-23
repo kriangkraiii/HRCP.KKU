@@ -218,8 +218,10 @@ public class SecurityHeadersFilter implements Filter {
                 return "default-src 'self'; "
                                 + "script-src 'self' 'nonce-" + nonce + "' https://translate.google.com "
                                 + "https://translate.googleapis.com https://translate-pa.googleapis.com https://cdnjs.cloudflare.com; "
-                                + "style-src 'self' 'nonce-" + nonce + "' https://translate.googleapis.com https://cdnjs.cloudflare.com; "
-                                + "font-src 'self' data: https://cdnjs.cloudflare.com; "
+                                // Prompt/Sarabun (brand fonts) come from Google Fonts: the stylesheet from
+                                // fonts.googleapis.com, the font files it points at from fonts.gstatic.com
+                                + "style-src 'self' 'nonce-" + nonce + "' https://translate.googleapis.com https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+                                + "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
                                 + "img-src 'self' data: blob: https://translate.google.com "
                                 + "https://www.google.com https://*.gstatic.com; "
                                 + "connect-src 'self' https://translate.googleapis.com "

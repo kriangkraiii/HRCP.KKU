@@ -687,6 +687,12 @@ document.addEventListener('click', function (e) {
             const displayTitle = docTitle ? `ตัวอย่างเอกสารที่ ${docPreview.docType}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${docPreview.docType}`;
             const titleEl = document.getElementById('docxTitleText');
             if (titleEl) titleEl.textContent = displayTitle;
+            // เอกสารอยู่ในซองลงนามแล้ว — ค่าในฟอร์มไม่มีลายเซ็น ต้องเรนเดอร์จากซองแทน
+            var signed = document.querySelector('[data-signed-preview-url]');
+            if (signed) {
+                docPreview.showStandalone(signed.getAttribute('data-signed-preview-url'), displayTitle);
+                return;
+            }
             docPreview.show();
         }
         return;

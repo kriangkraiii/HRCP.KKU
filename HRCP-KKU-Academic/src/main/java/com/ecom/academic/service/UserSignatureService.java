@@ -451,8 +451,8 @@ public class UserSignatureService {
             int maxW = 200;
             int maxH = 135;
             float scale = Math.min((float) maxW / inkImg.getWidth(), (float) maxH / inkImg.getHeight());
-            if (scale > 1.0f) {
-                scale = 1.0f;
+            if (scale > 2.5f) {
+                scale = 2.5f;
             }
             int drawW = Math.round(inkImg.getWidth() * scale);
             int drawH = Math.round(inkImg.getHeight() * scale);

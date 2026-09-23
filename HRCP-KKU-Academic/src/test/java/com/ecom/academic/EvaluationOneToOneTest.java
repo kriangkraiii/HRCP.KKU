@@ -239,7 +239,7 @@ class EvaluationOneToOneTest extends AbstractFlowTest {
                     .andExpect(status().isOk())
                     .andReturn().getResponse().getContentAsString();
 
-            assertThat(html).contains("ผลประเมินการสอนฉบับนี้ถูกใช้ยื่นขอตำแหน่งไปแล้ว");
+            assertThat(html).contains("ผลประเมินการสอนฉบับนี้ใช้ยื่นขอตำแหน่งไปแล้ว");
         }
     }
 }

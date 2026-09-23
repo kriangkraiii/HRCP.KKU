@@ -39,7 +39,7 @@
                                 <i class="fas fa-edit text-warning fa-lg"></i>
                             </div>
                             <div>
-                                <div class="text-muted small">อัพเดทสถานะ</div>
+                                <div class="text-muted small">อัปเดตสถานะ</div>
                                 <h4 class="mb-0" th:text="${updateCount ?: 0}">0</h4>
                             </div>
                         </div>
@@ -89,14 +89,14 @@
                                 </optgroup>
                                 <optgroup label="Admin Actions">
                                     <option value="CREATE_ACCOUNT" th:selected="${actionFilter == 'CREATE_ACCOUNT'}">สร้างบัญชี</option>
-                                    <option value="UPDATE_ACCOUNT_STATUS" th:selected="${actionFilter == 'UPDATE_ACCOUNT_STATUS'}">อัพเดทสถานะ</option>
+                                    <option value="UPDATE_ACCOUNT_STATUS" th:selected="${actionFilter == 'UPDATE_ACCOUNT_STATUS'}">อัปเดตสถานะ</option>
                                     <option value="CHANGE_PASSWORD" th:selected="${actionFilter == 'CHANGE_PASSWORD'}">เปลี่ยนรหัสผ่าน</option>
                                     <option value="EDIT_USER_ACCOUNT" th:selected="${actionFilter == 'EDIT_USER_ACCOUNT'}">แก้ไขบัญชีผู้ใช้</option>
-                                    <option value="EDIT_ADMIN_ACCOUNT" th:selected="${actionFilter == 'EDIT_ADMIN_ACCOUNT'}">แก้ไขบัญชีแอดมิน</option>
+                                    <option value="EDIT_ADMIN_ACCOUNT" th:selected="${actionFilter == 'EDIT_ADMIN_ACCOUNT'}">แก้ไขบัญชีผู้ดูแลระบบ</option>
                                     <option value="DELETE_USER_ACCOUNT" th:selected="${actionFilter == 'DELETE_USER_ACCOUNT'}">ลบบัญชีผู้ใช้</option>
-                                    <option value="DELETE_ADMIN_ACCOUNT" th:selected="${actionFilter == 'DELETE_ADMIN_ACCOUNT'}">ลบบัญชีแอดมิน</option>
+                                    <option value="DELETE_ADMIN_ACCOUNT" th:selected="${actionFilter == 'DELETE_ADMIN_ACCOUNT'}">ลบบัญชีผู้ดูแลระบบ</option>
                                     <option value="GENERATE_DOCUMENT" th:selected="${actionFilter == 'GENERATE_DOCUMENT'}">สร้างเอกสาร</option>
-                                    <option value="UPDATE_REQUEST_STATUS" th:selected="${actionFilter == 'UPDATE_REQUEST_STATUS'}">อัพเดทคำร้อง</option>
+                                    <option value="UPDATE_REQUEST_STATUS" th:selected="${actionFilter == 'UPDATE_REQUEST_STATUS'}">อัปเดตคำร้อง</option>
                                 </optgroup>
                             </select>
                         </div>

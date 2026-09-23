@@ -5,6 +5,9 @@ import java.time.Duration;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.authentication.AnonymousAuthenticationToken;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 
 import com.github.benmanes.caffeine.cache.Cache;
@@ -20,7 +23,7 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * IP-based rate limiter to protect against DDoS and brute-force attacks.
- * - General requests: configurable per IP (default 200 req/min)
+ * - General requests: configurable per signed-in user, or per IP before sign-in (default 200 req/min)
  * - Login attempts: configurable per IP (default 30 req/min)
  *
  * Uses Caffeine cache to auto-evict stale entries and prevent memory exhaustion.
@@ -73,7 +76,7 @@ public class RateLimitFilter implements Filter {
                 return;
             }
         } else {
-            RateBucket bucket = generalBuckets.get(clientIp, k -> new RateBucket());
+            RateBucket bucket = generalBuckets.get(generalKey(clientIp), k -> new RateBucket());
             if (!bucket.tryConsume(generalLimit)) {
                 sendRateLimitResponse(httpRes, "คุณส่งคำขอมากเกินไป กรุณารอสักครู่");
                 return;
@@ -81,6 +84,25 @@ public class RateLimitFilter implements Filter {
         }
 
         chain.doFilter(request, response);
+    }
+
+    /**
+     * โควตาทั่วไปนับต่อ "คน" เมื่อเข้าระบบแล้ว และต่อ IP เมื่อยังไม่เข้า
+     *
+     * <p>เครือข่ายมหาวิทยาลัยออกเน็ตหลัง NAT ทั้งวิทยาลัยจึงเป็น IP เดียวกัน นับตาม IP อย่างเดียว
+     * แปลว่าคนหนึ่งเปิดเอกสารยาว ๆ (บันทึกร่างอัตโนมัติยิงทุกครั้งที่พิมพ์) ก็กินโควตาของทั้งตึก
+     * แล้วคนอื่นที่ไม่ได้ทำอะไรเลยได้หน้า 429 ส่วนการเข้าสู่ระบบยังนับตาม IP เหมือนเดิม
+     * เพราะเป็นด่านกันเดารหัสผ่าน ซึ่งผู้โจมตียังไม่มีตัวตนให้นับ
+     *
+     * <p>ตัวกรองนี้อยู่ใน security chain หลัง SecurityContextHolderFilter จึงเห็นตัวตนจาก session แล้ว
+     */
+    private static String generalKey(String clientIp) {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.isAuthenticated() && !(auth instanceof AnonymousAuthenticationToken)
+                && auth.getName() != null) {
+            return "user:" + auth.getName();
+        }
+        return "ip:" + clientIp;
     }
 
     private void sendRateLimitResponse(HttpServletResponse response, String message) throws IOException {

@@ -108,22 +108,32 @@
                 <i class="fas fa-exclamation-triangle"></i>
                 <div>
                     <span>ต้องแก้ไขเอกสาร</span>
-                    <div class="ra-detail">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</div>
+                    <div class="ra-detail">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์
+                        และแนบไฟล์ฉบับแก้ไขด้านล่าง เพื่อให้เจ้าหน้าที่ส่งต่อคณะอนุกรรมการ</div>
+                    <!-- Flow ข้อ 13 — เดิมมีปลายทางรับไฟล์แต่ไม่มีฟอร์ม ผู้ยื่นจึงส่งฉบับแก้ในระบบไม่ได้ -->
+                    <form th:action="@{'/user/academic/upload-revision/' + ${request.id}}" method="post"
+                          enctype="multipart/form-data" class="d-flex flex-wrap gap-2 mt-2">
+                        <input type="file" name="file" class="form-control form-control-sm w-auto" required
+                               accept=".pdf,.doc,.docx,.zip">
+                        <button type="submit" class="btn btn-warning btn-sm">
+                            <i class="fas fa-upload me-1"></i> ส่งเอกสารที่แก้ไขแล้ว
+                        </button>
+                    </form>
                 </div>
             </div>
             <div th:if="${request.currentStatus.name() == 'COMPLETED'}" class="result-alert ra-completed">
-                <i class="fas fa-flag-checkered"></i> <span>เสร็จสิ้น — คำร้องได้ดำเนินการเสร็จสิ้นแล้ว</span>
+                <i class="fas fa-flag-checkered"></i> <span>คำร้องดำเนินการเสร็จสิ้นแล้ว</span>
             </div>
 
             <!-- แอดมินส่งเอกสารกลับมาให้แก้ไข -->
             <div th:if="${(canEditDoc1 != null and canEditDoc1) or (canEditDoc2 != null and canEditDoc2)}" class="result-alert ra-revise">
                 <i class="fas fa-pen-to-square"></i>
                 <div>
-                    <span>แอดมินส่งเอกสารกลับมาให้ท่านแก้ไข</span>
+                    <span>เจ้าหน้าที่ส่งเอกสารกลับมาให้ท่านแก้ไข</span>
                     <div class="ra-detail">
                         <span th:if="${(canEditDoc1 != null and canEditDoc1)}">เอกสารที่ 1<span th:if="${revisionNoteDoc1}"> — เหตุผล: [[${revisionNoteDoc1}]]</span><br></span>
                         <span th:if="${canEditDoc2 != null and canEditDoc2}">เอกสารที่ 2<span th:if="${revisionNoteDoc2}"> — เหตุผล: [[${revisionNoteDoc2}]]</span><br></span>
-                        กรุณาแก้ไขข้อมูลให้เรียบร้อย แล้ว<strong>ลงนามอิเล็กทรอนิกส์ใหม่</strong>ในหน้าเอกสารนั้น
+                        กรุณาแก้ไขข้อมูล แล้ว<strong>ลงนามใหม่</strong>ในหน้าเอกสารนั้น
                     </div>
                 </div>
             </div>

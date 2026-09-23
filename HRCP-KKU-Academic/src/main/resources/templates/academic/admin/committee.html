@@ -10,10 +10,10 @@
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
             <div>
                 <h1 class="h3 fw-bold text-primary mb-1">
-                    <i class="fas fa-user-tie me-2"></i>จัดการข้อมูลผู้ทรงคุณวุฒิ (External Experts)
+                    <i class="fas fa-user-tie me-2"></i>จัดการข้อมูลผู้ทรงคุณวุฒิ
                 </h1>
                 <p class="text-secondary small mb-0">
-                    ฐานข้อมูลผู้ทรงคุณวุฒิภายนอก (External Readers / Assessors) สำหรับประเมินผลการสอนและผลงานทางวิชาการ (รองรับทั้งภาษาไทยและภาษาอังกฤษ พร้อมระบบลงนามผ่าน KKU SSO)
+                    ผู้ทรงคุณวุฒิภายนอกสำหรับประเมินผลการสอนและผลงานทางวิชาการ
                 </p>
             </div>
             <div>
@@ -83,7 +83,7 @@
                             <td colspan="7" class="text-center py-5 text-muted">
                                 <i class="fas fa-folder-open fa-3x mb-3 text-secondary opacity-50"></i>
                                 <h6>ไม่พบข้อมูลผู้ทรงคุณวุฒิ</h6>
-                                <p class="small mb-0">กดปุ่ม "เพิ่มผู้ทรงคุณวุฒิใหม่" เพื่อบันทึกข้อมูลเข้าสู่ฐานข้อมูล</p>
+                                
                             </td>
                         </tr>
                         <tr th:each="m, iter : ${members}" th:id="'committee-' + ${m.id}">
@@ -420,7 +420,7 @@
         }
 
         function confirmDelete(id, name) {
-            var msg = 'คุณต้องการลบข้อมูลผู้ทรงคุณวุฒิ "' + name + '" หรือไม่?';
+            var msg = 'ยืนยันการลบข้อมูลผู้ทรงคุณวุฒิ "' + name + '"?';
             var confirmPromise = (typeof window.appConfirm === 'function')
                 ? window.appConfirm(msg, { title: 'ยืนยันลบผู้ทรงคุณวุฒิ', confirmText: 'ยืนยันลบ', variant: 'danger' })
                 : Promise.resolve(confirm(msg));

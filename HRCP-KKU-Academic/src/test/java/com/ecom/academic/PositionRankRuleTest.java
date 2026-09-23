@@ -179,7 +179,7 @@ class PositionRankRuleTest extends AbstractFlowTest {
             assertThat(html).contains("/user/position/new-request");
             assertThat(html).contains("ยื่นขอตำแหน่งศาสตราจารย์ (ไม่ต้องประเมินการสอน)");
             assertThat(html).contains("ท่านดำรงตำแหน่งรองศาสตราจารย์ (รศ.) แล้ว");
-            assertThat(html).contains("การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน");
+            assertThat(html).contains("การขอตำแหน่งศาสตราจารย์ไม่ต้องผ่านการประเมินผลการสอน");
         }
     }
 

@@ -20,7 +20,7 @@
         >
           <i class="fas fa-check-circle"></i>
           <span th:if="${param.success[0] == 'status_updated'}"
-            >อัพเดทสถานะสำเร็จ</span
+            >อัปเดตสถานะสำเร็จ</span
           >
           <span th:if="${param.success[0] == 'doc_generated'}"
             >บันทึกเอกสารสำเร็จ</span
@@ -53,10 +53,10 @@
             >ไม่สามารถบันทึกเอกสารได้</span
           >
           <span th:if="${param.error[0] == 'invalid_file_type'}"
-            >รองรับเฉพาะไฟล์ .pdf และ .docx เท่านั้น</span
+            >รองรับเฉพาะไฟล์ .pdf, .docx, .doc และ .zip</span
           >
           <span th:if="${param.error[0] == 'max_attachments'}"
-            >ถึงจำนวนเอกสารเพิ่มเติมสูงสุดแล้ว (10 ไฟล์)</span
+            >อัปโหลดไม่ได้ เนื่องจากครบ 20 ไฟล์แล้ว</span
           >
           <span th:if="${param.error[0] == 'upload_failed'}"
             >อัปโหลดเอกสารไม่สำเร็จ</span
@@ -78,8 +78,8 @@
         >
           <i class="fas fa-exclamation-triangle"></i>
           <span th:if="${param.warn[0] == 'notify_failed'}"
-            >เอกสารถูกสร้างสำเร็จ แต่การอัพเดตสถานะ/แจ้งเตือนผู้ยื่นล้มเหลว —
-            กรุณาลองอัพเดตสถานะด้วยตนเอง</span
+            >สร้างเอกสารแล้ว แต่อัปเดตสถานะหรือแจ้งผู้ยื่นไม่สำเร็จ
+            กรุณาอัปเดตสถานะด้วยตนเอง</span
           >
           <button
             type="button"
@@ -262,7 +262,7 @@
             <strong>ยังไม่มีผลการประเมินผลการสอน</strong>
             <span class="db-detail"
               >ผู้ยื่นยังไม่มีเอกสารที่ 8 จากคำร้องประเมินผลการสอน
-              หรือแอดมินยังไม่ได้กรอกข้อมูล</span
+              หรือเจ้าหน้าที่ยังไม่ได้กรอกข้อมูล</span
             >
           </div>
         </div>
@@ -291,8 +291,7 @@
           <div>
             <strong>คำร้องนี้ยังเป็นแบบร่าง</strong>
             <span class="db-detail"
-              >ผู้ยื่นยังไม่ได้ยื่นคำร้อง แอดมินจะจัดการได้หลังจากผู้ยื่นกด
-              "ยื่นคำร้อง" แล้วเท่านั้น</span
+              >ดำเนินการได้หลังจากผู้ยื่นกดยื่นคำร้องแล้ว</span
             >
           </div>
         </div>
@@ -305,7 +304,7 @@
               <div class="detail-section-header">
                 <h5>
                   <i class="fas fa-exchange-alt" style="color: #2e7d32"></i>
-                  อัพเดทสถานะ
+                  อัปเดตสถานะ
                 </h5>
               </div>
               <div class="detail-section-body">
@@ -315,10 +314,16 @@
                 >
                   <i class="fas fa-lock"></i>
                   <p>
-                    ไม่สามารถอัพเดทสถานะได้<br /><small
+                    ไม่สามารถอัปเดตสถานะได้<br /><small
                       >รอผู้ยื่นคำร้องยื่นก่อน</small
                     >
                   </p>
+                </div>
+                <!-- เอกสารที่ส่งกลับให้แก้ยังลงนามใหม่ไม่ครบ → เปลี่ยนสถานะไปข้างหน้าไม่ได้ (ฝั่งเซิร์ฟเวอร์ปฏิเสธด้วย) -->
+                <div th:if="${awaitingResignDocs != null and !#lists.isEmpty(awaitingResignDocs)}" class="alert alert-warning small" id="awaitingResignAlert">
+                  <i class="fas fa-pen-nib me-1"></i>
+                  <strong>รอลงนามใหม่หลังส่งกลับแก้ไข</strong> — ยังเดินเรื่องต่อไม่ได้จนกว่าเอกสารเหล่านี้จะลงนามใหม่ครบทุกช่อง:
+                  <ul class="mb-0 mt-1"><li th:each="d : ${awaitingResignDocs}" th:text="${d}">เอกสาร</li></ul>
                 </div>
                 <form
                   th:unless="${request.currentStatus.isDraft()}"
@@ -349,7 +354,7 @@
                     ></textarea>
                   </div>
                   <button type="submit" class="btn-save-status bss-green">
-                    <i class="fas fa-save"></i> อัพเดทสถานะ
+                    <i class="fas fa-save"></i> อัปเดตสถานะ
                   </button>
                 </form>
               </div>
@@ -369,7 +374,7 @@
                   th:action="'/admin/position/request/' + ${request.id} + '/upload-attachment'"
                   method="post"
                   enctype="multipart/form-data"
-                  th:if="${attachmentCount < 10}"
+                  th:if="${attachmentCount < 20}"
                 >
                   <div class="input-group mb-3">
                     <input
@@ -384,7 +389,7 @@
                     </button>
                   </div>
                   <small class="text-muted"
-                    ><i class="fas fa-info-circle"></i> รองรับไฟล์ .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB)</small
+                    >.pdf, .docx, .doc, .zip ไม่เกิน 20 ไฟล์ ขนาดรวมไม่เกิน 75 MB</small
                   >
                 </form>
                 <div
@@ -846,7 +851,7 @@
                   <textarea id="resignReasonInput" name="reason" class="form-control" rows="3" placeholder="ระบุเหตุผลที่ต้องการให้ผู้ยื่นแก้ไข..." required></textarea>
                 </div>
                 <div class="alert alert-info py-2 px-3 mb-0 small">
-                  <i class="fas fa-info-circle me-1"></i> ระบบจะปลดล็อกเอกสารนี้เพื่อให้ผู้ยื่นแก้ไขและลงนามใหม่ พร้อมส่งแจ้งเตือนทาง Email และ In-App ทันที
+                  <i class="fas fa-info-circle me-1"></i> ระบบจะปลดล็อกเอกสารให้ผู้ยื่นแก้ไขและลงนามใหม่ และแจ้งทางอีเมลและในระบบ
                 </div>
               </div>
               <div class="modal-footer border-0">

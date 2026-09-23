@@ -30,7 +30,7 @@
                                 <label class="form-label">เลขที่หนังสือและวันที่</label>
                                 <div class="form-control-plaintext text-muted">
                                     <i class="fas fa-building-columns"></i>
-                                    เจ้าหน้าที่สารบรรณเป็นผู้ลงให้หลังเอกสารลงนามครบ
+                                    เจ้าหน้าที่สารบรรณเป็นผู้กรอกหลังลงนามครบ
                                 </div>
                             </div>
                         </div>
@@ -76,7 +76,7 @@
                                 </select>
                                 <!-- ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ -->
                                 <input type="hidden" name="request_position" th:if="${request.targetPosition != null}" th:value="${request.targetPosition}">
-                                <div class="form-text" th:if="${request.targetPosition != null}">ตำแหน่งที่ขอกำหนดไว้ตั้งแต่สร้างคำร้อง จึงแก้ไขในแบบฟอร์มไม่ได้</div>
+                                <div class="form-text" th:if="${request.targetPosition != null}">กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้</div>
                             </div>
                         </div>
                     </div>
@@ -193,11 +193,6 @@
 
 
                 <div class="d-flex gap-2">
-                    <!-- ปุ่มรอง: ปุ่มหลักคือปุ่มส่งลงนามในแผงด้านล่าง ซึ่งบันทึกให้ก่อนส่งอยู่แล้ว -->
-                    <button type="submit" name="action" value="submit" class="btn btn-outline-secondary btn-lg"
-                            title="เก็บไว้แก้ต่อทีหลัง ยังไม่ส่งให้ใคร">
-                        <i class="fas fa-save"></i> บันทึกไว้ก่อน (ยังไม่ส่ง)
-                    </button>
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>

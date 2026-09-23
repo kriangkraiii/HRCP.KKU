@@ -43,7 +43,7 @@
                 </div>
 
                 <h1 class="guest-card-heading">เข้าสู่ระบบครั้งแรก</h1>
-                <p class="guest-card-sub">กรุณากรอกอีเมลที่ผู้ดูแลระบบลงทะเบียนไว้<br>ระบบจะส่งรหัส OTP ไปยังอีเมลของคุณ</p>
+                <p class="guest-card-sub">กรุณากรอกอีเมลที่ผู้ดูแลระบบลงทะเบียนไว้<br>ระบบจะส่งรหัส OTP ไปยังอีเมลนี้</p>
 
                 <div th:if="${succMsg}" class="alert alert-success">
                     <i class="fas fa-check-circle"></i>
@@ -59,7 +59,7 @@
                         <label>อีเมล</label>
                         <div class="input-wrapper">
                             <i class="fas fa-envelope"></i>
-                            <input type="email" name="email" placeholder="กรอกอีเมลของคุณ" required autocomplete="email">
+                            <input type="email" name="email" placeholder="อีเมล" required autocomplete="email">
                         </div>
                     </div>
                     <button type="submit" class="btn-guest-primary" id="submitBtn">

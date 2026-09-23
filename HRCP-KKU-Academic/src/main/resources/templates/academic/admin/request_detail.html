@@ -21,8 +21,8 @@
       </div>
       <div th:if="${param.error != null}" class="alert alert-danger alert-dismissible fade show">
         <i class="fas fa-exclamation-circle"></i>
-        <span th:if="${param.error[0] == 'max_attachments'}">ไม่สามารถอัปโหลดได้ (สูงสุด 10 ไฟล์)</span>
-        <span th:if="${param.error[0] == 'invalid_file_type'}">รองรับเฉพาะไฟล์ .pdf และ .docx เท่านั้น</span>
+        <span th:if="${param.error[0] == 'max_attachments'}">อัปโหลดไม่ได้ เนื่องจากครบ 20 ไฟล์แล้ว</span>
+        <span th:if="${param.error[0] == 'invalid_file_type'}">รองรับเฉพาะไฟล์ .pdf, .docx, .doc และ .zip</span>
         <span th:if="${param.error[0] == 'status_update_failed'}">ไม่สามารถอัปเดตสถานะได้ กรุณาลองใหม่อีกครั้ง</span>
         <small th:if="${errorDetail != null}" class="d-block mt-1 text-danger"
           th:text="'รายละเอียด: ' + ${errorDetail}"></small>
@@ -30,9 +30,8 @@
       </div>
       <div th:if="${param.warn != null}" class="alert alert-warning alert-dismissible fade show">
         <i class="fas fa-exclamation-triangle"></i>
-        <span th:if="${param.warn[0] == 'notify_failed'}">เอกสารถูกสร้างสำเร็จ แต่การอัพเดตสถานะ/แจ้งเตือนผู้ยื่นล้มเหลว
-          —
-          กรุณาลองอัพเดตสถานะด้วยตนเอง</span>
+        <span th:if="${param.warn[0] == 'notify_failed'}">สร้างเอกสารแล้ว แต่อัปเดตสถานะหรือแจ้งผู้ยื่นไม่สำเร็จ
+          กรุณาอัปเดตสถานะด้วยตนเอง</span>
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
 
@@ -123,6 +122,12 @@
               </h5>
             </div>
             <div class="detail-section-body">
+              <!-- เอกสารที่ส่งกลับให้แก้ยังลงนามใหม่ไม่ครบ → เปลี่ยนสถานะไปข้างหน้าไม่ได้ (ฝั่งเซิร์ฟเวอร์ปฏิเสธด้วย) -->
+              <div th:if="${awaitingResignDocs != null and !#lists.isEmpty(awaitingResignDocs)}" class="alert alert-warning small" id="awaitingResignAlert">
+                <i class="fas fa-pen-nib me-1"></i>
+                <strong>รอลงนามใหม่หลังส่งกลับแก้ไข</strong> — ยังเดินเรื่องต่อไม่ได้จนกว่าเอกสารเหล่านี้จะลงนามใหม่ครบทุกช่อง:
+                <ul class="mb-0 mt-1"><li th:each="d : ${awaitingResignDocs}" th:text="${d}">เอกสาร</li></ul>
+              </div>
               <form th:action="'/admin/academic/request/' + ${request.id} + '/status'" method="post">
                 <div class="mb-3">
                   <label class="form-label">สถานะใหม่</label>
@@ -161,16 +166,23 @@
               <span class="badge bg-secondary" th:text="${attachmentCount} + ' / 10 ไฟล์'"></span>
             </div>
             <div class="detail-section-body">
+              <!-- Flow ข้อ 13-14: ฉบับแก้ไขที่ผู้ยื่นส่งกลับมา — เจ้าหน้าที่ส่งต่อให้คณะอนุกรรมการ -->
+              <div th:if="${request.revisionFilePath != null}" class="alert alert-warning d-flex align-items-center justify-content-between gap-2 py-2">
+                <span><i class="fas fa-file-pen me-1"></i> ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว</span>
+                <a th:href="@{'/admin/academic/request/' + ${request.id} + '/revision-file'}" class="btn btn-sm btn-outline-dark">
+                  <i class="fas fa-download me-1"></i> ดาวน์โหลดฉบับแก้ไข
+                </a>
+              </div>
               <!-- Upload -->
               <form th:action="'/admin/academic/request/' + ${request.id} + '/upload-result'" method="post"
-                enctype="multipart/form-data" th:if="${attachmentCount < 10}">
+                enctype="multipart/form-data" th:if="${attachmentCount < 20}">
                 <div class="input-group mb-3">
                   <input type="file" name="file" class="form-control" accept=".pdf,.docx,.doc,.zip" required />
                   <button type="submit" class="btn btn-success btn-sm">
                     <i class="fas fa-upload"></i> อัปโหลด
                   </button>
                 </div>
-                <small class="text-muted"><i class="fas fa-info-circle"></i> รองรับไฟล์ .pdf, .docx, .doc, .zip (ขนาดรวมทั้งหมดไม่เกิน 75 MB)</small>
+                <small class="text-muted">.pdf, .docx, .doc, .zip ไม่เกิน 20 ไฟล์ ขนาดรวมไม่เกิน 75 MB</small>
               </form>
               <div th:if="${attachmentCount >= 20}" class="alert alert-warning mb-3">
                 <i class="fas fa-exclamation-triangle"></i>
@@ -569,7 +581,7 @@
                 <textarea id="resignReasonInput" name="reason" class="form-control" rows="3" placeholder="ระบุเหตุผลที่ต้องการให้ผู้ยื่นแก้ไข..." required></textarea>
               </div>
               <div class="alert alert-info py-2 px-3 mb-0 small">
-                <i class="fas fa-info-circle me-1"></i> ระบบจะปลดล็อกเอกสารนี้เพื่อให้ผู้ยื่นแก้ไขและลงนามใหม่ พร้อมส่งแจ้งเตือนทาง Email และ In-App ทันที
+                <i class="fas fa-info-circle me-1"></i> ระบบจะปลดล็อกเอกสารให้ผู้ยื่นแก้ไขและลงนามใหม่ และแจ้งทางอีเมลและในระบบ
               </div>
             </div>
             <div class="modal-footer border-0">

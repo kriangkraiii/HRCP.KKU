@@ -81,8 +81,8 @@
                             <div class="card-body">
                                 <p class="text-muted mb-3">
                                     <i class="fas fa-info-circle"></i>
-                                    เลือกช่วงเวลาที่ต้องการรับการแจ้งเตือนก่อนผลประเมินการสอนหมดอายุ (อายุ 3
-                                    ปีนับจากวันประกาศผล)
+                                    เลือกเวลาที่ต้องการรับแจ้งเตือนก่อนผลประเมินการสอนหมดอายุ
+                                    <span th:replace="~{academic/_info_tip :: tip('ผลประเมินการสอนมีอายุ 3 ปีนับจากวันประกาศผล')}"></span>
                                 </p>
 
                                 <div class="row g-3">
@@ -92,7 +92,6 @@
                                                 <div>
                                                     <h6 class="mb-0"><i class="fas fa-calendar-check text-success"></i>
                                                         6 เดือนก่อนหมด</h6>
-                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 6 เดือน (180 วัน)</small>
                                                 </div>
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input setting-toggle" type="checkbox"
@@ -110,7 +109,6 @@
                                                     <h6 class="mb-0"><i
                                                             class="fas fa-exclamation-triangle text-warning"></i> 3
                                                         เดือนก่อนหมด</h6>
-                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 3 เดือน (90 วัน)</small>
                                                 </div>
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input setting-toggle" type="checkbox"
@@ -127,7 +125,6 @@
                                                 <div>
                                                     <h6 class="mb-0"><i class="fas fa-clock text-danger"></i> 1
                                                         เดือนก่อนหมด</h6>
-                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 1 เดือน (30 วัน)</small>
                                                 </div>
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input setting-toggle" type="checkbox"
@@ -144,7 +141,6 @@
                                                 <div>
                                                     <h6 class="mb-0"><i class="fas fa-bell text-purple"></i> 1
                                                         สัปดาห์ก่อนหมด</h6>
-                                                    <small class="text-muted">แจ้งเตือนล่วงหน้า 7 วัน</small>
                                                 </div>
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input setting-toggle" type="checkbox"
@@ -162,9 +158,9 @@
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                     <div>
                                         <h6 class="mb-1 fw-bold">
-                                            <i class="fas fa-sliders-h text-primary me-2"></i>การแจ้งเตือนกำหนดเอง (Custom Alerts)
+                                            <i class="fas fa-sliders-h text-primary me-2"></i>การแจ้งเตือนกำหนดเอง
                                         </h6>
-                                        <small class="text-muted">เลือกเวลาแจ้งเตือนล่วงหน้าเพิ่มเติมได้เองสูงสุด 5 ครั้ง</small>
+                                        <small class="text-muted">เพิ่มได้สูงสุด 5 รายการ</small>
                                     </div>
                                     <button type="button" class="btn btn-outline-primary btn-sm rounded-pill px-3"
                                             id="btnAddCustomAlert"
@@ -260,7 +256,7 @@
                                     <h6 class="mb-1"><i class="fas fa-lock text-primary"></i> การยืนยันตัวตนสองขั้นตอน (2FA)</h6>
                                     <small class="text-muted">เมื่อเปิดใช้งาน ระบบจะส่งรหัส OTP 8 หลักไปที่อีเมลทุกครั้งที่เข้าสู่ระบบ</small>
                                     <div th:if="${ssoMode}" class="mt-1">
-                                        <small class="text-muted"><i class="fas fa-university"></i> ใช้กับการเข้าสู่ระบบด้วย KKU SSO ด้วย</small>
+                                        <small class="text-muted"><i class="fas fa-university"></i> มีผลกับการเข้าสู่ระบบด้วย KKU SSO</small>
                                     </div>
                                     <div th:if="${user.emailVerified == null || !user.emailVerified}" class="mt-1">
                                         <small class="text-danger"><i class="fas fa-info-circle"></i> ต้องยืนยันอีเมลก่อนจึงจะเปิด 2FA ได้</small>
@@ -281,25 +277,25 @@
                     <!-- Section 4: Admin SMTP Relay Diagnostic (Admin Only) -->
                     <div class="card mb-4 mt-4" th:if="${user != null and user.role == 'ROLE_ADMIN'}">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                            <h5 class="mb-0"><i class="fas fa-paper-plane text-primary"></i> ทดสอบการส่งอีเมล (KKU SMTP Relay Diagnostic)</h5>
+                            <h5 class="mb-0"><i class="fas fa-paper-plane text-primary"></i> ทดสอบการส่งอีเมล</h5>
                             <span class="badge bg-primary text-white"><i class="fas fa-shield-alt me-1"></i> เฉพาะผู้ดูแลระบบ</span>
                         </div>
                         <div class="card-body">
                             <p class="text-muted small mb-3">
                                 <i class="fas fa-info-circle text-primary"></i>
-                                ตรวจสอบการเชื่อมต่อและการส่งอีเมลผ่านระบบ <strong>KKU SMTP Relay (IP-Whitelisted)</strong> จากเครื่องเซิร์ฟเวอร์
+                                ทดสอบการส่งอีเมลจากเซิร์ฟเวอร์ผ่าน KKU SMTP Relay
                             </p>
 
                             <div class="row g-2 mb-3">
                                 <div class="col-sm-6">
                                     <div class="p-2 border rounded bg-light small">
-                                        <div class="text-muted"><i class="fas fa-server me-1"></i> SMTP Server:</div>
+                                        <div class="text-muted"><i class="fas fa-server me-1"></i> เซิร์ฟเวอร์ SMTP:</div>
                                         <div class="fw-bold text-dark font-monospace">smtp.kku.ac.th:587 (TLS)</div>
                                     </div>
                                 </div>
                                 <div class="col-sm-6">
                                     <div class="p-2 border rounded bg-light small">
-                                        <div class="text-muted"><i class="fas fa-at me-1"></i> Sender (From):</div>
+                                        <div class="text-muted"><i class="fas fa-at me-1"></i> ผู้ส่ง:</div>
                                         <div class="fw-bold text-dark font-monospace">noreply@kku.ac.th</div>
                                     </div>
                                 </div>
@@ -307,7 +303,7 @@
 
                             <div class="mb-3">
                                 <label for="diagnosticTargetEmail" class="form-label fw-bold small">
-                                    อีเมลปลายทางที่ต้องการทดสอบส่ง (Target Recipient)
+                                    อีเมลปลายทาง
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text bg-white"><i class="fas fa-envelope text-muted"></i></span>
@@ -317,10 +313,6 @@
                                     <button type="button" class="btn btn-primary px-3" id="btnSendTestEmail" data-call="sendDiagnosticTestEmail">
                                         <i class="fas fa-paper-plane me-1"></i> <span id="btnSendTestEmailText">ส่งอีเมลทดสอบ</span>
                                     </button>
-                                </div>
-                                <div class="form-text text-muted small mt-2">
-                                    <i class="fas fa-info-circle text-primary me-1"></i>
-                                    ระบบจะใส่ <strong>อีเมลของแอดมินที่เข้าสู่ระบบ</strong> เป็นค่าเริ่มต้นให้อัตโนมัติ และท่านสามารถพิมพ์เปลี่ยนเป็นอีเมลอื่นที่ต้องการทดสอบส่งได้อิสระ
                                 </div>
                             </div>
 
@@ -339,7 +331,7 @@
                                         <i class="fas fa-shield-alt" style="font-size:24px;color:#90caf9;"></i>
                                     </div>
                                     <h5 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 4px;">ยืนยันตัวตนด้วย OTP</h5>
-                                    <p style="color:rgba(255,255,255,0.75);font-size:13px;margin:0;">รหัส OTP 8 หลักถูกส่งไปที่อีเมลของคุณ</p>
+                                    <p style="color:rgba(255,255,255,0.75);font-size:13px;margin:0;">ส่งรหัส OTP 8 หลักไปที่อีเมลของท่านแล้ว</p>
                                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:0.7;"></button>
                                 </div>
 
@@ -435,14 +427,14 @@
                                         <div class="input-group mb-2">
                                             <input type="number" class="form-control" id="customAlertValue" min="1" max="365" placeholder="ระบุตัวเลข เช่น 15" required>
                                             <select class="form-select" id="customAlertUnit" style="max-width: 140px;">
-                                                <option value="DAYS">วัน (Days)</option>
-                                                <option value="WEEKS">สัปดาห์ (Weeks)</option>
-                                                <option value="MONTHS">เดือน (Months)</option>
+                                                <option value="DAYS">วัน</option>
+                                                <option value="WEEKS">สัปดาห์</option>
+                                                <option value="MONTHS">เดือน</option>
                                             </select>
                                             <span class="input-group-text bg-light text-muted">ก่อนหมด</span>
                                         </div>
                                         <div class="form-text text-muted mb-0">
-                                            <i class="fas fa-info-circle me-1"></i>ระบบจะส่งแจ้งเตือนทางอีเมลและในระบบเมื่อถึงเวลานี้ (เพิ่มได้สูงสุด 5 รายการ)
+                                            <i class="fas fa-info-circle me-1"></i>ระบบจะแจ้งเตือนทางอีเมลและในระบบเมื่อถึงเวลาที่กำหนด
                                         </div>
                                     </form>
                                 </div>

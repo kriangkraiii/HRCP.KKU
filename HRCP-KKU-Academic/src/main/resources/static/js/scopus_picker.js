@@ -137,7 +137,7 @@
                 state.loaded = true;
                 if (!body.linked) {
                     setStatus('');
-                    showNotice('ไม่พบข้อมูลของคุณในระบบ Fund Management — ' +
+                    showNotice('ไม่พบข้อมูลของท่านในระบบ Fund Management — ' +
                         'อีเมลที่ใช้เข้าสู่ระบบอาจไม่ตรงกับที่ลงทะเบียนไว้ กรุณาแจ้งผู้ดูแลระบบ');
                     return;
                 }

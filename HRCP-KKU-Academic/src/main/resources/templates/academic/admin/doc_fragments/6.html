@@ -44,8 +44,10 @@
                         <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
         <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
 
-                    <!-- ปุ่มส่งข้อเสนอแนะ (แสดงหลังบันทึกเอกสารแล้ว) -->
-                    <div th:if="${param.success != null || param.saved != null || existingData != null}" class="mt-3 border-top pt-3">
+                    <!-- ปุ่มส่งข้อเสนอแนะ — แสดงเสมอ เอกสารฉบับนี้ไม่มีปุ่มบันทึก (บันทึกอัตโนมัติ) เดิมปุ่มนี้
+                         โผล่เฉพาะหลังรีเฟรชหน้า เจ้าหน้าที่พิมพ์ข้อเสนอแนะเสร็จแล้วจึงหาปุ่มส่งไม่เจอ
+                         ตอนกดยืนยัน สคริปต์ด้านล่างบันทึกแบบร่างให้ก่อนส่ง -->
+                    <div class="mt-3 border-top pt-3">
                         <form th:action="'/admin/academic/request/' + ${request.id} + '/document/6/send-suggestion'" method="post" id="suggestionForm">
                             <button type="button" class="btn btn-warning" id="btnSendSuggestion">
                                 <i class="fas fa-envelope"></i> ส่งข้อเสนอแนะถึงผู้ยื่นทางอีเมลเพื่อทำการแก้ไขเอกสาร
@@ -94,9 +96,31 @@
                 var btnSend = document.getElementById('btnSendSuggestion');
                 if (btnSend) {
                     btnSend.addEventListener('click', function() {
+                        var text = document.querySelector('textarea[name="suggestions_text"]');
+                        if (text && !text.value.trim()) {
+                            text.classList.add('is-invalid');
+                            text.focus();
+                            return;
+                        }
                         var modal = new bootstrap.Modal(document.getElementById('suggestionConfirmModal'));
                         modal.show();
                     });
+                }
+                // ส่งหลังแบบร่างถึงเซิร์ฟเวอร์แล้วเท่านั้น — ปลายทางอ่านข้อเสนอแนะจากเอกสารที่บันทึกไว้
+                function submitSuggestion() {
+                    var send = function () { document.getElementById('suggestionForm').submit(); };
+                    if (window.AutoDraft && typeof window.AutoDraft.flushAll === 'function') {
+                        window.AutoDraft.flushAll().then(function (ok) {
+                            if (ok) {
+                                send();
+                            } else if (window.appConfirm) {
+                                window.appConfirm('บันทึกข้อเสนอแนะไม่สำเร็จ จึงยังไม่ได้ส่ง กรุณาลองใหม่อีกครั้ง',
+                                        { title: 'ส่งไม่สำเร็จ', variant: 'warning' });
+                            }
+                        });
+                    } else {
+                        send();
+                    }
                 }
                 var btnConfirm = document.getElementById('btnConfirmSendSuggestion');
                 if (btnConfirm) {
@@ -104,12 +128,10 @@
                         var modalEl = document.getElementById('suggestionConfirmModal');
                         var modalInstance = bootstrap.Modal.getInstance(modalEl);
                         if (modalInstance) {
-                            modalEl.addEventListener('hidden.bs.modal', function() {
-                                document.getElementById('suggestionForm').submit();
-                            }, { once: true });
+                            modalEl.addEventListener('hidden.bs.modal', submitSuggestion, { once: true });
                             modalInstance.hide();
                         } else {
-                            document.getElementById('suggestionForm').submit();
+                            submitSuggestion();
                         }
                     });
                 }

@@ -26,37 +26,6 @@
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
         }
 
-        /* Policy & Governance Card */
-        .policy-card {
-            background: var(--bg-card, #ffffff);
-            border: 1px solid var(--border-color, #e2e8f0);
-            border-left: 4px solid #3b82f6 !important;
-            border-radius: 0.875rem;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
-        }
-        [data-theme="dark"] .policy-card {
-            background: #1a1d26 !important;
-            border-color: #2d3041 !important;
-            border-left-color: #3b82f6 !important;
-        }
-        .policy-pillar {
-            background: var(--bg-hover, #f8fafc);
-            border: 1px solid var(--border-color, #f1f5f9);
-            border-radius: 0.75rem;
-            transition: all 0.2s ease;
-        }
-        [data-theme="dark"] .policy-pillar {
-            background: rgba(255, 255, 255, 0.04) !important;
-            border-color: rgba(255, 255, 255, 0.08) !important;
-        }
-        .policy-pillar:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-        }
-        [data-theme="dark"] .policy-pillar:hover {
-            background: rgba(255, 255, 255, 0.07) !important;
-            border-color: rgba(96, 165, 250, 0.3) !important;
-        }
 
         /* Tabs Styling */
         .matrix-nav-tabs {
@@ -307,16 +276,17 @@
                         <ol class="breadcrumb mb-0 small text-muted">
                             <li class="breadcrumb-item"><a href="/admin/academic/requests" class="text-decoration-none text-muted"><i class="fa-solid fa-house me-1"></i>หน้าหลัก</a></li>
                             <li class="breadcrumb-item"><a href="/admin/academic/settings" class="text-decoration-none text-muted">การตั้งค่าระบบ</a></li>
-                            <li class="breadcrumb-item active text-primary fw-bold" aria-current="page">เส้นทางการเวียนลงนาม (Signer Matrix)</li>
+                            <li class="breadcrumb-item active text-primary fw-bold" aria-current="page">เส้นทางการเวียนลงนาม</li>
                         </ol>
                     </nav>
 
                     <h2 class="h4 fw-bold mb-1 d-flex align-items-center gap-2">
                         <i class="fa-solid fa-signature text-primary"></i>
-                        ตั้งค่าผู้ลงนามและลำดับขั้นตอน (Signer Workflow Matrix)
+                        ตั้งค่าผู้ลงนามและลำดับขั้นตอน
+                        <span th:replace="~{academic/_info_tip :: tip('ผู้ลงนามลำดับถัดไปจะลงนามได้เมื่อลำดับก่อนหน้าลงนามครบแล้ว หากผู้ลงนามส่งกลับให้แก้ไข การเวียนจะหยุดและแจ้งผู้ยื่น ส่วนช่องลงนามของผู้ยื่นผูกกับบัญชีผู้ยื่นโดยอัตโนมัติ')}"></span>
                     </h2>
                     <p class="text-secondary small mb-0">
-                        ระบบควบคุมและกำหนดเส้นทางการเวียนลงนามดิจิทัล (Sequential Signer Matrix) กำหนดลำดับก่อน-หลัง (Step 1 &rarr; 6) เปิด/ปิดจุดลงนาม และผู้ลงนามเริ่มต้นสำหรับเอกสารทั้ง 17 ฉบับ
+                        กำหนดลำดับ จุดลงนาม และผู้ลงนามเริ่มต้นของเอกสารแต่ละฉบับ
                     </p>
                 </div>
 
@@ -330,61 +300,6 @@
 
         <!-- ==================== ALERT NOTIFICATIONS ==================== -->
 
-        <!-- ==================== WORKFLOW GOVERNANCE & SECURITY RULES ==================== -->
-        <div class="policy-card p-3 p-md-4 mb-4">
-            <div class="d-flex align-items-center gap-2 mb-3">
-                <i class="fa-solid fa-scale-balanced text-primary fs-5"></i>
-                <h6 class="fw-bold mb-0 text-body">ระเบียบและข้อกำหนดการเวียนลงนามดิจิทัล (Workflow Governance & Security Rules)</h6>
-            </div>
-            
-            <div class="row g-3">
-                <!-- Rule 1 -->
-                <div class="col-md-4">
-                    <div class="policy-pillar p-3 h-100">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-primary-subtle text-primary border px-2 py-1">
-                                <i class="fa-solid fa-arrow-down-1-9"></i> ข้อ 1
-                            </span>
-                            <span class="fw-bold small text-body">การลงนามตามลำดับขั้น</span>
-                        </div>
-                        <p class="small text-secondary mb-0">
-                            ผู้ลงนามในลำดับถัดไป (เช่น คณบดี ใน Step 3) จะได้รับแจ้งเตือนและสามารถลงนามได้ก็ต่อเมื่อลำดับก่อนหน้า (เช่น เจ้าหน้าที่ HR ใน Step 2) ลงนามเสร็จสิ้นสมบูรณ์แล้วเท่านั้น
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Rule 2 -->
-                <div class="col-md-4">
-                    <div class="policy-pillar p-3 h-100">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-danger-subtle text-danger border px-2 py-1">
-                                <i class="fa-solid fa-ban"></i> ข้อ 2
-                            </span>
-                            <span class="fw-bold small text-body">จุดส่งกลับแก้ไข (Decline)</span>
-                        </div>
-                        <p class="small text-secondary mb-0">
-                            หากผู้ลงนามกด <em>"ส่งกลับให้แก้ไข"</em> กระบวนการจะหยุดทันที ระบบจะระงับการส่งต่อและแจ้งเตือนตีกลับไปยังผู้ยื่นคำร้องเพื่อปรับปรุงเอกสาร
-                        </p>
-                    </div>
-                </div>
-
-                <!-- Rule 3 -->
-                <div class="col-md-4">
-                    <div class="policy-pillar p-3 h-100">
-                        <div class="d-flex align-items-center gap-2 mb-2">
-                            <span class="badge bg-success-subtle text-success border px-2 py-1">
-                                <i class="fa-solid fa-user-lock"></i> ข้อ 3
-                            </span>
-                            <span class="fw-bold small text-body">การผูกสิทธิ์บัญชีผู้ยื่น</span>
-                        </div>
-                        <p class="small text-secondary mb-0">
-                            จุดลงนามของผู้ยื่นคำร้อง (Applicant) จะถูกผูกกับบัญชีของผู้ยื่นโดยอัตโนมัติ และผู้ยื่นจะลงนามส่วนของตนเองก่อนนำส่งคำร้องเข้าสู่ระบบ
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
         <!-- ==================== TABS & FILTER TOOLBAR ==================== -->
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
             <ul class="nav matrix-nav-tabs" id="workflowTab" role="tablist">
@@ -392,7 +307,7 @@
                     <button class="nav-link active d-flex align-items-center gap-2" id="academic-tab" data-bs-toggle="tab"
                             data-bs-target="#academic-pane" type="button" role="tab">
                         <i class="fa-solid fa-chalkboard-user"></i>
-                        <span>หมวดที่ 1: ผลการสอน (Academic)</span>
+                        <span>หมวดที่ 1: ผลการสอน</span>
                         <span class="badge bg-primary text-white rounded-pill px-2" th:text="${#lists.size(academicGroups)} + ' เอกสาร'">8</span>
                     </button>
                 </li>
@@ -400,7 +315,7 @@
                     <button class="nav-link d-flex align-items-center gap-2" id="position-tab" data-bs-toggle="tab"
                             data-bs-target="#position-pane" type="button" role="tab">
                         <i class="fa-solid fa-award"></i>
-                        <span>หมวดที่ 2: ตำแหน่งทางวิชาการ (Position)</span>
+                        <span>หมวดที่ 2: ตำแหน่งทางวิชาการ</span>
                         <span class="badge bg-success text-white rounded-pill px-2" th:text="${#lists.size(positionGroups)} + ' เอกสาร'">9</span>
                     </button>
                 </li>
@@ -452,7 +367,7 @@
                                                     <th style="width: 80px;" class="text-center">เปิดใช้งาน</th>
                                                     <th style="width: 140px;" class="text-center">ลำดับขั้นตอน</th>
                                                     <th style="width: 250px;">ตำแหน่ง / บทบาทหน้าที่</th>
-                                                    <th>ผู้ดำรงตำแหน่งเริ่มต้น (Default Signer)</th>
+                                                    <th>ผู้ลงนามเริ่มต้น</th>
                                                     <th style="width: 200px;">Template Anchor</th>
                                                 </tr>
                                             </thead>
@@ -478,7 +393,7 @@
                                                     <td class="text-center">
                                                         <select name="stepOrders" class="form-select form-select-sm text-center step-select">
                                                             <option th:each="i : ${#numbers.sequence(1, 6)}"
-                                                                    th:value="${i}" th:text="'Step ' + ${i} + ' (ลำดับที่ ' + ${i} + ')'"
+                                                                    th:value="${i}" th:text="'ลำดับที่ ' + ${i}"
                                                                     th:selected="${i == slot.stepOrder}">Step 1</option>
                                                         </select>
                                                     </td>
@@ -489,23 +404,23 @@
                                                                 <i class="fa-solid fa-briefcase me-1"></i>บทบาทระบบ: <span th:text="${slot.defaultStaffRole}">HEAD_DEPT</span>
                                                             </span>
                                                         </div>
-                                                        <div th:if="${slot.defaultStaffRole == null or slot.slotKey == 'applicant'}">
+                                                        <div th:if="${slot.slotKey == 'applicant'}">
                                                             <span class="badge bg-success-subtle text-success border small">
-                                                                <i class="fa-solid fa-user-check me-1"></i> ผู้ยื่นคำร้อง (Applicant)
+                                                                <i class="fa-solid fa-user-check me-1"></i> ผู้ยื่นคำร้อง
                                                             </span>
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <!-- If Applicant Slot: Locked to applicant account -->
-                                                        <div th:if="${slot.defaultStaffRole == null or slot.slotKey == 'applicant'}">
+                                                        <div th:if="${slot.slotKey == 'applicant'}">
                                                             <input type="hidden" name="defaultSignerUserIds" value="">
                                                             <div class="applicant-locked-badge">
-                                                                <i class="fa-solid fa-lock text-primary me-2"></i> เซ็นด้วยตนเอง (ผูกบัญชีผู้ยื่นอัตโนมัติ)
+                                                                <i class="fa-solid fa-lock text-primary me-2"></i> ลงนามด้วยตนเอง (ผูกบัญชีผู้ยื่นอัตโนมัติ)
                                                             </div>
                                                         </div>
 
                                                         <!-- If Executive/Staff Slot: Searchable dropdown -->
-                                                        <div th:unless="${slot.defaultStaffRole == null or slot.slotKey == 'applicant'}">
+                                                        <div th:unless="${slot.slotKey == 'applicant'}">
                                                             <select name="defaultSignerUserIds" class="form-select form-select-sm searchable-select">
                                                                 <option value="">— ตรวจจับอัตโนมัติตามบทบาทบุคลากร —</option>
                                                                 <option th:each="signer : ${availableSigners}"
@@ -562,7 +477,7 @@
                                                     <th style="width: 80px;" class="text-center">เปิดใช้งาน</th>
                                                     <th style="width: 140px;" class="text-center">ลำดับขั้นตอน</th>
                                                     <th style="width: 250px;">ตำแหน่ง / บทบาทหน้าที่</th>
-                                                    <th>ผู้ดำรงตำแหน่งเริ่มต้น (Default Signer)</th>
+                                                    <th>ผู้ลงนามเริ่มต้น</th>
                                                     <th style="width: 200px;">Template Anchor</th>
                                                 </tr>
                                             </thead>
@@ -588,7 +503,7 @@
                                                     <td class="text-center">
                                                         <select name="stepOrders" class="form-select form-select-sm text-center step-select">
                                                             <option th:each="i : ${#numbers.sequence(1, 6)}"
-                                                                    th:value="${i}" th:text="'Step ' + ${i} + ' (ลำดับที่ ' + ${i} + ')'"
+                                                                    th:value="${i}" th:text="'ลำดับที่ ' + ${i}"
                                                                     th:selected="${i == slot.stepOrder}">Step 1</option>
                                                         </select>
                                                     </td>
@@ -599,23 +514,23 @@
                                                                 <i class="fa-solid fa-briefcase me-1"></i>บทบาทระบบ: <span th:text="${slot.defaultStaffRole}">HEAD_DEPT</span>
                                                             </span>
                                                         </div>
-                                                        <div th:if="${slot.defaultStaffRole == null or slot.slotKey == 'applicant'}">
+                                                        <div th:if="${slot.slotKey == 'applicant'}">
                                                             <span class="badge bg-success-subtle text-success border small">
-                                                                <i class="fa-solid fa-user-check me-1"></i> ผู้ยื่นคำร้อง (Applicant)
+                                                                <i class="fa-solid fa-user-check me-1"></i> ผู้ยื่นคำร้อง
                                                             </span>
                                                         </div>
                                                     </td>
                                                     <td>
                                                         <!-- If Applicant Slot: Locked to applicant account -->
-                                                        <div th:if="${slot.defaultStaffRole == null or slot.slotKey == 'applicant'}">
+                                                        <div th:if="${slot.slotKey == 'applicant'}">
                                                             <input type="hidden" name="defaultSignerUserIds" value="">
                                                             <div class="applicant-locked-badge">
-                                                                <i class="fa-solid fa-lock text-primary me-2"></i> เซ็นด้วยตนเอง (ผูกบัญชีผู้ยื่นอัตโนมัติ)
+                                                                <i class="fa-solid fa-lock text-primary me-2"></i> ลงนามด้วยตนเอง (ผูกบัญชีผู้ยื่นอัตโนมัติ)
                                                             </div>
                                                         </div>
 
                                                         <!-- If Executive/Staff Slot: Searchable dropdown -->
-                                                        <div th:unless="${slot.defaultStaffRole == null or slot.slotKey == 'applicant'}">
+                                                        <div th:unless="${slot.slotKey == 'applicant'}">
                                                             <select name="defaultSignerUserIds" class="form-select form-select-sm searchable-select">
                                                                 <option value="">— ตรวจจับอัตโนมัติตามบทบาทบุคลากร —</option>
                                                                 <option th:each="signer : ${availableSigners}"
@@ -648,7 +563,7 @@
                     <div class="d-flex align-items-center gap-2">
                         <i class="fa-solid fa-circle-check text-success fs-5"></i>
                         <span class="text-secondary small fw-medium">
-                            การบันทึกจะมีผลทันทีต่อการส่งเวียนลงนามเอกสารทุกคำร้องในรอบถัดไป
+                            มีผลกับการเวียนลงนามรอบถัดไปของทุกคำร้อง
                         </span>
                     </div>
                     <div class="d-flex align-items-center gap-2">

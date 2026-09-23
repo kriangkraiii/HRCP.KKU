@@ -168,6 +168,16 @@ public class AcademicRequestService {
 
         RequestStatus oldStatus = request.getCurrentStatus();
         requireLegalTransition(oldStatus, newStatus, requestId);
+        // เอกสารที่ส่งกลับให้แก้ต้องลงนามใหม่ครบก่อนเรื่องจะเดินต่อ — ส่วนการตีกลับ
+        // (คืนเป็นแบบร่าง / แจ้งผลให้แก้) ยังทำได้เสมอ
+        if (oldStatus != newStatus && newStatus != RequestStatus.DRAFT
+                && newStatus != RequestStatus.COMPLETED_REVISE
+                && newStatus != RequestStatus.REVISION_SUBMITTED) {
+            String blocker = resignBlocker(requestId);
+            if (blocker != null) {
+                throw new IllegalStateException(blocker);
+            }
+        }
         boolean returnedToApplicant = oldStatus == RequestStatus.RECEIVED && newStatus == RequestStatus.DRAFT;
         if (returnedToApplicant && (note == null || note.isBlank())) {
             // ผู้ยื่นต้องรู้ว่าต้องแก้อะไร การส่งคืนโดยไม่มีเหตุผลเท่ากับให้เดา
@@ -419,13 +429,15 @@ public class AcademicRequestService {
         if (request == null || request.getCurrentStatus() == null) {
             return false;
         }
+        // ก่อนดูว่าเป็นแบบร่าง — ผู้ยื่นลงนามเอกสารที่ 1-2 ได้ตั้งแต่ยังไม่ส่งคำร้อง ถ้าเช็กทีหลัง
+        // เอกสารที่ลงนามแล้วถูกเขียนทับได้ (บันทึกร่างอัตโนมัติที่ยิงช้า หรือ POST ตรง)
+        if (isDocumentLockedForSigning(request.getId(), documentType)) {
+            return false;
+        }
         if (request.getCurrentStatus() == RequestStatus.DRAFT) {
             return true;
         }
         if (CLOSED_STATUSES.contains(request.getCurrentStatus())) {
-            return false;
-        }
-        if (isDocumentLockedForSigning(request.getId(), documentType)) {
             return false;
         }
         return isRevisionRequested(request.getId(), documentType);
@@ -458,6 +470,75 @@ public class AcademicRequestService {
         var docs = documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType);
         return docs.stream()
                 .anyMatch(AcademicDocument::isRevisionRequested);
+    }
+
+    /**
+     * เอกสารที่เจ้าหน้าที่ส่งกลับให้แก้ แล้วยังลงนามใหม่ไม่ครบ
+     *
+     * <p>ส่งกลับ = ซองลายเซ็นเดิมถูกยกเลิก ลายเซ็นของ<em>ทุกคน</em>ในซองนั้นใช้ไม่ได้อีก ไม่ใช่แค่ของผู้ยื่น
+     * เอกสารจะนับว่าลงนามใหม่แล้วก็ต่อเมื่อทุกช่องที่เคยลงนามไว้ (และช่องของผู้ยื่นเสมอ) ลงนามอีกครั้ง
+     * ในซองที่เปิดหลังการส่งกลับ — ผู้ยื่นเซ็นแล้วแต่คณบดียังไม่เซ็นซ้ำ ยังไม่นับ
+     *
+     * <p>คำนวณจากเวลา ไม่ได้ล้างธงส่งกลับทิ้ง เพราะธงเดียวกันยังใช้บอกเหตุผลที่ส่งกลับอยู่
+     *
+     * @return เลขเอกสาร เรียงจากน้อยไปมาก — ว่างเมื่อไม่มีอะไรค้าง
+     */
+    @Transactional(readOnly = true)
+    public List<Integer> documentsAwaitingResign(Long requestId) {
+        var module = com.ecom.academic.model.SignatureModule.ACADEMIC;
+        java.util.Map<Integer, LocalDateTime> sentBack = new java.util.TreeMap<>();
+        documentRepository.findByRequestId(requestId).forEach(doc -> {
+            if (doc.getRevisionRequestedAt() != null) {
+                sentBack.merge(doc.getDocumentType(), doc.getRevisionRequestedAt(),
+                        (x, y) -> x.isAfter(y) ? x : y);
+            }
+        });
+        List<Integer> pending = new java.util.ArrayList<>();
+        sentBack.forEach((type, at) -> {
+            var slots = SignatureAnchorRegistry.slotsOf(module, type);
+            if (slots.isEmpty()) {
+                return; // ไม่มีช่องลงนาม แก้แล้วบันทึกก็จบ
+            }
+            var envelopes = signatureRequestRepository
+                    .findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, requestId, type);
+
+            java.util.Set<String> required = new java.util.HashSet<>();
+            if (slots.stream().anyMatch(slot -> "applicant".equals(slot.slotKey()))) {
+                required.add("applicant");
+            }
+            java.util.Set<String> signedAgain = new java.util.HashSet<>();
+            for (var envelope : envelopes) {
+                boolean before = envelope.getCreatedAt() != null && !envelope.getCreatedAt().isAfter(at);
+                var status = envelope.getStatus();
+                for (var step : envelope.getSteps()) {
+                    if (step.getStatus() != com.ecom.academic.model.SignatureStepStatus.SIGNED) {
+                        continue;
+                    }
+                    if (before) {
+                        required.add(step.getSlotKey());
+                    } else if (status == com.ecom.academic.model.SignatureRequestStatus.COMPLETED
+                            || status == com.ecom.academic.model.SignatureRequestStatus.IN_PROGRESS) {
+                        signedAgain.add(step.getSlotKey());
+                    }
+                }
+            }
+            if (!signedAgain.containsAll(required)) {
+                pending.add(type);
+            }
+        });
+        return pending;
+    }
+
+    /** ข้อความบอกเจ้าหน้าที่ว่าติดเอกสารฉบับไหน — null เมื่อเดินต่อได้ */
+    private String resignBlocker(Long requestId) {
+        List<Integer> pending = documentsAwaitingResign(requestId);
+        if (pending.isEmpty()) {
+            return null;
+        }
+        return "ยังเปลี่ยนสถานะไม่ได้ — เอกสารที่ส่งกลับให้แก้ไขยังลงนามใหม่ไม่ครบ: "
+                + pending.stream().map(t -> "เอกสารที่ " + t + " (" + getDocLabel(t) + ")")
+                        .reduce((a, b) -> a + ", " + b).orElse("")
+                + " — ผู้ยื่นต้องแก้และลงนามใหม่ และผู้ลงนามคนอื่นในเอกสารนั้นต้องลงนามใหม่ครบก่อน";
     }
 
     /** เหตุผลที่แอดมินส่งเอกสารฉบับนี้กลับมาให้แก้ไข (ถ้ามี) */

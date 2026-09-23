@@ -13,7 +13,7 @@
 
   var SAVING_LABEL = "กำลังบันทึกเอกสาร...";
   var FAIL_MSG =
-    "บันทึกเอกสารไม่สำเร็จ จึงยังไม่ได้ส่งไปลงนาม — กรุณาตรวจการเชื่อมต่อแล้วลองใหม่";
+    "บันทึกเอกสารไม่สำเร็จ จึงยังไม่ได้ส่งไปลงนาม กรุณาตรวจสอบการเชื่อมต่อแล้วลองใหม่";
 
   function submitButton(form) {
     return form.querySelector('button[type="submit"], input[type="submit"]');
@@ -96,13 +96,98 @@
           return;
         }
         form._preSaveDone = true;
-        if (typeof form.requestSubmit === "function") {
-          form.requestSubmit();
-        } else {
-          form.submit();
-        }
+        // เลื่อนออกไปหลัง event ปัจจุบันจบ — ถ้าแบบร่างบันทึกไว้แล้ว flushAll() resolve ทันที
+        // แล้ว .then นี้วิ่งใน microtask ระหว่างที่เบราว์เซอร์ยังส่ง submit รอบแรกอยู่
+        // requestSubmit() ช่วงนั้นถูกเบราว์เซอร์ทิ้งเงียบ ๆ (firing submission events)
+        // ผลคือกดส่งลงนามแล้วไม่มีอะไรเกิดขึ้น เมื่อผู้ใช้รอให้ขึ้น "บันทึกแล้ว" ก่อนกด
+        setTimeout(function () {
+          if (typeof form.requestSubmit === "function") {
+            form.requestSubmit();
+          } else {
+            form.submit();
+          }
+        }, 0);
       });
     },
     true
   );
+
+  /*
+   * จัดการการกดปุ่ม "บันทึกฉบับร่าง" ที่อยู่ในแผงลงนาม
+   * เพื่อส่งคำสั่งบันทึกไปยังฟอร์มเอกสารหลัก (Parent Doc Form)
+   */
+  document.addEventListener("click", function (e) {
+    var btn = e.target.closest(
+      '#panelSaveDraftBtn, [data-action="save-doc-draft"]'
+    );
+    if (!btn) return;
+
+    var docForm = document.querySelector(
+      'form[id^="doc"], form[data-auto-draft], form[action*="/document"], form[action*="/doc/"]'
+    );
+    if (!docForm) return;
+
+    // ถ้าปุ่มบันทึกเดิมในฟอร์มเอกสารยังมีอยู่และมี Event Listener เฉพาะ (เช่น btnSubmitDoc ใน admin) ให้ trigger ปุ่มนั้น
+    var origBtn = docForm.querySelector(
+      '#btnSubmitDoc, #doc1SubmitBtn, #doc2SubmitBtn'
+    );
+    if (origBtn && origBtn !== btn) {
+      origBtn.click();
+      return;
+    }
+
+    // ตรวจสอบความถูกต้องของแบบฟอร์มเบื้องต้น (HTML5 validation)
+    if (typeof docForm.reportValidity === "function" && !docForm.reportValidity()) {
+      return;
+    }
+
+    // กำหนด action=submit ในฟอร์มเอกสาร
+    var actionInput = docForm.querySelector('input[name="action"]');
+    if (!actionInput) {
+      actionInput = document.createElement("input");
+      actionInput.type = "hidden";
+      actionInput.name = "action";
+      docForm.appendChild(actionInput);
+    }
+    actionInput.value = "submit";
+
+    var originalHtml = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-sync-alt fa-spin me-1"></i> กำลังบันทึก...';
+
+    function resetBtn() {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+
+    docForm.addEventListener("submit", function onDocSubmit(evt) {
+      if (evt.defaultPrevented) {
+        resetBtn();
+      }
+    }, { once: true });
+
+    // Flush AutoDraft เพื่อความสดใหม่ของข้อมูลก่อนส่ง
+    if (window.AutoDraft && typeof window.AutoDraft.flushAll === "function") {
+      window.AutoDraft.flushAll().then(function () {
+        if (typeof docForm.requestSubmit === "function") {
+          docForm.requestSubmit();
+        } else {
+          docForm.submit();
+        }
+      }).catch(function () {
+        if (typeof docForm.requestSubmit === "function") {
+          docForm.requestSubmit();
+        } else {
+          docForm.submit();
+        }
+      });
+    } else {
+      if (typeof docForm.requestSubmit === "function") {
+        docForm.requestSubmit();
+      } else {
+        docForm.submit();
+      }
+    }
+  });
 })();
+

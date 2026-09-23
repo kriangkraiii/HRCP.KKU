@@ -29,13 +29,13 @@
                 <i class="fas fa-exclamation-circle me-1"></i>
                 <span th:if="${param.error[0] == 'incomplete_docs'}">กรุณากรอกเอกสารให้ครบทุกรายการก่อนส่งคำร้อง</span>
                 <span th:if="${param.error[0] == 'rank_not_higher'}">
-                    ยื่นคำร้องนี้ไม่ได้ เพราะตำแหน่งที่ขอไม่สูงกว่าตำแหน่งที่ท่านดำรงอยู่
+                    ยื่นคำร้องนี้ไม่ได้ เนื่องจากตำแหน่งที่ขอไม่สูงกว่าตำแหน่งที่ท่านดำรงอยู่
                 </span>
                 <span th:if="${param.error[0] == 'evaluation_required'}">
-                    ยื่นคำร้องนี้ไม่ได้ เพราะการขอตำแหน่งผู้ช่วยศาสตราจารย์และรองศาสตราจารย์ต้องใช้ผลการประเมินผลการสอน
+                    ยื่นคำร้องนี้ไม่ได้ เนื่องจากตำแหน่งผู้ช่วยศาสตราจารย์และรองศาสตราจารย์ต้องใช้ผลการประเมินผลการสอน
                 </span>
                 <span th:if="${param.error[0] == 'position_mismatch'}">
-                    ยื่นคำร้องนี้ไม่ได้ เพราะตำแหน่งที่ขอไม่ตรงกับตำแหน่งที่ระบุไว้ในผลการประเมินผลการสอน
+                    ยื่นคำร้องนี้ไม่ได้ เนื่องจากตำแหน่งที่ขอไม่ตรงกับผลการประเมินผลการสอน
                 </span>
                 <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'rank_not_higher'
                         or param.error[0] == 'evaluation_required' or param.error[0] == 'position_mismatch'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
@@ -130,7 +130,7 @@
                             <span th:if="${completedDocs.contains(entry.key) and docSignedMap != null and docSignedMap.get(entry.key)}" class="badge bg-success-subtle text-success border border-success-subtle fs-6">
                                 <i class="fas fa-check me-1"></i>ลงนามแล้ว
                             </span>
-                            <span th:if="${completedDocs.contains(entry.key) and (docSignedMap == null or !docSignedMap.get(entry.key)) and entry.key != 6}" class="badge bg-warning-subtle text-warning border border-warning-subtle fs-6">
+                            <span th:if="${completedDocs.contains(entry.key) and unsignedSigDocs != null and unsignedSigDocs.contains(entry.key)}" class="badge bg-warning-subtle text-warning border border-warning-subtle fs-6">
                                 <i class="fas fa-pen-nib me-1"></i>รอผู้ยื่นลงนาม
                             </span>
                             <span th:if="${completedDocs.contains(entry.key)}" class="badge bg-success fs-6">
@@ -164,6 +164,19 @@
                 </div>
             </th:block>
 
+            <!-- เจ้าหน้าที่ส่งเอกสารกลับมาให้แก้ (เช่น มติกลั่นกรองฯ ข้อ 22) — ต้องแก้และลงนามใหม่ เรื่องจึงเดินต่อได้ -->
+            <div th:if="${sentBackDocs != null and !sentBackDocs.isEmpty()}" class="alert alert-warning" id="sentBackAlert">
+                <i class="fas fa-pen-to-square me-1"></i>
+                <strong>เจ้าหน้าที่ส่งเอกสารกลับมาให้ท่านแก้ไข</strong> — กรุณาแก้ไขแล้ว<strong>ลงนามใหม่</strong> เรื่องจะเดินต่อได้เมื่อลงนามใหม่ครบ
+                <ul class="mb-0 mt-1">
+                    <li th:each="e : ${sentBackDocs}">
+                        <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${e.key}"
+                           th:text="'เอกสาร: ' + ${docLabels.get(e.key)}">เอกสาร</a>
+                        <span th:if="${!#strings.isEmpty(e.value)}" th:text="' — เหตุผล: ' + ${e.value}"></span>
+                    </li>
+                </ul>
+            </div>
+
             <!-- Submit Section -->
             <div class="card card-academic mb-4" th:if="${request.currentStatus.name() == 'DRAFT'}">
                 <div class="card-header bg-white border-bottom">
@@ -182,7 +195,7 @@
                     <th:block th:if="${#lists.size(completedDocs) >= #lists.size(applicantDocs) and !applicantSignaturesComplete}">
                         <div class="alert alert-warning mb-3">
                             <i class="fas fa-exclamation-triangle me-2"></i>
-                            กรุณาลงนามอิเล็กทรอนิกส์ในเอกสาร (ที่ระบุว่ารอผู้ยื่นลงนาม) ให้ครบถ้วนก่อนส่งคำร้อง
+                            กรุณาลงนามเอกสารที่มีสถานะ "รอผู้ยื่นลงนาม" ให้ครบก่อนส่งคำร้อง
                         </div>
                         <button class="btn btn-secondary btn-lg" disabled title="กรุณาลงนามเอกสารให้ครบถ้วนก่อน">
                             <i class="fas fa-lock me-1"></i> รอดำเนินการลงนาม
@@ -251,7 +264,7 @@
                         <div class="modal-footer justify-content-center border-0 pb-4">
                             <form th:action="'/user/position/request/' + ${request.id} + '/submit'" method="post">
                                 <button type="submit" class="btn btn-academic btn-lg px-5">
-                                    <i class="fas fa-check-circle me-2"></i> เข้าใจแล้ว ส่งคำร้อง
+                                    <i class="fas fa-check-circle me-2"></i> ยืนยันส่งคำร้อง
                                 </button>
                             </form>
                         </div>
@@ -273,8 +286,8 @@
                             <div class="mb-3 text-danger">
                                 <i class="fas fa-trash-alt fa-3x"></i>
                             </div>
-                            <h5 class="fw-bold mb-2">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกแบบร่างคำร้องขอตำแหน่งนี้?</h5>
-                            <p class="text-muted mb-0">ข้อมูลเอกสารที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมด และไม่สามารถกู้คืนได้</p>
+                            <h5 class="fw-bold mb-2">ยืนยันการยกเลิกแบบร่างคำร้องขอตำแหน่งนี้?</h5>
+                            <p class="text-muted mb-0">ข้อมูลที่กรอกไว้ในแบบร่างนี้จะถูกลบทั้งหมดและกู้คืนไม่ได้</p>
                         </div>
                         <div class="modal-footer bg-light d-flex justify-content-end gap-2">
                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">

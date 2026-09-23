@@ -21,7 +21,7 @@
                 </div>
                 <h5 class="fw-bold mb-2">ระบุรหัสตรวจสอบเอกสาร</h5>
                 <p class="text-secondary small mb-4" style="max-width: 480px; margin: 0 auto;">
-                    กรอกรหัสตรวจสอบเอกสาร (Verification Code) 10 หลัก ที่ระบุบริเวณมุมล่างของเอกสารฉบับจริง หรือในอีเมลแจ้งเตือน
+                    รหัส 10 หลักอยู่ที่มุมล่างของเอกสาร หรือในอีเมลแจ้งเตือน
                 </p>
                 <form onsubmit="event.preventDefault(); handleVerifySubmit(document.getElementById('verifyInputMain').value);" style="max-width: 420px; margin: 0 auto;">
                     <div class="input-group mb-3">
@@ -155,8 +155,7 @@
 
             <div th:unless="${report.sealingEnabled}" class="alert alert-secondary small">
                 <i class="fas fa-circle-info"></i>
-                ระบบยังไม่ได้ตั้งค่ากุญแจสำหรับผนึกหลักฐาน (<code>APP_ESIGN_HMAC_SECRET</code>)
-                จึงตรวจสอบการแก้ไขหลักฐานการลงนามไม่ได้ — ตรวจสอบได้เฉพาะความครบถ้วนของเนื้อหาเอกสารเท่านั้น
+                ตรวจสอบได้เฉพาะความครบถ้วนของเนื้อหาเอกสาร เนื่องจากระบบยังไม่ได้ตั้งค่าการผนึกหลักฐานการลงนาม
             </div>
 
             <!-- ============ ร่องรอยการดำเนินการ ============ -->

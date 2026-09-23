@@ -182,6 +182,19 @@ public class SecurityConfig {
                 return firewall;
         }
 
+        /**
+         * ตัวกรองจำกัดคำขอต้องทำงานในที่เดียว — ใน security chain ด้านล่าง
+         *
+         * <p>มันเป็น {@code @Component} Spring Boot จึงลงทะเบียนเป็น servlet filter ให้อีกทางหนึ่งด้วย
+         * คำขอเดียวถูกนับสองรอบ และรอบที่อยู่นอก security chain ไม่รู้ว่าใครเข้าระบบอยู่
+         */
+        @Bean
+        public org.springframework.boot.web.servlet.FilterRegistrationBean<RateLimitFilter> rateLimitFilterServletRegistration() {
+                var registration = new org.springframework.boot.web.servlet.FilterRegistrationBean<>(rateLimitFilter);
+                registration.setEnabled(false);
+                return registration;
+        }
+
         @Bean
         public SecurityFilterChain filterChain(HttpSecurity http, DaoAuthenticationProvider authenticationProvider)
                         throws Exception {

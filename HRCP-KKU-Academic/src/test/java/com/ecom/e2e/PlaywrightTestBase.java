@@ -190,6 +190,9 @@ public abstract class PlaywrightTestBase {
      */
     private static boolean isKnownTranslateWidgetNoise(String text) {
         return text.contains("gstatic.com")
+                // Google ตอบเครื่องที่ยิงถี่ด้วยหน้า captcha (/sorry) แทนสคริปต์ widget แปลภาษา
+                || text.contains("www.google.com/sorry")
+                || text.contains("[Google Translate]")
                 || text.contains("translate.googleapis.com") && text.contains("Applying inline style")
                 || text.contains("Applying inline style violates");
     }

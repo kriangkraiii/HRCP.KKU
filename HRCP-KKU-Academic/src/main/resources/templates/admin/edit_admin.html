@@ -6,7 +6,7 @@
 >
   <head>
     <meta charset="UTF-8" />
-    <title>แก้ไขข้อมูลแอดมิน</title>
+    <title>แก้ไขข้อมูลผู้ดูแลระบบ</title>
   </head>
 
   <body>
@@ -27,7 +27,7 @@
                 "
               >
                 <h5 class="mb-0">
-                  <i class="fas fa-user-shield me-2"></i>แก้ไขข้อมูลแอดมิน
+                  <i class="fas fa-user-shield me-2"></i>แก้ไขข้อมูลผู้ดูแลระบบ
                 </h5>
                 <a href="/admin/users?type=2" class="btn btn-outline-light btn-sm rounded-pill px-3">
                   <i class="fas fa-arrow-left me-1"></i> กลับ
@@ -129,11 +129,11 @@
                         >สิทธิ์การใช้งาน (Role) <span class="text-danger">*</span></label
                       >
                       <select name="role" class="form-select" id="roleSelect">
-                        <option value="ROLE_ADMIN" th:selected="${admin.role == 'ROLE_ADMIN'}"> ผู้ดูแลระบบ (Admin)</option>
+                        <option value="ROLE_ADMIN" th:selected="${admin.role == 'ROLE_ADMIN'}"> ผู้ดูแลระบบ</option>
                         <option value="ROLE_USER" th:selected="${admin.role == 'ROLE_USER'}"> ผู้ใช้งานทั่วไป (User)</option>
                       </select>
                       <div class="form-text text-muted" id="roleNotice">
-                        <span th:if="${admin.role == 'ROLE_ADMIN'}"> บัญชีผู้ดูแลระบบ (Admin) จะไม่มี Applicant ID</span>
+                        <span th:if="${admin.role == 'ROLE_ADMIN'}"> บัญชีผู้ดูแลระบบ จะไม่มี Applicant ID</span>
                         <span th:if="${admin.role == 'ROLE_USER'}"> หากเปลี่ยนเป็นผู้ใช้ทั่วไป จะได้รับรหัส Applicant ID อัตโนมัติ</span>
                       </div>
                     </div>
@@ -191,7 +191,7 @@
                           id="profileImageInput"
                         />
                         <div class="form-text text-muted mt-1">
-                          <i class="fas fa-info-circle me-1"></i>ไม่บังคับ — หากไม่อัพโหลดจะใช้รูปเดิม (รองรับ JPG, PNG, GIF, WEBP สูงสุด 5MB)
+                          <i class="fas fa-info-circle me-1"></i>ไม่บังคับ JPG, PNG, GIF หรือ WEBP ไม่เกิน 5 MB
                         </div>
                       </div>
                     </div>
@@ -328,13 +328,13 @@
                 }
 
                 // Show success message
-                showSuccessMessage("อัพเดทรูปโปรไฟล์สำเร็จ");
+                showSuccessMessage("อัปเดตรูปโปรไฟล์สำเร็จ");
               } else {
                 showErrorMessage("เกิดข้อผิดพลาด: " + data.error);
               }
             })
             .catch((error) => {
-              showErrorMessage("เกิดข้อผิดพลาดในการอัพโหลด");
+              showErrorMessage("เกิดข้อผิดพลาดในการอัปโหลด");
               console.error("Error:", error);
             });
         }

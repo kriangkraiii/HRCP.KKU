@@ -177,6 +177,9 @@ public class PositionAdminController {
         // Offering the whole list invited exactly the mistake the guard now
         // refuses, and left the officer to find out from an error message.
         model.addAttribute("allowedNextStatuses", request.getCurrentStatus().allowedNext());
+        // เอกสารที่ส่งกลับให้แก้แล้วยังลงนามใหม่ไม่ครบ — ฟอร์มสถานะบอกไว้ก่อนเจ้าหน้าที่กดแล้วโดนปฏิเสธ
+        model.addAttribute("awaitingResignDocs", positionService.documentsAwaitingResign(id).stream()
+                .map(t -> "เอกสารที่ " + t + " " + positionService.getDocLabel(t)).toList());
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
         model.addAttribute("editHistory", positionService.getEditHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
@@ -262,7 +265,10 @@ public class PositionAdminController {
                         getClientIpAddress());
             } catch (Exception logEx) { /* ignore */ }
         } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("errorDetail", e.getClass().getSimpleName() + ": " + e.getMessage());
+            // กติกาของกระบวนการ (ลำดับสถานะ / ต้องลงนามใหม่ก่อน) เป็นข้อความสำหรับคน ไม่ใช่ชื่อ exception
+            redirectAttributes.addFlashAttribute("errorDetail", e instanceof IllegalStateException
+                    ? e.getMessage()
+                    : e.getClass().getSimpleName() + ": " + e.getMessage());
             return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
         }
 

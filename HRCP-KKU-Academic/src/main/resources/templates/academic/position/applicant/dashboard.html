@@ -152,7 +152,7 @@
                         } else if (remaining < 90 * 24 * 60 * 60 * 1000) { // < 3 months
                             card.style.borderLeftColor = '#f57f17';
                             bar.style.background = 'linear-gradient(90deg, #ffa726, #f57f17)';
-                            warn.textContent = 'ใกล้หมดอายุ กรุณายื่นขอตำแหน่งภายในเร็วๆ นี้';
+                            warn.textContent = 'ใกล้หมดอายุ กรุณายื่นขอตำแหน่งโดยเร็ว';
                         } else if (remaining < 180 * 24 * 60 * 60 * 1000) { // < 6 months
                             card.style.borderLeftColor = '#ff9800';
                             warn.textContent = 'ผลประเมินจะหมดอายุในอีกไม่ถึง 6 เดือน';
@@ -168,12 +168,12 @@
 
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show">
                 <i class="fas fa-exclamation-triangle me-2"></i>
-                <span th:if="${param.error[0] == 'active_exists'}">ไม่สามารถยื่นคำร้องใหม่ได้ มีคำร้องที่กำลังดำเนินการอยู่</span>
+                <span th:if="${param.error[0] == 'active_exists'}">ยื่นคำร้องใหม่ไม่ได้ เนื่องจากมีคำร้องที่กำลังดำเนินการอยู่</span>
                 <span th:if="${param.error[0] == 'evaluation_already_used'}">
-                    ผลประเมินการสอนฉบับนี้ถูกใช้ยื่นขอตำแหน่งไปแล้ว ผลประเมิน 1 ฉบับใช้ได้กับคำร้องเดียวเท่านั้น
+                    ผลประเมินการสอนฉบับนี้ใช้ยื่นขอตำแหน่งไปแล้ว
                 </span>
                 <span th:if="${param.error[0] == 'rank_not_higher'}">
-                    ตำแหน่งที่ขอต้องสูงกว่าตำแหน่งที่ท่านดำรงอยู่ ไม่สามารถขอตำแหน่งเดิมหรือต่ำกว่าได้
+                    ตำแหน่งที่ขอต้องสูงกว่าตำแหน่งที่ท่านดำรงอยู่
                 </span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
@@ -190,7 +190,6 @@
                     <div class="d-flex justify-content-between align-items-start mb-3">
                         <div>
                             <h5 class="mb-1"><i class="fas fa-edit text-warning me-2"></i> คำร้องฉบับร่าง</h5>
-                            <small class="text-muted">กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง</small>
                         </div>
                         <span class="badge bg-warning text-dark fs-6">แบบร่าง</span>
                     </div>
@@ -332,7 +331,7 @@
                             <div class="mb-3 text-danger">
                                 <i class="fas fa-trash-alt fa-3x"></i>
                             </div>
-                            <h5 class="fw-bold mb-2">คุณแน่ใจหรือไม่ว่าต้องการยกเลิกแบบร่างนี้?</h5>
+                            <h5 class="fw-bold mb-2">ยืนยันการยกเลิกแบบร่างนี้?</h5>
                             <p class="text-muted mb-0">ข้อมูลเอกสารที่กรอกค้างไว้ในแบบร่างนี้จะถูกลบทั้งหมด และไม่สามารถกู้คืนได้</p>
                         </div>
                         <div class="modal-footer bg-light d-flex justify-content-end gap-2">

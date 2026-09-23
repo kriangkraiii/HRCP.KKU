@@ -713,7 +713,7 @@
 
         function deleteFolderPrompt(card) {
             var id=card.getAttribute('data-id'), name=card.getAttribute('data-name');
-            showConfirm('ลบโฟลเดอร์','ต้องการลบ <strong>'+name+'</strong> และไฟล์ข้างในทั้งหมด?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',function(){
+            showConfirm('ลบโฟลเดอร์','ต้องการลบ <strong>'+name+'</strong> และไฟล์ข้างในทั้งหมด?<br><small class="text-danger">กู้คืนไม่ได้</small>',function(){
                 var fd=new FormData(); fd.append('id',id); fd.append('_csrf',csrfToken);
                 fetch('/user/academic/storage/folder/delete',{method:'POST',body:fd})
                     .then(function(r){return r.json();}).then(function(d){showToast(d.message,d.success);if(d.success)setTimeout(function(){location.reload();},800);});
@@ -747,7 +747,7 @@
 
         function permanentDeleteStorageFile(btn) {
             var id=btn.getAttribute('data-id'), name=btn.getAttribute('data-name');
-            showConfirm('ลบถาวร','ลบ <strong>'+name+'</strong> ถาวร?<br><small class="text-danger">ไม่สามารถกู้คืนได้!</small>',function(){
+            showConfirm('ลบถาวร','ลบ <strong>'+name+'</strong> ถาวร?<br><small class="text-danger">กู้คืนไม่ได้</small>',function(){
                 var fd=new FormData(); fd.append('id',id); fd.append('_csrf',csrfToken);
                 fetch('/user/academic/storage/file/permanent-delete',{method:'POST',body:fd})
                     .then(function(r){return r.json();}).then(function(d){showToast(d.message,d.success);if(d.success){var row=document.getElementById('strash-'+id);if(row){row.style.transition='opacity 0.3s';row.style.opacity='0';setTimeout(function(){row.remove();},300);}}});

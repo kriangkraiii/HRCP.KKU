@@ -202,12 +202,12 @@
         </div>
         <div class="error-code">500</div>
         <h1 class="error-title" th:text="${errorTitle} ?: 'เกิดข้อผิดพลาดในระบบ'">เกิดข้อผิดพลาดในระบบ</h1>
-        <p class="error-message" th:text="${error} ?: 'เกิดข้อผิดพลาดขณะประมวลผลคำขอ ลองโหลดหน้าใหม่อีกครั้ง หรือกลับสู่หน้าหลักของระบบ'">
-            เกิดข้อผิดพลาดขณะประมวลผลคำขอ ลองโหลดหน้าใหม่อีกครั้ง หรือกลับสู่หน้าหลักของระบบ
+        <p class="error-message" th:text="${error} ?: 'เกิดข้อผิดพลาดขณะประมวลผลคำขอ กรุณาโหลดหน้าใหม่ หรือกลับสู่หน้าหลัก'">
+            เกิดข้อผิดพลาดขณะประมวลผลคำขอ กรุณาโหลดหน้าใหม่ หรือกลับสู่หน้าหลัก
         </p>
         <div class="error-actions">
             <button type="button" id="retryBtn" class="btn-custom-outline">
-                <i class="fas fa-rotate-right"></i> ลองใหม่อีกครั้ง
+                <i class="fas fa-rotate-right"></i> โหลดใหม่
             </button>
             <a href="/" class="btn-custom-primary">
                 <i class="fas fa-house"></i> กลับสู่หน้าหลัก

@@ -58,7 +58,7 @@ class StatusAdvanceNoteRenderTest extends AbstractFlowTest {
             assertThat(formFor(request, type))
                     .as("เอกสารที่ %d ต้องบอกว่าสถานะเปลี่ยนตอนลงนามครบ", type)
                     .contains("เอกสารฉบับนี้ทำให้คำร้องเดินไปขั้นถัดไป")
-                    .contains("สถานะจะเปลี่ยนเมื่อลงนามครบทุกขั้นแล้วเท่านั้น");
+                    .contains("สถานะจะเปลี่ยนเมื่อลงนามครบทุกขั้น");
         }
     }
 

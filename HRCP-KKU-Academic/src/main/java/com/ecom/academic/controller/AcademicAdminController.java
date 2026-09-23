@@ -43,6 +43,7 @@ import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
+import com.ecom.academic.service.Doc7Scoring;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
@@ -328,6 +329,9 @@ public class AcademicAdminController {
         // Offering the whole list invited exactly the mistake the guard now
         // refuses, and left the officer to find out from an error message.
         model.addAttribute("allowedNextStatuses", request.getCurrentStatus().allowedNext());
+        // เอกสารที่ส่งกลับให้แก้แล้วยังลงนามใหม่ไม่ครบ — ฟอร์มสถานะบอกไว้ก่อนเจ้าหน้าที่กดแล้วโดนปฏิเสธ
+        model.addAttribute("awaitingResignDocs", requestService.documentsAwaitingResign(id).stream()
+                .map(t -> "เอกสารที่ " + t + " " + requestService.getDocLabel(t)).toList());
         model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
 
         // Progress percentage
@@ -438,7 +442,10 @@ public class AcademicAdminController {
             return "redirect:/admin/academic/request/" + id + "?success=status_updated";
         } catch (Exception e) {
             logger.error("Status update failed for request #{}: {}", id, e.getMessage(), e);
-            redirectAttributes.addFlashAttribute("errorDetail", e.getClass().getSimpleName() + ": " + e.getMessage());
+            // กติกาของกระบวนการ (ลำดับสถานะ / ต้องลงนามใหม่ก่อน) เป็นข้อความสำหรับคน ไม่ใช่ชื่อ exception
+            redirectAttributes.addFlashAttribute("errorDetail", e instanceof IllegalStateException
+                    ? e.getMessage()
+                    : e.getClass().getSimpleName() + ": " + e.getMessage());
             return "redirect:/admin/academic/request/" + id + "?error=status_update_failed";
         }
     }
@@ -556,7 +563,7 @@ public class AcademicAdminController {
                     // eval_result_level → คำนวณจากคะแนนรวมให้ที่นี่
                     Object lv = doc7Data.get("eval_result_level");
                     if (lv == null || lv.toString().isBlank()) {
-                        String level = evalLevelFromScore(doc7Data.get("scorex"));
+                        String level = Doc7Scoring.evalLevelFromScore(doc7Data.get("scorex"));
                         if (!level.isEmpty())
                             doc7Data.put("eval_result_level", level);
                     }
@@ -681,60 +688,7 @@ public class AcademicAdminController {
 
         // ============ Document 7: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
         if (type == 7) {
-            // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1=20, 2=30, 3=30, 4=20
-            int[] weights = { 20, 30, 30, 20 };
-            double grandTotal = 0;
-
-            for (int sec = 1; sec <= 4; sec++) {
-                // Admin กรอกคะแนนรวมต่อส่วน (1 ค่าต่อส่วน) ในช่อง sec_score_X
-                String secScoreVal = formData.getOrDefault("sec_score_" + sec, "0");
-                double secScore = 0;
-                try {
-                    secScore = Double.parseDouble(secScoreVal);
-                } catch (NumberFormatException e) {
-                    secScore = 0;
-                }
-
-                // วิเคราะห์ว่าคะแนนตกอยู่ในช่วงไหน (5 ช่วง)
-                // ช่วง: 0-1 = score_1, 1.01-2 = score_2, 2.01-3 = score_3, 3.01-4 = score_4,
-                // 4.01-5 = score_5
-                // placeholder ใน template DOCX: {{score11}}, {{score12}}, ..., {{score45}}
-                for (int range = 1; range <= 5; range++) {
-                    String key = "score" + sec + range;
-                    boolean inRange = false;
-                    if (range == 1)
-                        inRange = (secScore > 0 && secScore <= 1);
-                    else if (range == 2)
-                        inRange = (secScore > 1 && secScore <= 2);
-                    else if (range == 3)
-                        inRange = (secScore > 2 && secScore <= 3);
-                    else if (range == 4)
-                        inRange = (secScore > 3 && secScore <= 4);
-                    else if (range == 5)
-                        inRange = (secScore > 4 && secScore <= 5);
-                    // ช่วงที่ตรง → ใส่คะแนน, ช่วงอื่น → ว่าง
-                    formData.put(key, inRange ? String.valueOf(secScore) : "");
-                }
-
-                // สูตร: (คะแนน / 5) × ค่าน้ำหนัก
-                double weighted = (secScore / 5.0) * weights[sec - 1];
-                formData.put("score" + sec + "x", "%.2f".formatted(weighted));
-                grandTotal += weighted;
-            }
-
-            // คะแนนรวม — เก็บเป็นเลขอารบิกเสมอ เอกสารที่ 7 พิมพ์เป็นเลขไทยก็จริง แต่การแปลง
-            // เป็นเรื่องของตอนสร้างไฟล์ (DocumentGenerationService ดูจากเทมเพลตเอง) ไม่ใช่ของ
-            // ข้อมูลที่บันทึกไว้ ซึ่งต้องอ่านกลับมาใส่ฟอร์มและคำนวณต่อได้
-            formData.put("scorex", "%.2f".formatted(grandTotal));
-
-            // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์ (ใช้คะแนนจริง ไม่ปัดขึ้น)
-            formData.put("ch1", grandTotal <= 56 ? "☑" : "☐");
-            formData.put("ch2", (grandTotal > 56 && grandTotal <= 70) ? "☑" : "☐");
-            formData.put("ch3", (grandTotal > 70 && grandTotal <= 85) ? "☑" : "☐");
-            formData.put("ch4", grandTotal > 85 ? "☑" : "☐");
-
-            // กำหนด eval_level จากผลคะแนนเพื่อส่งต่อไป doc8/doc9
-            formData.put("eval_result_level", evalLevelFromScore(grandTotal));
+            Doc7Scoring.derive(formData);
 
             // auto-fill title/applicant_name/requested_position จาก doc1 ถ้า form
             // ไม่ได้ส่งมา
@@ -1111,6 +1065,33 @@ public class AcademicAdminController {
         return "redirect:/admin/academic/request/" + id + "?success=attachment_uploaded";
     }
 
+    /**
+     * เอกสารที่ผู้ยื่นแก้ไขแล้วส่งกลับมา (Flow ข้อ 13) — เจ้าหน้าที่ต้องเปิดได้เพื่อส่งต่อให้อนุกรรมการ (ข้อ 14)
+     *
+     * <p>ไฟล์ถูกเก็บตั้งแต่ GAP-34 แต่ไม่มีหน้าไหนให้เปิด เจ้าหน้าที่จึงไม่เคยเห็นฉบับแก้
+     */
+    @GetMapping("/request/{id}/revision-file")
+    public ResponseEntity<Resource> downloadRevisionFile(@PathVariable Long id) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        String stored = request.getRevisionFilePath();
+        if (stored == null || stored.isBlank() || !Files.exists(Path.of(stored))) {
+            return ResponseEntity.notFound().build();
+        }
+        Path path = Path.of(stored);
+        String rawFilename = path.getFileName().toString();
+        String safeFilename = java.net.URLEncoder.encode(rawFilename, java.nio.charset.StandardCharsets.UTF_8)
+                .replace("+", "%20");
+        String asciiFilename = rawFilename.replaceAll("[^a-zA-Z0-9._-]", "_");
+        String contentType = Files.probeContentType(path);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + asciiFilename + "\"; filename*=UTF-8''" + safeFilename)
+                .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
+                .contentLength(Files.size(path))
+                .body(new FileSystemResource(path));
+    }
+
     @GetMapping("/request/{id}/attachment/{attachmentId}/download")
     public ResponseEntity<Resource> downloadAttachment(@PathVariable Long id,
             @PathVariable Long attachmentId) throws IOException {
@@ -1237,28 +1218,6 @@ public class AcademicAdminController {
         }
 
         return "redirect:/admin/academic/request/" + id + "?success=attachment_deleted";
-    }
-
-    /** สรุประดับผลการประเมินจากคะแนนรวม (รับได้ทั้งเลขไทยและ Arabic) */
-    private static String evalLevelFromScore(Object rawScore) {
-        if (rawScore == null)
-            return "";
-        String s = ThaiDateUtil.toArabicDigits(rawScore.toString()).trim();
-        if (s.isEmpty())
-            return "";
-        try {
-            // ใช้คะแนนจริงตามช่วงเกณฑ์ ไม่ปัดเศษขึ้น
-            double score = Double.parseDouble(s);
-            if (score <= 56)
-                return "ไม่ผ่าน";
-            if (score <= 70)
-                return "ชำนาญ";
-            if (score <= 85)
-                return "ชำนาญพิเศษ";
-            return "เชี่ยวชาญ";
-        } catch (NumberFormatException e) {
-            return "";
-        }
     }
 
     /**

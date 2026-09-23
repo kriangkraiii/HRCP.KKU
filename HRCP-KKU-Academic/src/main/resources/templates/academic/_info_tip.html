@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--
+    ปุ่ม (i) สำหรับคำอธิบายที่อ่านครั้งเดียวแล้วไม่ต้องเห็นอีก เช่น เหตุผลของขั้นตอนหรือข้อกฎหมาย
+    ข้อความที่ผู้ใช้ต้องใช้ตัดสินใจ หรือเตือนเรื่องที่ย้อนกลับไม่ได้ ให้คงไว้บนหน้า ไม่ใส่ในนี้
+
+    ใช้:  <span th:replace="~{academic/_info_tip :: tip('ข้อความอธิบาย')}"></span>
+
+    เป็น span ที่ tabindex="0" ไม่ใช่ button เพราะ Safari ไม่ focus ปุ่มเมื่อคลิก ทำให้ popover
+    แบบ trigger focus ไม่เปิด (ตามคำแนะนำของ Bootstrap) เนื้อหาเป็นข้อความล้วน Thymeleaf escape ให้
+    การเปิดปิดอยู่ใน /js/info_tip.js ซึ่ง base_academic โหลดไว้ทุกหน้า
+-->
+<span th:fragment="tip(text)"
+      class="info-tip"
+      role="button"
+      tabindex="0"
+      aria-label="ข้อมูลเพิ่มเติม"
+      data-bs-toggle="popover"
+      data-bs-trigger="focus"
+      data-bs-placement="auto"
+      th:attr="data-bs-content=${text}"><i class="fas fa-circle-info" aria-hidden="true"></i></span>
+</body>
+</html>

@@ -6,6 +6,15 @@
  *        <script src="/js/select_to_datalist.js"></script>
  */
 document.addEventListener('DOMContentLoaded', function () {
+    // ค่าที่บันทึกไว้ — ช่องนี้พิมพ์ค่าเองได้ (เช่นคำนำหน้าที่ไม่มีในรายการ) แต่ <select> ที่เซิร์ฟเวอร์
+    // เรนเดอร์มาเลือกได้เฉพาะค่าที่มีในรายการ ค่าที่พิมพ์เองจึงหายตอนเปิดฟอร์มซ้ำ (เช่นตอนถูกส่งกลับ
+    // ให้แก้) แล้วผู้ใช้ส่งลงนามไม่ได้เพราะช่องบังคับว่าง — อ่านจากข้อมูลที่บันทึกไว้แทน
+    var saved = {};
+    var holder = document.getElementById('existingDataHolder');
+    if (holder && holder.value) {
+        try { saved = JSON.parse(holder.value) || {}; } catch (e) { saved = {}; }
+    }
+
     // Target all selects inside doc forms (cards with .card-academic)
     document.querySelectorAll('form[id^="doc"] select.form-select').forEach(function (sel) {
         const name = sel.name;
@@ -35,6 +44,9 @@ document.addEventListener('DOMContentLoaded', function () {
             ? sel.querySelector('option[value=""]').textContent.trim()
             : '-- เลือกหรือพิมพ์ --';
         if (required) input.required = true;
+        if (!selectedValue && typeof saved[name] === 'string' && saved[name].trim()) {
+            selectedValue = saved[name].trim();
+        }
         if (selectedValue) input.value = selectedValue;
         if (sel.id) input.id = sel.id;
         // ต้องยกสถานะล็อกมาด้วย มิฉะนั้นช่องที่ถูกปิดไว้จะกลับมาแก้ได้ทันทีที่สคริปต์นี้ทำงาน

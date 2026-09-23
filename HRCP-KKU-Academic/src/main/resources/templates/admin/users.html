@@ -14,7 +14,7 @@
 					<i class="fas fa-users text-primary me-2" th:if="${userType==1}"></i>
 					<i class="fas fa-user-shield text-primary me-2" th:if="${userType==2}"></i>
 					<span th:if="${userType==1}">จัดการผู้ใช้งานทั่วไป</span>
-					<span th:if="${userType==2}">จัดการผู้ดูแลระบบ (Admin)</span>
+					<span th:if="${userType==2}">จัดการผู้ดูแลระบบ</span>
 				</h3>
 				<div class="d-flex gap-2 align-items-center">
 					<form th:if="${userType==1}" th:action="@{/admin/academic/staff/sync}" method="post" class="d-inline">
@@ -105,7 +105,7 @@
 											th:data-email="${u.email}"
 											data-call="resetTwoFactor" data-call-arg="self"
 											class="btn btn-sm btn-warning"
-											title="ปิด 2FA ให้บัญชีนี้ ใช้เมื่อผู้ใช้เข้าอีเมลรับ OTP ไม่ได้">
+											title="ปิด 2FA ของบัญชีนี้ กรณีผู้ใช้รับ OTP ทางอีเมลไม่ได้">
 											<i class="fa-solid fa-shield-halved"></i> รีเซ็ต 2FA
 										</a>
 										<a href="#"
@@ -178,7 +178,7 @@
 				const newStatus = el.checked;
 
 				if (!newStatus) {
-					var msg = 'คุณแน่ใจหรือไม่ว่าต้องการระงับการใช้งาน (Deactivate) บัญชีผู้ใช้นี้?';
+					var msg = 'ยืนยันการระงับการใช้งานบัญชีผู้ใช้นี้?';
 					var confirmPromise = (typeof window.appConfirm === 'function')
 						? window.appConfirm(msg, { title: 'ยืนยันระงับบัญชี', confirmText: 'ยืนยันระงับ', variant: 'danger' })
 						: Promise.resolve(confirm(msg));

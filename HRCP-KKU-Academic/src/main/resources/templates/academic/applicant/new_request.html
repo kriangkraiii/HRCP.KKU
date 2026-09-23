@@ -48,7 +48,6 @@
             <div class="page-header">
                 <div class="page-header-text">
                     <h3 class="page-header-title">ยื่นคำร้องใหม่</h3>
-                    <p class="page-header-sub">กรอกเอกสารที่จำเป็นให้ครบถ้วน แล้วส่งคำร้อง</p>
                 </div>
                 <span class="badge bg-secondary fs-6">แบบร่าง</span>
             </div>
@@ -160,7 +159,7 @@
                 <th:block th:if="${hasDoc1 and hasDoc2 and !applicantSignaturesComplete}">
                     <div class="d-flex align-items-center gap-2 mb-3">
                         <i class="fas fa-exclamation-triangle text-warning fs-5"></i>
-                        <span class="text-dark">กรุณาลงนามอิเล็กทรอนิกส์ในเอกสาร (ที่ระบุว่ารอลงนาม) ให้ครบถ้วนก่อนส่งคำร้อง</span>
+                        <span class="text-dark">กรุณาลงนามเอกสารที่มีสถานะ "รอลงนาม" ให้ครบก่อนส่งคำร้อง</span>
                     </div>
                     <div class="submit-section-actions">
                         <button class="btn btn-secondary btn-lg" disabled title="กรุณาลงนามเอกสารให้ครบถ้วนก่อน">
@@ -199,7 +198,7 @@
                         </div>
                         <div class="modal-body text-center py-4">
                             <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
-                            <p class="fs-5 mb-0">กรุณานำส่งเอกสารฉบับจริง<br>ให้นักทรัพยากรบุคคลวิทยาลัยการคอมพิวเตอร์และตรวจสอบความถูกต้อง</p>
+                            <p class="fs-5 mb-0">กรุณาตรวจสอบความถูกต้อง และนำส่งเอกสารฉบับจริง<br>ให้นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
                         </div>
                         <div class="modal-footer justify-content-center border-0 pb-4">
                             <form th:action="'/user/academic/request/' + ${request.id} + '/submit'" method="post">
