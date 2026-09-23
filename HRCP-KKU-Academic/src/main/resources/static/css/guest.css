@@ -127,7 +127,8 @@ body {
     text-shadow: 0 0 30px rgba(91, 146, 229, 0.5), 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-.guest-brand-title .brand-acad {
+.guest-brand-title .brand-acad,
+.guest-brand-title .brand-hrd {
     color: #ffffff;
     font-weight: 750;
     display: inline-block;

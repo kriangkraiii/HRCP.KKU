@@ -320,7 +320,8 @@ body {
   text-shadow: 0 0 16px rgba(91, 146, 229, 0.4);
 }
 
-.sidebar-brand h6 .brand-acad {
+.sidebar-brand h6 .brand-acad,
+.sidebar-brand h6 .brand-hrd {
   color: #ffffff;
   font-weight: 750;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);

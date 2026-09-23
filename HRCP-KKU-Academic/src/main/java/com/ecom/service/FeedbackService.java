@@ -105,7 +105,7 @@ public class FeedbackService {
                 helper.setCc(sender.getEmail());
             }
 
-            String fullSubject = "[CP ACAD] รายงาน: " + category + " — " + subject;
+            String fullSubject = "[CP HRD] Report: " + category + " — " + subject;
             helper.setSubject(fullSubject);
 
             String senderName = sender.getName() != null ? sender.getName() : "ผู้ใช้งาน";

@@ -12,8 +12,8 @@
 	<groupId>com.ecom</groupId>
 	<artifactId>HRCP_KKU</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>CP_ACAD</name>
-	<description>CP ACAD - CP Academic Evaluation &amp; Promotion System</description>
+	<name>CP_HRD</name>
+	<description>CP HRD - College of Computing Human Resource Development System</description>
 	<properties>
 		<java.version>21</java.version>
 		<skipTests>false</skipTests>

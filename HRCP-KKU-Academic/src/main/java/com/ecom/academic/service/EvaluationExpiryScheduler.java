@@ -144,7 +144,7 @@ public class EvaluationExpiryScheduler {
 
             String requestCode = request.getRequestCode() != null ? request.getRequestCode() : String.valueOf(request.getId());
 
-            String subject = "แจ้งเตือน: ผลประเมินการสอน (" + requestCode + ") จะหมดอายุภายใน " + alertLabel + " - CP ACAD";
+            String subject = "แจ้งเตือน: ผลประเมินการสอน (" + requestCode + ") จะหมดอายุภายใน " + alertLabel + " - CP HRD";
             String body = com.ecom.util.EmailTemplateHelper.buildEvaluationExpiryEmail(
                     user.getName(),
                     requestCode,
