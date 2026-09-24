@@ -43,33 +43,8 @@ class EsignPdfViewer {
     renderSkeleton() {
         this.container.innerHTML = `
             <div class="esign-viewer-wrapper">
-                <div class="esign-viewer-toolbar">
-                    <div class="tool-group">
-                        <button type="button" class="btn-tool" id="${this.container.id}-btn-zoom-out" title="ย่อ (-)">
-                            <i class="fas fa-magnifying-glass-minus"></i>
-                        </button>
-                        <button type="button" class="btn-tool" id="${this.container.id}-btn-zoom-in" title="ขยาย (+)">
-                            <i class="fas fa-magnifying-glass-plus"></i>
-                        </button>
-                        <button type="button" class="btn-tool" id="${this.container.id}-btn-fit-width" title="พอดีความกว้างหน้าจอ">
-                            <i class="fas fa-arrows-left-right"></i> พอดีหน้า
-                        </button>
-                        <button type="button" class="btn-tool" id="${this.container.id}-btn-actual-size" title="ขนาดจริง (100%)">
-                            <i class="fas fa-compress"></i> 100%
-                        </button>
-                    </div>
-                    <div class="tool-group">
-                        <span class="page-indicator" id="${this.container.id}-page-indicator">
-                            หน้า <span id="${this.container.id}-cur-page">1</span> / <span id="${this.container.id}-total-pages">-</span>
-                        </span>
-                        <button type="button" class="btn-tool" id="${this.container.id}-btn-fullscreen" title="ดูเต็มจอ">
-                            <i class="fas fa-expand"></i>
-                        </button>
-                        <a href="${this.pdfUrl}" target="_blank" class="btn-tool" title="เปิดแท็บใหม่">
-                            <i class="fas fa-arrow-up-right-from-square"></i>
-                        </a>
-                    </div>
-                </div>
+                <!-- แถบเครื่องมือ (ซูม/พอดีหน้า/เต็มจอ) ถูกเอาออก — ใช้งานไม่สะดวกและชอบค้าง
+                     เอกสารพอดีความกว้างอัตโนมัติ และปรับตามเมื่อขนาดหน้าจอเปลี่ยน -->
                 <div class="esign-viewer-pages" id="${this.container.id}-pages-view">
                     <div class="esign-viewer-loading" id="${this.container.id}-loading">
                         <div class="esign-loading-card">
