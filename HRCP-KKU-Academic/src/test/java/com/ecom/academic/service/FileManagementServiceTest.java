@@ -35,6 +35,9 @@ class FileManagementServiceTest {
     @Mock
     private AcademicAttachmentRepository attachmentRepository;
 
+    @org.mockito.Spy
+    private com.ecom.service.UploadPaths uploadPaths = com.ecom.service.UploadPaths.workingDirectoryDefault();
+
     @InjectMocks
     private FileManagementService fileManagementService;
 
