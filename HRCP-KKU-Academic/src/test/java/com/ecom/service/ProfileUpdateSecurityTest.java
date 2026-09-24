@@ -83,6 +83,15 @@ class ProfileUpdateSecurityTest {
         return userRepository.save(u);
     }
 
+    /**
+     * ผู้ยื่นอัปโหลดรูปเองไม่ได้แล้ว เทสที่ตรวจความปลอดภัยของการเก็บไฟล์จึงรันในฐานะแอดมิน
+     * ซึ่งยังอัปโหลดผ่านทางเดียวกันได้
+     */
+    private void asAdmin(UserDtls user) {
+        user.setRole("ROLE_ADMIN");
+        userRepository.save(user);
+    }
+
     private MockMultipartFile emptyUpload() {
         return new MockMultipartFile("img", "", "image/jpeg", new byte[0]);
     }
@@ -112,14 +121,14 @@ class ProfileUpdateSecurityTest {
     void updateProfile_appliesChangesToAuthenticatedUser() {
         UserDtls form = new UserDtls();
         form.setId(victim.getId());            // wrong id on purpose
-        form.setFirstName("Renamed");
-        form.setLastName("Properly");
+        form.setMobileNumber("0899999999");    // the one field an applicant may change
 
         userService.updateUserProfile(form, emptyUpload(), attacker.getEmail());
 
-        UserDtls attackerAfter = userRepository.findById(attacker.getId()).orElseThrow();
-        assertThat(attackerAfter.getFirstName()).isEqualTo("Renamed");
-        assertThat(attackerAfter.getLastName()).isEqualTo("Properly");
+        assertThat(userRepository.findById(attacker.getId()).orElseThrow().getMobileNumber())
+                .isEqualTo("0899999999");
+        assertThat(userRepository.findById(victim.getId()).orElseThrow().getMobileNumber())
+                .isNotEqualTo("0899999999");
     }
 
     // ==================== C-02 ====================
@@ -127,6 +136,7 @@ class ProfileUpdateSecurityTest {
     @Test
     @DisplayName("C-02: ชื่อไฟล์แบบ path traversal ต้องไม่เขียนออกนอกโฟลเดอร์ปลายทาง")
     void upload_withTraversalFilename_doesNotEscapeUploadDir() throws Exception {
+        asAdmin(attacker);
         Path outside = tempUploadDir.getParent().resolve("pwned.png");
         Files.deleteIfExists(outside);
 
@@ -143,6 +153,7 @@ class ProfileUpdateSecurityTest {
     @Test
     @DisplayName("C-02: ไฟล์ที่ไม่ใช่รูปภาพต้องถูกปฏิเสธ")
     void upload_withNonImageExtension_isRejected() {
+        asAdmin(attacker);
         MockMultipartFile html = new MockMultipartFile(
                 "img", "evil.html", "text/html", "<script>alert(1)</script>".getBytes());
 
@@ -157,6 +168,8 @@ class ProfileUpdateSecurityTest {
     @Test
     @DisplayName("C-02: ผู้ใช้สองคนอัปโหลดชื่อไฟล์เดียวกันต้องไม่ทับกัน")
     void upload_sameFilenameByTwoUsers_doesNotOverwrite() {
+        asAdmin(attacker);
+        asAdmin(victim);
         MockMultipartFile a = new MockMultipartFile("img", "avatar.png", "image/png", pngBytes());
         MockMultipartFile b = new MockMultipartFile("img", "avatar.png", "image/png", pngBytes());
 
@@ -172,6 +185,7 @@ class ProfileUpdateSecurityTest {
     @Test
     @DisplayName("C-02: ชื่อไฟล์ที่บันทึกลง DB ต้องเป็นชื่อที่ระบบสร้าง ไม่ใช่ชื่อจาก client")
     void upload_storesGeneratedFilenameNotClientFilename() {
+        asAdmin(attacker);
         MockMultipartFile img = new MockMultipartFile("img", "avatar.png", "image/png", pngBytes());
 
         userService.updateUserProfile(new UserDtls(), img, attacker.getEmail());
@@ -374,6 +388,27 @@ class ProfileUpdateSecurityTest {
 
         assertThat(userRepository.findById(admin.getId()).orElseThrow().getTitle())
                 .isEqualTo("รศ.ดร.");
+    }
+
+    @Test
+    @DisplayName("ผู้ยื่นแก้ได้เฉพาะเบอร์โทรศัพท์ — ชื่อ ชื่ออังกฤษ และรูป ไม่เปลี่ยน")
+    void updateProfile_applicantMayOnlyChangeThePhoneNumber() {
+        UserDtls fromForm = new UserDtls();
+        fromForm.setFirstName("ชื่อใหม่");
+        fromForm.setLastName("นามสกุลใหม่");
+        fromForm.setFirstNameEn("New");
+        fromForm.setLastNameEn("Name");
+        fromForm.setMobileNumber("0812345678");
+
+        userService.updateUserProfile(fromForm,
+                new MockMultipartFile("img", "a.png", "image/png", pngBytes()), attacker.getEmail());
+
+        UserDtls saved = userRepository.findById(attacker.getId()).orElseThrow();
+        assertThat(saved.getMobileNumber()).isEqualTo("0812345678");
+        assertThat(saved.getFirstName()).isEqualTo("Attacker");
+        assertThat(saved.getLastName()).isEqualTo("One");
+        assertThat(saved.getFirstNameEn()).isNull();
+        assertThat(saved.getProfileImage()).isEqualTo("default.png");
     }
 
     /** ProfileImageStorage decodes uploads, so tests need real encoded bytes. */

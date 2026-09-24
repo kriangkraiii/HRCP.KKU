@@ -141,7 +141,7 @@
 									<div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-center gap-3">
 										<div class="avatar-preview-box position-relative">
 											<img id="userProfilePreview"
-												th:src="@{'/img/profile_img/' + ${editUser.profileImage}}" 
+												th:src="@{'/img/profile_img/' + ${#strings.isEmpty(editUser.profileImage) ? 'default.png' : editUser.profileImage}}" 
 												alt="Current Profile" 
 												th:data-user-id="${editUser.id}"
 												data-fallback="/img/profile_img/default.png">

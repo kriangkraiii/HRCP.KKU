@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.regex.Matcher;
@@ -247,19 +248,78 @@ class PositionRankRuleTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("หน้าเริ่มคำร้อง มีทางขอ ศ. ให้คนที่ยังไม่เป็น ศ. เท่านั้น")
-        void theProfessorRouteIsOfferedOnlyBelowProfessor() throws Exception {
+        @DisplayName("หน้าเริ่มคำร้อง มีทางลัดขอ ศ. (ไม่ใช้ผลประเมิน) ให้ รศ. เท่านั้น")
+        void theProfessorShortcutIsOfferedOnlyToAssociateProfessors() throws Exception {
             UserDtls associate = applicantHolding("รองศาสตราจารย์");
             String offered = mvc.perform(get("/user/position/new-request")
                     .with(user(associate.getEmail()).roles("USER")))
                     .andReturn().getResponse().getContentAsString();
             assertThat(offered).contains("/user/position/create-professor-request");
 
-            UserDtls professor = applicantHolding("ศาสตราจารย์");
-            String notOffered = mvc.perform(get("/user/position/new-request")
-                    .with(user(professor.getEmail()).roles("USER")))
+            for (String position : new String[] { "ศาสตราจารย์", "ผู้ช่วยศาสตราจารย์", "อาจารย์" }) {
+                UserDtls applicant = applicantHolding(position);
+                String notOffered = mvc.perform(get("/user/position/new-request")
+                        .with(user(applicant.getEmail()).roles("USER")))
+                        .andReturn().getResponse().getContentAsString();
+                assertThat(notOffered).as(position)
+                        .doesNotContain("/user/position/create-professor-request");
+            }
+        }
+
+        @Test
+        @DisplayName("ผศ. ขอ ศ. ผ่านทางลัด — ไม่สร้างคำร้อง ต้องใช้ผลประเมินการสอน")
+        void anAssistantProfessorCannotTakeTheProfessorShortcut() throws Exception {
+            UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
+
+            mvc.perform(post("/user/position/create-professor-request")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(redirectedUrl("/user/position/dashboard?error=evaluation_required"));
+
+            assertThat(positionService.findDraftByApplicant(applicant.getId())).isEmpty();
+        }
+
+        @Test
+        @DisplayName("ผศ. ขอ ศ. (วิธีพิเศษ) ด้วยผลประเมินที่ขอ ศ. — สร้างคำร้องได้ และผูกผลประเมินไว้")
+        void anAssistantProfessorCanApplyForProfessorWithAnEvaluation() throws Exception {
+            UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
+            AcademicRequest evaluation = data.evaluationFor(applicant,
+                    AcademicRank.PROFESSOR, "ผู้ช่วยศาสตราจารย์");
+
+            mvc.perform(post("/user/position/create-request")
+                    .param("evaluationId", String.valueOf(evaluation.getId()))
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(redirectedUrlPattern("/user/position/request/*"));
+
+            PositionRequest draft = positionService.findDraftByApplicant(applicant.getId()).orElseThrow();
+            assertThat(draft.getTargetPosition()).isEqualTo("ศาสตราจารย์");
+            assertThat(draft.getLinkedEvaluation().getId()).isEqualTo(evaluation.getId());
+
+            // กติกาตำแหน่งตรวจก่อนเอกสาร — ผ่านกติกาแล้วจึงไปติดที่เอกสารยังไม่ครบ ไม่ใช่ evaluation_required
+            mvc.perform(post("/user/position/request/" + draft.getId() + "/submit")
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(redirectedUrl("/user/position/request/" + draft.getId() + "?error=incomplete_docs"));
+        }
+
+        @Test
+        @DisplayName("ผลประเมินที่ยังไม่จบ — เห็นในหน้าเลือก พร้อมเหตุผล แต่เลือกไม่ได้")
+        void anEvaluationStillInProgressIsListedButCannotBeChosen() throws Exception {
+            UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
+            AcademicRequest inProgress = data.evaluation(applicant, RequestStatus.RECEIVED);
+
+            String html = mvc.perform(get("/user/position/new-request")
+                    .with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().isOk())
                     .andReturn().getResponse().getContentAsString();
-            assertThat(notOffered).doesNotContain("/user/position/create-professor-request");
+
+            assertThat(html).contains(inProgress.getRequestCode()).contains("อยู่ระหว่างการประเมิน");
+            assertThat(html).doesNotContainPattern(
+                    "name=\"evaluationId\"[^>]*value=\"" + inProgress.getId() + "\"");
+
+            mvc.perform(post("/user/position/create-request")
+                    .param("evaluationId", String.valueOf(inProgress.getId()))
+                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(status().is3xxRedirection());
+            assertThat(positionService.findDraftByApplicant(applicant.getId())).isEmpty();
         }
     }
 
@@ -294,6 +354,16 @@ class PositionRankRuleTest extends AbstractFlowTest {
             UserDtls applicant = applicantHolding("อาจารย์");
             PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
                     null, "ผู้ช่วยศาสตราจารย์");
+
+            expectRefusal(applicant, draft, "evaluation_required");
+        }
+
+        @Test
+        @DisplayName("ผศ. ขอ ศ. โดยไม่มีผลประเมินการสอน (แบบร่างที่หลุดมาก่อนแก้) — ไม่ส่ง")
+        void anAssistantProfessorsProfessorRequestWithoutAnEvaluationIsRefused() throws Exception {
+            UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
+            PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
+                    null, "ศาสตราจารย์");
 
             expectRefusal(applicant, draft, "evaluation_required");
         }

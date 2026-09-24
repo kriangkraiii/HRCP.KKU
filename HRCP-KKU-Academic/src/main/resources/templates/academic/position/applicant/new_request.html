@@ -25,12 +25,12 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
-            <!-- ขอ ศ. ไม่ต้องใช้ผลประเมินการสอน -->
+            <!-- รศ. ขอ ศ. (วิธีปกติ) ไม่ต้องใช้ผลประเมินการสอน — อาจารย์/ผศ. ไม่เห็นการ์ดนี้ -->
             <div th:if="${canApplyForProfessor}" class="card card-academic mb-4">
                 <div class="card-body d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div>
                         <h5 class="mb-1"><i class="fas fa-landmark me-2"></i> ขอกำหนดตำแหน่งศาสตราจารย์</h5>
-                        <div class="small text-muted">การขอตำแหน่งศาสตราจารย์ไม่ต้องใช้ผลการประเมินผลการสอน</div>
+                        <div class="small text-muted">ท่านดำรงตำแหน่งรองศาสตราจารย์ การขอตำแหน่งศาสตราจารย์ (วิธีปกติ) ไม่ต้องใช้ผลการประเมินผลการสอน</div>
                     </div>
                     <form th:action="@{/user/position/create-professor-request}" method="post">
                         <button type="submit" class="btn btn-academic">
@@ -41,17 +41,20 @@
             </div>
 
             <!-- ไม่มีผลประเมินที่ใช้ได้เลย (สำหรับผู้ที่ต้องใช้ผลประเมิน) -->
-            <div th:if="${!hasAny and !canApplyForProfessor}" class="alert alert-warning">
+            <div th:if="${!hasUsable and !canApplyForProfessor}" class="alert alert-warning">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <strong>ไม่พบผลการประเมินผลการสอนที่ใช้ได้</strong>
-                <p class="mb-0 mt-2">การขอตำแหน่งผู้ช่วยศาสตราจารย์และรองศาสตราจารย์ ต้องมีผลการประเมินผลการสอนที่ <strong>ผ่านและยังไม่หมดอายุ</strong></p>
+                <p class="mb-0 mt-2">การขอตำแหน่งทางวิชาการต้องมีผลการประเมินผลการสอนที่ <strong>ผ่านและยังไม่หมดอายุ</strong>
+                    รวมถึงการขอตำแหน่งศาสตราจารย์โดยวิธีพิเศษ (ผู้ดำรงตำแหน่งอาจารย์หรือผู้ช่วยศาสตราจารย์)
+                    ซึ่งต้องเลือก "ศาสตราจารย์" ในเอกสารที่ 1 ของการขอประเมินการสอน</p>
+                <p class="mb-0 mt-1" th:if="${hasAny}">ผลการประเมินของท่านด้านล่างยังใช้ยื่นไม่ได้ — ดูเหตุผลในแต่ละรายการ</p>
                 <a href="/user/academic/dashboard" class="btn-back-pill mt-3">
                     <i class="fas fa-arrow-left"></i> กลับไปยื่นขอประเมินการสอน
                 </a>
             </div>
 
             <!-- มีผลประเมิน แต่ทุกใบถูกใช้ยื่นไปหมดแล้ว -->
-            <div th:if="${hasAny and !hasEligible}" class="alert alert-warning">
+            <div th:if="${hasUsable and !hasEligible}" class="alert alert-warning">
                 <i class="fas fa-lock me-2"></i>
                 <strong>ผลการประเมินทุกรายการถูกใช้ยื่นขอตำแหน่งไปแล้ว</strong>
                 <p class="mb-0 mt-2">
@@ -71,12 +74,13 @@
                 </div>
 
                 <div th:each="choice : ${choices}" class="card card-academic mb-3"
-                     th:classappend="${choice.spent} ? 'opacity-75 border-secondary' : ''">
+                     th:classappend="${!choice.selectable()} ? 'opacity-75 border-secondary' : ''">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                             <div class="flex-grow-1">
                                 <h5 class="mb-1">
-                                    <i th:class="${choice.spent} ? 'fas fa-lock text-secondary me-2' : 'fas fa-check-circle text-success me-2'"></i>
+                                    <i th:class="${!choice.usable()} ? 'fas fa-hourglass-half text-secondary me-2'
+                                                 : (${choice.spent} ? 'fas fa-lock text-secondary me-2' : 'fas fa-check-circle text-success me-2')"></i>
                                     <span th:text="${choice.summary.courseLabel()}">รหัสวิชา — ชื่อวิชา</span>
                                 </h5>
                                 <div class="text-muted small mb-3">
@@ -101,7 +105,7 @@
                                     </div>
                                     <div class="col-6 col-md-3">
                                         <div class="text-muted">ผลการประเมิน</div>
-                                        <div class="fw-semibold" th:text="${choice.summary.resultLevel() ?: 'ผ่าน'}">ผ่าน</div>
+                                        <div class="fw-semibold" th:text="${choice.summary.resultLevel() ?: (choice.usable() ? 'ผ่าน' : '—')}">ผ่าน</div>
                                     </div>
                                     <div class="col-6 col-md-3">
                                         <div class="text-muted">วันที่ประเมิน</div>
@@ -109,7 +113,7 @@
                                     </div>
                                 </div>
 
-                                <div class="mt-3 small" th:if="${choice.summary.daysLeft() != null}">
+                                <div class="mt-3 small" th:if="${choice.usable() and choice.summary.daysLeft() != null}">
                                     <span class="badge"
                                           th:classappend="${choice.summary.daysLeft() < 90} ? 'bg-danger' : 'bg-success-subtle text-success border border-success-subtle'">
                                         <i class="fas fa-hourglass-half me-1"></i>
@@ -128,7 +132,14 @@
                                         <i class="fas fa-arrow-right me-1"></i> เลือกและสร้างคำร้อง
                                     </button>
                                 </form>
-                                <div th:if="${choice.spent}" class="text-end">
+                                <div th:if="${!choice.usable()}" class="text-end">
+                                    <span class="badge bg-secondary mb-2">
+                                        <i class="fas fa-ban me-1"></i> ยังใช้ยื่นไม่ได้
+                                    </span>
+                                    <div class="small text-muted" style="max-width: 16rem;"
+                                         th:text="${choice.unavailableReason()}">เหตุผล</div>
+                                </div>
+                                <div th:if="${choice.usable() and choice.spent}" class="text-end">
                                     <span class="badge bg-secondary mb-2">
                                         <i class="fas fa-lock me-1"></i> ใช้ยื่นไปแล้ว
                                     </span>

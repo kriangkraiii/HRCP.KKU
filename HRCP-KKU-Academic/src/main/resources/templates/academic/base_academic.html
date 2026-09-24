@@ -200,7 +200,7 @@
         <script th:inline="javascript">
             window.AUTO_DRAFT_ENABLED = /*[[${user != null && user.autoDraftEnabled != null ? user.autoDraftEnabled : true}]]*/ true;
         </script>
-        <script src="/js/auto_draft.js?v=4.0"></script>
+        <script src="/js/auto_draft.js?v=4.1"></script>
         <!-- ตรวจช่องที่ยังไม่ได้กรอก แล้วบันทึกเอกสารให้ก่อนส่งไปลงนาม -->
         <script src="/js/doc_required_validate.js?v=1.0"></script>
         <script src="/js/sign_presave.js?v=1.3"></script>
@@ -676,7 +676,7 @@
             <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user text-decoration-none" style="text-decoration:none !important;" th:attr="data-title=${user.name}">
                 <div class="user-avatar" style="width:34px;height:34px;min-width:34px;max-width:34px;flex-shrink:0;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
                     <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
-                         th:src="'/img/profile_img/' + ${user.profileImage}"
+                         th:src="'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}"
                          class="sidebar-user-avatar-img"
                          style="width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:50%;display:block;"
                          alt="Avatar"

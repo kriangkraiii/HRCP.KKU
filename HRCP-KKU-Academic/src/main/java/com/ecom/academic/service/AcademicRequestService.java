@@ -1324,6 +1324,41 @@ public class AcademicRequestService {
         return null;
     }
 
+    /**
+     * Why one submitted evaluation cannot back a position request, in words for
+     * the applicant — null when it can. Follows {@link #isUsableEvaluation} check
+     * for check, so the two never disagree.
+     */
+    public String unusableReason(AcademicRequest request) {
+        if (isUsableEvaluation(request)) {
+            return null;
+        }
+        RequestStatus status = request == null ? null : request.getCurrentStatus();
+        if (status == null || status.isDraft()) {
+            return "ยังไม่ได้ยื่นคำร้องประเมิน";
+        }
+        if (status == RequestStatus.COMPLETED_FAIL) {
+            return "ผลการประเมินไม่ผ่าน";
+        }
+        if (!status.carriesAPassedResult()) {
+            return "อยู่ระหว่างการประเมิน (สถานะ: " + status.getThaiLabel()
+                    + ") — ใช้ได้เมื่อผลการประเมินผ่าน";
+        }
+        List<AcademicDocument> doc9s = documentRepository
+                .findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(request.getId(), 9);
+        if (doc9s.isEmpty() || doc9s.get(0).getJsonData() == null) {
+            return "ยังไม่ได้ออกหนังสือแจ้งผลการประเมิน";
+        }
+        return "ผลการประเมินหมดอายุแล้ว";
+    }
+
+    /** Evaluations this applicant has submitted, newest first — drafts are not choices. */
+    public List<AcademicRequest> findSubmittedEvaluations(Integer applicantId) {
+        return requestRepository.findByApplicantIdOrderByCreatedAtDesc(applicantId).stream()
+                .filter(r -> r.getCurrentStatus() != null && !r.getCurrentStatus().isDraft())
+                .toList();
+    }
+
     /** Whether one evaluation still backs a position request. */
     public boolean isUsableEvaluation(AcademicRequest request) {
         if (request == null || request.getCurrentStatus() == null) {

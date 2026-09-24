@@ -23,15 +23,10 @@
                         <div class="profile-identity-card" style="--card-delay:0ms">
                             <!-- Avatar -->
                             <div class="profile-avatar-wrap">
-                                <img id="avatarPreview" th:src="@{'/img/profile_img/' + ${user.profileImage}}"
+                                <img id="avatarPreview" th:src="@{'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}}"
                                      alt="รูปโปรไฟล์" class="profile-avatar-img"
                                      data-fallback="/img/profile_img/default.png">
-                                <label for="avatarInput" class="profile-avatar-overlay">
-                                    <i class="fas fa-camera"></i>
-                                    <span>เปลี่ยนรูป</span>
-                                </label>
-                                <input type="file" name="img" id="avatarInput" accept="image/*" class="d-none"
-                                       data-call-change="previewAvatar" data-call-arg="self">
+                                <!-- ผู้ยื่นเปลี่ยนรูปเองไม่ได้ (UserServiceImpl.updateUserProfile) -->
                             </div>
 
                             <!-- Name display -->
@@ -93,27 +88,35 @@
                                     </div>
                                     <div class="col-md-4">
                                         <label class="profile-label">ชื่อ</label>
-                                        <input type="text" name="firstName" class="form-control profile-input"
-                                               th:value="${user.firstName}" placeholder="ชื่อ">
+                                        <div class="profile-readonly-field">
+                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <span th:text="${user.firstName}">ชื่อ</span>
+                                        </div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="profile-label">นามสกุล</label>
-                                        <input type="text" name="lastName" class="form-control profile-input"
-                                               th:value="${user.lastName}" placeholder="นามสกุล">
+                                        <div class="profile-readonly-field">
+                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <span th:text="${user.lastName}">นามสกุล</span>
+                                        </div>
                                     </div>
                                 </div>
-                                <!-- ชื่ออังกฤษถูกเติมอัตโนมัติจากระบบต้นทาง โดยแยกจากชื่อเต็มก้อนเดียว
-                                     ซึ่งเดาผิดได้กับนามสกุลหลายคำ จึงให้แก้เองได้ -->
+                                <!-- ผู้ยื่นแก้ได้เฉพาะเบอร์โทรศัพท์ ที่เหลือมาจากทะเบียนบุคลากร มข.
+                                     ตัวที่บังคับจริงคือ UserServiceImpl.updateUserProfile -->
                                 <div class="row g-3 mt-1">
                                     <div class="col-md-6">
                                         <label class="profile-label">ชื่อ (อังกฤษ)</label>
-                                        <input type="text" name="firstNameEn" class="form-control profile-input"
-                                               th:value="${user.firstNameEn}" placeholder="เช่น Somchai">
+                                        <div class="profile-readonly-field">
+                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <span th:text="${user.firstNameEn}">-</span>
+                                        </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="profile-label">นามสกุล (อังกฤษ)</label>
-                                        <input type="text" name="lastNameEn" class="form-control profile-input"
-                                               th:value="${user.lastNameEn}" placeholder="เช่น Jaidee">
+                                        <div class="profile-readonly-field">
+                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <span th:text="${user.lastNameEn}">-</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

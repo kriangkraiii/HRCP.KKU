@@ -220,14 +220,20 @@ public class UserServiceImpl implements UserService {
 			return null;
 		}
 
-		dbUser.setFirstName(user.getFirstName());
-		dbUser.setLastName(user.getLastName());
+		// ผู้ยื่นแก้ได้แค่เบอร์โทรศัพท์ — ชื่อ ชื่ออังกฤษ และรูป มาจากทะเบียนบุคลากร มข.
+		// และถูกประทับบนเอกสารคำร้อง แก้ผิดต้องให้นักทรัพยากรบุคคลแก้ที่ /admin/edit-user
+		// ฟอร์มยังส่งช่องพวกนี้มาได้ (POST เอง) จึงต้องกันที่นี่ ไม่ใช่แค่ซ่อนในหน้า
 		dbUser.setMobileNumber(user.getMobileNumber());
-		// English names are seeded from the directory by splitting its combined
-		// name_en, which guesses wrong on multi-word family names — so they stay
-		// editable here rather than being sync-only.
-		dbUser.setFirstNameEn(user.getFirstNameEn());
-		dbUser.setLastNameEn(user.getLastNameEn());
+		boolean isAdmin = "ROLE_ADMIN".equals(dbUser.getRole());
+		if (isAdmin) {
+			dbUser.setFirstName(user.getFirstName());
+			dbUser.setLastName(user.getLastName());
+			// English names are seeded from the directory by splitting its combined
+			// name_en, which guesses wrong on multi-word family names — so they stay
+			// editable for staff rather than being sync-only.
+			dbUser.setFirstNameEn(user.getFirstNameEn());
+			dbUser.setLastNameEn(user.getLastNameEn());
+		}
 
 		// ตำแหน่งทางวิชาการมาจากทะเบียนบุคลากร มข. ไม่ใช่ของที่เจ้าตัวกรอกเอง:
 		// AcademicRankPolicy ใช้ค่านี้ตัดสินว่าผู้ยื่นขอตำแหน่งไหนได้ ปล่อยให้แก้เองคือ
@@ -251,7 +257,7 @@ public class UserServiceImpl implements UserService {
 		}
 		String oldImage = dbUser.getProfileImage();
 		// Only a file we validated and wrote ourselves may name the profile image.
-		String storedImage = profileImageStorage.store(img);
+		String storedImage = isAdmin ? profileImageStorage.store(img) : null;
 		if (storedImage != null) {
 			dbUser.setProfileImage(storedImage);
 		}

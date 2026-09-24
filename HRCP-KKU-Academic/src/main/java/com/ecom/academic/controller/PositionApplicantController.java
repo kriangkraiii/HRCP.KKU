@@ -198,16 +198,18 @@ public class PositionApplicantController {
             return "redirect:/user/position/dashboard?error=active_exists";
         }
 
-        // Every usable result from Phase 1, including the ones this applicant has
-        // already used on a request — those are shown, and explained, rather
-        // than quietly left out.
+        // Every evaluation this applicant has submitted — the ones already used on
+        // a request, still being assessed, failed or lapsed are shown, and
+        // explained, rather than quietly left out.
         List<com.ecom.academic.dto.EvaluationChoice> choices =
                 positionService.getEvaluationChoices(user.getId());
         model.addAttribute("choices", choices);
         model.addAttribute("hasEligible", choices.stream()
                 .anyMatch(com.ecom.academic.dto.EvaluationChoice::selectable));
+        model.addAttribute("hasUsable", choices.stream()
+                .anyMatch(com.ecom.academic.dto.EvaluationChoice::usable));
         model.addAttribute("hasAny", !choices.isEmpty());
-        // ขอ ศ. ไม่ต้องใช้ผลประเมินการสอน — เสนอทางนี้ให้เฉพาะคนที่ยังไม่เป็น ศ.
+        // ขอ ศ. โดยไม่ใช้ผลประเมินการสอน — วิธีปกติของ รศ. เท่านั้น
         model.addAttribute("canApplyForProfessor",
                 positionService.rankProblemForProfessor(user).isEmpty());
 

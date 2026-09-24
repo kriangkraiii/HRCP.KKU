@@ -100,4 +100,43 @@ class AcademicRankPolicyTest {
             assertThat(AcademicRankPolicy.rankViolation(AcademicRank.PROFESSOR, null)).isEmpty();
         }
     }
+
+    @Nested
+    @DisplayName("ต้องใช้ผลประเมินการสอนไหม")
+    class TeachingEvaluation {
+
+        @Test
+        @DisplayName("ขอ ผศ. หรือ รศ. — ต้องใช้เสมอ")
+        void assistantAndAssociateAlwaysNeedOne() {
+            for (AcademicRank current : new AcademicRank[] { AcademicRank.LECTURER,
+                    AcademicRank.ASSISTANT_PROFESSOR }) {
+                assertThat(AcademicRankPolicy.requiresTeachingEvaluation(current,
+                        AcademicRank.ASSOCIATE_PROFESSOR)).isTrue();
+            }
+            assertThat(AcademicRankPolicy.requiresTeachingEvaluation(AcademicRank.LECTURER,
+                    AcademicRank.ASSISTANT_PROFESSOR)).isTrue();
+        }
+
+        @Test
+        @DisplayName("รศ. ขอ ศ. (วิธีปกติ) — ไม่ต้องใช้")
+        void anAssociateProfessorApplyingForProfessorDoesNot() {
+            assertThat(AcademicRankPolicy.requiresTeachingEvaluation(AcademicRank.ASSOCIATE_PROFESSOR,
+                    AcademicRank.PROFESSOR)).isFalse();
+        }
+
+        @Test
+        @DisplayName("อาจารย์ หรือ ผศ. ขอ ศ. (วิธีพิเศษ) — ต้องใช้")
+        void skippingToProfessorDoes() {
+            assertThat(AcademicRankPolicy.requiresTeachingEvaluation(AcademicRank.ASSISTANT_PROFESSOR,
+                    AcademicRank.PROFESSOR)).isTrue();
+            assertThat(AcademicRankPolicy.requiresTeachingEvaluation(AcademicRank.LECTURER,
+                    AcademicRank.PROFESSOR)).isTrue();
+        }
+
+        @Test
+        @DisplayName("ยังไม่รู้ว่าขอตำแหน่งอะไร — ยังตัดสินไม่ได้ จึงไม่บังคับ")
+        void noTargetYetDoesNot() {
+            assertThat(AcademicRankPolicy.requiresTeachingEvaluation(AcademicRank.LECTURER, null)).isFalse();
+        }
+    }
 }

@@ -175,7 +175,7 @@
                       <div class="avatar-preview-box position-relative">
                         <img
                           id="adminProfilePreview"
-                          th:src="@{'/img/profile_img/' + ${admin.profileImage}}"
+                          th:src="@{'/img/profile_img/' + ${#strings.isEmpty(admin.profileImage) ? 'default.png' : admin.profileImage}}"
                           alt="Current Profile"
                           th:data-user-id="${admin.id}"
                           data-fallback="/img/profile_img/default.png"

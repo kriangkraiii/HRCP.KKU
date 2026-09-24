@@ -23,7 +23,7 @@
                         <div class="profile-identity-card" style="--card-delay:0ms">
                             <!-- Avatar -->
                             <div class="profile-avatar-wrap">
-                                <img id="avatarPreview" th:src="@{'/img/profile_img/' + ${user.profileImage}}"
+                                <img id="avatarPreview" th:src="@{'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}}"
                                      alt="รูปโปรไฟล์" class="profile-avatar-img"
                                      data-fallback="/img/profile_img/default.png">
                                 <label for="avatarInput" class="profile-avatar-overlay">

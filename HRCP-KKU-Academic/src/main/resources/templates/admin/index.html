@@ -131,7 +131,7 @@
 									<tbody>
 										<tr th:each="user : ${recentUsers}" th:if="${recentUsers}">
 											<td>
-												<img th:src="@{'/img/profile_img/' + ${user.profileImage}}" 
+												<img th:src="@{'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}}" 
 													 class="rounded-circle" width="40" height="40" 
 													 loading="lazy"
 													 decoding="async"

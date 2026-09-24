@@ -201,21 +201,27 @@ public class PositionRequestService {
     }
 
     /**
-     * Every teaching evaluation this applicant could put forward, each marked
-     * with whether it has already been used by a position request.
+     * Every teaching evaluation this applicant has submitted, each marked with
+     * whether it has already been used by a position request and, if it cannot
+     * back one at all, why.
      *
-     * <p>The unmarked ones are exactly {@link #getEligibleEvaluations}; this adds
-     * the ones the rule excludes, and why, so the screen can say so. Anything
-     * that failed, was refused, or has lapsed is not here at all — that is not a
-     * choice being withheld, it is not a choice.
+     * <p>The selectable ones are exactly {@link #getEligibleEvaluations}; the rest
+     * are here so the screen can say why they are not. An applicant whose only
+     * evaluation was still being assessed used to meet an empty list — and, with
+     * nothing else on the page, took the professor route that needs none.
      */
     public List<EvaluationChoice> getEvaluationChoices(Integer applicantId) {
         Map<Long, String> spent = getSpentEvaluations(applicantId);
-        return academicRequestService.findUsableEvaluations(applicantId).stream()
-                .map(academicRequestService::summarize)
-                .map(summary -> new EvaluationChoice(summary,
-                        spent.containsKey(summary.evaluationId()),
-                        spent.get(summary.evaluationId())))
+        return academicRequestService.findSubmittedEvaluations(applicantId).stream()
+                .map(evaluation -> {
+                    EvaluationSummary summary = academicRequestService.summarize(evaluation);
+                    return new EvaluationChoice(summary,
+                            spent.containsKey(summary.evaluationId()),
+                            spent.get(summary.evaluationId()),
+                            academicRequestService.unusableReason(evaluation));
+                })
+                // ที่ใช้ได้ขึ้นก่อน ในแต่ละกลุ่มยังเรียงใหม่สุดก่อนตามเดิม
+                .sorted(java.util.Comparator.comparing(choice -> !choice.usable()))
                 .toList();
     }
 
@@ -273,17 +279,30 @@ public class PositionRequestService {
                 .map(message -> ERROR_RANK_NOT_HIGHER);
     }
 
-    /** ปัญหาของการเริ่มคำร้องขอ ศ. ถ้ามี — ยังไม่มีเอกสาร จึงดูตำแหน่งจากโปรไฟล์ */
+    /**
+     * ปัญหาของการเริ่มคำร้องขอ ศ. โดยไม่ใช้ผลประเมิน ถ้ามี — ยังไม่มีเอกสาร จึงดูตำแหน่งจากโปรไฟล์
+     *
+     * <p>ทางนี้เป็นวิธีปกติของ รศ. เท่านั้น อาจารย์หรือ ผศ. ที่ขอ ศ. ต้องเริ่มจากผลประเมินการสอน
+     * ซึ่งเอกสารที่ 1 ติ๊กขอ ศ. ไว้ (วิธีพิเศษ) ผ่าน {@code /create-request}
+     */
     public Optional<String> rankProblemForProfessor(UserDtls applicant) {
-        return AcademicRankPolicy.rankViolation(AcademicRankPolicy.currentRank(applicant),
-                AcademicRank.PROFESSOR).map(message -> ERROR_RANK_NOT_HIGHER);
+        AcademicRank current = AcademicRankPolicy.currentRank(applicant);
+        Optional<String> violation = AcademicRankPolicy.rankViolation(current, AcademicRank.PROFESSOR)
+                .map(message -> ERROR_RANK_NOT_HIGHER);
+        if (violation.isPresent()) {
+            return violation;
+        }
+        if (AcademicRankPolicy.requiresTeachingEvaluation(current, AcademicRank.PROFESSOR)) {
+            return Optional.of(ERROR_EVALUATION_REQUIRED);
+        }
+        return Optional.empty();
     }
 
     /**
      * ตรวจกติกาตำแหน่งอีกรอบตอนยื่น — แบบร่างค้างได้เป็นสัปดาห์ และข้อมูลเก่าอาจสร้างก่อนมีกติกานี้
      *
      * <ul>
-     * <li>ขอ ผศ./รศ. ต้องมีผลประเมินการสอน (ขอ ศ. ไม่ต้อง)
+     * <li>ขอ ผศ./รศ. ต้องมีผลประเมินการสอน ขอ ศ. ไม่ต้องเฉพาะ รศ. (อาจารย์/ผศ. ขอ ศ. เป็นวิธีพิเศษ ต้องมี)
      * <li>ตำแหน่งที่ขอต้องตรงกับที่ผลประเมินระบุ
      * <li>ต้องสูงกว่าตำแหน่งปัจจุบัน — ยึดเอกสารแรกที่กรอก: เอกสารที่ 1 ของผลประเมิน แล้วเอกสารที่ 1
      * ของคำร้องนี้ แล้วค่อยโปรไฟล์
@@ -299,16 +318,17 @@ public class PositionRequestService {
             return Optional.empty();
         }
         EvaluationSummary evaluation = academicRequestService.summarize(request.getLinkedEvaluation());
-        if (evaluation == null && target.requiresTeachingEvaluation()) {
+        Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
+        AcademicRank current = AcademicRankPolicy.currentRank(request.getApplicant(),
+                evaluation == null ? null : evaluation.currentPosition(),
+                doc1 == null ? null : doc1.get("current_position"));
+        // ศ. ต้องใช้ผลประเมินหรือไม่ขึ้นกับตำแหน่งปัจจุบัน จึงต้องรู้ current ก่อนตัดสิน
+        if (evaluation == null && AcademicRankPolicy.requiresTeachingEvaluation(current, target)) {
             return Optional.of(ERROR_EVALUATION_REQUIRED);
         }
         if (evaluation != null && evaluation.targetRank() != null && evaluation.targetRank() != target) {
             return Optional.of(ERROR_POSITION_MISMATCH);
         }
-        Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
-        AcademicRank current = AcademicRankPolicy.currentRank(request.getApplicant(),
-                evaluation == null ? null : evaluation.currentPosition(),
-                doc1 == null ? null : doc1.get("current_position"));
         return AcademicRankPolicy.rankViolation(current, target).map(message -> ERROR_RANK_NOT_HIGHER);
     }
 

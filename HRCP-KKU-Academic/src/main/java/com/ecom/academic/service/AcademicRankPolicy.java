@@ -38,6 +38,24 @@ public final class AcademicRankPolicy {
         return fromProfile != null ? fromProfile : AcademicRank.LECTURER;
     }
 
+    /**
+     * การขอตำแหน่งนี้ต้องใช้ผลประเมินการสอนหรือไม่
+     *
+     * <p>ขอ ผศ./รศ. ต้องใช้เสมอ ส่วน ศ. ขึ้นกับว่ามาจากไหน: รศ. ขอ ศ. เป็นวิธีปกติ ข้ามการประเมินได้
+     * แต่อาจารย์หรือ ผศ. ข้ามขั้นไปขอ ศ. เป็นวิธีพิเศษ ต้องเลือกผลประเมินการสอนก่อนเสมอ
+     * ดู {@link AcademicRank#requiresTeachingEvaluation()} ซึ่งตอบจากตำแหน่งที่ขออย่างเดียว
+     */
+    public static boolean requiresTeachingEvaluation(AcademicRank current, AcademicRank target) {
+        if (target == null) {
+            return false;
+        }
+        if (target.requiresTeachingEvaluation()) {
+            return true;
+        }
+        return target == AcademicRank.PROFESSOR
+                && (current == null || current.compareTo(AcademicRank.ASSOCIATE_PROFESSOR) < 0);
+    }
+
     /** @return ข้อความแจ้งเหตุผล ถ้าตำแหน่งที่ขอไม่สูงกว่าตำแหน่งปัจจุบัน */
     public static Optional<String> rankViolation(AcademicRank current, AcademicRank target) {
         if (target == null || target.isAbove(current)) {

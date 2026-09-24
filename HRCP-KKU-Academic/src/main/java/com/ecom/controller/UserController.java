@@ -80,7 +80,7 @@ public class UserController {
 	}
 
 	@PostMapping("/update-profile")
-	public String updateProfile(@ModelAttribute UserDtls user, @RequestParam MultipartFile img, Principal p,
+	public String updateProfile(@ModelAttribute UserDtls user, @RequestParam(value = "img", required = false) MultipartFile img, Principal p,
 			HttpSession session) {
 		if (p == null) {
 			return "redirect:/signin";

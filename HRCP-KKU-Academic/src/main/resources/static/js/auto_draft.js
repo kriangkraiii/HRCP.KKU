@@ -177,6 +177,17 @@
     this._show("idle");
 
     var self = this;
+
+    /* ผู้ใช้แตะฟอร์มจริงแล้วหรือยัง — นับเฉพาะ event ที่ isTrusted (มาจากคนจริง)
+       สคริปต์บนหน้า (เติมวันที่, datalist, ค่าตั้งต้น) แก้ฟอร์มหลังโหลดได้ ถ้านับด้วย
+       แค่เปิดฟอร์มแล้วปิดไปก็เกิดแบบร่างที่มีแต่ค่าที่ระบบเติมให้ และไม่ถูกลบทิ้งเป็นแบบร่างว่าง
+       ต้องผูกก่อน listener ของ _onChange เพื่อให้ธงถูกตั้งก่อนตัดสินใจบันทึก */
+    this.touched = false;
+    var markTouched = function (e) { if (e.isTrusted) self.touched = true; };
+    ["input", "change", "click", "keydown", "paste", "drop"].forEach(function (type) {
+      self.form.addEventListener(type, markTouched, true);
+    });
+
     this.form.addEventListener("input", function () { self._onChange(); }, true);
     this.form.addEventListener("change", function () { self._onChange(); }, true);
 
@@ -349,6 +360,11 @@
   };
 
   Engine.prototype._onChange = function () {
+    /* ผู้ใช้ยังไม่ได้แตะ — สิ่งที่เปลี่ยนมาจากสคริปต์บนหน้า ถือเป็นจุดตั้งต้นใหม่ ไม่ใช่งานที่ต้องบันทึก */
+    if (!this.touched) {
+      this.lastHash = this._hash();
+      return;
+    }
     /* บอกไว้ก่อน debounce — ผู้ใช้ที่เลื่อนลงไปกดส่งทันทีจะได้ไม่เห็น "บันทึกแล้ว" ที่เก่าไป 1 วิ */
     this._show("dirty");
     if (this.saving) return;
@@ -392,6 +408,8 @@
       this._mirror("disabled");
       return Promise.resolve(true);
     }
+    // บันทึกอัตโนมัติรอจนผู้ใช้แตะฟอร์มจริง — flush (force) มาจากการกระทำของผู้ใช้ เช่นก่อนลงนาม จึงผ่านได้
+    if (!force && !this.touched) return Promise.resolve(true);
     var data = this._collect();
     // ทุกช่องถูกปิด แปลว่าเอกสารล็อกอยู่ ไม่มีอะไรให้บันทึก
     if (Object.keys(data).length === 0) return Promise.resolve(true);
