@@ -1331,8 +1331,7 @@ public class AcademicApplicantController {
                                 && hasValue(data, "applicant_name")
                                 && hasValue(data, "employee_type")
                                 && hasValue(data, "current_position")
-                                && ("✓".equals(data.get("chk1")) || "✓".equals(data.get("chk2"))
-                                        || "✓".equals(data.get("chk3")))
+                                && ("✓".equals(data.get("chk1")) || "✓".equals(data.get("chk2")))
                                 && hasValue(data, "course_code")
                                 && hasValue(data, "course_name")
                                 && hasValue(data, "academic_year");

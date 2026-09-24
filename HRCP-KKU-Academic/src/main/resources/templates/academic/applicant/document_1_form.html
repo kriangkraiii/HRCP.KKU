@@ -172,14 +172,6 @@
                                             th:disabled="${associateBlocked}">
                                         <label class="form-check-label fw-semibold" for="targetPos2">รองศาสตราจารย์</label>
                                     </div>
-                                    <!-- ศ. วิธีพิเศษ: อาจารย์/ผศ. ข้ามขั้นไปขอ ศ. ต้องผ่านการประเมินการสอน (รศ. ขอ ศ. ไม่ต้องประเมิน) -->
-                                    <div class="form-check">
-                                        <input class="form-check-input target-pos-radio" type="radio" name="target_position_choice" id="targetPos3"
-                                            value="chk3"
-                                            th:checked="${dData != null && dData.getOrDefault('chk3', '') == '✓'}" required
-                                            th:disabled="${associateBlocked}">
-                                        <label class="form-check-label fw-semibold" for="targetPos3">ศาสตราจารย์ <small class="text-muted fw-normal">(วิธีพิเศษ)</small></label>
-                                    </div>
                                 </div>
                                 <div class="form-text text-muted" th:if="${assistantBlocked}">
                                     <i class="fas fa-info-circle"></i>
@@ -192,8 +184,6 @@
                                     th:value="${dData != null ? dData.getOrDefault('chk1', '') : ''}">
                                 <input type="hidden" name="chk2" id="chk2"
                                     th:value="${dData != null ? dData.getOrDefault('chk2', '') : ''}">
-                                <input type="hidden" name="chk3" id="chk3"
-                                    th:value="${dData != null ? dData.getOrDefault('chk3', '') : ''}">
                             </div>
                         </div>
 
@@ -260,18 +250,24 @@
                     <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
 
                     <script>
-                        // ซิงค์ค่า radio ตำแหน่งที่ขอรับการประเมิน ไปยัง hidden chk1 / chk2 / chk3
+                        // ซิงค์ค่า radio ตำแหน่งที่ขอรับการประเมิน ไปยัง hidden chk1 / chk2
                         function syncTargetPos() {
-                            var anyChecked = false;
-                            [1, 2, 3].forEach(function (n) {
-                                if ((document.getElementById('targetPos' + n) || {}).checked) anyChecked = true;
-                            });
-                            [1, 2, 3].forEach(function (n) {
-                                var radio = document.getElementById('targetPos' + n);
-                                var hidden = document.getElementById('chk' + n);
-                                if (!hidden) return;
-                                hidden.value = !anyChecked ? '' : (radio && radio.checked ? '✓' : '☐');
-                            });
+                            var r1 = document.getElementById('targetPos1');
+                            var r2 = document.getElementById('targetPos2');
+                            var chk1 = document.getElementById('chk1');
+                            var chk2 = document.getElementById('chk2');
+                            if (!r1 || !r2 || !chk1 || !chk2) return;
+
+                            if (r1.checked) {
+                                chk1.value = '✓';
+                                chk2.value = '☐';
+                            } else if (r2.checked) {
+                                chk1.value = '☐';
+                                chk2.value = '✓';
+                            } else {
+                                chk1.value = '';
+                                chk2.value = '';
+                            }
                         }
 
                         document.querySelectorAll('.target-pos-radio').forEach(function(radio) {
@@ -325,10 +321,13 @@
                                         var el = form.querySelector('[name="' + key + '"]');
                                         if (el && !el.value) el.value = data[key];
                                     });
-                                    [1, 2, 3].forEach(function (n) {
-                                        var radio = document.getElementById('targetPos' + n);
-                                        if (radio && data['chk' + n] === '✓') radio.checked = true;
-                                    });
+                                    if (data['chk1'] === '✓') {
+                                        var r1 = document.getElementById('targetPos1');
+                                        if (r1) r1.checked = true;
+                                    } else if (data['chk2'] === '✓') {
+                                        var r2 = document.getElementById('targetPos2');
+                                        if (r2) r2.checked = true;
+                                    }
                                     syncTargetPos();
                                 }
                             } catch (e) { console.warn('Failed to load existing data:', e); }
@@ -370,8 +369,7 @@
                                 }
 
                                 // Suggest target position if not selected yet
-                                var r3 = document.getElementById('targetPos3');
-                                if (r1 && r2 && !r1.checked && !r2.checked && !(r3 && r3.checked)) {
+                                if (r1 && r2 && !r1.checked && !r2.checked) {
                                     if (pos === 'อาจารย์') {
                                         r1.checked = true;
                                         syncTargetPos();
