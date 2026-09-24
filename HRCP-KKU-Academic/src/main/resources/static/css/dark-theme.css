@@ -1596,19 +1596,38 @@ body,
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-[data-theme="dark"] .status-card {
+[data-theme="dark"] .sf-bar {
     background: var(--bg-card);
     border-color: var(--border-card);
 }
 
-[data-theme="dark"] .status-card:hover {
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+/* พื้นสีอ่อน 8% หายไปบนพื้นมืด — เพิ่มความเข้มให้ชิปที่เลือกยังแยกออก */
+/* ต้องชนะ [data-theme="dark"] a:not(.btn):not(.nav-link):not(.dropdown-item) ที่ทาลิงก์เป็นสีฟ้า */
+[data-theme="dark"] .sf-bar a.sf-chip[href] {
+    color: var(--text-secondary);
 }
 
-[data-theme="dark"] .filter-chip {
-    background: var(--bg-card);
-    border-color: var(--border-color);
+[data-theme="dark"] .sf-bar a.sf-chip.is-live[href],
+[data-theme="dark"] .sf-bar a.sf-chip[href]:hover {
+    color: var(--text-heading);
 }
+
+[data-theme="dark"] .sf-bar a.sf-chip.is-active[href] {
+    color: #fff;
+}
+
+/* สีสถานะหลายตัวเข้มเกินบนพื้นมืด ยกไอคอนขึ้นให้อ่านออก */
+[data-theme="dark"] .sf-chip:not(.is-active) i {
+    filter: brightness(1.5);
+}
+
+[data-theme="dark"] .sf-count {
+    background: transparent;
+}
+
+[data-theme="dark"] .sf-waiting { --_group: #ffb74d; }
+[data-theme="dark"] .sf-action { --_group: #64b5f6; }
+[data-theme="dark"] .sf-closed { --_group: #90a4ae; }
 
 [data-theme="dark"] .admin-table .course-detail-row td {
     background: rgba(21, 101, 192, 0.06);

@@ -228,6 +228,15 @@ public class AcademicAdminController {
 
 
 
+    /** กลุ่มชิปบนแถบสถานะ: แอดมินต้องทำ / รอผู้ยื่น / ปิดแล้ว */
+    private static List<Map<String, Object>> statusGroups(List<?> awaitingAdmin,
+            List<?> awaitingApplicant, List<?> closed) {
+        return List.of(
+                Map.of("title", "ต้องดำเนินการ", "icon", "fa-inbox", "tone", "action", "statuses", awaitingAdmin),
+                Map.of("title", "รอผู้ยื่น", "icon", "fa-hourglass-half", "tone", "waiting", "statuses", awaitingApplicant),
+                Map.of("title", "ปิดแล้ว", "icon", "fa-box-archive", "tone", "closed", "statuses", closed));
+    }
+
     @GetMapping("/requests")
     public String listRequests(@RequestParam(value = "search", required = false) String search,
             @RequestParam(value = "status", required = false) String statusFilter,
@@ -296,6 +305,12 @@ public class AcademicAdminController {
         model.addAttribute("completedRequests", completedRequests);
         model.addAttribute("statusCounts", statusCounts);
         model.addAttribute("statuses", RequestStatus.values());
+        model.addAttribute("statusGroups", statusGroups(RequestStatus.awaitingAdmin(),
+                RequestStatus.awaitingApplicant(), RequestStatus.closed()));
+        // ชิป "ทั้งหมดที่ยังไม่ปิด" = มุมมองเริ่มต้น นับจากทุกสถานะที่ไม่ใช่ปิดแล้ว
+        model.addAttribute("openStatusCount", statusCounts.entrySet().stream()
+                .filter(e -> !RequestStatus.valueOf(e.getKey()).isTerminal())
+                .mapToLong(Map.Entry::getValue).sum());
         model.addAttribute("requests", allRequests);
         model.addAttribute("activeType", typeFilter);
 
@@ -328,6 +343,9 @@ public class AcademicAdminController {
                 }
             }
             model.addAttribute("posStatusCounts", posStatusCounts);
+            model.addAttribute("posStatusGroups", statusGroups(PositionRequestStatus.awaitingAdmin(),
+                    PositionRequestStatus.awaitingApplicant(), PositionRequestStatus.closed()));
+            model.addAttribute("posAllCount", (long) positionRequests.size());
 
             // Apply status filter if provided
             if (posStatus != null && !posStatus.trim().isEmpty()) {
@@ -354,6 +372,8 @@ public class AcademicAdminController {
             model.addAttribute("positionTotalCount", (long) positionRequests.size());
         } catch (Exception e) {
             model.addAttribute("positionRequests", java.util.Collections.emptyList());
+            model.addAttribute("posStatusGroups", java.util.Collections.emptyList());
+            model.addAttribute("posAllCount", 0L);
             model.addAttribute("positionPendingCount", 0L);
             model.addAttribute("positionCompletedCount", 0L);
             model.addAttribute("positionTotalCount", 0L);

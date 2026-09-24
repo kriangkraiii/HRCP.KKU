@@ -39,36 +39,40 @@
                 <div class="tab-pane fade" id="evalPane" role="tabpanel"
                      th:classappend="${activeType == null || activeType == 'evaluation'} ? 'show active'">
 
-                    <!-- Status Strip -->
-                    <div class="status-strip">
-                        <th:block th:each="status, iter : ${statuses}" th:if="${!status.isDraft()}">
-                            <a th:href="'/admin/academic/requests?type=evaluation&status=' + ${status.name()}"
-                               class="status-card"
-                               th:classappend="${activeStatus == status.name()} ? 'sc-active'"
-                               th:style="'--_accent:' + ${status.color} + ';animation-delay:' + ${iter.index * 50} + 'ms'">
-                                <div>
-                                    <div class="status-card-label" th:text="${status.thaiLabel}"></div>
-                                    <div class="status-card-count" th:text="${statusCounts.get(status.name()) ?: 0}">0</div>
-                                </div>
-                                <div class="status-card-icon"
-                                     th:style="'background-color:' + ${status.color} + '18;color:' + ${status.color}">
-                                    <i class="fas" th:classappend="${status.icon}"></i>
-                                </div>
-                            </a>
-                        </th:block>
-                    </div>
-
-                    <!-- Filter Chip -->
-                    <div th:if="${activeStatus != null}" class="filter-chip">
-                        <i class="fas fa-filter"></i>
-                        กำลังแสดง:
-                        <th:block th:each="s : ${statuses}">
-                            <strong th:if="${s.name() == activeStatus}" th:text="${s.thaiLabel}"></strong>
-                        </th:block>
-                        <a href="/admin/academic/requests?type=evaluation" class="filter-chip-clear" title="แสดงทั้งหมด">
-                            <i class="fas fa-times"></i>
-                        </a>
-                    </div>
+                    <!-- Status filter: grouped by who acts next -->
+                    <nav class="sf-bar" aria-label="กรองตามสถานะ">
+                        <div class="sf-group">
+                            <div class="sf-title"><i class="fas fa-layer-group"></i> ภาพรวม</div>
+                            <div class="sf-chips">
+                                <a href="/admin/academic/requests?type=evaluation" class="sf-chip"
+                                   th:classappend="${(openStatusCount > 0 ? 'is-live' : 'is-zero') + (activeStatus == null ? ' is-active' : '')}"
+                                   th:attr="aria-current=${activeStatus == null} ? 'page'"
+                                   data-accent="#1565c0">
+                                    <i class="fas fa-list-ul"></i>
+                                    <span>ทั้งหมดที่ยังไม่ปิด</span>
+                                    <span class="sf-count" th:text="${openStatusCount}">0</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="sf-group" th:each="g : ${statusGroups}" th:classappend="'sf-' + ${g.tone}">
+                            <div class="sf-title">
+                                <i class="fas" th:classappend="${g.icon}"></i> <span th:text="${g.title}"></span>
+                            </div>
+                            <div class="sf-chips">
+                                <a th:each="s : ${g.statuses}" th:with="n=${statusCounts?.get(s.name()) ?: 0}"
+                                   th:href="'/admin/academic/requests?type=evaluation&status=' + ${s.name()}"
+                                   class="sf-chip"
+                                   th:classappend="${(n > 0 ? 'is-live' : 'is-zero') + (activeStatus == s.name() ? ' is-active' : '')}"
+                                   th:attr="aria-current=${activeStatus == s.name()} ? 'page'"
+                                   th:title="${s.thaiLabel}"
+                                   th:data-accent="${s.color}">
+                                    <i class="fas" th:classappend="${s.icon}"></i>
+                                    <span th:text="${s.shortLabel}"></span>
+                                    <span class="sf-count" th:text="${n}">0</span>
+                                </a>
+                            </div>
+                        </div>
+                    </nav>
 
                     <!-- Search -->
                     <form action="/admin/academic/requests" method="get" class="admin-search">
@@ -98,15 +102,15 @@
                                 <h5 class="admin-table-title">
                                     <span class="at-badge at-badge-eval">ประเมินผล</span>
                                     <th:block th:each="s : ${statuses}" th:if="${s.name() == activeStatus}">
-                                        <i class="fas" th:classappend="${s.icon}" th:style="'color:' + ${s.color}"></i>
+                                        <i class="fas" th:classappend="${s.icon}" th:data-fg="${s.color}"></i>
                                         <span th:text="${s.thaiLabel}"></span>
                                     </th:block>
                                     <span class="at-count"
                                           th:each="s : ${statuses}" th:if="${s.name() == activeStatus}"
-                                          th:style="'background-color:' + ${s.color} + ' !important'"
+                                          th:data-bg="${s.color}"
                                           th:text="${requests != null ? requests.size() : 0}"></span>
                                 </h5>
-                                <span class="admin-table-meta"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</span>
+                                <button type="button" class="admin-sort-toggle" title="สลับลำดับตามวันที่ยื่น"><i class="fas fa-sort-amount-up"></i> <span>เรียงจากเก่า → ใหม่</span></button>
                             </div>
                             <div th:if="${requests == null || requests.isEmpty()}" class="admin-table-empty">
                                 <i class="fas fa-inbox"></i>
@@ -128,8 +132,8 @@
                                     </thead>
                                     <tbody>
                                         <th:block th:each="req, iter : ${requests}">
-                                        <tr th:id="'req-' + ${req.id}">
-                                            <td class="at-date" th:text="${iter.index + 1}"></td>
+                                        <tr th:id="'req-' + ${req.id}" th:attr="data-submitted=${req.submissionDate}">
+                                            <td class="at-date row-num" th:text="${iter.index + 1}"></td>
                                             <td><span class="at-code" style="color:#1565c0" th:text="${req.requestCode}"></span></td>
                                             <td class="at-name" th:text="${req.applicant.name}"></td>
                                             <td class="at-email" th:text="${req.applicant.email}"></td>
@@ -179,7 +183,7 @@
                                     <span class="at-count at-count-eval"
                                           th:text="${pendingRequests != null ? pendingRequests.size() : 0}"></span>
                                 </h5>
-                                <span class="admin-table-meta"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</span>
+                                <button type="button" class="admin-sort-toggle" title="สลับลำดับตามวันที่ยื่น"><i class="fas fa-sort-amount-up"></i> <span>เรียงจากเก่า → ใหม่</span></button>
                             </div>
                             <div th:if="${pendingRequests == null || pendingRequests.isEmpty()}" class="admin-table-empty">
                                 <i class="fas fa-check-circle" style="color:var(--color-success)"></i>
@@ -201,8 +205,8 @@
                                     </thead>
                                     <tbody>
                                         <th:block th:each="req, iter : ${pendingRequests}">
-                                        <tr th:id="'req-' + ${req.id}" th:attr="data-request-id=${req.id}">
-                                            <td class="at-date" th:text="${iter.index + 1}"></td>
+                                        <tr th:id="'req-' + ${req.id}" th:attr="data-request-id=${req.id},data-submitted=${req.submissionDate}">
+                                            <td class="at-date row-num" th:text="${iter.index + 1}"></td>
                                             <td><span class="at-code" style="color:#1565c0" th:text="${req.requestCode}"></span></td>
                                             <td class="at-name" th:text="${req.applicant.name}"></td>
                                             <td class="at-email" th:text="${req.applicant.email}"></td>
@@ -246,36 +250,40 @@
                 <div class="tab-pane fade" id="posPane" role="tabpanel"
                      th:classappend="${activeType == 'position'} ? 'show active'">
 
-                    <!-- Status Strip -->
-                    <div class="status-strip">
-                        <th:block th:each="ps, iter : ${positionStatuses}" th:if="${!ps.isDraft()}">
-                            <a th:href="'/admin/academic/requests?type=position&posStatus=' + ${ps.name()}"
-                               class="status-card"
-                               th:classappend="${activePosStatus == ps.name()} ? 'sc-active'"
-                               th:style="'--_accent:' + ${ps.color} + ';animation-delay:' + ${iter.index * 50} + 'ms'">
-                                <div>
-                                    <div class="status-card-label" th:text="${ps.thaiLabel}"></div>
-                                    <div class="status-card-count" th:text="${posStatusCounts?.get(ps.name()) ?: 0}">0</div>
-                                </div>
-                                <div class="status-card-icon"
-                                     th:style="'background-color:' + ${ps.color} + '18;color:' + ${ps.color}">
+                    <!-- Status filter: grouped by who acts next -->
+                    <nav class="sf-bar" aria-label="กรองตามสถานะ">
+                        <div class="sf-group">
+                            <div class="sf-title"><i class="fas fa-layer-group"></i> ภาพรวม</div>
+                            <div class="sf-chips">
+                                <a href="/admin/academic/requests?type=position" class="sf-chip"
+                                   th:classappend="${(posAllCount > 0 ? 'is-live' : 'is-zero') + (activePosStatus == null ? ' is-active' : '')}"
+                                   th:attr="aria-current=${activePosStatus == null} ? 'page'"
+                                   data-accent="#2e7d32">
+                                    <i class="fas fa-list-ul"></i>
+                                    <span>ทั้งหมด</span>
+                                    <span class="sf-count" th:text="${posAllCount}">0</span>
+                                </a>
+                            </div>
+                        </div>
+                        <div class="sf-group" th:each="g : ${posStatusGroups}" th:classappend="'sf-' + ${g.tone}">
+                            <div class="sf-title">
+                                <i class="fas" th:classappend="${g.icon}"></i> <span th:text="${g.title}"></span>
+                            </div>
+                            <div class="sf-chips">
+                                <a th:each="ps : ${g.statuses}" th:with="n=${posStatusCounts?.get(ps.name()) ?: 0}"
+                                   th:href="'/admin/academic/requests?type=position&posStatus=' + ${ps.name()}"
+                                   class="sf-chip"
+                                   th:classappend="${(n > 0 ? 'is-live' : 'is-zero') + (activePosStatus == ps.name() ? ' is-active' : '')}"
+                                   th:attr="aria-current=${activePosStatus == ps.name()} ? 'page'"
+                                   th:title="${ps.thaiLabel}"
+                                   th:data-accent="${ps.color}">
                                     <i class="fas" th:classappend="${ps.icon}"></i>
-                                </div>
-                            </a>
-                        </th:block>
-                    </div>
-
-                    <!-- Filter Chip -->
-                    <div th:if="${activePosStatus != null}" class="filter-chip">
-                        <i class="fas fa-filter"></i>
-                        กำลังแสดง:
-                        <th:block th:each="ps : ${positionStatuses}">
-                            <strong th:if="${ps.name() == activePosStatus}" th:text="${ps.thaiLabel}"></strong>
-                        </th:block>
-                        <a href="/admin/academic/requests?type=position" class="filter-chip-clear" title="แสดงทั้งหมด">
-                            <i class="fas fa-times"></i>
-                        </a>
-                    </div>
+                                    <span th:text="${ps.shortLabel}"></span>
+                                    <span class="sf-count" th:text="${n}">0</span>
+                                </a>
+                            </div>
+                        </div>
+                    </nav>
 
                     <!-- Search -->
                     <form action="/admin/academic/requests" method="get" class="admin-search">
@@ -305,7 +313,7 @@
                                 <span class="at-badge at-badge-pos">ขอตำแหน่ง</span>
                                 <th:block th:if="${activePosStatus != null}">
                                     <th:block th:each="ps : ${positionStatuses}" th:if="${ps.name() == activePosStatus}">
-                                        <i class="fas" th:classappend="${ps.icon}" th:style="'color:' + ${ps.color}"></i>
+                                        <i class="fas" th:classappend="${ps.icon}" th:data-fg="${ps.color}"></i>
                                         <span th:text="${ps.thaiLabel}"></span>
                                     </th:block>
                                 </th:block>
@@ -316,7 +324,7 @@
                                 <span class="at-count at-count-pos"
                                       th:text="${positionRequests != null ? positionRequests.size() : 0}"></span>
                             </h5>
-                            <span class="admin-table-meta"><i class="fas fa-sort-amount-up"></i> เรียงจากเก่า → ใหม่</span>
+                            <button type="button" class="admin-sort-toggle" title="สลับลำดับตามวันที่ยื่น"><i class="fas fa-sort-amount-up"></i> <span>เรียงจากเก่า → ใหม่</span></button>
                         </div>
                         <div th:if="${positionRequests == null || positionRequests.isEmpty()}" class="admin-table-empty">
                             <i class="fas fa-inbox"></i>
@@ -338,8 +346,9 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    <tr th:each="req, iter : ${positionRequests}" th:id="'pos-req-' + ${req.id}">
-                                        <td class="at-date" th:text="${iter.index + 1}"></td>
+                                    <tr th:each="req, iter : ${positionRequests}" th:id="'pos-req-' + ${req.id}"
+                                        th:attr="data-submitted=${req.submissionDate}">
+                                        <td class="at-date row-num" th:text="${iter.index + 1}"></td>
                                         <td><span class="at-code" style="color:#2e7d32" th:text="${req.requestCode}"></span></td>
                                         <td class="at-name" th:text="${req.applicant.name}"></td>
                                         <td class="at-email" th:text="${req.applicant.email}"></td>
@@ -369,6 +378,22 @@
             </div>
         </div>
     <script>
+        // Status colours come from the enum. A style="" attribute is refused by the CSP
+        // (style-src has no 'unsafe-inline'), but setting it from script is not.
+        document.querySelectorAll('[data-accent]').forEach(function(el) {
+            var c = el.getAttribute('data-accent');
+            el.style.setProperty('--_accent', c);
+            el.style.setProperty('--_tint', c + '1f');
+            el.style.setProperty('--_tint-soft', c + '0f');
+            el.style.setProperty('--_ring', c + '4d');
+        });
+        document.querySelectorAll('[data-fg]').forEach(function(el) {
+            el.style.color = el.getAttribute('data-fg');
+        });
+        document.querySelectorAll('[data-bg]').forEach(function(el) {
+            el.style.setProperty('background-color', el.getAttribute('data-bg'), 'important');
+        });
+
         // Handle tab from URL param
         var urlParams = new URLSearchParams(window.location.search);
         var tabType = urlParams.get('type');
@@ -376,6 +401,52 @@
             var posTab = document.getElementById('pos-tab');
             if (posTab) posTab.click();
         }
+
+        // Sort toggle: เก่า → ใหม่ / ใหม่ → เก่า by submission date (remembered per browser)
+        var SORT_KEY = 'academicAdminRequestSort';
+        var sortDir = 'asc';
+        try { if (localStorage.getItem(SORT_KEY) === 'desc') sortDir = 'desc'; } catch (e) {}
+
+        function applySort(dir) {
+            document.querySelectorAll('.admin-sort-toggle').forEach(function(btn) {
+                var icon = btn.querySelector('i');
+                icon.classList.toggle('fa-sort-amount-up', dir === 'asc');
+                icon.classList.toggle('fa-sort-amount-down', dir === 'desc');
+                btn.querySelector('span').textContent = dir === 'asc' ? 'เรียงจากเก่า → ใหม่' : 'เรียงจากใหม่ → เก่า';
+
+                var tbody = btn.closest('.admin-table-wrap').querySelector('.admin-table tbody');
+                if (!tbody) return;
+
+                // Keep each request row together with its course-detail row
+                var groups = [];
+                Array.prototype.forEach.call(tbody.children, function(tr) {
+                    if (tr.classList.contains('course-detail-row') && groups.length) {
+                        groups[groups.length - 1].rows.push(tr);
+                    } else {
+                        groups.push({ key: tr.getAttribute('data-submitted') || '', idx: groups.length, rows: [tr] });
+                    }
+                });
+                groups.sort(function(a, b) {
+                    if (!a.key !== !b.key) return a.key ? -1 : 1; // no submission date always last
+                    if (a.key !== b.key) return (a.key < b.key ? -1 : 1) * (dir === 'asc' ? 1 : -1);
+                    return a.idx - b.idx;
+                });
+                groups.forEach(function(g, i) {
+                    var num = g.rows[0].querySelector('.row-num');
+                    if (num) num.textContent = i + 1;
+                    g.rows.forEach(function(tr) { tbody.appendChild(tr); });
+                });
+            });
+        }
+
+        applySort(sortDir);
+        document.querySelectorAll('.admin-sort-toggle').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                sortDir = sortDir === 'asc' ? 'desc' : 'asc';
+                try { localStorage.setItem(SORT_KEY, sortDir); } catch (e) {}
+                applySort(sortDir);
+            });
+        });
 
         // Build suggestions by scanning all table rows (pure client-side)
         var suggestionsSet = {};

@@ -1,6 +1,7 @@
 package com.ecom.academic.model;
 
 import java.util.EnumSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -61,6 +62,38 @@ public enum RequestStatus {
 
     public String getColor() {
         return color;
+    }
+
+    /** ป้ายสั้นสำหรับชิปบนแถบสถานะหน้าแอดมิน — ป้ายเต็มยาวจนตัดหลายบรรทัด */
+    public String getShortLabel() {
+        return switch (this) {
+            case MEETING_SCHEDULED -> "นัดหมายอนุกรรมการ";
+            case COMPLETED_PASS -> "ผ่าน · รอรับรอง";
+            case COMPLETED_REVISE -> "รอผู้ยื่นแก้ไข";
+            case REVISION_SUBMITTED -> "ส่งแก้ไขแล้ว";
+            case COLLEGE_ENDORSED -> "รับรองโดยวิทยาลัย";
+            case COMPLETED_FAIL -> "ไม่ผ่าน";
+            default -> thaiLabel;
+        };
+    }
+
+    /**
+     * แถบสถานะหน้าแอดมิน: สถานะที่แอดมินต้องทำขั้นต่อไป เรียงตามเส้นทางหลัก
+     * แล้วตามด้วยวงจรแก้ไข — แบ่งกลุ่มตามว่าใครถือลูกอยู่ ไม่ใช่ลำดับใน enum
+     */
+    public static List<RequestStatus> awaitingAdmin() {
+        return List.of(RECEIVED, SUB_COMMITTEE_APPOINTED, MEETING_SCHEDULED,
+                COMPLETED_PASS, COLLEGE_ENDORSED, REVISION_SUBMITTED);
+    }
+
+    /** แถบสถานะหน้าแอดมิน: ลูกอยู่ที่ผู้ยื่น (ข้อ 12-13) */
+    public static List<RequestStatus> awaitingApplicant() {
+        return List.of(COMPLETED_REVISE);
+    }
+
+    /** แถบสถานะหน้าแอดมิน: ปิดแล้ว */
+    public static List<RequestStatus> closed() {
+        return List.of(COMPLETED, COMPLETED_FAIL);
     }
 
     /**

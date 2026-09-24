@@ -3023,137 +3023,142 @@ body.modal-open .sidebar-toggle {
   background: rgba(255, 255, 255, 0.25);
 }
 
-/* ===== Status Strip ===== */
-.status-strip {
+/* ===== Status Filter Bar (grouped by who acts next) =====
+   คลาส sf-* ไม่ใช่ status-chip เพราะชื่อนั้นเป็นของ badge ในหน้าแดชบอร์ด (ท้ายไฟล์)
+   สีต่อสถานะ (--_accent/--_tint/--_tint-soft/--_ring) ตั้งจาก data-accent ด้วย JS
+   เพราะ CSP บล็อก style="" — ค่าใน .sf-chip คือค่าตั้งต้นก่อน JS ทำงาน */
+.sf-bar {
   display: flex;
-  gap: var(--space-sm);
+  flex-wrap: wrap;
+  align-items: flex-start;
+  row-gap: 12px;
   margin-bottom: var(--space-lg);
-  overflow-x: auto;
-  padding-bottom: 4px;
-}
-
-.status-card {
-  flex: 1;
-  min-width: 110px;
+  padding: 12px 8px;
   background: var(--bg-card);
   border: 1px solid var(--border-card);
-  border-radius: 10px;
-  padding: 14px 16px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  cursor: pointer;
-  text-decoration: none;
-  color: inherit;
-  transition:
-    transform var(--duration-fast) var(--ease-out-quart),
-    box-shadow var(--duration-fast) var(--ease-out-quart),
-    border-color var(--duration-fast);
-  position: relative;
-  overflow: hidden;
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
   animation: adminFadeIn var(--duration-slow) var(--ease-out-quart) both;
 }
 
-.status-card::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  width: 3px;
-  background: var(--_accent, var(--border-color));
-  border-radius: 3px 0 0 3px;
-  transition: width var(--duration-fast);
+.sf-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  padding: 0 10px;
 }
 
-.status-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  border-color: var(--_accent, var(--border-color));
+.sf-group + .sf-group {
+  border-left: 1px solid var(--border-color);
 }
 
-.status-card:hover::before {
-  width: 4px;
+.sf-group.sf-action {
+  flex: 1 1 380px;
 }
 
-.status-card.sc-active {
-  border-color: var(--_accent, var(--color-primary));
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-
-.status-card.sc-active::before {
-  width: 4px;
-}
-
-.status-card-label {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-  line-height: 1.3;
-}
-
-.status-card-count {
-  font-size: 1.35rem;
-  font-weight: 700;
-  color: var(--text-heading);
-  line-height: 1;
-  margin-top: 2px;
-}
-
-.status-card-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
+.sf-title {
   display: flex;
   align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  font-size: 0.9rem;
+  gap: 6px;
+  padding-left: 2px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--_group, var(--text-muted));
 }
 
-/* ===== Filter Chip ===== */
-.filter-chip {
+.sf-action { --_group: #1565c0; }
+.sf-waiting { --_group: #e65100; }
+.sf-closed { --_group: #546e7a; }
+
+.sf-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.sf-chip {
+  --_accent: var(--color-primary);
+  --_tint: rgba(26, 35, 126, 0.12);
+  --_tint-soft: rgba(26, 35, 126, 0.06);
+  --_ring: rgba(26, 35, 126, 0.3);
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 14px;
-  background: var(--bg-card);
-  border: 1px solid var(--border-color);
-  border-radius: 20px;
-  font-size: 0.82rem;
+  gap: 6px;
+  height: 34px;
+  padding: 0 5px 0 9px;
+  border: 1px solid var(--_ring);
+  border-radius: 8px;
+  background: var(--_tint-soft);
   color: var(--text-secondary);
-  margin-bottom: var(--space-md);
-  box-shadow: var(--shadow-card);
+  font-size: 0.84rem;
+  white-space: nowrap;
+  text-decoration: none;
+  transition:
+    background-color var(--duration-fast),
+    border-color var(--duration-fast),
+    box-shadow var(--duration-fast);
 }
 
-.filter-chip i {
-  font-size: 0.75rem;
+.sf-chip i {
+  width: 1em;
+  text-align: center;
+  font-size: 0.8rem;
+  color: var(--_accent);
 }
 
-.filter-chip strong {
+.sf-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 11px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--_accent);
+  background: var(--bg-card);
+}
+
+/* มีงานค้าง: พื้นเข้มขึ้น ตัวหนา ตัวเลขทึบสีสถานะ */
+.sf-chip.is-live {
+  background: var(--_tint);
   color: var(--text-heading);
   font-weight: 600;
 }
 
-.filter-chip-clear {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: var(--bg-hover);
-  color: var(--text-muted);
-  text-decoration: none;
-  font-size: 0.7rem;
-  margin-left: 4px;
-  transition:
-    background var(--duration-fast),
-    color var(--duration-fast);
+.sf-chip.is-live .sf-count {
+  background: var(--_accent);
+  color: #fff;
 }
 
-.filter-chip-clear:hover {
-  background: var(--color-danger);
+.sf-chip:hover {
+  border-color: var(--_accent);
+  color: var(--text-heading);
+  box-shadow: 0 2px 8px var(--_ring);
+}
+
+.sf-chip:focus-visible {
+  outline: 2px solid var(--_accent);
+  outline-offset: 2px;
+}
+
+/* เลือกอยู่: ทึบทั้งชิป */
+.sf-chip.is-active,
+.sf-chip.is-active:hover {
+  background: var(--_accent);
+  border-color: var(--_accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.sf-chip.is-active i {
+  color: #fff;
+}
+
+.sf-chip.is-active .sf-count {
+  background: rgba(255, 255, 255, 0.22);
   color: #fff;
 }
 
@@ -3297,6 +3302,28 @@ body.modal-open .sidebar-toggle {
 .admin-table-meta {
   font-size: 0.78rem;
   color: var(--text-muted);
+}
+
+.admin-sort-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.admin-sort-toggle:hover,
+.admin-sort-toggle:focus-visible {
+  color: #1565c0;
+  background: rgba(21, 101, 192, 0.06);
+  border-color: rgba(21, 101, 192, 0.25);
+  outline: none;
 }
 
 .admin-table {
@@ -3668,7 +3695,7 @@ body.modal-open .sidebar-toggle {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .status-card,
+  .sf-bar,
   .admin-table-wrap {
     animation: none;
   }
@@ -3676,12 +3703,17 @@ body.modal-open .sidebar-toggle {
 
 /* ===== Responsive: Admin Dashboard ===== */
 @media (max-width: 991px) {
-  .status-strip {
-    flex-wrap: wrap;
+  .sf-bar {
+    flex-direction: column;
+    align-items: stretch;
   }
-  .status-card {
-    min-width: calc(50% - var(--space-sm));
-    flex: 0 0 calc(50% - var(--space-sm));
+  .sf-group.sf-action {
+    flex: none; /* ในแนวตั้ง flex-basis กลายเป็นความสูง */
+  }
+  .sf-group + .sf-group {
+    border-left: none;
+    border-top: 1px solid var(--border-color);
+    padding-top: 12px;
   }
   .admin-table:not(.admin-table-attachments) thead th:nth-child(4),
   .admin-table:not(.admin-table-attachments) tbody td:nth-child(4) {
@@ -3692,10 +3724,6 @@ body.modal-open .sidebar-toggle {
 @media (max-width: 576px) {
   .admin-tab-bar {
     flex-direction: column;
-  }
-  .status-card {
-    min-width: 100%;
-    flex: 0 0 100%;
   }
   .admin-search {
     flex-direction: column;

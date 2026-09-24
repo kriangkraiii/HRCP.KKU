@@ -33,6 +33,36 @@ public enum PositionRequestStatus {
         return color;
     }
 
+    /** ป้ายสั้นสำหรับชิปบนแถบสถานะหน้าแอดมิน — ป้ายเต็มยาวจนตัดหลายบรรทัด */
+    public String getShortLabel() {
+        return switch (this) {
+            case DOCUMENT_VERIFICATION -> "ตรวจสอบเอกสาร";
+            case SCREENING_COMMITTEE -> "เสนอกลั่นกรองฯ";
+            case REVISION_REQUESTED -> "รอผู้ยื่นแก้ไข";
+            case SCREENING_APPROVED -> "รับรองมติกลั่นกรองฯ";
+            case COLLEGE_COMMITTEE -> "เสนอกรรมการวิทยาลัยฯ";
+            case COLLEGE_APPROVED -> "รับรองมติวิทยาลัยฯ";
+            case SENT_TO_HR -> "ส่งกองทรัพยากรบุคคลแล้ว";
+            default -> thaiLabel;
+        };
+    }
+
+    /** แถบสถานะหน้าแอดมิน: สถานะที่แอดมินต้องทำขั้นต่อไป เรียงตาม flow */
+    public static java.util.List<PositionRequestStatus> awaitingAdmin() {
+        return java.util.List.of(DOCUMENT_RECEIVED, DOCUMENT_VERIFICATION, SCREENING_COMMITTEE,
+                SCREENING_APPROVED, COLLEGE_COMMITTEE, COLLEGE_APPROVED);
+    }
+
+    /** แถบสถานะหน้าแอดมิน: ลูกอยู่ที่ผู้ยื่น */
+    public static java.util.List<PositionRequestStatus> awaitingApplicant() {
+        return java.util.List.of(REVISION_REQUESTED);
+    }
+
+    /** แถบสถานะหน้าแอดมิน: ปิดแล้ว */
+    public static java.util.List<PositionRequestStatus> closed() {
+        return java.util.List.of(SENT_TO_HR);
+    }
+
     /** Bootstrap badge class derived from color */
     public String getBadgeClass() {
         switch (this) {
