@@ -114,7 +114,7 @@ public class UserDigitalCertificateService {
         }
         byte[] p12Bytes = storage.read(optCert.get().getCertificatePath());
         if (p12Bytes == null || p12Bytes.length == 0) {
-            return VerifyResult.failed("ไม่พบไฟล์ใบรับรองในระบบ");
+            return VerifyResult.failed("ไม่พบไฟล์ใบรับรอง (.p12) ในระบบ — กรุณาอัปโหลดไฟล์ .p12 ใหม่");
         }
         return verifyP12(p12Bytes, password);
     }
@@ -137,7 +137,7 @@ public class UserDigitalCertificateService {
         UserDigitalCertificate cert = optCert.get();
         byte[] p12Bytes = storage.read(cert.getCertificatePath());
         if (p12Bytes == null || p12Bytes.length == 0) {
-            return SaveResult.failed("ไม่พบไฟล์ใบรับรองในระบบ");
+            return SaveResult.failed("ไม่พบไฟล์ใบรับรอง (.p12) ในระบบ — กรุณาอัปโหลดไฟล์ .p12 ใหม่");
         }
 
         // Verify that the new password actually unlocks the file

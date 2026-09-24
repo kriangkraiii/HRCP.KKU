@@ -61,6 +61,10 @@ public class SignatureWorkflowService {
     private final SignatureAuditEventRepository auditRepository;
     private final SignatureAnchorRegistry anchorRegistry;
     private final UserSignatureService userSignatureService;
+
+    /** Shown when the active certificate's .p12 cannot be found anywhere. */
+    static final String CERTIFICATE_FILE_MISSING = "ไม่พบไฟล์ใบรับรอง (.p12) ของคุณในระบบ "
+            + "— กรุณาอัปโหลดไฟล์ .p12 ใหม่ที่หน้า \"ลายเซ็นของฉัน\" แล้วลงนามอีกครั้ง";
     private final UserRepository userRepository;
     private final SignatureNotifier notifier;
     private final StaffMemberService staffMemberService;
@@ -814,8 +818,13 @@ public class SignatureWorkflowService {
             }
             String pin = digitalCertificateService.resolvePin(cert, digitalCertPin);
             if (pin != null && !pin.isBlank()) {
+                byte[] p12Bytes = digitalCertificateStorage.read(cert.getCertificatePath());
+                if (p12Bytes == null || p12Bytes.length == 0) {
+                    // ไม่ใช่รหัสผ่านผิด — ไฟล์ไม่อยู่ทั้งบนดิสก์และในฐานข้อมูล เดิมตกไปที่ข้อความ "PIN ไม่ถูกต้อง"
+                    // ผู้ใช้จึงเดาไม่ออกว่าต้องอัปโหลดไฟล์ใหม่
+                    return Result.failed(CERTIFICATE_FILE_MISSING);
+                }
                 try {
-                    byte[] p12Bytes = digitalCertificateStorage.read(cert.getCertificatePath());
                     pdfDigitalSignatureService.inspect(p12Bytes, pin);
                     authMethodToUse = "DIGITAL_ID_P12";
                     step.setDigitalCertSubject(cert.getSubjectDn());

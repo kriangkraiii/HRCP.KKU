@@ -21,10 +21,19 @@ public class DigitalCertificateStorage {
     private static final long MAX_CERT_SIZE_BYTES = 5 * 1024 * 1024; // 5MB limit
 
     private final Path baseDir;
+    private final com.ecom.service.BlobMirror mirror;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public DigitalCertificateStorage(
-            @Value("${app.upload.certificate-dir:${app.upload.dir:${user.dir}/uploads/}certificates}") String baseDir) {
+            @Value("${app.upload.certificate-dir:${app.upload.dir:${user.dir}/uploads/}certificates}") String baseDir,
+            com.ecom.service.BlobMirror mirror) {
         this.baseDir = Path.of(baseDir).toAbsolutePath().normalize();
+        this.mirror = mirror;
+    }
+
+    /** Disk only, no database copy — for tests that build the storage by hand. */
+    public DigitalCertificateStorage(String baseDir) {
+        this(baseDir, null);
     }
 
     /**
@@ -46,6 +55,9 @@ public class DigitalCertificateStorage {
         try {
             Files.write(temp, certBytes);
             Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            if (mirror != null) {
+                mirror.save(com.ecom.service.BlobMirror.CERTIFICATE, filename, certBytes);
+            }
             return filename;
         } finally {
             Files.deleteIfExists(temp);
@@ -62,8 +74,22 @@ public class DigitalCertificateStorage {
         try {
             Path target = resolveSafe(filename);
             if (!Files.isRegularFile(target)) {
-                log.warn("Certificate file does not exist: {}", filename);
-                return null;
+                // Uploaded on another machine sharing the database, or lost with a
+                // disk: use the database copy and put the file back.
+                byte[] copy = mirror != null ? mirror.load(com.ecom.service.BlobMirror.CERTIFICATE, filename) : null;
+                if (copy == null) {
+                    log.warn("Certificate file does not exist on disk or in the database: {}", filename);
+                    return null;
+                }
+                try {
+                    Files.createDirectories(baseDir);
+                    Files.write(target, copy);
+                    log.info("Restored certificate {} from the database copy", filename);
+                } catch (IOException e) {
+                    log.warn("Read certificate {} from the database but could not write it back: {}",
+                            filename, e.getMessage());
+                }
+                return copy;
             }
             return Files.readAllBytes(target);
         } catch (Exception e) {
@@ -82,9 +108,16 @@ public class DigitalCertificateStorage {
         try {
             Path target = resolveSafe(filename);
             Files.deleteIfExists(target);
+            if (mirror != null) {
+                mirror.delete(com.ecom.service.BlobMirror.CERTIFICATE, filename);
+            }
         } catch (Exception e) {
             log.error("Failed to delete certificate {}: {}", filename, e.getMessage());
         }
+    }
+
+    public Path getBaseDir() {
+        return baseDir;
     }
 
     private Path resolveSafe(String filename) {

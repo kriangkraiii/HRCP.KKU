@@ -358,6 +358,8 @@
                     <spring.datasource.username>sa</spring.datasource.username>
                     <spring.jpa.hibernate.ddl-auto>create-drop</spring.jpa.hibernate.ddl-auto>
                     <app.upload.dir>${project.basedir}/uploads/</app.upload.dir>
+                    <!-- ทุก context ของเทสต์จะคัดลอกไฟล์ลายเซ็นเข้า H2 ใหม่ทุกครั้งโดยไม่มีประโยชน์ -->
+                    <app.storage.blob-backfill.enabled>false</app.storage.blob-backfill.enabled>
                 </systemPropertyVariables>
             </configuration>
         </plugin>

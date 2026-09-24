@@ -51,6 +51,19 @@ class DigitalIdGateTest extends AbstractFlowTest {
     @Autowired
     private UserDigitalCertificateService certificateService;
 
+    @Autowired
+    private com.ecom.academic.service.DigitalCertificateStorage certificateStorage;
+
+    @Autowired
+    private com.ecom.service.BlobMirror blobMirror;
+
+    /** ลบไฟล์ .p12 ออกจากดิสก์ เหมือนเปิดลงนามจากอีกเครื่องที่ไม่ได้รับไฟล์นี้ */
+    private String removeCertificateFromDisk(UserDtls owner) throws Exception {
+        String filename = certificateService.findActive(owner).orElseThrow().getCertificatePath();
+        java.nio.file.Files.delete(certificateStorage.getBaseDir().resolve(filename));
+        return filename;
+    }
+
     /** ซองลงนามเอกสารที่ 1 พร้อมช่องของผู้ยื่น รอให้เซ็น */
     private SignatureStep aStepWaitingForTheApplicant(UserDtls applicant) {
         AcademicRequest draft = data.evaluation(applicant, RequestStatus.DRAFT);
@@ -151,5 +164,41 @@ class DigitalIdGateTest extends AbstractFlowTest {
         assertThat(signatureSteps.findById(step.getId()).orElseThrow().getSignedAt())
                 .as("ลงนามสำเร็จแล้วต้องถูกบันทึกเวลาไว้")
                 .isNotNull();
+    }
+
+    @Test
+    @DisplayName("ติดตั้งใบรับรองจากอีกเครื่องที่ใช้ฐานข้อมูลเดียวกัน — เครื่องนี้ไม่มีไฟล์ก็ยังลงนามได้")
+    void aCertificateInstalledOnAnotherMachineStillSigns() throws Exception {
+        UserDtls applicant = data.applicant();
+        UserSignature signature = data.signatureFor(applicant);
+        String pin = data.digitalCertificateFor(applicant);
+        String filename = removeCertificateFromDisk(applicant);
+        SignatureStep step = aStepWaitingForTheApplicant(applicant);
+
+        assertThat(signWith(step, signature, pin))
+                .as("ไฟล์ไม่อยู่บนดิสก์เครื่องนี้ ต้องอ่านจากสำเนาในฐานข้อมูลแล้วลงนามได้")
+                .isNotEqualTo(pageFor(step));
+        assertThat(certificateStorage.getBaseDir().resolve(filename))
+                .as("อ่านจากฐานข้อมูลแล้วต้องเขียนไฟล์กลับลงดิสก์ด้วย")
+                .isRegularFile();
+    }
+
+    @Test
+    @DisplayName("ไฟล์ใบรับรองหายทั้งดิสก์และฐานข้อมูล — บอกให้อัปโหลดใหม่ ไม่ใช่บอกว่ารหัสผ่านผิด")
+    void aMissingCertificateFileSaysSoInsteadOfBlamingThePin() throws Exception {
+        UserDtls applicant = data.applicant();
+        UserSignature signature = data.signatureFor(applicant);
+        String pin = data.digitalCertificateFor(applicant);
+        String filename = removeCertificateFromDisk(applicant);
+        blobMirror.delete(com.ecom.service.BlobMirror.CERTIFICATE, filename);
+        SignatureStep step = aStepWaitingForTheApplicant(applicant);
+
+        var result = signatureWorkflow.sign(step.getId(), applicant, signature.getId(), true,
+                SignatureWorkflowService.ActorContext.none(), pin);
+
+        assertThat(result.ok()).isFalse();
+        assertThat(result.error())
+                .contains("อัปโหลดไฟล์ .p12 ใหม่")
+                .doesNotContain("ไม่ถูกต้อง");
     }
 }

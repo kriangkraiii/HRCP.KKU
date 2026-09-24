@@ -55,10 +55,19 @@ public class SignatureImageStorage {
     private static final String DATA_URL_PREFIX = "data:image/png;base64,";
 
     private final Path baseDir;
+    private final BlobMirror mirror;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public SignatureImageStorage(
-            @Value("${app.upload.signature-dir:${app.upload.dir:${user.dir}/uploads/}signatures}") String baseDir) {
+            @Value("${app.upload.signature-dir:${app.upload.dir:${user.dir}/uploads/}signatures}") String baseDir,
+            BlobMirror mirror) {
         this.baseDir = Path.of(baseDir).toAbsolutePath().normalize();
+        this.mirror = mirror;
+    }
+
+    /** Disk only, no database copy — for tests that build the storage by hand. */
+    public SignatureImageStorage(String baseDir) {
+        this(baseDir, null);
     }
 
     /** What a stored signature image is, once decoded and validated. */
@@ -127,6 +136,9 @@ public class SignatureImageStorage {
         try {
             Files.createDirectories(baseDir);
             Files.write(target, pngBytes);
+            if (mirror != null) {
+                mirror.save(BlobMirror.SIGNATURE, filename, pngBytes);
+            }
             return new StoredImage(filename, image.getWidth(), image.getHeight());
         } catch (IOException e) {
             log.error("Failed to store signature image {}: {}", filename, e.getMessage(), e);
@@ -134,11 +146,19 @@ public class SignatureImageStorage {
         }
     }
 
-    /** Reads a stored signature, or null when it is missing or the name is unsafe. */
+    /**
+     * Reads a stored signature, or null when it is missing or the name is unsafe.
+     *
+     * <p>Not on this disk — stored by another machine sharing the database, or
+     * lost with a disk — falls back to the database copy and puts the file back.
+     */
     public byte[] read(String filename) {
         Path target = resolveSafely(filename);
-        if (target == null || !Files.isRegularFile(target)) {
+        if (target == null) {
             return null;
+        }
+        if (!Files.isRegularFile(target)) {
+            return restoreFromMirror(filename, target);
         }
         try {
             return Files.readAllBytes(target);
@@ -153,12 +173,34 @@ public class SignatureImageStorage {
         if (target == null) {
             return false;
         }
+        if (mirror != null) {
+            mirror.delete(BlobMirror.SIGNATURE, target.getFileName().toString());
+        }
         try {
             return Files.deleteIfExists(target);
         } catch (IOException e) {
             log.error("Failed to delete signature image {}: {}", filename, e.getMessage(), e);
             return false;
         }
+    }
+
+    private byte[] restoreFromMirror(String filename, Path target) {
+        if (mirror == null) {
+            return null;
+        }
+        byte[] copy = mirror.load(BlobMirror.SIGNATURE, target.getFileName().toString());
+        if (copy == null) {
+            return null;
+        }
+        try {
+            Files.createDirectories(baseDir);
+            Files.write(target, copy);
+            log.info("Restored signature image {} from the database copy", filename);
+        } catch (IOException e) {
+            log.warn("Read signature image {} from the database but could not write it back: {}",
+                    filename, e.getMessage());
+        }
+        return copy;
     }
 
     /**
