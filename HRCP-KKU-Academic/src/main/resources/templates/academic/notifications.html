@@ -12,7 +12,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
                 <h4 class="fw-bold mb-1">
-                    <i class="fas fa-bell me-2" style="color: var(--accent-color);"></i>ศูนย์การแจ้งเตือน
+                    <i class="fas fa-bell me-2 u-text-accent"></i>ศูนย์การแจ้งเตือน
                 </h4>
             </div>
             <div class="d-flex gap-2">
@@ -25,7 +25,7 @@
         <div class="row g-4">
             <!-- Left Column: Tabs Navigation -->
             <div class="col-lg-3 col-md-4">
-                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                <div class="card border-0 shadow-sm u-radius-16">
                     <div class="card-body p-2">
                         <div class="list-group list-group-flush border-0">
                             <!-- All -->
@@ -103,7 +103,7 @@
             <!-- Right Column: Notifications List & Search -->
             <div class="col-lg-9 col-md-8">
                 <!-- Search & Filters Toolbar -->
-                <div class="card border-0 shadow-sm mb-3" style="border-radius: 16px;">
+                <div class="card border-0 shadow-sm mb-3 u-radius-16">
                     <div class="card-body py-2 px-3">
                         <form method="get" class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <input type="hidden" name="tab" th:value="${currentTab}">
@@ -129,13 +129,13 @@
                 </div>
 
                 <!-- Notifications List -->
-                <div class="card border-0 shadow-sm" style="border-radius: 16px;">
+                <div class="card border-0 shadow-sm u-radius-16">
                     <div class="card-body p-0">
                         <!-- Empty State -->
                         <div th:if="${notifications == null or notifications.empty}" class="text-center py-5">
                             <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
                                  style="width: 70px; height: 70px; background: rgba(13,71,161,0.08);">
-                                <i class="fas fa-bell-slash fa-2x" style="color: var(--accent-color);"></i>
+                                <i class="fas fa-bell-slash fa-2x u-text-accent"></i>
                             </div>
                             <h6 class="fw-bold mb-1">ไม่มีรายการแจ้งเตือน</h6>
                             <p class="text-muted small mb-0">ไม่พบการแจ้งเตือนในหมวดหมู่นี้</p>
@@ -212,7 +212,7 @@
                                         <button class="btn btn-sm btn-light rounded-circle notif-kebab-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
                                             <i class="fas fa-ellipsis-v text-muted"></i>
                                         </button>
-                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0" style="border-radius: 12px;">
+                                        <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 u-radius-12">
                                             <!-- Open Detail Modal -->
                                             <li>
                                                 <a class="dropdown-item" href="#" data-notif-action="viewDetail" th:data-notif-id="${n.id}">

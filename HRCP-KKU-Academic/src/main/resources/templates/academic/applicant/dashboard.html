@@ -135,11 +135,11 @@
 
                     <!-- Academic Request Cards -->
                     <div th:each="req, iter : ${requests}" class="request-card-v2"
-                        th:styleappend="'--stagger:' + ${iter.index * 60} + 'ms'"
+                        data-styled th:data-var-stagger="${(iter.index * 60) + 'ms'}"
                         th:attr="data-index=${iter.index}">
 
                         <div class="request-card-v2-header">
-                            <div style="flex:1;min-width:0;">
+                            <div class="u-flex-fill">
                                 <h5 class="request-card-v2-title">คำร้อง [[${req.requestCode}]] — [[${req.applicant.name}]]</h5>
                                 <div class="request-card-v2-meta">
                                     <span class="meta-tag">
@@ -160,7 +160,7 @@
 
                         <!-- ข้อมูลรายวิชา (จากเอกสารที่ 1) -->
                         <div th:if="${doc1DataMap.containsKey(req.id)}" class="request-card-v2-course">
-                            <i class="fas fa-book me-1" style="color:var(--color-primary-medium)"></i>
+                            <i class="fas fa-book me-1 u-text-primary-medium"></i>
                             <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
                             <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_name', '')}"></span>
                             <span class="text-muted ms-2">ภาค/ปีการศึกษา <span th:text="${doc1DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
@@ -308,10 +308,10 @@
 
                     <!-- Position Request Cards -->
                     <div th:each="posReq, iter : ${positionRequests}" class="request-card-v2"
-                         th:styleappend="'--stagger:' + ${iter.index * 60} + 'ms'">
+                         data-styled th:data-var-stagger="${(iter.index * 60) + 'ms'}">
 
                         <div class="request-card-v2-header">
-                            <div style="flex:1;min-width:0;">
+                            <div class="u-flex-fill">
                                 <h5 class="request-card-v2-title">คำร้อง [[${posReq.requestCode}]] — [[${posReq.applicant.name}]]</h5>
                                 <div class="request-card-v2-meta">
                                     <span class="meta-tag" style="background:color-mix(in srgb, var(--color-success) 10%, var(--bg-hover));">
@@ -324,7 +324,7 @@
                                 </div>
                             </div>
                             <div class="request-card-status">
-                                <span class="badge" th:style="'background:' + ${posReq.currentStatus.color} + ';color:#fff'"
+                                <span class="badge text-white" th:data-bg="${posReq.currentStatus.color}"
                                     th:text="${posReq.currentStatus.thaiLabel}"></span>
                                 <th:block th:if="${positionSentBackMap.containsKey(posReq.id)}"><th:block th:replace="~{academic/_sent_back_alert :: badge(${positionSentBackMap.get(posReq.id)})}"></th:block></th:block>
                             </div>
@@ -348,11 +348,14 @@
                                      th:classappend="${posReq.currentStatus.ordinal() == step.ordinal()} ? 't-active' :
                                          (${posReq.currentStatus.ordinal() > step.ordinal()} ? 't-completed' : '')">
                                     <div class="timeline-v2-icon"
-                                         th:style="${posReq.currentStatus.ordinal() >= step.ordinal() ? 'border-color:' + step.color + ';background:' + step.color + ';color:#fff' : ''}">
-                                        <i class="fas" th:classappend="${step.icon}" style="font-size:0.7rem;"></i>
+                                         th:data-bg="${posReq.currentStatus.ordinal() >= step.ordinal() ? step.color : null}"
+                                         th:data-border="${posReq.currentStatus.ordinal() >= step.ordinal() ? step.color : null}"
+                                         th:classappend="${posReq.currentStatus.ordinal() >= step.ordinal()} ? 'text-white' : ''">
+                                        <i class="fas u-fs-07rem" th:classappend="${step.icon}"></i>
                                     </div>
                                     <div class="timeline-v2-label"
-                                         th:style="${posReq.currentStatus.ordinal() >= step.ordinal() ? 'color:' + step.color + ';font-weight:600' : ''}"
+                                         th:data-fg="${posReq.currentStatus.ordinal() >= step.ordinal() ? step.color : null}"
+                                         th:classappend="${posReq.currentStatus.ordinal() >= step.ordinal()} ? 'fw-semibold' : ''"
                                          th:text="${step.thaiLabel}"></div>
                                 </div>
                             </th:block>

@@ -36,7 +36,7 @@
                 <div class="progress flex-grow-1 mx-3 d-none d-md-block" style="height: 8px; max-width: 200px;">
                     <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated"
                          role="progressbar"
-                         th:style="'width: ' + (${queueIndex} * 100 / ${queueTotal}) + '%;'"></div>
+                         th:data-width="${queueIndex * 100 / queueTotal}"></div>
                 </div>
                 <span class="small text-muted d-none d-sm-inline">
                     ลงนามแล้วระบบจะเปิดฉบับถัดไปให้
@@ -173,7 +173,7 @@
                                    th:if="${!att.link() and att.extension() != 'PDF' and att.extension() != 'DOCX'}"></i>
                                 <span class="flex-grow-1 text-break">
                                     <span class="small" th:text="${att.filename()}">ชื่อไฟล์</span>
-                                    <span class="d-block text-muted" style="font-size: 0.75rem;">
+                                    <span class="d-block text-muted u-fs-075rem">
                                         <span th:text="${att.link() ? 'ลิงก์' : (att.fileSize() != null ? (att.fileSize() > 1048576 ? #numbers.formatDecimal(att.fileSize() / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize() / 1024.0, 1, 1) + ' KB') : '-')}">-</span>
                                         <span th:if="${att.uploadedAt() != null}"
                                               th:text="' · ' + ${#temporals.format(att.uploadedAt(), 'd MMM yy')}"></span>
@@ -293,7 +293,7 @@
                                                 <img th:src="${sig.imageUrl}" th:alt="${sig.displayName}">
                                             </div>
 
-                                            <div class="d-flex justify-content-between align-items-center small text-secondary" style="font-size: 0.8rem;">
+                                            <div class="d-flex justify-content-between align-items-center small text-secondary u-fs-08rem">
                                                 <span>
                                                     <i class="fas fa-pen me-1 text-muted"></i>
                                                     <span th:text="${sig.kind.thaiLabel}">ประเภท</span>

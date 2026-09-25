@@ -189,7 +189,7 @@ class AttachmentConstraintsTest {
         );
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("แอดมิน");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("เจ้าหน้าที่");
         verify(requestService, never()).saveAttachment(any(AcademicAttachment.class));
     }
 
@@ -206,7 +206,7 @@ class AttachmentConstraintsTest {
         String result = applicantController.deleteAttachment(1L, 5L, principal, redirectAttributes);
 
         assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2");
-        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("แอดมิน");
+        assertThat((String) redirectAttributes.getFlashAttributes().get("errorMsg")).contains("เจ้าหน้าที่");
         verify(requestService, never()).deleteAttachment(any(Long.class));
     }
 

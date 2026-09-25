@@ -67,7 +67,7 @@
                             <table class="table table-bordered align-middle">
                                 <thead class="table-light text-center">
                                     <tr>
-                                        <th style="width:5%">ลำดับ</th>
+                                        <th class="u-w-5p">ลำดับ</th>
                                         <th>เอกสาร</th>
                                         <th style="width:8%">จำนวน</th>
                                         <th style="width:10%">เจ้าตัว</th>
@@ -165,9 +165,9 @@
                                             <span th:if="${att.fileType == 'LINK'}" class="text-info"><i class="fas fa-link fa-lg"></i></span>
                                             <span th:if="${att.fileType == 'OTHER'}" class="text-muted"><i class="fas fa-file-alt fa-lg"></i></span>
                                             <span class="small fw-semibold text-truncate" th:text="${att.originalFilename}">filename.pdf</span>
-                                            <span th:if="${att.fileType != 'LINK'}" class="badge bg-white text-secondary border ms-1" style="font-size:0.7rem;"
+                                            <span th:if="${att.fileType != 'LINK'}" class="badge bg-white text-secondary border ms-1 u-fs-07rem"
                                                   th:text="${att.fileSize != null ? #numbers.formatDecimal(att.fileSize / 1024.0 / 1024.0, 1, 2) + ' MB' : '-'}">0 MB</span>
-                                            <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle ms-1" style="font-size:0.7rem;"><i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก</span>
+                                            <span th:if="${att.fileType == 'LINK'}" class="badge bg-info-subtle text-info border border-info-subtle ms-1 u-fs-07rem"><i class="fas fa-external-link-alt me-1"></i>ลิงก์ภายนอก</span>
                                         </div>
                                         <div class="btn-group btn-group-sm ms-2">
                                             <a th:if="${att.fileType == 'LINK'}"

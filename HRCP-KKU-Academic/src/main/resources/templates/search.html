@@ -55,8 +55,8 @@
                                  class="text-muted small">ยังไม่มีตัวกรองสำหรับคำค้นนี้</div>
 
                             <div th:unless="${#lists.isEmpty(result.typeFacets)}" class="mb-4">
-                                <div class="text-uppercase text-muted fw-semibold mb-2"
-                                     style="font-size:.72rem; letter-spacing:.5px;">ประเภท</div>
+                                <div class="text-uppercase text-muted fw-semibold mb-2 u-fs-072rem-tracked"
+                                    >ประเภท</div>
                                 <div class="form-check" th:each="facet : ${result.typeFacets}">
                                     <input class="form-check-input" type="checkbox" name="types"
                                            th:id="'type-' + ${facet.key}" th:value="${facet.key}"
@@ -72,8 +72,8 @@
                             </div>
 
                             <div th:unless="${#lists.isEmpty(result.statusFacets)}" class="mb-4">
-                                <div class="text-uppercase text-muted fw-semibold mb-2"
-                                     style="font-size:.72rem; letter-spacing:.5px;">สถานะ</div>
+                                <div class="text-uppercase text-muted fw-semibold mb-2 u-fs-072rem-tracked"
+                                    >สถานะ</div>
                                 <div class="form-check" th:each="facet : ${result.statusFacets}">
                                     <input class="form-check-input" type="checkbox" name="statuses"
                                            th:id="'status-' + ${facet.key}" th:value="${facet.key}"
@@ -89,8 +89,8 @@
                             </div>
 
                             <div>
-                                <div class="text-uppercase text-muted fw-semibold mb-2"
-                                     style="font-size:.72rem; letter-spacing:.5px;">ช่วงวันที่</div>
+                                <div class="text-uppercase text-muted fw-semibold mb-2 u-fs-072rem-tracked"
+                                    >ช่วงวันที่</div>
                                 <label class="form-label small text-muted mb-1" for="from">ตั้งแต่</label>
                                 <input type="date" id="from" name="from" class="form-control form-control-sm mb-2"
                                        th:value="${from}">
@@ -158,8 +158,8 @@
                                                   style="font-size:.7rem; letter-spacing:.5px;"
                                                   th:text="${hit.category}">หมวด</span>
                                             <i th:if="${hit.external}"
-                                               class="fas fa-arrow-up-right-from-square text-muted"
-                                               style="font-size:.7rem;" aria-label="ลิงก์ภายนอก"></i>
+                                               class="fas fa-arrow-up-right-from-square text-muted u-fs-07rem"
+                                               aria-label="ลิงก์ภายนอก"></i>
                                         </div>
                                         <div class="fw-semibold text-dark" th:text="${hit.title}">ชื่อรายการ</div>
                                         <div class="small text-muted" th:if="${hit.subtitle}"

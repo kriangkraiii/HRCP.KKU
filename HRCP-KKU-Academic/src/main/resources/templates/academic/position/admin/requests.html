@@ -28,7 +28,7 @@
                         <tr class="request-row" th:attr="data-index=${iter.index}">
                             <td th:text="${req.requestCode}"></td>
                             <td th:text="${req.applicant.name}"></td>
-                            <td><span class="badge" style="background:#2e7d32"><i class="fas fa-university me-1"></i> ขอตำแหน่ง</span></td>
+                            <td><span class="badge u-bg-green"><i class="fas fa-university me-1"></i> ขอตำแหน่ง</span></td>
                             <td th:text="${req.targetPosition ?: '-'}"></td>
                             <td th:text="${@thaiDateUtil.formatDateOnly(req.submissionDate)}"></td>
                             <td>
@@ -45,7 +45,7 @@
                             class="request-row-sub" th:attr="data-parent=${iter.index}">
                             <td></td>
                             <td colspan="6" style="border-top:0; padding-top:0">
-                                <small style="color:#2e7d32">
+                                <small class="u-text-green">
                                     <i class="fas fa-user-tie me-1"></i>
                                     ตำแหน่งที่ขอ: <strong th:text="${doc2DataMap.get(req.id).getOrDefault('request_position', '-')}"></strong>
                                     <span th:if="${doc2DataMap.get(req.id).getOrDefault('major', '') != ''}" class="text-muted ms-2">

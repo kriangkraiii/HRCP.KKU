@@ -44,7 +44,7 @@
                         </div>
 
                         <!-- Change Password (Dev Mode only — In Production/SSO mode, passwords are authenticated centrally via KKU SSO) -->
-                        <div class="profile-section" style="--card-delay:120ms" th:if="${!ssoMode}">
+                        <div class="profile-section u-card-delay-120" th:if="${!ssoMode}">
                             <button type="button" class="profile-pw-btn" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                                 <i class="fas fa-key"></i>
                                 <span>เปลี่ยนรหัสผ่าน</span>
@@ -76,7 +76,7 @@
                                     <div class="col-md-4">
                                         <label class="profile-label">คำนำหน้าชื่อ</label>
                                         <div class="profile-readonly-field">
-                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <i class="fas fa-lock u-fs-07rem-faint"></i>
                                             <span th:if="${user.title != null and user.title != ''}"
                                                   th:text="${user.title}">คำนำหน้า</span>
                                             <span th:unless="${user.title != null and user.title != ''}"
@@ -89,14 +89,14 @@
                                     <div class="col-md-4">
                                         <label class="profile-label">ชื่อ</label>
                                         <div class="profile-readonly-field">
-                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <i class="fas fa-lock u-fs-07rem-faint"></i>
                                             <span th:text="${user.firstName}">ชื่อ</span>
                                         </div>
                                     </div>
                                     <div class="col-md-4">
                                         <label class="profile-label">นามสกุล</label>
                                         <div class="profile-readonly-field">
-                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <i class="fas fa-lock u-fs-07rem-faint"></i>
                                             <span th:text="${user.lastName}">นามสกุล</span>
                                         </div>
                                     </div>
@@ -107,14 +107,14 @@
                                     <div class="col-md-6">
                                         <label class="profile-label">ชื่อ (อังกฤษ)</label>
                                         <div class="profile-readonly-field">
-                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <i class="fas fa-lock u-fs-07rem-faint"></i>
                                             <span th:text="${user.firstNameEn}">-</span>
                                         </div>
                                     </div>
                                     <div class="col-md-6">
                                         <label class="profile-label">นามสกุล (อังกฤษ)</label>
                                         <div class="profile-readonly-field">
-                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <i class="fas fa-lock u-fs-07rem-faint"></i>
                                             <span th:text="${user.lastNameEn}">-</span>
                                         </div>
                                     </div>
@@ -123,7 +123,7 @@
                         </div>
 
                         <!-- Section: Contact -->
-                        <div class="profile-section" style="--card-delay:120ms">
+                        <div class="profile-section u-card-delay-120">
                             <div class="profile-section-header">
                                 <i class="fas fa-address-book"></i>
                                 <h5>ข้อมูลติดต่อ</h5>
@@ -133,7 +133,7 @@
                                     <div class="col-md-6">
                                         <label class="profile-label">อีเมล</label>
                                         <div class="profile-readonly-field">
-                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <i class="fas fa-lock u-fs-07rem-faint"></i>
                                             <span th:text="${user.email}">email</span>
                                         </div>
                                     </div>
@@ -161,7 +161,7 @@
                                     <div class="col-md-6">
                                         <label class="profile-label">ตำแหน่งทางวิชาการ</label>
                                         <div class="profile-readonly-field">
-                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <i class="fas fa-lock u-fs-07rem-faint"></i>
                                             <span th:if="${user.academicPosition != null and user.academicPosition != ''}"
                                                   th:text="${user.academicPosition}">ตำแหน่งทางวิชาการ</span>
                                             <span th:unless="${user.academicPosition != null and user.academicPosition != ''}"
@@ -171,7 +171,7 @@
                                     <div class="col-md-6">
                                         <label class="profile-label">ตำแหน่งวิชาการ (อังกฤษ)</label>
                                         <div class="profile-readonly-field">
-                                            <i class="fas fa-lock" style="font-size:0.7rem;opacity:0.4"></i>
+                                            <i class="fas fa-lock u-fs-07rem-faint"></i>
                                             <span th:if="${user.academicPositionEn != null and user.academicPositionEn != ''}"
                                                   th:text="${user.academicPositionEn}">Academic position</span>
                                             <span th:unless="${user.academicPositionEn != null and user.academicPositionEn != ''}"
@@ -204,13 +204,13 @@
 <!-- Change Password Modal -->
 <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content" style="border-radius:20px;border:none;overflow:hidden;box-shadow:0 25px 60px rgba(0,0,0,0.15);">
+        <div class="modal-content u-modal-soft">
             <div style="background:linear-gradient(135deg,#0d1b3e 0%,#1a237e 50%,#0d47a1 100%);padding:24px;text-align:center;position:relative;">
                 <div style="width:52px;height:52px;background:rgba(255,255,255,0.12);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;">
                     <i class="fas fa-key" style="font-size:20px;color:#90caf9;"></i>
                 </div>
                 <h5 style="color:#fff;font-weight:700;margin:0 0 4px;">เปลี่ยนรหัสผ่าน</h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" style="position:absolute;top:16px;right:16px;opacity:0.7;"></button>
+                <button type="button" class="btn-close btn-close-white u-corner-close" data-bs-dismiss="modal"></button>
             </div>
             <form th:action="@{/user/change-password}" method="post" id="userChangePasswordForm">
                 <div class="modal-body" style="padding:24px;">
@@ -225,12 +225,12 @@
                     <div class="p-3" style="background:var(--bg-input);border-radius:10px;">
                         <small class="fw-bold" style="color:var(--text-secondary)"><i class="fas fa-info-circle"></i> เงื่อนไขรหัสผ่าน:</small>
                         <ul class="list-unstyled mb-0 mt-2" style="font-size:0.82rem;">
-                            <li id="uRule1" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> อย่างน้อย 8 ตัวอักษร</li>
-                            <li id="uRule2" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> ตัวพิมพ์ใหญ่ (A-Z)</li>
-                            <li id="uRule3" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> ตัวพิมพ์เล็ก (a-z)</li>
-                            <li id="uRule4" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> ตัวเลข (0-9)</li>
-                            <li id="uRule5" class="text-muted mb-1"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> อักขระพิเศษ (!@#$%^&*...)</li>
-                            <li id="uRule6" class="text-muted"><i class="fas fa-circle" style="font-size:6px;vertical-align:middle"></i> ห้ามมีช่องว่าง</li>
+                            <li id="uRule1" class="text-muted mb-1"><i class="fas fa-circle u-dot-6"></i> อย่างน้อย 8 ตัวอักษร</li>
+                            <li id="uRule2" class="text-muted mb-1"><i class="fas fa-circle u-dot-6"></i> ตัวพิมพ์ใหญ่ (A-Z)</li>
+                            <li id="uRule3" class="text-muted mb-1"><i class="fas fa-circle u-dot-6"></i> ตัวพิมพ์เล็ก (a-z)</li>
+                            <li id="uRule4" class="text-muted mb-1"><i class="fas fa-circle u-dot-6"></i> ตัวเลข (0-9)</li>
+                            <li id="uRule5" class="text-muted mb-1"><i class="fas fa-circle u-dot-6"></i> อักขระพิเศษ (!@#$%^&*...)</li>
+                            <li id="uRule6" class="text-muted"><i class="fas fa-circle u-dot-6"></i> ห้ามมีช่องว่าง</li>
                         </ul>
                         <div class="d-flex align-items-center gap-2 mt-3">
                             <small class="fw-bold" style="color:var(--text-secondary);white-space:nowrap">ความแข็งแรง:</small>
@@ -248,7 +248,7 @@
                     <div id="uMatchStatus" class="text-center" style="font-size:0.82rem;height:18px"></div>
                 </div>
                 <div style="padding:0 24px 24px;display:flex;gap:10px;">
-                    <button type="button" class="btn btn-secondary flex-fill" data-bs-dismiss="modal" style="border-radius:10px;">ยกเลิก</button>
+                    <button type="button" class="btn btn-secondary flex-fill u-radius-10" data-bs-dismiss="modal">ยกเลิก</button>
                     <button type="submit" class="profile-save-btn flex-fill" id="uSubmitBtn" disabled>
                         <i class="fas fa-save me-1"></i>เปลี่ยนรหัสผ่าน
                     </button>

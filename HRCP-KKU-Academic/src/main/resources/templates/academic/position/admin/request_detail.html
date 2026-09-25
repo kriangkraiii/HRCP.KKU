@@ -92,7 +92,7 @@
         <div class="detail-hero">
           <div class="detail-hero-info">
             <h4>
-              <i class="fas fa-university" style="color: #2e7d32"></i> คำร้อง
+              <i class="fas fa-university u-text-green"></i> คำร้อง
               [[${request.requestCode}]] — [[${request.applicant.name}]]
             </h4>
             <div class="detail-hero-meta">
@@ -118,7 +118,7 @@
           </div>
           <span
             class="detail-hero-status"
-            th:style="'background-color:' + ${request.currentStatus.color}"
+            th:data-bg="${request.currentStatus.color}"
             th:text="${request.currentStatus.thaiLabel}"
           ></span>
         </div>
@@ -130,15 +130,15 @@
           style="--_accent: #2e7d32"
         >
           <h6>
-            <i class="fas fa-user-tie" style="color: #2e7d32"></i>
+            <i class="fas fa-user-tie u-text-green"></i>
             ข้อมูลจากเอกสารที่ 2
           </h6>
           <div class="detail-info-row">
             <div class="detail-info-item">
               <small>ตำแหน่งที่เสนอขอ</small>
               <div
-                class="di-value"
-                style="color: #2e7d32"
+                class="di-value u-text-green"
+               
                 th:text="${doc2Data.getOrDefault('request_position', '-')}"
               ></div>
             </div>
@@ -174,8 +174,8 @@
         >
           <h6>
             <i
-              class="fas fa-clipboard-check"
-              style="color: var(--color-primary-medium)"
+              class="fas fa-clipboard-check u-text-primary-medium"
+             
             ></i>
             ผลการประเมินผลการสอน (เอกสารที่ 8)
           </h6>
@@ -302,7 +302,7 @@
             <div class="detail-section">
               <div class="detail-section-header">
                 <h5>
-                  <i class="fas fa-exchange-alt" style="color: #2e7d32"></i>
+                  <i class="fas fa-exchange-alt u-text-green"></i>
                   อัปเดตสถานะ
                 </h5>
               </div>
@@ -339,7 +339,7 @@
                         th:each="s : ${allowedNextStatuses}"
                         th:value="${s.name()}"
                         th:text="${s.thaiLabel}"
-                        th:style="'color:' + ${s.color}"
+                        th:data-fg="${s.color}"
                       ></option>
                     </select>
                   </div>
@@ -406,9 +406,9 @@
                   <i class="fas fa-inbox"></i>
                   <p>ยังไม่มีเอกสารเพิ่มเติม</p>
                 </div>
-                <div
+                <div class="u-overflow-x-auto"
                   th:unless="${#lists.isEmpty(attachments)}"
-                  style="overflow-x: auto"
+                 
                 >
                   <table class="admin-table">
                     <thead>
@@ -636,7 +636,7 @@
             <div class="detail-section">
               <div class="detail-section-header">
                 <h5>
-                  <i class="fas fa-file-word" style="color: #2e7d32"></i>
+                  <i class="fas fa-file-word u-text-green"></i>
                   จัดการเอกสาร (9 แบบฟอร์ม)
                 </h5>
                 <a

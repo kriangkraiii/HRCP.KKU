@@ -12,7 +12,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="fw-bold mb-1">
-                    <i class="fas fa-folder-open me-2" style="color: var(--accent-color);"></i>จัดการไฟล์
+                    <i class="fas fa-folder-open me-2 u-text-accent"></i>จัดการไฟล์
                 </h4>
             </div>
         </div>
@@ -20,7 +20,7 @@
         <!-- Summary Cards -->
         <div class="row mb-4">
             <div class="col-md-3 mb-3">
-                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card border-0 shadow-sm u-radius-12">
                     <div class="card-body d-flex align-items-center gap-3">
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
                              style="width: 50px; height: 50px; background: rgba(13,71,161,0.1); color: #0d47a1;">
@@ -34,13 +34,13 @@
                 </div>
             </div>
             <div class="col-md-3 mb-3">
-                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card border-0 shadow-sm u-radius-12">
                     <div class="card-body d-flex align-items-center gap-3">
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
                              style="width: 50px; height: 50px; background: rgba(46,125,50,0.1); color: #2e7d32;">
                             <i class="fas fa-hdd fa-lg"></i>
                         </div>
-                        <div style="flex: 1; min-width: 0;">
+                        <div class="u-flex-fill">
                             <div class="d-flex align-items-center gap-2">
                                 <h5 class="mb-0 fw-bold" th:text="${totalSize}">0 B</h5>
                                 <span class="badge bg-success-subtle text-success border border-success-subtle" style="font-size: 0.72rem; padding: 2px 6px;"
@@ -52,7 +52,7 @@
                 </div>
             </div>
             <div th:if="${totalFolders != null}" class="col-md-3 mb-3">
-                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card border-0 shadow-sm u-radius-12">
                     <div class="card-body d-flex align-items-center gap-3">
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
                              style="width: 50px; height: 50px; background: rgba(255,143,0,0.1); color: #ff8f00;">
@@ -66,7 +66,7 @@
                 </div>
             </div>
             <div class="col-md-3 mb-3">
-                <div class="card border-0 shadow-sm" style="border-radius: 12px;">
+                <div class="card border-0 shadow-sm u-radius-12">
                     <div class="card-body d-flex align-items-center gap-3">
                         <div class="rounded-circle d-flex align-items-center justify-content-center"
                              style="width: 50px; height: 50px; background: rgba(198,40,40,0.1); color: #c62828;">
@@ -108,7 +108,7 @@
                     <span class="badge bg-white text-danger ms-1" th:if="${trashCount > 0 && (viewMode == 'storage' || viewMode == 'storage-trash')}" th:text="${trashCount}"></span>
                 </a>
             </div>
-            <button th:if="${viewMode == 'trash'}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" data-call="emptyTrash">
+            <button th:if="${viewMode == 'trash'}" class="btn btn-outline-danger ms-auto u-radius-10" data-call="emptyTrash">
                 <i class="fas fa-dumpster-fire me-1"></i> ล้างถังขยะ
             </button>
             <button th:if="${viewMode == 'storage-trash' && trashCount > 0}" class="btn btn-outline-danger ms-auto" style="border-radius: 10px;" data-call="emptyStorageTrash">
@@ -117,7 +117,7 @@
         </div>
 
         <!-- Search & Filter (Document tabs only) -->
-        <div th:if="${viewMode == 'files' || viewMode == 'trash'}" class="card border-0 shadow-sm mb-4" style="border-radius: 12px;">
+        <div th:if="${viewMode == 'files' || viewMode == 'trash'}" class="card border-0 shadow-sm mb-4 u-radius-12">
             <div class="card-body py-3">
                 <div class="row g-2 align-items-center">
                     <div class="col-md-5">
@@ -147,7 +147,7 @@
         </div>
 
         <!-- File Table (Document tabs only) -->
-        <div th:if="${viewMode == 'files' || viewMode == 'trash'}" class="card border-0 shadow-sm" style="border-radius: 12px;">
+        <div th:if="${viewMode == 'files' || viewMode == 'trash'}" class="card border-0 shadow-sm u-radius-12">
             <div class="card-body p-0">
                 <div th:if="${files == null || files.isEmpty()}" class="text-center py-5">
                     <i class="fas fa-folder-open fa-3x text-muted mb-3 d-block"></i>
@@ -158,7 +158,7 @@
                     <table class="table table-hover align-middle mb-0" id="fileTable">
                         <thead class="table-light">
                             <tr>
-                                <th style="width:40px">#</th>
+                                <th class="u-w-40">#</th>
                                 <th>ชื่อไฟล์</th>
                                 <th>ประเภท</th>
                                 <th>ขนาด</th>
@@ -205,7 +205,7 @@
                                     <a th:if="${file.requestCode != null}"
                                        th:href="'/admin/academic/request/' + ${file.requestId}"
                                        class="text-decoration-none">
-                                        <span class="fw-semibold" style="font-size: 0.8rem;" th:text="${file.requestCode}"></span>
+                                        <span class="fw-semibold u-fs-08rem" th:text="${file.requestCode}"></span>
                                     </a>
                                     <div th:if="${file.requestActive && file.requestStatusLabel != null}" class="mt-1">
                                         <span class="badge rounded-pill bg-warning text-dark" style="font-size: 0.65rem;">
@@ -219,7 +219,7 @@
                                 </td>
                                 <td>
                                     <div th:if="${file.applicantName != null}">
-                                        <div class="fw-semibold" style="font-size: 0.85rem;" th:text="${file.applicantName}"></div>
+                                        <div class="fw-semibold u-fs-085rem" th:text="${file.applicantName}"></div>
                                         <small class="text-muted" th:text="${file.applicantEmail}"></small>
                                     </div>
                                     <small th:if="${file.applicantName == null}" class="text-muted">-</small>
@@ -301,8 +301,8 @@
                     ยืนยันการดำเนินการ?
                 </div>
                 <div class="modal-footer border-0 pt-0">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" style="border-radius: 10px;">ยกเลิก</button>
-                    <button type="button" class="btn btn-danger" id="confirmBtn" style="border-radius: 10px;">ยืนยัน</button>
+                    <button type="button" class="btn btn-secondary u-radius-10" data-bs-dismiss="modal">ยกเลิก</button>
+                    <button type="button" class="btn btn-danger u-radius-10" id="confirmBtn">ยืนยัน</button>
                 </div>
             </div>
         </div>
@@ -310,8 +310,8 @@
 
     <!-- Toast Notification -->
     <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
-        <div id="toastNotif" class="toast align-items-center text-white border-0" role="alert"
-             style="border-radius: 12px;">
+        <div id="toastNotif" class="toast align-items-center text-white border-0 u-radius-12" role="alert"
+            >
             <div class="d-flex">
                 <div class="toast-body" id="toastMsg"></div>
                 <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
@@ -399,7 +399,7 @@
             let bodyMsg = 'ยืนยันการย้าย <strong>' + fileName + '</strong> ไปถังขยะ?<br><small class="text-muted">กู้คืนได้ภายหลัง</small>';
 
             if (isActive) {
-                bodyMsg = '<div class="alert alert-warning py-2 px-3 mb-3" style="border-radius:10px;">' +
+                bodyMsg = '<div class="alert alert-warning py-2 px-3 mb-3 u-radius-10">' +
                     '<i class="fas fa-exclamation-triangle me-2"></i>' +
                     '<strong>ไฟล์นี้อยู่ในคำร้องที่กำลังดำเนินการ</strong><br>' +
                     '<small>สถานะปัจจุบัน: <strong>' + (statusLabel || '-') + '</strong></small>' +

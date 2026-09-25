@@ -131,7 +131,7 @@ public class AdminControllerDeleteAdminTest {
 
         // Then: Admin should be deleted and action logged
         assertThat(result).isEqualTo("redirect:/admin/users?type=2");
-        assertThat(session.getAttribute("succMsg")).isEqualTo("ลบบัญชีแอดมินสำเร็จ");
+        assertThat(session.getAttribute("succMsg")).isEqualTo("ลบบัญชีผู้ดูแลระบบสำเร็จ");
 
         // Verify admin was deleted from database
         UserDtls deletedAdmin = userService.getUserById(adminId);
@@ -145,7 +145,7 @@ public class AdminControllerDeleteAdminTest {
         assertThat(log.getAdminEmail()).isEqualTo("admin1@example.com");
         assertThat(log.getAdminName()).isEqualTo("Admin User 1");
         assertThat(log.getAction()).isEqualTo("DELETE_ADMIN_ACCOUNT");
-        assertThat(log.getDetails()).contains("ลบบัญชีแอดมิน ID:" + adminId);
+        assertThat(log.getDetails()).contains("ลบบัญชีผู้ดูแลระบบ ID:" + adminId);
         assertThat(log.getDetails()).contains(adminEmail);
         assertThat(log.getIpAddress()).isNotNull();
     }
@@ -222,7 +222,7 @@ public class AdminControllerDeleteAdminTest {
         // Action type
         assertThat(log.getAction()).isEqualTo("DELETE_ADMIN_ACCOUNT");
         // Details of modification (admin ID and email)
-        assertThat(log.getDetails()).contains("ลบบัญชีแอดมิน");
+        assertThat(log.getDetails()).contains("ลบบัญชีผู้ดูแลระบบ");
         assertThat(log.getDetails()).contains("ID:" + adminId);
         assertThat(log.getDetails()).contains(adminEmail);
         // Timestamp

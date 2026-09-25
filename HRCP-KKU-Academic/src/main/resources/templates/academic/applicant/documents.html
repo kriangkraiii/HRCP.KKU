@@ -34,10 +34,10 @@
                      class="doc-category"
                      th:classappend="${stat.index == 0} ? ' is-open' : ''"
                      th:attr="data-cat=${stat.index}"
-                     th:style="'--cat-delay:' + (${stat.index} * 80) + 'ms'">
+                     data-styled th:data-var-cat-delay="${(stat.index * 80) + 'ms'}">
                     <div class="doc-category-header" data-call="toggleCat" data-call-arg="self">
                         <i th:class="${cat.icon != null and !cat.icon.isEmpty() ? cat.icon : 'fas fa-landmark'} + ' cat-icon'"
-                           th:style="'color:' + ${cat.color != null and !cat.color.isEmpty() ? cat.color : 'var(--color-primary-medium,#1565c0)'}"></i>
+                           th:data-fg="${cat.color != null and !cat.color.isEmpty() ? cat.color : 'var(--color-primary-medium,#1565c0)'}"></i>
                         <strong th:text="${cat.title}">หมวดหมู่</strong>
                         <span class="cat-count" th:text="${cat.docs.size()} + ' รายการ'">0 รายการ</span>
                         <i class="fas fa-chevron-down cat-chevron"></i>

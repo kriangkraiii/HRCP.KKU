@@ -221,7 +221,7 @@
                         <div>
                             <h5 class="mb-2">คำร้อง [[${req.requestCode}]]</h5>
                             <div class="d-flex flex-wrap gap-2 align-items-center mb-1">
-                                <span class="badge" style="background:#2e7d32">
+                                <span class="badge u-bg-green">
                                     <i class="fas fa-university me-1"></i> ขอตำแหน่งทางวิชาการ
                                 </span>
                                 <span class="badge bg-light text-dark border">
@@ -267,7 +267,7 @@
                                      (${pIdx == sStat.index} ? 'active' :
                                      (${pIdx > sStat.index} ? 'completed' : ''))">
                             <div class="step-icon">
-                                <i th:class="'fas ' + ${s.icon}" style="font-size: 0.8rem;"></i>
+                                <i class="u-fs-08rem" th:class="'fas ' + ${s.icon}"></i>
                             </div>
                             <div class="step-label" th:text="${s.thaiLabel}"></div>
                         </div>

@@ -73,11 +73,11 @@
 								</td>
 								<td>
 									<div class="form-check form-switch d-flex align-items-center gap-2 mb-0">
-										<input class="form-check-input status-toggle" type="checkbox" role="switch"
+										<input class="form-check-input status-toggle u-switch-lg" type="checkbox" role="switch"
 											th:checked="${u.isEnable}"
 											th:data-id="${u.id}"
 											th:data-type="${userType}"
-											style="width: 3em; height: 1.5em; cursor: pointer;"
+										
 											data-call-change="toggleStatus" data-call-arg="self">
 										<label class="form-check-label fw-semibold"
 											th:classappend="${u.isEnable} ? 'text-success' : 'text-danger'"

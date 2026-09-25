@@ -163,7 +163,7 @@ public class AdminControllerEditAdminEndpointTest {
 
         // Then: Redirects with success message
         assertThat(result).isEqualTo("redirect:/admin/users?type=2");
-        assertThat(session.getAttribute("succMsg")).isEqualTo("อัพเดทข้อมูลแอดมินสำเร็จ");
+        assertThat(session.getAttribute("succMsg")).isEqualTo("อัปเดตข้อมูลผู้ดูแลระบบสำเร็จ");
 
         // Verify admin was updated in database
         UserDtls updated = userService.getUserById(testAdmin.getId());
@@ -236,7 +236,7 @@ public class AdminControllerEditAdminEndpointTest {
         assertThat(log.getAdminEmail()).isEqualTo("admin@example.com");
         assertThat(log.getAdminName()).isEqualTo("Performing Admin");
         assertThat(log.getAction()).isEqualTo("EDIT_ADMIN_ACCOUNT");
-        assertThat(log.getDetails()).contains("แก้ไขบัญชีแอดมิน ID:" + testAdmin.getId());
+        assertThat(log.getDetails()).contains("แก้ไขบัญชีผู้ดูแลระบบ ID:" + testAdmin.getId());
         assertThat(log.getDetails()).contains(testAdmin.getEmail());
         assertThat(log.getIpAddress()).isNotNull();
     }
@@ -260,7 +260,7 @@ public class AdminControllerEditAdminEndpointTest {
 
         // Then: Update succeeds
         assertThat(result).isEqualTo("redirect:/admin/users?type=2");
-        assertThat(session.getAttribute("succMsg")).isEqualTo("อัพเดทข้อมูลแอดมินสำเร็จ");
+        assertThat(session.getAttribute("succMsg")).isEqualTo("อัปเดตข้อมูลผู้ดูแลระบบสำเร็จ");
 
         // Verify admin was updated
         UserDtls updated = userService.getUserById(testAdmin.getId());

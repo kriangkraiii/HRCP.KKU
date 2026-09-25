@@ -161,7 +161,7 @@ public class AdminControllerEditUserEndpointTest {
 
         // Then: Redirects with success message
         assertThat(result).isEqualTo("redirect:/admin/users?type=1");
-        assertThat(session.getAttribute("succMsg")).isEqualTo("อัพเดทข้อมูลผู้ใช้สำเร็จ");
+        assertThat(session.getAttribute("succMsg")).isEqualTo("อัปเดตข้อมูลผู้ใช้สำเร็จ");
 
         // Verify user was updated in database
         UserDtls updated = userService.getUserById(testUser.getId());
@@ -300,7 +300,7 @@ public class AdminControllerEditUserEndpointTest {
 
         // Then: Update succeeds
         assertThat(result).isEqualTo("redirect:/admin/users?type=1");
-        assertThat(session.getAttribute("succMsg")).isEqualTo("อัพเดทข้อมูลผู้ใช้สำเร็จ");
+        assertThat(session.getAttribute("succMsg")).isEqualTo("อัปเดตข้อมูลผู้ใช้สำเร็จ");
 
         // Verify user was updated
         UserDtls updated = userService.getUserById(testUser.getId());

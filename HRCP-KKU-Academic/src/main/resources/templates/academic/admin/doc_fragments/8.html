@@ -80,25 +80,25 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk" id="fl1" data-hidden="fl1_val"
+                                    <input type="checkbox" class="form-check-input final-level-chk pe-none" id="fl1" data-hidden="fl1_val"
                                         th:checked="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'ชำนาญ'}"
-                                        style="pointer-events:none;" data-action="noop">
+                                        data-action="noop">
                                     <input type="hidden" name="final_level_1" id="fl1_val"
                                         th:value="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'ชำนาญ' ? '✓' : ' '}">
                                     <label class="form-check-label" for="fl1">ชำนาญ</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk" id="fl2" data-hidden="fl2_val"
+                                    <input type="checkbox" class="form-check-input final-level-chk pe-none" id="fl2" data-hidden="fl2_val"
                                         th:checked="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ'}"
-                                        style="pointer-events:none;" data-action="noop">
+                                        data-action="noop">
                                     <input type="hidden" name="final_level_2" id="fl2_val"
                                         th:value="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ' ? '✓' : ' '}">
                                     <label class="form-check-label" for="fl2">ชำนาญพิเศษ</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk" id="fl3" data-hidden="fl3_val"
+                                    <input type="checkbox" class="form-check-input final-level-chk pe-none" id="fl3" data-hidden="fl3_val"
                                         th:checked="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ'}"
-                                        style="pointer-events:none;" data-action="noop">
+                                        data-action="noop">
                                     <input type="hidden" name="final_level_3" id="fl3_val"
                                         th:value="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ' ? '✓' : ' '}">
                                     <label class="form-check-label" for="fl3">เชี่ยวชาญ</label>

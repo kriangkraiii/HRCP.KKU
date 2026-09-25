@@ -116,25 +116,25 @@
                                 <i class="fas fa-inbox"></i>
                                 <p>ไม่มีคำร้องในสถานะนี้</p>
                             </div>
-                            <div th:if="${requests != null && !requests.isEmpty()}" style="overflow-x:auto">
+                            <div class="u-overflow-x-auto" th:if="${requests != null && !requests.isEmpty()}">
                                 <table class="admin-table">
                                     <thead>
                                         <tr>
-                                            <th style="width:46px">#</th>
+                                            <th class="u-w-46">#</th>
                                             <th>รหัสคำร้อง</th>
                                             <th>ผู้ยื่นคำร้อง</th>
                                             <th>อีเมล</th>
                                             <th>วันที่ยื่น</th>
                                             <th>อัปเดตล่าสุด</th>
                                             <th>สถานะ</th>
-                                            <th style="width:125px">จัดการ</th>
+                                            <th class="u-w-125">จัดการ</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <th:block th:each="req, iter : ${requests}">
                                         <tr th:id="'req-' + ${req.id}" th:attr="data-submitted=${req.submissionDate}">
                                             <td class="at-date row-num" th:text="${iter.index + 1}"></td>
-                                            <td><span class="at-code" style="color:#1565c0" th:text="${req.requestCode}"></span></td>
+                                            <td><span class="at-code u-text-blue" th:text="${req.requestCode}"></span></td>
                                             <td class="at-name" th:text="${req.applicant.name}"></td>
                                             <td class="at-email" th:text="${req.applicant.email}"></td>
                                             <td class="at-date" th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate) : ''}"></td>
@@ -142,7 +142,7 @@
                                             <td>
                                                 <span class="at-status"
                                                       th:classappend="'at-status-' + ${#strings.toLowerCase(req.currentStatus.name())}"
-                                                      th:style="'background-color:' + ${req.currentStatus.color}">
+                                                      th:data-bg="${req.currentStatus.color}">
                                                     <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                     <span th:text="${req.currentStatus.thaiLabel}"></span>
                                                 </span>
@@ -178,7 +178,7 @@
                             <div class="admin-table-header">
                                 <h5 class="admin-table-title">
                                     <span class="at-badge at-badge-eval">ประเมินผล</span>
-                                    <i class="fas fa-clipboard-check" style="color:#1565c0"></i>
+                                    <i class="fas fa-clipboard-check u-text-blue"></i>
                                     คำร้องประเมินผลการสอน
                                     <span class="at-count at-count-eval"
                                           th:text="${pendingRequests != null ? pendingRequests.size() : 0}"></span>
@@ -189,25 +189,25 @@
                                 <i class="fas fa-check-circle" style="color:var(--color-success)"></i>
                                 <p>ไม่มีคำร้องที่รอดำเนินการ</p>
                             </div>
-                            <div th:if="${pendingRequests != null && !pendingRequests.isEmpty()}" style="overflow-x:auto">
+                            <div class="u-overflow-x-auto" th:if="${pendingRequests != null && !pendingRequests.isEmpty()}">
                                 <table class="admin-table">
                                     <thead>
                                         <tr>
-                                            <th style="width:46px">#</th>
+                                            <th class="u-w-46">#</th>
                                             <th>รหัสคำร้อง</th>
                                             <th>ผู้ยื่นคำร้อง</th>
                                             <th>อีเมล</th>
                                             <th>วันที่ยื่น</th>
                                             <th>อัปเดตล่าสุด</th>
                                             <th>สถานะ</th>
-                                            <th style="width:125px">จัดการ</th>
+                                            <th class="u-w-125">จัดการ</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <th:block th:each="req, iter : ${pendingRequests}">
                                         <tr th:id="'req-' + ${req.id}" th:attr="data-request-id=${req.id},data-submitted=${req.submissionDate}">
                                             <td class="at-date row-num" th:text="${iter.index + 1}"></td>
-                                            <td><span class="at-code" style="color:#1565c0" th:text="${req.requestCode}"></span></td>
+                                            <td><span class="at-code u-text-blue" th:text="${req.requestCode}"></span></td>
                                             <td class="at-name" th:text="${req.applicant.name}"></td>
                                             <td class="at-email" th:text="${req.applicant.email}"></td>
                                             <td class="at-date" th:text="${req.submissionDate != null ? @thaiDateUtil.format(req.submissionDate) : ''}"></td>
@@ -215,7 +215,7 @@
                                             <td>
                                                 <span class="at-status"
                                                       th:classappend="'at-status-' + ${#strings.toLowerCase(req.currentStatus.name())}"
-                                                      th:style="'background-color:' + ${req.currentStatus.color}">
+                                                      th:data-bg="${req.currentStatus.color}">
                                                     <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                     <span th:text="${req.currentStatus.thaiLabel}"></span>
                                                 </span>
@@ -318,7 +318,7 @@
                                     </th:block>
                                 </th:block>
                                 <th:block th:if="${activePosStatus == null}">
-                                    <i class="fas fa-university" style="color:#2e7d32"></i>
+                                    <i class="fas fa-university u-text-green"></i>
                                     คำร้องขอตำแหน่งทางวิชาการ
                                 </th:block>
                                 <span class="at-count at-count-pos"
@@ -330,11 +330,11 @@
                             <i class="fas fa-inbox"></i>
                             <p>ไม่มีคำร้องขอตำแหน่ง</p>
                         </div>
-                        <div th:if="${positionRequests != null && !positionRequests.isEmpty()}" style="overflow-x:auto">
+                        <div class="u-overflow-x-auto" th:if="${positionRequests != null && !positionRequests.isEmpty()}">
                             <table class="admin-table">
                                 <thead>
                                     <tr>
-                                        <th style="width:46px">#</th>
+                                        <th class="u-w-46">#</th>
                                         <th>รหัสคำร้อง</th>
                                         <th>ผู้ยื่นคำร้อง</th>
                                         <th>อีเมล</th>
@@ -342,14 +342,14 @@
                                         <th>วันที่ยื่น</th>
                                         <th>อัปเดตล่าสุด</th>
                                         <th>สถานะ</th>
-                                        <th style="width:125px">จัดการ</th>
+                                        <th class="u-w-125">จัดการ</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     <tr th:each="req, iter : ${positionRequests}" th:id="'pos-req-' + ${req.id}"
                                         th:attr="data-submitted=${req.submissionDate}">
                                         <td class="at-date row-num" th:text="${iter.index + 1}"></td>
-                                        <td><span class="at-code" style="color:#2e7d32" th:text="${req.requestCode}"></span></td>
+                                        <td><span class="at-code u-text-green" th:text="${req.requestCode}"></span></td>
                                         <td class="at-name" th:text="${req.applicant.name}"></td>
                                         <td class="at-email" th:text="${req.applicant.email}"></td>
                                         <td th:text="${req.targetPosition} ?: '-'"></td>
@@ -358,7 +358,7 @@
                                         <td>
                                             <span class="at-status"
                                                   th:classappend="'at-status-' + ${#strings.toLowerCase(req.currentStatus.name())}"
-                                                  th:style="'background-color:' + ${req.currentStatus.color}">
+                                                  th:data-bg="${req.currentStatus.color}">
                                                 <i class="fas" th:classappend="${req.currentStatus.icon}"></i>
                                                 <span th:text="${req.currentStatus.thaiLabel}"></span>
                                             </span>

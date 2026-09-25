@@ -671,7 +671,7 @@
 
         <!-- Sidebar Footer: User Info -->
         <div class="sidebar-footer" th:if="${user != null}">
-            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user text-decoration-none" style="text-decoration:none !important;" th:attr="data-title=${user.name}">
+            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user text-decoration-none text-decoration-none" th:attr="data-title=${user.name}">
                 <div class="user-avatar" style="width:34px;height:34px;min-width:34px;max-width:34px;flex-shrink:0;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
                     <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
                          th:src="'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}"
@@ -683,9 +683,9 @@
                        style="color: var(--accent-color, #ffca28); font-size: 0.95rem;"
                        th:if="${user.profileImage == null or user.profileImage == 'default.png'}"></i>
                 </div>
-                <div class="user-info text-decoration-none" style="text-decoration:none !important;">
-                    <div class="user-name text-decoration-none" th:text="${user.name}" style="text-decoration:none !important;"></div>
-                    <div class="user-role text-decoration-none" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : 'ผู้ยื่นคำร้อง'" style="text-decoration:none !important;"></div>
+                <div class="user-info text-decoration-none text-decoration-none">
+                    <div class="user-name text-decoration-none text-decoration-none" th:text="${user.name}"></div>
+                    <div class="user-role text-decoration-none text-decoration-none" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : 'ผู้ยื่นคำร้อง'"></div>
                 </div>
             </a>
             <form method="post" action="/logout">
@@ -729,18 +729,18 @@
                 <!-- Notifications Bell Dropdown -->
                 <div class="dropdown" id="topbarNotificationContainer">
                     <button type="button"
-                            class="topbar-icon-btn position-relative border-0 bg-transparent p-0"
+                            class="topbar-icon-btn position-relative border-0 bg-transparent p-0 u-pointer"
                             id="topbarNotifBtn"
                             data-bs-toggle="dropdown"
                             data-bs-auto-close="outside"
                             aria-expanded="false"
                             title="การแจ้งเตือน"
                             aria-label="การแจ้งเตือน"
-                            style="cursor: pointer;">
+                           >
                         <i class="far fa-bell fa-lg"></i>
                         <span class="position-absolute badge rounded-pill bg-danger topbar-badge-count"
                               id="topbarNotifBadge"
-                              th:style="${unreadNotificationCount != null and unreadNotificationCount > 0 ? 'display:inline-flex;' : 'display:none;'}"
+                              th:classappend="${unreadNotificationCount == null or unreadNotificationCount == 0} ? 'is-empty' : ''"
                               th:text="${unreadNotificationCount != null and unreadNotificationCount > 99 ? '99+' : (unreadNotificationCount != null ? unreadNotificationCount : 0)}"
                               th:title="${unreadNotificationCount != null ? unreadNotificationCount : 0} + ' รายการที่ยังไม่ได้อ่าน'">0</span>
                     </button>
@@ -752,17 +752,17 @@
                         <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light bg-opacity-50">
                             <div class="d-flex align-items-center gap-2">
                                 <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.95rem;">
-                                    <i class="fas fa-bell me-1" style="color: var(--accent-color);"></i>การแจ้งเตือน
+                                    <i class="fas fa-bell me-1 u-text-accent"></i>การแจ้งเตือน
                                 </h6>
                                 <span class="badge bg-danger rounded-pill topbar-unread-pill"
                                       id="topbarUnreadPill"
                                       th:if="${unreadNotificationCount != null and unreadNotificationCount > 0}"
                                       th:text="${unreadNotificationCount}">0</span>
                             </div>
-                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted"
+                            <button type="button" class="btn btn-link btn-sm p-0 text-decoration-none text-muted u-fs-08rem"
                                     id="topbarMarkAllReadBtn"
                                     title="ทำเครื่องหมายอ่านทั้งหมด"
-                                    style="font-size: 0.8rem;">
+                                   >
                                 <i class="fas fa-check-double me-1"></i>อ่านทั้งหมด
                             </button>
                         </div>
@@ -862,6 +862,7 @@
     </div>
 
     <script src="/vendor/bootstrap/bootstrap.bundle.min.js"></script>
+    <script src="/js/data_styles.js?v=1.0"></script>
     <!-- ปุ่ม (i) ของ academic/_info_tip.html ต้องมาหลัง bootstrap เพราะใช้ bootstrap.Popover -->
     <script src="/js/info_tip.js?v=1.0"></script>
     <script>

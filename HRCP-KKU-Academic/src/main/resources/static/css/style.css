@@ -969,6 +969,11 @@ body.has-floating-doc-btn:not(:has(.global-flash-alert .alert)) .content-wrapper
   animation: pulseBadge 2s infinite;
 }
 
+/* ไม่มีรายการที่ยังไม่อ่าน — notification.js ตั้ง style.display ทับได้เมื่อมีรายการใหม่ */
+.topbar-badge-count.is-empty {
+  display: none;
+}
+
 .topbar-badge-count {
   top: 0px;
   right: -2px;
@@ -6177,3 +6182,60 @@ body.modal-open .sidebar-toggle {
 }
 
 
+
+/* =============================================================
+   Utilities replacing inline style="" attributes
+   The CSP (style-src nonce, no 'unsafe-inline') drops every inline
+   style attribute, so these values never applied. Each class carries
+   the exact value its style="" used to hold. Values computed from data
+   go through data-* attributes instead (see /js/data_styles.js).
+   ============================================================= */
+.u-fs-085em { font-size: 0.85em; }
+.u-fs-082em { font-size: 0.82em; }
+.u-fs-08em { font-size: 0.8em; }
+.u-fs-10px { font-size: 10px; }
+.u-fs-07rem { font-size: 0.7rem; }
+.u-fs-075rem { font-size: 0.75rem; }
+.u-fs-08rem { font-size: 0.8rem; }
+.u-fs-085rem { font-size: 0.85rem; }
+.u-fs-09rem { font-size: 0.9rem; }
+.u-fs-07rem-faint { font-size: 0.7rem; opacity: 0.4; }
+.u-fs-072rem-tracked { font-size: 0.72rem; letter-spacing: 0.5px; }
+.u-dot-6 { font-size: 6px; vertical-align: middle; }
+
+.u-radius-10 { border-radius: 10px; }
+.u-radius-12 { border-radius: 12px; }
+.u-radius-16 { border-radius: 16px; }
+.u-radius-20 { border-radius: 20px; }
+
+.u-bg-green { background: #2e7d32; }
+.u-bg-navy { background: #0d47a1; }
+.u-text-green { color: #2e7d32; }
+.u-text-blue { color: #1565c0; }
+.u-text-primary-medium { color: var(--color-primary-medium); }
+.u-text-accent { color: var(--accent-color); }
+
+.u-w-5p { width: 5%; }
+.u-w-25p { width: 25%; }
+.u-w-35p { width: 35%; }
+.u-w-40 { width: 40px; }
+.u-w-46 { width: 46px; }
+.u-w-100 { width: 100px; }
+.u-w-125 { width: 125px; }
+.u-w-140 { width: 140px; }
+.u-w-200 { width: 200px; }
+.u-size-38 { width: 38px; height: 38px; }
+
+.u-switch-md { width: 2.5em; height: 1.3em; cursor: pointer; }
+.u-switch-lg { width: 3em; height: 1.5em; cursor: pointer; }
+.u-pointer { cursor: pointer; }
+.u-overflow-x-auto { overflow-x: auto; }
+.u-flex-fill { flex: 1; min-width: 0; }
+.u-card-delay-120 { --card-delay: 120ms; }
+.u-corner-close { position: absolute; top: 16px; right: 16px; opacity: 0.7; }
+.u-modal-soft {
+  border-radius: 20px;
+  border: none;
+  overflow: hidden;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+}

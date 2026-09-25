@@ -337,13 +337,13 @@
                                                 <div>
                                                     <div class="fw-semibold small text-dark" th:text="${st.roleLabel}">ตำแหน่ง</div>
                                                     <small class="text-secondary d-block" th:text="${st.signerNameSnapshot}">ชื่อผู้ลงนาม</small>
-                                                    <span th:if="${st.status.name() == 'SIGNED'}" class="badge bg-success-subtle text-success py-0 px-1 font-monospace" style="font-size: 10px;">
+                                                    <span th:if="${st.status.name() == 'SIGNED'}" class="badge bg-success-subtle text-success py-0 px-1 font-monospace u-fs-10px">
                                                         <i class="fas fa-check"></i> ลงนามแล้ว
                                                     </span>
-                                                    <span th:if="${st.status.name() == 'ACTIVE'}" class="badge bg-primary-subtle text-primary py-0 px-1 font-monospace" style="font-size: 10px;">
+                                                    <span th:if="${st.status.name() == 'ACTIVE'}" class="badge bg-primary-subtle text-primary py-0 px-1 font-monospace u-fs-10px">
                                                         <i class="fas fa-clock"></i> ถึงคิวเซ็น
                                                     </span>
-                                                    <span th:if="${st.status.name() == 'WAITING'}" class="badge bg-light text-muted border py-0 px-1 font-monospace" style="font-size: 10px;"
+                                                    <span th:if="${st.status.name() == 'WAITING'}" class="badge bg-light text-muted border py-0 px-1 font-monospace u-fs-10px"
                                                           th:text="${held} ? 'ยังไม่ได้ส่ง' : 'รอคิวก่อนหน้า'">
                                                         รอคิวก่อนหน้า
                                                     </span>
@@ -413,13 +413,13 @@
                                                 <div>
                                                     <div class="fw-semibold small text-dark" th:text="${st.roleLabel}">ตำแหน่ง</div>
                                                     <small class="text-secondary d-block" th:text="${st.signerNameSnapshot}">ชื่อ</small>
-                                                    <span th:if="${st.status.name() == 'SIGNED'}" class="badge bg-success-subtle text-success py-0 px-1 font-monospace" style="font-size: 10px;">
+                                                    <span th:if="${st.status.name() == 'SIGNED'}" class="badge bg-success-subtle text-success py-0 px-1 font-monospace u-fs-10px">
                                                         <i class="fas fa-check"></i> ลงนามแล้ว
                                                     </span>
-                                                    <span th:if="${st.status.name() == 'ACTIVE'}" class="badge bg-primary-subtle text-primary py-0 px-1 font-monospace" style="font-size: 10px;">
+                                                    <span th:if="${st.status.name() == 'ACTIVE'}" class="badge bg-primary-subtle text-primary py-0 px-1 font-monospace u-fs-10px">
                                                         <i class="fas fa-clock"></i> ถึงคิวเซ็น
                                                     </span>
-                                                    <span th:if="${st.status.name() == 'WAITING'}" class="badge bg-light text-muted border py-0 px-1 font-monospace" style="font-size: 10px;">
+                                                    <span th:if="${st.status.name() == 'WAITING'}" class="badge bg-light text-muted border py-0 px-1 font-monospace u-fs-10px">
                                                         รอคิว
                                                     </span>
                                                 </div>
