@@ -107,7 +107,7 @@
                     <div class="card-body py-2 px-3">
                         <form method="get" class="d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <input type="hidden" name="tab" th:value="${currentTab}">
-                            <div class="input-group input-group-sm" style="max-width: 380px;">
+                            <div class="input-group input-group-sm u-maxw-380px">
                                 <span class="input-group-text bg-light border-0"><i class="fas fa-search text-muted"></i></span>
                                 <input type="text" name="search" th:value="${search}" class="form-control bg-light border-0"
                                        placeholder="ค้นหาข้อความแจ้งเตือน...">
@@ -133,8 +133,8 @@
                     <div class="card-body p-0">
                         <!-- Empty State -->
                         <div th:if="${notifications == null or notifications.empty}" class="text-center py-5">
-                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                                 style="width: 70px; height: 70px; background: rgba(13,71,161,0.08);">
+                            <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 u-w-70px-h-70px-bg-rgba-13-71-161-0-08"
+                                >
                                 <i class="fas fa-bell-slash fa-2x u-text-accent"></i>
                             </div>
                             <h6 class="fw-bold mb-1">ไม่มีรายการแจ้งเตือน</h6>
@@ -144,10 +144,10 @@
                         <!-- Notification Items -->
                         <div th:unless="${notifications == null or notifications.empty}" class="list-group list-group-flush">
                             <div th:each="n : ${notifications.content}"
-                                 class="list-group-item list-group-item-action p-3 notification-row position-relative"
+                                 class="list-group-item list-group-item-action p-3 notification-row position-relative u-tr-background-color-0-2s-cur-pointer"
                                  th:id="'notif-row-' + ${n.id}"
                                  th:classappend="${!n.isRead} ? 'bg-light bg-opacity-50 fw-semibold unread-row' : ''"
-                                 style="transition: background-color 0.2s; cursor: pointer;"
+                                
                                  th:data-notif-id="${n.id}"
                                  th:data-notif-title="${n.title}"
                                  th:data-notif-message="${n.message}"
@@ -184,8 +184,8 @@
                                     </div>
 
                                     <!-- Notification Icon -->
-                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1"
-                                         style="width: 40px; height: 40px; background: rgba(13,71,161,0.08);">
+                                    <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1 u-w-40px-h-40px-bg-rgba-13-71-161-0-08"
+                                        >
                                         <i th:class="${n.type != null ? n.type.iconClass : 'fas fa-bell text-primary'}"></i>
                                     </div>
 
@@ -209,7 +209,7 @@
 
                                     <!-- Actions Dropdown -->
                                     <div class="dropdown flex-shrink-0" data-stop-propagation="1">
-                                        <button class="btn btn-sm btn-light rounded-circle notif-kebab-btn" type="button" data-bs-toggle="dropdown" aria-expanded="false" style="width: 32px; height: 32px;">
+                                        <button class="btn btn-sm btn-light rounded-circle notif-kebab-btn u-w-32px-h-32px" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             <i class="fas fa-ellipsis-v text-muted"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 u-radius-12">

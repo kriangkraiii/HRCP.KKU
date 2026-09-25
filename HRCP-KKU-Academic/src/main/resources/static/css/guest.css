@@ -1108,3 +1108,19 @@ body { top: 0px !important; }
 .sso-logout-frame {
     display: none !important;
 }
+
+/* Inline style="" migration (CSP drops style attributes) */
+.u-d-inline {
+  display: inline;
+}
+.u-fs-0-9em {
+  font-size: 0.9em;
+}
+.u-mr-8px-fs-1-2rem {
+  margin-right: 8px;
+  font-size: 1.2rem;
+}
+.u-mt-20px-ta-center {
+  margin-top: 20px;
+  text-align: center;
+}

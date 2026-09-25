@@ -126,8 +126,8 @@
         <!-- Position Info (from Doc 2) -->
         <div
           th:if="${doc2Data != null}"
-          class="detail-info-card"
-          style="--_accent: #2e7d32"
+          class="detail-info-card s-request-detail-3"
+         
         >
           <h6>
             <i class="fas fa-user-tie u-text-green"></i>
@@ -169,8 +169,8 @@
         <!-- Evaluation Results (Doc 8 from eval request) -->
         <div
           th:if="${evalDoc9Data != null}"
-          class="detail-info-card"
-          style="--_accent: #1565c0"
+          class="detail-info-card s-request-detail-4"
+         
         >
           <h6>
             <i
@@ -198,7 +198,7 @@
                 th:text="${evalDoc9Data.getOrDefault('is_qualified', '-')}"
               ></div>
             </div>
-            <div class="detail-info-item" style="flex: 1.5">
+            <div class="detail-info-item u-flex-1-5">
               <small>วิชา</small>
               <div
                 class="di-value"
@@ -215,8 +215,8 @@
             <div class="detail-info-item">
               <small>วันหมดอายุ</small>
               <div
-                class="di-value"
-                style="color: var(--color-danger)"
+                class="di-value u-c-var-color-danger"
+               
                 th:text="${evalDoc9Data.getOrDefault('expiration_date', '-')}"
               ></div>
             </div>
@@ -254,8 +254,8 @@
         </div>
         <div
           th:if="${evalDoc9Data == null}"
-          class="draft-banner"
-          style="border-color: #e3a008; background: #fffbeb; color: #854d0e"
+          class="draft-banner u-bdc-e3a008-bg-fffbeb-c-854d0e"
+         
         >
           <i class="fas fa-exclamation-triangle"></i>
           <div>
@@ -413,12 +413,12 @@
                   <table class="admin-table">
                     <thead>
                       <tr>
-                        <th style="width: 36px">#</th>
+                        <th class="u-w-36px">#</th>
                         <th>ชื่อไฟล์</th>
                         <th>ประเภท</th>
                         <th>ขนาด</th>
                         <th>อัปโหลดเมื่อ</th>
-                        <th style="width: 80px">จัดการ</th>
+                        <th class="u-w-80px">จัดการ</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -472,10 +472,10 @@
                             >
                               <i class="fas fa-download"></i>
                             </a>
-                            <form
+                            <form class="u-d-inline"
                               th:action="'/admin/position/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
                               method="post"
-                              style="display: inline"
+                             
                               data-confirm="ต้องการลบเอกสารนี้หรือไม่?"
                             >
                               <button
@@ -498,8 +498,8 @@
             <!-- History (Tabbed: Status + Edit) -->
             <div class="detail-section">
               <div
-                class="detail-section-header"
-                style="flex-direction: column; align-items: stretch; gap: 8px"
+                class="detail-section-header s-request-detail-2"
+               
               >
                 <div class="history-tabs" id="historyTabs">
                   <button
@@ -681,8 +681,8 @@
                     <!-- Draft: disabled -->
                     <th:block th:if="${request.currentStatus.isDraft()}">
                       <span
-                        class="btn btn-sm btn-outline-secondary disabled"
-                        style="opacity: 0.5; cursor: not-allowed"
+                        class="btn btn-sm btn-outline-secondary disabled u-o-0-5-cur-not-allowed"
+                       
                       >
                         <i class="fas fa-lock"></i> รอยื่น
                       </span>

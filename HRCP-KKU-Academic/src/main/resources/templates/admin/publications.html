@@ -141,14 +141,14 @@
                         <table class="table table-hover align-middle">
                             <thead class="table-light">
                             <tr>
-                                <th style="width:5rem">ปี</th>
+                                <th class="u-w-5rem">ปี</th>
                                 <th>ชื่อผลงาน</th>
-                                <th style="width:14rem">เจ้าของผลงาน</th>
-                                <th style="width:7rem">แหล่งข้อมูล</th>
-                                <th style="width:7rem">ประเภท</th>
-                                <th style="width:5rem" class="text-center">Q</th>
-                                <th style="width:6rem" class="text-end">อ้างอิง</th>
-                                <th style="width:4rem"></th>
+                                <th class="u-w-14rem">เจ้าของผลงาน</th>
+                                <th class="u-w-7rem">แหล่งข้อมูล</th>
+                                <th class="u-w-7rem">ประเภท</th>
+                                <th class="text-center u-w-5rem">Q</th>
+                                <th class="text-end u-w-6rem">อ้างอิง</th>
+                                <th class="u-w-4rem"></th>
                             </tr>
                             </thead>
                             <tbody>
@@ -164,7 +164,7 @@
                                         <span th:if="${p.issue}" th:text="' ฉบับที่ ' + ${p.issue}"></span>
                                         <span th:if="${p.pages}" th:text="' หน้า ' + ${p.pages}"></span>
                                     </div>
-                                    <div class="small text-muted text-truncate" style="max-width:48rem"
+                                    <div class="small text-muted text-truncate u-maxw-48rem"
                                          th:if="${p.authorNames}" th:text="${p.authorNames}"></div>
 
                                     <!-- บทคัดย่อยาวเฉลี่ยพันกว่าตัวอักษร กางไว้ทุกแถวจะอ่านตารางไม่ออก
@@ -189,7 +189,7 @@
 
                                     <div class="collapse mt-2" th:id="'abs-' + ${st.index}">
                                         <div class="border-start border-3 ps-3 py-1">
-                                            <p class="small mb-2" style="white-space:pre-line"
+                                            <p class="small mb-2 u-ws-pre-line"
                                                th:text="${row.abstractText}">บทคัดย่อ</p>
                                             <div th:if="${!row.keywords.isEmpty()}">
                                                 <span class="badge bg-light text-dark border me-1"

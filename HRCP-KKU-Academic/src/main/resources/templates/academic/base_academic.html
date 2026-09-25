@@ -206,7 +206,7 @@
         <script src="/js/doc_step_guide.js?v=1.0"></script>
         <script src="/js/checkbox_defaults.js"></script>
 
-        <div id="google_translate_element" style="display:none;"></div>
+        <div id="google_translate_element"></div>
 
         <!-- Language Switcher Loading Overlay (Glassmorphism) -->
         <div id="langLoadingOverlay" class="lang-loading-overlay" aria-live="polite" aria-hidden="true">
@@ -672,15 +672,15 @@
         <!-- Sidebar Footer: User Info -->
         <div class="sidebar-footer" th:if="${user != null}">
             <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/profile' : '/user/profile'}" class="sidebar-user text-decoration-none text-decoration-none" th:attr="data-title=${user.name}">
-                <div class="user-avatar" style="width:34px;height:34px;min-width:34px;max-width:34px;flex-shrink:0;overflow:hidden;border-radius:50%;background:rgba(255,255,255,0.12);display:flex;align-items:center;justify-content:center;">
+                <div class="user-avatar s-base-academic-1">
                     <img th:if="${user.profileImage != null and user.profileImage != 'default.png'}"
                          th:src="'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}"
-                         class="sidebar-user-avatar-img"
-                         style="width:100%;height:100%;object-fit:cover;object-position:center top;border-radius:50%;display:block;"
+                         class="sidebar-user-avatar-img s-base-academic-2"
+                        
                          alt="Avatar"
                          data-fallback="/img/profile_img/default.png">
-                    <i class="fa-solid fa-user"
-                       style="color: var(--accent-color, #ffca28); font-size: 0.95rem;"
+                    <i class="fa-solid fa-user u-c-var-accent-color-ffca28-fs-0-95rem"
+                      
                        th:if="${user.profileImage == null or user.profileImage == 'default.png'}"></i>
                 </div>
                 <div class="user-info text-decoration-none text-decoration-none">
@@ -705,7 +705,7 @@
         <!-- Top Navbar Header -->
         <header class="top-navbar d-flex justify-content-between align-items-center px-4 py-2" th:if="${user != null}">
             <!-- Left: Sidebar Toggle & Breadcrumbs -->
-            <div class="topbar-left d-flex align-items-center gap-2 text-truncate me-3" style="max-width: 50%;">
+            <div class="topbar-left d-flex align-items-center gap-2 text-truncate me-3 u-maxw-50pct">
                 <button type="button" class="topbar-sidebar-toggle me-1" id="sidebarToggleBtn"
                         aria-label="ซ่อน/แสดงแถบเมนูด้านข้าง" title="ซ่อน/แสดงแถบเมนู (Sidebar)">
                     <i class="fas fa-bars-staggered" id="sidebarToggleIcon"></i>
@@ -744,14 +744,14 @@
                               th:text="${unreadNotificationCount != null and unreadNotificationCount > 99 ? '99+' : (unreadNotificationCount != null ? unreadNotificationCount : 0)}"
                               th:title="${unreadNotificationCount != null ? unreadNotificationCount : 0} + ' รายการที่ยังไม่ได้อ่าน'">0</span>
                     </button>
-                    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-0 rounded-4"
+                    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 p-0 rounded-4 s-base-academic-3"
                          id="topbarNotifMenu"
                          aria-labelledby="topbarNotifBtn"
-                         style="width: 380px; max-width: 92vw; z-index: 1060; border-radius: 16px; overflow: hidden; background: var(--bg-card, #ffffff);">
+                        >
                         <!-- Dropdown Header -->
                         <div class="d-flex justify-content-between align-items-center p-3 border-bottom bg-light bg-opacity-50">
                             <div class="d-flex align-items-center gap-2">
-                                <h6 class="mb-0 fw-bold text-dark" style="font-size: 0.95rem;">
+                                <h6 class="mb-0 fw-bold text-dark u-fs-0-95rem">
                                     <i class="fas fa-bell me-1 u-text-accent"></i>การแจ้งเตือน
                                 </h6>
                                 <span class="badge bg-danger rounded-pill topbar-unread-pill"
@@ -768,7 +768,7 @@
                         </div>
 
                         <!-- Dropdown Items List (Populated via JS) -->
-                        <div class="list-group list-group-flush" id="topbarNotifList" style="max-height: 380px; overflow-y: auto;">
+                        <div class="list-group list-group-flush u-maxh-380px-ovy-auto" id="topbarNotifList">
                             <div class="p-4 text-center text-muted notif-loading-state">
                                 <div class="spinner-border spinner-border-sm text-primary mb-2" role="status"></div>
                                 <div class="small">กำลังโหลดการแจ้งเตือน...</div>
@@ -786,7 +786,7 @@
                 </div>
 
                 <!-- Global Search Input & Dropdown -->
-                <div class="global-search-container position-relative" style="max-width: 320px; width: 100%;">
+                <div class="global-search-container position-relative u-maxw-320px-w-100pct">
                     <div class="input-group input-group-sm global-search-input-group">
                         <span class="input-group-text bg-transparent border-0 ps-3 text-muted">
                             <i class="fas fa-search"></i>
@@ -802,8 +802,8 @@
                     </div>
 
                     <!-- Search Results Dropdown -->
-                    <div id="globalSearchResults" class="global-search-dropdown shadow-lg border-0 rounded-3 position-absolute start-0 mt-1 d-none"
-                         style="z-index: 1050; max-height: 400px; overflow-y: auto; overflow-x: hidden; background: var(--bg-card, #ffffff);">
+                    <div id="globalSearchResults" class="global-search-dropdown shadow-lg border-0 rounded-3 position-absolute start-0 mt-1 d-none s-base-academic-4"
+                        >
                     </div>
                 </div>
 
@@ -1242,7 +1242,7 @@
                 <button type="button" class="btn confirm-modal-btn-cancel px-4 py-2" id="confirmModalCancelBtn" data-bs-dismiss="modal">
                     ยกเลิก
                 </button>
-                <button type="button" class="btn btn-primary px-4 py-2 shadow-sm" id="confirmModalOkBtn" style="border-radius: 12px; font-weight: 600; min-width: 105px;">
+                <button type="button" class="btn btn-primary px-4 py-2 shadow-sm u-r-12px-fw-600-minw-105px" id="confirmModalOkBtn">
                     ยืนยัน
                 </button>
             </div>

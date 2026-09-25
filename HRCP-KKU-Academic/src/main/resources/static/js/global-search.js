@@ -282,24 +282,24 @@ function initGlobalSearch() {
         });
 
         categoryOrder.forEach(function(cat) {
-            html += '<div class="dropdown-header px-3 py-1 text-uppercase fw-bold text-muted" style="font-size: 0.72rem; letter-spacing: 0.5px;">' + escapeHtml(cat) + '</div>';
+            html += '<div class="dropdown-header px-3 py-1 text-uppercase fw-bold text-muted u-fs-0-72rem-ls-0-5px">' + escapeHtml(cat) + '</div>';
 
             grouped[cat].forEach(function(item) {
                 var targetUrl = enrichSearchUrl(item);
-                html += '<a href="' + escapeAttr(targetUrl) + '" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between px-3 py-2 border-0 search-result-item" style="text-decoration:none;">';
+                html += '<a href="' + escapeAttr(targetUrl) + '" class="list-group-item list-group-item-action d-flex align-items-center justify-content-between px-3 py-2 border-0 search-result-item text-decoration-none">';
                 html += '<div class="d-flex align-items-center gap-2 min-width-0 flex-grow-1 overflow-hidden me-2">';
-                html += '<div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0" style="width: 28px; height: 28px; background: rgba(13,71,161,0.08);">';
-                html += '<i class="' + escapeAttr(item.icon || 'fas fa-link') + '" style="font-size: 0.85rem;"></i>';
+                html += '<div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 u-w-28px-h-28px-bg-rgba-13-71-161-0-08">';
+                html += '<i class="' + escapeAttr(item.icon || 'fas fa-link') + ' u-fs-0-85rem"></i>';
                 html += '</div>';
                 html += '<div class="min-width-0 flex-grow-1 overflow-hidden">';
-                html += '<div class="text-dark fw-semibold text-truncate" style="font-size: 0.85rem;" title="' + escapeAttr(item.title) + '">' + highlightKeyword(item.title, query) + '</div>';
+                html += '<div class="text-dark fw-semibold text-truncate u-fs-0-85rem" title="' + escapeAttr(item.title) + '">' + highlightKeyword(item.title, query) + '</div>';
                 if (item.subtitle) {
-                    html += '<small class="text-muted text-truncate d-block" style="font-size: 0.75rem;" title="' + escapeAttr(item.subtitle) + '">' + escapeHtml(item.subtitle) + '</small>';
+                    html += '<small class="text-muted text-truncate d-block u-fs-0-75rem" title="' + escapeAttr(item.subtitle) + '">' + escapeHtml(item.subtitle) + '</small>';
                 }
                 html += '</div></div>';
 
                 if (item.badge) {
-                    html += '<span class="badge ' + escapeAttr(item.badgeClass || 'bg-light text-dark') + ' rounded-pill flex-shrink-0 ms-auto" style="font-size: 0.7rem;">' + escapeHtml(item.badge) + '</span>';
+                    html += '<span class="badge ' + escapeAttr(item.badgeClass || 'bg-light text-dark') + ' rounded-pill flex-shrink-0 ms-auto u-fs-0-7rem">' + escapeHtml(item.badge) + '</span>';
                 }
 
                 html += '</a>';
@@ -308,8 +308,7 @@ function initGlobalSearch() {
 
         html += '<a href="' + escapeAttr(allResultsUrl(query)) + '"'
             + ' class="list-group-item list-group-item-action text-center py-2 border-0 border-top'
-            + ' search-result-item small fw-semibold text-primary"'
-            + ' style="text-decoration:none;">'
+            + ' search-result-item small fw-semibold text-primary text-decoration-none">'
             + 'ดูผลลัพธ์ทั้งหมด <i class="fas fa-arrow-right ms-1"></i></a>';
 
         html += '</div>';

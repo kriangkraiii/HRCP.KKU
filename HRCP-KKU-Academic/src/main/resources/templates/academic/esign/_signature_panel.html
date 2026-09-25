@@ -55,8 +55,8 @@
                     <li class="list-group-item d-flex justify-content-between align-items-center gap-2 p-3"
                         th:each="s : ${signaturePanel.activeEnvelope.steps}">
                         <div class="d-flex align-items-center gap-3">
-                            <span class="badge rounded-circle d-flex align-items-center justify-content-center"
-                                  style="width: 28px; height: 28px;"
+                            <span class="badge rounded-circle d-flex align-items-center justify-content-center u-w-28px-h-28px"
+                                 
                                   th:classappend="${s.status.name() == 'SIGNED'} ? 'bg-success text-white' : (${s.status.name() == 'ACTIVE'} ? 'bg-primary text-white' : 'bg-light text-secondary border')"
                                   th:text="${s.stepOrder}">1</span>
                             <div>
@@ -443,7 +443,7 @@
 
                         <div class="p-2 border rounded bg-light d-flex align-items-center justify-content-between">
                             <div class="d-flex align-items-center gap-2">
-                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center" style="width: 36px; height: 36px;">
+                                <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center u-w-36px-h-36px">
                                     <i class="fas fa-pen-nib"></i>
                                 </div>
                                 <div>

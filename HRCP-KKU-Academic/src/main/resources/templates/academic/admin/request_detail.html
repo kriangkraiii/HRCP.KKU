@@ -71,11 +71,11 @@
       </div>
 
       <!-- Course Info -->
-      <div th:if="${doc1Data != null}" class="detail-info-card" style="--_accent: #1976d2">
+      <div th:if="${doc1Data != null}" class="detail-info-card s-request-detail-1">
         <h6>
           <i class="fas fa-book u-text-primary-medium"></i>
           ข้อมูลรายวิชา
-          <small style="color: var(--text-muted); font-weight: 400">(จากเอกสารที่ 1: บันทึกข้อความ)</small>
+          <small class="u-c-var-text-muted-fw-400">(จากเอกสารที่ 1: บันทึกข้อความ)</small>
         </h6>
         <div class="detail-info-row">
           <div class="detail-info-item">
@@ -84,7 +84,7 @@
               -
             </div>
           </div>
-          <div class="detail-info-item" style="flex: 2">
+          <div class="detail-info-item u-flex-2">
             <small>รายวิชา</small>
             <div class="di-value" th:text="${doc1Data.getOrDefault('course_name', '-')}">
               -
@@ -197,12 +197,12 @@
                 <table class="admin-table admin-table-attachments">
                   <thead>
                     <tr>
-                      <th style="width: 36px">#</th>
+                      <th class="u-w-36px">#</th>
                       <th>ชื่อไฟล์</th>
                       <th>ประเภท</th>
                       <th>ขนาด</th>
                       <th>อัปโหลดเมื่อ</th>
-                      <th style="width: 120px">จัดการ</th>
+                      <th class="u-w-120px">จัดการ</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -240,9 +240,9 @@
                             class="btn btn-outline-primary btn-sm" title="ดาวน์โหลด">
                             <i class="fas fa-download"></i>
                           </a>
-                          <form
+                          <form class="u-d-inline"
                             th:action="'/admin/academic/request/' + ${request.id} + '/attachment/' + ${att.id} + '/delete'"
-                            method="post" style="display: inline" th:data-confirm="${att.fileType == 'LINK' ? 'ต้องการลบลิงก์นี้หรือไม่?' : 'ต้องการลบเอกสารนี้หรือไม่?'}">
+                            method="post" th:data-confirm="${att.fileType == 'LINK' ? 'ต้องการลบลิงก์นี้หรือไม่?' : 'ต้องการลบเอกสารนี้หรือไม่?'}">
                             <button type="submit" class="btn btn-outline-danger btn-sm" title="ลบ">
                               <i class="fas fa-trash"></i>
                             </button>
@@ -259,8 +259,8 @@
           <!-- History Tabs: Status History & Edit History -->
           <div class="detail-section">
             <div
-              class="detail-section-header"
-              style="flex-direction: column; align-items: stretch; gap: 8px"
+              class="detail-section-header s-request-detail-2"
+             
             >
               <div class="history-tabs" id="historyTabs">
                 <button
@@ -301,8 +301,8 @@
                     ></div>
                     <div
                       th:if="${h.changedBy != null}"
-                      class="history-entry-by"
-                      style="font-size: 0.75rem; color: var(--text-muted);"
+                      class="history-entry-by u-fs-0-75rem-c-var-text-muted"
+                     
                     >
                       โดย: [[${h.changedBy.name}]]
                     </div>
@@ -442,7 +442,7 @@
                 <!-- Generated copies -->
                 <div th:each="doc : ${documents}" th:if="${doc.documentType == entry.key}" class="doc-grid-sub">
                   <div class="d-flex justify-content-between align-items-center">
-                    <small style="color: var(--color-success)"><i class="fas fa-check"></i>
+                    <small class="u-c-var-color-success"><i class="fas fa-check"></i>
                       [[${doc.documentLabel}]]</small>
                     <div class="d-flex gap-1">
                       <a th:href="'/admin/academic/request/' + ${request.id} + '/download/' + ${doc.id} + '?format=docx'"

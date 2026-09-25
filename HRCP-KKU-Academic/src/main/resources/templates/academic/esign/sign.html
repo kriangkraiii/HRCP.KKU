@@ -33,7 +33,7 @@
                         เอกสารที่ <span class="text-primary fw-bold" th:text="${queueIndex}">1</span> จากทั้งหมด <span th:text="${queueTotal}">3</span> ฉบับที่รอท่านลงนาม
                     </span>
                 </div>
-                <div class="progress flex-grow-1 mx-3 d-none d-md-block" style="height: 8px; max-width: 200px;">
+                <div class="progress flex-grow-1 mx-3 d-none d-md-block u-h-8px-maxw-200px">
                     <div class="progress-bar bg-primary progress-bar-striped progress-bar-animated"
                          role="progressbar"
                          th:data-width="${queueIndex * 100 / queueTotal}"></div>
@@ -309,7 +309,7 @@
                                 <!-- Dynamic Live Selected Status Box -->
                                 <div class="alert alert-primary bg-primary-subtle border-primary-subtle d-flex align-items-center justify-content-between p-2 px-3 rounded-3 shadow-sm mt-3" id="activeSigNotice">
                                     <div class="d-flex align-items-center gap-2 text-break">
-                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0" style="width: 32px; height: 32px;">
+                                        <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 u-w-32px-h-32px">
                                             <i class="fas fa-file-signature fa-sm"></i>
                                         </div>
                                         <div class="small">

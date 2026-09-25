@@ -59,7 +59,7 @@
                 <h6 class="mb-0"><i class="fas fa-align-left"></i> บทคัดย่อ</h6>
             </div>
             <div class="card-body">
-                <p th:if="${row.hasAbstract()}" style="white-space:pre-line;line-height:1.8"
+                <p class="u-ws-pre-line-lh-1-8" th:if="${row.hasAbstract()}"
                    th:text="${row.abstractText}">บทคัดย่อ</p>
                 <p th:unless="${row.hasAbstract()}" class="text-muted mb-0">
                     ไม่มีบทคัดย่อจากแหล่งข้อมูล กรุณาอ่านฉบับเต็มที่เว็บไซต์สำนักพิมพ์

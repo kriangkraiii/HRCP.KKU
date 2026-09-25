@@ -161,7 +161,7 @@ class EsignPdfViewer {
     renderDocxNotice() {
         if (this.pagesViewEl) {
             this.pagesViewEl.innerHTML = `
-                <div class="alert alert-warning text-center m-4 p-4 shadow-sm" style="max-width: 600px;">
+                <div class="alert alert-warning text-center m-4 p-4 shadow-sm u-maxw-600px">
                     <i class="fas fa-file-word fa-3x text-primary mb-3"></i>
                     <h5>ระบบกำลังแสดงเอกสารในรูปแบบต้นฉบับ DOCX</h5>
                     <p class="text-secondary small mb-3">

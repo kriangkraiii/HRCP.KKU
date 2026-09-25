@@ -30,7 +30,7 @@
             </div>
 
             <!-- ข้อมูลรายวิชา จากเอกสารที่ 1 -->
-            <div th:if="${doc1Data != null}" class="request-card-v2-course" style="margin-bottom:var(--space-lg);"
+            <div th:if="${doc1Data != null}" class="request-card-v2-course u-mb-var-space-lg"
                  th:with="courseDoc=${doc1Data}">
                 <div class="row g-3">
                     <div class="col-12 mb-1">
@@ -75,7 +75,7 @@
                                      (${pIdx == stepStat.index} ? (${stepStat.last} ? 't-final' : 't-active') : '')">
                             <div class="timeline-v2-icon">
                                 <i th:class="'fas ' + ${step.icon}" th:if="${pIdx >= stepStat.index}"></i>
-                                <i class="fas fa-circle" th:unless="${pIdx >= stepStat.index}" style="font-size: 0.45rem;"></i>
+                                <i class="fas fa-circle u-fs-0-45rem" th:unless="${pIdx >= stepStat.index}"></i>
                             </div>
                             <div class="timeline-v2-label" th:text="${step.thaiLabel}"></div>
                         </div>
@@ -160,7 +160,7 @@
                     </div>
                 </div>
                 <div class="section-card-body">
-                    <div th:if="${documents == null || documents.isEmpty()}" class="empty-state-v2" style="padding:var(--space-lg) 0;">
+                    <div th:if="${documents == null || documents.isEmpty()}" class="empty-state-v2 u-p-var-space-lg-0">
                         <p>ยังไม่มีเอกสาร</p>
                     </div>
                     <div th:each="doc : ${documents}" class="doc-list-item">

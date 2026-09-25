@@ -87,7 +87,7 @@
 
                                 <div class="row g-3">
                                     <div class="col-md-6">
-                                        <div class="card h-100" style="border-left: 4px solid #4caf50">
+                                        <div class="card h-100 u-bdl-4px-solid-4caf50">
                                             <div class="card-body d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <h6 class="mb-0"><i class="fas fa-calendar-check text-success"></i>
@@ -103,7 +103,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="card h-100" style="border-left: 4px solid #ff9800">
+                                        <div class="card h-100 u-bdl-4px-solid-ff9800">
                                             <div class="card-body d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <h6 class="mb-0"><i
@@ -120,7 +120,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="card h-100" style="border-left: 4px solid #f44336">
+                                        <div class="card h-100 u-bdl-4px-solid-f44336">
                                             <div class="card-body d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <h6 class="mb-0"><i class="fas fa-clock text-danger"></i> 1
@@ -136,7 +136,7 @@
                                         </div>
                                     </div>
                                     <div class="col-md-6">
-                                        <div class="card h-100" style="border-left: 4px solid #9c27b0">
+                                        <div class="card h-100 u-bdl-4px-solid-9c27b0">
                                             <div class="card-body d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <h6 class="mb-0"><i class="fas fa-bell text-purple"></i> 1
@@ -175,14 +175,14 @@
                                 <!-- Custom Alerts Cards -->
                                 <div id="customAlertsContainer" class="row g-3">
                                     <div th:if="${customAlerts == null || customAlerts.isEmpty()}" id="customAlertEmpty" class="col-12">
-                                        <div class="text-center py-4 px-3 border border-dashed rounded-3" style="background: var(--bg-hover, rgba(0,0,0,0.02));">
+                                        <div class="text-center py-4 px-3 border border-dashed rounded-3 u-bg-var-bg-hover-rgba-0-0-0-0-02">
                                             <i class="fas fa-clock fa-2x text-muted mb-2 opacity-50"></i>
                                             <p class="text-muted small mb-0">ยังไม่มีการแจ้งเตือนกำหนดเอง กดปุ่ม <strong>"เพิ่มเวลาแจ้งเตือน"</strong> เพื่อสร้างการแจ้งเตือนเพิ่มเติม</p>
                                         </div>
                                     </div>
 
                                     <div th:each="ca : ${customAlerts}" class="col-md-6 custom-alert-item" th:id="'custom-alert-' + ${ca.id}">
-                                        <div class="card h-100" style="border-left: 4px solid #0288d1">
+                                        <div class="card h-100 u-bdl-4px-solid-0288d1">
                                             <div class="card-body d-flex justify-content-between align-items-center">
                                                 <div>
                                                     <h6 class="mb-0 fw-bold">
@@ -213,7 +213,7 @@
                     </div>
 
                     <!-- Auto-save toast -->
-                    <div id="saveToast" style="position:fixed;bottom:24px;right:24px;z-index:1080;padding:10px 20px;border-radius:10px;background:#2e7d32;color:#fff;font-size:0.9rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.2);opacity:0;transition:opacity 0.3s;pointer-events:none;display:flex;align-items:center;gap:8px">
+                    <div class="s-settings-1" id="saveToast">
                         <i class="fas fa-check-circle"></i> <span id="saveToastText">บันทึกแล้ว</span>
                     </div>
 
@@ -317,7 +317,7 @@
                             </div>
 
                             <!-- Realtime Diagnostic Alert Box -->
-                            <div id="diagnosticAlertArea" style="display:none;" class="mt-3"></div>
+                            <div id="diagnosticAlertArea" class="mt-3 u-hidden"></div>
                         </div>
                     </div>
 
@@ -326,21 +326,21 @@
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content u-modal-soft">
                                 <!-- Header -->
-                                <div style="background:linear-gradient(135deg,#1a237e 0%,#0d47a1 50%,#1565c0 100%);padding:28px 24px 22px;text-align:center;position:relative;">
-                                    <div style="width:56px;height:56px;background:rgba(255,255,255,0.15);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:12px;backdrop-filter:blur(8px);border:1px solid rgba(255,255,255,0.2);">
-                                        <i class="fas fa-shield-alt" style="font-size:24px;color:#90caf9;"></i>
+                                <div class="s-settings-2">
+                                    <div class="s-settings-3">
+                                        <i class="fas fa-shield-alt u-fs-24px-c-90caf9"></i>
                                     </div>
-                                    <h5 style="color:#fff;font-size:18px;font-weight:700;margin:0 0 4px;">ยืนยันตัวตนด้วย OTP</h5>
-                                    <p style="color:rgba(255,255,255,0.75);font-size:13px;margin:0;">ส่งรหัส OTP 8 หลักไปที่อีเมลของท่านแล้ว</p>
+                                    <h5 class="u-c-fff-fs-18px-fw-700-m-0-0-4px">ยืนยันตัวตนด้วย OTP</h5>
+                                    <p class="u-c-rgba-255-255-255-0-75-fs-13px-m-0">ส่งรหัส OTP 8 หลักไปที่อีเมลของท่านแล้ว</p>
                                     <button type="button" class="btn-close btn-close-white u-corner-close" data-bs-dismiss="modal"></button>
                                 </div>
 
                                 <!-- Body -->
-                                <div style="padding:28px 28px 20px;text-align:center;">
+                                <div class="u-p-28px-28px-20px-ta-center">
                                     <!-- Countdown -->
-                                    <div id="otpCountdownArea" style="margin-bottom:20px;">
-                                        <span style="display:inline-flex;align-items:center;gap:6px;background:#fff8e1;color:#f57f17;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;">
-                                            <i class="fas fa-clock"></i> OTP หมดอายุใน <span id="otpCountdown" style="font-family:monospace;font-size:14px;font-weight:700;">5:00</span>
+                                    <div class="u-mb-20px" id="otpCountdownArea">
+                                        <span class="s-settings-4">
+                                            <i class="fas fa-clock"></i> OTP หมดอายุใน <span class="u-ff-monospace-fs-14px-fw-700" id="otpCountdown">5:00</span>
                                         </span>
                                     </div>
 
@@ -348,12 +348,12 @@
                                     <div id="otpAlertArea"></div>
 
                                     <!-- OTP Input — 8 individual digits -->
-                                    <div id="settingsOtpInputs" style="display:flex;gap:6px;justify-content:center;margin:0 auto 24px;">
+                                    <div class="u-d-flex-gap-6px-jc-center-m-0-auto-24px" id="settingsOtpInputs">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="0" autocomplete="off">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="1" autocomplete="off">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="2" autocomplete="off">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="3" autocomplete="off">
-                                        <span style="display:flex;align-items:center;color:#ccc;font-size:18px;padding:0 2px;">-</span>
+                                        <span class="u-d-flex-ai-center-c-ccc-fs-18px-p-0-2px">-</span>
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="4" autocomplete="off">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="5" autocomplete="off">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="6" autocomplete="off">
@@ -363,18 +363,18 @@
                                     <input type="hidden" id="emailOtpInput">
 
                                     <!-- Verify Button -->
-                                    <button type="button" class="btn w-100" id="verifyOtpBtn" data-call="verifyEmailOtp" disabled
-                                            style="background:linear-gradient(135deg,#1a237e,#0d47a1);color:#fff;border:none;border-radius:12px;padding:13px;font-size:15px;font-weight:600;transition:all 0.3s;cursor:pointer;">
+                                    <button type="button" class="btn w-100 s-settings-5" id="verifyOtpBtn" data-call="verifyEmailOtp" disabled
+                                           >
                                         <i class="fas fa-check-circle"></i> ยืนยัน OTP
                                     </button>
                                 </div>
 
                                 <!-- Footer -->
-                                <div style="padding:0 28px 24px;text-align:center;">
-                                    <div style="border-top:1px solid #eee;padding-top:16px;">
-                                        <p style="font-size:13px;color:#999;margin:0 0 8px;">ไม่ได้รับรหัส?</p>
-                                        <button type="button" class="btn btn-sm" id="resendOtpBtn" data-call="resendEmailOtp"
-                                                style="border:1.5px solid #1a237e;color:#1a237e;border-radius:8px;padding:6px 18px;font-size:13px;font-weight:600;transition:all 0.3s;cursor:pointer;">
+                                <div class="u-p-0-28px-24px-ta-center">
+                                    <div class="u-bdt-1px-solid-eee-pt-16px">
+                                        <p class="u-fs-13px-c-999-m-0-0-8px">ไม่ได้รับรหัส?</p>
+                                        <button type="button" class="btn btn-sm s-settings-6" id="resendOtpBtn" data-call="resendEmailOtp"
+                                               >
                                             <i class="fas fa-redo"></i> ส่ง OTP ใหม่
                                         </button>
                                         <small id="resendCooldownText" class="text-muted ms-2 js-hidden"></small>
@@ -412,8 +412,8 @@
 
                     <!-- Modal: Add Custom Expiry Alert -->
                     <div class="modal fade" id="customAlertModal" tabindex="-1" aria-labelledby="customAlertModalLabel" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
-                            <div class="modal-content border-0 shadow" style="border-radius: 16px; overflow: hidden;">
+                        <div class="modal-dialog modal-dialog-centered u-maxw-440px">
+                            <div class="modal-content border-0 shadow u-r-16px-ov-hidden">
                                 <div class="modal-header border-0 pb-0">
                                     <h5 class="modal-title fw-bold" id="customAlertModalLabel">
                                         <i class="fas fa-bell text-primary me-2"></i>เพิ่มเวลาแจ้งเตือนกำหนดเอง
@@ -421,12 +421,12 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body pt-3">
-                                    <div id="customAlertModalError" class="alert alert-danger py-2 mb-3 d-none" style="border-radius: 10px; font-size: 0.9rem;"></div>
+                                    <div id="customAlertModalError" class="alert alert-danger py-2 mb-3 d-none u-r-10px-fs-0-9rem"></div>
                                     <form id="customAlertForm" onsubmit="event.preventDefault(); saveCustomAlert();">
                                         <label class="form-label fw-bold mb-2">แจ้งเตือนล่วงหน้า</label>
                                         <div class="input-group mb-2">
                                             <input type="number" class="form-control" id="customAlertValue" min="1" max="365" placeholder="ระบุตัวเลข เช่น 15" required>
-                                            <select class="form-select" id="customAlertUnit" style="max-width: 140px;">
+                                            <select class="form-select u-maxw-140px" id="customAlertUnit">
                                                 <option value="DAYS">วัน</option>
                                                 <option value="WEEKS">สัปดาห์</option>
                                                 <option value="MONTHS">เดือน</option>
@@ -637,7 +637,7 @@
 
             function showOtpAlert(type, msg) {
                 document.getElementById('otpAlertArea').innerHTML =
-                    '<div class="alert alert-' + type + ' py-2 mb-3" style="border-radius:10px;font-size:.9rem;">' +
+                    '<div class="alert alert-' + type + ' py-2 mb-3 u-r-10px-fs-9rem">' +
                     '<i class="fas fa-' + (type === 'success' ? 'check-circle' : 'exclamation-circle') + '"></i> ' +
                     msg + '</div>';
             }
@@ -656,8 +656,8 @@
 
                 // Reset countdown display
                 area.innerHTML =
-                    '<span style="display:inline-flex;align-items:center;gap:6px;background:#fff8e1;color:#f57f17;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;">' +
-                    '<i class="fas fa-clock"></i> OTP หมดอายุใน <span id="otpCountdown" style="font-family:monospace;font-size:14px;font-weight:700;">5:00</span></span>';
+                    '<span class="s-settings-4">' +
+                    '<i class="fas fa-clock"></i> OTP หมดอายุใน <span class="u-ff-monospace-fs-14px-fw-700" id="otpCountdown">5:00</span></span>';
                 updateVerifyBtnState();
 
                 var el = document.getElementById('otpCountdown');
@@ -667,7 +667,7 @@
                     if (otpRemaining <= 0) {
                         clearInterval(otpTimer);
                         area.innerHTML =
-                            '<span style="display:inline-flex;align-items:center;gap:6px;background:#ffebee;color:#c62828;padding:7px 16px;border-radius:20px;font-size:13px;font-weight:600;">' +
+                            '<span class="s-settings-7">' +
                             '<i class="fas fa-exclamation-triangle"></i> OTP หมดอายุแล้ว กรุณาส่งรหัสใหม่</span>';
                         verifyBtn.disabled = true;
                         clearOtpDigits();
@@ -860,7 +860,7 @@
                                         var container = document.getElementById('customAlertsContainer');
                                         if (container) {
                                             container.innerHTML = '<div id="customAlertEmpty" class="col-12">' +
-                                                '<div class="text-center py-4 px-3 border border-dashed rounded-3" style="background: var(--bg-hover, rgba(0,0,0,0.02));">' +
+                                                '<div class="text-center py-4 px-3 border border-dashed rounded-3 u-bg-var-bg-hover-rgba-0-0-0-0-02">' +
                                                 '<i class="fas fa-clock fa-2x text-muted mb-2 opacity-50"></i>' +
                                                 '<p class="text-muted small mb-0">ยังไม่มีการแจ้งเตือนกำหนดเอง กดปุ่ม <strong>"เพิ่มเวลาแจ้งเตือน"</strong> เพื่อสร้างการแจ้งเตือนเพิ่มเติม</p>' +
                                                 '</div></div>';

@@ -126,9 +126,9 @@
                                     <th class="u-w-140">ผู้ดำเนินการ</th>
                                     <th class="u-w-140">การกระทำ</th>
                                     <th>รายละเอียด</th>
-                                    <th style="width:110px">IP Address</th>
-                                    <th style="width:160px">Resource</th>
-                                    <th style="width:180px">User Agent</th>
+                                    <th class="u-w-110px">IP Address</th>
+                                    <th class="u-w-160px">Resource</th>
+                                    <th class="u-w-180px">User Agent</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -155,10 +155,10 @@
                                                 (${log.action.contains('DELETE')} ? 'bg-danger' : 'bg-secondary'))))))))"
                                             th:text="${log.action}"></span>
                                     </td>
-                                    <td><small th:text="${log.details}" style="word-break:break-all"></small></td>
+                                    <td><small class="u-wb-break-all" th:text="${log.details}"></small></td>
                                     <td><code class="small" th:text="${log.ipAddress}"></code></td>
-                                    <td><small th:text="${log.resource}" style="word-break:break-all"></small></td>
-                                    <td><small class="text-muted" th:text="${log.userAgent}" style="max-width:180px;display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" th:title="${log.userAgent}"></small></td>
+                                    <td><small class="u-wb-break-all" th:text="${log.resource}"></small></td>
+                                    <td><small class="text-muted s-activity-logs-1" th:text="${log.userAgent}" th:title="${log.userAgent}"></small></td>
                                 </tr>
                                 <tr th:if="${logs.totalElements == 0}">
                                     <td colspan="8" class="text-center py-5 text-muted">

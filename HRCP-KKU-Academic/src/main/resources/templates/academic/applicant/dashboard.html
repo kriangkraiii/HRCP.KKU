@@ -70,7 +70,7 @@
                     </div>
 
                     <!-- แจ้งเตือนสำหรับ รศ. ที่ไม่ต้องประเมินการสอน -->
-                    <div th:if="${isAssociateProfessor}" class="alert alert-success d-flex align-items-center justify-content-between p-3 mb-3 border-0 shadow-sm" style="background-color: #e8f5e9; border-left: 4px solid #2e7d32 !important; border-radius: 8px;">
+                    <div th:if="${isAssociateProfessor}" class="alert alert-success d-flex align-items-center justify-content-between p-3 mb-3 border-0 shadow-sm s-dashboard-1">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-info-circle text-success fs-4 me-3"></i>
                             <div>
@@ -84,7 +84,7 @@
                     </div>
 
                     <!-- แจ้งเตือนสำหรับ ศ. -->
-                    <div th:if="${isProfessor}" class="alert alert-info d-flex align-items-center p-3 mb-3 border-0 shadow-sm" style="border-radius: 8px;">
+                    <div th:if="${isProfessor}" class="alert alert-info d-flex align-items-center p-3 mb-3 border-0 shadow-sm u-r-8px">
                         <i class="fas fa-award text-primary fs-4 me-3"></i>
                         <div class="ms-2">
                             <div class="fw-bold text-primary">ท่านดำรงตำแหน่งศาสตราจารย์ (ศ.)</div>
@@ -92,7 +92,7 @@
                         </div>
                     </div>
 
-                    <div th:if="${hasActiveRequest and !isAssociateProfessor and !isProfessor}" class="result-alert ra-pass" style="background:color-mix(in srgb, var(--color-primary-medium) 6%, var(--bg-card));color:var(--text-secondary);border:1px solid var(--border-color);">
+                    <div th:if="${hasActiveRequest and !isAssociateProfessor and !isProfessor}" class="result-alert ra-pass s-dashboard-2">
                         <i class="fas fa-info-circle"></i>
                         <span>ท่านมีคำร้องที่กำลังดำเนินการอยู่ จะยื่นคำร้องใหม่ได้เมื่อคำร้องนี้เสร็จสิ้น</span>
                     </div>
@@ -174,7 +174,7 @@
                                          (${pIdx == stepStat.index} ? (${stepStat.last} ? 't-final' : 't-active') : '')">
                                 <div class="timeline-v2-icon">
                                     <i th:class="'fas ' + ${step.icon}" th:if="${pIdx >= stepStat.index}"></i>
-                                    <i class="fas fa-circle" th:unless="${pIdx >= stepStat.index}" style="font-size: 0.45rem;"></i>
+                                    <i class="fas fa-circle u-fs-0-45rem" th:unless="${pIdx >= stepStat.index}"></i>
                                 </div>
                                 <div class="timeline-v2-label" th:text="${step.thaiLabel}"></div>
                             </div>
@@ -269,8 +269,8 @@
 
                     <div class="d-flex justify-content-end mb-3">
                         <th:block th:if="${!hasActivePositionRequest}">
-                            <a href="/user/position/new-request" class="btn"
-                               style="background:linear-gradient(135deg,#2e7d32,#43a047);color:#fff;border:none;">
+                            <a href="/user/position/new-request" class="btn s-dashboard-3"
+                              >
                                 <i class="fas fa-plus-circle me-1"></i> ยื่นคำร้องขอตำแหน่ง
                             </a>
                         </th:block>
@@ -314,7 +314,7 @@
                             <div class="u-flex-fill">
                                 <h5 class="request-card-v2-title">คำร้อง [[${posReq.requestCode}]] — [[${posReq.applicant.name}]]</h5>
                                 <div class="request-card-v2-meta">
-                                    <span class="meta-tag" style="background:color-mix(in srgb, var(--color-success) 10%, var(--bg-hover));">
+                                    <span class="meta-tag s-dashboard-4">
                                         <i class="fas fa-university"></i> ขอตำแหน่งทางวิชาการ
                                     </span>
                                     <span class="meta-tag">
@@ -332,7 +332,7 @@
 
                         <!-- ข้อมูลตำแหน่ง -->
                         <div th:if="${posDoc2DataMap.containsKey(posReq.id)}" class="request-card-v2-position">
-                            <i class="fas fa-user-tie me-1" style="color:var(--color-success)"></i>
+                            <i class="fas fa-user-tie me-1 u-c-var-color-success"></i>
                             ตำแหน่งที่เสนอ: <strong th:text="${posDoc2DataMap.get(posReq.id).getOrDefault('request_position', '-')}"></strong>
                             <span class="text-muted ms-2">สาขา: <span th:text="${posDoc2DataMap.get(posReq.id).getOrDefault('major', '-')}"></span></span>
                         </div>
@@ -342,7 +342,7 @@
                         </th:block>
 
                         <!-- Position Progress Tracker -->
-                        <div class="timeline-v2" style="margin-bottom:var(--space-md);">
+                        <div class="timeline-v2 u-mb-var-space-md">
                             <th:block th:each="step, stepStat : ${positionProgressSteps}">
                                 <div class="timeline-v2-step"
                                      th:classappend="${posReq.currentStatus.ordinal() == step.ordinal()} ? 't-active' :

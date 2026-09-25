@@ -83,8 +83,8 @@
                                 th:value="${search}">
                         </div>
                         <button type="submit" class="btn-admin-manage bam-blue">ค้นหา</button>
-                        <a href="/admin/academic/requests?type=evaluation" class="btn btn-outline-secondary btn-sm"
-                           th:if="${search != null && !search.isEmpty()}" style="align-self:center">
+                        <a href="/admin/academic/requests?type=evaluation" class="btn btn-outline-secondary btn-sm s-requests-1"
+                           th:if="${search != null && !search.isEmpty()}">
                             <i class="fas fa-times"></i> ล้าง
                         </a>
                     </form>
@@ -186,7 +186,7 @@
                                 <button type="button" class="admin-sort-toggle" title="สลับลำดับตามวันที่ยื่น"><i class="fas fa-sort-amount-up"></i> <span>เรียงจากเก่า → ใหม่</span></button>
                             </div>
                             <div th:if="${pendingRequests == null || pendingRequests.isEmpty()}" class="admin-table-empty">
-                                <i class="fas fa-check-circle" style="color:var(--color-success)"></i>
+                                <i class="fas fa-check-circle u-c-var-color-success"></i>
                                 <p>ไม่มีคำร้องที่รอดำเนินการ</p>
                             </div>
                             <div class="u-overflow-x-auto" th:if="${pendingRequests != null && !pendingRequests.isEmpty()}">
@@ -294,8 +294,8 @@
                                 th:value="${posSearch}">
                         </div>
                         <button type="submit" class="btn-admin-manage bam-green">ค้นหา</button>
-                        <a href="/admin/academic/requests?type=position" class="btn btn-outline-secondary btn-sm"
-                           th:if="${posSearch != null && !posSearch.isEmpty()}" style="align-self:center">
+                        <a href="/admin/academic/requests?type=position" class="btn btn-outline-secondary btn-sm s-requests-1"
+                           th:if="${posSearch != null && !posSearch.isEmpty()}">
                             <i class="fas fa-times"></i> ล้าง
                         </a>
                     </form>

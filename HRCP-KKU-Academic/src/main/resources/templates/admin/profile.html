@@ -20,7 +20,7 @@
                 <div class="row g-4">
                     <!-- Left: Identity Column -->
                     <div class="col-md-4">
-                        <div class="profile-identity-card" style="--card-delay:0ms">
+                        <div class="profile-identity-card s-profile-1">
                             <!-- Avatar -->
                             <div class="profile-avatar-wrap">
                                 <img id="avatarPreview" th:src="@{'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}}"
@@ -63,13 +63,13 @@
                             <button type="button" class="profile-pw-btn" data-bs-toggle="modal" data-bs-target="#adminChangePasswordModal">
                                 <i class="fas fa-key"></i>
                                 <span>เปลี่ยนรหัสผ่าน</span>
-                                <i class="fas fa-chevron-right ms-auto" style="font-size:0.75rem;opacity:0.5"></i>
+                                <i class="fas fa-chevron-right ms-auto u-fs-0-75rem-o-0-5"></i>
                             </button>
                         </div>
-                        <div class="profile-section p-3 text-center" style="--card-delay:120ms; background: rgba(13,110,253,0.04); border: 1px dashed rgba(13,110,253,0.25); border-radius: 12px;" th:if="${ssoMode}">
+                        <div class="profile-section p-3 text-center s-profile-2" th:if="${ssoMode}">
                             <div class="small text-muted">
                                 <i class="fas fa-shield-alt text-primary me-1"></i> เข้าสู่ระบบด้วย <strong>KKU SSO</strong>
-                                <div class="mt-1 text-secondary" style="font-size: 0.78rem;">จัดการรหัสผ่านผ่านระบบส่วนกลาง มข. (SSONext)</div>
+                                <div class="mt-1 text-secondary u-fs-0-78rem">จัดการรหัสผ่านผ่านระบบส่วนกลาง มข. (SSONext)</div>
                             </div>
                         </div>
                     </div>
@@ -77,7 +77,7 @@
                     <!-- Right: Form Column -->
                     <div class="col-md-8">
                         <!-- Section: Personal Info -->
-                        <div class="profile-section" style="--card-delay:60ms">
+                        <div class="profile-section s-profile-3">
                             <div class="profile-section-header">
                                 <i class="fas fa-user-circle"></i>
                                 <h5>ข้อมูลส่วนตัว</h5>
@@ -126,7 +126,7 @@
                         </div>
 
                         <!-- Section: Academic -->
-                        <div class="profile-section" style="--card-delay:180ms">
+                        <div class="profile-section s-profile-4">
                             <div class="profile-section-header">
                                 <i class="fas fa-graduation-cap"></i>
                                 <h5>ข้อมูลทางวิชาการ</h5>
@@ -139,7 +139,7 @@
                         </div>
 
                         <!-- Save Button -->
-                        <div class="d-flex justify-content-end mt-2" style="animation:cardSlideIn var(--duration-slow) var(--ease-out-quart) both;animation-delay:240ms">
+                        <div class="d-flex justify-content-end mt-2 s-profile-5">
                             <button type="submit" class="profile-save-btn">
                                 <i class="fas fa-save me-2"></i>บันทึกข้อมูล
                             </button>
@@ -155,16 +155,16 @@
 <div class="modal fade" id="adminChangePasswordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content u-modal-soft">
-            <div style="background:linear-gradient(135deg,#0d1b3e 0%,#1a237e 50%,#0d47a1 100%);padding:24px;text-align:center;position:relative;">
-                <div style="width:52px;height:52px;background:rgba(255,255,255,0.12);border-radius:50%;display:inline-flex;align-items:center;justify-content:center;margin-bottom:10px;">
-                    <i class="fas fa-key" style="font-size:20px;color:#90caf9;"></i>
+            <div class="s-profile-6">
+                <div class="s-profile-7">
+                    <i class="fas fa-key u-fs-20px-c-90caf9"></i>
                 </div>
-                <h5 style="color:#fff;font-weight:700;margin:0 0 4px;">เปลี่ยนรหัสผ่าน</h5>
-                <p style="color:rgba(255,255,255,0.6);font-size:0.82rem;margin:0;">กรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่</p>
+                <h5 class="u-c-fff-fw-700-m-0-0-4px">เปลี่ยนรหัสผ่าน</h5>
+                <p class="u-c-rgba-255-255-255-0-6-fs-0-82rem-m-0">กรอกรหัสผ่านปัจจุบันและรหัสผ่านใหม่</p>
                 <button type="button" class="btn-close btn-close-white u-corner-close" data-bs-dismiss="modal"></button>
             </div>
             <form th:action="@{/admin/change-password}" method="post" id="adminChangePasswordForm">
-                <div class="modal-body" style="padding:24px;">
+                <div class="modal-body u-p-24px">
                     <div class="mb-3">
                         <label class="profile-label">รหัสผ่านปัจจุบัน</label>
                         <input type="password" name="currentPassword" class="form-control profile-input" required>
@@ -173,9 +173,9 @@
                         <label class="profile-label">รหัสผ่านใหม่</label>
                         <input type="password" name="newPassword" class="form-control profile-input" required minlength="8" id="adminNewPassword">
                     </div>
-                    <div class="p-3" style="background:var(--bg-input);border-radius:10px;">
-                        <small class="fw-bold" style="color:var(--text-secondary)"><i class="fas fa-info-circle"></i> เงื่อนไขรหัสผ่าน:</small>
-                        <ul class="list-unstyled mb-0 mt-2" style="font-size:0.82rem;">
+                    <div class="p-3 u-bg-var-bg-input-r-10px">
+                        <small class="fw-bold u-c-var-text-secondary"><i class="fas fa-info-circle"></i> เงื่อนไขรหัสผ่าน:</small>
+                        <ul class="list-unstyled mb-0 mt-2 u-fs-0-82rem">
                             <li id="aRule1" class="text-muted mb-1"><i class="fas fa-circle u-dot-6"></i> อย่างน้อย 8 ตัวอักษร</li>
                             <li id="aRule2" class="text-muted mb-1"><i class="fas fa-circle u-dot-6"></i> ตัวพิมพ์ใหญ่ (A-Z)</li>
                             <li id="aRule3" class="text-muted mb-1"><i class="fas fa-circle u-dot-6"></i> ตัวพิมพ์เล็ก (a-z)</li>
@@ -184,11 +184,11 @@
                             <li id="aRule6" class="text-muted"><i class="fas fa-circle u-dot-6"></i> ห้ามมีช่องว่าง</li>
                         </ul>
                         <div class="d-flex align-items-center gap-2 mt-3">
-                            <small class="fw-bold" style="color:var(--text-secondary);white-space:nowrap">ความแข็งแรง:</small>
-                            <div style="flex:1;height:4px;background:var(--border-color);border-radius:2px;overflow:hidden">
-                                <div id="aStrBar" style="height:100%;width:0;border-radius:2px;transition:all 0.3s"></div>
+                            <small class="fw-bold u-c-var-text-secondary-ws-nowrap">ความแข็งแรง:</small>
+                            <div class="s-profile-8">
+                                <div class="u-h-100pct-w-0-r-2px-tr-all-0-3s" id="aStrBar"></div>
                             </div>
-                            <small id="aStrLabel" class="fw-bold" style="color:#999;white-space:nowrap">—</small>
+                            <small id="aStrLabel" class="fw-bold u-c-999-ws-nowrap">—</small>
                         </div>
                     </div>
                     <div class="mb-3 mt-3">
@@ -196,9 +196,9 @@
                         <input type="password" name="confirmPassword" class="form-control profile-input" required minlength="8" id="adminConfirmPassword">
                         <div class="invalid-feedback">รหัสผ่านไม่ตรงกัน</div>
                     </div>
-                    <div id="aMatchStatus" class="text-center" style="font-size:0.82rem;height:18px"></div>
+                    <div id="aMatchStatus" class="text-center u-fs-0-82rem-h-18px"></div>
                 </div>
-                <div style="padding:0 24px 24px;display:flex;gap:10px;">
+                <div class="u-p-0-24px-24px-d-flex-gap-10px">
                     <button type="button" class="btn btn-secondary flex-fill u-radius-10" data-bs-dismiss="modal">ยกเลิก</button>
                     <button type="submit" class="profile-save-btn flex-fill" id="aSubmitBtn" disabled>
                         <i class="fas fa-save me-1"></i>เปลี่ยนรหัสผ่าน

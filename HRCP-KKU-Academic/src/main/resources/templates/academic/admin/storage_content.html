@@ -48,10 +48,10 @@
     <h6 class="text-muted mb-3"><i class="fas fa-folder me-1"></i> โฟลเดอร์</h6>
     <div class="row g-3">
         <div th:each="folder : ${subFolders}" class="col-6 col-md-4 col-lg-3 col-xl-2">
-            <div class="card border-0 shadow-sm h-100 folder-card" style="border-radius: 12px; cursor: pointer;"
+            <div class="card border-0 shadow-sm h-100 folder-card u-r-12px-cur-pointer"
                  th:data-id="${folder.id}" th:data-name="${folder.name}">
                 <div class="card-body text-center py-3 position-relative">
-                    <div class="dropdown position-absolute" style="top: 8px; right: 8px;">
+                    <div class="dropdown position-absolute u-t-8px-rt-8px">
                         <button class="btn btn-sm btn-light p-1" data-bs-toggle="dropdown" data-stop-propagation="1">
                             <i class="fas fa-ellipsis-v"></i>
                         </button>
@@ -63,7 +63,7 @@
                         </ul>
                     </div>
                     <a th:href="'/admin/file-manager/storage?folderId=' + ${folder.id}" class="text-decoration-none text-dark d-block">
-                        <i class="fas fa-folder fa-3x mb-2" style="color: #f9a825;"></i>
+                        <i class="fas fa-folder fa-3x mb-2 u-c-f9a825"></i>
                         <div class="fw-semibold text-truncate" th:text="${folder.name}" th:title="${folder.name}"></div>
                         <small class="text-muted" th:text="${@thaiDateUtil.formatDateOnly(folder.createdAt)}"></small>
                     </a>
@@ -98,13 +98,13 @@
                     <td><small class="text-muted" th:text="${iter.index + 1}"></small></td>
                     <td>
                         <div class="d-flex align-items-center gap-2">
-                            <i th:switch="${f.fileExtension}"
+                            <i class="u-fs-1-2rem" th:switch="${f.fileExtension}"
                                th:class="${f.fileExtension == 'PDF'} ? 'fas fa-file-pdf text-danger' :
                                           ${f.fileExtension == 'DOCX'} ? 'fas fa-file-word text-primary' :
                                           ${f.fileExtension == 'JPG' || f.fileExtension == 'PNG'} ? 'fas fa-file-image text-success' :
                                           'fas fa-file text-secondary'"
-                               style="font-size:1.2rem;"></i>
-                            <span class="fw-semibold text-truncate" style="max-width:200px;" th:text="${f.originalFilename}" th:title="${f.originalFilename}"></span>
+                              ></i>
+                            <span class="fw-semibold text-truncate u-maxw-200px" th:text="${f.originalFilename}" th:title="${f.originalFilename}"></span>
                         </div>
                     </td>
                     <td><small th:text="${f.formattedSize}"></small></td>
@@ -138,7 +138,7 @@
     <div class="table-responsive" th:if="${storageTrashFiles != null && !storageTrashFiles.isEmpty()}">
         <table class="table table-hover align-middle mb-0">
             <thead class="table-light">
-                <tr><th>#</th><th>ชื่อไฟล์</th><th>ขนาด</th><th>วันที่ลบ</th><th style="width:120px">การดำเนินการ</th></tr>
+                <tr><th>#</th><th>ชื่อไฟล์</th><th>ขนาด</th><th>วันที่ลบ</th><th class="u-w-120px">การดำเนินการ</th></tr>
             </thead>
             <tbody>
                 <tr th:each="f, iter : ${storageTrashFiles}" th:id="'strash-' + ${f.id}">

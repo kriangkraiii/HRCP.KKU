@@ -349,7 +349,7 @@
                                                     </span>
                                                 </div>
                                                 <div th:if="${st.status.name() == 'ACTIVE' and (isAdmin or (currentUser != null and st.signer != null and st.signer.id == currentUser.id))}" class="ms-2">
-                                                    <a th:href="@{'/esign/sign/' + ${st.id}}" class="btn btn-xs btn-primary px-2 py-1" style="font-size: 11px;">
+                                                    <a th:href="@{'/esign/sign/' + ${st.id}}" class="btn btn-xs btn-primary px-2 py-1 u-fs-11px">
                                                         <i class="fas fa-pen-nib"></i> เซ็นตอนนี้
                                                     </a>
                                                 </div>
@@ -424,7 +424,7 @@
                                                     </span>
                                                 </div>
                                                 <div th:if="${st.status.name() == 'ACTIVE'}" class="ms-2">
-                                                    <a th:href="@{'/esign/sign/' + ${st.id}}" class="btn btn-xs btn-outline-primary px-2 py-1" style="font-size: 11px;">
+                                                    <a th:href="@{'/esign/sign/' + ${st.id}}" class="btn btn-xs btn-outline-primary px-2 py-1 u-fs-11px">
                                                         <i class="fas fa-eye"></i> ตรวจสอบ/เซ็น
                                                     </a>
                                                 </div>
@@ -567,8 +567,8 @@
 
     <!-- Modal: Quick Verify Code for Mobile & General use -->
     <div class="modal fade" id="verifyCodeModal" tabindex="-1" aria-labelledby="verifyCodeModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered" style="max-width: 440px;">
-            <div class="modal-content border-0 shadow" style="border-radius: 16px; overflow: hidden;">
+        <div class="modal-dialog modal-dialog-centered u-maxw-440px">
+            <div class="modal-content border-0 shadow u-r-16px-ov-hidden">
                 <div class="modal-header border-0 pb-0">
                     <h5 class="modal-title fw-bold" id="verifyCodeModalLabel">
                         <i class="fas fa-shield-halved text-primary me-2"></i>ตรวจสอบเอกสารที่ลงนาม
@@ -590,10 +590,10 @@
                                 <span class="input-group-text bg-light text-primary">
                                     <i class="fas fa-barcode"></i>
                                 </span>
-                                <input type="text" id="verifyCodeInputModal" name="code" class="form-control text-uppercase fw-bold"
+                                <input type="text" id="verifyCodeInputModal" name="code" class="form-control text-uppercase fw-bold u-ff-monospace-ls-1px-fs-1-1rem"
                                        placeholder="เช่น 55B5NXJLWW"
                                        maxlength="20"
-                                       style="font-family: monospace; letter-spacing: 1px; font-size: 1.1rem;"
+                                      
                                        autocomplete="off" required>
                             </div>
                         </div>

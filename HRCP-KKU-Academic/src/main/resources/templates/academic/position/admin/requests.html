@@ -41,10 +41,10 @@
                                 </a>
                             </td>
                         </tr>
-                        <tr th:if="${doc2DataMap.containsKey(req.id)}" style="background:#f8fbf8"
-                            class="request-row-sub" th:attr="data-parent=${iter.index}">
+                        <tr th:if="${doc2DataMap.containsKey(req.id)}"
+                            class="request-row-sub u-bg-f8fbf8" th:attr="data-parent=${iter.index}">
                             <td></td>
-                            <td colspan="6" style="border-top:0; padding-top:0">
+                            <td class="u-bdt-0-pt-0" colspan="6">
                                 <small class="u-text-green">
                                     <i class="fas fa-user-tie me-1"></i>
                                     ตำแหน่งที่ขอ: <strong th:text="${doc2DataMap.get(req.id).getOrDefault('request_position', '-')}"></strong>

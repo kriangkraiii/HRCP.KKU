@@ -4,7 +4,7 @@
 
 <body>
 <section>
-    <div class="container py-4" style="max-width: 860px;">
+    <div class="container py-4 u-maxw-860px">
         <div class="mb-3">
             <a href="/esign/inbox" class="btn-back-pill" onclick="if(window.history.length > 1 && document.referrer) { history.back(); return false; }">
                 <i class="fas fa-arrow-left"></i> กลับ
@@ -20,18 +20,18 @@
                     <i class="fas fa-shield-halved fa-2x"></i>
                 </div>
                 <h5 class="fw-bold mb-2">ระบุรหัสตรวจสอบเอกสาร</h5>
-                <p class="text-secondary small mb-4" style="max-width: 480px; margin: 0 auto;">
+                <p class="text-secondary small mb-4 u-maxw-480px-m-0-auto">
                     รหัส 10 หลักอยู่ที่มุมล่างของเอกสาร หรือในอีเมลแจ้งเตือน
                 </p>
-                <form onsubmit="event.preventDefault(); handleVerifySubmit(document.getElementById('verifyInputMain').value);" style="max-width: 420px; margin: 0 auto;">
+                <form class="u-maxw-420px-m-0-auto" onsubmit="event.preventDefault(); handleVerifySubmit(document.getElementById('verifyInputMain').value);">
                     <div class="input-group mb-3">
                         <span class="input-group-text bg-white text-primary">
                             <i class="fas fa-barcode"></i>
                         </span>
-                        <input type="text" id="verifyInputMain" class="form-control text-uppercase fw-bold"
+                        <input type="text" id="verifyInputMain" class="form-control text-uppercase fw-bold u-ff-monospace-ls-1px-fs-1-1rem"
                                placeholder="เช่น 55B5NXJLWW"
                                maxlength="20"
-                               style="font-family: monospace; letter-spacing: 1px; font-size: 1.1rem;"
+                              
                                autocomplete="off" autofocus required>
                         <button type="submit" class="btn btn-primary px-3">
                             <i class="fas fa-search me-1"></i> ตรวจสอบ
@@ -51,12 +51,12 @@
                 <p class="text-secondary mb-4">
                     รหัส <code class="fw-bold text-dark bg-light px-2 py-1 rounded border" th:text="${notFoundCode}">CODE</code> ไม่ตรงกับเอกสารใดในระบบ — กรุณาตรวจสอบการพิมพ์อีกครั้ง
                 </p>
-                <form onsubmit="event.preventDefault(); handleVerifySubmit(document.getElementById('verifyInputRetry').value);" style="max-width: 400px; margin: 0 auto;">
+                <form class="u-maxw-400px-m-0-auto" onsubmit="event.preventDefault(); handleVerifySubmit(document.getElementById('verifyInputRetry').value);">
                     <div class="input-group">
-                        <input type="text" id="verifyInputRetry" class="form-control text-uppercase fw-bold"
+                        <input type="text" id="verifyInputRetry" class="form-control text-uppercase fw-bold u-ff-monospace-ls-1px"
                                placeholder="กรอกรหัสใหม่อีกครั้ง"
                                maxlength="20"
-                               style="font-family: monospace; letter-spacing: 1px;"
+                              
                                autocomplete="off" required>
                         <button type="submit" class="btn btn-primary px-3">
                             <i class="fas fa-search me-1"></i> ลองใหม่

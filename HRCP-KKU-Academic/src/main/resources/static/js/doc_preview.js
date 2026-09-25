@@ -483,10 +483,10 @@ class DocPreviewEngine {
         this.setBanner(false);
         this.renderContainer.style.display = 'flex';
         this.renderContainer.innerHTML = `
-            <div style="padding:40px;text-align:center;color:#ef5350;">
-                <i class="fas fa-exclamation-triangle" style="font-size:2rem;"></i>
-                <p style="margin-top:10px;">เกิดข้อผิดพลาดในการสร้างตัวอย่างเอกสาร</p>
-                <p style="font-size:0.85rem;color:#999;">${message}</p>
+            <div class="u-p-40px-ta-center-c-ef5350">
+                <i class="fas fa-exclamation-triangle u-fs-2rem"></i>
+                <p class="u-mt-10px">เกิดข้อผิดพลาดในการสร้างตัวอย่างเอกสาร</p>
+                <p class="u-fs-0-85rem-c-999">${message}</p>
             </div>`;
     }
 

@@ -12,8 +12,8 @@
 			<div class="row justify-content-center">
 				<div class="col-lg-8 col-md-10">
 					<div class="card shadow-sm border-0 u-radius-16">
-						<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center"
-							style="border-radius: 16px 16px 0 0; background: linear-gradient(135deg, #1a237e, #0d47a1) !important;">
+						<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center s-add-admin-1"
+						>
 							<h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>เพิ่มบัญชีผู้ใช้งาน</h5>
 							<!-- type รับได้แค่ 1 หรือ 2 ตามตัวเลือกด้านล่าง ค่าที่ส่งมาแปลกๆ ให้ตกเป็น 1
 							     ไม่ต่อสตริงดิบลง href เพราะเป็นการเอาค่าจาก URL ไปวางในแอตทริบิวต์ตรงๆ -->
@@ -88,11 +88,11 @@
 
 								<div class="mb-4">
 									<div class="p-3 bg-light rounded-3 border d-flex flex-column flex-sm-row align-items-center gap-3">
-										<div class="position-relative flex-shrink-0" style="width: 110px; height: 110px; min-width: 110px; max-width: 110px; border-radius: 50%; overflow: hidden; border: 3px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.1); background: var(--bg-hover);">
-											<img id="newAdminAvatarPreview"
+										<div class="position-relative flex-shrink-0 s-add-admin-2">
+											<img class="s-add-admin-3" id="newAdminAvatarPreview"
 												th:src="@{/img/profile_img/default.png}" 
 												alt="Profile Preview" 
-												style="width: 100%; height: 100%; object-fit: cover; object-position: center top; display: block;"
+											
 												data-fallback="/img/profile_img/default.png">
 										</div>
 										<div class="flex-grow-1 text-center text-sm-start">
@@ -106,8 +106,8 @@
 								</div>
 
 								<div class="text-center mt-4">
-									<button type="submit" class="btn btn-primary btn-lg px-5"
-										style="background: linear-gradient(135deg, #1a237e, #0d47a1); border: none; border-radius: 10px;">
+									<button type="submit" class="btn btn-primary btn-lg px-5 s-add-admin-4"
+									>
 										<i class="fas fa-user-plus me-2"></i>เพิ่มบัญชี
 									</button>
 								</div>

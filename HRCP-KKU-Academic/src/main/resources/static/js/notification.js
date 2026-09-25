@@ -687,22 +687,22 @@ function loadTopbarNotifications() {
                 var html = '';
                 cachedTopbarNotifs.forEach(function(n, idx) {
                     var unreadClass = !n.isRead ? 'bg-light bg-opacity-75 fw-semibold' : '';
-                    var unreadDot = !n.isRead ? '<span class="badge bg-primary rounded-circle p-1 me-1" style="width: 7px; height: 7px;"> </span>' : '';
-                    var impBadge = n.isImportant ? '<span class="badge bg-danger ms-1" style="font-size: 0.65rem;">สำคัญ</span>' : '';
-                    var typeBadge = '<span class="badge bg-light text-dark border ms-1" style="font-size: 0.65rem;">' + escapeHtml(n.typeLabel || 'ทั่วไป') + '</span>';
+                    var unreadDot = !n.isRead ? '<span class="badge bg-primary rounded-circle p-1 me-1 u-w-7px-h-7px"> </span>' : '';
+                    var impBadge = n.isImportant ? '<span class="badge bg-danger ms-1 u-fs-0-65rem">สำคัญ</span>' : '';
+                    var typeBadge = '<span class="badge bg-light text-dark border ms-1 u-fs-0-65rem">' + escapeHtml(n.typeLabel || 'ทั่วไป') + '</span>';
                     
-                    html += '<div class="list-group-item list-group-item-action p-3 border-0 border-bottom topbar-notif-item ' + unreadClass + '" ' +
-                            'data-topbar-notif-idx="' + idx + '" style="cursor: pointer; transition: background-color 0.15s;">' +
+                    html += '<div class="list-group-item list-group-item-action p-3 border-0 border-bottom topbar-notif-item u-pointer-fade ' + unreadClass + '" ' +
+                            'data-topbar-notif-idx="' + idx + '">' +
                                 '<div class="d-flex align-items-start gap-2">' +
-                                    '<div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1" style="width: 32px; height: 32px; background: rgba(13,71,161,0.08);">' +
-                                        '<i class="' + escapeHtml(n.iconClass || 'fas fa-bell text-primary') + '" style="font-size: 0.85rem;"></i>' +
+                                    '<div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1 u-w-32px-h-32px-bg-rgba-13-71-161-0-08">' +
+                                        '<i class="' + escapeHtml(n.iconClass || 'fas fa-bell text-primary') + ' u-fs-0-85rem"></i>' +
                                     '</div>' +
                                     '<div class="flex-grow-1 min-width-0">' +
                                         '<div class="d-flex justify-content-between align-items-center mb-1">' +
-                                            '<div class="d-flex align-items-center">' + unreadDot + '<strong class="text-dark small text-truncate" style="max-width: 170px;">' + escapeHtml(n.title) + '</strong>' + impBadge + '</div>' +
-                                            '<small class="text-muted" style="font-size: 0.72rem;">' + escapeHtml(n.relativeTime) + '</small>' +
+                                            '<div class="d-flex align-items-center">' + unreadDot + '<strong class="text-dark small text-truncate u-maxw-170px">' + escapeHtml(n.title) + '</strong>' + impBadge + '</div>' +
+                                            '<small class="text-muted u-fs-0-72rem">' + escapeHtml(n.relativeTime) + '</small>' +
                                         '</div>' +
-                                        '<p class="mb-0 text-muted small text-truncate" style="font-size: 0.8rem;">' + escapeHtml(n.message) + '</p>' +
+                                        '<p class="mb-0 text-muted small text-truncate u-fs-0-8rem">' + escapeHtml(n.message) + '</p>' +
                                     '</div>' +
                                 '</div>' +
                             '</div>';

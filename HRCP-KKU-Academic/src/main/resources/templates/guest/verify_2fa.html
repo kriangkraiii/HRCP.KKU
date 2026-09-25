@@ -22,13 +22,13 @@
 
         <div class="guest-form">
             <div class="guest-card">
-                <h1 class="guest-card-heading"><i class="fas fa-key" style="margin-right:8px;font-size:1.2rem"></i>กรอกรหัส OTP</h1>
+                <h1 class="guest-card-heading"><i class="fas fa-key u-mr-8px-fs-1-2rem"></i>กรอกรหัส OTP</h1>
                 <p class="guest-card-sub">
                     ระบบส่งรหัส OTP 8 หลักไปที่อีเมล<br>
                     <span class="email-badge"><i class="fas fa-envelope"></i> [[${maskedEmail}]]</span>
                 </p>
                 <!-- Says why an extra step appeared after the university's own login screen. -->
-                <p class="guest-card-sub" th:if="${loginMethod == 'SSO'}" style="font-size:0.9em">
+                <p class="guest-card-sub u-fs-0-9em" th:if="${loginMethod == 'SSO'}">
                     <i class="fas fa-university"></i> ยืนยันตัวตนกับ KKU SSO แล้ว กรุณายืนยันด้วยรหัส OTP
                 </p>
 
@@ -66,7 +66,7 @@
 
                 <div class="resend-section">
                     <p>ไม่ได้รับรหัส?</p>
-                    <form th:action="@{/2fa/resend}" method="post" style="display:inline" id="resendForm">
+                    <form class="u-d-inline" th:action="@{/2fa/resend}" method="post" id="resendForm">
                         <button type="submit" class="btn-resend" id="resendBtn">
                             <i class="fas fa-redo"></i> ส่ง OTP อีกครั้ง
                         </button>

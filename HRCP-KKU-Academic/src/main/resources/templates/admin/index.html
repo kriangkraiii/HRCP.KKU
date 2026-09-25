@@ -11,7 +11,7 @@
 
 			<!-- Dashboard Header -->
 			<div class="text-center mb-4">
-				<h1 class="fw-bold" style="color: var(--accent-color, #0d47a1);">
+				<h1 class="fw-bold u-c-var-accent-color-0d47a1">
 					<i class="fa-solid fa-gauge-high me-2" aria-hidden="true"></i>แดชบอร์ดผู้ดูแลระบบ
 				</h1>
 			</div>
@@ -23,9 +23,9 @@
 						<div class="card-body p-4">
 							<div class="d-flex align-items-center justify-content-between">
 								<div class="d-flex align-items-center">
-									<div class="rounded-circle d-flex align-items-center justify-content-center me-3"
+									<div class="rounded-circle d-flex align-items-center justify-content-center me-3 u-w-50px-h-50px-fs-1-4rem"
 										 id="imageModeIcon"
-										 style="width: 50px; height: 50px; font-size: 1.4rem;"
+										
 										 th:classappend="${imageMode == 'AWS'} ? 'bg-info text-white' : 'bg-success text-white'">
 										<i th:class="${imageMode == 'AWS'} ? 'fa-solid fa-cloud' : 'fa-solid fa-hard-drive'" aria-hidden="true"></i>
 									</div>
@@ -44,11 +44,11 @@
 										<i class="fa-solid fa-hard-drive me-1" aria-hidden="true"></i>LOCAL
 									</span>
 									<div class="form-check form-switch mb-0">
-										<input class="form-check-input" type="checkbox" role="switch"
+										<input class="form-check-input u-w-3-5rem-h-1-75rem-cur-pointer" type="checkbox" role="switch"
 											   id="imageModeSwitchToggle"
 											   aria-label="สลับระหว่าง Local และ AWS S3"
 											   th:checked="${imageMode == 'AWS'}"
-											   style="width: 3.5rem; height: 1.75rem; cursor: pointer;">
+											  >
 									</div>
 									<span class="badge" id="modeBadgeAws"
 										  th:classappend="${imageMode == 'AWS'} ? 'bg-info' : 'bg-secondary bg-opacity-25 text-muted'">
@@ -58,9 +58,9 @@
 							</div>
 							<!-- Status bar -->
 							<div class="mt-3">
-								<div class="progress" style="height: 4px;" role="progressbar" aria-label="สถานะการสลับ">
-									<div class="progress-bar" id="imageModeProgress"
-										 style="width: 0%; transition: width 0.5s;"
+								<div class="progress u-h-4px" role="progressbar" aria-label="สถานะการสลับ">
+									<div class="progress-bar u-w-0pct-tr-width-0-5s" id="imageModeProgress"
+										
 										 th:classappend="${imageMode == 'AWS'} ? 'bg-info' : 'bg-success'">
 									</div>
 								</div>
@@ -80,8 +80,8 @@
 				<div class="col-md-6 mb-3">
 					<div class="card border-0 shadow-sm h-100">
 						<div class="card-body d-flex align-items-center">
-							<div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3"
-								 style="width: 56px; height: 56px; min-width: 56px;">
+							<div class="rounded-circle bg-primary bg-opacity-10 d-flex align-items-center justify-content-center me-3 u-w-56px-h-56px-minw-56px"
+								>
 								<i class="fa-solid fa-users fa-lg text-primary" aria-hidden="true"></i>
 							</div>
 							<div>
@@ -94,8 +94,8 @@
 				<div class="col-md-6 mb-3">
 					<div class="card border-0 shadow-sm h-100">
 						<div class="card-body d-flex align-items-center">
-							<div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3"
-								 style="width: 56px; height: 56px; min-width: 56px;">
+							<div class="rounded-circle bg-success bg-opacity-10 d-flex align-items-center justify-content-center me-3 u-w-56px-h-56px-minw-56px"
+								>
 								<i class="fa-solid fa-user-plus fa-lg text-success" aria-hidden="true"></i>
 							</div>
 							<div>
@@ -132,10 +132,10 @@
 										<tr th:each="user : ${recentUsers}" th:if="${recentUsers}">
 											<td>
 												<img th:src="@{'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}}" 
-													 class="rounded-circle" width="40" height="40" 
+													 class="rounded-circle s-index-1" width="40" height="40" 
 													 loading="lazy"
 													 decoding="async"
-													 style="width: 40px; height: 40px; min-width: 40px; max-width: 40px; object-fit: cover; object-position: center top; display: block;"
+													
 													 alt="รูปโปรไฟล์"
 													 data-fallback="/img/profile_img/default.png">
 											</td>
