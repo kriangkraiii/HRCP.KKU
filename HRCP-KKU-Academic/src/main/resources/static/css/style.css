@@ -4180,6 +4180,28 @@ body.modal-open .sidebar-toggle {
   flex-shrink: 0;
 }
 
+/* Classes, not style="" — the CSP (nonce, no 'unsafe-inline') drops inline style attributes */
+.history-scroll {
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.hist-filter {
+  max-width: 260px;
+  font-size: 0.85rem;
+}
+
+.history-entry-badge.hist-act-CREATED { background-color: #2e7d32; }
+.history-entry-badge.hist-act-UPDATED { background-color: #1565c0; }
+.history-entry-badge.hist-act-DRAFT_SAVED { background-color: #b26a00; }
+.history-entry-badge.hist-act-ATTACHMENT_ADDED { background-color: #00796b; }
+.history-entry-badge.hist-act-LINK_ADDED { background-color: #0277bd; }
+.history-entry-badge.hist-act-ATTACHMENT_DELETED { background-color: #c62828; }
+.history-entry-badge.hist-act-FILE_UPLOADED { background-color: #6a1b9a; }
+.history-entry-badge.hist-act-RESIGN_REQUESTED { background-color: #d84315; }
+.history-entry-badge.hist-act-SUGGESTION_SENT { background-color: #455a64; }
+
 .history-entry-content {
   flex: 1;
   min-width: 0;

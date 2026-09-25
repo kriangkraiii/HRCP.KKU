@@ -525,8 +525,7 @@
                 </div>
               </div>
               <div
-                class="detail-section-body"
-                style="max-height: 400px; overflow-y: auto"
+                class="detail-section-body history-scroll"
               >
                 <!-- Status History -->
                 <div id="statusHistPane">
@@ -569,10 +568,10 @@
                   <div class="mb-3">
                     <select
                       id="editHistFilter"
-                      class="form-select form-select-sm"
-                      style="max-width: 260px; font-size: 0.85rem"
+                      class="form-select form-select-sm hist-filter"
                     >
                       <option value="all">ทุกเอกสาร</option>
+                      <option value="0">ไฟล์ของคำร้อง (ไฟล์แนบ/อัปโหลด)</option>
                       <option
                         th:each="entry : ${docLabels}"
                         th:value="${entry.key}"
@@ -588,14 +587,14 @@
                     >
                       <span
                         class="history-entry-badge"
-                        th:style="'background-color:' + ${log.action.color}"
+                    th:classappend="'hist-act-' + ${log.action.name()}"
                       >
                         <i class="fas" th:classappend="${log.action.icon}"></i>
                         [[${log.action.thaiLabel}]]
                       </span>
                       <div class="history-entry-content">
                         <div class="history-entry-date">
-                          <strong>เอกสารที่ [[${log.documentType}]]</strong>
+                          <strong th:text="${log.documentType == 0 ? 'ไฟล์ของคำร้อง' : 'เอกสารที่ ' + log.documentType}">เอกสาร</strong>
                         </div>
                         <div
                           class="history-entry-note"

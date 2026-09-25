@@ -630,6 +630,8 @@ public class AcademicApplicantController {
             attachment.setFileSize(file.getSize());
             attachment.setChecklistItem(resolvedSlot);
             requestService.saveAttachment(attachment);
+            requestService.logDocumentChange(request, 2, "แนบไฟล์: " + originalFilename, user,
+                    AcademicDocumentEditLog.EditAction.ATTACHMENT_ADDED);
 
             uploadedCount++;
         }
@@ -697,6 +699,8 @@ public class AcademicApplicantController {
         attachment.setFileSize(0L);
         attachment.setChecklistItem(targetSlot);
         requestService.saveAttachment(attachment);
+        requestService.logDocumentChange(request, 2, "แนบลิงก์: " + linkTitle, user,
+                AcademicDocumentEditLog.EditAction.LINK_ADDED);
 
         redirectAttributes.addFlashAttribute("succMsg",
                 (slot != null && slot >= 1 && slot <= 5)
@@ -869,6 +873,9 @@ public class AcademicApplicantController {
                 }
             }
             requestService.deleteAttachment(attachmentId);
+            requestService.logDocumentChange(request, 2,
+                    (isLink ? "ลบลิงก์: " : "ลบไฟล์: ") + attachment.getOriginalFilename(), user,
+                    AcademicDocumentEditLog.EditAction.ATTACHMENT_DELETED);
             redirectAttributes.addFlashAttribute("succMsg", isLink ? "ลบลิงก์เรียบร้อยแล้ว" : "ลบไฟล์แนบเรียบร้อยแล้ว");
         }
         return "redirect:/user/academic/request/" + id + "/document-2";
@@ -1070,6 +1077,8 @@ public class AcademicApplicantController {
         String filePath = uploadPaths.toStored(target);
 
         requestService.setRevisionFile(id, filePath);
+        requestService.logDocumentChange(request, AcademicRequestService.REQUEST_FILES_DOC_TYPE,
+                "เอกสารฉบับแก้ไข: " + file.getOriginalFilename(), user, AcademicDocumentEditLog.EditAction.FILE_UPLOADED);
 
         // ข้อ 13 — ส่งเอกสารที่แก้แล้วกลับมายังคณะอนุกรรมการ
         //

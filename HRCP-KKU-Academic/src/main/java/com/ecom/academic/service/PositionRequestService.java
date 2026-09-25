@@ -694,6 +694,20 @@ public class PositionRequestService {
 
     public void logDocumentEdit(PositionRequest request, int documentType, String label,
             UserDtls user, PositionDocumentEditLog.EditAction action) {
+        if (action == PositionDocumentEditLog.EditAction.DRAFT_SAVED) {
+            // Autosave fires on every pause in typing; one row per burst is enough.
+            PositionDocumentEditLog last = editLogRepository
+                    .findFirstByRequestAndDocumentTypeOrderByEditedAtDescIdDesc(request, documentType)
+                    .orElse(null);
+            if (last != null && last.getAction() == action
+                    && isSameUser(last.getEditedBy(), user)
+                    && last.getEditedAt() != null
+                    && last.getEditedAt().isAfter(LocalDateTime.now().minus(DRAFT_LOG_MERGE_WINDOW))) {
+                last.setEditedAt(LocalDateTime.now());
+                editLogRepository.save(last);
+                return;
+            }
+        }
         PositionDocumentEditLog log = new PositionDocumentEditLog();
         log.setRequest(request);
         log.setDocumentType(documentType);
@@ -701,6 +715,31 @@ public class PositionRequestService {
         log.setEditedBy(user);
         log.setAction(action);
         editLogRepository.save(log);
+    }
+
+    /** Edit-log document type for files that belong to the request rather than a numbered document. */
+    public static final int REQUEST_FILES_DOC_TYPE = 0;
+
+    /** Logs a change that isn't a form save (attachment, upload, re-sign…), with what it touched. */
+    public void logDocumentChange(PositionRequest request, int documentType, String detail,
+            UserDtls user, PositionDocumentEditLog.EditAction action) {
+        String label = documentType == REQUEST_FILES_DOC_TYPE ? null : getDocLabel(documentType);
+        if (detail != null && !detail.isBlank()) {
+            label = (label != null ? label + " — " : "") + detail.strip();
+        }
+        if (label == null) {
+            label = "ไฟล์ของคำร้อง";
+        } else if (label.length() > 255) {
+            label = label.substring(0, 252) + "...";
+        }
+        logDocumentEdit(request, documentType, label, user, action);
+    }
+
+    /** Autosaves by the same user on the same document within this window share one history row. */
+    static final java.time.Duration DRAFT_LOG_MERGE_WINDOW = java.time.Duration.ofMinutes(10);
+
+    private static boolean isSameUser(UserDtls a, UserDtls b) {
+        return a != null && b != null && a.getId() != null && a.getId().equals(b.getId());
     }
 
     public List<PositionDocumentEditLog> getEditHistory(Long requestId) {

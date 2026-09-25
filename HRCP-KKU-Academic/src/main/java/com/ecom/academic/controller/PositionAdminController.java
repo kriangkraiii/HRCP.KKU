@@ -487,6 +487,9 @@ public class PositionAdminController {
         if (DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, type)) {
             positionService.openDocumentForRevision(id, type, reason);
         }
+        positionService.findById(id).ifPresent(r -> positionService.logDocumentChange(r, type,
+                reason != null && !reason.isBlank() ? "เหตุผล: " + reason : null, admin,
+                PositionDocumentEditLog.EditAction.RESIGN_REQUESTED));
 
         try {
             adminLogService.log(principal.getName(),
@@ -692,6 +695,9 @@ public class PositionAdminController {
             attachment.setFileType(fileType);
             attachment.setFileSize(file.getSize());
             positionService.saveAttachment(attachment);
+            positionService.logDocumentChange(request, PositionRequestService.REQUEST_FILES_DOC_TYPE,
+                    "อัปโหลด: " + originalFilename, principal != null ? getUser(principal) : null,
+                    PositionDocumentEditLog.EditAction.FILE_UPLOADED);
 
             // Log activity
             try {
@@ -815,7 +821,12 @@ public class PositionAdminController {
                     getClientIpAddress());
         } catch (Exception logEx) { /* ignore */ }
 
+        PositionAttachment toDelete = positionService.findAttachmentById(attachmentId).orElse(null);
         positionService.deleteAttachment(attachmentId);
+        if (toDelete != null) {
+            positionService.logDocumentChange(toDelete.getRequest(), PositionRequestService.REQUEST_FILES_DOC_TYPE,
+                    "ลบ: " + toDelete.getOriginalFilename(), getUser(principal), PositionDocumentEditLog.EditAction.ATTACHMENT_DELETED);
+        }
         return "redirect:/admin/position/request/" + id + "?success=attachment_deleted";
     }
 

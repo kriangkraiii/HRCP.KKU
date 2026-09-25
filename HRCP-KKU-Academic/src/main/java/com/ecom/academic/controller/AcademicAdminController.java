@@ -919,6 +919,9 @@ public class AcademicAdminController {
         // การยกเลิกซองลงนามอย่างเดียวไม่พอ เพราะเอกสารที่ไม่มีช่องลงนามของผู้ยื่น
         // จะไม่มีซองให้ยกเลิกตั้งแต่แรก
         requestService.openDocumentForRevision(id, type, reason);
+        requestService.findById(id).ifPresent(r -> requestService.logDocumentChange(r, type,
+                reason != null && !reason.isBlank() ? "เหตุผล: " + reason : null, admin,
+                AcademicDocumentEditLog.EditAction.RESIGN_REQUESTED));
 
         try {
             adminLogService.log(principal.getName(), admin.getName(),
@@ -960,6 +963,8 @@ public class AcademicAdminController {
 
         // ส่งอีเมลข้อเสนอแนะ (async - non-blocking)
         requestService.sendSuggestionEmail(request, suggestionsText);
+        requestService.logDocumentChange(request, 6, "ส่งถึง " + request.getApplicant().getEmail(), admin,
+                AcademicDocumentEditLog.EditAction.SUGGESTION_SENT);
         redirectAttributes.addFlashAttribute("successMsg",
                 "ส่งข้อเสนอแนะแล้ว กำลังส่งอีเมลถึงผู้ยื่น: " + request.getApplicant().getEmail());
 
@@ -1173,6 +1178,8 @@ public class AcademicAdminController {
 
         // Log activity
         UserDtls admin = getUser(principal);
+        requestService.logDocumentChange(request, AcademicRequestService.REQUEST_FILES_DOC_TYPE,
+                "อัปโหลด: " + originalFilename, admin, AcademicDocumentEditLog.EditAction.FILE_UPLOADED);
         adminLogService.log(principal.getName(),
                 admin != null ? admin.getName() : principal.getName(),
                 "UPLOAD_ATTACHMENT",
@@ -1333,6 +1340,10 @@ public class AcademicAdminController {
 
             // Log activity
             UserDtls admin = getUser(principal);
+            requestService.logDocumentChange(attachment.getRequest(),
+                    attachment.getChecklistItem() != null ? 2 : AcademicRequestService.REQUEST_FILES_DOC_TYPE,
+                    "ลบ: " + attachment.getOriginalFilename(), admin,
+                    AcademicDocumentEditLog.EditAction.ATTACHMENT_DELETED);
             adminLogService.log(principal.getName(),
                     admin != null ? admin.getName() : principal.getName(),
                     "DELETE_ATTACHMENT",

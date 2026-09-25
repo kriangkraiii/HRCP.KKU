@@ -27,7 +27,13 @@ public class PositionDocumentEditLog {
     public enum EditAction {
         CREATED("สร้าง", "#2e7d32", "fa-plus-circle"),
         UPDATED("แก้ไข", "#1565c0", "fa-edit"),
-        DRAFT_SAVED("บันทึกร่าง", "#f57f17", "fa-save");
+        DRAFT_SAVED("บันทึกร่าง", "#b26a00", "fa-save"),
+        ATTACHMENT_ADDED("แนบไฟล์", "#00796b", "fa-paperclip"),
+        LINK_ADDED("แนบลิงก์", "#0277bd", "fa-link"),
+        ATTACHMENT_DELETED("ลบไฟล์แนบ", "#c62828", "fa-trash-alt"),
+        FILE_UPLOADED("อัปโหลดเอกสาร", "#6a1b9a", "fa-file-upload"),
+        RESIGN_REQUESTED("ขอให้ลงนามใหม่", "#d84315", "fa-redo"),
+        SUGGESTION_SENT("ส่งข้อเสนอแนะ", "#455a64", "fa-comment-dots");
 
         private final String thaiLabel;
         private final String color;
