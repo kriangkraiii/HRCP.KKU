@@ -175,6 +175,9 @@ public class SigningController {
         model.addAttribute("queueIndex", queueIndex);
         model.addAttribute("deadlineAdvisory", deadlineAdvisory);
         model.addAttribute("canSign", canSign);
+        // คนที่ขยายกำหนดเวลาเองได้ไม่ต้องไปขอใคร — ปุ่ม "ขอขยายเวลา" ส่งคำขอไปหาผู้ส่งซอง
+        // ซึ่งสำหรับแอดมินที่ติดกำหนดเวลาอยู่ คือการขอคนอื่นในเรื่องที่ตัวเองทำได้อยู่แล้ว
+        model.addAttribute("canManageDeadline", me != null && mayManage(envelope, me));
         // ผู้ลงนามต้องรู้ว่ากำลังพิจารณาคำร้องของใคร และเห็นหลักฐานประกอบก่อนเลือกเห็นควรหรือไม่
         model.addAttribute("requestSummary",
                 documentLabelResolver.summaryOf(envelope.getModule(), envelope.getRequestId()));
@@ -221,7 +224,11 @@ public class SigningController {
                 previewSig = signatureService.findById(userSignatureId).orElse(null);
             }
         }
-        if (previewSig == null && step.getStatus() == SignatureStepStatus.ACTIVE) {
+        // ลายเซ็นตัวอย่างใส่เฉพาะเมื่อลงนามได้จริง บนขั้นที่ติดกำหนดเวลา ลายเซ็นที่โผล่ใน
+        // เอกสารทำให้ดูเหมือนลงนามไปแล้วทั้งที่ระบบยังไม่รับ
+        boolean blockedByDeadline = step.getSignatureRequest().isOverdue()
+                && !workflow.deadlineIsAdvisory(step);
+        if (previewSig == null && step.getStatus() == SignatureStepStatus.ACTIVE && !blockedByDeadline) {
             UserDtls targetSigner = (isSigner || !isAdmin) ? me : step.getSigner();
             if (targetSigner != null) {
                 previewSig = signatureService.findDefault(targetSigner).orElse(null);
@@ -441,7 +448,14 @@ public class SigningController {
     @PostMapping("/envelope/{envelopeId}/extend-due")
     public String extendDueDate(@PathVariable Long envelopeId,
             @RequestParam("dueAt") String dueAtStr,
+            @RequestParam(value = "returnTo", required = false) String returnTo,
             Principal principal, RedirectAttributes redirectAttributes) {
+
+        // ขยายจากหน้าลงนามแล้วต้องกลับไปลงนามต่อที่เดิม รับเฉพาะ path ของหน้าลงนาม
+        // เพื่อไม่ให้พารามิเตอร์นี้กลายเป็นทางพาไปที่อื่น
+        String back = returnTo != null && returnTo.matches("/esign/sign/\\d+")
+                ? "redirect:" + returnTo
+                : "redirect:/esign/inbox";
 
         UserDtls me = currentUser(principal);
         SignatureRequest envelope = workflow.findEnvelope(envelopeId).orElse(null);
@@ -460,7 +474,7 @@ public class SigningController {
                 newDueAt = LocalDateTime.parse(dueAtStr);
             } catch (DateTimeParseException e) {
                 redirectAttributes.addFlashAttribute("errorMsg", "รูปแบบวันเวลาไม่ถูกต้อง");
-                return "redirect:/esign/inbox";
+                return back;
             }
         }
 
@@ -470,7 +484,7 @@ public class SigningController {
         } else {
             redirectAttributes.addFlashAttribute("succMsg", "ขยายกำหนดเวลาลงนามเรียบร้อยแล้ว");
         }
-        return "redirect:/esign/inbox";
+        return back;
     }
 
     @PostMapping("/sign/{stepId}/decline")

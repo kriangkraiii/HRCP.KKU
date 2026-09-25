@@ -416,9 +416,9 @@ public class SignatureWorkflowService {
         audit(envelope, step.getId(), SignatureAuditEventType.EXTENSION_REQUESTED, signer, context,
                 "ผู้ลงนามขอขยายเวลา: " + (reason != null && !reason.isBlank() ? reason : "ไม่ระบุเหตุผล"));
 
-        UserDtls initiator = envelope.getInitiatedBy();
-        if (initiator != null) {
-            notifier.notifyExtensionRequested(initiator, envelope, signer, reason);
+        if (envelope.getInitiatedBy() != null) {
+            notifier.notifyExtensionRequested(
+                    noticeFor(envelope, step, List.of(envelope.getInitiatedBy())), reason);
         }
 
         return new Result(envelope, null);
@@ -497,13 +497,27 @@ public class SignatureWorkflowService {
      * <p>Every other step keeps the hard deadline. The ตามลำดับขั้น chain is
      * exactly where a date does protect someone: a document parked with one
      * signer is invisible to everyone behind them.
+     *
+     * <p>Also true for every step of a round the applicant sent themselves. Their
+     * form offers the date as "ตั้งเตือนให้ลงนามภายใน" — a reminder — and treating
+     * it as a gate once the request was submitted locked the staff behind them
+     * out of a document they were still expected to sign, with the only way out
+     * being to ask the applicant for more time.
      */
     public boolean deadlineIsAdvisory(SignatureStep step) {
-        if (step == null || !"applicant".equalsIgnoreCase(step.getSlotKey())) {
+        if (step == null) {
             return false;
         }
         SignatureRequest envelope = step.getSignatureRequest();
-        if (envelope == null || snapshotProvider == null) {
+        if (envelope == null) {
+            return false;
+        }
+        UserDtls initiator = envelope.getInitiatedBy();
+        if (initiator != null && !"ROLE_ADMIN".equals(initiator.getRole())
+                && !"ROLE_STAFF".equals(initiator.getRole())) {
+            return true;
+        }
+        if (!"applicant".equalsIgnoreCase(step.getSlotKey()) || snapshotProvider == null) {
             return false;
         }
         return snapshotProvider.isDraftRequest(envelope.getModule(), envelope.getRequestId());

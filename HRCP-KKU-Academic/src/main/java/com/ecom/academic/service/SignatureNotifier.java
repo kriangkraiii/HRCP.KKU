@@ -189,16 +189,23 @@ public class SignatureNotifier {
         }
     }
 
-    /** Tells the initiator that a signer requested a due date extension. */
+    /**
+     * Tells the initiator that a signer requested a due date extension.
+     *
+     * <p>Takes a {@link SignatureNotice} rather than the entities: this runs on
+     * another thread, where the initiator's lazy proxy can no longer load and
+     * the request was silently lost.
+     */
     @Async
-    public void notifyExtensionRequested(UserDtls initiator, SignatureRequest envelope, UserDtls signer, String reason) {
-        if (initiator == null) return;
-        String title = "ขอขยายเวลาลงนาม: " + (envelope.getDocumentLabel() != null ? envelope.getDocumentLabel() : "เอกสาร");
-        String message = (signer != null ? signer.getName() : "ผู้ลงนาม") + " ขอขยายเวลาลงนาม"
+    public void notifyExtensionRequested(SignatureNotice notice, String reason) {
+        String title = "ขอขยายเวลาลงนาม: " + notice.safeDocumentLabel();
+        String message = (notice.signerName() != null ? notice.signerName() : "ผู้ลงนาม") + " ขอขยายเวลาลงนาม"
                 + (reason != null && !reason.isBlank() ? " (เหตุผล: " + reason + ")" : "");
-        String link = envelope.getModule() != null ? envelope.getModule().adminLink(envelope.getRequestId()) : "/admin/academic/requests";
+        String link = notice.module() != null ? notice.module().adminLink(notice.requestId()) : "/admin/academic/requests";
 
-        notify(initiator, title, message, link, NotificationType.SIGNATURE_REMINDER, true);
+        for (UserDtls recipient : notice.recipients()) {
+            notify(recipient, title, message, link, NotificationType.SIGNATURE_REMINDER, true);
+        }
     }
 
     /** Tells the applicant that admin requested document correction and re-signing. */

@@ -180,7 +180,13 @@ public class SignatureReminderScheduler {
 
         step.setRemindedAt(LocalDateTime.now());
         stepRepository.save(step);
-        notifier.notifyDeadlineReached(workflow.reminderNoticeFor(envelope, step));
+        // "วันที่ท่านตั้งเตือนไว้เอง" is only true for the applicant; a later
+        // signer on a round the applicant sent gets the ordinary nudge.
+        if ("applicant".equalsIgnoreCase(step.getSlotKey())) {
+            notifier.notifyDeadlineReached(workflow.reminderNoticeFor(envelope, step));
+        } else {
+            notifier.notifyReminder(workflow.reminderNoticeFor(envelope, step));
+        }
         return 1;
     }
 }

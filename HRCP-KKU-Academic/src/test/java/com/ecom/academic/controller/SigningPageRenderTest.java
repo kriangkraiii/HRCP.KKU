@@ -253,6 +253,30 @@ class SigningPageRenderTest {
     }
 
     @Test
+    @DisplayName("เลยกำหนดที่แอดมินตั้ง: แอดมินขยายเวลาเองได้จากหน้าลงนาม ส่วนคนอื่นเห็นปุ่มขอขยายเวลา")
+    void anOverdueAdminDeadlineOffersTheRightWayOut() throws Exception {
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        // เอกสารที่ 2 ช่องนักทรัพยากรบุคคล — ขั้นเดียวกับที่ติดอยู่ในรายงานปัญหา
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 2,
+                "แบบตรวจสอบเอกสาร", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("hr", admin.getId())),
+                java.time.LocalDateTime.now().minusDays(1), admin, ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
+        workflow.startCirculation(created.request().getId(), admin, ActorContext.none());
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        String adminHtml = mockMvc.perform(get("/esign/sign/" + stepId)
+                        .with(user(admin.getEmail()).roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(adminHtml)
+                .contains("เอกสารนี้เลยกำหนดลงนามแล้ว")
+                .contains("extendDueModal")
+                .contains("/esign/envelope/" + created.request().getId() + "/extend-due")
+                .contains("value=\"/esign/sign/" + stepId + "\"");
+    }
+
+    @Test
     @DisplayName("ผู้ยื่นต้องเห็นช่องตั้งเตือนเวลาลงนามของตัวเองในแผงส่งลงนาม")
     void theApplicantCanSetTheirOwnReminderDate() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);

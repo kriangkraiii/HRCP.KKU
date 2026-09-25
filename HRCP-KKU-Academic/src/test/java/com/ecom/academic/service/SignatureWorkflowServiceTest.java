@@ -637,8 +637,8 @@ class SignatureWorkflowServiceTest {
     }
 
     @Test
-    @DisplayName("ยังไม่ยื่นคำร้อง: ผู้ลงนามลำดับถัดไปยังถูกกั้นด้วยกำหนดเวลาเหมือนเดิม")
-    void chainSignerStillBlockedPastTheDeadlineOnADraft() throws IOException {
+    @DisplayName("กำหนดที่ผู้ยื่นตั้งเป็นเพียงการเตือน: ผู้ลงนามลำดับถัดไปยังลงนามได้แม้เลยกำหนด")
+    void chainSignerMaySignPastAnApplicantsReminderDate() throws IOException {
         UserDtls applicant = newUser("draft-chain@kku.ac.th", "ROLE_USER");
         UserSignature signature = newSignature(applicant);
         PositionRequest request = newDraftRequest(applicant);
@@ -648,11 +648,12 @@ class SignatureWorkflowServiceTest {
                 signature.getId(), true, ActorContext.none()).ok()).isTrue();
         assertThat(workflow.startCirculation(envelope.getId(), admin, ActorContext.none()).ok()).isTrue();
 
-        Result blocked = signStep(stepOf(envelope, "head").getId(), head,
+        Result signed = signStep(stepOf(envelope, "head").getId(), head,
                 headSignature.getId(), true, ActorContext.none());
 
-        assertThat(blocked.ok()).as("สายเวียนตามลำดับต้องยังใช้กติกาเดิม").isFalse();
-        assertThat(blocked.error()).contains("เลยกำหนด");
+        assertThat(signed.ok())
+                .as("ผู้ยื่นตั้งวันที่ไว้เป็น \"ตั้งเตือน\" จึงต้องไม่ล็อกเจ้าหน้าที่ที่ลงนามต่อ")
+                .isTrue();
     }
 
     @Test

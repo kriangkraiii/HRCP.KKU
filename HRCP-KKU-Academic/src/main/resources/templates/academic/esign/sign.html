@@ -67,7 +67,10 @@
                     (กำหนดเดิม: <span th:text="${#temporals.format(envelope.dueAt, 'd MMM yyyy HH:mm')}"></span>)
                 </span>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-danger bg-white" data-bs-toggle="modal" data-bs-target="#requestExtensionModal">
+            <button th:if="${canManageDeadline}" type="button" class="btn btn-sm btn-danger" data-bs-toggle="modal" data-bs-target="#extendDueModal">
+                <i class="fas fa-calendar-plus me-1"></i> ขยายกำหนดเวลา
+            </button>
+            <button th:unless="${canManageDeadline}" type="button" class="btn btn-sm btn-outline-danger bg-white" data-bs-toggle="modal" data-bs-target="#requestExtensionModal">
                 <i class="fas fa-clock-rotate-left me-1"></i> ขอขยายเวลาลงนาม
             </button>
         </div>
@@ -512,6 +515,37 @@
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
                         <button type="submit" class="btn btn-danger">
                             <i class="fas fa-paper-plane me-1"></i> ส่งคำขอขยายเวลา
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal ขยายกำหนดเวลาเอง — สำหรับแอดมินหรือเจ้าของซองที่ติดกำหนดเวลาอยู่ -->
+    <div th:if="${canManageDeadline and envelope.overdue and !deadlineAdvisory}"
+         class="modal fade" id="extendDueModal" tabindex="-1" aria-labelledby="extendDueModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <form th:action="@{/esign/envelope/{id}/extend-due(id=${envelope.id})}" method="post">
+                    <input type="hidden" name="returnTo" th:value="'/esign/sign/' + ${step.id}">
+                    <div class="modal-header bg-danger text-white">
+                        <h5 class="modal-title" id="extendDueModalLabel">
+                            <i class="fas fa-calendar-plus me-1"></i> ขยายกำหนดเวลาลงนาม
+                        </h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body p-4">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">กำหนดวันเวลาลงนามใหม่</label>
+                            <input type="datetime-local" name="dueAt" class="form-control" required>
+                            <div class="form-text">ขยายแล้วกลับมาลงนามต่อที่หน้านี้ได้ทันที</div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-check me-1"></i> บันทึกกำหนดเวลาใหม่
                         </button>
                     </div>
                 </form>
