@@ -118,21 +118,7 @@ class EsignPdfViewer {
                     reject(new Error('PDF.js library failed to initialize'));
                 }
             };
-            script.onerror = () => {
-                const cdn = document.createElement('script');
-                cdn.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-                cdn.onload = () => {
-                    if (window.pdfjsLib) {
-                        window.pdfjsLib.GlobalWorkerOptions.workerSrc =
-                            'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-                        resolve();
-                    } else {
-                        reject(new Error('PDF.js library failed to initialize'));
-                    }
-                };
-                cdn.onerror = () => reject(new Error('Failed to load PDF.js from CDN'));
-                document.head.appendChild(cdn);
-            };
+            script.onerror = () => reject(new Error('Failed to load PDF.js'));
             document.head.appendChild(script);
         });
     }
@@ -153,7 +139,7 @@ class EsignPdfViewer {
 
         const loadingTask = window.pdfjsLib.getDocument({
             url: this.pdfUrl,
-            cMapUrl: 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/cmaps/',
+            cMapUrl: '/vendor/pdfjs/cmaps/',
             cMapPacked: true
         });
 

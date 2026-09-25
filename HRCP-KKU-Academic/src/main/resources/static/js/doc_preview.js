@@ -98,10 +98,10 @@ class DocPreviewEngine {
 
         this.docxLibPromise = (async () => {
             if (!window.JSZip) {
-                await loadScript('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+                await loadScript('/vendor/jszip/jszip.min.js');
             }
             if (!window.docx) {
-                await loadScript('https://cdn.jsdelivr.net/npm/docx-preview@0.3.7/dist/docx-preview.min.js');
+                await loadScript('/vendor/docx-preview/docx-preview.min.js');
             }
         })();
         return this.docxLibPromise;

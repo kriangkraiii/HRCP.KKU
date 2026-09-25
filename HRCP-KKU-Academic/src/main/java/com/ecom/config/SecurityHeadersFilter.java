@@ -217,16 +217,16 @@ public class SecurityHeadersFilter implements Filter {
         private String contentSecurityPolicy(String nonce) {
                 return "default-src 'self'; "
                                 + "script-src 'self' 'nonce-" + nonce + "' https://translate.google.com "
-                                + "https://translate.googleapis.com https://translate-pa.googleapis.com https://cdnjs.cloudflare.com; "
-                                // Prompt/Sarabun (brand fonts) come from Google Fonts: the stylesheet from
-                                // fonts.googleapis.com, the font files it points at from fonts.gstatic.com
-                                + "style-src 'self' 'nonce-" + nonce + "' https://translate.googleapis.com https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
-                                + "font-src 'self' data: https://cdnjs.cloudflare.com https://fonts.gstatic.com; "
+                                + "https://translate.googleapis.com https://translate-pa.googleapis.com; "
+                                // Fonts and third-party libraries are self-hosted under /vendor, so no CDN
+                                // host is allowed (a third-party stylesheet/script cannot carry SRI reliably)
+                                + "style-src 'self' 'nonce-" + nonce + "' https://translate.googleapis.com; "
+                                + "font-src 'self' data:; "
                                 + "img-src 'self' data: blob: https://translate.google.com "
                                 + "https://www.google.com https://*.gstatic.com; "
                                 + "connect-src 'self' https://translate.googleapis.com "
-                                + "https://translate-pa.googleapis.com https://cdnjs.cloudflare.com; "
-                                + "worker-src 'self' blob: https://cdnjs.cloudflare.com; "
+                                + "https://translate-pa.googleapis.com; "
+                                + "worker-src 'self' blob:; "
                                 // blob: is required by the PDF preview iframe (doc_preview.js)
                                 + "frame-src 'self' blob: https://translate.google.com "
                                 + "https://docs.google.com https://hr2.kku.ac.th"

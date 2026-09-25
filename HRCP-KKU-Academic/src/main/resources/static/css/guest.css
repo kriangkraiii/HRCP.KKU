@@ -4,7 +4,10 @@
     set_password, verify_otp, verify_2fa)
    ============================================= */
 
-@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@500;600;700&family=Prompt:wght@400;500;600;700;800&family=Sarabun:wght@300;400;500;600;700&display=swap');
+/* Self-hosted (no third-party stylesheet, so no SRI gap) */
+@import url('/vendor/fonts/ibm-plex-sans-thai.css');
+@import url('/vendor/fonts/prompt.css');
+@import url('/vendor/fonts/sarabun.css');
 
 /* ---------- Reset & Base ---------- */
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
