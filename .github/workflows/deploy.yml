@@ -50,12 +50,12 @@ jobs:
           }
           if (Test-Path $env:UPLOADS_PATH) {
               robocopy $env:UPLOADS_PATH "$env:BACKUP_ROOT\uploads" /E /R:2 /W:2 /NP /NFL /NDL /XD chunks
-              # robocopy: 0-7 = สำเร็จ (มี/ไม่มีไฟล์ที่คัดลอก), 8 ขึ้นไป = ล้มเหลว
+              # robocopy: 0-7 = success (files copied or no change), 8+ = failure
               if ($LASTEXITCODE -ge 8) { throw "Backup of $env:UPLOADS_PATH failed (robocopy exit $LASTEXITCODE)" }
               $global:LASTEXITCODE = 0
               Write-Host "Backed up $env:UPLOADS_PATH -> $env:BACKUP_ROOT\uploads"
           } else {
-              Write-Host "::warning::$env:UPLOADS_PATH not found — uploads were NOT backed up. Set UPLOADS_PATH to the service's real uploads folder."
+              Write-Host "::warning::$env:UPLOADS_PATH not found - uploads were NOT backed up. Set UPLOADS_PATH to the service real uploads folder."
           }
 
       # 3) หยุด Windows Service "MyWebApp" ก่อน เพื่อปลดล็อกไฟล์ app.jar ที่กำลังถูกใช้งานอยู่
