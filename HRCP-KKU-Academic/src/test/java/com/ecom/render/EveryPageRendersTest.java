@@ -78,11 +78,13 @@ class EveryPageRendersTest extends AbstractFlowTest {
         // แบบร่างเป็นของผู้ยื่นล้วน — หน้ารายละเอียดของผู้ยื่นจะเด้งกลับไปหน้ากรอก
         // และฝั่งเจ้าหน้าที่ยังเปิดแบบฟอร์มไม่ได้จนกว่าคำร้องจะถูกส่งเข้ามาจริง
         AcademicRequest draftEvaluation = data.evaluation(applicant, RequestStatus.DRAFT);
+        data.academicDocument(draftEvaluation, 1, "{\"current_position\":\"อาจารย์\"}");
         AcademicRequest liveEvaluation = data.evaluation(applicant, RequestStatus.RECEIVED);
         // ผลประเมินหนึ่งฉบับผูกได้กับคำร้องขอตำแหน่งเดียว แบบร่างจึงต้องมีผลประเมินของตัวเอง
         AcademicRequest evaluationForDraft = data.evaluation(applicant, RequestStatus.COMPLETED);
         PositionRequest draftPosition =
                 data.positionRequest(applicant, PositionRequestStatus.DRAFT, evaluationForDraft);
+        data.positionDocument(draftPosition, 1, "{\"applicant_name\":\"" + applicant.getName() + "\"}");
         PositionRequest livePosition = data.positionRequest(
                 applicant, PositionRequestStatus.DOCUMENT_RECEIVED, liveEvaluation);
 
@@ -148,7 +150,7 @@ class EveryPageRendersTest extends AbstractFlowTest {
                 + "&types=ACADEMIC_REQUEST&sort=NEWEST"));
 
         // --- หน้าฝั่งผู้ดูแลระบบ ---
-        pages.add(asStaff("/admin/"));
+        pages.add(asStaff("/admin/academic/dashboard"));
         pages.add(asStaff("/admin/users"));
         pages.add(asStaff("/admin/activity-logs"));
         pages.add(asStaff("/admin/add-admin"));

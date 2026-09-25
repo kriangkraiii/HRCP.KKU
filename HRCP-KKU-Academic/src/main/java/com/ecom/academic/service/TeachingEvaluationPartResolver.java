@@ -101,7 +101,7 @@ public class TeachingEvaluationPartResolver {
                 summary == null ? null : summary.courseName()));
 
         String level = levelOf(doc8, summary);
-        put(fields, "s3_level", LEVELS.contains(level) ? level : null);
+        put(fields, "s3_level", level != null && LEVELS.contains(level) ? level : null);
         put(fields, "s3_quality", qualityOf(level));
 
         // ชื่อและวันที่ในเอกสารที่ 8 คือสิ่งที่พิมพ์อยู่บนเอกสารฉบับนั้น ใช้ก่อน ถ้าว่างค่อยถามซองลงนาม

@@ -17,7 +17,7 @@ class EmailTemplateHelperTest {
                 .contains(EmailTemplateHelper.LOGO_CP_URL)
                 .contains("วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น")
                 .contains("College of Computing, Khon Kaen University")
-                .contains("ระบบบริหารจัดการตำแหน่งทางวิชาการ (HRCP.KKU)")
+                .contains("CP HRD (College of Computing Human Resource Development System)")
                 .contains("043-009700")
                 .contains("computing.kku.ac.th")
                 .contains("ทดสอบหัวเรื่อง")

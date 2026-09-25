@@ -194,7 +194,9 @@ public abstract class PlaywrightTestBase {
                 || text.contains("www.google.com/sorry")
                 || text.contains("[Google Translate]")
                 || text.contains("translate.googleapis.com") && text.contains("Applying inline style")
-                || text.contains("Applying inline style violates");
+                || text.contains("Applying inline style violates")
+                || text.contains("ERR_INTERNET_DISCONNECTED")
+                || text.contains("ERR_NAME_NOT_RESOLVED");
     }
 
     @AfterEach

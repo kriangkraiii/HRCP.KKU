@@ -769,6 +769,9 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                   const form = document.querySelector('form[data-auto-draft]')
                             || document.querySelector('form[id^="doc"]');
                   if (!form) return 0;
+                  if (form.__autoDraft) {
+                    form.__autoDraft.touched = true;
+                  }
                   let n = 0;
                   const seenRadio = new Set();
                   for (const el of form.querySelectorAll('input, textarea, select')) {
@@ -950,13 +953,19 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         if (create.count() > 0) {
             if (!formOverrides.isEmpty()) {
                 page.evaluate("""
-                        (vals) => { for (const [k, v] of Object.entries(vals)) {
-                          const el = document.querySelector('form[data-auto-draft] [name="' + k + '"]');
-                          if (!el) continue;
-                          el.value = v;
-                          el.dispatchEvent(new Event('input', { bubbles: true }));
-                          el.dispatchEvent(new Event('change', { bubbles: true }));
-                        } }
+                        (vals) => {
+                          const form = document.querySelector('form[data-auto-draft]');
+                          if (form && form.__autoDraft) {
+                            form.__autoDraft.touched = true;
+                          }
+                          for (const [k, v] of Object.entries(vals)) {
+                            const el = form ? form.querySelector('[name="' + k + '"]') : null;
+                            if (!el) continue;
+                            el.value = v;
+                            el.dispatchEvent(new Event('input', { bubbles: true }));
+                            el.dispatchEvent(new Event('change', { bubbles: true }));
+                          }
+                        }
                         """, formOverrides);
                 formOverrides = Map.of();
             }

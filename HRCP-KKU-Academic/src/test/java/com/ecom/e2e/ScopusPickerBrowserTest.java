@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.model.UserDtls;
 import com.ecom.support.TestDataFactory;
@@ -30,7 +31,9 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
         data.faculty(FS_ID, TestDataFactory.APPLICANT_EMAIL);
         data.publication(FS_ID, "Deep learning for Thai handwriting recognition", 2023, 18);
         data.publication(FS_ID, "Edge computing for smart agriculture", 2024, 6);
-        return data.positionRequest(professor, PositionRequestStatus.DRAFT, null).getId();
+        PositionRequest req = data.positionRequest(professor, PositionRequestStatus.DRAFT, null);
+        data.positionDocument(req, 1, "{\"applicant_name\":\"" + professor.getName() + "\"}");
+        return req.getId();
     }
 
     private void openDocumentOne(Long requestId) {
@@ -100,7 +103,7 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
     }
 
     @Test
-    @DisplayName("เลือกตำแหน่ง รศ. แล้วมีปุ่มครบทั้งสี่กลุ่ม (รวมวิธีที่ ๓)")
+    @DisplayName("เลือกตำแหน่ง รศ. แล้วมีปุ่มครบทั้งสามกลุ่ม (ตัดวิธีที่ ๓ ตามเกณฑ์ กพว03)")
     void associateProfessorSeesAPickerButtonInEveryGroup() {
         UserDtls professor = data.applicant();
         openDocumentOne(openADraftPositionRequestFor(professor));
@@ -108,8 +111,8 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
         chooseTargetPosition("รองศาสตราจารย์");
 
         assertThat(visiblePickerButtons().count())
-                .as("ส่วน รศ. มีสี่กลุ่ม: งานวิจัย, ผลงานอื่น, ตำรา/หนังสือ และงานวิจัยวิธีที่ ๓")
-                .isEqualTo(4);
+                .as("ส่วน รศ. มีสามกลุ่ม: งานวิจัย, ผลงานอื่น, ตำรา/หนังสือ")
+                .isEqualTo(3);
     }
 
     @Test
@@ -249,7 +252,7 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
         fillIfEmpty("applicant_name", "ผศ.ดร.สมชาย ทดสอบ");
         fillIfEmpty("title", "ผู้ช่วยศาสตราจารย์");
 
-        page.locator("button[name='action'][value='submit']").first().click();
+        page.locator("#panelSaveDocBtn, [data-action='save-doc-draft']").first().click();
         page.waitForLoadState();
 
         com.microsoft.playwright.assertions.PlaywrightAssertions
@@ -275,7 +278,9 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
     void unlinkedAccountIsToldWhy() {
         UserDtls stranger = data.user("stranger@" + TestDataFactory.DOMAIN,
                 "ไม่ผูก", "บัญชี", "ROLE_USER");
-        Long requestId = data.positionRequest(stranger, PositionRequestStatus.DRAFT, null).getId();
+        PositionRequest req = data.positionRequest(stranger, PositionRequestStatus.DRAFT, null);
+        data.positionDocument(req, 1, "{\"applicant_name\":\"" + stranger.getName() + "\"}");
+        Long requestId = req.getId();
 
         signIn("stranger@" + TestDataFactory.DOMAIN, TestDataFactory.PASSWORD);
         page.navigate(baseUrl() + "/user/position/request/" + requestId + "/document/1");

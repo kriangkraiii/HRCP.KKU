@@ -360,9 +360,8 @@
   };
 
   Engine.prototype._onChange = function () {
-    /* ผู้ใช้ยังไม่ได้แตะ — สิ่งที่เปลี่ยนมาจากสคริปต์บนหน้า ถือเป็นจุดตั้งต้นใหม่ ไม่ใช่งานที่ต้องบันทึก */
+    /* ผู้ใช้ยังไม่ได้แตะ — สิ่งที่เปลี่ยนมาจากสคริปต์บนหน้า ไม่ต้องเริ่มนับเวลาบันทึกอัตโนมัติ */
     if (!this.touched) {
-      this.lastHash = this._hash();
       return;
     }
     /* บอกไว้ก่อน debounce — ผู้ใช้ที่เลื่อนลงไปกดส่งทันทีจะได้ไม่เห็น "บันทึกแล้ว" ที่เก่าไป 1 วิ */
@@ -409,13 +408,16 @@
       return Promise.resolve(true);
     }
     // บันทึกอัตโนมัติรอจนผู้ใช้แตะฟอร์มจริง — flush (force) มาจากการกระทำของผู้ใช้ เช่นก่อนลงนาม จึงผ่านได้
+    if (force) this.touched = true;
     if (!force && !this.touched) return Promise.resolve(true);
     var data = this._collect();
     // ทุกช่องถูกปิด แปลว่าเอกสารล็อกอยู่ ไม่มีอะไรให้บันทึก
     if (Object.keys(data).length === 0) return Promise.resolve(true);
     var h = JSON.stringify(data);
     // พิมพ์แล้วลบกลับเป็นเหมือนเดิมก็มาถึงตรงนี้ ต้องล้าง "ยังไม่บันทึก" ที่ _onChange ขึ้นไว้
-    if (h === this.lastHash) {
+    // แต่ถ้าเป็นการสั่งบันทึกโดยตรง (force) และในเซสชันนี้ยังไม่เคยบันทึกสำเร็จขึ้นเซิร์ฟเวอร์มาก่อน
+    // ต้องยอมให้ส่งข้อมูลขึ้นเซิร์ฟเวอร์เพื่อให้มีข้อมูลในฐานข้อมูล
+    if (h === this.lastHash && (!force || this.lastSavedDate != null)) {
       this._showSynced();
       return Promise.resolve(true);
     }
