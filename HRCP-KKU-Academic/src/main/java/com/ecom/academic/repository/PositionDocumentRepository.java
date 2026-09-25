@@ -14,6 +14,10 @@ public interface PositionDocumentRepository extends JpaRepository<PositionDocume
     @Query("SELECT d FROM PositionDocument d WHERE d.request.id = :requestId AND d.isDeleted = false ORDER BY d.documentType ASC")
     List<PositionDocument> findByRequestId(@Param("requestId") Long requestId);
 
+    /** คำร้องในชุดนี้ที่มีเอกสารเคยถูกส่งกลับให้แก้ — แดชบอร์ดคำนวณขั้นการแก้ไขเฉพาะคำร้องเหล่านี้ */
+    @Query("SELECT DISTINCT d.request.id FROM PositionDocument d WHERE d.request.id IN :requestIds AND d.revisionRequestedAt IS NOT NULL AND d.isDeleted = false")
+    List<Long> findRequestIdsWithRevisionRequested(@Param("requestIds") java.util.Collection<Long> requestIds);
+
     @Query("SELECT d FROM PositionDocument d WHERE d.request.id = :requestId AND d.documentType = :docType AND d.isDeleted = false ORDER BY d.isDraft ASC, d.copyNumber ASC, d.id DESC")
     List<PositionDocument> findByRequestIdAndDocType(@Param("requestId") Long requestId,
             @Param("docType") Integer docType);

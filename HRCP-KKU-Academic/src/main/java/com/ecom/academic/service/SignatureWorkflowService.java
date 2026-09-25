@@ -978,6 +978,7 @@ public class SignatureWorkflowService {
         }
         String label = envelope.getDocumentLabel();
         String applicantName = step.getSignerNameSnapshot();
+        Integer applicantId = step.getSigner() != null ? step.getSigner().getId() : null;
         LocalDateTime envelopeCreatedAt = envelope.getCreatedAt();
 
         Runnable announce = () -> {
@@ -986,6 +987,8 @@ public class SignatureWorkflowService {
                 if (sentBackAt == null || envelopeCreatedAt == null || !envelopeCreatedAt.isAfter(sentBackAt)) {
                     return;
                 }
+                UserDtls applicant = applicantId != null ? userRepository.findById(applicantId).orElse(null) : null;
+                snapshotProvider.recordRevisionSubmitted(module, requestId, documentType, applicant);
                 notifier.notifyRevisionSubmitted(module, requestId, label, applicantName);
             } catch (Exception e) {
                 log.warn("Could not announce revision on {} request {} doc {}: {}",

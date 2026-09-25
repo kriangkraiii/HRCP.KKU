@@ -4,12 +4,18 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import com.ecom.academic.model.AcademicDocument;
 
 public interface AcademicDocumentRepository extends JpaRepository<AcademicDocument, Long> {
 
     List<AcademicDocument> findByRequestId(Long requestId);
+
+    /** คำร้องในชุดนี้ที่มีเอกสารเคยถูกส่งกลับให้แก้ — แดชบอร์ดคำนวณขั้นการแก้ไขเฉพาะคำร้องเหล่านี้ */
+    @Query("SELECT DISTINCT d.request.id FROM AcademicDocument d WHERE d.request.id IN :requestIds AND d.revisionRequestedAt IS NOT NULL")
+    List<Long> findRequestIdsWithRevisionRequested(@Param("requestIds") java.util.Collection<Long> requestIds);
 
     Optional<AcademicDocument> findByRequestIdAndDocumentTypeAndCopyNumber(Long requestId, Integer documentType,
             Integer copyNumber);

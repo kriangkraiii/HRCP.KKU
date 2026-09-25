@@ -12,6 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
@@ -106,6 +107,25 @@ class RevisionStagesTest extends AbstractFlowTest {
                 .as("เอกสารที่ 1 มีแต่ช่องลงนามของผู้ยื่น ลงนามแล้วจึงจบ")
                 .isNull();
         awaitCondition("เจ้าหน้าที่ได้รับแจ้งว่าผู้ยื่นแก้ไขแล้ว", this::officerWasToldOfRevision);
+        awaitCondition("การลงนามถูกบันทึกในประวัติการแก้ไขว่าเป็นการยื่นการแก้ไข",
+                () -> academicService.getEditHistory(request.getId()).stream()
+                        .anyMatch(l -> l.getAction() == AcademicDocumentEditLog.EditAction.REVISION_SUBMITTED
+                                && l.getDocumentType() == 1));
+    }
+
+    @Test
+    @DisplayName("แดชบอร์ดคำนวณขั้นการแก้ไขเฉพาะคำร้องที่เคยถูกส่งกลับ")
+    void dashboardBatchOnlyReturnsSentBackRequests() {
+        AcademicRequest untouched = data.evaluation(applicant, RequestStatus.RECEIVED);
+        data.academicDocument(untouched, 1, DOC);
+        AcademicRequest sentBack = data.evaluation(applicant, RequestStatus.RECEIVED);
+        data.academicDocument(sentBack, 1, DOC);
+        academicService.openDocumentForRevision(sentBack.getId(), 1, null);
+
+        var map = academicService.revisionProgressFor(List.of(untouched, sentBack));
+
+        assertThat(map).containsOnlyKeys(sentBack.getId());
+        assertThat(map.get(sentBack.getId()).documents().get(1).stage()).isEqualTo(Stage.TO_EDIT);
     }
 
     @Test

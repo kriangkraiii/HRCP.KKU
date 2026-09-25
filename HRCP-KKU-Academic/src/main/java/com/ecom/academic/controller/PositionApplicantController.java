@@ -123,13 +123,8 @@ public class PositionApplicantController {
         model.addAttribute("hasActiveRequest", hasActiveRequest);
         model.addAttribute("statuses", PositionRequestStatus.values());
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
-        java.util.Map<Long, com.ecom.academic.service.RevisionProgress.Summary> sentBackMap = new java.util.HashMap<>();
-        for (PositionRequest req : requests) {
-            var progress = positionService.revisionProgress(req);
-            if (!progress.isEmpty()) {
-                sentBackMap.put(req.getId(), progress);
-            }
-        }
+        java.util.Map<Long, com.ecom.academic.service.RevisionProgress.Summary> sentBackMap =
+                positionService.revisionProgressFor(requests);
         model.addAttribute("sentBackMap", sentBackMap);
         model.addAttribute("positionDocLabels", positionService.getAdminDocLabels());
 

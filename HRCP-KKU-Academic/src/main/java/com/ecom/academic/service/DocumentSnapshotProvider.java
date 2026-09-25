@@ -287,6 +287,15 @@ public class DocumentSnapshotProvider {
         }
     }
 
+    /** บันทึกลงประวัติการแก้ไขว่าผู้ยื่นยื่นการแก้ไขเอกสารฉบับนี้แล้ว (ด้วยการลงนาม) */
+    public void recordRevisionSubmitted(SignatureModule module, Long requestId, int documentType, UserDtls applicant) {
+        if (module == SignatureModule.ACADEMIC) {
+            academicRequestService.logRevisionSubmitted(requestId, documentType, applicant);
+        } else {
+            positionRequestService.logRevisionSubmitted(requestId, documentType, applicant);
+        }
+    }
+
     /** เวลาที่เจ้าหน้าที่ส่งเอกสารฉบับนี้กลับให้แก้รอบล่าสุด หรือ null */
     public java.time.LocalDateTime revisionRequestedAt(SignatureModule module, Long requestId, int documentType) {
         try {

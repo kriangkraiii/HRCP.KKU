@@ -735,6 +735,18 @@ public class PositionRequestService {
         logDocumentEdit(request, documentType, label, user, action);
     }
 
+    /**
+     * ผู้ยื่นลงนามในเอกสารที่ถูกส่งกลับ = ยื่นการแก้ไข — บันทึกลงประวัติการแก้ไข
+     *
+     * <p>ถูกเรียกหลัง commit ของการลงนาม ต้องเปิด transaction ใหม่ ไม่งั้นจะเข้าร่วม transaction
+     * ที่ commit ไปแล้วและแถวนี้ไม่ถูกบันทึกเลย
+     */
+    @Transactional(propagation = org.springframework.transaction.annotation.Propagation.REQUIRES_NEW)
+    public void logRevisionSubmitted(Long requestId, int documentType, UserDtls applicant) {
+        requestRepository.findById(requestId).ifPresent(request -> logDocumentEdit(request, documentType, null,
+                applicant, PositionDocumentEditLog.EditAction.REVISION_SUBMITTED));
+    }
+
     /** Autosaves by the same user on the same document within this window share one history row. */
     static final java.time.Duration DRAFT_LOG_MERGE_WINDOW = java.time.Duration.ofMinutes(10);
 
@@ -1000,6 +1012,31 @@ public class PositionRequestService {
      * <p>ต่างจาก {@link #sentBackDocuments} ตรงที่ไม่หายไปตอนเปิดซองลงนาม — ผู้ยื่นที่ยังไม่ได้ลงนาม
      * ยังเห็น "รอท่านลงนาม" และหลังลงนามเห็นว่ายื่นแล้ว รอตรวจ จนกว่าทุกคนจะลงนามใหม่ครบ
      */
+    /**
+     * ขั้นการแก้ไขของหลายคำร้องพร้อมกัน (แดชบอร์ด) — คืนเฉพาะคำร้องที่มีเอกสารค้างอยู่
+     *
+     * <p>ถามครั้งเดียวว่าคำร้องไหนเคยถูกส่งกลับ แล้วคำนวณเต็มเฉพาะคำร้องเหล่านั้น ซึ่งมีไม่กี่รายการ
+     * ไม่ใช่ไล่คำนวณทุกคำร้องในประวัติของผู้ยื่น (N+1)
+     */
+    @Transactional(readOnly = true)
+    public java.util.Map<Long, RevisionProgress.Summary> revisionProgressFor(List<PositionRequest> requests) {
+        java.util.Map<Long, RevisionProgress.Summary> result = new java.util.HashMap<>();
+        if (requests == null || requests.isEmpty()) {
+            return result;
+        }
+        java.util.Set<Long> sentBack = new java.util.HashSet<>(documentRepository.findRequestIdsWithRevisionRequested(
+                requests.stream().map(PositionRequest::getId).toList()));
+        for (PositionRequest request : requests) {
+            if (sentBack.contains(request.getId())) {
+                RevisionProgress.Summary summary = revisionProgress(request);
+                if (!summary.isEmpty()) {
+                    result.put(request.getId(), summary);
+                }
+            }
+        }
+        return result;
+    }
+
     @Transactional(readOnly = true)
     public RevisionProgress.Summary revisionProgress(PositionRequest request) {
         java.util.Map<Integer, RevisionProgress.SentBackDocument> result = new java.util.TreeMap<>();

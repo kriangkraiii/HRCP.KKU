@@ -493,13 +493,17 @@
                 + '<div class="upload-file-icon" data-bg="' + icon.bg + '" data-fg="' + icon.color + '"><i class="fas ' + icon.icon + '"></i></div>'
                 + '<div class="flex-grow-1 overflow-hidden">'
                 + '<div class="d-flex justify-content-between align-items-center">'
-                + '<span class="fw-semibold text-truncate u-maxw-280px" title="' + file.name + '">' + file.name + '</span>'
+                + '<span class="fw-semibold text-truncate u-maxw-280px upload-file-name"></span>'
                 + '<small class="text-muted ms-2 text-nowrap">' + formatFileSize(file.size) + '</small>'
                 + '</div>'
                 + '<div class="upload-progress-bar"><div class="upload-progress-fill u-w-0pct" id="progress-' + fileIndex + '"></div></div>'
                 + '<div class="upload-file-status" id="status-' + fileIndex + '">รอคิว...</div>'
                 + '</div></div>';
             document.getElementById('uploadFileList').insertAdjacentHTML('beforeend', html);
+            // ชื่อไฟล์มาจากผู้ใช้ ใส่ผ่าน textContent/title ไม่ใช่ HTML — ชื่ออย่าง <img onerror=...>.pdf ต้องไม่ถูกตีความ
+            var nameEl = document.querySelector('#upload-item-' + fileIndex + ' .upload-file-name');
+            nameEl.textContent = file.name;
+            nameEl.title = file.name;
             if (window.applyDataStyles) window.applyDataStyles(document.getElementById('upload-item-' + fileIndex));
         }
 
