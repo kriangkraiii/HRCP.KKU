@@ -76,13 +76,13 @@ public class NavigationCatalog {
                     "/user/academic/settings", "fas fa-cog text-secondary", false),
 
             // ---------- admin ----------
-            new Entry("แดชบอร์ดงานวิชาการ (แอดมิน)", "ภาพรวมการติดตามและวิเคราะห์ข้อมูลวิชาการ",
+            new Entry("แดชบอร์ดงานวิชาการ (ผู้ดูแลระบบ)", "ภาพรวมการติดตามและวิเคราะห์ข้อมูลวิชาการ",
                     "แดชบอร์ด หน้าหลัก dashboard analytics admin ภาพรวม",
                     "/admin/academic/dashboard", "fas fa-chart-line text-primary", true),
-            new Entry("คำร้องประเมินผลการสอน (แอดมิน)", "จัดการและตรวจสอบคำร้องประเมินผลการสอน",
+            new Entry("คำร้องประเมินผลการสอน (ผู้ดูแลระบบ)", "จัดการและตรวจสอบคำร้องประเมินผลการสอน",
                     "คำร้องประเมิน ประเมินการสอน evaluation แดชบอร์ด dashboard จัดการคำร้อง",
                     "/admin/academic/requests?type=evaluation", "fas fa-clipboard-check text-primary", true),
-            new Entry("คำร้องขอตำแหน่งทางวิชาการ (แอดมิน)", "จัดการคำร้องขอกำหนดตำแหน่ง (Phase 2)",
+            new Entry("คำร้องขอตำแหน่งทางวิชาการ (ผู้ดูแลระบบ)", "จัดการคำร้องขอกำหนดตำแหน่ง (Phase 2)",
                     "คำร้องตำแหน่ง กำหนดตำแหน่ง position ผศ. รศ. ศ. ศาสตราจารย์",
                     "/admin/academic/requests?type=position", "fas fa-university text-info", true),
             new Entry("จัดการบุคลากร / กรรมการ", "รายชื่อบุคลากรและคณะกรรมการประเมิน",
@@ -94,7 +94,7 @@ public class NavigationCatalog {
             new Entry("จัดการผู้ดูแลระบบ", "ดูรายชื่อผู้ดูแลระบบทั้งหมด",
                     "ผู้ดูแล admin แอดมิน สิทธิ์",
                     "/admin/users?type=2", "fas fa-user-shield text-danger", true),
-            new Entry("เพิ่มผู้ใช้ / แอดมินใหม่", "สร้างบัญชีผู้ใช้งานใหม่ในระบบ",
+            new Entry("เพิ่มผู้ใช้ / ผู้ดูแลระบบใหม่", "สร้างบัญชีผู้ใช้งานใหม่ในระบบ",
                     "เพิ่มผู้ใช้ เพิ่มแอดมิน add user สมัคร สร้างบัญชี",
                     "/admin/add-admin", "fas fa-user-plus text-success", true),
             new Entry("ประวัติกิจกรรมระบบ", "ตรวจสอบประวัติการเข้าใช้งานและการแก้ไข",
@@ -103,7 +103,7 @@ public class NavigationCatalog {
             new Entry("จัดการไฟล์ระบบ", "พื้นที่จัดเก็บไฟล์กลาง 10 GB",
                     "ไฟล์ จัดการไฟล์ file storage คลังไฟล์",
                     "/admin/file-manager", "fas fa-folder-open text-warning", true),
-            new Entry("คู่มือการใช้งานสำหรับแอดมิน", "ขั้นตอนการจัดการคำร้องและฟังก์ชันแอดมิน",
+            new Entry("คู่มือการใช้งานสำหรับผู้ดูแลระบบ", "ขั้นตอนการจัดการคำร้องและฟังก์ชันแอดมิน",
                     "คู่มือ guide ช่วยเหลือ help แอดมิน",
                     "/admin/academic/guide", "fas fa-book text-info", true),
             new Entry("การตั้งค่าระบบ", "ตั้งค่าระบบงานวิชาการและอีเมล",
@@ -130,7 +130,7 @@ public class NavigationCatalog {
         d.setTitle(entry.title());
         d.setSubtitle(entry.subtitle());
         d.setKeywords(entry.keywords());
-        d.setCategory(entry.adminOnly() ? "เมนูแอดมิน" : "เมนูระบบ");
+        d.setCategory(entry.adminOnly() ? "เมนูผู้ดูแลระบบ" : "เมนูระบบ");
         d.setIcon(entry.icon());
         d.setUrl(entry.url());
         d.setAdminUrl(entry.url());

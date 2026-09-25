@@ -81,7 +81,7 @@ public class TwoFactorController {
         // Check if user has already exceeded max attempts
         if (attempts >= MAX_OTP_ATTEMPTS) {
             return startOver(user, session, redirect,
-                    "คุณกรอกรหัส OTP ไม่ถูกต้องเกินจำนวนครั้งที่กำหนด กรุณาเข้าสู่ระบบใหม่");
+                    "ท่านกรอกรหัส OTP ไม่ถูกต้องเกินจำนวนครั้งที่กำหนด กรุณาเข้าสู่ระบบใหม่");
         }
 
         // Remove all spaces/dashes from OTP input
@@ -116,7 +116,7 @@ public class TwoFactorController {
 
                 if (remaining <= 0) {
                     return startOver(user, session, redirect,
-                            "คุณกรอกรหัส OTP ไม่ถูกต้องเกิน " + MAX_OTP_ATTEMPTS + " ครั้ง กรุณาเข้าสู่ระบบใหม่");
+                            "ท่านกรอกรหัส OTP ไม่ถูกต้องเกิน " + MAX_OTP_ATTEMPTS + " ครั้ง กรุณาเข้าสู่ระบบใหม่");
                 }
 
                 redirect.addFlashAttribute("error", "รหัส OTP ไม่ถูกต้อง (เหลือโอกาสอีก " + remaining + " ครั้ง)");

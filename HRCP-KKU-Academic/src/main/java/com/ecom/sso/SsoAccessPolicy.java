@@ -150,7 +150,7 @@ public class SsoAccessPolicy {
                   2. สร้างบัญชีในระบบด้วยอีเมลนี้ และตั้ง app.auth.sso.allow-existing-local-users=true
                   3. ให้อีเมลนี้อยู่ในรายชื่อบุคลากร (fs_faculty) จากการซิงค์
                   4. เพิ่มเป็นกรรมการที่ยัง active ในระบบ""", normalized);
-        return Decision.deny("บัญชีของคุณยังไม่ได้รับสิทธิ์เข้าใช้ระบบนี้ กรุณาติดต่อผู้ดูแลระบบเพื่อขอเปิดสิทธิ์");
+        return Decision.deny("บัญชีของท่านยังไม่ได้รับสิทธิ์เข้าใช้ระบบนี้ กรุณาติดต่อผู้ดูแลระบบเพื่อขอเปิดสิทธิ์");
     }
 
     /** Outcome of an allowlist check. */

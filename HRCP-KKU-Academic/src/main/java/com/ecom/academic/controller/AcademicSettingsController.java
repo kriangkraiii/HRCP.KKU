@@ -246,7 +246,7 @@ public class AcademicSettingsController {
             String otp = twoFactorService.generateOtp(user);
             twoFactorService.sendOtpEmail(user, otp, "EMAIL_VERIFY");
             return ResponseEntity.ok(Map.of("success", true,
-                    "message", "ส่ง OTP ไปที่อีเมลของคุณแล้ว"));
+                    "message", "ส่ง OTP ไปที่อีเมลของท่านแล้ว"));
         } catch (Exception e) {
             return ResponseEntity.ok(Map.of("success", false,
                     "message", "เกิดข้อผิดพลาดในการส่ง OTP"));
@@ -328,7 +328,7 @@ public class AcademicSettingsController {
             try {
                 adminLogService.log(principal.getName(), user.getName(),
                         "UPDATE_SETTINGS",
-                        "อัพเดทการตั้งค่างาน",
+                        "อัปเดตการตั้งค่างาน",
                         getClientIpAddress());
             } catch (Exception e) {
             auditLogFailed(e);

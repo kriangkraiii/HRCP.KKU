@@ -316,40 +316,40 @@ public class GlobalSearchService {
 
     private void matchAdminNavigation(String kw, List<SearchResultItem> results) {
         if (containsAny(kw, "แดชบอร์ด", "หน้าหลัก", "dashboard", "home")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "แดชบอร์ดงานวิชาการ", "ภาพรวมคำร้องและการประเมินทั้งหมด", "/admin/academic/dashboard", "fas fa-tachometer-alt text-primary", "Admin", "bg-primary"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "แดชบอร์ดงานวิชาการ", "ภาพรวมคำร้องและการประเมินทั้งหมด", "/admin/academic/dashboard", "fas fa-tachometer-alt text-primary", "Admin", "bg-primary"));
         }
         if (containsAny(kw, "คำร้องประเมิน", "ประเมินการสอน", "evaluation")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "คำร้องประเมินผลการสอน", "จัดการและตรวจสอบคำร้องประเมินผลการสอน", "/admin/academic/requests?type=evaluation", "fas fa-clipboard-check text-primary", "Admin", "bg-primary"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "คำร้องประเมินผลการสอน", "จัดการและตรวจสอบคำร้องประเมินผลการสอน", "/admin/academic/requests?type=evaluation", "fas fa-clipboard-check text-primary", "Admin", "bg-primary"));
         }
         if (containsAny(kw, "คำร้องตำแหน่ง", "กำหนดตำแหน่ง", "position")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "คำร้องขอตำแหน่งทางวิชาการ", "จัดการคำร้องขอกำหนดตำแหน่ง (Phase 2)", "/admin/academic/requests?type=position", "fas fa-university text-info", "Admin", "bg-info"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "คำร้องขอตำแหน่งทางวิชาการ", "จัดการคำร้องขอกำหนดตำแหน่ง (Phase 2)", "/admin/academic/requests?type=position", "fas fa-university text-info", "Admin", "bg-info"));
         }
         if (containsAny(kw, "บุคลากร", "กรรมการ", "staff", "อาจารย์")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "จัดการบุคลากร / กรรมการ", "รายชื่อบุคลากรและคณะกรรมการประเมิน", "/admin/academic/staff", "fas fa-users-cog text-success", "Admin", "bg-success"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "จัดการบุคลากร / กรรมการ", "รายชื่อบุคลากรและคณะกรรมการประเมิน", "/admin/academic/staff", "fas fa-users-cog text-success", "Admin", "bg-success"));
         }
         if (containsAny(kw, "ผู้ใช้", "ผู้ใช้งาน", "user")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "จัดการผู้ใช้งานทั่วไป", "ดูและจัดการบัญชีผู้ยื่นคำร้อง", "/admin/users?type=1", "fas fa-users text-secondary", "Admin", "bg-secondary"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "จัดการผู้ใช้งานทั่วไป", "ดูและจัดการบัญชีผู้ยื่นคำร้อง", "/admin/users?type=1", "fas fa-users text-secondary", "Admin", "bg-secondary"));
         }
         if (containsAny(kw, "ผู้ดูแล", "admin", "แอดมิน")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "จัดการผู้ดูแลระบบ (Admins)", "ดูรายชื่อผู้ดูแลระบบทั้งหมด", "/admin/users?type=2", "fas fa-user-shield text-danger", "Admin", "bg-danger"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "จัดการผู้ดูแลระบบ (Admins)", "ดูรายชื่อผู้ดูแลระบบทั้งหมด", "/admin/users?type=2", "fas fa-user-shield text-danger", "Admin", "bg-danger"));
         }
         if (containsAny(kw, "เพิ่มผู้ใช้", "เพิ่มแอดมิน", "add user", "สมัคร")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "เพิ่มผู้ใช้ / แอดมินใหม่", "สร้างบัญชีผู้ใช้งานใหม่ในระบบ", "/admin/add-admin", "fas fa-user-plus text-success", "Admin", "bg-success"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "เพิ่มผู้ใช้ / ผู้ดูแลระบบใหม่", "สร้างบัญชีผู้ใช้งานใหม่ในระบบ", "/admin/add-admin", "fas fa-user-plus text-success", "Admin", "bg-success"));
         }
         if (containsAny(kw, "ประวัติ", "กิจกรรม", "log", "activity")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "ประวัติกิจกรรมระบบ (Activity Logs)", "ตรวจสอบประวัติการเข้าใช้งานและการแก้ไข", "/admin/activity-logs", "fas fa-history text-secondary", "Admin", "bg-secondary"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "ประวัติกิจกรรมระบบ (Activity Logs)", "ตรวจสอบประวัติการเข้าใช้งานและการแก้ไข", "/admin/activity-logs", "fas fa-history text-secondary", "Admin", "bg-secondary"));
         }
         if (containsAny(kw, "ไฟล์", "จัดการไฟล์", "file", "storage")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "จัดการไฟล์ระบบ (File Manager)", "พื้นที่จัดเก็บไฟล์กลาง 10 GB", "/admin/file-manager", "fas fa-folder-open text-warning", "Admin", "bg-warning text-dark"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "จัดการไฟล์ระบบ (File Manager)", "พื้นที่จัดเก็บไฟล์กลาง 10 GB", "/admin/file-manager", "fas fa-folder-open text-warning", "Admin", "bg-warning text-dark"));
         }
         if (containsAny(kw, "คู่มือ", "guide", "ช่วยเหลือ")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "คู่มือการใช้งานสำหรับแอดมิน", "ขั้นตอนการจัดการคำร้องและฟังก์ชันแอดมิน", "/admin/academic/guide", "fas fa-book text-info", "Admin", "bg-info"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "คู่มือการใช้งานสำหรับผู้ดูแลระบบ", "ขั้นตอนการจัดการคำร้องและฟังก์ชันแอดมิน", "/admin/academic/guide", "fas fa-book text-info", "Admin", "bg-info"));
         }
         if (containsAny(kw, "แจ้งเตือน", "notification")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "ศูนย์การแจ้งเตือนแอดมิน", "จัดการข้อความแจ้งเตือนทั้งหมด", "/admin/notifications", "fas fa-bell text-warning", "Admin", "bg-warning text-dark"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "ศูนย์การแจ้งเตือนผู้ดูแลระบบ", "จัดการข้อความแจ้งเตือนทั้งหมด", "/admin/notifications", "fas fa-bell text-warning", "Admin", "bg-warning text-dark"));
         }
         if (containsAny(kw, "ตั้งค่า", "setting")) {
-            results.add(new SearchResultItem("เมนูแอดมิน", "การตั้งค่าระบบ", "ตั้งค่าระบบงานวิชาการและอีเมล", "/admin/academic/settings", "fas fa-cog text-secondary", "Admin", "bg-secondary"));
+            results.add(new SearchResultItem("เมนูผู้ดูแลระบบ", "การตั้งค่าระบบ", "ตั้งค่าระบบงานวิชาการและอีเมล", "/admin/academic/settings", "fas fa-cog text-secondary", "Admin", "bg-secondary"));
         }
     }
 

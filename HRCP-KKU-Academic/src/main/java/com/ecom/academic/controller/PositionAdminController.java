@@ -248,7 +248,7 @@ public class PositionAdminController {
 
             if (request.getCurrentStatus().isDraft()) {
                 redirectAttributes.addFlashAttribute("errorDetail",
-                        "ไม่สามารถอัพเดทสถานะได้ คำร้องยังเป็นแบบร่าง");
+                        "ไม่สามารถอัปเดตสถานะได้ คำร้องยังเป็นแบบร่าง");
                 return "redirect:/admin/position/request/" + id + "?error=status_update_failed";
             }
 
@@ -266,7 +266,7 @@ public class PositionAdminController {
             try {
                 adminLogService.log(principal.getName(), admin.getName(),
                         "UPDATE_POSITION_STATUS",
-                        "อัพเดทสถานะคำร้องตำแหน่ง #" + id + " เป็น " + newStatus.name()
+                        "อัปเดตสถานะคำร้องตำแหน่ง #" + id + " เป็น " + newStatus.name()
                                 + (note != null ? " (" + note + ")" : ""),
                         getClientIpAddress());
             } catch (Exception logEx) { /* ignore */ }

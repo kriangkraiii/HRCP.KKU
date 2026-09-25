@@ -153,7 +153,7 @@ public class HomeController {
 		try {
 			userService.generateAndSendOtp(email);
 			session.setAttribute("otpEmail", email);
-			session.setAttribute("succMsg", "ส่งรหัส OTP ไปที่อีเมลของคุณแล้ว");
+			session.setAttribute("succMsg", "ส่งรหัส OTP ไปที่อีเมลของท่านแล้ว");
 			return "redirect:/first-login/verify-otp";
 		} catch (MailException | MessagingException | UnsupportedEncodingException e) {
 			logger.error("ส่ง OTP ไปยัง {} ไม่สำเร็จ", email, e);
@@ -265,7 +265,7 @@ public class HomeController {
 			String url = CommonUtil.generateUrl(request) + "/reset-password?token=" + resetToken;
 			try {
 				commonUtil.sendMail(url, email);
-				session.setAttribute("succMsg", "กรุณาตรวจสอบอีเมลของคุณ ลิงก์รีเซ็ตรหัสผ่านถูกส่งแล้ว");
+				session.setAttribute("succMsg", "กรุณาตรวจสอบอีเมลของท่าน ลิงก์รีเซ็ตรหัสผ่านถูกส่งแล้ว");
 			} catch (MailException | MessagingException | UnsupportedEncodingException e) {
 				logger.error("ส่งลิงก์รีเซ็ตรหัสผ่านไปยัง {} ไม่สำเร็จ", email, e);
 				session.setAttribute("errorMsg", MAIL_ERROR_MSG);

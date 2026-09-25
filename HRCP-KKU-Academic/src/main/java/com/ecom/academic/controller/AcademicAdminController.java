@@ -551,7 +551,7 @@ public class AcademicAdminController {
                 adminLogService.log(principal.getName(),
                         admin.getName(),
                         "UPDATE_REQUEST_STATUS",
-                        "อัพเดทสถานะคำร้อง #" + id + " เป็น " + newStatus.name()
+                        "อัปเดตสถานะคำร้อง #" + id + " เป็น " + newStatus.name()
                                 + (note != null ? " (" + note + ")" : ""),
                         getClientIpAddress());
             } catch (Exception logEx) {

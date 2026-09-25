@@ -459,7 +459,7 @@ public class UserServiceImpl implements UserService {
 			throw e; // Re-throw to trigger transaction rollback
 		} catch (Exception e) {
 			logger.error("Unexpected error updating user details for user ID: " + user.getId(), e);
-			throw new RuntimeException("เกิดข้อผิดพลาดในการอัพเดทข้อมูล", e);
+			throw new RuntimeException("เกิดข้อผิดพลาดในการอัปเดตข้อมูล", e);
 		}
 	}
 

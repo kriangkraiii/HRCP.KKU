@@ -89,14 +89,14 @@ public class UserController {
 		// The target account comes from the session — an id in the form is ignored.
 		UserDtls updated = userService.updateUserProfile(user, img, p.getName());
 		if (ObjectUtils.isEmpty(updated)) {
-			session.setAttribute("errorMsg", "อัพเดทโปรไฟล์ไม่สำเร็จ");
+			session.setAttribute("errorMsg", "อัปเดตโปรไฟล์ไม่สำเร็จ");
 		} else {
-			session.setAttribute("succMsg", "อัพเดทโปรไฟล์สำเร็จ");
+			session.setAttribute("succMsg", "อัปเดตโปรไฟล์สำเร็จ");
 			// Log activity
 			try {
 				adminLogService.log(updated.getEmail(), updated.getName(),
 						"USER_UPDATE_PROFILE",
-						"อัพเดทโปรไฟล์ผู้ใช้ (" + updated.getEmail() + ")",
+						"อัปเดตโปรไฟล์ผู้ใช้ (" + updated.getEmail() + ")",
 						getClientIpAddress());
 			} catch (Exception e) {
 				logger.warn("Failed to write audit log for profile update of {}: {}",

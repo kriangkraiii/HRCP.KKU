@@ -128,7 +128,7 @@ public class AcademicApplicantController {
     private static final List<Integer> APPLICANT_VISIBLE_DOC_TYPES = Arrays.asList(1, 2, 9);
 
     private static final String EDIT_LOCKED_MESSAGE =
-            "ไม่สามารถแก้ไขเอกสารได้ เนื่องจากส่งคำร้องไปแล้ว — จะแก้ไขได้ต่อเมื่อแอดมินส่งเอกสารกลับมาให้แก้ไขเท่านั้น";
+            "ไม่สามารถแก้ไขเอกสารได้ เนื่องจากส่งคำร้องไปแล้ว — จะแก้ไขได้ต่อเมื่อเจ้าหน้าที่ส่งเอกสารกลับมาให้แก้ไขเท่านั้น";
 
     /**
      * บอกหน้าเอกสารว่าตอนนี้แก้ไขได้หรือไม่ และแอดมินส่งกลับมาด้วยเหตุผลอะไร

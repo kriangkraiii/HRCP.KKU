@@ -78,7 +78,7 @@ public class RateLimitFilter implements Filter {
         } else {
             RateBucket bucket = generalBuckets.get(generalKey(clientIp), k -> new RateBucket());
             if (!bucket.tryConsume(generalLimit)) {
-                sendRateLimitResponse(httpRes, "คุณส่งคำขอมากเกินไป กรุณารอสักครู่");
+                sendRateLimitResponse(httpRes, "ท่านส่งคำขอมากเกินไป กรุณารอสักครู่");
                 return;
             }
         }

@@ -371,12 +371,12 @@ public class SigningController {
         var certOpt = digitalCertificateService.findActive(me);
         if (certOpt.isEmpty()) {
             redirectAttributes.addFlashAttribute("errorMsg",
-                    "คุณยังไม่ได้ติดตั้งใบรับรอง Digital ID (.p12) ของมหาวิทยาลัยขอนแก่น กรุณาติดตั้งที่หน้า \"ลายเซ็นของฉัน\" ก่อนจึงจะได้รับอนุญาตให้ลงนาม");
+                    "ท่านยังไม่ได้ติดตั้งใบรับรอง Digital ID (.p12) ของมหาวิทยาลัยขอนแก่น กรุณาติดตั้งที่หน้า \"ลายเซ็นของฉัน\" ก่อนจึงจะได้รับอนุญาตให้ลงนาม");
             return "redirect:/esign/sign/" + stepId;
         }
         if (certOpt.get().isExpired()) {
             redirectAttributes.addFlashAttribute("errorMsg",
-                    "ใบรับรอง Digital ID (.p12) ของคุณหมดอายุแล้ว ไม่สามารถใช้ลงนามเอกสารได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th และติดตั้งที่หน้า \"ลายเซ็นของฉัน\"");
+                    "ใบรับรอง Digital ID (.p12) ของท่านหมดอายุแล้ว ไม่สามารถใช้ลงนามเอกสารได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th และติดตั้งที่หน้า \"ลายเซ็นของฉัน\"");
             return "redirect:/esign/sign/" + stepId;
         }
 
@@ -393,7 +393,7 @@ public class SigningController {
         java.util.Optional<SignatureStep> nextStep = workflow.findNextPendingStep(me, stepId);
         if (nextStep.isPresent()) {
             redirectAttributes.addFlashAttribute("succMsg",
-                    "ลงนามเอกสารฉบับนี้เรียบร้อยแล้ว — นำคุณไปยังเอกสารถัดไปในคิวทันที");
+                    "ลงนามเอกสารฉบับนี้เรียบร้อยแล้ว — ระบบนำท่านไปยังเอกสารถัดไปในคิวทันที");
             return "redirect:/esign/sign/" + nextStep.get().getId();
         }
 
@@ -450,7 +450,7 @@ public class SigningController {
             return "redirect:/esign/inbox";
         }
         if (!mayManage(envelope, me)) {
-            redirectAttributes.addFlashAttribute("errorMsg", "คุณไม่มีสิทธิ์แก้กำหนดเวลาลงนามนี้");
+            redirectAttributes.addFlashAttribute("errorMsg", "ท่านไม่มีสิทธิ์แก้กำหนดเวลาลงนามนี้");
             return "redirect:/esign/inbox";
         }
 
@@ -526,7 +526,7 @@ public class SigningController {
         boolean isOwner = documentLabelResolver.isApplicantOf(module, requestId, me.getId());
         if (!isAdmin && !isOwner) {
             redirectAttributes.addFlashAttribute("errorMsg",
-                    "คุณไม่มีสิทธิ์ส่งเอกสารฉบับนี้ไปลงนาม");
+                    "ท่านไม่มีสิทธิ์ส่งเอกสารฉบับนี้ไปลงนาม");
             return "redirect:" + module.userLink(requestId);
         }
 
@@ -609,7 +609,7 @@ public class SigningController {
         // Forwarding commits other people to act, so it is staff-only — unlike
         // cancelling, which the applicant may also do to their own request.
         if (!isAdminOrStaff(me)) {
-            redirectAttributes.addFlashAttribute("errorMsg", "คุณไม่มีสิทธิ์ส่งเวียนลงนามต่อ");
+            redirectAttributes.addFlashAttribute("errorMsg", "ท่านไม่มีสิทธิ์ส่งเวียนลงนามต่อ");
             return "redirect:/esign/inbox";
         }
 
@@ -743,7 +743,7 @@ public class SigningController {
                             envelope.getDocumentType(), me));
         }
         if (!mayManage(envelope, me)) {
-            redirectAttributes.addFlashAttribute("errorMsg", "คุณไม่มีสิทธิ์ยกเลิกการเวียนลงนามนี้");
+            redirectAttributes.addFlashAttribute("errorMsg", "ท่านไม่มีสิทธิ์ยกเลิกการเวียนลงนามนี้");
             return "redirect:/esign/inbox";
         }
 

@@ -59,7 +59,7 @@ public class SignatureNotifier {
     @Async
     public void notifySignatureRequested(SignatureNotice notice) {
         String title = "ขอให้ลงนาม: " + notice.safeDocumentLabel();
-        String message = "คุณได้รับมอบหมายให้ลงนามในตำแหน่ง \"" + notice.roleLabel() + "\" "
+        String message = "ท่านได้รับมอบหมายให้ลงนามในตำแหน่ง \"" + notice.roleLabel() + "\" "
                 + "สำหรับ" + notice.module().getThaiLabel()
                 + (notice.dueAt() != null ? " ภายในวันที่ " + notice.dueAt().format(DUE_FORMAT) : "");
 
@@ -74,7 +74,7 @@ public class SignatureNotifier {
     @Async
     public void notifyReminder(SignatureNotice notice) {
         String title = "เตือน: ยังไม่ได้ลงนาม " + notice.safeDocumentLabel();
-        String message = "เอกสารยังรอลายเซ็นของคุณในตำแหน่ง \"" + notice.roleLabel() + "\"";
+        String message = "เอกสารยังรอลายเซ็นของท่านในตำแหน่ง \"" + notice.roleLabel() + "\"";
 
         for (UserDtls recipient : notice.recipients()) {
             notify(recipient, title, message, "/esign/sign/" + notice.stepId(),
@@ -95,13 +95,13 @@ public class SignatureNotifier {
     @Async
     public void notifyDeadlineReached(SignatureNotice notice) {
         String title = "ถึงกำหนดที่ตั้งเตือนไว้: " + notice.safeDocumentLabel();
-        String message = "เลยกำหนดที่คุณตั้งเตือนไว้สำหรับ \"" + notice.safeDocumentLabel() + "\" แล้ว "
-                + "คุณยังลงนามได้ตามปกติ และยื่นคำร้องได้เมื่อลงนามครบ";
+        String message = "เลยกำหนดที่ท่านตั้งเตือนไว้สำหรับ \"" + notice.safeDocumentLabel() + "\" แล้ว "
+                + "ท่านยังลงนามได้ตามปกติ และยื่นคำร้องได้เมื่อลงนามครบ";
         String body = EmailTemplateHelper.wrapLayout("ถึงกำหนดที่ตั้งเตือนไว้", "แจ้งเตือน",
                 "<p>เอกสาร <strong>" + escape(notice.safeDocumentLabel()) + "</strong> "
-                        + "ยังรอลายเซ็นของคุณอยู่ และเลยวันที่คุณตั้งเตือนไว้แล้ว</p>"
+                        + "ยังรอลายเซ็นของท่านอยู่ และเลยวันที่ท่านตั้งเตือนไว้แล้ว</p>"
                         + "<p>กำหนดนี้เป็น<strong>เพียงการแจ้งเตือน</strong> "
-                        + "เอกสารยังไม่ถูกปิด คุณลงนามเมื่อใดก็ได้ "
+                        + "เอกสารยังไม่ถูกปิด ท่านลงนามเมื่อใดก็ได้ "
                         + "และยื่นคำร้องได้ทันทีที่ลงนามครบทุกฉบับ</p>");
 
         for (UserDtls recipient : notice.recipients()) {
@@ -208,7 +208,7 @@ public class SignatureNotifier {
         if (applicant == null) return;
         String safeDoc = documentLabel != null && !documentLabel.isBlank() ? documentLabel : ("เอกสารที่ " + documentType);
         String title = "ขอให้แก้ไขและลงนามใหม่: " + safeDoc;
-        String message = "แอดมินแจ้งให้ท่านแก้ไขข้อมูลและลงนามใหม่ในเอกสาร " + safeDoc
+        String message = "เจ้าหน้าที่แจ้งให้ท่านแก้ไขข้อมูลและลงนามใหม่ในเอกสาร " + safeDoc
                 + (reason != null && !reason.isBlank() ? " (เหตุผล: " + reason + ")" : "");
         String userLink = module == SignatureModule.POSITION
                 ? "/user/position/request/" + requestId + "/document/" + documentType
@@ -217,7 +217,7 @@ public class SignatureNotifier {
         notify(applicant, title, message, userLink, NotificationType.SIGNATURE_DECLINED, true);
 
         String body = EmailTemplateHelper.wrapLayout("แจ้งให้แก้ไขข้อมูลและลงนามใหม่", "ต้องดำเนินการ",
-                "<p>แอดมินได้ตรวจสอบเอกสาร <strong>" + escape(safeDoc) + "</strong> และขอให้ท่านแก้ไขข้อมูลพร้อมลงนามใหม่อีกครั้ง</p>"
+                "<p>เจ้าหน้าที่ได้ตรวจสอบเอกสาร <strong>" + escape(safeDoc) + "</strong> และขอให้ท่านแก้ไขข้อมูลพร้อมลงนามใหม่อีกครั้ง</p>"
                         + (reason != null && !reason.isBlank() ? "<p><strong>เหตุผลที่ส่งกลับ:</strong> " + escape(reason) + "</p>" : "")
                         + "<p>ระบบได้ปลดล็อกเอกสารให้ท่านสามารถเข้าสู่ระบบเพื่อแก้ไขและลงนามใหม่ได้ทันที</p>");
         email(applicant, title, body);

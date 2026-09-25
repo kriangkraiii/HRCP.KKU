@@ -157,7 +157,7 @@ public class AdminController {
 			@RequestParam Integer type, HttpSession session) {
 		Boolean f = userService.updateEmailNotification(id, enabled);
 		if (f) {
-			session.setAttribute("succMsg", "อัพเดทการแจ้งเตือนสำเร็จ");
+			session.setAttribute("succMsg", "อัปเดตการแจ้งเตือนสำเร็จ");
 		} else {
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาด");
 		}
@@ -169,7 +169,7 @@ public class AdminController {
 			@RequestParam Integer type, HttpSession session) {
 		Boolean f = userService.updateAccountStatus(id, status);
 		if (f) {
-			session.setAttribute("succMsg", "อัพเดทสถานะบัญชีสำเร็จ");
+			session.setAttribute("succMsg", "อัปเดตสถานะบัญชีสำเร็จ");
 			Principal p = request.getUserPrincipal();
 			if (p != null) {
 				UserDtls admin = userService.getUserByEmail(p.getName());
@@ -258,7 +258,7 @@ public class AdminController {
 		} catch (Exception e) {
 			logger.error("Error updating profile image for user ID {}: {}", id, e.getMessage(), e);
 			response.put("success", "false");
-			response.put("error", "เกิดข้อผิดพลาดในการอัพโหลดรูปภาพ");
+			response.put("error", "เกิดข้อผิดพลาดในการอัปโหลดรูปภาพ");
 			return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(response);
 		}
 	}
@@ -400,9 +400,9 @@ public class AdminController {
 						currentUserEmail,
 						admin != null ? admin.getName() : currentUserEmail,
 						"DELETE_ADMIN_ACCOUNT",
-						"ลบบัญชีแอดมิน ID:" + id + " (" + deletedEmail + ")",
+						"ลบบัญชีผู้ดูแลระบบ ID:" + id + " (" + deletedEmail + ")",
 						getClientIpAddress(request));
-				session.setAttribute("succMsg", "ลบบัญชีแอดมินสำเร็จ");
+				session.setAttribute("succMsg", "ลบบัญชีผู้ดูแลระบบสำเร็จ");
 			} else {
 				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการลบบัญชี");
 			}
@@ -476,16 +476,16 @@ public class AdminController {
 							logEmail,
 							logName,
 							"EDIT_ADMIN_ACCOUNT",
-							"แก้ไขบัญชีแอดมิน ID:" + user.getId() + " (" + user.getEmail() + ")",
+							"แก้ไขบัญชีผู้ดูแลระบบ ID:" + user.getId() + " (" + user.getEmail() + ")",
 							getClientIpAddress(request));
 				}
-				session.setAttribute("succMsg", "อัพเดทข้อมูลแอดมินสำเร็จ");
+				session.setAttribute("succMsg", "อัปเดตข้อมูลผู้ดูแลระบบสำเร็จ");
 			} else {
-				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
+				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัปเดตข้อมูล");
 			}
 		} catch (Exception e) {
 			logger.error("Error updating admin ID {}: {}", user.getId(), e.getMessage(), e);
-			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
+			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัปเดตข้อมูล");
 		}
 
 		int targetType = (user.getRole() != null && "ROLE_USER".equals(user.getRole())) ? 1 : 2;
@@ -554,13 +554,13 @@ public class AdminController {
 							"แก้ไขบัญชีผู้ใช้ ID:" + user.getId() + " (" + user.getEmail() + ")",
 							getClientIpAddress(request));
 				}
-				session.setAttribute("succMsg", "อัพเดทข้อมูลผู้ใช้สำเร็จ");
+				session.setAttribute("succMsg", "อัปเดตข้อมูลผู้ใช้สำเร็จ");
 			} else {
-				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
+				session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัปเดตข้อมูล");
 			}
 		} catch (Exception e) {
 			logger.error("Error updating user ID {}: {}", user.getId(), e.getMessage(), e);
-			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัพเดทข้อมูล");
+			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัปเดตข้อมูล");
 		}
 
 		int targetType = (user.getRole() != null && "ROLE_ADMIN".equals(user.getRole())) ? 2 : 1;
@@ -625,9 +625,9 @@ public class AdminController {
 		// The target account comes from the session — an id in the form is ignored.
 		UserDtls updated = userService.updateUserProfile(user, img, p.getName());
 		if (ObjectUtils.isEmpty(updated)) {
-			session.setAttribute("errorMsg", "อัพเดทโปรไฟล์ไม่สำเร็จ");
+			session.setAttribute("errorMsg", "อัปเดตโปรไฟล์ไม่สำเร็จ");
 		} else {
-			session.setAttribute("succMsg", "อัพเดทโปรไฟล์สำเร็จ");
+			session.setAttribute("succMsg", "อัปเดตโปรไฟล์สำเร็จ");
 		}
 		return "redirect:/admin/profile";
 	}

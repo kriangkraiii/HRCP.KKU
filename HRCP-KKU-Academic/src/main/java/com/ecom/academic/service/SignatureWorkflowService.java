@@ -63,7 +63,7 @@ public class SignatureWorkflowService {
     private final UserSignatureService userSignatureService;
 
     /** Shown when the active certificate's .p12 cannot be found anywhere. */
-    static final String CERTIFICATE_FILE_MISSING = "ไม่พบไฟล์ใบรับรอง (.p12) ของคุณในระบบ "
+    static final String CERTIFICATE_FILE_MISSING = "ไม่พบไฟล์ใบรับรอง (.p12) ของท่านในระบบ "
             + "— กรุณาอัปโหลดไฟล์ .p12 ใหม่ที่หน้า \"ลายเซ็นของฉัน\" แล้วลงนามอีกครั้ง";
     private final UserRepository userRepository;
     private final SignatureNotifier notifier;
@@ -410,7 +410,7 @@ public class SignatureWorkflowService {
         // so this would post them a request addressed to themselves. The page
         // hides the button; this refuses the route.
         if (deadlineIsAdvisory(step)) {
-            return Result.failed("กำหนดเวลานี้เป็นเพียงการแจ้งเตือน คุณยังลงนามได้ตามปกติ");
+            return Result.failed("กำหนดเวลานี้เป็นเพียงการแจ้งเตือน ท่านยังลงนามได้ตามปกติ");
         }
 
         audit(envelope, step.getId(), SignatureAuditEventType.EXTENSION_REQUESTED, signer, context,
@@ -774,11 +774,11 @@ public class SignatureWorkflowService {
 
         // 1. This must be the person who was asked.
         if (step.getSigner() == null || !step.getSigner().getId().equals(actingUser.getId())) {
-            return Result.failed("คุณไม่ใช่ผู้ที่ได้รับมอบหมายให้ลงนามในขั้นตอนนี้");
+            return Result.failed("ท่านไม่ใช่ผู้ที่ได้รับมอบหมายให้ลงนามในขั้นตอนนี้");
         }
         // 2. It must be their turn — this is the sequencing rule.
         if (step.getStatus() != SignatureStepStatus.ACTIVE) {
-            return Result.failed("ยังไม่ถึงคิวลงนามของคุณ หรือขั้นตอนนี้ถูกดำเนินการไปแล้ว");
+            return Result.failed("ยังไม่ถึงคิวลงนามของท่าน หรือขั้นตอนนี้ถูกดำเนินการไปแล้ว");
         }
         // 3. The envelope must still be open.
         if (!envelope.getStatus().isOpen()) {
@@ -814,7 +814,7 @@ public class SignatureWorkflowService {
         if (optCert.isPresent()) {
             var cert = optCert.get();
             if (cert.isExpired()) {
-                return Result.failed("ใบรับรอง Digital ID (.p12) ของคุณหมดอายุแล้ว ไม่สามารถใช้ลงนามได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th");
+                return Result.failed("ใบรับรอง Digital ID (.p12) ของท่านหมดอายุแล้ว ไม่สามารถใช้ลงนามได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th");
             }
             String pin = digitalCertificateService.resolvePin(cert, digitalCertPin);
             if (pin != null && !pin.isBlank()) {
@@ -1110,7 +1110,7 @@ public class SignatureWorkflowService {
         SignatureRequest envelope = step.getSignatureRequest();
 
         if (step.getSigner() == null || !step.getSigner().getId().equals(actingUser.getId())) {
-            return Result.failed("คุณไม่ใช่ผู้ที่ได้รับมอบหมายให้ลงนามในขั้นตอนนี้");
+            return Result.failed("ท่านไม่ใช่ผู้ที่ได้รับมอบหมายให้ลงนามในขั้นตอนนี้");
         }
         if (step.getStatus() != SignatureStepStatus.ACTIVE) {
             return Result.failed("ขั้นตอนนี้ถูกดำเนินการไปแล้ว");
@@ -1316,8 +1316,8 @@ public class SignatureWorkflowService {
             envelope.setStatus(SignatureRequestStatus.CANCELLED);
             envelope.setCancelledAt(LocalDateTime.now());
             envelope.setCancelReason(truncate(reason != null && !reason.isBlank()
-                    ? "แอดมินส่งกลับให้แก้ไขและลงนามใหม่: " + reason
-                    : "แอดมินส่งกลับให้แก้ไขและลงนามใหม่", 500));
+                    ? "เจ้าหน้าที่ส่งกลับให้แก้ไขและลงนามใหม่: " + reason
+                    : "เจ้าหน้าที่ส่งกลับให้แก้ไขและลงนามใหม่", 500));
             envelope.getSteps().forEach(s -> {
                 if (s.getStatus() == SignatureStepStatus.WAITING || s.getStatus() == SignatureStepStatus.ACTIVE) {
                     s.setStatus(SignatureStepStatus.SKIPPED);
@@ -1325,7 +1325,7 @@ public class SignatureWorkflowService {
             });
             requestRepository.save(envelope);
             audit(envelope, null, SignatureAuditEventType.DECLINED, adminUser, actor,
-                    "แอดมินส่งกลับให้แก้ไขและลงนามใหม่: " + (reason != null && !reason.isBlank() ? reason : "-"));
+                    "เจ้าหน้าที่ส่งกลับให้แก้ไขและลงนามใหม่: " + (reason != null && !reason.isBlank() ? reason : "-"));
         }
 
         UserDtls applicant = snapshotProvider.applicantOf(module, requestId);

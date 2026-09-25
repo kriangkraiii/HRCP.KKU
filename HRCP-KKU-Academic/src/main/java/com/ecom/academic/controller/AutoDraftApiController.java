@@ -77,7 +77,7 @@ public class AutoDraftApiController {
             // หลังส่งคำร้องแล้วผู้ยื่นแก้ได้เฉพาะเอกสารที่แอดมินส่งกลับมาให้แก้เท่านั้น
             if (!isAdmin && !academicService.canApplicantEditDocument(request, docType)) {
                 return ResponseEntity.status(409)
-                        .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อแอดมินส่งกลับมาให้แก้ไขเท่านั้น"));
+                        .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อเจ้าหน้าที่ส่งกลับมาให้แก้ไขเท่านั้น"));
             }
             // แอดมินเคยข้ามการเช็กล็อกทั้งหมดในทางนี้ ทั้งที่หน้าเว็บปกติห้ามไว้ — เอกสารที่
             // เวียนลงนามไปแล้วจึงถูกแก้เงียบ ๆ ผ่าน auto-draft ได้
@@ -163,7 +163,7 @@ public class AutoDraftApiController {
             // เจ้าหน้าที่ (7, 8) ได้ ทั้งที่หน้าเว็บปกติกันไว้แล้ว
             if (!isAdmin && !positionService.canApplicantEditDocument(request, docType)) {
                 return ResponseEntity.status(409)
-                        .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อแอดมินส่งกลับมาให้แก้ไขเท่านั้น"));
+                        .body(Map.of("error", "เอกสารถูกล็อก แก้ไขได้เมื่อเจ้าหน้าที่ส่งกลับมาให้แก้ไขเท่านั้น"));
             }
             boolean signingComplete = positionService.isSigningComplete(requestId, docType);
             if (isAdmin && positionService.isDocumentLockedForSigning(requestId, docType)

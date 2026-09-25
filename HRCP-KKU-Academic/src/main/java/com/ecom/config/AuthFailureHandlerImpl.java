@@ -95,7 +95,7 @@ public class AuthFailureHandlerImpl extends SimpleUrlAuthenticationFailureHandle
         // 1) Banned account
         if (user != null && Boolean.FALSE.equals(user.getIsEnable())) {
             log.info("Login attempt on banned account: email={}", email);
-            return "บัญชีของคุณถูกระงับถาวร (แบน) "
+            return "บัญชีของท่านถูกระงับถาวร "
                     + "เนื่องจากกรอกรหัสผ่านผิดซ้ำจนเกินกำหนด "
                     + "กรุณาติดต่อผู้ดูแลระบบเพื่อเปิดใช้งานบัญชีอีกครั้ง";
         }
@@ -106,7 +106,7 @@ public class AuthFailureHandlerImpl extends SimpleUrlAuthenticationFailureHandle
             long blockedUntil = bruteForceProtection.getBlockedUntilMillis("ip:" + clientIp);
             request.getSession().setAttribute("blockedUntilMillis", blockedUntil);
             log.info("IP blocked: ip={}, duration={}min", clientIp, totalDuration);
-            return "IP ของคุณถูกระงับชั่วคราว " + totalDuration + " นาที "
+            return "IP ของท่านถูกระงับชั่วคราว " + totalDuration + " นาที "
                     + "เนื่องจากพยายามเข้าสู่ระบบผิดพลาดหลายครั้ง";
         }
 
@@ -142,7 +142,7 @@ public class AuthFailureHandlerImpl extends SimpleUrlAuthenticationFailureHandle
                         + "เนื่องจากกรอกรหัสผ่านผิดเกิน " + MAX_ATTEMPTS + " ครั้ง";
             }
         }
-        return "บัญชีของคุณถูกระงับชั่วคราว กรุณารอสักครู่แล้วลองใหม่";
+        return "บัญชีของท่านถูกระงับชั่วคราว กรุณารอสักครู่แล้วลองใหม่";
     }
 
     private String resolveAttemptMessage(String clientIp, String email) {
