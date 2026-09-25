@@ -581,6 +581,30 @@ class SignatureWorkflowServiceTest {
     }
 
     @Test
+    @DisplayName("คนที่ไม่ใช่ผู้ลงนามขั้นนั้นขอขยายเวลาแทนไม่ได้")
+    void onlyTheStepsSignerMayRequestAnExtension() {
+        SignatureRequest envelope = createEnvelope().request();
+        SignatureStep step = stepOf(envelope, "head");
+
+        Result result = workflow.requestExtension(step.getId(), "แทนหัวหน้า", dean, ActorContext.none());
+
+        assertThat(result.ok()).isFalse();
+    }
+
+    @Test
+    @DisplayName("ซองที่ระบบปิดเพราะเลยกำหนด ผู้ลงนามที่ถึงคิวยังขอขยายเวลาได้")
+    void theLapsedSignerMayStillRequestAnExtensionAfterExpiry() {
+        SignatureRequest envelope = createEnvelope().request();
+        assertThat(workflow.expire(envelope.getId()).ok()).isTrue();
+
+        Result fromHead = workflow.requestExtension(stepOf(envelope, "head").getId(),
+                "เพิ่งกลับจากราชการ", head, ActorContext.none());
+        assertThat(fromHead.ok()).as("ขั้นที่ถูกเวลาตัดไปต้องยังมีทางขอกลับมา").isTrue();
+        assertThat(workflow.auditTrail(envelope.getId()))
+                .anyMatch(e -> e.getEventType() == SignatureAuditEventType.EXTENSION_REQUESTED);
+    }
+
+    @Test
     @DisplayName("สามารถขยายกำหนดเวลาลงนามได้")
     void extendDueDateUpdatesDueAtAndAudits() {
         SignatureRequest envelope = createEnvelope().request();

@@ -403,7 +403,16 @@ public class SignatureWorkflowService {
             return Result.failed("ไม่พบรายการลงนาม");
         }
         SignatureRequest envelope = step.getSignatureRequest();
-        if (envelope == null || !envelope.getStatus().isOpen()) {
+        if (step.getSigner() == null || signer == null || !step.getSigner().getId().equals(signer.getId())) {
+            return Result.failed("ท่านไม่ใช่ผู้ที่ได้รับมอบหมายให้ลงนามในขั้นตอนนี้");
+        }
+        // A round the clock closed is still one the signer can ask to reopen —
+        // extendDueDate revives it — but only for a turn the expiry took away.
+        boolean cutShortByExpiry = envelope != null
+                && envelope.getStatus() == SignatureRequestStatus.EXPIRED
+                && step.getStatus() == SignatureStepStatus.SKIPPED
+                && step.getSignedAt() == null;
+        if (envelope == null || (!envelope.getStatus().isOpen() && !cutShortByExpiry)) {
             return Result.failed("คำขอลงนามนี้ปิดไปแล้ว");
         }
         // The initiator of an unsubmitted request is the applicant themselves,
@@ -416,10 +425,11 @@ public class SignatureWorkflowService {
         audit(envelope, step.getId(), SignatureAuditEventType.EXTENSION_REQUESTED, signer, context,
                 "ผู้ลงนามขอขยายเวลา: " + (reason != null && !reason.isBlank() ? reason : "ไม่ระบุเหตุผล"));
 
-        if (envelope.getInitiatedBy() != null) {
-            notifier.notifyExtensionRequested(
-                    noticeFor(envelope, step, List.of(envelope.getInitiatedBy())), reason);
-        }
+        List<UserDtls> initiator = envelope.getInitiatedBy() != null
+                ? List.of(envelope.getInitiatedBy())
+                : List.of();
+        notifier.notifyExtensionRequested(noticeFor(envelope, step, initiator),
+                envelope.getDocumentType() != null ? envelope.getDocumentType() : 0, reason);
 
         return new Result(envelope, null);
     }
@@ -1184,6 +1194,9 @@ public class SignatureWorkflowService {
             return Result.failed("คำขอลงนามนี้ปิดไปแล้ว");
         }
 
+        // Captured before the steps are closed: this is whose turn the clock ended.
+        SignatureStep lapsedStep = envelope.activeStep().orElse(null);
+
         envelope.setStatus(SignatureRequestStatus.EXPIRED);
         envelope.getSteps().stream()
                 .filter(s -> s.getStatus() == SignatureStepStatus.WAITING
@@ -1193,9 +1206,13 @@ public class SignatureWorkflowService {
         audit(envelope, null, SignatureAuditEventType.EXPIRED, null, ActorContext.none(),
                 "เลยกำหนดลงนาม ระบบปิดคำขอโดยอัตโนมัติ");
 
+        UserDtls lapsedSigner = lapsedStep != null ? lapsedStep.getSigner() : null;
+        if (lapsedSigner != null) {
+            notifier.notifyExpired(noticeFor(envelope, lapsedStep, List.of(lapsedSigner)));
+        }
         notifier.notifyCancelled(noticeFor(envelope, null,
                 envelope.getSteps().stream()
-                        .filter(s -> s.getSigner() != null && s.getSignedAt() == null)
+                        .filter(s -> s != lapsedStep && s.getSigner() != null && s.getSignedAt() == null)
                         .map(SignatureStep::getSigner)
                         .toList()));
 

@@ -277,6 +277,31 @@ class SigningPageRenderTest {
     }
 
     @Test
+    @DisplayName("ซองที่ระบบปิดเพราะเลยกำหนด ผู้ลงนามยังเห็นปุ่มขอขยายเวลา")
+    void anExpiredRoundStillOffersTheSignerAnExtensionRequest() throws Exception {
+        UserDtls hr = newUser("render" + RUN.incrementAndGet() + "-hr@kku.ac.th", "ROLE_USER");
+        AcademicRequest request = requestService.createDraftRequest(applicant);
+        var created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 2,
+                "แบบตรวจสอบเอกสาร", "{\"applicant_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("hr", hr.getId())),
+                java.time.LocalDateTime.now().minusDays(1), admin, ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(created.ok()).isTrue();
+        workflow.startCirculation(created.request().getId(), admin, ActorContext.none());
+        org.assertj.core.api.Assertions.assertThat(workflow.expire(created.request().getId()).ok()).isTrue();
+        Long stepId = created.request().getSteps().get(0).getId();
+
+        String html = mockMvc.perform(get("/esign/sign/" + stepId)
+                        .with(user(hr.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(html)
+                .contains("เอกสารนี้ถูกปิดอัตโนมัติเพราะเลยกำหนดลงนาม")
+                .contains("requestExtensionModal")
+                .contains("/esign/step/" + stepId + "/request-extension")
+                .doesNotContain("extendDueModal");
+    }
+
+    @Test
     @DisplayName("ผู้ยื่นต้องเห็นช่องตั้งเตือนเวลาลงนามของตัวเองในแผงส่งลงนาม")
     void theApplicantCanSetTheirOwnReminderDate() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);

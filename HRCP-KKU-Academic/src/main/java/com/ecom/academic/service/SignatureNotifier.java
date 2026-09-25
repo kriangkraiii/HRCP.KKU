@@ -190,21 +190,78 @@ public class SignatureNotifier {
     }
 
     /**
-     * Tells the initiator that a signer requested a due date extension.
+     * Tells the people who can move a deadline that a signer asked for more time.
+     *
+     * <p>The sender of the round and every administrator: the sender alone left
+     * the request stranded whenever that one person was away, while the page
+     * promised the signer that staff would hear of it too. Administrators are
+     * loaded here, on this thread, so nothing lazy crosses over.
      *
      * <p>Takes a {@link SignatureNotice} rather than the entities: this runs on
-     * another thread, where the initiator's lazy proxy can no longer load and
-     * the request was silently lost.
+     * another thread, where a lazy proxy can no longer load.
      */
     @Async
-    public void notifyExtensionRequested(SignatureNotice notice, String reason) {
-        String title = "ขอขยายเวลาลงนาม: " + notice.safeDocumentLabel();
-        String message = (notice.signerName() != null ? notice.signerName() : "ผู้ลงนาม") + " ขอขยายเวลาลงนาม"
-                + (reason != null && !reason.isBlank() ? " (เหตุผล: " + reason + ")" : "");
-        String link = notice.module() != null ? notice.module().adminLink(notice.requestId()) : "/admin/academic/requests";
+    public void notifyExtensionRequested(SignatureNotice notice, int documentType, String reason) {
+        String who = notice.signerName() != null && !notice.signerName().isBlank() ? notice.signerName() : "ผู้ลงนาม";
+        String safeDoc = notice.safeDocumentLabel();
+        boolean hasReason = reason != null && !reason.isBlank();
+        String title = "ขอขยายเวลาลงนาม: " + safeDoc;
+        String message = who + " ขอขยายเวลาลงนาม" + (hasReason ? " (เหตุผล: " + reason + ")" : "");
+        String link = notice.module() != null
+                ? notice.module().adminDocumentLink(notice.requestId(), documentType)
+                : "/esign/inbox";
+        String body = EmailTemplateHelper.wrapLayout("คำขอขยายเวลาลงนาม", "ต้องดำเนินการ",
+                "<p><strong>" + escape(who) + "</strong>"
+                        + (notice.roleLabel() != null ? " (" + escape(notice.roleLabel()) + ")" : "")
+                        + " ขอขยายเวลาลงนามในเอกสาร <strong>" + escape(safeDoc) + "</strong></p>"
+                        + (hasReason ? "<p><strong>เหตุผล:</strong> " + escape(reason) + "</p>" : "")
+                        + (notice.dueAt() != null
+                                ? "<p><strong>กำหนดเดิม:</strong> " + notice.dueAt().format(DUE_FORMAT) + "</p>"
+                                : "")
+                        + "<p>กรุณาเข้าสู่ระบบที่หน้าเอกสารของคำร้องเพื่อตั้งกำหนดเวลาใหม่</p>");
 
-        for (UserDtls recipient : notice.recipients()) {
+        java.util.Map<Integer, UserDtls> recipients = new java.util.LinkedHashMap<>();
+        for (UserDtls u : notice.recipients()) {
+            if (u != null && u.getId() != null) recipients.putIfAbsent(u.getId(), u);
+        }
+        try {
+            for (UserDtls admin : userRepository.findByRole("ROLE_ADMIN")) {
+                recipients.putIfAbsent(admin.getId(), admin);
+            }
+        } catch (Exception e) {
+            log.warn("Could not load admins for extension request on {} request {}: {}",
+                    notice.module(), notice.requestId(), e.toString());
+        }
+
+        for (UserDtls recipient : recipients.values()) {
             notify(recipient, title, message, link, NotificationType.SIGNATURE_REMINDER, true);
+            email(recipient, title, body);
+        }
+    }
+
+    /**
+     * Tells the signer whose turn it was that the clock closed the round.
+     *
+     * <p>Not {@link #notifyCancelled}: that says the sender withdrew the
+     * document, which is not what happened, and points at an inbox the document
+     * has already left. This links back to the step, where they can ask for
+     * more time.
+     */
+    @Async
+    public void notifyExpired(SignatureNotice notice) {
+        String safeDoc = notice.safeDocumentLabel();
+        String title = "เลยกำหนดลงนาม: " + safeDoc;
+        String message = "เอกสาร \"" + safeDoc + "\" ถูกปิดอัตโนมัติเพราะเลยกำหนดลงนาม "
+                + "ท่านขอขยายเวลาเพื่อกลับมาลงนามได้";
+        String body = EmailTemplateHelper.wrapLayout("เลยกำหนดลงนาม", "แจ้งเพื่อทราบ",
+                "<p>เอกสาร <strong>" + escape(safeDoc) + "</strong> ที่รอลายเซ็นของท่าน"
+                        + " ถูกระบบปิดอัตโนมัติเพราะเลยกำหนดลงนาม</p>"
+                        + "<p>หากท่านยังต้องการลงนาม กรุณาเข้าสู่ระบบและกด <strong>\"ขอขยายเวลาลงนาม\"</strong>"
+                        + " ที่หน้าลงนามของเอกสารนี้</p>");
+        for (UserDtls recipient : notice.recipients()) {
+            notify(recipient, title, message, "/esign/sign/" + notice.stepId(),
+                    NotificationType.SIGNATURE_REMINDER, true);
+            email(recipient, title, body);
         }
     }
 

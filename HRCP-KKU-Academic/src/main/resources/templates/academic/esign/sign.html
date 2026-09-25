@@ -59,10 +59,10 @@
         </div>
 
         <!-- Overdue Alert & Extension Option -->
-        <div th:if="${envelope.overdue and !deadlineAdvisory}" class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 shadow-sm">
+        <div th:if="${deadlineLapsed}" class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 shadow-sm">
             <div>
                 <i class="fas fa-triangle-exclamation fa-lg me-2"></i>
-                <strong>เอกสารนี้เลยกำหนดลงนามแล้ว</strong>
+                <strong th:text="${roundExpired} ? 'เอกสารนี้ถูกปิดอัตโนมัติเพราะเลยกำหนดลงนาม' : 'เอกสารนี้เลยกำหนดลงนามแล้ว'">เอกสารนี้เลยกำหนดลงนามแล้ว</strong>
                 <span class="ms-1" th:if="${envelope.dueAt != null}">
                     (กำหนดเดิม: <span th:text="${#temporals.format(envelope.dueAt, 'd MMM yyyy HH:mm')}"></span>)
                 </span>
@@ -490,7 +490,7 @@
     </div>
 
     <!-- Modal ขอขยายเวลาลงนาม (ไม่แสดงเมื่อกำหนดเวลาเป็นเพียงการแจ้งเตือน) -->
-    <div th:unless="${deadlineAdvisory}"
+    <div th:if="${deadlineLapsed and !canManageDeadline}"
          class="modal fade" id="requestExtensionModal" tabindex="-1" aria-labelledby="requestExtensionModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -523,7 +523,7 @@
     </div>
 
     <!-- Modal ขยายกำหนดเวลาเอง — สำหรับแอดมินหรือเจ้าของซองที่ติดกำหนดเวลาอยู่ -->
-    <div th:if="${canManageDeadline and envelope.overdue and !deadlineAdvisory}"
+    <div th:if="${canManageDeadline and deadlineLapsed}"
          class="modal fade" id="extendDueModal" tabindex="-1" aria-labelledby="extendDueModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content border-0 shadow">

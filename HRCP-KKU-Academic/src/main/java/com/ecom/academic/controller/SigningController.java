@@ -30,6 +30,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
+import com.ecom.academic.model.SignatureRequestStatus;
 import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.SignatureStepStatus;
 import com.ecom.academic.model.UserSignature;
@@ -178,6 +179,14 @@ public class SigningController {
         // คนที่ขยายกำหนดเวลาเองได้ไม่ต้องไปขอใคร — ปุ่ม "ขอขยายเวลา" ส่งคำขอไปหาผู้ส่งซอง
         // ซึ่งสำหรับแอดมินที่ติดกำหนดเวลาอยู่ คือการขอคนอื่นในเรื่องที่ตัวเองทำได้อยู่แล้ว
         model.addAttribute("canManageDeadline", me != null && mayManage(envelope, me));
+        // ซองที่ระบบปิดเพราะเลยกำหนด ขั้นของท่านถูกข้ามทั้งที่ยังไม่ได้ลงนาม — ยังขอขยายเวลาได้
+        // ถ้าไม่โชว์ทางออกตรงนี้ ผู้ลงนามเห็นแค่ "ไม่สามารถลงนามได้แล้ว" แล้วไม่รู้จะทำอะไรต่อ
+        boolean roundExpired = envelope.getStatus() == SignatureRequestStatus.EXPIRED
+                && step.getStatus() == SignatureStepStatus.SKIPPED
+                && step.getSignedAt() == null;
+        model.addAttribute("roundExpired", roundExpired);
+        model.addAttribute("deadlineLapsed",
+                roundExpired || (envelope.isOverdue() && !deadlineAdvisory));
         // ผู้ลงนามต้องรู้ว่ากำลังพิจารณาคำร้องของใคร และเห็นหลักฐานประกอบก่อนเลือกเห็นควรหรือไม่
         model.addAttribute("requestSummary",
                 documentLabelResolver.summaryOf(envelope.getModule(), envelope.getRequestId()));

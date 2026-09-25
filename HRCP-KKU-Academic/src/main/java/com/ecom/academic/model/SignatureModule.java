@@ -33,6 +33,11 @@ public enum SignatureModule {
         return adminPathPrefix + requestId;
     }
 
+    /** The administrator's page for one document of this request — where its deadline is set. */
+    public String adminDocumentLink(Long requestId, int documentType) {
+        return adminLink(requestId) + "/document/" + documentType;
+    }
+
     /** Where a notification should send the applicant for this request. */
     public String userLink(Long requestId) {
         return userPathPrefix + requestId;
