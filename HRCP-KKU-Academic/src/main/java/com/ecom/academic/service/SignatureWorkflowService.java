@@ -912,6 +912,9 @@ public class SignatureWorkflowService {
         if (choice != null && signerChoice.equals(choice.alertValue())) {
             announceAdverseFinding(envelope, step, choice, signerChoice);
         }
+        if ("applicant".equalsIgnoreCase(step.getSlotKey())) {
+            announceRevisionIfSentBack(envelope, step);
+        }
 
         activateNextStep(envelope, actor);
         return new Result(requestRepository.save(envelope), null);
@@ -958,6 +961,42 @@ public class SignatureWorkflowService {
             return slot.choice();
         }
         return slot.defaultStaffRole() == null ? null : SignatureAnchorRegistry.CONSIDERATION;
+    }
+
+    /**
+     * ผู้ยื่นลงนามในเอกสารที่เจ้าหน้าที่ส่งกลับให้แก้ — การลงนามนี้คือการยื่นการแก้ไข
+     *
+     * <p>ส่งหลัง commit ด้วยเหตุผลเดียวกับ {@link #announceAdverseFinding}
+     * ซองที่เปิดก่อนการส่งกลับไม่นับ (ถูกยกเลิกไปตอนส่งกลับแล้ว)
+     */
+    private void announceRevisionIfSentBack(SignatureRequest envelope, SignatureStep step) {
+        SignatureModule module = envelope.getModule();
+        Long requestId = envelope.getRequestId();
+        Integer documentType = envelope.getDocumentType();
+        if (documentType == null) {
+            return;
+        }
+        String label = envelope.getDocumentLabel();
+        String applicantName = step.getSignerNameSnapshot();
+        LocalDateTime envelopeCreatedAt = envelope.getCreatedAt();
+
+        Runnable announce = () -> {
+            try {
+                LocalDateTime sentBackAt = snapshotProvider.revisionRequestedAt(module, requestId, documentType);
+                if (sentBackAt == null || envelopeCreatedAt == null || !envelopeCreatedAt.isAfter(sentBackAt)) {
+                    return;
+                }
+                notifier.notifyRevisionSubmitted(module, requestId, label, applicantName);
+            } catch (Exception e) {
+                log.warn("Could not announce revision on {} request {} doc {}: {}",
+                        module, requestId, documentType, e.toString());
+            }
+        };
+        if (afterCommitRunner != null) {
+            afterCommitRunner.run(announce);
+        } else {
+            announce.run();
+        }
     }
 
     /**

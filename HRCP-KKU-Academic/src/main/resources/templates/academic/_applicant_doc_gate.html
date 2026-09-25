@@ -14,6 +14,20 @@
         <div th:if="${revisionNote != null and !#strings.isEmpty(revisionNote)}" class="mt-1">
             เหตุผล: <span th:text="${revisionNote}">-</span>
         </div>
+        <!--/* ลงนาม = ยื่นการแก้ไข เอกสารที่ไม่มีช่องลงนามของผู้ยื่นจึงต้องมีปุ่มยื่นแทน */-->
+        <div th:unless="${canSubmitRevision}" class="small mt-2">
+            กรุณาแก้ไขและบันทึกเอกสาร แล้วลงนามใหม่ การลงนามถือเป็นการยื่นการแก้ไขต่อเจ้าหน้าที่
+        </div>
+        <form th:if="${canSubmitRevision}" method="post" class="mt-2"
+              th:action="'/user/position/request/' + ${request.id} + '/document/' + ${documentType} + '/submit-revision'">
+            <div class="small mb-2">
+                เมื่อแก้ไขและบันทึกเอกสารเรียบร้อยแล้ว กรุณากด "ยื่นการแก้ไข" เพื่อส่งให้เจ้าหน้าที่ตรวจสอบ
+                หลังยื่นแล้วจะไม่สามารถแก้ไขเอกสารได้อีก
+            </div>
+            <button type="submit" class="btn btn-success btn-sm">
+                <i class="fas fa-paper-plane me-1"></i> ยื่นการแก้ไข
+            </button>
+        </form>
     </div>
     <div th:if="${editable != null and !editable}" class="alert alert-secondary">
         <i class="fas fa-lock"></i> เอกสารนี้แก้ไขไม่ได้ในขณะนี้

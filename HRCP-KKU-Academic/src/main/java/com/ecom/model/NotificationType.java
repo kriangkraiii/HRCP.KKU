@@ -10,6 +10,7 @@ public enum NotificationType {
     SIGNATURE_REMINDER("เตือนให้ลงนามในเอกสาร", "fas fa-bell text-warning"),
     SIGNATURE_COMPLETED("ลงนามครบทุกคนแล้ว", "fas fa-circle-check text-success"),
     SIGNATURE_DECLINED("ปฏิเสธการลงนาม", "fas fa-circle-xmark text-danger"),
+    REVISION_SUBMITTED("ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว", "fas fa-paper-plane text-success"),
     SYSTEM("การแจ้งเตือนจากระบบ", "fas fa-bell text-secondary");
 
     private final String thaiLabel;

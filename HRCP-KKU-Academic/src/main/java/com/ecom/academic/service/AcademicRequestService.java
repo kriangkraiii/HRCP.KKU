@@ -502,6 +502,63 @@ public class AcademicRequestService {
         return sentBack;
     }
 
+    /**
+     * เอกสารที่ส่งกลับให้ผู้ยื่นแก้ ยังไม่จบ พร้อมขั้นที่อยู่ ({@link RevisionProgress})
+     *
+     * <p>ต่างจาก {@link #sentBackDocuments} ตรงที่ไม่หายไปตอนเปิดซองลงนาม — ผู้ยื่นที่ยังไม่ได้ลงนาม
+     * ยังเห็น "รอท่านลงนาม" และหลังลงนามเห็นว่ายื่นแล้ว รอตรวจ จนกว่าทุกคนจะลงนามใหม่ครบ
+     */
+    @Transactional(readOnly = true)
+    public RevisionProgress.Summary revisionProgress(AcademicRequest request) {
+        java.util.Map<Integer, RevisionProgress.SentBackDocument> result = new java.util.TreeMap<>();
+        if (request == null || request.getCurrentStatus() == null || request.getCurrentStatus() == RequestStatus.DRAFT
+                || CLOSED_STATUSES.contains(request.getCurrentStatus())) {
+            return new RevisionProgress.Summary(result);
+        }
+        var module = com.ecom.academic.model.SignatureModule.ACADEMIC;
+        java.util.Map<Integer, LocalDateTime> requestedAt = new java.util.HashMap<>();
+        java.util.Map<Integer, LocalDateTime> submittedAt = new java.util.HashMap<>();
+        java.util.Map<Integer, String> notes = new java.util.HashMap<>();
+        for (var doc : documentRepository.findByRequestId(request.getId())) {
+            int type = doc.getDocumentType();
+            if (doc.getRevisionRequestedAt() == null || !DocumentFieldOwnership.isApplicantDocument(module, type)) {
+                continue;
+            }
+            LocalDateTime seen = requestedAt.get(type);
+            if (seen == null || doc.getRevisionRequestedAt().isAfter(seen)) {
+                requestedAt.put(type, doc.getRevisionRequestedAt());
+                submittedAt.put(type, null);
+                notes.put(type, doc.getRevisionNote() != null ? doc.getRevisionNote() : "");
+            }
+        }
+        if (requestedAt.isEmpty()) {
+            return new RevisionProgress.Summary(result);
+        }
+        List<Integer> awaiting = documentsAwaitingResign(request.getId());
+        requestedAt.forEach((type, at) -> {
+            boolean hasApplicantSlot = SignatureAnchorRegistry.slotsOf(module, type).stream()
+                    .anyMatch(slot -> "applicant".equals(slot.slotKey()));
+            var envelopes = signatureRequestRepository
+                    .findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, request.getId(), type);
+            RevisionProgress.Stage stage = RevisionProgress.stageOf(hasApplicantSlot, at, submittedAt.get(type),
+                    envelopes, isDocumentLockedForSigning(request.getId(), type), awaiting.contains(type));
+            if (stage != null) {
+                result.put(type, new RevisionProgress.SentBackDocument(type, stage, notes.get(type)));
+            }
+        });
+        return new RevisionProgress.Summary(result);
+    }
+
+    /** เวลาส่งกลับรอบล่าสุดของเอกสารฉบับนี้ หรือ null ถ้าไม่เคยถูกส่งกลับ */
+    public LocalDateTime latestRevisionRequestedAt(Long requestId, int documentType) {
+        return documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType)
+                .stream()
+                .map(AcademicDocument::getRevisionRequestedAt)
+                .filter(java.util.Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+    }
+
     /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
     public boolean isRevisionRequested(Long requestId, int documentType) {
         var docs = documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType);

@@ -8,29 +8,41 @@
   การส่งกลับไม่ได้เปลี่ยนสถานะคำร้อง การ์ดจึงยังขึ้น "รับคำร้อง" ตามเดิม ถ้าไม่มีส่วนนี้
   ผู้ยื่นจะไม่รู้เลยว่ามีงานรออยู่ จนกว่าจะกดเข้าไปดูรายละเอียดเอง
 
-  sentBack   Map<Integer, String>  เลขเอกสาร → เหตุผล ("" ถ้าไม่ระบุ)
-  labels     Map<Integer, String>  เลขเอกสาร → ชื่อเอกสาร
+  summary    RevisionProgress.Summary  เอกสารที่ส่งกลับ พร้อมขั้น (ต้องแก้ไข / รอลงนาม / ยื่นแล้ว)
+  labels     Map<Integer, String>      เลขเอกสาร → ชื่อเอกสาร
   linkBase   เช่น /user/academic/request/5  (ต่อท้ายด้วย /document/{n})
 -->
 
-<span th:fragment="badge" class="status-badge status-needs-revision">
-    <i class="fas fa-pen-to-square me-1"></i>ต้องแก้ไขเอกสาร
-</span>
+<th:block th:fragment="badge(summary)">
+    <span th:if="${summary.actionRequired}" class="status-badge status-needs-revision">
+        <i class="fas fa-pen-to-square me-1"></i>ต้องแก้ไขเอกสาร
+    </span>
+    <span th:unless="${summary.actionRequired}" class="status-badge status-revision-submitted">
+        <i class="fas fa-paper-plane me-1"></i>ยื่นการแก้ไขแล้ว
+    </span>
+</th:block>
 
-<div th:fragment="alert(sentBack, labels, linkBase)" class="result-alert ra-revise sent-back-alert">
-    <i class="fas fa-pen-to-square"></i>
+<div th:fragment="alert(summary, labels, linkBase)" class="result-alert sent-back-alert"
+     th:classappend="${summary.actionRequired} ? 'ra-revise' : 'ra-info'">
+    <i class="fas" th:classappend="${summary.actionRequired} ? 'fa-pen-to-square' : 'fa-hourglass-half'"></i>
     <div class="flex-grow-1">
-        <span>เจ้าหน้าที่ส่งเอกสารกลับมาให้ท่านแก้ไข</span>
+        <span th:if="${summary.actionRequired}">เจ้าหน้าที่ส่งเอกสารกลับมาให้ท่านแก้ไข</span>
+        <span th:unless="${summary.actionRequired}">ท่านยื่นเอกสารที่แก้ไขแล้ว อยู่ระหว่างการตรวจสอบของเจ้าหน้าที่</span>
         <ul class="sent-back-list">
-            <li th:each="entry : ${sentBack}">
+            <li th:each="entry : ${summary.documents}">
                 <a th:href="${linkBase} + '/document/' + ${entry.key}" class="sent-back-link">
                     เอกสารที่ [[${entry.key}]]<span th:if="${labels != null and labels.containsKey(entry.key)}">
                     — [[${labels.get(entry.key)}]]</span>
                 </a>
-                <div th:if="${!#strings.isEmpty(entry.value)}" class="ra-detail">เหตุผล: [[${entry.value}]]</div>
+                <span class="sent-back-stage" th:classappend="'stage-' + ${entry.value.stage.name()}"
+                      th:text="${entry.value.stage.thaiLabel}">ต้องแก้ไข</span>
+                <div th:if="${!#strings.isEmpty(entry.value.note)}" class="ra-detail">เหตุผล: [[${entry.value.note}]]</div>
             </li>
         </ul>
-        <div class="ra-detail">กรุณาแก้ไขข้อมูล แล้ว<strong>ลงนามใหม่</strong>ในหน้าเอกสารนั้น</div>
+        <div th:if="${summary.actionRequired}" class="ra-detail">
+            กรุณาแก้ไขข้อมูลและบันทึก แล้ว<strong>ลงนามใหม่</strong>ในหน้าเอกสารนั้น การลงนามถือเป็นการยื่นการแก้ไข
+            (เอกสารที่ไม่มีช่องลงนามของท่าน ให้กดปุ่ม "ยื่นการแก้ไข" ในหน้าเอกสาร)
+        </div>
     </div>
 </div>
 

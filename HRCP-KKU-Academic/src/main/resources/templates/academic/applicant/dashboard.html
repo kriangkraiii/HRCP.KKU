@@ -154,7 +154,7 @@
                             <div class="request-card-status">
                                 <span class="status-badge" th:classappend="'status-' + ${req.currentStatus.name()}"
                                     th:text="${req.currentStatus.thaiLabel}"></span>
-                                <th:block th:if="${sentBackMap.containsKey(req.id)}"><span th:replace="~{academic/_sent_back_alert :: badge}"></span></th:block>
+                                <th:block th:if="${sentBackMap.containsKey(req.id)}"><th:block th:replace="~{academic/_sent_back_alert :: badge(${sentBackMap.get(req.id)})}"></th:block></th:block>
                             </div>
                         </div>
 
@@ -326,7 +326,7 @@
                             <div class="request-card-status">
                                 <span class="badge" th:style="'background:' + ${posReq.currentStatus.color} + ';color:#fff'"
                                     th:text="${posReq.currentStatus.thaiLabel}"></span>
-                                <th:block th:if="${positionSentBackMap.containsKey(posReq.id)}"><span th:replace="~{academic/_sent_back_alert :: badge}"></span></th:block>
+                                <th:block th:if="${positionSentBackMap.containsKey(posReq.id)}"><th:block th:replace="~{academic/_sent_back_alert :: badge(${positionSentBackMap.get(posReq.id)})}"></th:block></th:block>
                             </div>
                         </div>
 

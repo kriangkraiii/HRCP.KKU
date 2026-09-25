@@ -195,11 +195,11 @@ public class AcademicApplicantController {
         }
         model.addAttribute("doc1DataMap", doc1DataMap);
         // เอกสารที่เจ้าหน้าที่ส่งกลับให้แก้ — สถานะคำร้องไม่เปลี่ยน การ์ดจึงต้องบอกเอง
-        Map<Long, Map<Integer, String>> sentBackMap = new java.util.HashMap<>();
+        Map<Long, com.ecom.academic.service.RevisionProgress.Summary> sentBackMap = new java.util.HashMap<>();
         for (AcademicRequest req : requests) {
-            Map<Integer, String> sentBack = requestService.sentBackDocuments(req);
-            if (!sentBack.isEmpty()) {
-                sentBackMap.put(req.getId(), sentBack);
+            var progress = requestService.revisionProgress(req);
+            if (!progress.isEmpty()) {
+                sentBackMap.put(req.getId(), progress);
             }
         }
         model.addAttribute("sentBackMap", sentBackMap);
@@ -218,11 +218,11 @@ public class AcademicApplicantController {
                 .filter(r -> r.getCurrentStatus() != PositionRequestStatus.DRAFT)
                 .collect(Collectors.toList());
         model.addAttribute("positionRequests", positionRequests);
-        Map<Long, Map<Integer, String>> positionSentBackMap = new java.util.HashMap<>();
+        Map<Long, com.ecom.academic.service.RevisionProgress.Summary> positionSentBackMap = new java.util.HashMap<>();
         for (PositionRequest req : positionRequests) {
-            Map<Integer, String> sentBack = positionRequestService.sentBackDocuments(req);
-            if (!sentBack.isEmpty()) {
-                positionSentBackMap.put(req.getId(), sentBack);
+            var progress = positionRequestService.revisionProgress(req);
+            if (!progress.isEmpty()) {
+                positionSentBackMap.put(req.getId(), progress);
             }
         }
         model.addAttribute("positionSentBackMap", positionSentBackMap);

@@ -287,6 +287,19 @@ public class DocumentSnapshotProvider {
         }
     }
 
+    /** เวลาที่เจ้าหน้าที่ส่งเอกสารฉบับนี้กลับให้แก้รอบล่าสุด หรือ null */
+    public java.time.LocalDateTime revisionRequestedAt(SignatureModule module, Long requestId, int documentType) {
+        try {
+            return module == SignatureModule.ACADEMIC
+                    ? academicRequestService.latestRevisionRequestedAt(requestId, documentType)
+                    : positionRequestService.latestRevisionRequestedAt(requestId, documentType);
+        } catch (Exception e) {
+            log.warn("Could not read revision time for {} request {} doc {}: {}",
+                    module, requestId, documentType, e.toString());
+            return null;
+        }
+    }
+
     /**
      * ข้อมูลหัวคำร้องสำหรับแสดงบนหน้าลงนาม
      *

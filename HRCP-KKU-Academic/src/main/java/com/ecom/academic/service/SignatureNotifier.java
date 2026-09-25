@@ -43,13 +43,16 @@ public class SignatureNotifier {
 
     private final NotificationService notificationService;
     private final JavaMailSender mailSender;
+    private final com.ecom.repository.UserRepository userRepository;
 
     @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
 
-    public SignatureNotifier(NotificationService notificationService, JavaMailSender mailSender) {
+    public SignatureNotifier(NotificationService notificationService, JavaMailSender mailSender,
+            com.ecom.repository.UserRepository userRepository) {
         this.notificationService = notificationService;
         this.mailSender = mailSender;
+        this.userRepository = userRepository;
     }
 
     /** Asks the signer whose turn it now is. */
@@ -218,6 +221,36 @@ public class SignatureNotifier {
                         + (reason != null && !reason.isBlank() ? "<p><strong>เหตุผลที่ส่งกลับ:</strong> " + escape(reason) + "</p>" : "")
                         + "<p>ระบบได้ปลดล็อกเอกสารให้ท่านสามารถเข้าสู่ระบบเพื่อแก้ไขและลงนามใหม่ได้ทันที</p>");
         email(applicant, title, body);
+    }
+
+    /**
+     * บอกเจ้าหน้าที่ว่าผู้ยื่นแก้เอกสารที่ส่งกลับเสร็จแล้ว (ลงนามใหม่ หรือกดยื่นการแก้ไข)
+     *
+     * <p>ซองที่ผู้ยื่นลงนามแล้วรอให้เจ้าหน้าที่ตรวจก่อนส่งเวียน ถ้าไม่แจ้ง ซองจะรออยู่เงียบ ๆ
+     * จนกว่าจะมีคนบังเอิญเปิดดู
+     */
+    @Async
+    public void notifyRevisionSubmitted(SignatureModule module, Long requestId, String documentLabel,
+            String applicantName) {
+        String safeDoc = documentLabel != null && !documentLabel.isBlank() ? documentLabel : "เอกสาร";
+        String who = applicantName != null && !applicantName.isBlank() ? applicantName : "ผู้ยื่นคำร้อง";
+        String title = "ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว: " + safeDoc;
+        String message = who + " แก้ไขเอกสาร " + safeDoc + " ตามที่ส่งกลับเรียบร้อยแล้ว กรุณาตรวจสอบและดำเนินการต่อ";
+        String body = EmailTemplateHelper.wrapLayout("ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว", "ต้องดำเนินการ",
+                "<p><strong>" + escape(who) + "</strong> ได้แก้ไขเอกสาร <strong>" + escape(safeDoc)
+                        + "</strong> ตามที่ส่งกลับเรียบร้อยแล้ว</p>"
+                        + "<p>กรุณาตรวจสอบความถูกต้อง และส่งเวียนลงนามต่อตามขั้นตอน</p>");
+        List<UserDtls> admins;
+        try {
+            admins = userRepository.findByRole("ROLE_ADMIN");
+        } catch (Exception e) {
+            log.warn("Could not load admins to announce revision on {} request {}: {}", module, requestId, e.toString());
+            return;
+        }
+        for (UserDtls admin : admins) {
+            notify(admin, title, message, module.adminLink(requestId), NotificationType.REVISION_SUBMITTED, true);
+            email(admin, title, body);
+        }
     }
 
     // =====================================================================

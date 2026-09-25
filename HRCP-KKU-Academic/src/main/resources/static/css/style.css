@@ -2891,6 +2891,33 @@ body.modal-open .sidebar-toggle {
   border: 1px solid color-mix(in srgb, var(--color-warning) 35%, var(--border-color));
 }
 
+.status-badge.status-revision-submitted {
+  background: color-mix(in srgb, var(--color-success) 12%, var(--bg-card));
+  color: var(--color-success);
+  border: 1px solid color-mix(in srgb, var(--color-success) 30%, var(--border-color));
+}
+
+.result-alert.ra-info {
+  background: color-mix(in srgb, var(--color-primary-medium, #1565c0) 7%, var(--bg-card));
+  color: var(--color-primary-medium, #1565c0);
+  border: 1px solid color-mix(in srgb, var(--color-primary-medium, #1565c0) 20%, var(--border-color));
+}
+
+.sent-back-stage {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 8px;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  vertical-align: middle;
+}
+
+.sent-back-stage.stage-TO_EDIT { background: #b26a00; }
+.sent-back-stage.stage-TO_SIGN { background: #d84315; }
+.sent-back-stage.stage-SUBMITTED { background: #2e7d32; }
+
 .request-card-status {
   display: flex;
   flex-direction: column;
@@ -4233,6 +4260,7 @@ body.modal-open .sidebar-toggle {
 .history-entry-badge.hist-act-FILE_UPLOADED { background-color: #6a1b9a; }
 .history-entry-badge.hist-act-RESIGN_REQUESTED { background-color: #d84315; }
 .history-entry-badge.hist-act-SUGGESTION_SENT { background-color: #455a64; }
+.history-entry-badge.hist-act-REVISION_SUBMITTED { background-color: #2e7d32; }
 
 .history-entry-content {
   flex: 1;

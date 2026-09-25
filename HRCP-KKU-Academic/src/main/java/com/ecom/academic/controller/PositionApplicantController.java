@@ -60,6 +60,7 @@ public class PositionApplicantController {
     private final com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart;
     private final jakarta.servlet.http.HttpServletRequest httpRequest;
     private final com.ecom.service.UploadPaths uploadPaths;
+    private final com.ecom.academic.service.SignatureNotifier signatureNotifier;
 
     private static final org.slf4j.Logger log =
             org.slf4j.LoggerFactory.getLogger(PositionApplicantController.class);
@@ -75,8 +76,10 @@ public class PositionApplicantController {
             com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer,
             com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart,
             jakarta.servlet.http.HttpServletRequest httpRequest,
-            com.ecom.service.UploadPaths uploadPaths) {
+            com.ecom.service.UploadPaths uploadPaths,
+            com.ecom.academic.service.SignatureNotifier signatureNotifier) {
         this.uploadPaths = uploadPaths;
+        this.signatureNotifier = signatureNotifier;
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.academicService = academicService;
@@ -120,11 +123,11 @@ public class PositionApplicantController {
         model.addAttribute("hasActiveRequest", hasActiveRequest);
         model.addAttribute("statuses", PositionRequestStatus.values());
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
-        java.util.Map<Long, java.util.Map<Integer, String>> sentBackMap = new java.util.HashMap<>();
+        java.util.Map<Long, com.ecom.academic.service.RevisionProgress.Summary> sentBackMap = new java.util.HashMap<>();
         for (PositionRequest req : requests) {
-            java.util.Map<Integer, String> sentBack = positionService.sentBackDocuments(req);
-            if (!sentBack.isEmpty()) {
-                sentBackMap.put(req.getId(), sentBack);
+            var progress = positionService.revisionProgress(req);
+            if (!progress.isEmpty()) {
+                sentBackMap.put(req.getId(), progress);
             }
         }
         model.addAttribute("sentBackMap", sentBackMap);
@@ -413,6 +416,7 @@ public class PositionApplicantController {
         model.addAttribute("editable", positionService.canApplicantEditDocument(request, type));
         model.addAttribute("revisionNote", positionService.getRevisionNote(id, type));
         model.addAttribute("revisionRequested", positionService.isRevisionRequested(id, type));
+        model.addAttribute("canSubmitRevision", positionService.canSubmitRevision(request, type));
 
         // ส่วนที่ ๓ ของแบบ ก.พ.ว. มข. ๐๓ ไม่มีช่องให้กรอก แสดงค่าที่จะดึงมาใส่ให้ดูเฉย ๆ
         if (type == 1) {
@@ -435,6 +439,31 @@ public class PositionApplicantController {
         DocumentFormSupport.addCompletenessRules(model, com.ecom.academic.model.SignatureModule.POSITION, type);
 
         return "academic/position/applicant/doc_form_" + type;
+    }
+
+    /**
+     * ยื่นการแก้ไขเอกสารที่ถูกส่งกลับ — สำหรับเอกสารที่ไม่มีช่องลงนามของผู้ยื่น
+     *
+     * <p>เอกสารที่มีช่องลงนามของผู้ยื่น การลงนามใหม่คือการยื่น (ดู {@code RevisionProgress})
+     */
+    @PostMapping("/request/{id}/document/{type}/submit-revision")
+    public String submitRevision(@PathVariable Long id, @PathVariable int type, Principal principal,
+            RedirectAttributes redirectAttributes) {
+        UserDtls user = getUser(principal);
+        PositionRequest request = positionService.findById(id).orElse(null);
+        if (request == null || !request.getApplicant().getId().equals(user.getId())) {
+            return "redirect:/user/position/dashboard";
+        }
+        String error = positionService.submitRevision(request, type, user);
+        if (error != null) {
+            redirectAttributes.addFlashAttribute("errorMsg", error);
+            return "redirect:/user/position/request/" + id + "/document/" + type;
+        }
+        signatureNotifier.notifyRevisionSubmitted(com.ecom.academic.model.SignatureModule.POSITION, id,
+                positionService.getDocLabel(type), user.getName());
+        redirectAttributes.addFlashAttribute("succMsg",
+                "ยื่นการแก้ไขเอกสารที่ " + type + " เรียบร้อยแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบต่อไป");
+        return "redirect:/user/position/request/" + id;
     }
 
     @PostMapping("/request/{id}/document/{type}")

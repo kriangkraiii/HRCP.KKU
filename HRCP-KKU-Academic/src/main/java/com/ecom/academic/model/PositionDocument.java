@@ -74,6 +74,10 @@ public class PositionDocument {
     @Column(name = "revision_note", length = 500)
     private String revisionNote;
 
+    /** เวลาที่ผู้ยื่นกด "ยื่นการแก้ไข" — ใช้กับเอกสารที่ไม่มีช่องลงนามของผู้ยื่น (ดู V30) */
+    @Column(name = "revision_submitted_at")
+    private LocalDateTime revisionSubmittedAt;
+
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
@@ -212,8 +216,26 @@ public class PositionDocument {
         this.revisionNote = revisionNote;
     }
 
-    /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้แล้วหรือยัง */
+    public LocalDateTime getRevisionSubmittedAt() {
+        return revisionSubmittedAt;
+    }
+
+    public void setRevisionSubmittedAt(LocalDateTime revisionSubmittedAt) {
+        this.revisionSubmittedAt = revisionSubmittedAt;
+    }
+
+    /** ผู้ยื่นกดยื่นการแก้ไขรอบล่าสุดแล้ว (ส่งกลับรอบใหม่ = ยังไม่ได้ยื่น) */
+    public boolean isRevisionSubmitted() {
+        return revisionRequestedAt != null && revisionSubmittedAt != null
+                && !revisionSubmittedAt.isBefore(revisionRequestedAt);
+    }
+
+    /**
+     * แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ และผู้ยื่นยังไม่ได้ยื่นการแก้ไข
+     *
+     * <p>ยื่นแล้วประตูแก้ไขปิด เอกสารกลับไปอยู่ในมือเจ้าหน้าที่เหมือนตอนส่งคำร้องครั้งแรก
+     */
     public boolean isRevisionRequested() {
-        return revisionRequestedAt != null;
+        return revisionRequestedAt != null && !isRevisionSubmitted();
     }
 }

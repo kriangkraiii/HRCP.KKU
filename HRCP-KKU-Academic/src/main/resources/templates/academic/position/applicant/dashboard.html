@@ -230,7 +230,7 @@
                                 </span>
                                 <span class="badge fs-6" th:classappend="'bg-' + ${req.currentStatus.badgeClass}"
                                     th:text="${req.currentStatus.thaiLabel}"></span>
-                                <th:block th:if="${sentBackMap.containsKey(req.id)}"><span th:replace="~{academic/_sent_back_alert :: badge}"></span></th:block>
+                                <th:block th:if="${sentBackMap.containsKey(req.id)}"><th:block th:replace="~{academic/_sent_back_alert :: badge(${sentBackMap.get(req.id)})}"></th:block></th:block>
                             </div>
                             <small class="text-muted" th:if="${req.targetPosition != null}">
                                 <i class="fas fa-user-tie me-1"></i>ตำแหน่งที่ขอ: [[${req.targetPosition}]]

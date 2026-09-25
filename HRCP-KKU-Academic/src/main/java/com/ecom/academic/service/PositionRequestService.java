@@ -994,6 +994,96 @@ public class PositionRequestService {
         return sentBack;
     }
 
+    /**
+     * เอกสารที่ส่งกลับให้ผู้ยื่นแก้ ยังไม่จบ พร้อมขั้นที่อยู่ ({@link RevisionProgress})
+     *
+     * <p>ต่างจาก {@link #sentBackDocuments} ตรงที่ไม่หายไปตอนเปิดซองลงนาม — ผู้ยื่นที่ยังไม่ได้ลงนาม
+     * ยังเห็น "รอท่านลงนาม" และหลังลงนามเห็นว่ายื่นแล้ว รอตรวจ จนกว่าทุกคนจะลงนามใหม่ครบ
+     */
+    @Transactional(readOnly = true)
+    public RevisionProgress.Summary revisionProgress(PositionRequest request) {
+        java.util.Map<Integer, RevisionProgress.SentBackDocument> result = new java.util.TreeMap<>();
+        if (request == null || request.getCurrentStatus() == null || request.getCurrentStatus().isDraft()
+                || request.getCurrentStatus().isTerminal()) {
+            return new RevisionProgress.Summary(result);
+        }
+        var module = com.ecom.academic.model.SignatureModule.POSITION;
+        java.util.Map<Integer, LocalDateTime> requestedAt = new java.util.HashMap<>();
+        java.util.Map<Integer, LocalDateTime> submittedAt = new java.util.HashMap<>();
+        java.util.Map<Integer, String> notes = new java.util.HashMap<>();
+        for (var doc : documentRepository.findByRequestId(request.getId())) {
+            int type = doc.getDocumentType();
+            if (doc.getRevisionRequestedAt() == null || !DocumentFieldOwnership.isApplicantDocument(module, type)) {
+                continue;
+            }
+            LocalDateTime seen = requestedAt.get(type);
+            if (seen == null || doc.getRevisionRequestedAt().isAfter(seen)) {
+                requestedAt.put(type, doc.getRevisionRequestedAt());
+                submittedAt.put(type, doc.getRevisionSubmittedAt());
+                notes.put(type, doc.getRevisionNote() != null ? doc.getRevisionNote() : "");
+            }
+        }
+        if (requestedAt.isEmpty()) {
+            return new RevisionProgress.Summary(result);
+        }
+        List<Integer> awaiting = documentsAwaitingResign(request.getId());
+        requestedAt.forEach((type, at) -> {
+            boolean hasApplicantSlot = SignatureAnchorRegistry.slotsOf(module, type).stream()
+                    .anyMatch(slot -> "applicant".equals(slot.slotKey()));
+            var envelopes = signatureRequestRepository
+                    .findByModuleAndRequestIdAndDocumentTypeOrderByCreatedAtDesc(module, request.getId(), type);
+            RevisionProgress.Stage stage = RevisionProgress.stageOf(hasApplicantSlot, at, submittedAt.get(type),
+                    envelopes, isDocumentLockedForSigning(request.getId(), type), awaiting.contains(type));
+            if (stage != null) {
+                result.put(type, new RevisionProgress.SentBackDocument(type, stage, notes.get(type)));
+            }
+        });
+        return new RevisionProgress.Summary(result);
+    }
+
+    /**
+     * ผู้ยื่นกด "ยื่นการแก้ไข" — ใช้กับเอกสารที่ไม่มีช่องลงนามของผู้ยื่นเท่านั้น
+     *
+     * <p>เอกสารที่มีช่องลงนามของผู้ยื่น การลงนามใหม่คือการยื่น ไม่ต้องมีปุ่มนี้ (และไม่ยอมให้ใช้
+     * เพราะจะข้ามการลงนามไปได้) ยื่นแล้วประตูแก้ไขปิด
+     *
+     * @return null เมื่อสำเร็จ หรือข้อความบอกผู้ยื่นว่าทำไมยื่นไม่ได้
+     */
+    @Transactional
+    public String submitRevision(PositionRequest request, int documentType, UserDtls applicant) {
+        if (!canSubmitRevision(request, documentType)) {
+            return "เอกสารฉบับนี้ไม่อยู่ในสถานะที่ยื่นการแก้ไขได้";
+        }
+        List<PositionDocument> docs = documentRepository.findByRequestId(request.getId()).stream()
+                .filter(d -> d.getDocumentType() == documentType)
+                .toList();
+        LocalDateTime now = LocalDateTime.now();
+        docs.forEach(d -> d.setRevisionSubmittedAt(now));
+        documentRepository.saveAll(docs);
+        logDocumentEdit(request, documentType, null, applicant, PositionDocumentEditLog.EditAction.REVISION_SUBMITTED);
+        return null;
+    }
+
+    /** เอกสารถูกส่งกลับ ยังไม่ยื่น และไม่มีช่องลงนามของผู้ยื่น — ปุ่ม "ยื่นการแก้ไข" จึงแสดง */
+    public boolean canSubmitRevision(PositionRequest request, int documentType) {
+        if (!canApplicantEditDocument(request, documentType)
+                || request.getCurrentStatus().isDraft()) {
+            return false;
+        }
+        return SignatureAnchorRegistry.slotsOf(SignatureModule.POSITION, documentType).stream()
+                .noneMatch(slot -> "applicant".equals(slot.slotKey()));
+    }
+
+    /** เวลาส่งกลับรอบล่าสุดของเอกสารฉบับนี้ หรือ null ถ้าไม่เคยถูกส่งกลับ */
+    public LocalDateTime latestRevisionRequestedAt(Long requestId, int documentType) {
+        return documentRepository.findByRequestIdAndDocType(requestId, documentType)
+                .stream()
+                .map(PositionDocument::getRevisionRequestedAt)
+                .filter(java.util.Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(null);
+    }
+
     /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
     public boolean isRevisionRequested(Long requestId, int documentType) {
         return getDocumentsByType(requestId, documentType).stream()
