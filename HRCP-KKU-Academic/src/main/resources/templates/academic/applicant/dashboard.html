@@ -151,8 +151,11 @@
                                     </span>
                                 </div>
                             </div>
-                            <span class="status-badge" th:classappend="'status-' + ${req.currentStatus.name()}"
-                                th:text="${req.currentStatus.thaiLabel}"></span>
+                            <div class="request-card-status">
+                                <span class="status-badge" th:classappend="'status-' + ${req.currentStatus.name()}"
+                                    th:text="${req.currentStatus.thaiLabel}"></span>
+                                <th:block th:if="${sentBackMap.containsKey(req.id)}"><span th:replace="~{academic/_sent_back_alert :: badge}"></span></th:block>
+                            </div>
                         </div>
 
                         <!-- ข้อมูลรายวิชา (จากเอกสารที่ 1) -->
@@ -193,6 +196,10 @@
 
                         <!--/* ข้อมูลการนัดหมายและรายชื่อกรรมการเป็นความลับทางราชการ ผู้ยื่นไม่ได้ร่วม
                              จึงไม่แสดงที่นี่ เจ้าหน้าที่ดูและแก้ได้จากหน้าผู้ดูแลระบบตามเดิม */-->
+
+                        <th:block th:if="${sentBackMap.containsKey(req.id)}">
+                             <div th:replace="~{academic/_sent_back_alert :: alert(${sentBackMap.get(req.id)}, ${academicDocLabels}, '/user/academic/request/' + ${req.id})}"></div>
+                        </th:block>
 
                         <!-- Result Alerts -->
                         <div th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}" class="result-alert ra-pass">
@@ -316,8 +323,11 @@
                                     </span>
                                 </div>
                             </div>
-                            <span class="badge" th:style="'background:' + ${posReq.currentStatus.color} + ';color:#fff'"
-                                th:text="${posReq.currentStatus.thaiLabel}"></span>
+                            <div class="request-card-status">
+                                <span class="badge" th:style="'background:' + ${posReq.currentStatus.color} + ';color:#fff'"
+                                    th:text="${posReq.currentStatus.thaiLabel}"></span>
+                                <th:block th:if="${positionSentBackMap.containsKey(posReq.id)}"><span th:replace="~{academic/_sent_back_alert :: badge}"></span></th:block>
+                            </div>
                         </div>
 
                         <!-- ข้อมูลตำแหน่ง -->
@@ -326,6 +336,10 @@
                             ตำแหน่งที่เสนอ: <strong th:text="${posDoc2DataMap.get(posReq.id).getOrDefault('request_position', '-')}"></strong>
                             <span class="text-muted ms-2">สาขา: <span th:text="${posDoc2DataMap.get(posReq.id).getOrDefault('major', '-')}"></span></span>
                         </div>
+
+                        <th:block th:if="${positionSentBackMap.containsKey(posReq.id)}">
+                             <div th:replace="~{academic/_sent_back_alert :: alert(${positionSentBackMap.get(posReq.id)}, ${positionDocLabels}, '/user/position/request/' + ${posReq.id})}"></div>
+                        </th:block>
 
                         <!-- Position Progress Tracker -->
                         <div class="timeline-v2" style="margin-bottom:var(--space-md);">

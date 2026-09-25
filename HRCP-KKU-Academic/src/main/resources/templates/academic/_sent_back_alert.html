@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  เอกสารที่เจ้าหน้าที่ส่งกลับให้ผู้ยื่นแก้ไข (การ์ดคำร้องบนแดชบอร์ด)
+
+  การส่งกลับไม่ได้เปลี่ยนสถานะคำร้อง การ์ดจึงยังขึ้น "รับคำร้อง" ตามเดิม ถ้าไม่มีส่วนนี้
+  ผู้ยื่นจะไม่รู้เลยว่ามีงานรออยู่ จนกว่าจะกดเข้าไปดูรายละเอียดเอง
+
+  sentBack   Map<Integer, String>  เลขเอกสาร → เหตุผล ("" ถ้าไม่ระบุ)
+  labels     Map<Integer, String>  เลขเอกสาร → ชื่อเอกสาร
+  linkBase   เช่น /user/academic/request/5  (ต่อท้ายด้วย /document/{n})
+-->
+
+<span th:fragment="badge" class="status-badge status-needs-revision">
+    <i class="fas fa-pen-to-square me-1"></i>ต้องแก้ไขเอกสาร
+</span>
+
+<div th:fragment="alert(sentBack, labels, linkBase)" class="result-alert ra-revise sent-back-alert">
+    <i class="fas fa-pen-to-square"></i>
+    <div class="flex-grow-1">
+        <span>เจ้าหน้าที่ส่งเอกสารกลับมาให้ท่านแก้ไข</span>
+        <ul class="sent-back-list">
+            <li th:each="entry : ${sentBack}">
+                <a th:href="${linkBase} + '/document/' + ${entry.key}" class="sent-back-link">
+                    เอกสารที่ [[${entry.key}]]<span th:if="${labels != null and labels.containsKey(entry.key)}">
+                    — [[${labels.get(entry.key)}]]</span>
+                </a>
+                <div th:if="${!#strings.isEmpty(entry.value)}" class="ra-detail">เหตุผล: [[${entry.value}]]</div>
+            </li>
+        </ul>
+        <div class="ra-detail">กรุณาแก้ไขข้อมูล แล้ว<strong>ลงนามใหม่</strong>ในหน้าเอกสารนั้น</div>
+    </div>
+</div>
+
+</body>
+</html>

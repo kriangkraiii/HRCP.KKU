@@ -113,6 +113,31 @@ class DocumentEditLogTest {
     }
 
     @Test
+    @DisplayName("เอกสารที่ส่งกลับให้แก้ แสดงบนแดชบอร์ดพร้อมเหตุผล แม้สถานะยังเป็นรับคำร้อง")
+    void sentBackDocumentsAreReportedWhileStatusIsUnchanged() {
+        requestService.saveDocument(request, 1, "{}", null, null, 0);
+        requestService.saveDocument(request, 2, "{}", null, null, 0);
+        request.setCurrentStatus(com.ecom.academic.model.RequestStatus.RECEIVED);
+        request = requestService.save(request);
+
+        assertThat(requestService.sentBackDocuments(request)).isEmpty();
+
+        requestService.openDocumentForRevision(request.getId(), 2, "แก้ชื่อรายวิชา");
+
+        assertThat(requestService.sentBackDocuments(request))
+                .containsExactly(java.util.Map.entry(2, "แก้ชื่อรายวิชา"));
+    }
+
+    @Test
+    @DisplayName("แบบร่างไม่นับว่าถูกส่งกลับ")
+    void draftsAreNeverSentBack() {
+        requestService.saveDocument(request, 1, "{}", null, null, 0);
+        requestService.openDocumentForRevision(request.getId(), 1, null);
+
+        assertThat(requestService.sentBackDocuments(request)).isEmpty();
+    }
+
+    @Test
     @DisplayName("การแนบ/ลบไฟล์ถูกบันทึกพร้อมชื่อไฟล์")
     void attachmentChangesAreLoggedWithTheFileName() {
         requestService.logDocumentChange(request, 2, "แนบไฟล์: ผลงาน.pdf", applicant, EditAction.ATTACHMENT_ADDED);

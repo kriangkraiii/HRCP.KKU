@@ -2866,6 +2866,38 @@ body.modal-open .sidebar-toggle {
   opacity: 0.85;
 }
 
+/* เอกสารที่ถูกส่งกลับให้ผู้ยื่นแก้ (_sent_back_alert.html) */
+.result-alert.sent-back-alert {
+  align-items: flex-start;
+}
+
+.sent-back-list {
+  margin: 6px 0 0;
+  padding-left: 1.1rem;
+}
+
+.sent-back-list li + li {
+  margin-top: 4px;
+}
+
+.sent-back-link {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.status-badge.status-needs-revision {
+  background: color-mix(in srgb, var(--color-warning) 14%, var(--bg-card));
+  color: var(--color-warning);
+  border: 1px solid color-mix(in srgb, var(--color-warning) 35%, var(--border-color));
+}
+
+.request-card-status {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
 /* ===== Staggered Animation Utility ===== */
 .stagger-in {
   animation: contentFadeIn var(--duration-slow) var(--ease-out-quart) both;

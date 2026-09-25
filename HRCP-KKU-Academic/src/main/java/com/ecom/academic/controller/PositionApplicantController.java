@@ -120,6 +120,15 @@ public class PositionApplicantController {
         model.addAttribute("hasActiveRequest", hasActiveRequest);
         model.addAttribute("statuses", PositionRequestStatus.values());
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
+        java.util.Map<Long, java.util.Map<Integer, String>> sentBackMap = new java.util.HashMap<>();
+        for (PositionRequest req : requests) {
+            java.util.Map<Integer, String> sentBack = positionService.sentBackDocuments(req);
+            if (!sentBack.isEmpty()) {
+                sentBackMap.put(req.getId(), sentBack);
+            }
+        }
+        model.addAttribute("sentBackMap", sentBackMap);
+        model.addAttribute("positionDocLabels", positionService.getAdminDocLabels());
 
         // ดึงข้อมูลตำแหน่งจาก doc_2 สำหรับทุกคำร้อง
         java.util.Map<Long, java.util.Map<String, String>> doc2DataMap = new java.util.HashMap<>();
@@ -349,15 +358,7 @@ public class PositionApplicantController {
         model.addAttribute("docSignedMap", docSignedMap);
         model.addAttribute("unsignedSigDocs", unsignedSigDocs);
         // เอกสารที่เจ้าหน้าที่ส่งกลับมาให้แก้และยังไม่ได้ลงนามใหม่ — ลงนามแล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
-        Map<Integer, String> sentBackDocs = new java.util.LinkedHashMap<>();
-        for (Integer docType : PositionRequestService.APPLICANT_DOCS) {
-            if (positionService.isRevisionRequested(id, docType)
-                    && positionService.canApplicantEditDocument(request, docType)) {
-                String note = positionService.getRevisionNote(id, docType);
-                sentBackDocs.put(docType, note != null ? note : "");
-            }
-        }
-        model.addAttribute("sentBackDocs", sentBackDocs);
+        model.addAttribute("sentBackDocs", positionService.sentBackDocuments(request));
         model.addAttribute("applicantSignaturesComplete", applicantSignaturesComplete);
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
 

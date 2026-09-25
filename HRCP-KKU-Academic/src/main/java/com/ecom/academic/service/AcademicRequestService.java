@@ -482,6 +482,26 @@ public class AcademicRequestService {
                         .getStatus() == com.ecom.academic.model.SignatureRequestStatus.COMPLETED);
     }
 
+    /**
+     * เอกสารที่เจ้าหน้าที่ส่งกลับให้ผู้ยื่นแก้ และผู้ยื่นยังแก้/ลงนามใหม่ไม่เสร็จ → เหตุผล ("" ถ้าไม่ได้ระบุ)
+     *
+     * <p>สถานะคำร้องไม่เปลี่ยนตอนส่งกลับ (ยังเป็น "รับคำร้อง" ฯลฯ) ผู้ยื่นจึงรู้ได้จากรายการนี้เท่านั้น
+     * ใช้กฎเดียวกับประตูแก้ไขเอกสาร: ลงนามใหม่แล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
+     */
+    public java.util.Map<Integer, String> sentBackDocuments(AcademicRequest request) {
+        java.util.Map<Integer, String> sentBack = new java.util.LinkedHashMap<>();
+        if (request == null || request.getCurrentStatus() == null || request.getCurrentStatus() == RequestStatus.DRAFT) {
+            return sentBack;
+        }
+        for (int docType : DocumentFieldOwnership.applicantDocuments(com.ecom.academic.model.SignatureModule.ACADEMIC)) {
+            if (isRevisionRequested(request.getId(), docType) && canApplicantEditDocument(request, docType)) {
+                String note = getRevisionNote(request.getId(), docType);
+                sentBack.put(docType, note != null ? note : "");
+            }
+        }
+        return sentBack;
+    }
+
     /** แอดมินส่งเอกสารฉบับนี้กลับมาให้ผู้ยื่นแก้ไขแล้วหรือยัง */
     public boolean isRevisionRequested(Long requestId, int documentType) {
         var docs = documentRepository.findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(requestId, documentType);

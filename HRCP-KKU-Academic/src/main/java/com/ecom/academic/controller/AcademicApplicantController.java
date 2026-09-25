@@ -194,6 +194,16 @@ public class AcademicApplicantController {
             }
         }
         model.addAttribute("doc1DataMap", doc1DataMap);
+        // เอกสารที่เจ้าหน้าที่ส่งกลับให้แก้ — สถานะคำร้องไม่เปลี่ยน การ์ดจึงต้องบอกเอง
+        Map<Long, Map<Integer, String>> sentBackMap = new java.util.HashMap<>();
+        for (AcademicRequest req : requests) {
+            Map<Integer, String> sentBack = requestService.sentBackDocuments(req);
+            if (!sentBack.isEmpty()) {
+                sentBackMap.put(req.getId(), sentBack);
+            }
+        }
+        model.addAttribute("sentBackMap", sentBackMap);
+        model.addAttribute("academicDocLabels", AcademicRequestService.getDocLabels());
 
         // ============ Position Requests ============
         List<PositionRequest> allPositionRequests = positionRequestService.findByApplicant(user.getId());
@@ -208,6 +218,15 @@ public class AcademicApplicantController {
                 .filter(r -> r.getCurrentStatus() != PositionRequestStatus.DRAFT)
                 .collect(Collectors.toList());
         model.addAttribute("positionRequests", positionRequests);
+        Map<Long, Map<Integer, String>> positionSentBackMap = new java.util.HashMap<>();
+        for (PositionRequest req : positionRequests) {
+            Map<Integer, String> sentBack = positionRequestService.sentBackDocuments(req);
+            if (!sentBack.isEmpty()) {
+                positionSentBackMap.put(req.getId(), sentBack);
+            }
+        }
+        model.addAttribute("positionSentBackMap", positionSentBackMap);
+        model.addAttribute("positionDocLabels", positionRequestService.getAdminDocLabels());
         model.addAttribute("positionDraft", positionDraft);
         model.addAttribute("positionStatuses", PositionRequestStatus.values());
         model.addAttribute("positionProgressSteps", PositionRequestStatus.getProgressSteps());

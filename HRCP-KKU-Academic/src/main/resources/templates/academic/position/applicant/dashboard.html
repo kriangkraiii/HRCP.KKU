@@ -230,6 +230,7 @@
                                 </span>
                                 <span class="badge fs-6" th:classappend="'bg-' + ${req.currentStatus.badgeClass}"
                                     th:text="${req.currentStatus.thaiLabel}"></span>
+                                <th:block th:if="${sentBackMap.containsKey(req.id)}"><span th:replace="~{academic/_sent_back_alert :: badge}"></span></th:block>
                             </div>
                             <small class="text-muted" th:if="${req.targetPosition != null}">
                                 <i class="fas fa-user-tie me-1"></i>ตำแหน่งที่ขอ: [[${req.targetPosition}]]
@@ -246,6 +247,10 @@
                             สาขา <span th:text="${doc2DataMap.get(req.id).getOrDefault('major', '')}"></span>
                         </span>
                     </div>
+
+                    <th:block th:if="${sentBackMap.containsKey(req.id)}">
+                         <div th:replace="~{academic/_sent_back_alert :: alert(${sentBackMap.get(req.id)}, ${positionDocLabels}, '/user/position/request/' + ${req.id})}"></div>
+                    </th:block>
 
                     <!-- Revision Alert -->
                     <div th:if="${req.currentStatus.name() == 'REVISION_REQUESTED'}" class="alert alert-warning py-2 mb-3 d-flex align-items-center">
