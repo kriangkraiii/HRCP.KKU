@@ -575,14 +575,18 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         // ---------- ข้อ 19 (รอบใหม่): ผู้เสนอขอเห็นว่าต้องแก้ แก้แล้วลงนามใหม่ ----------
         signIn(TestDataFactory.APPLICANT_EMAIL, TestDataFactory.PASSWORD);
         page.navigate(baseUrl() + "/user/position/request/" + id);
-        assertThat(page.locator("#sentBackAlert").count()).as("ผู้เสนอขอต้องเห็นว่าต้องแก้และลงนามใหม่").isPositive();
-        assertThat(page.locator("#sentBackAlert").innerText()).contains("ข้อความรับรองจริยธรรม");
+        page.waitForLoadState();
+        Locator sentBackAlert = page.locator("#sentBackAlert");
+        sentBackAlert.waitFor();
+        assertThat(sentBackAlert.count()).as("ผู้เสนอขอต้องเห็นว่าต้องแก้และลงนามใหม่").isPositive();
+        assertThat(sentBackAlert.innerText()).contains("ข้อความรับรองจริยธรรม");
         openAndFill("/user/position/request/" + id + "/document/3", null);
         assertThat(page.locator("form[data-auto-draft] [name='applicant_name']").first().isEditable())
                 .as("ผู้เสนอขอต้องแก้เอกสารที่ถูกส่งกลับได้").isTrue();
         sendForSignature("ผู้เสนอขอ ลงนามเอกสารที่ 3 ใหม่");
         signHere("ผู้เสนอขอ ลงนามเอกสารที่ 3 ใหม่", null);
         page.navigate(baseUrl() + "/user/position/request/" + id);
+        page.waitForLoadState();
         assertThat(page.locator("#sentBackAlert").count()).as("ลงนามใหม่แล้ว ป้ายต้องแก้ต้องหายไป").isZero();
         signOut();
 
@@ -604,6 +608,7 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         // ---------- ข้อ 20-31: ลงนามใหม่ครบแล้ว เดินเรื่องจนส่งกองทรัพยากรบุคคล ----------
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
         page.navigate(baseUrl() + "/admin/position/request/" + id);
+        page.waitForLoadState();
         assertThat(page.locator("#awaitingResignAlert").count()).as("ลงนามใหม่ครบแล้ว ต้องไม่มีป้ายรอลงนามใหม่").isZero();
         for (PositionRequestStatus st : new PositionRequestStatus[] { PositionRequestStatus.DOCUMENT_VERIFICATION,
                 PositionRequestStatus.SCREENING_COMMITTEE, PositionRequestStatus.SCREENING_APPROVED,
@@ -690,7 +695,9 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
     /** ฟอร์มสถานะต้องปฏิเสธ พร้อมบอกว่าติดเอกสารฉบับไหน และสถานะต้องไม่ขยับ */
     private void expectStatusRefused(String module, Long id, String status, String mustMention) {
         page.navigate(baseUrl() + "/admin/" + module + "/request/" + id);
+        page.waitForLoadState();
         Locator alert = page.locator("#awaitingResignAlert");
+        alert.waitFor();
         assertThat(alert.count()).as("หน้าเจ้าหน้าที่ต้องเตือนว่ายังรอลงนามใหม่").isPositive();
         assertThat(alert.innerText()).contains(mustMention);
 
