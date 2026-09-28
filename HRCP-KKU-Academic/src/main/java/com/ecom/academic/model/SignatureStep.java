@@ -38,13 +38,46 @@ public class SignatureStep {
      * <p>Stored by version on each step rather than only rendered: if this text
      * is ever reworded, past evidence must still point at what that person
      * actually agreed to, not at today's phrasing.
+     *
+     * <p>v1: generic {@link #CONSENT_TEXT}, accepted by ticking a checkbox.
+     * v2: {@link #consentStatement} naming the signer, their role and the
+     * document, accepted by pressing "ยอมรับและลงนาม" in the confirmation
+     * dialog. Every input to the v2 wording is kept on the step itself (signer,
+     * role label, envelope), so the exact text can be rebuilt from the record.
      */
-    public static final String CONSENT_TEXT_VERSION = "v1";
+    public static final String CONSENT_TEXT_VERSION = "v2";
 
+    /** v1 wording — kept so evidence stamped v1 can still be read back. */
     public static final String CONSENT_TEXT = "ข้าพเจ้าได้ตรวจสอบเอกสารฉบับนี้แล้ว "
-            + "และยินยอมลงลายมือชื่ออิเล็กทรอนิกส์ในเอกสารดังกล่าวด้วยความสมัครใจ "
+            + "และยินยอมลงลายมือชื่ออิเล็กทรอนิกส์ในเอกสารดังกล่าว "
             + "โดยรับทราบว่าการลงลายมือชื่ออิเล็กทรอนิกส์นี้มีผลผูกพันตามกฎหมายเช่นเดียวกับการลงลายมือชื่อด้วยตนเอง "
             + "ตามพระราชบัญญัติว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์ พ.ศ. 2544 และที่แก้ไขเพิ่มเติม";
+
+    /** The legal part of the v2 statement, after who is signing what. */
+    public static final String CONSENT_TERMS = "และยินยอมลงลายมือชื่ออิเล็กทรอนิกส์ในเอกสารดังกล่าว "
+            + "โดยรับทราบว่าการลงลายมือชื่ออิเล็กทรอนิกส์นี้มีผลผูกพันตามกฎหมายเช่นเดียวกับการลงลายมือชื่อด้วยตนเอง "
+            + "ตามพระราชบัญญัติว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์ พ.ศ. 2544 และที่แก้ไขเพิ่มเติม";
+
+    /**
+     * The v2 statement: "ข้าพเจ้า {name} ในฐานะ{role} ได้ตรวจสอบเอกสาร "{doc}" แล้ว …".
+     * Blank parts are left out rather than printed as empty quotes.
+     */
+    public static String consentStatement(String signerName, String roleLabel, String documentLabel) {
+        StringBuilder text = new StringBuilder("ข้าพเจ้า");
+        if (signerName != null && !signerName.isBlank()) {
+            text.append(' ').append(signerName.strip());
+        }
+        if (roleLabel != null && !roleLabel.isBlank()) {
+            text.append(" ในฐานะ").append(roleLabel.strip());
+        }
+        text.append(" ได้ตรวจสอบเอกสาร");
+        if (documentLabel != null && !documentLabel.isBlank()) {
+            text.append(" \"").append(documentLabel.strip()).append('"');
+        } else {
+            text.append("ฉบับนี้");
+        }
+        return text.append(" แล้ว ").append(CONSENT_TERMS).toString();
+    }
 
     /** How the signer was identified at the moment of signing. */
     public static final String AUTH_METHOD_SESSION = "SESSION";

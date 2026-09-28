@@ -413,26 +413,20 @@
                             </div>
                         </div>
 
-                        <!-- ความยินยอม — เป็นสาระสำคัญตาม พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์ ม.9
-                             ระบบบันทึกทั้งข้อความที่แสดง เวลา IP และอุปกรณ์ไว้เป็นหลักฐาน -->
+                        <!-- คำรับรองของผู้ลงนาม — เป็นสาระสำคัญตาม พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์ ม.9
+                             ไม่มี checkbox: การกด "ยอมรับและลงนาม" ในหน้าต่างยืนยันคือการแสดงเจตนา
+                             ระบบบันทึกฉบับของข้อความ เวลา IP และอุปกรณ์ไว้เป็นหลักฐาน -->
                         <div class="card card-academic mb-3">
                             <div class="card-header bg-white">
-                                <i class="fas fa-scale-balanced"></i> ความยินยอมในการลงลายมือชื่อ
+                                <i class="fas fa-scale-balanced"></i> คำรับรองของผู้ลงนาม
                             </div>
                             <div class="card-body">
-                                <p class="small text-secondary" th:text="${consentText}">ข้อความยินยอม</p>
+                                <p class="mb-2 js-consent-statement" th:text="${consentStatement}">คำรับรอง</p>
 
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" name="consent"
-                                           id="consentCheck" value="true" required>
-                                    <label class="form-check-label fw-semibold" for="consentCheck">
-                                        ข้าพเจ้าได้อ่านและยินยอมตามข้อความข้างต้น
-                                    </label>
-                                </div>
-
-                                <div class="form-text mt-2 text-muted">
+                                <div class="form-text text-muted">
                                     <i class="fas fa-clock text-primary me-1"></i>
-                                    ระบบจะบันทึกวันและเวลาในตราประทับและหลักฐานดิจิทัลตาม<strong>เวลาจริง ณ วินาทีที่ท่านกดยืนยันการลงนาม</strong> พร้อมหมายเลข IP และอุปกรณ์
+                                    เมื่อกด <strong>"ยอมรับและลงนาม"</strong> ถือว่าท่านรับรองตามข้อความข้างต้น
+                                    ระบบจะบันทึกวันและเวลาในตราประทับและหลักฐานดิจิทัลตาม<strong>เวลาจริง ณ วินาทีที่ท่านกดยืนยัน</strong> พร้อมหมายเลข IP และอุปกรณ์
                                 </div>
                             </div>
                         </div>
@@ -442,8 +436,51 @@
                         <button type="submit" class="btn btn-academic w-100" id="signSubmitBtn"
                                 data-stop-label="ยืนยันไม่เห็นควร และส่งกลับไปแก้ไข"
                                 th:attr="data-stop-confirm='ยืนยันผลการพิจารณา &quot;' + ${notApprovedValue} + '&quot;? การเวียนลงนามฉบับนี้จะหยุดและเอกสารถูกส่งกลับไปแก้ไข'">
-                            <i class="fas fa-signature"></i> ยืนยันการลงนาม
+                            <i class="fas fa-signature"></i> ลงนาม
                         </button>
+
+                        <!-- หน้าต่างยืนยันก่อนลงนาม: ทวนว่ากำลังเซ็นอะไร ในฐานะใด ด้วยลายเซ็นไหน
+                             consent=true ส่งไปกับปุ่มในหน้าต่างนี้เท่านั้น ฟอร์มที่ส่งทางอื่นเซิร์ฟเวอร์จะปฏิเสธ -->
+                        <div class="modal fade" id="signConfirmModal" tabindex="-1"
+                             aria-labelledby="signConfirmTitle" aria-hidden="true">
+                            <div class="modal-dialog modal-dialog-centered">
+                                <div class="modal-content">
+                                    <div class="modal-header">
+                                        <h5 class="modal-title" id="signConfirmTitle">
+                                            <i class="fas fa-file-signature text-primary me-1"></i> ยืนยันการลงลายมือชื่อ
+                                        </h5>
+                                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+                                    </div>
+                                    <div class="modal-body">
+                                        <dl class="row small mb-3">
+                                            <dt class="col-4 text-secondary fw-normal">เอกสาร</dt>
+                                            <dd class="col-8" th:text="${envelope.documentLabel}">เอกสาร</dd>
+                                            <th:block th:if="${step.roleLabel != null}">
+                                                <dt class="col-4 text-secondary fw-normal">ในฐานะ</dt>
+                                                <dd class="col-8" th:text="${step.roleLabel}">ตำแหน่ง</dd>
+                                            </th:block>
+                                            <dt class="col-4 text-secondary fw-normal">ลายเซ็น</dt>
+                                            <dd class="col-8" id="signConfirmSignature">-</dd>
+                                            <dt class="col-4 text-secondary fw-normal" id="signConfirmChoiceLabel" hidden>ผลการพิจารณา</dt>
+                                            <dd class="col-8 mb-0" id="signConfirmChoice" hidden></dd>
+                                        </dl>
+                                        <div class="border rounded p-3 bg-light">
+                                            <div class="fw-semibold mb-1">คำรับรอง</div>
+                                            <p class="small mb-0" th:text="${consentStatement}">คำรับรอง</p>
+                                        </div>
+                                    </div>
+                                    <div class="modal-footer">
+                                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                                        <!-- form= ผูกกับฟอร์มตรง ๆ: สคริปต์ส่วนกลางย้าย .modal ไปไว้ใต้ body
+                                             ให้พ้น stacking context ของคอลัมน์ ปุ่มจึงไม่ได้อยู่ในฟอร์มแล้วจริง ๆ -->
+                                        <button type="submit" class="btn btn-academic" id="signConfirmBtn"
+                                                form="signForm" name="consent" value="true">
+                                            <i class="fas fa-signature"></i> ยอมรับและลงนาม
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </form>
 
                     <!-- ปฏิเสธการลงนาม — เหลือไว้เฉพาะช่องที่ไม่ได้ถูกถามผลการพิจารณา
@@ -526,7 +563,7 @@
     <!-- Interactive PDF Viewer Assets -->
     <link rel="stylesheet" href="/css/esign_pdf_viewer.css?v=3.2">
     <script src="/js/esign_pdf_viewer.js?v=3.3"></script>
-    <script src="/js/esign_consideration.js?v=1.0"></script>
+    <script src="/js/esign_consideration.js?v=1.2"></script>
     <script>
         (function() {
             function initSignViewer() {

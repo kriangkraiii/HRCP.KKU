@@ -930,10 +930,13 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         if (pin.count() > 0) {
             pin.fill(com.ecom.support.TestCertificates.PIN);
         }
-        page.locator("#consentCheck").check();
+        // ปุ่ม "ลงนาม" เปิดหน้าต่างยืนยัน การยินยอมคือกด "ยอมรับและลงนาม" ในหน้าต่างนั้น
+        page.locator("#signSubmitBtn").click();
+        page.locator("#signConfirmModal.show #signConfirmBtn")
+                .waitFor(new Locator.WaitForOptions().setTimeout(10_000));
 
         String before = page.url();
-        clickAndSettle(page.locator("#signSubmitBtn"), who + ": กดยืนยันการลงนาม");
+        clickAndSettle(page.locator("#signConfirmBtn"), who + ": กดยอมรับและลงนาม");
         assertThat(page.url())
                 .as(who + ": ลงนามไม่สำเร็จ ถูกเด้งกลับหน้าเดิม — " + visibleErrors())
                 .isNotEqualTo(before);

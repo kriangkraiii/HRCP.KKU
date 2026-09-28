@@ -170,7 +170,10 @@ public class SigningController {
         model.addAttribute("defaultSignature", signatureService.findDefault(me).orElse(null));
         model.addAttribute("myCert", myCert);
         model.addAttribute("hasValidCert", hasValidCert);
-        model.addAttribute("consentText", SignatureStep.CONSENT_TEXT);
+        // คำรับรองระบุชื่อตามใบรับรองที่จะใช้ลงนามจริง ไม่ใช่ชื่อบัญชี เพราะลายมือชื่อดิจิทัลออกในชื่อนั้น
+        String signerName = myCert != null ? myCert.getCommonName() : me.getName();
+        model.addAttribute("consentStatement", SignatureStep.consentStatement(
+                signerName, step.getRoleLabel(), envelope.getDocumentLabel()));
         model.addAttribute("queueTotal", queueTotal);
         model.addAttribute("queueIndex", queueIndex);
         model.addAttribute("deadlineAdvisory", deadlineAdvisory);

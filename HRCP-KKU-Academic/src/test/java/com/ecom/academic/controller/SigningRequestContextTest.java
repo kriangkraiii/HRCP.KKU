@@ -201,9 +201,14 @@ class SigningRequestContextTest {
                 .contains("/js/info_tip.js")
                 .contains("data-bs-toggle=\"popover\"")
                 .contains("data-bs-content=\"เอกสารนี้เป็นฉบับที่ล็อกไว้ตอนส่งเวียนลงนาม")
-                // ข้อความยินยอมเป็นสาระสำคัญทางกฎหมาย ต้องไม่ถูกย้ายไปซ่อนในปุ่ม
-                .contains(com.ecom.academic.model.SignatureStep.CONSENT_TEXT)
-                .contains("ข้าพเจ้าได้อ่านและยินยอมตามข้อความข้างต้น")
+                // คำรับรองเป็นสาระสำคัญทางกฎหมาย ต้องไม่ถูกย้ายไปซ่อนในปุ่ม และระบุชื่อตามใบรับรอง
+                .contains("ข้าพเจ้า ทดสอบ")
+                .contains(com.ecom.academic.model.SignatureStep.CONSENT_TERMS)
+                // ยินยอมด้วยปุ่มในหน้าต่างยืนยัน ไม่ใช่ checkbox
+                .contains("id=\"signConfirmModal\"")
+                .contains("id=\"signConfirmBtn\"")
+                .contains("ยอมรับและลงนาม")
+                .doesNotContain("consentCheck")
                 .doesNotContain("Freeze Snapshot")
                 .doesNotContain("One-Click Sign");
     }

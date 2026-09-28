@@ -789,7 +789,7 @@ public class SignatureWorkflowService {
         }
         // 4. Consent is not optional — it is what makes this a signature.
         if (!consentAccepted) {
-            return Result.failed("กรุณากดยอมรับข้อความยินยอมก่อนลงนาม");
+            return Result.failed("กรุณากด \"ยอมรับและลงนาม\" เพื่อแสดงความยินยอมตามคำรับรองก่อนลงนาม");
         }
         // 5. The signature must be one of theirs.
         UserSignature signature = userSignatureService.findMine(userSignatureId, actingUser).orElse(null);
