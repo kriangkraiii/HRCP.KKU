@@ -150,7 +150,7 @@
                          data-presave-skip-checks: เนื้อเอกสารผ่านการตรวจครบไปแล้วตอนผู้ยื่นลงนาม ช่องที่ยังว่าง
                          (เช่นเลขที่หนังสือ) เป็นช่องที่ออกให้ทีหลัง ไม่ใช่เหตุให้ส่งต่อไม่ได้ -->
                     <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/forward'}"
-                          data-presave-doc data-required-title="ยังส่งเวียนลงนามต่อไม่ได้"
+                          data-required-title="ยังส่งเวียนลงนามต่อไม่ได้"
                           th:attr="data-optional-fields=${docOptionalFields},
                                    data-repeatable-prefixes=${docRepeatablePrefixes}"
                           method="post"
