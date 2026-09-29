@@ -75,8 +75,8 @@ public class IncrementalSigningService {
             DocumentWorkflowConfigService workflowConfig,
             org.springframework.beans.factory.ObjectProvider<com.ecom.academic.service.OfficeFieldResolver> officeFields,
             com.ecom.academic.repository.SignatureRequestRepository envelopes,
-            @Value("${app.esign.pdf-mode:legacy}") String mode,
-            @Value("${app.esign.incremental-docs:ACADEMIC:1}") String documents) {
+            @Value("${app.esign.pdf-mode:incremental}") String mode,
+            @Value("${app.esign.incremental-docs:ACADEMIC:1,ACADEMIC:2,ACADEMIC:3,ACADEMIC:4,ACADEMIC:5,ACADEMIC:7,ACADEMIC:8,ACADEMIC:9,POSITION:1,POSITION:2,POSITION:3,POSITION:4,POSITION:6,POSITION:7,POSITION:8,POSITION:9}") String documents) {
         this.renderer = renderer;
         this.revisions = revisions;
         this.workflowConfig = workflowConfig;
@@ -115,7 +115,7 @@ public class IncrementalSigningService {
         Set<String> seen = new LinkedHashSet<>();
         for (String f : DocumentFieldOwnership.lateFields(envelope.getModule(), envelope.getDocumentType())) {
             if (seen.add(f)) {
-                texts.add(new BasePdfBuilder.TextSpec(f, reserveFor(f), isTickField(f)));
+                texts.add(new BasePdfBuilder.TextSpec(f, reserveFor(f), isTickField(f), linesFor(f)));
             }
         }
         List<BasePdfBuilder.SlotSpec> slotSpecs = new ArrayList<>();
@@ -186,6 +186,14 @@ public class IncrementalSigningService {
             ticks.add(s.marks().commentTickFieldKey());
         }
         return ticks;
+    }
+
+    /**
+     * Lines reserved for a late field. The remarks of document 2 (text_1..5) sit in
+     * narrow table cells and wrap there, as they do in the Word version.
+     */
+    static int linesFor(String field) {
+        return field.startsWith("text_") ? 3 : 1;
     }
 
     /** Office/admin fields that hold a ✓ rather than text (the chk_* boxes). */

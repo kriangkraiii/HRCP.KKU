@@ -66,7 +66,11 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         // .p12 files that TestDataFactory installs are written to disk. Left at
         // the default they land in the repository's own uploads/ directory and
         // accumulate there, one per test that signs anything.
-        "app.upload.certificate-dir=${java.io.tmpdir}/hrcp-test-certificates"
+        "app.upload.certificate-dir=${java.io.tmpdir}/hrcp-test-certificates",
+        // Incremental signing renders every envelope through LibreOffice. Workflow
+        // tests are about who may do what, not the PDF, so they keep the old flow;
+        // the Incremental* tests switch it on for themselves.
+        "app.esign.pdf-mode=legacy"
 })
 public abstract class AbstractFlowTest {
 

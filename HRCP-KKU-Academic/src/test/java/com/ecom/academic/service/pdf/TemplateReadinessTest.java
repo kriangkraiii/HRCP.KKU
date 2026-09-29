@@ -124,6 +124,23 @@ class TemplateReadinessTest {
         }
     }
 
+    private static final PdfIncrementService PDF = new PdfIncrementService(THAI);
+
+    /** Would {@code v} fit the box at some allowed size, wrapping if the box has lines? */
+    private static boolean fits(String v, BasePdfBuilder.Box b) {
+        for (float s = b.fontSize(); s >= Math.min(PdfIncrementService.MIN_TEXT_SIZE, b.fontSize()); s -= 0.5f) {
+            if (b.lines() > 1) {
+                List<String> lines = PDF.wrap(v, s, b.width() - 1);
+                if (lines != null && lines.size() <= b.lines()) {
+                    return true;
+                }
+            } else if (THAI.width(v, s) <= b.width() - 1) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Test
     void everyTemplate() throws Exception {
         assumeTrue(GEN.isPdfConversionAvailable(), "LibreOffice is not installed");
@@ -148,7 +165,7 @@ class TemplateReadinessTest {
                 for (String f : DocumentFieldOwnership.lateFields(module, type)) {
                     if (keys.contains(f) && seen.add(f)) {
                         texts.add(new BasePdfBuilder.TextSpec(f, IncrementalSigningService.reserveFor(f),
-                                IncrementalSigningService.isTickField(f)));
+                                IncrementalSigningService.isTickField(f), IncrementalSigningService.linesFor(f)));
                     }
                 }
                 List<BasePdfBuilder.SlotSpec> slotSpecs = new ArrayList<>();
@@ -200,9 +217,8 @@ class TemplateReadinessTest {
                     }
                     for (BasePdfBuilder.Box b : base.layout().texts()) {
                         String v = typical(b.field());
-                        if (!PdfIncrementService.TICK.equals(v)
-                                && THAI.fittingSize(v, b.fontSize(), Math.min(PdfIncrementService.MIN_TEXT_SIZE, b.fontSize()),
-                                        b.width() - 1) < 0) {
+                        boolean fits = PdfIncrementService.TICK.equals(v) || fits(v, b);
+                        if (!fits) {
                             problems.add(b.field() + " too narrow (" + Math.round(b.width()) + "pt)");
                         }
                     }

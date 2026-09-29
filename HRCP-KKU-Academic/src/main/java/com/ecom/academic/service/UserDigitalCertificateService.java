@@ -263,9 +263,8 @@ public class UserDigitalCertificateService {
                     : unlock.error());
         }
 
-        cert.setEncryptedPin(pinEncryptionService.encrypt(newPassword));
-        certificateRepository.save(cert);
-        record(user, cert, Event.PIN_CHANGED, null, null);
+        // Checked only — PINs are never kept.
+        record(user, cert, Event.PIN_CHANGED, "verified, not stored", null);
         log.info("Updated Digital ID Password for user {} cert {}", user.getId(), cert.getId());
         return SaveResult.ok(cert);
     }
@@ -331,11 +330,8 @@ public class UserDigitalCertificateService {
         cert.setValidTo(info.validTo());
         cert.setActive(true);
 
-        if (rememberPin) {
-            cert.setEncryptedPin(pinEncryptionService.encrypt(pin));
-        } else {
-            cert.setEncryptedPin(null);
-        }
+        // PINs are never kept: every signature opens the .p12 with the PIN typed for it.
+        cert.setEncryptedPin(null);
 
         UserDigitalCertificate saved = certificateRepository.save(cert);
         record(user, saved, Event.UPLOADED, info.subjectDn(), null);

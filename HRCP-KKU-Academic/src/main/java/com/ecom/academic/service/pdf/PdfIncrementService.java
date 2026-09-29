@@ -203,10 +203,27 @@ public final class PdfIncrementService {
         }
         String text = value == null ? "" : value;
         float preferred = daSize(field);
+        int lines = field.getCOSObject().getInt(BasePdfBuilder.LINES, 1);
+        float pitch = field.getCOSObject().getFloat(BasePdfBuilder.PITCH, 0);
         for (PDAnnotationWidget w : field.getWidgets()) {
             PDRectangle r = w.getRectangle();
-            float size = text.isEmpty() ? preferred
-                    : thai.fittingSize(text, preferred, Math.min(MIN_TEXT_SIZE, preferred), r.getWidth() - 1);
+            float size;
+            List<String> wrapped = null;
+            if (text.isEmpty()) {
+                size = preferred;
+            } else if (lines > 1) {
+                size = -1;
+                for (float s = preferred; s >= Math.min(MIN_TEXT_SIZE, preferred); s -= 0.5f) {
+                    List<String> candidate = wrap(text, s, r.getWidth() - 1);
+                    if (candidate != null && candidate.size() <= lines) {
+                        size = s;
+                        wrapped = candidate;
+                        break;
+                    }
+                }
+            } else {
+                size = thai.fittingSize(text, preferred, Math.min(MIN_TEXT_SIZE, preferred), r.getWidth() - 1);
+            }
             if (size < 0) {
                 throw new DoesNotFitException(name, text);
             }
@@ -219,9 +236,22 @@ public final class PdfIncrementService {
             fonts.setItem(FONT, form.getDefaultResources().getCOSObject().getCOSDictionary(COSName.FONT).getItem(FONT));
             res.getCOSObject().setItem(COSName.FONT, fonts);
             ap.setResources(res);
-            String ops = "/Tx BMC\n" + (text.isEmpty() ? ""
-                    : TICK.equals(text) ? tick(r, preferred)
-                    : thai.operators(FONT, size, text, 0, baseline(r))) + "EMC\n";
+            StringBuilder body = new StringBuilder();
+            if (text.isEmpty()) {
+                // nothing to draw
+            } else if (TICK.equals(text)) {
+                body.append(tick(r, preferred));
+            } else if (wrapped != null) {
+                // Line i sits where the base found the template's line i.
+                float lineBox = preferred * 1.3f;
+                float firstBaseline = r.getHeight() - lineBox + lineBox * BASELINE_RATIO;
+                for (int i = 0; i < wrapped.size(); i++) {
+                    body.append(thai.operators(FONT, size, wrapped.get(i), 0, firstBaseline - i * pitch));
+                }
+            } else {
+                body.append(thai.operators(FONT, size, text, 0, baseline(r)));
+            }
+            String ops = "/Tx BMC\n" + body + "EMC\n";
             try (var os = ap.getContentStream().createOutputStream(COSName.FLATE_DECODE)) {
                 os.write(ops.getBytes(StandardCharsets.US_ASCII));
             }
@@ -234,6 +264,38 @@ public final class PdfIncrementService {
         // where search, screen readers and valueOf() find it.
         field.getCOSObject().setItem(isPushButton(field) ? COSName.TU : COSName.V, new COSString(text));
         field.getCOSObject().setNeedToBeUpdated(true);
+    }
+
+    /**
+     * Breaks Thai text into lines no wider than {@code width} at {@code size}, at
+     * word boundaries (the JDK's Thai dictionary). Null when a single word is wider
+     * than a line.
+     */
+    List<String> wrap(String text, float size, float width) {
+        java.text.BreakIterator words = java.text.BreakIterator.getLineInstance(Locale.forLanguageTag("th"));
+        words.setText(text);
+        List<String> lines = new ArrayList<>();
+        StringBuilder line = new StringBuilder();
+        int start = words.first();
+        for (int end = words.next(); end != java.text.BreakIterator.DONE; start = end, end = words.next()) {
+            String word = text.substring(start, end);
+            if (thai.width(line + word.stripTrailing(), size) <= width) {
+                line.append(word);
+                continue;
+            }
+            if (line.length() > 0) {
+                lines.add(line.toString().strip());
+                line.setLength(0);
+            }
+            if (thai.width(word.stripTrailing(), size) > width) {
+                return null;
+            }
+            line.append(word);
+        }
+        if (line.length() > 0) {
+            lines.add(line.toString().strip());
+        }
+        return lines;
     }
 
     static boolean isPushButton(PDField field) {

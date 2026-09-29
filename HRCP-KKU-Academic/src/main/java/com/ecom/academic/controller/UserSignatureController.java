@@ -221,7 +221,7 @@ public class UserSignatureController {
             UserDigitalCertificateService.SaveResult result = digitalCertificateService.registerCertificate(
                     me, certFile.getBytes(), certFile.getOriginalFilename(), pin, true);
             if (result.ok()) {
-                redirectAttributes.addFlashAttribute("succMsg", "ติดตั้งและยืนยัน Digital ID (.p12) เรียบร้อยแล้ว (เปิดใช้ One-Click Sign อัตโนมัติ)");
+                redirectAttributes.addFlashAttribute("succMsg", "ติดตั้งและยืนยัน Digital ID (.p12) เรียบร้อยแล้ว — ระบบไม่เก็บรหัสผ่าน กรุณากรอกทุกครั้งที่ลงนาม");
             } else {
                 redirectAttributes.addFlashAttribute("errorMsg", result.error());
             }

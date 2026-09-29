@@ -216,6 +216,7 @@ public class SignedDocumentRenderer {
                         } catch (Exception e) {
                             log.warn("Could not apply digital certificates to envelope {}: {}", envelope.getId(), e.getMessage());
                         }
+                        keepSignedCopy(pdfTarget, pdf);
                         writeAtomically(pdfTarget, pdf);
                         pdfPath = uploadPaths.toStored(pdfTarget);
                     }
@@ -304,6 +305,30 @@ public class SignedDocumentRenderer {
     private static String archiveBaseName(SignatureRequest envelope) {
         return (envelope.getModule() == SignatureModule.ACADEMIC ? "doc_" : "p2doc_")
                 + envelope.getDocumentType() + "_signed_" + envelope.getVerificationCode();
+    }
+
+    /**
+     * An old-flow envelope rebuilt after saved PINs were removed (V33) comes out
+     * without digital signatures. Before such a copy replaces one that had them,
+     * keep the signed one next to it.
+     */
+    private static void keepSignedCopy(Path target, byte[] replacement) throws IOException {
+        if (!Files.isRegularFile(target)) {
+            return;
+        }
+        byte[] existing = Files.readAllBytes(target);
+        if (hasSignature(existing) && !hasSignature(replacement)) {
+            Path kept = target.resolveSibling(target.getFileName().toString().replace(".pdf", ".signed-original.pdf"));
+            if (!Files.exists(kept)) {
+                Files.write(kept, existing);
+                log.warn("Kept the digitally signed copy of {} as {} before replacing it with an unsigned rebuild",
+                        target.getFileName(), kept.getFileName());
+            }
+        }
+    }
+
+    private static boolean hasSignature(byte[] pdf) {
+        return pdf != null && new String(pdf, StandardCharsets.ISO_8859_1).contains("/ByteRange");
     }
 
     private static void writeAtomically(Path target, byte[] content) throws IOException {

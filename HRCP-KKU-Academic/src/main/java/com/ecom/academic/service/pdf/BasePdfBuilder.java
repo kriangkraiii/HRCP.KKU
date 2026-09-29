@@ -90,9 +90,13 @@ public final class BasePdfBuilder {
      * A late value to reserve. {@code reserve} is its length in non-breaking spaces;
      * a {@code tick} (✓ in a pair of brackets) gets a short fixed reserve instead.
      */
-    public record TextSpec(String field, int reserve, boolean tick) {
+    public record TextSpec(String field, int reserve, boolean tick, int lines) {
         public TextSpec(String field, int reserve) {
-            this(field, reserve, false);
+            this(field, reserve, false, 1);
+        }
+
+        public TextSpec(String field, int reserve, boolean tick) {
+            this(field, reserve, tick, 1);
         }
     }
 
@@ -102,9 +106,20 @@ public final class BasePdfBuilder {
     public record SlotSpec(String slotKey, String anchorPlaceholder, List<String> ownFields) {
     }
 
-    /** Where one field ended up. Coordinates in PDF points, origin bottom-left. */
-    public record Box(String field, int page, float x, float y, float width, float height, float fontSize) {
+    /**
+     * Where one field ended up. Coordinates in PDF points, origin bottom-left. A
+     * multi-line field is one box over all its lines, {@code pitch} apart.
+     */
+    public record Box(String field, int page, float x, float y, float width, float height, float fontSize,
+            int lines, float pitch) {
+        public Box(String field, int page, float x, float y, float width, float height, float fontSize) {
+            this(field, page, x, y, width, height, fontSize, 1, 0);
+        }
     }
+
+    /** Custom keys on a multi-line field: how many lines, and how far apart. */
+    static final COSName LINES = COSName.getPDFName("HRCPLines");
+    static final COSName PITCH = COSName.getPDFName("HRCPPitch");
 
     public record Layout(List<Box> texts, List<Box> signatures) {
     }
@@ -122,8 +137,10 @@ public final class BasePdfBuilder {
     public Result build(Renderer renderer, List<TextSpec> texts, List<SlotSpec> slots)
             throws IOException, BaseBuildException {
         Map<String, Integer> wanted = new LinkedHashMap<>();
+        Map<String, Integer> lines = new LinkedHashMap<>();
         for (TextSpec t : texts) {
             wanted.put(t.field(), t.tick() ? TICK_RUN : Math.max(MIN_RUN, t.reserve()));
+            lines.put(t.field(), t.tick() ? 1 : Math.max(1, t.lines()));
         }
         Map<String, String> overrides = new LinkedHashMap<>();
         wanted.keySet().forEach(f -> overrides.put(f, String.format(TOKEN, f)));
@@ -146,7 +163,7 @@ public final class BasePdfBuilder {
             Map<String, Integer> lengths = attempt == 0 ? distinct(wanted) : new LinkedHashMap<>(wanted);
             Map<String, Integer> present = new LinkedHashMap<>();
             List<String> order = new ArrayList<>();
-            byte[] docx = reserve(template, lengths, present, order);
+            byte[] docx = reserve(template, lengths, lines, present, order);
             // A late field this template does not print has nothing to reserve.
             lengths.keySet().retainAll(present.keySet());
             wanted.keySet().retainAll(present.keySet());
@@ -169,8 +186,42 @@ public final class BasePdfBuilder {
                 }
                 continue;
             }
-            return finish(rendered, found, byWidth, slots);
+            return finish(rendered, mergeLines(found, lines), byWidth, slots);
         }
+    }
+
+    /**
+     * A multi-line field was found as one box per line, in reading order: join each
+     * occurrence's lines into one box.
+     */
+    private static List<Box> mergeLines(List<Box> found, Map<String, Integer> lines) throws BaseBuildException {
+        List<Box> out = new ArrayList<>();
+        Map<String, List<Box>> pending = new LinkedHashMap<>();
+        for (Box b : found) {
+            int k = lines.getOrDefault(b.field(), 1);
+            if (k <= 1) {
+                out.add(b);
+                continue;
+            }
+            List<Box> group = pending.computeIfAbsent(b.field(), f -> new ArrayList<>());
+            group.add(b);
+            if (group.size() == k) {
+                Box top = group.get(0), bottom = group.get(k - 1);
+                if (top.page() != bottom.page()) {
+                    throw new BaseBuildException("Lines of " + b.field() + " run across a page break");
+                }
+                float x = (float) group.stream().mapToDouble(Box::x).min().orElse(top.x());
+                float right = (float) group.stream().mapToDouble(g -> g.x() + g.width()).max().orElse(top.x());
+                float pitch = (top.y() - bottom.y()) / (k - 1);
+                out.add(new Box(b.field(), top.page(), x, bottom.y(), right - x, top.y() + top.height() - bottom.y(),
+                        top.fontSize(), k, pitch));
+                pending.remove(b.field());
+            }
+        }
+        if (!pending.isEmpty()) {
+            throw new BaseBuildException("Not every line of " + pending.keySet() + " was found");
+        }
+        return out;
     }
 
     /** Run lengths at least three apart, so no field's run can pass for another's. */
@@ -211,8 +262,8 @@ public final class BasePdfBuilder {
     /**
      * @param order filled with each token occurrence's field, in document order
      */
-    static byte[] reserve(byte[] docx, Map<String, Integer> lengths, Map<String, Integer> seen, List<String> order)
-            throws IOException {
+    static byte[] reserve(byte[] docx, Map<String, Integer> lengths, Map<String, Integer> lines,
+            Map<String, Integer> seen, List<String> order) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(docx));
                 ZipOutputStream zout = new ZipOutputStream(out)) {
@@ -232,7 +283,12 @@ public final class BasePdfBuilder {
                                 at.put(i, l.getKey());
                             }
                         }
-                        order.addAll(at.values());
+                        // A multi-line reserve is one run per line.
+                        at.values().forEach(f -> {
+                            for (int n = lines.getOrDefault(f, 1); n > 0; n--) {
+                                order.add(f);
+                            }
+                        });
                     }
                     for (var l : lengths.entrySet()) {
                         String token = String.format(TOKEN, l.getKey());
@@ -243,8 +299,13 @@ public final class BasePdfBuilder {
                             int tEnd = xml.indexOf('>', tStart);
                             String open = xml.substring(tStart, tEnd + 1);
                             String fixed = open.contains("xml:space") ? open : "<w:t xml:space=\"preserve\">";
+                            String run = String.valueOf(NBSP).repeat(l.getValue());
+                            String reserved = run;
+                            for (int n = lines.getOrDefault(l.getKey(), 1); n > 1; n--) {
+                                reserved += "</w:t><w:br/><w:t xml:space=\"preserve\">" + run;
+                            }
                             xml = xml.substring(0, tStart) + fixed + xml.substring(tEnd + 1, at)
-                                    + String.valueOf(NBSP).repeat(l.getValue())
+                                    + reserved
                                     + xml.substring(at + token.length());
                             seen.merge(l.getKey(), 1, Integer::sum);
                         }
@@ -433,6 +494,10 @@ public final class BasePdfBuilder {
                     List<PDAnnotationWidget> ws = new ArrayList<>(t.getWidgets());
                     ws.add(w);
                     t.setWidgets(ws);
+                }
+                if (b.lines() > 1) {
+                    t.getCOSObject().setInt(LINES, b.lines());
+                    t.getCOSObject().setFloat(PITCH, b.pitch());
                 }
                 place(doc, w, b);
             }

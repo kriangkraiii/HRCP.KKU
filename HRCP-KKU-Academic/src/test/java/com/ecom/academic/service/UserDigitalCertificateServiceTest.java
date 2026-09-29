@@ -81,7 +81,8 @@ class UserDigitalCertificateServiceTest {
         assertTrue(result.ok());
         assertNotNull(result.certificate());
         assertEquals("ดร.กฤษดา มหาวิทยาลัย", result.certificate().getCommonName());
-        assertTrue(result.certificate().hasSavedPin());
+        // PINs are never kept (V33): every signature opens the .p12 with the PIN typed for it.
+        assertTrue(!result.certificate().hasSavedPin());
 
         verify(repository).deactivateAllFor(101);
         verify(repository).save(any(UserDigitalCertificate.class));
@@ -132,8 +133,8 @@ class UserDigitalCertificateServiceTest {
         // 2. Try to update with correct password -> succeeds
         UserDigitalCertificateService.SaveResult okRes = service.updatePassword(user, originalPin);
         assertTrue(okRes.ok());
-        assertEquals(originalPin, pinEncryptionService.decrypt(cert.getEncryptedPin()));
-        verify(repository).save(cert);
+        // Checked, not stored.
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).save(cert);
     }
 
     @Test

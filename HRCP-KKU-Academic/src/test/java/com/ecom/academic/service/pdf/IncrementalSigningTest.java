@@ -188,4 +188,46 @@ class IncrementalSigningTest {
         assertThat(IncrementalSigningService.values(filled)).containsEntry("chk_off_2", PdfIncrementService.TICK)
                 .containsEntry("chk_off_1", "");
     }
+
+    @Test
+    @DisplayName("หมายเหตุหลายบรรทัดในตาราง (เอกสารที่ 2): ตัดบรรทัดตามคำ ไม่เกินพื้นที่ที่จอง")
+    void multiLineRemarks() throws Exception {
+        String json = "{\"applicant_name\":\"นายสมชาย ใจดี\",\"title\":\"นาย\"}";
+        List<BasePdfBuilder.TextSpec> texts = new java.util.ArrayList<>();
+        for (int i = 1; i <= 5; i++) {
+            texts.add(new BasePdfBuilder.TextSpec("chk_off_" + i, 0, true));
+            texts.add(new BasePdfBuilder.TextSpec("text_" + i, 30, false, IncrementalSigningService.linesFor("text_" + i)));
+        }
+        var base = new BasePdfBuilder().build(new BasePdfBuilder.Renderer() {
+            @Override
+            public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures) throws IOException {
+                StringBuilder j = new StringBuilder(json.substring(0, json.length() - 1));
+                overrides.forEach((k, v) -> j.append(",\"").append(k).append("\":\"").append(v).append('"'));
+                return GEN.generateSignedDocx(2, j.append('}').toString(), pictures.stream()
+                        .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height())).toList());
+            }
+
+            @Override
+            public byte[] toPdf(byte[] docx) throws IOException {
+                return GEN.convertDocxToPdf(docx);
+            }
+        }, texts, List.of());
+
+        var remark = base.layout().texts().stream().filter(b -> b.field().equals("text_1")).findFirst().orElseThrow();
+        assertThat(remark.lines()).isEqualTo(3);
+        assertThat(remark.pitch()).isGreaterThan(10);
+
+        Map<String, String> values = new LinkedHashMap<>();
+        values.put("chk_off_1", PdfIncrementService.TICK);
+        values.put("text_1", "เอกสารครบถ้วน");
+        values.put("chk_off_2", PdfIncrementService.TICK);
+        values.put("text_2", "ขาดสำเนาคำสั่งแต่งตั้ง");
+        byte[] filled = PDF.fill(base.pdf(), values);
+        assertThat(IncrementalSigningService.values(filled)).containsEntry("text_2", "ขาดสำเนาคำสั่งแต่งตั้ง");
+        assertThatThrownBy(() -> PDF.fill(base.pdf(), Map.of("text_3",
+                "ข้อความยาวมากเกินกว่าที่ช่องหมายเหตุสามบรรทัดในตารางนี้จะรับได้แม้จะย่อขนาดตัวอักษรลงแล้วก็ตาม")))
+                .isInstanceOf(PdfIncrementService.DoesNotFitException.class);
+        java.nio.file.Files.createDirectories(java.nio.file.Path.of("target", "incremental"));
+        java.nio.file.Files.write(java.nio.file.Path.of("target", "incremental", "doc2-remarks.pdf"), filled);
+    }
 }

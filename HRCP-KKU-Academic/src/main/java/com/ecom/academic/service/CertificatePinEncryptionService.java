@@ -23,7 +23,8 @@ import org.springframework.stereotype.Service;
  * dump could decrypt every PIN. That key is kept for reading old rows only
  * ({@link #LEGACY_SECRET}). New ciphertext is written with the key from
  * {@code APP_ESIGN_P12_MASTER_KEY} (32 random bytes, Base64) and carries the
- * prefix {@code v1:}; {@link PinKeyMigration} rewrites old rows at startup.
+ * prefix {@code v1:}. PINs are no longer stored at all (V33); the key now protects the
+ * .p12 files at rest ({@link #encryptFile}).
  *
  * <p><b>Unset key.</b> The service still starts, logs an error, and keeps using the
  * legacy key for both directions. Refusing to start would take signing down on a
