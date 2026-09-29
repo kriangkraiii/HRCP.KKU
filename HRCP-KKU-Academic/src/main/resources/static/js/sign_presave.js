@@ -83,17 +83,21 @@
           showFailure(form);
           return;
         }
-        // ด่านเฉพาะของฟอร์ม (เช่น เอกสารที่ 2 ต้องติ๊กครบ 5 ข้อ) ซึ่งเป็นเงื่อนไขที่ไม่ได้อยู่บน
-        // [required] จึงหลุดจาก DocRequiredFields — ฟอร์มตั้งแอตทริบิวต์นี้ไว้พร้อมเหตุผล
-        var blocked = docForm.getAttribute("data-sign-blocked");
-        if (blocked) {
-          showFailure(form, blocked);
-          return;
-        }
-        // เอกสารที่กรอกไม่ครบ เซิร์ฟเวอร์ก็ปฏิเสธอยู่แล้ว แต่ตอบได้แค่จำนวนช่อง
-        // ดักตรงนี้เพื่อบอกว่าเป็นช่องไหนและพาไปที่ช่องนั้น
-        if (window.DocRequiredFields && !window.DocRequiredFields.check(form)) {
-          return;
+        // ส่งเวียนลงนามต่อ (data-presave-skip-checks): เอกสารผ่านการตรวจไปแล้วตอนส่งลงนามรอบแรก
+        // ต้องการแค่ให้ช่องของเจ้าหน้าที่ถึงเซิร์ฟเวอร์ก่อนส่งต่อ
+        if (!form.hasAttribute("data-presave-skip-checks")) {
+          // ด่านเฉพาะของฟอร์ม (เช่น เอกสารที่ 2 ต้องติ๊กครบ 5 ข้อ) ซึ่งเป็นเงื่อนไขที่ไม่ได้อยู่บน
+          // [required] จึงหลุดจาก DocRequiredFields — ฟอร์มตั้งแอตทริบิวต์นี้ไว้พร้อมเหตุผล
+          var blocked = docForm.getAttribute("data-sign-blocked");
+          if (blocked) {
+            showFailure(form, blocked);
+            return;
+          }
+          // เอกสารที่กรอกไม่ครบ เซิร์ฟเวอร์ก็ปฏิเสธอยู่แล้ว แต่ตอบได้แค่จำนวนช่อง
+          // ดักตรงนี้เพื่อบอกว่าเป็นช่องไหนและพาไปที่ช่องนั้น
+          if (window.DocRequiredFields && !window.DocRequiredFields.check(form)) {
+            return;
+          }
         }
         form._preSaveDone = true;
         // เลื่อนออกไปหลัง event ปัจจุบันจบ — ถ้าแบบร่างบันทึกไว้แล้ว flushAll() resolve ทันที

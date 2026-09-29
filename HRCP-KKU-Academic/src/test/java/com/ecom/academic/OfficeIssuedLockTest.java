@@ -218,9 +218,8 @@ class OfficeIssuedLockTest extends AbstractFlowTest {
                 .contains("ออกเลขที่หนังสือและวันที่เอกสารแล้ว แก้ไขไม่ได้อีก");
     }
 
-    @Test
-    @DisplayName("เอกสารที่ 2: ผู้ยื่นเซ็นแล้ว นักทรัพยากรบุคคลยังไม่เซ็น — ยังไม่เขียว ขึ้นป้ายรอลงนาม")
-    void aDocumentWaitingForTheNextSignerIsNotGreen() throws Exception {
+    /** เอกสารที่ 2: ผู้ยื่นเซ็นช่องของตัวเองแล้ว เหลือนักทรัพยากรบุคคลที่เจ้าหน้าที่ต้องส่งต่อ */
+    private void doc2SignedByApplicantOnly() {
         String doc2 = "{\"applicant_name\":\"ผู้ยื่นกรอกไว้\"}";
         data.academicDocument(request, 2, doc2);
         var created = signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 2,
@@ -234,9 +233,34 @@ class OfficeIssuedLockTest extends AbstractFlowTest {
                 com.ecom.academic.service.SignatureWorkflowService.ActorContext.none(), null, null);
         assertThat(signed.error()).isNull();
         assertThat(signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, request.getId(), 2)).isTrue();
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 2: ผู้ยื่นเซ็นแล้ว นักทรัพยากรบุคคลยังไม่เซ็น — ยังไม่เขียว ขึ้นป้ายรอลงนาม")
+    void aDocumentWaitingForTheNextSignerIsNotGreen() throws Exception {
+        doc2SignedByApplicantOnly();
 
         assertThat(card(2)).contains("dgi-draft")
                 .doesNotContain("dgi-completed")
                 .contains("รอลงนาม");
+    }
+
+    @Test
+    @DisplayName("รอส่งเวียนลงนามต่อ: ไม่มีปุ่มบันทึกแยก ช่องของเจ้าหน้าที่บันทึกอัตโนมัติ และปุ่มส่งต่อบันทึกให้ก่อนส่ง")
+    void forwardingNeedsNoSeparateSaveButton() throws Exception {
+        doc2SignedByApplicantOnly();
+
+        String html = mvc.perform(get("/admin/academic/request/" + request.getId() + "/document/2")
+                .with(as(officer)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(html).doesNotContain("id=\"btnSubmitDoc\"")
+                .doesNotContain("บันทึกข้อมูลเอกสาร")
+                .contains("data-auto-draft=\"/api/draft/academic/" + request.getId() + "/2\"")
+                .contains("ยืนยันความถูกต้องและส่งเวียนลงนามต่อ")
+                .contains("data-presave-skip-checks=\"true\"")
+                .contains("ตรวจสอบข้อมูลและลงนาม")
+                .doesNotContain("<span>บันทึกเอกสาร</span>");
     }
 }

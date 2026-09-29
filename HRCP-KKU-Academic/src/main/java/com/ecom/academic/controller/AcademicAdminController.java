@@ -757,7 +757,7 @@ public class AcademicAdminController {
         // ไม่สร้างไฟล์ใหม่ไม่ว่าจะกดปุ่มไหน เพราะเอกสารฉบับจริงคือฉบับที่ลงนามไปแล้ว
         // ค่าที่กรอกตรงนี้ไปโผล่บนเอกสารผ่าน OfficeFieldResolver ตอน render
         // ออกเลขที่หนังสือและวันที่ครบแล้ว = หนังสือออกไปแล้ว ไม่มีช่องไหนแก้ได้อีก
-        if (requestService.isOfficeIssued(id, type)) {
+        if (officeIssued(id, type)) {
             return "redirect:/admin/academic/request/" + id
                     + "/document/" + type + "?error=office_issued";
         }
@@ -905,7 +905,7 @@ public class AcademicAdminController {
         requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         // หนังสือออกเลขไปแล้ว ส่งกลับให้แก้ไม่ได้ — ต้องออกหนังสือฉบับใหม่แทน
-        if (requestService.isOfficeIssued(id, type)) {
+        if (officeIssued(id, type)) {
             return "redirect:/admin/academic/request/" + id
                     + "/document/" + type + "?error=office_issued";
         }
@@ -1414,6 +1414,18 @@ public class AcademicAdminController {
 
     }
 
+    /**
+     * เอกสารจบแล้ว: ลงนามครบทุกช่อง ไม่เหลือใครให้ส่งต่อ และออกเลขที่หนังสือกับวันที่ครบ
+     *
+     * <p>ต้องไม่เหลือผู้ลงนามให้ส่งต่อด้วย — ผู้ยื่นเซ็นแล้วยังต้องส่งต่อให้ผู้ลงนามคนถัดไป ช่วงนั้น
+     * ช่องของเจ้าหน้าที่บันทึกผ่านร่างอัตโนมัติ ถ้าปิดเอกสารทันทีที่มีเลขกับวันที่ ช่องที่ยังต้องกรอก
+     * ก่อนส่งต่อจะถูกปิดไปด้วย — ตรรกะเดียวกับ {@code PositionAdminController.officeIssued}
+     */
+    private boolean officeIssued(Long id, int type) {
+        return requestService.isOfficeIssued(id, type)
+                && !signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, id, type);
+    }
+
     private void addOwnershipGate(Model model, SignatureModule module, Long requestId, int type) {
         model.addAttribute("readOnlyForAdmin", DocumentFieldOwnership.isApplicantDocument(module, type));
         // ส่งกลับให้ผู้ยื่นแก้แล้ว ผู้ยื่นยังไม่ได้ลงนามฉบับแก้ไข — งานของเจ้าหน้าที่ทั้งคำร้องพักไว้
@@ -1428,7 +1440,7 @@ public class AcademicAdminController {
         model.addAttribute("adminEditableFields",
                 onHold ? List.of() : DocumentFieldOwnership.adminFields(module, type));
         // ออกเลขที่หนังสือและวันที่ครบแล้ว — เอกสารจบแล้ว ปิดทุกช่องรวมทั้งช่องสารบรรณเอง
-        boolean officeIssued = requestId != null && requestService.isOfficeIssued(requestId, type);
+        boolean officeIssued = requestId != null && officeIssued(requestId, type);
         model.addAttribute("officeIssued", officeIssued);
         // เอกสารที่มีช่องสารบรรณ — บันทึกหลังลงนามครบแล้วอาจปิดเอกสาร ต้องกดบันทึกเองเท่านั้น
         model.addAttribute("issuesOffice", !DocumentFieldOwnership.officeFields(module, type).isEmpty());

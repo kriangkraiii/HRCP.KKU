@@ -17,7 +17,7 @@
                 <div class="card-body">
                     <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
                     <div th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}"></div>
-                    <!-- ขั้นตอน: กรอก → บันทึก → ลงนาม -->
+                    <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
                     <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
