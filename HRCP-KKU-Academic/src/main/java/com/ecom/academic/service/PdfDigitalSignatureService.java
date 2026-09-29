@@ -50,7 +50,9 @@ public class PdfDigitalSignatureService {
             String serialNumber,
             LocalDateTime validFrom,
             LocalDateTime validTo,
-            String commonName) {
+            String commonName,
+            /** SHA-256 of the DER-encoded signer certificate, lowercase hex. */
+            String fingerprintSha256) {
     }
 
     /**
@@ -80,7 +82,10 @@ public class PdfDigitalSignatureService {
 
         String commonName = extractCn(subject);
 
-        return new ParsedCertificateInfo(subject, issuer, serial, from, to, commonName);
+        String fingerprint = java.util.HexFormat.of().formatHex(
+                java.security.MessageDigest.getInstance("SHA-256").digest(x509.getEncoded()));
+
+        return new ParsedCertificateInfo(subject, issuer, serial, from, to, commonName, fingerprint);
     }
 
     /**

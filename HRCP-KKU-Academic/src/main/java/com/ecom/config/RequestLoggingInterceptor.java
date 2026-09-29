@@ -14,7 +14,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public class RequestLoggingInterceptor implements HandlerInterceptor {
 
     private static final Set<String> EXCLUDED_PREFIXES = Set.of(
-            "/css/", "/js/", "/img/", "/uploads/", "/admin/css/", "/admin/js/",
+            "/css/", "/js/", "/img/", "/admin/css/", "/admin/js/",
             "/favicon.ico", "/error", "/webjars/");
 
     private final AdminLogService adminLogService;

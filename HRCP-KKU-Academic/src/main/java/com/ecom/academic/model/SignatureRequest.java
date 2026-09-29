@@ -127,6 +127,23 @@ public class SignatureRequest {
     @Column(name = "version", nullable = false)
     private Integer version = 0;
 
+    /** How this envelope's PDF is produced; fixed at creation. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "pdf_mode", length = 15, nullable = false)
+    private PdfMode pdfMode = PdfMode.LEGACY;
+
+    /** Latest revision of the incrementally signed PDF; null for LEGACY envelopes. */
+    @Column(name = "current_revision_no")
+    private Integer currentRevisionNo;
+
+    /** Where the base put each field ({@code BasePdfBuilder.Layout} as JSON). */
+    @Column(name = "field_layout_json", columnDefinition = "TEXT")
+    private String fieldLayoutJson;
+
+    /** When the office's final signature froze the PDF. */
+    @Column(name = "pdf_locked_at")
+    private LocalDateTime pdfLockedAt;
+
     @OneToMany(mappedBy = "signatureRequest", cascade = CascadeType.ALL, orphanRemoval = true)
     @OrderBy("stepOrder ASC")
     private List<SignatureStep> steps = new ArrayList<>();
@@ -336,5 +353,41 @@ public class SignatureRequest {
     public void addStep(SignatureStep step) {
         step.setSignatureRequest(this);
         steps.add(step);
+    }
+
+    public PdfMode getPdfMode() {
+        return pdfMode;
+    }
+
+    public void setPdfMode(PdfMode pdfMode) {
+        this.pdfMode = pdfMode;
+    }
+
+    public boolean isIncremental() {
+        return pdfMode == PdfMode.INCREMENTAL;
+    }
+
+    public Integer getCurrentRevisionNo() {
+        return currentRevisionNo;
+    }
+
+    public void setCurrentRevisionNo(Integer currentRevisionNo) {
+        this.currentRevisionNo = currentRevisionNo;
+    }
+
+    public String getFieldLayoutJson() {
+        return fieldLayoutJson;
+    }
+
+    public void setFieldLayoutJson(String fieldLayoutJson) {
+        this.fieldLayoutJson = fieldLayoutJson;
+    }
+
+    public LocalDateTime getPdfLockedAt() {
+        return pdfLockedAt;
+    }
+
+    public void setPdfLockedAt(LocalDateTime pdfLockedAt) {
+        this.pdfLockedAt = pdfLockedAt;
     }
 }

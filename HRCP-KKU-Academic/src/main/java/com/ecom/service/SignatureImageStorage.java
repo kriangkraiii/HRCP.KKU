@@ -28,10 +28,8 @@ import org.springframework.stereotype.Component;
  *       ways of making a signature — drawing, uploading, typing — are rendered to
  *       a canvas in the browser and exported as PNG, so exactly one format ever
  *       reaches the server and the DOCX stamping code has one case to handle.</li>
- *   <li><b>The directory is not the statically-served upload root.</b>
- *       {@code WebConfig} maps {@code /uploads/**} to a resource handler that any
- *       logged-in user can read; a signature image is personal data and is served
- *       only through an ownership-checked controller.</li>
+ *   <li><b>Never served as a static resource.</b> A signature image is personal
+ *       data and is served only through an ownership-checked controller.</li>
  * </ul>
  */
 @Component

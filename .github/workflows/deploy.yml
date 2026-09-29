@@ -58,6 +58,35 @@ jobs:
               Write-Host "::warning::$env:UPLOADS_PATH not found - uploads were NOT backed up. Set UPLOADS_PATH to the service real uploads folder."
           }
 
+      # 2.3) สำรองฐานข้อมูลก่อน jar ใหม่รัน Flyway migration — คำร้อง ลายเซ็น และประวัติการลงนามอยู่ในฐานข้อมูล
+      #      ไม่ใช่ใน uploads ตั้งค่าที่ Settings > Secrets and variables > Actions:
+      #        secret   DB_BACKUP_PASSWORD
+      #        variable DB_BACKUP_HOST (เช่น 10.198.200.84), DB_BACKUP_NAME (เช่น hr_db), DB_BACKUP_USER
+      #      และต้องมี pg_dump บนเครื่อง runner (มากับ PostgreSQL client) ถ้ายังไม่ได้ตั้ง จะข้ามพร้อมคำเตือน
+      #      ถ้าตั้งแล้วแต่สำรองไม่สำเร็จ จะหยุด deploy ก่อนแตะ production
+      - name: Back up database
+        shell: powershell
+        env:
+          PGPASSWORD: ${{ secrets.DB_BACKUP_PASSWORD }}
+          DB_HOST: ${{ vars.DB_BACKUP_HOST }}
+          DB_NAME: ${{ vars.DB_BACKUP_NAME }}
+          DB_USER: ${{ vars.DB_BACKUP_USER }}
+        run: |
+          $pgDump = Get-Command pg_dump -ErrorAction SilentlyContinue
+          if (-not $pgDump -or -not $env:PGPASSWORD -or -not $env:DB_HOST -or -not $env:DB_NAME -or -not $env:DB_USER) {
+              Write-Host "::warning::Database was NOT backed up (pg_dump or DB_BACKUP_* settings missing)."
+              exit 0
+          }
+          $dir = "$env:BACKUP_ROOT\db"
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          $file = "$dir\$env:DB_NAME-$(Get-Date -Format 'yyyyMMdd-HHmmss').dump"
+          & $pgDump.Source --host=$env:DB_HOST --username=$env:DB_USER --dbname=$env:DB_NAME --format=custom --file=$file
+          if ($LASTEXITCODE -ne 0) { throw "pg_dump failed (exit $LASTEXITCODE)" }
+          Write-Host "Backed up database -> $file"
+          # เก็บ 10 ไฟล์ล่าสุด
+          Get-ChildItem $dir -Filter "$env:DB_NAME-*.dump" | Sort-Object LastWriteTime -Descending |
+              Select-Object -Skip 10 | Remove-Item -Force
+
       # 3) หยุด Windows Service "MyWebApp" ก่อน เพื่อปลดล็อกไฟล์ app.jar ที่กำลังถูกใช้งานอยู่
       #    -ErrorAction SilentlyContinue กันพังกรณี service ยังไม่เคยรัน/ไม่พบ service
       #    พร้อมรอจนกว่าสถานะจะ Stopped จริงเพื่อป้องกัน file lock ตอน Copy-Item

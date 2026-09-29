@@ -13,13 +13,16 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.DigitalCertificateAudit;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.UserSignature;
+import com.ecom.academic.repository.DigitalCertificateAuditRepository;
 import com.ecom.academic.repository.SignatureStepRepository;
 import com.ecom.academic.service.SignatureWorkflowService;
 import com.ecom.academic.service.UserDigitalCertificateService;
+import com.ecom.config.BruteForceProtection;
 import com.ecom.model.UserDtls;
 import com.ecom.support.AbstractFlowTest;
 import com.ecom.support.TestCertificates;
@@ -56,6 +59,12 @@ class DigitalIdGateTest extends AbstractFlowTest {
 
     @Autowired
     private com.ecom.service.BlobMirror blobMirror;
+
+    @Autowired
+    private DigitalCertificateAuditRepository certificateAudit;
+
+    @Autowired
+    private BruteForceProtection pinAttempts;
 
     /** ลบไฟล์ .p12 ออกจากดิสก์ เหมือนเปิดลงนามจากอีกเครื่องที่ไม่ได้รับไฟล์นี้ */
     private String removeCertificateFromDisk(UserDtls owner) throws Exception {
@@ -181,6 +190,74 @@ class DigitalIdGateTest extends AbstractFlowTest {
         assertThat(certificateStorage.getBaseDir().resolve(filename))
                 .as("อ่านจากฐานข้อมูลแล้วต้องเขียนไฟล์กลับลงดิสก์ด้วย")
                 .isRegularFile();
+    }
+
+    @Test
+    @DisplayName("มีใบรับรองแต่ไม่ได้กรอกรหัสและไม่มีรหัสที่บันทึกไว้ — ต้องถูกปฏิเสธ ไม่ใช่ลงนามแบบไม่มีใบรับรอง")
+    void aCertificateWithoutAnyPinIsRefusedNotDowngraded() throws Exception {
+        UserDtls applicant = data.applicant();
+        UserSignature signature = data.signatureFor(applicant);
+        var installed = certificateService.registerCertificate(applicant,
+                TestCertificates.validP12("อาจารย์ไม่บันทึกรหัส"), "nopin.p12", TestCertificates.PIN, false);
+        assertThat(installed.ok()).isTrue();
+        SignatureStep step = aStepWaitingForTheApplicant(applicant);
+
+        var result = signatureWorkflow.sign(step.getId(), applicant, signature.getId(), true,
+                SignatureWorkflowService.ActorContext.none(), "");
+
+        assertThat(result.ok()).as("เดิมตกไปลงนามแบบ SESSION เงียบ ๆ").isFalse();
+        assertThat(result.error()).contains("กรุณากรอกรหัสผ่าน");
+        assertThat(signatureSteps.findById(step.getId()).orElseThrow().getSignedAt()).isNull();
+    }
+
+    @Test
+    @DisplayName("ลงนามสำเร็จ — ขั้นลงนามบันทึกใบรับรองที่ใช้จริงไว้")
+    void theStepRecordsTheCertificateThatWasChecked() throws Exception {
+        UserDtls applicant = data.applicant();
+        UserSignature signature = data.signatureFor(applicant);
+        String pin = data.digitalCertificateFor(applicant);
+        Long certId = certificateService.findActive(applicant).orElseThrow().getId();
+        SignatureStep step = aStepWaitingForTheApplicant(applicant);
+
+        var result = signatureWorkflow.sign(step.getId(), applicant, signature.getId(), true,
+                SignatureWorkflowService.ActorContext.none(), pin);
+
+        assertThat(result.ok()).as(String.valueOf(result.error())).isTrue();
+        SignatureStep signed = signatureSteps.findById(step.getId()).orElseThrow();
+        assertThat(signed.getAuthMethod()).isEqualTo(SignatureStep.AUTH_METHOD_DIGITAL_ID_P12);
+        assertThat(signed.getDigitalCertificateId()).isEqualTo(certId);
+        assertThat(signed.getCertFingerprintSha256()).hasSize(64);
+        assertThat(certificateAudit.findByUserIdOrderByIdAsc(applicant.getId()))
+                .extracting(DigitalCertificateAudit::getEvent)
+                .contains(DigitalCertificateAudit.Event.UPLOADED, DigitalCertificateAudit.Event.PIN_OK);
+    }
+
+    @Test
+    @DisplayName("กรอกรหัสผิดหลายครั้ง — ถูกล็อก แม้รอบต่อไปจะกรอกถูก")
+    void repeatedWrongPinsLockTheCertificate() throws Exception {
+        UserDtls applicant = data.applicant();
+        UserSignature signature = data.signatureFor(applicant);
+        String pin = data.digitalCertificateFor(applicant);
+        SignatureStep step = aStepWaitingForTheApplicant(applicant);
+        try {
+            for (int i = 0; i < 5; i++) {
+                var wrong = signatureWorkflow.sign(step.getId(), applicant, signature.getId(), true,
+                        SignatureWorkflowService.ActorContext.none(), "wrong-" + i);
+                assertThat(wrong.ok()).isFalse();
+            }
+
+            var locked = signatureWorkflow.sign(step.getId(), applicant, signature.getId(), true,
+                    SignatureWorkflowService.ActorContext.none(), pin);
+
+            assertThat(locked.ok()).isFalse();
+            assertThat(locked.error()).contains("ผิดหลายครั้ง");
+            assertThat(certificateAudit.findByUserIdOrderByIdAsc(applicant.getId()))
+                    .extracting(DigitalCertificateAudit::getEvent)
+                    .contains(DigitalCertificateAudit.Event.PIN_WRONG, DigitalCertificateAudit.Event.PIN_LOCKED);
+        } finally {
+            // The counter is in memory and shared by the whole test context.
+            pinAttempts.resetAttempts("p12pin:" + applicant.getId());
+        }
     }
 
     @Test

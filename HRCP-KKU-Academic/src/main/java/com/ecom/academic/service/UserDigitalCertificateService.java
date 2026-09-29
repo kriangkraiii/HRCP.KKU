@@ -1,5 +1,6 @@
 package com.ecom.academic.service;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -11,11 +12,13 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.ecom.academic.model.DigitalCertificateAudit.Event;
 import com.ecom.academic.model.SignatureRequest;
 import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.SignatureStepStatus;
 import com.ecom.academic.model.UserDigitalCertificate;
 import com.ecom.academic.repository.UserDigitalCertificateRepository;
+import com.ecom.config.BruteForceProtection;
 import com.ecom.model.UserDtls;
 
 /**
@@ -32,16 +35,107 @@ public class UserDigitalCertificateService {
     private final DigitalCertificateStorage storage;
     private final CertificatePinEncryptionService pinEncryptionService;
     private final PdfDigitalSignatureService pdfSignatureService;
+    /** Null only in unit tests that build the service by hand. */
+    private final DigitalCertificateAuditService audit;
+    /** Wrong PINs against a stored .p12, per user. The file never leaves the server,
+     *  so this is the only place a PIN can be guessed. */
+    private final BruteForceProtection pinAttempts;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    public UserDigitalCertificateService(
+            UserDigitalCertificateRepository certificateRepository,
+            DigitalCertificateStorage storage,
+            CertificatePinEncryptionService pinEncryptionService,
+            PdfDigitalSignatureService pdfSignatureService,
+            DigitalCertificateAuditService audit,
+            BruteForceProtection pinAttempts) {
+        this.certificateRepository = certificateRepository;
+        this.storage = storage;
+        this.pinEncryptionService = pinEncryptionService;
+        this.pdfSignatureService = pdfSignatureService;
+        this.audit = audit;
+        this.pinAttempts = pinAttempts;
+    }
+
+    /** For unit tests: no trail, a private attempt counter. */
     public UserDigitalCertificateService(
             UserDigitalCertificateRepository certificateRepository,
             DigitalCertificateStorage storage,
             CertificatePinEncryptionService pinEncryptionService,
             PdfDigitalSignatureService pdfSignatureService) {
-        this.certificateRepository = certificateRepository;
-        this.storage = storage;
-        this.pinEncryptionService = pinEncryptionService;
-        this.pdfSignatureService = pdfSignatureService;
+        this(certificateRepository, storage, pinEncryptionService, pdfSignatureService, null,
+                new BruteForceProtection());
+    }
+
+    public enum UnlockStatus { OK, NO_PIN, WRONG_PIN, LOCKED, FILE_MISSING }
+
+    /** Outcome of opening a stored .p12 with a PIN. {@code info} is set only on OK. */
+    public record UnlockResult(UnlockStatus status, String error,
+            PdfDigitalSignatureService.ParsedCertificateInfo info) {
+        public boolean ok() {
+            return status == UnlockStatus.OK;
+        }
+    }
+
+    static final String PIN_REQUIRED = "กรุณากรอกรหัสผ่าน (PIN) ของ Digital ID เพื่อยืนยันการลงนาม";
+    static final String PIN_WRONG = "รหัสผ่าน (PIN) สำหรับ Digital ID ไม่ถูกต้อง";
+
+    private static String attemptKey(UserDtls user) {
+        return "p12pin:" + user.getId();
+    }
+
+    private void record(UserDtls user, UserDigitalCertificate cert, Event event, String detail, String ip) {
+        if (audit != null) {
+            audit.record(user, cert, event, detail, ip);
+        }
+    }
+
+    /**
+     * Opens the user's stored .p12 with the PIN they typed, or the saved one if they
+     * typed nothing. Counts wrong typed PINs and refuses after too many.
+     */
+    public UnlockResult unlock(UserDtls user, UserDigitalCertificate cert, String onDemandPin, String ipAddress) {
+        return unlock(user, cert, onDemandPin, ipAddress, false);
+    }
+
+    /**
+     * @param typedOnly refuse the saved PIN: the signer must type it now. Used where
+     *                  the signature is made at this moment with the signer's key.
+     */
+    public UnlockResult unlock(UserDtls user, UserDigitalCertificate cert, String onDemandPin, String ipAddress,
+            boolean typedOnly) {
+        String key = attemptKey(user);
+        if (pinAttempts.isBlocked(key)) {
+            record(user, cert, Event.PIN_LOCKED, null, ipAddress);
+            return new UnlockResult(UnlockStatus.LOCKED,
+                    "กรอกรหัสผ่าน Digital ID ผิดหลายครั้งเกินไป กรุณารอ "
+                            + pinAttempts.getBlockMinutesRemaining(key) + " นาทีแล้วลองใหม่", null);
+        }
+        boolean typed = onDemandPin != null && !onDemandPin.isBlank();
+        String pin = typedOnly ? (typed ? onDemandPin : null) : resolvePin(cert, onDemandPin);
+        if (pin == null || pin.isBlank()) {
+            return new UnlockResult(UnlockStatus.NO_PIN, PIN_REQUIRED, null);
+        }
+        byte[] p12Bytes = storage.read(cert.getCertificatePath());
+        if (p12Bytes == null || p12Bytes.length == 0) {
+            return new UnlockResult(UnlockStatus.FILE_MISSING,
+                    "ไม่พบไฟล์ใบรับรอง (.p12) ในระบบ — กรุณาอัปโหลดไฟล์ .p12 ใหม่", null);
+        }
+        try {
+            var info = pdfSignatureService.inspect(p12Bytes, pin);
+            pinAttempts.resetAttempts(key);
+            record(user, cert, Event.PIN_OK, typed ? "typed" : "saved PIN", ipAddress);
+            return new UnlockResult(UnlockStatus.OK, null, info);
+        } catch (Exception e) {
+            if (!typed) {
+                // The saved PIN no longer opens the file. Not a guess, so not counted.
+                return new UnlockResult(UnlockStatus.NO_PIN,
+                        "รหัสผ่าน Digital ID ที่บันทึกไว้ใช้ไม่ได้แล้ว " + PIN_REQUIRED, null);
+            }
+            pinAttempts.recordFailure(key);
+            record(user, cert, Event.PIN_WRONG, null, ipAddress);
+            return new UnlockResult(UnlockStatus.WRONG_PIN, PIN_WRONG, null);
+        }
     }
 
     public record SaveResult(boolean ok, String error, UserDigitalCertificate certificate) {
@@ -102,6 +196,22 @@ public class UserDigitalCertificateService {
     }
 
     /**
+     * The certificate's key, opened for one signature. Call only after
+     * {@link #unlock} accepted the same PIN.
+     */
+    public com.ecom.academic.service.pdf.CmsSigner openSigner(UserDigitalCertificate cert, String pin) throws IOException {
+        byte[] p12Bytes = storage.read(cert.getCertificatePath());
+        if (p12Bytes == null || p12Bytes.length == 0) {
+            throw new IOException("Certificate file missing for certificate " + cert.getId());
+        }
+        try {
+            return com.ecom.academic.service.pdf.CmsSigner.open(p12Bytes, pin.toCharArray());
+        } catch (java.security.GeneralSecurityException e) {
+            throw new IOException("Could not open the certificate: " + e.getMessage(), e);
+        }
+    }
+
+    /**
      * Pre-verifies a Digital ID Password against the user's currently active .p12 file on disk.
      */
     public VerifyResult verifyActiveCertificatePassword(UserDtls user, String password) {
@@ -112,11 +222,19 @@ public class UserDigitalCertificateService {
         if (optCert.isEmpty()) {
             return VerifyResult.failed("ไม่พบใบรับรองดิจิทัลที่เปิดใช้งานอยู่");
         }
-        byte[] p12Bytes = storage.read(optCert.get().getCertificatePath());
-        if (p12Bytes == null || p12Bytes.length == 0) {
-            return VerifyResult.failed("ไม่พบไฟล์ใบรับรอง (.p12) ในระบบ — กรุณาอัปโหลดไฟล์ .p12 ใหม่");
+        if (password == null || password.isBlank()) {
+            return VerifyResult.failed("กรุณากรอก Digital ID Password");
         }
-        return verifyP12(p12Bytes, password);
+        UnlockResult unlock = unlock(user, optCert.get(), password, null);
+        if (!unlock.ok()) {
+            return VerifyResult.failed(unlock.error());
+        }
+        var info = unlock.info();
+        if (info.validTo() != null && info.validTo().isBefore(LocalDateTime.now())) {
+            return VerifyResult.failed("ใบรับรองดิจิทัลนี้หมดอายุแล้วเมื่อ " + info.validTo().format(DATE_FMT));
+        }
+        return VerifyResult.success(info.commonName(), info.issuerDn(),
+                info.validTo() != null ? info.validTo().format(DATE_FMT) : "-");
     }
 
     /**
@@ -135,20 +253,19 @@ public class UserDigitalCertificateService {
             return SaveResult.failed("ไม่พบใบรับรองดิจิทัลที่เปิดใช้งานอยู่");
         }
         UserDigitalCertificate cert = optCert.get();
-        byte[] p12Bytes = storage.read(cert.getCertificatePath());
-        if (p12Bytes == null || p12Bytes.length == 0) {
-            return SaveResult.failed("ไม่พบไฟล์ใบรับรอง (.p12) ในระบบ — กรุณาอัปโหลดไฟล์ .p12 ใหม่");
-        }
 
-        // Verify that the new password actually unlocks the file
-        try {
-            pdfSignatureService.inspect(p12Bytes, newPassword);
-        } catch (Exception e) {
-            return SaveResult.failed("Digital ID Password ไม่ถูกต้องสำหรับไฟล์ใบรับรองนี้");
+        // Verify that the new password actually unlocks the file — counted like any
+        // other PIN typed against a stored .p12, or this would be a guessing oracle.
+        UnlockResult unlock = unlock(user, cert, newPassword, null);
+        if (!unlock.ok()) {
+            return SaveResult.failed(unlock.status() == UnlockStatus.WRONG_PIN
+                    ? "Digital ID Password ไม่ถูกต้องสำหรับไฟล์ใบรับรองนี้"
+                    : unlock.error());
         }
 
         cert.setEncryptedPin(pinEncryptionService.encrypt(newPassword));
         certificateRepository.save(cert);
+        record(user, cert, Event.PIN_CHANGED, null, null);
         log.info("Updated Digital ID Password for user {} cert {}", user.getId(), cert.getId());
         return SaveResult.ok(cert);
     }
@@ -221,6 +338,7 @@ public class UserDigitalCertificateService {
         }
 
         UserDigitalCertificate saved = certificateRepository.save(cert);
+        record(user, saved, Event.UPLOADED, info.subjectDn(), null);
         log.info("Registered Digital Certificate {} for user {} (Subject: {})",
                 saved.getId(), user.getId(), info.subjectDn());
 
@@ -236,6 +354,7 @@ public class UserDigitalCertificateService {
         certificateRepository.findByIdAndUserId(certId, user.getId()).ifPresent(cert -> {
             cert.setActive(false);
             certificateRepository.save(cert);
+            record(user, cert, Event.DEACTIVATED, null, null);
             log.info("Deactivated Digital Certificate {} for user {}", certId, user.getId());
         });
     }
@@ -277,32 +396,53 @@ public class UserDigitalCertificateService {
         if (optCert.isEmpty()) {
             return pdfBytes;
         }
+        return signWith(pdfBytes, signer, optCert.get(), onDemandPin, reason, location, signDate);
+    }
 
-        UserDigitalCertificate cert = optCert.get();
+    private byte[] signWith(byte[] pdfBytes, UserDtls signer, UserDigitalCertificate cert, String onDemandPin,
+                            String reason, String location, java.time.LocalDateTime signDate) {
         if (cert.isExpired()) {
             log.warn("Signer {} certificate {} is expired, skipping digital signature", signer.getId(), cert.getId());
+            record(signer, cert, Event.PDF_SIGN_SKIPPED, "certificate expired", null);
             return pdfBytes;
         }
 
+        boolean typed = onDemandPin != null && !onDemandPin.isBlank();
         String pin = resolvePin(cert, onDemandPin);
         if (pin == null || pin.isBlank()) {
-            log.info("No PIN available for signer {} certificate {}, skipping digital signature", signer.getId(), cert.getId());
+            log.warn("No PIN available for signer {} certificate {}, skipping digital signature", signer.getId(), cert.getId());
+            record(signer, cert, Event.PDF_SIGN_SKIPPED, "no PIN available", null);
             return pdfBytes;
         }
 
         byte[] p12Bytes = storage.read(cert.getCertificatePath());
         if (p12Bytes == null || p12Bytes.length == 0) {
             log.warn("Certificate file missing on disk for cert {}", cert.getId());
+            record(signer, cert, Event.PDF_SIGN_SKIPPED, "certificate file missing", null);
             return pdfBytes;
         }
 
         try {
             String signerDisplayName = cert.getCommonName();
-            return pdfSignatureService.signPdf(pdfBytes, p12Bytes, pin, signerDisplayName, reason, location, signDate);
+            byte[] signed = pdfSignatureService.signPdf(pdfBytes, p12Bytes, pin, signerDisplayName, reason, location, signDate);
+            record(signer, cert, typed ? Event.PDF_SIGNED : Event.STORED_PIN_USED, reason, null);
+            return signed;
         } catch (Exception e) {
             log.error("Failed to apply digital signature for signer {}: {}", signer.getId(), e.getMessage(), e);
+            record(signer, cert, Event.PDF_SIGN_SKIPPED, "signing failed: " + e.getMessage(), null);
             return pdfBytes;
         }
+    }
+
+    /**
+     * The certificate checked when the step was signed; the signer's current one
+     * only for steps signed before that was recorded.
+     */
+    private Optional<UserDigitalCertificate> certificateFor(SignatureStep step) {
+        if (step.getDigitalCertificateId() != null) {
+            return certificateRepository.findById(step.getDigitalCertificateId());
+        }
+        return findActive(step.getSigner());
     }
 
     /**
@@ -324,7 +464,11 @@ public class UserDigitalCertificateService {
                 String reason = "ลงนามในตำแหน่ง \"" + (step.getRoleLabel() != null ? step.getRoleLabel() : "ผู้ลงนาม") + "\"";
                 String location = "มหาวิทยาลัยขอนแก่น";
 
-                byte[] signed = signPdfForSigner(currentPdf, signer, onDemandPin, reason, location, step.getSignedAt());
+                Optional<UserDigitalCertificate> cert = certificateFor(step);
+                if (cert.isEmpty()) {
+                    continue;
+                }
+                byte[] signed = signWith(currentPdf, signer, cert.get(), onDemandPin, reason, location, step.getSignedAt());
                 if (signed != null && signed.length > 0) {
                     currentPdf = signed;
                 }

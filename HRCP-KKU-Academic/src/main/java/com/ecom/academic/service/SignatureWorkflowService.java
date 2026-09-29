@@ -78,6 +78,8 @@ public class SignatureWorkflowService {
     private final UserDigitalCertificateService digitalCertificateService;
     private final DigitalCertificateStorage digitalCertificateStorage;
     private final PdfDigitalSignatureService pdfDigitalSignatureService;
+    private final com.ecom.academic.service.pdf.IncrementalSigningService incrementalSigning;
+    private final com.ecom.service.SignatureImageStorage signatureImageStorage;
 
     public SignatureWorkflowService(
             SignatureRequestRepository requestRepository,
@@ -97,8 +99,12 @@ public class SignatureWorkflowService {
             UserDigitalCertificateService digitalCertificateService,
             DigitalCertificateStorage digitalCertificateStorage,
             PdfDigitalSignatureService pdfDigitalSignatureService,
-            DocumentRevisionRouter revisionRouter) {
+            DocumentRevisionRouter revisionRouter,
+            com.ecom.academic.service.pdf.IncrementalSigningService incrementalSigning,
+            com.ecom.service.SignatureImageStorage signatureImageStorage) {
         this.revisionRouter = revisionRouter;
+        this.incrementalSigning = incrementalSigning;
+        this.signatureImageStorage = signatureImageStorage;
         this.requestRepository = requestRepository;
         this.stepRepository = stepRepository;
         this.auditRepository = auditRepository;
@@ -598,6 +604,9 @@ public class SignatureWorkflowService {
         SignatureRequest saved = requestRepository.save(envelope);
         audit(saved, null, SignatureAuditEventType.CREATED, initiator, actor,
                 "ส่งเอกสารไปลงนาม " + saved.getSteps().size() + " ขั้นตอน");
+        // Documents switched to incremental signing get their PDF now, with every
+        // signature place in it; the rest (or any it cannot prepare) keep the old flow.
+        incrementalSigning.start(saved);
 
         activateNextStep(saved, actor);
         return new Result(requestRepository.save(saved), null);
@@ -684,6 +693,10 @@ public class SignatureWorkflowService {
         SignatureRequestStatus status = envelope.getStatus();
         if (!status.isOpen() && status != SignatureRequestStatus.COMPLETED) {
             return Result.failed("คำขอลงนามนี้ถูกปิดไปแล้ว (" + status.getThaiLabel() + ")");
+        }
+        if (envelope.getPdfLockedAt() != null) {
+            // The closing signature froze the file: another signature would break it.
+            return Result.failed("เอกสารนี้ออกเลขที่หนังสือและลงนามปิดแล้ว ส่งเวียนต่อไม่ได้ — ต้องเริ่มการลงนามรอบใหม่");
         }
 
         String adminGap = adminFieldsGap(envelope);
@@ -813,32 +826,38 @@ public class SignatureWorkflowService {
                 return Result.failed("ตัวเลือกไม่ถูกต้องสำหรับ" + choice.question());
             }
         }
-        // 6. Digital Certificate verification if signer has registered .p12
+        // 6. Digital Certificate verification if signer has registered .p12.
+        //    A registered certificate must actually be opened: with no usable PIN
+        //    the signature is refused, never downgraded to a session signature.
         var optCert = digitalCertificateService.findActive(actingUser);
         String authMethodToUse = SignatureStep.AUTH_METHOD_SESSION;
+        com.ecom.academic.model.UserDigitalCertificate usedCert = null;
+        String usedFingerprint = null;
+        String usedPin = null;
+        if (envelope.isIncremental() && optCert.isEmpty()) {
+            return Result.failed("เอกสารนี้ต้องลงนามด้วย Digital ID (.p12) กรุณาติดตั้งที่หน้า \"ลายเซ็นของฉัน\" ก่อน");
+        }
         if (optCert.isPresent()) {
             var cert = optCert.get();
             if (cert.isExpired()) {
                 return Result.failed("ใบรับรอง Digital ID (.p12) ของท่านหมดอายุแล้ว ไม่สามารถใช้ลงนามได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th");
             }
-            String pin = digitalCertificateService.resolvePin(cert, digitalCertPin);
-            if (pin != null && !pin.isBlank()) {
-                byte[] p12Bytes = digitalCertificateStorage.read(cert.getCertificatePath());
-                if (p12Bytes == null || p12Bytes.length == 0) {
-                    // ไม่ใช่รหัสผ่านผิด — ไฟล์ไม่อยู่ทั้งบนดิสก์และในฐานข้อมูล เดิมตกไปที่ข้อความ "PIN ไม่ถูกต้อง"
-                    // ผู้ใช้จึงเดาไม่ออกว่าต้องอัปโหลดไฟล์ใหม่
-                    return Result.failed(CERTIFICATE_FILE_MISSING);
-                }
-                try {
-                    pdfDigitalSignatureService.inspect(p12Bytes, pin);
-                    authMethodToUse = "DIGITAL_ID_P12";
-                    step.setDigitalCertSubject(cert.getSubjectDn());
-                } catch (Exception e) {
-                    return Result.failed("รหัสผ่าน (PIN) สำหรับ Digital ID ไม่ถูกต้อง: " + e.getMessage());
-                }
-            } else if (!cert.hasSavedPin() && (digitalCertPin != null && !digitalCertPin.isBlank())) {
-                return Result.failed("รหัสผ่าน (PIN) สำหรับ Digital ID ไม่ถูกต้อง");
+            // An incrementally signed document is signed with the key right now, so the
+            // PIN must be typed; a saved one is never used for it.
+            var unlock = digitalCertificateService.unlock(actingUser, cert, digitalCertPin, actor.ipAddress(),
+                    envelope.isIncremental());
+            if (unlock.status() == UserDigitalCertificateService.UnlockStatus.FILE_MISSING) {
+                // ไม่ใช่รหัสผ่านผิด — ไฟล์ไม่อยู่ทั้งบนดิสก์และในฐานข้อมูล เดิมตกไปที่ข้อความ "PIN ไม่ถูกต้อง"
+                // ผู้ใช้จึงเดาไม่ออกว่าต้องอัปโหลดไฟล์ใหม่
+                return Result.failed(CERTIFICATE_FILE_MISSING);
             }
+            if (!unlock.ok()) {
+                return Result.failed(unlock.error());
+            }
+            authMethodToUse = SignatureStep.AUTH_METHOD_DIGITAL_ID_P12;
+            usedCert = cert;
+            usedPin = digitalCertPin;
+            usedFingerprint = unlock.info().fingerprintSha256();
         }
 
         // 7. The frozen content must be intact. Belt and braces: the form is
@@ -897,6 +916,11 @@ public class SignatureWorkflowService {
         step.setConsentAccepted(true);
         step.setConsentTextVersion(SignatureStep.CONSENT_TEXT_VERSION);
         step.setAuthMethod(authMethodToUse);
+        if (usedCert != null) {
+            step.setDigitalCertSubject(usedCert.getSubjectDn());
+            step.setDigitalCertificateId(usedCert.getId());
+            step.setCertFingerprintSha256(usedFingerprint);
+        }
         step.setIpAddress(actor.ipAddress());
         step.setUserAgent(truncate(actor.userAgent(), 500));
         step.setDocHashSigned(envelope.getFrozenHash());
@@ -906,6 +930,17 @@ public class SignatureWorkflowService {
         stepRepository.saveAndFlush(step);
         step.setEvidenceHmac(verificationService.seal(step));
         stepRepository.save(step);
+
+        if (envelope.isIncremental()) {
+            String problem = signIntoPdf(envelope, step, usedCert, usedPin);
+            if (problem != null) {
+                // Nothing of this signature may remain: the step, its evidence and
+                // any PDF revision go back together.
+                org.springframework.transaction.interceptor.TransactionAspectSupport
+                        .currentTransactionStatus().setRollbackOnly();
+                return Result.failed(problem);
+            }
+        }
 
         audit(envelope, step.getId(), SignatureAuditEventType.SIGNED, actingUser, actor,
                 "ลงนามในตำแหน่ง \"" + step.getRoleLabel() + "\""
@@ -923,6 +958,31 @@ public class SignatureWorkflowService {
 
         activateNextStep(envelope, actor);
         return new Result(requestRepository.save(envelope), null);
+    }
+
+    /**
+     * Puts this step's signature into the envelope's PDF with the signer's own key.
+     *
+     * @return why it could not be done, or null when it was
+     */
+    private String signIntoPdf(SignatureRequest envelope, SignatureStep step,
+            com.ecom.academic.model.UserDigitalCertificate cert, String pin) {
+        try {
+            byte[] png = step.getImagePathSnapshot() != null ? signatureImageStorage.read(step.getImagePathSnapshot()) : null;
+            String name = step.getSignerNameSnapshot() != null ? step.getSignerNameSnapshot()
+                    : (step.getSigner() != null ? step.getSigner().getName() : null);
+            incrementalSigning.sign(envelope, step, digitalCertificateService.openSigner(cert, pin), png, name);
+            stepRepository.save(step);
+            return null;
+        } catch (com.ecom.academic.service.pdf.PdfIncrementService.DoesNotFitException e) {
+            return "ข้อความที่กรอกยาวเกินช่องในเอกสาร กรุณาย่อให้สั้นลงแล้วลงนามอีกครั้ง";
+        } catch (IllegalStateException e) {
+            log.warn("Envelope {} step {}: could not sign the PDF: {}", envelope.getId(), step.getId(), e.getMessage());
+            return "เอกสารมีการเปลี่ยนแปลงระหว่างลงนาม กรุณาเปิดหน้าลงนามใหม่แล้วลองอีกครั้ง";
+        } catch (Exception e) {
+            log.error("Envelope {} step {}: could not sign the PDF", envelope.getId(), step.getId(), e);
+            return "ลงนามลงไฟล์เอกสารไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
+        }
     }
 
     /**

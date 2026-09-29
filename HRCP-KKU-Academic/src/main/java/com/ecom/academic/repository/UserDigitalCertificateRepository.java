@@ -18,6 +18,8 @@ public interface UserDigitalCertificateRepository extends JpaRepository<UserDigi
 
     Optional<UserDigitalCertificate> findFirstByUserIdAndIsActiveTrueOrderByCreatedAtDesc(Integer userId);
 
+    List<UserDigitalCertificate> findByEncryptedPinIsNotNull();
+
     @Modifying
     @Query("UPDATE UserDigitalCertificate c SET c.isActive = false WHERE c.user.id = :userId")
     void deactivateAllFor(@Param("userId") Integer userId);

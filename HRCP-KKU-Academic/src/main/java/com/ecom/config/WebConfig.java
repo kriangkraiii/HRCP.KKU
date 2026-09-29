@@ -25,7 +25,7 @@ public class WebConfig implements WebMvcConfigurer {
 	public void addInterceptors(InterceptorRegistry registry) {
 		registry.addInterceptor(requestLoggingInterceptor)
 				.addPathPatterns("/**")
-				.excludePathPatterns("/css/**", "/js/**", "/img/**", "/uploads/**",
+				.excludePathPatterns("/css/**", "/js/**", "/img/**",
 						"/admin/css/**", "/admin/js/**", "/webjars/**", "/favicon.ico");
 	}
 
@@ -46,10 +46,6 @@ public class WebConfig implements WebMvcConfigurer {
 
 		// Normalize upload base directory to proper URI (safely encodes spaces like 'Spring pj' on Mac)
 		java.nio.file.Path basePath = java.nio.file.Path.of(uploadBaseDir).toAbsolutePath().normalize();
-		String baseUri = basePath.toUri().toString();
-		if (!baseUri.endsWith("/")) {
-			baseUri += "/";
-		}
 
 		// Profile images - serve from both external uploads and static directory with browser HTTP caching (7 days)
 		String profileUploadUri = basePath.resolve("profile_img").toUri().toString();
@@ -84,9 +80,16 @@ public class WebConfig implements WebMvcConfigurer {
 		registry.addResourceHandler("/img/**").addResourceLocations("classpath:/static/img/")
 				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
 
-		// Serve uploaded files from external directory with caching
-		registry.addResourceHandler("/uploads/**").addResourceLocations(baseUri, "file:uploads/")
-				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
+		// Pinned here rather than left to spring.web.resources.static-locations: the
+		// production properties file is not in git, and an old copy of it pointed
+		// /static/** (open to anonymous users) at file:uploads/. Registering the
+		// pattern ourselves takes precedence over Boot's handler for it.
+		registry.addResourceHandler("/static/**").addResourceLocations("classpath:/static/");
+
+		// The upload root is deliberately NOT served as a whole. It holds .p12
+		// certificates, signature images, signed documents and applicants'
+		// attachments; each of those is read back through a controller that checks
+		// who is asking. Only the image folders above are public.
 	}
 
 	@PostConstruct

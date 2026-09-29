@@ -82,6 +82,7 @@ public class SignatureStep {
     /** How the signer was identified at the moment of signing. */
     public static final String AUTH_METHOD_SESSION = "SESSION";
     public static final String AUTH_METHOD_OTP = "EMAIL_OTP";
+    public static final String AUTH_METHOD_DIGITAL_ID_P12 = "DIGITAL_ID_P12";
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -197,6 +198,17 @@ public class SignatureStep {
 
     @Column(name = "digital_cert_subject", length = 500)
     private String digitalCertSubject;
+
+    /** The certificate whose PIN was checked when this step was signed. */
+    @Column(name = "digital_certificate_id")
+    private Long digitalCertificateId;
+
+    @Column(name = "cert_fingerprint_sha256", length = 64)
+    private String certFingerprintSha256;
+
+    /** The PDF revision this step's signature created (INCREMENTAL envelopes). */
+    @Column(name = "pdf_revision_no")
+    private Integer pdfRevisionNo;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "delegated_from_user_id")
@@ -452,6 +464,30 @@ public class SignatureStep {
 
     public void setDigitalCertSubject(String digitalCertSubject) {
         this.digitalCertSubject = digitalCertSubject;
+    }
+
+    public Long getDigitalCertificateId() {
+        return digitalCertificateId;
+    }
+
+    public void setDigitalCertificateId(Long digitalCertificateId) {
+        this.digitalCertificateId = digitalCertificateId;
+    }
+
+    public String getCertFingerprintSha256() {
+        return certFingerprintSha256;
+    }
+
+    public void setCertFingerprintSha256(String certFingerprintSha256) {
+        this.certFingerprintSha256 = certFingerprintSha256;
+    }
+
+    public Integer getPdfRevisionNo() {
+        return pdfRevisionNo;
+    }
+
+    public void setPdfRevisionNo(Integer pdfRevisionNo) {
+        this.pdfRevisionNo = pdfRevisionNo;
     }
 
     public UserDtls getDelegatedFrom() {

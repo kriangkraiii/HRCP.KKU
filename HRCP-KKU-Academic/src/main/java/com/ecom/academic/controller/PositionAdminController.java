@@ -77,6 +77,12 @@ public class PositionAdminController {
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.academic.service.pdf.IncrementalSigningService incrementalSigning;
+
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.academic.service.pdf.OfficeIssueService officeIssue;
+
     /** สถานะจริงของเอกสาร — ทุกหน้าใช้กติกาเดียวกัน */
     private final com.ecom.academic.service.DocumentProgress documentProgress;
     private final com.ecom.academic.service.AcademicCommitteeService committeeService;
@@ -331,6 +337,9 @@ public class PositionAdminController {
         // ออกเลขที่หนังสือและวันที่ครบแล้ว — เอกสารจบแล้ว ปิดทุกช่องรวมทั้งช่องสารบรรณเอง
         boolean officeIssued = officeIssued(id, type);
         model.addAttribute("officeIssued", officeIssued);
+        // เอกสารที่ลงนามแบบใส่ทับ: ออกเลขที่หนังสือ = เจ้าหน้าที่ลงนามปิดไฟล์ด้วย .p12 ของตัวเอง
+        model.addAttribute("officeSignsPdf",
+                incrementalSigning.envelopeFor(SignatureModule.POSITION, id, type).isPresent());
         model.addAttribute("issuesOffice",
                 !DocumentFieldOwnership.officeFields(SignatureModule.POSITION, type).isEmpty());
         // ช่องที่ยังกรอกได้หลังลงนาม — ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ ช่องของแอดมินยังกรอกได้ด้วย
@@ -414,6 +423,8 @@ public class PositionAdminController {
         // ฟอร์มรุ่นเก่ายังอาจส่งช่องนี้มา เอาออกก่อนเสมอเพื่อไม่ให้หลุดลงเนื้อเอกสาร
         formData.remove("sendNotify");
         formData.remove("action");
+        // รหัสผ่าน .p12 ของเจ้าหน้าที่ใช้ลงนามปิดเอกสารเท่านั้น ห้ามหลุดลงเนื้อเอกสาร
+        String officeCertPin = formData.remove("officeCertPin");
 
         // ลงนามครบแล้ว: เนื้อความตายตัว เหลือแต่เลขที่หนังสือกับวันที่ที่สารบรรณออกให้ทีหลัง
         // ไม่สร้างไฟล์ใหม่และไม่เลื่อนสถานะ เพราะเอกสารฉบับจริงคือฉบับที่ลงนามไปแล้ว
@@ -434,9 +445,24 @@ public class PositionAdminController {
             try {
                 // เขียนทับแถวเดิม ไม่เปิดแถวร่างใหม่ — เส้นทางเดียวกับเฟส 1 ทุกประการ
                 // ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ: ช่องของแอดมินยังไม่มีใครเซ็นรับรอง จึงยังกรอกได้
-                positionService.saveOfficeFieldsAcrossCopies(request, type, formData,
-                        positionService.getDocLabel(type),
-                        signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type));
+                boolean awaitsMore = signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type);
+                Map<String, String> officeValues = formData;
+                Runnable saveValues = () -> positionService.saveOfficeFieldsAcrossCopies(request, type, officeValues,
+                        positionService.getDocLabel(type), awaitsMore);
+                // บันทึกครั้งนี้ทำให้เอกสารออกแล้ว — ดู AcademicAdminController.generateDocument
+                var signedPdf = !awaitsMore
+                        ? incrementalSigning.envelopeFor(SignatureModule.POSITION, id, type)
+                        : java.util.Optional.<com.ecom.academic.model.SignatureRequest>empty();
+                if (signedPdf.isPresent()) {
+                    String problem = officeIssue.issue(signedPdf.get().getId(), getUser(principal), officeCertPin,
+                            getClientIpAddress(), saveValues);
+                    if (problem != null) {
+                        redirectAttributes.addFlashAttribute("errorMsg", problem);
+                        return "redirect:/admin/position/request/" + id + "/document/" + type + "?error=office_sign";
+                    }
+                } else {
+                    saveValues.run();
+                }
                 positionService.logDocumentEdit(request, type, positionService.getDocLabel(type),
                         getUser(principal), PositionDocumentEditLog.EditAction.UPDATED);
             } catch (Exception e) {

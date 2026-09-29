@@ -118,9 +118,7 @@ public class UserSignatureController {
     /**
      * Serves a signature image to its owner only.
      *
-     * <p>Deliberately not a static resource. {@code WebConfig} maps
-     * {@code /uploads/**} to a handler that serves any file under the upload root
-     * to any authenticated user; a signature is personal data, so it is read back
+     * <p>Deliberately not a static resource: a signature is personal data, so it is read back
      * through the repository with the owner in the query and a 404 — not a 403 —
      * for anything else, which avoids confirming that an id exists.
      */

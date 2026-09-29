@@ -323,6 +323,32 @@
 			<version>1.85.2</version>
 		</dependency>
 
+		<!-- EU DSS — ตรวจสายโซ่ลายเซ็น PAdES ในเทสต์เท่านั้น (ไม่อยู่ใน jar ที่ deploy) -->
+		<dependency>
+			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-pades-pdfbox</artifactId>
+			<version>6.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-validation</artifactId>
+			<version>6.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-utils-apache-commons</artifactId>
+			<version>6.2</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>eu.europa.ec.joinup.sd-dss</groupId>
+			<artifactId>dss-crl-parser-x509crl</artifactId>
+			<version>6.2</version>
+			<scope>test</scope>
+		</dependency>
+
 	</dependencies>
 	<build>
     <plugins>

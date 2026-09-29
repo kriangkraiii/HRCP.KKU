@@ -54,6 +54,10 @@ public class SignedDocumentRenderer {
     private final TeachingEvaluationPartResolver teachingEvaluationPartResolver;
     private final UploadPaths uploadPaths;
 
+    /** Incrementally signed envelopes: their PDF is the revision chain, never a rendering. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecom.academic.service.pdf.SignedPdfRevisionService pdfRevisions;
+
     /** One archive write per envelope at a time — two viewers must not interleave files. */
     private final ConcurrentHashMap<Long, Object> archiveLocks = new ConcurrentHashMap<>();
 
@@ -117,6 +121,56 @@ public class SignedDocumentRenderer {
     }
 
     /**
+     * The document as revision 0 of an incrementally signed PDF: the envelope's
+     * frozen content and signer names, with {@code overrides} in place of the late
+     * values and {@code pictures} in place of signatures still to come.
+     *
+     * <p>No office values and no signatures of this envelope: those arrive later as
+     * revisions on top. The teaching-evaluation chair's signature is different — it
+     * was given in another document before this one existed, so it is part of the
+     * base like any other printed text.
+     */
+    public byte[] renderBaseDocx(SignatureRequest envelope, java.util.Map<String, String> overrides,
+            List<StampedSignature> pictures) throws IOException {
+        String json = envelope.getFrozenJson();
+        if (json == null || json.isBlank()) {
+            json = "{}";
+        }
+        json = signerNameResolver.fillInto(envelope, json);
+        json = teachingEvaluationPartResolver.fillInto(envelope, json);
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, Object> data = mapper.readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {});
+            data.putAll(overrides);
+            json = mapper.writeValueAsString(data);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IOException("Frozen content of envelope " + envelope.getId() + " is not JSON", e);
+        }
+
+        List<StampedSignature> all = new ArrayList<>(pictures);
+        teachingEvaluationPartResolver.chairSignatureFor(envelope)
+                .map(step -> loadSignature(step, TeachingEvaluationPartResolver.CHAIR_ANCHOR))
+                .ifPresent(all::add);
+
+        return envelope.getModule() == SignatureModule.ACADEMIC
+                ? documentGenerationService.generateSignedDocx(envelope.getDocumentType(), json, all)
+                : documentGenerationService.generateSignedP2Docx(envelope.getDocumentType(), json, all);
+    }
+
+    /** PDF of a DOCX through the app's LibreOffice profile (the one with the Thai fonts). */
+    public byte[] toPdf(byte[] docx) throws IOException {
+        if (!documentGenerationService.isPdfConversionAvailable()) {
+            throw new IOException("LibreOffice is not available");
+        }
+        byte[] pdf = documentGenerationService.convertDocxToPdf(docx);
+        if (pdf == null || pdf.length == 0) {
+            throw new IOException("LibreOffice produced no PDF");
+        }
+        return pdf;
+    }
+
+    /**
      * Stores the finished document alongside the request's other files.
      *
      * <p>Kept rather than re-generated on demand: a stored copy is what was
@@ -146,7 +200,15 @@ public class SignedDocumentRenderer {
 
                 Path pdfTarget = dir.resolve(base + ".pdf");
                 String pdfPath = null;
-                if (documentGenerationService.isPdfConversionAvailable()) {
+                if (envelope.isIncremental() && pdfRevisions != null) {
+                    // The signers' own file, byte for byte: re-rendering it would drop
+                    // every signature, and re-signing it is exactly what this mode ended.
+                    byte[] signed = pdfRevisions.latest(envelope.getId());
+                    if (signed != null) {
+                        writeAtomically(pdfTarget, signed);
+                        pdfPath = uploadPaths.toStored(pdfTarget);
+                    }
+                } else if (documentGenerationService.isPdfConversionAvailable()) {
                     byte[] pdf = documentGenerationService.convertDocxToPdfCached(docx);
                     if (pdf != null && pdf.length > 0) {
                         try {
@@ -219,6 +281,9 @@ public class SignedDocumentRenderer {
             json = "{}";
         }
         StringBuilder material = new StringBuilder(officeFieldResolver.fillInto(envelope, json));
+        if (envelope.isIncremental()) {
+            material.append("|rev:").append(envelope.getCurrentRevisionNo());
+        }
         for (SignatureStep step : stepRepository.findSignedSteps(envelope.getId())) {
             material.append('|').append(step.getId())
                     .append(':').append(step.getImagePathSnapshot())
@@ -264,6 +329,13 @@ public class SignedDocumentRenderer {
      * จัดการเรื่องรูปแบบไฟล์ต่อเอง
      */
     public byte[] renderForDownload(SignatureRequest envelope, String format) throws IOException {
+        if ("pdf".equalsIgnoreCase(format) && envelope.isIncremental() && pdfRevisions != null) {
+            // Signed or not yet, the real document is the file the signers are signing.
+            byte[] signed = pdfRevisions.latest(envelope.getId());
+            if (signed != null) {
+                return signed;
+            }
+        }
         // ลงนามครบแล้ว — ส่งสำเนาที่เก็บไว้ ไม่สร้างใหม่จากเทมเพลตของรุ่นที่ deploy อยู่
         // สำเนาถูกสร้างใหม่เองเมื่อสำนักงานกรอกเลขที่หนังสือหรือช่องของตัวเองทีหลัง (ดู storeFinalCopies)
         if (envelope.getStatus() == SignatureRequestStatus.COMPLETED) {

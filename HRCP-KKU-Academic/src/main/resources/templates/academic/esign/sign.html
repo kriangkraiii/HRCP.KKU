@@ -356,18 +356,24 @@
                                 </div>
 
                                 <!-- รหัสผ่านบันทึกไว้แล้ว ลงนามได้โดยไม่ต้องกรอก -->
-                                <div th:if="${myCert.hasSavedPin()}" class="alert alert-success border py-1 px-2 mb-0 small">
+                                <div th:if="${myCert.hasSavedPin() and !envelope.incremental}" class="alert alert-success border py-1 px-2 mb-0 small">
                                     <i class="fas fa-key text-success me-1"></i> ใช้รหัสผ่าน Digital ID ที่บันทึกไว้ ไม่ต้องกรอกใหม่
                                 </div>
 
-                                <!-- Fallback if old cert without saved password -->
-                                <div th:unless="${myCert.hasSavedPin()}" class="mb-1">
+                                <!-- กรอกรหัสผ่าน: ใบรับรองที่ไม่ได้บันทึกรหัสไว้ และเอกสารที่ลงนามแบบใส่ทับ
+                                     (เซ็นลงไฟล์ด้วยกุญแจของท่านตอนนี้เลย จึงไม่ใช้รหัสที่บันทึกไว้) -->
+                                <div th:unless="${myCert.hasSavedPin() and !envelope.incremental}" class="mb-1">
                                     <label class="form-label small fw-semibold text-dark mb-1" for="digitalCertPin">
                                         <i class="fas fa-key text-primary me-1"></i> รหัสผ่าน Digital ID
-                                        <span th:replace="~{academic/_info_tip :: tip('ใช้ปลดล็อกใบรับรองเฉพาะครั้งนี้ ระบบไม่เก็บรหัสผ่านไว้')}"></span>
+                                        <span th:replace="~{academic/_info_tip :: tip('รหัสผ่านของไฟล์ .p12 ใช้ยืนยันว่าท่านเป็นผู้ลงนาม จำเป็นต้องกรอกก่อนลงนาม')}"></span>
                                     </label>
                                     <input type="password" class="form-control form-control-sm" id="digitalCertPin" name="digitalCertPin"
-                                           placeholder="รหัสผ่านของไฟล์ .p12" autocomplete="off">
+                                           placeholder="รหัสผ่านของไฟล์ .p12" autocomplete="off"
+                                           th:required="${envelope.incremental}">
+                                    <div th:if="${envelope.incremental}" class="form-text small">
+                                        <i class="fas fa-file-signature me-1"></i> ลายเซ็นดิจิทัลของท่านจะถูกลงในไฟล์เอกสารทันที
+                                        ระบบไม่เก็บรหัสผ่านนี้
+                                    </div>
                                 </div>
                             </div>
                         </div>
