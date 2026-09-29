@@ -647,41 +647,19 @@
                 </a>
               </div>
               <div class="detail-section-body">
+                <!--/* สีและป้ายมาจาก DocumentProgress ที่เดียว — เขียวเมื่อจบจริงเท่านั้น */-->
                 <div
                   th:each="entry : ${docLabels}"
+                  th:with="stage=${docProgress.get(entry.key)}"
                   class="doc-grid-item"
-                  th:classappend="${completedDocs.contains(entry.key) and !pendingOfficeDocs.contains(entry.key) and !pendingSignDocs.contains(entry.key)} ? 'dgi-completed' : (${draftDocs.contains(entry.key) or pendingOfficeDocs.contains(entry.key) or pendingSignDocs.contains(entry.key)} ? 'dgi-draft' : '')"
+                  th:classappend="${stage.cardClass}"
                 >
                   <div>
                     <span class="doc-grid-item-title">
                       เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
                     </span>
-                    <!--/* ป้ายต้องเดินตามกติกาเดียวกับกรอบ ไม่งั้นกรอบเหลืองแต่ป้ายเขียว */-->
-                    <span
-                      th:if="${completedDocs.contains(entry.key) and !pendingOfficeDocs.contains(entry.key) and !pendingSignDocs.contains(entry.key)}"
-                      class="badge bg-success ms-1"
-                    >
-                      <i class="fas fa-check"></i> กรอกแล้ว
-                    </span>
-                    <span
-                      th:if="${pendingSignDocs.contains(entry.key)}"
-                      class="badge bg-warning text-dark ms-1"
-                      title="ยังมีผู้ที่ต้องลงนามเอกสารนี้"
-                    >
-                      <i class="fas fa-pen-nib"></i> รอลงนาม
-                    </span>
-                    <span
-                      th:if="${pendingOfficeDocs.contains(entry.key)}"
-                      class="badge bg-warning text-dark ms-1"
-                      title="ยังไม่ได้ลงเลขที่หนังสือหรือวันที่เอกสาร"
-                    >
-                      <i class="fas fa-hashtag"></i> รอออกเลข
-                    </span>
-                    <span
-                      th:if="${!completedDocs.contains(entry.key) and !pendingOfficeDocs.contains(entry.key)}"
-                      class="badge bg-warning text-dark ms-1"
-                    >
-                      <i class="fas fa-clock"></i> รอกรอก
+                    <span class="badge ms-1" th:classappend="${stage.badgeClass}">
+                      <i th:class="|fas ${stage.icon}|"></i> [[${stage.label}]]
                     </span>
                   </div>
                   <div class="doc-grid-item-actions">

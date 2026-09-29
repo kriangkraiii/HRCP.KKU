@@ -83,6 +83,9 @@ public class AcademicApplicantController {
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
 
+    /** สถานะจริงของเอกสาร — ทุกหน้าใช้กติกาเดียวกัน */
+    private final com.ecom.academic.service.DocumentProgress documentProgress;
+
     private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
 
     private final com.ecom.external.service.KkuDocumentSyncService kkuDocSyncService;
@@ -116,6 +119,7 @@ public class AcademicApplicantController {
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
         this.signatureWorkflow = signatureWorkflow;
+        this.documentProgress = new com.ecom.academic.service.DocumentProgress(signatureWorkflow);
         this.signedDocumentRenderer = signedDocumentRenderer;
         this.kkuDocSyncService = kkuDocSyncService;
     }

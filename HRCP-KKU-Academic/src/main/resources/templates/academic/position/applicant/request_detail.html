@@ -108,11 +108,12 @@
             <!-- Step Indicator -->
             <div class="d-flex justify-content-center mb-4 flex-wrap gap-2">
                 <th:block th:each="entry, iterStat : ${docLabels}">
-                    <div class="step-indicator"
-                        th:classappend="${completedDocs.contains(entry.key)} ? 'completed' : ''">
+                    <!--/* เขียวเมื่อจบจริงเท่านั้น (ลงนามครบ ออกเลขครบ) ดู DocumentProgress */-->
+                    <div class="step-indicator" th:with="stage=${docProgress.get(entry.key)}"
+                        th:classappend="${stage.done} ? 'completed' : (${stage.started} ? 'in-progress' : '')">
                         <span class="step-number">
-                            <i th:if="${completedDocs.contains(entry.key)}" class="fas fa-check"></i>
-                            <span th:unless="${completedDocs.contains(entry.key)}" th:text="${iterStat.count}"></span>
+                            <i th:if="${stage.done}" class="fas fa-check"></i>
+                            <span th:unless="${stage.done}" th:text="${iterStat.count}"></span>
                         </span>
                     </div>
                 </th:block>
@@ -120,10 +121,11 @@
 
             <!-- Document Cards -->
             <th:block th:each="entry, iterStat : ${docLabels}">
-                <div class="card card-academic mb-3">
+                <div class="card card-academic mb-3" th:with="stage=${docProgress.get(entry.key)}">
                     <div class="card-header bg-white border-bottom d-flex justify-content-between align-items-center flex-wrap gap-2">
                         <h5 class="mb-0">
-                            <i th:class="${completedDocs.contains(entry.key)} ? 'fas fa-check-circle text-success' : 'fas fa-file-alt'"></i>
+                            <i th:class="${stage.done} ? 'fas fa-check-circle text-success'
+                                        : (${stage.started} ? 'fas fa-hourglass-half text-warning' : 'fas fa-file-alt')"></i>
                             เอกสารที่ [[${iterStat.count}]]: [[${entry.value}]]
                         </h5>
                         <div class="d-flex align-items-center gap-2">
@@ -133,11 +135,8 @@
                             <span th:if="${completedDocs.contains(entry.key) and unsignedSigDocs != null and unsignedSigDocs.contains(entry.key)}" class="badge bg-warning-subtle text-warning border border-warning-subtle fs-6">
                                 <i class="fas fa-pen-nib me-1"></i>รอผู้ยื่นลงนาม
                             </span>
-                            <span th:if="${completedDocs.contains(entry.key)}" class="badge bg-success fs-6">
-                                <i class="fas fa-check me-1"></i>กรอกแล้ว
-                            </span>
-                            <span th:unless="${completedDocs.contains(entry.key)}" class="badge bg-warning text-dark fs-6">
-                                <i class="fas fa-clock me-1"></i>รอกรอก
+                            <span class="badge fs-6" th:classappend="${stage.badgeClass}">
+                                <i th:class="|fas ${stage.icon} me-1|"></i>[[${stage.label}]]
                             </span>
                         </div>
                     </div>
@@ -313,6 +312,10 @@
                 font-weight: bold; font-size: 0.8rem; transition: all 0.3s;
             }
             .step-indicator.completed { background: #e8f5e9; color: #2e7d32; }
+            /* เริ่มแล้วแต่ยังไม่จบ (รอลงนาม/รอออกเลข) */
+            .step-indicator.in-progress { background: #fff3e0; color: #e65100; }
+            [data-theme="dark"] .step-indicator.completed { background: rgba(76, 175, 80, 0.18); color: #81c784; }
+            [data-theme="dark"] .step-indicator.in-progress { background: rgba(255, 167, 38, 0.18); color: #ffb74d; }
         </style>
     </section>
 </body>

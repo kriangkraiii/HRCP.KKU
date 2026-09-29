@@ -404,22 +404,15 @@
               </a>
             </div>
             <div class="detail-section-body">
-              <div th:each="entry : ${docLabels}">
-                <div class="doc-grid-item"
-                  th:classappend="${completedDocs.contains(entry.key) and !pendingOfficeDocs.contains(entry.key) and !pendingSignDocs.contains(entry.key)} ? 'dgi-completed' : (${draftDocs.contains(entry.key) or pendingOfficeDocs.contains(entry.key) or pendingSignDocs.contains(entry.key)} ? 'dgi-draft' : '')">
+              <!--/* สี ป้าย และเส้นข้างแถวไฟล์ มาจาก DocumentProgress ที่เดียว — เขียวเมื่อจบจริงเท่านั้น */-->
+              <div th:each="entry : ${docLabels}" th:with="stage=${docProgress.get(entry.key)}">
+                <div class="doc-grid-item" th:classappend="${stage.cardClass}">
                   <div class="doc-grid-item-title">
                     เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
                     <span th:if="${entry.key == multiCopyDocType}" class="badge bg-info ms-1"
                       th:text="|${multiCopyCount} สำเนา|">3 สำเนา</span>
-                    <span th:if="${pendingSignDocs.contains(entry.key)}"
-                      class="badge bg-warning text-dark ms-1"
-                      title="ยังมีผู้ที่ต้องลงนามเอกสารนี้">
-                      <i class="fas fa-pen-nib"></i> รอลงนาม
-                    </span>
-                    <span th:if="${pendingOfficeDocs.contains(entry.key)}"
-                      class="badge bg-warning text-dark ms-1"
-                      title="ยังไม่ได้ลงเลขที่หนังสือหรือวันที่เอกสาร">
-                      <i class="fas fa-hashtag"></i> รอออกเลข
+                    <span class="badge ms-1" th:classappend="${stage.badgeClass}">
+                      <i th:class="|fas ${stage.icon}|"></i> [[${stage.label}]]
                     </span>
                   </div>
                   <div class="doc-grid-item-actions">
@@ -437,9 +430,10 @@
                   </div>
                 </div>
                 <!-- Generated copies -->
-                <div th:each="doc : ${documents}" th:if="${doc.documentType == entry.key}" class="doc-grid-sub">
+                <div th:each="doc : ${documents}" th:if="${doc.documentType == entry.key}" class="doc-grid-sub"
+                  th:classappend="${stage.done} ? 'dgs-done' : 'dgs-pending'">
                   <div class="d-flex justify-content-between align-items-center">
-                    <small class="u-c-var-color-success"><i class="fas fa-check"></i>
+                    <small class="dgs-label"><i th:class="|fas ${stage.icon}|"></i>
                       [[${doc.documentLabel}]]</small>
                     <div class="d-flex gap-1">
                       <a th:href="'/admin/academic/request/' + ${request.id} + '/download/' + ${doc.id} + '?format=docx'"

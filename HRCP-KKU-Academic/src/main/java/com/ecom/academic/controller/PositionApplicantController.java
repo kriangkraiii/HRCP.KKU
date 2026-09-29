@@ -56,6 +56,9 @@ public class PositionApplicantController {
     private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+
+    /** สถานะจริงของเอกสาร — ทุกหน้าใช้กติกาเดียวกัน */
+    private final com.ecom.academic.service.DocumentProgress documentProgress;
     private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
     private final com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart;
     private final jakarta.servlet.http.HttpServletRequest httpRequest;
@@ -87,6 +90,7 @@ public class PositionApplicantController {
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
         this.signatureWorkflow = signatureWorkflow;
+        this.documentProgress = new com.ecom.academic.service.DocumentProgress(signatureWorkflow);
         this.signedDocumentRenderer = signedDocumentRenderer;
         this.teachingEvaluationPart = teachingEvaluationPart;
         this.httpRequest = httpRequest;
@@ -352,6 +356,13 @@ public class PositionApplicantController {
         model.addAttribute("completedDocs", completedDocs);
         model.addAttribute("documents", documents);
         model.addAttribute("docLabels", docLabels);
+        // สีสถานะของเอกสาร — กติกาเดียวกับหน้าเจ้าหน้าที่ เขียวเมื่อจบจริงเท่านั้น
+        model.addAttribute("docProgress", documentProgress.of(
+                com.ecom.academic.model.SignatureModule.POSITION, id, docLabels.keySet(),
+                documents.stream()
+                        .map(d -> new com.ecom.academic.service.DocumentProgress.Row(d.getDocumentType(),
+                                Boolean.TRUE.equals(d.getIsDraft()), d.getJsonData()))
+                        .toList()));
         model.addAttribute("applicantDocs", PositionRequestService.APPLICANT_DOCS);
         model.addAttribute("docSignedMap", docSignedMap);
         model.addAttribute("unsignedSigDocs", unsignedSigDocs);

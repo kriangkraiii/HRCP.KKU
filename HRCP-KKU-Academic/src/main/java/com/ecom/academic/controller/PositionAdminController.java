@@ -5,11 +5,8 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.Principal;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 
@@ -39,7 +36,6 @@ import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.PositionRequestStatus;
-import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -79,6 +75,9 @@ public class PositionAdminController {
     private final com.ecom.academic.service.DocumentPrewarmService documentPrewarmService;
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
+
+    /** สถานะจริงของเอกสาร — ทุกหน้าใช้กติกาเดียวกัน */
+    private final com.ecom.academic.service.DocumentProgress documentProgress;
     private final com.ecom.academic.service.AcademicCommitteeService committeeService;
     private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
     private final com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart;
@@ -112,6 +111,7 @@ public class PositionAdminController {
         this.autoFillHelper = autoFillHelper;
         this.documentPrewarmService = documentPrewarmService;
         this.signatureWorkflow = signatureWorkflow;
+        this.documentProgress = new com.ecom.academic.service.DocumentProgress(signatureWorkflow);
         this.committeeService = committeeService;
         this.signedDocumentRenderer = signedDocumentRenderer;
         this.teachingEvaluationPart = teachingEvaluationPart;
@@ -161,38 +161,24 @@ public class PositionAdminController {
                 d.setDocumentLabel(fullLabel);
             }
         }
-        // เอกสารที่ส่งลงนามแล้วคือฉบับจริงแม้แถวยังติดธงร่าง — ปุ่มส่งลงนามบันทึกผ่านร่างอัตโนมัติ
-        // ถ้านับแค่ธง กล่องจะค้างสีส้มตลอดไปทั้งที่ลงนามครบแล้ว กติกาเดียวกับเฟส 1
-        Set<Integer> signedDocs = documents.stream()
-                .map(PositionDocument::getDocumentType)
-                .distinct()
-                .filter(type -> signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type))
-                .collect(Collectors.toSet());
-        List<Integer> completedDocs = new ArrayList<>(positionService.getCompletedDocTypes(id));
-        signedDocs.stream().filter(type -> !completedDocs.contains(type)).forEach(completedDocs::add);
+        // มีเนื้อหาแล้ว (บันทึกหรือส่งลงนามแล้ว) — ใช้เลือกปุ่ม "แก้ไข" กับ "กรอก" และปุ่มดาวน์โหลด
+        // สีและป้ายสถานะดู docProgress ซึ่งใช้กติกาเดียวกับทุกหน้า
+        Map<Integer, com.ecom.academic.service.DocumentProgress.Stage> docProgress =
+                documentProgress.of(SignatureModule.POSITION, id, positionService.getAdminDocLabels().keySet(),
+                        documents.stream()
+                                .map(d -> new com.ecom.academic.service.DocumentProgress.Row(d.getDocumentType(),
+                                        Boolean.TRUE.equals(d.getIsDraft()), d.getJsonData()))
+                                .toList());
+        List<Integer> completedDocs = docProgress.entrySet().stream()
+                .filter(e -> e.getValue() != com.ecom.academic.service.DocumentProgress.Stage.NOT_STARTED
+                        && e.getValue() != com.ecom.academic.service.DocumentProgress.Stage.DRAFT)
+                .map(Map.Entry::getKey)
+                .toList();
 
         model.addAttribute("request", request);
         model.addAttribute("documents", documents);
-        // บันทึกแล้วแต่สารบรรณยังไม่ได้ออกเลขที่หนังสือ/วันที่ = ยังไม่เสร็จ กรอบจึงยังไม่เขียว
-        // กติกาเดียวกับเฟส 1 ทุกประการ อ่านจากแถวที่ไม่ใช่ร่างเท่านั้น
-        Set<Integer> pendingOfficeDocs = documents.stream()
-                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()) || signedDocs.contains(d.getDocumentType()))
-                .filter(d -> !DocumentCompleteness
-                        .missingOfficeFields(SignatureModule.POSITION, d.getDocumentType(), d.getJsonData())
-                        .isEmpty())
-                .map(PositionDocument::getDocumentType)
-                .collect(Collectors.toSet());
-
         model.addAttribute("completedDocs", completedDocs);
-        model.addAttribute("draftDocs", positionService.getDraftDocTypes(id).stream()
-                .filter(type -> !signedDocs.contains(type)).toList());
-        model.addAttribute("pendingOfficeDocs", pendingOfficeDocs);
-        // ยังมีคนต้องลงนามอยู่ — กำลังเวียน หรือผู้ยื่นเซ็นแล้วแต่ยังไม่ได้ส่งต่อ (เช่น เอกสารที่ 2
-        // ของเฟส 1 ที่นักทรัพยากรบุคคลยังไม่ได้ลงนาม) ยังไม่เสร็จ กรอบจึงยังไม่เขียว
-        model.addAttribute("pendingSignDocs", signedDocs.stream()
-                .filter(type -> !signatureWorkflow.isSigningComplete(SignatureModule.POSITION, id, type)
-                        || signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type))
-                .collect(Collectors.toSet()));
+        model.addAttribute("docProgress", docProgress);
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
         model.addAttribute("statuses", PositionRequestStatus.values());
         // Only the moves the process allows from where this request stands.

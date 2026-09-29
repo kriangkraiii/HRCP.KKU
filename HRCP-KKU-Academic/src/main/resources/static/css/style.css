@@ -2514,6 +2514,19 @@ body.modal-open .sidebar-toggle {
   color: #fff;
 }
 
+/* กรอกแล้วแต่ยังต้องลงนาม — ยังไม่เสร็จ จึงไม่ใช่สีเขียว */
+.doc-checklist-item.dci-pending {
+  border-color: color-mix(
+    in srgb,
+    var(--color-warning) 40%,
+    var(--border-color)
+  );
+}
+
+.doc-checklist-item.dci-pending .doc-checklist-icon {
+  border-color: var(--color-warning);
+}
+
 .doc-checklist-body {
   flex: 1;
   min-width: 0;
@@ -4208,8 +4221,29 @@ body.modal-open .sidebar-toggle {
 
 .doc-grid-sub {
   padding: 6px var(--space-md) 8px calc(var(--space-md) + 12px);
-  border-left: 2px solid var(--color-success);
+  border-left: 2px solid var(--border-color);
   margin: -4px 0 var(--space-sm) 0;
+}
+
+/* เส้นข้างแถวไฟล์เดินตามสถานะของเอกสาร — เดิมเขียวเสมอแม้ยังรอลงนามหรือรอออกเลข */
+.doc-grid-sub.dgs-done {
+  border-left-color: var(--color-success);
+}
+
+.doc-grid-sub.dgs-done .dgs-label {
+  color: var(--color-success);
+}
+
+.doc-grid-sub.dgs-pending {
+  border-left-color: var(--color-warning);
+}
+
+.doc-grid-sub.dgs-pending .dgs-label {
+  color: var(--text-muted);
+}
+
+.doc-grid-sub.dgs-pending .dgs-label i {
+  color: var(--color-warning);
 }
 
 .doc-grid-sub a,

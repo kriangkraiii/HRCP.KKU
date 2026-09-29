@@ -11,7 +11,6 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -46,7 +45,6 @@ import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.Doc7Scoring;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DashboardAnalyticsService;
-import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -86,6 +84,9 @@ public class AcademicAdminController {
 
     private final com.ecom.academic.service.SignatureWorkflowService signatureWorkflow;
 
+    /** สถานะจริงของเอกสาร — ทุกหน้าใช้กติกาเดียวกัน */
+    private final com.ecom.academic.service.DocumentProgress documentProgress;
+
     private final DashboardAnalyticsService dashboardAnalytics;
 
     public AcademicAdminController(
@@ -110,6 +111,7 @@ public class AcademicAdminController {
         this.adminLogService = adminLogService;
         this.positionRequestService = positionRequestService;
         this.signatureWorkflow = signatureWorkflow;
+        this.documentProgress = new com.ecom.academic.service.DocumentProgress(signatureWorkflow);
         this.signedDocumentRenderer = signedDocumentRenderer;
         this.httpRequest = httpRequest;
         this.autoFillHelper = autoFillHelper;
@@ -471,45 +473,12 @@ public class AcademicAdminController {
         model.addAttribute("attachments", requestService.getAttachments(id));
         model.addAttribute("attachmentCount", requestService.countAttachments(id));
 
-        // สามสถานะบนกล่องเอกสาร: ยังไม่เริ่ม / ร่าง / บันทึกแล้ว
-        // เดิมนับแค่ "มีแถวของเอกสารนี้" = เสร็จ กรอบจึงเขียวทันทีที่ auto-draft ทำงาน
-        // ทั้งที่เจ้าหน้าที่ยังไม่ได้กดบันทึกเอกสารเลย
-        // เอกสารที่ส่งลงนามแล้วคือฉบับจริงแม้แถวยังติดธงร่าง — ปุ่มส่งลงนามบันทึกผ่านร่างอัตโนมัติ
-        // ถ้านับแค่ธง กล่องจะค้างสีส้มตลอดไปทั้งที่ลงนามและออกเลขครบแล้ว
-        Set<Integer> signedDocs = documents.stream()
-                .map(AcademicDocument::getDocumentType)
-                .distinct()
-                .filter(type -> signatureWorkflow.isDocumentLocked(SignatureModule.ACADEMIC, id, type))
-                .collect(Collectors.toSet());
-        Set<Integer> completedDocs = documents.stream()
-                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()) || signedDocs.contains(d.getDocumentType()))
-                .map(AcademicDocument::getDocumentType)
-                .collect(Collectors.toSet());
-        Set<Integer> draftDocs = documents.stream()
-                .filter(d -> Boolean.TRUE.equals(d.getIsDraft()))
-                .map(AcademicDocument::getDocumentType)
-                .filter(type -> !completedDocs.contains(type))
-                .collect(Collectors.toSet());
-
-        // บันทึกแล้วแต่สารบรรณยังไม่ได้ออกเลขที่หนังสือ/วันที่ = ยังไม่เสร็จ กรอบจึงยังไม่เขียว
-        // อ่านจากแถวที่ไม่ใช่ร่างเท่านั้น เพราะฉบับจริงคือแถวนั้น
-        Set<Integer> pendingOfficeDocs = documents.stream()
-                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()) || signedDocs.contains(d.getDocumentType()))
-                .filter(d -> !DocumentCompleteness
-                        .missingOfficeFields(SignatureModule.ACADEMIC, d.getDocumentType(), d.getJsonData())
-                        .isEmpty())
-                .map(AcademicDocument::getDocumentType)
-                .collect(Collectors.toSet());
-
-        model.addAttribute("completedDocs", completedDocs);
-        model.addAttribute("draftDocs", draftDocs);
-        model.addAttribute("pendingOfficeDocs", pendingOfficeDocs);
-        // ยังมีคนต้องลงนามอยู่ — กำลังเวียน หรือผู้ยื่นเซ็นแล้วแต่ยังไม่ได้ส่งต่อ (เช่น เอกสารที่ 2
-        // ของเฟส 1 ที่นักทรัพยากรบุคคลยังไม่ได้ลงนาม) ยังไม่เสร็จ กรอบจึงยังไม่เขียว
-        model.addAttribute("pendingSignDocs", signedDocs.stream()
-                .filter(type -> !signatureWorkflow.isSigningComplete(SignatureModule.ACADEMIC, id, type)
-                        || signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, id, type))
-                .collect(Collectors.toSet()));
+        // สีและป้ายของกล่องเอกสาร — ใช้กติกาเดียวกับทุกหน้า ดู DocumentProgress
+        model.addAttribute("docProgress", documentProgress.of(SignatureModule.ACADEMIC, id,
+                DOC_LABELS.keySet(), documents.stream()
+                        .map(d -> new com.ecom.academic.service.DocumentProgress.Row(d.getDocumentType(),
+                                Boolean.TRUE.equals(d.getIsDraft()), d.getJsonData()))
+                        .toList()));
 
         Map<Integer, Long> docTypeToId = documents.stream()
                 .collect(Collectors.toMap(AcademicDocument::getDocumentType, AcademicDocument::getId, (existing, replacement) -> existing));

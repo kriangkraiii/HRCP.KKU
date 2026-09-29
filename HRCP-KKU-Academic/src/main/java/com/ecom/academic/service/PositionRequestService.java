@@ -1277,7 +1277,14 @@ public class PositionRequestService {
     }
 
     public List<Integer> getCompletedDocTypes(Long requestId) {
-        return documentRepository.findCompletedDocTypes(requestId);
+        List<Integer> completed = new java.util.ArrayList<>(documentRepository.findCompletedDocTypes(requestId));
+        // ส่งลงนามแล้วคือฉบับจริงแม้แถวยังติดธงร่าง — ปุ่มส่งลงนามบันทึกผ่านร่างอัตโนมัติ
+        // ถ้าไม่นับ เอกสารที่ลงนามแล้วขึ้น "รอกรอก" และผู้ยื่นส่งคำร้องไม่ได้เพราะถูกนับว่ากรอกไม่ครบ
+        documentRepository.findDraftDocTypes(requestId).stream()
+                .filter(type -> !completed.contains(type))
+                .filter(type -> isDocumentLockedForSigning(requestId, type))
+                .forEach(completed::add);
+        return completed;
     }
 
     /**
@@ -1286,7 +1293,7 @@ public class PositionRequestService {
      * <p>ตัดเอกสารที่บันทึกแล้วออก เพราะแถวร่างเก่าอาจค้างอยู่คู่กัน กล่องเดียวมีสองสีไม่ได้
      */
     public List<Integer> getDraftDocTypes(Long requestId) {
-        List<Integer> completed = documentRepository.findCompletedDocTypes(requestId);
+        List<Integer> completed = getCompletedDocTypes(requestId);
         return documentRepository.findDraftDocTypes(requestId).stream()
                 .filter(type -> !completed.contains(type))
                 .toList();

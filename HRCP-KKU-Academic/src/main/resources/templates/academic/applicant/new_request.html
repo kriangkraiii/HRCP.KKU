@@ -54,27 +54,28 @@
 
             <!-- Step Progress -->
             <div class="step-progress">
-                <div class="step-progress-item" th:classappend="${hasDoc1} ? 'sp-completed' : 'sp-active'" id="stepInd1">
+                <!--/* เขียวเมื่อกรอกและลงนามแล้วเท่านั้น — กรอกอย่างเดียวยังส่งคำร้องไม่ได้ */-->
+                <div class="step-progress-item" th:classappend="${hasDoc1 and doc1Signed} ? 'sp-completed' : 'sp-active'" id="stepInd1">
                     <span class="step-num">
-                        <i th:if="${hasDoc1}" class="fas fa-check"></i>
-                        <span th:unless="${hasDoc1}">1</span>
+                        <i th:if="${hasDoc1 and doc1Signed}" class="fas fa-check"></i>
+                        <span th:unless="${hasDoc1 and doc1Signed}">1</span>
                     </span>
                     <span>บันทึกข้อความ</span>
                 </div>
 
                 <div class="step-progress-connector"></div>
 
-                <div class="step-progress-item" th:classappend="${hasDoc2} ? 'sp-completed' : (${hasDoc1} ? 'sp-active' : '')" id="stepInd2">
+                <div class="step-progress-item" th:classappend="${hasDoc2 and doc2Signed} ? 'sp-completed' : (${hasDoc1 and doc1Signed} ? 'sp-active' : '')" id="stepInd2">
                     <span class="step-num">
-                        <i th:if="${hasDoc2}" class="fas fa-check"></i>
-                        <span th:unless="${hasDoc2}">2</span>
+                        <i th:if="${hasDoc2 and doc2Signed}" class="fas fa-check"></i>
+                        <span th:unless="${hasDoc2 and doc2Signed}">2</span>
                     </span>
                     <span>แบบตรวจสอบ</span>
                 </div>
 
                 <div class="step-progress-connector"></div>
 
-                <div class="step-progress-item" th:classappend="${hasDoc1 and hasDoc2} ? 'sp-active' : ''" id="stepInd3">
+                <div class="step-progress-item" th:classappend="${hasDoc1 and doc1Signed and hasDoc2 and doc2Signed} ? 'sp-active' : ''" id="stepInd3">
                     <span class="step-num">3</span>
                     <span>ตรวจสอบและส่ง</span>
                 </div>
@@ -84,7 +85,7 @@
             <div class="doc-checklist">
 
                 <!-- เอกสารที่ 1 -->
-                <div class="doc-checklist-item" th:classappend="${hasDoc1} ? 'dci-done' : ''">
+                <div class="doc-checklist-item" th:classappend="${hasDoc1} ? (${doc1Signed} ? 'dci-done' : 'dci-pending') : ''">
                     <div class="doc-checklist-icon">
                         <i th:if="${hasDoc1 and doc1Signed}" class="fas fa-check"></i>
                         <i th:if="${hasDoc1 and !doc1Signed}" class="fas fa-pen-nib text-warning"></i>
@@ -112,7 +113,7 @@
                 </div>
 
                 <!-- เอกสารที่ 2 -->
-                <div class="doc-checklist-item" th:classappend="${hasDoc2} ? 'dci-done' : ''">
+                <div class="doc-checklist-item" th:classappend="${hasDoc2} ? (${doc2Signed} ? 'dci-done' : 'dci-pending') : ''">
                     <div class="doc-checklist-icon">
                         <i th:if="${hasDoc2 and doc2Signed}" class="fas fa-check"></i>
                         <i th:if="${hasDoc2 and !doc2Signed}" class="fas fa-pen-nib text-warning"></i>
