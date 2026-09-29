@@ -504,6 +504,12 @@ public class AcademicAdminController {
         model.addAttribute("completedDocs", completedDocs);
         model.addAttribute("draftDocs", draftDocs);
         model.addAttribute("pendingOfficeDocs", pendingOfficeDocs);
+        // ยังมีคนต้องลงนามอยู่ — กำลังเวียน หรือผู้ยื่นเซ็นแล้วแต่ยังไม่ได้ส่งต่อ (เช่น เอกสารที่ 2
+        // ของเฟส 1 ที่นักทรัพยากรบุคคลยังไม่ได้ลงนาม) ยังไม่เสร็จ กรอบจึงยังไม่เขียว
+        model.addAttribute("pendingSignDocs", signedDocs.stream()
+                .filter(type -> !signatureWorkflow.isSigningComplete(SignatureModule.ACADEMIC, id, type)
+                        || signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, id, type))
+                .collect(Collectors.toSet()));
 
         Map<Integer, Long> docTypeToId = documents.stream()
                 .collect(Collectors.toMap(AcademicDocument::getDocumentType, AcademicDocument::getId, (existing, replacement) -> existing));

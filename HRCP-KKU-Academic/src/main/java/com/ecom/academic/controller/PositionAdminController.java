@@ -187,6 +187,12 @@ public class PositionAdminController {
         model.addAttribute("draftDocs", positionService.getDraftDocTypes(id).stream()
                 .filter(type -> !signedDocs.contains(type)).toList());
         model.addAttribute("pendingOfficeDocs", pendingOfficeDocs);
+        // ยังมีคนต้องลงนามอยู่ — กำลังเวียน หรือผู้ยื่นเซ็นแล้วแต่ยังไม่ได้ส่งต่อ (เช่น เอกสารที่ 2
+        // ของเฟส 1 ที่นักทรัพยากรบุคคลยังไม่ได้ลงนาม) ยังไม่เสร็จ กรอบจึงยังไม่เขียว
+        model.addAttribute("pendingSignDocs", signedDocs.stream()
+                .filter(type -> !signatureWorkflow.isSigningComplete(SignatureModule.POSITION, id, type)
+                        || signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type))
+                .collect(Collectors.toSet()));
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
         model.addAttribute("statuses", PositionRequestStatus.values());
         // Only the moves the process allows from where this request stands.

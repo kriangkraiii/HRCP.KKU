@@ -79,7 +79,15 @@ class OfficeIssuedLockTest extends AbstractFlowTest {
         envelope.setFrozenHash(SignatureWorkflowService.sha256(frozen));
         envelope.setVerificationCode("VC" + System.nanoTime());
         envelope.setCreatedAt(LocalDateTime.now());
-        envelopes.save(envelope);
+        envelope = envelopes.save(envelope);
+        // ผู้ยื่นเซ็นช่องเดียวของเอกสารที่ 1 แล้ว — ไม่มีใครเหลือให้ส่งต่อ
+        com.ecom.academic.model.SignatureStep step = new com.ecom.academic.model.SignatureStep();
+        step.setSignatureRequest(envelope);
+        step.setStepOrder(1);
+        step.setSlotKey("applicant");
+        step.setAnchorPlaceholder("{{sig_applicant}}");
+        step.setStatus(com.ecom.academic.model.SignatureStepStatus.SIGNED);
+        signatureSteps.save(step);
     }
 
     private void issue(String memo, String date) throws Exception {
@@ -92,17 +100,21 @@ class OfficeIssuedLockTest extends AbstractFlowTest {
     }
 
     private String card() throws Exception {
+        return card(1);
+    }
+
+    private String card(int documentType) throws Exception {
         String html = mvc.perform(get("/admin/academic/request/" + request.getId()).with(as(officer)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         Matcher m = Pattern.compile("class=\"doc-grid-item[ \"](.*?)(?=class=\"doc-grid-item[ \"]|$)",
                 Pattern.DOTALL).matcher(html);
         while (m.find()) {
-            if (m.group(1).contains("เอกสารที่ 1:")) {
+            if (m.group(1).contains("เอกสารที่ " + documentType + ":")) {
                 return m.group(0);
             }
         }
-        throw new AssertionError("ไม่พบกล่องของเอกสารที่ 1");
+        throw new AssertionError("ไม่พบกล่องของเอกสารที่ " + documentType);
     }
 
     private String form() throws Exception {
@@ -204,5 +216,27 @@ class OfficeIssuedLockTest extends AbstractFlowTest {
         assertThat(after).doesNotContain("id=\"btnSubmitDoc\"")
                 .doesNotContain("id=\"sendBackPanel\"")
                 .contains("ออกเลขที่หนังสือและวันที่เอกสารแล้ว แก้ไขไม่ได้อีก");
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 2: ผู้ยื่นเซ็นแล้ว นักทรัพยากรบุคคลยังไม่เซ็น — ยังไม่เขียว ขึ้นป้ายรอลงนาม")
+    void aDocumentWaitingForTheNextSignerIsNotGreen() throws Exception {
+        String doc2 = "{\"applicant_name\":\"ผู้ยื่นกรอกไว้\"}";
+        data.academicDocument(request, 2, doc2);
+        var created = signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 2,
+                "เอกสารที่ 2", doc2,
+                java.util.List.of(new com.ecom.academic.service.SignatureWorkflowService.SignerAssignment(
+                        "applicant", applicant.getId())),
+                null, applicant, com.ecom.academic.service.SignatureWorkflowService.ActorContext.none());
+        assertThat(created.error()).isNull();
+        var step = signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(created.request().getId()).get(0);
+        var signed = signatureWorkflow.sign(step.getId(), applicant, data.signatureFor(applicant).getId(), true,
+                com.ecom.academic.service.SignatureWorkflowService.ActorContext.none(), null, null);
+        assertThat(signed.error()).isNull();
+        assertThat(signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, request.getId(), 2)).isTrue();
+
+        assertThat(card(2)).contains("dgi-draft")
+                .doesNotContain("dgi-completed")
+                .contains("รอลงนาม");
     }
 }
