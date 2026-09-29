@@ -129,12 +129,12 @@ class ExternalSyncPageControllerTest {
         @SuppressWarnings("unchecked")
         List<ExternalSyncPageController.SyncJobDisplay> syncJobList =
                 (List<ExternalSyncPageController.SyncJobDisplay>) model.getAttribute("syncJobList");
-        assertThat(syncJobList).hasSize(9);
+        assertThat(syncJobList).hasSize(8);
         assertThat(syncJobList.stream().map(ExternalSyncPageController.SyncJobDisplay::id).toList())
-                .containsExactly("users", "college_web", "scopus", "openalex", "crossref", "dblp", "thaijo", "kkuir", "kku_regulations");
+                .containsExactly("users", "college_web", "scopus", "openalex", "crossref", "thaijo", "kkuir", "kku_regulations");
 
         assertThat(model.getAttribute("okCount")).isEqualTo(1L);
-        assertThat(model.getAttribute("totalJobs")).isEqualTo(9);
+        assertThat(model.getAttribute("totalJobs")).isEqualTo(8);
 
         @SuppressWarnings("unchecked")
         List<ExternalSyncPageController.ScheduleCategory> scheduleCategories =

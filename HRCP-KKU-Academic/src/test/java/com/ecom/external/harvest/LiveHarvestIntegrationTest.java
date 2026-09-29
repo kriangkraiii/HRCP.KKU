@@ -117,6 +117,7 @@ class LiveHarvestIntegrationTest {
 
     @Test
     @DisplayName("Live Test 3: DBLP ดึงงานวิจัยจริงอาจารย์สายคอมพ์")
+    @org.junit.jupiter.api.Disabled("DBLP harvesting is disabled (b7c7676)")
     void testLiveDblp() {
         HarvestProperties props = new HarvestProperties();
         DblpAdapter adapter = new DblpAdapter(props);

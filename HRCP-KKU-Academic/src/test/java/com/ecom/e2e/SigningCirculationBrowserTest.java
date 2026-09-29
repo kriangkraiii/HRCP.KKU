@@ -536,7 +536,20 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 evaluation, "ผู้ช่วยศาสตราจารย์");
         Long id = request.getId();
         // เอกสารที่ 3 (แบบรับรองจริยธรรม) — ผู้เสนอขอลงนาม แล้วคณบดีลงนาม
-        String doc3 = "{\"applicant_name\":\"สมชาย ใจดี\",\"position\":\"อาจารย์\"}";
+        // ช่องของเจ้าหน้าที่ต้องครบก่อนเริ่มเวียน (61158e8) — เติมทุกช่องที่ยังขาด
+        Map<String, String> doc3Fields = new java.util.LinkedHashMap<>();
+        doc3Fields.put("applicant_name", "สมชาย ใจดี");
+        doc3Fields.put("position", "อาจารย์");
+        for (String key : com.ecom.academic.service.DocumentCompleteness.missingAdminFields(
+                SignatureModule.POSITION, 3, "{}")) {
+            doc3Fields.putIfAbsent(key, key.startsWith("chk_") ? "on" : "ทดสอบ");
+        }
+        String doc3;
+        try {
+            doc3 = new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(doc3Fields);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
         data.positionDocument(request, 3, doc3);
         var none = SignatureWorkflowService.ActorContext.none();
         var created = workflow.createEnvelope(SignatureModule.POSITION, id, 3, "แบบรับรองจริยธรรม", doc3,
@@ -545,7 +558,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 null, officer, none);
         assertThat(created.ok()).as(String.valueOf(created.error())).isTrue();
         Long firstEnvelope = created.request().getId();
-        workflow.startCirculation(firstEnvelope, officer, none);
+        var started = workflow.startCirculation(firstEnvelope, officer, none);
+        assertThat(started.ok()).as(String.valueOf(started.error())).isTrue();
         assertThat(workflow.sign(stepFor(created.request(), "applicant").getId(), professor,
                 data.signatureFor(professor).getId(), true, none, com.ecom.support.TestCertificates.PIN, null).ok()).isTrue();
         assertThat(workflow.sign(stepFor(created.request(), "dean").getId(), dean,
@@ -988,6 +1002,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                         + " / " + page.locator("#signaturePanel").innerText().replaceAll("\\s+", " "));
             }
         } else if (forward.count() > 0) {
+            // ช่องของเจ้าหน้าที่ต้องครบก่อนส่งต่อ (61158e8) — ฟอร์มส่งต่อบันทึกเอกสารก่อนส่ง
+            fillEmptyFields(null);
             pickSigners(forward.first(), signers, who);
             clickAndSettle(forward.first().locator("button[type='submit']").first(), who + ": ส่งต่อ");
             assertNoErrorFlash(who + ": ส่งต่อ");
