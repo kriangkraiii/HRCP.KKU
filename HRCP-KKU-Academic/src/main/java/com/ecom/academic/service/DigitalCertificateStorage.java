@@ -23,6 +23,10 @@ public class DigitalCertificateStorage {
     private final Path baseDir;
     private final com.ecom.service.BlobMirror mirror;
 
+    /** Encrypts files at rest when APP_ESIGN_P12_MASTER_KEY is set; absent in hand-built test instances. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private CertificatePinEncryptionService encryption;
+
     @org.springframework.beans.factory.annotation.Autowired
     public DigitalCertificateStorage(
             @Value("${app.upload.certificate-dir:${app.upload.dir:${user.dir}/uploads/}certificates}") String baseDir,
@@ -47,16 +51,17 @@ public class DigitalCertificateStorage {
             throw new IllegalArgumentException("Certificate file exceeds 5 MB limit");
         }
 
+        byte[] stored = encryption != null ? encryption.encryptFile(certBytes) : certBytes;
         Files.createDirectories(baseDir);
         String filename = "cert_" + UUID.randomUUID() + ".p12";
         Path target = resolveSafe(filename);
 
         Path temp = Files.createTempFile(baseDir, "cert_tmp_", ".p12");
         try {
-            Files.write(temp, certBytes);
+            Files.write(temp, stored);
             Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
             if (mirror != null) {
-                mirror.save(com.ecom.service.BlobMirror.CERTIFICATE, filename, certBytes);
+                mirror.save(com.ecom.service.BlobMirror.CERTIFICATE, filename, stored);
             }
             return filename;
         } finally {
@@ -65,9 +70,40 @@ public class DigitalCertificateStorage {
     }
 
     /**
-     * Reads the .p12 file bytes from storage.
+     * Reads the .p12 file bytes from storage, decrypted.
      */
     public byte[] read(String filename) {
+        byte[] stored = readStored(filename);
+        if (stored == null || encryption == null) {
+            return stored;
+        }
+        try {
+            return encryption.decryptFile(stored);
+        } catch (IllegalStateException e) {
+            log.error("Certificate {}: {}", filename, e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * Replaces a stored file's bytes (disk and database copy) — for re-encryption.
+     */
+    public void rewrite(String filename, byte[] stored) throws IOException {
+        Path target = resolveSafe(filename);
+        Path temp = Files.createTempFile(baseDir, "cert_tmp_", ".p12");
+        try {
+            Files.write(temp, stored);
+            Files.move(temp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+        } finally {
+            Files.deleteIfExists(temp);
+        }
+        if (mirror != null) {
+            mirror.save(com.ecom.service.BlobMirror.CERTIFICATE, filename, stored);
+        }
+    }
+
+    /** The file as stored (possibly encrypted). */
+    public byte[] readStored(String filename) {
         if (filename == null || filename.isBlank()) {
             return null;
         }

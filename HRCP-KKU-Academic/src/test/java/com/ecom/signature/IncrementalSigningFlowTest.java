@@ -170,6 +170,51 @@ class IncrementalSigningFlowTest extends AbstractFlowTest {
                 .doesNotContainValue(TestCertificates.PIN);
     }
 
+    @Autowired
+    private com.ecom.academic.service.DigitalCertificateStorage certificateStorage;
+
+    @Autowired
+    private com.ecom.academic.service.UserDigitalCertificateService certificateService;
+
+    @Test
+    @DisplayName("ไฟล์ .p12 ที่เก็บไว้ถูกเข้ารหัส และยังใช้ลงนามได้")
+    void storedCertificatesAreEncrypted() throws Exception {
+        String path = certificateService.findActive(applicant).orElseThrow().getCertificatePath();
+        assertThat(com.ecom.academic.service.CertificatePinEncryptionService
+                .isEncryptedFile(certificateStorage.readStored(path))).isTrue();
+        assertThat(sign(TestCertificates.PIN)).isNotEqualTo("/esign/sign/" + step.getId());
+    }
+
+    @Test
+    @DisplayName("ตัวอย่างตอนลงนามคือไฟล์จริงบวกลายเซ็นที่จะลง — ไม่ถูกบันทึกเป็น revision")
+    void previewIsTheRealFile() throws Exception {
+        byte[] current = revisions.latest(envelope.getId());
+        byte[] preview = mvc.perform(get("/esign/sign/" + step.getId() + "/preview")
+                .param("userSignatureId", String.valueOf(signature.getId())).with(as(applicant)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+
+        assertThat(preview.length).isGreaterThan(current.length);
+        assertThat(java.util.Arrays.equals(current, 0, current.length, preview, 0, current.length))
+                .as("ตัวอย่างต้องต่อท้ายไฟล์จริง ไม่ใช่เรนเดอร์ใหม่").isTrue();
+        assertThat(kinds()).containsExactly(SignedPdfRevision.Kind.BASE);
+    }
+
+    @Test
+    @DisplayName("ไฟล์ Word ของเอกสารลงนามแบบใส่ทับถูกประทับว่าเป็นสำเนา")
+    void wordCopyIsStamped() throws Exception {
+        byte[] docx = renderer.renderForDownload(reload(), "docx");
+        try (var zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(docx))) {
+            java.util.zip.ZipEntry e;
+            String xml = null;
+            while ((e = zip.getNextEntry()) != null) {
+                if (e.getName().equals("word/document.xml")) {
+                    xml = new String(zip.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                }
+            }
+            assertThat(xml).contains("สำเนา — ไม่มีผลทางลายมือชื่อ").contains(envelope.getVerificationCode());
+        }
+    }
+
     @Test
     @DisplayName("หน้าออกเลขแสดงช่องรหัสผ่าน Digital ID ของเจ้าหน้าที่")
     void theIssueFormAsksForThePin() throws Exception {

@@ -41,7 +41,7 @@ import org.apache.pdfbox.pdmodel.interactive.annotation.PDAnnotationWidget;
 import org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm;
 import org.apache.pdfbox.pdmodel.interactive.form.PDField;
 import org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField;
-import org.apache.pdfbox.pdmodel.interactive.form.PDTextField;
+import org.apache.pdfbox.pdmodel.interactive.form.PDPushButton;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.apache.pdfbox.util.Matrix;
@@ -86,9 +86,18 @@ public final class BasePdfBuilder {
     public record SlotPicture(String anchorPlaceholder, byte[] png, int width, int height) {
     }
 
-    /** A late text value to reserve. {@code reserve} is its length in non-breaking spaces. */
-    public record TextSpec(String field, int reserve) {
+    /**
+     * A late value to reserve. {@code reserve} is its length in non-breaking spaces;
+     * a {@code tick} (✓ in a pair of brackets) gets a short fixed reserve instead.
+     */
+    public record TextSpec(String field, int reserve, boolean tick) {
+        public TextSpec(String field, int reserve) {
+            this(field, reserve, false);
+        }
     }
+
+    /** Length of a tick's reserve. Tick fields are told apart by order, not length. */
+    static final int TICK_RUN = 5;
 
     public record SlotSpec(String slotKey, String anchorPlaceholder, List<String> ownFields) {
     }
@@ -112,16 +121,12 @@ public final class BasePdfBuilder {
 
     public Result build(Renderer renderer, List<TextSpec> texts, List<SlotSpec> slots)
             throws IOException, BaseBuildException {
-        // Distinct run lengths, three apart so a template NBSP touching a run cannot
-        // make it look like another field's.
-        Map<String, Integer> lengths = new LinkedHashMap<>();
-        int bump = 0;
+        Map<String, Integer> wanted = new LinkedHashMap<>();
         for (TextSpec t : texts) {
-            lengths.put(t.field(), Math.max(MIN_RUN, t.reserve()) + bump);
-            bump += 3;
+            wanted.put(t.field(), t.tick() ? TICK_RUN : Math.max(MIN_RUN, t.reserve()));
         }
         Map<String, String> overrides = new LinkedHashMap<>();
-        lengths.keySet().forEach(f -> overrides.put(f, String.format(TOKEN, f)));
+        wanted.keySet().forEach(f -> overrides.put(f, String.format(TOKEN, f)));
 
         List<SlotPicture> pictures = new ArrayList<>();
         Map<Integer, SlotSpec> byWidth = new LinkedHashMap<>();
@@ -131,13 +136,70 @@ public final class BasePdfBuilder {
             byWidth.put(w, slots.get(i));
         }
 
-        Map<String, Integer> present = new LinkedHashMap<>();
-        byte[] docx = reserve(renderer.docx(overrides, pictures), lengths, present);
-        // A late field this template does not print has nothing to reserve.
-        lengths.keySet().retainAll(present.keySet());
-        byte[] rendered = renderer.toPdf(docx);
+        byte[] template = renderer.docx(overrides, pictures);
+        // A reserve longer than its line (a narrow table cell) is split by the layout
+        // and cannot be found; shrink those and render again. Each field ends up with
+        // the widest reserve that stays on one line.
+        for (int attempt = 0;; attempt++) {
+            // Distinct lengths first; once a field has had to shrink, equal lengths
+            // are allowed and told apart by their order in the document.
+            Map<String, Integer> lengths = attempt == 0 ? distinct(wanted) : new LinkedHashMap<>(wanted);
+            Map<String, Integer> present = new LinkedHashMap<>();
+            List<String> order = new ArrayList<>();
+            byte[] docx = reserve(template, lengths, present, order);
+            // A late field this template does not print has nothing to reserve.
+            lengths.keySet().retainAll(present.keySet());
+            wanted.keySet().retainAll(present.keySet());
+            byte[] rendered = renderer.toPdf(docx);
 
-        List<Box> textBoxes = locateTexts(rendered, lengths);
+            List<Box> found = new ArrayList<>();
+            List<String> missing = locate(rendered, lengths, order, found);
+            if (missing.stream().anyMatch(f -> lengths.get(f) == TICK_RUN)) {
+                throw new BaseBuildException("Tick places for " + missing + " not found in the rendered page");
+            }
+            if (!missing.isEmpty()) {
+                boolean shrunk = false;
+                for (String f : missing) {
+                    int smaller = Math.max(MIN_RUN, (int) (wanted.get(f) * 0.7));
+                    shrunk |= smaller < wanted.get(f);
+                    wanted.put(f, smaller);
+                }
+                if (!shrunk || attempt >= 4) {
+                    throw new BaseBuildException("Reserved area for " + missing + " not found in the rendered page");
+                }
+                continue;
+            }
+            return finish(rendered, found, byWidth, slots);
+        }
+    }
+
+    /** Run lengths at least three apart, so no field's run can pass for another's. */
+    private static Map<String, Integer> distinct(Map<String, Integer> wanted) {
+        Map<String, Integer> out = new LinkedHashMap<>();
+        for (var w : wanted.entrySet()) {
+            int n = w.getValue();
+            if (n != TICK_RUN) {
+                while (tooClose(out, n)) {
+                    n++;
+                }
+            }
+            out.put(w.getKey(), n);
+        }
+        return out;
+    }
+
+    private static boolean tooClose(Map<String, Integer> taken, int n) {
+        for (int o : taken.values()) {
+            if (o != TICK_RUN && Math.abs(o - n) < 3) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private Result finish(byte[] rendered, List<Box> found, Map<Integer, SlotSpec> byWidth,
+            List<SlotSpec> slots) throws IOException, BaseBuildException {
+        List<Box> textBoxes = new ArrayList<>(found);
         List<Box> sigBoxes = locateSlots(rendered, byWidth);
         byte[] pdf = installForm(rendered, textBoxes, sigBoxes, slots);
         return new Result(pdf, new Layout(textBoxes, sigBoxes));
@@ -146,7 +208,11 @@ public final class BasePdfBuilder {
     // ------------------------------------------------------------------ DOCX
 
     /** Swaps each token for its NBSP run, in the token's own run formatting. */
-    static byte[] reserve(byte[] docx, Map<String, Integer> lengths, Map<String, Integer> seen) throws IOException {
+    /**
+     * @param order filled with each token occurrence's field, in document order
+     */
+    static byte[] reserve(byte[] docx, Map<String, Integer> lengths, Map<String, Integer> seen, List<String> order)
+            throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(docx));
                 ZipOutputStream zout = new ZipOutputStream(out)) {
@@ -157,6 +223,17 @@ public final class BasePdfBuilder {
                 if (name.startsWith("word/") && name.endsWith(".xml")
                         && (name.equals("word/document.xml") || name.startsWith("word/header") || name.startsWith("word/footer"))) {
                     String xml = new String(data, StandardCharsets.UTF_8);
+                    if (name.equals("word/document.xml")) {
+                        // Runs of equal length are matched to fields by reading order.
+                        java.util.TreeMap<Integer, String> at = new java.util.TreeMap<>();
+                        for (var l : lengths.entrySet()) {
+                            String token = String.format(TOKEN, l.getKey());
+                            for (int i = xml.indexOf(token); i >= 0; i = xml.indexOf(token, i + 1)) {
+                                at.put(i, l.getKey());
+                            }
+                        }
+                        order.addAll(at.values());
+                    }
                     for (var l : lengths.entrySet()) {
                         String token = String.format(TOKEN, l.getKey());
                         int at;
@@ -196,10 +273,23 @@ public final class BasePdfBuilder {
 
     // ------------------------------------------------------------------ locating
 
-    private static List<Box> locateTexts(byte[] pdf, Map<String, Integer> lengths) throws IOException, BaseBuildException {
-        Map<Integer, String> byLength = new LinkedHashMap<>();
-        lengths.forEach((f, n) -> byLength.put(n, f));
-        List<Box> boxes = new ArrayList<>();
+    /**
+     * Finds each reserved run in reading order and gives it to the next field, in
+     * document order, of the same length. A template NBSP may touch the front of a
+     * text reserve, so a run one or two longer also matches (ours is its tail);
+     * tick reserves must match exactly.
+     *
+     * @return the fields left without a place
+     */
+    private static List<String> locate(byte[] pdf, Map<String, Integer> lengths, List<String> order, List<Box> boxes)
+            throws IOException {
+        Map<Integer, java.util.ArrayDeque<String>> queues = new LinkedHashMap<>();
+        for (String f : order) {
+            Integer n = lengths.get(f);
+            if (n != null) {
+                queues.computeIfAbsent(n, k -> new java.util.ArrayDeque<>()).add(f);
+            }
+        }
         try (PDDocument doc = Loader.loadPDF(pdf)) {
             for (int p = 0; p < doc.getNumberOfPages(); p++) {
                 float pageHeight = doc.getPage(p).getMediaBox().getHeight();
@@ -223,16 +313,19 @@ public final class BasePdfBuilder {
                         k++;
                     }
                     int run = k - i;
-                    // A template NBSP may touch the front of ours: take ours from the end.
                     for (int extra = 0; extra <= 2; extra++) {
-                        String field = byLength.get(run - extra);
-                        if (field != null) {
+                        int n = run - extra;
+                        if (n == TICK_RUN && extra > 0) {
+                            continue;
+                        }
+                        var queue = queues.get(n);
+                        if (queue != null && !queue.isEmpty()) {
                             TextPosition first = all.get(i + extra), last = all.get(k - 1);
                             float size = first.getFontSizeInPt();
                             float width = last.getXDirAdj() + last.getWidthDirAdj() - first.getXDirAdj();
                             float baseline = pageHeight - first.getYDirAdj();
                             float height = size * 1.3f;
-                            boxes.add(new Box(field, p, first.getXDirAdj(),
+                            boxes.add(new Box(queue.poll(), p, first.getXDirAdj(),
                                     baseline - height * PdfIncrementService.BASELINE_RATIO, width, height, size));
                             break;
                         }
@@ -241,12 +334,9 @@ public final class BasePdfBuilder {
                 }
             }
         }
-        for (String f : lengths.keySet()) {
-            if (boxes.stream().noneMatch(b -> b.field().equals(f))) {
-                throw new BaseBuildException("Reserved area for " + f + " not found in the rendered page");
-            }
-        }
-        return boxes;
+        List<String> missing = new ArrayList<>();
+        queues.values().forEach(missing::addAll);
+        return missing.stream().distinct().toList();
     }
 
     private static boolean isNbsp(TextPosition t) {
@@ -317,15 +407,21 @@ public final class BasePdfBuilder {
             form.setDefaultAppearance("/" + PdfIncrementService.FONT + " 16 Tf 0 g");
             form.setNeedAppearances(false);
 
-            Map<String, PDTextField> textFields = new LinkedHashMap<>();
+            // Push buttons, not text fields: viewers redraw a text field's value themselves
+            // (Preview/PDFKit with its own font, clipped to the box), losing TH Sarabun and
+            // the Thai shaping. A push button has no value to redraw, so every viewer shows
+            // the appearance we draw. The value itself is kept in the field's /TU.
+            Map<String, PDPushButton> textFields = new LinkedHashMap<>();
             for (Box b : texts) {
-                PDTextField t = textFields.get(b.field());
+                PDPushButton t = textFields.get(b.field());
                 PDAnnotationWidget w;
                 if (t == null) {
-                    t = new PDTextField(form);
+                    t = new PDPushButton(form);
                     t.setPartialName(b.field());
-                    t.setDefaultAppearance(String.format(Locale.ROOT, "/%s %.1f Tf 0 g", PdfIncrementService.FONT, b.fontSize()));
-                    // Filled by the server only; a viewer regenerating the appearance would lose the Thai shaping.
+                    // Kept for the size the value is drawn at (the template's own).
+                    t.getCOSObject().setString(COSName.DA,
+                            String.format(Locale.ROOT, "/%s %.1f Tf 0 g", PdfIncrementService.FONT, b.fontSize()));
+                    // Filled by the server only.
                     t.setReadOnly(true);
                     textFields.put(b.field(), t);
                     form.getFields().add(t);

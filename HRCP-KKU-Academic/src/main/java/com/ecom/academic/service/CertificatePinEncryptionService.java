@@ -118,6 +118,64 @@ public class CertificatePinEncryptionService {
         }
     }
 
+    // ------------------------------------------------------------------ .p12 files
+
+    /** Marks a .p12 file encrypted with the current key. A PKCS#12 file never starts like this. */
+    private static final byte[] FILE_MAGIC = "HRCPP12E1".getBytes(StandardCharsets.US_ASCII);
+
+    public static boolean isEncryptedFile(byte[] data) {
+        return data != null && data.length > FILE_MAGIC.length
+                && java.util.Arrays.equals(data, 0, FILE_MAGIC.length, FILE_MAGIC, 0, FILE_MAGIC.length);
+    }
+
+    /**
+     * Encrypts a .p12 file for storage, or returns it unchanged when no key is set.
+     * The PIN no longer being kept makes the file what an attacker would try to
+     * brute-force offline; this keeps a copied file or database dump useless without the key.
+     */
+    public byte[] encryptFile(byte[] plain) {
+        if (currentKey == null || plain == null || isEncryptedFile(plain)) {
+            return plain;
+        }
+        try {
+            byte[] iv = new byte[IV_LENGTH];
+            random.nextBytes(iv);
+            Cipher cipher = Cipher.getInstance(ALGO);
+            cipher.init(Cipher.ENCRYPT_MODE, currentKey, new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+            byte[] ct = cipher.doFinal(plain);
+            byte[] out = new byte[FILE_MAGIC.length + IV_LENGTH + ct.length];
+            System.arraycopy(FILE_MAGIC, 0, out, 0, FILE_MAGIC.length);
+            System.arraycopy(iv, 0, out, FILE_MAGIC.length, IV_LENGTH);
+            System.arraycopy(ct, 0, out, FILE_MAGIC.length + IV_LENGTH, ct.length);
+            return out;
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not encrypt the certificate file", e);
+        }
+    }
+
+    /**
+     * The .p12 bytes of a stored file, encrypted or not.
+     *
+     * @throws IllegalStateException for an encrypted file when the key is missing or wrong
+     */
+    public byte[] decryptFile(byte[] stored) {
+        if (!isEncryptedFile(stored)) {
+            return stored;
+        }
+        if (currentKey == null) {
+            throw new IllegalStateException("Certificate file is encrypted but APP_ESIGN_P12_MASTER_KEY is not set");
+        }
+        try {
+            Cipher cipher = Cipher.getInstance(ALGO);
+            cipher.init(Cipher.DECRYPT_MODE, currentKey,
+                    new GCMParameterSpec(GCM_TAG_LENGTH, stored, FILE_MAGIC.length, IV_LENGTH));
+            int off = FILE_MAGIC.length + IV_LENGTH;
+            return cipher.doFinal(stored, off, stored.length - off);
+        } catch (Exception e) {
+            throw new IllegalStateException("Could not decrypt the certificate file (wrong key?)", e);
+        }
+    }
+
     private String seal(SecretKeySpec key, String plaintext) throws Exception {
         byte[] iv = new byte[IV_LENGTH];
         random.nextBytes(iv);

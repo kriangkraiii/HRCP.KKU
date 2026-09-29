@@ -206,6 +206,9 @@ public class SigningController {
     }
 
     /** Streams the document being signed, for the on-page preview. */
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.academic.service.pdf.IncrementalSigningService incrementalSigning;
+
     @GetMapping("/sign/{stepId}/preview")
     public ResponseEntity<byte[]> preview(
             @PathVariable Long stepId,
@@ -242,7 +245,10 @@ public class SigningController {
         }
 
         try {
-            byte[] pdf = renderer.renderPdf(step.getSignatureRequest(), step, previewSig);
+            byte[] pdf = step.getSignatureRequest().isIncremental()
+                    // The file the signer is about to sign, not a fresh rendering of it
+                    ? incrementalSigning.preview(step.getSignatureRequest(), step, renderer.previewImage(step, previewSig))
+                    : renderer.renderPdf(step.getSignatureRequest(), step, previewSig);
             if (pdf != null && pdf.length > 0) {
                 return ResponseEntity.ok()
                         .contentType(MediaType.APPLICATION_PDF)

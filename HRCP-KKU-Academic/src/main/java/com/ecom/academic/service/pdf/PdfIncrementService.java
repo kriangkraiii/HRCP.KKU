@@ -160,6 +160,29 @@ public final class PdfIncrementService {
         }
     }
 
+    /**
+     * What {@link #sign} would draw, without signing: the signer's fields and their
+     * picture in the signature box. For the signing page's preview only — the result
+     * is shown and thrown away, never stored.
+     */
+    public byte[] preview(byte[] pdf, String signatureField, Map<String, String> ownValues, byte[] imagePng)
+            throws IOException {
+        try (PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(pdf))) {
+            PDAcroForm form = requireForm(doc);
+            for (var e : ownValues.entrySet()) {
+                fillField(doc, form, e.getKey(), e.getValue());
+            }
+            if (imagePng != null && form.getField(signatureField) instanceof PDSignatureField sf) {
+                PDAnnotationWidget widget = sf.getWidgets().get(0);
+                widget.setAppearance(imageAppearance(doc, imagePng, widget.getRectangle()));
+                widget.getCOSObject().setNeedToBeUpdated(true);
+            }
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            doc.saveIncremental(out);
+            return out.toByteArray();
+        }
+    }
+
     // ------------------------------------------------------------------ fields
 
     private void fillField(PDDocument doc, PDAcroForm form, String name, String value) throws IOException {
@@ -196,7 +219,9 @@ public final class PdfIncrementService {
             fonts.setItem(FONT, form.getDefaultResources().getCOSObject().getCOSDictionary(COSName.FONT).getItem(FONT));
             res.getCOSObject().setItem(COSName.FONT, fonts);
             ap.setResources(res);
-            String ops = "/Tx BMC\n" + (text.isEmpty() ? "" : thai.operators(FONT, size, text, 0, baseline(r))) + "EMC\n";
+            String ops = "/Tx BMC\n" + (text.isEmpty() ? ""
+                    : TICK.equals(text) ? tick(r, preferred)
+                    : thai.operators(FONT, size, text, 0, baseline(r))) + "EMC\n";
             try (var os = ap.getContentStream().createOutputStream(COSName.FLATE_DECODE)) {
                 os.write(ops.getBytes(StandardCharsets.US_ASCII));
             }
@@ -205,8 +230,35 @@ public final class PdfIncrementService {
             w.setAppearance(apd);
             w.getCOSObject().setNeedToBeUpdated(true);
         }
-        field.getCOSObject().setItem(COSName.V, new COSString(text));
+        // A push button has no value a viewer could redraw; the text goes in /TU,
+        // where search, screen readers and valueOf() find it.
+        field.getCOSObject().setItem(isPushButton(field) ? COSName.TU : COSName.V, new COSString(text));
         field.getCOSObject().setNeedToBeUpdated(true);
+    }
+
+    static boolean isPushButton(PDField field) {
+        return field instanceof org.apache.pdfbox.pdmodel.interactive.form.PDPushButton;
+    }
+
+    /** The text a server-filled field holds (push buttons keep it in /TU). */
+    public static String valueOf(PDField field) {
+        if (isPushButton(field)) {
+            String tu = field.getCOSObject().getString(COSName.TU);
+            return tu != null ? tu : "";
+        }
+        return field.getValueAsString();
+    }
+
+    /** The mark printed in a tick box. TH Sarabun New has no ✓, so it is drawn. */
+    public static final String TICK = "✓";
+
+    /** A check mark centred in the box, sitting on the text baseline. */
+    private static String tick(PDRectangle r, float size) {
+        float s = size * 0.62f;
+        float x = (r.getWidth() - s) / 2, y = baseline(r);
+        return String.format(Locale.ROOT,
+                "/Span <</ActualText <FEFF2713>>> BDC q 0 G %.2f w 1 J 1 j %.2f %.2f m %.2f %.2f l %.2f %.2f l S Q EMC\n",
+                size * 0.07f, x, y + s * 0.45f, x + s * 0.35f, y + s * 0.05f, x + s, y + s * 0.85f);
     }
 
     private static final java.util.regex.Pattern DA_SIZE = java.util.regex.Pattern.compile("([0-9.]+)\\s+Tf");

@@ -56,4 +56,17 @@ class CertificatePinEncryptionServiceTest {
                 .isInstanceOf(IllegalStateException.class)
                 .hasMessageContaining("32 bytes");
     }
+
+    @Test
+    @DisplayName("ไฟล์ .p12 — เข้ารหัสแล้วถอดกลับได้ ไม่มีกุญแจเก็บแบบเดิม และไฟล์เข้ารหัสอ่านไม่ได้ถ้าไม่มีกุญแจ")
+    void certificateFilesAtRest() {
+        byte[] p12 = "PKCS12-bytes".getBytes(java.nio.charset.StandardCharsets.US_ASCII);
+        byte[] stored = withKey.encryptFile(p12);
+
+        assertThat(CertificatePinEncryptionService.isEncryptedFile(stored)).isTrue();
+        assertThat(withKey.decryptFile(stored)).isEqualTo(p12);
+        assertThat(withKey.decryptFile(p12)).as("ไฟล์เดิมที่ยังไม่เข้ารหัสต้องอ่านได้").isEqualTo(p12);
+        assertThat(legacyOnly.encryptFile(p12)).as("ไม่มีกุญแจ เก็บแบบเดิม").isEqualTo(p12);
+        assertThatThrownBy(() -> legacyOnly.decryptFile(stored)).isInstanceOf(IllegalStateException.class);
+    }
 }

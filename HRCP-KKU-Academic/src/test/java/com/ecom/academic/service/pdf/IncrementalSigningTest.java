@@ -135,8 +135,8 @@ class IncrementalSigningTest {
 
         try (var doc = Loader.loadPDF(r3)) {
             var form = doc.getDocumentCatalog().getAcroForm(null);
-            assertThat(form.getField("memo_no").getValueAsString()).isEqualTo("อว 660301.26.8/1234");
-            assertThat(form.getField("date").getValueAsString()).isEqualTo("1 ตุลาคม 2569");
+            assertThat(PdfIncrementService.valueOf(form.getField("memo_no"))).isEqualTo("อว 660301.26.8/1234");
+            assertThat(PdfIncrementService.valueOf(form.getField("date"))).isEqualTo("1 ตุลาคม 2569");
         }
         java.nio.file.Files.createDirectories(java.nio.file.Path.of("target", "incremental"));
         java.nio.file.Files.write(java.nio.file.Path.of("target", "incremental", "doc1-locked.pdf"), r3);
@@ -158,5 +158,34 @@ class IncrementalSigningTest {
         assertThatThrownBy(() -> PDF.sign(r1, new PdfIncrementService.SignSpec(signer("ข"), "sig_applicant", Map.of(),
                 List.of("sig_applicant"), false, signatureImage(), "ข", "ทดสอบ", "มข.", now())))
                 .isInstanceOf(IllegalStateException.class);
+    }
+
+    @Test
+    @DisplayName("ช่องติ๊ก ✓ ในตาราง (เอกสารที่ 2): หาเจอตามลำดับ และเติมเครื่องหมายได้")
+    void tickBoxes() throws Exception {
+        String json = "{\"applicant_name\":\"นายสมชาย ใจดี\",\"title\":\"นาย\"}";
+        var base = new BasePdfBuilder().build(new BasePdfBuilder.Renderer() {
+            @Override
+            public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures) throws IOException {
+                StringBuilder j = new StringBuilder(json.substring(0, json.length() - 1));
+                overrides.forEach((k, v) -> j.append(",\"").append(k).append("\":\"").append(v).append('"'));
+                return GEN.generateSignedDocx(2, j.append('}').toString(), pictures.stream()
+                        .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height())).toList());
+            }
+
+            @Override
+            public byte[] toPdf(byte[] docx) throws IOException {
+                return GEN.convertDocxToPdf(docx);
+            }
+        }, List.of(new BasePdfBuilder.TextSpec("chk_off_1", 0, true), new BasePdfBuilder.TextSpec("chk_off_2", 0, true),
+                new BasePdfBuilder.TextSpec("chk_off_3", 0, true)), List.of());
+
+        var ticks = base.layout().texts();
+        assertThat(ticks).extracting(BasePdfBuilder.Box::field).containsExactly("chk_off_1", "chk_off_2", "chk_off_3");
+        assertThat(ticks.get(0).y()).as("เรียงจากบนลงล่างตามเอกสาร").isGreaterThan(ticks.get(2).y());
+
+        byte[] filled = PDF.fill(base.pdf(), Map.of("chk_off_2", PdfIncrementService.TICK));
+        assertThat(IncrementalSigningService.values(filled)).containsEntry("chk_off_2", PdfIncrementService.TICK)
+                .containsEntry("chk_off_1", "");
     }
 }

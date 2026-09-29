@@ -329,6 +329,16 @@ public class SignedDocumentRenderer {
      * จัดการเรื่องรูปแบบไฟล์ต่อเอง
      */
     public byte[] renderForDownload(SignatureRequest envelope, String format) throws IOException {
+        byte[] out = renderForDownloadUnstamped(envelope, format);
+        // A Word file of an incrementally signed document carries none of its
+        // signatures: say so on it, and point at the signed PDF.
+        if (envelope.isIncremental() && out != null && out.length > 1 && out[0] == 'P' && out[1] == 'K') {
+            return com.ecom.academic.service.pdf.DocxCopyStamp.stamp(out, envelope.getVerificationCode());
+        }
+        return out;
+    }
+
+    private byte[] renderForDownloadUnstamped(SignatureRequest envelope, String format) throws IOException {
         if ("pdf".equalsIgnoreCase(format) && envelope.isIncremental() && pdfRevisions != null) {
             // Signed or not yet, the real document is the file the signers are signing.
             byte[] signed = pdfRevisions.latest(envelope.getId());
@@ -383,6 +393,16 @@ public class SignedDocumentRenderer {
      */
     private List<StampedSignature> collectSignatures(SignatureRequest envelope) {
         return collectSignatures(envelope, null, null);
+    }
+
+    /** The picture a signer would put on the document with this library signature. */
+    public byte[] previewImage(SignatureStep step, com.ecom.academic.model.UserSignature sig) {
+        if (step == null || sig == null) {
+            return null;
+        }
+        List<StampedSignature> all = collectSignatures(step.getSignatureRequest(), step, sig);
+        return all.stream().filter(s -> s.anchorPlaceholder().equals(step.getAnchorPlaceholder()))
+                .map(StampedSignature::pngBytes).reduce((a, b) -> b).orElse(null);
     }
 
     private List<StampedSignature> collectSignatures(SignatureRequest envelope,

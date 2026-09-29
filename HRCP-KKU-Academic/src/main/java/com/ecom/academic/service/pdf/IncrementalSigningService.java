@@ -110,23 +110,22 @@ public class IncrementalSigningService {
             return false;
         }
         List<SignatureSlot> slots = workflowConfig.effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType());
-        if (slots.stream().anyMatch(IncrementalSigningService::needsTick)) {
-            log.warn("Envelope {}: document {}:{} has tick-box answers, which incremental signing does not draw yet; "
-                    + "using the old flow", envelope.getId(), envelope.getModule(), envelope.getDocumentType());
-            return false;
-        }
 
         List<BasePdfBuilder.TextSpec> texts = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
         for (String f : DocumentFieldOwnership.lateFields(envelope.getModule(), envelope.getDocumentType())) {
             if (seen.add(f)) {
-                texts.add(new BasePdfBuilder.TextSpec(f, reserveFor(f)));
+                texts.add(new BasePdfBuilder.TextSpec(f, reserveFor(f), isTickField(f)));
             }
         }
         List<BasePdfBuilder.SlotSpec> slotSpecs = new ArrayList<>();
         for (SignatureSlot s : slots) {
             List<String> own = ownFields(s);
-            own.stream().filter(seen::add).forEach(f -> texts.add(new BasePdfBuilder.TextSpec(f, reserveFor(f))));
+            for (String f : own) {
+                if (seen.add(f)) {
+                    texts.add(new BasePdfBuilder.TextSpec(f, reserveFor(f), tickFields(s).contains(f)));
+                }
+            }
             slotSpecs.add(new BasePdfBuilder.SlotSpec(s.slotKey(), s.anchorPlaceholder(), own));
         }
 
@@ -168,15 +167,30 @@ public class IncrementalSigningService {
                 own.add(s.marks().commentFieldKey());
             }
         }
-        if (s.choice() != null && !s.choice().renderAsTick()) {
+        if (s.marks() != null && s.marks().commentTickFieldKey() != null) {
+            own.add(s.marks().commentTickFieldKey());
+        }
+        if (s.choice() != null) {
             own.add(s.choice().fieldKey());
         }
         return own;
     }
 
-    private static boolean needsTick(SignatureSlot s) {
-        return (s.choice() != null && s.choice().renderAsTick())
-                || (s.marks() != null && s.marks().commentTickFieldKey() != null);
+    /** Of a slot's own fields, those printed as a ✓ in brackets. */
+    static Set<String> tickFields(SignatureSlot s) {
+        Set<String> ticks = new LinkedHashSet<>();
+        if (s.choice() != null && s.choice().renderAsTick()) {
+            ticks.add(s.choice().fieldKey());
+        }
+        if (s.marks() != null && s.marks().commentTickFieldKey() != null) {
+            ticks.add(s.marks().commentTickFieldKey());
+        }
+        return ticks;
+    }
+
+    /** Office/admin fields that hold a ✓ rather than text (the chk_* boxes). */
+    static boolean isTickField(String field) {
+        return field.startsWith("chk");
     }
 
     /** Reserved length in non-breaking spaces (≈3.46 pt each at 16 pt). */
@@ -189,6 +203,11 @@ public class IncrementalSigningService {
         }
         if (field.contains("comment")) {
             return 60;
+        }
+        // Names and positions (with academic titles) run long; BasePdfBuilder shrinks
+        // a reserve that does not fit its line.
+        if (field.contains("name") || field.contains("position")) {
+            return 45;
         }
         return 30;
     }
@@ -217,17 +236,7 @@ public class IncrementalSigningService {
             throw new IllegalStateException("The signed PDF has no place for slot " + slot.slotKey());
         }
 
-        Map<String, String> own = new LinkedHashMap<>();
-        if (slot.marks() != null && slot.marks().signedDateFieldKey() != null && step.getSignedAt() != null) {
-            own.put(slot.marks().signedDateFieldKey(), AcademicRequestService.formatThaiDate(step.getSignedAt()));
-        }
-        if (slot.marks() != null && slot.marks().commentFieldKey() != null && step.getSignerComment() != null
-                && !step.getSignerComment().isBlank()) {
-            own.put(slot.marks().commentFieldKey(), step.getSignerComment());
-        }
-        if (slot.choice() != null && !slot.choice().renderAsTick() && step.getSignerChoiceValue() != null) {
-            own.put(slot.choice().fieldKey(), slot.choice().renderedValue(step.getSignerChoiceValue()));
-        }
+        Map<String, String> own = ownValues(slot, step, step.getSignedAt());
         own.keySet().retainAll(fields);
 
         // Frozen by this signature: its own fields, and whatever the office has already
@@ -254,6 +263,46 @@ public class IncrementalSigningService {
                 step.getSigner() != null ? step.getSigner().getId() : null, signer.fingerprint());
         step.setPdfRevisionNo(no);
         return no;
+    }
+
+    /** What the signer of {@code slot} writes into the document by signing. */
+    static Map<String, String> ownValues(SignatureSlot slot, SignatureStep step, LocalDateTime signedAt) {
+        Map<String, String> own = new LinkedHashMap<>();
+        if (slot.marks() != null && slot.marks().signedDateFieldKey() != null && signedAt != null) {
+            own.put(slot.marks().signedDateFieldKey(), AcademicRequestService.formatThaiDate(signedAt));
+        }
+        if (slot.marks() != null && slot.marks().commentFieldKey() != null && step.getSignerComment() != null
+                && !step.getSignerComment().isBlank()) {
+            own.put(slot.marks().commentFieldKey(), step.getSignerComment());
+        }
+        if (slot.choice() != null && step.getSignerChoiceValue() != null) {
+            own.put(slot.choice().fieldKey(), slot.choice().renderedValue(step.getSignerChoiceValue()));
+        }
+        if (slot.marks() != null && slot.marks().commentTickFieldKey() != null && step.getSignerComment() != null
+                && !step.getSignerComment().isBlank()) {
+            own.put(slot.marks().commentTickFieldKey(), com.ecom.academic.service.SignatureAnchorRegistry.TICK);
+        }
+        return own;
+    }
+
+    /**
+     * The document as the signer of an active step would leave it: the current file
+     * with their picture and today's date drawn in. Not signed, not stored.
+     */
+    public byte[] preview(SignatureRequest envelope, SignatureStep step, byte[] imagePng) throws IOException {
+        byte[] current = latest(envelope);
+        if (step == null || step.getStatus() != com.ecom.academic.model.SignatureStepStatus.ACTIVE) {
+            return current;
+        }
+        SignatureSlot slot = workflowConfig.effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType()).stream()
+                .filter(s -> s.slotKey().equals(step.getSlotKey())).findFirst().orElse(null);
+        if (slot == null) {
+            return current;
+        }
+        Set<String> fields = fieldNames(current);
+        Map<String, String> own = ownValues(slot, step, LocalDateTime.now(ZoneId.of("Asia/Bangkok")));
+        own.keySet().retainAll(fields);
+        return pdf.preview(current, "sig_" + slot.slotKey(), own, imagePng);
     }
 
     /**
@@ -385,7 +434,7 @@ public class IncrementalSigningService {
             if (form != null) {
                 for (PDField f : form.getFieldTree()) {
                     if (!(f instanceof PDSignatureField)) {
-                        out.put(f.getFullyQualifiedName(), f.getValueAsString());
+                        out.put(f.getFullyQualifiedName(), PdfIncrementService.valueOf(f));
                     }
                 }
             }
