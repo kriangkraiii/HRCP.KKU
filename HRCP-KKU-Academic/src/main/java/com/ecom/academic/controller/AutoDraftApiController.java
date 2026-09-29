@@ -197,6 +197,11 @@ public class AutoDraftApiController {
             // (แถวร่างที่งอกออกมาคือแถวที่หน้าดาวน์โหลดไม่เคยอ่าน ค่าที่กรอกจึงไม่ไปถึงผู้ยื่น)
             // ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ: ช่องของแอดมินยังกรอกได้ ส่งต่อแล้วเหลือแค่ช่องสารบรรณ
             if (isAdmin && signingComplete) {
+                if (positionService.isOfficeIssued(requestId, docType)
+                        && !signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, requestId, docType)) {
+                    return ResponseEntity.status(409)
+                            .body(Map.of("error", OFFICE_ISSUED_MESSAGE));
+                }
                 Map<String, String> submitted = parseFields(jsonData);
                 if (submitted == null) {
                     return ResponseEntity.badRequest()

@@ -335,11 +335,16 @@ public class PositionAdminController {
                 .map(t -> "เอกสารที่ " + t + " (" + positionService.getDocLabel(t) + ")").toList());
         model.addAttribute("adminEditableFields",
                 onHold ? List.of() : DocumentFieldOwnership.adminFields(SignatureModule.POSITION, type));
+        // ออกเลขที่หนังสือและวันที่ครบแล้ว — เอกสารจบแล้ว ปิดทุกช่องรวมทั้งช่องสารบรรณเอง
+        boolean officeIssued = officeIssued(id, type);
+        model.addAttribute("officeIssued", officeIssued);
+        model.addAttribute("issuesOffice",
+                !DocumentFieldOwnership.officeFields(SignatureModule.POSITION, type).isEmpty());
         // ช่องที่ยังกรอกได้หลังลงนาม — ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ ช่องของแอดมินยังกรอกได้ด้วย
-        boolean adminFieldsStillOpen = !onHold
+        boolean adminFieldsStillOpen = !onHold && !officeIssued
                 && signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type);
         model.addAttribute("adminFieldsStillOpen", adminFieldsStillOpen);
-        model.addAttribute("officeFields", onHold ? List.of()
+        model.addAttribute("officeFields", onHold || officeIssued ? List.of()
                 : adminFieldsStillOpen
                 ? DocumentFieldOwnership.lateFields(SignatureModule.POSITION, type)
                 : DocumentFieldOwnership.officeFields(SignatureModule.POSITION, type));
@@ -420,6 +425,11 @@ public class PositionAdminController {
         // ลงนามครบแล้ว: เนื้อความตายตัว เหลือแต่เลขที่หนังสือกับวันที่ที่สารบรรณออกให้ทีหลัง
         // ไม่สร้างไฟล์ใหม่และไม่เลื่อนสถานะ เพราะเอกสารฉบับจริงคือฉบับที่ลงนามไปแล้ว
         // ค่าที่กรอกตรงนี้ไปโผล่บนเอกสารผ่าน OfficeFieldResolver ตอน render
+        // ออกเลขที่หนังสือและวันที่ครบแล้ว = หนังสือออกไปแล้ว ไม่มีช่องไหนแก้ได้อีก
+        if (officeIssued(id, type)) {
+            return "redirect:/admin/position/request/" + id
+                    + "/document/" + type + "?error=office_issued";
+        }
         if (signingComplete) {
             try {
                 // เขียนทับแถวเดิม ไม่เปิดแถวร่างใหม่ — เส้นทางเดียวกับเฟส 1 ทุกประการ
@@ -486,6 +496,17 @@ public class PositionAdminController {
         }
     }
 
+    /**
+     * เอกสารจบแล้ว: ลงนามครบทุกช่อง ไม่เหลือใครให้ส่งต่อ และออกเลขที่หนังสือกับวันที่ครบ
+     *
+     * <p>ต้องไม่เหลือผู้ลงนามให้ส่งต่อด้วย — เอกสารที่ 4 ผู้ยื่นเซ็นแล้วยังต้องส่งต่อให้หัวหน้าสาขา
+     * ถ้าปิดตั้งแต่ตอนนั้น ช่องของแอดมินที่ยังต้องกรอกก่อนส่งต่อจะถูกปิดไปด้วย
+     */
+    private boolean officeIssued(Long id, int type) {
+        return positionService.isOfficeIssued(id, type)
+                && !signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type);
+    }
+
     @PostMapping("/request/{id}/document/{type}/request-resign")
     public String requestDocumentResign(
             @PathVariable Long id,
@@ -496,6 +517,11 @@ public class PositionAdminController {
         UserDtls admin = getUser(principal);
         positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + id));
+        // หนังสือออกเลขไปแล้ว ส่งกลับให้แก้ไม่ได้ — ต้องออกหนังสือฉบับใหม่แทน
+        if (officeIssued(id, type)) {
+            return "redirect:/admin/position/request/" + id
+                    + "/document/" + type + "?error=office_issued";
+        }
 
         var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
                 getClientIpAddress(), httpRequest.getHeader("User-Agent"));

@@ -976,6 +976,22 @@ public class PositionRequestService {
     }
 
     /**
+     * ลงนามครบและสารบรรณออกเลขที่หนังสือกับวันที่ครบแล้ว — คู่แฝดของ
+     * {@code AcademicRequestService.isOfficeIssued}
+     *
+     * <p>ไม่ได้ดูว่ายังเหลือผู้ลงนามที่ต้องส่งต่อหรือไม่ (เอกสารที่ 4 มีผู้ยื่นแล้วต่อด้วยหัวหน้าสาขา)
+     * ผู้เรียกต้องตัดกรณีนั้นเองด้วย {@code SignatureWorkflowService.awaitsMoreSigners}
+     */
+    public boolean isOfficeIssued(Long requestId, int documentType) {
+        if (!isSigningComplete(requestId, documentType)) {
+            return false;
+        }
+        List<PositionDocument> docs = getDocumentsByType(requestId, documentType);
+        return !docs.isEmpty() && docs.stream().allMatch(d -> DocumentCompleteness.officeFieldsIssued(
+                SignatureModule.POSITION, documentType, d.getJsonData()));
+    }
+
+    /**
      * ลงนามครบแล้ว รอบเวียนลงนามปิดไปแล้ว
      *
      * <p>แคบกว่า {@link #isDocumentLockedForSigning} หนึ่งขั้น: ระหว่างเวียนลงนามห้ามขยับ

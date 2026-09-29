@@ -160,6 +160,23 @@
 </div>
 
 <!--
+  ปุ่มบันทึกเลขที่หนังสือ/วันที่ของฟอร์มเฟส 2 — ฟอร์มเฟส 2 บันทึกผ่านร่างอัตโนมัติอย่างเดียว
+  แต่ขั้นออกเลขต้องกดบันทึกเอง เพราะเลขกับวันที่ครบเมื่อไรเอกสารจะถูกปิด (ดู script ด้านล่าง)
+  ขึ้นเฉพาะตอนลงนามครบ ไม่เหลือใครให้ส่งต่อ และยังไม่ได้ออกเลข — ช่วงที่ยังต้องส่งต่อใช้ร่างอัตโนมัติ
+  ตามเดิม เพราะปุ่มส่งต่อบันทึกช่องของแอดมินผ่านทางนั้น
+-->
+<button th:fragment="officeSave"
+        th:if="${signingComplete != null and signingComplete
+                 and issuesOffice != null and issuesOffice
+                 and !(officeIssued != null and officeIssued)
+                 and !(adminFieldsStillOpen != null and adminFieldsStillOpen)
+                 and !(onHoldForApplicant != null and onHoldForApplicant)}"
+        type="button" class="btn btn-academic" data-office-save
+        title="บันทึกเลขที่หนังสือและวันที่เอกสาร">
+    <i class="fas fa-save"></i> บันทึกเลขที่หนังสือและวันที่
+</button>
+
+<!--
   ปิดช่องที่ผู้ใช้คนนี้ไม่ได้เป็นเจ้าของ ต้องวางหลังฟอร์มใน DOM
 
   จุดที่เคยรั่วและกันไว้แล้วตรงนี้:
@@ -170,6 +187,23 @@
 -->
 <th:block th:fragment="script(formId)">
     <script th:inline="javascript">
+        // ขั้นออกเลขที่หนังสือ (ปุ่ม officeSave): บันทึกเมื่อกดปุ่มเท่านั้น ถ้าปล่อยร่างอัตโนมัติไว้
+        // เลขที่พิมพ์ไปครึ่งเดียว (วันที่ถูกเติมให้ตั้งแต่เปิดหน้า) จะปิดเอกสารไปก่อนพิมพ์เสร็จ
+        // ต้องถอดก่อน DOMContentLoaded ซึ่งเป็นจังหวะที่ auto_draft.js สร้างตัวบันทึก
+        (function () {
+            var form = document.getElementById(/*[[${formId}]]*/ '');
+            var btn = form && form.querySelector('[data-office-save]');
+            if (!btn) return;
+            form.removeAttribute('data-auto-draft');
+            btn.addEventListener('click', function () {
+                if (!form.reportValidity()) return;
+                if (!confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
+                        + 'เอกสารจะถูกปิด แก้ไขไม่ได้อีก\nยืนยันการบันทึก?')) return;
+                btn.disabled = true;
+                form.submit();
+            });
+        })();
+
         (function () {
             var readOnly = /*[[${readOnlyForAdmin}]]*/ false;
             var locked = /*[[${lockedForSigning}]]*/ false;
