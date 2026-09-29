@@ -35,6 +35,8 @@ public class AutoDraftApiController {
     private static final String ROLE_ADMIN = "ROLE_ADMIN";
     private static final String ON_HOLD_MESSAGE =
             "รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับและลงนามใหม่ก่อน จึงจะดำเนินการต่อได้";
+    private static final String OFFICE_ISSUED_MESSAGE =
+            "ออกเลขที่หนังสือและวันที่เอกสารแล้ว จึงแก้ไขเอกสารไม่ได้อีก";
 
     private final AcademicRequestService academicService;
 
@@ -100,6 +102,10 @@ public class AutoDraftApiController {
             // ลงนามครบแล้ว: เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่ และต้องลงครบทุกสำเนา
             // เอกสารที่ 5 มีสามแถว (กรรมการคนละท่าน) แต่เป็นหนังสือฉบับเดียวกัน
             if (isAdmin && signingComplete) {
+                if (academicService.isOfficeIssued(requestId, docType)) {
+                    return ResponseEntity.status(409)
+                            .body(Map.of("error", OFFICE_ISSUED_MESSAGE));
+                }
                 Map<String, String> submitted = parseFields(jsonData);
                 if (submitted == null) {
                     return ResponseEntity.badRequest()

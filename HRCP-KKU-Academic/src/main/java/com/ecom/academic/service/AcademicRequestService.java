@@ -409,6 +409,9 @@ public class AcademicRequestService {
             doc.setJsonData(writeJson(merged));
             // ไฟล์ที่สร้างไว้จากข้อมูลชุดก่อนไม่มีค่าที่เพิ่งกรอก — ทิ้งไป ทางสำรองจะได้สร้างใหม่
             doc.setGeneratedFilePath(null);
+            // ทางนี้ใช้เฉพาะเอกสารที่ลงนามแล้ว ฉบับที่ลงนามคือฉบับจริง ไม่ใช่ร่าง — แถวที่ถูกส่งลงนาม
+            // ผ่านบันทึกร่างอัตโนมัติยังติดธงร่างอยู่ กล่องเอกสารจึงค้างสีส้มแม้ออกเลขครบแล้ว
+            doc.setIsDraft(false);
             documentRepository.save(doc);
             written++;
         }
@@ -465,6 +468,21 @@ public class AcademicRequestService {
         var blocking = signatureRequestRepository.findBlockingEnvelopes(
                 com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType);
         return !blocking.isEmpty();
+    }
+
+    /**
+     * ลงนามครบและสารบรรณออกเลขที่หนังสือกับวันที่ครบทุกสำเนาแล้ว — เอกสารฉบับนี้จบแล้ว
+     *
+     * <p>แคบกว่า {@link #isSigningComplete} อีกขั้น: ช่องสารบรรณที่ยังเปิดอยู่หลังลงนามครบก็ปิดตาม
+     * ไม่มีช่องไหนแก้ได้ และส่งกลับให้ผู้ยื่นแก้ก็ไม่ได้ เพราะหนังสือออกเลขไปแล้ว
+     */
+    public boolean isOfficeIssued(Long requestId, int documentType) {
+        if (!isSigningComplete(requestId, documentType)) {
+            return false;
+        }
+        List<AcademicDocument> docs = getDocumentsByType(requestId, documentType);
+        return !docs.isEmpty() && docs.stream().allMatch(d -> DocumentCompleteness.officeFieldsIssued(
+                com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, d.getJsonData()));
     }
 
     /**

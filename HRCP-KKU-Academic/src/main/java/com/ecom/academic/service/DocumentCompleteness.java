@@ -166,11 +166,32 @@ public final class DocumentCompleteness {
         List<String> missing = new ArrayList<>();
         for (String key : keys) {
             String value = data == null ? null : data.get(key);
-            if (value == null || value.isBlank()) {
+            if (!isIssued(value)) {
                 missing.add(key);
             }
         }
         return missing;
+    }
+
+    /**
+     * สารบรรณออกเลขที่หนังสือและวันที่ครบแล้วหรือยัง — ครบแล้วเอกสารฉบับนั้นถือว่าเสร็จ แก้ไขไม่ได้อีก
+     *
+     * @return false เมื่อเอกสารนี้ไม่มีช่องสารบรรณเลย เพราะไม่มีอะไรให้ออก
+     */
+    public static boolean officeFieldsIssued(SignatureModule module, int documentType, String json) {
+        return !DocumentFieldOwnership.officeFields(module, documentType).isEmpty()
+                && missingOfficeFields(module, documentType, json).isEmpty();
+    }
+
+    /**
+     * ช่องเลขที่หนังสือตั้งต้นด้วยรหัสหน่วยงาน (เช่น {@code "อว 660301.26.8/"}) ให้สารบรรณเติมเลขต่อท้าย
+     * มีแต่รหัสหน่วยงานแปลว่ายังไม่ได้ออกเลข ไม่อย่างนั้นกดบันทึกเฉย ๆ ก็ปิดเอกสารไปทั้งที่ไม่มีเลข
+     */
+    private static boolean isIssued(String value) {
+        if (value == null || value.isBlank()) {
+            return false;
+        }
+        return !value.strip().endsWith("/");
     }
 
 

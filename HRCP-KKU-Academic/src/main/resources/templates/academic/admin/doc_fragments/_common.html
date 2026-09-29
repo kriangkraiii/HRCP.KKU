@@ -18,7 +18,10 @@
         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
     </button>
     <!--/* เมื่อลงนามครบแล้ว เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่เอกสาร */-->
-    <button th:if="${signingComplete != null && signingComplete}" type="button" id="btnSubmitDoc" class="btn btn-academic"
+    <!--/* ออกเลขครบแล้วเอกสารจบ ไม่มีอะไรให้บันทึกอีก */-->
+    <button th:if="${signingComplete != null && signingComplete && !(officeIssued != null && officeIssued)}"
+            type="button" id="btnSubmitDoc" class="btn btn-academic"
+            th:attr="data-issues-office=${issuesOffice != null and issuesOffice}"
             title="บันทึกเลขที่หนังสือและวันที่เอกสาร">
         <i class="fas fa-save"></i> บันทึกข้อมูลเอกสาร
     </button>
@@ -42,10 +45,22 @@
         (function() {
             const submitBtn = document.getElementById('btnSubmitDoc');
 
+            // ขั้นออกเลขที่หนังสือ: บันทึกเลขและวันที่ครบแล้วเอกสารจะถูกปิด แก้ไขไม่ได้อีก
+            // จึงบันทึกเมื่อกดปุ่มเท่านั้น ถ้าปล่อยบันทึกร่างอัตโนมัติไว้ เลขที่พิมพ์ไปครึ่งเดียว
+            // (วันที่ถูกเติมให้ตั้งแต่เปิดหน้า) จะปิดเอกสารไปก่อนที่สารบรรณจะพิมพ์เสร็จ
+            // ต้องถอดก่อน DOMContentLoaded ซึ่งเป็นจังหวะที่ auto_draft.js สร้างตัวบันทึก
+            const issuesOffice = submitBtn && submitBtn.dataset.issuesOffice === 'true';
+            if (issuesOffice) {
+                const docForm = document.getElementById('docForm');
+                if (docForm) docForm.removeAttribute('data-auto-draft');
+            }
+
             if (submitBtn) {
                 submitBtn.addEventListener('click', function() {
                     const form = document.getElementById('docForm');
                     if (form && !form.reportValidity()) return;
+                    if (issuesOffice && !confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
+                            + 'เอกสารจะถูกปิด แก้ไขไม่ได้อีก\nยืนยันการบันทึก?')) return;
                     submitFormAsSubmit();
                 });
             }

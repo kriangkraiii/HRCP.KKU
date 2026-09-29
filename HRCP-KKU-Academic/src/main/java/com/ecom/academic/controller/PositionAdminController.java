@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -160,14 +161,22 @@ public class PositionAdminController {
                 d.setDocumentLabel(fullLabel);
             }
         }
-        List<Integer> completedDocs = positionService.getCompletedDocTypes(id);
+        // เอกสารที่ส่งลงนามแล้วคือฉบับจริงแม้แถวยังติดธงร่าง — ปุ่มส่งลงนามบันทึกผ่านร่างอัตโนมัติ
+        // ถ้านับแค่ธง กล่องจะค้างสีส้มตลอดไปทั้งที่ลงนามครบแล้ว กติกาเดียวกับเฟส 1
+        Set<Integer> signedDocs = documents.stream()
+                .map(PositionDocument::getDocumentType)
+                .distinct()
+                .filter(type -> signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type))
+                .collect(Collectors.toSet());
+        List<Integer> completedDocs = new ArrayList<>(positionService.getCompletedDocTypes(id));
+        signedDocs.stream().filter(type -> !completedDocs.contains(type)).forEach(completedDocs::add);
 
         model.addAttribute("request", request);
         model.addAttribute("documents", documents);
         // บันทึกแล้วแต่สารบรรณยังไม่ได้ออกเลขที่หนังสือ/วันที่ = ยังไม่เสร็จ กรอบจึงยังไม่เขียว
         // กติกาเดียวกับเฟส 1 ทุกประการ อ่านจากแถวที่ไม่ใช่ร่างเท่านั้น
         Set<Integer> pendingOfficeDocs = documents.stream()
-                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()))
+                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()) || signedDocs.contains(d.getDocumentType()))
                 .filter(d -> !DocumentCompleteness
                         .missingOfficeFields(SignatureModule.POSITION, d.getDocumentType(), d.getJsonData())
                         .isEmpty())
@@ -175,7 +184,8 @@ public class PositionAdminController {
                 .collect(Collectors.toSet());
 
         model.addAttribute("completedDocs", completedDocs);
-        model.addAttribute("draftDocs", positionService.getDraftDocTypes(id));
+        model.addAttribute("draftDocs", positionService.getDraftDocTypes(id).stream()
+                .filter(type -> !signedDocs.contains(type)).toList());
         model.addAttribute("pendingOfficeDocs", pendingOfficeDocs);
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
         model.addAttribute("statuses", PositionRequestStatus.values());

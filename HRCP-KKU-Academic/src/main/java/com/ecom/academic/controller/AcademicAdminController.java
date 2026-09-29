@@ -474,8 +474,15 @@ public class AcademicAdminController {
         // สามสถานะบนกล่องเอกสาร: ยังไม่เริ่ม / ร่าง / บันทึกแล้ว
         // เดิมนับแค่ "มีแถวของเอกสารนี้" = เสร็จ กรอบจึงเขียวทันทีที่ auto-draft ทำงาน
         // ทั้งที่เจ้าหน้าที่ยังไม่ได้กดบันทึกเอกสารเลย
+        // เอกสารที่ส่งลงนามแล้วคือฉบับจริงแม้แถวยังติดธงร่าง — ปุ่มส่งลงนามบันทึกผ่านร่างอัตโนมัติ
+        // ถ้านับแค่ธง กล่องจะค้างสีส้มตลอดไปทั้งที่ลงนามและออกเลขครบแล้ว
+        Set<Integer> signedDocs = documents.stream()
+                .map(AcademicDocument::getDocumentType)
+                .distinct()
+                .filter(type -> signatureWorkflow.isDocumentLocked(SignatureModule.ACADEMIC, id, type))
+                .collect(Collectors.toSet());
         Set<Integer> completedDocs = documents.stream()
-                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()))
+                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()) || signedDocs.contains(d.getDocumentType()))
                 .map(AcademicDocument::getDocumentType)
                 .collect(Collectors.toSet());
         Set<Integer> draftDocs = documents.stream()
@@ -487,7 +494,7 @@ public class AcademicAdminController {
         // บันทึกแล้วแต่สารบรรณยังไม่ได้ออกเลขที่หนังสือ/วันที่ = ยังไม่เสร็จ กรอบจึงยังไม่เขียว
         // อ่านจากแถวที่ไม่ใช่ร่างเท่านั้น เพราะฉบับจริงคือแถวนั้น
         Set<Integer> pendingOfficeDocs = documents.stream()
-                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()))
+                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()) || signedDocs.contains(d.getDocumentType()))
                 .filter(d -> !DocumentCompleteness
                         .missingOfficeFields(SignatureModule.ACADEMIC, d.getDocumentType(), d.getJsonData())
                         .isEmpty())
@@ -773,6 +780,11 @@ public class AcademicAdminController {
         // ลงนามครบแล้ว: เนื้อความตายตัว เหลือแต่เลขที่หนังสือกับวันที่ที่สารบรรณออกให้ทีหลัง
         // ไม่สร้างไฟล์ใหม่ไม่ว่าจะกดปุ่มไหน เพราะเอกสารฉบับจริงคือฉบับที่ลงนามไปแล้ว
         // ค่าที่กรอกตรงนี้ไปโผล่บนเอกสารผ่าน OfficeFieldResolver ตอน render
+        // ออกเลขที่หนังสือและวันที่ครบแล้ว = หนังสือออกไปแล้ว ไม่มีช่องไหนแก้ได้อีก
+        if (requestService.isOfficeIssued(id, type)) {
+            return "redirect:/admin/academic/request/" + id
+                    + "/document/" + type + "?error=office_issued";
+        }
         if (signingComplete) {
             // เขียนลงทุกสำเนา — เอกสารที่ 5 มีสามแถว (กรรมการคนละท่าน) แต่เป็นหนังสือ
             // ฉบับเดียวกัน ใช้เลขที่และวันที่ร่วมกัน
@@ -908,6 +920,11 @@ public class AcademicAdminController {
         UserDtls admin = getUser(principal);
         requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
+        // หนังสือออกเลขไปแล้ว ส่งกลับให้แก้ไม่ได้ — ต้องออกหนังสือฉบับใหม่แทน
+        if (requestService.isOfficeIssued(id, type)) {
+            return "redirect:/admin/academic/request/" + id
+                    + "/document/" + type + "?error=office_issued";
+        }
 
         var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
                 getClientIpAddress(), httpRequest.getHeader("User-Agent"));
@@ -1426,10 +1443,16 @@ public class AcademicAdminController {
                 .map(t -> "เอกสารที่ " + t + " (" + AcademicRequestService.getDocLabel(t) + ")").toList());
         model.addAttribute("adminEditableFields",
                 onHold ? List.of() : DocumentFieldOwnership.adminFields(module, type));
+        // ออกเลขที่หนังสือและวันที่ครบแล้ว — เอกสารจบแล้ว ปิดทุกช่องรวมทั้งช่องสารบรรณเอง
+        boolean officeIssued = requestId != null && requestService.isOfficeIssued(requestId, type);
+        model.addAttribute("officeIssued", officeIssued);
+        // เอกสารที่มีช่องสารบรรณ — บันทึกหลังลงนามครบแล้วอาจปิดเอกสาร ต้องกดบันทึกเองเท่านั้น
+        model.addAttribute("issuesOffice", !DocumentFieldOwnership.officeFields(module, type).isEmpty());
         // ช่องที่ยังกรอกได้หลังลงนาม — ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ ช่องของแอดมินยังกรอกได้ด้วย
-        boolean adminFieldsStillOpen = !onHold && signatureWorkflow.awaitsMoreSigners(module, requestId, type);
+        boolean adminFieldsStillOpen = !onHold && !officeIssued
+                && signatureWorkflow.awaitsMoreSigners(module, requestId, type);
         model.addAttribute("adminFieldsStillOpen", adminFieldsStillOpen);
-        model.addAttribute("officeFields", onHold ? List.of()
+        model.addAttribute("officeFields", onHold || officeIssued ? List.of()
                 : adminFieldsStillOpen
                 ? DocumentFieldOwnership.lateFields(module, type)
                 : DocumentFieldOwnership.officeFields(module, type));

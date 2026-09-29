@@ -917,6 +917,9 @@ public class PositionRequestService {
             doc.setJsonData(writeOfficeJson(merged));
             // ไฟล์ที่สร้างไว้จากข้อมูลชุดก่อนไม่มีค่าที่เพิ่งกรอก — ทิ้งไป ทางสำรองจะได้สร้างใหม่
             doc.setGeneratedFilePath(null);
+            // ทางนี้ใช้เฉพาะเอกสารที่ลงนามแล้ว ฉบับที่ลงนามคือฉบับจริง ไม่ใช่ร่าง — แถวที่ถูกส่งลงนาม
+            // ผ่านบันทึกร่างอัตโนมัติยังติดธงร่างอยู่ กล่องเอกสารจึงค้างสีส้มแม้ออกเลขครบแล้ว
+            doc.setIsDraft(false);
             documentRepository.save(doc);
             written++;
         }
