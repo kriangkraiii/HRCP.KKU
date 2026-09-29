@@ -59,6 +59,8 @@
                 submitBtn.addEventListener('click', function() {
                     const form = document.getElementById('docForm');
                     if (form && !form.reportValidity()) return;
+                    // ต้องกรอกทุกช่องที่ยังเปิดให้กรอก — เลขที่หนังสือที่มีแต่รหัสหน่วยงานนับว่ายังว่าง
+                    if (window.DocRequiredFields && !window.DocRequiredFields.checkForm(form, submitBtn)) return;
                     if (issuesOffice && !confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
                             + 'เอกสารจะถูกปิด แก้ไขไม่ได้อีก\nยืนยันการบันทึก?')) return;
                     submitFormAsSubmit();

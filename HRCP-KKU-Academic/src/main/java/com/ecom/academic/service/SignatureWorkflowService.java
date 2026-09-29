@@ -686,6 +686,11 @@ public class SignatureWorkflowService {
             return Result.failed("คำขอลงนามนี้ถูกปิดไปแล้ว (" + status.getThaiLabel() + ")");
         }
 
+        String adminGap = adminFieldsGap(envelope);
+        if (adminGap != null) {
+            return Result.failed(adminGap);
+        }
+
         List<SignatureSlot> slots = slotsFor(envelope.getModule(), envelope.getDocumentType());
 
         int before = envelope.getSteps().size();
@@ -1413,6 +1418,25 @@ public class SignatureWorkflowService {
      * @return the released envelope, or an error to show the person who asked
      */
     @Transactional
+    /**
+     * ช่องของเจ้าหน้าที่ต้องกรอกครบก่อนส่งต่อ — ผู้ลงนามคนถัดไปเซ็นรับรองสิ่งที่เจ้าหน้าที่กรอก
+     * ถ้าปล่อยว่าง ก็เท่ากับให้เขาเซ็นรับรองช่องว่าง
+     *
+     * @return ข้อความบอกผู้ใช้ หรือ null เมื่อกรอกครบ
+     */
+    private String adminFieldsGap(SignatureRequest envelope) {
+        if (snapshotProvider == null) {
+            return null;
+        }
+        String json = snapshotProvider.currentJsonFor(envelope.getModule(), envelope.getRequestId(),
+                envelope.getDocumentType());
+        List<String> missing = DocumentCompleteness.missingAdminFields(envelope.getModule(),
+                envelope.getDocumentType(), json);
+        return missing.isEmpty() ? null
+                : "ช่องของเจ้าหน้าที่ยังกรอกไม่ครบ (ขาดอีก " + missing.size()
+                        + " ช่อง) กรุณากรอกให้ครบก่อนส่งเวียนลงนามต่อ";
+    }
+
     public Result startCirculation(Long envelopeId, UserDtls staff, ActorContext actor) {
         SignatureRequest envelope = requestRepository.findByIdWithSteps(envelopeId).orElse(null);
         if (envelope == null) {
@@ -1429,6 +1453,10 @@ public class SignatureWorkflowService {
                         && step.getStatus() == SignatureStepStatus.WAITING);
         if (!anyoneToAsk) {
             return Result.failed("ยังไม่มีผู้ลงนามลำดับถัดไปให้ส่งต่อ กรุณาเลือกผู้ลงนามก่อน");
+        }
+        String adminGap = adminFieldsGap(envelope);
+        if (adminGap != null) {
+            return Result.failed(adminGap);
         }
 
         envelope.setCirculationStartedAt(LocalDateTime.now());

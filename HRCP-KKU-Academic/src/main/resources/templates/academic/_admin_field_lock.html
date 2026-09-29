@@ -154,6 +154,12 @@
         บันทึกไม่สำเร็จ — ออกเลขที่หนังสือและวันที่เอกสารแล้ว จึงแก้ไขเอกสารไม่ได้อีก
     </div>
 
+    <div th:if="${param.error != null && param.error[0] == 'office_incomplete'}"
+         class="alert alert-danger">
+        <i class="fas fa-triangle-exclamation"></i>
+        บันทึกไม่สำเร็จ — กรุณากรอกเลขที่หนังสือและวันที่เอกสารให้ครบก่อนบันทึก
+    </div>
+
     <div th:if="${param.saved != null && param.saved[0] == 'office'}" class="alert alert-success">
         <i class="fas fa-check"></i> บันทึกเลขที่หนังสือ/วันที่เอกสารแล้ว
     </div>
@@ -197,6 +203,8 @@
             form.removeAttribute('data-auto-draft');
             btn.addEventListener('click', function () {
                 if (!form.reportValidity()) return;
+                // ต้องกรอกทุกช่องที่ยังเปิดให้กรอก — เลขที่หนังสือที่มีแต่รหัสหน่วยงานนับว่ายังว่าง
+                if (window.DocRequiredFields && !window.DocRequiredFields.checkForm(form, btn)) return;
                 if (!confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
                         + 'เอกสารจะถูกปิด แก้ไขไม่ได้อีก\nยืนยันการบันทึก?')) return;
                 btn.disabled = true;

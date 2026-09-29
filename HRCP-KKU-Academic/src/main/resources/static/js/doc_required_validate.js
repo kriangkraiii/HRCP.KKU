@@ -62,9 +62,17 @@
         return (text || '').replace(/\s+/g, ' ').replace(/\*$/, '').trim();
     }
 
-    function findMissing(docForm, optionalRaw, repeatableRaw) {
+    /** เลขที่หนังสือที่มีแต่รหัสหน่วยงาน (เช่น "อว 660301.26.8/") ยังไม่มีเลข */
+    var BARE_PREFIX = /\/\s*$/;
+
+    /**
+     * @param opts.officeNumbers  true ตอนกดบันทึกเลขที่หนังสือ — ช่องที่มีแต่รหัสหน่วยงานนับว่ายังว่าง
+     *                            (ตอนส่งลงนาม/ส่งต่อไม่นับ เพราะเลขออกให้หลังลงนามครบ)
+     */
+    function findMissing(docForm, optionalRaw, repeatableRaw, opts) {
         var optional = toSet(optionalRaw);
         var prefixes = toList(repeatableRaw);
+        var officeNumbers = !!(opts && opts.officeNumbers);
         var missing = [];
 
         docForm.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (el) {
@@ -76,9 +84,23 @@
             if (el.hasAttribute('data-optional')) return;
             if (isExtraRepeatedRow(el.name, prefixes)) return;
             if (!isVisible(el)) return;
-            if ((el.value || '').trim() !== '') return;
+            var value = (el.value || '').trim();
+            if (value !== '' && !(officeNumbers && el.name === 'memo_no' && BARE_PREFIX.test(value))) return;
 
             missing.push({ el: el, label: labelOf(el) });
+        });
+
+        // ช่องติ๊กของเจ้าหน้าที่ (data-required-check): ต้องติ๊ก หรือถ้าไม่ติ๊กต้องเขียนหมายเหตุ
+        // ในช่องที่ data-note ชี้ไว้ — ช่องติ๊กถูกข้ามในรอบบน เพราะช่องติ๊กทั่วไปไม่ติ๊กก็ได้
+        docForm.querySelectorAll('input[type="checkbox"][data-required-check]').forEach(function (cb) {
+            if (cb.disabled || cb.checked || !isVisible(cb)) return;
+            var target = cb.getAttribute('data-target');
+            var stored = target ? docForm.querySelector('[name="' + target + '"]') : null;
+            if (stored && stored.disabled) return;
+            var noteName = cb.getAttribute('data-note');
+            var note = noteName ? docForm.querySelector('[name="' + noteName + '"]') : null;
+            if (note && (note.value || '').trim() !== '') return;
+            missing.push({ el: cb, label: cb.getAttribute('data-label') || labelOf(cb) });
         });
 
         return missing;
@@ -118,8 +140,9 @@
         var more = missing.length > names.length
             ? ' และอีก ' + (missing.length - names.length) + ' ช่อง'
             : '';
+        var title = panelForm.getAttribute('data-required-title') || 'ยังส่งไปลงนามไม่ได้';
         box.innerHTML = '<i class="fas fa-triangle-exclamation me-1"></i>'
-            + '<strong>ยังส่งไปลงนามไม่ได้ — กรอกข้อมูลไม่ครบ ' + missing.length + ' ช่อง</strong>'
+            + '<strong>' + title + ' — กรอกข้อมูลไม่ครบ ' + missing.length + ' ช่อง</strong>'
             + '<div class="mt-1">' + names.join(', ') + more + '</div>';
         box.hidden = false;
     }
@@ -147,6 +170,45 @@
             if (missing.length === 0) return true;
 
             report(panelForm, missing);
+            highlight(missing);
+            return false;
+        },
+
+        /**
+         * ตรวจฟอร์มเอกสารก่อนกดบันทึกเลขที่หนังสือ — ต้องกรอกทุกช่องที่ยังเปิดให้กรอก
+         *
+         * @param docForm ฟอร์มเอกสาร
+         * @param anchor  ปุ่มที่กด ข้อความเตือนจะขึ้นเหนือกลุ่มปุ่มนี้
+         * @return true เมื่อกรอกครบ
+         */
+        checkForm: function (docForm, anchor) {
+            if (!docForm) return true;
+            clearHighlight(docForm);
+            var host = anchor ? anchor.parentNode : docForm;
+            var old = host.querySelector(':scope > .required-fields-error');
+            if (old) old.hidden = true;
+
+            var missing = findMissing(docForm,
+                docForm.getAttribute('data-optional-fields'),
+                docForm.getAttribute('data-repeatable-prefixes'),
+                { officeNumbers: true });
+            if (missing.length === 0) return true;
+
+            var box = old;
+            if (!box) {
+                box = document.createElement('div');
+                box.className = 'required-fields-error alert alert-warning border-0 small w-100 mb-0';
+                box.setAttribute('role', 'alert');
+                host.insertBefore(box, host.firstChild);
+            }
+            var names = missing.slice(0, 8).map(function (item) { return item.label; });
+            var more = missing.length > names.length
+                ? ' และอีก ' + (missing.length - names.length) + ' ช่อง'
+                : '';
+            box.innerHTML = '<i class="fas fa-triangle-exclamation me-1"></i>'
+                + '<strong>ยังบันทึกไม่ได้ — กรอกข้อมูลไม่ครบ ' + missing.length + ' ช่อง</strong>'
+                + '<div class="mt-1">' + names.join(', ') + more + '</div>';
+            box.hidden = false;
             highlight(missing);
             return false;
         },

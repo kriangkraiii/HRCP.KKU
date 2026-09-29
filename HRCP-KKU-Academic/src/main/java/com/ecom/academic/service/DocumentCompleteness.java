@@ -162,9 +162,14 @@ public final class DocumentCompleteness {
             return List.of();
         }
 
-        Map<String, String> data = parse(json);
+        return missingOfficeValues(module, documentType, parse(json));
+    }
+
+    /** เหมือน {@link #missingOfficeFields} แต่อ่านจากค่าที่ส่งมากับฟอร์มโดยตรง */
+    public static List<String> missingOfficeValues(SignatureModule module, int documentType,
+            Map<String, String> data) {
         List<String> missing = new ArrayList<>();
-        for (String key : keys) {
+        for (String key : DocumentFieldOwnership.officeFields(module, documentType)) {
             String value = data == null ? null : data.get(key);
             if (!isIssued(value)) {
                 missing.add(key);
@@ -181,6 +186,54 @@ public final class DocumentCompleteness {
     public static boolean officeFieldsIssued(SignatureModule module, int documentType, String json) {
         return !DocumentFieldOwnership.officeFields(module, documentType).isEmpty()
                 && missingOfficeFields(module, documentType, json).isEmpty();
+    }
+
+    private static final Pattern OFFICER_CHECK = Pattern.compile("^chk_off_(\\d+)$");
+    private static final Pattern OFFICER_NOTE = Pattern.compile("^text_(\\d+)$");
+
+    /**
+     * ช่องของเจ้าหน้าที่ในเอกสารของผู้ยื่นที่ยังว่าง — ต้องกรอกครบก่อนส่งต่อให้ผู้ลงนามคนถัดไป
+     *
+     * <p>ไม่นับเลขที่หนังสือกับวันที่ (ออกให้หลังลงนามครบ) และไม่นับชื่อผู้ลงนาม
+     * (ระบบเติมจากผู้ที่ลงนามจริง ดู {@code SignerNameResolver})
+     *
+     * <p>คอลัมน์ "เจ้าหน้าที่" ในเอกสารที่ 2 ของเฟส 1: แต่ละแถวต้องติ๊กว่าตรวจแล้ว หรือถ้าไม่ติ๊ก
+     * ต้องเขียนหมายเหตุบอกเหตุผล — ติ๊กครบทุกแถวแล้วหมายเหตุว่างได้
+     *
+     * @return ชื่อช่องที่ยังว่าง — ว่างเปล่าเมื่อกรอกครบ หรือเอกสารนี้ไม่มีช่องของเจ้าหน้าที่
+     */
+    public static List<String> missingAdminFields(SignatureModule module, int documentType, String json) {
+        Set<String> keys = new LinkedHashSet<>(DocumentFieldOwnership.adminFields(module, documentType));
+        keys.removeAll(DocumentFieldOwnership.officeFields(module, documentType));
+        SignatureAnchorRegistry.slotsOf(module, documentType)
+                .forEach(slot -> keys.remove(slot.anchorPlaceholder()));
+        if (keys.isEmpty()) {
+            return List.of();
+        }
+        Map<String, String> data = parse(json);
+        if (data == null) {
+            data = Map.of();
+        }
+        List<String> missing = new ArrayList<>();
+        for (String key : keys) {
+            Matcher note = OFFICER_NOTE.matcher(key);
+            if (note.matches() && keys.contains("chk_off_" + note.group(1))) {
+                continue; // ตรวจคู่กับช่องติ๊กของแถวเดียวกัน
+            }
+            Matcher check = OFFICER_CHECK.matcher(key);
+            if (check.matches()) {
+                String remark = data.get("text_" + check.group(1));
+                if (!isTicked(data.get(key)) && (remark == null || remark.isBlank())) {
+                    missing.add(key);
+                }
+                continue;
+            }
+            String value = data.get(key);
+            if (value == null || value.isBlank()) {
+                missing.add(key);
+            }
+        }
+        return missing;
     }
 
     /**

@@ -45,6 +45,7 @@ import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.Doc7Scoring;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DashboardAnalyticsService;
+import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -759,6 +760,14 @@ public class AcademicAdminController {
         if (requestService.isOfficeIssued(id, type)) {
             return "redirect:/admin/academic/request/" + id
                     + "/document/" + type + "?error=office_issued";
+        }
+        // ปุ่มบันทึกเลขที่หนังสือ: ต้องกรอกเลขที่หนังสือและวันที่ให้ครบก่อน ร่างอัตโนมัติ (action=draft)
+        // บันทึกทีละช่องได้ตามปกติ ส่วนช่วงที่ยังต้องส่งต่อ ช่องสารบรรณยังไม่ถึงเวลาออก
+        if (signingComplete && !"draft".equals(action)
+                && !signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, id, type)
+                && !DocumentCompleteness.missingOfficeValues(SignatureModule.ACADEMIC, type, formData).isEmpty()) {
+            return "redirect:/admin/academic/request/" + id
+                    + "/document/" + type + "?error=office_incomplete";
         }
         if (signingComplete) {
             // เขียนลงทุกสำเนา — เอกสารที่ 5 มีสามแถว (กรรมการคนละท่าน) แต่เป็นหนังสือ

@@ -145,7 +145,12 @@
                 <div class="card-body p-3">
                     <p class="text-secondary small mb-3">เลือกผู้ลงนามในตำแหน่งที่เหลือ</p>
 
+                    <!--/* data-presave-doc: บันทึกช่องของเจ้าหน้าที่ แล้วตรวจว่ากรอกครบก่อนส่งต่อ (sign_presave.js)
+                         เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว (SignatureWorkflowService.adminFieldsGap) ตรงนี้แค่ชี้ว่าช่องไหน */-->
                     <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/forward'}"
+                          data-presave-doc data-required-title="ยังส่งเวียนลงนามต่อไม่ได้"
+                          th:attr="data-optional-fields=${docOptionalFields},
+                                   data-repeatable-prefixes=${docRepeatablePrefixes}"
                           method="post"
                           data-confirm="ยืนยันความถูกต้องและส่งเวียนลงนามต่อ? ระบบจะแจ้งเตือนผู้ลงนามลำดับถัดไปทันที">
                         <div class="row g-3">

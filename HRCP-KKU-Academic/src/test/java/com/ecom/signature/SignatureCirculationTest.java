@@ -192,6 +192,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
                     List.of(new SignerAssignment("applicant", applicant.getId()),
                             new SignerAssignment("hr", hrOfficer.getId()))).request();
             signAs(applicant, stepFor(envelope, "applicant"));
+            officerFilledIn(SignatureModule.ACADEMIC, request.getId(), 2);
 
             Result released = workflow.startCirculation(envelope.getId(), hrOfficer,
                     ActorContext.none());
@@ -215,6 +216,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
                             new SignerAssignment("hr", hrOfficer.getId()))).request();
 
             signAs(applicant, stepFor(envelope, "applicant"));
+            officerFilledIn(SignatureModule.ACADEMIC, request.getId(), 2);
             workflow.startCirculation(envelope.getId(), hrOfficer, ActorContext.none());
             signAs(hrOfficer, stepFor(envelope, "hr"));
 
@@ -469,6 +471,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             assertThat(envelopes.findById(envelope.getId()).orElseThrow().getStatus())
                     .as("ยังไม่มีใครในช่องคณบดี ซองจึงถือว่าจบรอบนี้ไปก่อน")
                     .isEqualTo(SignatureRequestStatus.COMPLETED);
+            officerFilledIn(SignatureModule.POSITION, request.getId(), 3);
 
             Result forwarded = workflow.forwardToNextSigners(envelope.getId(),
                     List.of(new SignerAssignment("dean", dean.getId())), null, hrOfficer,

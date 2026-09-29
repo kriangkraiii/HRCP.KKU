@@ -36,6 +36,7 @@ import com.ecom.academic.model.PositionDocumentEditLog;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -421,6 +422,13 @@ public class PositionAdminController {
         if (officeIssued(id, type)) {
             return "redirect:/admin/position/request/" + id
                     + "/document/" + type + "?error=office_issued";
+        }
+        // ปุ่มบันทึกเลขที่หนังสือ: ต้องกรอกเลขที่หนังสือและวันที่ให้ครบก่อน
+        // ช่วงที่ยังต้องส่งต่อ ช่องสารบรรณยังไม่ถึงเวลาออก จึงไม่บังคับ
+        if (signingComplete && !signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type)
+                && !DocumentCompleteness.missingOfficeValues(SignatureModule.POSITION, type, formData).isEmpty()) {
+            return "redirect:/admin/position/request/" + id
+                    + "/document/" + type + "?error=office_incomplete";
         }
         if (signingComplete) {
             try {

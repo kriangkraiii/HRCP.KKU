@@ -169,6 +169,35 @@ public abstract class AbstractFlowTest {
     @Autowired
     protected com.ecom.academic.repository.SignatureStepRepository signatureSteps;
 
+    @Autowired
+    private com.ecom.academic.service.AcademicRequestService flowAcademicService;
+
+    @Autowired
+    private com.ecom.academic.service.PositionRequestService flowPositionService;
+
+    /**
+     * เจ้าหน้าที่ตรวจเอกสารของผู้ยื่นแล้ว กรอกช่องของตัวเองครบ — ต้องทำก่อนส่งเวียนต่อ
+     * (SignatureWorkflowService ปฏิเสธการส่งต่อเมื่อช่องของเจ้าหน้าที่ยังว่าง)
+     */
+    protected void officerFilledIn(com.ecom.academic.model.SignatureModule module, Long requestId,
+            int documentType) {
+        java.util.Map<String, String> values = new java.util.LinkedHashMap<>();
+        for (String key : com.ecom.academic.service.DocumentFieldOwnership.adminFields(module, documentType)) {
+            // เลขที่หนังสือกับวันที่ออกให้หลังลงนามครบ ไม่ใช่งานตอนตรวจ
+            if (com.ecom.academic.service.DocumentFieldOwnership.officeFields(module, documentType).contains(key)) {
+                continue;
+            }
+            values.put(key, key.startsWith("chk_off_") ? "✓" : "ตรวจแล้ว");
+        }
+        if (module == com.ecom.academic.model.SignatureModule.ACADEMIC) {
+            flowAcademicService.findById(requestId).ifPresent(r -> flowAcademicService
+                    .saveOfficeFieldsAcrossCopies(r, documentType, values, "เอกสารที่ " + documentType, true));
+        } else {
+            flowPositionService.findById(requestId).ifPresent(r -> flowPositionService
+                    .saveOfficeFieldsAcrossCopies(r, documentType, values, "เอกสารที่ " + documentType, true));
+        }
+    }
+
     /**
      * ส่งเอกสารเวียนลงนาม
      *
@@ -196,6 +225,8 @@ public abstract class AbstractFlowTest {
     protected void signEveryStep(com.ecom.academic.model.SignatureRequest envelope,
             com.ecom.model.UserDtls releaser) {
         // ด่านตรวจของเจ้าหน้าที่: ช่องที่ไม่ใช่ของผู้ยื่นจะไม่ถูกปลุกจนกว่าจะปลดด่านนี้
+        // และปลดได้เมื่อเจ้าหน้าที่กรอกช่องของตัวเองครบแล้วเท่านั้น
+        officerFilledIn(envelope.getModule(), envelope.getRequestId(), envelope.getDocumentType());
         signatureWorkflow.startCirculation(envelope.getId(), releaser,
                 com.ecom.academic.service.SignatureWorkflowService.ActorContext.none());
 

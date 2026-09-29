@@ -133,7 +133,7 @@ class LateFieldsReachTheApplicantTest extends AbstractFlowTest {
     void forwardedRoundKeepsAdminFieldsAndAddsTheNextSignature() throws IOException {
         SignatureRequest envelope = applicantSigned();
         positionService.saveOfficeFieldsAcrossCopies(request, DOC_ETHICS,
-                Map.of("verify_date", "3 ตุลาคม 2569"), "แบบรับรองจริยธรรม", true);
+                Map.of("verify_date", "3 ตุลาคม 2569", "dean_position", "คณบดี"), "แบบรับรองจริยธรรม", true);
 
         Result forwarded = workflow.forwardToNextSigners(envelope.getId(),
                 List.of(new SignerAssignment("dean", dean.getId())), null, data.admin(), ActorContext.none());
@@ -160,7 +160,7 @@ class LateFieldsReachTheApplicantTest extends AbstractFlowTest {
     void afterEveryoneSignedAdminFieldsAreClosed() throws IOException {
         SignatureRequest envelope = applicantSigned();
         positionService.saveOfficeFieldsAcrossCopies(request, DOC_ETHICS,
-                Map.of("verify_date", "3 ตุลาคม 2569"), "แบบรับรองจริยธรรม", true);
+                Map.of("verify_date", "3 ตุลาคม 2569", "dean_position", "คณบดี"), "แบบรับรองจริยธรรม", true);
         workflow.forwardToNextSigners(envelope.getId(),
                 List.of(new SignerAssignment("dean", dean.getId())), null, data.admin(), ActorContext.none());
         sign(dean, stepFor(envelope, "dean"));
