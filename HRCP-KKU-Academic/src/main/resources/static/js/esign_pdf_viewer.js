@@ -23,6 +23,8 @@ class EsignPdfViewer {
         this.pageRendering = false;
         this.pageContainers = [];
         this.isFullscreen = false;
+        this.loadSeq = 0;
+        this.renderSeq = 0;
 
         if (this.container) {
             this.init();
@@ -45,18 +47,19 @@ class EsignPdfViewer {
             <div class="esign-viewer-wrapper">
                 <!-- แถบเครื่องมือ (ซูม/พอดีหน้า/เต็มจอ) ถูกเอาออก — ใช้งานไม่สะดวกและชอบค้าง
                      เอกสารพอดีความกว้างอัตโนมัติ และปรับตามเมื่อขนาดหน้าจอเปลี่ยน -->
-                <div class="esign-viewer-pages" id="${this.container.id}-pages-view">
-                    <div class="esign-viewer-loading" id="${this.container.id}-loading">
-                        <div class="esign-loading-card">
-                            <div class="esign-spinner-wrapper">
-                                <div class="esign-spinner"></div>
-                                <div class="esign-spinner-icon"><i class="fas fa-file-signature"></i></div>
-                            </div>
-                            <h6 class="esign-loading-title" id="${this.container.id}-loading-title">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
+                <div class="esign-viewer-pages" id="${this.container.id}-pages-view"></div>
+                <!-- ม่านโหลดอยู่ใน wrapper ไม่ใช่ใน pages-view: renderAllPages แทนที่ลูกของ pages-view
+                     ทั้งหมด ถ้าม่านอยู่ข้างในจะถูกลบทิ้งตั้งแต่เริ่มวาด ก่อนเอกสารใหม่จะพร้อม -->
+                <div class="esign-viewer-loading" id="${this.container.id}-loading">
+                    <div class="esign-loading-card">
+                        <div class="esign-spinner-wrapper">
+                            <div class="esign-spinner"></div>
+                            <div class="esign-spinner-icon"><i class="fas fa-file-signature"></i></div>
+                        </div>
+                        <h6 class="esign-loading-title" id="${this.container.id}-loading-title">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
 
-                            <div class="esign-loading-progress-bar">
-                                <div class="esign-loading-progress-val"></div>
-                            </div>
+                        <div class="esign-loading-progress-bar">
+                            <div class="esign-loading-progress-val"></div>
                         </div>
                     </div>
                 </div>
@@ -70,6 +73,25 @@ class EsignPdfViewer {
         this.loadingEl = document.getElementById(`${this.container.id}-loading`);
 
         this.bindEvents();
+    }
+
+    /** แสดงม่านโหลดทับเอกสารเดิม — เอกสารเดิมยังอยู่ข้างหลังจนกว่าฉบับใหม่จะวาดเสร็จ */
+    showLoading(title) {
+        if (!this.loadingEl) return;
+        const titleEl = document.getElementById(`${this.container.id}-loading-title`);
+        if (titleEl && title) titleEl.textContent = title;
+        clearTimeout(this.hideTimer);
+        this.loadingEl.style.display = 'flex';
+        this.loadingEl.style.opacity = '1';
+    }
+
+    hideLoading() {
+        if (!this.loadingEl) return;
+        this.loadingEl.style.opacity = '0';
+        clearTimeout(this.hideTimer);
+        this.hideTimer = setTimeout(() => {
+            if (this.loadingEl) this.loadingEl.style.display = 'none';
+        }, 250);
     }
 
     bindEvents() {
@@ -123,14 +145,23 @@ class EsignPdfViewer {
         });
     }
 
-    async loadDocument() {
+    /**
+     * โหลดเอกสารที่ this.pdfUrl แล้วสลับเข้าหน้าจอทีเดียวเมื่อวาดครบทุกหน้า
+     *
+     * @param seq ลำดับการโหลด — ผู้ใช้เปลี่ยนลายเซ็นซ้ำระหว่างโหลด รอบที่เก่ากว่าต้องไม่ทับรอบใหม่
+     */
+    async loadDocument(seq = ++this.loadSeq) {
+        const url = this.pdfUrl;
+        this.renderSeq++;
         try {
-            const resp = await fetch(this.pdfUrl, { method: 'HEAD' });
+            const resp = await fetch(url, { method: 'HEAD' });
             const contentType = resp.headers.get('Content-Type') || '';
             const previewFormat = resp.headers.get('X-Preview-Format') || '';
 
             if (previewFormat === 'docx-fallback' || contentType.includes('wordprocessingml')) {
+                if (seq !== this.loadSeq) return;
                 this.renderDocxNotice();
+                this.hideLoading();
                 return;
             }
         } catch (e) {
@@ -138,24 +169,35 @@ class EsignPdfViewer {
         }
 
         const loadingTask = window.pdfjsLib.getDocument({
-            url: this.pdfUrl,
+            url: url,
             cMapUrl: '/vendor/pdfjs/cmaps/',
             cMapPacked: true
         });
 
-        this.pdfDoc = await loadingTask.promise;
-        this.pageCount = this.pdfDoc.numPages;
+        const pdfDoc = await loadingTask.promise;
+        if (seq !== this.loadSeq) {
+            pdfDoc.destroy();
+            return;
+        }
+
+        const scale = await this.calculateFitWidthScale(pdfDoc);
+        const rendered = await this.renderAllPages(pdfDoc, scale, seq);
+        if (!rendered || seq !== this.loadSeq) {
+            pdfDoc.destroy();
+            return;
+        }
+
+        const previous = this.pdfDoc;
+        this.pdfDoc = pdfDoc;
+        this.pageCount = pdfDoc.numPages;
+        this.fitWidthScale = scale;
+        this.currentScale = scale;
         if (this.totalPagesEl) {
             this.totalPagesEl.textContent = this.pageCount;
         }
+        if (previous && previous !== pdfDoc) previous.destroy();
 
-        await this.calculateFitWidthScale();
-        this.currentScale = this.fitWidthScale;
-        await this.renderAllPages();
-
-        if (this.loadingEl) {
-            this.loadingEl.style.display = 'none';
-        }
+        this.hideLoading();
     }
 
     renderDocxNotice() {
@@ -175,30 +217,40 @@ class EsignPdfViewer {
         }
     }
 
-    async calculateFitWidthScale() {
-        if (!this.pdfDoc || !this.pagesViewEl) return;
-        const page1 = await this.pdfDoc.getPage(1);
+    async calculateFitWidthScale(pdfDoc = this.pdfDoc) {
+        if (!pdfDoc || !this.pagesViewEl) return this.fitWidthScale;
+        const page1 = await pdfDoc.getPage(1);
         const unscaledViewport = page1.getViewport({ scale: 1.0 });
 
         const availableWidth = this.pagesViewEl.clientWidth - 48; // subtract padding
         if (availableWidth > 0 && unscaledViewport.width > 0) {
-            this.fitWidthScale = Math.min(Math.max(availableWidth / unscaledViewport.width, 0.7), 2.2);
-        } else {
-            this.fitWidthScale = 1.15;
+            return Math.min(Math.max(availableWidth / unscaledViewport.width, 0.7), 2.2);
         }
+        return 1.15;
     }
 
-    async renderAllPages() {
-        if (!this.pdfDoc || !this.pagesViewEl) return;
-
-        this.pagesViewEl.innerHTML = '';
-        this.pageContainers = [];
+    /**
+     * วาดทุกหน้าลงคอนเทนเนอร์ที่ยังไม่ติดหน้าจอ แล้วแทนที่ของเดิมทีเดียว
+     * เดิมล้างหน้าจอก่อนแล้ววาดทีละหน้า เอกสารจึงหายแล้วค่อย ๆ โผล่ ไม่เปลี่ยนพร้อมม่านโหลด
+     *
+     * @return false ถ้ามีการวาดรอบใหม่แซงไปก่อน (ไม่แตะหน้าจอ)
+     */
+    async renderAllPages(pdfDoc = this.pdfDoc, scale = this.currentScale, loadSeq = null) {
+        if (!pdfDoc || !this.pagesViewEl) return false;
+        const isLoad = loadSeq !== null;
+        const renderSeq = isLoad ? this.renderSeq : ++this.renderSeq;
+        const startedLoad = this.loadSeq;
+        const stale = () => isLoad
+            ? loadSeq !== this.loadSeq
+            : (renderSeq !== this.renderSeq || startedLoad !== this.loadSeq);
 
         const dpr = window.devicePixelRatio || 1;
+        const pageCount = pdfDoc.numPages;
+        const staged = [];
 
-        for (let pageNum = 1; pageNum <= this.pageCount; pageNum++) {
-            const page = await this.pdfDoc.getPage(pageNum);
-            const viewport = page.getViewport({ scale: this.currentScale });
+        for (let pageNum = 1; pageNum <= pageCount; pageNum++) {
+            const page = await pdfDoc.getPage(pageNum);
+            const viewport = page.getViewport({ scale: scale });
 
             const pageContainer = document.createElement('div');
             pageContainer.className = 'esign-page-container';
@@ -217,37 +269,37 @@ class EsignPdfViewer {
 
             const badge = document.createElement('div');
             badge.className = 'esign-page-badge';
-            badge.textContent = `หน้า ${pageNum} / ${this.pageCount}`;
+            badge.textContent = `หน้า ${pageNum} / ${pageCount}`;
 
             pageContainer.appendChild(canvas);
             pageContainer.appendChild(badge);
-            this.pagesViewEl.appendChild(pageContainer);
-            this.pageContainers.push(pageContainer);
+            staged.push(pageContainer);
 
-            const renderContext = {
-                canvasContext: ctx,
-                viewport: viewport
-            };
+            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
 
-            await page.render(renderContext).promise;
+            if (stale()) return false;
         }
+
+        this.pagesViewEl.replaceChildren(...staged);
+        this.pageContainers = staged;
+        return true;
     }
 
     zoom(delta) {
         const newScale = Math.min(Math.max(this.currentScale + delta, this.options.minScale), this.options.maxScale);
         if (Math.abs(newScale - this.currentScale) > 0.01) {
             this.currentScale = newScale;
-            this.renderAllPages();
+            this.renderAllPages(this.pdfDoc, newScale);
         }
     }
 
     setZoom(scale) {
         this.currentScale = scale;
-        this.renderAllPages();
+        this.renderAllPages(this.pdfDoc, scale);
     }
 
     async fitToWidth() {
-        await this.calculateFitWidthScale();
+        this.fitWidthScale = await this.calculateFitWidthScale();
         this.setZoom(this.fitWidthScale);
     }
 
@@ -290,50 +342,32 @@ class EsignPdfViewer {
     async loadNewPdf(newUrl) {
         if (!newUrl) return;
         this.pdfUrl = newUrl;
-        const openTabBtn = this.container.querySelector('a[title="เปิดแท็บใหม่"]');
-        if (openTabBtn) {
-            openTabBtn.href = newUrl;
-        }
-
-        const titleEl = document.getElementById(`${this.container.id}-loading-title`);
-        const subEl = document.getElementById(`${this.container.id}-loading-sub`);
-        if (titleEl) titleEl.textContent = 'กำลังอัปเดตตัวอย่างพร้อมลายเซ็น...';
-        if (subEl) subEl.textContent = 'ระบบกำลังจำลองตำแหน่งลายเซ็นลงบนเอกสารฉบับจริง';
+        const seq = ++this.loadSeq;
+        this.showLoading('กำลังอัปเดตตัวอย่างพร้อมลายเซ็น...');
 
         if (this.frameEl) {
-            let done = false;
-            const hideLoading = () => {
-                if (!done) {
-                    done = true;
-                    if (this.loadingEl) {
-                        this.loadingEl.style.opacity = '0';
-                        setTimeout(() => {
-                            if (this.loadingEl) this.loadingEl.style.display = 'none';
-                        }, 250);
-                    }
-                }
-            };
-            this.frameEl.onload = () => setTimeout(hideLoading, 200);
-            setTimeout(hideLoading, 4000);
-            this.frameEl.src = newUrl + '#view=FitH&toolbar=1';
+            this.loadIntoFrame(newUrl, seq);
             return;
         }
 
-        if (this.loadingEl) {
-            this.loadingEl.style.display = 'flex';
-            this.loadingEl.style.opacity = '1';
-            this.loadingEl.classList.remove('d-none');
-            if (this.pagesViewEl) {
-                this.pagesViewEl.innerHTML = '';
-                this.pagesViewEl.appendChild(this.loadingEl);
-            }
-        }
         try {
-            await this.loadDocument();
+            await this.loadDocument(seq);
         } catch (err) {
+            if (seq !== this.loadSeq) return;
             console.warn('PDF.js reload error, falling back to native frame:', err);
             this.renderNativeFallback();
         }
+    }
+
+    /** โหมดสำรอง (iframe): ม่านโหลดหายเมื่อ iframe โหลดฉบับใหม่เสร็จจริง ไม่ใช่ตามเวลาที่เดาไว้ */
+    loadIntoFrame(url, seq) {
+        const done = () => {
+            if (seq === this.loadSeq) this.hideLoading();
+        };
+        this.frameEl.onload = done;
+        // กันค้าง: ถ้าเบราว์เซอร์ไม่ยิง onload (บางตัวไม่ยิงกับ PDF) ก็ไม่ปล่อยม่านทิ้งไว้ตลอด
+        setTimeout(done, 15000);
+        this.frameEl.src = url + '#view=FitH&toolbar=1';
     }
 
     renderNativeFallback() {
@@ -346,14 +380,13 @@ class EsignPdfViewer {
                             <div class="esign-spinner-icon"><i class="fas fa-file-signature"></i></div>
                         </div>
                         <h6 class="esign-loading-title" id="${this.container.id}-loading-title">กำลังจัดเตรียมตัวอย่างเอกสาร...</h6>
-                   
+
                         <div class="esign-loading-progress-bar">
                             <div class="esign-loading-progress-val"></div>
                         </div>
                     </div>
                 </div>
-                <iframe src="${this.pdfUrl}#view=FitH&toolbar=1"
-                        class="esign-fallback-frame"
+                <iframe class="esign-fallback-frame"
                         id="${this.container.id}-frame"
                         title="เอกสารที่จะลงนาม"></iframe>
             </div>
@@ -363,20 +396,7 @@ class EsignPdfViewer {
         this.frameEl = document.getElementById(`${this.container.id}-frame`);
 
         if (this.frameEl) {
-            let done = false;
-            const hideLoading = () => {
-                if (!done) {
-                    done = true;
-                    if (this.loadingEl) {
-                        this.loadingEl.style.opacity = '0';
-                        setTimeout(() => {
-                            if (this.loadingEl) this.loadingEl.style.display = 'none';
-                        }, 250);
-                    }
-                }
-            };
-            this.frameEl.onload = () => setTimeout(hideLoading, 250);
-            setTimeout(hideLoading, 4000); // Safety fallback
+            this.loadIntoFrame(this.pdfUrl, this.loadSeq);
         }
     }
 }

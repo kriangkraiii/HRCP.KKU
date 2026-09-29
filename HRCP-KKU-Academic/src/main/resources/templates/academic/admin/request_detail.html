@@ -418,14 +418,6 @@
                     </span>
                   </div>
                   <div class="doc-grid-item-actions">
-                    <button th:if="${applicantDocTypes.contains(entry.key)}" type="button"
-                      class="btn btn-sm btn-outline-warning btn-request-resign"
-                      th:data-doc-type="${entry.key}"
-                      th:data-doc-title="|เอกสารที่ ${entry.key}: ${entry.value}|"
-                      th:data-action-url="|/admin/academic/request/${request.id}/document/${entry.key}/request-resign|"
-                      title="ขอให้ผู้ยื่นแก้ไขและลงนามใหม่">
-                      <i class="fas fa-undo-alt me-1"></i> ขอให้เซ็นใหม่
-                    </button>
                     <button type="button"
                       class="btn btn-sm btn-outline-info btn-doc-preview"
                       th:data-preview-url="|/admin/academic/request/${request.id}/document/${entry.key}/download?format=pdf|"
@@ -532,66 +524,8 @@
         });
       }
 
-      // Resign Modal handling
-      document.querySelectorAll('.btn-request-resign').forEach(function (btn) {
-        btn.addEventListener('click', function () {
-          var docTitle = this.dataset.docTitle || 'เอกสาร';
-          var actionUrl = this.dataset.actionUrl;
-          document.getElementById('resignDocTitle').textContent = docTitle;
-          document.getElementById('resignForm').action = actionUrl;
-          document.getElementById('resignReasonInput').value = '';
-          var modal = new bootstrap.Modal(document.getElementById('resignModal'));
-          modal.show();
-        });
-      });
-      document.querySelectorAll('.btn-reason-preset').forEach(function (presetBtn) {
-        presetBtn.addEventListener('click', function () {
-          document.getElementById('resignReasonInput').value = this.dataset.reason;
-        });
-      });
     </script>
 
-    <!-- Resign Request Modal -->
-    <div class="modal fade" id="resignModal" tabindex="-1" aria-labelledby="resignModalLabel" aria-hidden="true">
-      <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-          <div class="modal-header bg-warning-subtle text-warning-emphasis border-warning-subtle">
-            <h5 class="modal-title" id="resignModalLabel">
-              <i class="fas fa-undo-alt me-2"></i> ขอให้ผู้ยื่นแก้ไขและลงนามใหม่
-            </h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-          </div>
-          <form id="resignForm" method="post" action="">
-            <!-- action ถูกตั้งด้วย JavaScript ตอนเปิด modal จึงใช้ th:action ไม่ได้
-                 และ Thymeleaf จะเติม CSRF token ให้เฉพาะฟอร์มที่มี th:action เท่านั้น
-                 ถ้าไม่ใส่เอง CsrfFilter จะปฏิเสธแล้วเด้งไป /signin?expired=true
-                 ซึ่งผู้ใช้จะเห็นเป็น "จู่ ๆ ก็หลุดออกจากระบบ" โดยไม่มีคำอธิบาย -->
-            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
-            <div class="modal-body">
-              <p class="mb-2"><strong>เอกสาร:</strong> <span id="resignDocTitle" class="text-primary">-</span></p>
-              <div class="mb-3">
-                <label class="form-label fw-bold">เหตุผลในการส่งกลับ <span class="text-danger">*</span></label>
-                <div class="d-flex flex-wrap gap-1 mb-2">
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-reason-preset" data-reason="ลายเซ็นไม่ชัดเจนหรือไม่ถูกต้อง">ลายเซ็นไม่ชัดเจน</button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-reason-preset" data-reason="ข้อมูลในแบบฟอร์มไม่ถูกต้อง กรุณาตรวจสอบและแก้ไข">ข้อมูลไม่ถูกต้อง</button>
-                  <button type="button" class="btn btn-sm btn-outline-secondary btn-reason-preset" data-reason="แนบเอกสารหลักฐานหรือระบุรายละเอียดไม่ครบถ้วน">ข้อมูลไม่ครบถ้วน</button>
-                </div>
-                <textarea id="resignReasonInput" name="reason" class="form-control" rows="3" placeholder="ระบุเหตุผลที่ต้องการให้ผู้ยื่นแก้ไข..." required></textarea>
-              </div>
-              <div class="alert alert-info py-2 px-3 mb-0 small">
-                <i class="fas fa-info-circle me-1"></i> ระบบจะปลดล็อกเอกสารให้ผู้ยื่นแก้ไขและลงนามใหม่ และแจ้งทางอีเมลและในระบบ
-              </div>
-            </div>
-            <div class="modal-footer border-0">
-              <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-              <button type="submit" class="btn btn-warning text-dark fw-bold">
-                <i class="fas fa-paper-plane me-1"></i> ส่งกลับให้แก้ไข
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </div>
   </section>
 </body>
 

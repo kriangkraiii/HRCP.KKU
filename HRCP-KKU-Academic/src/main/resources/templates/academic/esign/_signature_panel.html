@@ -28,7 +28,9 @@
                   th:text="${signaturePanel.activeEnvelope.status.thaiLabel}">สถานะ</span>
             <span th:unless="${signaturePanel.locked}" class="badge rounded-pill bg-light text-secondary border px-3 py-2">
                 <i class="fas fa-clock me-1"></i>
-                <span th:text="${signaturePanel.isAdminViewer} ? 'ยังไม่ได้ส่งเวียนลงนาม' : 'ยังไม่ได้ลงนาม'">ยังไม่ได้ลงนาม</span>
+                <span th:text="${signaturePanel.isAdminViewer and sentBackAwaitingResign != null and sentBackAwaitingResign}
+                                ? 'ส่งกลับให้ผู้ยื่นแก้ไข'
+                                : (${signaturePanel.isAdminViewer} ? 'ยังไม่ได้ส่งเวียนลงนาม' : 'ยังไม่ได้ลงนาม')">ยังไม่ได้ลงนาม</span>
             </span>
         </div>
     </div>
@@ -115,7 +117,15 @@
             </div>
 
             <!-- ปุ่มเริ่มเวียนลงนาม: ผู้ลงนามเลือกไว้ครบแล้ว เหลือแค่เจ้าหน้าที่ยืนยันว่าเอกสารถูกต้อง -->
-            <form th:if="${signaturePanel.isAdminViewer and signaturePanel.startable}"
+            <div th:if="${signaturePanel.isAdminViewer and (onHoldForApplicant != null and onHoldForApplicant) and (signaturePanel.startable or signaturePanel.forwardable)}"
+                 class="alert alert-warning border-0 bg-warning-subtle text-dark d-flex align-items-center gap-3 p-3 rounded-3 mb-3">
+                <i class="fas fa-pause-circle fa-lg text-warning flex-shrink-0"></i>
+                <div class="small">
+                    <strong>พักการเวียนลงนาม</strong> — รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับและลงนามใหม่ก่อน
+                </div>
+            </div>
+
+            <form th:if="${signaturePanel.isAdminViewer and signaturePanel.startable and !(onHoldForApplicant != null and onHoldForApplicant)}"
                   th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/start'}"
                   method="post" class="mb-3"
                   data-confirm="ยืนยันว่าตรวจสอบเอกสารแล้ว? ระบบจะแจ้งผู้ลงนามลำดับถัดไปทันที">
@@ -127,7 +137,7 @@
             <!-- ============ ส่งเวียนลงนามต่อ (Admin/เจ้าหน้าที่เท่านั้น) ============
                  ตำแหน่งที่ยังไม่ได้เลือกผู้ลงนามตอนส่งรอบแรก จะมาเติมได้ที่นี่
                  นี่คือขั้นตอนที่เจ้าหน้าที่ตรวจสอบเอกสารแล้วส่งต่อให้ผู้บริหาร -->
-            <div th:if="${signaturePanel.isAdminViewer and signaturePanel.forwardable}"
+            <div th:if="${signaturePanel.isAdminViewer and signaturePanel.forwardable and !(onHoldForApplicant != null and onHoldForApplicant)}"
                  class="card border-primary border-opacity-25 rounded-3 mb-3">
                 <div class="card-header bg-primary bg-opacity-10 py-2 px-3 fw-semibold small text-primary">
                     <i class="fas fa-share me-1"></i> ตรวจสอบแล้ว — ส่งเวียนลงนามต่อ
@@ -392,7 +402,18 @@
             </button>
         </div>
 
-        <form th:unless="${signaturePanel.locked or (!signaturePanel.isAdminViewer and !signaturePanel.hasApplicantSlot())}"
+        <!-- เจ้าหน้าที่ส่งกลับให้ผู้ยื่นแก้แล้ว ยังไม่ได้ลงนามใหม่ — ลำดับต่อไปเป็นของผู้ยื่น
+             ไม่ใช่ของเจ้าหน้าที่ จึงไม่ยื่นฟอร์มเวียนลงนามให้ (ผู้ยื่นลงนามแล้วซองใหม่จะมาเอง) -->
+        <div th:if="${!signaturePanel.locked and signaturePanel.isAdminViewer and (onHoldForApplicant != null and onHoldForApplicant)}"
+             class="alert alert-warning border-0 bg-warning-subtle text-dark d-flex align-items-center gap-3 p-3 rounded-3 mb-0">
+            <i class="fas fa-hourglass-half fa-lg text-warning flex-shrink-0"></i>
+            <div class="small">
+                <strong>รอผู้ยื่นแก้ไขและลงนามใหม่</strong> — ยังเวียนลงนามไม่ได้จนกว่าผู้ยื่นจะลงนามเอกสารที่ส่งกลับ
+            </div>
+        </div>
+
+        <form th:unless="${signaturePanel.locked or (!signaturePanel.isAdminViewer and !signaturePanel.hasApplicantSlot())
+                           or (signaturePanel.isAdminViewer and (onHoldForApplicant != null and onHoldForApplicant))}"
               th:action="@{/esign/envelope/create}" method="post"
               data-presave-doc="true"
               th:attr="data-optional-fields=${docOptionalFields},

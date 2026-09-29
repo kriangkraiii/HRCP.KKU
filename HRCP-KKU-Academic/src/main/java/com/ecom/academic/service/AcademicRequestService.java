@@ -648,6 +648,23 @@ public class AcademicRequestService {
         return pending;
     }
 
+    /**
+     * เอกสารที่ส่งกลับให้ผู้ยื่นแก้ แล้วผู้ยื่นยังไม่ได้ลงนามฉบับแก้ไข — ระหว่างนี้งานของเจ้าหน้าที่
+     * ในคำร้องนี้ทั้งหมดพักไว้ ดู {@link ApplicantRevisionRule}
+     */
+    @Transactional(readOnly = true)
+    public List<Integer> documentsAwaitingApplicant(Long requestId) {
+        java.util.Map<Integer, LocalDateTime> sentBack = new java.util.HashMap<>();
+        documentRepository.findByRequestId(requestId).forEach(doc -> {
+            if (doc.getRevisionRequestedAt() != null) {
+                sentBack.merge(doc.getDocumentType(), doc.getRevisionRequestedAt(),
+                        (x, y) -> x.isAfter(y) ? x : y);
+            }
+        });
+        return ApplicantRevisionRule.awaitingApplicant(com.ecom.academic.model.SignatureModule.ACADEMIC,
+                requestId, sentBack, signatureRequestRepository);
+    }
+
     /** ข้อความบอกเจ้าหน้าที่ว่าติดเอกสารฉบับไหน — null เมื่อเดินต่อได้ */
     private String resignBlocker(Long requestId) {
         List<Integer> pending = documentsAwaitingResign(requestId);

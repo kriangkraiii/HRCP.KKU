@@ -201,10 +201,19 @@ public class SignatureNotifier {
         notify(initiator, title, message, link, NotificationType.SIGNATURE_REMINDER, true);
     }
 
-    /** Tells the applicant that admin requested document correction and re-signing. */
+    /**
+     * Tells the applicant that admin requested document correction and re-signing.
+     *
+     * <p>รับ id ไม่ใช่ตัว {@link UserDtls}: เมธอดนี้รันบนเธรดอื่น ถ้ารับ entity มาจากคำขอของเจ้าหน้าที่
+     * (มักเป็น proxy ที่ยังไม่โหลด) การแตะมันที่นี่จะไปโหลดผ่าน session ของเธรดนั้น ขณะที่เธรดนั้นกำลัง
+     * บันทึกการส่งกลับอยู่ — Hibernate session ใช้ข้ามเธรดไม่ได้ การส่งกลับจึงพังเป็นระยะด้วย
+     * "Illegal pop() with non-matching JdbcValuesSourceProcessingState"
+     */
     @Async
-    public void notifyResignRequested(UserDtls applicant, SignatureModule module, Long requestId, int documentType,
+    public void notifyResignRequested(Integer applicantId, SignatureModule module, Long requestId, int documentType,
             String documentLabel, String reason) {
+        if (applicantId == null) return;
+        UserDtls applicant = userRepository.findById(applicantId).orElse(null);
         if (applicant == null) return;
         String safeDoc = documentLabel != null && !documentLabel.isBlank() ? documentLabel : ("เอกสารที่ " + documentType);
         String title = "ขอให้แก้ไขและลงนามใหม่: " + safeDoc;

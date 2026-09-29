@@ -757,6 +757,11 @@ public class AcademicAdminController {
             return "redirect:/admin/academic/request/" + id
                     + "/document/" + type + "?error=document_locked_for_signing";
         }
+        // ส่งกลับให้ผู้ยื่นแก้อยู่ — เจ้าหน้าที่ดำเนินการต่อไม่ได้ทุกเอกสาร จนกว่าผู้ยื่นจะลงนามฉบับแก้ไข
+        if (!requestService.documentsAwaitingApplicant(id).isEmpty()) {
+            return "redirect:/admin/academic/request/" + id
+                    + "/document/" + type + "?error=on_hold_for_applicant";
+        }
 
         // ดึง action (draft / submit) แล้วเอาออกจาก formData
         String action = formData.getOrDefault("action", "submit");
@@ -1410,11 +1415,22 @@ public class AcademicAdminController {
 
     private void addOwnershipGate(Model model, SignatureModule module, Long requestId, int type) {
         model.addAttribute("readOnlyForAdmin", DocumentFieldOwnership.isApplicantDocument(module, type));
-        model.addAttribute("adminEditableFields", DocumentFieldOwnership.adminFields(module, type));
+        // ส่งกลับให้ผู้ยื่นแก้แล้ว ผู้ยื่นยังไม่ได้ลงนามฉบับแก้ไข — งานของเจ้าหน้าที่ทั้งคำร้องพักไว้
+        // ดู ApplicantRevisionHold ตัวบังคับจริงอยู่ที่ generateDocument / AutoDraftApi / SigningController
+        List<Integer> awaitingApplicant = requestService.documentsAwaitingApplicant(requestId);
+        boolean onHold = !awaitingApplicant.isEmpty();
+        model.addAttribute("sentBackAwaitingResign", awaitingApplicant.contains(type));
+        model.addAttribute("sentBackNote", requestService.getRevisionNote(requestId, type));
+        model.addAttribute("onHoldForApplicant", onHold);
+        model.addAttribute("onHoldDocs", awaitingApplicant.stream()
+                .map(t -> "เอกสารที่ " + t + " (" + AcademicRequestService.getDocLabel(t) + ")").toList());
+        model.addAttribute("adminEditableFields",
+                onHold ? List.of() : DocumentFieldOwnership.adminFields(module, type));
         // ช่องที่ยังกรอกได้หลังลงนาม — ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ ช่องของแอดมินยังกรอกได้ด้วย
-        boolean adminFieldsStillOpen = signatureWorkflow.awaitsMoreSigners(module, requestId, type);
+        boolean adminFieldsStillOpen = !onHold && signatureWorkflow.awaitsMoreSigners(module, requestId, type);
         model.addAttribute("adminFieldsStillOpen", adminFieldsStillOpen);
-        model.addAttribute("officeFields", adminFieldsStillOpen
+        model.addAttribute("officeFields", onHold ? List.of()
+                : adminFieldsStillOpen
                 ? DocumentFieldOwnership.lateFields(module, type)
                 : DocumentFieldOwnership.officeFields(module, type));
 

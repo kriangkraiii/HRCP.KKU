@@ -1333,7 +1333,8 @@ public class SignatureWorkflowService {
 
         UserDtls applicant = snapshotProvider.applicantOf(module, requestId);
         if (applicant != null) {
-            notifier.notifyResignRequested(applicant, module, requestId, documentType, docLabel, reason);
+            // ส่งแค่ id — ตัว notifier เป็น @Async ห้ามแตะ entity ของ session เธรดนี้ (ดูเหตุผลที่ตัวเมธอด)
+            notifier.notifyResignRequested(applicant.getId(), module, requestId, documentType, docLabel, reason);
         }
 
         return new Result(blocking.isEmpty() ? null : blocking.get(0), null);

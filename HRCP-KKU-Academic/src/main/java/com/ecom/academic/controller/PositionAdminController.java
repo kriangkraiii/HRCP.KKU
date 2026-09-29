@@ -314,12 +314,23 @@ public class PositionAdminController {
         // (7, 8) ที่ลงนามครบแล้วก็ต้องล็อก ทั้งที่ readOnlyForAdmin เป็น false
         model.addAttribute("readOnlyForAdmin",
                 DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, type));
+        // ส่งกลับให้ผู้ยื่นแก้แล้ว ยังลงนามใหม่ไม่ครบ — หน้าจอต้องบอกว่ารอผู้ยื่นอยู่
+        // ส่งกลับให้ผู้ยื่นแก้แล้ว ผู้ยื่นยังไม่ได้ลงนามฉบับแก้ไข — งานของเจ้าหน้าที่ทั้งคำร้องพักไว้
+        List<Integer> awaitingApplicant = positionService.documentsAwaitingApplicant(id);
+        boolean onHold = !awaitingApplicant.isEmpty();
+        model.addAttribute("sentBackAwaitingResign", awaitingApplicant.contains(type));
+        model.addAttribute("sentBackNote", positionService.getRevisionNote(id, type));
+        model.addAttribute("onHoldForApplicant", onHold);
+        model.addAttribute("onHoldDocs", awaitingApplicant.stream()
+                .map(t -> "เอกสารที่ " + t + " (" + positionService.getDocLabel(t) + ")").toList());
         model.addAttribute("adminEditableFields",
-                DocumentFieldOwnership.adminFields(SignatureModule.POSITION, type));
+                onHold ? List.of() : DocumentFieldOwnership.adminFields(SignatureModule.POSITION, type));
         // ช่องที่ยังกรอกได้หลังลงนาม — ผู้ยื่นเซ็นแล้วแต่ยังไม่ส่งต่อ ช่องของแอดมินยังกรอกได้ด้วย
-        boolean adminFieldsStillOpen = signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type);
+        boolean adminFieldsStillOpen = !onHold
+                && signatureWorkflow.awaitsMoreSigners(SignatureModule.POSITION, id, type);
         model.addAttribute("adminFieldsStillOpen", adminFieldsStillOpen);
-        model.addAttribute("officeFields", adminFieldsStillOpen
+        model.addAttribute("officeFields", onHold ? List.of()
+                : adminFieldsStillOpen
                 ? DocumentFieldOwnership.lateFields(SignatureModule.POSITION, type)
                 : DocumentFieldOwnership.officeFields(SignatureModule.POSITION, type));
 
@@ -384,6 +395,11 @@ public class PositionAdminController {
         if (signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type) && !signingComplete) {
             return "redirect:/admin/position/request/" + id
                     + "/document/" + type + "?error=document_locked_for_signing";
+        }
+        // ส่งกลับให้ผู้ยื่นแก้อยู่ — เจ้าหน้าที่ดำเนินการต่อไม่ได้ทุกเอกสาร จนกว่าผู้ยื่นจะลงนามฉบับแก้ไข
+        if (!positionService.documentsAwaitingApplicant(id).isEmpty()) {
+            return "redirect:/admin/position/request/" + id
+                    + "/document/" + type + "?error=on_hold_for_applicant";
         }
 
         formData.remove("_csrf");

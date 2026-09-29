@@ -33,6 +33,8 @@ public class AutoDraftApiController {
 
     private static final Logger log = LoggerFactory.getLogger(AutoDraftApiController.class);
     private static final String ROLE_ADMIN = "ROLE_ADMIN";
+    private static final String ON_HOLD_MESSAGE =
+            "รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับและลงนามใหม่ก่อน จึงจะดำเนินการต่อได้";
 
     private final AcademicRequestService academicService;
 
@@ -86,6 +88,11 @@ public class AutoDraftApiController {
                     && !signingComplete) {
                 return ResponseEntity.status(409)
                         .body(Map.of("error", "เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้"));
+            }
+            // ส่งกลับให้ผู้ยื่นแก้อยู่ — เจ้าหน้าที่ดำเนินการต่อไม่ได้ทุกเอกสารจนกว่าผู้ยื่นจะลงนามฉบับแก้ไข
+            if (isAdmin && !academicService.documentsAwaitingApplicant(requestId).isEmpty()) {
+                return ResponseEntity.status(409)
+                        .body(Map.of("error", ON_HOLD_MESSAGE));
             }
 
             String label = academicService.getDocLabel(docType);
@@ -170,6 +177,11 @@ public class AutoDraftApiController {
                     && !signingComplete) {
                 return ResponseEntity.status(409)
                         .body(Map.of("error", "เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้"));
+            }
+            // ส่งกลับให้ผู้ยื่นแก้อยู่ — เจ้าหน้าที่ดำเนินการต่อไม่ได้ทุกเอกสารจนกว่าผู้ยื่นจะลงนามฉบับแก้ไข
+            if (isAdmin && !positionService.documentsAwaitingApplicant(requestId).isEmpty()) {
+                return ResponseEntity.status(409)
+                        .body(Map.of("error", ON_HOLD_MESSAGE));
             }
 
             String label = positionService.getDocLabel(docType);

@@ -74,6 +74,8 @@ public class SigningController {
     private final UserDigitalCertificateService digitalCertificateService;
     private final DocumentGenerationService documentService;
     private final com.ecom.service.UploadPaths uploadPaths;
+    /** ส่งกลับให้ผู้ยื่นแก้อยู่ — เจ้าหน้าที่ส่งเวียน/เริ่มเวียน/ส่งต่อไม่ได้จนกว่าผู้ยื่นจะลงนามฉบับแก้ไข */
+    private final com.ecom.academic.service.ApplicantRevisionHold revisionHold;
 
     public SigningController(SignatureWorkflowService workflow,
             SignedDocumentRenderer renderer,
@@ -84,8 +86,10 @@ public class SigningController {
             HttpServletRequest httpRequest,
             UserDigitalCertificateService digitalCertificateService,
             DocumentGenerationService documentService,
-            com.ecom.service.UploadPaths uploadPaths) {
+            com.ecom.service.UploadPaths uploadPaths,
+            com.ecom.academic.service.ApplicantRevisionHold revisionHold) {
         this.uploadPaths = uploadPaths;
+        this.revisionHold = revisionHold;
         this.workflow = workflow;
         this.renderer = renderer;
         this.signatureService = signatureService;
@@ -533,6 +537,14 @@ public class SigningController {
             return "redirect:" + module.userLink(requestId);
         }
 
+        if (isAdmin) {
+            String onHold = revisionHold.blocker(module, requestId);
+            if (onHold != null) {
+                redirectAttributes.addFlashAttribute("errorMsg", onHold);
+                return "redirect:" + documentFormLink(module, requestId, documentType, me);
+            }
+        }
+
         String documentLabel = documentLabelResolver.labelFor(module, documentType);
         String frozenJson = documentLabelResolver.currentJsonFor(module, requestId, documentType);
 
@@ -619,6 +631,12 @@ public class SigningController {
         String back = documentFormLink(envelope.getModule(), envelope.getRequestId(),
                 envelope.getDocumentType(), me);
 
+        String onHold = revisionHold.blocker(envelope.getModule(), envelope.getRequestId());
+        if (onHold != null) {
+            redirectAttributes.addFlashAttribute("errorMsg", onHold);
+            return "redirect:" + back;
+        }
+
         List<SignerAssignment> assignments = parseAssignments(slotKeys, signerUserIds);
         if (assignments == null) {
             redirectAttributes.addFlashAttribute("errorMsg", "ผู้ลงนามที่เลือกไม่ถูกต้อง");
@@ -651,6 +669,13 @@ public class SigningController {
         if (!isAdminOrStaff(me)) {
             redirectAttributes.addFlashAttribute("errorMsg", "เฉพาะเจ้าหน้าที่เท่านั้นที่เริ่มเวียนลงนามได้");
             return "redirect:/esign/inbox";
+        }
+
+        String onHold = revisionHold.blocker(envelope.getModule(), envelope.getRequestId());
+        if (onHold != null) {
+            redirectAttributes.addFlashAttribute("errorMsg", onHold);
+            return "redirect:" + documentFormLink(envelope.getModule(), envelope.getRequestId(),
+                    envelope.getDocumentType(), me);
         }
 
         Result result = workflow.startCirculation(envelopeId, me, actorContext());

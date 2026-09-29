@@ -30,6 +30,10 @@
     <div th:if="${signingComplete}" class="alert alert-info">
         <i class="fas fa-stamp"></i>
         <strong>เอกสารลงนามครบแล้ว</strong>
+        <span th:if="${onHoldForApplicant != null and onHoldForApplicant}">
+            — พักไว้จนกว่าผู้ยื่นจะแก้เอกสารที่ส่งกลับ
+        </span>
+        <th:block th:unless="${onHoldForApplicant != null and onHoldForApplicant}">
         <span th:if="${adminFieldsStillOpen != null and adminFieldsStillOpen}">
             — ยังไม่ได้ส่งต่อให้ผู้ลงนามคนถัดไป กรอกช่องของเจ้าหน้าที่ได้จนกว่าจะส่งต่อ
         </span>
@@ -40,11 +44,44 @@
         <span th:unless="${officeFields != null and !officeFields.isEmpty()}">
             — แก้ไขไม่ได้แล้ว
         </span>
+        </th:block>
         <span th:replace="~{academic/_info_tip :: tip('ค่าที่กรอกจะแสดงบนเอกสารที่ลงนามแล้วทันที โดยไม่กระทบลายมือชื่อที่ลงไว้')}"></span>
     </div>
 
+    <!-- ส่งกลับให้ผู้ยื่นแล้ว รอผู้ยื่นแก้และลงนามใหม่ — ไม่มีอะไรให้เจ้าหน้าที่ทำจนกว่าผู้ยื่นจะลงนาม
+         เดิมหน้านี้ยังโชว์ปุ่มส่งกลับกับปุ่มเวียนลงนามเหมือนยังไม่ได้ส่งกลับ ดูเหมือนแก้/ส่งต่อได้ -->
+    <div th:if="${sentBackAwaitingResign != null and sentBackAwaitingResign and !lockedForSigning}"
+         class="alert alert-warning d-flex align-items-start gap-3">
+        <i class="fas fa-hourglass-half fa-lg mt-1"></i>
+        <div>
+            <strong>ส่งกลับให้ผู้ยื่นแก้ไขแล้ว — รอผู้ยื่นแก้ไขและลงนามใหม่</strong>
+            <div class="small mt-1" th:if="${sentBackNote != null}">
+                เหตุผลที่ส่งกลับ: <span th:text="${sentBackNote}">เหตุผล</span>
+            </div>
+            <div class="small text-muted mt-1">
+                เมื่อผู้ยื่นลงนามใหม่แล้ว เอกสารจะกลับมาให้ตรวจและเวียนลงนามต่อ
+            </div>
+        </div>
+    </div>
+
+    <!-- คำร้องพักไว้: เอกสารฉบับอื่นถูกส่งกลับให้ผู้ยื่นแก้ — ยังดำเนินการต่อในเอกสารฉบับนี้ไม่ได้
+         ส่งกลับเอกสารฉบับนี้เพิ่มได้ (รวบข้อแก้ไขส่งไปทีเดียว) ดู ApplicantRevisionHold -->
+    <div th:if="${onHoldForApplicant != null and onHoldForApplicant
+                  and !(sentBackAwaitingResign != null and sentBackAwaitingResign)}"
+         class="alert alert-warning d-flex align-items-start gap-3">
+        <i class="fas fa-pause-circle fa-lg mt-1"></i>
+        <div>
+            <strong>คำร้องนี้รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับ — ยังดำเนินการต่อไม่ได้</strong>
+            <ul class="small mb-0 mt-1"><li th:each="d : ${onHoldDocs}" th:text="${d}">เอกสาร</li></ul>
+            <div class="small text-muted mt-1">
+                เมื่อผู้ยื่นแก้ไขและลงนามใหม่แล้ว จึงบันทึกและเวียนลงนามเอกสารทุกฉบับต่อได้
+            </div>
+        </div>
+    </div>
+
     <!-- เอกสารของผู้ยื่น -->
-    <div th:if="${readOnlyForAdmin and !lockedForSigning}"
+    <div th:if="${readOnlyForAdmin and !lockedForSigning
+                  and !(sentBackAwaitingResign != null and sentBackAwaitingResign)}"
          class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
             <i class="fas fa-lock"></i>
@@ -79,7 +116,8 @@
     </div>
 
     <!-- อยู่นอก <form> ของเอกสาร เพราะเป็นการส่ง POST คนละปลายทาง -->
-    <div th:if="${readOnlyForAdmin and (!lockedForSigning or signingComplete)}" class="collapse mb-3" id="sendBackPanel">
+    <div th:if="${readOnlyForAdmin and (!lockedForSigning or signingComplete)
+                  and !(sentBackAwaitingResign != null and sentBackAwaitingResign)}" class="collapse mb-3" id="sendBackPanel">
         <form th:action="@{'/admin/' + ${module} + '/request/' + ${requestId} + '/document/' + ${documentType} + '/request-resign'}"
               method="post" class="card card-body">
             <label class="form-label fw-semibold">เหตุผลที่ส่งกลับ <span class="text-danger">*</span></label>
@@ -98,6 +136,12 @@
          class="alert alert-danger">
         <i class="fas fa-triangle-exclamation"></i>
         บันทึกไม่สำเร็จ — เอกสารนี้อยู่ระหว่างการเวียนลงนาม จึงแก้ไขไม่ได้
+    </div>
+
+    <div th:if="${param.error != null && param.error[0] == 'on_hold_for_applicant'}"
+         class="alert alert-danger">
+        <i class="fas fa-triangle-exclamation"></i>
+        บันทึกไม่สำเร็จ — รอผู้ยื่นแก้ไขเอกสารที่ส่งกลับและลงนามใหม่ก่อน จึงจะดำเนินการต่อได้
     </div>
 
     <div th:if="${param.saved != null && param.saved[0] == 'office'}" class="alert alert-success">
@@ -120,14 +164,15 @@
             var readOnly = /*[[${readOnlyForAdmin}]]*/ false;
             var locked = /*[[${lockedForSigning}]]*/ false;
             var signed = /*[[${signingComplete}]]*/ false;
-            if (!readOnly && !locked) return;
+            var onHold = /*[[${onHoldForApplicant}]]*/ false;
+            if (!readOnly && !locked && !onHold) return;
 
             var form = document.getElementById(/*[[${formId}]]*/ '');
             if (!form) return;
 
             // ลำดับความเข้มจากมากไปน้อย: เวียนลงนามอยู่ → ลงนามครบ → เอกสารของผู้ยื่น
             var editable;
-            if (locked && !signed) {
+            if (onHold || (locked && !signed)) {
                 editable = new Set();
             } else if (signed) {
                 editable = new Set(/*[[${officeFields}]]*/[] || []);
