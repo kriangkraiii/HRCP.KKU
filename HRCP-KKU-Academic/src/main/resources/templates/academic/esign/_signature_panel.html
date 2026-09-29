@@ -20,7 +20,7 @@
 
     <div class="card-header bg-white d-flex justify-content-between align-items-center py-3 border-bottom">
         <span class="fw-bold text-dark fs-6">
-            <i class="fas fa-file-signature text-primary me-2"></i> ขั้นตอนที่ 3 · การลงนามอิเล็กทรอนิกส์
+            <i class="fas fa-file-signature text-primary me-2"></i> ขั้นตอนที่ 2 · ตรวจสอบข้อมูลและลงนาม
         </span>
         <div class="d-flex align-items-center gap-2">
             <span th:if="${signaturePanel.locked}" class="badge rounded-pill px-3 py-2"
@@ -145,8 +145,13 @@
                 <div class="card-body p-3">
                     <p class="text-secondary small mb-3">เลือกผู้ลงนามในตำแหน่งที่เหลือ</p>
 
+                    <!-- data-presave-doc: ช่องของเจ้าหน้าที่ที่กรอกหลังผู้ยื่นลงนาม บันทึกผ่านร่างอัตโนมัติ
+                         ไม่มีปุ่มบันทึกแยก จึงต้อง flush ให้เสร็จก่อนส่งต่อ ไม่งั้นค่าที่เพิ่งพิมพ์ยังไม่ถึงเซิร์ฟเวอร์
+                         data-presave-skip-checks: เนื้อเอกสารผ่านการตรวจครบไปแล้วตอนผู้ยื่นลงนาม ช่องที่ยังว่าง
+                         (เช่นเลขที่หนังสือ) เป็นช่องที่ออกให้ทีหลัง ไม่ใช่เหตุให้ส่งต่อไม่ได้ -->
                     <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/forward'}"
                           method="post"
+                          data-presave-doc="true" data-presave-skip-checks="true"
                           data-confirm="ยืนยันความถูกต้องและส่งเวียนลงนามต่อ? ระบบจะแจ้งเตือนผู้ลงนามลำดับถัดไปทันที">
                         <div class="row g-3">
                             <div class="col-md-6" th:each="slot, iter : ${signaturePanel.unfilledSlots()}">

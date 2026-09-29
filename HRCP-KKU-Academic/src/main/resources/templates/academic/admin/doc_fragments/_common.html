@@ -7,23 +7,26 @@
           th:replace="~{academic/_notify_applicant :: note}"></th:block>
 
 <!-- ==================== Shared Buttons ==================== -->
-<!--/* ล็อกปุ่มบันทึกเฉพาะตอนที่ยังเวียนลงนามอยู่ — เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว
-     แต่ปุ่มที่กดไม่ได้อธิบายเหตุผลได้ดีกว่าปุ่มที่กดแล้วเด้งกลับ
+<!--/* ไม่มีปุ่ม "บันทึกข้อมูลเอกสาร" ทั่วไปแล้ว — ฟอร์มบันทึกแบบร่างอัตโนมัติ และปุ่มในแผงลงนาม
+     (ส่งไปลงนาม / ยืนยันความถูกต้องและส่งเวียนลงนามต่อ) บันทึกข้อมูลล่าสุดให้ก่อนส่งเสมอ
+     ดู sign_presave.js — เจ้าหน้าที่ตรวจสอบข้อมูลแล้วกดลงนามได้เลย
 
-     เมื่อลงนามครบแล้วปุ่มต้องกลับมากดได้ เพราะยังเหลือให้สารบรรณลงเลขที่หนังสือ
-     กับวันที่เอกสาร (DocumentFieldOwnership.officeFields) */-->
-<div th:fragment="buttons" class="d-flex flex-wrap gap-2 mt-4"
-     th:with="signingLocked=${lockedForSigning != null && lockedForSigning && !(signingComplete != null && signingComplete)}">
+     เหลือปุ่มเดียวคือขั้นออกเลขที่หนังสือ: ลงนามครบ ไม่เหลือใครให้ส่งต่อ และยังไม่ได้ออกเลข
+     ขั้นนี้ต้องกดบันทึกเอง เพราะเลขกับวันที่ครบเมื่อไรเอกสารจะถูกปิด (ดู script ด้านล่าง)
+     เงื่อนไขเดียวกับ _admin_field_lock :: officeSave ของเฟส 2 */-->
+<div th:fragment="buttons" class="d-flex flex-wrap gap-2 mt-4">
     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
     </button>
-    <!--/* เมื่อลงนามครบแล้ว เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่เอกสาร */-->
-    <!--/* ออกเลขครบแล้วเอกสารจบ ไม่มีอะไรให้บันทึกอีก */-->
-    <button th:if="${signingComplete != null && signingComplete && !(officeIssued != null && officeIssued)}"
+    <button th:if="${signingComplete != null and signingComplete
+                     and issuesOffice != null and issuesOffice
+                     and !(officeIssued != null and officeIssued)
+                     and !(adminFieldsStillOpen != null and adminFieldsStillOpen)
+                     and !(onHoldForApplicant != null and onHoldForApplicant)}"
             type="button" id="btnSubmitDoc" class="btn btn-academic"
-            th:attr="data-issues-office=${issuesOffice != null and issuesOffice}"
+            data-issues-office="true"
             title="บันทึกเลขที่หนังสือและวันที่เอกสาร">
-        <i class="fas fa-save"></i> บันทึกข้อมูลเอกสาร
+        <i class="fas fa-save"></i> บันทึกเลขที่หนังสือและวันที่
     </button>
     <a th:href="'/admin/academic/request/' + ${request.id}" class="btn-back-pill">
         <i class="fas fa-arrow-left"></i> กลับ
@@ -40,7 +43,7 @@
 <!-- ==================== Shared Scripts ==================== -->
 <th:block th:fragment="scripts">
     <script>
-        // ==================== ส่งฟอร์มบันทึกเอกสาร ====================
+        // ==================== ปุ่มบันทึกเลขที่หนังสือและวันที่ ====================
         // ไม่มีกล่องยืนยันและไม่มีช่องติ๊กแจ้งเตือนแล้ว — ดู _notify_applicant.html
         (function() {
             const submitBtn = document.getElementById('btnSubmitDoc');
@@ -49,17 +52,15 @@
             // จึงบันทึกเมื่อกดปุ่มเท่านั้น ถ้าปล่อยบันทึกร่างอัตโนมัติไว้ เลขที่พิมพ์ไปครึ่งเดียว
             // (วันที่ถูกเติมให้ตั้งแต่เปิดหน้า) จะปิดเอกสารไปก่อนที่สารบรรณจะพิมพ์เสร็จ
             // ต้องถอดก่อน DOMContentLoaded ซึ่งเป็นจังหวะที่ auto_draft.js สร้างตัวบันทึก
-            const issuesOffice = submitBtn && submitBtn.dataset.issuesOffice === 'true';
-            if (issuesOffice) {
+            // ปุ่มนี้ขึ้นเฉพาะขั้นออกเลข ขั้นอื่นทั้งหมดใช้บันทึกร่างอัตโนมัติ
+            if (submitBtn) {
                 const docForm = document.getElementById('docForm');
                 if (docForm) docForm.removeAttribute('data-auto-draft');
-            }
 
-            if (submitBtn) {
                 submitBtn.addEventListener('click', function() {
                     const form = document.getElementById('docForm');
                     if (form && !form.reportValidity()) return;
-                    if (issuesOffice && !confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
+                    if (!confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
                             + 'เอกสารจะถูกปิด แก้ไขไม่ได้อีก\nยืนยันการบันทึก?')) return;
                     submitFormAsSubmit();
                 });

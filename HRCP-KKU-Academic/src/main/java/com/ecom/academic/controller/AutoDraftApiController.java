@@ -102,7 +102,9 @@ public class AutoDraftApiController {
             // ลงนามครบแล้ว: เหลือให้สารบรรณลงเลขที่หนังสือกับวันที่ และต้องลงครบทุกสำเนา
             // เอกสารที่ 5 มีสามแถว (กรรมการคนละท่าน) แต่เป็นหนังสือฉบับเดียวกัน
             if (isAdmin && signingComplete) {
-                if (academicService.isOfficeIssued(requestId, docType)) {
+                // ยังต้องส่งต่อ: ช่องของแอดมินยังกรอกได้ แม้เลขที่กับวันที่จะมีค่าแล้ว (ดูเฟส 2 ด้านล่าง)
+                if (academicService.isOfficeIssued(requestId, docType)
+                        && !signatureWorkflow.awaitsMoreSigners(SignatureModule.ACADEMIC, requestId, docType)) {
                     return ResponseEntity.status(409)
                             .body(Map.of("error", OFFICE_ISSUED_MESSAGE));
                 }
