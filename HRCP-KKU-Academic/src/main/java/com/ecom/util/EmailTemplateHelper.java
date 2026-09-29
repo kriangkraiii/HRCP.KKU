@@ -27,21 +27,19 @@ public final class EmailTemplateHelper {
         return configuredEmail.trim();
     }
 
+    public static final String DEFAULT_LOGO_BASE_URL =
+            "https://raw.githubusercontent.com/kriangkraiii/HRCP.KKU/main/HRCP-KKU-Academic/src/main/resources/static/img";
     public static final String CID_KKU_LOGO = "cid:kku_logo";
     public static final String CID_CP_LOGO = "cid:cp_logo";
-    public static final String LOGO_KKU_URL = CID_KKU_LOGO;
-    public static final String LOGO_CP_URL = CID_CP_LOGO;
+    public static final String LOGO_KKU_URL = DEFAULT_LOGO_BASE_URL + "/kku_logo.png";
+    public static final String LOGO_CP_URL = DEFAULT_LOGO_BASE_URL + "/cphr_logo.png";
 
     /**
      * Attaches the bundled KKU Emblem and College of Computing logo as inline CID resources.
+     * In modern zero-attachment mode, this is a safe no-op to eliminate the [inline] badge in Gmail.
      */
     public static void attachLogos(MimeMessageHelper helper) {
-        try {
-            helper.addInline("kku_logo", new org.springframework.core.io.ClassPathResource("static/img/kku_logo_email.png"), "image/png");
-            helper.addInline("cp_logo", new org.springframework.core.io.ClassPathResource("static/img/cp_logo_email.png"), "image/png");
-        } catch (Exception e) {
-            log.warn("Could not attach inline email logos: {}", e.getMessage());
-        }
+        // Safe no-op: Prevents Gmail [inline] attachment badge and eliminates binary payload bloat
     }
 
     private static final org.slf4j.Logger log =
@@ -88,28 +86,35 @@ public final class EmailTemplateHelper {
         
         sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='0' style='max-width:600px;background-color:#ffffff;border-radius:14px;overflow:hidden;box-shadow:0 6px 20px rgba(0,0,0,0.07);border:1px solid #e2e8f0;'>");
         
-        // --- Top White Branding Bar (Official Logos) ---
-        sb.append("<tr><td style='background-color:#ffffff;padding:18px 24px;border-bottom:1px solid #e2e8f0;text-align:center;'>");
-        sb.append("<table border='0' cellspacing='0' cellpadding='0' style='margin:0 auto;'><tr>");
-        sb.append("<td align='center' style='padding:0 16px;vertical-align:middle;'>");
-        sb.append("<img src='").append(LOGO_KKU_URL).append("' alt='มหาวิทยาลัยขอนแก่น' height='46' style='display:block;height:46px;width:auto;border:0;' />");
-        sb.append("</td>");
-        sb.append("<td style='width:1px;background-color:#cbd5e1;height:36px;vertical-align:middle;'></td>");
-        sb.append("<td align='center' style='padding:0 16px;vertical-align:middle;'>");
-        sb.append("<img src='").append(LOGO_CP_URL).append("' alt='วิทยาลัยการคอมพิวเตอร์ มข.' height='44' style='display:block;height:44px;width:auto;border:0;' />");
-        sb.append("</td>");
-        sb.append("</tr></table>");
-        sb.append("</td></tr>");
-
-        // --- Official Hero Header ---
-        sb.append("<tr><td style='background:linear-gradient(135deg,#0b1f44 0%,#172554 50%,#1e3a8a 100%);padding:26px 24px;text-align:center;border-bottom:4px solid #d97706;'>");
-        sb.append("<div style='color:#cbd5e1;font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:6px;'>CP HRD (College of Computing Human Resource Development System)</div>");
-        sb.append("<h1 style='color:#ffffff;margin:0 0 6px 0;font-size:20px;font-weight:700;line-height:1.4;'>").append(escapeHtml(headingTitle)).append("</h1>");
+        // --- Official Brand Header (CP HRD - Matching Sign-in Page & Zero-Attachment) ---
+        sb.append("<tr><td style='background:linear-gradient(135deg,#0b1727 0%,#0f2744 50%,#173763 100%);padding:36px 28px 28px 28px;text-align:center;border-bottom:3px solid #3b82f6;'>");
+        
+        // Brand Title: CP | HRD
+        sb.append("<div style='font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Prompt\",Helvetica,Arial,sans-serif;font-size:32px;font-weight:800;letter-spacing:1px;line-height:1.1;margin-bottom:8px;'>");
+        sb.append("<span style='color:#60a5fa;'>CP</span>");
+        sb.append("<span style='color:#64748b;font-weight:300;margin:0 10px;'>|</span>");
+        sb.append("<span style='color:#ffffff;'>HRD</span>");
+        sb.append("</div>");
+        
+        // Brand Subtitle: COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM
+        sb.append("<div style='color:#94a3b8;font-family:-apple-system,BlinkMacSystemFont,\"Segoe UI\",Roboto,\"Prompt\",Helvetica,Arial,sans-serif;font-size:11px;font-weight:600;letter-spacing:1.8px;text-transform:uppercase;margin-bottom:18px;'>");
+        sb.append("COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM");
+        sb.append("</div>");
+        
+        // Accent Divider
+        sb.append("<div style='width:48px;height:2px;background:#3b82f6;margin:0 auto 18px auto;border-radius:2px;'></div>");
+        
+        // Main Heading
+        sb.append("<h1 style='color:#ffffff;margin:0 0 6px 0;font-size:20px;font-weight:700;line-height:1.4;font-family:\"Sarabun\",\"Prompt\",sans-serif;'>")
+          .append(escapeHtml(headingTitle)).append("</h1>");
+        
+        // Optional Badge
         if (badgeText != null && !badgeText.isBlank()) {
-            sb.append("<div style='display:inline-block;background:rgba(217,119,6,0.22);border:1px solid #d97706;color:#fef3c7;font-size:12px;font-weight:500;padding:3px 12px;border-radius:20px;margin-top:4px;'>")
+            sb.append("<div style='display:inline-block;background:rgba(59,130,246,0.18);border:1px solid rgba(96,165,250,0.4);color:#bfdbfe;font-size:12px;font-weight:500;padding:3px 14px;border-radius:20px;margin-top:6px;'>")
               .append(escapeHtml(badgeText)).append("</div>");
         }
-        sb.append("<div style='color:#94a3b8;font-size:12px;margin-top:10px;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น &bull; College of Computing, KKU</div>");
+        
+        sb.append("<div style='color:#94a3b8;font-size:12px;margin-top:12px;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น &bull; College of Computing, KKU</div>");
         sb.append("</td></tr>");
         
         // --- Body Content ---

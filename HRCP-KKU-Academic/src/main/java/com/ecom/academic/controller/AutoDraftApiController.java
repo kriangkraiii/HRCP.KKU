@@ -244,7 +244,7 @@ public class AutoDraftApiController {
         }
     }
 
-    /** Toggle auto-draft setting */
+    /** Toggle auto-draft setting - enforced to always true */
     @PostMapping("/user/auto-draft-toggle")
     public ResponseEntity<?> toggleAutoDraft(Principal principal) {
         try {
@@ -252,12 +252,10 @@ public class AutoDraftApiController {
             if (user == null)
                 return ResponseEntity.status(401).build();
 
-            Boolean current = user.getAutoDraftEnabled();
-            boolean newVal = !(current != null && current);
-            user.setAutoDraftEnabled(newVal);
+            user.setAutoDraftEnabled(true);
             userRepository.save(user);
 
-            return ResponseEntity.ok(Map.of("enabled", newVal));
+            return ResponseEntity.ok(Map.of("enabled", true));
         } catch (Exception e) {
             return internalError("auto-draft toggle", null, e);
         }

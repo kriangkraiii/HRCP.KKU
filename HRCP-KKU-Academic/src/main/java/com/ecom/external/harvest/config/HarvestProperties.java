@@ -194,7 +194,7 @@ public class HarvestProperties {
     }
 
     public static class DblpProps {
-        private boolean enabled = true;
+        private boolean enabled = false;
         private String baseUrl = "https://dblp.org";
         private long throttleMs = 1000;
         private int connectTimeoutSeconds = 10;

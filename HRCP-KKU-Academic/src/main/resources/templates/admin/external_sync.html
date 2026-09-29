@@ -92,12 +92,12 @@
                                          th:classappend="${pendingCount > 0} ? 'text-warning' : ''"
                                          th:text="${pendingCount}">0</div>
                                     <div class="text-muted small">รอการยืนยัน</div>
-                                    <button th:if="${pendingCount > 0}"
-                                            type="button"
-                                            class="btn btn-sm btn-warning mt-2 fw-semibold"
-                                            onclick="switchToChangesTab()">
+                                    <a th:if="${pendingCount > 0}"
+                                       th:href="@{/admin/external-sync(tab='changes')}"
+                                       class="btn btn-sm btn-warning mt-2 fw-semibold"
+                                       onclick="switchToChangesTab(event)">
                                         <i class="fas fa-arrow-right me-1"></i>ไปตรวจสอบ
-                                    </button>
+                                    </a>
                                 </div>
                             </div>
                         </div>
@@ -117,9 +117,6 @@
                                     </span>
                                     <span class="badge bg-warning bg-opacity-10 text-dark border border-warning px-2 py-1">
                                         <i class="fas fa-crosshairs me-1"></i>Crossref: <strong th:text="${sourceCounts['CROSSREF'] != null ? sourceCounts['CROSSREF'] : 0}">0</strong>
-                                    </span>
-                                    <span class="badge bg-primary bg-opacity-10 text-primary border border-primary px-2 py-1">
-                                        <i class="fas fa-laptop-code me-1"></i>DBLP: <strong th:text="${sourceCounts['DBLP'] != null ? sourceCounts['DBLP'] : 0}">0</strong>
                                     </span>
                                     <span class="badge bg-danger bg-opacity-10 text-danger border border-danger px-2 py-1">
                                         <i class="fas fa-file-lines me-1"></i>ThaiJO: <strong th:text="${sourceCounts['THAIJO'] != null ? sourceCounts['THAIJO'] : 0}">0</strong>
@@ -201,10 +198,10 @@
                             <div class="col-lg-3 col-md-6">
                                 <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white border-primary">
                                     <div class="d-flex align-items-center justify-content-between mb-1">
-                                        <h6 class="fw-bold mb-0"><i class="fas fa-network-wired text-primary me-1"></i> ดึงงานวิจัย 5 แหล่งใหม่</h6>
+                                        <h6 class="fw-bold mb-0"><i class="fas fa-network-wired text-primary me-1"></i> ดึงงานวิจัย 4 แหล่งใหม่</h6>
                                     </div>
                                     <p class="text-muted small flex-grow-1 mb-3">
-                                        ดึงจาก OpenAlex, Crossref, DBLP, ThaiJO และ KKU IR
+                                        ดึงจาก OpenAlex, Crossref, ThaiJO และ KKU IR
                                         <span th:replace="~{academic/_info_tip :: tip('ระบบตัดผลงานที่ซ้ำกันระหว่างแหล่งข้อมูล และจัดระดับวารสาร (Tier) ให้')}"></span>
                                     </p>
                                     <div class="d-flex flex-column gap-2">
@@ -239,16 +236,6 @@
                                                             data-source="crossref"
                                                             data-name="Crossref (DOI Works)">
                                                         <span><i class="fas fa-crosshairs text-warning me-2"></i>Crossref (DOI Works)</span>
-                                                        <i class="fas fa-play text-muted small ms-2"></i>
-                                                    </button>
-                                                </li>
-                                                <li>
-                                                    <button type="button" class="dropdown-item py-2 d-flex align-items-center justify-content-between harvest-source-item"
-                                                            data-call="triggerHarvestSourceAsync"
-                                                            data-call-args='["dblp", "DBLP (Computer Science)"]'
-                                                            data-source="dblp"
-                                                            data-name="DBLP (Computer Science)">
-                                                        <span><i class="fas fa-laptop-code text-primary me-2"></i>DBLP (Computer Science)</span>
                                                         <i class="fas fa-play text-muted small ms-2"></i>
                                                     </button>
                                                 </li>
@@ -632,10 +619,6 @@
                             <span><i class="fas fa-crosshairs text-warning me-2"></i>Crossref (DOI Works)</span>
                             <span class="badge bg-secondary badge-source-status">รอดำเนินการ</span>
                         </div>
-                        <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" data-src="DBLP">
-                            <span><i class="fas fa-laptop-code text-primary me-2"></i>DBLP (Computer Science)</span>
-                            <span class="badge bg-secondary badge-source-status">รอดำเนินการ</span>
-                        </div>
                         <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" data-src="THAIJO">
                             <span><i class="fas fa-file-lines text-danger me-2"></i>ThaiJO (วารสารไทย OAI)</span>
                             <span class="badge bg-secondary badge-source-status">รอดำเนินการ</span>
@@ -680,7 +663,7 @@
         function triggerHarvestAllAsync() {
             var dropdownLabel = document.getElementById('dropdownSourceLabel');
             if (dropdownLabel) dropdownLabel.innerHTML = '<i class="fas fa-filter me-1"></i> เลือกดึงเฉพาะแหล่ง';
-            openHarvestModal("ดึงงานวิจัยทุกแหล่งพร้อมกัน (5 แหล่ง)", "ALL");
+            openHarvestModal("ดึงงานวิจัยทุกแหล่งพร้อมกัน (4 แหล่ง)", "ALL");
             
             fetch('/admin/external-sync/harvest/start', {
                 method: 'POST',
@@ -911,19 +894,149 @@
         window.triggerHarvestSourceAsync = triggerHarvestSourceAsync;
         window.reloadPage = function() { window.location.reload(); };
 
-        function switchToChangesTab() {
+        function switchToChangesTab(e) {
+            if (e && typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+
             var tabBtn = document.getElementById('tab-changes-btn');
+            var syncBtn = document.getElementById('tab-sync-btn');
+            var changesPane = document.getElementById('tab-changes');
+            var syncPane = document.getElementById('tab-sync');
+
+            // 1. Trigger native click on tab button (Bootstrap 5 internal data-bs-toggle listener)
+            if (tabBtn) {
+                try {
+                    tabBtn.click();
+                } catch (err) {
+                    console.warn('tabBtn.click error:', err);
+                }
+            }
+
+            // 2. Try Bootstrap 5 Tab API via getOrCreateInstance
             if (tabBtn && window.bootstrap && bootstrap.Tab) {
-                var tab = new bootstrap.Tab(tabBtn);
-                tab.show();
+                try {
+                    var tab = bootstrap.Tab.getOrCreateInstance(tabBtn);
+                    if (tab) tab.show();
+                } catch (err) {
+                    console.warn('Bootstrap Tab show error:', err);
+                }
+            }
+
+            // 3. Direct DOM Fallback (guarantees tab switch even if Bootstrap JS is not ready)
+            if (tabBtn && syncBtn) {
+                syncBtn.classList.remove('active');
+                syncBtn.setAttribute('aria-selected', 'false');
+                tabBtn.classList.add('active');
+                tabBtn.setAttribute('aria-selected', 'true');
+            }
+            if (changesPane && syncPane) {
+                syncPane.classList.remove('show', 'active');
+                changesPane.classList.add('show', 'active');
+            }
+
+            // 4. Update browser URL history without reloading
+            try {
+                var url = new URL(window.location);
+                if (url.searchParams.get('tab') !== 'changes') {
+                    url.searchParams.set('tab', 'changes');
+                    window.history.pushState({ tab: 'changes' }, '', url.toString());
+                }
+            } catch (err) {}
+
+            // 5. Smooth scroll into view
+            var targetScrollEl = document.getElementById('syncTabs') || changesPane;
+            if (targetScrollEl) {
+                setTimeout(function() {
+                    targetScrollEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }, 60);
             }
         }
+
+        function switchToSyncTab(e) {
+            if (e && typeof e.preventDefault === 'function') {
+                e.preventDefault();
+            }
+
+            var tabBtn = document.getElementById('tab-changes-btn');
+            var syncBtn = document.getElementById('tab-sync-btn');
+            var changesPane = document.getElementById('tab-changes');
+            var syncPane = document.getElementById('tab-sync');
+
+            if (syncBtn) {
+                try { syncBtn.click(); } catch (err) {}
+            }
+
+            if (syncBtn && window.bootstrap && bootstrap.Tab) {
+                try {
+                    var tab = bootstrap.Tab.getOrCreateInstance(syncBtn);
+                    if (tab) tab.show();
+                } catch (err) {}
+            }
+
+            if (tabBtn && syncBtn) {
+                tabBtn.classList.remove('active');
+                tabBtn.setAttribute('aria-selected', 'false');
+                syncBtn.classList.add('active');
+                syncBtn.setAttribute('aria-selected', 'true');
+            }
+            if (changesPane && syncPane) {
+                changesPane.classList.remove('show', 'active');
+                syncPane.classList.add('show', 'active');
+            }
+
+            try {
+                var url = new URL(window.location);
+                if (url.searchParams.has('tab')) {
+                    url.searchParams.delete('tab');
+                    window.history.pushState({ tab: 'sync' }, '', url.toString());
+                }
+            } catch (err) {}
+        }
+
+        window.switchToChangesTab = switchToChangesTab;
+        window.switchToSyncTab = switchToSyncTab;
 
         document.addEventListener('DOMContentLoaded', function() {
             var params = new URLSearchParams(window.location.search);
             if (params.get('tab') === 'changes') {
                 switchToChangesTab();
             }
+
+            // Sync URL when tabs are toggled directly by user
+            var tabBtn = document.getElementById('tab-changes-btn');
+            var syncBtn = document.getElementById('tab-sync-btn');
+            if (tabBtn) {
+                tabBtn.addEventListener('shown.bs.tab', function() {
+                    try {
+                        var url = new URL(window.location);
+                        if (url.searchParams.get('tab') !== 'changes') {
+                            url.searchParams.set('tab', 'changes');
+                            window.history.replaceState({ tab: 'changes' }, '', url.toString());
+                        }
+                    } catch (e) {}
+                });
+            }
+            if (syncBtn) {
+                syncBtn.addEventListener('shown.bs.tab', function() {
+                    try {
+                        var url = new URL(window.location);
+                        if (url.searchParams.has('tab')) {
+                            url.searchParams.delete('tab');
+                            window.history.replaceState({}, '', url.toString());
+                        }
+                    } catch (e) {}
+                });
+            }
+
+            window.addEventListener('popstate', function(e) {
+                var p = new URLSearchParams(window.location.search);
+                if (p.get('tab') === 'changes') {
+                    switchToChangesTab();
+                } else {
+                    switchToSyncTab();
+                }
+            });
         });
 
         // Submit button locking to prevent double clicks

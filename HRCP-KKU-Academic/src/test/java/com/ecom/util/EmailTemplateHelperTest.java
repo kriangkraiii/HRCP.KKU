@@ -8,16 +8,16 @@ import org.junit.jupiter.api.Test;
 class EmailTemplateHelperTest {
 
     @Test
-    @DisplayName("Email template ต้องมีชื่อทางการและโลโก้ CDN ครบถ้วน")
+    @DisplayName("Email template ต้องมีชื่อทางการและอัตลักษณ์ CP HRD สไตล์ Sign-in ครบถ้วน")
     void containsOfficialUniversityAndCollegeIdentity() {
         String html = EmailTemplateHelper.wrapLayout("ทดสอบหัวเรื่อง", "ป้ายกำกับ", "<p>เนื้อหาทดสอบ</p>");
 
         assertThat(html)
-                .contains(EmailTemplateHelper.LOGO_KKU_URL)
-                .contains(EmailTemplateHelper.LOGO_CP_URL)
+                .contains("CP")
+                .contains("HRD")
+                .contains("COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM")
                 .contains("วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น")
                 .contains("College of Computing, Khon Kaen University")
-                .contains("CP HRD (College of Computing Human Resource Development System)")
                 .contains("043-009700")
                 .contains("computing.kku.ac.th")
                 .contains("ทดสอบหัวเรื่อง")
@@ -25,13 +25,13 @@ class EmailTemplateHelperTest {
     }
 
     @Test
-    @DisplayName("สร้างอีเมล OTP ต้องมีรหัส OTP โลโก้ และระบุชื่อทางการ")
+    @DisplayName("สร้างอีเมล OTP ต้องมีรหัส OTP และระบุชื่อทางการ")
     void buildsOtpEmailCorrectly() {
         String html = EmailTemplateHelper.buildOtpEmail("ดร.สมชาย ใจดี", "12345678", "เข้าสู่ระบบ", 5);
 
         assertThat(html)
-                .contains(EmailTemplateHelper.LOGO_KKU_URL)
-                .contains(EmailTemplateHelper.LOGO_CP_URL)
+                .contains("CP")
+                .contains("HRD")
                 .contains("12345678")
                 .contains("ดร.สมชาย ใจดี")
                 .contains("เข้าสู่ระบบ")
@@ -46,8 +46,8 @@ class EmailTemplateHelperTest {
         String html = EmailTemplateHelper.buildPasswordResetEmail(resetUrl);
 
         assertThat(html)
-                .contains(EmailTemplateHelper.LOGO_KKU_URL)
-                .contains(EmailTemplateHelper.LOGO_CP_URL)
+                .contains("CP")
+                .contains("HRD")
                 .contains(resetUrl)
                 .contains("ตั้งรหัสผ่านใหม่")
                 .contains("วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น");
@@ -66,8 +66,8 @@ class EmailTemplateHelperTest {
                 "<div>รายละเอียดเพิ่มเติม</div>");
 
         assertThat(html)
-                .contains(EmailTemplateHelper.LOGO_KKU_URL)
-                .contains(EmailTemplateHelper.LOGO_CP_URL)
+                .contains("CP")
+                .contains("HRD")
                 .contains("ผศ.ดร.สมศรี มีสุข")
                 .contains("POS-2026-001")
                 .contains("รับคำร้องแล้ว")
@@ -82,8 +82,8 @@ class EmailTemplateHelperTest {
                 "กดปุ่มไม่ทำงาน", "รายละเอียดทดสอบ", 2);
 
         assertThat(html)
-                .contains(EmailTemplateHelper.LOGO_KKU_URL)
-                .contains(EmailTemplateHelper.LOGO_CP_URL)
+                .contains("CP")
+                .contains("HRD")
                 .contains("อาจารย์ใจดี")
                 .contains("teacher@kku.ac.th")
                 .contains("ปัญหาระบบ")
@@ -93,7 +93,7 @@ class EmailTemplateHelperTest {
     }
 
     @Test
-    @DisplayName("attachLogos ต้องแนบรูปภาพ inline logo โดยไม่เกิดข้อผิดพลาด")
+    @DisplayName("attachLogos ต้องเป็น safe no-op เพื่อไม่ให้เกิดป้าย [inline] ใน Gmail")
     void attachLogosWithoutException() throws Exception {
         org.springframework.mail.javamail.JavaMailSenderImpl sender = new org.springframework.mail.javamail.JavaMailSenderImpl();
         jakarta.mail.internet.MimeMessage message = sender.createMimeMessage();
@@ -103,9 +103,9 @@ class EmailTemplateHelperTest {
         helper.setText("<html><body>Hello</body></html>", true);
         EmailTemplateHelper.attachLogos(helper);
 
-        // Verify that inline parts were added inside the multipart/related container
+        // Verify zero-attachment: No inline parts added, eliminating [inline] in Gmail
         jakarta.mail.Multipart rootMp = (jakarta.mail.Multipart) message.getContent();
         jakarta.mail.Multipart relatedMp = (jakarta.mail.Multipart) rootMp.getBodyPart(0).getContent();
-        assertThat(relatedMp.getCount()).isEqualTo(3); // HTML body + 2 inline logos
+        assertThat(relatedMp.getCount()).isEqualTo(1); // Only HTML body, 0 inline image attachments
     }
 }

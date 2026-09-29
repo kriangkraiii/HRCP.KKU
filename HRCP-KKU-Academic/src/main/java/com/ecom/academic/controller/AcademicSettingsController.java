@@ -110,7 +110,6 @@ public class AcademicSettingsController {
     /** Save settings (shared) */
     @PostMapping("/user/academic/settings")
     public String saveUserSettings(
-            @RequestParam(value = "autoDraftEnabled", required = false) Boolean autoDraftEnabled,
             @RequestParam(value = "emailNotificationEnabled", required = false) Boolean emailNotificationEnabled,
             @RequestParam(value = "expiryAlert6m", required = false) Boolean expiryAlert6m,
             @RequestParam(value = "expiryAlert3m", required = false) Boolean expiryAlert3m,
@@ -118,14 +117,13 @@ public class AcademicSettingsController {
             @RequestParam(value = "expiryAlert1w", required = false) Boolean expiryAlert1w,
             Principal principal,
             RedirectAttributes redirect) {
-        return saveSettings(principal, autoDraftEnabled, emailNotificationEnabled,
+        return saveSettings(principal, emailNotificationEnabled,
                 expiryAlert6m, expiryAlert3m, expiryAlert1m, expiryAlert1w,
                 redirect, "/user/academic/settings");
     }
 
     @PostMapping("/admin/academic/settings")
     public String saveAdminSettings(
-            @RequestParam(value = "autoDraftEnabled", required = false) Boolean autoDraftEnabled,
             @RequestParam(value = "emailNotificationEnabled", required = false) Boolean emailNotificationEnabled,
             @RequestParam(value = "expiryAlert6m", required = false) Boolean expiryAlert6m,
             @RequestParam(value = "expiryAlert3m", required = false) Boolean expiryAlert3m,
@@ -133,7 +131,7 @@ public class AcademicSettingsController {
             @RequestParam(value = "expiryAlert1w", required = false) Boolean expiryAlert1w,
             Principal principal,
             RedirectAttributes redirect) {
-        return saveSettings(principal, autoDraftEnabled, emailNotificationEnabled,
+        return saveSettings(principal, emailNotificationEnabled,
                 expiryAlert6m, expiryAlert3m, expiryAlert1m, expiryAlert1w,
                 redirect, "/admin/academic/settings");
     }
@@ -310,13 +308,13 @@ public class AcademicSettingsController {
     // =================== Private Helper ===================
 
     private String saveSettings(Principal principal,
-            Boolean autoDraftEnabled, Boolean emailNotificationEnabled,
+            Boolean emailNotificationEnabled,
             Boolean expiryAlert6m, Boolean expiryAlert3m,
             Boolean expiryAlert1m, Boolean expiryAlert1w,
             RedirectAttributes redirect, String redirectPath) {
         try {
             UserDtls user = userRepository.findByEmail(principal.getName());
-            user.setAutoDraftEnabled(autoDraftEnabled != null);
+            user.setAutoDraftEnabled(true);
             user.setEmailNotificationEnabled(emailNotificationEnabled != null);
             user.setExpiryAlert6m(expiryAlert6m != null);
             user.setExpiryAlert3m(expiryAlert3m != null);
@@ -352,7 +350,7 @@ public class AcademicSettingsController {
         try {
             UserDtls user = userRepository.findByEmail(principal.getName());
             switch (key) {
-                case "autoDraftEnabled" -> user.setAutoDraftEnabled(Boolean.parseBoolean(value));
+                case "autoDraftEnabled" -> user.setAutoDraftEnabled(true);
                 case "emailNotificationEnabled" -> user.setEmailNotificationEnabled(Boolean.parseBoolean(value));
                 case "expiryAlert6m" -> user.setExpiryAlert6m(Boolean.parseBoolean(value));
                 case "expiryAlert3m" -> user.setExpiryAlert3m(Boolean.parseBoolean(value));

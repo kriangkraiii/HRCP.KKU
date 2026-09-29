@@ -169,6 +169,9 @@ public class UserDtls {
 	@PreUpdate
 	protected void onUpdate() {
 		updatedDate = new Date();
+		if (autoDraftEnabled == null || !autoDraftEnabled) {
+			autoDraftEnabled = true;
+		}
 	}
 
 	// Getters and Setters
@@ -419,11 +422,11 @@ public class UserDtls {
 	}
 
 	public Boolean getAutoDraftEnabled() {
-		return autoDraftEnabled;
+		return autoDraftEnabled == null || autoDraftEnabled;
 	}
 
 	public void setAutoDraftEnabled(Boolean autoDraftEnabled) {
-		this.autoDraftEnabled = autoDraftEnabled;
+		this.autoDraftEnabled = true;
 	}
 
 	public String getThemePreference() {

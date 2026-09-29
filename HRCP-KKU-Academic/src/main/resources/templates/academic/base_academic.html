@@ -195,8 +195,8 @@
             </th:block>
         </nav>
 
-        <script th:inline="javascript">
-            window.AUTO_DRAFT_ENABLED = /*[[${user != null && user.autoDraftEnabled != null ? user.autoDraftEnabled : true}]]*/ true;
+        <script>
+            window.AUTO_DRAFT_ENABLED = true;
         </script>
         <script src="/js/auto_draft.js?v=4.1"></script>
         <!-- ตรวจช่องที่ยังไม่ได้กรอก แล้วบันทึกเอกสารให้ก่อนส่งไปลงนาม -->

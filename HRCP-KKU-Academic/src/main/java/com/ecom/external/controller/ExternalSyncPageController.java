@@ -124,7 +124,6 @@ public class ExternalSyncPageController {
         sourceCounts.put("SCOPUS", 0L);
         sourceCounts.put("OPENALEX", 0L);
         sourceCounts.put("CROSSREF", 0L);
-        sourceCounts.put("DBLP", 0L);
         sourceCounts.put("THAIJO", 0L);
         sourceCounts.put("KKU_IR", 0L);
 
@@ -157,7 +156,6 @@ public class ExternalSyncPageController {
                 new SyncJobDisplay("scopus", "ผลงาน Scopus เดิม", "fas fa-book", "text-success", "งานวิจัย", jobs.get(FsSyncState.TYPE_SCOPUS)),
                 new SyncJobDisplay("openalex", "OpenAlex (Global Works API)", "fas fa-globe", "text-info", "งานวิจัย", jobs.get("openalex")),
                 new SyncJobDisplay("crossref", "Crossref (DOI Registry)", "fas fa-crosshairs", "text-warning", "งานวิจัย", jobs.get("crossref")),
-                new SyncJobDisplay("dblp", "DBLP (Computer Science Bibliography)", "fas fa-laptop-code", "text-primary", "งานวิจัย", jobs.get("dblp")),
                 new SyncJobDisplay("thaijo", "ThaiJO (วารสารวิชาการไทย OAI-PMH)", "fas fa-file-lines", "text-danger", "งานวิจัย", jobs.get("thaijo")),
                 new SyncJobDisplay("kkuir", "KKU IR (คลังสถาบัน มข. DSpace)", "fas fa-building-columns", "text-secondary", "งานวิจัย", jobs.get("kkuir")),
                 new SyncJobDisplay("kku_regulations", "คลังข้อบังคับ & ประกาศ มข. (hr2.kku.ac.th)", "fas fa-landmark", "text-warning", "เอกสาร/ระเบียบ", kkuDocSyncService.getSyncState())
@@ -255,8 +253,8 @@ public class ExternalSyncPageController {
                                         "bg-success"
                                 ),
                                 new ScheduleItem(
-                                        "งานวิจัย 5 แหล่งใหม่ (OpenAlex, Crossref, DBLP, ThaiJO, KKU IR)",
-                                        "ดึงผลงานจาก 5 แหล่งพร้อมกันแบบ Parallel ผ่าน Virtual Threads, ทำ Deduplication 2.5 ชั้น และตรวจระดับวารสาร SJR/TCI",
+                                        "งานวิจัย 4 แหล่งใหม่ (OpenAlex, Crossref, ThaiJO, KKU IR)",
+                                        "ดึงผลงานจาก 4 แหล่งพร้อมกันแบบ Parallel ผ่าน Virtual Threads, ทำ Deduplication 2.5 ชั้น และตรวจระดับวารสาร SJR/TCI",
                                         harvestCron,
                                         "ทุกวัน เวลา 02:30 น.",
                                         describeNext(harvestCron),
