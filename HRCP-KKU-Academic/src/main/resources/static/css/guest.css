@@ -41,9 +41,15 @@
     --g-ease: cubic-bezier(0.16, 1, 0.3, 1);
 }
 
+html {
+    height: 100%;
+}
+
 body {
     font-family: var(--g-font);
+    height: 100%;
     min-height: 100vh;
+    min-height: 100dvh;
     background: var(--g-navy-deep);
     color: var(--g-text);
     -webkit-font-smoothing: antialiased;
@@ -52,7 +58,12 @@ body {
 /* ---------- Split Layout ---------- */
 .guest-split {
     display: flex;
+    height: 100vh;
+    height: 100dvh;
     min-height: 100vh;
+    min-height: 100dvh;
+    width: 100%;
+    overflow: hidden;
 }
 
 /* Brand Panel (left side on desktop) */
@@ -1007,7 +1018,21 @@ body {
 }
 
 /* ---------- Google Translate Hidden ---------- */
-.goog-te-banner-frame.skiptranslate { display: none !important; }
+.goog-te-banner-frame,
+.goog-te-banner-frame.skiptranslate,
+iframe[class*="goog-te-banner-frame"],
+iframe.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.VIpgJd-ZVi9od-ORHb-OEVmcd,
+.goog-te-spinner-pos,
+div[id^="goog-gt-"],
+div[id*=".container"] {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    width: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
 body { top: 0px !important; }
 .goog-te-gadget { font-size: 0 !important; }
 .skiptranslate { display: none !important; }
@@ -1021,9 +1046,43 @@ body { top: 0px !important; }
 }
 
 /* ---------- Responsive ---------- */
+@media (min-width: 768px) {
+    html, body {
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .guest-split {
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .guest-brand {
+        height: 100%;
+        overflow: hidden;
+    }
+
+    .guest-form {
+        height: 100%;
+        overflow-y: auto;
+    }
+}
+
 @media (max-width: 767px) {
+    html, body {
+        height: auto;
+        min-height: 100%;
+        overflow-y: auto;
+    }
+
     .guest-split {
         flex-direction: column;
+        height: auto;
+        min-height: 100vh;
+        min-height: 100dvh;
+        overflow: visible;
     }
 
     .guest-brand {
