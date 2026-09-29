@@ -76,20 +76,16 @@
                                 <!-- currentTitle: อ่านผ่าน map['key'] เพราะ map.key จะโยน
                                      exception ถ้าไม่มีคีย์นั้น ซึ่งเกิดกับผู้ใช้ที่ยังไม่ได้ตั้งคำนำหน้า -->
                                 <select name="title" class="form-select" id="titleSelect" required
-                                        th:with="currentTitle=${(dData != null ? dData['title'] : null) ?: request.applicant.title}">
+                                        th:with="storedTitle=${(dData != null ? dData['title'] : null) ?: request.applicant.title},
+                                                 currentTitle=${#strings.trim(#strings.replace(storedTitle, 'ดร.', ''))}">
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย" th:selected="${currentTitle == 'นาย'}">นาย</option>
                                     <option value="นาง" th:selected="${currentTitle == 'นาง'}">นาง</option>
                                     <option value="นางสาว" th:selected="${currentTitle == 'นางสาว'}">นางสาว</option>
-                                    <option value="ดร." th:selected="${currentTitle == 'ดร.'}">ดร.</option>
-                                    <option value="อาจารย์" th:selected="${currentTitle == 'อาจารย์' or currentTitle == 'อ.'}">อาจารย์</option>
-                                    <option value="อ.ดร." th:selected="${currentTitle == 'อ.ดร.' or currentTitle == 'อาจารย์ ดร.'}">อาจารย์ ดร.</option>
+                                    <option value="อาจารย์" th:selected="${currentTitle == 'อาจารย์' or currentTitle == 'อ.' or storedTitle == 'ดร.'}">อาจารย์</option>
                                     <option value="ผู้ช่วยศาสตราจารย์" th:selected="${currentTitle == 'ผู้ช่วยศาสตราจารย์' or currentTitle == 'ผศ.'}">ผู้ช่วยศาสตราจารย์</option>
-                                    <option value="ผศ.ดร." th:selected="${currentTitle == 'ผศ.ดร.' or currentTitle == 'ผู้ช่วยศาสตราจารย์ ดร.' or currentTitle == 'ผู้ช่วยศาสตราจารย์ดร.'}">ผู้ช่วยศาสตราจารย์ ดร.</option>
                                     <option value="รองศาสตราจารย์" th:selected="${currentTitle == 'รองศาสตราจารย์' or currentTitle == 'รศ.'}">รองศาสตราจารย์</option>
-                                    <option value="รศ.ดร." th:selected="${currentTitle == 'รศ.ดร.' or currentTitle == 'รองศาสตราจารย์ ดร.' or currentTitle == 'รองศาสตราจารย์ดร.'}">รองศาสตราจารย์ ดร.</option>
                                     <option value="ศาสตราจารย์" th:selected="${currentTitle == 'ศาสตราจารย์' or currentTitle == 'ศ.'}">ศาสตราจารย์</option>
-                                    <option value="ศ.ดร." th:selected="${currentTitle == 'ศ.ดร.' or currentTitle == 'ศาสตราจารย์ ดร.' or currentTitle == 'ศาสตราจารย์ดร.'}">ศาสตราจารย์ ดร.</option>
                                 </select>
                             </div>
                             <div class="col-md-5">

@@ -30,7 +30,7 @@
 
 								<div class="row mb-3" th:if="${editUser.applicantId != null}">
 									<div class="col-md-12">
-										<label class="form-label fw-bold">Applicant ID</label>
+										<label class="form-label fw-bold">รหัสผู้ยื่น</label>
 										<div>
 											<span class="badge bg-primary fs-6 px-3 py-2">[[${editUser.applicantId}]]</span>
 										</div>
@@ -102,8 +102,8 @@
 											<option value="ROLE_ADMIN" th:selected="${editUser.role == 'ROLE_ADMIN'}"> ผู้ดูแลระบบ</option>
 										</select>
 										<div class="form-text text-muted" id="roleNotice">
-											<span th:if="${editUser.role == 'ROLE_USER'}"> หากเปลี่ยนเป็นผู้ดูแลระบบ เลข Applicant ID จะถูกลบออกอัตโนมัติ</span>
-											<span th:if="${editUser.role == 'ROLE_ADMIN'}"> บัญชีผู้ดูแลระบบจะไม่มี Applicant ID</span>
+											<span th:if="${editUser.role == 'ROLE_USER'}"> หากเปลี่ยนเป็นผู้ดูแลระบบ รหัสผู้ยื่นจะถูกลบออก</span>
+											<span th:if="${editUser.role == 'ROLE_ADMIN'}"> บัญชีผู้ดูแลระบบไม่มีรหัสผู้ยื่น</span>
 										</div>
 									</div>
 								</div>

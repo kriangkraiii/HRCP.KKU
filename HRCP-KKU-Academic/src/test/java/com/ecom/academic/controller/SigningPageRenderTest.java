@@ -114,7 +114,7 @@ class SigningPageRenderTest {
                 .andExpect(content().string(
                         org.hamcrest.Matchers.containsString("/esign/envelope/create")))
                 .andExpect(content().string(
-                        org.hamcrest.Matchers.containsString("บันทึกและส่งลงนามในส่วนของผู้ยื่นคำร้อง")))
+                        org.hamcrest.Matchers.containsString("บันทึกและไปลงนาม")))
                 .andExpect(content().string(
                         org.hamcrest.Matchers.containsString("บันทึกฉบับร่าง")));
     }

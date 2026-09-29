@@ -27,7 +27,8 @@
                   th:classappend="'bg-' + ${signaturePanel.activeEnvelope.status.color}"
                   th:text="${signaturePanel.activeEnvelope.status.thaiLabel}">สถานะ</span>
             <span th:unless="${signaturePanel.locked}" class="badge rounded-pill bg-light text-secondary border px-3 py-2">
-                <i class="fas fa-clock me-1"></i> ยังไม่ได้ส่งเวียนลงนาม
+                <i class="fas fa-clock me-1"></i>
+                <span th:text="${signaturePanel.isAdminViewer} ? 'ยังไม่ได้ส่งเวียนลงนาม' : 'ยังไม่ได้ลงนาม'">ยังไม่ได้ลงนาม</span>
             </span>
         </div>
     </div>
@@ -41,7 +42,7 @@
             <div class="alert alert-warning border-0 bg-warning-subtle text-dark d-flex align-items-center gap-3 p-3 rounded-3 mb-3">
                 <i class="fas fa-lock fa-2x text-warning flex-shrink-0"></i>
                 <div class="small">
-                    <strong>เอกสารถูกล็อก</strong> เนื่องจากอยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว
+                    <strong>แก้ไขเอกสารไม่ได้</strong> เพราะส่งไปลงนามแล้ว
                     <span th:replace="~{academic/_info_tip :: tip('หากพบข้อผิดพลาด เจ้าหน้าที่ส่งเอกสารกลับให้ผู้ยื่นแก้ไขและลงนามใหม่ได้')}"></span>
                 </div>
             </div>
@@ -101,10 +102,10 @@
                  class="alert alert-info border-0 bg-info-subtle text-dark d-flex align-items-start gap-3 p-3 rounded-3 mb-3">
                 <i class="fas fa-hourglass-half fa-lg text-info mt-1 flex-shrink-0"></i>
                 <div class="small">
-                    <strong>รอเจ้าหน้าที่ตรวจสอบก่อนเวียนลงนาม</strong>
+                    <strong th:text="${signaturePanel.isAdminViewer} ? 'รอเจ้าหน้าที่ตรวจสอบก่อนเวียนลงนาม' : 'รอเจ้าหน้าที่ตรวจเอกสาร'">รอเจ้าหน้าที่ตรวจเอกสาร</strong>
                     <div class="text-secondary mt-1">
                         <span th:unless="${signaturePanel.isAdminViewer}">
-                            เจ้าหน้าที่จะตรวจเอกสารและไฟล์แนบ แล้วเวียนลงนามไปยังผู้บริหารตามลำดับ
+                            เจ้าหน้าที่จะตรวจเอกสารและไฟล์แนบ แล้วส่งให้ผู้บริหารลงนามตามลำดับ
                         </span>
                         <span th:if="${signaturePanel.isAdminViewer}">
                             กรุณาตรวจเอกสารและไฟล์แนบ แล้วกดเริ่มเวียนลงนาม
@@ -396,7 +397,9 @@
               data-presave-doc="true"
               th:attr="data-optional-fields=${docOptionalFields},
                        data-repeatable-prefixes=${docRepeatablePrefixes}"
-              data-confirm="ส่งเอกสารไปลงนาม? ฟอร์มจะถูกล็อกไม่ให้แก้ไขจนกว่าจะลงนามครบหรือยกเลิก">
+              th:data-confirm="${signaturePanel.isAdminViewer}
+                  ? 'ส่งเอกสารไปลงนาม? ฟอร์มจะถูกล็อกไม่ให้แก้ไขจนกว่าจะลงนามครบหรือยกเลิก'
+                  : 'บันทึกเอกสารและไปลงนาม? หลังลงนามแล้วจะแก้ไขเอกสารไม่ได้ ถ้าต้องแก้ ถอนลายเซ็นได้จนกว่าจะส่งคำร้อง'">
             <input type="hidden" name="module" th:value="${signatureModule}">
             <input type="hidden" name="requestId" th:value="${request.id}">
             <input type="hidden" name="documentType" th:value="${documentType != null ? documentType : (currentDocType != null ? currentDocType : 0)}">
@@ -407,10 +410,13 @@
                     <div class="d-flex align-items-start gap-2">
                         <i class="fas fa-pen-nib text-primary fa-lg mt-1"></i>
                         <div>
-                            <strong class="d-block mb-1">การลงนามในส่วนของผู้ยื่นคำร้อง
-                                <span th:replace="~{academic/_info_tip :: tip('เมื่อท่านลงนามและยื่นคำร้องแล้ว เจ้าหน้าที่จะตรวจเอกสาร แล้วเวียนลงนามไปยังหัวหน้าสาขาวิชาและคณบดีตามลำดับ')}"></span>
-                            </strong>
-                            <p class="small text-secondary mb-0">ท่านลงนามเฉพาะในส่วนของผู้ยื่นคำร้อง</p>
+                            <strong class="d-block mb-1">ลงนามเอกสารฉบับนี้</strong>
+                            <p class="small text-secondary mb-0" th:if="${#lists.size(signaturePanel.slots) > 1}">
+                                ท่านลงนามก่อน ส่วนผู้ลงนามคนอื่น เจ้าหน้าที่จะส่งให้ลงนามต่อหลังท่านยื่นคำร้อง
+                            </p>
+                            <p class="small text-secondary mb-0" th:unless="${#lists.size(signaturePanel.slots) > 1}">
+                                เอกสารฉบับนี้ท่านลงนามคนเดียว
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -436,7 +442,8 @@
                                 <span th:text="${slot.roleLabel}">ผู้ขอรับการประเมิน</span>
                             </span>
                             <span class="badge bg-success-subtle text-success border border-success-subtle">
-                                <i class="fas fa-user-check me-1"></i> ผู้ยื่นคำร้อง (ลงนามด้วยตนเอง)
+                                <i class="fas fa-user-check me-1"></i>
+                                <span th:text="${signaturePanel.isAdminViewer} ? 'ผู้ยื่นลงนามเอง' : 'ท่านลงนามเอง'">ท่านลงนามเอง</span>
                             </span>
                         </label>
                         <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
@@ -460,9 +467,6 @@
                             <div>
                                 <input type="hidden" name="signerUserIds"
                                        th:value="${signaturePanel.applicantOption != null ? signaturePanel.applicantOption.userId : (signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.userId : '')}">
-                                <span class="badge bg-white text-muted border">
-                                    <i class="fas fa-lock text-primary me-1"></i> ล็อกผู้ยื่นอัตโนมัติ
-                                </span>
                             </div>
                         </div>
                     </div>
@@ -511,7 +515,7 @@
                         <div th:unless="${signaturePanel.isAdminViewer}" class="p-2 border rounded bg-light text-secondary small">
                             <i class="fas fa-user-clock text-muted me-1"></i>
                             <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
-                            <span class="text-muted">(เจ้าหน้าที่เป็นผู้เลือก)</span>
+                            <span class="text-muted">— เจ้าหน้าที่จะส่งให้ลงนามต่อ</span>
                             <input type="hidden" name="signerUserIds" value="">
                         </div>
                     </div>
@@ -539,12 +543,12 @@
 
             <div class="d-flex flex-wrap gap-2 align-items-center mt-3">
                 <button type="button" class="btn btn-outline-secondary px-4 py-2" id="panelSaveDraftBtn" data-action="save-doc-draft"
-                        title="บันทึกข้อมูลแบบร่างไว้ก่อน ยังไม่ส่งเวียนลงนาม">
+                        title="บันทึกไว้ก่อน ยังไม่ส่งไปลงนาม">
                     <i class="fas fa-save me-1"></i> บันทึกฉบับร่าง
                 </button>
                 <button type="submit" class="btn btn-academic px-4 py-2">
                     <i class="fas fa-paper-plane me-1"></i>
-                    <span th:if="${!signaturePanel.isAdminViewer}">บันทึกและส่งลงนามในส่วนของผู้ยื่นคำร้อง</span>
+                    <span th:if="${!signaturePanel.isAdminViewer}">บันทึกและไปลงนาม</span>
                     <span th:if="${signaturePanel.isAdminViewer}">ยืนยันความถูกต้องและส่งเวียนลงนาม</span>
                 </button>
             </div>

@@ -126,8 +126,8 @@
                         <option value="ROLE_USER" th:selected="${admin.role == 'ROLE_USER'}"> ผู้ใช้งานทั่วไป (User)</option>
                       </select>
                       <div class="form-text text-muted" id="roleNotice">
-                        <span th:if="${admin.role == 'ROLE_ADMIN'}"> บัญชีผู้ดูแลระบบ จะไม่มี Applicant ID</span>
-                        <span th:if="${admin.role == 'ROLE_USER'}"> หากเปลี่ยนเป็นผู้ใช้ทั่วไป จะได้รับรหัส Applicant ID อัตโนมัติ</span>
+                        <span th:if="${admin.role == 'ROLE_ADMIN'}"> บัญชีผู้ดูแลระบบไม่มีรหัสผู้ยื่น</span>
+                        <span th:if="${admin.role == 'ROLE_USER'}"> หากเปลี่ยนเป็นผู้ใช้ทั่วไป ระบบจะออกรหัสผู้ยื่นให้</span>
                       </div>
                     </div>
                   </div>

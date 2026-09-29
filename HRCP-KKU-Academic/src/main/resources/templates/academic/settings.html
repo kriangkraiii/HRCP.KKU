@@ -906,7 +906,7 @@
                 if (btnText) btnText.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> กำลังส่งผ่าน KKU SMTP...';
                 if (alertArea) {
                     alertArea.style.display = 'block';
-                    alertArea.innerHTML = '<div class="alert alert-info py-2 mb-0 small"><i class="fas fa-spinner fa-spin me-1"></i> กำลังเชื่อมต่อไปยัง smtp.kku.ac.th:587 และทำการส่งอีเมลทดสอบ...</div>';
+                    alertArea.innerHTML = '<div class="alert alert-info py-2 mb-0 small"><i class="fas fa-spinner fa-spin me-1"></i> กำลังเชื่อมต่อ smtp.kku.ac.th:587 และส่งอีเมลทดสอบ...</div>';
                 }
 
                 var reqUrl = (basePath ? basePath : '/admin/academic/settings') + '/test-email';
