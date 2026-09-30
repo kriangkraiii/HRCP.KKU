@@ -88,7 +88,8 @@
                             <span class="badge rounded-pill px-2 py-1"
                                   th:classappend="'bg-' + ${s.status.color}"
                                   th:text="${s.status.thaiLabel}">สถานะ</span>
-                            <a th:if="${s.status.name() == 'ACTIVE' and (signaturePanel.isAdminViewer or (signaturePanel.currentUserOption != null and s.signer != null and s.signer.id == signaturePanel.currentUserOption.userId))}"
+                            <!-- เฉพาะผู้ลงนามของขั้นนี้ — เดิมขึ้นให้เจ้าหน้าที่ทุกขั้น ดูเหมือนลงนามแทนได้ (เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว) -->
+                            <a th:if="${s.status.name() == 'ACTIVE' and signaturePanel.currentUserOption != null and s.signer != null and s.signer.id == signaturePanel.currentUserOption.userId}"
                                th:href="@{'/esign/sign/' + ${s.id}}"
                                class="btn btn-sm btn-primary px-3">
                                 <i class="fas fa-pen-nib me-1"></i> ลงนามตอนนี้
@@ -140,10 +141,19 @@
             <div th:if="${signaturePanel.isAdminViewer and signaturePanel.forwardable and !(onHoldForApplicant != null and onHoldForApplicant)}"
                  class="card border-primary border-opacity-25 rounded-3 mb-3">
                 <div class="card-header bg-primary bg-opacity-10 py-2 px-3 fw-semibold small text-primary">
-                    <i class="fas fa-share me-1"></i> ตรวจสอบแล้ว — ส่งเวียนลงนามต่อ
+                    <th:block th:if="${signaturePanel.reviewerSignsNext}">
+                        <i class="fas fa-signature me-1"></i> ตรวจสอบแล้ว — ลงนามในตำแหน่ง<span
+                            th:each="slot : ${signaturePanel.unfilledSlots()}" th:text="${slot.roleLabel}"></span>
+                    </th:block>
+                    <th:block th:unless="${signaturePanel.reviewerSignsNext}">
+                        <i class="fas fa-share me-1"></i> ตรวจสอบแล้ว — ส่งเวียนลงนามต่อ
+                    </th:block>
                 </div>
                 <div class="card-body p-3">
-                    <p class="text-secondary small mb-3">เลือกผู้ลงนามในตำแหน่งที่เหลือ</p>
+                    <p class="text-secondary small mb-3" th:unless="${signaturePanel.reviewerSignsNext}">เลือกผู้ลงนามในตำแหน่งที่เหลือ</p>
+                    <p class="text-secondary small mb-3" th:if="${signaturePanel.reviewerSignsNext}">
+                        ผู้ตรวจสอบเอกสารเป็นผู้ลงนามในตำแหน่งนี้เอง กดยืนยันแล้วระบบพาไปหน้าลงนามด้วย Digital ID
+                    </p>
 
                     <!-- data-presave-doc: ช่องของเจ้าหน้าที่ที่กรอกหลังผู้ยื่นลงนาม บันทึกผ่านร่างอัตโนมัติ
                          ไม่มีปุ่มบันทึกแยก จึงต้อง flush ให้เสร็จก่อนส่งต่อ ไม่งั้นค่าที่เพิ่งพิมพ์ยังไม่ถึงเซิร์ฟเวอร์
@@ -155,7 +165,9 @@
                                    data-repeatable-prefixes=${docRepeatablePrefixes}"
                           method="post"
                           data-presave-doc="true" data-presave-skip-checks="true"
-                          data-confirm="ยืนยันความถูกต้องและส่งเวียนลงนามต่อ? ระบบจะแจ้งเตือนผู้ลงนามลำดับถัดไปทันที">
+                          th:data-confirm="${signaturePanel.reviewerSignsNext}
+                              ? 'ยืนยันความถูกต้องของเอกสาร และไปลงนามด้วย Digital ID ของท่าน?'
+                              : 'ยืนยันความถูกต้องและส่งเวียนลงนามต่อ? ระบบจะแจ้งเตือนผู้ลงนามลำดับถัดไปทันที'">
                         <div class="row g-3">
                             <div class="col-md-6" th:each="slot, iter : ${signaturePanel.unfilledSlots()}">
                                 <label class="form-label mb-1">
@@ -163,7 +175,18 @@
                                     <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
                                 </label>
                                 <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
-                                <select name="signerUserIds" class="form-select signer-searchable-select">
+                                <!-- ช่องที่ผู้ตรวจลงนามเอง (SignatureAnchorRegistry.isSignedByReviewer) — ไม่มีตัวเลือก
+                                     เซิร์ฟเวอร์ปฏิเสธถ้าส่งชื่อคนอื่นมา -->
+                                <div th:if="${signaturePanel.isReviewerSlot(slot.slotKey)}"
+                                     class="p-2 border rounded bg-light d-flex align-items-center gap-2" data-reviewer-signs>
+                                    <i class="fas fa-user-pen text-primary"></i>
+                                    <span class="fw-semibold"
+                                          th:text="'ฉัน — ' + ${signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.displayName : ''}">ฉัน</span>
+                                    <input type="hidden" name="signerUserIds"
+                                           th:value="${signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.userId : ''}">
+                                </div>
+                                <select name="signerUserIds" class="form-select signer-searchable-select"
+                                        th:unless="${signaturePanel.isReviewerSlot(slot.slotKey)}">
                                     <option value="">— ยังไม่ส่งในรอบนี้ —</option>
 
                                     <optgroup label="ลงนามเอง" th:if="${signaturePanel.currentUserOption != null}">
@@ -192,7 +215,7 @@
                                 </select>
                             </div>
 
-                            <div class="col-md-6">
+                            <div class="col-md-6" th:unless="${signaturePanel.reviewerSignsNext}">
                                 <label class="form-label">กำหนดลงนามภายใน (ไม่บังคับ)</label>
                                 <input type="datetime-local" name="dueAt" class="form-control"
                                        th:value="${signaturePanel.activeEnvelope.dueAt != null ? #temporals.format(signaturePanel.activeEnvelope.dueAt, 'yyyy-MM-dd''T''HH:mm') : ''}">
@@ -200,8 +223,11 @@
                             </div>
                         </div>
 
-                        <button type="submit" class="btn btn-academic px-4 py-2 mt-3">
+                        <button type="submit" class="btn btn-academic px-4 py-2 mt-3" th:unless="${signaturePanel.reviewerSignsNext}">
                             <i class="fas fa-paper-plane me-1"></i> ยืนยันความถูกต้องและส่งเวียนลงนามต่อ
+                        </button>
+                        <button type="submit" class="btn btn-academic px-4 py-2 mt-3" th:if="${signaturePanel.reviewerSignsNext}">
+                            <i class="fas fa-signature me-1"></i> ยืนยันความถูกต้องและลงนาม
                         </button>
                     </form>
                 </div>
@@ -328,13 +354,21 @@
             <div class="d-flex align-items-center gap-3 flex-wrap" th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer}">
                 <form th:action="@{'/esign/envelope/' + ${signaturePanel.activeEnvelope.id} + '/cancel'}"
                       method="post" class="d-flex gap-2 align-items-center flex-grow-1"
-                      data-confirm="ยกเลิกการเวียนลงนาม? ลายเซ็นที่ลงไปแล้วจะเป็นโมฆะทั้งหมด">
+                      th:data-confirm="${signaturePanel.forwardWithdrawable}
+                          ? 'ถอนผู้ลงนามที่ส่งต่อไป? ลายเซ็นของผู้ยื่นยังอยู่ แก้ช่องของเจ้าหน้าที่แล้วส่งเวียนต่อได้'
+                          : 'ยกเลิกการเวียนลงนาม? ลายเซ็นที่ลงไปแล้วจะเป็นโมฆะทั้งหมด'">
                     <input type="text" name="reason" class="form-control form-control-sm"
                            maxlength="500" placeholder="ระบุเหตุผลหากต้องการยกเลิกการเวียนลงนามนี้">
                     <button type="submit" class="btn btn-sm btn-outline-danger flex-shrink-0">
                         <i class="fas fa-ban me-1"></i> ยกเลิกการเวียนลงนาม
                     </button>
-                    <span th:replace="~{academic/_info_tip :: tip('ใช้เมื่อส่วนของเจ้าหน้าที่ต้องแก้ เช่น เลือกผู้ลงนามผิด ลายเซ็นรอบนี้จะถูกยกเลิก และเจ้าหน้าที่แก้แล้วส่งเวียนใหม่ได้ ผู้ยื่นแก้ไม่ได้ — ถ้าส่วนของผู้ยื่นผิด ให้ใช้ “ส่งกลับให้แก้ไขและลงนามใหม่”')}"></span>
+                    <!--/* ข้อความต่างกันตามสิ่งที่จะเกิดจริง — ดู SignatureRequest.forwardedStepsToWithdraw */-->
+                    <th:block th:if="${signaturePanel.forwardWithdrawable}">
+                        <span th:replace="~{academic/_info_tip :: tip('ใช้เมื่อส่วนของเจ้าหน้าที่ต้องแก้ เช่น เลือกผู้ลงนามผิด หรือกรอกช่องของเจ้าหน้าที่ผิด ระบบถอนเฉพาะผู้ลงนามที่ส่งต่อไปและยังไม่ได้ลงนาม ลายเซ็นของผู้ยื่นยังอยู่ แก้แล้วส่งเวียนลงนามต่อได้เลย ผู้ยื่นไม่ต้องลงนามใหม่ — ถ้าส่วนของผู้ยื่นผิด ให้ใช้ “ส่งกลับให้แก้ไขและลงนามใหม่”')}"></span>
+                    </th:block>
+                    <th:block th:unless="${signaturePanel.forwardWithdrawable}">
+                        <span th:replace="~{academic/_info_tip :: tip('ใช้เมื่อส่วนของเจ้าหน้าที่ต้องแก้ เช่น เลือกผู้ลงนามผิด ลายเซ็นรอบนี้จะถูกยกเลิก และเจ้าหน้าที่แก้แล้วส่งเวียนใหม่ได้ ผู้ยื่นแก้ไม่ได้ — ถ้าส่วนของผู้ยื่นผิด ให้ใช้ “ส่งกลับให้แก้ไขและลงนามใหม่”')}"></span>
+                    </th:block>
                 </form>
             </div>
         </div>
@@ -511,8 +545,18 @@
                         </label>
                         <input type="hidden" name="slotKeys" th:value="${slot.slotKey}">
 
+                        <!-- ช่องที่ผู้ตรวจลงนามเอง: เจ้าหน้าที่ที่ส่งรอบนี้คือผู้ลงนาม ไม่มีตัวเลือก -->
+                        <div th:if="${signaturePanel.isAdminViewer and signaturePanel.isReviewerSlot(slot.slotKey)}"
+                             class="p-2 border rounded bg-light d-flex align-items-center gap-2" data-reviewer-signs>
+                            <i class="fas fa-user-pen text-primary"></i>
+                            <span class="fw-semibold"
+                                  th:text="'ฉัน — ' + ${signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.displayName : ''}">ฉัน</span>
+                            <input type="hidden" name="signerUserIds"
+                                   th:value="${signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.userId : ''}">
+                        </div>
+
                         <!-- สำหรับ Admin: สามารถค้นหาและเลือกผู้ลงนามได้ -->
-                        <div th:if="${signaturePanel.isAdminViewer}">
+                        <div th:if="${signaturePanel.isAdminViewer and !signaturePanel.isReviewerSlot(slot.slotKey)}">
                             <select name="signerUserIds" class="form-select signer-searchable-select">
                                 <option value="">— ไม่ลงนามในรอบนี้ —</option>
 

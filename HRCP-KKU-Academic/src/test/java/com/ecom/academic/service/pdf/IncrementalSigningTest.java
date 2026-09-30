@@ -189,6 +189,22 @@ class IncrementalSigningTest {
                 .containsEntry("chk_off_1", "");
     }
 
+    @Test
+    @DisplayName("วันที่ลงนามในไฟล์เป็น ค.ศ. แม้เครื่องตั้งรูปแบบภูมิภาคเป็นไทย (ปฏิทินพุทธ)")
+    void signDateIsGregorianUnderThaiLocale() {
+        java.util.Locale format = java.util.Locale.getDefault(java.util.Locale.Category.FORMAT);
+        try {
+            java.util.Locale.setDefault(java.util.Locale.Category.FORMAT, java.util.Locale.forLanguageTag("th-TH"));
+            Calendar cal = IncrementalSigningService.calendar(java.time.LocalDateTime.of(2026, 9, 4, 15, 30, 45));
+            // PDFBox เขียน /M จาก YEAR ของปฏิทินนี้ตรง ๆ — ปฏิทินพุทธจะได้ D:2569…
+            assertThat(cal.getCalendarType()).isEqualTo("gregory");
+            assertThat(cal.get(Calendar.YEAR)).isEqualTo(2026);
+            assertThat(cal.get(Calendar.HOUR_OF_DAY)).isEqualTo(15);
+        } finally {
+            java.util.Locale.setDefault(java.util.Locale.Category.FORMAT, format);
+        }
+    }
+
     private static final String DOC2_JSON = "{\"applicant_name\":\"นายสมชาย ใจดี\",\"title\":\"นาย\"}";
 
     /** เอกสารที่ 2 ฉบับเริ่มลงนาม — จองช่องของเจ้าหน้าที่ (✓ และหมายเหตุ) ไว้ทุกแถว */
@@ -243,6 +259,33 @@ class IncrementalSigningTest {
         assertThat(yOf(signedBase, belowTable))
                 .as("ตารางต้องสูงเท่าฉบับยังไม่ลงนาม")
                 .isCloseTo(yOf(unsigned, belowTable), org.assertj.core.data.Offset.offset(1.0f));
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 9 ลงนามแล้วหน้าตาเหมือนฉบับยังไม่ลงนาม — ช่องเลขที่/วันที่ที่จองไว้ไม่ดันบรรทัดลง")
+    void reservedOfficeFieldsDoNotPushTheLetterDown() throws Exception {
+        String json = "{\"applicant_name\":\"สมชาย ใจดี\",\"title\":\"นาย\",\"course_name\":\"โครงสร้างข้อมูล\"}";
+        byte[] unsigned = GEN.convertDocxToPdf(GEN.generateSignedDocx(9, json, List.of()));
+        byte[] signedBase = new BasePdfBuilder().build(new BasePdfBuilder.Renderer() {
+            @Override
+            public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures) throws IOException {
+                StringBuilder j = new StringBuilder(json.substring(0, json.length() - 1));
+                overrides.forEach((k, v) -> j.append(",\"").append(k).append("\":\"").append(v).append('"'));
+                return GEN.generateSignedDocx(9, j.append('}').toString(), pictures.stream()
+                        .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height())).toList());
+            }
+
+            @Override
+            public byte[] toPdf(byte[] docx) throws IOException {
+                return GEN.convertDocxToPdf(docx);
+            }
+        }, List.of(new BasePdfBuilder.TextSpec("memo_no", IncrementalSigningService.reserveFor("memo_no")),
+                new BasePdfBuilder.TextSpec("date", IncrementalSigningService.reserveFor("date"))), List.of()).pdf();
+
+        // บรรทัดใต้หัวหนังสือ: ถ้าช่องที่จองยาวจนวันที่ตกบรรทัด บรรทัดนี้จะถูกดันลง
+        assertThat(yOf(signedBase, "แจ้งผลการประเมินผลการสอน"))
+                .as("หัวหนังสือต้องสูงเท่าฉบับยังไม่ลงนาม")
+                .isCloseTo(yOf(unsigned, "แจ้งผลการประเมินผลการสอน"), org.assertj.core.data.Offset.offset(1.0f));
     }
 
     @Test

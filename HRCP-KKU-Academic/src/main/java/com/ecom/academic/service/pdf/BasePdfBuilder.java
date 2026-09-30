@@ -304,9 +304,9 @@ public final class BasePdfBuilder {
                             for (int n = lines.getOrDefault(l.getKey(), 1); n > 1; n--) {
                                 reserved += "</w:t><w:br/><w:t xml:space=\"preserve\">" + run;
                             }
-                            xml = xml.substring(0, tStart) + fixed + xml.substring(tEnd + 1, at)
-                                    + reserved
-                                    + xml.substring(at + token.length());
+                            String head = xml.substring(0, tStart) + fixed + xml.substring(tEnd + 1, at) + reserved;
+                            xml = head + xml.substring(at + token.length());
+                            xml = dropTrailingSpaces(xml, head.length());
                             seen.merge(l.getKey(), 1, Integer::sum);
                         }
                     }
@@ -318,6 +318,32 @@ public final class BasePdfBuilder {
             }
         }
         return out.toByteArray();
+    }
+
+    /**
+     * Removes plain spaces that follow a reserve at the very end of its paragraph.
+     *
+     * <p>LibreOffice wraps a run of non-breaking spaces onto a new line when only
+     * plain spaces come after it before the paragraph ends — however short the run,
+     * and although the same line takes a real value of any length. The page then
+     * grows a line and everything below moves down (document 9: "วันที่ {{date}}   ").
+     * Spaces at the end of a paragraph print nothing, so dropping them changes nothing
+     * else on the page.
+     *
+     * @param from index just past the reserve
+     */
+    static String dropTrailingSpaces(String xml, int from) {
+        int end = xml.indexOf("</w:p>", from);
+        if (end < 0) {
+            return xml;
+        }
+        String tail = xml.substring(from, end);
+        if (!tail.replaceAll("<[^>]+>", "").isBlank()) {
+            return xml; // more text follows on this paragraph — leave it alone
+        }
+        String trimmed = tail.replaceFirst("^ +", "")
+                .replaceAll("(<w:t(?:\\s[^>]*)?>) +(</w:t>)", "$1$2");
+        return xml.substring(0, from) + trimmed + xml.substring(end);
     }
 
     private static byte[] clearPng(int w, int h) throws IOException {

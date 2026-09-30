@@ -78,8 +78,15 @@ class SignatureCirculationTest extends AbstractFlowTest {
 
     private Result sendForSignature(SignatureModule module, Long requestId, int docType,
             List<SignerAssignment> signers) {
+        // ช่องที่ผู้ตรวจลงนามเอง (เอกสารที่ 2: นักทรัพยากรบุคคล) มอบให้ได้แต่คนที่ส่งรอบนี้เอง
+        // รอบที่มีช่องนั้นจึงส่งในนามเจ้าหน้าที่ผู้นั้น — ดู SignatureAnchorRegistry.isSignedByReviewer
+        UserDtls initiator = signers.stream()
+                .filter(a -> com.ecom.academic.service.SignatureAnchorRegistry.isSignedByReviewer(module, docType, a.slotKey()))
+                .map(a -> hrOfficer.getId().equals(a.signerUserId()) ? hrOfficer : null)
+                .filter(java.util.Objects::nonNull)
+                .findFirst().orElse(applicant);
         return workflow.createEnvelope(module, requestId, docType, "เอกสารทดสอบ",
-                "{\"applicant_name\":\"สมชาย ใจดี\"}", signers, null, applicant,
+                "{\"applicant_name\":\"สมชาย ใจดี\"}", signers, null, initiator,
                 ActorContext.none());
     }
 

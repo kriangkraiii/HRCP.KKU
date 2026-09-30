@@ -77,12 +77,23 @@ class PdfDigitalSignatureServiceTest {
         byte[] samplePdf = generateSamplePdf("บันทึกข้อความ");
 
         java.time.LocalDateTime specificTime = java.time.LocalDateTime.of(2026, 9, 4, 15, 30, 45);
-        byte[] signedPdf = service.signPdf(samplePdf, p12Bytes, testPin,
-                "รศ.ดร.วิชัย ทดสอบ", "อนุมัติ", "มข.", specificTime);
+        // เครื่องที่ตั้งรูปแบบภูมิภาคเป็นไทย Calendar.getInstance() ได้ปฏิทินพุทธ — วันที่ในไฟล์ PDF
+        // ต้องยังเป็น ค.ศ. เสมอ (เคยออกมาเป็น D:2569… ผู้อ่าน PDF เห็นเป็นปี ค.ศ. 2569)
+        java.util.Locale format = java.util.Locale.getDefault(java.util.Locale.Category.FORMAT);
+        byte[] signedPdf;
+        try {
+            java.util.Locale.setDefault(java.util.Locale.Category.FORMAT, java.util.Locale.forLanguageTag("th-TH"));
+            signedPdf = service.signPdf(samplePdf, p12Bytes, testPin,
+                    "รศ.ดร.วิชัย ทดสอบ", "อนุมัติ", "มข.", specificTime);
+        } finally {
+            java.util.Locale.setDefault(java.util.Locale.Category.FORMAT, format);
+        }
 
         try (PDDocument doc = Loader.loadPDF(signedPdf)) {
             PDSignature sig = doc.getSignatureDictionaries().get(0);
             assertNotNull(sig.getSignDate());
+            assertTrue(sig.getCOSObject().getString(org.apache.pdfbox.cos.COSName.M).startsWith("D:2026"),
+                    "sign date stored as " + sig.getCOSObject().getString(org.apache.pdfbox.cos.COSName.M));
             assertEquals(2026, sig.getSignDate().get(java.util.Calendar.YEAR));
             assertEquals(java.util.Calendar.SEPTEMBER, sig.getSignDate().get(java.util.Calendar.MONTH));
             assertEquals(4, sig.getSignDate().get(java.util.Calendar.DAY_OF_MONTH));

@@ -142,7 +142,11 @@ public class SigningController {
             return "redirect:/esign/inbox";
         }
 
-        workflow.recordView(step, me, actorContext());
+        // เจ้าหน้าที่เปิดดูขั้นของคนอื่นได้ แต่ไม่ใช่ "ผู้ลงนามเปิดดูเอกสารก่อนลงนาม" — เดิมการเปิดของ
+        // เจ้าหน้าที่ถูกบันทึกเป็นหลักฐานนั้นแทน และการเปิดจริงของผู้ลงนามภายหลังไม่ถูกบันทึกอีก
+        if (isSigner) {
+            workflow.recordView(step, me, actorContext());
+        }
 
         List<SignatureStep> inbox = workflow.findInbox(me);
         int queueTotal = inbox.size();
@@ -164,9 +168,13 @@ public class SigningController {
         var myCert = digitalCertificateService.findActive(me).orElse(null);
         boolean hasValidCert = myCert != null && !myCert.isExpired();
 
-        boolean canSign = step.getStatus() == SignatureStepStatus.ACTIVE
+        // เฉพาะผู้ลงนามของขั้นนี้ — เจ้าหน้าที่ที่เปิดดูเห็นเอกสารได้อย่างเดียว ไม่มีฟอร์มลงนาม
+        // (เดิมเห็นฟอร์มเต็มพร้อมลายเซ็นของตัวเอง แล้วค่อยถูกปฏิเสธตอนกดยืนยัน)
+        boolean canSign = isSigner
+                && step.getStatus() == SignatureStepStatus.ACTIVE
                 && envelope.getStatus().isOpen()
                 && (deadlineAdvisory || !envelope.isOverdue());
+        model.addAttribute("viewOnly", !isSigner);
 
         model.addAttribute("step", step);
         model.addAttribute("envelope", envelope);
@@ -199,9 +207,9 @@ public class SigningController {
         // ช่องของผู้ยื่นเองไม่มีปุ่มปฏิเสธ: "ปฏิเสธ" คือการตีเอกสารกลับไปหาเจ้าของ แต่ผู้ยื่นคือ
         // เจ้าของเอง สิ่งที่ผู้ยื่นต้องการจริงคือกลับไปแก้ ซึ่งมีปุ่มของมันเองด้านล่าง
         boolean applicantSlot = "applicant".equalsIgnoreCase(step.getSlotKey());
-        model.addAttribute("showDeclineForm", !applicantSlot && choice != SignatureAnchorRegistry.CONSIDERATION);
+        model.addAttribute("showDeclineForm", isSigner && !applicantSlot && choice != SignatureAnchorRegistry.CONSIDERATION);
         model.addAttribute("canApplicantWithdraw",
-                applicantSlot && workflow.applicantWithdrawBlocker(envelope, me).isEmpty());
+                isSigner && applicantSlot && workflow.applicantWithdrawBlocker(envelope, me).isEmpty());
         return "academic/esign/sign";
     }
 
@@ -652,7 +660,9 @@ public class SigningController {
         Result result = workflow.forwardToNextSigners(
                 envelopeId, assignments, parseDueAt(dueAt), me, actorContext());
         flashOutcome(result, redirectAttributes);
-        return "redirect:" + back;
+        // เจ้าหน้าที่ผู้ตรวจลงนามเอง (เช่นเอกสารที่ 2) — ไปหน้าลงนามต่อเลย ไม่ต้องไปหาในกล่องงาน
+        String signNow = signLinkFor(result, me);
+        return "redirect:" + (signNow != null ? signNow : back);
     }
 
     /**
@@ -787,7 +797,12 @@ public class SigningController {
             return "redirect:/esign/inbox";
         }
 
-        redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกการเวียนลงนามแล้ว เอกสารกลับมาแก้ไขได้");
+        // ถอนเฉพาะขั้นที่ส่งต่อไป (ผู้ยื่นลงนามแล้ว) ซองจึงยังอยู่ในสถานะลงนามครบ — ดู SignatureWorkflowService.cancel
+        boolean onlyForwardedWithdrawn = result.request() != null
+                && result.request().getStatus() == com.ecom.academic.model.SignatureRequestStatus.COMPLETED;
+        redirectAttributes.addFlashAttribute("succMsg", onlyForwardedWithdrawn
+                ? "ถอนการส่งเวียนลงนามต่อแล้ว ลายเซ็นของผู้ยื่นยังอยู่ แก้ช่องของเจ้าหน้าที่แล้วส่งเวียนต่อได้เลย"
+                : "ยกเลิกการเวียนลงนามแล้ว เอกสารกลับมาแก้ไขได้");
         return "redirect:" + documentFormLink(envelope.getModule(), envelope.getRequestId(),
                 envelope.getDocumentType(), me);
     }

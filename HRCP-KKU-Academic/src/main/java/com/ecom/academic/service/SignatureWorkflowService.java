@@ -594,7 +594,10 @@ public class SignatureWorkflowService {
         envelope.setVerificationCode(newVerificationCode());
         envelope.setDueAt(dueAt);
 
-        String problem = addStepsForAssignments(envelope, slots, assignments);
+        String problem = reviewerSlotProblem(module, documentType, assignments, initiator);
+        if (problem == null) {
+            problem = addStepsForAssignments(envelope, slots, assignments);
+        }
         if (problem != null) {
             return Result.failed(problem);
         }
@@ -726,7 +729,10 @@ public class SignatureWorkflowService {
         List<SignatureSlot> slots = slotsFor(envelope.getModule(), envelope.getDocumentType());
 
         int before = envelope.getSteps().size();
-        String problem = addStepsForAssignments(envelope, slots, assignments);
+        String problem = reviewerSlotProblem(envelope.getModule(), envelope.getDocumentType(), assignments, adminUser);
+        if (problem == null) {
+            problem = addStepsForAssignments(envelope, slots, assignments);
+        }
         if (problem != null) {
             return Result.failed(problem);
         }
@@ -1305,6 +1311,13 @@ public class SignatureWorkflowService {
             return Result.failed("คำขอลงนามนี้ปิดไปแล้ว");
         }
 
+        // ผู้ยื่นลงนามแล้ว และคนที่ส่งต่อไปยังไม่ได้ลงนาม: ส่วนที่ผิดคือส่วนของเจ้าหน้าที่ ถอนเฉพาะขั้นที่ส่งต่อไป
+        // เดิมยกเลิกทั้งรอบ ลายเซ็นของผู้ยื่นหายไปด้วย แล้วรอบใหม่ต้องให้ผู้ยื่นลงนามซ้ำ (ซอง 70 วันที่ 30 ก.ย. 2569)
+        List<SignatureStep> forwarded = envelope.forwardedStepsToWithdraw();
+        if (!forwarded.isEmpty()) {
+            return withdrawForwarded(envelope, forwarded, actingUser, reason, actor);
+        }
+
         envelope.setStatus(SignatureRequestStatus.CANCELLED);
         envelope.setCancelledAt(LocalDateTime.now());
         envelope.setCancelReason(truncate(reason, 500));
@@ -1323,6 +1336,39 @@ public class SignatureWorkflowService {
                 .map(SignatureStep::getSigner)
                 .toList();
         notifier.notifyCancelled(noticeFor(envelope, null, outstanding));
+        return new Result(requestRepository.save(envelope), null);
+    }
+
+    /**
+     * ถอนขั้นที่เจ้าหน้าที่ส่งต่อไป — ซองกลับเป็น "ผู้ยื่นลงนามแล้ว รอเจ้าหน้าที่ตรวจ"
+     *
+     * <p>ลบขั้นเหล่านั้นทิ้ง ไม่ใช่ตั้งเป็น SKIPPED: ขั้นที่ถูกข้ามไม่นับว่า "ลงนามครบ" และการเปิดรอบที่เลย
+     * กำหนดขึ้นมาใหม่จะปลุกขั้นที่ข้ามไว้กลับมา ใครเคยถูกขอให้ลงนามยังอยู่ในบันทึกการตรวจสอบครบ
+     */
+    private Result withdrawForwarded(SignatureRequest envelope, List<SignatureStep> forwarded, UserDtls actingUser,
+            String reason, ActorContext actor) {
+        List<UserDtls> outstanding = forwarded.stream()
+                .map(SignatureStep::getSigner)
+                .filter(java.util.Objects::nonNull)
+                .toList();
+        String names = forwarded.stream()
+                .map(s -> s.getRoleLabel() + " (" + s.getSignerNameSnapshot() + ")")
+                .collect(java.util.stream.Collectors.joining(", "));
+        // แจ้งก่อนถอด: ข้อความแจ้งอ่านจากขั้นที่ยังอยู่ในซอง
+        notifier.notifyCancelled(noticeFor(envelope, null, outstanding));
+
+        envelope.getSteps().removeAll(forwarded);
+        envelope.setCirculationStartedAt(null);
+        envelope.setStatus(SignatureRequestStatus.COMPLETED);
+        envelope.setCompletedAt(envelope.getSteps().stream()
+                .map(SignatureStep::getSignedAt)
+                .filter(java.util.Objects::nonNull)
+                .max(LocalDateTime::compareTo)
+                .orElse(LocalDateTime.now()));
+
+        audit(envelope, null, SignatureAuditEventType.CANCELLED, actingUser, actor,
+                "ถอนการส่งเวียนลงนามต่อ: " + names + " — ลายเซ็นของผู้ยื่นยังอยู่"
+                        + (reason == null || reason.isBlank() ? "" : " — เหตุผล: " + reason));
         return new Result(requestRepository.save(envelope), null);
     }
 
@@ -1801,7 +1847,25 @@ public class SignatureWorkflowService {
                 isAdminViewer,
                 deadlineAdvisory,
                 revivableEnvelope,
-                applicantMayWithdraw);
+                applicantMayWithdraw,
+                SignatureAnchorRegistry.reviewerSignedSlots(module, documentType));
+    }
+
+    /**
+     * ช่องที่เจ้าหน้าที่ผู้ตรวจต้องลงนามเอง ถูกมอบให้คนอื่น — กันไว้ที่เซิร์ฟเวอร์ ไม่ใช่แค่ซ่อนตัวเลือก
+     *
+     * @return ข้อความบอกผู้ใช้ หรือ null เมื่อถูกต้อง
+     */
+    private static String reviewerSlotProblem(SignatureModule module, int documentType,
+            List<SignerAssignment> assignments, UserDtls actingUser) {
+        for (SignerAssignment a : assignments) {
+            if (a.signerUserId() != null
+                    && SignatureAnchorRegistry.isSignedByReviewer(module, documentType, a.slotKey())
+                    && (actingUser == null || !a.signerUserId().equals(actingUser.getId()))) {
+                return "ตำแหน่งนี้ต้องลงนามโดยเจ้าหน้าที่ผู้ตรวจสอบเอกสารเอง ส่งให้ผู้อื่นลงนามแทนไม่ได้";
+            }
+        }
+        return null;
     }
 
     /** Signed steps carrying the images to stamp, in order. */

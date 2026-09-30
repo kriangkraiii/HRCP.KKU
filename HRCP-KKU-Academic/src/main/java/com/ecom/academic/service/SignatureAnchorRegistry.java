@@ -283,6 +283,25 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("corresponding_author", "ผู้ประพันธ์บรรณกิจ",
                             "corres_name", APPLICANT, 3))));
 
+    /**
+     * ช่องที่เจ้าหน้าที่ผู้ตรวจเอกสารลงนามเองเสมอ — ไม่มีการเลือกผู้ลงนามหรือส่งต่อให้คนอื่น
+     *
+     * <p>เอกสารที่ 2 เฟส 1: นักทรัพยากรบุคคลที่ติ๊กคอลัมน์ "เจ้าหน้าที่" คือคนที่รับรองผลตรวจนั้น
+     * คนตรวจกับคนเซ็นจึงต้องเป็นคนเดียวกัน
+     */
+    private static final Map<DocKey, java.util.Set<String>> REVIEWER_SIGNED = Map.of(
+            new DocKey(SignatureModule.ACADEMIC, 2), java.util.Set.of("hr"));
+
+    /** ช่องนี้ต้องเป็นเจ้าหน้าที่ที่กดยืนยันเองหรือไม่ */
+    public static boolean isSignedByReviewer(SignatureModule module, int documentType, String slotKey) {
+        return REVIEWER_SIGNED.getOrDefault(new DocKey(module, documentType), java.util.Set.of()).contains(slotKey);
+    }
+
+    /** ช่องของเอกสารนี้ที่เจ้าหน้าที่ผู้ตรวจลงนามเอง */
+    public static java.util.Set<String> reviewerSignedSlots(SignatureModule module, int documentType) {
+        return REVIEWER_SIGNED.getOrDefault(new DocKey(module, documentType), java.util.Set.of());
+    }
+
     /** The signature positions for a document, in signing order. Empty if unsignable. */
     public List<SignatureSlot> slotsFor(SignatureModule module, int documentType) {
         return slotsOf(module, documentType);

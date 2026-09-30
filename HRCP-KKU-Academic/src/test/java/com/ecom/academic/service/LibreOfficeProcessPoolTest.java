@@ -67,6 +67,25 @@ class LibreOfficeProcessPoolTest {
         assertThat(poolMs).as("pooled %d ms vs CLI %d ms", poolMs, cliMs).isLessThan(cliMs);
     }
 
+    /**
+     * งานที่มาถึงหลังแอปปิด pool แล้ว (เช่นงาน prewarm ที่ค้างอยู่บน executor ตอน context ปิด)
+     * ต้องไม่เปิด LibreOffice ชุดใหม่ — ไม่มีใครปิดชุดนั้นให้ soffice จะค้างอยู่ในเครื่อง
+     */
+    @Test
+    @DisplayName("ปิดแล้วไม่เปิด LibreOffice ใหม่ งานที่มาทีหลังใช้ CLI แทน")
+    void aStoppedPoolDoesNotStartAgain() throws IOException {
+        DocumentGenerationService pooled = new DocumentGenerationService();
+        Assumptions.assumeTrue(pooled.isPdfConversionAvailable(), "LibreOffice is not installed");
+        pooled.setOfficePool(pool);
+        byte[] docx = pooled.generatePreviewDocx(1, "{\"applicant_name\":\"สมชาย ทดสอบยื่น\"}");
+
+        pool.stop();
+        byte[] pdf = pooled.convertDocxToPdf(docx);
+
+        assertThat(pdf).as("still converted, through the CLI").isNotEmpty();
+        assertThat(pool.isRunning()).as("no LibreOffice started after stop()").isFalse();
+    }
+
     private record Summary(int pages, String text, TreeSet<String> fonts) {
     }
 

@@ -157,7 +157,10 @@ public class PdfDigitalSignatureService {
                 signature.setLocation(location);
             }
 
-            Calendar cal = Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Bangkok"));
+            // Gregorian always — on a Thai-format JVM Calendar.getInstance() is Buddhist and
+            // PDFBox would write the sign date as D:2569… (read as the year 2569 CE)
+            Calendar cal = new java.util.GregorianCalendar(java.util.TimeZone.getTimeZone("Asia/Bangkok"),
+                    java.util.Locale.ROOT);
             if (signDate != null) {
                 java.time.ZonedDateTime zdt = signDate.atZone(java.time.ZoneId.of("Asia/Bangkok"));
                 cal.setTimeInMillis(zdt.toInstant().toEpochMilli());

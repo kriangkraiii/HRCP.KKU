@@ -34,6 +34,8 @@ import com.ecom.academic.service.SignatureAnchorRegistry.SignatureSlot;
  *                           of a request they have not submitted yet
  * @param revivableEnvelope  a round the clock closed that can be reopened by
  *                           setting a new deadline, or null
+ * @param reviewerSlots      slots the reviewing staff member always signs themselves
+ *                           ({@code SignatureAnchorRegistry#isSignedByReviewer}) — no picker
  */
 public record SignaturePanelView(
         List<SignatureSlot> slots,
@@ -47,7 +49,8 @@ public record SignaturePanelView(
         boolean isAdminViewer,
         boolean deadlineAdvisory,
         SignatureRequest revivableEnvelope,
-        boolean applicantMayWithdraw) {
+        boolean applicantMayWithdraw,
+        java.util.Set<String> reviewerSlots) {
 
     public SignaturePanelView(
             List<SignatureSlot> slots,
@@ -58,7 +61,27 @@ public record SignaturePanelView(
             SignerOptionDTO currentUserOption,
             SignatureRequest activeEnvelope,
             boolean signable) {
-        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false);
+        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false, java.util.Set.of());
+    }
+
+    /** ยกเลิกการเวียนตอนนี้ถอนเฉพาะขั้นที่ส่งต่อไป ลายเซ็นของผู้ยื่นยังอยู่ ({@code SignatureRequest#forwardedStepsToWithdraw}) */
+    public boolean isForwardWithdrawable() {
+        return activeEnvelope != null && activeEnvelope.getSteps() != null
+                && !activeEnvelope.forwardedStepsToWithdraw().isEmpty();
+    }
+
+    /** ช่องที่เจ้าหน้าที่ผู้ตรวจลงนามเอง — ไม่มีตัวเลือกผู้ลงนาม */
+    public boolean isReviewerSlot(String slotKey) {
+        return reviewerSlots != null && reviewerSlots.contains(slotKey);
+    }
+
+    /**
+     * ขั้นต่อไปคือเจ้าหน้าที่ผู้ตรวจลงนามเอง (ช่องที่เหลือทั้งหมดเป็นของผู้ตรวจ) — แผงแสดงปุ่ม
+     * "ยืนยันความถูกต้องและลงนาม" แทนการเลือกผู้ลงนามแล้วส่งเวียนต่อ
+     */
+    public boolean isReviewerSignsNext() {
+        List<SignatureSlot> rest = unfilledSlots();
+        return !rest.isEmpty() && rest.stream().allMatch(s -> isReviewerSlot(s.slotKey()));
     }
 
     /** True while the document is out for signature or already fully signed. */
@@ -199,6 +222,7 @@ public record SignaturePanelView(
 
     /** An empty panel, for documents with no signature block. */
     public static SignaturePanelView unsignable() {
-        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false, false, null, false);
+        return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false, false, null, false,
+                java.util.Set.of());
     }
 }

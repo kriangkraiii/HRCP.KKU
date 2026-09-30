@@ -478,8 +478,14 @@ public class IncrementalSigningService {
 
     // ------------------------------------------------------------------ helpers
 
-    private static Calendar calendar(LocalDateTime at) {
-        Calendar cal = Calendar.getInstance(BANGKOK);
+    /**
+     * The signing time for the PDF. Gregorian whatever the machine's regional format:
+     * PDFBox writes /M straight from this calendar's fields, and on a Thai-format JVM
+     * {@code Calendar.getInstance()} is Buddhist — the file would say D:2569…, which
+     * every reader shows as the year 2569 CE.
+     */
+    static Calendar calendar(LocalDateTime at) {
+        Calendar cal = new java.util.GregorianCalendar(BANGKOK, Locale.ROOT);
         if (at != null) {
             cal.setTimeInMillis(at.atZone(ZoneId.of("Asia/Bangkok")).toInstant().toEpochMilli());
         }

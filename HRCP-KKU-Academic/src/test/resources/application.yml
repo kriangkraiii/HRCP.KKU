@@ -5,3 +5,8 @@ app:
     # เทสต์ส่วนใหญ่ทดสอบลำดับขั้นของงาน ไม่ใช่ไฟล์ PDF จึงใช้แบบเดิม
     # เทสต์ Incremental* เปิดแบบใส่ทับเองผ่าน @TestPropertySource
     pdf-mode: legacy
+  pdf:
+    office-pool:
+      # เทสต์ส่วนใหญ่ไม่แปลง PDF เลย ไม่ต้องเปิด LibreOffice ค้างไว้ตั้งแต่ context เริ่ม
+      # (ทุก context ที่ cache ไว้จะเปิด soffice 2 ตัว) — ตัวที่แปลงยังใช้ pool ได้ตามปกติ แค่เปิดตอนใช้
+      warm-on-startup: false

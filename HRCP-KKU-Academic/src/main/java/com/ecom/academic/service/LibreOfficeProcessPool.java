@@ -55,6 +55,11 @@ public class LibreOfficeProcessPool {
     private volatile LocalConverter converter;
     /** เปิดไม่ขึ้นแล้วครั้งหนึ่ง — ไม่ลองซ้ำทุก request ให้ช้าเพิ่ม ใช้ CLI ไปจนรีสตาร์ต */
     private volatile boolean unavailable;
+    /**
+     * แอปปิด pool แล้ว ({@link #stop()}) — ห้ามเปิดใหม่ งานที่มาทีหลัง (เช่น prewarm ที่ค้างอยู่บน
+     * executor ตอน context ปิด) ใช้ CLI แทน ไม่งั้นจะเปิด soffice ชุดใหม่ที่ไม่มีใครปิดให้
+     */
+    private volatile boolean stopped;
     private volatile String sofficePath;
 
     public LibreOfficeProcessPool(
@@ -140,7 +145,7 @@ public class LibreOfficeProcessPool {
     }
 
     private LocalConverter ensureStarted() {
-        if (!enabled || unavailable) {
+        if (!enabled || unavailable || stopped) {
             return null;
         }
         LocalConverter c = converter;
@@ -148,7 +153,7 @@ public class LibreOfficeProcessPool {
             return c;
         }
         synchronized (this) {
-            if (converter != null || unavailable) {
+            if (converter != null || unavailable || stopped) {
                 return converter;
             }
             long start = System.currentTimeMillis();
@@ -237,6 +242,7 @@ public class LibreOfficeProcessPool {
 
     @PreDestroy
     public synchronized void stop() {
+        stopped = true;
         converter = null;
         stopQuietly();
     }

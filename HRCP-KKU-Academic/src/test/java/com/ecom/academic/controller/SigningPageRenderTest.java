@@ -150,8 +150,9 @@ class SigningPageRenderTest {
                 .andExpect(status().isOk())
                 // ก่อนแก้: แผงถูกล็อก ไม่มีทางเติมผู้ลงนามที่เหลือได้เลย
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("/forward")))
+                // ช่องนักทรัพยากรบุคคลของเอกสารที่ 2 เจ้าหน้าที่ผู้ตรวจลงนามเอง — ไม่ใช่ส่งเวียนต่อให้คนอื่น
                 .andExpect(content().string(
-                        org.hamcrest.Matchers.containsString("ยืนยันความถูกต้องและส่งเวียนลงนามต่อ")));
+                        org.hamcrest.Matchers.containsString("ยืนยันความถูกต้องและลงนาม")));
     }
     @Test
     @DisplayName("หน้าลงนาม render ได้ และ URL ตัวอย่างเอกสารต้องเรียกได้จริง")

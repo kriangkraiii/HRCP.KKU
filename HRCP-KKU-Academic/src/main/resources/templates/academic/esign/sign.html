@@ -68,12 +68,19 @@
                     (กำหนดเดิม: <span th:text="${#temporals.format(envelope.dueAt, 'd MMM yyyy HH:mm')}"></span>)
                 </span>
             </div>
-            <button type="button" class="btn btn-sm btn-outline-danger bg-white" data-bs-toggle="modal" data-bs-target="#requestExtensionModal">
+            <button type="button" class="btn btn-sm btn-outline-danger bg-white" data-bs-toggle="modal" data-bs-target="#requestExtensionModal"
+                    th:unless="${viewOnly}">
                 <i class="fas fa-clock-rotate-left me-1"></i> ขอขยายเวลาลงนาม
             </button>
         </div>
 
-        <div th:unless="${canSign}" class="alert alert-secondary">
+        <!-- เจ้าหน้าที่เปิดดูขั้นของคนอื่น — ดูเอกสารได้ ลงนามแทนไม่ได้ -->
+        <div th:if="${viewOnly}" class="alert alert-info" data-view-only>
+            <i class="fas fa-eye"></i>
+            ขั้นตอนนี้เป็นของ <strong th:text="${step.signerNameSnapshot != null ? step.signerNameSnapshot : step.signer.name}">ผู้ลงนาม</strong>
+            (<span th:text="${step.roleLabel}">ตำแหน่ง</span>) — ท่านดูเอกสารได้อย่างเดียว ลงนามแทนไม่ได้
+        </div>
+        <div th:if="${!canSign and !viewOnly}" class="alert alert-secondary">
             <i class="fas fa-circle-info"></i>
             ขั้นตอนนี้ไม่สามารถลงนามได้แล้ว
             (สถานะ: <span th:text="${step.status.thaiLabel}">—</span>)

@@ -167,6 +167,24 @@ public class SignatureRequest {
                 .min(Comparator.comparingInt(SignatureStep::getStepOrder));
     }
 
+    /**
+     * ขั้นที่เจ้าหน้าที่ส่งต่อไปหลังผู้ยื่นลงนาม และยังไม่มีใครลงนาม — ยกเลิกการเวียนแล้วถอนเฉพาะขั้นเหล่านี้
+     * ลายเซ็นของผู้ยื่นยังอยู่ (ก่อนผู้ลงนามคนถัดไปเซ็น ไฟล์ยังมีแค่ลายเซ็นผู้ยื่น)
+     *
+     * @return ว่างเมื่อผู้ยื่นยังไม่ลงนาม ไม่มีขั้นที่ส่งต่อ หรือมีคนหลังผู้ยื่นลงนามไปแล้ว — ยกเลิกทั้งรอบตามเดิม
+     */
+    public List<SignatureStep> forwardedStepsToWithdraw() {
+        boolean applicantSigned = steps.stream().anyMatch(s -> "applicant".equalsIgnoreCase(s.getSlotKey())
+                && s.getStatus() == SignatureStepStatus.SIGNED);
+        List<SignatureStep> others = steps.stream().filter(s -> !"applicant".equalsIgnoreCase(s.getSlotKey())).toList();
+        if (!applicantSigned || others.stream().anyMatch(s -> s.getStatus() == SignatureStepStatus.SIGNED)) {
+            return List.of();
+        }
+        return others.stream()
+                .filter(s -> s.getStatus() == SignatureStepStatus.WAITING || s.getStatus() == SignatureStepStatus.ACTIVE)
+                .toList();
+    }
+
     public long signedCount() {
         return steps.stream().filter(s -> s.getStatus() == SignatureStepStatus.SIGNED).count();
     }
