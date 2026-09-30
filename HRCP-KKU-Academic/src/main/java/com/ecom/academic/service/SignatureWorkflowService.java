@@ -1044,12 +1044,8 @@ public class SignatureWorkflowService {
     /**
      * คำถามที่ช่องลงนามนี้ต้องตอบ หรือ null เมื่อไม่ต้องตอบอะไร
      *
-     * <p>ลำดับ: เอกสารที่กำหนดคำถามเฉพาะไว้ใช้ของตัวเอง (เช่น เฟส 2 เอกสารที่ 5 ถาม
-     * ครบถ้วน/ไม่ครบถ้วน ซึ่งพิมพ์ลงเอกสารจริงตามแบบฟอร์มราชการ) ช่องที่เหลือได้
-     * {@link SignatureAnchorRegistry#CONSIDERATION} — <b>ถามอันใดอันหนึ่ง ไม่ถามซ้ำสองรอบ</b>
-     *
-     * <p>ช่องของผู้ยื่นไม่ถูกถาม: คนยื่นเอกสารของตัวเองไม่ได้ "พิจารณา" คำร้องตัวเอง
-     * ({@code defaultStaffRole()} เป็น null คือช่องผู้ยื่น ตามที่ทะเบียนนิยามไว้)
+     * <p>ถามเฉพาะช่องที่แบบฟอร์มพิมพ์ตัวเลือกไว้จริง (เช่น เห็นควร/เห็นชอบในคำสั่งแต่งตั้ง
+     * คณะอนุกรรมการ) เอกสารที่ไม่มีตัวเลือกให้ติ๊ก ผู้ลงนามแค่ลงนาม — ถ้าไม่เห็นด้วยใช้ปุ่มปฏิเสธ
      */
     SignatureAnchorRegistry.SignerChoice signerChoiceFor(SignatureStep step) {
         SignatureRequest envelope = step.getSignatureRequest();
@@ -1061,13 +1057,7 @@ public class SignatureWorkflowService {
                 .filter(s -> step.getSlotKey().equals(s.slotKey()))
                 .findFirst()
                 .orElse(null);
-        if (slot == null) {
-            return null;
-        }
-        if (slot.choice() != null) {
-            return slot.choice();
-        }
-        return slot.defaultStaffRole() == null ? null : SignatureAnchorRegistry.CONSIDERATION;
+        return slot == null ? null : slot.choice();
     }
 
     /**

@@ -35,11 +35,8 @@ import com.ecom.model.UserDtls;
 import com.ecom.support.AbstractFlowTest;
 
 /**
- * ผู้ลงนามทุกคนที่ไม่ใช่ผู้ยื่นต้องบันทึกผลการพิจารณา และเขียนความเห็นได้
- *
- * <p>ก่อนหน้านี้การเวียนลงนามมีแค่ "เซ็น" กับ "ปฏิเสธ" คนที่เห็นด้วยไม่มีที่บันทึกข้อสังเกต และ
- * คนที่ไม่เห็นด้วยต้องใช้ปุ่มปฏิเสธซึ่งไม่ได้แยกว่า <em>พิจารณาแล้วไม่เห็นควร</em> ออกจาก
- * <em>ยังไม่พร้อมเซ็น</em> — สองเรื่องนี้ต่างกันในทางราชการ
+ * ผลการพิจารณาตอนเวียนลงนาม — ถามเฉพาะช่องที่แบบฟอร์มพิมพ์ตัวเลือกไว้จริง
+ * (เช่น เห็นควร/เห็นชอบในคำสั่งแต่งตั้งคณะอนุกรรมการ) เอกสารที่ไม่มีตัวเลือก ผู้ลงนามแค่ลงนาม
  *
  * <p>ข้อที่เสียหายเงียบที่สุดถ้าพลาดคือ <strong>การตีกลับตามเจ้าของเอกสาร</strong>: ตีเอกสารของ
  * แอดมินกลับไปให้ผู้ยื่นก็เท่ากับไม่ได้ตีกลับ เพราะผู้ยื่นมองไม่เห็นเอกสารพวกนั้นด้วยซ้ำ
@@ -142,15 +139,6 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
     class WhoIsAsked {
 
         @Test
-        @DisplayName("ช่องของผู้ลงนามที่ไม่ใช่ผู้ยื่น ถูกถามผลการพิจารณา")
-        void reviewersAreAsked() {
-            SignatureStep step = headStepOnApplicantDocument();
-
-            assertThat(workflow.signerChoiceFor(step.getId()))
-                    .isSameAs(SignatureAnchorRegistry.CONSIDERATION);
-        }
-
-        @Test
         @DisplayName("ช่องของผู้ยื่นไม่ถูกถาม — คนยื่นไม่ได้พิจารณาคำร้องตัวเอง")
         void theApplicantIsNotAsked() {
             PositionRequest request = data.positionRequest(applicant,
@@ -162,6 +150,22 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
                     null, applicant, ActorContext.none()).request();
 
             assertThat(workflow.signerChoiceFor(stepFor(envelope, "applicant").getId())).isNull();
+        }
+
+        @Test
+        @DisplayName("เอกสารที่ไม่มีตัวเลือกเห็นควรให้ติ๊ก ไม่ถูกถาม — ลงนามอย่างเดียว")
+        void documentsWithoutAPrintedChoiceAreNotAsked() {
+            assertThat(workflow.signerChoiceFor(headStepOnApplicantDocument().getId())).isNull();
+
+            // เอกสารที่ 2: นักทรัพยากรบุคคลผู้ตรวจลงนามเอง
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+            data.academicDocument(request, 2, FROZEN);
+            SignatureRequest envelope = workflow.createEnvelope(SignatureModule.ACADEMIC,
+                    request.getId(), 2, "แบบตรวจสอบคุณสมบัติ", FROZEN,
+                    List.of(new SignerAssignment("hr", data.admin().getId())),
+                    null, data.admin(), ActorContext.none()).request();
+
+            assertThat(workflow.signerChoiceFor(stepFor(envelope, "hr").getId())).isNull();
         }
 
         @Test
@@ -178,20 +182,19 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
 
             var choice = workflow.signerChoiceFor(stepFor(envelope, "head").getId());
 
-            assertThat(choice).isNotSameAs(SignatureAnchorRegistry.CONSIDERATION);
             assertThat(choice.options()).containsExactly("ครบถ้วน", "ไม่ครบถ้วน");
         }
 
         @Test
-        @DisplayName("ไม่ตอบผลการพิจารณา เซ็นไม่ผ่าน")
+        @DisplayName("เอกสารที่มีตัวเลือก ไม่ตอบ เซ็นไม่ผ่าน")
         void answeringIsMandatory() {
-            SignatureStep step = headStepOnApplicantDocument();
+            SignatureStep step = headStepOnAdminDocument();
 
             Result result = workflow.sign(step.getId(), head, data.signatureFor(head).getId(),
                     true, ActorContext.none(), null, null);
 
             assertThat(result.ok()).isFalse();
-            assertThat(result.error()).contains("ผลการพิจารณา");
+            assertThat(result.error()).contains("กรุณาเลือก");
             assertThat(reload(step).getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
         }
     }
@@ -204,7 +207,7 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
         @Test
         @DisplayName("บันทึกผลและความเห็นไว้ แล้วเอกสารเดินต่อ")
         void theDecisionAndCommentAreKept() {
-            SignatureStep step = headStepOnApplicantDocument();
+            SignatureStep step = headStepOnAdminDocument();
 
             Result result = workflow.sign(step.getId(), head, data.signatureFor(head).getId(),
                     true, ActorContext.none(), null, SignatureAnchorRegistry.APPROVED,
@@ -224,7 +227,7 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
         @Test
         @DisplayName("ไม่เขียนความเห็นก็เซ็นผ่านได้ และไม่เก็บเป็นช่องว่าง")
         void theCommentIsOptionalWhenApproving() {
-            SignatureStep step = headStepOnApplicantDocument();
+            SignatureStep step = headStepOnAdminDocument();
 
             Result result = workflow.sign(step.getId(), head, data.signatureFor(head).getId(),
                     true, ActorContext.none(), null, SignatureAnchorRegistry.APPROVED, "   ");
@@ -239,7 +242,7 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
             SignatureStep step = headStepOnApplicantDocument();
 
             workflow.sign(step.getId(), head, data.signatureFor(head).getId(), true,
-                    ActorContext.none(), null, SignatureAnchorRegistry.APPROVED, null);
+                    ActorContext.none(), null, null, null);
 
             assertThat(revisionOpenedOnPositionDocument()).isFalse();
         }

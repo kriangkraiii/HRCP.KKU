@@ -147,20 +147,6 @@ public class SignatureAnchorRegistry {
     /** คำตอบที่แปลว่าผู้ลงนามเห็นด้วย ให้เดินต่อไปยังผู้ลงนามลำดับถัดไป */
     public static final String APPROVED = "เห็นควร";
 
-    /**
-     * คำถามเริ่มต้นของทุกช่องลงนามที่ไม่ใช่ของผู้ยื่น และเอกสารไม่ได้กำหนดคำถามเฉพาะไว้
-     *
-     * <p>ไม่ได้ใส่ลงใน {@link #SLOTS} ทีละช่อง — {@code SignatureWorkflowService.signerChoiceFor}
-     * เติมให้ตอนจะลงนามแทน เพราะ {@code DocumentFieldOwnership.signerFields} อ่าน slot ที่มี
-     * {@code choice()} แล้วลบ {@code fieldKey} นั้นทิ้งจากข้อมูลที่ฟอร์มส่งมา และ
-     * {@code SignerNameResolver.choicesForEnvelope} จะพยายาม render มันลงเอกสาร ซึ่งไม่มี
-     * เทมเพลต docx ฉบับไหนมีช่อง {@code {{consideration_result}}} รออยู่ การเติมที่ปลายทาง
-     * การลงนามจึงได้สิ่งที่ต้องการพอดี: ถามผู้ลงนาม เก็บลงฐานข้อมูล แต่ไม่ไปยุ่งกับเนื้อเอกสาร
-     */
-    public static final SignerChoice CONSIDERATION = new SignerChoice(
-            "consideration_result", "ผลการพิจารณา",
-            List.of(APPROVED, NOT_APPROVED), NOT_APPROVED);
-
     private record DocKey(SignatureModule module, int documentType) {
     }
 

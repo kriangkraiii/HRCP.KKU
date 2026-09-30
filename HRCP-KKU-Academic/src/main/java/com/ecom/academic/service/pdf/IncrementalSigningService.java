@@ -284,15 +284,16 @@ public class IncrementalSigningService {
             throw new IllegalStateException("The signed PDF has no place for slot " + slot.slotKey());
         }
 
+        Map<String, String> filled = values(current);
         Map<String, String> own = ownValues(slot, step, step.getSignedAt());
         own.keySet().retainAll(fields);
+        putNameIfBlank(own, slot, step, fields, filled);
 
         // Frozen by this signature: its own fields, and whatever the office has already
         // filled in between signers (those are the values this signer is agreeing to).
         List<String> locked = new ArrayList<>();
         locked.add(sigField);
         locked.addAll(own.keySet());
-        Map<String, String> filled = values(current);
         Set<String> office = DocumentFieldOwnership.officeFields(envelope.getModule(), envelope.getDocumentType());
         for (String f : DocumentFieldOwnership.adminFields(envelope.getModule(), envelope.getDocumentType())) {
             // Office fields stay open for the issuing step; locking one here would make
@@ -306,7 +307,7 @@ public class IncrementalSigningService {
 
         byte[] next = pdf.sign(current, new PdfIncrementService.SignSpec(signer, sigField, own, locked, certify,
                 imagePng, printedName, "ลงนามในตำแหน่ง \"" + (step.getRoleLabel() != null ? step.getRoleLabel() : slot.roleLabel()) + "\"",
-                LOCATION, calendar(step.getSignedAt())));
+                LOCATION, calendar(step.getSignedAt()), nameField(slot)));
         int no = revisions.append(envelope, current, next, SignedPdfRevision.Kind.SIGN, step.getId(),
                 step.getSigner() != null ? step.getSigner().getId() : null, signer.fingerprint());
         step.setPdfRevisionNo(no);
@@ -334,6 +335,26 @@ public class IncrementalSigningService {
     }
 
     /**
+     * The signer's name under their signature line, when the base reserved it and
+     * nobody has filled it in — document 2's HR slot is signed by whichever officer
+     * reviewed it, so the name cannot be known when the base is built.
+     */
+    static void putNameIfBlank(Map<String, String> own, SignatureSlot slot, SignatureStep step,
+            Set<String> fields, Map<String, String> filled) {
+        String anchor = slot.anchorPlaceholder();
+        String name = com.ecom.academic.service.SignerNameResolver.printedNameOf(step);
+        if (anchor != null && fields.contains(anchor) && filled.getOrDefault(anchor, "").isBlank()
+                && name != null && !name.isBlank()) {
+            own.put(anchor, name);
+        }
+    }
+
+    /** The name under a slot's signature, drawn centred in its "( ... )". */
+    private static Set<String> nameField(SignatureSlot slot) {
+        return slot.anchorPlaceholder() == null ? Set.of() : Set.of(slot.anchorPlaceholder());
+    }
+
+    /**
      * The document as the signer of an active step would leave it: the current file
      * with their picture and today's date drawn in. Not signed, not stored.
      */
@@ -350,7 +371,8 @@ public class IncrementalSigningService {
         Set<String> fields = fieldNames(current);
         Map<String, String> own = ownValues(slot, step, LocalDateTime.now(ZoneId.of("Asia/Bangkok")));
         own.keySet().retainAll(fields);
-        return pdf.preview(current, "sig_" + slot.slotKey(), own, imagePng);
+        putNameIfBlank(own, slot, step, fields, values(current));
+        return pdf.preview(current, "sig_" + slot.slotKey(), own, nameField(slot), imagePng);
     }
 
     /**

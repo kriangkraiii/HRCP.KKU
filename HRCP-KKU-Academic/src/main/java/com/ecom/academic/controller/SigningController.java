@@ -200,14 +200,13 @@ public class SigningController {
         model.addAttribute("signerChoice", choice);
         model.addAttribute("notApprovedValue", SignatureAnchorRegistry.NOT_APPROVED);
 
-        // ช่องที่ถูกถาม "ผลการพิจารณา" มีทางปฏิเสธอยู่ในคำถามแล้ว (เลือกไม่เห็นควร) การโชว์
-        // ฟอร์มปฏิเสธแยกอีกอันทำให้หน้าเดียวมีสองปุ่มที่ทำเรื่องเดียวกัน ส่วนช่องที่ถูกถาม
-        // คำถามเฉพาะของเอกสาร (เช่น ครบถ้วน/ไม่ครบถ้วน) ยังต้องมีทางปฏิเสธของตัวเอง
-        //
         // ช่องของผู้ยื่นเองไม่มีปุ่มปฏิเสธ: "ปฏิเสธ" คือการตีเอกสารกลับไปหาเจ้าของ แต่ผู้ยื่นคือ
         // เจ้าของเอง สิ่งที่ผู้ยื่นต้องการจริงคือกลับไปแก้ ซึ่งมีปุ่มของมันเองด้านล่าง
+        // ผู้ตรวจที่ลงนามเองก็ไม่มี — ถ้าเอกสารผิด ส่งกลับให้ผู้ยื่นจากหน้าตรวจเอกสาร
         boolean applicantSlot = "applicant".equalsIgnoreCase(step.getSlotKey());
-        model.addAttribute("showDeclineForm", isSigner && !applicantSlot && choice != SignatureAnchorRegistry.CONSIDERATION);
+        boolean reviewerSlot = SignatureAnchorRegistry.isSignedByReviewer(
+                envelope.getModule(), envelope.getDocumentType(), step.getSlotKey());
+        model.addAttribute("showDeclineForm", isSigner && !applicantSlot && !reviewerSlot);
         model.addAttribute("canApplicantWithdraw",
                 isSigner && applicantSlot && workflow.applicantWithdrawBlocker(envelope, me).isEmpty());
         return "academic/esign/sign";

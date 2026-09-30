@@ -214,6 +214,11 @@ public class SignerNameResolver {
         return names;
     }
 
+    /** ชื่อที่พิมพ์ในวงเล็บใต้ลายเซ็นของขั้นนี้ */
+    public static String printedNameOf(SignatureStep step) {
+        return printedName(step);
+    }
+
     /**
      * ชื่อของขั้นตอนหนึ่ง — ใช้ชื่อ ณ ตอนมอบหมายเป็นหลัก
      *

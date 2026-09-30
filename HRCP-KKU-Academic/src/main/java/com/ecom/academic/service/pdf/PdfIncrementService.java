@@ -130,9 +130,16 @@ public final class PdfIncrementService {
      * @param lockedFields fields this signature freezes (FieldMDP Include); null freezes everything
      * @param certify     first signature of the document: DocMDP P=2 (form filling and signing still allowed)
      * @param imagePng    the visible signature, or null for an invisible one
+     * @param centredFields own fields drawn centred in their box (the name in "( ... )")
      */
     public record SignSpec(CmsSigner signer, String field, Map<String, String> ownValues, List<String> lockedFields,
-            boolean certify, byte[] imagePng, String name, String reason, String location, Calendar signedAt) {
+            boolean certify, byte[] imagePng, String name, String reason, String location, Calendar signedAt,
+            java.util.Set<String> centredFields) {
+        public SignSpec(CmsSigner signer, String field, Map<String, String> ownValues, List<String> lockedFields,
+                boolean certify, byte[] imagePng, String name, String reason, String location, Calendar signedAt) {
+            this(signer, field, ownValues, lockedFields, certify, imagePng, name, reason, location, signedAt,
+                    java.util.Set.of());
+        }
     }
 
     public byte[] fill(byte[] pdf, Map<String, String> values) throws IOException {
@@ -151,7 +158,7 @@ public final class PdfIncrementService {
         try (PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(pdf))) {
             PDAcroForm form = requireForm(doc);
             for (var e : spec.ownValues().entrySet()) {
-                fillField(doc, form, e.getKey(), e.getValue());
+                fillField(doc, form, e.getKey(), e.getValue(), spec.centredFields().contains(e.getKey()));
             }
             if (!(form.getField(spec.field()) instanceof PDSignatureField sf)) {
                 throw new IllegalArgumentException("No signature field " + spec.field());
@@ -209,10 +216,15 @@ public final class PdfIncrementService {
      */
     public byte[] preview(byte[] pdf, String signatureField, Map<String, String> ownValues, byte[] imagePng)
             throws IOException {
+        return preview(pdf, signatureField, ownValues, java.util.Set.of(), imagePng);
+    }
+
+    public byte[] preview(byte[] pdf, String signatureField, Map<String, String> ownValues,
+            java.util.Set<String> centredFields, byte[] imagePng) throws IOException {
         try (PDDocument doc = Loader.loadPDF(new RandomAccessReadBuffer(pdf))) {
             PDAcroForm form = requireForm(doc);
             for (var e : ownValues.entrySet()) {
-                fillField(doc, form, e.getKey(), e.getValue());
+                fillField(doc, form, e.getKey(), e.getValue(), centredFields.contains(e.getKey()));
             }
             if (imagePng != null && form.getField(signatureField) instanceof PDSignatureField sf) {
                 PDAnnotationWidget widget = sf.getWidgets().get(0);
@@ -228,6 +240,11 @@ public final class PdfIncrementService {
     // ------------------------------------------------------------------ fields
 
     private void fillField(PDDocument doc, PDAcroForm form, String name, String value) throws IOException {
+        fillField(doc, form, name, value, false);
+    }
+
+    private void fillField(PDDocument doc, PDAcroForm form, String name, String value, boolean centred)
+            throws IOException {
         PDField field = form.getField(name);
         if (field == null) {
             throw new IllegalArgumentException("No field " + name + " in this document");
@@ -277,7 +294,8 @@ public final class PdfIncrementService {
                     body.append(thai.operators(FONT, size, wrapped.get(i), 0, firstBaseline - i * pitch));
                 }
             } else {
-                body.append(thai.operators(FONT, size, text, 0, baseline(r)));
+                float x = centred ? Math.max(0, (r.getWidth() - thai.width(text, size)) / 2) : 0;
+                body.append(thai.operators(FONT, size, text, x, baseline(r)));
             }
             String ops = "/Tx BMC\n" + body + "EMC\n";
             try (var os = ap.getContentStream().createOutputStream(COSName.FLATE_DECODE)) {
