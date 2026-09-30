@@ -1,0 +1,54 @@
+# PLAN: แท็บ "ประวัติการลงนาม" ในหน้ารอลงนาม (PLAN-signing-history-tab.md)
+
+## 1. ปัญหาและเป้าหมาย
+
+### ปัญหาปัจจุบัน
+- หน้า `/esign/inbox` แสดงเฉพาะงานที่ค้างอยู่ ทั้งขั้นที่ถึงคิวลงนาม (`ACTIVE`) และซองที่ยังเวียนอยู่ (`IN_PROGRESS`)
+- พอลงนามครบทุกบทบาทแล้ว ซองจะเปลี่ยนเป็น `COMPLETED` แล้วหายไปจากทุกแท็บ ผู้ลงนามไม่มีที่ย้อนดูว่าตัวเองลงนามอะไรไปแล้ว
+
+### เป้าหมาย (ตามที่ตกลง)
+1. เพิ่มแท็บใหม่ **"ประวัติการลงนาม"** ในหน้า `/esign/inbox` เดิม
+2. แสดง**เฉพาะขั้นที่ผู้ใช้ที่ล็อกอินอยู่ลงนามเอง** ไม่มีมุมมองรวมทั้งระบบ รวมถึง admin/staff ด้วย
+3. แสดง**เฉพาะซองที่ "ลงนามครบแล้ว"** (`SignatureRequestStatus.COMPLETED`)
+4. แต่ละรายการมีปุ่ม **"ตรวจสอบเอกสาร"** ไปที่ `/esign/verify/{verificationCode}` และ**ไม่มี**ปุ่มดาวน์โหลด PDF
+
+### นอกขอบเขต
+- ไม่แก้ schema และไม่ต้องมี Flyway migration เพราะใช้ index `idx_sig_step_signer (signer_user_id, status)` ที่มีอยู่แล้ว
+- ไม่แตะแท็บเดิม ขั้นตอนการลงนาม และหน้า verify
+
+---
+
+## 2. นิยามข้อมูล
+
+"หนึ่งรายการ" = หนึ่ง `SignatureStep` ที่ผ่านเงื่อนไขทั้งหมดนี้
+- `step.signer.id = ผู้ใช้ปัจจุบัน` (กรณีรับมอบอำนาจ คนที่ลงนามจริงจะเห็นรายการ ส่วนเจ้าของเดิม `delegatedFrom` จะไม่เห็น)
+- `step.status = SIGNED`
+- `envelope.status = COMPLETED`
+- เรียงตาม `step.signedAt` ใหม่สุดก่อน
+
+ถ้าคนเดียวลงนามหลายบทบาทในซองเดียวกัน จะขึ้นหลายรายการ แยกตาม `roleLabel`
+
+---
+
+## 3. แผนการดำเนินงาน
+
+| # | ไฟล์ | สิ่งที่ทำ | ตรวจสอบว่าเสร็จ |
+|---|------|--------|------------------|
+| 1 | `repository/SignatureStepRepository.java` | เพิ่ม `findSignedHistory(userId)` เป็น JPQL `JOIN FETCH s.signatureRequest` ตามเงื่อนไขข้อ 2 | คอมไพล์ผ่าน |
+| 2 | `service/SignatureWorkflowService.java` | เพิ่ม `findSignedHistory(UserDtls signer)` ให้คืน `List.of()` เมื่อ signer เป็น null แบบเดียวกับ `findInbox` | unit test ข้อ 6 |
+| 3 | `controller/SigningController.java` (`inbox()`) | `model.addAttribute("signedHistory", workflow.findSignedHistory(me))` | render test ข้อ 7 |
+| 4 | `templates/academic/esign/inbox.html` (แท็บ) | เพิ่มปุ่มแท็บ `#tab-history` "ประวัติการลงนาม" (ไอคอน `fa-clock-rotate-left` + badge จำนวน) ไว้ต่อจากแท็บ "เอกสารที่ฉันส่งไปลงนาม" ทุก role เห็นแท็บนี้ | เปิดหน้าแล้วเห็นแท็บ |
+| 5 | `templates/academic/esign/inbox.html` (เนื้อหา) | pane `#content-history` เป็นการ์ดแบบเดียวกับแท็บอื่น แต่ละใบมี ป้ายประเภทคำร้อง, ป้าย "ลงนามครบแล้ว", ชื่อเอกสาร, "ลงนามในตำแหน่ง", "ท่านลงนามเมื่อ" (`signedAt`), "ลงนามครบเมื่อ" (`completedAt`), รหัสตรวจสอบ และปุ่มเดียวคือ **ตรวจสอบเอกสาร** → `/esign/verify/{code}` มีช่องค้นหา (ชื่อเอกสาร/ประเภท/ตำแหน่ง/รหัส) และ empty state "ยังไม่มีประวัติการลงนาม" JS: รองรับ `#history` ตอนโหลดหน้า และ `replaceState` ใส่ hash ตอนสลับแท็บ เพื่อให้กดย้อนกลับจากหน้า verify แล้วกลับมาที่แท็บเดิม | ตรวจด้วยตา + render test |
+| 6 | `SignatureWorkflowServiceTest.java` | เทสต์ใหม่: ซองมีหัวหน้าและคณบดี หัวหน้าลงนามแล้ว → ประวัติหัวหน้ายังว่าง (ซองยังไม่ครบ) คณบดีลงนาม → หัวหน้าและคณบดีมีคนละ 1 รายการ admin ผู้ส่งเวียน (ไม่ได้ลงนาม) → ว่าง ซองที่ถูกปฏิเสธหรือยกเลิก → ไม่ขึ้น | `mvn test -Dtest=SignatureWorkflowServiceTest` |
+| 7 | `SigningPageRenderTest.java` | เมื่อมีซองที่ครบแล้ว หน้า inbox ต้องมีแท็บประวัติ มีลิงก์ `/esign/verify/{code}` และ**ไม่มี**ลิงก์ดาวน์โหลด PDF ในแท็บนี้ | `mvn test -Dtest=SigningPageRenderTest` |
+
+### ข้อระวัง
+- การ์ดในแท็บประวัติ**ห้ามใช้ class `inbox-card-item`** เพราะ JS เดิมนับ KPI และตัวกรอง "เลยกำหนด/ปกติ" จาก class นี้ ให้ใช้ class แยก (`history-card-item`) และตัวกรองค้นหาแยก
+- ชื่อเอกสารใช้ fallback แบบเดียวกับแท็บ "รอฉันลงนาม": `documentLabel ?: 'เอกสารที่ ' + documentType`
+
+---
+
+## 4. Phase X: ตรวจสอบก่อนส่ง
+- [ ] `mvn test -Dtest=SignatureWorkflowServiceTest,SigningPageRenderTest,EveryPageRendersTest` ผ่าน
+- [ ] เปิด `/esign/inbox` ด้วย user และ admin แล้วได้แท็บใหม่ รายการถูกต้อง ปุ่มตรวจสอบเปิดหน้า verify ได้ กดกลับแล้วอยู่แท็บเดิม
+- [ ] แท็บเดิมทั้ง 3 แท็บ รวมตัวเลข KPI และตัวกรอง ทำงานเหมือนเดิม
