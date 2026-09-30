@@ -474,7 +474,7 @@ public class PositionRequestService {
                 }
 
                 // Delete document edit logs
-                List<PositionDocumentEditLog> editLogs = editLogRepository.findByRequestOrderByEditedAtDesc(req);
+                List<PositionDocumentEditLog> editLogs = editLogRepository.findByRequestOrderByEditedAtDescIdDesc(req);
                 if (!editLogs.isEmpty()) {
                     editLogRepository.deleteAll(editLogs);
                 }
@@ -757,7 +757,7 @@ public class PositionRequestService {
     public List<PositionDocumentEditLog> getEditHistory(Long requestId) {
         PositionRequest request = requestRepository.findById(requestId).orElse(null);
         if (request == null) return List.of();
-        return editLogRepository.findByRequestOrderByEditedAtDesc(request);
+        return editLogRepository.findByRequestOrderByEditedAtDescIdDesc(request);
     }
 
     // ================== Document CRUD ==================

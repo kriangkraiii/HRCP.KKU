@@ -857,7 +857,7 @@ public class AcademicRequestService {
     public List<AcademicDocumentEditLog> getEditHistory(Long requestId) {
         AcademicRequest request = requestRepository.findById(requestId).orElse(null);
         if (request == null) return List.of();
-        return editLogRepository.findByRequestOrderByEditedAtDesc(request);
+        return editLogRepository.findByRequestOrderByEditedAtDescIdDesc(request);
     }
 
     public AcademicRequest save(AcademicRequest request) {

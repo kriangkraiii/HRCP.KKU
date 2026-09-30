@@ -10,7 +10,7 @@ import com.ecom.academic.model.AcademicRequest;
 
 public interface AcademicDocumentEditLogRepository extends JpaRepository<AcademicDocumentEditLog, Long> {
 
-    List<AcademicDocumentEditLog> findByRequestOrderByEditedAtDesc(AcademicRequest request);
+    List<AcademicDocumentEditLog> findByRequestOrderByEditedAtDescIdDesc(AcademicRequest request);
 
     Optional<AcademicDocumentEditLog> findFirstByRequestAndDocumentTypeOrderByEditedAtDescIdDesc(
             AcademicRequest request, Integer documentType);

@@ -10,7 +10,7 @@ import com.ecom.academic.model.PositionRequest;
 
 public interface PositionDocumentEditLogRepository extends JpaRepository<PositionDocumentEditLog, Long> {
 
-    List<PositionDocumentEditLog> findByRequestOrderByEditedAtDesc(PositionRequest request);
+    List<PositionDocumentEditLog> findByRequestOrderByEditedAtDescIdDesc(PositionRequest request);
 
     Optional<PositionDocumentEditLog> findFirstByRequestAndDocumentTypeOrderByEditedAtDescIdDesc(
             PositionRequest request, Integer documentType);

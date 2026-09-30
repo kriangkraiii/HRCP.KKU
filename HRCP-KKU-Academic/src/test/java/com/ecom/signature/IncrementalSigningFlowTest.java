@@ -42,7 +42,9 @@ import com.ecom.support.TestCertificates;
  * เส้นทางจริงผ่านหน้าเว็บ: ส่งเวียน → ผู้ยื่นลงนามด้วย .p12 (ต้องพิมพ์รหัส ไม่ใช้รหัสที่บันทึกไว้)
  * → เจ้าหน้าที่ออกเลขที่หนังสือพร้อมลงนามปิดไฟล์ด้วย .p12 ของตัวเอง
  */
-@TestPropertySource(properties = { "app.esign.pdf-mode=incremental", "app.esign.incremental-docs=ACADEMIC:1" })
+@TestPropertySource(properties = { "app.esign.pdf-mode=incremental", "app.esign.incremental-docs=ACADEMIC:1",
+        // runner has no local test properties; the encryption test needs a master key
+        "app.esign.p12-master-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" })
 @DisplayName("ลงนามแบบใส่ทับผ่านหน้าเว็บ — ลงนาม ออกเลข ปิดเอกสาร")
 class IncrementalSigningFlowTest extends AbstractFlowTest {
 
