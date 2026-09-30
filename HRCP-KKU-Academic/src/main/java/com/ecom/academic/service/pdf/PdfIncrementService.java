@@ -69,15 +69,57 @@ public final class PdfIncrementService {
     /** A value that does not fit its reserved area, even at the smallest size. */
     public static final class DoesNotFitException extends IllegalArgumentException {
         private final String field;
+        private final String value;
 
         public DoesNotFitException(String field, String value) {
             super("\"" + value + "\" is too long for field " + field);
             this.field = field;
+            this.value = value;
         }
 
         public String field() {
             return field;
         }
+
+        public String value() {
+            return value;
+        }
+    }
+
+    /** How a value is drawn in its box: the size, and its lines when the box has more than one. */
+    private record Fit(float size, List<String> wrapped) {
+    }
+
+    /**
+     * The size (and lines) {@code text} is drawn at in a box {@code width} wide with
+     * {@code lines} lines, shrinking from {@code preferred} down to {@link #MIN_TEXT_SIZE}.
+     *
+     * @return null when it does not fit even at the smallest size
+     */
+    private Fit fit(String text, float preferred, float width, int lines) {
+        if (text.isEmpty()) {
+            return new Fit(preferred, null);
+        }
+        float minimum = Math.min(MIN_TEXT_SIZE, preferred);
+        if (lines > 1) {
+            for (float s = preferred; s >= minimum; s -= 0.5f) {
+                List<String> candidate = wrap(text, s, width - 1);
+                if (candidate != null && candidate.size() <= lines) {
+                    return new Fit(s, candidate);
+                }
+            }
+            return null;
+        }
+        float size = thai.fittingSize(text, preferred, minimum, width - 1);
+        return size < 0 ? null : new Fit(size, null);
+    }
+
+    /**
+     * Whether {@code text} fits a reserved box — the same rule {@link #fill} applies, so
+     * a value checked here is never refused when it is written into the PDF.
+     */
+    public boolean fits(String text, float preferred, float width, int lines) {
+        return text == null || fit(text, preferred, width, Math.max(1, lines)) != null;
     }
 
     /**
@@ -207,26 +249,12 @@ public final class PdfIncrementService {
         float pitch = field.getCOSObject().getFloat(BasePdfBuilder.PITCH, 0);
         for (PDAnnotationWidget w : field.getWidgets()) {
             PDRectangle r = w.getRectangle();
-            float size;
-            List<String> wrapped = null;
-            if (text.isEmpty()) {
-                size = preferred;
-            } else if (lines > 1) {
-                size = -1;
-                for (float s = preferred; s >= Math.min(MIN_TEXT_SIZE, preferred); s -= 0.5f) {
-                    List<String> candidate = wrap(text, s, r.getWidth() - 1);
-                    if (candidate != null && candidate.size() <= lines) {
-                        size = s;
-                        wrapped = candidate;
-                        break;
-                    }
-                }
-            } else {
-                size = thai.fittingSize(text, preferred, Math.min(MIN_TEXT_SIZE, preferred), r.getWidth() - 1);
-            }
-            if (size < 0) {
+            Fit fit = fit(text, preferred, r.getWidth(), lines);
+            if (fit == null) {
                 throw new DoesNotFitException(name, text);
             }
+            float size = fit.size();
+            List<String> wrapped = fit.wrapped();
 
             PDAppearanceStream ap = new PDAppearanceStream(doc);
             ap.setBBox(new PDRectangle(r.getWidth(), r.getHeight()));

@@ -75,12 +75,19 @@
         var officeNumbers = !!(opts && opts.officeNumbers);
         var missing = [];
 
+        // หมายเหตุของช่องติ๊กเจ้าหน้าที่ตรวจคู่กับช่องติ๊กในรอบล่าง ไม่ใช่ช่องบังคับเดี่ยว ๆ —
+        // ติ๊กแล้วหมายเหตุว่างได้ (เหมือน DocumentCompleteness.missingAdminFields ฝั่งเซิร์ฟเวอร์)
+        var notes = Object.create(null);
+        docForm.querySelectorAll('input[type="checkbox"][data-required-check][data-note]').forEach(function (cb) {
+            notes[cb.getAttribute('data-note')] = true;
+        });
+
         docForm.querySelectorAll('input[name], select[name], textarea[name]').forEach(function (el) {
             var type = (el.getAttribute('type') || '').toLowerCase();
             if (SKIP_TYPES.indexOf(type) !== -1) return;
             if (el.disabled || el.readOnly) return;
             if (!el.name || el.name === '_csrf' || el.name === 'action') return;
-            if (optional[el.name]) return;
+            if (optional[el.name] || notes[el.name]) return;
             if (el.hasAttribute('data-optional')) return;
             if (isExtraRepeatedRow(el.name, prefixes)) return;
             if (!isVisible(el)) return;

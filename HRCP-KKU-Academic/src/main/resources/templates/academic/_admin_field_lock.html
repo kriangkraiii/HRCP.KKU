@@ -357,7 +357,20 @@
 
             function lock(el) {
                 if (el.tagName === 'BUTTON') {
+                    // ดูตัวอย่างไม่ได้แก้อะไร — ระหว่างเวียนยิ่งต้องดูได้ (เรนเดอร์จากซองที่ลงนามแล้ว)
+                    if (el.matches('[data-action="docPreviewShow"]')) return;
                     if (nothingToFill) el.disabled = true;
+                    return;
+                }
+                // ช่องติ๊กที่ไม่มี name แต่เขียนค่าลงช่องซ่อนผ่าน data-target (.chk-toggle เช่นคอลัมน์
+                // "เจ้าหน้าที่" ของเอกสารที่ 2) — ใช้กติกาของช่องปลายทาง เดิมหลุดกฎข้อ "ไม่มี name"
+                // ด้านล่าง จึงติ๊กได้ทั้งที่เอกสารล็อกแล้ว
+                var target = !el.name && el.getAttribute('data-target');
+                if (target) {
+                    var stored = form.querySelector('[name="' + target + '"]');
+                    if (stored && !editable.has(stored.name)) {
+                        el.disabled = true;
+                    }
                     return;
                 }
                 // ช่องซ่อนไม่ต้องปิด: ผู้ใช้แตะไม่ได้อยู่แล้ว และเซิร์ฟเวอร์ตัดทิ้งเองถ้าไม่ใช่ของแอดมิน
@@ -394,7 +407,14 @@
                 });
             }).observe(form, { childList: true, subtree: true });
         })();
+
+        // เตือนระหว่างพิมพ์เมื่อค่าที่เจ้าหน้าที่กรอกยาวเกินช่องในไฟล์ลงนาม — ดู late_field_fit.js
+        window.LATE_FIELD_FIT = {
+            formId: /*[[${formId}]]*/ '',
+            url: /*[[${signatureModule != null and request != null and documentType != null ? '/api/late-field-fit/' + signatureModule.name().toLowerCase() + '/' + request.id + '/' + documentType : null}]]*/ null
+        };
     </script>
+    <script src="/js/late_field_fit.js"></script>
 </th:block>
 
 </body>

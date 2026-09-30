@@ -65,6 +65,8 @@ public class SignatureWorkflowService {
     /** Shown when the active certificate's .p12 cannot be found anywhere. */
     static final String CERTIFICATE_FILE_MISSING = "ไม่พบไฟล์ใบรับรอง (.p12) ของท่านในระบบ "
             + "— กรุณาอัปโหลดไฟล์ .p12 ใหม่ที่หน้า \"ลายเซ็นของฉัน\" แล้วลงนามอีกครั้ง";
+    /** Shown when an incrementally signed document's PDF could not be prepared, so it was not sent. */
+    static final String SIGNED_PDF_NOT_PREPARED = "สร้างไฟล์ลงนามไม่สำเร็จ ยังไม่ได้ส่งเอกสาร กรุณาลองใหม่อีกครั้ง";
     private final UserRepository userRepository;
     private final SignatureNotifier notifier;
     private final StaffMemberService staffMemberService;
@@ -605,8 +607,25 @@ public class SignatureWorkflowService {
         audit(saved, null, SignatureAuditEventType.CREATED, initiator, actor,
                 "ส่งเอกสารไปลงนาม " + saved.getSteps().size() + " ขั้นตอน");
         // Documents switched to incremental signing get their PDF now, with every
-        // signature place in it; the rest (or any it cannot prepare) keep the old flow.
-        incrementalSigning.start(saved);
+        // signature place in it; the rest keep the old flow. One that cannot be
+        // prepared is not sent at all — on the old flow its file would carry no one's
+        // certificate, and nobody would notice (envelope 70, 30 Sep 2026).
+        try {
+            incrementalSigning.start(saved);
+        } catch (com.ecom.academic.service.pdf.IncrementalSigningService.CannotPrepareException e) {
+            // The envelope, its steps and the CREATED audit go back together
+            org.springframework.transaction.interceptor.TransactionAspectSupport
+                    .currentTransactionStatus().setRollbackOnly();
+            return Result.failed(SIGNED_PDF_NOT_PREPARED);
+        }
+        // Staff values already filled in (a round sent again after a cancel) go into the
+        // file at the first signature — refuse now, while the one who typed them is here
+        String tooLong = staffValuesTooLong(saved);
+        if (tooLong != null) {
+            org.springframework.transaction.interceptor.TransactionAspectSupport
+                    .currentTransactionStatus().setRollbackOnly();
+            return Result.failed(tooLong);
+        }
 
         activateNextStep(saved, actor);
         return new Result(requestRepository.save(saved), null);
@@ -975,7 +994,8 @@ public class SignatureWorkflowService {
             stepRepository.save(step);
             return null;
         } catch (com.ecom.academic.service.pdf.PdfIncrementService.DoesNotFitException e) {
-            return "ข้อความที่กรอกยาวเกินช่องในเอกสาร กรุณาย่อให้สั้นลงแล้วลงนามอีกครั้ง";
+            log.warn("Envelope {} step {}: {}", envelope.getId(), step.getId(), e.getMessage());
+            return doesNotFitMessage(envelope, e);
         } catch (IllegalStateException e) {
             log.warn("Envelope {} step {}: could not sign the PDF: {}", envelope.getId(), step.getId(), e.getMessage());
             return "เอกสารมีการเปลี่ยนแปลงระหว่างลงนาม กรุณาเปิดหน้าลงนามใหม่แล้วลองอีกครั้ง";
@@ -983,6 +1003,22 @@ public class SignatureWorkflowService {
             log.error("Envelope {} step {}: could not sign the PDF", envelope.getId(), step.getId(), e);
             return "ลงนามลงไฟล์เอกสารไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
         }
+    }
+
+    /**
+     * ข้อความตอนค่าในไฟล์ลงนามยาวเกินช่อง — บอกว่าช่องไหน และใครต้องแก้
+     *
+     * <p>ช่องที่เจ้าหน้าที่กรอกทีหลัง (หมายเหตุ ฯลฯ) ถูกเขียนลงไฟล์ตอนคนถัดไปลงนาม เดิมข้อความบอก
+     * ผู้ลงนามให้ "ย่อให้สั้นลง" ทั้งที่เขาแก้ช่องนั้นไม่ได้ (ซอง 71: ผู้ยื่นเจอหมายเหตุของเจ้าหน้าที่)
+     */
+    static String doesNotFitMessage(SignatureRequest envelope,
+            com.ecom.academic.service.pdf.PdfIncrementService.DoesNotFitException e) {
+        String what = "“" + com.ecom.academic.service.pdf.LateFieldFit.labelOf(e.field()) + " — " + e.value() + "”";
+        if (DocumentFieldOwnership.lateFields(envelope.getModule(), envelope.getDocumentType()).contains(e.field())) {
+            return what + " ที่เจ้าหน้าที่กรอกยาวเกินช่องในเอกสาร ท่านจึงยังลงนามไม่ได้ "
+                    + "กรุณาแจ้งเจ้าหน้าที่ให้ย่อข้อความแล้วส่งเวียนใหม่";
+        }
+        return what + " ยาวเกินช่องในเอกสาร กรุณาย่อให้สั้นลงแล้วลงนามอีกครั้ง";
     }
 
     /**
@@ -1492,9 +1528,21 @@ public class SignatureWorkflowService {
                 envelope.getDocumentType());
         List<String> missing = DocumentCompleteness.missingAdminFields(envelope.getModule(),
                 envelope.getDocumentType(), json);
-        return missing.isEmpty() ? null
-                : "ช่องของเจ้าหน้าที่ยังกรอกไม่ครบ (ขาดอีก " + missing.size()
-                        + " ช่อง) กรุณากรอกให้ครบก่อนส่งเวียนลงนามต่อ";
+        if (!missing.isEmpty()) {
+            return "ช่องของเจ้าหน้าที่ยังกรอกไม่ครบ (ขาดอีก " + missing.size()
+                    + " ช่อง) กรุณากรอกให้ครบก่อนส่งเวียนลงนามต่อ";
+        }
+        return staffValuesTooLong(envelope);
+    }
+
+    /**
+     * ค่าที่เจ้าหน้าที่กรอกยาวเกินช่องในไฟล์ลงนาม — ต้องรู้ก่อนส่งต่อ ไม่อย่างนั้นไปล้มตอนคนถัดไปลงนาม
+     *
+     * @return ข้อความบอกเจ้าหน้าที่ว่าช่องไหนต้องย่อ หรือ null เมื่อใส่ได้ทุกช่อง
+     */
+    private String staffValuesTooLong(SignatureRequest envelope) {
+        var tooLong = incrementalSigning.staffValuesThatDoNotFit(envelope);
+        return tooLong.isEmpty() ? null : com.ecom.academic.service.pdf.LateFieldFit.message(tooLong);
     }
 
     public Result startCirculation(Long envelopeId, UserDtls staff, ActorContext actor) {

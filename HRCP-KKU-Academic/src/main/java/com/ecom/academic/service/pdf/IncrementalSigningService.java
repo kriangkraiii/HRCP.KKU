@@ -49,8 +49,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
  *
  * <p>Off unless {@code app.esign.pdf-mode=incremental}, and then only for the
  * documents in {@code app.esign.incremental-docs} ({@code MODULE:type,...}) — each
- * template's reserved areas have to be checked before it joins. An envelope that
- * cannot be prepared this way stays on the old flow.
+ * template's reserved areas have to be checked before it joins. An envelope of such
+ * a document that cannot be prepared is refused ({@link CannotPrepareException}),
+ * never sent on the old flow: that file would carry no one's certificate.
  */
 @Service
 public class IncrementalSigningService {
@@ -97,9 +98,25 @@ public class IncrementalSigningService {
 
     // ------------------------------------------------------------------ revision 0
 
+    /** Attempts at the base PDF: LibreOffice now and then fails one conversion and succeeds the next. */
+    static final int PREPARE_ATTEMPTS = 3;
+
+    /**
+     * An incrementally signed document whose PDF could not be prepared. The envelope
+     * must not go out: on the old flow nobody's certificate would be in the file.
+     */
+    public static final class CannotPrepareException extends RuntimeException {
+        public CannotPrepareException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+
     /**
      * Prepares a new envelope's PDF. Leaves the envelope LEGACY (and returns false)
-     * when this document is not switched on or cannot be prepared.
+     * when this document is not switched on.
+     *
+     * @throws CannotPrepareException when it is switched on but the PDF could not be
+     *         prepared, even after retrying a failed conversion
      */
     @Transactional
     public boolean start(SignatureRequest envelope) {
@@ -109,6 +126,30 @@ public class IncrementalSigningService {
         if (!isEnabledFor(envelope.getModule(), envelope.getDocumentType())) {
             return false;
         }
+        Exception last = null;
+        for (int attempt = 1; attempt <= PREPARE_ATTEMPTS; attempt++) {
+            try {
+                prepare(envelope);
+                return true;
+            } catch (IOException e) {
+                // The conversion itself (LibreOffice) — worth another go
+                last = e;
+                log.warn("Envelope {}: preparing the signed PDF failed (attempt {}/{}): {}",
+                        envelope.getId(), attempt, PREPARE_ATTEMPTS, e.toString());
+            } catch (BasePdfBuilder.BaseBuildException | RuntimeException e) {
+                // The template itself does not fit — the same every time
+                last = e;
+                break;
+            }
+        }
+        envelope.setPdfMode(PdfMode.LEGACY);
+        envelope.setFieldLayoutJson(null);
+        log.error("Envelope {}: could not prepare the incrementally signed PDF; refusing to send it",
+                envelope.getId(), last);
+        throw new CannotPrepareException("Envelope " + envelope.getId() + ": signed PDF could not be prepared", last);
+    }
+
+    private void prepare(SignatureRequest envelope) throws IOException, BasePdfBuilder.BaseBuildException {
         List<SignatureSlot> slots = workflowConfig.effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType());
 
         List<BasePdfBuilder.TextSpec> texts = new ArrayList<>();
@@ -129,31 +170,22 @@ public class IncrementalSigningService {
             slotSpecs.add(new BasePdfBuilder.SlotSpec(s.slotKey(), s.anchorPlaceholder(), own));
         }
 
-        try {
-            BasePdfBuilder.Result base = builder.build(new BasePdfBuilder.Renderer() {
-                @Override
-                public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures) throws IOException {
-                    return renderer.renderBaseDocx(envelope, overrides, pictures.stream()
-                            .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height()))
-                            .toList());
-                }
+        BasePdfBuilder.Result base = builder.build(new BasePdfBuilder.Renderer() {
+            @Override
+            public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures) throws IOException {
+                return renderer.renderBaseDocx(envelope, overrides, pictures.stream()
+                        .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height()))
+                        .toList());
+            }
 
-                @Override
-                public byte[] toPdf(byte[] docx) throws IOException {
-                    return renderer.toPdf(docx);
-                }
-            }, texts, slotSpecs);
-            envelope.setFieldLayoutJson(json.writeValueAsString(base.layout()));
-            envelope.setPdfMode(PdfMode.INCREMENTAL);
-            revisions.append(envelope, null, base.pdf(), SignedPdfRevision.Kind.BASE, null, null, null);
-            return true;
-        } catch (BasePdfBuilder.BaseBuildException | IOException | RuntimeException e) {
-            log.warn("Envelope {}: could not prepare the incrementally signed PDF ({}); using the old flow",
-                    envelope.getId(), e.toString());
-            envelope.setPdfMode(PdfMode.LEGACY);
-            envelope.setFieldLayoutJson(null);
-            return false;
-        }
+            @Override
+            public byte[] toPdf(byte[] docx) throws IOException {
+                return renderer.toPdf(docx);
+            }
+        }, texts, slotSpecs);
+        envelope.setFieldLayoutJson(json.writeValueAsString(base.layout()));
+        envelope.setPdfMode(PdfMode.INCREMENTAL);
+        revisions.append(envelope, null, base.pdf(), SignedPdfRevision.Kind.BASE, null, null, null);
     }
 
     /** The template fields a slot's signer fills while signing. */
@@ -381,6 +413,31 @@ public class IncrementalSigningService {
             throw new IOException(e);
         }
         return values.isEmpty() ? -1 : fill(envelope, values, actor);
+    }
+
+    /**
+     * The staff's values that the next signature would write into this envelope's PDF
+     * but do not fit their boxes — the same values {@link #syncLateValues(SignatureRequest, UserDtls, boolean)}
+     * writes before a signer signs. Checked before the document goes on, so the staff
+     * member who typed them shortens them, not the next signer who cannot.
+     */
+    @Transactional(readOnly = true)
+    public List<LateFieldFit.Problem> staffValuesThatDoNotFit(SignatureRequest envelope) {
+        if (!envelope.isIncremental() || envelope.getPdfLockedAt() != null) {
+            return List.of();
+        }
+        Set<String> office = DocumentFieldOwnership.officeFields(envelope.getModule(), envelope.getDocumentType());
+        Map<String, String> values = new LinkedHashMap<>();
+        try {
+            json.readTree(officeFields.getObject().fillInto(envelope, "{}")).properties().forEach(e -> {
+                if (!office.contains(e.getKey())) {
+                    values.put(e.getKey(), e.getValue().asText(""));
+                }
+            });
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return List.of();
+        }
+        return LateFieldFit.check(envelope.getFieldLayoutJson(), values);
     }
 
     /** The incrementally signed envelope currently holding this document, if any. */

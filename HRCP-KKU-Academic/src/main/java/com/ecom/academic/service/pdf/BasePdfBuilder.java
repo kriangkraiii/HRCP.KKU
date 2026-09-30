@@ -127,7 +127,7 @@ public final class BasePdfBuilder {
     public record Result(byte[] pdf, Layout layout) {
     }
 
-    /** The document could not be prepared this way; the envelope should use the old flow. */
+    /** The template cannot be prepared this way; retrying will not help. */
     public static final class BaseBuildException extends Exception {
         public BaseBuildException(String message) {
             super(message);

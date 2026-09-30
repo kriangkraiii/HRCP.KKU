@@ -263,7 +263,10 @@ class IncrementalSigningTest {
         values.put("text_3", "ขาดสำเนาคำสั่ง");
         byte[] filled = PDF.fill(base.pdf(), values);
         assertThat(IncrementalSigningService.values(filled)).containsEntry("text_3", "ขาดสำเนาคำสั่ง");
-        assertThatThrownBy(() -> PDF.fill(base.pdf(), Map.of("text_1", "ขาดสำเนาคำสั่ง")))
+        // คอลัมน์หมายเหตุขยายแล้ว (เดิม 36pt — "ไม่เห็นเอกสาร" ของซอง 71 ใส่ไม่ได้) ข้อความสั้น ๆ พอดีบรรทัดเดียว
+        assertThat(IncrementalSigningService.values(PDF.fill(base.pdf(), Map.of("text_1", "ไม่เห็นเอกสาร"))))
+                .containsEntry("text_1", "ไม่เห็นเอกสาร");
+        assertThatThrownBy(() -> PDF.fill(base.pdf(), Map.of("text_1", "ขาดสำเนาคำสั่งแต่งตั้งและเอกสารแนบทั้งหมด")))
                 .as("แถว 1 มีบรรทัดเดียว").isInstanceOf(PdfIncrementService.DoesNotFitException.class);
         assertThatThrownBy(() -> PDF.fill(base.pdf(), Map.of("text_3",
                 "ข้อความยาวมากเกินกว่าที่ช่องหมายเหตุสามบรรทัดในตารางนี้จะรับได้แม้จะย่อขนาดตัวอักษรลงแล้วก็ตาม")))
