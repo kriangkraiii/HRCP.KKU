@@ -177,19 +177,61 @@
                    and !(officeIssued != null and officeIssued)
                    and !(adminFieldsStillOpen != null and adminFieldsStillOpen)
                    and !(onHoldForApplicant != null and onHoldForApplicant)}">
-    <!-- เอกสารลงนามแบบใส่ทับ: การออกเลขคือการลงนามปิดไฟล์ด้วย Digital ID ของเจ้าหน้าที่เอง
-         เซิร์ฟเวอร์ตัดค่านี้ทิ้งก่อนบันทึกลงเอกสาร -->
-    <div th:if="${officeSignsPdf != null and officeSignsPdf}" class="input-group input-group-sm mb-2"
-         style="max-width: 22rem;">
-        <span class="input-group-text"><i class="fas fa-key me-1"></i> รหัสผ่าน Digital ID</span>
-        <input type="password" class="form-control" name="officeCertPin" data-office-pin
-               autocomplete="off" placeholder="ลงนามปิดเอกสาร">
-    </div>
     <button type="button" class="btn btn-academic" data-office-save
             title="บันทึกเลขที่หนังสือและวันที่เอกสาร">
         <i class="fas fa-save"></i> บันทึกเลขที่หนังสือและวันที่
     </button>
+    <th:block th:replace="~{academic/_admin_field_lock :: officeIssueDialog}"></th:block>
 </th:block>
+
+<!--
+  กล่องยืนยันการออกเลขที่หนังสือ — กดบันทึกก่อน แล้วค่อยกรอกรหัสผ่าน Digital ID ในกล่องนี้
+  ใช้ร่วมกันทั้งสองเฟส (officeSave ของเฟส 2 และ _common :: buttons ของเฟส 1) เปิดด้วย
+  window.openOfficeIssueDialog ใน script ด้านล่าง
+
+  อยู่ในฟอร์มของเอกสาร เพื่อให้ officeCertPin ถูกส่งไปพร้อมเลขที่หนังสือ
+  เอกสารลงนามแบบใส่ทับ: การออกเลขคือการลงนามปิดไฟล์ด้วย Digital ID ของเจ้าหน้าที่เอง
+  เซิร์ฟเวอร์ตัดค่านี้ทิ้งก่อนบันทึกลงเอกสาร
+  data-office-pin: สคริปต์ล็อกช่องข้ามช่องนี้ ไม่งั้นถูกปิดจนพิมพ์ไม่ได้
+  data-optional: ตัวตรวจช่องที่ต้องกรอก (doc_required_validate.js) ไม่นับช่องนี้เป็นช่องของเอกสาร
+-->
+<div th:fragment="officeIssueDialog" class="modal fade" id="officeIssueModal" tabindex="-1"
+     aria-labelledby="officeIssueModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="officeIssueModalTitle">
+                    <i class="fas fa-stamp me-1"></i> ยืนยันการออกเลขที่หนังสือ
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning small mb-3">
+                    <i class="fas fa-triangle-exclamation me-1"></i>
+                    เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว เอกสารจะถูกปิด แก้ไขไม่ได้อีก
+                </div>
+                <div th:if="${officeSignsPdf != null and officeSignsPdf}">
+                    <label class="form-label fw-semibold" for="officeCertPin">
+                        <i class="fas fa-key me-1"></i> รหัสผ่าน Digital ID (.p12)
+                    </label>
+                    <input type="password" class="form-control" id="officeCertPin" name="officeCertPin"
+                           data-office-pin data-optional autocomplete="off">
+                    <div class="invalid-feedback">กรุณากรอกรหัสผ่าน Digital ID (.p12) ของท่าน เพื่อลงนามปิดเอกสาร</div>
+                    <div class="form-text">ใช้ลงนามปิดเอกสารด้วยใบรับรองของท่าน ระบบไม่เก็บรหัสผ่านนี้</div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
+                <!-- เอกสารแบบเดิมไม่ได้ลงนามลงไฟล์ตอนออกเลข จึงไม่ใช้คำว่า "ลงนาม" -->
+                <button type="button" class="btn btn-academic" data-office-issue-confirm>
+                    <i class="fas fa-signature me-1"></i>
+                    <span th:text="${officeSignsPdf != null and officeSignsPdf}
+                                   ? 'ยืนยันลงนามปิดเอกสาร' : 'ยืนยันการบันทึก'">ยืนยันลงนามปิดเอกสาร</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!--
   ปิดช่องที่ผู้ใช้คนนี้ไม่ได้เป็นเจ้าของ ต้องวางหลังฟอร์มใน DOM
@@ -214,18 +256,80 @@
                 if (!form.reportValidity()) return;
                 // ต้องกรอกทุกช่องที่ยังเปิดให้กรอก — เลขที่หนังสือที่มีแต่รหัสหน่วยงานนับว่ายังว่าง
                 if (window.DocRequiredFields && !window.DocRequiredFields.checkForm(form, btn)) return;
-                var pin = form.querySelector('[data-office-pin]');
+                window.openOfficeIssueDialog(form, function () {
+                    btn.disabled = true;
+                    form.submit();
+                });
+            });
+        })();
+
+        // กล่องยืนยันการออกเลข (officeIssueDialog): กดบันทึกก่อน แล้วค่อยกรอกรหัสผ่าน Digital ID
+        // onConfirm ถูกเรียกเมื่อกรอกรหัสผ่านแล้ว (หรือเอกสารแบบเดิมที่ไม่ต้องใช้รหัสผ่าน)
+        window.openOfficeIssueDialog = function (form, onConfirm) {
+            var modalEl = document.getElementById('officeIssueModal');
+            if (!modalEl || !window.bootstrap) {
+                // ไม่มีกล่อง (ไม่ควรเกิด) — อย่าส่งไปโดยไม่มีรหัสผ่าน ให้เซิร์ฟเวอร์ปฏิเสธแทนการเงียบ
+                if (confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
+                        + 'เอกสารจะถูกปิด แก้ไขไม่ได้อีก\nยืนยันการบันทึก?')) onConfirm();
+                return;
+            }
+            var pin = modalEl.querySelector('[data-office-pin]');
+            // ย้ายไปไว้ใต้ body: modal ที่ซ้อนอยู่ในการ์ดของฟอร์มอาจติดอยู่ใต้ฉากหลังมืด
+            // ช่องรหัสผ่านยังส่งไปกับฟอร์มผ่าน attribute form=
+            if (modalEl.parentElement !== document.body) {
+                if (pin && form.id) pin.setAttribute('form', form.id);
+                document.body.appendChild(modalEl);
+            }
+            var modal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            var confirmBtn = modalEl.querySelector('[data-office-issue-confirm]');
+
+            function confirmIssue() {
                 if (pin && !pin.value) {
-                    alert('กรุณากรอกรหัสผ่าน Digital ID (.p12) ของท่าน เพื่อลงนามปิดเอกสาร');
+                    pin.classList.add('is-invalid');
                     pin.focus();
                     return;
                 }
-                if (!confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
-                        + 'เอกสารจะถูกปิด แก้ไขไม่ได้อีก\nยืนยันการบันทึก?')) return;
-                btn.disabled = true;
-                form.submit();
-            });
-        })();
+                cleanup();
+                confirmBtn.disabled = true;
+                if (window.setButtonLoading) window.setButtonLoading(confirmBtn, 'กำลังลงนามและบันทึก...');
+                onConfirm();
+            }
+            function onKey(e) {
+                // Enter ในช่องรหัสผ่านจะส่งฟอร์มเองโดยข้ามการตรวจ — ให้ผ่านปุ่มยืนยันแทน
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    confirmIssue();
+                }
+            }
+            function onInput() { pin.classList.remove('is-invalid'); }
+            function onShown() { if (pin) pin.focus(); }
+            function onHidden() {
+                // ยกเลิกแล้วไม่ทิ้งรหัสผ่านค้างไว้ในหน้า
+                if (pin && !confirmBtn.disabled) pin.value = '';
+                cleanup();
+            }
+            function cleanup() {
+                confirmBtn.removeEventListener('click', confirmIssue);
+                modalEl.removeEventListener('shown.bs.modal', onShown);
+                modalEl.removeEventListener('hidden.bs.modal', onHidden);
+                if (pin) {
+                    pin.removeEventListener('keydown', onKey);
+                    pin.removeEventListener('input', onInput);
+                }
+            }
+
+            if (pin) {
+                pin.value = '';
+                pin.classList.remove('is-invalid');
+                pin.addEventListener('keydown', onKey);
+                pin.addEventListener('input', onInput);
+            }
+            confirmBtn.disabled = false;
+            confirmBtn.addEventListener('click', confirmIssue);
+            modalEl.addEventListener('shown.bs.modal', onShown);
+            modalEl.addEventListener('hidden.bs.modal', onHidden);
+            modal.show();
+        };
 
         (function () {
             var readOnly = /*[[${readOnlyForAdmin}]]*/ false;
@@ -261,6 +365,9 @@
                 // ยกเว้นตอนที่ไม่มีอะไรให้กรอกเลย: สคริปต์ของหน้าเติมค่าช่องซ่อนตอนโหลด (จำนวนแถว ฯลฯ)
                 // บันทึกร่างอัตโนมัติเห็นว่ามีการเปลี่ยนแล้วยิงไปโดน 409 "อยู่ระหว่างเวียนลงนาม" ทุกครั้งที่เปิดหน้า
                 if (!el.name || editable.has(el.name)) return;
+                // รหัสผ่าน Digital ID ของขั้นออกเลข ไม่ใช่ช่องของเอกสาร (เซิร์ฟเวอร์ตัดทิ้งก่อนบันทึก)
+                // แต่อยู่ในฟอร์มเดียวกัน ถ้าปิดไปด้วยจะพิมพ์ไม่ได้และออกเลขไม่ได้เลย
+                if (el.hasAttribute('data-office-pin')) return;
                 if (el.type === 'hidden') {
                     if (nothingToFill) el.disabled = true;
                     return;

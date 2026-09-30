@@ -25,20 +25,17 @@
                      and !(onHoldForApplicant != null and onHoldForApplicant)}"
             type="button" id="btnSubmitDoc" class="btn btn-academic"
             data-issues-office="true"
-            th:attr="data-office-signs-pdf=${officeSignsPdf != null and officeSignsPdf}"
             title="บันทึกเลขที่หนังสือและวันที่เอกสาร">
         <i class="fas fa-save"></i> บันทึกเลขที่หนังสือและวันที่
     </button>
-    <!-- เอกสารลงนามแบบใส่ทับ: การออกเลขคือการลงนามปิดไฟล์ด้วย Digital ID ของเจ้าหน้าที่เอง
-         อยู่นอกฟอร์มจึงผูกด้วย form="docForm"; เซิร์ฟเวอร์ตัดค่านี้ทิ้งก่อนบันทึกลงเอกสาร -->
-    <div th:if="${officeSignsPdf != null and officeSignsPdf and signingComplete != null and signingComplete
-                 and !(officeIssued != null and officeIssued)
-                 and !(adminFieldsStillOpen != null and adminFieldsStillOpen)}"
-         class="input-group input-group-sm" style="max-width: 22rem;">
-        <span class="input-group-text"><i class="fas fa-key me-1"></i> รหัสผ่าน Digital ID</span>
-        <input type="password" class="form-control" id="officeCertPin" name="officeCertPin" form="docForm"
-               autocomplete="off" placeholder="ลงนามปิดเอกสาร">
-    </div>
+    <!-- กดบันทึกก่อน แล้วค่อยกรอกรหัสผ่าน Digital ID ในกล่องยืนยัน — กล่องเดียวกับเฟส 2 -->
+    <th:block th:if="${signingComplete != null and signingComplete
+                       and issuesOffice != null and issuesOffice
+                       and !(officeIssued != null and officeIssued)
+                       and !(adminFieldsStillOpen != null and adminFieldsStillOpen)
+                       and !(onHoldForApplicant != null and onHoldForApplicant)}">
+        <th:block th:replace="~{academic/_admin_field_lock :: officeIssueDialog}"></th:block>
+    </th:block>
 </div>
 
 <!-- ==================== แผงลงนามอิเล็กทรอนิกส์ ==================== -->
@@ -68,15 +65,8 @@
                 submitBtn.addEventListener('click', function() {
                     const form = document.getElementById('docForm');
                     if (form && !form.reportValidity()) return;
-                    const pin = document.getElementById('officeCertPin');
-                    if (submitBtn.dataset.officeSignsPdf === 'true' && pin && !pin.value) {
-                        alert('กรุณากรอกรหัสผ่าน Digital ID (.p12) ของท่าน เพื่อลงนามปิดเอกสาร');
-                        pin.focus();
-                        return;
-                    }
-                    if (!confirm('เมื่อบันทึกเลขที่หนังสือและวันที่เอกสารครบแล้ว '
-                            + 'เอกสารจะถูกปิด แก้ไขไม่ได้อีก\nยืนยันการบันทึก?')) return;
-                    submitFormAsSubmit();
+                    // กล่องยืนยันถามรหัสผ่าน Digital ID ต่อ — ดู _admin_field_lock :: officeIssueDialog
+                    window.openOfficeIssueDialog(form, submitFormAsSubmit);
                 });
             }
 

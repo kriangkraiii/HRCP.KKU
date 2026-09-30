@@ -189,19 +189,19 @@ class IncrementalSigningTest {
                 .containsEntry("chk_off_1", "");
     }
 
-    @Test
-    @DisplayName("หมายเหตุหลายบรรทัดในตาราง (เอกสารที่ 2): ตัดบรรทัดตามคำ ไม่เกินพื้นที่ที่จอง")
-    void multiLineRemarks() throws Exception {
-        String json = "{\"applicant_name\":\"นายสมชาย ใจดี\",\"title\":\"นาย\"}";
+    private static final String DOC2_JSON = "{\"applicant_name\":\"นายสมชาย ใจดี\",\"title\":\"นาย\"}";
+
+    /** เอกสารที่ 2 ฉบับเริ่มลงนาม — จองช่องของเจ้าหน้าที่ (✓ และหมายเหตุ) ไว้ทุกแถว */
+    private static BasePdfBuilder.Result doc2Base() throws Exception {
         List<BasePdfBuilder.TextSpec> texts = new java.util.ArrayList<>();
         for (int i = 1; i <= 5; i++) {
             texts.add(new BasePdfBuilder.TextSpec("chk_off_" + i, 0, true));
             texts.add(new BasePdfBuilder.TextSpec("text_" + i, 30, false, IncrementalSigningService.linesFor("text_" + i)));
         }
-        var base = new BasePdfBuilder().build(new BasePdfBuilder.Renderer() {
+        return new BasePdfBuilder().build(new BasePdfBuilder.Renderer() {
             @Override
             public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures) throws IOException {
-                StringBuilder j = new StringBuilder(json.substring(0, json.length() - 1));
+                StringBuilder j = new StringBuilder(DOC2_JSON.substring(0, DOC2_JSON.length() - 1));
                 overrides.forEach((k, v) -> j.append(",\"").append(k).append("\":\"").append(v).append('"'));
                 return GEN.generateSignedDocx(2, j.append('}').toString(), pictures.stream()
                         .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height())).toList());
@@ -212,18 +212,59 @@ class IncrementalSigningTest {
                 return GEN.convertDocxToPdf(docx);
             }
         }, texts, List.of());
+    }
 
-        var remark = base.layout().texts().stream().filter(b -> b.field().equals("text_1")).findFirst().orElseThrow();
-        assertThat(remark.lines()).isEqualTo(3);
-        assertThat(remark.pitch()).isGreaterThan(10);
+    /** ระยะจากขอบล่างของหน้า (pt) ของบรรทัดแรกที่มีข้อความนี้ */
+    private static float yOf(byte[] pdf, String needle) throws IOException {
+        try (var doc = Loader.loadPDF(pdf)) {
+            float[] found = { Float.NaN };
+            var stripper = new org.apache.pdfbox.text.PDFTextStripper() {
+                @Override
+                protected void writeString(String text, List<org.apache.pdfbox.text.TextPosition> positions) {
+                    if (Float.isNaN(found[0]) && text.contains(needle) && !positions.isEmpty()) {
+                        found[0] = positions.get(0).getPageHeight() - positions.get(0).getYDirAdj();
+                    }
+                }
+            };
+            stripper.getText(doc);
+            assertThat(found[0]).as("ไม่พบข้อความ \"%s\" ในเอกสาร", needle).isNotNaN();
+            return found[0];
+        }
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 2 ลงนามแล้วหน้าตาเหมือนฉบับยังไม่ลงนาม — ช่องหมายเหตุไม่ทำให้แถวสูงขึ้น")
+    void signingKeepsTheUnsignedLayout() throws Exception {
+        byte[] unsigned = GEN.convertDocxToPdf(GEN.generateSignedDocx(2, DOC2_JSON, List.of()));
+        byte[] signedBase = doc2Base().pdf();
+
+        // บรรทัดใต้ตาราง: ถ้าแถวไหนสูงขึ้น บรรทัดนี้จะถูกดันลง
+        String belowTable = "ผู้ขอรับการประเมินผลการสอน";
+        assertThat(yOf(signedBase, belowTable))
+                .as("ตารางต้องสูงเท่าฉบับยังไม่ลงนาม")
+                .isCloseTo(yOf(unsigned, belowTable), org.assertj.core.data.Offset.offset(1.0f));
+    }
+
+    @Test
+    @DisplayName("หมายเหตุในตาราง (เอกสารที่ 2): ใช้บรรทัดเท่าที่แถวมีอยู่แล้ว ตัดบรรทัดตามคำ ไม่เกินพื้นที่ที่จอง")
+    void multiLineRemarks() throws Exception {
+        var base = doc2Base();
+
+        var remarks = base.layout().texts().stream().filter(b -> b.field().startsWith("text_"))
+                .collect(java.util.stream.Collectors.toMap(BasePdfBuilder.Box::field, BasePdfBuilder.Box::lines));
+        assertThat(remarks).containsEntry("text_1", 1).containsEntry("text_2", 1)
+                .containsEntry("text_3", 2).containsEntry("text_4", 2).containsEntry("text_5", 1);
 
         Map<String, String> values = new LinkedHashMap<>();
         values.put("chk_off_1", PdfIncrementService.TICK);
-        values.put("text_1", "เอกสารครบถ้วน");
-        values.put("chk_off_2", PdfIncrementService.TICK);
-        values.put("text_2", "ขาดสำเนาคำสั่งแต่งตั้ง");
+        values.put("text_1", "ครบ");
+        values.put("chk_off_3", PdfIncrementService.TICK);
+        // แถว 3 มีสองบรรทัด — ข้อความที่ยาวเกินหนึ่งบรรทัดตัดลงบรรทัดที่สอง
+        values.put("text_3", "ขาดสำเนาคำสั่ง");
         byte[] filled = PDF.fill(base.pdf(), values);
-        assertThat(IncrementalSigningService.values(filled)).containsEntry("text_2", "ขาดสำเนาคำสั่งแต่งตั้ง");
+        assertThat(IncrementalSigningService.values(filled)).containsEntry("text_3", "ขาดสำเนาคำสั่ง");
+        assertThatThrownBy(() -> PDF.fill(base.pdf(), Map.of("text_1", "ขาดสำเนาคำสั่ง")))
+                .as("แถว 1 มีบรรทัดเดียว").isInstanceOf(PdfIncrementService.DoesNotFitException.class);
         assertThatThrownBy(() -> PDF.fill(base.pdf(), Map.of("text_3",
                 "ข้อความยาวมากเกินกว่าที่ช่องหมายเหตุสามบรรทัดในตารางนี้จะรับได้แม้จะย่อขนาดตัวอักษรลงแล้วก็ตาม")))
                 .isInstanceOf(PdfIncrementService.DoesNotFitException.class);

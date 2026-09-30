@@ -191,9 +191,17 @@ public class IncrementalSigningService {
     /**
      * Lines reserved for a late field. The remarks of document 2 (text_1..5) sit in
      * narrow table cells and wrap there, as they do in the Word version.
+     *
+     * <p>Only as many lines as the row already has: a reserved line is a real line
+     * break in the layout, so reserving more makes the row taller than in the
+     * unsigned document and the page changes shape the moment someone signs.
+     * Rows 3 and 4 are two lines tall because their item text wraps; the rest are one.
      */
     static int linesFor(String field) {
-        return field.startsWith("text_") ? 3 : 1;
+        return switch (field) {
+            case "text_3", "text_4" -> 2;
+            default -> 1;
+        };
     }
 
     /** Office/admin fields that hold a ✓ rather than text (the chk_* boxes). */

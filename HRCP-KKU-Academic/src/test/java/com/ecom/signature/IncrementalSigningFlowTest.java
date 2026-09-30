@@ -218,11 +218,27 @@ class IncrementalSigningFlowTest extends AbstractFlowTest {
     }
 
     @Test
+    @DisplayName("ระหว่างเวียน: ปุ่มส่งกลับกับปุ่มยกเลิกการเวียนมีคำอธิบาย (i) บอกว่าต่างกันอย่างไร")
+    void sendBackAndCancelExplainThemselves() throws Exception {
+        String html = mvc.perform(get("/admin/academic/request/" + request.getId() + "/document/1").with(as(officer)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("ส่งกลับให้แก้ไขและลงนามใหม่").contains("ยกเลิกการเวียนลงนาม")
+                .contains("ใช้เมื่อส่วนของผู้ยื่นต้องแก้")
+                .contains("ใช้เมื่อส่วนของเจ้าหน้าที่ต้องแก้");
+    }
+
+    @Test
     @DisplayName("หน้าออกเลขแสดงช่องรหัสผ่าน Digital ID ของเจ้าหน้าที่")
     void theIssueFormAsksForThePin() throws Exception {
         sign(TestCertificates.PIN);
         String html = mvc.perform(get("/admin/academic/request/" + request.getId() + "/document/1").with(as(officer)))
                 .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
         assertThat(html).contains("name=\"officeCertPin\"");
+        // กดบันทึกก่อนแล้วค่อยกรอกรหัสผ่าน: ช่องรหัสผ่านอยู่ในกล่องยืนยัน ไม่ได้วางข้างปุ่ม
+        assertThat(html).containsOnlyOnce("id=\"officeIssueModal\"");
+        assertThat(html.indexOf("name=\"officeCertPin\"")).isGreaterThan(html.indexOf("id=\"officeIssueModal\""));
+        // ช่องรหัสผ่านอยู่ในฟอร์มและไม่ใช่ช่องสารบรรณ — สคริปต์ล็อกช่องต้องข้ามมัน ไม่งั้นถูกปิดจนพิมพ์ไม่ได้
+        assertThat(html).containsPattern("<input[^>]*name=\"officeCertPin\"[^>]*data-office-pin");
+        assertThat(html).contains("el.hasAttribute('data-office-pin')");
     }
 }
