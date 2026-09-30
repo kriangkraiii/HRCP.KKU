@@ -62,6 +62,14 @@
                     <span class="badge rounded-pill bg-primary bg-opacity-75" th:if="${!#lists.isEmpty(sentEnvelopes)}" th:text="${#lists.size(sentEnvelopes)}">0</span>
                 </button>
             </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link fw-semibold d-flex align-items-center gap-2 px-3"
+                        id="tab-history" data-bs-toggle="pill" data-bs-target="#content-history" type="button" role="tab">
+                    <i class="fas fa-clock-rotate-left"></i>
+                    <span>ประวัติการลงนาม</span>
+                    <span class="badge rounded-pill bg-success bg-opacity-75" th:if="${historyQ == null and signedHistory.totalElements > 0}" th:text="${signedHistory.totalElements}">0</span>
+                </button>
+            </li>
             <li class="nav-item" role="presentation" th:if="${isAdmin}">
                 <button class="nav-link fw-semibold d-flex align-items-center gap-2 px-3 text-dark"
                         id="tab-all-active" data-bs-toggle="pill" data-bs-target="#content-all-active" type="button" role="tab">
@@ -375,7 +383,137 @@
             </div>
 
             <!-- ============================================================= -->
-            <!-- TAB 3: ภาพรวมกำลังเวียนลงนามทั้งหมด (Admin / Staff Overview)  -->
+            <!-- TAB 3: ประวัติการลงนาม (เฉพาะที่ฉันลงนาม ในซองที่ลงนามครบแล้ว)  -->
+            <!-- ============================================================= -->
+            <div class="tab-pane fade" id="content-history" role="tabpanel">
+
+                <div th:if="${historyQ == null and signedHistory.totalElements == 0}" class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body text-center py-5">
+                        <div class="rounded-circle bg-light d-inline-flex p-4 mb-3">
+                            <i class="fas fa-clock-rotate-left fa-3x text-secondary opacity-50"></i>
+                        </div>
+                        <h5 class="fw-bold text-dark mb-1">ยังไม่มีประวัติการลงนาม</h5>
+                        <p class="text-secondary mb-0">
+                            เอกสารที่ท่านลงนามจะแสดงที่นี่เมื่อผู้ลงนามทุกคนลงนามครบแล้ว
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ค้นหาที่ฝั่งเซิร์ฟเวอร์ เพื่อให้ค้นได้ทุกหน้า ไม่ใช่แค่หน้าที่เปิดอยู่ -->
+                <div class="card border-0 shadow-sm rounded-3 mb-4" th:unless="${historyQ == null and signedHistory.totalElements == 0}">
+                    <div class="card-body p-3">
+                        <form method="get" action="/esign/inbox#history" class="d-flex gap-2" role="search">
+                            <div class="input-group">
+                                <span class="input-group-text bg-transparent border-end-0 text-muted">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="search" id="historySearchInput" name="historyQ" class="form-control border-start-0"
+                                       th:value="${historyQ}"
+                                       placeholder="ค้นหาชื่อเอกสาร ประเภทคำร้อง ตำแหน่ง หรือรหัสตรวจสอบ">
+                            </div>
+                            <button type="submit" class="btn btn-primary text-nowrap">ค้นหา</button>
+                            <a th:if="${historyQ != null}" href="/esign/inbox#history" class="btn btn-outline-secondary text-nowrap">ล้าง</a>
+                        </form>
+                    </div>
+                </div>
+
+                <div th:if="${historyQ != null and signedHistory.totalElements == 0}" id="noHistoryResults" class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body text-center py-5">
+                        <i class="fas fa-magnifying-glass fa-2x text-secondary opacity-50 mb-2"></i>
+                        <p class="text-secondary mb-0">ไม่พบประวัติการลงนามตรงตามคำค้นหา</p>
+                    </div>
+                </div>
+
+                <div class="row g-3" th:if="${signedHistory.hasContent()}">
+                    <div class="col-md-6 col-xl-4 history-card-item"
+                         th:each="step : ${signedHistory.content}"
+                         th:with="env=${step.signatureRequest}">
+
+                        <div class="card border-0 shadow-sm rounded-4 h-100 border-start border-success border-4">
+                            <div class="card-body p-4 d-flex flex-column justify-content-between">
+
+                                <div>
+                                    <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                                        <span class="badge rounded-pill"
+                                              th:classappend="${env.module.name() == 'ACADEMIC'} ? 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' : 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25'"
+                                              th:text="${env.module.thaiLabel}">
+                                            ประเภท
+                                        </span>
+                                        <span class="badge bg-success rounded-pill px-2 py-1">
+                                            <i class="fas fa-circle-check me-1"></i> ลงนามครบแล้ว
+                                        </span>
+                                    </div>
+
+                                    <h5 class="fw-bold text-dark mb-2 line-clamp-2"
+                                        th:text="${env.documentLabel} ?: ('เอกสารที่ ' + ${env.documentType})">
+                                        ชื่อเอกสาร
+                                    </h5>
+
+                                    <div class="bg-light rounded-3 p-2 mb-3 small">
+                                        <div class="d-flex justify-content-between gap-2 text-secondary mb-1">
+                                            <span>ลงนามในตำแหน่ง:</span>
+                                            <strong class="text-dark text-end" th:text="${step.roleLabel}">—</strong>
+                                        </div>
+                                        <div class="d-flex justify-content-between gap-2 text-secondary mb-1">
+                                            <span>ท่านลงนามเมื่อ:</span>
+                                            <span class="text-dark fw-medium"
+                                                  th:text="${step.signedAt != null} ? ${#temporals.format(step.signedAt, 'd MMM yyyy HH:mm')} : '—'">—</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between gap-2 text-secondary mb-1">
+                                            <span>ลงนามครบเมื่อ:</span>
+                                            <span class="text-dark fw-medium"
+                                                  th:text="${env.completedAt != null} ? ${#temporals.format(env.completedAt, 'd MMM yyyy HH:mm')} : '—'">—</span>
+                                        </div>
+                                        <div class="d-flex justify-content-between gap-2 text-secondary">
+                                            <span>รหัสตรวจสอบ:</span>
+                                            <code class="fw-bold text-dark" th:text="${env.verificationCode}">CODE</code>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="d-flex gap-2 pt-2 border-top">
+                                    <a th:href="@{'/esign/verify/' + ${env.verificationCode}}"
+                                       class="btn btn-outline-success flex-grow-1 history-verify-link">
+                                        <i class="fas fa-shield-halved me-1"></i> ตรวจสอบเอกสาร
+                                    </a>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- แบ่งหน้า: หน้าแรกคือรายการล่าสุด แสดงหน้าแรกและหน้าสุดท้ายเสมอ (-1 = ช่วงที่ย่อไว้) -->
+                <div id="historyPager" th:if="${signedHistory.totalPages > 0}"
+                     class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
+                    <small class="text-secondary"
+                           th:text="'แสดง ' + ${signedHistory.number * signedHistory.size + 1} + '–' + ${signedHistory.number * signedHistory.size + signedHistory.numberOfElements} + ' จาก ' + ${signedHistory.totalElements} + ' รายการ'">
+                        แสดง 1–12 จาก 12 รายการ
+                    </small>
+                    <nav th:if="${signedHistory.totalPages > 1}" aria-label="หน้าประวัติการลงนาม">
+                        <ul class="pagination pagination-sm mb-0 flex-wrap">
+                            <li class="page-item" th:classappend="${signedHistory.first} ? 'disabled'">
+                                <a class="page-link" th:href="${'/esign/inbox?historyPage=' + (signedHistory.number - 1) + historyQueryParam + '#history'}">ก่อนหน้า</a>
+                            </li>
+                            <li th:each="n : ${historyPageNumbers}" class="page-item"
+                                th:classappend="${n == -1} ? 'disabled' : (${n == signedHistory.number} ? 'active' : '')">
+                                <span th:if="${n == -1}" class="page-link">…</span>
+                                <a th:if="${n != -1}" class="page-link"
+                                   th:href="${'/esign/inbox?historyPage=' + n + historyQueryParam + '#history'}"
+                                   th:attr="aria-current=${n == signedHistory.number} ? 'page' : null"
+                                   th:text="${n + 1}">1</a>
+                            </li>
+                            <li class="page-item" th:classappend="${signedHistory.last} ? 'disabled'">
+                                <a class="page-link" th:href="${'/esign/inbox?historyPage=' + (signedHistory.number + 1) + historyQueryParam + '#history'}">ถัดไป</a>
+                            </li>
+                        </ul>
+                    </nav>
+                </div>
+
+            </div>
+
+            <!-- ============================================================= -->
+            <!-- TAB 4: ภาพรวมกำลังเวียนลงนามทั้งหมด (Admin / Staff Overview)  -->
             <!-- ============================================================= -->
             <div class="tab-pane fade" id="content-all-active" role="tabpanel" th:if="${isAdmin}">
 
@@ -494,9 +632,20 @@
         var hash = window.location.hash;
         if (hash === '#sent' || hash === '#tab-sent' || hash === '#content-sent') {
             switchEsignTab('tab-sent');
+        } else if (hash === '#history' || hash === '#tab-history' || hash === '#content-history') {
+            switchEsignTab('tab-history');
         } else if (hash === '#all' || hash === '#tab-all-active' || hash === '#content-all-active') {
             switchEsignTab('tab-all-active');
         }
+
+        // Keep the open tab in the URL so coming back from the verify page lands on it again.
+        var tabHashes = { 'tab-pending': '', 'tab-sent': '#sent', 'tab-history': '#history', 'tab-all-active': '#all' };
+        document.querySelectorAll('#esignTabs .nav-link').forEach(function(el) {
+            el.addEventListener('click', function() {
+                if (!(el.id in tabHashes) || !window.history.replaceState) return;
+                window.history.replaceState(null, '', window.location.pathname + window.location.search + tabHashes[el.id]);
+            });
+        });
     });
 
     (function() {

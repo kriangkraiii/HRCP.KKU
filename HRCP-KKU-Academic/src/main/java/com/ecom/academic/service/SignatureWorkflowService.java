@@ -6,13 +6,17 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HexFormat;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -248,6 +252,22 @@ public class SignatureWorkflowService {
     public List<SignatureStep> findInbox(UserDtls signer) {
         if (signer == null) return List.of();
         return stepRepository.findInbox(signer.getId(), SignatureStepStatus.ACTIVE);
+    }
+
+    /**
+     * Steps this person signed on envelopes that are now fully signed, newest first.
+     *
+     * <p>{@code search} matches the document name, the role signed as, the
+     * verification code or the request type's Thai label; blank means everything.
+     */
+    public Page<SignatureStep> findSignedHistory(UserDtls signer, String search, Pageable pageable) {
+        if (signer == null || signer.getId() == null) return Page.empty(pageable);
+        String term = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
+        String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
+        List<SignatureModule> modules = Arrays.stream(SignatureModule.values())
+                .filter(m -> !term.isEmpty() && m.getThaiLabel().toLowerCase(Locale.ROOT).contains(term))
+                .toList();
+        return stepRepository.findSignedHistory(signer.getId(), !term.isEmpty(), pattern, modules, pageable);
     }
 
     /** Open envelopes sent/initiated by this user that are currently in progress. */

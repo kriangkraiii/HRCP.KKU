@@ -1,12 +1,16 @@
 package com.ecom.academic.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.SignatureStepStatus;
 
@@ -27,6 +31,48 @@ public interface SignatureStepRepository extends JpaRepository<SignatureStep, Lo
             """)
     List<SignatureStep> findInbox(@Param("userId") Integer userId,
             @Param("status") SignatureStepStatus status);
+
+    /**
+     * What one person has signed — the "ประวัติการลงนาม" tab.
+     *
+     * <p>Only envelopes that went on to collect every signature: a signature on
+     * a round that was declined, cancelled or voided is not on any document
+     * anyone can verify, so listing it would point at nothing.
+     *
+     * <p>{@code searching} is a flag rather than a null check on {@code pattern}:
+     * PostgreSQL cannot type a bare {@code ? IS NULL}. {@code modules} are the
+     * request types whose Thai label matches the search, worked out by the caller.
+     */
+    @Query(value = """
+            SELECT s FROM SignatureStep s
+            JOIN FETCH s.signatureRequest r
+            WHERE s.signer.id = :userId
+              AND s.status = com.ecom.academic.model.SignatureStepStatus.SIGNED
+              AND r.status = com.ecom.academic.model.SignatureRequestStatus.COMPLETED
+              AND (:searching = false
+                   OR LOWER(r.documentLabel) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(s.roleLabel) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(r.verificationCode) LIKE :pattern ESCAPE '\\'
+                   OR r.module IN :modules)
+            ORDER BY s.signedAt DESC, s.id DESC
+            """,
+            countQuery = """
+            SELECT COUNT(s) FROM SignatureStep s
+            JOIN s.signatureRequest r
+            WHERE s.signer.id = :userId
+              AND s.status = com.ecom.academic.model.SignatureStepStatus.SIGNED
+              AND r.status = com.ecom.academic.model.SignatureRequestStatus.COMPLETED
+              AND (:searching = false
+                   OR LOWER(r.documentLabel) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(s.roleLabel) LIKE :pattern ESCAPE '\\'
+                   OR LOWER(r.verificationCode) LIKE :pattern ESCAPE '\\'
+                   OR r.module IN :modules)
+            """)
+    Page<SignatureStep> findSignedHistory(@Param("userId") Integer userId,
+            @Param("searching") boolean searching,
+            @Param("pattern") String pattern,
+            @Param("modules") Collection<SignatureModule> modules,
+            Pageable pageable);
 
     /** Count for the sidebar badge. */
     @Query("""

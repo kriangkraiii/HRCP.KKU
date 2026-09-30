@@ -14,6 +14,8 @@ import java.util.List;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -64,6 +66,10 @@ public class SigningController {
 
     private static final Logger log = LoggerFactory.getLogger(SigningController.class);
 
+    /** Twelve cards fill four rows of the three-column grid. */
+    private static final int HISTORY_PAGE_SIZE = 12;
+    private static final int HISTORY_PAGE_WINDOW = 2;
+
     private final SignatureWorkflowService workflow;
     private final SignedDocumentRenderer renderer;
     private final UserSignatureService signatureService;
@@ -101,22 +107,57 @@ public class SigningController {
         this.documentService = documentService;
     }
 
-    /** Everything waiting on the signed-in person + sent envelopes tracking. */
+    /** Everything waiting on the signed-in person, sent envelopes tracking, and what they have signed. */
     @GetMapping("/inbox")
-    public String inbox(Principal principal, Model model) {
+    public String inbox(Principal principal, Model model,
+            @RequestParam(name = "historyPage", defaultValue = "0") int historyPage,
+            @RequestParam(name = "historyQ", required = false) String historyQ) {
         UserDtls me = currentUser(principal);
+        String historySearch = historyQ == null || historyQ.isBlank() ? null : historyQ.trim();
         boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
 
         List<SignatureStep> pendingSteps = workflow.findInbox(me);
         List<SignatureRequest> sentEnvelopes = workflow.findSentEnvelopes(me);
         List<SignatureRequest> allActiveEnvelopes = isAdmin ? workflow.findAllActiveEnvelopes() : List.of();
 
+        Page<SignatureStep> signedHistory = workflow.findSignedHistory(me, historySearch,
+                PageRequest.of(Math.max(0, historyPage), HISTORY_PAGE_SIZE));
+        if (signedHistory.getTotalPages() > 0 && signedHistory.getNumber() >= signedHistory.getTotalPages()) {
+            // A page past the end, e.g. an old link: show the last page instead of an empty one.
+            signedHistory = workflow.findSignedHistory(me, historySearch,
+                    PageRequest.of(signedHistory.getTotalPages() - 1, HISTORY_PAGE_SIZE));
+        }
+
         model.addAttribute("pendingSteps", pendingSteps);
         model.addAttribute("sentEnvelopes", sentEnvelopes);
         model.addAttribute("allActiveEnvelopes", allActiveEnvelopes);
+        model.addAttribute("signedHistory", signedHistory);
+        model.addAttribute("historyPageNumbers", pageNumbers(signedHistory.getNumber(), signedHistory.getTotalPages()));
+        model.addAttribute("historyQ", historySearch);
+        // Carried on the pager links; left off entirely when not searching.
+        model.addAttribute("historyQueryParam", historySearch == null ? ""
+                : "&historyQ=" + URLEncoder.encode(historySearch, StandardCharsets.UTF_8));
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("currentUser", me);
         return "academic/esign/inbox";
+    }
+
+    /**
+     * The page links to print, 0-based, with {@code -1} where a run of pages is
+     * left out: the first and last pages always, plus two either side of the
+     * current one — e.g. {@code 1 2 3 … 10} or {@code 1 … 4 5 6 7 8 … 10}.
+     */
+    static List<Integer> pageNumbers(int current, int totalPages) {
+        List<Integer> numbers = new ArrayList<>();
+        for (int i = 0; i < totalPages; i++) {
+            boolean shown = i == 0 || i == totalPages - 1 || Math.abs(i - current) <= HISTORY_PAGE_WINDOW;
+            if (shown) {
+                numbers.add(i);
+            } else if (numbers.get(numbers.size() - 1) != -1) {
+                numbers.add(-1);
+            }
+        }
+        return numbers;
     }
 
     /**

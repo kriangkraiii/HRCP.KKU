@@ -18,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.TestPropertySource;
 
 import com.ecom.academic.model.PositionRequest;
@@ -507,6 +508,104 @@ class SignatureWorkflowServiceTest {
         assertThat(workflow.findInbox(head)).isEmpty();
         assertThat(workflow.findInbox(dean)).hasSize(1);
         assertThat(workflow.countPending(dean)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("ประวัติการลงนามแสดงเฉพาะขั้นที่เราลงนามเอง เมื่อซองลงนามครบแล้ว")
+    void signedHistoryListsMyStepsOnceTheEnvelopeIsComplete() {
+        SignatureRequest envelope = createEnvelope().request();
+
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+        // The dean has not signed yet, so the round is not something anyone can verify.
+        assertThat(history(head)).isEmpty();
+
+        signStep(stepOf(envelope, "dean").getId(), dean, deanSignature.getId(), true, ActorContext.none());
+        assertThat(requestRepository.findById(envelope.getId()).orElseThrow().getStatus())
+                .isEqualTo(SignatureRequestStatus.COMPLETED);
+
+        assertThat(history(head))
+                .extracting(SignatureStep::getId)
+                .containsExactly(stepOf(envelope, "head").getId());
+        assertThat(history(dean))
+                .extracting(SignatureStep::getId)
+                .containsExactly(stepOf(envelope, "dean").getId());
+        // Sending the round out is not signing it.
+        assertThat(history(admin)).isEmpty();
+        assertThat(history(null)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ซองที่ถูกปฏิเสธไม่ขึ้นในประวัติ แม้เราจะลงนามไปแล้ว")
+    void signedHistoryLeavesOutDeclinedRounds() {
+        SignatureRequest envelope = createEnvelope().request();
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+
+        assertThat(workflow.decline(stepOf(envelope, "dean").getId(), dean,
+                "ข้อมูลไม่ถูกต้อง", ActorContext.none()).ok()).isTrue();
+
+        assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.SIGNED);
+        assertThat(history(head)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ประวัติการลงนามแบ่งหน้าโดยเอารายการล่าสุดขึ้นก่อน และค้นหาได้ทุกหน้า")
+    void signedHistoryPagesNewestFirstAndSearchesEveryPage() {
+        String first = completedRoundSignedByHead(5001L, "บันทึกข้อความ ก");
+        completedRoundSignedByHead(5002L, "บันทึกข้อความ ข");
+        completedRoundSignedByHead(5003L, "บันทึกข้อความ ค");
+
+        var page0 = workflow.findSignedHistory(head, null, PageRequest.of(0, 2));
+        assertThat(page0.getTotalElements()).isEqualTo(3);
+        assertThat(page0.getTotalPages()).isEqualTo(2);
+        assertThat(page0.getContent()).extracting(s -> s.getSignatureRequest().getDocumentLabel())
+                .containsExactly("บันทึกข้อความ ค", "บันทึกข้อความ ข");
+        assertThat(workflow.findSignedHistory(head, null, PageRequest.of(1, 2)).getContent())
+                .extracting(s -> s.getSignatureRequest().getDocumentLabel())
+                .containsExactly("บันทึกข้อความ ก");
+
+        // The oldest round sits on page 2, yet a search still finds it from page 1.
+        assertThat(searchHistory(head, "ข้อความ ก")).containsExactly("บันทึกข้อความ ก");
+        assertThat(searchHistory(head, first.toLowerCase())).containsExactly("บันทึกข้อความ ก");
+        assertThat(searchHistory(head, history(head).get(0).getRoleLabel())).hasSize(3); // role signed as
+        assertThat(searchHistory(head, MODULE.getThaiLabel())).hasSize(3); // request type
+        // LIKE wildcards typed by the user are taken literally.
+        assertThat(searchHistory(head, "%")).isEmpty();
+        assertThat(searchHistory(head, "_")).isEmpty();
+    }
+
+    private List<SignatureStep> history(UserDtls signer) {
+        return workflow.findSignedHistory(signer, null, PageRequest.of(0, 50)).getContent();
+    }
+
+    private List<String> searchHistory(UserDtls signer, String search) {
+        return workflow.findSignedHistory(signer, search, PageRequest.of(0, 50)).getContent().stream()
+                .map(s -> s.getSignatureRequest().getDocumentLabel())
+                .toList();
+    }
+
+    /** A round only the head signs, carried through to completion; returns its verification code. */
+    private String completedRoundSignedByHead(Long requestId, String label) {
+        Result created = workflow.createEnvelope(MODULE, requestId, DOC_TYPE, label, FROZEN_JSON,
+                List.of(new SignerAssignment("head", head.getId())), null, admin, ActorContext.none());
+        assertThat(created.ok()).isTrue();
+        assertThat(workflow.startCirculation(created.request().getId(), admin, ActorContext.none()).ok()).isTrue();
+        assertThat(signStep(stepOf(created.request(), "head").getId(), head, headSignature.getId(), true,
+                ActorContext.none()).ok()).isTrue();
+        SignatureRequest done = requestRepository.findById(created.request().getId()).orElseThrow();
+        assertThat(done.getStatus()).isEqualTo(SignatureRequestStatus.COMPLETED);
+        return done.getVerificationCode();
+    }
+
+    @Test
+    @DisplayName("ซองที่ถูกยกเลิกไม่ขึ้นในประวัติ แม้เราจะลงนามไปแล้ว")
+    void signedHistoryLeavesOutCancelledRounds() {
+        SignatureRequest envelope = createEnvelope().request();
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+
+        assertThat(workflow.cancel(envelope.getId(), admin, "ต้องแก้ไขข้อมูล", ActorContext.none()).ok()).isTrue();
+
+        assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.SIGNED);
+        assertThat(history(head)).isEmpty();
     }
 
     @Test

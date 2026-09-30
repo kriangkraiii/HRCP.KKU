@@ -104,6 +104,98 @@ class SigningPageRenderTest {
     }
 
     @Test
+    @DisplayName("แท็บประวัติการลงนาม — เอกสารที่ลงนามครบแล้วมีปุ่มตรวจสอบ ไม่มีดาวน์โหลด PDF")
+    void historyTabListsCompletedRoundsWithAVerifyLinkOnly() throws Exception {
+        String code = completedRoundSignedBy(applicant, newSignature(applicant), "แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา");
+
+        String html = mockMvc.perform(get("/esign/inbox").with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String historyPane = html.substring(html.indexOf("id=\"content-history\""), html.indexOf("id=\"historyPager\""));
+
+        org.assertj.core.api.Assertions.assertThat(historyPane)
+                .contains("แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา")
+                .contains("href=\"/esign/verify/" + code + "\"")
+                .doesNotContainIgnoringCase("download")
+                .doesNotContain("ดาวน์โหลด")
+                .doesNotContain(".pdf");
+
+        // The admin sent the round out but did not sign it, so it is not their history.
+        mockMvc.perform(get("/esign/inbox").with(user(admin.getEmail()).roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("ยังไม่มีประวัติการลงนาม")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("/esign/verify/" + code))));
+    }
+
+    @Test
+    @DisplayName("แท็บประวัติการลงนาม — แบ่งหน้าละ 12 รายการ ค้นหาข้ามหน้าได้ และหน้าที่เกินไปจะพาไปหน้าสุดท้าย")
+    void historyTabPagesTwelveAtATime() throws Exception {
+        Long signatureId = newSignature(applicant);
+        String oldest = completedRoundSignedBy(applicant, signatureId, "บันทึกข้อความ ฉบับที่ 1");
+        for (int i = 2; i <= 13; i++) {
+            completedRoundSignedBy(applicant, signatureId, "บันทึกข้อความ ฉบับที่ " + i);
+        }
+        var asApplicant = user(applicant.getEmail()).roles("USER");
+
+        String firstPage = mockMvc.perform(get("/esign/inbox").with(asApplicant))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        org.assertj.core.api.Assertions.assertThat(firstPage)
+                .contains("แสดง 1–12 จาก 13 รายการ")
+                .contains("บันทึกข้อความ ฉบับที่ 13")
+                .doesNotContain("/esign/verify/" + oldest)
+                .contains("href=\"/esign/inbox?historyPage=1#history\"");
+
+        // An old link to a page that no longer exists lands on the last page, not an empty one.
+        mockMvc.perform(get("/esign/inbox").param("historyPage", "99").with(asApplicant))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("แสดง 13–13 จาก 13 รายการ")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/esign/verify/" + oldest)));
+
+        // The oldest round is on page 2, but searching from page 1 still finds it.
+        mockMvc.perform(get("/esign/inbox").param("historyQ", oldest).with(asApplicant))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("แสดง 1–1 จาก 1 รายการ")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("/esign/verify/" + oldest)));
+
+        mockMvc.perform(get("/esign/inbox").param("historyQ", "ไม่มีเอกสารนี้แน่นอน").with(asApplicant))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("ไม่พบประวัติการลงนามตรงตามคำค้นหา")));
+    }
+
+    @Test
+    @DisplayName("เลขหน้าแสดงหน้าแรกและหน้าสุดท้ายเสมอ พร้อมสองหน้ารอบหน้าปัจจุบัน")
+    void pageNumbersKeepFirstAndLastWithAWindowAroundTheCurrentPage() {
+        org.assertj.core.api.Assertions.assertThat(SigningController.pageNumbers(0, 0)).isEmpty();
+        org.assertj.core.api.Assertions.assertThat(SigningController.pageNumbers(0, 1)).containsExactly(0);
+        org.assertj.core.api.Assertions.assertThat(SigningController.pageNumbers(0, 4)).containsExactly(0, 1, 2, 3);
+        org.assertj.core.api.Assertions.assertThat(SigningController.pageNumbers(0, 10)).containsExactly(0, 1, 2, -1, 9);
+        org.assertj.core.api.Assertions.assertThat(SigningController.pageNumbers(5, 10))
+                .containsExactly(0, -1, 3, 4, 5, 6, 7, -1, 9);
+        org.assertj.core.api.Assertions.assertThat(SigningController.pageNumbers(9, 10)).containsExactly(0, -1, 7, 8, 9);
+    }
+
+    private static final java.util.concurrent.atomic.AtomicLong ROUND_REQUEST_ID =
+            new java.util.concurrent.atomic.AtomicLong(900_000L);
+
+    /** A round with one signer, carried through to completion; returns its verification code. */
+    private String completedRoundSignedBy(UserDtls signer, Long signatureId, String label) {
+        var created = workflow.createEnvelope(SignatureModule.POSITION, ROUND_REQUEST_ID.incrementAndGet(), 1,
+                label, "{\"department_head_name\":\"สุดา\"}",
+                java.util.List.of(new SignerAssignment("head", signer.getId())),
+                null, admin, ActorContext.none());
+        Long envelopeId = created.request().getId();
+        org.assertj.core.api.Assertions.assertThat(
+                workflow.startCirculation(envelopeId, admin, ActorContext.none()).ok()).isTrue();
+        Long stepId = created.request().getSteps().get(0).getId();
+        var question = workflow.signerChoiceFor(stepId);
+        org.assertj.core.api.Assertions.assertThat(workflow.sign(stepId, signer, signatureId, true,
+                ActorContext.none(), null, question != null ? question.options().get(0) : null).ok()).isTrue();
+        return workflow.findEnvelope(envelopeId).orElseThrow().getVerificationCode();
+    }
+
+    @Test
     @DisplayName("หน้าฟอร์มเอกสารพร้อมแผงลงนาม render ได้ และมีปุ่มส่งไปลงนาม")
     void applicantDocumentFormRendersTheSignaturePanel() throws Exception {
         AcademicRequest request = requestService.createDraftRequest(applicant);

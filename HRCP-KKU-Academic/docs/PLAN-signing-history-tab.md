@@ -11,6 +11,8 @@
 2. แสดง**เฉพาะขั้นที่ผู้ใช้ที่ล็อกอินอยู่ลงนามเอง** ไม่มีมุมมองรวมทั้งระบบ รวมถึง admin/staff ด้วย
 3. แสดง**เฉพาะซองที่ "ลงนามครบแล้ว"** (`SignatureRequestStatus.COMPLETED`)
 4. แต่ละรายการมีปุ่ม **"ตรวจสอบเอกสาร"** ไปที่ `/esign/verify/{verificationCode}` และ**ไม่มี**ปุ่มดาวน์โหลด PDF
+5. ซองที่เคยลงนามครบแต่ภายหลังเป็นโมฆะ (`VOIDED`) ไม่แสดงในประวัติ (ยืนยันแล้ว)
+6. **แบ่งหน้า** หน้าละ 12 รายการ หน้าแรกคือรายการล่าสุด ตัวเลขหน้าแสดงหน้าแรกและหน้าสุดท้ายเสมอ พร้อมสองหน้ารอบหน้าปัจจุบัน เช่น `1 2 3 … 10` (ยืนยันแล้ว)
 
 ### นอกขอบเขต
 - ไม่แก้ schema และไม่ต้องมี Flyway migration เพราะใช้ index `idx_sig_step_signer (signer_user_id, status)` ที่มีอยู่แล้ว
@@ -34,16 +36,17 @@
 
 | # | ไฟล์ | สิ่งที่ทำ | ตรวจสอบว่าเสร็จ |
 |---|------|--------|------------------|
-| 1 | `repository/SignatureStepRepository.java` | เพิ่ม `findSignedHistory(userId)` เป็น JPQL `JOIN FETCH s.signatureRequest` ตามเงื่อนไขข้อ 2 | คอมไพล์ผ่าน |
-| 2 | `service/SignatureWorkflowService.java` | เพิ่ม `findSignedHistory(UserDtls signer)` ให้คืน `List.of()` เมื่อ signer เป็น null แบบเดียวกับ `findInbox` | unit test ข้อ 6 |
-| 3 | `controller/SigningController.java` (`inbox()`) | `model.addAttribute("signedHistory", workflow.findSignedHistory(me))` | render test ข้อ 7 |
+| 1 | `repository/SignatureStepRepository.java` | เพิ่ม `findSignedHistory(userId, searching, pattern, modules, Pageable)` คืนค่าเป็น `Page` แบบ JPQL `JOIN FETCH s.signatureRequest` ตามเงื่อนไขข้อ 2 พร้อม `countQuery` และค้นด้วย `LIKE` บนชื่อเอกสาร/ตำแหน่ง/รหัส (escape `%` `_`) + ประเภทคำร้อง | คอมไพล์ผ่าน |
+| 2 | `service/SignatureWorkflowService.java` | เพิ่ม `findSignedHistory(UserDtls signer, String search, Pageable)` ให้คืน `Page.empty` เมื่อ signer เป็น null ทำ pattern ค้นหาและหาประเภทคำร้องที่ชื่อตรงกับคำค้น | unit test ข้อ 6 |
+| 3 | `controller/SigningController.java` (`inbox()`) | รับ `historyPage` (เริ่มที่ 0) และ `historyQ` ถ้าขอหน้าที่เกินจำนวนหน้าจะพาไปหน้าสุดท้าย และคำนวณเลขหน้าด้วย `pageNumbers()` | render test ข้อ 7 |
 | 4 | `templates/academic/esign/inbox.html` (แท็บ) | เพิ่มปุ่มแท็บ `#tab-history` "ประวัติการลงนาม" (ไอคอน `fa-clock-rotate-left` + badge จำนวน) ไว้ต่อจากแท็บ "เอกสารที่ฉันส่งไปลงนาม" ทุก role เห็นแท็บนี้ | เปิดหน้าแล้วเห็นแท็บ |
-| 5 | `templates/academic/esign/inbox.html` (เนื้อหา) | pane `#content-history` เป็นการ์ดแบบเดียวกับแท็บอื่น แต่ละใบมี ป้ายประเภทคำร้อง, ป้าย "ลงนามครบแล้ว", ชื่อเอกสาร, "ลงนามในตำแหน่ง", "ท่านลงนามเมื่อ" (`signedAt`), "ลงนามครบเมื่อ" (`completedAt`), รหัสตรวจสอบ และปุ่มเดียวคือ **ตรวจสอบเอกสาร** → `/esign/verify/{code}` มีช่องค้นหา (ชื่อเอกสาร/ประเภท/ตำแหน่ง/รหัส) และ empty state "ยังไม่มีประวัติการลงนาม" JS: รองรับ `#history` ตอนโหลดหน้า และ `replaceState` ใส่ hash ตอนสลับแท็บ เพื่อให้กดย้อนกลับจากหน้า verify แล้วกลับมาที่แท็บเดิม | ตรวจด้วยตา + render test |
-| 6 | `SignatureWorkflowServiceTest.java` | เทสต์ใหม่: ซองมีหัวหน้าและคณบดี หัวหน้าลงนามแล้ว → ประวัติหัวหน้ายังว่าง (ซองยังไม่ครบ) คณบดีลงนาม → หัวหน้าและคณบดีมีคนละ 1 รายการ admin ผู้ส่งเวียน (ไม่ได้ลงนาม) → ว่าง ซองที่ถูกปฏิเสธหรือยกเลิก → ไม่ขึ้น | `mvn test -Dtest=SignatureWorkflowServiceTest` |
-| 7 | `SigningPageRenderTest.java` | เมื่อมีซองที่ครบแล้ว หน้า inbox ต้องมีแท็บประวัติ มีลิงก์ `/esign/verify/{code}` และ**ไม่มี**ลิงก์ดาวน์โหลด PDF ในแท็บนี้ | `mvn test -Dtest=SigningPageRenderTest` |
+| 5 | `templates/academic/esign/inbox.html` (เนื้อหา) | pane `#content-history` เป็นการ์ดแบบเดียวกับแท็บอื่น แต่ละใบมี ป้ายประเภทคำร้อง, ป้าย "ลงนามครบแล้ว", ชื่อเอกสาร, "ลงนามในตำแหน่ง", "ท่านลงนามเมื่อ" (`signedAt`), "ลงนามครบเมื่อ" (`completedAt`), รหัสตรวจสอบ และปุ่มเดียวคือ **ตรวจสอบเอกสาร** → `/esign/verify/{code}` มีช่องค้นหาแบบฟอร์ม GET ที่ค้นฝั่งเซิร์ฟเวอร์ (จึงค้นได้ทุกหน้า) ตัวแบ่งหน้า "ก่อนหน้า 1 2 3 … N ถัดไป" และ empty state "ยังไม่มีประวัติการลงนาม" JS: รองรับ `#history` ตอนโหลดหน้า และ `replaceState` ใส่ hash ตอนสลับแท็บ เพื่อให้กดย้อนกลับจากหน้า verify แล้วกลับมาที่แท็บเดิม | ตรวจด้วยตา + render test |
+| 6 | `SignatureWorkflowServiceTest.java` | เทสต์ใหม่: ซองมีหัวหน้าและคณบดี หัวหน้าลงนามแล้ว → ประวัติหัวหน้ายังว่าง (ซองยังไม่ครบ) คณบดีลงนาม → หัวหน้าและคณบดีมีคนละ 1 รายการ admin ผู้ส่งเวียน (ไม่ได้ลงนาม) → ว่าง ซองที่ถูกปฏิเสธหรือยกเลิก → ไม่ขึ้น, แบ่งหน้าเรียงล่าสุดก่อน และค้นหาข้ามหน้าได้ | `mvn test -Dtest=SignatureWorkflowServiceTest` |
+| 7 | `SigningPageRenderTest.java` | เมื่อมีซองที่ครบแล้ว หน้า inbox ต้องมีแท็บประวัติ มีลิงก์ `/esign/verify/{code}` และ**ไม่มี**ลิงก์ดาวน์โหลด PDF ในแท็บนี้, 13 รายการแบ่งเป็น 2 หน้า, `historyPage=99` พาไปหน้าสุดท้าย, ค้นหาเจอรายการในหน้า 2 และตรรกะเลขหน้า `pageNumbers()` | `mvn test -Dtest=SigningPageRenderTest` |
 
 ### ข้อระวัง
-- การ์ดในแท็บประวัติ**ห้ามใช้ class `inbox-card-item`** เพราะ JS เดิมนับ KPI และตัวกรอง "เลยกำหนด/ปกติ" จาก class นี้ ให้ใช้ class แยก (`history-card-item`) และตัวกรองค้นหาแยก
+- การ์ดในแท็บประวัติ**ห้ามใช้ class `inbox-card-item`** เพราะ JS เดิมนับ KPI และตัวกรอง "เลยกำหนด/ปกติ" จาก class นี้ ให้ใช้ class แยก (`history-card-item`)
+- ลิงก์แบ่งหน้าและฟอร์มค้นหาต้องพ่วง `#history` เพื่อให้เปิดกลับมาที่แท็บประวัติ
 - ชื่อเอกสารใช้ fallback แบบเดียวกับแท็บ "รอฉันลงนาม": `documentLabel ?: 'เอกสารที่ ' + documentType`
 
 ---
