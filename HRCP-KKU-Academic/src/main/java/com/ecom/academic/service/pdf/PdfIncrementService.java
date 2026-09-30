@@ -342,13 +342,25 @@ public final class PdfIncrementService {
     /** The mark printed in a tick box. TH Sarabun New has no ✓, so it is drawn. */
     public static final String TICK = "✓";
 
+    /**
+     * The ✓ outline of DejaVu Sans (2048 units per em), the font LibreOffice falls
+     * back to for the ticks it prints in the base, so both columns match.
+     */
+    private static final String TICK_GLYPH = "453 654 m 479 654 498.7 632.7 512 590 c 538.7 510 557.7 470 569 470 c "
+            + "577.7 470 586.7 476.7 596 490 c 783.3 790 956.7 1032.7 1116 1218 c 1157.3 1266 1223 1290 1313 1290 c "
+            + "1334.3 1290 1348.7 1288 1356 1284 c 1363.3 1280 1367 1275 1367 1269 c 1367 1259.7 1356 1241.3 1334 1214 c "
+            + "1076.7 904.7 838 578 618 234 c 602.7 210 571.3 198 524 198 c 476 198 447.7 200 439 204 c "
+            + "416.3 214 389.7 265 359 357 c 324.3 459 307 523 307 549 c 307 577 330.3 604 377 630 c "
+            + "405.7 646 431 654 453 654 c h f";
+    private static final float TICK_INK_LEFT = 307, TICK_INK_WIDTH = 1060, TICK_EM = 2048;
+
     /** A check mark centred in the box, sitting on the text baseline. */
     private static String tick(PDRectangle r, float size) {
-        float s = size * 0.62f;
-        float x = (r.getWidth() - s) / 2, y = baseline(r);
+        float k = size / TICK_EM;
+        float x = (r.getWidth() - TICK_INK_WIDTH * k) / 2 - TICK_INK_LEFT * k;
         return String.format(Locale.ROOT,
-                "/Span <</ActualText <FEFF2713>>> BDC q 0 G %.2f w 1 J 1 j %.2f %.2f m %.2f %.2f l %.2f %.2f l S Q EMC\n",
-                size * 0.07f, x, y + s * 0.45f, x + s * 0.35f, y + s * 0.05f, x + s, y + s * 0.85f);
+                "/Span <</ActualText <FEFF2713>>> BDC q 0 g %.5f 0 0 %.5f %.2f %.2f cm %s Q EMC\n",
+                k, k, x, baseline(r), TICK_GLYPH);
     }
 
     private static final java.util.regex.Pattern DA_SIZE = java.util.regex.Pattern.compile("([0-9.]+)\\s+Tf");
