@@ -67,6 +67,14 @@ public class DocumentGenerationService {
         this.uploadPaths = uploadPaths;
     }
 
+    /** LibreOffice ที่เปิดค้างไว้ — ไม่มี (สร้างเองในเทสต์) ก็ใช้ CLI เปิด soffice ใหม่ทุกครั้งแบบเดิม */
+    private LibreOfficeProcessPool officePool;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setOfficePool(LibreOfficeProcessPool officePool) {
+        this.officePool = officePool;
+    }
+
     /** For tests that build the service by hand; writes under the working directory's uploads/. */
     public DocumentGenerationService() {
         this(com.ecom.service.UploadPaths.workingDirectoryDefault());
@@ -2173,6 +2181,23 @@ public class DocumentGenerationService {
      */
     private static final Path BASE_PROFILE_DIR = Path.of(System.getProperty("java.io.tmpdir"), "hrcp-lo-profiles");
 
+    /** เปิด LibreOffice ค้างไว้ตั้งแต่แอปพร้อม ไม่ให้ผู้ใช้คนแรกรอเปิดโปรแกรม */
+    @org.springframework.context.event.EventListener(org.springframework.boot.context.event.ApplicationReadyEvent.class)
+    public void warmUpOfficePool() {
+        LibreOfficeProcessPool pool = officePool;
+        String soffice = resolveLibreOffice();
+        if (pool != null && !soffice.isEmpty()) {
+            pool.useSoffice(soffice);
+            byte[] sample = null;
+            try (InputStream in = new ClassPathResource(TEMPLATE_DIR + "doc_1.docx").getInputStream()) {
+                sample = in.readAllBytes();
+            } catch (IOException e) {
+                log.debug("No sample template to warm LibreOffice with: {}", e.getMessage());
+            }
+            pool.warmUp(sample);
+        }
+    }
+
     /** LibreOffice พร้อมใช้งานหรือไม่ — ใช้ตัดสินใจว่าจะ preview เป็น PDF ได้ไหม */
     public boolean isPdfConversionAvailable() {
         return !resolveLibreOffice().isEmpty();
@@ -2247,6 +2272,19 @@ public class DocumentGenerationService {
                     "Linux: sudo apt install libreoffice-writer");
         }
 
+        LibreOfficeProcessPool pool = officePool;
+        if (pool != null) {
+            pool.useSoffice(soffice);
+            try {
+                byte[] pdf = pool.convert(docxBytes);
+                if (pdf != null && pdf.length > 0) {
+                    return pdf;
+                }
+            } catch (IOException e) {
+                log.warn("{} — retrying with a new soffice process", e.getMessage());
+            }
+        }
+
         Integer slot;
         try {
             slot = SLOT_POOL.poll(PDF_TIMEOUT_SECONDS, TimeUnit.SECONDS);
@@ -2267,7 +2305,7 @@ public class DocumentGenerationService {
         Path profileDir = BASE_PROFILE_DIR.resolve("slot-" + slot);
         try {
             Files.createDirectories(profileDir);
-            ensureFontsInProfile(profileDir);
+            installThaiFonts(profileDir);
         } catch (IOException ignored) {
         }
         
@@ -2405,7 +2443,7 @@ public class DocumentGenerationService {
      * เพื่อให้ LibreOffice เรนเดอร์ภาษาไทยได้ถูกต้อง 100% บนทุกระบบปฏิบัติการ
      * (macOS Local Dev, Linux Server/Docker, และ Windows Server)
      */
-    private void ensureFontsInProfile(Path profileDir) {
+    static void installThaiFonts(Path profileDir) {
         Path userFontsDir = profileDir.resolve("user").resolve("fonts");
         try {
             Files.createDirectories(userFontsDir);

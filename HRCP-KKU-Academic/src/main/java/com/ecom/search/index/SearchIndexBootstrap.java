@@ -37,11 +37,22 @@ import com.ecom.search.repository.SearchDocumentRepository;
  * row costs a read and no write. It runs asynchronously so a slow pass delays
  * nobody's sign-in, and {@code app.search.reconcile-on-startup=false} turns it
  * off if the corpus ever grows enough to make boot-time work unwelcome.
+ *
+ * <p><b>Once per JVM.</b> Over the remote development database the pass takes
+ * 45–200 seconds and holds connections the whole time, and devtools restarts the
+ * context on every recompile — so a developer was paying for a full pass after
+ * each saved file, with the app sluggish throughout. The marker lives in a
+ * system property because that survives a devtools restart while the classes do
+ * not. Production starts a fresh JVM on every deploy, so it still reconciles
+ * each time.
  */
 @Component
 public class SearchIndexBootstrap implements ApplicationRunner {
 
     private static final Logger log = LoggerFactory.getLogger(SearchIndexBootstrap.class);
+
+    /** Set once this JVM has run the start-up pass; see the class comment. */
+    static final String RECONCILED_MARKER = "hrcp.search.startup-reconcile-done";
 
     private final SearchDocumentRepository index;
     private final SearchReconciler reconciler;
@@ -73,6 +84,11 @@ public class SearchIndexBootstrap implements ApplicationRunner {
             if (!reconcileOnStartup) {
                 return;
             }
+            if (System.getProperty(RECONCILED_MARKER) != null) {
+                log.info("Search index: ข้ามการตรวจทั้งหมดตอนเริ่ม — JVM นี้ตรวจไปแล้ว (devtools restart)");
+                return;
+            }
+            System.setProperty(RECONCILED_MARKER, "true");
             log.info("Search index: เริ่มตรวจสอบความครบถ้วน (มี {} แถว)", index.count());
             log.info("Search index พร้อมใช้งาน: {}", reconciler.reconcileAll());
         } catch (Exception e) {
