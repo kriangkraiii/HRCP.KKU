@@ -6,6 +6,7 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.jupiter.api.DisplayName;
@@ -94,6 +95,39 @@ class ReturnToDraftTest extends AbstractFlowTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         assertThat(dashboard).contains(REASON);
+    }
+
+    @Test
+    @DisplayName("คำร้องที่ถูกส่งคืน — ไม่มีปุ่มยกเลิกแบบร่างบน dashboard")
+    void aReturnedRequestOffersNoDeleteButton() throws Exception {
+        UserDtls applicant = data.applicant();
+        AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+        service.updateStatus(request.getId(), RequestStatus.DRAFT, data.admin(), REASON, false);
+
+        String dashboard = mvc.perform(get("/user/academic/dashboard")
+                .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        assertThat(dashboard).contains(REASON)
+                .doesNotContainPattern("data-bs-target=\"#cancelEvalDraftModal\"");
+    }
+
+    @Test
+    @DisplayName("คำร้องที่ถูกส่งคืน — ยิงลบตรงก็ลบไม่ได้ คำร้องยังอยู่")
+    void aReturnedRequestCannotBeDeleted() throws Exception {
+        UserDtls applicant = data.applicant();
+        AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
+        service.updateStatus(request.getId(), RequestStatus.DRAFT, data.admin(), REASON, false);
+
+        mvc.perform(post("/user/academic/request/" + request.getId() + "/cancel-draft")
+                .param("confirmCode", "DELETE")
+                .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attributeExists("errorMsg"));
+
+        assertThat(service.deleteDraftRequest(request.getId(), applicant.getId())).isFalse();
+        assertThat(service.findById(request.getId())).isPresent();
     }
 
     @Test

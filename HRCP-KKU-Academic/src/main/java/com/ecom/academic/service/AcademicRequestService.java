@@ -927,14 +927,24 @@ public class AcademicRequestService {
     }
 
     /**
+     * คำร้องเคยยื่นแล้วหรือไม่ — คำร้องที่ถูกส่งคืนมาเป็นแบบร่างยังเป็นคำร้องที่ยื่นไปแล้ว
+     * มีรหัสคำร้องและประวัติกับฝ่ายวิชาการ จึงลบทิ้งไม่ได้ ทำได้แค่แก้แล้วยื่นใหม่
+     */
+    public boolean hasBeenSubmitted(AcademicRequest request) {
+        return request.getSubmissionDate() != null || getReturnNote(request.getId()) != null;
+    }
+
+    /**
      * ยกเลิก/ลบ draft request พร้อมลบไฟล์และโฟลเดอร์บนดิสก์ทั้งหมด
+     * (เฉพาะแบบร่างที่ยังไม่เคยยื่น — คำร้องที่ถูกส่งคืนมาแก้ไขลบไม่ได้)
      */
     @Transactional
     public boolean deleteDraftRequest(Long requestId, Integer applicantId) {
         Optional<AcademicRequest> opt = requestRepository.findById(requestId);
         if (opt.isPresent()) {
             AcademicRequest req = opt.get();
-            if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == RequestStatus.DRAFT) {
+            if (req.getApplicant().getId().equals(applicantId) && req.getCurrentStatus() == RequestStatus.DRAFT
+                    && !hasBeenSubmitted(req)) {
                 List<AcademicAttachment> attachments = attachmentRepository.findByRequestIdOrderByUploadedAtDesc(requestId);
                 for (AcademicAttachment att : attachments) {
                     deletePhysicalFile(att.getStoredFilePath());

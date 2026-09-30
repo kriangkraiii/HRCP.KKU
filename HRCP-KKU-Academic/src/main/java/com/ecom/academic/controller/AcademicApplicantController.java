@@ -175,6 +175,9 @@ public class AcademicApplicantController {
         // ข้อ 2 — เหตุผลที่คณบดีส่งคำร้องกลับมาให้แก้ไข (ถ้ามี)
         model.addAttribute("returnNote",
                 draftRequest == null ? null : requestService.getReturnNote(draftRequest.getId()));
+        // คำร้องที่ยื่นไปแล้วแต่ถูกส่งคืนมาแก้ไข ลบไม่ได้ — ซ่อนปุ่มยกเลิกแบบร่าง
+        model.addAttribute("draftDeletable",
+                draftRequest != null && !requestService.hasBeenSubmitted(draftRequest));
         model.addAttribute("statuses", RequestStatus.values());
         model.addAttribute("progressSteps", RequestStatus.getProgressSteps());
         model.addAttribute("hasActiveRequest", requestService.hasActiveRequest(user.getId()));
@@ -971,6 +974,10 @@ public class AcademicApplicantController {
         }
 
         AcademicRequest req = reqOpt.get();
+        if (requestService.hasBeenSubmitted(req)) {
+            redirectAttributes.addFlashAttribute("errorMsg", "คำร้องที่ยื่นไปแล้วไม่สามารถลบได้ กรุณาแก้ไขตามเหตุผลที่ส่งคืนแล้วยื่นคำร้องอีกครั้ง");
+            return "redirect:/user/academic/dashboard";
+        }
         String expectedCode = req.getRequestCode() != null ? req.getRequestCode() : String.valueOf(req.getId());
         if (confirmCode == null || (!confirmCode.trim().equalsIgnoreCase("DELETE") && !confirmCode.trim().equalsIgnoreCase(expectedCode))) {
             redirectAttributes.addFlashAttribute("errorMsg", "กรุณาพิมพ์ยืนยันด้วย 'DELETE' หรือรหัสคำร้อง '" + expectedCode + "' ให้ถูกต้องก่อนดำเนินการ");

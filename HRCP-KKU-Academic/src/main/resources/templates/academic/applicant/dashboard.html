@@ -115,7 +115,7 @@
                             <span th:text="${returnNote != null} ? 'แก้ไขตามเหตุผลด้านบน แล้วส่งคำร้องอีกครั้ง' : 'กรุณากรอกเอกสารให้ครบแล้วส่งคำร้อง'"></span>
                         </div>
                         <div class="d-flex align-items-center gap-2">
-                            <button type="button" class="btn btn-outline-danger btn-sm"
+                            <button th:if="${draftDeletable}" type="button" class="btn btn-outline-danger btn-sm"
                                     data-bs-toggle="modal" data-bs-target="#cancelEvalDraftModal"
                                     th:attr="data-request-id=${draftRequest.id}">
                                 <i class="fas fa-trash-alt me-1"></i> ยกเลิกแบบร่าง
