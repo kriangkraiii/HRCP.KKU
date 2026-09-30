@@ -146,6 +146,11 @@
         var el = document.querySelector('[name="' + name + '"]');
         if (!el) return;
 
+        // ช่องคำนำหน้าใช้แค่ตำแหน่งวิชาการ (เหมือนเฟส 1) — "ผศ.ดร." ต้องไปตกที่
+        // "ผู้ช่วยศาสตราจารย์" ไม่ว่าช่องจะยังเป็น <select> หรือถูกเปลี่ยนเป็น <input> แล้ว
+        var titleField = window.AcademicTitle && AcademicTitle.isTitleField(el);
+        if (titleField) value = AcademicTitle.normalize(value);
+
         if (el.tagName === 'SELECT') {
             if (el.value) return;
             var wanted = squash(value);
@@ -159,6 +164,8 @@
             // คำนำหน้าในทะเบียนบุคลากรเป็นข้อความอิสระ (เช่น "ผศ.ดร." "ดร." "ว่าที่ ร.ต.")
             // รายการในฟอร์มจึงไม่ครบทุกแบบ — เติมตัวเลือกที่ดึงมาให้เลย
             // มิฉะนั้นช่องคำนำหน้าจะค้างที่ "-- เลือก --" ทั้งที่ดึงข้อมูลมาได้แล้ว
+            // ยกเว้นช่องคำนำหน้าแบบตำแหน่งวิชาการ ที่ค่านอกรายการต้องให้ผู้ใช้เลือกเอง
+            if (titleField) return;
             var opt = document.createElement('option');
             opt.value = value;
             opt.textContent = value;

@@ -49,13 +49,15 @@
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
-                                <select name="applicant_title" class="form-select">
+                                <select name="applicant_title" class="form-select" data-academic-title>
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย">นาย</option>
                                     <option value="นาง">นาง</option>
                                     <option value="นางสาว">นางสาว</option>
-                                    <option value="ผศ.ดร.">ผศ.ดร.</option>
-                                    <option value="รศ.ดร.">รศ.ดร.</option>
+                                    <option value="อาจารย์">อาจารย์</option>
+                                    <option value="ผู้ช่วยศาสตราจารย์">ผู้ช่วยศาสตราจารย์</option>
+                                    <option value="รองศาสตราจารย์">รองศาสตราจารย์</option>
+                                    <option value="ศาสตราจารย์">ศาสตราจารย์</option>
                                 </select>
                             </div>
                             <div class="col-md-5">
@@ -155,6 +157,7 @@
 
         </div>
 
+        <script src="/js/academic_title.js"></script>
         <script th:inline="javascript">
             // ==================== Dynamic Research Rows ====================
             let researchRowCount = 0;
@@ -268,7 +271,7 @@
                             const el = document.querySelector(`[name="${key}"]`);
                             if (el) {
                                 if (el.type === 'checkbox') { el.checked = (value === '☑'); }
-                                else { el.value = value; }
+                                else { el.value = window.AcademicTitle ? AcademicTitle.valueFor(el, value) : value; }
                             }
                         }
                         syncCountInput();

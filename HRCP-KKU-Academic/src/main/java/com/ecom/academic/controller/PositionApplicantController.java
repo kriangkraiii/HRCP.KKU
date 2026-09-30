@@ -64,6 +64,7 @@ public class PositionApplicantController {
     private final jakarta.servlet.http.HttpServletRequest httpRequest;
     private final com.ecom.service.UploadPaths uploadPaths;
     private final com.ecom.academic.service.SignatureNotifier signatureNotifier;
+    private final com.ecom.service.AdminLogService adminLogService;
 
     private static final org.slf4j.Logger log =
             org.slf4j.LoggerFactory.getLogger(PositionApplicantController.class);
@@ -80,8 +81,10 @@ public class PositionApplicantController {
             com.ecom.academic.service.TeachingEvaluationPartResolver teachingEvaluationPart,
             jakarta.servlet.http.HttpServletRequest httpRequest,
             com.ecom.service.UploadPaths uploadPaths,
-            com.ecom.academic.service.SignatureNotifier signatureNotifier) {
+            com.ecom.academic.service.SignatureNotifier signatureNotifier,
+            com.ecom.service.AdminLogService adminLogService) {
         this.uploadPaths = uploadPaths;
+        this.adminLogService = adminLogService;
         this.signatureNotifier = signatureNotifier;
         this.positionService = positionService;
         this.userRepository = userRepository;
@@ -302,6 +305,14 @@ public class PositionApplicantController {
 
         boolean deleted = positionService.deleteDraftRequest(id, user.getId());
         if (deleted) {
+            try {
+                adminLogService.log(principal.getName(), user.getName(),
+                        "CANCEL_DRAFT",
+                        "ยกเลิกแบบร่างคำร้องขอตำแหน่ง #" + id,
+                        getClientIpAddress());
+            } catch (Exception e) {
+                auditLogFailed(e);
+            }
             redirectAttributes.addFlashAttribute("succMsg", "ยกเลิกแบบร่างคำร้องขอตำแหน่งและลบไฟล์เอกสารเรียบร้อยแล้ว");
         } else {
             redirectAttributes.addFlashAttribute("errorMsg", "ไม่สามารถยกเลิกแบบร่างได้ หรือคำร้องไม่ได้อยู่ในสถานะแบบร่าง");
@@ -467,6 +478,14 @@ public class PositionApplicantController {
         }
         signatureNotifier.notifyRevisionSubmitted(com.ecom.academic.model.SignatureModule.POSITION, id,
                 positionService.getDocLabel(type), user.getName());
+        try {
+            adminLogService.log(principal.getName(), user.getName(),
+                    "SUBMIT_REVISION",
+                    "ยื่นการแก้ไขเอกสารที่ " + type + " คำร้องขอตำแหน่ง #" + id,
+                    getClientIpAddress());
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
         redirectAttributes.addFlashAttribute("succMsg",
                 "ยื่นการแก้ไขเอกสารที่ " + type + " เรียบร้อยแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบต่อไป");
         return "redirect:/user/position/request/" + id;
@@ -582,6 +601,14 @@ public class PositionApplicantController {
 
         positionService.submitRequest(request);
 
+        try {
+            adminLogService.log(principal.getName(), user.getName(),
+                    "SUBMIT_REQUEST",
+                    "ส่งคำร้องขอตำแหน่ง #" + id,
+                    getClientIpAddress());
+        } catch (Exception e) {
+            auditLogFailed(e);
+        }
 
         return "redirect:/user/position/dashboard?success=submitted";
     }
@@ -599,6 +626,12 @@ public class PositionApplicantController {
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
 
         if (!request.getApplicant().getId().equals(user.getId())) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        // เอกสารของแอดมิน (7, 8) มีรายชื่อผู้ทรงคุณวุฒิ ผู้ยื่นโหลดไม่ได้ — หน้าจอไม่มีลิงก์ให้
+        // แต่ยิง URL ตรงก็ต้องไม่ได้ไฟล์ เหมือนเอกสารที่ผู้ยื่นเห็นไม่ได้ของเฟส 1
+        if (!PositionRequestService.APPLICANT_DOCS.contains(type)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 
@@ -669,5 +702,14 @@ public class PositionApplicantController {
 
     private UserDtls getUser(Principal principal) {
         return userRepository.findByEmail(principal.getName());
+    }
+
+    private String getClientIpAddress() {
+        return com.ecom.config.ClientIpUtils.resolveClientIp(httpRequest);
+    }
+
+    /** Audit logging must never break the user's action, but it must leave a trace. */
+    private void auditLogFailed(Exception e) {
+        log.warn("Failed to write audit log: {}", e.toString());
     }
 }

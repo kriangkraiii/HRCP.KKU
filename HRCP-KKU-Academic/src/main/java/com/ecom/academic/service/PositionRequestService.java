@@ -643,7 +643,7 @@ public class PositionRequestService {
         // Send email notification to applicant if requested
         if (sendNotify) {
             Long notifyId = request.getId();
-            afterCommit.run(() -> emailService.sendStatusChangeEmail(notifyId, oldStatus, newStatus));
+            afterCommit.run(() -> emailService.sendStatusChangeEmail(notifyId, oldStatus, newStatus, note));
         }
 
         return request;

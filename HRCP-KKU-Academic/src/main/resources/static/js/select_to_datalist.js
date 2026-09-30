@@ -44,8 +44,13 @@ document.addEventListener('DOMContentLoaded', function () {
             ? sel.querySelector('option[value=""]').textContent.trim()
             : '-- เลือกหรือพิมพ์ --';
         if (required) input.required = true;
+        // ช่องคำนำหน้าแบบตำแหน่งวิชาการ — ยกเครื่องหมายตามไป สคริปต์ที่เติมค่าทีหลังจะได้แปลง
+        // "ผศ.ดร." เป็น "ผู้ช่วยศาสตราจารย์" เหมือนตอนยังเป็น <select>
+        if (sel.hasAttribute('data-academic-title')) input.setAttribute('data-academic-title', '');
         if (!selectedValue && typeof saved[name] === 'string' && saved[name].trim()) {
-            selectedValue = saved[name].trim();
+            selectedValue = window.AcademicTitle
+                ? window.AcademicTitle.valueFor(input, saved[name].trim())
+                : saved[name].trim();
         }
         if (selectedValue) input.value = selectedValue;
         if (sel.id) input.id = sel.id;

@@ -54,6 +54,16 @@ public class PositionEmailService {
     @Async
     public void sendStatusChangeEmail(Long requestId,
             PositionRequestStatus oldStatus, PositionRequestStatus newStatus) {
+        sendStatusChangeEmail(requestId, oldStatus, newStatus, null);
+    }
+
+    /**
+     * @param note หมายเหตุที่แอดมินใส่ตอนเปลี่ยนสถานะ — เป็นเหตุผลเมื่อส่งกลับให้แก้ไข ผู้ยื่นต้องเห็น
+     *             ไม่งั้นรู้แค่ว่าถูกส่งกลับแต่ไม่รู้ว่าต้องแก้อะไร (เหมือนเฟส 1)
+     */
+    @Async
+    public void sendStatusChangeEmail(Long requestId,
+            PositionRequestStatus oldStatus, PositionRequestStatus newStatus, String note) {
         try {
             PositionRequest request = reload(requestId);
             if (request == null) {
@@ -66,7 +76,8 @@ public class PositionEmailService {
                         || newStatus == PositionRequestStatus.COLLEGE_APPROVED
                         || newStatus == PositionRequestStatus.SENT_TO_HR;
                 String notifTitle = "อัปเดตสถานะขอตำแหน่ง: " + newStatus.getThaiLabel();
-                String notifMsg = "คำร้องขอตำแหน่งทางวิชาการ (" + request.getRequestCode() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel();
+                String notifMsg = "คำร้องขอตำแหน่งทางวิชาการ (" + request.getRequestCode() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel()
+                        + (hasNote(note) ? " " + noteLabel(newStatus) + " " + note.trim() : "");
                 String notifLink = "/user/position/request/" + request.getId();
                 notificationService.sendNotification(request.getApplicant(), null, notifTitle, notifMsg, notifLink, com.ecom.model.NotificationType.POSITION_STATUS_UPDATE, isImportant);
             }
@@ -80,7 +91,7 @@ public class PositionEmailService {
                 return;
 
             String subject = "อัปเดตสถานะคำร้องขอตำแหน่งทางวิชาการ (" + request.getRequestCode() + ") - " + newStatus.getThaiLabel();
-            String body = buildStatusEmailBody(request, oldStatus, newStatus);
+            String body = buildStatusEmailBody(request, oldStatus, newStatus, note);
 
             MimeMessage message = mailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -153,8 +164,18 @@ public class PositionEmailService {
         }
     }
 
+    private static boolean hasNote(String note) {
+        return note != null && !note.isBlank();
+    }
+
+    private static String noteLabel(PositionRequestStatus newStatus) {
+        return newStatus == PositionRequestStatus.REVISION_REQUESTED
+                ? "เหตุผลที่ส่งกลับให้แก้ไข:"
+                : "หมายเหตุจากเจ้าหน้าที่:";
+    }
+
     private String buildStatusEmailBody(PositionRequest request,
-            PositionRequestStatus oldStatus, PositionRequestStatus newStatus) {
+            PositionRequestStatus oldStatus, PositionRequestStatus newStatus, String note) {
         String statusColor = switch (newStatus) {
             case SCREENING_APPROVED, COLLEGE_APPROVED -> "#16a34a";
             case REVISION_REQUESTED -> "#d97706";
@@ -167,6 +188,12 @@ public class PositionEmailService {
         if (request.getTargetPosition() != null && !request.getTargetPosition().isBlank()) {
             extraDetails = "<div style='background:#f1f5f9;border:1px solid #cbd5e1;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
                     + "ตำแหน่งทางวิชาการที่ยื่นขอ: <strong style='color:#1e293b;'>" + request.getTargetPosition() + "</strong>"
+                    + "</div>";
+        }
+        if (hasNote(note)) {
+            extraDetails += "<div style='background:#fffbeb;border:1px solid #fcd34d;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
+                    + "<div style='font-weight:600;color:#92400e;margin-bottom:4px;'>" + noteLabel(newStatus) + "</div>"
+                    + "<div>" + org.springframework.web.util.HtmlUtils.htmlEscape(note.trim()) + "</div>"
                     + "</div>";
         }
 

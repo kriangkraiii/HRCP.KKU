@@ -63,6 +63,9 @@ import com.ecom.support.TestDataFactory;
 class FullJourneyMockMvcTest extends AbstractFlowTest {
 
     @Autowired
+    private com.ecom.repository.AdminLogRepository adminLogs;
+
+    @Autowired
     private AcademicRequestService academicService;
 
     @Autowired
@@ -278,6 +281,9 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         assertThat(positionService.findById(id).orElseThrow().getCurrentStatus())
                 .as("ข้อ 19 — ส่งเอกสารเข้าสู่กระบวนการ")
                 .isEqualTo(PositionRequestStatus.DOCUMENT_RECEIVED);
+        awaitCondition("การยื่นคำร้องขอตำแหน่งถูกบันทึกใน log ของผู้ดูแลระบบ (เหมือนเฟส 1)",
+                () -> adminLogs.findByActionContaining("SUBMIT_REQUEST").stream()
+                        .anyMatch(l -> l.getDetails() != null && l.getDetails().endsWith("#" + id)));
 
         // --- ข้อ 20-31: เจ้าหน้าที่เดินเรื่องผ่านที่ประชุมทั้งสองชุด ---
         advanceAsOfficer(id, PositionRequestStatus.DOCUMENT_VERIFICATION,

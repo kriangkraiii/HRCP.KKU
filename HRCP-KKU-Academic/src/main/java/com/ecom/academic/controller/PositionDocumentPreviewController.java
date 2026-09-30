@@ -85,6 +85,12 @@ public class PositionDocumentPreviewController {
             @RequestParam(value = "requestId", required = false) Long requestId,
             @RequestBody Map<String, String> formData,
             Authentication authentication) {
+        // ผู้ยื่นดูตัวอย่างได้เฉพาะเอกสารของตัวเอง ที่เหลือเป็นงานฝั่งเจ้าหน้าที่ (เหมือนเฟส 1)
+        if (isApplicant(authentication) && !PositionRequestService.APPLICANT_DOCS.contains(docType)) {
+            logger.warn("Applicant {} attempted to preview admin position document type {}",
+                    authentication.getName(), docType);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
         // ผู้ยื่นได้เฉพาะ PDF — ปุ่ม Word ถูกซ่อนแล้ว แต่ยิง URL ตรงก็ต้องไม่ได้ไฟล์ Word
         if (isApplicant(authentication)) {
             format = "pdf";

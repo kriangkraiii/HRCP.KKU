@@ -18,6 +18,7 @@ import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.service.AcademicEmailService;
 import com.ecom.academic.service.PositionEmailService;
+import com.ecom.academic.service.PositionRequestService;
 import com.ecom.model.Notification;
 import com.ecom.model.NotificationType;
 import com.ecom.model.UserDtls;
@@ -46,6 +47,9 @@ class NotificationDeliveryTest extends AbstractFlowTest {
 
     @Autowired
     private PositionEmailService positionEmail;
+
+    @Autowired
+    private PositionRequestService positionService;
 
     @Autowired
     private NotificationRepository notifications;
@@ -220,6 +224,25 @@ class NotificationDeliveryTest extends AbstractFlowTest {
             assertThat(inboxOf(applicant))
                     .anySatisfy(n -> assertThat(n.getType())
                             .isEqualTo(NotificationType.POSITION_STATUS_UPDATE));
+        }
+
+        @Test
+        @DisplayName("ส่งกลับให้แก้ไขพร้อมเหตุผล — ผู้ยื่นเห็นเหตุผลทั้งในอีเมลและการแจ้งเตือน (เหมือนเฟส 1)")
+        void revisionReasonReachesApplicant() {
+            String reason = "เอกสารที่ 3 ลงวันที่ไม่ตรงกับเอกสารที่ 1";
+            UserDtls applicant = data.applicant();
+            PositionRequest request = data.positionRequest(applicant,
+                    PositionRequestStatus.DOCUMENT_VERIFICATION, null);
+
+            positionService.updateStatus(request.getId(), PositionRequestStatus.REVISION_REQUESTED,
+                    data.admin(), reason, true);
+
+            awaitCondition("อีเมลถึงผู้ยื่นพร้อมเหตุผล",
+                    () -> mail().to(TestDataFactory.APPLICANT_EMAIL).stream()
+                            .anyMatch(m -> m.bodyContains(reason)));
+            awaitCondition("การแจ้งเตือนในระบบพร้อมเหตุผล",
+                    () -> inboxOf(applicant).stream()
+                            .anyMatch(n -> n.getMessage() != null && n.getMessage().contains(reason)));
         }
 
         @Test
