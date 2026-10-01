@@ -17,7 +17,7 @@ import java.util.zip.ZipOutputStream;
  * <p>ใช้กับสำเนาที่สร้างจากเทมเพลตเดียวกันและรูปลายเซ็นชุดเดียวกันเท่านั้น — ไฟล์ประกอบ
  * (รูป relationship สไตล์) ของทุกสำเนาจึงตรงกันทุกไบต์ ใช้ของสำเนาแรกได้เลย ต่อแค่เนื้อความ
  */
-final class DocxCopies {
+public final class DocxCopies {
 
     private DocxCopies() {
     }
@@ -38,13 +38,48 @@ final class DocxCopies {
         if (sectPr < 0) {
             sectPr = first.lastIndexOf("</w:body>");
         }
-        StringBuilder merged = new StringBuilder(first.substring(0, sectPr));
+        int open = first.indexOf('>', first.indexOf("<w:body")) + 1;
+        StringBuilder merged = new StringBuilder(first.substring(0, open))
+                .append(marker(1)).append(first, open, sectPr);
         for (int i = 1; i < copies.size(); i++) {
-            merged.append(onNewPage(renumber(body(documentXml(copies.get(i))), i * ID_STEP)));
+            merged.append(marker(i + 1))
+                    .append(onNewPage(renumber(body(documentXml(copies.get(i))), i * ID_STEP)));
         }
         merged.append(first.substring(sectPr));
         return withDocument(copies.get(0), merged.toString());
     }
+
+    /**
+     * ฉบับที่ {@code copy} (นับจาก 1) จากไฟล์ที่ {@link #oneAfterAnother} ต่อไว้
+     *
+     * @return ไฟล์เดิมทั้งไฟล์ เมื่อไม่ใช่ไฟล์ที่ต่อสำเนาไว้
+     */
+    public static byte[] only(byte[] docx, int copy) throws IOException {
+        String xml = documentXml(docx);
+        int start = xml.indexOf(marker(copy));
+        if (start < 0) {
+            return docx;
+        }
+        int from = start + marker(copy).length();
+        int next = xml.indexOf(marker(copy + 1), from);
+        int sectPr = xml.lastIndexOf("<w:sectPr");
+        String body = xml.substring(from, next >= 0 ? next : sectPr);
+        if (copy > 1) {
+            body = body.startsWith(PAGE_BREAK) ? body.substring(PAGE_BREAK.length())
+                    : body.replaceFirst("<w:pageBreakBefore/>", "");
+        }
+        int open = xml.indexOf('>', xml.indexOf("<w:body")) + 1;
+        return withDocument(docx, xml.substring(0, open) + body + xml.substring(sectPr));
+    }
+
+    /** ที่คั่นหัวแต่ละฉบับ — bookmark ว่าง ไม่พิมพ์อะไรออกมา */
+    private static String marker(int copy) {
+        return "<w:bookmarkStart w:id=\"" + (MARKER_ID + copy) + "\" w:name=\"_hrcp_copy_" + copy
+                + "\"/><w:bookmarkEnd w:id=\"" + (MARKER_ID + copy) + "\"/>";
+    }
+
+    private static final int MARKER_ID = 990000;
+    private static final String PAGE_BREAK = "<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>";
 
     /** เนื้อความใน {@code <w:body>} ไม่รวมการตั้งค่าหน้ากระดาษท้ายเอกสาร */
     private static String body(String xml) {
@@ -86,7 +121,7 @@ final class DocxCopies {
             }
             return body.substring(0, tagEnd) + "<w:pPr><w:pageBreakBefore/></w:pPr>" + body.substring(tagEnd);
         }
-        return "<w:p><w:r><w:br w:type=\"page\"/></w:r></w:p>" + body;
+        return PAGE_BREAK + body;
     }
 
     private static String documentXml(byte[] docx) throws IOException {
