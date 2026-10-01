@@ -7343,3 +7343,10 @@ body.modal-open .sidebar-toggle {
   cursor: pointer;
   transition: background-color 0.15s;
 }
+
+/* ช่องที่ล็อกในฟอร์มเอกสาร (ดึงจากเอกสารอื่นหรือคำนวณให้) — สีเทาให้เห็นว่าแก้ไม่ได้ */
+#docForm .form-control[readonly] {
+  background-color: var(--bs-secondary-bg);
+  color: var(--bs-secondary-color);
+  cursor: not-allowed;
+}

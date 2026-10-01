@@ -46,6 +46,7 @@
         this.hidden = this.ensureHidden();
         this.selectedName = null;
         this.timer = null;
+        this.seq = 0;
         this.build();
     }
 
@@ -92,7 +93,13 @@
             return; // เอกสารล็อก — แค่แสดงค่า
         }
         this.input.addEventListener('focus', function () { self.query(); });
-        this.input.addEventListener('input', function () {
+        // เลือกแล้วช่องยังโฟกัสอยู่ คลิกซ้ำจึงไม่เกิด focus — เปิดรายการให้เลือกคนใหม่
+        this.input.addEventListener('click', function () {
+            if (!self.menu.classList.contains('show')) self.query();
+        });
+        this.input.addEventListener('input', function (e) {
+            // choose() ส่ง input ให้บันทึกร่างอัตโนมัติ — ไม่ใช่การพิมพ์ ห้ามเปิดรายการกลับขึ้นมา
+            if (!e.isTrusted) return;
             clearTimeout(self.timer);
             self.timer = setTimeout(function () { self.query(); }, 250);
         });
@@ -143,7 +150,11 @@
         var q = this.input.value.trim();
         // ช่องที่แสดงชื่อคนที่เลือกอยู่ — โฟกัสแล้วแสดงคนที่แนะนำ ไม่ใช่ค้นด้วยชื่อเดิม
         if (q === this.selectedName) q = '';
-        search(q, this.role).then(function (people) { self.render(people, q); });
+        var seq = ++this.seq;
+        search(q, this.role).then(function (people) {
+            // ผลที่กลับมาช้ากว่าการเลือกหรือการพิมพ์ครั้งถัดไป — ไม่ใช่รายการที่ต้องแสดงแล้ว
+            if (seq === self.seq) self.render(people, q);
+        });
     };
 
     Picker.prototype.render = function (people, q) {
@@ -185,6 +196,8 @@
     };
 
     Picker.prototype.close = function () {
+        clearTimeout(this.timer);
+        this.seq++;
         this.menu.classList.remove('show');
     };
 

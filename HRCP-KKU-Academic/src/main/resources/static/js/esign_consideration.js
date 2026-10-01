@@ -34,6 +34,10 @@
     var confirmModalEl = document.getElementById('signConfirmModal');
     var confirmBtn = document.getElementById('signConfirmBtn');
     var stoppingNow = false;
+    // รหัสผ่าน Digital ID / รหัสจากอีเมล ใช้ยืนยันการลงนาม ไม่เห็นควรไม่ได้ลงนามจึงไม่ต้องกรอก
+    var credentials = form.querySelectorAll('[name="digitalCertPin"], [name="emailOtp"]');
+    var credentialRequired = Array.prototype.map.call(credentials, function (f) { return f.required; });
+    var credentialCards = form.querySelectorAll('[data-signing-credential]');
 
     function setRequired(name, required) {
       var fields = form.querySelectorAll('[name="' + name + '"]');
@@ -45,6 +49,12 @@
     function apply(stopping) {
       stoppingNow = stopping;
       setRequired('userSignatureId', !stopping);
+      for (var i = 0; i < credentials.length; i++) {
+        credentials[i].required = !stopping && credentialRequired[i];
+      }
+      for (var j = 0; j < credentialCards.length; j++) {
+        credentialCards[j].hidden = stopping;
+      }
       if (comment) {
         comment.required = stopping;
       }

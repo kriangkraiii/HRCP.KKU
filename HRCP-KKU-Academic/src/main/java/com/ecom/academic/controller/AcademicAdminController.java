@@ -626,6 +626,10 @@ public class AcademicAdminController {
             }
         }
 
+        if (type == 4) {
+            model.addAttribute("carried", carriedIntoDoc4(request));
+        }
+
         // สำหรับ doc_5: ดึงข้อมูลจาก doc_4 มา auto-fill (applicant info)
         if (type == 5) {
             List<AcademicDocument> doc4List = requestService.getDocumentsByType(id, 4);
@@ -811,6 +815,11 @@ public class AcademicAdminController {
             requestService.logDocumentEdit(request, type, DOC_LABELS.get(type), getUser(principal),
                     AcademicDocumentEditLog.EditAction.UPDATED);
             return "redirect:/admin/academic/request/" + id + "/document/" + type + "?saved=office";
+        }
+
+        // ช่องที่ดึงจากเอกสารก่อนหน้าแก้ในฉบับนี้ไม่ได้ — ใช้ค่าจากเอกสารต้นทางเสมอ
+        if (type == 4) {
+            formData.putAll(carriedIntoDoc4(request));
         }
 
         // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
@@ -1509,6 +1518,47 @@ public class AcademicAdminController {
      * "เจ้าหน้าที่" เท่านั้น ที่เหลือดูได้อย่างเดียว ถ้าต้องแก้ให้กดส่งกลับให้ผู้ยื่นแก้
      * ส่วนเอกสารที่ 3–9 เป็นของเจ้าหน้าที่ทั้งฉบับ ผ่านไปเหมือนเดิม
      */
+    /**
+     * ช่องของเอกสารที่ 4 ที่มาจากเอกสารก่อนหน้า — ข้อมูลผู้ยื่นจากเอกสารที่ 1 (หรือโปรไฟล์ผู้ยื่น)
+     * รายชื่อกรรมการจากเอกสารที่ 3 แก้ที่ต้นทาง ไม่ใช่ที่ฉบับนี้ ช่องที่ต้นทางยังว่างไม่อยู่ในผลลัพธ์
+     * และยังกรอกเองได้
+     */
+    private Map<String, String> carriedIntoDoc4(AcademicRequest request) {
+        Map<String, String> doc1 = latestJson(request.getId(), 1);
+        Map<String, String> doc3 = latestJson(request.getId(), 3);
+        UserDtls applicant = request.getApplicant();
+        String requested = "✓".equals(doc1.get("chk1")) ? "ผู้ช่วยศาสตราจารย์"
+                : "✓".equals(doc1.get("chk2")) ? "รองศาสตราจารย์" : null;
+
+        Map<String, String> carried = new java.util.LinkedHashMap<>();
+        carried.put("applicant_title", doc1.getOrDefault("title", applicant != null ? applicant.getTitle() : null));
+        carried.put("applicant_name", doc1.getOrDefault("applicant_name", applicant != null ? applicant.getName() : null));
+        carried.put("employee_type", doc1.get("employee_type"));
+        carried.put("current_position", doc1.getOrDefault("current_position",
+                applicant != null ? applicant.getAcademicPosition() : null));
+        carried.put("requested_position", requested);
+        for (int i = 1; i <= 3; i++) {
+            carried.put("committee_" + i + "_name", doc3.get("committee_" + i + "_name"));
+        }
+        carried.values().removeIf(v -> v == null || v.isBlank());
+        return carried;
+    }
+
+    private Map<String, String> latestJson(Long requestId, int type) {
+        List<AcademicDocument> docs = requestService.getDocumentsByType(requestId, type);
+        if (docs.isEmpty() || docs.get(0).getJsonData() == null) {
+            return Map.of();
+        }
+        try {
+            Map<String, String> data = objectMapper.readValue(docs.get(0).getJsonData(),
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                    });
+            return data != null ? data : Map.of();
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
     private Map<String, String> onlyWhatAnOfficerOwns(Long requestId, int type,
             Map<String, String> formData) {
         return DocumentFieldOwnership.merge(SignatureModule.ACADEMIC, type, true, formData,

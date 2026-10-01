@@ -9,10 +9,12 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -154,23 +156,35 @@ public final class BasePdfBuilder {
         }
 
         byte[] template = renderer.docx(overrides, pictures);
+        Map<String, Integer> original = new LinkedHashMap<>(wanted);
+        // Fields that sit on a line of their own even at the shortest reserve: the
+        // template's own layout breaks there, so they keep their full length.
+        Set<String> wrapsInTemplate = new HashSet<>();
         // A reserve longer than its line (a narrow table cell) is split by the layout
-        // and cannot be found; shrink those and render again. Each field ends up with
-        // the widest reserve that stays on one line.
+        // and cannot be found, or pushed whole onto the next line, away from the text
+        // it follows ("( ✓ ) {{comment}}"); shrink those and render again. Each field
+        // ends up with the widest reserve that stays on its line.
         for (int attempt = 0;; attempt++) {
             // Distinct lengths first; once a field has had to shrink, equal lengths
             // are allowed and told apart by their order in the document.
             Map<String, Integer> lengths = attempt == 0 ? distinct(wanted) : new LinkedHashMap<>(wanted);
             Map<String, Integer> present = new LinkedHashMap<>();
             List<String> order = new ArrayList<>();
-            byte[] docx = reserve(template, lengths, lines, present, order);
+            Set<String> inline = new HashSet<>();
+            byte[] docx = reserve(template, lengths, lines, present, order, inline);
             // A late field this template does not print has nothing to reserve.
             lengths.keySet().retainAll(present.keySet());
             wanted.keySet().retainAll(present.keySet());
             byte[] rendered = renderer.toPdf(docx);
 
+            Set<String> keepInline = new HashSet<>();
+            for (String f : inline) {
+                if (lengths.get(f) != TICK_RUN && lines.getOrDefault(f, 1) == 1 && !wrapsInTemplate.contains(f)) {
+                    keepInline.add(f);
+                }
+            }
             List<Box> found = new ArrayList<>();
-            List<String> missing = locate(rendered, lengths, order, found);
+            List<String> missing = locate(rendered, lengths, order, found, keepInline);
             if (missing.stream().anyMatch(f -> lengths.get(f) == TICK_RUN)) {
                 throw new BaseBuildException("Tick places for " + missing + " not found in the rendered page");
             }
@@ -178,10 +192,16 @@ public final class BasePdfBuilder {
                 boolean shrunk = false;
                 for (String f : missing) {
                     int smaller = Math.max(MIN_RUN, (int) (wanted.get(f) * 0.7));
+                    if (smaller == wanted.get(f) && keepInline.contains(f)) {
+                        wrapsInTemplate.add(f);
+                        wanted.put(f, original.get(f));
+                        shrunk = true;
+                        continue;
+                    }
                     shrunk |= smaller < wanted.get(f);
                     wanted.put(f, smaller);
                 }
-                if (!shrunk || attempt >= 4) {
+                if (!shrunk || attempt >= 8) {
                     throw new BaseBuildException("Reserved area for " + missing + " not found in the rendered page");
                 }
                 continue;
@@ -260,10 +280,11 @@ public final class BasePdfBuilder {
 
     /** Swaps each token for its NBSP run, in the token's own run formatting. */
     /**
-     * @param order filled with each token occurrence's field, in document order
+     * @param order  filled with each token occurrence's field, in document order
+     * @param inline filled with the fields that follow text in their paragraph
      */
     static byte[] reserve(byte[] docx, Map<String, Integer> lengths, Map<String, Integer> lines,
-            Map<String, Integer> seen, List<String> order) throws IOException {
+            Map<String, Integer> seen, List<String> order, Set<String> inline) throws IOException {
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         try (ZipInputStream zin = new ZipInputStream(new ByteArrayInputStream(docx));
                 ZipOutputStream zout = new ZipOutputStream(out)) {
@@ -294,6 +315,11 @@ public final class BasePdfBuilder {
                         String token = String.format(TOKEN, l.getKey());
                         int at;
                         while ((at = xml.indexOf(token)) >= 0) {
+                            int pStart = Math.max(xml.lastIndexOf("<w:p>", at), xml.lastIndexOf("<w:p ", at));
+                            if (pStart >= 0 && !xml.substring(pStart, at).replaceAll("<[^>]+>", "")
+                                    .replace(NBSP, ' ').isBlank()) {
+                                inline.add(l.getKey());
+                            }
                             // Word trims a text element's edge spaces unless told not to.
                             int tStart = xml.lastIndexOf("<w:t", at);
                             int tEnd = xml.indexOf('>', tStart);
@@ -366,10 +392,12 @@ public final class BasePdfBuilder {
      * text reserve, so a run one or two longer also matches (ours is its tail);
      * tick reserves must match exactly.
      *
-     * @return the fields left without a place
+     * @param keepInline fields that must stay on the line of the text before them
+     * @return the fields left without a place, or pushed off their line
      */
-    private static List<String> locate(byte[] pdf, Map<String, Integer> lengths, List<String> order, List<Box> boxes)
-            throws IOException {
+    private static List<String> locate(byte[] pdf, Map<String, Integer> lengths, List<String> order, List<Box> boxes,
+            Set<String> keepInline) throws IOException {
+        List<String> wrapped = new ArrayList<>();
         Map<Integer, java.util.ArrayDeque<String>> queues = new LinkedHashMap<>();
         for (String f : order) {
             Integer n = lengths.get(f);
@@ -407,6 +435,10 @@ public final class BasePdfBuilder {
                         }
                         var queue = queues.get(n);
                         if (queue != null && !queue.isEmpty()) {
+                            if (keepInline.contains(queue.peek()) && startsLine(all, i)) {
+                                wrapped.add(queue.poll());
+                                break;
+                            }
                             TextPosition first = all.get(i + extra), last = all.get(k - 1);
                             float size = first.getFontSizeInPt();
                             float width = last.getXDirAdj() + last.getWidthDirAdj() - first.getXDirAdj();
@@ -421,9 +453,19 @@ public final class BasePdfBuilder {
                 }
             }
         }
-        List<String> missing = new ArrayList<>();
+        List<String> missing = new ArrayList<>(wrapped);
         queues.values().forEach(missing::addAll);
         return missing.stream().distinct().toList();
+    }
+
+    /** Whether the run at {@code i} begins a line — the text before it ended on another. */
+    private static boolean startsLine(List<TextPosition> all, int i) {
+        for (int j = i - 1; j >= 0; j--) {
+            if (!all.get(j).getUnicode().isBlank()) {
+                return Math.abs(all.get(j).getYDirAdj() - all.get(i).getYDirAdj()) > 1;
+            }
+        }
+        return true;
     }
 
     private static boolean isNbsp(TextPosition t) {
