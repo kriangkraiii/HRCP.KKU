@@ -630,20 +630,8 @@ public class AcademicAdminController {
             model.addAttribute("carried", carriedIntoDoc4(request));
         }
 
-        // สำหรับ doc_5: ดึงข้อมูลจาก doc_4 มา auto-fill (applicant info)
         if (type == 5) {
-            List<AcademicDocument> doc4List = requestService.getDocumentsByType(id, 4);
-            if (!doc4List.isEmpty()) {
-                try {
-                    String doc4Json = doc4List.get(0).getJsonData();
-                    Map<String, String> doc4Data = objectMapper.readValue(doc4Json,
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                            });
-                    model.addAttribute("doc4Data", doc4Data);
-                } catch (Exception e) {
-                    // ignore
-                }
-            }
+            model.addAttribute("carried", carriedIntoDoc5(request));
         }
         // แนบรายการไฟล์เอกสารแนบของผู้ยื่น
         List<com.ecom.academic.model.AcademicAttachment> attachments = requestService.getAttachments(id);
@@ -820,6 +808,8 @@ public class AcademicAdminController {
         // ช่องที่ดึงจากเอกสารก่อนหน้าแก้ในฉบับนี้ไม่ได้ — ใช้ค่าจากเอกสารต้นทางเสมอ
         if (type == 4) {
             formData.putAll(carriedIntoDoc4(request));
+        } else if (type == 5) {
+            formData.putAll(carriedIntoDoc5(request));
         }
 
         // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
@@ -1539,6 +1529,37 @@ public class AcademicAdminController {
         carried.put("requested_position", requested);
         for (int i = 1; i <= 3; i++) {
             carried.put("committee_" + i + "_name", doc3.get("committee_" + i + "_name"));
+        }
+        carried.values().removeIf(v -> v == null || v.isBlank());
+        return carried;
+    }
+
+    /**
+     * ช่องของเอกสารที่ 5 ที่มาจากคำสั่งในเอกสารที่ 4 — เลขที่/วันที่คำสั่งอ้างอิง ข้อมูลผู้ยื่น
+     * และรายชื่อกรรมการ ถ้าเอกสารที่ 4 ยังไม่ได้บันทึกช่องไหนใช้ค่าที่เอกสารที่ 4 จะดึงมาแทน
+     * ช่องที่ต้นทางยังว่างไม่อยู่ในผลลัพธ์ และยังกรอกเองได้
+     */
+    private Map<String, String> carriedIntoDoc5(AcademicRequest request) {
+        Map<String, String> doc4 = new java.util.HashMap<>(carriedIntoDoc4(request));
+        latestJson(request.getId(), 4).forEach((k, v) -> {
+            if (v != null && !v.isBlank()) {
+                doc4.put(k, v);
+            }
+        });
+
+        String orderNo = doc4.get("order_no");
+        String year = doc4.get("year");
+        Map<String, String> carried = new java.util.LinkedHashMap<>();
+        carried.put("ref_order_no", orderNo == null || orderNo.isBlank() || year == null || year.isBlank()
+                ? orderNo : orderNo.trim() + "/" + year.trim());
+        carried.put("ref_order_date", doc4.get("order_date"));
+        carried.put("applicant_title", doc4.get("applicant_title"));
+        carried.put("applicant_name", doc4.get("applicant_name"));
+        carried.put("applicant_employee_type", doc4.get("employee_type"));
+        carried.put("applicant_current_pos", doc4.get("current_position"));
+        carried.put("applicant_req_pos", doc4.get("requested_position"));
+        for (int i = 1; i <= 3; i++) {
+            carried.put("committee_name_" + i, doc4.get("committee_" + i + "_name"));
         }
         carried.values().removeIf(v -> v == null || v.isBlank());
         return carried;
