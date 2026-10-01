@@ -171,10 +171,10 @@ class DocumentCardStateTest extends AbstractFlowTest {
         @DisplayName("ลงนามแล้วแต่ยังไม่ได้ออกเลขที่หนังสือ — เหลือง ไม่ใช่เขียว")
         void savedWithoutAMemoNumberIsNotGreen() throws Exception {
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
-            data.academicDocument(request, 5, "{\"memo_no\":\"\",\"date\":\"\"}");
-            fullySigned(SignatureModule.ACADEMIC, request.getId(), 5);
+            data.academicDocument(request, 9, "{\"memo_no\":\"\",\"date\":\"\"}");
+            fullySigned(SignatureModule.ACADEMIC, request.getId(), 9);
 
-            String card = cardFor(page(request), 5);
+            String card = cardFor(page(request), 9);
             assertThat(card)
                     .as("งานสารบรรณยังไม่จบ กล่องจึงยังไม่เขียว")
                     .contains("dgi-draft")
@@ -186,11 +186,11 @@ class DocumentCardStateTest extends AbstractFlowTest {
         @DisplayName("ออกเลขและลงวันที่ครบแล้ว — เขียว")
         void savedWithOfficeFieldsIsGreen() throws Exception {
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
-            data.academicDocument(request, 5,
+            data.academicDocument(request, 9,
                     "{\"memo_no\":\"อว 660301.26.4/ว.17\",\"date\":\"๒๑ กันยายน ๒๕๖๙\"}");
-            fullySigned(SignatureModule.ACADEMIC, request.getId(), 5);
+            fullySigned(SignatureModule.ACADEMIC, request.getId(), 9);
 
-            String card = cardFor(page(request), 5);
+            String card = cardFor(page(request), 9);
             assertThat(card).contains("dgi-completed")
                     .doesNotContain("dgi-draft")
                     .doesNotContain("รอออกเลข");

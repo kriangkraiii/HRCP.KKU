@@ -295,13 +295,19 @@ class DocumentFieldOwnershipTest {
     class OfficeFields {
 
         @Test
-        @DisplayName("เฟส 1 เอกสาร 1, 5, 9 มีทั้งเลขที่หนังสือและวันที่")
+        @DisplayName("เฟส 1 เอกสาร 1 และ 9 มีทั้งเลขที่หนังสือและวันที่")
         void phase1DocumentsWithAMemoHeader() {
-            for (int type : new int[] { 1, 5, 9 }) {
+            for (int type : new int[] { 1, 9 }) {
                 assertThat(DocumentFieldOwnership.officeFields(P1, type))
                         .as("เอกสารเฟส 1 ที่ %d", type)
                         .containsExactlyInAnyOrder("memo_no", "date");
             }
+        }
+
+        @Test
+        @DisplayName("เฟส 1 เอกสาร 5 พิมพ์เลขที่และวันที่จากฟอร์มตั้งแต่แรก ไม่มีขั้นออกเลขทีหลัง")
+        void phase1Document5PrintsTheFormsMemoHeader() {
+            assertThat(DocumentFieldOwnership.officeFields(P1, 5)).isEmpty();
         }
 
         @Test

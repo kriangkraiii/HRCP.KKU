@@ -197,17 +197,17 @@ class StatusAcrossSigningLifecycleTest extends AbstractFlowTest {
         void numberingAfterSigningDoesNotMoveTheStatus() throws Exception {
             AcademicRequest request =
                     data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
-            data.academicDocument(request, 5, "{\"memo_no\":\"อว 660301.26.4/\"}");
-            envelopeFor(SignatureModule.ACADEMIC, request.getId(), 5,
+            data.academicDocument(request, 9, "{\"memo_no\":\"อว 660301.26.4/\"}");
+            envelopeFor(SignatureModule.ACADEMIC, request.getId(), 9,
                     SignatureRequestStatus.COMPLETED);
 
-            assertThat(redirectOf(post("/admin/academic/request/" + request.getId() + "/document/5")
+            assertThat(redirectOf(post("/admin/academic/request/" + request.getId() + "/document/9")
                     .with(as(officer)).with(csrf())
                     .param("memo_no", "อว 660301.26.4/ว.17")
                     .param("date", "๒๑ กันยายน ๒๕๖๙")))
-                    .endsWith("/document/5?saved=office");
+                    .endsWith("/document/9?saved=office");
 
-            assertThat(academicService.getLatestDocumentData(request.getId(), 5))
+            assertThat(academicService.getLatestDocumentData(request.getId(), 9))
                     .containsEntry("memo_no", "อว 660301.26.4/ว.17")
                     .containsEntry("date", "๒๑ กันยายน ๒๕๖๙");
             assertThat(statusOf(request.getId()))

@@ -124,9 +124,11 @@ class SignatureStampingTest {
                     String document = text(entries, "word/document.xml");
                     assertThat(document).contains("<w:drawing>");
                     for (int i = 1; i <= slots.size(); i++) {
+                        // เอกสารที่ 5 ของเฟส 1 คือหนังสือถึงกรรมการสามท่านในไฟล์เดียว ลายเซ็นจึงอยู่ครบทั้งสามฉบับ
+                        int copies = module == SignatureModule.ACADEMIC && docType == 5 ? 3 : 1;
                         assertThat(countOf(document, "r:embed=\"rIdHrcpSig" + i + "\""))
-                                .as("document.xml must embed signature %d exactly once", i)
-                                .isEqualTo(1);
+                                .as("document.xml must embed signature %d once per letter", i)
+                                .isEqualTo(copies);
                     }
 
                     // 5. Paragraph tags stay balanced — the stamper rewrites raw
