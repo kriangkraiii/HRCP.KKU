@@ -16,7 +16,7 @@
 					<i class="fas fa-user-tie text-primary me-2" th:if="${userType==3}"></i>
 					<span th:if="${userType==1}">จัดการผู้ใช้งานทั่วไป</span>
 					<span th:if="${userType==2}">จัดการผู้ดูแลระบบ</span>
-					<span th:if="${userType==3}">ผู้ลงนามภายนอก มข.</span>
+					<span th:if="${userType==3}">ผู้ลงนามภายนอก</span>
 				</h3>
 				<div class="d-flex gap-2 align-items-center">
 					<form th:if="${userType==1}" th:action="@{/admin/academic/staff/sync}" method="post" class="d-inline">
