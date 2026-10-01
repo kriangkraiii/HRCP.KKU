@@ -316,19 +316,26 @@ public class IncrementalSigningService {
 
     /** What the signer of {@code slot} writes into the document by signing. */
     static Map<String, String> ownValues(SignatureSlot slot, SignatureStep step, LocalDateTime signedAt) {
+        return ownValues(slot, signedAt, step.getSignerChoiceValue(), step.getSignerComment());
+    }
+
+    /**
+     * The same, from an answer and a comment not yet saved on the step — the signing
+     * page's preview while the signer is still choosing.
+     */
+    static Map<String, String> ownValues(SignatureSlot slot, LocalDateTime signedAt, String choice, String comment) {
         Map<String, String> own = new LinkedHashMap<>();
+        boolean hasComment = comment != null && !comment.isBlank();
         if (slot.marks() != null && slot.marks().signedDateFieldKey() != null && signedAt != null) {
             own.put(slot.marks().signedDateFieldKey(), AcademicRequestService.formatThaiDate(signedAt));
         }
-        if (slot.marks() != null && slot.marks().commentFieldKey() != null && step.getSignerComment() != null
-                && !step.getSignerComment().isBlank()) {
-            own.put(slot.marks().commentFieldKey(), step.getSignerComment());
+        if (slot.marks() != null && slot.marks().commentFieldKey() != null && hasComment) {
+            own.put(slot.marks().commentFieldKey(), comment);
         }
-        if (slot.choice() != null && step.getSignerChoiceValue() != null) {
-            own.put(slot.choice().fieldKey(), slot.choice().renderedValue(step.getSignerChoiceValue()));
+        if (slot.choice() != null && choice != null) {
+            own.put(slot.choice().fieldKey(), slot.choice().renderedValue(choice));
         }
-        if (slot.marks() != null && slot.marks().commentTickFieldKey() != null && step.getSignerComment() != null
-                && !step.getSignerComment().isBlank()) {
+        if (slot.marks() != null && slot.marks().commentTickFieldKey() != null && hasComment) {
             own.put(slot.marks().commentTickFieldKey(), com.ecom.academic.service.SignatureAnchorRegistry.TICK);
         }
         return own;
@@ -359,6 +366,19 @@ public class IncrementalSigningService {
      * with their picture and today's date drawn in. Not signed, not stored.
      */
     public byte[] preview(SignatureRequest envelope, SignatureStep step, byte[] imagePng) throws IOException {
+        return preview(envelope, step, imagePng, step != null ? step.getSignerChoiceValue() : null,
+                step != null ? step.getSignerComment() : null);
+    }
+
+    /**
+     * The same, with the answer and comment the signer has chosen on the page but not
+     * yet signed — drawn by the rule {@link #sign} uses, so the preview is what they
+     * will get. Nothing is stored.
+     *
+     * @throws PdfIncrementService.DoesNotFitException when the comment does not fit its box
+     */
+    public byte[] preview(SignatureRequest envelope, SignatureStep step, byte[] imagePng, String choice,
+            String comment) throws IOException {
         byte[] current = latest(envelope);
         if (step == null || step.getStatus() != com.ecom.academic.model.SignatureStepStatus.ACTIVE) {
             return current;
@@ -369,7 +389,7 @@ public class IncrementalSigningService {
             return current;
         }
         Set<String> fields = fieldNames(current);
-        Map<String, String> own = ownValues(slot, step, LocalDateTime.now(ZoneId.of("Asia/Bangkok")));
+        Map<String, String> own = ownValues(slot, LocalDateTime.now(ZoneId.of("Asia/Bangkok")), choice, comment);
         own.keySet().retainAll(fields);
         putNameIfBlank(own, slot, step, fields, values(current));
         return pdf.preview(current, "sig_" + slot.slotKey(), own, nameField(slot), imagePng);

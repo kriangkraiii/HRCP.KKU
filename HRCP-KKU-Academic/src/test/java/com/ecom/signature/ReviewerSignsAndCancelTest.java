@@ -167,6 +167,10 @@ class ReviewerSignsAndCancelTest extends AbstractFlowTest {
         assertThat(page("/admin/academic/request/" + request.getId() + "/document/2", officer))
                 .contains("/esign/sign/" + hr.getId() + "\"");
 
+        // เอกสารของผู้ยื่น — ปุ่มส่งกลับให้ผู้ยื่นแก้ยังอยู่ (เอกสารของเจ้าหน้าที่ไม่มี ดู NamedSignerTest)
+        assertThat(page("/admin/academic/request/" + request.getId() + "/document/2", officer))
+                .contains("modal-resign-").contains("ส่งกลับให้แก้ไขและลงนามใหม่");
+
         String signPage = page("/esign/sign/" + hr.getId(), otherStaff);
         assertThat(signPage).contains("data-view-only").contains("ลงนามแทนไม่ได้");
         assertThat(signatureSteps.findById(hr.getId()).orElseThrow().getViewedAt())

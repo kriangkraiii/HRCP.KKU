@@ -22,9 +22,10 @@ import org.springframework.stereotype.Component;
  * registry marks the rehearsal accounts so mail raised on their behalf can be
  * held back, while everything a genuine user does is delivered as normal.
  *
- * <p>Matching is by exact address. Matching whole domains would be convenient
- * but silently unreachable is a bad failure mode for anyone whose real address
- * happens to look like a test one.
+ * <p>Matching is by exact address, plus any address that starts with
+ * {@value #TEST_PREFIX} — the convention for accounts made purely for testing.
+ * Matching whole domains would be convenient but silently unreachable is a bad
+ * failure mode for anyone whose real address happens to look like a test one.
  */
 @Component
 public class TestAccountRegistry {
@@ -33,6 +34,9 @@ public class TestAccountRegistry {
 
     /** Fallback for code reached before Spring has wired this bean. */
     private static final Set<String> BUILT_IN = Set.of("user@user.com", "admin@admin.com");
+
+    /** Any address starting with this is a test account, listed or not. */
+    public static final String TEST_PREFIX = "test";
 
     private static volatile TestAccountRegistry instance;
 
@@ -63,7 +67,8 @@ public class TestAccountRegistry {
         if (email == null || email.isBlank()) {
             return false;
         }
-        return addresses.contains(email.trim().toLowerCase(Locale.ROOT));
+        String normalized = email.trim().toLowerCase(Locale.ROOT);
+        return addresses.contains(normalized) || normalized.startsWith(TEST_PREFIX);
     }
 
     /**
@@ -95,6 +100,10 @@ public class TestAccountRegistry {
         if (registry != null) {
             return registry.isTestAccount(email);
         }
-        return email != null && BUILT_IN.contains(email.trim().toLowerCase(Locale.ROOT));
+        if (email == null) {
+            return false;
+        }
+        String normalized = email.trim().toLowerCase(Locale.ROOT);
+        return BUILT_IN.contains(normalized) || normalized.startsWith(TEST_PREFIX);
     }
 }

@@ -50,7 +50,29 @@ public record SignaturePanelView(
         boolean deadlineAdvisory,
         SignatureRequest revivableEnvelope,
         boolean applicantMayWithdraw,
-        java.util.Set<String> reviewerSlots) {
+        java.util.Set<String> reviewerSlots,
+        boolean signerNamedInForm) {
+
+    /**
+     * คนที่จับคู่ได้จากชื่อที่กรอกในแบบฟอร์ม — บุคลากรที่ผูกบัญชีแล้ว ชื่อแบบเดียวกับรายการชื่อในแบบฟอร์ม
+     * ใช้กับเอกสารที่ผู้ลงนามมาจากชื่อในแบบฟอร์ม (named_signer.js); เซิร์ฟเวอร์จับคู่ซ้ำเองตอนส่งเสมอ
+     */
+    public List<SignerOptionDTO> namedCandidates() {
+        Map<Integer, SignerOptionDTO> byUser = new java.util.LinkedHashMap<>();
+        recommendedOptions.values().forEach(list -> list.forEach(o -> {
+            if (o.staffId() != null && o.signable() && o.userId() != null) byUser.putIfAbsent(o.userId(), o);
+        }));
+        otherOptions.forEach(o -> {
+            if (o.staffId() != null && o.signable() && o.userId() != null) byUser.putIfAbsent(o.userId(), o);
+        });
+        return new ArrayList<>(byUser.values());
+    }
+
+    /** ตำแหน่งนี้ผู้ลงนามมาจากชื่อในแบบฟอร์ม — ไม่มีตัวเลือกผู้ลงนาม */
+    public boolean isNamedInForm(SignatureSlot slot) {
+        return signerNamedInForm && slot.anchorPlaceholder() != null
+                && !"applicant".equalsIgnoreCase(slot.slotKey()) && !isReviewerSlot(slot.slotKey());
+    }
 
     public SignaturePanelView(
             List<SignatureSlot> slots,
@@ -61,7 +83,16 @@ public record SignaturePanelView(
             SignerOptionDTO currentUserOption,
             SignatureRequest activeEnvelope,
             boolean signable) {
-        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false, java.util.Set.of());
+        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false, java.util.Set.of(), false);
+    }
+
+    /**
+     * เอกสารของผู้ยื่น — มีปุ่ม "ส่งกลับให้แก้ไขและลงนามใหม่" เอกสารของเจ้าหน้าที่ (เฟส 1 ฉบับที่ 3 เป็นต้นไป ฯลฯ)
+     * ไม่มีอะไรให้ผู้ยื่นแก้ ส่งกลับก็คือยกเลิกการเวียนแล้วแจ้งผู้ยื่นผิดคน จึงเหลือแค่ปุ่มยกเลิก
+     */
+    public boolean isApplicantDocument() {
+        return activeEnvelope != null && com.ecom.academic.service.DocumentFieldOwnership
+                .isApplicantDocument(activeEnvelope.getModule(), activeEnvelope.getDocumentType());
     }
 
     /** ยกเลิกการเวียนตอนนี้ถอนเฉพาะขั้นที่ส่งต่อไป ลายเซ็นของผู้ยื่นยังอยู่ ({@code SignatureRequest#forwardedStepsToWithdraw}) */
@@ -223,6 +254,6 @@ public record SignaturePanelView(
     /** An empty panel, for documents with no signature block. */
     public static SignaturePanelView unsignable() {
         return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false, false, null, false,
-                java.util.Set.of());
+                java.util.Set.of(), false);
     }
 }

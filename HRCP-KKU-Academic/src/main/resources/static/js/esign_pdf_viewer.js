@@ -157,6 +157,12 @@ class EsignPdfViewer {
             const resp = await fetch(url, { method: 'HEAD' });
             const contentType = resp.headers.get('Content-Type') || '';
             const previewFormat = resp.headers.get('X-Preview-Format') || '';
+            // หน้าลงนามฟังเพื่อเตือนผู้ลงนาม เช่นความเห็นยาวเกินช่องในเอกสาร (ดู SigningController.preview)
+            if (seq === this.loadSeq) {
+                document.dispatchEvent(new CustomEvent('esign:preview-headers', {
+                    detail: { url: url, warning: resp.headers.get('X-Preview-Warning') || '' }
+                }));
+            }
 
             if (previewFormat === 'docx-fallback' || contentType.includes('wordprocessingml')) {
                 if (seq !== this.loadSeq) return;

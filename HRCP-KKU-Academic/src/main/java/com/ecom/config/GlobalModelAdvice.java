@@ -25,13 +25,17 @@ public class GlobalModelAdvice {
             com.ecom.service.NotificationService notificationService,
             AuthModeProperties authProperties,
             com.ecom.academic.service.SignatureWorkflowService signatureWorkflowService,
-            com.ecom.sso.KkuSsoProperties ssoProperties) {
+            com.ecom.sso.KkuSsoProperties ssoProperties,
+            com.ecom.service.DevAccountSwitchService devAccountSwitch) {
         this.userService = userService;
         this.notificationService = notificationService;
         this.authProperties = authProperties;
         this.signatureWorkflowService = signatureWorkflowService;
         this.ssoProperties = ssoProperties;
+        this.devAccountSwitch = devAccountSwitch;
     }
+
+    private final com.ecom.service.DevAccountSwitchService devAccountSwitch;
 
     private final com.ecom.sso.KkuSsoProperties ssoProperties;
 
@@ -92,6 +96,13 @@ public class GlobalModelAdvice {
                     model.addAttribute("pendingSignatureCount", signatureWorkflowService.countPending(user));
                 } catch (Exception e) {
                     model.addAttribute("pendingSignatureCount", 0L);
+                }
+
+                // Dev mode only: the top-bar switcher into test accounts.
+                HttpSession session = request != null ? request.getSession(false) : null;
+                if (devAccountSwitch.isAvailable(user, session)) {
+                    model.addAttribute("devSwitchOptions", devAccountSwitch.options(user, session));
+                    model.addAttribute("devSwitchOrigin", devAccountSwitch.originalEmail(session));
                 }
             }
         }

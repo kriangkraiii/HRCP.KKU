@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.ecom.academic.model.SignatureModule;
+import com.ecom.academic.model.SignatureRequestStatus;
 import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.SignatureStepStatus;
 
@@ -35,9 +36,11 @@ public interface SignatureStepRepository extends JpaRepository<SignatureStep, Lo
     /**
      * What one person has signed — the "ประวัติการลงนาม" tab.
      *
-     * <p>Only envelopes that went on to collect every signature: a signature on
-     * a round that was declined, cancelled or voided is not on any document
-     * anyone can verify, so listing it would point at nothing.
+     * <p>{@code envelopeStatus} picks the view: COMPLETED for rounds that
+     * collected every signature, IN_PROGRESS for rounds still waiting on
+     * someone after this person. A round that was declined, cancelled or voided
+     * is never asked for: its signatures are not on any document anyone can
+     * verify, so listing it would point at nothing.
      *
      * <p>{@code searching} is a flag rather than a null check on {@code pattern}:
      * PostgreSQL cannot type a bare {@code ? IS NULL}. {@code modules} are the
@@ -48,7 +51,7 @@ public interface SignatureStepRepository extends JpaRepository<SignatureStep, Lo
             JOIN FETCH s.signatureRequest r
             WHERE s.signer.id = :userId
               AND s.status = com.ecom.academic.model.SignatureStepStatus.SIGNED
-              AND r.status = com.ecom.academic.model.SignatureRequestStatus.COMPLETED
+              AND r.status = :envelopeStatus
               AND (:searching = false
                    OR LOWER(r.documentLabel) LIKE :pattern ESCAPE '\\'
                    OR LOWER(s.roleLabel) LIKE :pattern ESCAPE '\\'
@@ -61,7 +64,7 @@ public interface SignatureStepRepository extends JpaRepository<SignatureStep, Lo
             JOIN s.signatureRequest r
             WHERE s.signer.id = :userId
               AND s.status = com.ecom.academic.model.SignatureStepStatus.SIGNED
-              AND r.status = com.ecom.academic.model.SignatureRequestStatus.COMPLETED
+              AND r.status = :envelopeStatus
               AND (:searching = false
                    OR LOWER(r.documentLabel) LIKE :pattern ESCAPE '\\'
                    OR LOWER(s.roleLabel) LIKE :pattern ESCAPE '\\'
@@ -69,10 +72,24 @@ public interface SignatureStepRepository extends JpaRepository<SignatureStep, Lo
                    OR r.module IN :modules)
             """)
     Page<SignatureStep> findSignedHistory(@Param("userId") Integer userId,
+            @Param("envelopeStatus") SignatureRequestStatus envelopeStatus,
             @Param("searching") boolean searching,
             @Param("pattern") String pattern,
             @Param("modules") Collection<SignatureModule> modules,
             Pageable pageable);
+
+    /** Size of each "ประวัติการลงนาม" view, for the filter buttons. */
+    @Query("""
+            SELECT COUNT(s) FROM SignatureStep s
+            WHERE s.signer.id = :userId
+              AND s.status = com.ecom.academic.model.SignatureStepStatus.SIGNED
+              AND s.signatureRequest.status = :envelopeStatus
+            """)
+    long countSignedHistory(@Param("userId") Integer userId,
+            @Param("envelopeStatus") SignatureRequestStatus envelopeStatus);
+
+    /** Every step of several envelopes, to draw each one's signing order. */
+    List<SignatureStep> findBySignatureRequestIdInOrderByStepOrderAsc(Collection<Long> signatureRequestIds);
 
     /** Count for the sidebar badge. */
     @Query("""

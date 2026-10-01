@@ -115,6 +115,8 @@ class SigningPageRenderTest {
 
         org.assertj.core.api.Assertions.assertThat(historyPane)
                 .contains("แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา")
+                .contains("ลำดับการลงนาม")
+                .contains("ลงนามแล้ว")
                 .contains("href=\"/esign/verify/" + code + "\"")
                 .doesNotContainIgnoringCase("download")
                 .doesNotContain("ดาวน์โหลด")
@@ -162,6 +164,44 @@ class SigningPageRenderTest {
         mockMvc.perform(get("/esign/inbox").param("historyQ", "ไม่มีเอกสารนี้แน่นอน").with(asApplicant))
                 .andExpect(status().isOk())
                 .andExpect(content().string(org.hamcrest.Matchers.containsString("ไม่พบประวัติการลงนามตรงตามคำค้นหา")));
+    }
+
+    @Test
+    @DisplayName("แท็บประวัติการลงนาม — 'รอผู้อื่นลงนาม' แสดงซองที่เราลงนามแล้วพร้อมลำดับว่าถึงคิวใคร")
+    void historyTabShowsRoundsStillWaitingOnOthers() throws Exception {
+        Long signatureId = newSignature(applicant);
+        var created = workflow.createEnvelope(SignatureModule.POSITION, ROUND_REQUEST_ID.incrementAndGet(), 1,
+                "บันทึกข้อความ รอคณบดี", "{\"department_head_name\":\"สุดา\",\"dean_name\":\"สมชาย\"}",
+                java.util.List.of(new SignerAssignment("head", applicant.getId()),
+                        new SignerAssignment("dean", admin.getId())),
+                null, admin, ActorContext.none());
+        Long envelopeId = created.request().getId();
+        org.assertj.core.api.Assertions.assertThat(
+                workflow.startCirculation(envelopeId, admin, ActorContext.none()).ok()).isTrue();
+        Long headStepId = workflow.findEnvelope(envelopeId).orElseThrow().getSteps().stream()
+                .filter(s -> "head".equals(s.getSlotKey())).findFirst().orElseThrow().getId();
+        var question = workflow.signerChoiceFor(headStepId);
+        org.assertj.core.api.Assertions.assertThat(workflow.sign(headStepId, applicant, signatureId, true,
+                ActorContext.none(), null, question != null ? question.options().get(0) : null).ok()).isTrue();
+        String code = workflow.findEnvelope(envelopeId).orElseThrow().getVerificationCode();
+        var asApplicant = user(applicant.getEmail()).roles("USER");
+
+        String html = mockMvc.perform(get("/esign/inbox").param("historyFilter", "pending").with(asApplicant))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String historyPane = html.substring(html.indexOf("id=\"content-history\""), html.indexOf("id=\"historyPager\""));
+        org.assertj.core.api.Assertions.assertThat(historyPane)
+                .contains("บันทึกข้อความ รอคณบดี")
+                .contains("กำลังเวียน 1/2")
+                .contains("รอผู้อื่นลงนาม (<span>1</span>)")
+                .contains("ถึงคิว")
+                .contains("href=\"/esign/verify/" + code + "\"");
+
+        // Not fully signed yet, so the default view leaves it out.
+        mockMvc.perform(get("/esign/inbox").with(asApplicant))
+                .andExpect(status().isOk())
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        org.hamcrest.Matchers.containsString("/esign/verify/" + code))));
     }
 
     @Test

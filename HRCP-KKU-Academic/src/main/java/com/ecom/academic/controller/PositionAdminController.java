@@ -548,6 +548,11 @@ public class PositionAdminController {
             return "redirect:/admin/position/request/" + id
                     + "/document/" + type + "?error=office_issued";
         }
+        // เอกสารของเจ้าหน้าที่ไม่มีอะไรให้ผู้ยื่นแก้ — ใช้ "ยกเลิกการเวียนลงนาม" แล้วแก้เองแทน
+        if (!DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, type)) {
+            redirectAttributes.addFlashAttribute("errorMsg", AcademicAdminController.STAFF_DOCUMENT_NOT_SENT_BACK);
+            return "redirect:/admin/position/request/" + id + "/document/" + type;
+        }
 
         var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(
                 getClientIpAddress(), httpRequest.getHeader("User-Agent"));
