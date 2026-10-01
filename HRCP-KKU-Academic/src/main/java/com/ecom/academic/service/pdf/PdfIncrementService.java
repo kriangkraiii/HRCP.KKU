@@ -186,9 +186,14 @@ public final class PdfIncrementService {
                 catalog.setItem(COSName.PERMS, perms);
                 catalog.setNeedToBeUpdated(true);
             }
-            refs.add(spec.lockedFields() == null
+            List<PDField> mirrors = mirrorsOf(form, spec.field());
+            List<String> locked = spec.lockedFields() == null ? null : new ArrayList<>(spec.lockedFields());
+            if (locked != null) {
+                mirrors.forEach(m -> locked.add(m.getFullyQualifiedName()));
+            }
+            refs.add(locked == null
                     ? MdpSupport.fieldMdp("All", null, catalog)
-                    : MdpSupport.fieldMdp("Include", spec.lockedFields(), catalog));
+                    : MdpSupport.fieldMdp("Include", locked, catalog));
             sig.getCOSObject().setItem(COSName.getPDFName("Reference"), refs);
             sf.getCOSObject().setItem(COSName.V, sig);
 
@@ -202,6 +207,9 @@ public final class PdfIncrementService {
                     widget.setAppearance(imageAppearance(doc, spec.imagePng(), rect));
                 }
                 widget.getCOSObject().setNeedToBeUpdated(true);
+                if (spec.imagePng() != null) {
+                    drawMirrors(doc, mirrors, spec.imagePng());
+                }
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 doc.saveIncremental(out);
                 return requirePrefix(pdf, out.toByteArray());
@@ -230,6 +238,7 @@ public final class PdfIncrementService {
                 PDAnnotationWidget widget = sf.getWidgets().get(0);
                 widget.setAppearance(imageAppearance(doc, imagePng, widget.getRectangle()));
                 widget.getCOSObject().setNeedToBeUpdated(true);
+                drawMirrors(doc, mirrorsOf(form, signatureField), imagePng);
             }
             ByteArrayOutputStream out = new ByteArrayOutputStream();
             doc.saveIncremental(out);
@@ -426,6 +435,27 @@ public final class PdfIncrementService {
         PDAppearanceDictionary apd = new PDAppearanceDictionary();
         apd.setNormalAppearance(ap);
         return apd;
+    }
+
+    /** The places that repeat a signature field's picture in the other copies of the letter. */
+    private static List<PDField> mirrorsOf(PDAcroForm form, String signatureField) {
+        List<PDField> out = new ArrayList<>();
+        String prefix = signatureField + BasePdfBuilder.MIRROR_SEPARATOR;
+        for (PDField f : form.getFieldTree()) {
+            if (f.getFullyQualifiedName().startsWith(prefix)) {
+                out.add(f);
+            }
+        }
+        return out;
+    }
+
+    private static void drawMirrors(PDDocument doc, List<PDField> mirrors, byte[] png) throws IOException {
+        for (PDField m : mirrors) {
+            for (PDAnnotationWidget w : m.getWidgets()) {
+                w.setAppearance(imageAppearance(doc, png, w.getRectangle()));
+                w.getCOSObject().setNeedToBeUpdated(true);
+            }
+        }
     }
 
     private static PDAcroForm requireForm(PDDocument doc) {

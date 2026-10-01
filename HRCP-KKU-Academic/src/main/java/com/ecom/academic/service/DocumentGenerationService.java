@@ -150,6 +150,10 @@ public class DocumentGenerationService {
 
     public byte[] generatePreviewDocx(int documentType, String jsonData) throws IOException {
         Map<String, Object> dataMap = parseJsonData(jsonData);
+        if (isCommitteeBundle(documentType, dataMap)) {
+            return renderCommitteeBundle(dataMap, placeholders -> processTemplate(
+                    new ClassPathResource(TEMPLATE_DIR + "doc_5.docx").getInputStream(), placeholders, documentType));
+        }
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
@@ -158,6 +162,32 @@ public class DocumentGenerationService {
         preprocessPlaceholders(documentType, placeholders);
 
         return processTemplate(resource.getInputStream(), placeholders, documentType);
+    }
+
+    /**
+     * เอกสารที่ 5 ส่งถึงกรรมการสามท่าน ท่านละฉบับ — ข้อมูลที่ยังไม่ได้ระบุว่าเป็นฉบับของท่านใด
+     * (ซองลงนามเก็บข้อมูลฟอร์มชุดเดียว) จึงพิมพ์ครบทั้งสามฉบับต่อกันในไฟล์เดียว ลงนามครั้งเดียว
+     */
+    private static boolean isCommitteeBundle(int documentType, Map<String, Object> dataMap) {
+        return documentType == 5 && dataMap.get("committee_name") == null;
+    }
+
+    @FunctionalInterface
+    private interface CopyRenderer {
+        byte[] render(Map<String, String> placeholders) throws IOException;
+    }
+
+    private byte[] renderCommitteeBundle(Map<String, Object> dataMap, CopyRenderer renderer) throws IOException {
+        List<byte[]> copies = new ArrayList<>();
+        for (int i = 1; i <= 3; i++) {
+            Map<String, Object> copy = new java.util.HashMap<>(dataMap);
+            copy.put("committee_name", dataMap.getOrDefault("committee_name_" + i, ""));
+            copy.put("committee_position", dataMap.getOrDefault("committee_position_" + i, ""));
+            Map<String, String> placeholders = flattenMap(copy, "");
+            preprocessPlaceholders(5, placeholders);
+            copies.add(renderer.render(placeholders));
+        }
+        return DocxCopies.oneAfterAnother(copies);
     }
 
     /**
@@ -170,6 +200,11 @@ public class DocumentGenerationService {
     public byte[] generateSignedDocx(int documentType, String jsonData,
             List<StampedSignature> signatures) throws IOException {
         Map<String, Object> dataMap = parseJsonData(jsonData);
+        if (isCommitteeBundle(documentType, dataMap)) {
+            return renderCommitteeBundle(dataMap, placeholders -> processTemplate(
+                    new ClassPathResource(TEMPLATE_DIR + "doc_5.docx").getInputStream(), placeholders, documentType,
+                    signatures));
+        }
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
         String templateFile = TEMPLATE_DIR + "doc_" + documentType + ".docx";
@@ -187,6 +222,11 @@ public class DocumentGenerationService {
     public byte[] generateSignedDocx(int documentType, String jsonData,
             List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
         Map<String, Object> dataMap = parseJsonData(jsonData);
+        if (isCommitteeBundle(documentType, dataMap)) {
+            return renderCommitteeBundle(dataMap, placeholders -> processTemplate(
+                    new ClassPathResource(TEMPLATE_DIR + "doc_5.docx").getInputStream(), placeholders, documentType,
+                    signatures, verification));
+        }
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
         ClassPathResource resource = new ClassPathResource(TEMPLATE_DIR + "doc_" + documentType + ".docx");

@@ -69,8 +69,8 @@ public final class DocumentFieldOwnership {
      */
     private static final Map<SignatureModule, Map<Integer, Set<String>>> OFFICE_FIELDS = Map.of(
             SignatureModule.ACADEMIC, Map.of(
+                    // เอกสารที่ 5 พิมพ์เลขที่และวันที่ที่เจ้าหน้าที่กรอกในฟอร์มตั้งแต่สร้างเอกสาร
                     1, Set.of("memo_no", "date"),
-                    5, Set.of("memo_no", "date"),
                     9, Set.of("memo_no", "date")),
             SignatureModule.POSITION, Map.of(
                     4, Set.of("memo_no", "date"),

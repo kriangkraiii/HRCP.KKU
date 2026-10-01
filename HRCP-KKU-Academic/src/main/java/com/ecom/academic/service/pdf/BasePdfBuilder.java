@@ -569,12 +569,30 @@ public final class BasePdfBuilder {
                 }
                 place(doc, w, b);
             }
+            // A slot printed more than once (one letter per recipient, all in one file):
+            // the first place is the signature field, the others mirror its picture.
+            Map<String, List<String>> mirrors = new LinkedHashMap<>();
+            Map<String, Box> firstPlace = new LinkedHashMap<>();
             for (Box b : sigs) {
+                if (firstPlace.putIfAbsent(b.field(), b) == null) {
+                    continue;
+                }
+                List<String> names = mirrors.computeIfAbsent(b.field(), f -> new ArrayList<>());
+                String name = mirrorName(b.field(), names.size() + 2);
+                names.add(name);
+                PDPushButton m = new PDPushButton(form);
+                m.setPartialName(name);
+                m.setReadOnly(true);
+                form.getFields().add(m);
+                place(doc, m.getWidgets().get(0), b);
+            }
+            for (Box b : firstPlace.values()) {
                 PDSignatureField sf = new PDSignatureField(form);
                 sf.setPartialName(b.field());
                 SlotSpec slot = slots.stream().filter(s -> b.field().equals("sig_" + s.slotKey())).findFirst().orElseThrow();
                 List<String> locked = new ArrayList<>();
                 locked.add(b.field());
+                locked.addAll(mirrors.getOrDefault(b.field(), List.of()));
                 slot.ownFields().stream().filter(textFields::containsKey).forEach(locked::add);
                 sf.getCOSObject().setItem(PdfIncrementService.lockKey(), MdpSupport.lock("Include", locked, null));
                 place(doc, sf.getWidgets().get(0), b);
@@ -639,6 +657,14 @@ public final class BasePdfBuilder {
         w.setPage(page);
         w.setPrinted(true);
         page.getAnnotations().add(w);
+    }
+
+    /** Separates a signature field's name from the number of the copy that mirrors it. */
+    public static final String MIRROR_SEPARATOR = "__copy";
+
+    /** The field that shows signature field {@code field}'s picture again in copy {@code copy}. */
+    public static String mirrorName(String field, int copy) {
+        return field + MIRROR_SEPARATOR + copy;
     }
 
     /** Which boxes exist, for tests and diagnostics. */
