@@ -290,12 +290,46 @@ public class SignatureAnchorRegistry {
      * <p>เอกสารที่ 3 เฟส 1: เจ้าหน้าที่กรอกชื่อหัวหน้าสาขา รองคณบดี คณบดี และเจ้าหน้าที่ลงในคำสั่ง
      * เดิมเลือกผู้ลงนามได้อีกที่ เอกสารจึงระบุชื่อคนหนึ่งแต่ให้อีกคนเซ็นได้
      */
-    private static final java.util.Set<DocKey> SIGNERS_NAMED_IN_FORM = java.util.Set.of(
-            new DocKey(SignatureModule.ACADEMIC, 3));
+    /*
+     * ช่องชื่อผู้ลงนามในแบบฟอร์มที่เป็นตัวค้นหาชื่อ (person_picker.js) → ช่องตำแหน่งที่คู่กัน ("" = ไม่มี)
+     * ทุกช่องตรงกับ anchorPlaceholder ของตำแหน่งลงนามในตาราง SLOTS ดู docs/PLAN-signer-picker.md
+     * ตำแหน่งที่ชื่อไม่ได้อยู่ในแบบฟอร์ม (เช่น เฟส 2 ฉบับ 1) ยังเลือกผู้ลงนามในแผงลงนามตามเดิม
+     */
+    private static final Map<DocKey, Map<String, String>> SIGNER_NAME_FIELDS = Map.ofEntries(
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 3), Map.of(
+                    "department_head", "dropdownCsHead",
+                    "associate_dean_name", "dropdownAssociateDean",
+                    "dean_name", "dropdownDean",
+                    "hr_staff_name", "dropdownHr")),
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 4), Map.of("dean_name", "deandropdown_position")),
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 5), Map.of("dean_name", "dropdownDean")),
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 7), Map.of("committee_1_name", "")),
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 9), Map.of("dean_name", "dean_position")),
+            Map.entry(new DocKey(SignatureModule.POSITION, 3), Map.of("dean_name", "dean_position")),
+            Map.entry(new DocKey(SignatureModule.POSITION, 4), Map.of("department_head_name", "")),
+            Map.entry(new DocKey(SignatureModule.POSITION, 6), Map.of("dean_signature_name", "position_title")),
+            Map.entry(new DocKey(SignatureModule.POSITION, 7), Map.of(
+                    "hr_officer_name", "hr_officer_position",
+                    "dean_name", "dean_position")),
+            Map.entry(new DocKey(SignatureModule.POSITION, 8), Map.of("name_admin", "")),
+            Map.entry(new DocKey(SignatureModule.POSITION, 9), Map.of(
+                    "firstauthor_name", "",
+                    "corres_name", "")));
 
-    /** ผู้ลงนามของเอกสารนี้มาจากชื่อที่กรอกในแบบฟอร์มหรือไม่ */
+    /** ผู้ลงนามของเอกสารนี้ (บางตำแหน่ง) มาจากชื่อที่เลือกในแบบฟอร์มหรือไม่ */
     public static boolean isSignerNamedInForm(SignatureModule module, int documentType) {
-        return SIGNERS_NAMED_IN_FORM.contains(new DocKey(module, documentType));
+        return SIGNER_NAME_FIELDS.containsKey(new DocKey(module, documentType));
+    }
+
+    /** ช่องชื่อผู้ลงนามที่เป็นตัวค้นหาชื่อของเอกสารนี้ — ผู้ลงนามตำแหน่งนั้นคือคนที่เลือกในช่อง */
+    public static java.util.Set<String> signerNameFields(SignatureModule module, int documentType) {
+        return SIGNER_NAME_FIELDS.getOrDefault(new DocKey(module, documentType), Map.of()).keySet();
+    }
+
+    /** ช่องตำแหน่งที่คู่กับช่องชื่อ หรือ null เมื่อไม่มี */
+    public static String positionFieldFor(SignatureModule module, int documentType, String nameField) {
+        String field = SIGNER_NAME_FIELDS.getOrDefault(new DocKey(module, documentType), Map.of()).get(nameField);
+        return field == null || field.isEmpty() ? null : field;
     }
 
     /** ช่องของเอกสารนี้ที่เจ้าหน้าที่ผู้ตรวจลงนามเอง */

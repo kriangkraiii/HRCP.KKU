@@ -86,6 +86,14 @@ public class SignatureWorkflowService {
     private final DigitalCertificateStorage digitalCertificateStorage;
     private final PdfDigitalSignatureService pdfDigitalSignatureService;
     private final com.ecom.academic.service.pdf.IncrementalSigningService incrementalSigning;
+
+    /** ทางสำรองของผู้ลงนามภายนอกที่ไม่มี Digital ID — ไม่ตั้งค่าใบรับรองของระบบไว้ = ปิด */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecom.academic.service.pdf.SystemSealService systemSeal;
+
+    /** รหัสยืนยันทางอีเมลของทางสำรองเดียวกัน */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecom.service.TwoFactorService twoFactorService;
     private final com.ecom.service.SignatureImageStorage signatureImageStorage;
 
     public SignatureWorkflowService(
@@ -867,6 +875,20 @@ public class SignatureWorkflowService {
     public Result sign(Long stepId, UserDtls actingUser, Long userSignatureId,
             boolean consentAccepted, ActorContext actor, String digitalCertPin, String signerChoice,
             String signerComment) {
+        return sign(stepId, actingUser, userSignatureId, consentAccepted, actor, digitalCertPin, signerChoice,
+                signerComment, null);
+    }
+
+    /**
+     * ลงนาม — ผู้ลงนามภายนอกที่ไม่มี Digital ID ส่งรหัสยืนยันทางอีเมลมาแทนรหัสผ่าน .p12
+     *
+     * @param emailOtp รหัสที่ส่งไปทางอีเมล ({@link #sendSigningOtp}) — ใช้เฉพาะทางสำรองของผู้ลงนามภายนอก
+     *                 แล้วระบบลงนามลงไฟล์ด้วยใบรับรองของระบบ ({@code SystemSealService})
+     */
+    @Transactional
+    public Result sign(Long stepId, UserDtls actingUser, Long userSignatureId,
+            boolean consentAccepted, ActorContext actor, String digitalCertPin, String signerChoice,
+            String signerComment, String emailOtp) {
 
         SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
         if (step == null) {
@@ -918,7 +940,22 @@ public class SignatureWorkflowService {
         com.ecom.academic.model.UserDigitalCertificate usedCert = null;
         String usedFingerprint = null;
         String usedPin = null;
-        if (envelope.isIncremental() && optCert.isEmpty()) {
+        // ทางสำรองของผู้ลงนามภายนอกที่ไม่มี Digital ID (หรือหมดอายุ): ยืนยันตัวตนทางอีเมล แล้วระบบประทับรับรองแทน
+        boolean systemSealed = (optCert.isEmpty() || optCert.get().isExpired()) && systemSeal != null
+                && systemSeal.availableFor(actingUser);
+        if (systemSealed) {
+            if (emailOtp == null || emailOtp.isBlank()) {
+                return Result.failed("กรุณากรอกรหัสยืนยันที่ส่งไปทางอีเมล " + actingUser.getEmail());
+            }
+            String verified = twoFactorService.verifyOtp(actingUser, emailOtp.strip());
+            if (!"OK".equals(verified)) {
+                return Result.failed("EXPIRED".equals(verified)
+                        ? "รหัสยืนยันหมดอายุแล้ว กรุณากดส่งรหัสใหม่"
+                        : "รหัสยืนยันไม่ถูกต้อง");
+            }
+            authMethodToUse = SignatureStep.AUTH_METHOD_OTP;
+            optCert = java.util.Optional.empty();
+        } else if (envelope.isIncremental() && optCert.isEmpty()) {
             return Result.failed("เอกสารนี้ต้องลงนามด้วย Digital ID (.p12) กรุณาติดตั้งที่หน้า \"ลายเซ็นของฉัน\" ก่อน");
         }
         if (optCert.isPresent()) {
@@ -1016,7 +1053,8 @@ public class SignatureWorkflowService {
         stepRepository.save(step);
 
         if (envelope.isIncremental()) {
-            String problem = signIntoPdf(envelope, step, usedCert, usedPin);
+            String problem = systemSealed ? sealIntoPdf(envelope, step, actingUser)
+                    : signIntoPdf(envelope, step, usedCert, usedPin);
             if (problem != null) {
                 // Nothing of this signature may remain: the step, its evidence and
                 // any PDF revision go back together.
@@ -1051,11 +1089,29 @@ public class SignatureWorkflowService {
      */
     private String signIntoPdf(SignatureRequest envelope, SignatureStep step,
             com.ecom.academic.model.UserDigitalCertificate cert, String pin) {
+        return putIntoPdf(envelope, step, () -> digitalCertificateService.openSigner(cert, pin), null);
+    }
+
+    /**
+     * ทางสำรองของผู้ลงนามภายนอกที่ไม่มี Digital ID — ลงไฟล์ด้วยกุญแจของระบบ เหตุผลในลายมือชื่อดิจิทัล
+     * ระบุชื่อ อีเมล และวิธียืนยันตัวตน Foxit/Adobe จึงยังขึ้นใบรับรองของขั้นนี้
+     */
+    private String sealIntoPdf(SignatureRequest envelope, SignatureStep step, UserDtls signer) {
+        return putIntoPdf(envelope, step, systemSeal::open,
+                com.ecom.academic.service.pdf.SystemSealService.reasonFor(signer, step.getRoleLabel()));
+    }
+
+    @FunctionalInterface
+    private interface KeySource {
+        com.ecom.academic.service.pdf.CmsSigner open() throws Exception;
+    }
+
+    private String putIntoPdf(SignatureRequest envelope, SignatureStep step, KeySource key, String reason) {
         try {
             byte[] png = step.getImagePathSnapshot() != null ? signatureImageStorage.read(step.getImagePathSnapshot()) : null;
             String name = step.getSignerNameSnapshot() != null ? step.getSignerNameSnapshot()
                     : (step.getSigner() != null ? step.getSigner().getName() : null);
-            incrementalSigning.sign(envelope, step, digitalCertificateService.openSigner(cert, pin), png, name);
+            incrementalSigning.sign(envelope, step, key.open(), png, name, reason);
             stepRepository.save(step);
             return null;
         } catch (com.ecom.academic.service.pdf.PdfIncrementService.DoesNotFitException e) {
@@ -1068,6 +1124,28 @@ public class SignatureWorkflowService {
             log.error("Envelope {} step {}: could not sign the PDF", envelope.getId(), step.getId(), e);
             return "ลงนามลงไฟล์เอกสารไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";
         }
+    }
+
+    /**
+     * ส่งรหัสยืนยันทางอีเมลให้ผู้ลงนามภายนอกที่ไม่มี Digital ID ก่อนลงนาม ({@link #sign} พร้อม emailOtp)
+     *
+     * @return ข้อความบอกผู้ใช้ว่าทำไมส่งไม่ได้ หรือ null เมื่อส่งแล้ว
+     */
+    public String sendSigningOtp(Long stepId, UserDtls actingUser) {
+        SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
+        if (step == null || step.getSigner() == null || actingUser == null
+                || !step.getSigner().getId().equals(actingUser.getId())) {
+            return "ไม่พบรายการลงนามของท่าน";
+        }
+        if (step.getStatus() != SignatureStepStatus.ACTIVE) {
+            return "ยังไม่ถึงคิวลงนามของท่าน หรือขั้นตอนนี้ถูกดำเนินการไปแล้ว";
+        }
+        if (systemSeal == null || twoFactorService == null || !systemSeal.availableFor(actingUser)) {
+            return "บัญชีนี้ต้องลงนามด้วย Digital ID (.p12)";
+        }
+        String otp = twoFactorService.generateOtp(actingUser);
+        twoFactorService.sendOtpEmail(actingUser, otp, "SIGN");
+        return null;
     }
 
     /**
@@ -1898,7 +1976,7 @@ public class SignatureWorkflowService {
                 revivableEnvelope,
                 applicantMayWithdraw,
                 SignatureAnchorRegistry.reviewerSignedSlots(module, documentType),
-                SignatureAnchorRegistry.isSignerNamedInForm(module, documentType));
+                SignatureAnchorRegistry.signerNameFields(module, documentType));
     }
 
     /** ผู้ลงนามหลังจับคู่กับชื่อในแบบฟอร์มแล้ว หรือเหตุที่จับคู่ไม่ได้ */
@@ -1926,41 +2004,96 @@ public class SignatureWorkflowService {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             return new NamedSigners(requested, "อ่านข้อมูลในเอกสารไม่ได้ กรุณาบันทึกเอกสารใหม่");
         }
-        List<com.ecom.academic.model.StaffMember> staff = staffMemberService.findAllWithAccounts().stream()
-                .filter(com.ecom.academic.model.StaffMember::isSignable)
-                .toList();
+        java.util.Set<String> nameFields = SignatureAnchorRegistry.signerNameFields(module, documentType);
 
         List<SignerAssignment> result = new ArrayList<>();
         java.util.Set<String> bound = new java.util.HashSet<>();
         for (SignatureSlot slot : slotsFor(module, documentType)) {
-            if ("applicant".equalsIgnoreCase(slot.slotKey()) || slot.anchorPlaceholder() == null
+            if ("applicant".equalsIgnoreCase(slot.slotKey()) || !nameFields.contains(slot.anchorPlaceholder())
                     || SignatureAnchorRegistry.isSignedByReviewer(module, documentType, slot.slotKey())) {
                 continue;
             }
-            bound.add(slot.slotKey());
             String name = normalizeName(data.get(slot.anchorPlaceholder()));
             if (name.isEmpty()) {
+                // ยังไม่ได้เลือกชื่อในเอกสาร: ไม่มีชื่อให้ขัดกับผู้ลงนาม — ใช้ผู้ลงนามที่ส่งมา (ถ้ามี) และชื่อของเขา
+                // จะถูกเติมลงช่องว่างตอนพิมพ์ (SignerNameResolver) แผงลงนามไม่ส่งใครมาสำหรับช่องนี้อยู่แล้ว
                 continue;
             }
-            List<Integer> matches = staff.stream()
-                    .filter(s -> normalizeName(s.getDisplayName()).equals(name))
-                    .map(s -> s.getUser().getId())
-                    .distinct()
-                    .toList();
-            if (matches.isEmpty()) {
-                return new NamedSigners(requested, "ไม่พบบัญชีผู้ใช้ของ “" + name + "” (" + slot.roleLabel()
-                        + ") ในระบบ — กรุณาเลือกชื่อจากรายการในช่อง" + slot.roleLabel());
+            bound.add(slot.slotKey());
+            Object chosenId = data.get(DocumentFieldOwnership.signerIdField(slot.anchorPlaceholder()));
+            UserDtls signer;
+            if (chosenId != null && !String.valueOf(chosenId).isBlank()) {
+                // ตัวค้นหาชื่อเก็บรหัสบัญชีของคนที่เลือกไว้คู่กับชื่อ — ใช้รหัส ไม่ต้องเดาจากชื่อ
+                signer = parseId(chosenId).flatMap(userRepository::findById)
+                        .filter(u -> Boolean.TRUE.equals(u.getIsEnable()))
+                        .orElse(null);
+                if (signer == null) {
+                    return new NamedSigners(requested, "บัญชีของ “" + name + "” (" + slot.roleLabel()
+                            + ") ถูกปิดหรือไม่มีในระบบแล้ว — กรุณาเลือกผู้ลงนามใหม่");
+                }
+                if (!normalizeName(SignerNameResolver.printedName(signer)).equals(name)) {
+                    // ชื่อในเอกสารถูกแก้หลังเลือก — ชื่อที่พิมพ์ลงเอกสารต้องเป็นคนที่ลงนามจริง
+                    return new NamedSigners(requested, "ชื่อ “" + name + "” (" + slot.roleLabel()
+                            + ") ไม่ตรงกับบัญชีที่เลือกไว้ — กรุณาค้นหาแล้วเลือกจากรายชื่อใหม่");
+                }
+            } else {
+                // ข้อมูลที่บันทึกก่อนมีตัวค้นหาชื่อ — จับคู่จากชื่อ
+                List<UserDtls> matches = usersNamed(name);
+                if (matches.isEmpty()) {
+                    return new NamedSigners(requested, "ไม่พบบัญชีผู้ใช้ของ “" + name + "” (" + slot.roleLabel()
+                            + ") ในระบบ — กรุณาค้นหาแล้วเลือกจากรายชื่อในช่อง" + slot.roleLabel());
+                }
+                if (matches.size() > 1) {
+                    return new NamedSigners(requested, "มีบัญชีชื่อ “" + name + "” มากกว่าหนึ่งคน ("
+                            + slot.roleLabel() + ") — กรุณาค้นหาแล้วเลือกจากรายชื่อในช่อง" + slot.roleLabel());
+                }
+                signer = matches.get(0);
             }
-            if (matches.size() > 1) {
-                return new NamedSigners(requested, "มีบุคลากรชื่อ “" + name + "” มากกว่าหนึ่งคน ("
-                        + slot.roleLabel() + ") — กรุณาแจ้งผู้ดูแลระบบให้แก้ทะเบียนบุคลากร");
-            }
-            result.add(new SignerAssignment(slot.slotKey(), matches.get(0)));
+            rememberPosition(signer, data.get(SignatureAnchorRegistry.positionFieldFor(module, documentType,
+                    slot.anchorPlaceholder())));
+            result.add(new SignerAssignment(slot.slotKey(), signer.getId()));
         }
         if (requested != null) {
             requested.stream().filter(a -> !bound.contains(a.slotKey())).forEach(result::add);
         }
         return new NamedSigners(result, null);
+    }
+
+    private static java.util.Optional<Integer> parseId(Object raw) {
+        try {
+            return java.util.Optional.of(Integer.valueOf(String.valueOf(raw).strip()));
+        } catch (NumberFormatException e) {
+            return java.util.Optional.empty();
+        }
+    }
+
+    /** บัญชีที่เปิดใช้งานซึ่งชื่อที่พิมพ์ลงเอกสาร (หรือชื่อในทะเบียนบุคลากร) ตรงกับชื่อนี้ */
+    private List<UserDtls> usersNamed(String name) {
+        java.util.Map<Integer, UserDtls> found = new java.util.LinkedHashMap<>();
+        for (UserDtls u : userRepository.findAll()) {
+            if (Boolean.TRUE.equals(u.getIsEnable()) && normalizeName(SignerNameResolver.printedName(u)).equals(name)) {
+                found.put(u.getId(), u);
+            }
+        }
+        for (com.ecom.academic.model.StaffMember s : staffMemberService.findAllWithAccounts()) {
+            if (s.isSignable() && Boolean.TRUE.equals(s.getUser().getIsEnable())
+                    && normalizeName(s.getDisplayName()).equals(name)) {
+                found.putIfAbsent(s.getUser().getId(), s.getUser());
+            }
+        }
+        return new ArrayList<>(found.values());
+    }
+
+    /**
+     * ตำแหน่งที่กรอกให้คนนี้ในเอกสาร เก็บเป็นตำแหน่งของบัญชีเมื่อยังว่าง — ครั้งต่อไปตัวค้นหาชื่อเติมให้เอง
+     * ไม่ทับค่าที่มีอยู่แล้ว (บางฉบับเขียนต่างจากปกติ เช่น "รักษาการแทน...")
+     */
+    private void rememberPosition(UserDtls signer, Object position) {
+        String value = normalizeName(position);
+        if (!value.isEmpty() && (signer.getPositionTitle() == null || signer.getPositionTitle().isBlank())) {
+            signer.setPositionTitle(value);
+            userRepository.save(signer);
+        }
     }
 
     /** ชื่อสำหรับเทียบ: ตัดช่องว่างหัวท้าย และยุบช่องว่างซ้อนเป็นช่องเดียว */

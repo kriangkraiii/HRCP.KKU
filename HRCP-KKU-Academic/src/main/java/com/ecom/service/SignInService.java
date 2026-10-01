@@ -236,8 +236,14 @@ public class SignInService {
 
     /** Where a role lands after signing in. One answer for every entry point. */
     public String landingPageFor(UserDtls user) {
+        if (user != null && user.isExternal()) {
+            // ผู้ลงนามภายนอกไม่มีแดชบอร์ด/คำร้อง — มาเพื่อลงนามอย่างเดียว
+            return EXTERNAL_LANDING;
+        }
         return user != null && ROLE_ADMIN.equals(user.getRole()) ? ADMIN_LANDING : USER_LANDING;
     }
+
+    private static final String EXTERNAL_LANDING = "/esign/inbox";
 
     /**
      * Writes the audit trail entry for a completed sign-in.

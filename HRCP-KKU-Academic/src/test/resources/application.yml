@@ -1,5 +1,7 @@
 # ค่าตั้งของทุกเทสต์ (อยู่ใน git — ไฟล์ .properties ถูก gitignore จึงไม่ถึง runner ตอน deploy)
 app:
+  dev:
+    seed-test-accounts: false
   esign:
     # ระบบจริงลงนามแบบใส่ทับ (เรนเดอร์ PDF ผ่าน LibreOffice ทุกซอง และบังคับใช้ .p12)
     # เทสต์ส่วนใหญ่ทดสอบลำดับขั้นของงาน ไม่ใช่ไฟล์ PDF จึงใช้แบบเดิม

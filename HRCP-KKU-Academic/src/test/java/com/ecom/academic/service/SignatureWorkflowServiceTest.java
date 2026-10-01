@@ -64,6 +64,11 @@ class SignatureWorkflowServiceTest {
     private static final int DOC_TYPE = 1;
     private static final Long REQUEST_ID = 4242L;
     private static final String FROZEN_JSON = "{\"department_head_name\":\"สุดา\",\"dean_name\":\"สมชาย\"}";
+    /**
+     * เอกสารที่ช่องชื่อผู้ลงนามเป็นตัวค้นหาชื่อ (เช่น เฟส 2 ฉบับ 4) ชื่อในช่องต้องเป็นบัญชีในระบบ —
+     * เทสที่ไม่ได้พูดเรื่องชื่อจึงปล่อยช่องชื่อว่าง ผู้ลงนามมาจากที่ส่งเวียน (SignatureAnchorRegistry.signerNameFields)
+     */
+    private static final String UNNAMED_JSON = "{\"applicant_name\":\"สมชาย\"}";
 
     @Autowired
     private SignatureWorkflowService workflow;
@@ -681,7 +686,7 @@ class SignatureWorkflowServiceTest {
     void findNextPendingStepWorksCorrectlyForContinuousFlow() {
         // Create 2 envelopes waiting on head
         SignatureRequest envelope1 = createEnvelope().request();
-        Result result2 = workflow.createEnvelope(MODULE, REQUEST_ID, 4, "เอกสาร 4", FROZEN_JSON,
+        Result result2 = workflow.createEnvelope(MODULE, REQUEST_ID, 4, "เอกสาร 4", UNNAMED_JSON,
                 List.of(new SignerAssignment("head", head.getId())),
                 null, admin, ActorContext.none());
         assertThat(result2.ok()).isTrue();
@@ -748,7 +753,7 @@ class SignatureWorkflowServiceTest {
 
     private Result createDraftEnvelope(PositionRequest request, UserDtls applicant) {
         return workflow.createEnvelope(MODULE, request.getId(), DRAFT_DOC_TYPE,
-                "แบบคำขอ", FROZEN_JSON,
+                "แบบคำขอ", UNNAMED_JSON,
                 List.of(new SignerAssignment("applicant", applicant.getId()),
                         new SignerAssignment("head", head.getId())),
                 LocalDateTime.now().minusDays(1), applicant, ActorContext.none());

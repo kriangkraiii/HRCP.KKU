@@ -361,16 +361,13 @@ public final class PdfIncrementService {
     public static final String TICK = "✓";
 
     /**
-     * The ✓ outline of DejaVu Sans (2048 units per em), the font LibreOffice falls
-     * back to for the ticks it prints in the base, so both columns match.
+     * The ✓ outline of OpenSymbol (2048 units per em), the font the ticks printed
+     * in the base are set in ({@code DocumentGenerationService}), so both match.
      */
-    private static final String TICK_GLYPH = "453 654 m 479 654 498.7 632.7 512 590 c 538.7 510 557.7 470 569 470 c "
-            + "577.7 470 586.7 476.7 596 490 c 783.3 790 956.7 1032.7 1116 1218 c 1157.3 1266 1223 1290 1313 1290 c "
-            + "1334.3 1290 1348.7 1288 1356 1284 c 1363.3 1280 1367 1275 1367 1269 c 1367 1259.7 1356 1241.3 1334 1214 c "
-            + "1076.7 904.7 838 578 618 234 c 602.7 210 571.3 198 524 198 c 476 198 447.7 200 439 204 c "
-            + "416.3 214 389.7 265 359 357 c 324.3 459 307 523 307 549 c 307 577 330.3 604 377 630 c "
-            + "405.7 646 431 654 453 654 c h f";
-    private static final float TICK_INK_LEFT = 307, TICK_INK_WIDTH = 1060, TICK_EM = 2048;
+    private static final String TICK_GLYPH = "1499 1569 m 1534 1518 l 1373.3 1396 1208 1224.7 1038 1004 c "
+            + "880.7 797.3 754.3 594.3 659 395 c 585 346.3 519 298.7 461 252 c 371 546.7 266.3 718 147 766 c "
+            + "214.3 842.7 280.7 881 346 881 c 402 881 469.7 787.3 549 600 c 803.7 1030 1120.3 1353 1499 1569 c h f";
+    private static final float TICK_INK_LEFT = 147, TICK_INK_WIDTH = 1387, TICK_EM = 2048;
 
     /** A check mark centred in the box, sitting on the text baseline. */
     private static String tick(PDRectangle r, float size) {

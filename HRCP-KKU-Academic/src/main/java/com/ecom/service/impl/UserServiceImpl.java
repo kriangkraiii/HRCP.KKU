@@ -254,6 +254,10 @@ public class UserServiceImpl implements UserService {
 			dbUser.setTitle(user.getTitle());
 			dbUser.setAcademicPosition(user.getAcademicPosition());
 			dbUser.setAcademicPositionEn(user.getAcademicPositionEn());
+			// ตำแหน่งที่พิมพ์ในเอกสาร — เฉพาะเมื่อฟอร์มส่งช่องนี้มา (null = หน้านั้นไม่มีช่องนี้ ไม่ใช่ล้างค่า)
+			if (user.getPositionTitle() != null) {
+				dbUser.setPositionTitle(user.getPositionTitle().strip());
+			}
 		}
 		String oldImage = dbUser.getProfileImage();
 		// Only a file we validated and wrote ourselves may name the profile image.
@@ -411,6 +415,13 @@ public class UserServiceImpl implements UserService {
 			dbUser.setFirstNameEn(user.getFirstNameEn());
 			dbUser.setLastNameEn(user.getLastNameEn());
 			dbUser.setAcademicPositionEn(user.getAcademicPositionEn());
+			// ตำแหน่งที่พิมพ์ในเอกสาร (ตัวค้นหาชื่อผู้ลงนามเติมช่องตำแหน่งจากค่านี้) — null = ฟอร์มไม่มีช่องนี้
+			if (user.getPositionTitle() != null) {
+				dbUser.setPositionTitle(user.getPositionTitle().strip());
+			}
+			if (user.getAffiliation() != null) {
+				dbUser.setAffiliation(user.getAffiliation().strip());
+			}
 
 			// Handle role change and Applicant ID management
 			if (user.getRole() != null && !user.getRole().isBlank()) {

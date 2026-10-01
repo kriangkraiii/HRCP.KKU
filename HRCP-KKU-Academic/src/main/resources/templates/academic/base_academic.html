@@ -36,7 +36,7 @@
 </head>
 
 <!-- ผู้ยื่น (ROLE_USER) โหลดเอกสารได้เฉพาะ PDF — doc_preview.js อ่านค่านี้เพื่อซ่อนปุ่ม Word -->
-<body th:attr="data-pdf-only=${user != null and user.role == 'ROLE_USER'}">
+<body th:attr="data-pdf-only=${user != null and (user.role == 'ROLE_USER' or user.role == 'ROLE_EXTERNAL')}">
 
     <!-- Skip to Content -->
     <a href="#main-content" class="skip-link">ข้ามไปยังเนื้อหา</a>
@@ -49,7 +49,7 @@
 
     <!-- ===== Left Sidebar ===== -->
     <aside class="sidebar" id="sidebar" role="navigation" aria-label="เมนูหลัก">
-        <a th:href="${user != null && user.role == 'ROLE_ADMIN' ? '/admin/academic/dashboard' : '/user/academic/dashboard'}" class="sidebar-brand text-decoration-none d-block">
+        <a th:href="${user != null && user.role == 'ROLE_ADMIN' ? '/admin/academic/dashboard' : (user != null && user.role == 'ROLE_EXTERNAL' ? '/esign/inbox' : '/user/academic/dashboard')}" class="sidebar-brand text-decoration-none d-block">
             <span class="sidebar-brand-collapsed-label" aria-hidden="true">CP</span>
             <h6><span class="brand-cp">CP</span> <span class="brand-hrd">HRD</span></h6>
             <small>COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM</small>
@@ -92,6 +92,10 @@
                 <a href="/admin/users?type=2" class="sidebar-link" id="nav-admins" data-title="ผู้ดูแลระบบ">
                     <i class="fas fa-user-shield"></i>
                     <span class="sidebar-link-text">ผู้ดูแลระบบ</span>
+                </a>
+                <a href="/admin/users?type=3" class="sidebar-link" id="nav-externals" data-title="ผู้ลงนามภายนอก มข.">
+                    <i class="fas fa-user-tie"></i>
+                    <span class="sidebar-link-text">ผู้ลงนามภายนอก มข.</span>
                 </a>
 
                 <div class="sidebar-section-title">ข้อมูลจากระบบภายนอก</div>
@@ -183,6 +187,43 @@
                 <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures" data-title="ลายเซ็นของฉัน">
                     <i class="fas fa-signature"></i>
                     <span class="sidebar-link-text">ลายเซ็นของฉัน</span>
+                </a>
+                <a href="/user/academic/settings" class="sidebar-link" id="nav-settings" data-title="การตั้งค่า">
+                    <i class="fas fa-cog"></i>
+                    <span class="sidebar-link-text">การตั้งค่า</span>
+                </a>
+                <a href="/user/feedback" class="sidebar-link" id="nav-feedback" data-title="รายงานปัญหา/ข้อเสนอแนะ">
+                    <i class="fas fa-comment-dots"></i>
+                    <span class="sidebar-link-text">รายงานปัญหา/ข้อเสนอแนะ</span>
+                </a>
+            </th:block>
+            <!-- ผู้ลงนามภายนอก มข. (ROLE_EXTERNAL): เหมือนผู้ใช้ทั่วไป ยกเว้นยื่นคำร้องประเมินการสอน/ขอตำแหน่ง
+                 แดชบอร์ด และประวัติคำร้อง — ดู SecurityConfig.externalUserPaths -->
+            <th:block th:if="${user != null && user.role == 'ROLE_EXTERNAL'}">
+                <div class="sidebar-section-title">งานลงนาม</div>
+                <a href="/esign/inbox" class="sidebar-link" id="nav-signing" data-title="รอลงนาม">
+                    <i class="fas fa-file-signature"></i>
+                    <span class="sidebar-link-text">รอลงนาม</span>
+                    <span class="badge bg-warning text-dark rounded-pill ms-auto"
+                          th:if="${pendingSignatureCount != null && pendingSignatureCount > 0}"
+                          th:text="${pendingSignatureCount}">0</span>
+                </a>
+                <a href="/esign/my-signatures" class="sidebar-link" id="nav-signatures" data-title="ลายเซ็นของฉัน">
+                    <i class="fas fa-signature"></i>
+                    <span class="sidebar-link-text">ลายเซ็นของฉัน</span>
+                </a>
+
+                <div class="sidebar-section-title">ทรัพยากร & การตั้งค่า</div>
+                <a href="/user/notifications" class="sidebar-link" id="nav-notifications" data-title="การแจ้งเตือน">
+                    <i class="fas fa-bell"></i>
+                    <span class="sidebar-link-text">การแจ้งเตือน</span>
+                    <span class="badge bg-danger rounded-pill notification-sidebar-badge ms-auto"
+                          th:if="${unreadNotificationCount != null && unreadNotificationCount > 0}"
+                          th:text="${unreadNotificationCount}">0</span>
+                </a>
+                <a href="/user/academic/documents" class="sidebar-link" id="nav-documents" data-title="เอกสาร/ข้อบังคับ">
+                    <i class="fas fa-book-open"></i>
+                    <span class="sidebar-link-text">เอกสาร/ข้อบังคับ</span>
                 </a>
                 <a href="/user/academic/settings" class="sidebar-link" id="nav-settings" data-title="การตั้งค่า">
                     <i class="fas fa-cog"></i>
@@ -685,7 +726,7 @@
                 </div>
                 <div class="user-info text-decoration-none text-decoration-none">
                     <div class="user-name text-decoration-none text-decoration-none" th:text="${user.name}"></div>
-                    <div class="user-role text-decoration-none text-decoration-none" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : 'ผู้ยื่นคำร้อง'"></div>
+                    <div class="user-role text-decoration-none text-decoration-none" th:text="${user.role == 'ROLE_ADMIN'} ? 'ผู้ดูแลระบบ' : (${user.role == 'ROLE_EXTERNAL'} ? 'ผู้ลงนามภายนอก' : 'ผู้ยื่นคำร้อง')"></div>
                 </div>
             </a>
             <form method="post" action="/logout">
@@ -713,7 +754,7 @@
                 <nav aria-label="breadcrumb" class="d-none d-md-block">
                     <ol class="breadcrumb mb-0 py-0" id="topbar-breadcrumb">
                         <li class="breadcrumb-item">
-                            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/academic/dashboard' : '/user/academic/dashboard'}" class="text-decoration-none text-muted">
+                            <a th:href="${user.role == 'ROLE_ADMIN' ? '/admin/academic/dashboard' : (user.role == 'ROLE_EXTERNAL' ? '/esign/inbox' : '/user/academic/dashboard')}" class="text-decoration-none text-muted">
                                 <i class="fas fa-home me-1"></i>หน้าหลัก
                             </a>
                         </li>
@@ -1072,7 +1113,9 @@
             });
         });
     </script>
-<script src="/js/select_to_datalist.js?v=2"></script>
+<!-- ตัวค้นหาชื่อผู้ลงนาม — ต้องรันก่อน DOMContentLoaded (สร้างช่องซ่อนรหัสบัญชีให้สคริปต์ของหน้าเติมค่าที่บันทึกไว้) -->
+<script src="/js/person_picker.js?v=1"></script>
+<script src="/js/select_to_datalist.js?v=3"></script>
 <script src="/js/thai_date_autofill.js"></script>
 <script src="/js/theme-switcher.js"></script>
 

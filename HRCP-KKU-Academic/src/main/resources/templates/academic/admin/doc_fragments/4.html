@@ -129,10 +129,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อคณบดี (ลงนาม)</label>
                                 <div class="combo-input">
-                                    <input type="text" name="dean_name" class="form-control" list="deanList3" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist id="deanList3">
-                                        <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
-                                    </datalist>
+                                    <input type="text" name="dean_name" class="form-control" data-person-picker data-role="DEAN" data-position-field="deandropdown_position">
                                 </div>
                             </div>
                             <div class="col-md-6">

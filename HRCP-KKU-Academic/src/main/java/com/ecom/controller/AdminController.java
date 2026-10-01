@@ -144,6 +144,8 @@ public class AdminController {
 		List<UserDtls> users = null;
 		if (type == 1) {
 			users = userService.getUsers("ROLE_USER");
+		} else if (type == 3) {
+			users = userService.getUsers(UserDtls.ROLE_EXTERNAL);
 		} else {
 			users = userService.getUsers("ROLE_ADMIN");
 		}
@@ -488,8 +490,14 @@ public class AdminController {
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัปเดตข้อมูล");
 		}
 
-		int targetType = (user.getRole() != null && "ROLE_USER".equals(user.getRole())) ? 1 : 2;
-		return "redirect:/admin/users?type=" + targetType;
+		return "redirect:/admin/users?type=" + userListType(user.getRole());
+	}
+
+	private static int userListType(String role) {
+		if ("ROLE_USER".equals(role)) {
+			return 1;
+		}
+		return UserDtls.ROLE_EXTERNAL.equals(role) ? 3 : 2;
 	}
 
 	@GetMapping("/edit-user")
@@ -563,7 +571,8 @@ public class AdminController {
 			session.setAttribute("errorMsg", "เกิดข้อผิดพลาดในการอัปเดตข้อมูล");
 		}
 
-		int targetType = (user.getRole() != null && "ROLE_ADMIN".equals(user.getRole())) ? 2 : 1;
+		int targetType = "ROLE_ADMIN".equals(user.getRole()) ? 2
+				: UserDtls.ROLE_EXTERNAL.equals(user.getRole()) ? 3 : 1;
 		return "redirect:/admin/users?type=" + targetType;
 	}
 

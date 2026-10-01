@@ -423,6 +423,7 @@ public class DocumentGenerationService {
                             // เอกสารอื่น: ☑/☐ → MS Gothic font runs (กล่อง)
                             xml = renderCheckboxes(xml);
                         }
+                        xml = pinTickFont(xml);
                     }
 
                     data = xml.getBytes(StandardCharsets.UTF_8);
@@ -2136,6 +2137,47 @@ public class DocumentGenerationService {
         xml = xml.replace("\u2610", chkOffXml);
 
         return xml;
+    }
+
+    /** A run whose text holds a ✓: its attributes, its rPr, its w:t attributes, its text. */
+    private static final java.util.regex.Pattern TICK_RUN = java.util.regex.Pattern.compile(
+            "<w:r(\\s[^>]*)?>(?:<w:rPr>((?:(?!</w:rPr>).)*)</w:rPr>)?<w:t(?:\\s[^>]*)?>([^<]*✓[^<]*)</w:t></w:r>",
+            java.util.regex.Pattern.DOTALL);
+
+    private static final java.util.regex.Pattern RUN_FONTS = java.util.regex.Pattern.compile("<w:rFonts[^>]*/>");
+
+    private static final String TICK_FONTS = "<w:rFonts w:ascii=\"OpenSymbol\" w:hAnsi=\"OpenSymbol\""
+            + " w:eastAsia=\"OpenSymbol\" w:cs=\"OpenSymbol\"/>";
+
+    /**
+     * ตั้งฟอนต์ของ ✓ เป็น OpenSymbol ซึ่งติดมากับ LibreOffice ทุกระบบ
+     *
+     * <p>TH Sarabun New ไม่มี ✓ ถ้าปล่อยให้ LibreOffice หาฟอนต์แทนเอง Windows ได้ OpenSymbol
+     * แต่ Linux อาจได้ DejaVu Sans ซึ่งหน้าตาต่างกัน ติ๊กที่ผู้ลงนามเติมตอนเซ็น
+     * ({@code PdfIncrementService}) วาดจากโครงร่าง ✓ ของ OpenSymbol จึงต้องตรึงฟอนต์ไว้ให้เหมือนกัน
+     */
+    static String pinTickFont(String xml) {
+        java.util.regex.Matcher m = TICK_RUN.matcher(xml);
+        StringBuilder out = new StringBuilder();
+        while (m.find()) {
+            String runAttrs = m.group(1) == null ? "" : m.group(1);
+            String rPr = m.group(2) == null ? "" : m.group(2);
+            String tickRPr = RUN_FONTS.matcher(rPr).find()
+                    ? RUN_FONTS.matcher(rPr).replaceFirst(java.util.regex.Matcher.quoteReplacement(TICK_FONTS))
+                    : rPr.replaceFirst("^((?:<w:rStyle[^>]*/>)?)", "$1" + TICK_FONTS);
+            StringBuilder runs = new StringBuilder();
+            for (String part : m.group(3).split("(?<=✓)|(?=✓)")) {
+                if (part.isEmpty()) {
+                    continue;
+                }
+                runs.append("<w:r").append(runAttrs).append("><w:rPr>")
+                        .append(part.equals("✓") ? tickRPr : rPr)
+                        .append("</w:rPr><w:t xml:space=\"preserve\">").append(part).append("</w:t></w:r>");
+            }
+            m.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(runs.toString()));
+        }
+        m.appendTail(out);
+        return out.toString();
     }
 
     private static final Logger log = LoggerFactory.getLogger(DocumentGenerationService.class);

@@ -60,3 +60,5 @@ logs/
 *.log.gz
 C:/
 /C:/
+# ใบรับรองของระบบ (system seal) และรหัส — deploy.yml สร้างไว้ข้าง app.jar บนเซิร์ฟเวอร์เท่านั้น
+secrets/

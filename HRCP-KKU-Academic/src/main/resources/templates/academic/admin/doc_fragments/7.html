@@ -213,7 +213,8 @@
                                 <label class="form-label">กรรมการคนที่ [[${i}]]</label>
                                 <div class="combo-input">
                                     <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control" th:list="'committeeList6_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
-                                        th:value="${i == 1 ? defaultCommittee1 : (i == 2 ? defaultCommittee2 : defaultCommittee3)}">
+                                        th:value="${i == 1 ? defaultCommittee1 : (i == 2 ? defaultCommittee2 : defaultCommittee3)}"
+                                        th:attrappend="data-person-picker=${i == 1} ? 'true' : null,data-role=${i == 1} ? 'COMMITTEE' : null"><!--/* กรรมการคนที่ 1 คือประธานผู้ลงนาม — เลือกจากรายชื่อในระบบเท่านั้น (person_picker.js) */-->
                                     <datalist th:id="'committeeList6_' + ${i}">
                                         <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
                                     </datalist>

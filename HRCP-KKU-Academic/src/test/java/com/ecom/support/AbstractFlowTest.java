@@ -191,6 +191,10 @@ public abstract class AbstractFlowTest {
             if (com.ecom.academic.service.DocumentFieldOwnership.officeFields(module, documentType).contains(key)) {
                 continue;
             }
+            // ช่องชื่อผู้ลงนามเป็นตัวค้นหาชื่อ เลือกได้เฉพาะบัญชีในระบบ — ปล่อยว่าง ผู้ลงนามมาจากที่ส่งเวียน
+            if (com.ecom.academic.service.SignatureAnchorRegistry.signerNameFields(module, documentType).contains(key)) {
+                continue;
+            }
             values.put(key, key.startsWith("chk_off_") ? "✓" : "ตรวจแล้ว");
         }
         if (module == com.ecom.academic.model.SignatureModule.ACADEMIC) {

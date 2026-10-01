@@ -129,6 +129,13 @@ public class SsoAccessPolicy {
             return Decision.allow(null);
         }
 
+        // ผู้ลงนามภายนอก มข. ที่ถูกเชิญ (ROLE_EXTERNAL — ExternalSignerService) เข้าด้วย KKU SSO
+        // เหมือนทุกคน แต่ไม่มีในทะเบียนบุคลากร บัญชีนี้คือสิทธิ์ที่ระบบออกให้เองแล้ว
+        if (local != null && local.isExternal()) {
+            log.info("SSO access granted — {} is an invited external signer", normalized);
+            return Decision.allow(null);
+        }
+
         // Allow active committee members registered in the system
         if (committeeRepo != null && committeeRepo.findByEmailIgnoreCaseAndIsActiveTrue(normalized).isPresent()) {
             log.info("SSO access granted — {} is an active committee member", normalized);

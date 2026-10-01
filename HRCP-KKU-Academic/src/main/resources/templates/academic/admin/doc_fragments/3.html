@@ -36,10 +36,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อรองคณบดี</label>
                                 <div class="combo-input">
-                                    <input type="text" name="associate_dean_name" class="form-control" list="assocDeanList" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist id="assocDeanList">
-                                        <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
-                                    </datalist>
+                                    <input type="text" name="associate_dean_name" class="form-control" data-person-picker data-role="DEAN" data-position-field="dropdownAssociateDean">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -55,10 +52,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อเจ้าหน้าที่ (ภารกิจทรัพยากรบุคคล)</label>
                                 <div class="combo-input">
-                                    <input type="text" name="hr_staff_name" class="form-control" list="hrList" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist id="hrList">
-                                        <option th:each="h : ${hrStaff}" th:value="${h.displayName}"></option>
-                                    </datalist>
+                                    <input type="text" name="hr_staff_name" class="form-control" data-person-picker data-role="HR" data-position-field="dropdownHr">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -74,10 +68,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อหัวหน้าสาขา</label>
                                 <div class="combo-input">
-                                    <input type="text" name="department_head" class="form-control" list="headList" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist id="headList">
-                                        <option th:each="h : ${heads}" th:value="${h.displayName}"></option>
-                                    </datalist>
+                                    <input type="text" name="department_head" class="form-control" data-person-picker data-role="HEAD" data-position-field="dropdownCsHead">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -118,10 +109,7 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อคณบดี</label>
                                 <div class="combo-input">
-                                    <input type="text" name="dean_name" class="form-control" list="deanList" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist id="deanList">
-                                        <option th:each="d : ${deans}" th:value="${d.displayName}"></option>
-                                    </datalist>
+                                    <input type="text" name="dean_name" class="form-control" data-person-picker data-role="DEAN" data-position-field="dropdownDean">
                                 </div>
                             </div>
                             <div class="col-md-6">

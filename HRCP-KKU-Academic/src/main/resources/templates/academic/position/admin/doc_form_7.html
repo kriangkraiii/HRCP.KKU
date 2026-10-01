@@ -481,7 +481,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">เจ้าหน้าที่ผู้ตรวจสอบ</label>
-                                <input type="text" name="hr_officer_name" class="form-control">
+                                <input type="text" name="hr_officer_name" class="form-control" data-person-picker data-role="HR" data-position-field="hr_officer_position">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
@@ -489,10 +489,7 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อคณบดี</label>
-                                <select name="dean_name" class="form-select">
-                                    <option value="">-- เลือก --</option>
-                                    <option th:each="dean : ${deans}" th:value="${dean.fullName}" th:text="${dean.fullName}"></option>
-                                </select>
+                                <input type="text" name="dean_name" class="form-control" data-person-picker data-role="DEAN" data-position-field="dean_position">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งคณบดี</label>

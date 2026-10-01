@@ -799,6 +799,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                     if (el.disabled || el.readOnly || el.type === 'hidden') continue;
                     if (el.type === 'file' || el.type === 'button' || el.type === 'submit') continue;
                     if (el.name === 'dueAt' || el.closest('#signaturePanel')) continue;
+                    // ช่องชื่อผู้ลงนามเป็นตัวค้นหาชื่อ เลือกได้เฉพาะบัญชีในระบบ — pickSigners เลือกให้ตามผู้ลงนามที่ต้องการ
+                    if (el.hasAttribute('data-person-picker')) continue;
                     if (el.type === 'checkbox') {
                       if (tick === '*' || (tick && el.name === tick) || el.required) {
                         if (!el.checked) { el.checked = true; n++; }
@@ -1056,6 +1058,9 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                               .find(e => !e.closest('[data-named-signer]'));
                           if (!f) return;
                           f.value = c ? c.displayName : '';
+                          // ชื่อตามทะเบียนบุคลากร ไม่มีรหัสบัญชีคู่กัน — เซิร์ฟเวอร์จับคู่จากชื่อ (ทางเดียวกับข้อมูลเก่า)
+                          const chosen = document.querySelector('[name="' + name + '__signer"]');
+                          if (chosen) chosen.value = '';
                           f.dispatchEvent(new Event('input', { bubbles: true }));
                           f.dispatchEvent(new Event('change', { bubbles: true }));
                         }

@@ -142,6 +142,20 @@ public class SecurityConfig {
          * factor for <em>both</em> ways in, so closing it under SSO would turn the
          * user's own 2FA switch into a lockout.
          */
+        /**
+         * หน้าใต้ /user/** ที่ผู้ลงนามภายนอกใช้ได้ — โปรไฟล์ การแจ้งเตือน เอกสาร/ข้อบังคับ การตั้งค่า
+         * คู่มือ และรายงานปัญหา ส่วน /user/academic/** กับ /user/position/** ที่เหลือคือฟังก์ชันยื่นคำร้อง
+         */
+        static String[] externalUserPaths() {
+                return new String[] {
+                                "/user/profile", "/user/update-profile", "/user/change-password",
+                                "/user/notifications", "/user/feedback", "/user/feedback/**",
+                                "/user/academic/documents", "/user/academic/documents/**",
+                                "/user/academic/settings", "/user/academic/settings/**",
+                                "/user/academic/guide"
+                };
+        }
+
         private static String[] passwordLoginPaths() {
                 return new String[] {
                                 "/forgot-password", "/reset-password",
@@ -310,6 +324,10 @@ public class SecurityConfig {
                                                 // ตกไปที่กฎ "/user/**" แล้วจบด้วย 404 ตามปกติ
                                                 // ไม่ต้องมีกฎเฉพาะกิจกันไว้อีก
                                                 .requestMatchers("/admin/**").hasRole("ADMIN")
+                                                // ผู้ลงนามภายนอก มข. (ROLE_EXTERNAL) ใช้ได้ทุกอย่างของผู้ใช้ทั่วไป
+                                                // ยกเว้นยื่นคำร้องประเมินการสอน/ขอตำแหน่ง แดชบอร์ด และประวัติคำร้อง
+                                                // ที่เหลือใต้ /user/** จึงเปิดให้ทีละทาง
+                                                .requestMatchers(externalUserPaths()).hasAnyRole("USER", "EXTERNAL")
                                                 .requestMatchers("/user/**").hasRole("USER")
                                                 .anyRequest().authenticated())
                                 .formLogin(form -> {

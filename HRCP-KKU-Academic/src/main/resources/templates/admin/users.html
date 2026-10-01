@@ -13,8 +13,10 @@
 				<h3 class="mb-0">
 					<i class="fas fa-users text-primary me-2" th:if="${userType==1}"></i>
 					<i class="fas fa-user-shield text-primary me-2" th:if="${userType==2}"></i>
+					<i class="fas fa-user-tie text-primary me-2" th:if="${userType==3}"></i>
 					<span th:if="${userType==1}">จัดการผู้ใช้งานทั่วไป</span>
 					<span th:if="${userType==2}">จัดการผู้ดูแลระบบ</span>
+					<span th:if="${userType==3}">ผู้ลงนามภายนอก มข.</span>
 				</h3>
 				<div class="d-flex gap-2 align-items-center">
 					<form th:if="${userType==1}" th:action="@{/admin/academic/staff/sync}" method="post" class="d-inline">
@@ -22,7 +24,8 @@
 							<i class="fas fa-sync me-1"></i> ซิงก์ข้อมูลและรูปภาพจากเว็บไซต์คณะ
 						</button>
 					</form>
-					<a th:href="@{/admin/add-admin(type=${userType})}" class="btn btn-academic">
+					<!-- ผู้ลงนามภายนอกเพิ่มจากช่องชื่อผู้ลงนามในเอกสาร ("+ เพิ่มผู้ลงนามภายนอก มข.") -->
+					<a th:unless="${userType==3}" th:href="@{/admin/add-admin(type=${userType})}" class="btn btn-academic">
 						<i class="fas fa-plus me-1"></i>
 						<span th:if="${userType==1}">เพิ่มผู้ใช้งาน</span>
 						<span th:if="${userType==2}">เพิ่มผู้ดูแลระบบ</span>
@@ -86,7 +89,7 @@
 								</td>
 								<td>
 									<div class="d-flex gap-2">
-										<a th:if="${userType==1}" 
+										<a th:if="${userType==1 or userType==3}" 
 											th:href="@{/admin/edit-user(id=${u.id})}" 
 											class="btn btn-sm btn-primary">
 											<i class="fa-solid fa-pen-to-square"></i> Edit

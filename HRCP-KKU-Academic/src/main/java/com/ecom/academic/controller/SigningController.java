@@ -225,6 +225,8 @@ public class SigningController {
                 && envelope.getStatus().isOpen()
                 && (deadlineAdvisory || !envelope.isOverdue());
         model.addAttribute("viewOnly", !isSigner);
+        // ผู้ลงนามภายนอกที่ไม่มี Digital ID ที่ใช้ได้ — ยืนยันตัวตนทางอีเมลแทนรหัสผ่าน .p12
+        model.addAttribute("sealAvailable", isSigner && !hasValidCert && systemSeal.availableFor(me));
 
         model.addAttribute("step", step);
         model.addAttribute("envelope", envelope);
@@ -256,7 +258,9 @@ public class SigningController {
         boolean applicantSlot = "applicant".equalsIgnoreCase(step.getSlotKey());
         boolean reviewerSlot = SignatureAnchorRegistry.isSignedByReviewer(
                 envelope.getModule(), envelope.getDocumentType(), step.getSlotKey());
-        model.addAttribute("showDeclineForm", isSigner && !applicantSlot && !reviewerSlot);
+        // ช่องที่มีตัวเลือก "ไม่เห็นควร" ไม่มีปุ่มปฏิเสธซ้ำ — สองทางนี้หยุดการเวียนเหมือนกัน
+        boolean choiceCanStop = choice != null && choice.options().contains(SignatureAnchorRegistry.NOT_APPROVED);
+        model.addAttribute("showDeclineForm", isSigner && !applicantSlot && !reviewerSlot && !choiceCanStop);
         model.addAttribute("canApplicantWithdraw",
                 isSigner && applicantSlot && workflow.applicantWithdrawBlocker(envelope, me).isEmpty());
         return "academic/esign/sign";
@@ -448,6 +452,25 @@ public class SigningController {
         return "inline; filename=\"" + ascii + "\"; filename*=UTF-8''" + encoded;
     }
 
+    /** ใบรับรองของระบบสำหรับทางสำรองของผู้ลงนามภายนอกที่ไม่มี Digital ID */
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.academic.service.pdf.SystemSealService systemSeal;
+
+    /** ส่งรหัสยืนยันทางอีเมลก่อนลงนาม — ผู้ลงนามภายนอกที่ไม่มี Digital ID */
+    @PostMapping("/sign/{stepId}/email-otp")
+    public String sendSigningOtp(@PathVariable Long stepId, Principal principal,
+            RedirectAttributes redirectAttributes) {
+        UserDtls me = currentUser(principal);
+        String problem = workflow.sendSigningOtp(stepId, me);
+        if (problem != null) {
+            redirectAttributes.addFlashAttribute("errorMsg", problem);
+        } else {
+            redirectAttributes.addFlashAttribute("succMsg",
+                    "ส่งรหัสยืนยันไปที่ " + me.getEmail() + " แล้ว (ใช้ได้ 5 นาที)");
+        }
+        return "redirect:/esign/sign/" + stepId;
+    }
+
     @PostMapping("/sign/{stepId}")
     public String sign(@PathVariable Long stepId,
             @RequestParam(value = "userSignatureId", required = false) Long userSignatureId,
@@ -455,6 +478,7 @@ public class SigningController {
             @RequestParam(value = "digitalCertPin", required = false) String digitalCertPin,
             @RequestParam(value = "signerChoice", required = false) String signerChoice,
             @RequestParam(value = "signerComment", required = false) String signerComment,
+            @RequestParam(value = "emailOtp", required = false) String emailOtp,
             Principal principal, RedirectAttributes redirectAttributes) {
 
         UserDtls me = currentUser(principal);
@@ -474,12 +498,14 @@ public class SigningController {
         }
 
         var certOpt = digitalCertificateService.findActive(me);
-        if (certOpt.isEmpty()) {
+        // ผู้ลงนามภายนอกที่ไม่มี Digital ID: ยืนยันตัวตนทางอีเมล แล้วระบบประทับรับรองแทน (SystemSealService)
+        boolean sealed = (certOpt.isEmpty() || certOpt.get().isExpired()) && systemSeal.availableFor(me);
+        if (certOpt.isEmpty() && !sealed) {
             redirectAttributes.addFlashAttribute("errorMsg",
                     "ท่านยังไม่ได้ติดตั้งใบรับรอง Digital ID (.p12) ของมหาวิทยาลัยขอนแก่น กรุณาติดตั้งที่หน้า \"ลายเซ็นของฉัน\" ก่อนจึงจะได้รับอนุญาตให้ลงนาม");
             return "redirect:/esign/sign/" + stepId;
         }
-        if (certOpt.get().isExpired()) {
+        if (!sealed && certOpt.get().isExpired()) {
             redirectAttributes.addFlashAttribute("errorMsg",
                     "ใบรับรอง Digital ID (.p12) ของท่านหมดอายุแล้ว ไม่สามารถใช้ลงนามเอกสารได้ กรุณาดาวน์โหลดไฟล์ใหม่จาก https://i.kku.ac.th และติดตั้งที่หน้า \"ลายเซ็นของฉัน\"");
             return "redirect:/esign/sign/" + stepId;
@@ -487,7 +513,7 @@ public class SigningController {
 
         Result result = workflow.sign(stepId, me, userSignatureId,
                 Boolean.TRUE.equals(consent), actorContext(), digitalCertPin, signerChoice,
-                signerComment);
+                signerComment, emailOtp);
 
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());

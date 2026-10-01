@@ -137,6 +137,24 @@ public final class DocumentFieldOwnership {
      * <p>อ่านจาก {@link SignatureAnchorRegistry} โดยตรง ไม่ตั้งรายการซ้ำ — เพิ่มคำถามให้ผู้ลงนาม
      * ที่ทะเบียนนั้นที่เดียว แล้วการกันช่องตรงนี้ตามเองอัตโนมัติ
      */
+    /**
+     * ช่องซ่อนคู่กับช่องชื่อผู้ลงนาม (ตัวค้นหาชื่อ — person_picker.js) เก็บรหัสบัญชีของคนที่เลือก
+     * เช่น {@code dean_name__signer} คู่กับ {@code dean_name} — เป็นของคนเดียวกับช่องชื่อเสมอ
+     */
+    public static final String SIGNER_ID_SUFFIX = "__signer";
+
+    /** ช่องรหัสบัญชีที่คู่กับช่องชื่อ */
+    public static String signerIdField(String nameField) {
+        return nameField + SIGNER_ID_SUFFIX;
+    }
+
+    /** ช่องที่ใช้ตัดสินความเป็นเจ้าของ — ช่องรหัสบัญชีตามช่องชื่อของมัน */
+    static String ownerField(String key) {
+        return key != null && key.endsWith(SIGNER_ID_SUFFIX)
+                ? key.substring(0, key.length() - SIGNER_ID_SUFFIX.length())
+                : key;
+    }
+
     public static Set<String> signerFields(SignatureModule module, int documentType) {
         Set<String> keys = new HashSet<>();
         for (SignatureAnchorRegistry.SignatureSlot slot :
@@ -175,7 +193,7 @@ public final class DocumentFieldOwnership {
         } else if (submitted != null) {
             Set<String> adminOwned = adminFields(module, documentType);
             for (Map.Entry<String, String> entry : submitted.entrySet()) {
-                boolean ownedByActor = actorIsAdmin == adminOwned.contains(entry.getKey());
+                boolean ownedByActor = actorIsAdmin == adminOwned.contains(ownerField(entry.getKey()));
                 if (ownedByActor) {
                     result.put(entry.getKey(), entry.getValue());
                 }
@@ -214,10 +232,9 @@ public final class DocumentFieldOwnership {
             Set<String> writable = includeAdminFields
                     ? lateFields(module, documentType)
                     : officeFields(module, documentType);
-            for (String key : writable) {
-                String value = submitted.get(key);
-                if (value != null) {
-                    result.put(key, value);
+            for (Map.Entry<String, String> entry : submitted.entrySet()) {
+                if (entry.getValue() != null && writable.contains(ownerField(entry.getKey()))) {
+                    result.put(entry.getKey(), entry.getValue());
                 }
             }
         }

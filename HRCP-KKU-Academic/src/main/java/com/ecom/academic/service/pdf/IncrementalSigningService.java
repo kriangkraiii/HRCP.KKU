@@ -271,6 +271,16 @@ public class IncrementalSigningService {
     @Transactional
     public int sign(SignatureRequest envelope, SignatureStep step, CmsSigner signer, byte[] imagePng,
             String printedName) throws IOException {
+        return sign(envelope, step, signer, imagePng, printedName, null);
+    }
+
+    /**
+     * @param reason เหตุผลในลายมือชื่อดิจิทัล — null ใช้ "ลงนามในตำแหน่ง ..." ตามปกติ
+     *               ทางสำรองของผู้ลงนามภายนอก (กุญแจของระบบ) ระบุชื่อและวิธียืนยันตัวตนไว้ที่นี่ ({@link SystemSealService})
+     */
+    @Transactional
+    public int sign(SignatureRequest envelope, SignatureStep step, CmsSigner signer, byte[] imagePng,
+            String printedName, String reason) throws IOException {
         // What the office filled in between signers is part of what this one signs —
         // but not the memo number and date, which are issued at the very end.
         syncLateValues(envelope, null, false);
@@ -306,7 +316,8 @@ public class IncrementalSigningService {
                 .noneMatch(r -> r.getKind() == SignedPdfRevision.Kind.SIGN);
 
         byte[] next = pdf.sign(current, new PdfIncrementService.SignSpec(signer, sigField, own, locked, certify,
-                imagePng, printedName, "ลงนามในตำแหน่ง \"" + (step.getRoleLabel() != null ? step.getRoleLabel() : slot.roleLabel()) + "\"",
+                imagePng, printedName, reason != null ? reason
+                        : "ลงนามในตำแหน่ง \"" + (step.getRoleLabel() != null ? step.getRoleLabel() : slot.roleLabel()) + "\"",
                 LOCATION, calendar(step.getSignedAt()), nameField(slot)));
         int no = revisions.append(envelope, current, next, SignedPdfRevision.Kind.SIGN, step.getId(),
                 step.getSigner() != null ? step.getSigner().getId() : null, signer.fingerprint());

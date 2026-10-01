@@ -44,23 +44,30 @@
             }
             var name = normalize(field.value);
             if (!name) {
-                show('ยังไม่ได้กรอกชื่อในเอกสาร', 'ตำแหน่งนี้จะยังไม่ถูกส่งในรอบนี้ — กรอกชื่อในเอกสารก่อน', false);
+                show('ยังไม่ได้เลือกชื่อในเอกสาร', 'ตำแหน่งนี้จะยังไม่ถูกส่งในรอบนี้ — เลือกชื่อในเอกสารก่อน', false);
                 return;
             }
+            // ตัวค้นหาชื่อ (person_picker.js) เก็บรหัสบัญชีของคนที่เลือกไว้ใน "<ช่อง>__signer"
+            var chosen = document.querySelector('[name="' + field.name + '__signer"]');
             var seen = {};
             var matches = candidates.filter(function (c) {
-                if (normalize(c.displayName) !== name || seen[c.userId]) return false;
+                var hit = chosen && chosen.value ? String(c.userId) === chosen.value
+                    : normalize(c.displayName) === name;
+                if (!hit || seen[c.userId]) return false;
                 seen[c.userId] = true;
                 return true;
             });
             if (matches.length === 1) {
+                // ชื่อที่พิมพ์ลงเอกสารคือชื่อในช่อง — รายการของแผงอาจต่อท้ายบทบาทไว้ จึงไม่ใช้ชื่อจากรายการ
                 hidden.value = matches[0].userId;
-                show(matches[0].displayName + (matches[0].email ? ' (' + matches[0].email + ')' : ''),
-                    'ผู้ลงนามตามชื่อที่กรอกในเอกสาร', false);
-            } else if (matches.length > 1) {
-                show('“' + name + '”', 'มีบุคลากรชื่อนี้มากกว่าหนึ่งคน — กรุณาแจ้งผู้ดูแลระบบ', true);
+                show(field.value.trim() + (matches[0].email ? ' (' + matches[0].email + ')' : ''),
+                    'ผู้ลงนามตามชื่อที่เลือกในเอกสาร', false);
+                return;
+            }
+            if (matches.length > 1) {
+                show('“' + name + '”', 'มีบัญชีชื่อนี้มากกว่าหนึ่งคน — กรุณาค้นหาแล้วเลือกใหม่ในช่องชื่อของเอกสาร', true);
             } else {
-                show('“' + name + '”', 'ไม่พบบัญชีผู้ใช้ชื่อนี้ — กรุณาเลือกชื่อจากรายการในช่องชื่อของเอกสาร', true);
+                show('“' + name + '”', 'ยังไม่ได้เลือกจากรายชื่อในระบบ — กรุณาค้นหาแล้วเลือกในช่องชื่อของเอกสาร', true);
             }
         }
 

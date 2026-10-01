@@ -16,7 +16,8 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // Target all selects inside doc forms (cards with .card-academic)
-    document.querySelectorAll('form[id^="doc"] select.form-select').forEach(function (sel) {
+    // ช่องชื่อผู้ลงนามเป็นตัวค้นหาชื่อ (person_picker.js) — เลือกได้อย่างเดียว ห้ามแปลงเป็นช่องพิมพ์อิสระ
+    document.querySelectorAll('form[id^="doc"] select.form-select:not([data-person-picker])').forEach(function (sel) {
         const name = sel.name;
         const required = sel.required;
         const id = sel.id || ('dl_' + name);

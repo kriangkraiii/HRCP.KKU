@@ -279,6 +279,10 @@ public final class DocumentCompleteness {
             if (adminFields.contains(key) || signerFields.contains(key)) {
                 continue;
             }
+            // รหัสบัญชีที่คู่กับช่องชื่อผู้ลงนาม (ตัวค้นหาชื่อ) — บังคับหรือไม่ตามช่องชื่อของมัน ไม่ใช่ช่องแยก
+            if (key.endsWith(DocumentFieldOwnership.SIGNER_ID_SUFFIX)) {
+                continue;
+            }
             if (isOptional(module, documentType, key, targetPosition)) {
                 continue;
             }
@@ -325,7 +329,8 @@ public final class DocumentCompleteness {
 
         Set<String> required = new LinkedHashSet<>();
         for (String key : data.keySet()) {
-            if (adminFields.contains(key) || signerFields.contains(key)) {
+            if (adminFields.contains(key) || signerFields.contains(key)
+                    || key.endsWith(DocumentFieldOwnership.SIGNER_ID_SUFFIX)) {
                 continue;
             }
             if (academicDoc1HasChoice && ("chk1".equals(key) || "chk2".equals(key) || "chk3".equals(key))) {

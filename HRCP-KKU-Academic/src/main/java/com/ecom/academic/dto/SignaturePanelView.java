@@ -51,26 +51,31 @@ public record SignaturePanelView(
         SignatureRequest revivableEnvelope,
         boolean applicantMayWithdraw,
         java.util.Set<String> reviewerSlots,
-        boolean signerNamedInForm) {
+        java.util.Set<String> namedFields) {
 
     /**
-     * คนที่จับคู่ได้จากชื่อที่กรอกในแบบฟอร์ม — บุคลากรที่ผูกบัญชีแล้ว ชื่อแบบเดียวกับรายการชื่อในแบบฟอร์ม
-     * ใช้กับเอกสารที่ผู้ลงนามมาจากชื่อในแบบฟอร์ม (named_signer.js); เซิร์ฟเวอร์จับคู่ซ้ำเองตอนส่งเสมอ
+     * บัญชีที่แผงใช้แสดงผู้ลงนามตามที่เลือกในแบบฟอร์ม (named_signer.js หาจากรหัสบัญชีในช่อง
+     * {@code <ชื่อช่อง>__signer}) — ทุกคนที่อยู่ในตัวเลือกของแผง เซิร์ฟเวอร์จับคู่ซ้ำเองตอนส่งเสมอ
      */
     public List<SignerOptionDTO> namedCandidates() {
         Map<Integer, SignerOptionDTO> byUser = new java.util.LinkedHashMap<>();
         recommendedOptions.values().forEach(list -> list.forEach(o -> {
-            if (o.staffId() != null && o.signable() && o.userId() != null) byUser.putIfAbsent(o.userId(), o);
+            if (o.signable() && o.userId() != null) byUser.putIfAbsent(o.userId(), o);
         }));
         otherOptions.forEach(o -> {
-            if (o.staffId() != null && o.signable() && o.userId() != null) byUser.putIfAbsent(o.userId(), o);
+            if (o.signable() && o.userId() != null) byUser.putIfAbsent(o.userId(), o);
         });
         return new ArrayList<>(byUser.values());
     }
 
-    /** ตำแหน่งนี้ผู้ลงนามมาจากชื่อในแบบฟอร์ม — ไม่มีตัวเลือกผู้ลงนาม */
+    /** เอกสารนี้มีตำแหน่งที่ผู้ลงนามมาจากชื่อที่เลือกในแบบฟอร์ม */
+    public boolean isSignerNamedInForm() {
+        return namedFields != null && !namedFields.isEmpty();
+    }
+
+    /** ตำแหน่งนี้ผู้ลงนามมาจากชื่อที่เลือกในแบบฟอร์ม (ตัวค้นหาชื่อ) — ไม่มีตัวเลือกผู้ลงนามในแผง */
     public boolean isNamedInForm(SignatureSlot slot) {
-        return signerNamedInForm && slot.anchorPlaceholder() != null
+        return namedFields != null && namedFields.contains(slot.anchorPlaceholder())
                 && !"applicant".equalsIgnoreCase(slot.slotKey()) && !isReviewerSlot(slot.slotKey());
     }
 
@@ -83,7 +88,7 @@ public record SignaturePanelView(
             SignerOptionDTO currentUserOption,
             SignatureRequest activeEnvelope,
             boolean signable) {
-        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false, java.util.Set.of(), false);
+        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false, java.util.Set.of(), java.util.Set.of());
     }
 
     /**
@@ -254,6 +259,6 @@ public record SignaturePanelView(
     /** An empty panel, for documents with no signature block. */
     public static SignaturePanelView unsignable() {
         return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false, false, null, false,
-                java.util.Set.of(), false);
+                java.util.Set.of(), java.util.Set.of());
     }
 }

@@ -79,58 +79,62 @@ class AdminFieldsRequiredTest extends AbstractFlowTest {
         assertThat(result.error()).isNull();
     }
 
-    /** เอกสารที่ 2 เฟส 1: ผู้ยื่นเซ็นแล้ว รอเจ้าหน้าที่ตรวจแล้วปล่อยให้นักทรัพยากรบุคคลลงนาม */
-    private SignatureRequest documentTwoSignedByApplicant(AcademicRequest request, UserDtls hr) {
+    /** เอกสารที่ 2 เฟส 1: ผู้ยื่นเซ็นแล้ว รอเจ้าหน้าที่ตรวจ แล้วลงนามเองในตำแหน่งนักทรัพยากรบุคคล */
+    private SignatureRequest documentTwoSignedByApplicant(AcademicRequest request) {
         String doc2 = "{\"chk_app_1\":\"✓\",\"chk_off_1\":\"\",\"chk_off_2\":\"\",\"chk_off_3\":\"\","
                 + "\"chk_off_4\":\"\",\"chk_off_5\":\"\"}";
         data.academicDocument(request, 2, doc2);
         SignatureRequest envelope = circulate(SignatureModule.ACADEMIC, request.getId(), 2, doc2, applicant,
-                List.of(new SignerAssignment("applicant", applicant.getId()),
-                        new SignerAssignment("hr", hr.getId())));
+                List.of(new SignerAssignment("applicant", applicant.getId())));
         applicantSigns(envelope);
         return envelope;
+    }
+
+    /** ผู้ตรวจ (นักทรัพยากรบุคคล) ลงนามเองต่อจากผู้ยื่น — SignatureAnchorRegistry.isSignedByReviewer */
+    private Result releaseToReviewer(SignatureRequest envelope) {
+        return signatureWorkflow.forwardToNextSigners(envelope.getId(),
+                List.of(new SignerAssignment("hr", officer.getId())), null, officer, ActorContext.none());
     }
 
     @Test
     @DisplayName("เอกสารที่ 2: เจ้าหน้าที่ยังไม่ได้ตรวจ — ปล่อยให้ลงนามต่อไม่ได้")
     void documentTwoCannotBeReleasedUnchecked() {
-        UserDtls hr = data.user("hr-required@example.invalid", "เจ้าหน้าที่", "บุคคล", "ROLE_ADMIN");
         AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
-        SignatureRequest envelope = documentTwoSignedByApplicant(request, hr);
+        SignatureRequest envelope = documentTwoSignedByApplicant(request);
 
-        Result released = signatureWorkflow.startCirculation(envelope.getId(), officer, ActorContext.none());
+        Result released = releaseToReviewer(envelope);
 
         assertThat(released.ok()).isFalse();
         assertThat(released.error()).contains("ช่องของเจ้าหน้าที่ยังกรอกไม่ครบ").contains("5 ช่อง");
-        assertThat(stepFor(envelope, "hr").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+        assertThat(signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId()))
+                .noneMatch(s -> "hr".equals(s.getSlotKey()));
     }
 
     @Test
     @DisplayName("เอกสารที่ 2: แต่ละแถวติ๊ก หรือไม่ติ๊กแต่เขียนหมายเหตุ — ปล่อยได้")
     void aRowWithANoteInsteadOfATickIsAccepted() {
-        UserDtls hr = data.user("hr-note@example.invalid", "เจ้าหน้าที่", "บุคคล", "ROLE_ADMIN");
         AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
-        SignatureRequest envelope = documentTwoSignedByApplicant(request, hr);
+        SignatureRequest envelope = documentTwoSignedByApplicant(request);
 
         academicService.saveOfficeFieldsAcrossCopies(request, 2, Map.of(
                 "chk_off_1", "✓", "chk_off_2", "✓", "chk_off_4", "✓", "chk_off_5", "✓",
                 "text_3", "ไม่มีสื่อการสอนแนบมา"), "เอกสารที่ 2", true);
-        assertThat(signatureWorkflow.startCirculation(envelope.getId(), officer, ActorContext.none()).ok())
-                .as("ข้อ 3 ไม่ติ๊กแต่มีหมายเหตุ")
+        Result released = releaseToReviewer(envelope);
+        assertThat(released.ok())
+                .as("ข้อ 3 ไม่ติ๊กแต่มีหมายเหตุ: %s", released.error())
                 .isTrue();
     }
 
     @Test
     @DisplayName("เอกสารที่ 2: ข้อที่ไม่ติ๊กและไม่มีหมายเหตุ — ยังปล่อยไม่ได้")
     void aRowWithNeitherTickNorNoteIsRefused() {
-        UserDtls hr = data.user("hr-gap@example.invalid", "เจ้าหน้าที่", "บุคคล", "ROLE_ADMIN");
         AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
-        SignatureRequest envelope = documentTwoSignedByApplicant(request, hr);
+        SignatureRequest envelope = documentTwoSignedByApplicant(request);
 
         academicService.saveOfficeFieldsAcrossCopies(request, 2, Map.of(
                 "chk_off_1", "✓", "chk_off_2", "✓", "chk_off_4", "✓", "chk_off_5", "✓"),
                 "เอกสารที่ 2", true);
-        Result released = signatureWorkflow.startCirculation(envelope.getId(), officer, ActorContext.none());
+        Result released = releaseToReviewer(envelope);
         assertThat(released.ok()).isFalse();
         assertThat(released.error()).contains("1 ช่อง");
     }
@@ -155,9 +159,9 @@ class AdminFieldsRequiredTest extends AbstractFlowTest {
 
         positionService.saveOfficeFieldsAcrossCopies(request, 3,
                 Map.of("dean_position", "คณบดี"), "เอกสารที่ 3", true);
-        assertThat(signatureWorkflow.forwardToNextSigners(envelope.getId(),
-                List.of(new SignerAssignment("dean", dean.getId())), null, officer, ActorContext.none()).ok())
-                .isTrue();
+        Result complete = signatureWorkflow.forwardToNextSigners(envelope.getId(),
+                List.of(new SignerAssignment("dean", dean.getId())), null, officer, ActorContext.none());
+        assertThat(complete.ok()).as(complete.error()).isTrue();
     }
 
     /** ซองที่ลงนามครบทุกช่องแล้ว โดยไม่ต้องเดินเวียนลงนามจริง */

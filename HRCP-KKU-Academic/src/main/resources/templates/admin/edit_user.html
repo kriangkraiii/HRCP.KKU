@@ -83,6 +83,21 @@
 									th:replace="~{admin/_academic_position_fields :: fields(
 										${editUser.academicPosition}, ${editUser.academicPositionEn}, 'form-label fw-bold', '')}"></div>
 
+								<!-- ตำแหน่งที่พิมพ์ใต้ชื่อในเอกสาร — ตัวค้นหาชื่อผู้ลงนาม (person_picker.js) เติมช่องตำแหน่งจากค่านี้ -->
+								<div class="row mb-3 mt-1">
+									<div class="col-md-6">
+										<label class="form-label fw-bold">ตำแหน่งที่พิมพ์ในเอกสาร</label>
+										<input type="text" name="positionTitle" class="form-control" maxlength="255"
+											placeholder="เช่น คณบดีวิทยาลัยการคอมพิวเตอร์" th:value="${editUser.positionTitle}">
+										<div class="form-text">เติมให้อัตโนมัติเมื่อเลือกคนนี้เป็นผู้ลงนามในเอกสาร</div>
+									</div>
+									<div class="col-md-6">
+										<label class="form-label fw-bold">หน่วยงาน / สังกัด</label>
+										<input type="text" name="affiliation" class="form-control" maxlength="255"
+											placeholder="ใช้กับผู้ลงนามภายนอก มข." th:value="${editUser.affiliation}">
+									</div>
+								</div>
+
 								<h6 class="text-muted mb-3 mt-4"><i class="fas fa-envelope me-1"></i> ข้อมูลบัญชี</h6>
 								<hr class="mt-0">
 
@@ -100,6 +115,7 @@
 										<select name="role" class="form-select" id="roleSelect">
 											<option value="ROLE_USER" th:selected="${editUser.role == 'ROLE_USER'}"> ผู้ใช้งานทั่วไป (User)</option>
 											<option value="ROLE_ADMIN" th:selected="${editUser.role == 'ROLE_ADMIN'}"> ผู้ดูแลระบบ</option>
+											<option value="ROLE_EXTERNAL" th:selected="${editUser.role == 'ROLE_EXTERNAL'}"> ผู้ลงนามภายนอก มข. (ลงนามอย่างเดียว)</option>
 										</select>
 										<div class="form-text text-muted" id="roleNotice">
 											<span th:if="${editUser.role == 'ROLE_USER'}"> หากเปลี่ยนเป็นผู้ดูแลระบบ รหัสผู้ยื่นจะถูกลบออก</span>

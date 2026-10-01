@@ -135,6 +135,11 @@
                                 <div th:replace="~{admin/_academic_position_fields :: fields(
                                         ${user.academicPosition}, ${user.academicPositionEn},
                                         'profile-label', 'profile-input')}"></div>
+                                <div class="mt-3">
+                                    <label class="profile-label">ตำแหน่งที่พิมพ์ในเอกสาร</label>
+                                    <input type="text" name="positionTitle" class="form-control profile-input" maxlength="255"
+                                           placeholder="เช่น นักทรัพยากรบุคคลชำนาญการ" th:value="${user.positionTitle}">
+                                </div>
                             </div>
                         </div>
 

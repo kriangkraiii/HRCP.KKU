@@ -74,6 +74,17 @@ public class UserDtls {
 	private String academicPositionEn;
 
 	/**
+	 * ตำแหน่งที่พิมพ์ในเอกสาร (ตำแหน่งบริหาร/ตำแหน่งงาน) เช่น "คณบดีวิทยาลัยการคอมพิวเตอร์"
+	 * — ไม่ใช่ {@link #academicPosition} ใช้เติมช่องตำแหน่งข้างชื่อผู้ลงนามในแบบฟอร์ม
+	 */
+	@Column(name = "position_title")
+	private String positionTitle;
+
+	/** หน่วยงานของผู้ลงนามภายนอก ({@code ROLE_EXTERNAL}) เช่น มหาวิทยาลัยอื่น */
+	@Column(name = "affiliation")
+	private String affiliation;
+
+	/**
 	 * When KKU SSO last confirmed {@link #academicPosition} — null means it never did.
 	 *
 	 * <p>Three feeds write the academic position: the KKU SSO profile (on sign-in),
@@ -292,6 +303,30 @@ public class UserDtls {
 	public void setAcademicPositionEn(String academicPositionEn) {
 		this.academicPositionEn = academicPositionEn;
 	}
+
+	public String getPositionTitle() {
+		return positionTitle;
+	}
+
+	public void setPositionTitle(String positionTitle) {
+		this.positionTitle = positionTitle;
+	}
+
+	public String getAffiliation() {
+		return affiliation;
+	}
+
+	public void setAffiliation(String affiliation) {
+		this.affiliation = affiliation;
+	}
+
+	/** บัญชีผู้ลงนามภายนอก มข. — ไม่มีฟังก์ชันยื่นคำร้อง เข้าสู่ระบบด้วยรหัสทางอีเมล */
+	public boolean isExternal() {
+		return ROLE_EXTERNAL.equals(role);
+	}
+
+	/** บทบาทของบัญชีผู้ลงนามภายนอก มข. */
+	public static final String ROLE_EXTERNAL = "ROLE_EXTERNAL";
 
 	public LocalDateTime getAcademicPositionSyncedAt() {
 		return academicPositionSyncedAt;

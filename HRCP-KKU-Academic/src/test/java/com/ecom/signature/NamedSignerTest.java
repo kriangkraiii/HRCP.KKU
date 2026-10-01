@@ -102,6 +102,39 @@ class NamedSignerTest extends AbstractFlowTest {
                 .containsEntry("dean", dean.getId()).containsEntry("hr", officer.getId());
     }
 
+    @Autowired
+    private com.ecom.repository.UserRepository users;
+
+    /** เอกสารที่ 3 ที่เลือกชื่อด้วยตัวค้นหาชื่อ: ชื่อที่พิมพ์ลงเอกสาร + รหัสบัญชีในช่อง __signer */
+    private String doc3Picked(UserDtls chosenHead, String printedHead) {
+        String base = doc3(printedHead);
+        return base.substring(0, base.length() - 1) + ",\"department_head__signer\":\"" + chosenHead.getId()
+                + "\",\"dropdownCsHead\":\"หัวหน้าสาขาวิทยาการคอมพิวเตอร์\"}";
+    }
+
+    @Test
+    @DisplayName("ตัวค้นหาชื่อ: ใช้รหัสบัญชีที่เลือก และเก็บตำแหน่งที่กรอกเป็นตำแหน่งของบัญชีเมื่อยังว่าง")
+    void theChosenAccountSignsAndItsPositionIsRemembered() {
+        String printed = com.ecom.academic.service.SignerNameResolver.printedName(otherHead);
+        var result = send(doc3Picked(otherHead, printed), head);
+
+        assertThat(result.ok()).as(result.error()).isTrue();
+        assertThat(signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(result.request().getId()))
+                .filteredOn(s -> "head".equals(s.getSlotKey()))
+                .extracting(s -> s.getSigner().getId()).containsExactly(otherHead.getId());
+        assertThat(users.findById(otherHead.getId()).orElseThrow().getPositionTitle())
+                .isEqualTo("หัวหน้าสาขาวิทยาการคอมพิวเตอร์");
+    }
+
+    @Test
+    @DisplayName("ชื่อในช่องถูกแก้หลังเลือก (ไม่ตรงกับบัญชีที่เลือก) — ส่งไม่ได้")
+    void aNameEditedAfterPickingIsRefused() {
+        var result = send(doc3Picked(otherHead, "ชื่อที่พิมพ์ทับ"), head);
+
+        assertThat(result.ok()).isFalse();
+        assertThat(result.error()).contains("ไม่ตรงกับบัญชีที่เลือก");
+    }
+
     @Test
     @DisplayName("ชื่อในเอกสารไม่ตรงกับบุคลากรคนไหน — ส่งไม่ได้ พร้อมบอกว่าช่องไหน")
     void aNameThatMatchesNobodyIsRefused() {

@@ -87,6 +87,58 @@ jobs:
           Get-ChildItem $dir -Filter "$env:DB_NAME-*.dump" | Sort-Object LastWriteTime -Descending |
               Select-Object -Skip 10 | Remove-Item -Force
 
+      # 2.4) ใบรับรองของระบบ (system seal) — ประทับรับรองลายเซ็นของผู้ลงนามภายนอกที่ไม่มี Digital ID
+      #      (ยืนยันตัวตนด้วย OTP ทางอีเมลแล้วระบบลงนามให้ ดู SystemSealService)
+      #      สร้างครั้งเดียวตอน deploy ครั้งแรก รอบต่อไปเห็นว่ามีแล้วก็ข้าม — ห้ามสร้างใหม่ทับ
+      #      ไม่งั้นเครื่องที่ติดตั้ง .cer ไว้เชื่อถือต้องติดตั้งใหม่
+      #      ใบรับรอง self-signed หมดอายุ 31 ธ.ค. 9999 (ค่า "ไม่มีวันหมดอายุ" ตาม RFC 5280)
+      #      แอปหาไฟล์เองที่ secrets\ ข้าง app.jar ไม่ต้องตั้ง env/properties และไม่ต้อง restart
+      #      ไม่สำเร็จก็ไม่หยุด deploy — แค่ทางสำรองนี้ยังปิดอยู่ ผู้ลงนามภายนอกต้องใช้ .p12 ของตัวเอง
+      - name: Ensure system seal certificate
+        shell: powershell
+        continue-on-error: true
+        run: |
+          $dir = Join-Path (Split-Path $env:DEPLOY_PATH -Parent) 'secrets'
+          $p12 = Join-Path $dir 'system-seal.p12'
+          if (Test-Path $p12) {
+              Write-Host "System seal certificate already exists: $p12 (kept as is)"
+              exit 0
+          }
+          $keytool = if ($env:JAVA_HOME -and (Test-Path "$env:JAVA_HOMEin\keytool.exe")) { "$env:JAVA_HOMEin\keytool.exe" }
+                     else { (Get-Command keytool -ErrorAction SilentlyContinue).Source }
+          if (-not $keytool) { throw "keytool not found (set JAVA_HOME on the runner)" }
+
+          # รหัสสุ่ม เก็บในไฟล์ข้าง .p12 ที่แอปอ่าน — ไม่ต้องจำ ไม่ต้องตั้ง secret
+          $bytes = New-Object byte[] 24
+          [Security.Cryptography.RandomNumberGenerator]::Create().GetBytes($bytes)
+          $env:SEAL_PASS = [Convert]::ToBase64String($bytes) -replace '[+/=]', 'x'
+          # หักไว้ 1 วัน กันเวลา UTC เลยไปปี 10000 ซึ่ง X.509 เขียนไม่ได้
+          $days = ([datetime]'9999-12-31' - (Get-Date).Date).Days - 1
+
+          New-Item -ItemType Directory -Force -Path $dir | Out-Null
+          & $keytool -genkeypair -alias system-seal -keyalg RSA -keysize 3072 -sigalg SHA256withRSA `
+              -validity $days -storetype PKCS12 -keystore $p12 -storepass:env SEAL_PASS `
+              -dname "CN=HRCP e-Signature Seal, OU=College of Computing, O=Khon Kaen University, C=TH" `
+              -ext 'KU=digitalSignature,nonRepudiation'
+          if ($LASTEXITCODE -ne 0) { throw "keytool -genkeypair failed (exit $LASTEXITCODE)" }
+          [IO.File]::WriteAllText("$p12.password", $env:SEAL_PASS)
+          # ใบรับรอง (ไม่มีกุญแจลับ) ไว้ติดตั้งเป็น "เชื่อถือ" ใน Adobe/Foxit ของเครื่องที่ตรวจเอกสาร
+          & $keytool -exportcert -rfc -alias system-seal -keystore $p12 -storepass:env SEAL_PASS -file (Join-Path $dir 'system-seal.cer')
+          Remove-Item Env:SEAL_PASS
+
+          # กุญแจลับ: ให้อ่านได้เฉพาะ SYSTEM, Administrators, บัญชีที่รัน service และบัญชีของ runner นี้
+          $svcAccount = (Get-CimInstance Win32_Service -Filter "Name='$env:SERVICE_NAME'").StartName
+          if (-not $svcAccount -or $svcAccount -eq 'LocalSystem') { $svcAccount = 'SYSTEM' }
+          $runner = [Security.Principal.WindowsIdentity]::GetCurrent().Name
+          icacls $dir /inheritance:r /grant:r "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" "${svcAccount}:(OI)(CI)R" "${runner}:(OI)(CI)F" | Out-Null
+
+          # สำรองไว้ ถ้าเครื่องพังจะได้ใช้ใบเดิม ไม่ต้องให้ทุกเครื่องติดตั้ง .cer ใหม่
+          New-Item -ItemType Directory -Force -Path $env:BACKUP_ROOT | Out-Null
+          Copy-Item -Path $dir -Destination "$env:BACKUP_ROOT\secrets" -Recurse -Force
+          icacls "$env:BACKUP_ROOT\secrets" /inheritance:r /grant:r "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" "${runner}:(OI)(CI)F" | Out-Null
+          Write-Host "Created system seal certificate (valid until 9999-12-31): $p12"
+          Write-Host "Trust it in Adobe/Foxit with: $(Join-Path $dir 'system-seal.cer')"
+
       # 3) หยุด Windows Service "MyWebApp" ก่อน เพื่อปลดล็อกไฟล์ app.jar ที่กำลังถูกใช้งานอยู่
       #    -ErrorAction SilentlyContinue กันพังกรณี service ยังไม่เคยรัน/ไม่พบ service
       #    พร้อมรอจนกว่าสถานะจะ Stopped จริงเพื่อป้องกัน file lock ตอน Copy-Item

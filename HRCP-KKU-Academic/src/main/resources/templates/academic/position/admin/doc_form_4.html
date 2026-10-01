@@ -199,12 +199,7 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อผู้บังคับบัญชาชั้นต้น</label>
-                                <select name="department_head_name" class="form-select">
-                                    <option value="">-- เลือก --</option>
-                                    <option th:each="head : ${heads}"
-                                            th:value="${head.fullName}"
-                                            th:text="${head.fullName}"></option>
-                                </select>
+                                <input type="text" name="department_head_name" class="form-control" data-person-picker data-role="HEAD">
                             </div>
                         </div>
                     </div>
