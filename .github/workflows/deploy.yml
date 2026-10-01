@@ -104,7 +104,8 @@ jobs:
               Write-Host "System seal certificate already exists: $p12 (kept as is)"
               exit 0
           }
-          $keytool = if ($env:JAVA_HOME -and (Test-Path "$env:JAVA_HOMEin\keytool.exe")) { "$env:JAVA_HOMEin\keytool.exe" }
+          $jdkKeytool = if ($env:JAVA_HOME) { Join-Path $env:JAVA_HOME 'bin/keytool.exe' }
+          $keytool = if ($jdkKeytool -and (Test-Path $jdkKeytool)) { $jdkKeytool }
                      else { (Get-Command keytool -ErrorAction SilentlyContinue).Source }
           if (-not $keytool) { throw "keytool not found (set JAVA_HOME on the runner)" }
 
@@ -129,6 +130,8 @@ jobs:
           # กุญแจลับ: ให้อ่านได้เฉพาะ SYSTEM, Administrators, บัญชีที่รัน service และบัญชีของ runner นี้
           $svcAccount = (Get-CimInstance Win32_Service -Filter "Name='$env:SERVICE_NAME'").StartName
           if (-not $svcAccount -or $svcAccount -eq 'LocalSystem') { $svcAccount = 'SYSTEM' }
+          # local account written as dot-backslash-user: icacls needs MACHINE-backslash-user
+          if ($svcAccount.StartsWith('.' + [char]92)) { $svcAccount = $env:COMPUTERNAME + $svcAccount.Substring(1) }
           $runner = [Security.Principal.WindowsIdentity]::GetCurrent().Name
           icacls $dir /inheritance:r /grant:r "SYSTEM:(OI)(CI)F" "Administrators:(OI)(CI)F" "${svcAccount}:(OI)(CI)R" "${runner}:(OI)(CI)F" | Out-Null
 
