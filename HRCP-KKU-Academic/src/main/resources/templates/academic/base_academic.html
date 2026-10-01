@@ -726,6 +726,37 @@
 
             <!-- Center/Right: Global Search & Action Icons -->
             <div class="topbar-right d-flex align-items-center gap-3 flex-grow-1 justify-content-end">
+                <!-- โหมด dev เท่านั้น: แอดมินสลับเข้าบัญชีทดสอบได้โดยไม่ต้องกรอกรหัสผ่าน (DevAccountSwitchService) -->
+                <div class="dropdown" th:if="${devSwitchOptions != null}">
+                    <button type="button"
+                            class="topbar-icon-btn border-0 bg-transparent p-0 u-pointer"
+                            data-bs-toggle="dropdown"
+                            aria-expanded="false"
+                            title="สลับบัญชีทดสอบ (โหมด dev)"
+                            aria-label="สลับบัญชีทดสอบ">
+                        <i class="fas fa-user-secret fa-lg"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 py-1">
+                        <h6 class="dropdown-header">สลับบัญชีทดสอบ (โหมด dev)</h6>
+                        <form method="post" action="/dev/switch-account" th:each="opt : ${devSwitchOptions}">
+                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                            <input type="hidden" name="email" th:value="${opt.email}" />
+                            <button type="submit" class="dropdown-item d-flex align-items-center gap-2"
+                                    th:disabled="${opt.current}" data-loading-timeout="4000">
+                                <i class="fas fa-fw" th:classappend="${opt.role == 'ROLE_ADMIN'} ? 'fa-user-shield' : 'fa-user'"></i>
+                                <span class="d-flex flex-column">
+                                    <span th:text="${opt.name}"></span>
+                                    <small class="text-muted" th:text="${opt.email}"></small>
+                                </span>
+                                <i th:if="${opt.current}" class="fas fa-check ms-auto text-success"></i>
+                            </button>
+                        </form>
+                        <span th:if="${#lists.isEmpty(devSwitchOptions)}" class="dropdown-item-text small text-muted">
+                            ยังไม่มีบัญชีทดสอบในระบบ (ตั้งค่า TEST_ACCOUNTS)
+                        </span>
+                    </div>
+                </div>
+
                 <!-- Notifications Bell Dropdown -->
                 <div class="dropdown" id="topbarNotificationContainer">
                     <button type="button"
@@ -829,6 +860,24 @@
 
             </div>
         </header>
+
+        <!-- เตือนว่ากำลังใช้บัญชีทดสอบที่สลับเข้ามา และพากลับบัญชีเดิมได้ในคลิกเดียว -->
+        <div class="px-4 pt-2" th:if="${devSwitchOrigin != null}">
+            <div class="alert alert-warning d-flex flex-wrap align-items-center gap-2 py-2 mb-0 small" role="status">
+                <i class="fas fa-user-secret"></i>
+                <span>
+                    โหมดทดสอบ: กำลังใช้งานเป็น <strong th:text="${user.email}"></strong>
+                    (สลับมาจาก <span th:text="${devSwitchOrigin}"></span>)
+                </span>
+                <form method="post" action="/dev/switch-account" class="ms-auto">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                    <input type="hidden" name="email" th:value="${devSwitchOrigin}" />
+                    <button type="submit" class="btn btn-sm btn-outline-dark" data-loading-timeout="4000">
+                        <i class="fas fa-rotate-left me-1"></i>กลับบัญชีเดิม
+                    </button>
+                </form>
+            </div>
+        </div>
 
         <!-- ข้อความผลลัพธ์กลาง: หน้าใดก็ตามที่ redirect มาพร้อม flash attribute จะแสดงตรงนี้
              โดยไม่ต้องไปเพิ่มบล็อกซ้ำในทุกเทมเพลต -->

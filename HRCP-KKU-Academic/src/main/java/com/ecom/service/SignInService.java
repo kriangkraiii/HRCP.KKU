@@ -72,7 +72,9 @@ public class SignInService {
     /** How a sign-in started. Decides what has to be restored once OTP passes. */
     public enum Method {
         PASSWORD("รหัสผ่าน"),
-        SSO("KKU SSO");
+        SSO("KKU SSO"),
+        /** An administrator stepping into a test account in dev mode — see DevAccountSwitchService. */
+        DEV_SWITCH("การสลับบัญชีทดสอบ (โหมด dev)");
 
         private final String label;
 
