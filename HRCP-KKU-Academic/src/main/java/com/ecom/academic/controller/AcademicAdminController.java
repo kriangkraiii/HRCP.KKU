@@ -479,6 +479,7 @@ public class AcademicAdminController {
         // ป้าย "3 สำเนา" กับปุ่มขอให้เซ็นใหม่ไม่ได้เลื่อนตาม เลยไปชี้เอกสารผิดฉบับอยู่นาน
         model.addAttribute("multiCopyDocType", AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE);
         model.addAttribute("multiCopyCount", AcademicRequestService.COMMITTEE_COPIES);
+        model.addAttribute("committeeLetters", committeeLetters(id));
         model.addAttribute("applicantDocTypes",
                 DocumentFieldOwnership.applicantDocuments(SignatureModule.ACADEMIC));
         model.addAttribute("attachments", requestService.getAttachments(id));
@@ -1072,6 +1073,59 @@ public class AcademicAdminController {
         return PreviewResponseFactory.build(documentService, data, format, baseName);
     }
 
+    /** หนังสือถึงกรรมการท่านหนึ่งของเอกสารที่ 5 */
+    public record CommitteeLetter(int number, String committeeName) {
+    }
+
+    /**
+     * หนังสือถึงกรรมการแยกท่านละฉบับ — มีเมื่อลงนามครบแล้วเท่านั้น ก่อนหน้านั้นยังเป็นไฟล์เดียวที่เวียนลงนาม
+     * ชื่อกรรมการอ่านจากข้อมูลที่ลงนามไป ไม่ใช่จากฟอร์มที่อาจถูกแก้ทีหลัง
+     */
+    private List<CommitteeLetter> committeeLetters(Long id) {
+        int type = AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE;
+        return signatureWorkflow.findEnvelope(SignatureModule.ACADEMIC, id, type)
+                .filter(e -> e.getStatus() == com.ecom.academic.model.SignatureRequestStatus.COMPLETED)
+                .map(e -> {
+                    Map<String, Object> signed;
+                    try {
+                        signed = objectMapper.readValue(e.getFrozenJson(),
+                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                                });
+                    } catch (Exception ex) {
+                        signed = Map.of();
+                    }
+                    List<CommitteeLetter> letters = new ArrayList<>();
+                    for (int i = 1; i <= AcademicRequestService.COMMITTEE_COPIES; i++) {
+                        Object name = signed.get("committee_name_" + i);
+                        letters.add(new CommitteeLetter(i, name != null ? name.toString() : ""));
+                    }
+                    return letters;
+                })
+                .orElse(List.of());
+    }
+
+    @GetMapping("/request/{id}/document/5/letter/{number}")
+    public ResponseEntity<byte[]> downloadCommitteeLetter(@PathVariable Long id, @PathVariable int number,
+            @RequestParam(value = "format", defaultValue = "pdf") String format) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        List<CommitteeLetter> letters = committeeLetters(id);
+        if (number < 1 || number > letters.size()) {
+            return ResponseEntity.notFound().build();
+        }
+        com.ecom.academic.model.SignatureRequest envelope = signatureWorkflow
+                .findEnvelope(SignatureModule.ACADEMIC, id, AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE)
+                .orElseThrow();
+        byte[] data = signedDocumentRenderer.renderLetterForDownload(envelope, format, number, letters.size());
+        if (data == null) {
+            return ResponseEntity.notFound().build();
+        }
+        String name = letters.get(number - 1).committeeName();
+        String baseName = request.getRequestCode() + "_เอกสารที่_5_ฉบับที่_" + number
+                + (name.isBlank() ? "" : "_" + name.replaceAll("[\\\\/:*?\"<>|\\s]+", "_"));
+        return PreviewResponseFactory.build(documentService, data, format, baseName);
+    }
+
     @GetMapping("/request/{id}/document/{type}/download")
     public ResponseEntity<byte[]> downloadDocumentByType(@PathVariable Long id,
             @PathVariable int type,
@@ -1116,9 +1170,29 @@ public class AcademicAdminController {
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         List<AcademicDocument> docs = requestService.getDocuments(id);
 
+        List<CommitteeLetter> letters = committeeLetters(id);
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         try (ZipOutputStream zos = new ZipOutputStream(baos)) {
+            if (!letters.isEmpty()) {
+                var envelope = signatureWorkflow.findEnvelope(SignatureModule.ACADEMIC, id,
+                        AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE).orElseThrow();
+                for (CommitteeLetter letter : letters) {
+                    byte[] docx = signedDocumentRenderer.renderLetterForDownload(envelope, "docx",
+                            letter.number(), letters.size());
+                    if (docx == null) {
+                        continue;
+                    }
+                    String name = letter.committeeName().isBlank() ? ""
+                            : "_" + letter.committeeName().replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
+                    zos.putNextEntry(new ZipEntry("เอกสารที่_5_ฉบับที่_" + letter.number() + name + ".docx"));
+                    zos.write(docx);
+                    zos.closeEntry();
+                }
+            }
             for (AcademicDocument doc : docs) {
+                if (!letters.isEmpty() && doc.getDocumentType() == AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE) {
+                    continue;
+                }
                 byte[] docxBytes = null;
                 java.util.Optional<com.ecom.academic.model.SignatureRequest> optEnvelope =
                         signatureWorkflow.findEnvelope(com.ecom.academic.model.SignatureModule.ACADEMIC, id, doc.getDocumentType());

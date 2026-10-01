@@ -122,4 +122,37 @@ class CommitteeLettersSigningTest {
         java.nio.file.Files.createDirectories(java.nio.file.Path.of("target", "incremental"));
         java.nio.file.Files.write(java.nio.file.Path.of("target", "incremental", "doc5-signed.pdf"), signed);
     }
+
+    private static String text(byte[] pdf) throws IOException {
+        try (var doc = Loader.loadPDF(pdf)) {
+            return new PDFTextStripper().getText(doc);
+        }
+    }
+
+    @Test
+    @DisplayName("ลงนามครบแล้วแยกเป็นสามไฟล์ ไฟล์ละกรรมการหนึ่งท่าน ทั้ง PDF และ Word")
+    void signedLettersSplitPerCommitteeMember() throws Exception {
+        var base = base();
+        byte[] signed = PDF.sign(base.pdf(), new PdfIncrementService.SignSpec(
+                CmsSigner.open(TestCertificates.validP12("คณบดี ทดสอบ"), TestCertificates.PIN.toCharArray()),
+                "sig_dean", Map.of(), List.of("sig_dean"), true, signatureImage(), "คณบดี ทดสอบ", "ลงนามในตำแหน่ง คณบดี",
+                "มหาวิทยาลัยขอนแก่น", Calendar.getInstance(TimeZone.getTimeZone("Asia/Bangkok"))));
+        byte[] docx = GEN.generateSignedDocx(5, JSON, List.of());
+        String[] names = { "หนึ่ง", "สอง", "สาม" };
+
+        for (int letter = 1; letter <= 3; letter++) {
+            byte[] pdf = com.ecom.academic.service.SignedDocumentRenderer.pdfLetter(signed, letter, 3);
+            try (var doc = Loader.loadPDF(pdf)) {
+                assertThat(doc.getNumberOfPages()).isEqualTo(1);
+                assertThat(doc.getDocumentCatalog().getAcroForm(null)).isNull();
+            }
+            String pdfText = text(pdf);
+            String wordText = text(GEN.convertDocxToPdf(com.ecom.academic.service.DocxCopies.only(docx, letter)));
+            for (int other = 1; other <= 3; other++) {
+                assertThat(pdfText.contains(names[other - 1])).as("PDF ฉบับที่ %d", letter).isEqualTo(other == letter);
+                assertThat(wordText.contains(names[other - 1])).as("Word ฉบับที่ %d", letter).isEqualTo(other == letter);
+            }
+            java.nio.file.Files.write(java.nio.file.Path.of("target", "incremental", "doc5-letter" + letter + ".pdf"), pdf);
+        }
+    }
 }

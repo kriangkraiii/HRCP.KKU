@@ -363,6 +363,58 @@ public class SignedDocumentRenderer {
         return out;
     }
 
+    /**
+     * ฉบับเดียวจากเอกสารที่พิมพ์หลายฉบับต่อกันในไฟล์เดียว (เอกสารที่ 5: หนังสือถึงกรรมการท่านละฉบับ)
+     * ไว้ส่งให้แต่ละท่านแยกกัน
+     *
+     * <p>PDF ที่ตัดออกมาเป็นไฟล์ใหม่ ลายเซ็นดิจิทัลจึงตรวจได้จากไฟล์ที่ลงนามทั้งฉบับเท่านั้น
+     * รูปลายเซ็นยังพิมพ์อยู่ตามเดิม
+     *
+     * @param letter  ฉบับที่ นับจาก 1
+     * @param letters จำนวนฉบับในไฟล์
+     */
+    public byte[] renderLetterForDownload(SignatureRequest envelope, String format, int letter, int letters)
+            throws IOException {
+        byte[] whole = renderForDownloadUnstamped(envelope, format);
+        if (whole == null) {
+            return null;
+        }
+        if (whole.length > 1 && whole[0] == 'P' && whole[1] == 'K') {
+            byte[] one = DocxCopies.only(whole, letter);
+            return envelope.isIncremental()
+                    ? com.ecom.academic.service.pdf.DocxCopyStamp.stamp(one, envelope.getVerificationCode())
+                    : one;
+        }
+        return pdfLetter(whole, letter, letters);
+    }
+
+    /** หน้าของฉบับที่ {@code letter} เมื่อทุกฉบับยาวเท่ากัน — ไม่อย่างนั้นคืนทั้งไฟล์ */
+    public static byte[] pdfLetter(byte[] pdf, int letter, int letters) throws IOException {
+        try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+            int total = doc.getNumberOfPages();
+            if (letters < 1 || total % letters != 0) {
+                return pdf;
+            }
+            int per = total / letters;
+            // พิมพ์รูปลายเซ็นและค่าในช่องลงเนื้อหน้า ช่องฟอร์มของหน้าที่ตัดทิ้งจะได้ไม่ค้างอยู่ในไฟล์
+            org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm form =
+                    doc.getDocumentCatalog().getAcroForm(null);
+            if (form != null) {
+                form.flatten();
+                doc.getDocumentCatalog().setAcroForm(null);
+            }
+            doc.getDocumentCatalog().getCOSObject().removeItem(org.apache.pdfbox.cos.COSName.PERMS);
+            for (int p = total - 1; p >= 0; p--) {
+                if (p / per != letter - 1) {
+                    doc.removePage(p);
+                }
+            }
+            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
+            doc.save(out);
+            return out.toByteArray();
+        }
+    }
+
     private byte[] renderForDownloadUnstamped(SignatureRequest envelope, String format) throws IOException {
         if ("pdf".equalsIgnoreCase(format) && envelope.isIncremental() && pdfRevisions != null) {
             // Signed or not yet, the real document is the file the signers are signing.

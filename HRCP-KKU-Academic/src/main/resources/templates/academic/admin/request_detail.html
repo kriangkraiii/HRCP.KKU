@@ -429,8 +429,30 @@
                     </a>
                   </div>
                 </div>
+                <!--/* เอกสารที่ 5 ลงนามครบแล้ว: หนังสือถึงกรรมการแยกท่านละฉบับ */-->
+                <th:block th:if="${entry.key == multiCopyDocType and !committeeLetters.isEmpty()}">
+                  <div th:each="letter : ${committeeLetters}" class="doc-grid-sub"
+                    th:classappend="${stage.done} ? 'dgs-done' : 'dgs-pending'">
+                    <div class="d-flex justify-content-between align-items-center">
+                      <small class="dgs-label"><i th:class="|fas ${stage.icon}|"></i>
+                        ฉบับที่ [[${letter.number}]]<th:block th:unless="${#strings.isEmpty(letter.committeeName)}">: เรียน [[${letter.committeeName}]]</th:block></small>
+                      <div class="d-flex gap-1">
+                        <a th:href="|/admin/academic/request/${request.id}/document/5/letter/${letter.number}?format=docx|"
+                          class="btn btn-outline-primary btn-sm" title="ดาวน์โหลด DOCX">
+                          <i class="fas fa-file-word"></i> DOCX
+                        </a>
+                        <a th:href="|/admin/academic/request/${request.id}/document/5/letter/${letter.number}?format=pdf|"
+                          class="btn btn-outline-danger btn-sm" title="ดาวน์โหลด PDF">
+                          <i class="fas fa-file-pdf"></i> PDF
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </th:block>
                 <!-- Generated copies -->
-                <div th:each="doc : ${documents}" th:if="${doc.documentType == entry.key}" class="doc-grid-sub"
+                <div th:each="doc : ${documents}"
+                  th:if="${doc.documentType == entry.key and !(entry.key == multiCopyDocType and !committeeLetters.isEmpty())}"
+                  class="doc-grid-sub"
                   th:classappend="${stage.done} ? 'dgs-done' : 'dgs-pending'">
                   <div class="d-flex justify-content-between align-items-center">
                     <small class="dgs-label"><i th:class="|fas ${stage.icon}|"></i>
