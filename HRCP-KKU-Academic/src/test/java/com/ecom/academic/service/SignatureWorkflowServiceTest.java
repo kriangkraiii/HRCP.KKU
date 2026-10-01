@@ -545,6 +545,37 @@ class SignatureWorkflowServiceTest {
 
         assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.SIGNED);
         assertThat(history(head)).isEmpty();
+        assertThat(awaitingOthers(head)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ลงนามแล้วแต่ยังรอคนถัดไป: อยู่ใน 'รอผู้อื่นลงนาม' จนกว่าจะครบ แล้วย้ายไป 'ลงนามครบแล้ว'")
+    void signedStepsWaitingOnOthersMoveToCompletedOnceEveryoneSigns() {
+        SignatureRequest envelope = createEnvelope().request();
+        signStep(stepOf(envelope, "head").getId(), head, headSignature.getId(), true, ActorContext.none());
+
+        assertThat(awaitingOthers(head)).extracting(SignatureStep::getId)
+                .containsExactly(stepOf(envelope, "head").getId());
+        assertThat(workflow.countSignedHistory(head, true)).isEqualTo(1);
+        assertThat(workflow.countSignedHistory(head, false)).isZero();
+        // The dean has not signed, so the round is in neither of their views.
+        assertThat(awaitingOthers(dean)).isEmpty();
+
+        // The whole signing order comes with it, so the head can see it is with the dean now.
+        assertThat(workflow.stepsByEnvelope(awaitingOthers(head)).get(envelope.getId()))
+                .extracting(SignatureStep::getSlotKey, SignatureStep::getStatus)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("head", SignatureStepStatus.SIGNED),
+                        org.assertj.core.groups.Tuple.tuple("dean", SignatureStepStatus.ACTIVE));
+
+        signStep(stepOf(envelope, "dean").getId(), dean, deanSignature.getId(), true, ActorContext.none());
+
+        assertThat(awaitingOthers(head)).isEmpty();
+        assertThat(history(head)).hasSize(1);
+        assertThat(workflow.countSignedHistory(head, true)).isZero();
+        assertThat(workflow.countSignedHistory(head, false)).isEqualTo(1);
+        assertThat(workflow.countSignedHistory(null, false)).isZero();
+        assertThat(workflow.stepsByEnvelope(List.of())).isEmpty();
     }
 
     @Test
@@ -554,12 +585,12 @@ class SignatureWorkflowServiceTest {
         completedRoundSignedByHead(5002L, "บันทึกข้อความ ข");
         completedRoundSignedByHead(5003L, "บันทึกข้อความ ค");
 
-        var page0 = workflow.findSignedHistory(head, null, PageRequest.of(0, 2));
+        var page0 = workflow.findSignedHistory(head, false, null, PageRequest.of(0, 2));
         assertThat(page0.getTotalElements()).isEqualTo(3);
         assertThat(page0.getTotalPages()).isEqualTo(2);
         assertThat(page0.getContent()).extracting(s -> s.getSignatureRequest().getDocumentLabel())
                 .containsExactly("บันทึกข้อความ ค", "บันทึกข้อความ ข");
-        assertThat(workflow.findSignedHistory(head, null, PageRequest.of(1, 2)).getContent())
+        assertThat(workflow.findSignedHistory(head, false, null, PageRequest.of(1, 2)).getContent())
                 .extracting(s -> s.getSignatureRequest().getDocumentLabel())
                 .containsExactly("บันทึกข้อความ ก");
 
@@ -574,11 +605,15 @@ class SignatureWorkflowServiceTest {
     }
 
     private List<SignatureStep> history(UserDtls signer) {
-        return workflow.findSignedHistory(signer, null, PageRequest.of(0, 50)).getContent();
+        return workflow.findSignedHistory(signer, false, null, PageRequest.of(0, 50)).getContent();
+    }
+
+    private List<SignatureStep> awaitingOthers(UserDtls signer) {
+        return workflow.findSignedHistory(signer, true, null, PageRequest.of(0, 50)).getContent();
     }
 
     private List<String> searchHistory(UserDtls signer, String search) {
-        return workflow.findSignedHistory(signer, search, PageRequest.of(0, 50)).getContent().stream()
+        return workflow.findSignedHistory(signer, false, search, PageRequest.of(0, 50)).getContent().stream()
                 .map(s -> s.getSignatureRequest().getDocumentLabel())
                 .toList();
     }

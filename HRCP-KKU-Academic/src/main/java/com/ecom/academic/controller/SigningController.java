@@ -111,20 +111,23 @@ public class SigningController {
     @GetMapping("/inbox")
     public String inbox(Principal principal, Model model,
             @RequestParam(name = "historyPage", defaultValue = "0") int historyPage,
-            @RequestParam(name = "historyQ", required = false) String historyQ) {
+            @RequestParam(name = "historyQ", required = false) String historyQ,
+            @RequestParam(name = "historyFilter", required = false) String historyFilter) {
         UserDtls me = currentUser(principal);
         String historySearch = historyQ == null || historyQ.isBlank() ? null : historyQ.trim();
+        // "pending" = rounds this person signed that still wait on someone after them; anything else = fully signed.
+        boolean awaitingOthers = "pending".equals(historyFilter);
         boolean isAdmin = me != null && ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole()));
 
         List<SignatureStep> pendingSteps = workflow.findInbox(me);
         List<SignatureRequest> sentEnvelopes = workflow.findSentEnvelopes(me);
         List<SignatureRequest> allActiveEnvelopes = isAdmin ? workflow.findAllActiveEnvelopes() : List.of();
 
-        Page<SignatureStep> signedHistory = workflow.findSignedHistory(me, historySearch,
+        Page<SignatureStep> signedHistory = workflow.findSignedHistory(me, awaitingOthers, historySearch,
                 PageRequest.of(Math.max(0, historyPage), HISTORY_PAGE_SIZE));
         if (signedHistory.getTotalPages() > 0 && signedHistory.getNumber() >= signedHistory.getTotalPages()) {
             // A page past the end, e.g. an old link: show the last page instead of an empty one.
-            signedHistory = workflow.findSignedHistory(me, historySearch,
+            signedHistory = workflow.findSignedHistory(me, awaitingOthers, historySearch,
                     PageRequest.of(signedHistory.getTotalPages() - 1, HISTORY_PAGE_SIZE));
         }
 
@@ -133,10 +136,16 @@ public class SigningController {
         model.addAttribute("allActiveEnvelopes", allActiveEnvelopes);
         model.addAttribute("signedHistory", signedHistory);
         model.addAttribute("historyPageNumbers", pageNumbers(signedHistory.getNumber(), signedHistory.getTotalPages()));
+        model.addAttribute("historySteps", workflow.stepsByEnvelope(signedHistory.getContent()));
+        model.addAttribute("historyAwaitingOthers", awaitingOthers);
+        model.addAttribute("historyCompletedCount", workflow.countSignedHistory(me, false));
+        model.addAttribute("historyPendingCount", workflow.countSignedHistory(me, true));
         model.addAttribute("historyQ", historySearch);
-        // Carried on the pager links; left off entirely when not searching.
-        model.addAttribute("historyQueryParam", historySearch == null ? ""
-                : "&historyQ=" + URLEncoder.encode(historySearch, StandardCharsets.UTF_8));
+        // Carried on the links; each part is left off entirely when it is the default.
+        String searchParam = historySearch == null ? ""
+                : "&historyQ=" + URLEncoder.encode(historySearch, StandardCharsets.UTF_8);
+        model.addAttribute("historySearchParam", searchParam);
+        model.addAttribute("historyQueryParam", (awaitingOthers ? "&historyFilter=pending" : "") + searchParam);
         model.addAttribute("isAdmin", isAdmin);
         model.addAttribute("currentUser", me);
         return "academic/esign/inbox";

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -255,19 +256,41 @@ public class SignatureWorkflowService {
     }
 
     /**
-     * Steps this person signed on envelopes that are now fully signed, newest first.
+     * Steps this person signed, newest first, on envelopes that are now fully
+     * signed ({@code awaitingOthers} false) or still waiting on someone after
+     * them ({@code awaitingOthers} true).
      *
      * <p>{@code search} matches the document name, the role signed as, the
      * verification code or the request type's Thai label; blank means everything.
      */
-    public Page<SignatureStep> findSignedHistory(UserDtls signer, String search, Pageable pageable) {
+    public Page<SignatureStep> findSignedHistory(UserDtls signer, boolean awaitingOthers, String search,
+            Pageable pageable) {
         if (signer == null || signer.getId() == null) return Page.empty(pageable);
         String term = search == null ? "" : search.trim().toLowerCase(Locale.ROOT);
         String pattern = "%" + term.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%";
         List<SignatureModule> modules = Arrays.stream(SignatureModule.values())
                 .filter(m -> !term.isEmpty() && m.getThaiLabel().toLowerCase(Locale.ROOT).contains(term))
                 .toList();
-        return stepRepository.findSignedHistory(signer.getId(), !term.isEmpty(), pattern, modules, pageable);
+        return stepRepository.findSignedHistory(signer.getId(), historyStatus(awaitingOthers),
+                !term.isEmpty(), pattern, modules, pageable);
+    }
+
+    /** How many entries {@link #findSignedHistory} has for this person, before any search. */
+    public long countSignedHistory(UserDtls signer, boolean awaitingOthers) {
+        if (signer == null || signer.getId() == null) return 0;
+        return stepRepository.countSignedHistory(signer.getId(), historyStatus(awaitingOthers));
+    }
+
+    /** Every step of each history entry's envelope in signing order, keyed by envelope id. */
+    public Map<Long, List<SignatureStep>> stepsByEnvelope(List<SignatureStep> history) {
+        List<Long> envelopeIds = history.stream().map(s -> s.getSignatureRequest().getId()).distinct().toList();
+        if (envelopeIds.isEmpty()) return Map.of();
+        return stepRepository.findBySignatureRequestIdInOrderByStepOrderAsc(envelopeIds).stream()
+                .collect(Collectors.groupingBy(s -> s.getSignatureRequest().getId()));
+    }
+
+    private static SignatureRequestStatus historyStatus(boolean awaitingOthers) {
+        return awaitingOthers ? SignatureRequestStatus.IN_PROGRESS : SignatureRequestStatus.COMPLETED;
     }
 
     /** Open envelopes sent/initiated by this user that are currently in progress. */
