@@ -258,7 +258,8 @@ class OfficeIssuedLockTest extends AbstractFlowTest {
         assertThat(html).doesNotContain("id=\"btnSubmitDoc\"")
                 .doesNotContain("บันทึกข้อมูลเอกสาร")
                 .contains("data-auto-draft=\"/api/draft/academic/" + request.getId() + "/2\"")
-                .contains("ยืนยันความถูกต้องและส่งเวียนลงนามต่อ")
+                // เอกสารที่ 2: นักทรัพยากรบุคคลผู้ตรวจลงนามเอง (SignatureAnchorRegistry.isSignedByReviewer)
+                .contains("ยืนยันความถูกต้องและลงนาม")
                 .contains("data-presave-skip-checks=\"true\"")
                 .contains("ตรวจสอบข้อมูลและลงนาม")
                 .doesNotContain("<span>บันทึกเอกสาร</span>");

@@ -187,8 +187,9 @@
                                     <input type="hidden" name="signerUserIds"
                                            th:value="${signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.userId : ''}">
                                 </div>
+                                <div th:replace="~{academic/esign/_signature_panel :: namedSigner(${slot})}"></div>
                                 <select name="signerUserIds" class="form-select signer-searchable-select"
-                                        th:unless="${signaturePanel.isReviewerSlot(slot.slotKey)}">
+                                        th:unless="${signaturePanel.isReviewerSlot(slot.slotKey) or signaturePanel.isNamedInForm(slot)}">
                                     <option value="">— ยังไม่ส่งในรอบนี้ —</option>
 
                                     <optgroup label="ลงนามเอง" th:if="${signaturePanel.currentUserOption != null}">
@@ -255,14 +256,17 @@
                 </div>
 
                 <div class="d-flex gap-2 align-items-center" th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer}">
-                    <!-- ปุ่มขอให้ลงนามใหม่ (Admin Re-sign trigger) -->
-                    <button type="button" class="btn btn-sm btn-outline-warning text-dark"
-                            data-bs-toggle="modal"
-                            th:data-bs-target="'#modal-resign-' + ${signaturePanel.activeEnvelope.id}">
-                        <i class="fas fa-rotate-left text-warning me-1"></i> ส่งกลับให้แก้ไขและลงนามใหม่
-                    </button>
-                    <!--/* สองปุ่มนี้ยกเลิกลายเซ็นรอบนี้เหมือนกัน แต่คนแก้ต่อคนละคน — ดู requestDocumentResign / cancel */-->
-                    <span th:replace="~{academic/_info_tip :: tip('ใช้เมื่อส่วนของผู้ยื่นต้องแก้ ลายเซ็นรอบนี้จะถูกยกเลิก เอกสารเปิดให้ผู้ยื่นแก้ และผู้ยื่นได้รับแจ้งพร้อมเหตุผล ระหว่างนี้คำร้องถูกพักไว้ทุกฉบับจนกว่าผู้ยื่นจะแก้และลงนามใหม่')}"></span>
+                    <!-- ปุ่มขอให้ลงนามใหม่ (Admin Re-sign trigger) — เฉพาะเอกสารของผู้ยื่น
+                         เอกสารของเจ้าหน้าที่ไม่มีอะไรให้ผู้ยื่นแก้ เหลือแค่ปุ่มยกเลิกการเวียนด้านล่าง -->
+                    <th:block th:if="${signaturePanel.applicantDocument}">
+                        <button type="button" class="btn btn-sm btn-outline-warning text-dark"
+                                data-bs-toggle="modal"
+                                th:data-bs-target="'#modal-resign-' + ${signaturePanel.activeEnvelope.id}">
+                            <i class="fas fa-rotate-left text-warning me-1"></i> ส่งกลับให้แก้ไขและลงนามใหม่
+                        </button>
+                        <!--/* สองปุ่มนี้ยกเลิกลายเซ็นรอบนี้เหมือนกัน แต่คนแก้ต่อคนละคน — ดู requestDocumentResign / cancel */-->
+                        <span th:replace="~{academic/_info_tip :: tip('ใช้เมื่อส่วนของผู้ยื่นต้องแก้ ลายเซ็นรอบนี้จะถูกยกเลิก เอกสารเปิดให้ผู้ยื่นแก้ และผู้ยื่นได้รับแจ้งพร้อมเหตุผล ระหว่างนี้คำร้องถูกพักไว้ทุกฉบับจนกว่าผู้ยื่นจะแก้และลงนามใหม่')}"></span>
+                    </th:block>
 
                     <button type="button" class="btn btn-sm btn-outline-secondary"
                             data-bs-toggle="modal"
@@ -272,8 +276,9 @@
                 </div>
             </div>
 
-            <!-- Modal ส่งกลับให้แก้ไขและลงนามใหม่ (สำหรับ Admin/Staff) -->
-            <div th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer}"
+            <!--/* Modal ส่งกลับให้แก้ไขและลงนามใหม่ (สำหรับ Admin/Staff) — เฉพาะเอกสารของผู้ยื่น */-->
+            <div th:if="${signaturePanel.activeEnvelope.status.open and signaturePanel.isAdminViewer
+                          and signaturePanel.applicantDocument}"
                  class="modal fade" th:id="'modal-resign-' + ${signaturePanel.activeEnvelope.id}" tabindex="-1" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow">
@@ -368,7 +373,10 @@
                     <th:block th:if="${signaturePanel.forwardWithdrawable}">
                         <span th:replace="~{academic/_info_tip :: tip('ใช้เมื่อส่วนของเจ้าหน้าที่ต้องแก้ เช่น เลือกผู้ลงนามผิด หรือกรอกช่องของเจ้าหน้าที่ผิด ระบบถอนเฉพาะผู้ลงนามที่ส่งต่อไปและยังไม่ได้ลงนาม ลายเซ็นของผู้ยื่นยังอยู่ แก้แล้วส่งเวียนลงนามต่อได้เลย ผู้ยื่นไม่ต้องลงนามใหม่ — ถ้าส่วนของผู้ยื่นผิด ให้ใช้ “ส่งกลับให้แก้ไขและลงนามใหม่”')}"></span>
                     </th:block>
-                    <th:block th:unless="${signaturePanel.forwardWithdrawable}">
+                    <th:block th:if="${!signaturePanel.forwardWithdrawable and !signaturePanel.applicantDocument}">
+                        <span th:replace="~{academic/_info_tip :: tip('เอกสารฉบับนี้เป็นของเจ้าหน้าที่ ยกเลิกแล้วแก้เอกสารและส่งเวียนใหม่ได้ ลายเซ็นที่ลงไปแล้วจะเป็นโมฆะ')}"></span>
+                    </th:block>
+                    <th:block th:if="${!signaturePanel.forwardWithdrawable and signaturePanel.applicantDocument}">
                         <span th:replace="~{academic/_info_tip :: tip('ใช้เมื่อส่วนของเจ้าหน้าที่ต้องแก้ เช่น เลือกผู้ลงนามผิด ลายเซ็นรอบนี้จะถูกยกเลิก และเจ้าหน้าที่แก้แล้วส่งเวียนใหม่ได้ ผู้ยื่นแก้ไม่ได้ — ถ้าส่วนของผู้ยื่นผิด ให้ใช้ “ส่งกลับให้แก้ไขและลงนามใหม่”')}"></span>
                     </th:block>
                 </form>
@@ -557,8 +565,13 @@
                                    th:value="${signaturePanel.currentUserOption != null ? signaturePanel.currentUserOption.userId : ''}">
                         </div>
 
+                        <th:block th:if="${signaturePanel.isAdminViewer}">
+                            <div th:replace="~{academic/esign/_signature_panel :: namedSigner(${slot})}"></div>
+                        </th:block>
+
                         <!-- สำหรับ Admin: สามารถค้นหาและเลือกผู้ลงนามได้ -->
-                        <div th:if="${signaturePanel.isAdminViewer and !signaturePanel.isReviewerSlot(slot.slotKey)}">
+                        <div th:if="${signaturePanel.isAdminViewer and !signaturePanel.isReviewerSlot(slot.slotKey)
+                                      and !signaturePanel.isNamedInForm(slot)}">
                             <select name="signerUserIds" class="form-select signer-searchable-select">
                                 <option value="">— ไม่ลงนามในรอบนี้ —</option>
 
@@ -633,6 +646,28 @@
 
         </form>
     </div>
+
+    <!--/* ผู้ลงนามตามชื่อในแบบฟอร์ม — named_signer.js จับคู่ชื่อที่กรอกกับรายชื่อนี้ */-->
+    <th:block th:if="${signaturePanel.signerNamedInForm}">
+        <script th:inline="javascript">
+            window.NAMED_SIGNER_CANDIDATES = /*[[${signaturePanel.namedCandidates()}]]*/ [];
+        </script>
+        <script src="/js/named_signer.js"></script>
+    </th:block>
+</div>
+
+<!--
+  ตำแหน่งที่ผู้ลงนามคือคนที่ชื่ออยู่ในช่องชื่อของแบบฟอร์ม (SignatureAnchorRegistry.isSignerNamedInForm)
+  ไม่มีตัวเลือกผู้ลงนาม — named_signer.js เติมชื่อและบัญชีตามชื่อที่กรอก เซิร์ฟเวอร์จับคู่ซ้ำเองตอนส่งเสมอ
+-->
+<div th:fragment="namedSigner(slot)" th:if="${signaturePanel.isNamedInForm(slot)}"
+     class="p-2 border rounded bg-light" th:attr="data-named-signer=${slot.anchorPlaceholder}">
+    <div class="d-flex align-items-center gap-2">
+        <i class="fas fa-user-check text-primary" data-named-signer-icon></i>
+        <span class="fw-semibold" data-named-signer-label>—</span>
+    </div>
+    <div class="small text-muted" data-named-signer-hint>ผู้ลงนามตามชื่อที่กรอกในเอกสาร</div>
+    <input type="hidden" name="signerUserIds" value="">
 </div>
 
 </body>

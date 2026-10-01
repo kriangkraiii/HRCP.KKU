@@ -414,6 +414,11 @@
                                 <textarea name="signerComment" id="signerComment" class="form-control"
                                           rows="3" maxlength="1000"
                                           placeholder="ระบุข้อสังเกตหรือเหตุผลประกอบการพิจารณา (ถ้ามี)"></textarea>
+                                <!-- ตัวอย่างเอกสารวาดความเห็นไม่ลงเพราะยาวเกินช่อง — ตอนลงนามจริงจะถูกปฏิเสธ -->
+                                <div class="text-danger small mt-1" id="commentTooLong" hidden>
+                                    <i class="fas fa-triangle-exclamation"></i>
+                                    ความเห็นยาวเกินช่องในเอกสาร กรุณาย่อให้สั้นลงก่อนลงนาม
+                                </div>
 
                                 <!-- เลือกไม่เห็นควร = หยุดการเวียนและตีเอกสารกลับ ไม่ใช่การลงนาม
                                      จึงเตือนให้ชัดก่อน แล้วฝั่งเซิร์ฟเวอร์แยกทางเองที่ SigningController -->
@@ -600,18 +605,56 @@
                         }
                     }
 
+                    // ตัวอย่างเอกสารต้องเป็นเอกสารที่จะได้จริง: ลายเซ็นที่เลือก + คำตอบที่ติ๊ก + ความเห็นที่พิมพ์
+                    // เดิมส่งไปแค่ลายเซ็น คำตอบจึงโผล่ในเอกสารหลังลงนามแล้วเท่านั้น
+                    function previewUrl() {
+                        const params = new URLSearchParams();
+                        const sig = document.querySelector('input[name="userSignatureId"]:checked');
+                        if (sig) params.set('userSignatureId', sig.value);
+                        const choice = document.querySelector('input.js-signer-choice:checked');
+                        if (choice) params.set('choice', choice.value);
+                        const comment = document.getElementById('signerComment');
+                        if (comment && comment.value.trim()) params.set('comment', comment.value.trim());
+                        const query = params.toString();
+                        return '/esign/sign/' + stepId + '/preview' + (query ? '?' + query : '');
+                    }
+
+                    let lastUrl = null;
+                    function reloadPreview() {
+                        const url = previewUrl();
+                        if (url === lastUrl) return;
+                        lastUrl = url;
+                        if (window.activeEsignViewer && typeof window.activeEsignViewer.loadNewPdf === 'function') {
+                            window.activeEsignViewer.loadNewPdf(url);
+                        }
+                    }
+
                     sigRadios.forEach(function(radio) {
                         if (radio.checked) {
                             updateSelectedSigLabel(radio);
                         }
                         radio.addEventListener('change', function() {
                             updateSelectedSigLabel(this);
-                            const sigId = this.value;
-                            const newPdfUrl = '/esign/sign/' + stepId + '/preview?userSignatureId=' + sigId;
-                            if (window.activeEsignViewer && typeof window.activeEsignViewer.loadNewPdf === 'function') {
-                                window.activeEsignViewer.loadNewPdf(newPdfUrl);
-                            }
+                            reloadPreview();
                         });
+                    });
+
+                    document.querySelectorAll('input.js-signer-choice').forEach(function(radio) {
+                        radio.addEventListener('change', reloadPreview);
+                    });
+                    const commentBox = document.getElementById('signerComment');
+                    if (commentBox) {
+                        let typing = null;
+                        commentBox.addEventListener('input', function() {
+                            clearTimeout(typing);
+                            typing = setTimeout(reloadPreview, 500);
+                        });
+                    }
+
+                    // เซิร์ฟเวอร์บอกว่าความเห็นยาวเกินช่อง (ตัวอย่างจึงไม่มีความเห็น) — เตือนใต้ช่องความเห็น
+                    const tooLong = document.getElementById('commentTooLong');
+                    document.addEventListener('esign:preview-headers', function(e) {
+                        if (tooLong) tooLong.hidden = e.detail.warning !== 'too-long';
                     });
                 }
             }

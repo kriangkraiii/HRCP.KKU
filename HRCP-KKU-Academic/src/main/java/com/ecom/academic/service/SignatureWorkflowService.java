@@ -621,6 +621,11 @@ public class SignatureWorkflowService {
         if (isDocumentLocked(module, requestId, documentType)) {
             return Result.failed("เอกสารฉบับนี้อยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว");
         }
+        NamedSigners named = signersNamedInForm(module, documentType, frozenJson, assignments);
+        if (named.problem() != null) {
+            return Result.failed(named.problem());
+        }
+        assignments = named.assignments();
         if (assignments == null || assignments.isEmpty()) {
             return Result.failed("กรุณาเลือกผู้ลงนามอย่างน้อยหนึ่งคน");
         }
@@ -770,6 +775,17 @@ public class SignatureWorkflowService {
         }
 
         List<SignatureSlot> slots = slotsFor(envelope.getModule(), envelope.getDocumentType());
+
+        // ผู้ลงนามตามชื่อในแบบฟอร์ม (เอกสารที่ 3) — อ่านจากเอกสารฉบับที่บันทึกล่าสุด
+        NamedSigners named = signersNamedInForm(envelope.getModule(), envelope.getDocumentType(),
+                snapshotProvider == null ? envelope.getFrozenJson()
+                        : snapshotProvider.currentJsonFor(envelope.getModule(), envelope.getRequestId(),
+                                envelope.getDocumentType()),
+                assignments);
+        if (named.problem() != null) {
+            return Result.failed(named.problem());
+        }
+        assignments = named.assignments();
 
         int before = envelope.getSteps().size();
         String problem = reviewerSlotProblem(envelope.getModule(), envelope.getDocumentType(), assignments, adminUser);
@@ -1881,7 +1897,75 @@ public class SignatureWorkflowService {
                 deadlineAdvisory,
                 revivableEnvelope,
                 applicantMayWithdraw,
-                SignatureAnchorRegistry.reviewerSignedSlots(module, documentType));
+                SignatureAnchorRegistry.reviewerSignedSlots(module, documentType),
+                SignatureAnchorRegistry.isSignerNamedInForm(module, documentType));
+    }
+
+    /** ผู้ลงนามหลังจับคู่กับชื่อในแบบฟอร์มแล้ว หรือเหตุที่จับคู่ไม่ได้ */
+    private record NamedSigners(List<SignerAssignment> assignments, String problem) {
+    }
+
+    /**
+     * เอกสารที่ผู้ลงนามคือคนที่ชื่ออยู่ในแบบฟอร์ม ({@link SignatureAnchorRegistry#isSignerNamedInForm}):
+     * ผู้ลงนามของแต่ละตำแหน่งหาจากชื่อที่กรอกในช่องชื่อของตำแหน่งนั้น ไม่ใช่จากที่เลือกมา
+     *
+     * <p>ผู้ลงนามที่ส่งมาสำหรับตำแหน่งเหล่านั้นถูกทิ้ง — เอกสารระบุชื่อคนหนึ่งแต่ให้อีกคนเซ็นไม่ได้
+     * ช่องชื่อที่ยังว่างแปลว่าตำแหน่งนั้นยังไม่อยู่ในรอบนี้ จับคู่ชื่อแบบเดียวกับรายการชื่อในแบบฟอร์ม
+     * (ชื่อแสดงของบุคลากร) ชื่อที่ไม่ตรงใครหรือตรงหลายคนส่งไม่ได้ ต้องเลือกจากรายการ
+     */
+    private NamedSigners signersNamedInForm(SignatureModule module, int documentType, String json,
+            List<SignerAssignment> requested) {
+        if (!SignatureAnchorRegistry.isSignerNamedInForm(module, documentType)) {
+            return new NamedSigners(requested, null);
+        }
+        Map<String, Object> data;
+        try {
+            data = new com.fasterxml.jackson.databind.ObjectMapper().readValue(json == null ? "{}" : json,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                    });
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return new NamedSigners(requested, "อ่านข้อมูลในเอกสารไม่ได้ กรุณาบันทึกเอกสารใหม่");
+        }
+        List<com.ecom.academic.model.StaffMember> staff = staffMemberService.findAllWithAccounts().stream()
+                .filter(com.ecom.academic.model.StaffMember::isSignable)
+                .toList();
+
+        List<SignerAssignment> result = new ArrayList<>();
+        java.util.Set<String> bound = new java.util.HashSet<>();
+        for (SignatureSlot slot : slotsFor(module, documentType)) {
+            if ("applicant".equalsIgnoreCase(slot.slotKey()) || slot.anchorPlaceholder() == null
+                    || SignatureAnchorRegistry.isSignedByReviewer(module, documentType, slot.slotKey())) {
+                continue;
+            }
+            bound.add(slot.slotKey());
+            String name = normalizeName(data.get(slot.anchorPlaceholder()));
+            if (name.isEmpty()) {
+                continue;
+            }
+            List<Integer> matches = staff.stream()
+                    .filter(s -> normalizeName(s.getDisplayName()).equals(name))
+                    .map(s -> s.getUser().getId())
+                    .distinct()
+                    .toList();
+            if (matches.isEmpty()) {
+                return new NamedSigners(requested, "ไม่พบบัญชีผู้ใช้ของ “" + name + "” (" + slot.roleLabel()
+                        + ") ในระบบ — กรุณาเลือกชื่อจากรายการในช่อง" + slot.roleLabel());
+            }
+            if (matches.size() > 1) {
+                return new NamedSigners(requested, "มีบุคลากรชื่อ “" + name + "” มากกว่าหนึ่งคน ("
+                        + slot.roleLabel() + ") — กรุณาแจ้งผู้ดูแลระบบให้แก้ทะเบียนบุคลากร");
+            }
+            result.add(new SignerAssignment(slot.slotKey(), matches.get(0)));
+        }
+        if (requested != null) {
+            requested.stream().filter(a -> !bound.contains(a.slotKey())).forEach(result::add);
+        }
+        return new NamedSigners(result, null);
+    }
+
+    /** ชื่อสำหรับเทียบ: ตัดช่องว่างหัวท้าย และยุบช่องว่างซ้อนเป็นช่องเดียว */
+    static String normalizeName(Object value) {
+        return value == null ? "" : String.valueOf(value).strip().replaceAll("\\s+", " ");
     }
 
     /**

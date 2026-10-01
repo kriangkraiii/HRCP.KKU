@@ -65,6 +65,10 @@ public class AcademicAdminController {
 
     private static final Logger logger = LoggerFactory.getLogger(AcademicAdminController.class);
 
+    /** ส่งกลับให้ผู้ยื่นแก้ในเอกสารของเจ้าหน้าที่ — ใช้ทั้งสองเฟส */
+    static final String STAFF_DOCUMENT_NOT_SENT_BACK = "เอกสารฉบับนี้เป็นของเจ้าหน้าที่ ผู้ยื่นแก้ไม่ได้ "
+            + "— หากต้องแก้ไข ให้ยกเลิกการเวียนลงนาม แล้วแก้เอกสารและส่งเวียนใหม่";
+
     private final AcademicRequestService requestService;
 
     private final DocumentGenerationService documentService;
@@ -935,6 +939,13 @@ public class AcademicAdminController {
         if (officeIssued(id, type)) {
             return "redirect:/admin/academic/request/" + id
                     + "/document/" + type + "?error=office_issued";
+        }
+        // เอกสารของเจ้าหน้าที่ไม่มีอะไรให้ผู้ยื่นแก้ — เดิมยกเลิกซองเหมือนปุ่มยกเลิก แล้วยังแจ้งผู้ยื่นให้
+        // "แก้เอกสารและลงนามใหม่" ทั้งที่ผู้ยื่นแก้ไม่ได้และไม่ได้ลงนามในฉบับนี้
+        if (!com.ecom.academic.service.DocumentFieldOwnership.isApplicantDocument(
+                com.ecom.academic.model.SignatureModule.ACADEMIC, type)) {
+            redirectAttributes.addFlashAttribute("errorMsg", STAFF_DOCUMENT_NOT_SENT_BACK);
+            return "redirect:/admin/academic/request/" + id + "/document/" + type;
         }
 
         var actorContext = new com.ecom.academic.service.SignatureWorkflowService.ActorContext(

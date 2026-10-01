@@ -1044,6 +1044,28 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
             String slot = slotKeys.nth(i).getAttribute("value");
             Locator field = selects.nth(i);
             UserDtls signer = signers.get(slot);
+            // ผู้ลงนามตามชื่อในแบบฟอร์ม (เอกสารที่ 3): ไม่มีตัวเลือก — กรอกชื่อของผู้ลงนามลงช่องชื่อของตำแหน่งแทน
+            String namedField = (String) field.evaluate(
+                    "e => { const b = e.closest('[data-named-signer]'); return b ? b.getAttribute('data-named-signer') : null }");
+            if (namedField != null) {
+                String id = signer == null ? "" : String.valueOf(signer.getId());
+                page.evaluate("""
+                        ([name, id]) => {
+                          const c = (window.NAMED_SIGNER_CANDIDATES || []).find(x => String(x.userId) === id);
+                          const f = [...document.querySelectorAll('[name="' + name + '"]')]
+                              .find(e => !e.closest('[data-named-signer]'));
+                          if (!f) return;
+                          f.value = c ? c.displayName : '';
+                          f.dispatchEvent(new Event('input', { bubbles: true }));
+                          f.dispatchEvent(new Event('change', { bubbles: true }));
+                        }
+                        """, List.of(namedField, id));
+                assertThat((String) field.evaluate("e => e.value"))
+                        .as(who + ": ชื่อใน " + namedField + " ต้องจับคู่ได้กับ " + slot + " = "
+                                + (signer == null ? "-" : signer.getEmail()))
+                        .isEqualTo(id);
+                continue;
+            }
             if ("select".equalsIgnoreCase((String) field.evaluate("e => e.tagName"))) {
                 String value = signer == null ? "" : String.valueOf(signer.getId());
                 field.evaluate("(e, v) => { e.value = v; e.dispatchEvent(new Event('change', {bubbles:true})); }", value);

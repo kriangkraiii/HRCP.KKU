@@ -270,6 +270,8 @@ public class SigningController {
     public ResponseEntity<byte[]> preview(
             @PathVariable Long stepId,
             @RequestParam(value = "userSignatureId", required = false) Long userSignatureId,
+            @RequestParam(value = "choice", required = false) String choice,
+            @RequestParam(value = "comment", required = false) String comment,
             Principal principal) {
         UserDtls me = currentUser(principal);
         SignatureStep step = workflow.findStep(stepId).orElse(null);
@@ -301,17 +303,50 @@ public class SigningController {
             }
         }
 
+        // คำตอบและความเห็นที่ผู้ลงนามเลือกบนหน้าลงนามแต่ยังไม่ได้ลงนาม — วาดลงตัวอย่างทันทีที่ติ๊ก
+        // ไม่ใช่ไปโผล่หลังลงนามแล้ว ใช้วาดอย่างเดียว ไม่บันทึกอะไร
+        if (choice != null && !choice.isBlank()) {
+            SignatureAnchorRegistry.SignerChoice question = workflow.signerChoiceFor(stepId);
+            if (question == null || !question.options().contains(choice)) {
+                return ResponseEntity.badRequest().build();
+            }
+        } else {
+            choice = step.getSignerChoiceValue();
+        }
+        if (comment != null) {
+            comment = comment.strip();
+            if (comment.length() > 1000) {
+                comment = comment.substring(0, 1000);
+            }
+        } else {
+            comment = step.getSignerComment();
+        }
+
         try {
-            byte[] pdf = step.getSignatureRequest().isIncremental()
-                    // The file the signer is about to sign, not a fresh rendering of it
-                    ? incrementalSigning.preview(step.getSignatureRequest(), step, renderer.previewImage(step, previewSig))
-                    : renderer.renderPdf(step.getSignatureRequest(), step, previewSig);
+            String warning = null;
+            byte[] pdf;
+            if (step.getSignatureRequest().isIncremental()) {
+                // The file the signer is about to sign, not a fresh rendering of it
+                byte[] image = renderer.previewImage(step, previewSig);
+                try {
+                    pdf = incrementalSigning.preview(step.getSignatureRequest(), step, image, choice, comment);
+                } catch (com.ecom.academic.service.pdf.PdfIncrementService.DoesNotFitException tooLong) {
+                    // ความเห็นยาวเกินช่อง — ตัวอย่างไม่มีความเห็น และบอกหน้าลงนามให้เตือน (ตอนลงนามจริงจะถูกปฏิเสธ)
+                    warning = "too-long";
+                    pdf = incrementalSigning.preview(step.getSignatureRequest(), step, image, choice, null);
+                }
+            } else {
+                pdf = renderer.renderPdf(step.getSignatureRequest(), step, previewSig);
+            }
             if (pdf != null && pdf.length > 0) {
-                return ResponseEntity.ok()
+                var ok = ResponseEntity.ok()
                         .contentType(MediaType.APPLICATION_PDF)
                         .header("Content-Disposition", "inline; filename=\"document.pdf\"")
-                        .header("X-Preview-Format", "pdf")
-                        .body(pdf);
+                        .header("X-Preview-Format", "pdf");
+                if (warning != null) {
+                    ok.header("X-Preview-Warning", warning);
+                }
+                return ok.body(pdf);
             }
             // No LibreOffice on this host — hand over the DOCX so the signer can
             // still read what they are being asked to sign.

@@ -283,6 +283,21 @@ public class SignatureAnchorRegistry {
         return REVIEWER_SIGNED.getOrDefault(new DocKey(module, documentType), java.util.Set.of()).contains(slotKey);
     }
 
+    /**
+     * เอกสารที่ผู้ลงนามแต่ละตำแหน่งคือคนที่ชื่ออยู่ในช่องชื่อของตำแหน่งนั้นในแบบฟอร์ม
+     * ({@link SignatureSlot#anchorPlaceholder()}) — เลือกผู้ลงนามแยกจากชื่อในเอกสารไม่ได้
+     *
+     * <p>เอกสารที่ 3 เฟส 1: เจ้าหน้าที่กรอกชื่อหัวหน้าสาขา รองคณบดี คณบดี และเจ้าหน้าที่ลงในคำสั่ง
+     * เดิมเลือกผู้ลงนามได้อีกที่ เอกสารจึงระบุชื่อคนหนึ่งแต่ให้อีกคนเซ็นได้
+     */
+    private static final java.util.Set<DocKey> SIGNERS_NAMED_IN_FORM = java.util.Set.of(
+            new DocKey(SignatureModule.ACADEMIC, 3));
+
+    /** ผู้ลงนามของเอกสารนี้มาจากชื่อที่กรอกในแบบฟอร์มหรือไม่ */
+    public static boolean isSignerNamedInForm(SignatureModule module, int documentType) {
+        return SIGNERS_NAMED_IN_FORM.contains(new DocKey(module, documentType));
+    }
+
     /** ช่องของเอกสารนี้ที่เจ้าหน้าที่ผู้ตรวจลงนามเอง */
     public static java.util.Set<String> reviewerSignedSlots(SignatureModule module, int documentType) {
         return REVIEWER_SIGNED.getOrDefault(new DocKey(module, documentType), java.util.Set.of());
