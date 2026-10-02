@@ -289,8 +289,16 @@
             }
         }
 
+        // คะแนนรายส่วน 0–5: max="5" ไม่กันการพิมพ์ จึงบีบค่าเองทันทีที่พิมพ์ (เซิร์ฟเวอร์บีบซ้ำ — Doc7Scoring)
         document.querySelectorAll('.sec-score-single').forEach(input => {
-            input.addEventListener('input', calculateDoc6Scores);
+            input.addEventListener('input', function () {
+                const max = parseFloat(this.max);
+                const min = parseFloat(this.min);
+                const v = parseFloat(this.value);
+                if (!isNaN(v) && !isNaN(max) && v > max) this.value = max;
+                if (!isNaN(v) && !isNaN(min) && v < min) this.value = min;
+                calculateDoc6Scores();
+            });
         });
 
         // ==================== Checkbox toggle สำหรับ ✔️ ====================
@@ -319,9 +327,16 @@
                                 el.value = data[key];
                             }
                         });
-                        if (currentDocType === 6) {
-                            calculateDoc6Scores();
-                        }
+                        // แบบประเมินที่มีคะแนนรายส่วน (ปัจจุบันคือเอกสารที่ 7 — เดิมเช็กเลข 6 ซึ่งเลื่อนไปแล้ว)
+                        // ค่าที่บันทึกไว้ก่อนมีการบีบช่วงอาจเกิน 5 — ส่ง input เฉพาะช่องที่เกิน ให้บีบและบันทึกค่าที่ถูก
+                        // ช่องอื่นไม่ส่ง เพื่อไม่ให้แค่เปิดดูก็บันทึกร่างทับเอกสาร
+                        document.querySelectorAll('.sec-score-single').forEach(function (el) {
+                            const v = parseFloat(el.value);
+                            if (!isNaN(v) && (v > parseFloat(el.max) || v < parseFloat(el.min))) {
+                                el.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        });
+                        if (document.querySelector('.sec-score-single')) calculateDoc6Scores();
                     }
                 } catch (e) {
                     console.warn('Failed to load existing data:', e);

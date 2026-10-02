@@ -154,9 +154,12 @@ public class AutoDraftApiController {
             // ตรงนี้ด้วย ซองจะแช่แข็งเอกสารที่ไม่มีระดับผลประเมิน และสถานะไม่เลื่อนเมื่อลงนามครบ
             if (isAdmin && docType == 7) {
                 Map<String, String> fields = parseFields(jsonData);
-                if (fields != null && Doc7Scoring.hasAllSectionScores(fields)) {
+                if (fields != null) {
                     Map<String, String> derived = new java.util.LinkedHashMap<>(fields);
-                    Doc7Scoring.derive(derived);
+                    Doc7Scoring.clampSectionScores(derived);
+                    if (Doc7Scoring.hasAllSectionScores(derived)) {
+                        Doc7Scoring.derive(derived);
+                    }
                     jsonData = new ObjectMapper().writeValueAsString(derived);
                 }
             }
