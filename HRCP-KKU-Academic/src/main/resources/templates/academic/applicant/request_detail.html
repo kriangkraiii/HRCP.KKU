@@ -121,6 +121,19 @@
                     </form>
                 </div>
             </div>
+            <!-- ข้อเสนอแนะจากคณะอนุกรรมการ (เอกสารที่ 6) — ขึ้นเมื่อแจ้งผู้ยื่นแล้วเท่านั้น -->
+            <div th:if="${committeeSuggestions != null}" class="result-alert"
+                 th:classappend="${request.currentStatus.name() == 'COMPLETED_REVISE'} ? 'ra-revise' : 'ra-pass'"
+                 id="committeeSuggestions">
+                <i class="fas fa-comment-dots"></i>
+                <div>
+                    <span>ข้อเสนอแนะจากคณะอนุกรรมการ</span>
+                    <div class="ra-detail u-pre-wrap" th:text="${committeeSuggestions}">ข้อเสนอแนะ</div>
+                    <div class="ra-detail" th:unless="${request.currentStatus.name() == 'COMPLETED_REVISE'
+                                                          or request.currentStatus.name() == 'REVISION_SUBMITTED'}">
+                        แจ้งเพื่อทราบ ไม่ต้องแก้ไขเอกสาร</div>
+                </div>
+            </div>
             <div th:if="${request.currentStatus.name() == 'COMPLETED'}" class="result-alert ra-completed">
                 <i class="fas fa-flag-checkered"></i> <span>คำร้องดำเนินการเสร็จสิ้นแล้ว</span>
             </div>

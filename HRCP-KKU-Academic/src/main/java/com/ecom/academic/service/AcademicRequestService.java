@@ -1619,4 +1619,162 @@ public class AcademicRequestService {
         Long notifyId = request.getId();
         afterCommit.run(() -> emailService.sendSuggestionEmail(notifyId, suggestionsText));
     }
+
+    public void sendSuggestionNoticeEmail(AcademicRequest request, String suggestionsText) {
+        Long notifyId = request.getId();
+        afterCommit.run(() -> emailService.sendSuggestionNoticeEmail(notifyId, suggestionsText));
+    }
+
+    /**
+     * ช่องที่ดึงมาจากเอกสารก่อนหน้า แก้ในเอกสารฉบับนี้ไม่ได้ — ทั้งหน้าฟอร์ม (แสดงแบบอ่านอย่างเดียว)
+     * การกดบันทึก และการบันทึกร่างอัตโนมัติ (ซึ่งปุ่มส่งเวียนลงนามใช้) ใช้ค่าจากที่นี่ที่เดียว
+     * ช่องที่ต้นทางยังว่างไม่อยู่ในผลลัพธ์ และยังกรอกเองได้ เอกสารอื่นได้แผนที่ว่าง
+     */
+    public Map<String, String> carriedFields(AcademicRequest request, int documentType) {
+        return switch (documentType) {
+            case 4 -> carriedIntoDoc4(request);
+            case 5 -> carriedIntoDoc5(request);
+            case 7 -> carriedIntoDoc7(request);
+            default -> Map.of();
+        };
+    }
+
+    /**
+     * ข้อมูลที่จะบันทึกลงเอกสาร โดยแทนช่องที่ดึงจากเอกสารก่อนหน้าด้วยค่าจากต้นทาง
+     *
+     * <p>ช่องชื่อผู้ลงนามที่ถูกล็อก (เช่น ประธานกรรมการในเอกสารที่ 7) อาจมีรหัสบัญชีที่เคยเลือกไว้
+     * ติดมาจากร่างเดิม ถ้าชื่อที่ต้นทางเปลี่ยนไปแล้ว รหัสนั้นเป็นของคนเก่า — ทิ้งไปให้ระบบจับคู่จากชื่อ
+     * มิฉะนั้นจะส่งเวียนลงนามไม่ได้ และเจ้าหน้าที่ก็เลือกคนใหม่ในช่องที่ล็อกไม่ได้
+     */
+    public Map<String, String> withCarriedFields(AcademicRequest request, int documentType,
+            Map<String, String> data) {
+        Map<String, String> carried = carriedFields(request, documentType);
+        if (carried.isEmpty()) {
+            return data;
+        }
+        Map<String, String> saved = getLatestDocumentData(request.getId(), documentType);
+        Map<String, String> result = new java.util.LinkedHashMap<>(data);
+        carried.forEach((field, value) -> {
+            String signerId = DocumentFieldOwnership.signerIdField(field);
+            if (result.containsKey(signerId)
+                    && (saved == null || !value.equals(saved.get(field)))) {
+                result.remove(signerId);
+            }
+            result.put(field, value);
+        });
+        return result;
+    }
+
+    /** ข้อมูลผู้ยื่นจากเอกสารที่ 1 และรายชื่อกรรมการจากเอกสารที่ 3 */
+    private Map<String, String> carriedIntoDoc4(AcademicRequest request) {
+        Map<String, String> doc1 = firstDocumentJson(request.getId(), 1);
+        Map<String, String> doc3 = firstDocumentJson(request.getId(), 3);
+        UserDtls applicant = request.getApplicant();
+        String requested = "✓".equals(doc1.get("chk1")) ? "ผู้ช่วยศาสตราจารย์"
+                : "✓".equals(doc1.get("chk2")) ? "รองศาสตราจารย์" : null;
+
+        Map<String, String> carried = new java.util.LinkedHashMap<>();
+        carried.put("applicant_title", doc1.getOrDefault("title", applicant != null ? applicant.getTitle() : null));
+        carried.put("applicant_name", doc1.getOrDefault("applicant_name", applicant != null ? applicant.getName() : null));
+        carried.put("employee_type", doc1.get("employee_type"));
+        carried.put("current_position", doc1.getOrDefault("current_position",
+                applicant != null ? applicant.getAcademicPosition() : null));
+        carried.put("requested_position", requested);
+        for (int i = 1; i <= 3; i++) {
+            carried.put("committee_" + i + "_name", doc3.get("committee_" + i + "_name"));
+        }
+        carried.values().removeIf(v -> v == null || v.isBlank());
+        return carried;
+    }
+
+    /** ค่าของเอกสารที่ 4 ที่บันทึกไว้ ช่องไหนยังไม่ได้บันทึกใช้ค่าที่เอกสารที่ 4 จะดึงมาแทน */
+    private Map<String, String> doc4AsSaved(AcademicRequest request) {
+        Map<String, String> doc4 = new java.util.HashMap<>(carriedIntoDoc4(request));
+        firstDocumentJson(request.getId(), 4).forEach((k, v) -> {
+            if (v != null && !v.isBlank()) {
+                doc4.put(k, v);
+            }
+        });
+        return doc4;
+    }
+
+    /** เลขที่/วันที่คำสั่งอ้างอิง ข้อมูลผู้ยื่น และรายชื่อกรรมการ จากคำสั่งในเอกสารที่ 4 */
+    private Map<String, String> carriedIntoDoc5(AcademicRequest request) {
+        Map<String, String> doc4 = doc4AsSaved(request);
+        String orderNo = doc4.get("order_no");
+        String year = doc4.get("year");
+        Map<String, String> carried = new java.util.LinkedHashMap<>();
+        carried.put("ref_order_no", orderNo == null || orderNo.isBlank() || year == null || year.isBlank()
+                ? orderNo : orderNo.trim() + "/" + year.trim());
+        carried.put("ref_order_date", doc4.get("order_date"));
+        carried.put("applicant_title", doc4.get("applicant_title"));
+        carried.put("applicant_name", doc4.get("applicant_name"));
+        carried.put("applicant_employee_type", doc4.get("employee_type"));
+        carried.put("applicant_current_pos", doc4.get("current_position"));
+        carried.put("applicant_req_pos", doc4.get("requested_position"));
+        for (int i = 1; i <= 3; i++) {
+            carried.put("committee_name_" + i, doc4.get("committee_" + i + "_name"));
+        }
+        carried.values().removeIf(v -> v == null || v.isBlank());
+        return carried;
+    }
+
+    /** ข้อมูลผู้เสนอขอและรายชื่อกรรมการ ตามคำสั่งแต่งตั้งในเอกสารที่ 4 */
+    private Map<String, String> carriedIntoDoc7(AcademicRequest request) {
+        Map<String, String> doc4 = doc4AsSaved(request);
+        Map<String, String> carried = new java.util.LinkedHashMap<>();
+        carried.put("title", doc4.get("applicant_title"));
+        carried.put("applicant_name", doc4.get("applicant_name"));
+        carried.put("requested_position", doc4.get("requested_position"));
+        for (int i = 1; i <= 3; i++) {
+            carried.put("committee_" + i + "_name", doc4.get("committee_" + i + "_name"));
+        }
+        carried.values().removeIf(v -> v == null || v.isBlank());
+        return carried;
+    }
+
+    private Map<String, String> firstDocumentJson(Long requestId, int type) {
+        List<AcademicDocument> docs = getDocumentsByType(requestId, type);
+        if (docs.isEmpty() || docs.get(0).getJsonData() == null) {
+            return Map.of();
+        }
+        try {
+            Map<String, String> data = new com.fasterxml.jackson.databind.ObjectMapper().readValue(
+                    docs.get(0).getJsonData(),
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                    });
+            return data != null ? data : Map.of();
+        } catch (Exception e) {
+            return Map.of();
+        }
+    }
+
+    /**
+     * ข้อเสนอแนะจากคณะอนุกรรมการ (เอกสารที่ 6) ที่ผู้ยื่นเห็นได้ — null ถ้ายังไม่ได้แจ้ง
+     *
+     * <p>เจ้าหน้าที่พิมพ์แล้วระบบบันทึกร่างให้ทุกครั้ง ร่างจึงยังไม่ใช่สิ่งที่แจ้งผู้ยื่น
+     * แจ้งแล้วคือ บันทึกฉบับจริงแล้ว (ดำเนินการต่อ) หรือส่งกลับให้แก้ไขแล้ว (ส่งทางอีเมลไปแล้ว)
+     */
+    public String committeeSuggestionsFor(AcademicRequest request) {
+        List<AcademicDocument> docs = getDocumentsByType(request.getId(), 6);
+        RequestStatus status = request.getCurrentStatus();
+        boolean sentForRevision = status == RequestStatus.COMPLETED_REVISE
+                || status == RequestStatus.REVISION_SUBMITTED;
+        return docs.stream()
+                .filter(d -> !Boolean.TRUE.equals(d.getIsDraft()) || sentForRevision)
+                .reduce((first, second) -> second)
+                .map(d -> {
+                    try {
+                        Map<String, String> data = new com.fasterxml.jackson.databind.ObjectMapper()
+                                .readValue(d.getJsonData(),
+                                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                                        });
+                        String text = data.get("suggestions_text");
+                        return text == null || text.isBlank() ? null : text.trim();
+                    } catch (Exception e) {
+                        return null;
+                    }
+                })
+                .orElse(null);
+    }
 }

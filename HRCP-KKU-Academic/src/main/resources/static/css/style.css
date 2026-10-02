@@ -6247,6 +6247,7 @@ body.modal-open .sidebar-toggle {
 .u-bg-navy { background: #0d47a1; }
 .u-text-green { color: #2e7d32; }
 .u-text-blue { color: #1565c0; }
+.u-pre-wrap { white-space: pre-wrap; }
 .u-text-primary-medium { color: var(--color-primary-medium); }
 .u-text-accent { color: var(--accent-color); }
 

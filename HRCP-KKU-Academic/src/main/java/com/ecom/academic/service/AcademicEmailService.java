@@ -240,4 +240,48 @@ public class AcademicEmailService {
             System.err.println("Suggestion email sending failed: " + e.getMessage());
         }
     }
+
+    /**
+     * ข้อเสนอแนะแจ้งเพื่อทราบ (เอกสารที่ 6 ดำเนินการต่อโดยไม่ส่งกลับแก้ไข) — แจ้งในระบบและทางอีเมล
+     * สถานะคำร้องไม่เปลี่ยน
+     */
+    @Async
+    public void sendSuggestionNoticeEmail(Long requestId, String suggestionsText) {
+        try {
+            AcademicRequest request = reload(requestId);
+            if (request == null || request.getApplicant() == null) {
+                return;
+            }
+            notificationService.sendNotification(request.getApplicant(), null,
+                    "ข้อเสนอแนะจากคณะอนุกรรมการ",
+                    "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") — " + suggestionsText
+                            + " (แจ้งเพื่อทราบ ไม่ต้องแก้ไขเอกสาร)",
+                    "/user/academic/request/" + request.getId(),
+                    com.ecom.model.NotificationType.ACADEMIC_STATUS_UPDATE, false);
+
+            if (Boolean.FALSE.equals(request.getApplicant().getIsEnable())) {
+                return;
+            }
+            String applicantEmail = request.getApplicant().getEmail();
+            if (applicantEmail == null || applicantEmail.isEmpty() || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail))
+                return;
+
+            String subject = "ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน (#" + request.getId() + ") - แจ้งเพื่อทราบ";
+            String body = com.ecom.util.EmailTemplateHelper.buildSuggestionNoticeEmail(
+                    request.getApplicant().getName(),
+                    String.valueOf(request.getId()),
+                    suggestionsText);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(com.ecom.util.EmailTemplateHelper.resolveSenderEmail(senderEmail), com.ecom.util.EmailTemplateHelper.SENDER_NAME);
+            helper.setTo(applicantEmail);
+            helper.setSubject(subject);
+            helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Suggestion notice email sending failed: " + e.getMessage());
+        }
+    }
 }

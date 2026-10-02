@@ -44,16 +44,23 @@
                         <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
         <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
 
-                    <!-- ปุ่มส่งข้อเสนอแนะ — แสดงเสมอ เอกสารฉบับนี้ไม่มีปุ่มบันทึก (บันทึกอัตโนมัติ) เดิมปุ่มนี้
-                         โผล่เฉพาะหลังรีเฟรชหน้า เจ้าหน้าที่พิมพ์ข้อเสนอแนะเสร็จแล้วจึงหาปุ่มส่งไม่เจอ
-                         ตอนกดยืนยัน สคริปต์ด้านล่างบันทึกแบบร่างให้ก่อนส่ง -->
-                    <div class="mt-3 border-top pt-3">
+                    <!-- สองทางเลือกหลังประชุม: ดำเนินการต่อ (มีหรือไม่มีข้อเสนอแนะก็ได้) หรือส่งกลับให้ผู้ยื่นแก้ไข
+                         เอกสารฉบับนี้ไม่มีผู้ลงนาม เดิมมีแต่ปุ่มส่งกลับ เอกสารจึงค้างเป็นร่างตลอดไป
+                         ปุ่มส่งข้อเสนอแนะ: ตอนกดยืนยัน สคริปต์ด้านล่างบันทึกแบบร่างให้ก่อนส่ง -->
+                    <div class="mt-3 border-top pt-3 d-flex flex-wrap gap-2">
+                        <button type="button" class="btn btn-success" id="btnProceedDoc6">
+                            <i class="fas fa-check"></i> บันทึกและดำเนินการเอกสารต่อ
+                        </button>
                         <form th:action="'/admin/academic/request/' + ${request.id} + '/document/6/send-suggestion'" method="post" id="suggestionForm">
                             <button type="button" class="btn btn-warning" id="btnSendSuggestion">
                                 <i class="fas fa-envelope"></i> ส่งข้อเสนอแนะถึงผู้ยื่นทางอีเมลเพื่อทำการแก้ไขเอกสาร
                             </button>
                         </form>
                     </div>
+                    <small class="text-muted d-block mt-2">
+                        ไม่มีข้อเสนอแนะ หรือมีแต่ไม่ต้องแก้ไขเอกสาร กด "บันทึกและดำเนินการเอกสารต่อ" —
+                        ผู้ยื่นจะเห็นข้อเสนอแนะในระบบและได้รับอีเมลแจ้งเพื่อทราบ สถานะคำร้องไม่เปลี่ยน
+                    </small>
 
                 </div>
             </div>
@@ -91,6 +98,35 @@
         <link rel="stylesheet" href="/css/doc_preview.css">
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
         <script>
+            // ดำเนินการต่อ: บันทึกเอกสารที่ 6 เป็นฉบับจริงและแจ้งผู้ยื่นเพื่อทราบ ไม่เปลี่ยนสถานะ
+            (function() {
+                var btnProceed = document.getElementById('btnProceedDoc6');
+                if (!btnProceed) return;
+                btnProceed.addEventListener('click', function() {
+                    var text = document.querySelector('textarea[name="suggestions_text"]');
+                    var empty = !text || !text.value.trim();
+                    var msg = empty
+                        ? 'บันทึกเอกสารที่ 6 ว่า "ไม่มีข้อเสนอแนะ" แจ้งผู้ยื่นทางอีเมลเพื่อทราบ และไปเอกสารที่ 7 ต่อ?'
+                        : 'บันทึกข้อเสนอแนะ แจ้งผู้ยื่นทางอีเมลเพื่อทราบ (ไม่ต้องแก้ไขเอกสาร) และไปเอกสารที่ 7 ต่อ?';
+                    var ask = window.appConfirm
+                        ? window.appConfirm(msg, { title: 'ดำเนินการเอกสารต่อ', confirmText: 'ยืนยัน', variant: 'primary' })
+                        : Promise.resolve(window.confirm(msg));
+                    ask.then(function(ok) {
+                        if (!ok) return;
+                        var form = document.getElementById('docForm');
+                        // ไม่ให้ร่างอัตโนมัติยิงซ้อนกับการบันทึกฉบับจริง
+                        form.removeAttribute('data-auto-draft');
+                        var action = document.createElement('input');
+                        action.type = 'hidden';
+                        action.name = 'action';
+                        action.value = 'submit';
+                        form.appendChild(action);
+                        if (window.setButtonLoading) window.setButtonLoading(btnProceed, 'กำลังบันทึก...');
+                        form.submit();
+                    });
+                });
+            })();
+
             // Send suggestion button logic
             (function() {
                 var btnSend = document.getElementById('btnSendSuggestion');

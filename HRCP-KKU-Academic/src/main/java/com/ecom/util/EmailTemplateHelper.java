@@ -267,6 +267,29 @@ public final class EmailTemplateHelper {
     }
 
     /**
+     * ข้อเสนอแนะแจ้งเพื่อทราบ — คณะอนุกรรมการไม่ได้ให้แก้ไขเอกสาร กระบวนการดำเนินต่อตามปกติ
+     */
+    public static String buildSuggestionNoticeEmail(String applicantName, String requestCode, String suggestionsText) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
+          .append(escapeHtml(applicantName)).append("</strong>,</p>");
+        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>คณะอนุกรรมการประเมินผลการสอนได้พิจารณาคำร้องหมายเลข <strong>#")
+          .append(escapeHtml(requestCode)).append("</strong> ของท่านแล้ว โดยมีข้อเสนอแนะดังนี้:</p>");
+
+        sb.append("<div style='background:#f0fdf4;border:1px solid #dcfce7;border-left:4px solid #16a34a;padding:16px 20px;border-radius:8px;margin:20px 0;'>");
+        sb.append("<div style='font-weight:700;color:#166534;margin-bottom:8px;font-size:14px;'>ข้อเสนอแนะจากคณะอนุกรรมการ:</div>");
+        sb.append("<div style='color:#1e293b;font-size:14px;white-space:pre-wrap;line-height:1.6;'>")
+          .append(escapeHtml(suggestionsText != null ? suggestionsText : "")).append("</div>");
+        sb.append("</div>");
+
+        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#334155;font-size:13px;font-weight:500;'>");
+        sb.append("แจ้งเพื่อทราบ ท่านไม่ต้องแก้ไขเอกสาร เจ้าหน้าที่จะดำเนินการขั้นตอนถัดไปให้");
+        sb.append("</div>");
+
+        return wrapLayout("ข้อเสนอแนะจากคณะอนุกรรมการ", "แจ้งเพื่อทราบ", sb.toString());
+    }
+
+    /**
      * Builds Teaching Evaluation Expiry Reminder email.
      */
     public static String buildEvaluationExpiryEmail(String recipientName, String requestCode, String alertLabel,

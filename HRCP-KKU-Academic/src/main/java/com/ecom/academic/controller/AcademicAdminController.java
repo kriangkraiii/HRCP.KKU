@@ -627,13 +627,8 @@ public class AcademicAdminController {
             }
         }
 
-        if (type == 4) {
-            model.addAttribute("carried", carriedIntoDoc4(request));
-        }
-
-        if (type == 5) {
-            model.addAttribute("carried", carriedIntoDoc5(request));
-        }
+        // ช่องที่ดึงจากเอกสารก่อนหน้า (เอกสารที่ 4, 5, 7) — แสดงแบบอ่านอย่างเดียว
+        model.addAttribute("carried", requestService.carriedFields(request, type));
         // แนบรายการไฟล์เอกสารแนบของผู้ยื่น
         List<com.ecom.academic.model.AcademicAttachment> attachments = requestService.getAttachments(id);
         model.addAttribute("attachments", attachments);
@@ -807,11 +802,7 @@ public class AcademicAdminController {
         }
 
         // ช่องที่ดึงจากเอกสารก่อนหน้าแก้ในฉบับนี้ไม่ได้ — ใช้ค่าจากเอกสารต้นทางเสมอ
-        if (type == 4) {
-            formData.putAll(carriedIntoDoc4(request));
-        } else if (type == 5) {
-            formData.putAll(carriedIntoDoc5(request));
-        }
+        formData = requestService.withCarriedFields(request, type, formData);
 
         // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
         if ("draft".equals(action)) {
@@ -869,6 +860,11 @@ public class AcademicAdminController {
             }
         }
 
+        // เอกสารที่ 6: ไม่มีข้อเสนอแนะก็ดำเนินการต่อได้ — ให้เอกสารบอกชัดว่าไม่มี ไม่ใช่ช่องว่าง
+        if (type == 6 && formData.getOrDefault("suggestions_text", "").isBlank()) {
+            formData.put("suggestions_text", "ไม่มีข้อเสนอแนะ");
+        }
+
         // กรองท้ายสุด หลังคำนวณคะแนนและเติมวันที่ไทยเสร็จแล้ว เพื่อให้แน่ใจว่าไม่มีค่าที่ฝั่ง
         // เจ้าหน้าที่คำนวณขึ้นเองหลุดไปทับช่องของผู้ยื่นในเอกสารที่ 1 และ 2
         formData = onlyWhatAnOfficerOwns(id, type, formData);
@@ -914,6 +910,17 @@ public class AcademicAdminController {
         // ไม่เลื่อนสถานะตรงนี้ — การบันทึกคือการร่างหนังสือเสร็จ ยังไม่มีใครลงนามและยัง
         // ไม่ได้ส่งออกไปไหน ขั้นตอนจะนับว่าจบเมื่อซองลายเซ็นปิด ดู
         // SignedDocumentStatusAdvancer ซึ่งถูกเรียกจาก SignatureWorkflowService
+
+        // เอกสารที่ 6 ไม่มีผู้ลงนาม บันทึกแล้วคือจบ — แจ้งผู้ยื่นเพื่อทราบ (ไม่เปลี่ยนสถานะ)
+        // แล้วไปเอกสารที่ 7 ต่อเลย
+        if (type == 6) {
+            requestService.sendSuggestionNoticeEmail(request, formData.get("suggestions_text"));
+            requestService.logDocumentChange(request, 6, "แจ้งเพื่อทราบถึง " + request.getApplicant().getEmail(),
+                    admin, AcademicDocumentEditLog.EditAction.SUGGESTION_SENT);
+            redirectAttributes.addFlashAttribute("succMsg",
+                    "บันทึกข้อเสนอแนะและแจ้งผู้ยื่นทางอีเมลแล้ว ดำเนินการเอกสารที่ 7 ต่อได้เลย");
+            return "redirect:/admin/academic/request/" + id + "/document/7";
+        }
 
         // อยู่หน้าเดิม: แผงลงนามอยู่ใต้ฟอร์ม เจ้าหน้าที่จะได้ส่งเวียนลงนามต่อได้ทันที
         redirectAttributes.addFlashAttribute("succMsg", savedDocumentMessage(type));
@@ -1582,78 +1589,6 @@ public class AcademicAdminController {
      * "เจ้าหน้าที่" เท่านั้น ที่เหลือดูได้อย่างเดียว ถ้าต้องแก้ให้กดส่งกลับให้ผู้ยื่นแก้
      * ส่วนเอกสารที่ 3–9 เป็นของเจ้าหน้าที่ทั้งฉบับ ผ่านไปเหมือนเดิม
      */
-    /**
-     * ช่องของเอกสารที่ 4 ที่มาจากเอกสารก่อนหน้า — ข้อมูลผู้ยื่นจากเอกสารที่ 1 (หรือโปรไฟล์ผู้ยื่น)
-     * รายชื่อกรรมการจากเอกสารที่ 3 แก้ที่ต้นทาง ไม่ใช่ที่ฉบับนี้ ช่องที่ต้นทางยังว่างไม่อยู่ในผลลัพธ์
-     * และยังกรอกเองได้
-     */
-    private Map<String, String> carriedIntoDoc4(AcademicRequest request) {
-        Map<String, String> doc1 = latestJson(request.getId(), 1);
-        Map<String, String> doc3 = latestJson(request.getId(), 3);
-        UserDtls applicant = request.getApplicant();
-        String requested = "✓".equals(doc1.get("chk1")) ? "ผู้ช่วยศาสตราจารย์"
-                : "✓".equals(doc1.get("chk2")) ? "รองศาสตราจารย์" : null;
-
-        Map<String, String> carried = new java.util.LinkedHashMap<>();
-        carried.put("applicant_title", doc1.getOrDefault("title", applicant != null ? applicant.getTitle() : null));
-        carried.put("applicant_name", doc1.getOrDefault("applicant_name", applicant != null ? applicant.getName() : null));
-        carried.put("employee_type", doc1.get("employee_type"));
-        carried.put("current_position", doc1.getOrDefault("current_position",
-                applicant != null ? applicant.getAcademicPosition() : null));
-        carried.put("requested_position", requested);
-        for (int i = 1; i <= 3; i++) {
-            carried.put("committee_" + i + "_name", doc3.get("committee_" + i + "_name"));
-        }
-        carried.values().removeIf(v -> v == null || v.isBlank());
-        return carried;
-    }
-
-    /**
-     * ช่องของเอกสารที่ 5 ที่มาจากคำสั่งในเอกสารที่ 4 — เลขที่/วันที่คำสั่งอ้างอิง ข้อมูลผู้ยื่น
-     * และรายชื่อกรรมการ ถ้าเอกสารที่ 4 ยังไม่ได้บันทึกช่องไหนใช้ค่าที่เอกสารที่ 4 จะดึงมาแทน
-     * ช่องที่ต้นทางยังว่างไม่อยู่ในผลลัพธ์ และยังกรอกเองได้
-     */
-    private Map<String, String> carriedIntoDoc5(AcademicRequest request) {
-        Map<String, String> doc4 = new java.util.HashMap<>(carriedIntoDoc4(request));
-        latestJson(request.getId(), 4).forEach((k, v) -> {
-            if (v != null && !v.isBlank()) {
-                doc4.put(k, v);
-            }
-        });
-
-        String orderNo = doc4.get("order_no");
-        String year = doc4.get("year");
-        Map<String, String> carried = new java.util.LinkedHashMap<>();
-        carried.put("ref_order_no", orderNo == null || orderNo.isBlank() || year == null || year.isBlank()
-                ? orderNo : orderNo.trim() + "/" + year.trim());
-        carried.put("ref_order_date", doc4.get("order_date"));
-        carried.put("applicant_title", doc4.get("applicant_title"));
-        carried.put("applicant_name", doc4.get("applicant_name"));
-        carried.put("applicant_employee_type", doc4.get("employee_type"));
-        carried.put("applicant_current_pos", doc4.get("current_position"));
-        carried.put("applicant_req_pos", doc4.get("requested_position"));
-        for (int i = 1; i <= 3; i++) {
-            carried.put("committee_name_" + i, doc4.get("committee_" + i + "_name"));
-        }
-        carried.values().removeIf(v -> v == null || v.isBlank());
-        return carried;
-    }
-
-    private Map<String, String> latestJson(Long requestId, int type) {
-        List<AcademicDocument> docs = requestService.getDocumentsByType(requestId, type);
-        if (docs.isEmpty() || docs.get(0).getJsonData() == null) {
-            return Map.of();
-        }
-        try {
-            Map<String, String> data = objectMapper.readValue(docs.get(0).getJsonData(),
-                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                    });
-            return data != null ? data : Map.of();
-        } catch (Exception e) {
-            return Map.of();
-        }
-    }
-
     private Map<String, String> onlyWhatAnOfficerOwns(Long requestId, int type,
             Map<String, String> formData) {
         return DocumentFieldOwnership.merge(SignatureModule.ACADEMIC, type, true, formData,

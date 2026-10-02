@@ -130,6 +130,16 @@ public class AutoDraftApiController {
             }
             jsonData = filtered;
 
+            // ช่องที่ดึงจากเอกสารก่อนหน้าแก้ในฉบับนี้ไม่ได้ — ปุ่มส่งเวียนลงนามบันทึกผ่านทางนี้
+            // จึงต้องใช้ค่าจากเอกสารต้นทางที่นี่ด้วย ไม่ใช่แค่ล็อกช่องบนหน้าเว็บ
+            if (isAdmin && !academicService.carriedFields(request, docType).isEmpty()) {
+                Map<String, String> fields = parseFields(jsonData);
+                if (fields != null) {
+                    jsonData = new ObjectMapper().writeValueAsString(
+                            academicService.withCarriedFields(request, docType, fields));
+                }
+            }
+
             // เอกสารที่ 7: ปุ่ม "ส่งเวียนลงนาม" บันทึกผ่านทางนี้ ไม่ใช่ปุ่มบันทึก — ถ้าไม่คำนวณผล
             // ตรงนี้ด้วย ซองจะแช่แข็งเอกสารที่ไม่มีระดับผลประเมิน และสถานะไม่เลื่อนเมื่อลงนามครบ
             if (isAdmin && docType == 7) {

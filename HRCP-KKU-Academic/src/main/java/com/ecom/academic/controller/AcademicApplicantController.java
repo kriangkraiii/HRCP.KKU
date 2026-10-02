@@ -1047,6 +1047,7 @@ public class AcademicApplicantController {
         model.addAttribute("canEditDoc2", canEditDoc2);
         model.addAttribute("revisionNoteDoc1", requestService.getRevisionNote(id, 1));
         model.addAttribute("revisionNoteDoc2", requestService.getRevisionNote(id, 2));
+        model.addAttribute("committeeSuggestions", requestService.committeeSuggestionsFor(request));
 
         // ดึงข้อมูลจาก doc_1 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
         List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
