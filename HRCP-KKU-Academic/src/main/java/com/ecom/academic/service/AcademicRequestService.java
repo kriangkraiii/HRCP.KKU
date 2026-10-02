@@ -1635,6 +1635,7 @@ public class AcademicRequestService {
             case 4 -> carriedIntoDoc4(request);
             case 5 -> carriedIntoDoc5(request);
             case 7 -> carriedIntoDoc7(request);
+            case 8 -> carriedIntoDoc8(request);
             default -> Map.of();
         };
     }
@@ -1645,6 +1646,7 @@ public class AcademicRequestService {
      * <p>ช่องชื่อผู้ลงนามที่ถูกล็อก (เช่น ประธานกรรมการในเอกสารที่ 7) อาจมีรหัสบัญชีที่เคยเลือกไว้
      * ติดมาจากร่างเดิม ถ้าชื่อที่ต้นทางเปลี่ยนไปแล้ว รหัสนั้นเป็นของคนเก่า — ทิ้งไปให้ระบบจับคู่จากชื่อ
      * มิฉะนั้นจะส่งเวียนลงนามไม่ได้ และเจ้าหน้าที่ก็เลือกคนใหม่ในช่องที่ล็อกไม่ได้
+     * ถ้าต้นทางมีรหัสบัญชีมาด้วย (กรรมการที่เลือกในเอกสารที่ 3) รหัสนั้นอยู่ถัดจากชื่อในแผนที่ จึงเขียนทับทีหลัง
      */
     public Map<String, String> withCarriedFields(AcademicRequest request, int documentType,
             Map<String, String> data) {
@@ -1681,20 +1683,45 @@ public class AcademicRequestService {
                 applicant != null ? applicant.getAcademicPosition() : null));
         carried.put("requested_position", requested);
         for (int i = 1; i <= 3; i++) {
-            carried.put("committee_" + i + "_name", doc3.get("committee_" + i + "_name"));
+            putCommittee(carried, "committee_" + i + "_name", doc3, "committee_" + i + "_name");
         }
         carried.values().removeIf(v -> v == null || v.isBlank());
         return carried;
     }
 
+    /**
+     * ชื่อกรรมการพร้อมรหัสบัญชีที่เลือกไว้ในเอกสารที่ 3 (ตัวค้นหาชื่อ) — กรรมการสามคนลงนามเอกสารที่ 7
+     * และประธานลงนามเอกสารที่ 8 คนที่ลงนามจึงต้องเป็นบัญชีเดียวกับที่ถูกแต่งตั้ง ไม่ใช่แค่ชื่อตรงกัน
+     */
+    private static void putCommittee(Map<String, String> carried, String field, Map<String, String> source,
+            String sourceField) {
+        carried.put(field, source.get(sourceField));
+        carried.put(DocumentFieldOwnership.signerIdField(field),
+                source.get(DocumentFieldOwnership.signerIdField(sourceField)));
+    }
+
     /** ค่าของเอกสารที่ 4 ที่บันทึกไว้ ช่องไหนยังไม่ได้บันทึกใช้ค่าที่เอกสารที่ 4 จะดึงมาแทน */
     private Map<String, String> doc4AsSaved(AcademicRequest request) {
-        Map<String, String> doc4 = new java.util.HashMap<>(carriedIntoDoc4(request));
-        firstDocumentJson(request.getId(), 4).forEach((k, v) -> {
+        Map<String, String> fromSources = carriedIntoDoc4(request);
+        Map<String, String> doc4 = new java.util.HashMap<>(fromSources);
+        Map<String, String> saved = firstDocumentJson(request.getId(), 4);
+        saved.forEach((k, v) -> {
             if (v != null && !v.isBlank()) {
                 doc4.put(k, v);
             }
         });
+        // เอกสารที่ 4 ที่บันทึกก่อนเอกสารที่ 3 เปลี่ยนกรรมการ: ชื่อในเอกสารที่ 4 ยังเป็นคนเดิม
+        // รหัสบัญชีของคนใหม่จากเอกสารที่ 3 จึงไม่ใช่ของชื่อนี้
+        for (int i = 1; i <= 3; i++) {
+            String name = "committee_" + i + "_name";
+            String signer = DocumentFieldOwnership.signerIdField(name);
+            String savedName = saved.get(name);
+            String savedSigner = saved.get(signer);
+            if (savedName != null && !savedName.isBlank() && (savedSigner == null || savedSigner.isBlank())
+                    && !savedName.equals(fromSources.get(name))) {
+                doc4.remove(signer);
+            }
+        }
         return doc4;
     }
 
@@ -1727,8 +1754,16 @@ public class AcademicRequestService {
         carried.put("applicant_name", doc4.get("applicant_name"));
         carried.put("requested_position", doc4.get("requested_position"));
         for (int i = 1; i <= 3; i++) {
-            carried.put("committee_" + i + "_name", doc4.get("committee_" + i + "_name"));
+            putCommittee(carried, "committee_" + i + "_name", doc4, "committee_" + i + "_name");
         }
+        carried.values().removeIf(v -> v == null || v.isBlank());
+        return carried;
+    }
+
+    /** ประธานคณะอนุกรรมการ ตามคำสั่งแต่งตั้งในเอกสารที่ 4 — ผู้ลงนามเอกสารที่ 8 */
+    private Map<String, String> carriedIntoDoc8(AcademicRequest request) {
+        Map<String, String> carried = new java.util.LinkedHashMap<>();
+        putCommittee(carried, "committee_president_name", doc4AsSaved(request), "committee_1_name");
         carried.values().removeIf(v -> v == null || v.isBlank());
         return carried;
     }

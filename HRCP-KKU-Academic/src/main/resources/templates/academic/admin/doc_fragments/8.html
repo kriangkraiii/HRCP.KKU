@@ -109,9 +109,19 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อประธานคณะกรรมการ</label>
-                                <input type="text" name="committee_president_name" class="form-control" readonly
-                                    th:value="${defaultCommittee1 != null ? defaultCommittee1 : ''}">
-                                <small class="text-muted">ดึงจากกรรมการคนที่ 1 (เอกสารที่ 2)</small>
+                                <!--/* ผู้ลงนามเอกสารนี้คือประธานที่เลือกไว้ในเอกสารที่ 3 (รหัสบัญชีส่งต่อมาในช่องซ่อน)
+                                     ยังไม่มีชื่อจากต้นทาง (คำร้องเก่า) จึงเลือกจากรายชื่อในระบบได้ที่นี่ — person_picker.js */-->
+                                <th:block th:if="${carried.containsKey('committee_president_name')}">
+                                    <input type="text" name="committee_president_name" class="form-control" readonly
+                                        th:value="${carried['committee_president_name']}">
+                                    <input type="hidden" name="committee_president_name__signer"
+                                        th:if="${carried.containsKey('committee_president_name__signer')}"
+                                        th:value="${carried['committee_president_name__signer']}">
+                                    <small class="text-muted"><i class="fas fa-lock me-1"></i>ดึงจากคำสั่งแต่งตั้งในเอกสารที่ 4 — แก้ไขที่เอกสารที่ 3</small>
+                                </th:block>
+                                <input th:unless="${carried.containsKey('committee_president_name')}" type="text"
+                                    name="committee_president_name" class="form-control"
+                                    data-person-picker data-role="COMMITTEE">
                             </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">วันที่ลงนาม</h5>

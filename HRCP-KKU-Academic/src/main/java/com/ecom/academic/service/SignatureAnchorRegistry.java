@@ -201,9 +201,14 @@ public class SignatureAnchorRegistry {
             // Phase 1 doc 6 (formerly doc 5) is a bare suggestions textbox ({{suggestions_text}})
             // with no signature block at all, so it is deliberately absent.
 
+            // แบบประเมินผลการสอน — กรรมการทั้งสามคนตามคำสั่งแต่งตั้งลงนาม ประธานก่อน แล้วกรรมการคนที่ 2 และ 3
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 7), List.of(
                     new SignatureSlot("committee_chair", "ประธานคณะกรรมการประเมิน",
-                            "committee_1_name", "COMMITTEE", 1))),
+                            "committee_1_name", "COMMITTEE", 1),
+                    new SignatureSlot("committee_member_2", "กรรมการ (คนที่ 2)",
+                            "committee_2_name", "COMMITTEE", 2),
+                    new SignatureSlot("committee_member_3", "กรรมการ (คนที่ 3)",
+                            "committee_3_name", "COMMITTEE", 3))),
 
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 8), List.of(
                     new SignatureSlot("committee_chair", "ประธานคณะอนุกรรมการ",
@@ -303,7 +308,12 @@ public class SignatureAnchorRegistry {
                     "hr_staff_name", "dropdownHr")),
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 4), Map.of("dean_name", "deandropdown_position")),
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 5), Map.of("dean_name", "dropdownDean")),
-            Map.entry(new DocKey(SignatureModule.ACADEMIC, 7), Map.of("committee_1_name", "")),
+            // กรรมการเลือกจากบัญชีในเอกสารที่ 3 แล้วส่งต่อมาแบบอ่านอย่างเดียว (AcademicRequestService.carriedFields)
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 7), Map.of(
+                    "committee_1_name", "",
+                    "committee_2_name", "",
+                    "committee_3_name", "")),
+            Map.entry(new DocKey(SignatureModule.ACADEMIC, 8), Map.of("committee_president_name", "")),
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 9), Map.of("dean_name", "dean_position")),
             Map.entry(new DocKey(SignatureModule.POSITION, 3), Map.of("dean_name", "dean_position")),
             Map.entry(new DocKey(SignatureModule.POSITION, 4), Map.of("department_head_name", "")),

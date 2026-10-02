@@ -8,6 +8,8 @@
  *     คนที่เลือกคือผู้ลงนามตำแหน่งนั้น (SignatureWorkflowService.signersNamedInForm)
  *   - เติมช่องตำแหน่ง (data-position-field) จากตำแหน่งที่บันทึกไว้ในบัญชี — ยังแก้เองได้
  *   - data-allow-external: เพิ่มผู้ลงนามจากนอก มข. ด้วยอีเมลได้ (ExternalSignerService)
+ *   - data-picker-hint: ข้อความใต้ช่อง แทนข้อความตั้งต้น (เช่น ช่องที่คนที่เลือกไปลงนามในเอกสารฉบับอื่น)
+ *   - data-distinct-group: ช่องในกลุ่มเดียวกันเลือกคนซ้ำกันไม่ได้ (เช่น กรรมการสามคน)
  *
  * ดู docs/PLAN-signer-picker.md
  */
@@ -15,6 +17,7 @@
     'use strict';
 
     var SUFFIX = '__signer';
+    var DEFAULT_HINT = 'เลือกจากรายชื่อในระบบ — ผู้ที่เลือกคือผู้ลงนามตำแหน่งนี้';
 
     function csrfToken() {
         var el = document.querySelector('input[name="_csrf"]') || document.querySelector('meta[name="_csrf"]');
@@ -43,6 +46,8 @@
         this.role = input.getAttribute('data-role') || '';
         this.positionField = input.getAttribute('data-position-field');
         this.allowExternal = input.hasAttribute('data-allow-external');
+        this.hintText = input.getAttribute('data-picker-hint') || DEFAULT_HINT;
+        this.group = input.getAttribute('data-distinct-group');
         this.hidden = this.ensureHidden();
         this.selectedName = null;
         this.timer = null;
@@ -80,7 +85,7 @@
         this.menu.style.overflowY = 'auto';
         wrap.appendChild(this.menu);
 
-        this.hint = el('div', 'form-text person-picker-hint', 'เลือกจากรายชื่อในระบบ — ผู้ที่เลือกคือผู้ลงนามตำแหน่งนี้');
+        this.hint = el('div', 'form-text person-picker-hint', this.hintText + ' ');
         wrap.appendChild(this.hint);
         if (this.allowExternal) {
             var add = el('button', 'btn btn-link btn-sm p-0 ms-1 align-baseline', '+ เพิ่มผู้ลงนามนอก มข.');
@@ -141,7 +146,7 @@
         if (!ok) {
             this.hint.firstChild.textContent = 'ชื่อนี้ยังไม่ได้เลือกจากรายชื่อในระบบ — กรุณาค้นหาแล้วเลือกใหม่ ';
         } else {
-            this.hint.firstChild.textContent = 'เลือกจากรายชื่อในระบบ — ผู้ที่เลือกคือผู้ลงนามตำแหน่งนี้ ';
+            this.hint.firstChild.textContent = this.hintText + ' ';
         }
     };
 
@@ -157,9 +162,25 @@
         });
     };
 
+    /** รหัสบัญชีที่ช่องอื่นในกลุ่มเดียวกันเลือกไว้แล้ว */
+    Picker.prototype.takenByOthers = function () {
+        if (!this.group) return [];
+        var self = this;
+        var scope = this.form || document;
+        var taken = [];
+        scope.querySelectorAll('[data-person-picker][data-distinct-group="' + this.group + '"]').forEach(function (other) {
+            if (other === self.input) return;
+            var hidden = scope.querySelector('input[name="' + other.name + SUFFIX + '"]');
+            if (hidden && hidden.value) taken.push(hidden.value);
+        });
+        return taken;
+    };
+
     Picker.prototype.render = function (people, q) {
         var self = this;
         this.menu.replaceChildren();
+        var taken = this.takenByOthers();
+        people = people.filter(function (p) { return taken.indexOf(String(p.userId)) < 0; });
         if (!people.length) {
             this.menu.appendChild(el('div', 'dropdown-item-text small text-muted',
                 q ? 'ไม่พบชื่อ “' + q + '” ในระบบ' : 'พิมพ์ชื่อ อีเมล หรือตำแหน่งเพื่อค้นหา'));

@@ -216,14 +216,15 @@
                         <div class="row mb-3" th:each="i : ${#numbers.sequence(1, 3)}">
                             <div class="col-md-5">
                                 <label class="form-label">กรรมการคนที่ [[${i}]]</label>
-                                <div class="combo-input">
-                                    <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control" th:list="'committeeList6_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
-                                        th:value="${carried.containsKey('committee_' + i + '_name') ? carried['committee_' + i + '_name'] : (i == 1 ? defaultCommittee1 : (i == 2 ? defaultCommittee2 : defaultCommittee3))}"
-                                        th:readonly="${carried.containsKey('committee_' + i + '_name')}"
-                                        th:attrappend="data-person-picker=${i == 1} ? 'true' : null,data-role=${i == 1} ? 'COMMITTEE' : null"><!--/* กรรมการคนที่ 1 คือประธานผู้ลงนาม — เลือกจากรายชื่อในระบบเท่านั้น (person_picker.js) */-->
-                                    <datalist th:id="'committeeList6_' + ${i}">
-                                        <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
-                                    </datalist>
+                                <div class="combo-input" th:with="nameField=${'committee_' + i + '_name'}, locked=${carried.containsKey('committee_' + i + '_name')}">
+                                    <!--/* กรรมการทั้งสามคนลงนามเอกสารนี้ ผู้ลงนามคือบัญชีที่เลือกไว้ในเอกสารที่ 3 (รหัสบัญชีส่งต่อมาในช่องซ่อน)
+                                         ยังไม่มีชื่อจากต้นทาง (คำร้องเก่า) จึงเลือกจากรายชื่อในระบบได้ที่นี่ — person_picker.js */-->
+                                    <input type="text" th:name="${nameField}" class="form-control"
+                                        th:value="${locked ? carried.get(nameField) : (i == 1 ? defaultCommittee1 : (i == 2 ? defaultCommittee2 : defaultCommittee3))}"
+                                        th:readonly="${locked}"
+                                        th:attrappend="data-person-picker=${!locked} ? 'true' : null,data-role=${!locked} ? 'COMMITTEE' : null,data-distinct-group=${!locked} ? 'committee' : null,data-allow-external=${!locked and i == 2} ? 'true' : null">
+                                    <input type="hidden" th:if="${locked and carried.containsKey(nameField + '__signer')}"
+                                        th:name="${nameField + '__signer'}" th:value="${carried.get(nameField + '__signer')}">
                                 </div>
                             </div>
                             <div class="col-md-5">

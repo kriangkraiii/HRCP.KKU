@@ -2049,6 +2049,17 @@ public class SignatureWorkflowService {
                 }
                 signer = matches.get(0);
             }
+            if ("COMMITTEE".equals(slot.defaultStaffRole())) {
+                // กรรมการแต่ละคนคือคนละคน — บัญชีเดียวลงนามสองตำแหน่งในแบบประเมินไม่ได้
+                Integer signerId = signer.getId();
+                boolean taken = result.stream().anyMatch(a -> signerId.equals(a.signerUserId())
+                        && slotsFor(module, documentType).stream().anyMatch(s -> s.slotKey().equals(a.slotKey())
+                                && "COMMITTEE".equals(s.defaultStaffRole())));
+                if (taken) {
+                    return new NamedSigners(requested, "“" + name + "” ถูกเลือกเป็นกรรมการมากกว่าหนึ่งตำแหน่ง"
+                            + " — กรรมการแต่ละคนต้องเป็นคนละบัญชี กรุณาแก้รายชื่อกรรมการที่เอกสารที่ 3");
+                }
+            }
             rememberPosition(signer, data.get(SignatureAnchorRegistry.positionFieldFor(module, documentType,
                     slot.anchorPlaceholder())));
             result.add(new SignerAssignment(slot.slotKey(), signer.getId()));

@@ -84,10 +84,12 @@
                             <div class="col-md-6">
                                 <label class="form-label">กรรมการคนที่ [[${i}]]</label>
                                 <div class="combo-input">
-                                    <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control" th:list="'committeeList2_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ...">
-                                    <datalist th:id="'committeeList2_' + ${i}">
-                                        <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
-                                    </datalist>
+                                    <!--/* กรรมการสามคนลงนามในเอกสารที่ 7 (ประธานลงนามเอกสารที่ 8 ด้วย) — เลือกจากบัญชีในระบบเท่านั้น
+                                         คนที่ 2 เป็นอนุกรรมการภายนอก จึงเพิ่มคนนอก มข. ทางอีเมลได้ ดู docs/PLAN-committee-signers.md */-->
+                                    <input type="text" th:name="'committee_' + ${i} + '_name'" class="form-control"
+                                        data-person-picker data-role="COMMITTEE" data-distinct-group="committee"
+                                        data-picker-hint="เลือกจากรายชื่อในระบบ — ผู้ที่เลือกลงนามในแบบประเมินผลการสอน (เอกสารที่ 7)"
+                                        th:attrappend="data-allow-external=${i == 2} ? 'true' : null">
                                 </div>
                             </div>
                             <div class="col-md-6">

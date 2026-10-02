@@ -53,6 +53,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
     private static final String ASSOC_DEAN_EMAIL = "assocdean@" + TestDataFactory.DOMAIN;
     private static final String DEAN_EMAIL = "dean@" + TestDataFactory.DOMAIN;
     private static final String CHAIR_EMAIL = "chair@" + TestDataFactory.DOMAIN;
+    private static final String MEMBER2_EMAIL = "member2@" + TestDataFactory.DOMAIN;
+    private static final String MEMBER3_EMAIL = "member3@" + TestDataFactory.DOMAIN;
     private static final String AUTHOR1_EMAIL = "author1@" + TestDataFactory.DOMAIN;
     private static final String AUTHOR2_EMAIL = "author2@" + TestDataFactory.DOMAIN;
 
@@ -77,6 +79,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
     private UserDtls assocDean;
     private UserDtls dean;
     private UserDtls chair;
+    private UserDtls member2;
+    private UserDtls member3;
     private UserDtls author1;
     private UserDtls author2;
 
@@ -110,6 +114,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         assocDean = data.user(ASSOC_DEAN_EMAIL, "วิชัย", "รองคณบดี", "ROLE_USER");
         dean = data.user(DEAN_EMAIL, "ประสิทธิ์", "คณบดี", "ROLE_USER");
         chair = data.user(CHAIR_EMAIL, "บุญมี", "ประธานกรรมการ", "ROLE_USER");
+        member2 = data.user(MEMBER2_EMAIL, "ชาญ", "กรรมการภายนอก", "ROLE_USER");
+        member3 = data.user(MEMBER3_EMAIL, "อรุณี", "เลขานุการ", "ROLE_USER");
         author1 = data.user(AUTHOR1_EMAIL, "กิตติ", "ร่วมวิจัย", "ROLE_USER");
         author2 = data.user(AUTHOR2_EMAIL, "สุภาวดี", "บรรณกิจ", "ROLE_USER");
 
@@ -118,14 +124,16 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         staff(assocDean, "DEAN");
         staff(dean, "DEAN");
         staff(chair, "COMMITTEE");
+        staff(member2, "COMMITTEE");
+        staff(member3, "COMMITTEE");
 
-        for (UserDtls u : List.of(professor, officer, head, assocDean, dean, chair, author1, author2)) {
+        for (UserDtls u : List.of(professor, officer, head, assocDean, dean, chair, member2, member3, author1, author2)) {
             data.signatureFor(u);
             data.digitalCertificateFor(u);
         }
 
         emailById = new java.util.HashMap<>();
-        for (UserDtls u : List.of(professor, officer, head, assocDean, dean, chair, author1, author2)) {
+        for (UserDtls u : List.of(professor, officer, head, assocDean, dean, chair, member2, member3, author1, author2)) {
             emailById.put(u.getId(), u.getEmail());
         }
     }
@@ -198,6 +206,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
 
         // ---------- ข้อ 2-3: หัวหน้าสาขา → รองคณบดี → คณบดี → เจ้าหน้าที่ ----------
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
+        // กรรมการสามคนเลือกจากบัญชีในระบบ (ตัวค้นหาชื่อ) — ลงนามเอกสารที่ 7 ทั้งสามคน
+        formOverrides = committeePicks();
         circulateAsOfficer(SignatureModule.ACADEMIC, id, 3, Map.of(
                 "head", head, "associate_dean", assocDean, "dean", dean, "hr", officer));
         signOut();
@@ -228,7 +238,7 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 formOverrides = Map.of("sec_score_1", "4", "sec_score_2", "4",
                         "sec_score_3", "4", "sec_score_4", "4");
             }
-            circulateAsOfficer(SignatureModule.ACADEMIC, id, doc, Map.of("committee_chair", chair));
+            circulateAsOfficer(SignatureModule.ACADEMIC, id, doc, committeeSigners());
             signOut();
             signEveryActiveStep(SignatureModule.ACADEMIC, id, doc, null);
             expectCompleted(SignatureModule.ACADEMIC, id, doc);
@@ -515,7 +525,7 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
 
         // ---------- ข้อ 15 → 9-11: ประชุมรอบใหม่เห็นชอบ ----------
         formOverrides = Map.of("sec_score_1", "4", "sec_score_2", "4", "sec_score_3", "4", "sec_score_4", "4");
-        circulateAsOfficer(SignatureModule.ACADEMIC, id, 7, Map.of("committee_chair", chair));
+        circulateAsOfficer(SignatureModule.ACADEMIC, id, 7, committeeSigners());
         signOut();
         signEveryActiveStep(SignatureModule.ACADEMIC, id, 7, null);
         awaitStatus(id, RequestStatus.COMPLETED_PASS, "ข้อ 15 — อนุฯ เห็นชอบรอบใหม่");
@@ -1038,6 +1048,23 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
     /** ค่าที่เจ้าหน้าที่พิมพ์เองก่อนส่งเวียนครั้งถัดไป (เช่นคะแนนประเมิน) — ใช้แล้วล้าง */
     private Map<String, String> formOverrides = Map.of();
 
+    /** ผู้ลงนามเอกสารที่ 7 (กรรมการสามคน) — เอกสารที่ 8 ใช้แค่ประธาน */
+    private Map<String, UserDtls> committeeSigners() {
+        return Map.of("committee_chair", chair, "committee_member_2", member2, "committee_member_3", member3);
+    }
+
+    /** เลือกกรรมการสามคนในเอกสารที่ 3 แบบที่ตัวค้นหาชื่อบันทึก: ชื่อที่พิมพ์ลงเอกสาร + รหัสบัญชี */
+    private Map<String, String> committeePicks() {
+        Map<String, String> picks = new java.util.LinkedHashMap<>();
+        UserDtls[] committee = { chair, member2, member3 };
+        for (int i = 1; i <= 3; i++) {
+            picks.put("committee_" + i + "_name",
+                    com.ecom.academic.service.SignerNameResolver.printedName(committee[i - 1]));
+            picks.put("committee_" + i + "_name__signer", String.valueOf(committee[i - 1].getId()));
+        }
+        return picks;
+    }
+
     private void pickSigners(Locator form, Map<String, UserDtls> signers, String who) {
         Locator slotKeys = form.locator("input[name='slotKeys']");
         Locator selects = form.locator("[name='signerUserIds']");
@@ -1053,6 +1080,10 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                 String id = signer == null ? "" : String.valueOf(signer.getId());
                 page.evaluate("""
                         ([name, id]) => {
+                          // ช่องชื่อที่ดึงจากเอกสารก่อนหน้า (กรรมการในเอกสารที่ 7-8) แก้ไม่ได้ — ผู้ลงนามคือคนที่เลือกไว้แล้ว
+                          const locked = [...document.querySelectorAll('[name="' + name + '"]')]
+                              .find(e => !e.closest('[data-named-signer]') && e.readOnly);
+                          if (locked) return;
                           const c = (window.NAMED_SIGNER_CANDIDATES || []).find(x => String(x.userId) === id);
                           const f = [...document.querySelectorAll('[name="' + name + '"]')]
                               .find(e => !e.closest('[data-named-signer]'));
