@@ -390,7 +390,8 @@ public class IncrementalSigningService {
      */
     public byte[] preview(SignatureRequest envelope, SignatureStep step, byte[] imagePng, String choice,
             String comment) throws IOException {
-        byte[] current = latest(envelope);
+        // ช่องที่สำนักงานกรอกไว้แล้วจะถูกเขียนลงไฟล์ตอนลงนาม (sign → syncLateValues) — แสดงให้เห็นตั้งแต่ตอนนี้
+        byte[] current = latestForViewing(envelope);
         if (step == null || step.getStatus() != com.ecom.academic.model.SignatureStepStatus.ACTIVE) {
             return current;
         }
@@ -418,15 +419,7 @@ public class IncrementalSigningService {
             throw new IllegalStateException("เอกสารนี้ปิดแล้ว แก้ไขไม่ได้");
         }
         byte[] current = latest(envelope);
-        Set<String> fields = fieldNames(current);
-        Map<String, String> filled = values(current);
-        Map<String, String> changes = new LinkedHashMap<>();
-        values.forEach((k, v) -> {
-            String value = v == null ? "" : v.trim();
-            if (fields.contains(k) && !value.equals(filled.getOrDefault(k, ""))) {
-                changes.put(k, value);
-            }
-        });
+        Map<String, String> changes = changesAgainst(current, values);
         if (changes.isEmpty()) {
             return -1;
         }
@@ -452,6 +445,35 @@ public class IncrementalSigningService {
      */
     @Transactional
     public int syncLateValues(SignatureRequest envelope, UserDtls actor, boolean includeOffice) throws IOException {
+        Map<String, String> values = savedLateValues(envelope, includeOffice);
+        return values.isEmpty() ? -1 : fill(envelope, values, actor);
+    }
+
+    /**
+     * The current file as the next signature will find it: what the office has saved
+     * since the last revision (ticks and remarks of document 2, for instance) drawn in,
+     * the way {@link #sign} writes them before signing. Shown only, never stored —
+     * otherwise an officer's tick does not appear on any preview until they sign.
+     * The memo number and date stay out, as they do when signing.
+     */
+    public byte[] latestForViewing(SignatureRequest envelope) throws IOException {
+        byte[] current = latest(envelope);
+        if (envelope.getPdfLockedAt() != null) {
+            return current;
+        }
+        try {
+            Map<String, String> changes = changesAgainst(current, savedLateValues(envelope, false));
+            return changes.isEmpty() ? current : pdf.fill(current, changes);
+        } catch (IOException | RuntimeException e) {
+            // A value that does not fit (or a field a signer has locked) is reported where it
+            // is saved or signed — the preview falls back to the file as it is.
+            log.debug("Preview without pending values for envelope {}: {}", envelope.getId(), e.toString());
+            return current;
+        }
+    }
+
+    /** The late values the office has saved for this envelope's document; blanks skipped. */
+    private Map<String, String> savedLateValues(SignatureRequest envelope, boolean includeOffice) throws IOException {
         Set<String> office = DocumentFieldOwnership.officeFields(envelope.getModule(), envelope.getDocumentType());
         String filled = officeFields.getObject().fillInto(envelope, "{}");
         Map<String, String> values = new LinkedHashMap<>();
@@ -465,7 +487,21 @@ public class IncrementalSigningService {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             throw new IOException(e);
         }
-        return values.isEmpty() ? -1 : fill(envelope, values, actor);
+        return values;
+    }
+
+    /** The values that differ from what {@code current} already shows, for fields it prints. */
+    private static Map<String, String> changesAgainst(byte[] current, Map<String, String> values) throws IOException {
+        Set<String> fields = fieldNames(current);
+        Map<String, String> filled = values(current);
+        Map<String, String> changes = new LinkedHashMap<>();
+        values.forEach((k, v) -> {
+            String value = v == null ? "" : v.trim();
+            if (fields.contains(k) && !value.equals(filled.getOrDefault(k, ""))) {
+                changes.put(k, value);
+            }
+        });
+        return changes;
     }
 
     /**

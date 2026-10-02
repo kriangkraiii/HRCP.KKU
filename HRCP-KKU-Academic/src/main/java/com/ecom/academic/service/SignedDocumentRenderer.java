@@ -58,6 +58,10 @@ public class SignedDocumentRenderer {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.ecom.academic.service.pdf.SignedPdfRevisionService pdfRevisions;
 
+    /** Lazy: the incremental signer itself depends on this renderer. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.beans.factory.ObjectProvider<com.ecom.academic.service.pdf.IncrementalSigningService> incrementalSigning;
+
     /** One archive write per envelope at a time — two viewers must not interleave files. */
     private final ConcurrentHashMap<Long, Object> archiveLocks = new ConcurrentHashMap<>();
 
@@ -417,10 +421,13 @@ public class SignedDocumentRenderer {
 
     private byte[] renderForDownloadUnstamped(SignatureRequest envelope, String format) throws IOException {
         if ("pdf".equalsIgnoreCase(format) && envelope.isIncremental() && pdfRevisions != null) {
-            // Signed or not yet, the real document is the file the signers are signing.
+            // Signed or not yet, the real document is the file the signers are signing —
+            // with what the office has saved since the last signature drawn in (written to the
+            // file when the next signer signs). เจ้าหน้าที่ติ๊กแล้วต้องเห็นในตัวอย่างทันที
             byte[] signed = pdfRevisions.latest(envelope.getId());
             if (signed != null) {
-                return signed;
+                var viewer = incrementalSigning != null ? incrementalSigning.getIfAvailable() : null;
+                return viewer != null ? viewer.latestForViewing(envelope) : signed;
             }
         }
         // ลงนามครบแล้ว — ส่งสำเนาที่เก็บไว้ ไม่สร้างใหม่จากเทมเพลตของรุ่นที่ deploy อยู่

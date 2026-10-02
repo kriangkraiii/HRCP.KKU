@@ -103,6 +103,13 @@
         // Skip if target opens in new tab/window
         if (form.getAttribute('target') === '_blank') return;
 
+        // ยังไม่ได้ส่งจริง — ฟอร์มที่มี data-confirm กำลังจะถามยืนยันก่อน (csp_fallbacks.js)
+        // สคริปต์นี้โหลดก่อนจึงทำงานก่อนกล่องยืนยัน ถ้าตั้งสถานะกำลังบันทึกตรงนี้ แล้วผู้ใช้กดยกเลิก
+        // ปุ่มจะค้างหมุนจนครบ 15 วินาที — รอให้ยืนยันก่อน (ส่งรอบที่ยืนยันแล้วจะผ่านมาที่นี่อีกครั้ง)
+        if (form.dataset.confirm && !form._inAppConfirmed) return;
+        // สคริปต์ของหน้ายกเลิกการส่งไว้เอง (เช่นตรวจข้อมูลไม่ผ่าน หรือเปิดกล่องยืนยันของตัวเอง)
+        if (e.defaultPrevented) return;
+
         // Find the active submit button
         var submitBtn = lastClickedSubmitBtn;
         if (!submitBtn || !form.contains(submitBtn)) {
