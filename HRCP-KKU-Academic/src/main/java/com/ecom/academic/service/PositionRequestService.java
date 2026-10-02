@@ -262,6 +262,12 @@ public class PositionRequestService {
     public static final String ERROR_RANK_NOT_HIGHER = "rank_not_higher";
     public static final String ERROR_EVALUATION_REQUIRED = "evaluation_required";
     public static final String ERROR_POSITION_MISMATCH = "position_mismatch";
+    public static final String ERROR_ALREADY_PROFESSOR = "already_professor";
+
+    /** ศาสตราจารย์เป็นตำแหน่งสูงสุด — ยื่นคำร้องขอตำแหน่งใหม่ไม่ได้ ดูจากโปรไฟล์ */
+    public boolean holdsHighestRank(UserDtls applicant) {
+        return AcademicRankPolicy.holdsHighestRank(applicant);
+    }
 
     /**
      * ปัญหาของการเริ่มคำร้องด้วยผลประเมินฉบับนี้ ถ้ามี — ตำแหน่งที่ผลประเมินขอต้องสูงกว่าตำแหน่งปัจจุบัน
@@ -271,6 +277,9 @@ public class PositionRequestService {
         EvaluationSummary summary = academicRequestRepository.findById(evaluationId)
                 .map(academicRequestService::summarize)
                 .orElse(null);
+        if (AcademicRankPolicy.holdsHighestRank(applicant, summary == null ? null : summary.currentPosition())) {
+            return Optional.of(ERROR_ALREADY_PROFESSOR);
+        }
         if (summary == null || summary.targetRank() == null) {
             return Optional.empty();
         }
@@ -286,6 +295,9 @@ public class PositionRequestService {
      * ซึ่งเอกสารที่ 1 ติ๊กขอ ศ. ไว้ (วิธีพิเศษ) ผ่าน {@code /create-request}
      */
     public Optional<String> rankProblemForProfessor(UserDtls applicant) {
+        if (AcademicRankPolicy.holdsHighestRank(applicant)) {
+            return Optional.of(ERROR_ALREADY_PROFESSOR);
+        }
         AcademicRank current = AcademicRankPolicy.currentRank(applicant);
         Optional<String> violation = AcademicRankPolicy.rankViolation(current, AcademicRank.PROFESSOR)
                 .map(message -> ERROR_RANK_NOT_HIGHER);
@@ -308,17 +320,22 @@ public class PositionRequestService {
      * ของคำร้องนี้ แล้วค่อยโปรไฟล์
      * </ul>
      *
-     * คำร้องที่ยังไม่รู้ว่าขอตำแหน่งอะไรจะถูกปล่อยผ่าน เพราะยังไม่มีอะไรให้เทียบ
+     * ศาสตราจารย์ยื่นไม่ได้เลยไม่ว่าขอตำแหน่งอะไร คำร้องอื่นที่ยังไม่รู้ว่าขอตำแหน่งอะไรจะถูกปล่อยผ่าน เพราะยังไม่มีอะไรให้เทียบ
      *
      * @return error code สำหรับหน้าจอ ถ้าผิดกติกา
      */
     public Optional<String> submissionProblem(PositionRequest request) {
+        EvaluationSummary evaluation = academicRequestService.summarize(request.getLinkedEvaluation());
+        Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
+        if (AcademicRankPolicy.holdsHighestRank(request.getApplicant(),
+                evaluation == null ? null : evaluation.currentPosition(),
+                doc1 == null ? null : doc1.get("current_position"))) {
+            return Optional.of(ERROR_ALREADY_PROFESSOR);
+        }
         AcademicRank target = AcademicRank.of(request.getTargetPosition());
         if (target == null) {
             return Optional.empty();
         }
-        EvaluationSummary evaluation = academicRequestService.summarize(request.getLinkedEvaluation());
-        Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
         AcademicRank current = AcademicRankPolicy.currentRank(request.getApplicant(),
                 evaluation == null ? null : evaluation.currentPosition(),
                 doc1 == null ? null : doc1.get("current_position"));

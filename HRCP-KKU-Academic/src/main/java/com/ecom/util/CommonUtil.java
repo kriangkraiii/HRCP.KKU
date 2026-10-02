@@ -90,9 +90,15 @@ public class CommonUtil {
 		return true;
 	}
 
+	/**
+	 * ต้นทางของเว็บ (scheme://host[:port][/context]) สำหรับลิงก์ในอีเมล
+	 *
+	 * <p>เดิมตัด servlet path ออกจาก URL ของคำขอด้วย {@code String.replace} ซึ่งพังเมื่อ servlet path
+	 * ว่าง (ได้ลิงก์ {@code /forgot-password/reset-password}) หรือเมื่อข้อความเดียวกันโผล่ในชื่อโฮสต์
+	 */
 	public static String generateUrl(HttpServletRequest request) {
-		String siteUrl = request.getRequestURL().toString();
-		return siteUrl.replace(request.getServletPath(), "");
+		return org.springframework.web.servlet.support.ServletUriComponentsBuilder.fromContextPath(request)
+				.replaceQuery(null).build().toUriString();
 	}
 
 	public UserDtls getLoggedInUserDetails(Principal p) {

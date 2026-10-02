@@ -39,6 +39,18 @@ public final class AcademicRankPolicy {
     }
 
     /**
+     * ผู้ยื่นเป็นศาสตราจารย์แล้วหรือไม่ — ตำแหน่งสูงสุด จึงยื่นอะไรต่อไม่ได้ทั้งประเมินการสอนและขอตำแหน่ง
+     *
+     * <p>ต่างจาก {@link #currentRank} ตรงที่โปรไฟล์ไม่ถูกเอกสารบัง: ได้ ศ. หลังประเมินการสอนไปแล้ว
+     * เอกสารเก่าที่ยังเขียนว่า ผศ. ต้องไม่เปิดทางให้ยื่นต่อ ที่ไหนบอกว่า ศ. ก็ถือว่า ศ.
+     */
+    public static boolean holdsHighestRank(UserDtls user, String... documentedPositions) {
+        AcademicRank fromProfile = user == null ? null : AcademicRank.of(user.getAcademicPosition());
+        return fromProfile == AcademicRank.PROFESSOR
+                || currentRank(user, documentedPositions) == AcademicRank.PROFESSOR;
+    }
+
+    /**
      * การขอตำแหน่งนี้ต้องใช้ผลประเมินการสอนหรือไม่
      *
      * <p>ขอ ผศ./รศ. ต้องใช้เสมอ ส่วน ศ. ขึ้นกับว่ามาจากไหน: รศ. ขอ ศ. เป็นวิธีปกติ ข้ามการประเมินได้

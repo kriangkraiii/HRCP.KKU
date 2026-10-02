@@ -34,11 +34,15 @@
                 <span th:if="${param.error[0] == 'evaluation_required'}">
                     ยื่นคำร้องนี้ไม่ได้ เนื่องจากตำแหน่งผู้ช่วยศาสตราจารย์และรองศาสตราจารย์ต้องใช้ผลการประเมินผลการสอน
                 </span>
+                <span th:if="${param.error[0] == 'already_professor'}">
+                    ยื่นคำร้องนี้ไม่ได้ เนื่องจากท่านดำรงตำแหน่งศาสตราจารย์ ซึ่งเป็นตำแหน่งทางวิชาการระดับสูงสุดแล้ว
+                </span>
                 <span th:if="${param.error[0] == 'position_mismatch'}">
                     ยื่นคำร้องนี้ไม่ได้ เนื่องจากตำแหน่งที่ขอไม่ตรงกับผลการประเมินผลการสอน
                 </span>
                 <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'rank_not_higher'
-                        or param.error[0] == 'evaluation_required' or param.error[0] == 'position_mismatch'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
+                        or param.error[0] == 'evaluation_required' or param.error[0] == 'position_mismatch'
+                        or param.error[0] == 'already_professor'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 

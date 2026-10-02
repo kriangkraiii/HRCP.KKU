@@ -102,6 +102,39 @@ class AcademicRankPolicyTest {
     }
 
     @Nested
+    @DisplayName("ศาสตราจารย์ขอตำแหน่งต่อไม่ได้ — สูงสุดแล้ว")
+    class HighestRank {
+
+        @Test
+        @DisplayName("โปรไฟล์เป็น ศ. — ถือว่าสูงสุดแล้ว")
+        void aProfessorProfileHoldsTheHighestRank() {
+            assertThat(AcademicRankPolicy.holdsHighestRank(withProfilePosition("ศ.ดร."))).isTrue();
+        }
+
+        @Test
+        @DisplayName("โปรไฟล์เป็น ศ. แต่ผลประเมินเก่าเขียนว่า ผศ. — ยังถือว่าสูงสุด")
+        void anOldEvaluationDoesNotHideAProfessorProfile() {
+            assertThat(AcademicRankPolicy.holdsHighestRank(withProfilePosition("ศาสตราจารย์"),
+                    "ผู้ช่วยศาสตราจารย์"))
+                    .as("ได้ ศ. หลังประเมินการสอน ต้องเอาผลประเมินเก่ามาขอตำแหน่งต่อไม่ได้")
+                    .isTrue();
+        }
+
+        @Test
+        @DisplayName("เอกสารระบุ ศ. — ถือว่าสูงสุดแล้ว แม้โปรไฟล์ยังไม่ sync")
+        void aDocumentNamingProfessorHoldsTheHighestRank() {
+            assertThat(AcademicRankPolicy.holdsHighestRank(withProfilePosition(null), "ศาสตราจารย์")).isTrue();
+        }
+
+        @Test
+        @DisplayName("รศ. ยังขอ ศ. ได้")
+        void anAssociateProfessorDoesNot() {
+            assertThat(AcademicRankPolicy.holdsHighestRank(withProfilePosition("รองศาสตราจารย์"))).isFalse();
+            assertThat(AcademicRankPolicy.holdsHighestRank(null)).isFalse();
+        }
+    }
+
+    @Nested
     @DisplayName("ต้องใช้ผลประเมินการสอนไหม")
     class TeachingEvaluation {
 

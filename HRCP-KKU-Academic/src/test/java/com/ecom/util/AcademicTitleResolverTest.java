@@ -63,6 +63,7 @@ class AcademicTitleResolverTest {
         assertEquals("รองศาสตราจารย์", AcademicTitleResolver.resolveThaiAcademicPosition(null, "Associate Professor Ph.D."));
         assertEquals("ผู้ช่วยศาสตราจารย์", AcademicTitleResolver.resolveThaiAcademicPosition("ผศ.ดร.", "Assistant Professor"));
         assertEquals("ศาสตราจารย์", AcademicTitleResolver.resolveThaiAcademicPosition("ศ.", "Professor"));
+        assertEquals("ศาสตราจารย์", AcademicTitleResolver.resolveThaiAcademicPosition("ศ.ดร."));
         assertEquals("อาจารย์", AcademicTitleResolver.resolveThaiAcademicPosition(null, "Lecturer"));
     }
 }

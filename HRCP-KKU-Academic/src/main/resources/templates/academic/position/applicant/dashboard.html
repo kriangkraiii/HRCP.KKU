@@ -6,12 +6,17 @@
         <div class="container py-4">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h3><i class="fas fa-university"></i> การยื่นขอตำแหน่งทางวิชาการ</h3>
-                <th:block th:if="${!hasActiveRequest}">
+                <th:block th:if="${isProfessor}">
+                    <button class="btn btn-secondary" disabled title="ท่านดำรงตำแหน่งทางวิชาการระดับสูงสุดแล้ว">
+                        <i class="fas fa-check-circle"></i> ดำรงตำแหน่งสูงสุดแล้ว (ศาสตราจารย์)
+                    </button>
+                </th:block>
+                <th:block th:if="${!isProfessor and !hasActiveRequest}">
                     <a href="/user/position/new-request" class="btn btn-academic">
                         <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
                     </a>
                 </th:block>
-                <th:block th:if="${hasActiveRequest}">
+                <th:block th:if="${!isProfessor and hasActiveRequest}">
                     <button class="btn btn-secondary" disabled title="มีคำร้องที่กำลังดำเนินการอยู่">
                         <i class="fas fa-plus-circle"></i> ยื่นคำร้องใหม่
                     </button>
@@ -174,6 +179,9 @@
                 </span>
                 <span th:if="${param.error[0] == 'rank_not_higher'}">
                     ตำแหน่งที่ขอต้องสูงกว่าตำแหน่งที่ท่านดำรงอยู่
+                </span>
+                <span th:if="${param.error[0] == 'already_professor'}">
+                    ท่านดำรงตำแหน่งศาสตราจารย์อยู่แล้ว ซึ่งเป็นตำแหน่งทางวิชาการระดับสูงสุด จึงยื่นขอตำแหน่งเพิ่มไม่ได้
                 </span>
                 <span th:if="${param.error[0] == 'evaluation_required'}">
                     การขอตำแหน่งนี้ต้องใช้ผลการประเมินผลการสอนที่ผ่านแล้ว — การขอตำแหน่งศาสตราจารย์โดยไม่ใช้ผลประเมิน

@@ -101,7 +101,7 @@ public final class AcademicTitleResolver {
             if (raw.contains("ผู้ช่วยศาสตราจารย์") || raw.contains("ผศ.") || raw.contains("ผศ") || raw.contains("asst") || raw.contains("assist")) {
                 return "ผู้ช่วยศาสตราจารย์";
             }
-            if ((raw.contains("ศาสตราจารย์") || raw.contains("prof") || raw.equals("ศ.") || raw.equals("ศ"))
+            if ((raw.contains("ศาสตราจารย์") || raw.contains("prof") || raw.startsWith("ศ.") || raw.equals("ศ"))
                     && !raw.contains("รอง") && !raw.contains("ผู้ช่วย") && !raw.contains("assoc") && !raw.contains("asst")) {
                 return "ศาสตราจารย์";
             }

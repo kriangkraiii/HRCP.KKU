@@ -11,6 +11,10 @@ import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+import org.springframework.security.web.savedrequest.DefaultSavedRequest;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
+import org.springframework.security.web.savedrequest.RequestCache;
+import org.springframework.security.web.savedrequest.SavedRequest;
 import org.springframework.stereotype.Service;
 
 import com.ecom.config.ClientIpUtils;
@@ -91,6 +95,9 @@ public class SignInService {
     private final AdminLogService adminLogService;
 
     private final SecurityContextRepository contextRepository = new HttpSessionSecurityContextRepository();
+
+    /** Where the security filter parks the page a signed-out browser asked for. */
+    private final RequestCache requestCache = new HttpSessionRequestCache();
 
     public SignInService(TwoFactorService twoFactorService, AdminLogService adminLogService) {
         this.twoFactorService = twoFactorService;
@@ -231,7 +238,53 @@ public class SignInService {
         request.changeSessionId();
 
         recordSignIn(request, user, method);
-        return landingPageFor(user);
+        return destinationFor(request, response, user);
+    }
+
+    /**
+     * Where to send someone who has just signed in: the page they were trying to
+     * open, else their role's landing page.
+     *
+     * <p>Every button in the system's e-mails points at a protected page. Opened
+     * from a mail client the browser has no session yet, so the security filter
+     * parks the address and sends it to sign in — and until this existed nobody
+     * ever read it back, so every such button ended on the dashboard. The parked
+     * address survives the SSO round trip and the OTP screen because both keep the
+     * session.
+     *
+     * <p>Only the path and query are reused, never a host, so this cannot be
+     * turned into an open redirect. A page the role cannot open falls back to the
+     * landing page rather than a 403.
+     */
+    public String destinationFor(HttpServletRequest request, HttpServletResponse response, UserDtls user) {
+        SavedRequest saved = requestCache.getRequest(request, response);
+        if (saved == null) {
+            return landingPageFor(user);
+        }
+        requestCache.removeRequest(request, response);
+        if (!(saved instanceof DefaultSavedRequest parked) || !"GET".equals(parked.getMethod())) {
+            return landingPageFor(user);
+        }
+        String path = parked.getRequestURI();
+        if (!mayReturnTo(path, user)) {
+            return landingPageFor(user);
+        }
+        String query = parked.getQueryString();
+        return query == null || query.isBlank() ? path : path + "?" + query;
+    }
+
+    private static boolean mayReturnTo(String path, UserDtls user) {
+        if (path == null || !path.startsWith("/") || path.startsWith("//") || path.contains("\\")) {
+            return false;
+        }
+        if (user == null) {
+            return false;
+        }
+        if (user.isExternal()) {
+            // ผู้ลงนามภายนอกมาเพื่อลงนามอย่างเดียว — อีเมลที่ส่งถึงเขาชี้ไปที่ /esign เท่านั้น
+            return path.startsWith("/esign/");
+        }
+        return !path.startsWith("/admin/") || ROLE_ADMIN.equals(user.getRole());
     }
 
     /** Where a role lands after signing in. One answer for every entry point. */

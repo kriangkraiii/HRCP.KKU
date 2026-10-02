@@ -15,6 +15,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.context.SecurityContextImpl;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
+import org.springframework.security.web.savedrequest.HttpSessionRequestCache;
 
 import com.ecom.model.UserDtls;
 
@@ -178,5 +179,55 @@ class SignInServiceTest {
         assertThat(session.getAttribute(SignInService.SESSION_PENDING_METHOD)).isNull();
         assertThat(session.getAttribute(SignInService.SESSION_PENDING_SSO_TOKEN)).isNull();
         assertThat(session.getAttribute(SignInService.SESSION_ATTEMPTS)).isNull();
+    }
+
+    /** What the security filter does when a signed-out browser opens a protected link, e.g. from an e-mail. */
+    private void openedWhileSignedOut(String path, String query) {
+        MockHttpServletRequest original = new MockHttpServletRequest("GET", path);
+        original.setQueryString(query);
+        original.setSession(request.getSession());
+        new HttpSessionRequestCache().saveRequest(original, response);
+    }
+
+    @Test
+    @DisplayName("กดลิงก์ในอีเมลตอนยังไม่เข้าระบบ — เข้าระบบแล้วต้องไปหน้าที่ลิงก์ชี้ ไม่ใช่แดชบอร์ด")
+    void signingInReturnsToTheLinkThatWasOpened() {
+        openedWhileSignedOut("/esign/sign/42", null);
+
+        String landing = signInService.completeSignIn(request, response, user("ROLE_USER", false),
+                SignInService.Method.SSO, "sso-access-token");
+
+        assertThat(landing).isEqualTo("/esign/sign/42");
+    }
+
+    @Test
+    @DisplayName("ใช้ปลายทางที่จำไว้ได้ครั้งเดียว — เข้าระบบครั้งถัดไปกลับแดชบอร์ดตามปกติ")
+    void theRememberedLinkIsUsedOnce() {
+        openedWhileSignedOut("/user/position/request/7", "tab=docs");
+        UserDtls u = user("ROLE_USER", false);
+
+        assertThat(signInService.destinationFor(request, response, u)).isEqualTo("/user/position/request/7?tab=docs");
+        assertThat(signInService.destinationFor(request, response, u)).isEqualTo("/user/academic/dashboard");
+    }
+
+    @Test
+    @DisplayName("ลิงก์หน้าแอดมินที่ผู้ใช้ทั่วไปเปิด — พาไปแดชบอร์ดของตัวเองแทนหน้า 403")
+    void anAdminLinkDoesNotStrandAnApplicant() {
+        openedWhileSignedOut("/admin/academic/request/5", null);
+
+        assertThat(signInService.destinationFor(request, response, user("ROLE_USER", false)))
+                .isEqualTo("/user/academic/dashboard");
+    }
+
+    @Test
+    @DisplayName("ผู้ลงนามภายนอกกลับได้เฉพาะหน้าลงนาม")
+    void anExternalSignerOnlyReturnsToSigningPages() {
+        openedWhileSignedOut("/user/academic/dashboard", null);
+        assertThat(signInService.destinationFor(request, response, user("ROLE_EXTERNAL", false)))
+                .isEqualTo("/esign/inbox");
+
+        openedWhileSignedOut("/esign/committee/academic/9", null);
+        assertThat(signInService.destinationFor(request, response, user("ROLE_EXTERNAL", false)))
+                .isEqualTo("/esign/committee/academic/9");
     }
 }

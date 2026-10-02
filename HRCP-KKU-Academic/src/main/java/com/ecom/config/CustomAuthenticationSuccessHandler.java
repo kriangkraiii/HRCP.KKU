@@ -83,6 +83,6 @@ public class CustomAuthenticationSuccessHandler implements AuthenticationSuccess
         // is left is the session rotation, the audit entry and the destination.
         request.changeSessionId();
         signInService.recordSignIn(request, user, SignInService.Method.PASSWORD);
-        response.sendRedirect(signInService.landingPageFor(user));
+        response.sendRedirect(signInService.destinationFor(request, response, user));
     }
 }

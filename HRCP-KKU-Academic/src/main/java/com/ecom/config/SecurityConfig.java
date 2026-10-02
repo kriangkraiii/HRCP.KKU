@@ -97,6 +97,7 @@ public class SecurityConfig {
 
                         if (code == null || code.isBlank() || alreadyRetried
                                         || !isKnownCallbackPath(request.getRequestURI())) {
+                                rememberWhereTheyWereGoing(request, response);
                                 expiredPage.onInvalidSessionDetected(request, response);
                                 return;
                         }
@@ -114,6 +115,26 @@ public class SecurityConfig {
                                         + "&sso_retry=1";
                         response.sendRedirect(again);
                 };
+        }
+
+        /**
+         * จำหน้าที่เบราว์เซอร์กำลังจะเปิดไว้ใน session ใหม่ เพื่อให้เข้าระบบแล้วกลับมาที่หน้านั้น
+         *
+         * <p>ปกติ ExceptionTranslationFilter จำให้เอง แต่คำขอที่พก cookie ของ session ที่ตายแล้ว
+         * ถูกตีกลับที่นี่ก่อนจะไปถึงมัน — และนั่นคือกรณีที่พบบ่อยที่สุดของคนที่กดปุ่มในอีเมล:
+         * เคยเข้าระบบมาก่อน แล้ว session หมดอายุหรือระบบเพิ่ง deploy ใหม่ จำเฉพาะหน้าในระบบที่ต้อง
+         * เข้าสู่ระบบ และเฉพาะ GET ที่เปิดจากแถบที่อยู่ ไม่ใช่ AJAX
+         */
+        private static void rememberWhereTheyWereGoing(jakarta.servlet.http.HttpServletRequest request,
+                        jakarta.servlet.http.HttpServletResponse response) {
+                String uri = request.getRequestURI();
+                boolean appPage = uri != null
+                                && (uri.startsWith("/user/") || uri.startsWith("/admin/") || uri.startsWith("/esign/"));
+                if (appPage && "GET".equals(request.getMethod())
+                                && !"XMLHttpRequest".equals(request.getHeader("X-Requested-With"))) {
+                        new org.springframework.security.web.savedrequest.HttpSessionRequestCache()
+                                        .saveRequest(request, response);
+                }
         }
 
         /**

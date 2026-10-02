@@ -124,7 +124,7 @@ public class SignatureNotifier {
         String message = "ผู้ลงนามทุกคนลงนามในเอกสารเรียบร้อยแล้ว (" + notice.progressLabel() + ")";
 
         for (UserDtls recipient : notice.recipients()) {
-            notify(recipient, title, message, notice.module().adminLink(notice.requestId()),
+            notify(recipient, title, message, requestLinkFor(recipient, notice.module(), notice.requestId()),
                     NotificationType.SIGNATURE_COMPLETED, false);
             String body = EmailTemplateHelper.Letter.of("เอกสาร “" + notice.safeDocumentLabel() + "” ลงนามครบแล้ว",
                             formal(recipient))
@@ -132,7 +132,7 @@ public class SignatureNotifier {
                             + " ได้รับการลงนามครบทุกตำแหน่งแล้ว")
                     .details(caseRows(notice, "ความคืบหน้า", notice.progressLabel()))
                     .para("ท่านสามารถดาวน์โหลดเอกสารที่ลงนามแล้ว และดำเนินการในขั้นตอนต่อไปได้ในระบบ")
-                    .button("เปิดคำร้องในระบบ", link(notice.module().adminLink(notice.requestId())))
+                    .button("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, notice.module(), notice.requestId())))
                     .close("จึงเรียนมาเพื่อโปรดทราบ");
             email(recipient, "ลงนามครบแล้ว: " + notice.safeDocumentLabel() + aboutWhom(notice),
                     EmailTemplateHelper.wrapLayout("เอกสารลงนามครบแล้ว", "เสร็จสิ้น", body));
@@ -146,7 +146,7 @@ public class SignatureNotifier {
         String message = notice.signerName() + " ปฏิเสธการลงนาม — เหตุผล: " + notice.declineReason();
 
         for (UserDtls recipient : notice.recipients()) {
-            notify(recipient, title, message, notice.module().adminLink(notice.requestId()),
+            notify(recipient, title, message, requestLinkFor(recipient, notice.module(), notice.requestId()),
                     NotificationType.SIGNATURE_DECLINED, true);
             String body = EmailTemplateHelper.Letter.of("ผู้ลงนามไม่ลงนามในเอกสาร “" + notice.safeDocumentLabel() + "”",
                             formal(recipient))
@@ -157,7 +157,7 @@ public class SignatureNotifier {
                     .note("danger", "เหตุผล", nameOr(notice.declineReason(), "-"))
                     .para("ระบบได้ปลดล็อกเอกสารให้แก้ไขได้แล้ว ขอให้ตรวจสอบและแก้ไขตามเหตุผลข้างต้น"
                             + " แล้วส่งเวียนลงนามใหม่อีกครั้ง")
-                    .button("เปิดคำร้องในระบบ", link(notice.module().adminLink(notice.requestId())))
+                    .button("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, notice.module(), notice.requestId())))
                     .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
             email(recipient, "ผู้ลงนามไม่ลงนาม: " + notice.safeDocumentLabel() + aboutWhom(notice),
                     EmailTemplateHelper.wrapLayout("ผู้ลงนามไม่ลงนามในเอกสาร", "ต้องดำเนินการ", body));
@@ -200,14 +200,14 @@ public class SignatureNotifier {
         String message = who + " ลงนามแล้วและบันทึก" + question + "เป็น \"" + answer + "\"";
 
         for (UserDtls recipient : recipients) {
-            notify(recipient, title, message, module.adminLink(requestId),
+            notify(recipient, title, message, requestLinkFor(recipient, module, requestId),
                     NotificationType.SIGNATURE_DECLINED, true);
             String body = EmailTemplateHelper.Letter.of("ผลการตรวจสอบในเอกสาร “" + safeDoc + "”", formal(recipient))
                     .para(who + " ได้ลงนามในเอกสาร “" + safeDoc + "” ของ" + module.getThaiLabel()
                             + " รหัส " + requestId + " แล้ว และได้บันทึกผลการตรวจสอบที่ควรทราบ ดังนี้")
                     .note("warn", question, answer)
                     .para("การเวียนลงนามยังดำเนินต่อไปตามปกติ ขอให้ตรวจสอบว่าต้องดำเนินการใดเพิ่มเติมหรือไม่")
-                    .button("เปิดคำร้องในระบบ", link(module.adminLink(requestId)))
+                    .button("เปิดคำร้องในระบบ", link(requestLinkFor(recipient, module, requestId)))
                     .close("จึงเรียนมาเพื่อโปรดพิจารณา");
             email(recipient, "ผลการตรวจสอบ “" + answer + "”: " + safeDoc,
                     EmailTemplateHelper.wrapLayout("ผลการตรวจสอบจากผู้ลงนาม", "ควรตรวจสอบ", body));
@@ -221,7 +221,9 @@ public class SignatureNotifier {
         String title = "ขอขยายเวลาลงนาม: " + (envelope.getDocumentLabel() != null ? envelope.getDocumentLabel() : "เอกสาร");
         String message = (signer != null ? signer.getName() : "ผู้ลงนาม") + " ขอขยายเวลาลงนาม"
                 + (reason != null && !reason.isBlank() ? " (เหตุผล: " + reason + ")" : "");
-        String link = envelope.getModule() != null ? envelope.getModule().adminLink(envelope.getRequestId()) : "/admin/academic/requests";
+        String link = envelope.getModule() != null
+                ? requestLinkFor(initiator, envelope.getModule(), envelope.getRequestId())
+                : "/esign/inbox";
 
         notify(initiator, title, message, link, NotificationType.SIGNATURE_REMINDER, true);
     }
@@ -431,6 +433,25 @@ public class SignatureNotifier {
 
     private static String nameOr(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value;
+    }
+
+    /**
+     * หน้าคำร้องที่ผู้รับคนนี้เปิดได้จริง
+     *
+     * <p>ผู้รับแจ้งเตือนเรื่องซองไม่ได้มีแต่เจ้าหน้าที่ — ผู้ยื่นส่งเอกสารของตัวเองไปลงนามได้ จึงเป็น
+     * ผู้ส่งซอง และผลการตรวจสอบของผู้ลงนามก็แจ้งผู้ยื่นด้วย ลิงก์ {@code /admin/**} ที่ส่งให้ทุกคน
+     * เท่าเดิมพาผู้ยื่นไปเจอหน้า 403 เจ้าหน้าที่ ROLE_STAFF ก็เปิด {@code /admin/**} ไม่ได้
+     * จึงไปกล่องลงนามแทน
+     */
+    static String requestLinkFor(UserDtls recipient, SignatureModule module, Long requestId) {
+        String role = recipient == null ? null : recipient.getRole();
+        if ("ROLE_ADMIN".equals(role)) {
+            return module.adminLink(requestId);
+        }
+        if ("ROLE_USER".equals(role)) {
+            return module.userLink(requestId);
+        }
+        return "/esign/inbox";
     }
 
     /** ลิงก์เต็มสำหรับใส่ในอีเมล — ลิงก์แบบ "/esign/..." เปิดจากโปรแกรมอีเมลไม่ได้ */

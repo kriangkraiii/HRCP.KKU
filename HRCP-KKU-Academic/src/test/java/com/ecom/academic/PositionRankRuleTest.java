@@ -236,13 +236,13 @@ class PositionRankRuleTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("ศ. ขอ ศ. — ไม่สร้างคำร้อง")
+        @DisplayName("ศ. ขอ ศ. — ไม่สร้างคำร้อง เพราะ ศ. เป็นตำแหน่งสูงสุดแล้ว")
         void aProfessorCannotApplyForProfessor() throws Exception {
             UserDtls applicant = applicantHolding("ศาสตราจารย์");
 
             mvc.perform(post("/user/position/create-professor-request")
                     .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
-                    .andExpect(redirectedUrl("/user/position/dashboard?error=rank_not_higher"));
+                    .andExpect(redirectedUrl("/user/position/dashboard?error=already_professor"));
 
             assertThat(positionService.findDraftByApplicant(applicant.getId())).isEmpty();
         }
@@ -371,11 +371,32 @@ class PositionRankRuleTest extends AbstractFlowTest {
         @Test
         @DisplayName("ขอตำแหน่งที่ไม่สูงกว่าตำแหน่งปัจจุบัน — ไม่ส่ง")
         void aTargetNotAboveTheCurrentRankIsRefused() throws Exception {
+            UserDtls applicant = applicantHolding("รองศาสตราจารย์");
+            AcademicRequest evaluation = data.evaluationFor(applicant,
+                    AcademicRank.ASSISTANT_PROFESSOR, "รองศาสตราจารย์");
+            PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
+                    evaluation, "ผู้ช่วยศาสตราจารย์");
+
+            expectRefusal(applicant, draft, "rank_not_higher");
+        }
+
+        @Test
+        @DisplayName("ศ. ยื่นแบบร่างที่ค้างจากก่อนได้ตำแหน่ง — ไม่ส่ง เพราะสูงสุดแล้ว")
+        void aProfessorsLeftoverDraftIsRefused() throws Exception {
             UserDtls applicant = applicantHolding("ศาสตราจารย์");
             PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
                     null, "ศาสตราจารย์");
 
-            expectRefusal(applicant, draft, "rank_not_higher");
+            expectRefusal(applicant, draft, "already_professor");
+        }
+
+        @Test
+        @DisplayName("ศ. เปิดหน้าเริ่มคำร้อง — ถูกพากลับแดชบอร์ดพร้อมเหตุผล")
+        void aProfessorIsTurnedAwayFromTheNewRequestPage() throws Exception {
+            UserDtls applicant = applicantHolding("ศ.ดร.");
+
+            mvc.perform(get("/user/position/new-request").with(user(applicant.getEmail()).roles("USER")))
+                    .andExpect(redirectedUrl("/user/position/dashboard?error=already_professor"));
         }
     }
 

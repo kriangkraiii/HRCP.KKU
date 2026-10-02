@@ -268,13 +268,18 @@
                 <div class="tab-pane fade" id="posPane" role="tabpanel" aria-labelledby="pos-tab">
 
                     <div class="d-flex justify-content-end mb-3">
-                        <th:block th:if="${!hasActivePositionRequest}">
+                        <th:block th:if="${isProfessor}">
+                            <button class="btn btn-secondary" disabled>
+                                <i class="fas fa-check-circle me-1"></i> ดำรงตำแหน่งสูงสุดแล้ว (ศาสตราจารย์)
+                            </button>
+                        </th:block>
+                        <th:block th:if="${!isProfessor and !hasActivePositionRequest}">
                             <a href="/user/position/new-request" class="btn s-dashboard-3"
                               >
                                 <i class="fas fa-plus-circle me-1"></i> ยื่นคำร้องขอตำแหน่ง
                             </a>
                         </th:block>
-                        <th:block th:if="${hasActivePositionRequest}">
+                        <th:block th:if="${!isProfessor and hasActivePositionRequest}">
                             <button class="btn btn-secondary" disabled>
                                 <i class="fas fa-plus-circle me-1"></i> ยื่นคำร้องขอตำแหน่ง
                             </button>

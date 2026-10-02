@@ -165,6 +165,33 @@ public class PositionRequestServiceTest {
         }
     }
 
+    // ================== Highest Rank ==================
+
+    @Nested
+    class AlreadyProfessor {
+
+        @BeforeEach
+        void makeProfessor() {
+            testUser.setAcademicPosition("ศาสตราจารย์");
+            testUser = userRepository.save(testUser);
+        }
+
+        @Test
+        void cannotStartAProfessorRequest() {
+            assertThat(positionService.rankProblemForProfessor(testUser))
+                    .contains(PositionRequestService.ERROR_ALREADY_PROFESSOR);
+        }
+
+        @Test
+        void cannotSubmitADraftLeftOverFromBeforeThePromotion() {
+            PositionRequest draft = positionService.createDraftRequest(testUser, null);
+
+            assertThat(positionService.submissionProblem(draft))
+                    .as("ไม่รู้ว่าขอตำแหน่งอะไรก็ต้องถูกกัน — ศ. ไม่มีตำแหน่งให้ขอต่อแล้ว")
+                    .contains(PositionRequestService.ERROR_ALREADY_PROFESSOR);
+        }
+    }
+
     // ================== Status Transition Tests ==================
 
     @Nested

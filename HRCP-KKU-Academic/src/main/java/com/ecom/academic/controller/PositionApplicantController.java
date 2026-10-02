@@ -128,6 +128,7 @@ public class PositionApplicantController {
         model.addAttribute("requests", requests);
         model.addAttribute("draftRequest", draftRequest.orElse(null));
         model.addAttribute("hasActiveRequest", hasActiveRequest);
+        model.addAttribute("isProfessor", positionService.holdsHighestRank(user));
         model.addAttribute("statuses", PositionRequestStatus.values());
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
         java.util.Map<Long, com.ecom.academic.service.RevisionProgress.Summary> sentBackMap =
@@ -193,6 +194,10 @@ public class PositionApplicantController {
     @GetMapping("/new-request")
     public String newRequestForm(Principal principal, Model model) {
         UserDtls user = getUser(principal);
+
+        if (positionService.holdsHighestRank(user)) {
+            return "redirect:/user/position/dashboard?error=" + PositionRequestService.ERROR_ALREADY_PROFESSOR;
+        }
 
         // An unfinished draft comes first. It counts as an active request, so
         // checking the other way round meant this branch never ran and someone

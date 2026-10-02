@@ -1353,13 +1353,13 @@ public class AcademicApplicantController {
      * {@code current_position} ของเอกสารที่ 1 ก่อน แล้วค่อยโปรไฟล์
      */
     private Optional<String> doc1RankProblem(Map<String, String> doc1, UserDtls user) {
-        AcademicRank current = AcademicRankPolicy.currentRank(user,
-                doc1 == null ? null : doc1.get("current_position"));
+        String documented = doc1 == null ? null : doc1.get("current_position");
+        if (AcademicRankPolicy.holdsHighestRank(user, documented)) {
+            return Optional.of("ท่านดำรงตำแหน่งศาสตราจารย์อยู่แล้ว ซึ่งเป็นตำแหน่งทางวิชาการระดับสูงสุด");
+        }
+        AcademicRank current = AcademicRankPolicy.currentRank(user, documented);
         if (current == AcademicRank.ASSOCIATE_PROFESSOR) {
             return Optional.of("ท่านดำรงตำแหน่งรองศาสตราจารย์แล้ว การขอกำหนดตำแหน่งศาสตราจารย์ (ศ.) ไม่ต้องผ่านการประเมินผลการสอน");
-        }
-        if (current == AcademicRank.PROFESSOR) {
-            return Optional.of("ท่านดำรงตำแหน่งศาสตราจารย์อยู่แล้ว ซึ่งเป็นตำแหน่งทางวิชาการระดับสูงสุด");
         }
         return AcademicRankPolicy.rankViolation(current, AcademicRank.fromDoc1Checks(doc1));
     }
