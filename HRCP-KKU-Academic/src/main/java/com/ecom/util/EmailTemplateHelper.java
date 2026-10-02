@@ -290,6 +290,52 @@ public final class EmailTemplateHelper {
     }
 
     /**
+     * หนังสือเชิญเป็นกรรมการ (เอกสารที่ 5) ถึงกรรมการท่านหนึ่ง พร้อมทางเปิดดูเอกสารของผู้ยื่น
+     *
+     * @param files ชื่อไฟล์ที่ผู้ยื่นแนบ — เปิดได้จากหน้า {@code filesUrl} หลังเข้าสู่ระบบ
+     * @param links ลิงก์ที่ผู้ยื่นแนบ (ชื่อ, URL) — เปิดได้จากอีเมลโดยตรง
+     */
+    public static String buildCommitteeInvitationEmail(String committeeName, String requestCode,
+            String applicantName, String filesUrl, java.util.List<String> files,
+            java.util.List<java.util.Map.Entry<String, String>> links) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
+          .append(escapeHtml(committeeName)).append("</strong></p>");
+        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น ขอเรียนเชิญท่านเป็นกรรมการผู้ทรงคุณวุฒิประเมินผลการสอนของ <strong>")
+          .append(escapeHtml(applicantName)).append("</strong> (คำร้อง #").append(escapeHtml(requestCode))
+          .append(") รายละเอียดตามหนังสือเชิญที่แนบมากับอีเมลฉบับนี้</p>");
+
+        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;padding:16px 20px;border-radius:8px;margin:20px 0;'>");
+        sb.append("<div style='font-weight:700;color:#1e3a8a;margin-bottom:8px;font-size:14px;'>เอกสารประกอบการประเมินผลการสอนของผู้ยื่น</div>");
+        if (files.isEmpty() && links.isEmpty()) {
+            sb.append("<div style='color:#92400e;font-size:13px;'>ผู้ยื่นไม่ได้แนบเอกสารประกอบไว้ในระบบ กรุณาติดต่อเจ้าหน้าที่เพื่อขอรับเอกสาร</div>");
+        } else {
+            sb.append("<ul style='margin:0;padding-left:20px;color:#1e293b;font-size:14px;line-height:1.7;'>");
+            for (String file : files) {
+                sb.append("<li>").append(escapeHtml(file)).append("</li>");
+            }
+            for (java.util.Map.Entry<String, String> link : links) {
+                sb.append("<li><a href='").append(escapeHtml(link.getValue()))
+                  .append("' target='_blank' style='color:#2563eb;'>").append(escapeHtml(link.getKey())).append("</a></li>");
+            }
+            sb.append("</ul>");
+        }
+        sb.append("</div>");
+
+        if (!files.isEmpty()) {
+            sb.append("<div style='text-align:center;margin:30px 0;'>");
+            sb.append("<a href='").append(escapeHtml(filesUrl)).append("' target='_blank' style='background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;text-decoration:none;padding:14px 32px;font-size:15px;font-weight:600;border-radius:8px;display:inline-block;box-shadow:0 4px 12px rgba(37,99,235,0.25);'>เปิดดูเอกสารของผู้ยื่น</a>");
+            sb.append("</div>");
+            sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;color:#64748b;word-break:break-all;'>");
+            sb.append("เข้าสู่ระบบด้วยอีเมลที่ได้รับหนังสือฉบับนี้ หากปุ่มด้านบนไม่ทำงาน คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์:<br>");
+            sb.append("<a href='").append(escapeHtml(filesUrl)).append("' style='color:#2563eb;'>").append(escapeHtml(filesUrl)).append("</a>");
+            sb.append("</div>");
+        }
+
+        return wrapLayout("ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", "ประเมินผลการสอน", sb.toString());
+    }
+
+    /**
      * Builds Teaching Evaluation Expiry Reminder email.
      */
     public static String buildEvaluationExpiryEmail(String recipientName, String requestCode, String alertLabel,

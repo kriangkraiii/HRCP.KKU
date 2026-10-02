@@ -1814,6 +1814,32 @@ public class AcademicRequestService {
         return carried;
     }
 
+    /**
+     * กรรมการสามท่านตามคำสั่งแต่งตั้งในเอกสารที่ 4 — ชื่อในช่อง {@code committee_<n>_name}
+     * พร้อมรหัสบัญชีที่เลือกไว้ในเอกสารที่ 3 ใช้ผูกชื่อกับบัญชีผ่าน {@link NamedAccountResolver}
+     */
+    public Map<String, String> appointedCommittee(AcademicRequest request) {
+        Map<String, String> doc4 = doc4AsSaved(request);
+        Map<String, String> committee = new java.util.LinkedHashMap<>();
+        for (String field : NamedAccountResolver.COMMITTEE_FIELDS) {
+            putCommittee(committee, field, doc4, field);
+        }
+        committee.values().removeIf(v -> v == null || v.isBlank());
+        return committee;
+    }
+
+    /** ผู้ใช้นี้เป็นหนึ่งในกรรมการสามท่านที่ได้รับแต่งตั้งให้ประเมินคำร้องนี้หรือไม่ */
+    public boolean isAppointedCommitteeMember(AcademicRequest request, UserDtls user) {
+        if (accounts == null || request == null || user == null) {
+            return false;
+        }
+        Map<String, String> committee = appointedCommittee(request);
+        return NamedAccountResolver.COMMITTEE_FIELDS.stream()
+                .filter(committee::containsKey)
+                .map(field -> accounts.resolve(committee, field).account())
+                .anyMatch(account -> account != null && account.getId().equals(user.getId()));
+    }
+
     /** ข้อมูลผู้เสนอขอและรายชื่อกรรมการ ตามคำสั่งแต่งตั้งในเอกสารที่ 4 */
     private Map<String, String> carriedIntoDoc7(AcademicRequest request) {
         Map<String, String> doc4 = doc4AsSaved(request);

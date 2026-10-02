@@ -34,7 +34,8 @@ public class AcademicDocumentEditLog {
         FILE_UPLOADED("อัปโหลดเอกสาร", "#6a1b9a", "fa-file-upload"),
         RESIGN_REQUESTED("ขอให้ลงนามใหม่", "#d84315", "fa-redo"),
         SUGGESTION_SENT("ส่งข้อเสนอแนะ", "#455a64", "fa-comment-dots"),
-        REVISION_SUBMITTED("ยื่นการแก้ไข", "#2e7d32", "fa-paper-plane");
+        REVISION_SUBMITTED("ยื่นการแก้ไข", "#2e7d32", "fa-paper-plane"),
+        COMMITTEE_EMAILED("ส่งอีเมลถึงกรรมการ", "#1565c0", "fa-envelope");
 
         private final String thaiLabel;
         private final String color;

@@ -294,7 +294,7 @@ public class AcademicApplicantController {
         // เช็คว่ามี doc 1 และ doc 2 แล้วหรือยัง
         List<AcademicDocument> allDocs = requestService.getDocumentsSorted(draftRequest.getId());
         boolean hasDoc1 = isDoc1Complete(allDocs);
-        boolean hasDoc2 = isDoc2Complete(allDocs);
+        boolean hasDoc2 = isDoc2Complete(allDocs) && hasAttachments(draftRequest.getId());
 
         // เช็คการลงนามของผู้ยื่นใน doc 1 และ doc 2
         boolean doc1Signed = signatureWorkflow.isApplicantSignatureCompleted(com.ecom.academic.model.SignatureModule.ACADEMIC, draftRequest.getId(), 1);
@@ -535,6 +535,10 @@ public class AcademicApplicantController {
         }
 
         if ("submit".equals(action)) {
+            // เอกสารของผู้ยื่นถูกส่งต่อให้กรรมการทั้งสามท่านพร้อมเอกสารที่ 5 จึงต้องมีก่อนบันทึก
+            if (!hasAttachments(id)) {
+                return "redirect:/user/academic/request/" + id + "/document-2?error=no_attachments";
+            }
             long totalSize = requestService.getTotalAttachmentSize(id);
             final long MAX_TOTAL_BYTES = 75L * 1024L * 1024L;
 
@@ -939,6 +943,11 @@ public class AcademicApplicantController {
             redirectAttributes.addFlashAttribute("error", "กรุณากรอกเอกสารที่ 1 และแบบตรวจสอบเอกสารที่ 2 ให้ครบถ้วนสมบูรณ์ก่อนส่งคำร้อง");
             return "redirect:/user/academic/new-request";
         }
+        // เอกสารที่ 2 ที่บันทึกก่อนบังคับแนบไฟล์ หรือไฟล์ถูกลบออกหลังบันทึก
+        if (!hasAttachments(id)) {
+            redirectAttributes.addFlashAttribute("error", "กรุณาแนบเอกสารประกอบการประเมินผลการสอนในเอกสารที่ 2 อย่างน้อย 1 รายการก่อนส่งคำร้อง");
+            return "redirect:/user/academic/new-request";
+        }
 
         // ตรวจสอบว่าผู้ยื่นได้ลงนามครบทั้งเอกสาร 1 และ 2 หรือยัง
         List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
@@ -1303,6 +1312,11 @@ public class AcademicApplicantController {
     /**
      * เช็คว่าเอกสารที่ 2 สมบูรณ์หรือไม่ (ผู้ยื่นติ๊ก ✓ ครบทุก 5 ข้อ)
      */
+    /** ไฟล์หรือลิงก์ที่ผู้ยื่นแนบไว้ในเอกสารที่ 2 อย่างน้อยหนึ่งรายการ */
+    private boolean hasAttachments(Long requestId) {
+        return requestService.countAttachments(requestId) > 0;
+    }
+
     private boolean isDoc2Complete(List<AcademicDocument> docs) {
         return docs.stream()
                 .filter(d -> d.getDocumentType() == 2)

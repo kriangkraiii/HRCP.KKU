@@ -417,9 +417,40 @@ public class SignedDocumentRenderer {
             return DocxCopies.only(unsignedDocx(envelope), letter);
         }
         byte[] whole = renderStored(envelope, format);
+        return whole == null ? null : letterOf(envelope, whole, letter, letters);
+    }
+
+    /**
+     * ทุกฉบับจากการสร้างเอกสารครั้งเดียว — สำหรับส่งให้ทุกท่านพร้อมกัน ไม่ต้องสร้างทั้งไฟล์ซ้ำทีละฉบับ
+     *
+     * @return ฉบับที่ 1..{@code letters} ตามลำดับ หรือ null เมื่อสร้างเอกสารไม่ได้
+     */
+    public List<byte[]> renderLettersForDownload(SignatureRequest envelope, String format, int letters)
+            throws IOException {
+        if (!"pdf".equalsIgnoreCase(format)) {
+            byte[] docx = unsignedDocx(envelope);
+            if (docx == null) {
+                return null;
+            }
+            List<byte[]> out = new ArrayList<>(letters);
+            for (int letter = 1; letter <= letters; letter++) {
+                out.add(DocxCopies.only(docx, letter));
+            }
+            return out;
+        }
+        byte[] whole = renderStored(envelope, format);
         if (whole == null) {
             return null;
         }
+        List<byte[]> out = new ArrayList<>(letters);
+        for (int letter = 1; letter <= letters; letter++) {
+            out.add(letterOf(envelope, whole, letter, letters));
+        }
+        return out;
+    }
+
+    private byte[] letterOf(SignatureRequest envelope, byte[] whole, int letter, int letters)
+            throws IOException {
         if (whole.length > 1 && whole[0] == 'P' && whole[1] == 'K') {
             // แปลง PDF ไม่ได้ — ได้ Word ฉบับนั้นแทน ไม่มีลายเซ็นเหมือนปุ่ม DOCX
             return DocxCopies.only(unsignedDocx(envelope), letter);

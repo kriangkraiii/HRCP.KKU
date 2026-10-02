@@ -33,13 +33,16 @@ public class SignedDocumentStatusAdvancer {
     private final SignatureRequestRepository requestRepository;
     private final AcademicRequestService academicService;
     private final PositionRequestService positionService;
+    private final CommitteeDocumentMailer committeeMailer;
 
     public SignedDocumentStatusAdvancer(SignatureRequestRepository requestRepository,
             AcademicRequestService academicService,
-            PositionRequestService positionService) {
+            PositionRequestService positionService,
+            CommitteeDocumentMailer committeeMailer) {
         this.requestRepository = requestRepository;
         this.academicService = academicService;
         this.positionService = positionService;
+        this.committeeMailer = committeeMailer;
     }
 
     /**
@@ -86,6 +89,12 @@ public class SignedDocumentStatusAdvancer {
         } catch (Exception e) {
             log.warn("เลื่อนสถานะคำร้อง #{} หลังปิดซองเอกสารที่ {} ไม่สำเร็จ: {}",
                     requestId, documentType, e.toString());
+        }
+
+        // หนังสือเชิญเป็นกรรมการออกไปได้เมื่อลงนามครบแล้วเท่านั้น — ส่งถึงกรรมการทันทีพร้อมทางเปิดดูเอกสารของผู้ยื่น
+        if (envelope.getModule() == SignatureModule.ACADEMIC
+                && documentType == AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE) {
+            committeeMailer.sendWhenSigned(envelopeId);
         }
     }
 }

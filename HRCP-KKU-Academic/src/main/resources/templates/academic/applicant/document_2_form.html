@@ -18,7 +18,7 @@
 
                     <!-- ข้อความผลลัพธ์ขึ้นที่บล็อกกลางใน base_academic (succMsg/errorMsg) -->
                     <div th:if="${param.error != null and param.error[0] == 'no_attachments'}" class="alert alert-danger alert-dismissible fade show">
-                        <i class="fas fa-exclamation-circle me-1"></i> กรุณาแนบไฟล์เอกสารประกอบการประเมินผลการสอนอย่างน้อย 1 ไฟล์ก่อนบันทึกเอกสาร
+                        <i class="fas fa-exclamation-circle me-1"></i> กรุณาแนบเอกสารประกอบการประเมินผลการสอน (ไฟล์หรือลิงก์) อย่างน้อย 1 รายการก่อนบันทึกเอกสาร — ระบบจะส่งเอกสารชุดนี้ให้กรรมการทั้งสามท่านพร้อมหนังสือเชิญ
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
 
@@ -186,7 +186,7 @@
                         <div class="card-header bg-light d-flex justify-content-between align-items-center">
                             <h6 class="mb-0 fw-semibold text-primary">
                                 <i class="fas fa-paperclip me-2"></i> เอกสารแนบประกอบการประเมินผลการสอน
-                                <span class="badge bg-secondary-subtle text-secondary border ms-1">ไม่บังคับ</span>
+                                <span class="badge bg-danger-subtle text-danger border border-danger-subtle ms-1">บังคับ</span>
                             </h6>
                             <div class="d-flex align-items-center gap-2">
                                 <small class="text-muted" id="totalSizeDisplay" th:text="${totalSizeFormatted != null ? totalSizeFormatted + ' / 75.0 MB' : '0.0 / 75.0 MB'}">0.0 / 75.0 MB</small>
@@ -403,18 +403,14 @@
                                 var noOverQuota = (totalBytes <= MAX_TOTAL_BYTES);
 
                                 var panelDraftBtn = document.getElementById('panelSaveDraftBtn');
-                                if (allChecked && noOverQuota) {
+                                if (allChecked && hasAttachment && noOverQuota) {
                                     if (submitBtn) submitBtn.disabled = false;
                                     if (panelDraftBtn) panelDraftBtn.disabled = false;
                                     // ปุ่มส่งลงนามอยู่คนละฟอร์ม จึงไม่ถูกด่านนี้กั้น — บอก sign_presave.js ผ่านแอตทริบิวต์
                                     if (docForm) docForm.removeAttribute('data-sign-blocked');
                                     alertBox.classList.remove('alert-warning', 'alert-danger');
                                     alertBox.classList.add('alert-success');
-                                    if (hasAttachment) {
-                                        alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบเอกสารแล้ว (' + attCount + ' รายการ, ขนาดรวม ' + (totalBytes / (1024 * 1024)).toFixed(1) + ' MB) พร้อมบันทึกเอกสาร';
-                                    } else {
-                                        alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ พร้อมบันทึกเอกสาร';
-                                    }
+                                    alertBox.innerHTML = '<i class="fas fa-check-circle me-1"></i> ตรวจสอบครบ 5 ข้อ และแนบเอกสารแล้ว (' + attCount + ' รายการ, ขนาดรวม ' + (totalBytes / (1024 * 1024)).toFixed(1) + ' MB) พร้อมบันทึกเอกสาร';
                                 } else {
                                     if (submitBtn) submitBtn.disabled = true;
                                     if (panelDraftBtn) panelDraftBtn.disabled = true;
@@ -422,6 +418,9 @@
                                     var reasons = [];
                                     if (!allChecked) {
                                         reasons.push('ทำเครื่องหมายให้ครบทุกข้อก่อนบันทึก (<span id="doc2CheckedCount">' + checked + '</span>/' + total + ')');
+                                    }
+                                    if (!hasAttachment) {
+                                        reasons.push('แนบเอกสารประกอบการประเมินผลการสอนอย่างน้อย 1 รายการ (ส่งต่อให้กรรมการพร้อมหนังสือเชิญ)');
                                     }
                                     if (!noOverQuota) {
                                         var curMb = (totalBytes / (1024 * 1024)).toFixed(1);
@@ -450,7 +449,7 @@
                                     var submitter = e.submitter;
                                     if (submitter && submitter.value === 'submit' && submitBtn.disabled) {
                                         e.preventDefault();
-                                        alert('บันทึกเอกสารไม่ได้ กรุณาตรวจสอบว่าทำเครื่องหมายครบ 5 ข้อ และไฟล์รวมไม่เกิน 75 MB');
+                                        alert('บันทึกเอกสารไม่ได้ กรุณาตรวจสอบว่าทำเครื่องหมายครบ 5 ข้อ แนบเอกสารอย่างน้อย 1 รายการ และไฟล์รวมไม่เกิน 75 MB');
                                         return false;
                                     }
                                 });
