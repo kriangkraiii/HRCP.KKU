@@ -50,6 +50,7 @@ class SigningPreviewChoiceTest extends AbstractFlowTest {
         String names = "{\"department_head\":\"" + staff(head, "HEAD") + "\",\"associate_dean_name\":\""
                 + staff(assocDean, "DEAN") + "\",\"dean_name\":\"" + staff(dean, "DEAN") + "\",\"hr_staff_name\":\""
                 + staff(officer, "HR") + "\"}";
+        names = data.withCommittee(names); // กรรมการที่มีบัญชีครบสามคน — เอกสารที่ 3 ส่งเวียนไม่ได้ถ้าไม่มี
         SignatureRequest envelope = circulate(SignatureModule.ACADEMIC, request.getId(), 3, names, officer, List.of(
                 new SignerAssignment("head", head.getId()),
                 new SignerAssignment("associate_dean", assocDean.getId()),

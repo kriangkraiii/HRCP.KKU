@@ -225,6 +225,20 @@ public class TestDataFactory {
         return fields;
     }
 
+    /** ข้อมูลเอกสารที่ 3/4 ที่เติมกรรมการครบสามคน — เอกสารสองฉบับนี้ส่งเวียนไม่ได้ถ้ากรรมการผูกบัญชีไม่ได้ */
+    public String withCommittee(String json) {
+        try {
+            var mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.Map<String, Object> fields = new java.util.LinkedHashMap<>(mapper.readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
+                    }));
+            committeeFields().forEach(fields::putIfAbsent);
+            return mapper.writeValueAsString(fields);
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     /** คำสั่งแต่งตั้งที่ระบุกรรมการครบสามคน (JSON ของเอกสารที่ 3/4) */
     public String appointmentOrder() {
         try {

@@ -591,7 +591,7 @@ class SignatureCirculationTest extends AbstractFlowTest {
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
             Result created = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 4,
-                    "คำสั่งแต่งตั้งคณะอนุกรรมการ", "{\"order_no\":\"123/2569\"}",
+                    "คำสั่งแต่งตั้งคณะอนุกรรมการ", data.withCommittee("{\"order_no\":\"123/2569\"}"),
                     List.of(new SignerAssignment("dean", dean.getId())),
                     null, hrOfficer, ActorContext.none());
 

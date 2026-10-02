@@ -111,10 +111,12 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
 
     private SignatureStep headStepOnAdminDocument() {
         adminOwnedRequest = data.evaluation(applicant, RequestStatus.RECEIVED);
-        data.academicDocument(adminOwnedRequest, ACADEMIC_DOC_ADMIN_OWNED, FROZEN);
+        // คำสั่งแต่งตั้งต้องระบุกรรมการที่มีบัญชีครบสามคนถึงจะส่งเวียนได้
+        String adminFrozen = data.withCommittee(FROZEN);
+        data.academicDocument(adminOwnedRequest, ACADEMIC_DOC_ADMIN_OWNED, adminFrozen);
         SignatureRequest envelope = workflow.createEnvelope(SignatureModule.ACADEMIC,
                 adminOwnedRequest.getId(), ACADEMIC_DOC_ADMIN_OWNED,
-                "คำสั่งแต่งตั้งคณะอนุกรรมการ", FROZEN,
+                "คำสั่งแต่งตั้งคณะอนุกรรมการ", adminFrozen,
                 List.of(new SignerAssignment("head", head.getId())),
                 null, data.admin(), ActorContext.none()).request();
         envelope = workflow.startCirculation(envelope.getId(), data.admin(), ActorContext.none())
@@ -329,9 +331,10 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
         @DisplayName("\"เพื่อโปรดพิจารณา\" ติ๊กเองตามผู้ลงนามที่อยู่ในซอง ไม่ต้องให้แอดมินติ๊กแทน")
         void theForwardingTickComesFromTheCirculationItself() {
             adminOwnedRequest = data.evaluation(applicant, RequestStatus.RECEIVED);
-            data.academicDocument(adminOwnedRequest, ACADEMIC_DOC_ADMIN_OWNED, FROZEN);
+            String adminFrozen = data.withCommittee(FROZEN);
+            data.academicDocument(adminOwnedRequest, ACADEMIC_DOC_ADMIN_OWNED, adminFrozen);
             SignatureRequest envelope = workflow.createEnvelope(SignatureModule.ACADEMIC,
-                    adminOwnedRequest.getId(), ACADEMIC_DOC_ADMIN_OWNED, "คำสั่งแต่งตั้ง", FROZEN,
+                    adminOwnedRequest.getId(), ACADEMIC_DOC_ADMIN_OWNED, "คำสั่งแต่งตั้ง", adminFrozen,
                     List.of(new SignerAssignment("head", head.getId())),
                     null, data.admin(), ActorContext.none()).request();
 
