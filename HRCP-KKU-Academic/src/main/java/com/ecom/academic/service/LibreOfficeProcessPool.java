@@ -165,6 +165,10 @@ public class LibreOfficeProcessPool {
                         .templateProfileDir(TEMPLATE_PROFILE_DIR.toFile())
                         .taskExecutionTimeout(60_000L)
                         .taskQueueTimeout(60_000L)
+                        // ค่าเริ่มต้น 120 วินาที: soffice ที่โดนตัดกลางการแปลง (เช่น devtools รีสตาร์ตตอน
+                        // warm-up) ไม่ยอมปิดตามคำสั่ง stop() จะค้างรอจนครบ แอปปิดตัว/รีสตาร์ตไม่เสร็จ
+                        // ลดลงให้บังคับปิดเร็วขึ้น — ยังเหลือเวลาพอสำหรับเปิด soffice ครั้งแรกบนเครื่องช้า
+                        .processTimeout(30_000L)
                         // LibreOffice กินหน่วยความจำขึ้นเรื่อย ๆ ถ้าเปิดยาว ๆ — เริ่ม process ใหม่เป็นระยะ
                         .maxTasksPerProcess(200);
                 File home = officeHome();
