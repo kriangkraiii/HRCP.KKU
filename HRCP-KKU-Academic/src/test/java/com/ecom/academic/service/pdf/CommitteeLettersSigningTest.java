@@ -137,6 +137,7 @@ class CommitteeLettersSigningTest {
                 CmsSigner.open(TestCertificates.validP12("คณบดี ทดสอบ"), TestCertificates.PIN.toCharArray()),
                 "sig_dean", Map.of(), List.of("sig_dean"), true, signatureImage(), "คณบดี ทดสอบ", "ลงนามในตำแหน่ง คณบดี",
                 "มหาวิทยาลัยขอนแก่น", Calendar.getInstance(TimeZone.getTimeZone("Asia/Bangkok"))));
+        java.nio.file.Files.createDirectories(java.nio.file.Path.of("target", "incremental"));
         byte[] docx = GEN.generateSignedDocx(5, JSON, List.of());
         String[] names = { "หนึ่ง", "สอง", "สาม" };
 
@@ -153,6 +154,37 @@ class CommitteeLettersSigningTest {
                 assertThat(wordText.contains(names[other - 1])).as("Word ฉบับที่ %d", letter).isEqualTo(other == letter);
             }
             java.nio.file.Files.write(java.nio.file.Path.of("target", "incremental", "doc5-letter" + letter + ".pdf"), pdf);
+        }
+    }
+
+    @Test
+    @DisplayName("ฉบับที่แยกออกมาลงนามด้วยใบรับรองของคณบดี ช่องลงนามทับรูปลายเซ็นบนหน้านั้น")
+    void separateLettersCarryTheSignersCertificate() throws Exception {
+        var base = base();
+        java.nio.file.Files.createDirectories(java.nio.file.Path.of("target", "incremental"));
+        CmsSigner dean = CmsSigner.open(TestCertificates.validP12("คณบดี ทดสอบ"), TestCertificates.PIN.toCharArray());
+        byte[] signed = PDF.sign(base.pdf(), new PdfIncrementService.SignSpec(dean,
+                "sig_dean", Map.of(), List.of("sig_dean"), true, signatureImage(), "คณบดี ทดสอบ", "ลงนามในตำแหน่ง คณบดี",
+                "มหาวิทยาลัยขอนแก่น", Calendar.getInstance(TimeZone.getTimeZone("Asia/Bangkok"))));
+
+        for (int letter = 1; letter <= 3; letter++) {
+            LetterCopies.Letter cut = LetterCopies.cut(signed, letter, 3);
+            assertThat(cut.signatureBoxes()).as("ฉบับที่ %d", letter).containsKey("sig_dean");
+            byte[] pdf = LetterCopies.sign(cut, "sig_dean", dean, "คณบดี ทดสอบ", "ลงนามในตำแหน่ง คณบดี",
+                    "มหาวิทยาลัยขอนแก่น", Calendar.getInstance(TimeZone.getTimeZone("Asia/Bangkok")));
+
+            assertThat(PdfIncrementService.verify(pdf)).as("ฉบับที่ %d", letter).singleElement().satisfies(c -> {
+                assertThat(c.valid()).isTrue();
+                assertThat(c.coversWholeFile()).isTrue();
+                assertThat(c.signerDn()).contains("คณบดี ทดสอบ");
+            });
+            try (var doc = Loader.loadPDF(pdf)) {
+                assertThat(doc.getNumberOfPages()).isEqualTo(1);
+                var widget = doc.getDocumentCatalog().getAcroForm(null).getFields().get(0).getWidgets().get(0);
+                assertThat(widget.getRectangle().getWidth()).isEqualTo(cut.signatureBoxes().get("sig_dean").getWidth());
+            }
+            assertThat(text(pdf)).contains(new String[] { "หนึ่ง", "สอง", "สาม" }[letter - 1]);
+            java.nio.file.Files.write(java.nio.file.Path.of("target", "incremental", "doc5-letter" + letter + "-signed.pdf"), pdf);
         }
     }
 }

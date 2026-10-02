@@ -58,6 +58,10 @@ public class SignedDocumentRenderer {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.ecom.academic.service.pdf.SignedPdfRevisionService pdfRevisions;
 
+    /** Lazy: the incremental signer itself depends on this renderer. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private org.springframework.beans.factory.ObjectProvider<com.ecom.academic.service.pdf.IncrementalSigningService> incrementalSigning;
+
     /** One archive write per envelope at a time — two viewers must not interleave files. */
     private final ConcurrentHashMap<Long, Object> archiveLocks = new ConcurrentHashMap<>();
 
@@ -97,8 +101,18 @@ public class SignedDocumentRenderer {
      * an active step's signature before confirmation.
      */
     public byte[] renderDocx(SignatureRequest envelope, SignatureStep previewStep, com.ecom.academic.model.UserSignature previewSig) throws IOException {
-        List<StampedSignature> signatures = collectSignatures(envelope, previewStep, previewSig);
+        return renderDocx(envelope, collectSignatures(envelope, previewStep, previewSig));
+    }
 
+    /**
+     * The document's content without any signature picture — the Word file handed out
+     * to be edited or printed, which carries none of the PDF's signatures anyway.
+     */
+    public byte[] renderUnsignedDocx(SignatureRequest envelope) throws IOException {
+        return renderDocx(envelope, List.of());
+    }
+
+    private byte[] renderDocx(SignatureRequest envelope, List<StampedSignature> signatures) throws IOException {
         String json = envelope.getFrozenJson();
         if (json == null || json.isBlank()) {
             json = "{}";
@@ -197,6 +211,8 @@ public class SignedDocumentRenderer {
 
                 Path docxPath = dir.resolve(base + ".docx");
                 writeAtomically(docxPath, docx);
+                // ไฟล์ Word ที่ให้ดาวน์โหลด — เนื้อหาเดียวกัน ไม่มีรูปลายเซ็น
+                writeAtomically(dir.resolve(base + UNSIGNED_DOCX), renderUnsignedDocx(envelope));
 
                 Path pdfTarget = dir.resolve(base + ".pdf");
                 String pdfPath = null;
@@ -258,8 +274,13 @@ public class SignedDocumentRenderer {
             if (!current && storeFinalCopies(envelope) == null) {
                 return null;
             }
+            Path unsigned = dir.resolve(base + UNSIGNED_DOCX);
+            if (!Files.isRegularFile(unsigned)) {
+                // Archived before Word copies were kept without signatures.
+                writeAtomically(unsigned, renderUnsignedDocx(envelope));
+            }
             Path pdf = dir.resolve(base + ".pdf");
-            return new FinishedCopy(Files.readAllBytes(docx),
+            return new FinishedCopy(Files.readAllBytes(docx), Files.readAllBytes(unsigned),
                     Files.isRegularFile(pdf) ? Files.readAllBytes(pdf) : null);
         } catch (IOException | RuntimeException e) {
             log.warn("Could not use the archived copy of envelope {}; rendering live: {}",
@@ -268,8 +289,11 @@ public class SignedDocumentRenderer {
         }
     }
 
-    private record FinishedCopy(byte[] docx, byte[] pdf) {
+    private record FinishedCopy(byte[] docx, byte[] unsignedDocx, byte[] pdf) {
     }
+
+    /** Suffix of the archived Word copy without signature pictures — the one handed out. */
+    static final String UNSIGNED_DOCX = ".unsigned.docx";
 
     /**
      * What an archived copy depends on besides the frozen form: the office's late
@@ -354,28 +378,42 @@ public class SignedDocumentRenderer {
      * จัดการเรื่องรูปแบบไฟล์ต่อเอง
      */
     public byte[] renderForDownload(SignatureRequest envelope, String format) throws IOException {
-        byte[] out = renderForDownloadUnstamped(envelope, format);
-        // A Word file of an incrementally signed document carries none of its
-        // signatures: say so on it, and point at the signed PDF.
-        if (envelope.isIncremental() && out != null && out.length > 1 && out[0] == 'P' && out[1] == 'K') {
-            return com.ecom.academic.service.pdf.DocxCopyStamp.stamp(out, envelope.getVerificationCode());
+        // ไฟล์ Word ไม่มีรูปลายเซ็นทุกฉบับ — ลายเซ็นอยู่ใน PDF เท่านั้น
+        if ("pdf".equalsIgnoreCase(format)) {
+            byte[] out = renderStored(envelope, format);
+            if (out == null || out.length < 2 || out[0] != 'P' || out[1] != 'K') {
+                return out;
+            }
+            // แปลง PDF ไม่ได้ — ได้ Word แทน ไม่มีลายเซ็นเหมือนปุ่ม DOCX
         }
-        return out;
+        return unsignedDocx(envelope);
+    }
+
+    /** Word ไม่มีรูปลายเซ็น — ของซองที่ลงนามครบมาจากสำเนาที่เก็บไว้ เหมือนไฟล์อื่นของซอง */
+    private byte[] unsignedDocx(SignatureRequest envelope) throws IOException {
+        if (envelope.getStatus() == SignatureRequestStatus.COMPLETED) {
+            FinishedCopy copy = finishedCopy(envelope);
+            if (copy != null) {
+                return copy.unsignedDocx();
+            }
+        }
+        return renderUnsignedDocx(envelope);
     }
 
     /**
      * ฉบับเดียวจากเอกสารที่พิมพ์หลายฉบับต่อกันในไฟล์เดียว (เอกสารที่ 5: หนังสือถึงกรรมการท่านละฉบับ)
      * ไว้ส่งให้แต่ละท่านแยกกัน
      *
-     * <p>PDF ที่ตัดออกมาเป็นไฟล์ใหม่ ลายเซ็นดิจิทัลจึงตรวจได้จากไฟล์ที่ลงนามทั้งฉบับเท่านั้น
-     * รูปลายเซ็นยังพิมพ์อยู่ตามเดิม
+     * <p>PDF คือไฟล์ที่ลงนามแยกไว้ตอนผู้ลงนามลงนามไฟล์รวม ({@link #storeSignedLetters}) จึงมีใบรับรองของผู้ลงนาม
+     * ซองที่ลงนามไปก่อนมีไฟล์แยกนี้ ตัดจากไฟล์รวมแล้วประทับด้วยใบรับรองของระบบแทน (ถ้าตั้งค่าไว้)
+     * Word ไม่มีรูปลายเซ็น — ลายเซ็นอยู่ใน PDF เท่านั้น
      *
      * @param letter  ฉบับที่ นับจาก 1
      * @param letters จำนวนฉบับในไฟล์
      */
     public byte[] renderLetterForDownload(SignatureRequest envelope, String format, int letter, int letters)
             throws IOException {
-        byte[] whole = renderForDownloadUnstamped(envelope, format);
+        byte[] whole = wholeForLetters(envelope, format);
         return whole == null ? null : letterOf(envelope, whole, letter, letters);
     }
 
@@ -386,7 +424,7 @@ public class SignedDocumentRenderer {
      */
     public List<byte[]> renderLettersForDownload(SignatureRequest envelope, String format, int letters)
             throws IOException {
-        byte[] whole = renderForDownloadUnstamped(envelope, format);
+        byte[] whole = wholeForLetters(envelope, format);
         if (whole == null) {
             return null;
         }
@@ -397,50 +435,132 @@ public class SignedDocumentRenderer {
         return out;
     }
 
-    private static byte[] letterOf(SignatureRequest envelope, byte[] whole, int letter, int letters)
-            throws IOException {
+    /** ไฟล์รวมทุกฉบับ — Word ไม่มีรูปลายเซ็น ส่วน PDF ที่แปลงไม่ได้ได้ Word แทน เหมือนปุ่ม DOCX */
+    private byte[] wholeForLetters(SignatureRequest envelope, String format) throws IOException {
+        if (!"pdf".equalsIgnoreCase(format)) {
+            return unsignedDocx(envelope);
+        }
+        byte[] whole = renderStored(envelope, format);
+        return whole != null && whole.length > 1 && whole[0] == 'P' && whole[1] == 'K'
+                ? unsignedDocx(envelope)
+                : whole;
+    }
+
+    private byte[] letterOf(SignatureRequest envelope, byte[] whole, int letter, int letters) throws IOException {
         if (whole.length > 1 && whole[0] == 'P' && whole[1] == 'K') {
-            byte[] one = DocxCopies.only(whole, letter);
-            return envelope.isIncremental()
-                    ? com.ecom.academic.service.pdf.DocxCopyStamp.stamp(one, envelope.getVerificationCode())
-                    : one;
+            return DocxCopies.only(whole, letter);
+        }
+        if (envelope.isIncremental()) {
+            byte[] signed = signedLetter(envelope, letter, letters, whole);
+            if (signed != null) {
+                return signed;
+            }
         }
         return pdfLetter(whole, letter, letters);
     }
 
     /** หน้าของฉบับที่ {@code letter} เมื่อทุกฉบับยาวเท่ากัน — ไม่อย่างนั้นคืนทั้งไฟล์ */
     public static byte[] pdfLetter(byte[] pdf, int letter, int letters) throws IOException {
-        try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
-            int total = doc.getNumberOfPages();
-            if (letters < 1 || total % letters != 0) {
-                return pdf;
-            }
-            int per = total / letters;
-            // พิมพ์รูปลายเซ็นและค่าในช่องลงเนื้อหน้า ช่องฟอร์มของหน้าที่ตัดทิ้งจะได้ไม่ค้างอยู่ในไฟล์
-            org.apache.pdfbox.pdmodel.interactive.form.PDAcroForm form =
-                    doc.getDocumentCatalog().getAcroForm(null);
-            if (form != null) {
-                form.flatten();
-                doc.getDocumentCatalog().setAcroForm(null);
-            }
-            doc.getDocumentCatalog().getCOSObject().removeItem(org.apache.pdfbox.cos.COSName.PERMS);
-            for (int p = total - 1; p >= 0; p--) {
-                if (p / per != letter - 1) {
-                    doc.removePage(p);
+        com.ecom.academic.service.pdf.LetterCopies.Letter cut =
+                com.ecom.academic.service.pdf.LetterCopies.cut(pdf, letter, letters);
+        return cut != null ? cut.pdf() : pdf;
+    }
+
+    /** Used when an envelope signed before letters were signed separately is downloaded. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecom.academic.service.pdf.SystemSealService systemSeal;
+
+    /** จำนวนฉบับที่พิมพ์ต่อกันในเอกสารของซองนี้ — 0 เมื่อเป็นเอกสารฉบับเดียว */
+    public static int letterCount(SignatureRequest envelope) {
+        return envelope.getModule() == SignatureModule.ACADEMIC
+                && envelope.getDocumentType() == AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE
+                        ? AcademicRequestService.COMMITTEE_COPIES
+                        : 0;
+    }
+
+    private Path letterFile(SignatureRequest envelope, int revisionNo, int letter) {
+        return archiveDir(envelope).resolve(archiveBaseName(envelope) + "_r" + revisionNo + "_letter_" + letter + ".pdf");
+    }
+
+    /**
+     * ลงนามหนังสือแต่ละฉบับแยกไฟล์ ด้วยกุญแจเดียวกับที่เพิ่งลงนามไฟล์รวม (revision {@code revisionNo})
+     * — ไฟล์ที่ตัดจากไฟล์รวมไม่มีลายเซ็นดิจิทัลติดมา และหลังจากนี้ไม่มีใครมีกุญแจของผู้ลงนามอีกแล้ว
+     *
+     * <p>ลงนามไม่สำเร็จไม่ทำให้การลงนามไฟล์รวมล้ม ฉบับนั้นจะถูกประทับด้วยใบรับรองของระบบตอนดาวน์โหลดแทน
+     */
+    public void storeSignedLetters(SignatureRequest envelope, byte[] bundle, int revisionNo, String slotField,
+            com.ecom.academic.service.pdf.CmsSigner signer, String name, String reason, String location,
+            java.util.Calendar signedAt) {
+        int letters = letterCount(envelope);
+        if (letters == 0) {
+            return;
+        }
+        try {
+            Files.createDirectories(archiveDir(envelope));
+            for (int i = 1; i <= letters; i++) {
+                var cut = com.ecom.academic.service.pdf.LetterCopies.cut(bundle, i, letters);
+                if (cut == null) {
+                    log.warn("Envelope {}: the signed PDF does not split into {} letters", envelope.getId(), letters);
+                    return;
                 }
+                byte[] signed = com.ecom.academic.service.pdf.LetterCopies.sign(cut, slotField, signer, name,
+                        reason, location, signedAt);
+                writeAtomically(letterFile(envelope, revisionNo, i), signed);
             }
-            java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream();
-            doc.save(out);
-            return out.toByteArray();
+        } catch (Exception e) {
+            log.error("Envelope {}: could not sign the separate letters of revision {}", envelope.getId(),
+                    revisionNo, e);
         }
     }
 
-    private byte[] renderForDownloadUnstamped(SignatureRequest envelope, String format) throws IOException {
+    /**
+     * ฉบับที่ลงนามแยกไว้ของ revision ปัจจุบัน หรือ — ซองที่ลงนามไปก่อนมีไฟล์แยก — ตัดจากไฟล์รวมแล้วประทับ
+     * ใบรับรองของระบบ (เก็บไว้ ดาวน์โหลดครั้งต่อไปได้ไฟล์เดิม)
+     *
+     * @return null เมื่อไม่มีทั้งสองทาง
+     */
+    private byte[] signedLetter(SignatureRequest envelope, int letter, int letters, byte[] whole) {
+        Integer revision = envelope.getCurrentRevisionNo();
+        if (revision == null) {
+            return null;
+        }
+        Path file = letterFile(envelope, revision, letter);
+        try {
+            if (Files.isRegularFile(file)) {
+                return Files.readAllBytes(file);
+            }
+            if (systemSeal == null || !systemSeal.isConfigured()) {
+                return null;
+            }
+            var cut = com.ecom.academic.service.pdf.LetterCopies.cut(whole, letter, letters);
+            if (cut == null) {
+                return null;
+            }
+            byte[] sealed = com.ecom.academic.service.pdf.LetterCopies.sign(cut, null, systemSeal.open(),
+                    "ระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ มข.",
+                    "สำเนาฉบับที่ " + letter + " จากเอกสารที่ลงนามแล้ว รหัสตรวจสอบ " + envelope.getVerificationCode()
+                            + " — รับรองโดยระบบ",
+                    "มหาวิทยาลัยขอนแก่น", java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Bangkok")));
+            synchronized (archiveLocks.computeIfAbsent(envelope.getId(), id -> new Object())) {
+                Files.createDirectories(file.getParent());
+                writeAtomically(file, sealed);
+            }
+            return sealed;
+        } catch (Exception e) {
+            log.warn("Envelope {}: no signed copy of letter {}: {}", envelope.getId(), letter, e.toString());
+            return null;
+        }
+    }
+
+    private byte[] renderStored(SignatureRequest envelope, String format) throws IOException {
         if ("pdf".equalsIgnoreCase(format) && envelope.isIncremental() && pdfRevisions != null) {
-            // Signed or not yet, the real document is the file the signers are signing.
+            // Signed or not yet, the real document is the file the signers are signing —
+            // with what the office has saved since the last signature drawn in (written to the
+            // file when the next signer signs). เจ้าหน้าที่ติ๊กแล้วต้องเห็นในตัวอย่างทันที
             byte[] signed = pdfRevisions.latest(envelope.getId());
             if (signed != null) {
-                return signed;
+                var viewer = incrementalSigning != null ? incrementalSigning.getIfAvailable() : null;
+                return viewer != null ? viewer.latestForViewing(envelope) : signed;
             }
         }
         // ลงนามครบแล้ว — ส่งสำเนาที่เก็บไว้ ไม่สร้างใหม่จากเทมเพลตของรุ่นที่ deploy อยู่

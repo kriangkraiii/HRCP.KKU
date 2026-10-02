@@ -106,6 +106,12 @@ class SignedCopyIsFrozenTest extends AbstractFlowTest {
                 .resolve("p2doc_" + DOC_ETHICS + "_signed_" + envelope.getVerificationCode() + ".docx");
     }
 
+    /** The Word copy handed out on download: the same document without signature pictures. */
+    private Path downloadedDocx(SignatureRequest envelope) {
+        return archivedDocx(envelope).resolveSibling(
+                "p2doc_" + DOC_ETHICS + "_signed_" + envelope.getVerificationCode() + ".unsigned.docx");
+    }
+
     private static String text(byte[] docx) throws IOException {
         try (XWPFDocument document = new XWPFDocument(new ByteArrayInputStream(docx));
                 XWPFWordExtractor extractor = new XWPFWordExtractor(document)) {
@@ -124,11 +130,32 @@ class SignedCopyIsFrozenTest extends AbstractFlowTest {
         // Stand-in for "the template changed in a later deploy": whatever the
         // archive holds is what must come back, not a fresh render.
         byte[] archivedBytes = renderer.renderForDownload(envelope, "docx");
-        assertThat(archivedBytes).isEqualTo(Files.readAllBytes(archived));
+        assertThat(archivedBytes).isEqualTo(Files.readAllBytes(downloadedDocx(envelope)));
         byte[] marker = java.util.Arrays.copyOf(archivedBytes, archivedBytes.length + 1);
-        Files.write(archived, marker);
+        Files.write(downloadedDocx(envelope), marker);
 
         assertThat(renderer.renderForDownload(envelope, "docx")).isEqualTo(marker);
+    }
+
+    @Test
+    @DisplayName("ไฟล์ Word ที่ดาวน์โหลดไม่มีรูปลายเซ็น ส่วนสำเนาที่ลงนามเก็บไว้ยังมี")
+    void downloadedWordHasNoSignature() throws Exception {
+        SignatureRequest envelope = completedEnvelope();
+        int signed = mediaCount(Files.readAllBytes(archivedDocx(envelope)));
+        assertThat(mediaCount(renderer.renderForDownload(envelope, "docx"))).isLessThan(signed);
+    }
+
+    private static int mediaCount(byte[] docx) throws IOException {
+        int n = 0;
+        try (var zip = new java.util.zip.ZipInputStream(new ByteArrayInputStream(docx))) {
+            java.util.zip.ZipEntry e;
+            while ((e = zip.getNextEntry()) != null) {
+                if (e.getName().startsWith("word/media/")) {
+                    n++;
+                }
+            }
+        }
+        return n;
     }
 
     @Test
@@ -142,7 +169,7 @@ class SignedCopyIsFrozenTest extends AbstractFlowTest {
 
         byte[] served = renderer.renderForDownload(envelopes.findById(envelope.getId()).orElseThrow(), "docx");
         assertThat(text(served)).contains("3 ตุลาคม 2569");
-        assertThat(Files.readAllBytes(archivedDocx(envelope)))
+        assertThat(Files.readAllBytes(downloadedDocx(envelope)))
                 .as("สำเนาที่เก็บไว้ต้องเป็นฉบับที่มีค่าใหม่แล้ว")
                 .isEqualTo(served);
     }
@@ -152,10 +179,12 @@ class SignedCopyIsFrozenTest extends AbstractFlowTest {
     void aMissingArchiveIsRebuilt() throws Exception {
         SignatureRequest envelope = completedEnvelope();
         Files.delete(archivedDocx(envelope));
+        Files.delete(downloadedDocx(envelope));
 
         byte[] served = renderer.renderForDownload(envelope, "docx");
 
         assertThat(served).isNotEmpty();
         assertThat(archivedDocx(envelope)).isRegularFile();
+        assertThat(downloadedDocx(envelope)).isRegularFile();
     }
 }
