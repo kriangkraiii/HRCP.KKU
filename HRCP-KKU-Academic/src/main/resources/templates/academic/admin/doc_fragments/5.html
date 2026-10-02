@@ -11,8 +11,10 @@
             </div>
             <div class="card card-academic">
                 <div class="card-header bg-white">
-                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> เอกสารที่ [[${documentType}]]: [[${documentLabel}]]</h4>
-                    <small class="text-muted">คำร้อง [[${request.requestCode}]] — ผู้ยื่น: [[${request.applicant.name}]]</small>
+                    <h4 class="mb-0"><i class="fas fa-file-alt"></i> เอกสารที่ [[${documentType}]]: [[${documentLabel}]]
+                    </h4>
+                    <small class="text-muted">คำร้อง [[${request.requestCode}]] — ผู้ยื่น:
+                        [[${request.applicant.name}]]</small>
                 </div>
                 <div class="card-body">
                     <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
@@ -20,7 +22,9 @@
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
                     <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
-                    <div th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}"></div>
+                    <div
+                        th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}">
+                    </div>
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
                         method="post" id="docForm"
                         th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
@@ -31,37 +35,46 @@
                         <div class="row mb-3">
                             <div class="col-md-4"><label class="form-label">เลขที่หนังสือ</label><input type="text"
                                     name="memo_no" class="form-control" placeholder="กรอกเลขที่หนังสือ (ถ้ามี)"
-                                    th:value="${docData != null and !#strings.isEmpty(docData['memo_no']) ? docData['memo_no'] : 'อว 660301.26.4/ว.'}"></div>
+                                    th:value="${docData != null and !#strings.isEmpty(docData['memo_no']) ? docData['memo_no'] : 'อว 660301.26.4/ว.'}">
+                            </div>
                             <div class="col-md-4"><label class="form-label">วันที่</label>
                                 <div class="input-group">
                                     <input type="text" name="date" class="form-control thai-full-date">
                                     <input type="date" class="thai-date-picker">
-                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn"
+                                        title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
                         </div>
                         <div class="row mb-3">
-                            <div class="col-md-4"><label class="form-label">เลขที่คำสั่งอ้างอิง</label><input type="text"
-                                    name="ref_order_no" class="form-control" placeholder="27/2567"
-                                    th:value="${carried['ref_order_no']}" th:readonly="${carried.containsKey('ref_order_no')}"></div>
+                            <div class="col-md-4"><label class="form-label">เลขที่คำสั่งอ้างอิง</label><input
+                                    type="text" name="ref_order_no" class="form-control" placeholder="27/2567"
+                                    th:value="${carried['ref_order_no']}"
+                                    th:readonly="${carried.containsKey('ref_order_no')}"></div>
                             <div class="col-md-4"><label class="form-label">วันที่คำสั่งอ้างอิง</label>
-                                <input th:if="${carried.containsKey('ref_order_date')}" type="text" name="ref_order_date"
-                                    class="form-control" readonly th:value="${carried['ref_order_date']}">
+                                <input th:if="${carried.containsKey('ref_order_date')}" type="text"
+                                    name="ref_order_date" class="form-control" readonly
+                                    th:value="${carried['ref_order_date']}">
                                 <div class="input-group" th:unless="${carried.containsKey('ref_order_date')}">
                                     <input type="text" name="ref_order_date" class="form-control thai-full-date">
                                     <input type="date" class="thai-date-picker">
-                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn"
+                                        title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
                         </div>
-                        <p class="small text-muted mt-n2 mb-3"><i class="fas fa-lock me-1"></i>เลขที่และวันที่คำสั่งดึงจากเอกสารที่ 4 — แก้ไขที่เอกสารที่ 4</p>
+                        <p class="small text-muted mt-n2 mb-3"><i
+                                class="fas fa-lock me-1"></i>เลขที่และวันที่คำสั่งดึงจากเอกสารที่ 4 — แก้ไขที่เอกสารที่
+                            4</p>
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้ยื่น</h5>
-                        <p class="small text-muted mt-n2 mb-2"><i class="fas fa-lock me-1"></i>ดึงจากเอกสารที่ 4 — แก้ไขที่เอกสารที่ 4</p>
+                        <p class="small text-muted mt-n2 mb-2"><i class="fas fa-lock me-1"></i>ดึงจากเอกสารที่ 4 —
+                            แก้ไขที่เอกสารที่ 4</p>
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
-                                <input type="text" name="applicant_title" class="form-control" list="titleList4" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${carried['applicant_title']}" th:readonly="${carried.containsKey('applicant_title')}">
+                                <input type="text" name="applicant_title" class="form-control" list="titleList4"
+                                    placeholder="เลือกหรือพิมพ์..." th:value="${carried['applicant_title']}"
+                                    th:readonly="${carried.containsKey('applicant_title')}">
                                 <datalist id="titleList4">
                                     <option value="นาย">
                                     <option value="นาง">
@@ -73,12 +86,14 @@
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อผู้ยื่น</label>
                                 <input type="text" name="applicant_name" class="form-control"
-                                    th:value="${carried['applicant_name']}" th:readonly="${carried.containsKey('applicant_name')}">
+                                    th:value="${carried['applicant_name']}"
+                                    th:readonly="${carried.containsKey('applicant_name')}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">ประเภท</label>
-                                <input type="text" name="applicant_employee_type" class="form-control" list="typeList4" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${carried['applicant_employee_type']}" th:readonly="${carried.containsKey('applicant_employee_type')}">
+                                <input type="text" name="applicant_employee_type" class="form-control" list="typeList4"
+                                    placeholder="เลือกหรือพิมพ์..." th:value="${carried['applicant_employee_type']}"
+                                    th:readonly="${carried.containsKey('applicant_employee_type')}">
                                 <datalist id="typeList4">
                                     <option value="พนักงานมหาวิทยาลัย">
                                     <option value="ข้าราชการ">
@@ -88,8 +103,9 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งปัจจุบัน</label>
-                                <input type="text" name="applicant_current_pos" class="form-control" list="posList4" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${carried['applicant_current_pos']}" th:readonly="${carried.containsKey('applicant_current_pos')}">
+                                <input type="text" name="applicant_current_pos" class="form-control" list="posList4"
+                                    placeholder="เลือกหรือพิมพ์..." th:value="${carried['applicant_current_pos']}"
+                                    th:readonly="${carried.containsKey('applicant_current_pos')}">
                                 <datalist id="posList4">
                                     <option value="อาจารย์">
                                     <option value="ผู้ช่วยศาสตราจารย์">
@@ -98,8 +114,9 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งที่ขอ</label>
-                                <input type="text" name="applicant_req_pos" class="form-control" list="posReqList4" placeholder="เลือกหรือพิมพ์..."
-                                    th:value="${carried['applicant_req_pos']}" th:readonly="${carried.containsKey('applicant_req_pos')}">
+                                <input type="text" name="applicant_req_pos" class="form-control" list="posReqList4"
+                                    placeholder="เลือกหรือพิมพ์..." th:value="${carried['applicant_req_pos']}"
+                                    th:readonly="${carried.containsKey('applicant_req_pos')}">
                                 <datalist id="posReqList4">
                                     <option value="ผู้ช่วยศาสตราจารย์">
                                     <option value="รองศาสตราจารย์">
@@ -113,31 +130,39 @@
                                 <div class="input-group">
                                     <input type="text" name="schedule_date" class="form-control thai-full-date">
                                     <input type="date" class="thai-date-picker">
-                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
+                                    <button type="button" class="btn btn-outline-secondary thai-date-btn"
+                                        title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
                             <!-- ตัวเลือกเวลา: ช่องที่บันทึกจริงคือช่องซ่อน เก็บแบบที่พิมพ์ลงหนังสือ (09.30)
                                  data-target ให้ล็อกตามช่องซ่อนตอนเอกสารเวียนลงนาม (_admin_field_lock) -->
-                            <div class="col-md-2"><label class="form-label" for="scheduleTimeStartPicker">เวลาเริ่ม</label>
+                            <div class="col-md-2"><label class="form-label"
+                                    for="scheduleTimeStartPicker">เวลาเริ่ม</label>
                                 <input type="hidden" name="schedule_time_start">
                                 <input type="time" id="scheduleTimeStartPicker" class="form-control doc-time-picker"
-                                    data-target="schedule_time_start" step="300"></div>
-                            <div class="col-md-2"><label class="form-label" for="scheduleTimeEndPicker">เวลาสิ้นสุด</label>
+                                    data-target="schedule_time_start" step="300">
+                            </div>
+                            <div class="col-md-2"><label class="form-label"
+                                    for="scheduleTimeEndPicker">เวลาสิ้นสุด</label>
                                 <input type="hidden" name="schedule_time_end">
                                 <input type="time" id="scheduleTimeEndPicker" class="form-control doc-time-picker"
-                                    data-target="schedule_time_end" step="300"></div>
+                                    data-target="schedule_time_end" step="300">
+                            </div>
                             <div class="col-md-4"><label class="form-label">สถานที่</label><input type="text"
                                     name="schedule_venue" class="form-control"></div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">กรรมการ 3 ท่าน (สร้าง 3 ชุด)</h5>
-                        <p class="small text-muted mt-n2 mb-2"><i class="fas fa-lock me-1"></i>ดึงจากเอกสารที่ 4 — แก้ไขที่เอกสารที่ 4</p>
+                        <p class="small text-muted mt-n2 mb-2"><i class="fas fa-lock me-1"></i>ดึงจากเอกสารที่ 4 —
+                            แก้ไขที่เอกสารที่ 4</p>
                         <div th:each="i : ${#numbers.sequence(1, 3)}" class="card p-3 mb-2">
                             <div class="row">
                                 <div class="col-md-6">
                                     <label class="form-label">กรรมการคนที่ [[${i}]]</label>
                                     <div class="combo-input">
-                                        <input type="text" th:name="'committee_name_' + ${i}" class="form-control" th:list="'committeeList4_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
-                                            th:value="${carried['committee_name_' + i]}" th:readonly="${carried.containsKey('committee_name_' + i)}">
+                                        <input type="text" th:name="'committee_name_' + ${i}" class="form-control"
+                                            th:list="'committeeList4_' + ${i}" placeholder="เลือกหรือพิมพ์ชื่อ..."
+                                            th:value="${carried['committee_name_' + i]}"
+                                            th:readonly="${carried.containsKey('committee_name_' + i)}">
                                         <datalist th:id="'committeeList4_' + ${i}">
                                             <option th:each="c : ${committee}" th:value="${c.displayName}"></option>
                                         </datalist>
@@ -145,7 +170,8 @@
                                 </div>
                                 <div class="col-md-6">
                                     <label class="form-label">ตำแหน่ง</label>
-                                    <input type="text" th:name="'committee_position_' + ${i}" class="form-control" readonly
+                                    <input type="text" th:name="'committee_position_' + ${i}" class="form-control"
+                                        readonly
                                         th:value="${i == 1 ? 'ประธานอนุกรรมการ' : (i == 3 ? 'อนุกรรมการและเลขานุการ' : 'อนุกรรมการ')}">
                                 </div>
                             </div>
@@ -155,7 +181,8 @@
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อคณบดี</label>
                                 <div class="combo-input">
-                                    <input type="text" name="dean_name" class="form-control" data-person-picker data-role="DEAN" data-position-field="dropdownDean">
+                                    <input type="text" name="dean_name" class="form-control" data-person-picker
+                                        data-role="DEAN" data-position-field="dropdownDean">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -170,8 +197,8 @@
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
 
-                        <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
-        <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
+                    <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+                    <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
 
                 </div>
             </div>
