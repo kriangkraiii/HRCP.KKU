@@ -315,13 +315,16 @@ public class IncrementalSigningService {
         boolean certify = revisions.chain(envelope.getId()).stream()
                 .noneMatch(r -> r.getKind() == SignedPdfRevision.Kind.SIGN);
 
+        String why = reason != null ? reason
+                : "ลงนามในตำแหน่ง \"" + (step.getRoleLabel() != null ? step.getRoleLabel() : slot.roleLabel()) + "\"";
         byte[] next = pdf.sign(current, new PdfIncrementService.SignSpec(signer, sigField, own, locked, certify,
-                imagePng, printedName, reason != null ? reason
-                        : "ลงนามในตำแหน่ง \"" + (step.getRoleLabel() != null ? step.getRoleLabel() : slot.roleLabel()) + "\"",
-                LOCATION, calendar(step.getSignedAt()), nameField(slot)));
+                imagePng, printedName, why, LOCATION, calendar(step.getSignedAt()), nameField(slot)));
         int no = revisions.append(envelope, current, next, SignedPdfRevision.Kind.SIGN, step.getId(),
                 step.getSigner() != null ? step.getSigner().getId() : null, signer.fingerprint());
         step.setPdfRevisionNo(no);
+        // หนังสือที่พิมพ์หลายฉบับในไฟล์เดียว: ฉบับที่ตัดแยกต้องมีใบรับรองของผู้ลงนามด้วย และกุญแจมีอยู่ตอนนี้เท่านั้น
+        renderer.storeSignedLetters(envelope, next, no, sigField, signer, printedName, why, LOCATION,
+                calendar(step.getSignedAt()));
         return no;
     }
 
