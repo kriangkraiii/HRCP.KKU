@@ -628,6 +628,10 @@ public class SignatureWorkflowService {
             return Result.failed("กรอกข้อมูลในเอกสารยังไม่ครบ (ขาดอีก " + missing.size()
                     + " ช่อง) กรุณากรอกให้ครบแล้วบันทึกก่อนส่งไปลงนาม");
         }
+        List<String> malformed = DocumentCompleteness.malformedFields(module, documentType, frozenJson);
+        if (!malformed.isEmpty()) {
+            return Result.failed(String.join(" · ", malformed));
+        }
         if (isDocumentLocked(module, requestId, documentType)) {
             return Result.failed("เอกสารฉบับนี้อยู่ระหว่างการเวียนลงนามหรือลงนามครบแล้ว");
         }

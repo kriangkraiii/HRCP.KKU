@@ -248,6 +248,26 @@ public final class DocumentCompleteness {
     }
 
 
+    /** ภาค/ปีการศึกษา: ภาค 1–3 (3 = ภาคฤดูร้อน) ทับปี พ.ศ. สี่หลัก เช่น 1/2569 */
+    public static final Pattern SEMESTER_YEAR = Pattern.compile("^[1-3]/\\d{4}$");
+
+    /**
+     * ช่องที่กรอกแล้วแต่รูปแบบผิด — ร่างบันทึกได้ตามปกติ (กำลังพิมพ์อยู่) แต่ส่งไปลงนามไม่ได้
+     *
+     * @return ข้อความบอกผู้ใช้ทีละช่อง ว่างแปลว่าถูกรูปแบบทุกช่อง
+     */
+    public static List<String> malformedFields(SignatureModule module, int documentType, String json) {
+        if (module != SignatureModule.ACADEMIC || documentType != 1) {
+            return List.of();
+        }
+        Map<String, String> data = parse(json);
+        String year = data == null ? null : data.get("academic_year");
+        if (year != null && !year.isBlank() && !SEMESTER_YEAR.matcher(year.trim()).matches()) {
+            return List.of("ภาค/ปีการศึกษา ต้องกรอกเป็น ภาค/ปี เช่น 1/2569");
+        }
+        return List.of();
+    }
+
     /**
      * ช่องของผู้ยื่นที่ยังว่างในเอกสารฉบับนี้
      *

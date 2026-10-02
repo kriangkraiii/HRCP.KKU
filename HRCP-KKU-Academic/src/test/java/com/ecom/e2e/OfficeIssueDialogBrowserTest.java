@@ -64,7 +64,7 @@ class OfficeIssueDialogBrowserTest extends PlaywrightTestBase {
         data.digitalCertificateFor(officer);
         AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
         String json = "{\"applicant_name\":\"" + applicant.getName() + "\",\"title\":\"ขอรับการประเมินผลการสอน\","
-                + "\"course_code\":\"CP353001\",\"course_name\":\"วิศวกรรมซอฟต์แวร์\",\"academic_year\":\"2569\","
+                + "\"course_code\":\"CP353001\",\"course_name\":\"วิศวกรรมซอฟต์แวร์\",\"academic_year\":\"1/2569\","
                 + "\"memo_no\":\"อว 660301.26.8/\",\"date\":\"\"}";
         academicService.saveDraft(request, 1, json, "เอกสารที่ 1", null);
         SignatureRequest envelope = workflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1,

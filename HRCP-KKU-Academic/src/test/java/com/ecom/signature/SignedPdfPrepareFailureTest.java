@@ -59,7 +59,7 @@ class SignedPdfPrepareFailureTest extends AbstractFlowTest {
     private SignatureWorkflowService.Result send() {
         return signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 1, "เอกสารที่ 1",
                 "{\"applicant_name\":\"" + applicant.getName() + "\",\"title\":\"ขอรับการประเมินผลการสอน\","
-                        + "\"course_code\":\"CP353001\",\"course_name\":\"วิศวกรรมซอฟต์แวร์\",\"academic_year\":\"2569\"}",
+                        + "\"course_code\":\"CP353001\",\"course_name\":\"วิศวกรรมซอฟต์แวร์\",\"academic_year\":\"1/2569\"}",
                 List.of(new SignatureWorkflowService.SignerAssignment("applicant", applicant.getId())),
                 null, applicant, SignatureWorkflowService.ActorContext.none());
     }

@@ -214,9 +214,12 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">ภาค/ปีการศึกษา <span class="text-danger">*</span></label>
-                                <input type="text" name="academic_year" class="form-control"
+                                <!-- รูปแบบเดียวกับ DocumentCompleteness.SEMESTER_YEAR — เซิร์ฟเวอร์ไม่ให้ส่งลงนามถ้าผิดรูปแบบ -->
+                                <input type="text" name="academic_year" id="academicYearInput" class="form-control"
                                     th:value="${dData != null ? dData.getOrDefault('academic_year', '') : ''}"
-                                    placeholder="เช่น 1/2569" pattern="^[0-9]+/[0-9]+$" required>
+                                    placeholder="เช่น 1/2569" pattern="^[1-3]/[0-9]{4}$"
+                                    maxlength="6" title="ภาค/ปี เช่น 1/2569" required>
+                                <div class="invalid-feedback">กรอกเป็น ภาค/ปี เช่น 1/2569 (ภาค 1–3)</div>
                             </div>
                         </div>
 
@@ -399,6 +402,19 @@
                             updateTitleOptions(); // run on page load
                         })();
 
+                        // === ภาค/ปีการศึกษา: บอกทันทีที่พิมพ์ผิดรูปแบบ (ไม่ต้องรอกดส่ง) ===
+                        (function() {
+                            var input = document.getElementById('academicYearInput');
+                            if (!input) return;
+                            function check() {
+                                var v = input.value.trim();
+                                input.classList.toggle('is-invalid', v !== '' && !/^[1-3]\/\d{4}$/.test(v));
+                            }
+                            input.addEventListener('input', check);
+                            input.addEventListener('blur', check);
+                            check();
+                        })();
+
                         // === Form Validation ===
                         (function() {
                             var form = document.getElementById('doc1Form');
@@ -445,7 +461,7 @@
                                 if (!courseName || !courseName.value.trim()) errors.push('รายวิชา');
                                 if (!academicYear || !academicYear.value.trim()) {
                                     errors.push('ภาค/ปีการศึกษา');
-                                } else if (!/^\d+\/\d+$/.test(academicYear.value.trim())) {
+                                } else if (!/^[1-3]\/\d{4}$/.test(academicYear.value.trim())) {
                                     errors.push('ภาค/ปีการศึกษา ต้องอยู่ในรูปแบบ เช่น 1/2569');
                                 }
 

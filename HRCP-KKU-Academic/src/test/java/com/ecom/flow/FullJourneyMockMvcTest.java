@@ -450,7 +450,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         fields.put("chk1", "✓");
         fields.put("course_code", "CP101");
         fields.put("course_name", "การเขียนโปรแกรมคอมพิวเตอร์");
-        fields.put("academic_year", "2569");
+        fields.put("academic_year", "1/2569");
         return fields;
     }
 

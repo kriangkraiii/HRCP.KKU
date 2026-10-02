@@ -80,7 +80,7 @@ class IncrementalEnvelopeTest extends AbstractFlowTest {
         AcademicRequest draft = data.evaluation(applicant, RequestStatus.DRAFT);
         return circulate(SignatureModule.ACADEMIC, draft.getId(), 1,
                 "{\"applicant_name\":\"" + applicant.getName() + "\",\"title\":\"ขอรับการประเมินผลการสอน\","
-                        + "\"course_code\":\"CP353001\",\"course_name\":\"วิศวกรรมซอฟต์แวร์\",\"academic_year\":\"2569\"}",
+                        + "\"course_code\":\"CP353001\",\"course_name\":\"วิศวกรรมซอฟต์แวร์\",\"academic_year\":\"1/2569\"}",
                 applicant, List.of(new SignatureWorkflowService.SignerAssignment("applicant", applicant.getId())));
     }
 

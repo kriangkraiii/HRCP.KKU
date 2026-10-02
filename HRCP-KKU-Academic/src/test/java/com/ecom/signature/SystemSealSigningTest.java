@@ -74,7 +74,7 @@ class SystemSealSigningTest extends AbstractFlowTest {
         signature = data.signatureFor(guest);
         AcademicRequest request = data.evaluation(data.applicant(), RequestStatus.RECEIVED);
         String json = "{\"applicant_name\":\"วิภา ภายนอก\",\"title\":\"ขอรับการประเมินผลการสอน\","
-                + "\"course_code\":\"CP353001\",\"course_name\":\"วิศวกรรมซอฟต์แวร์\",\"academic_year\":\"2569\"}";
+                + "\"course_code\":\"CP353001\",\"course_name\":\"วิศวกรรมซอฟต์แวร์\",\"academic_year\":\"1/2569\"}";
         envelope = circulate(SignatureModule.ACADEMIC, request.getId(), 1, json, officer,
                 List.of(new SignerAssignment("applicant", guest.getId())));
         step = signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId()).get(0);
