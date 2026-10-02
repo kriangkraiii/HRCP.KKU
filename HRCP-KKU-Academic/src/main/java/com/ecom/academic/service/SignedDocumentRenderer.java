@@ -211,6 +211,8 @@ public class SignedDocumentRenderer {
 
                 Path docxPath = dir.resolve(base + ".docx");
                 writeAtomically(docxPath, docx);
+                // ไฟล์ Word ที่ให้ดาวน์โหลด — เนื้อหาเดียวกัน ไม่มีรูปลายเซ็น
+                writeAtomically(dir.resolve(base + UNSIGNED_DOCX), renderUnsignedDocx(envelope));
 
                 Path pdfTarget = dir.resolve(base + ".pdf");
                 String pdfPath = null;
@@ -272,8 +274,13 @@ public class SignedDocumentRenderer {
             if (!current && storeFinalCopies(envelope) == null) {
                 return null;
             }
+            Path unsigned = dir.resolve(base + UNSIGNED_DOCX);
+            if (!Files.isRegularFile(unsigned)) {
+                // Archived before Word copies were kept without signatures.
+                writeAtomically(unsigned, renderUnsignedDocx(envelope));
+            }
             Path pdf = dir.resolve(base + ".pdf");
-            return new FinishedCopy(Files.readAllBytes(docx),
+            return new FinishedCopy(Files.readAllBytes(docx), Files.readAllBytes(unsigned),
                     Files.isRegularFile(pdf) ? Files.readAllBytes(pdf) : null);
         } catch (IOException | RuntimeException e) {
             log.warn("Could not use the archived copy of envelope {}; rendering live: {}",
@@ -282,8 +289,11 @@ public class SignedDocumentRenderer {
         }
     }
 
-    private record FinishedCopy(byte[] docx, byte[] pdf) {
+    private record FinishedCopy(byte[] docx, byte[] unsignedDocx, byte[] pdf) {
     }
+
+    /** Suffix of the archived Word copy without signature pictures — the one handed out. */
+    static final String UNSIGNED_DOCX = ".unsigned.docx";
 
     /**
      * What an archived copy depends on besides the frozen form: the office's late
@@ -368,13 +378,26 @@ public class SignedDocumentRenderer {
      * จัดการเรื่องรูปแบบไฟล์ต่อเอง
      */
     public byte[] renderForDownload(SignatureRequest envelope, String format) throws IOException {
-        byte[] out = renderForDownloadUnstamped(envelope, format);
-        // A Word file of an incrementally signed document carries none of its
-        // signatures: say so on it, and point at the signed PDF.
-        if (envelope.isIncremental() && out != null && out.length > 1 && out[0] == 'P' && out[1] == 'K') {
-            return com.ecom.academic.service.pdf.DocxCopyStamp.stamp(out, envelope.getVerificationCode());
+        // ไฟล์ Word ไม่มีรูปลายเซ็นทุกฉบับ — ลายเซ็นอยู่ใน PDF เท่านั้น
+        if ("pdf".equalsIgnoreCase(format)) {
+            byte[] out = renderStored(envelope, format);
+            if (out == null || out.length < 2 || out[0] != 'P' || out[1] != 'K') {
+                return out;
+            }
+            // แปลง PDF ไม่ได้ — ได้ Word แทน ไม่มีลายเซ็นเหมือนปุ่ม DOCX
         }
-        return out;
+        return unsignedDocx(envelope);
+    }
+
+    /** Word ไม่มีรูปลายเซ็น — ของซองที่ลงนามครบมาจากสำเนาที่เก็บไว้ เหมือนไฟล์อื่นของซอง */
+    private byte[] unsignedDocx(SignatureRequest envelope) throws IOException {
+        if (envelope.getStatus() == SignatureRequestStatus.COMPLETED) {
+            FinishedCopy copy = finishedCopy(envelope);
+            if (copy != null) {
+                return copy.unsignedDocx();
+            }
+        }
+        return renderUnsignedDocx(envelope);
     }
 
     /**
@@ -391,15 +414,15 @@ public class SignedDocumentRenderer {
     public byte[] renderLetterForDownload(SignatureRequest envelope, String format, int letter, int letters)
             throws IOException {
         if (!"pdf".equalsIgnoreCase(format)) {
-            return DocxCopies.only(renderUnsignedDocx(envelope), letter);
+            return DocxCopies.only(unsignedDocx(envelope), letter);
         }
-        byte[] whole = renderForDownloadUnstamped(envelope, format);
+        byte[] whole = renderStored(envelope, format);
         if (whole == null) {
             return null;
         }
         if (whole.length > 1 && whole[0] == 'P' && whole[1] == 'K') {
             // แปลง PDF ไม่ได้ — ได้ Word ฉบับนั้นแทน ไม่มีลายเซ็นเหมือนปุ่ม DOCX
-            return DocxCopies.only(renderUnsignedDocx(envelope), letter);
+            return DocxCopies.only(unsignedDocx(envelope), letter);
         }
         if (envelope.isIncremental()) {
             byte[] signed = signedLetter(envelope, letter, letters, whole);
@@ -503,7 +526,7 @@ public class SignedDocumentRenderer {
         }
     }
 
-    private byte[] renderForDownloadUnstamped(SignatureRequest envelope, String format) throws IOException {
+    private byte[] renderStored(SignatureRequest envelope, String format) throws IOException {
         if ("pdf".equalsIgnoreCase(format) && envelope.isIncremental() && pdfRevisions != null) {
             // Signed or not yet, the real document is the file the signers are signing —
             // with what the office has saved since the last signature drawn in (written to the

@@ -202,19 +202,26 @@ class IncrementalSigningFlowTest extends AbstractFlowTest {
     }
 
     @Test
-    @DisplayName("ไฟล์ Word ของเอกสารลงนามแบบใส่ทับถูกประทับว่าเป็นสำเนา")
-    void wordCopyIsStamped() throws Exception {
-        byte[] docx = renderer.renderForDownload(reload(), "docx");
+    @DisplayName("ไฟล์ Word ที่ดาวน์โหลดไม่มีรูปลายเซ็น")
+    void wordCopyHasNoSignature() throws Exception {
+        sign(TestCertificates.PIN);
+        var env = reload();
+        assertThat(mediaCount(renderer.renderDocx(env))).isGreaterThan(mediaCount(renderer.renderUnsignedDocx(env)));
+        assertThat(mediaCount(renderer.renderForDownload(env, "docx")))
+                .isEqualTo(mediaCount(renderer.renderUnsignedDocx(env)));
+    }
+
+    private static int mediaCount(byte[] docx) throws java.io.IOException {
+        int n = 0;
         try (var zip = new java.util.zip.ZipInputStream(new java.io.ByteArrayInputStream(docx))) {
             java.util.zip.ZipEntry e;
-            String xml = null;
             while ((e = zip.getNextEntry()) != null) {
-                if (e.getName().equals("word/document.xml")) {
-                    xml = new String(zip.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+                if (e.getName().startsWith("word/media/")) {
+                    n++;
                 }
             }
-            assertThat(xml).contains("สำเนา — ไม่มีผลทางลายมือชื่อ").contains(envelope.getVerificationCode());
         }
+        return n;
     }
 
     @Test
