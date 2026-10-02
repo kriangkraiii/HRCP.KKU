@@ -362,6 +362,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         Long id = request.getId();
 
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
+        // เอกสารที่ 3 ต้องเลือกกรรมการสามคนจากบัญชีในระบบก่อนส่งเวียน
+        formOverrides = committeePicks();
         circulateAsOfficer(SignatureModule.ACADEMIC, id, 3, Map.of(
                 "head", head, "associate_dean", assocDean, "dean", dean, "hr", officer));
         signOut();
@@ -398,6 +400,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
 
         // ---------- เจ้าหน้าที่แก้แล้วส่งเวียนใหม่ ----------
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
+        // เอกสารที่ 3 ต้องเลือกกรรมการสามคนจากบัญชีในระบบก่อนส่งเวียน
+        formOverrides = committeePicks();
         circulateAsOfficer(SignatureModule.ACADEMIC, id, 3, Map.of(
                 "head", head, "associate_dean", assocDean, "dean", dean, "hr", officer));
         signOut();

@@ -30,8 +30,36 @@ public final class Doc7Scoring {
         return true;
     }
 
+    /** คะแนนสูงสุดของแต่ละส่วน */
+    public static final double MAX_SECTION_SCORE = 5;
+
+    /**
+     * บีบคะแนนรายส่วนให้อยู่ในช่วง 0–5 แล้วเขียนกลับ — ช่อง max="5" บนหน้าเว็บไม่กันการพิมพ์
+     * และร่างอัตโนมัติไม่ผ่านการตรวจของเบราว์เซอร์ คะแนน 10 จึงเคยถูกบันทึกและนับเกิน 100
+     * ช่องที่ว่างหรือไม่ใช่ตัวเลขปล่อยไว้ตามเดิม
+     */
+    public static void clampSectionScores(Map<String, String> formData) {
+        for (String key : SECTION_KEYS) {
+            String v = formData.get(key);
+            if (v == null || v.isBlank()) {
+                continue;
+            }
+            try {
+                double score = Double.parseDouble(v.trim());
+                if (score > MAX_SECTION_SCORE || score < 0) {
+                    double clamped = Math.max(0, Math.min(MAX_SECTION_SCORE, score));
+                    formData.put(key, clamped == Math.rint(clamped)
+                            ? String.valueOf((long) clamped) : String.valueOf(clamped));
+                }
+            } catch (NumberFormatException e) {
+                // ปล่อยไว้ — derive นับเป็น 0
+            }
+        }
+    }
+
     /** เติมคะแนนถ่วงน้ำหนัก คะแนนรวม ช่องติ๊กผลสรุป และ {@code eval_result_level} ลงใน formData */
     public static void derive(Map<String, String> formData) {
+        clampSectionScores(formData);
         // ค่าน้ำหนักแต่ละส่วน: ส่วนที่ 1=20, 2=30, 3=30, 4=20
         int[] weights = { 20, 30, 30, 20 };
         double grandTotal = 0;
