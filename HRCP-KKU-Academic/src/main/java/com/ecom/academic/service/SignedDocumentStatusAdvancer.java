@@ -96,5 +96,15 @@ public class SignedDocumentStatusAdvancer {
                 && documentType == AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE) {
             committeeMailer.sendWhenSigned(envelopeId);
         }
+
+        // หนังสือแจ้งผล (เลขที่และวันที่ลงไว้ก่อนส่งลงนาม) คณบดีลงนามครบ = หนังสือออกแล้ว
+        // ผู้ยื่นเปิดดูได้ตั้งแต่ตอนนี้ — แจ้งในระบบและทางอีเมล
+        if (envelope.getModule() == SignatureModule.ACADEMIC && documentType == 9) {
+            try {
+                academicService.notifyResultLetterIssued(requestId, signedJson);
+            } catch (Exception e) {
+                log.warn("แจ้งผู้ยื่นคำร้อง #{} เรื่องหนังสือแจ้งผลไม่สำเร็จ: {}", requestId, e.toString());
+            }
+        }
     }
 }

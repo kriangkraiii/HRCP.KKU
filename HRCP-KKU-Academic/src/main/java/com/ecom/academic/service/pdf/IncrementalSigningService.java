@@ -296,6 +296,7 @@ public class IncrementalSigningService {
 
         Map<String, String> filled = values(current);
         Map<String, String> own = ownValues(slot, step, step.getSignedAt());
+        thaiDateDigits(own, slot, envelope);
         own.keySet().retainAll(fields);
         putNameIfBlank(own, slot, step, fields, filled);
 
@@ -356,6 +357,17 @@ public class IncrementalSigningService {
     }
 
     /**
+     * The signing date in Thai numerals when the document prints them (doc_8: "๒ ตุลาคม ๒๕๖๙").
+     * The Word render converts on its own; values drawn into the PDF here do not pass through it.
+     */
+    private void thaiDateDigits(Map<String, String> own, SignatureSlot slot, SignatureRequest envelope) {
+        String key = slot.marks() == null ? null : slot.marks().signedDateFieldKey();
+        if (key != null && own.containsKey(key) && renderer.usesThaiNumerals(envelope)) {
+            own.put(key, com.ecom.util.ThaiDateUtil.toThaiDigits(own.get(key)));
+        }
+    }
+
+    /**
      * The signer's name under their signature line, when the base reserved it and
      * nobody has filled it in — document 2's HR slot is signed by whichever officer
      * reviewed it, so the name cannot be known when the base is built.
@@ -405,6 +417,7 @@ public class IncrementalSigningService {
         }
         Set<String> fields = fieldNames(current);
         Map<String, String> own = ownValues(slot, LocalDateTime.now(ZoneId.of("Asia/Bangkok")), choice, comment);
+        thaiDateDigits(own, slot, envelope);
         own.keySet().retainAll(fields);
         putNameIfBlank(own, slot, step, fields, values(current));
         return pdf.preview(current, "sig_" + slot.slotKey(), own, nameField(slot), imagePng);
@@ -479,12 +492,14 @@ public class IncrementalSigningService {
     private Map<String, String> savedLateValues(SignatureRequest envelope, boolean includeOffice) throws IOException {
         Set<String> office = DocumentFieldOwnership.officeFields(envelope.getModule(), envelope.getDocumentType());
         String filled = officeFields.getObject().fillInto(envelope, "{}");
+        // ค่าที่กรอกทีหลังวาดลง PDF ตรง ๆ ไม่ผ่านการแปลงเลขของเครื่องสร้าง Word — แปลงเองตามเอกสาร
+        boolean thai = renderer.usesThaiNumerals(envelope);
         Map<String, String> values = new LinkedHashMap<>();
         try {
             json.readTree(filled).properties().forEach(e -> {
                 String v = e.getValue().asText("");
                 if (!v.isBlank() && (includeOffice || !office.contains(e.getKey()))) {
-                    values.put(e.getKey(), v);
+                    values.put(e.getKey(), thai ? com.ecom.util.ThaiDateUtil.toThaiDigits(v) : v);
                 }
             });
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
@@ -519,11 +534,13 @@ public class IncrementalSigningService {
             return List.of();
         }
         Set<String> office = DocumentFieldOwnership.officeFields(envelope.getModule(), envelope.getDocumentType());
+        boolean thai = renderer.usesThaiNumerals(envelope);
         Map<String, String> values = new LinkedHashMap<>();
         try {
             json.readTree(officeFields.getObject().fillInto(envelope, "{}")).properties().forEach(e -> {
                 if (!office.contains(e.getKey())) {
-                    values.put(e.getKey(), e.getValue().asText(""));
+                    String v = e.getValue().asText("");
+                    values.put(e.getKey(), thai ? com.ecom.util.ThaiDateUtil.toThaiDigits(v) : v);
                 }
             });
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {

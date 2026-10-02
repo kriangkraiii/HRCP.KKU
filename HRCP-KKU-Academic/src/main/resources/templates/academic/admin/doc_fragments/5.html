@@ -134,19 +134,22 @@
                                         title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
-                            <!-- ตัวเลือกเวลา: ช่องที่บันทึกจริงคือช่องซ่อน เก็บแบบที่พิมพ์ลงหนังสือ (09.30)
+                            <!-- ช่องเวลาแบบ 24 ชั่วโมง (time_picker_24.js) — input type="time" แสดง AM/PM ตามเครื่อง
+                                 ช่องที่บันทึกจริงคือช่องซ่อน เก็บแบบที่พิมพ์ลงหนังสือ (09.30)
                                  data-target ให้ล็อกตามช่องซ่อนตอนเอกสารเวียนลงนาม (_admin_field_lock) -->
-                            <div class="col-md-2"><label class="form-label"
-                                    for="scheduleTimeStartPicker">เวลาเริ่ม</label>
+                            <div class="col-md-2"><label class="form-label" for="scheduleTimeStart">เวลาเริ่ม</label>
                                 <input type="hidden" name="schedule_time_start">
-                                <input type="time" id="scheduleTimeStartPicker" class="form-control doc-time-picker"
-                                    data-target="schedule_time_start" step="300">
+                                <div class="time24" data-target="schedule_time_start">
+                                    <input type="text" id="scheduleTimeStart" class="form-control time24-input" data-target="schedule_time_start"
+                                        placeholder="--:--">
+                                </div>
                             </div>
-                            <div class="col-md-2"><label class="form-label"
-                                    for="scheduleTimeEndPicker">เวลาสิ้นสุด</label>
+                            <div class="col-md-2"><label class="form-label" for="scheduleTimeEnd">เวลาสิ้นสุด</label>
                                 <input type="hidden" name="schedule_time_end">
-                                <input type="time" id="scheduleTimeEndPicker" class="form-control doc-time-picker"
-                                    data-target="schedule_time_end" step="300">
+                                <div class="time24" data-target="schedule_time_end">
+                                    <input type="text" id="scheduleTimeEnd" class="form-control time24-input" data-target="schedule_time_end"
+                                        placeholder="--:--">
+                                </div>
                             </div>
                             <div class="col-md-4"><label class="form-label">สถานที่</label><input type="text"
                                     name="schedule_venue" class="form-control"></div>
@@ -208,29 +211,10 @@
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
         <link rel="stylesheet" href="/css/doc_preview.css">
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
+        <!-- หลัง _common :: scripts — ต้องให้ช่องซ่อนถูกเติมค่าที่บันทึกไว้ก่อน -->
+        <script src="/js/time_picker_24.js"></script>
 
         <script>
-            // ตัวเลือกเวลา ↔ ช่องที่บันทึก: หนังสือราชการเขียนเวลาเป็น 09.30 ส่วนตัวเลือกเวลาใช้ 09:30
-            // ช่องซ่อนถูกเติมค่าที่บันทึกไว้ตอน DOMContentLoaded (_common :: scripts ลงทะเบียนก่อนหน้านี้)
-            document.addEventListener('DOMContentLoaded', function () {
-                function toPicker(stored) {
-                    // รับ 9.30, 09.30, 9:30, 09.30 น. — ค่าเก่าที่พิมพ์เองก่อนมีตัวเลือกเวลา
-                    var m = /^\s*(\d{1,2})\s*[.:]\s*(\d{2})/.exec(stored || '');
-                    if (!m || +m[1] > 23 || +m[2] > 59) return '';
-                    return (m[1].length === 1 ? '0' + m[1] : m[1]) + ':' + m[2];
-                }
-                document.querySelectorAll('.doc-time-picker').forEach(function (picker) {
-                    var stored = picker.form && picker.form.querySelector('[name="' + picker.dataset.target + '"]');
-                    if (!stored) return;
-                    picker.value = toPicker(stored.value);
-                    picker.addEventListener('change', function () {
-                        stored.value = picker.value ? picker.value.replace(':', '.') : '';
-                        // ให้บันทึกร่างอัตโนมัติและตัวอย่างเอกสารเห็นการเปลี่ยน (ฟังที่ฟอร์ม)
-                        stored.dispatchEvent(new Event('input', { bubbles: true }));
-                    });
-                });
-            });
-
             // ตั้งค่า tabs สำหรับ preview กรรมการ 3 ท่าน
             document.addEventListener('DOMContentLoaded', function () {
                 if (docPreview) {

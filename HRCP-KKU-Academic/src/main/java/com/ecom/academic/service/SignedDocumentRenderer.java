@@ -172,6 +172,12 @@ public class SignedDocumentRenderer {
                 : documentGenerationService.generateSignedP2Docx(envelope.getDocumentType(), json, all);
     }
 
+    /** Whether the envelope's document prints Thai numerals (๑ ๒ ๓) rather than 1 2 3. */
+    public boolean usesThaiNumerals(SignatureRequest envelope) {
+        return documentGenerationService.templateUsesThaiNumerals(
+                envelope.getModule() != SignatureModule.ACADEMIC, envelope.getDocumentType());
+    }
+
     /** PDF of a DOCX through the app's LibreOffice profile (the one with the Thai fonts). */
     public byte[] toPdf(byte[] docx) throws IOException {
         if (!documentGenerationService.isPdfConversionAvailable()) {

@@ -520,6 +520,16 @@ public class DocumentGenerationService {
             String anchorPlaceholder, byte[] pngBytes,
             String mediaName, String relationshipId, int drawingId,
             long widthEmu, long heightEmu) {
+
+        /** The same picture scaled down, keeping its shape, to at most {@code maxHeightEmu} tall. */
+        PreparedSignature shrunkTo(long maxHeightEmu) {
+            if (heightEmu <= maxHeightEmu) {
+                return this;
+            }
+            long width = Math.round(widthEmu * (double) maxHeightEmu / heightEmu);
+            return new PreparedSignature(anchorPlaceholder, pngBytes, mediaName, relationshipId, drawingId,
+                    width, maxHeightEmu);
+        }
     }
 
     private static final String WORD_MEDIA_DIR = "word/media/";
@@ -532,6 +542,14 @@ public class DocumentGenerationService {
 
     /** Ceiling on printed height, so a tall image cannot push the following line down. */
     private static final long SIGNATURE_MAX_HEIGHT_EMU = (long) (1.8 * EMU_PER_CM);
+
+    /**
+     * Ceiling for a signature stamped inside a text box. A text box does not grow
+     * with its content and LibreOffice clips what overflows it, so a full-size
+     * signature can vanish from the page — doc_7 stacks three committee
+     * signatures in one box, and the third was cut off.
+     */
+    private static final long TEXT_BOX_SIGNATURE_MAX_HEIGHT_EMU = (long) (1.2 * EMU_PER_CM);
 
     /** EMUs per twip, the unit Word measures line heights in. 1 twip = 1/1440 inch. */
     private static final long EMU_PER_TWIP = 635L;
@@ -757,7 +775,7 @@ public class DocumentGenerationService {
         // lines into it.
         Set<Integer> paddedCellStarts = new HashSet<>();
 
-        record Placement(PreparedSignature sig, int[] namePara, int[] signLine) {
+        record Placement(PreparedSignature sig, int[] namePara, int[] signLine, boolean inTextBox) {
         }
         List<Placement> placements = new ArrayList<>();
 
@@ -774,7 +792,11 @@ public class DocumentGenerationService {
                 continue;
             }
             int[] signLine = precedingSignatureLine(xml, namePara[0]);
-            placements.add(new Placement(sig, namePara, signLine));
+            boolean inTextBox = enclosingElement(xml, namePara[0], "w:txbxContent") != null;
+            if (inTextBox) {
+                sig = sig.shrunkTo(TEXT_BOX_SIGNATURE_MAX_HEIGHT_EMU);
+            }
+            placements.add(new Placement(sig, namePara, signLine, inTextBox));
 
             // Only the branch that adds a paragraph makes its cell taller, so
             // only that one puts the row out of step.
@@ -794,7 +816,10 @@ public class DocumentGenerationService {
                 // The template draws a "ลงชื่อ ......" rule: sign on that line and
                 // drop the dot leader, so the image is not pushed off the margin.
                 int[] signLine = placement.signLine();
-                String rewritten = stampOntoSignatureLine(xml.substring(signLine[0], signLine[1]), sig);
+                String line = xml.substring(signLine[0], signLine[1]);
+                String rewritten = placement.inTextBox()
+                        ? stampInPlaceOfLeader(line, sig)
+                        : stampOntoSignatureLine(line, sig);
                 edits.add(new Edit(signLine[0], signLine[1], rewritten));
                 continue;
             }
@@ -994,6 +1019,44 @@ public class DocumentGenerationService {
         }
         lastRunEnd += "</w:r>".length();
         return stripped.substring(0, lastRunEnd) + signatureDrawingRun(sig) + stripped.substring(lastRunEnd);
+    }
+
+    private static final java.util.regex.Pattern DOT_LEADER =
+            java.util.regex.Pattern.compile("[" + java.util.regex.Pattern.quote(DOT_LEADER_CHARS) + "]{3,}");
+
+    /**
+     * Puts the image exactly where the dot leader was, between the label and the
+     * signer's role: "ลงชื่อ [signature] ประธานคณะกรรมการ". Used inside text boxes
+     * (doc_7), where appending it after the role leaves it floating at the far end.
+     * Falls back to {@link #stampOntoSignatureLine} when no leader sits in one run.
+     */
+    private String stampInPlaceOfLeader(String paragraph, PreparedSignature sig) {
+        java.util.regex.Matcher text = java.util.regex.Pattern
+                .compile("<w:t(?:\\s[^>]*)?>([^<]*)</w:t>").matcher(paragraph);
+        while (text.find()) {
+            java.util.regex.Matcher leader = DOT_LEADER.matcher(text.group(1));
+            if (!leader.find()) {
+                continue;
+            }
+            java.util.regex.Matcher runOpen = java.util.regex.Pattern.compile("<w:r[\\s>]")
+                    .matcher(paragraph.substring(0, text.start()));
+            int runStart = -1;
+            while (runOpen.find()) {
+                runStart = runOpen.start();
+            }
+            if (runStart == -1) {
+                break;
+            }
+            // The run's own <w:r> and <w:rPr>, so the text after the picture keeps its font.
+            String runHead = paragraph.substring(runStart, text.start());
+            String before = text.group(1).substring(0, leader.start());
+            String after = text.group(1).substring(leader.end());
+            String split = runHead + "<w:t xml:space=\"preserve\">" + before + " </w:t></w:r>"
+                    + signatureDrawingRun(sig)
+                    + runHead + "<w:t xml:space=\"preserve\"> " + after + "</w:t>";
+            return removeDotLeaders(paragraph.substring(0, runStart) + split + paragraph.substring(text.end()));
+        }
+        return stampOntoSignatureLine(paragraph, sig);
     }
 
     /** Blanks dot leaders inside {@code <w:t>} text, leaving all markup intact. */
@@ -1805,6 +1868,31 @@ public class DocumentGenerationService {
      * <p>ตั้งใจไม่เก็บเป็นรายชื่อเอกสารในโค้ด เพราะรายชื่อแบบนั้นจะเพี้ยนทันทีที่มีคนแก้ไฟล์
      * .docx หรือเพิ่มเอกสารใหม่ โดยไม่มีอะไรเตือน
      */
+    private final Map<String, Boolean> thaiNumeralTemplates = new java.util.concurrent.ConcurrentHashMap<>();
+
+    /**
+     * Whether a document's template prints Thai numerals — for values drawn straight
+     * into a signed PDF (the signing date), which never pass through Step 1.8.
+     *
+     * @param phase2 true for the Phase 2 templates (p2doc_N)
+     */
+    public boolean templateUsesThaiNumerals(boolean phase2, int documentType) {
+        String file = TEMPLATE_DIR + (phase2 ? "Phase2/p2doc_" : "doc_") + documentType + ".docx";
+        return thaiNumeralTemplates.computeIfAbsent(file, f -> {
+            try (ZipInputStream zis = new ZipInputStream(new ClassPathResource(f).getInputStream())) {
+                ZipEntry entry;
+                while ((entry = zis.getNextEntry()) != null) {
+                    if (entry.getName().equals("word/document.xml")) {
+                        return usesThaiNumerals(new String(zis.readAllBytes(), StandardCharsets.UTF_8));
+                    }
+                }
+            } catch (IOException e) {
+                log.warn("Cannot read template {} to tell its numerals: {}", f, e.toString());
+            }
+            return false;
+        });
+    }
+
     private static boolean usesThaiNumerals(String xml) {
         java.util.regex.Matcher m = BODY_TEXT.matcher(xml);
         while (m.find()) {
@@ -2066,6 +2154,13 @@ public class DocumentGenerationService {
     private static final java.util.regex.Pattern CHECKBOX_BLANK_KEY = java.util.regex.Pattern.compile(
             "^(asst|assoc|prof)_(not_used|is_used)_(research|other|book)_[0-9]+$");
 
+    /** ช่อง "( ✓ )" ระดับผลการประเมินของเอกสารที่ 8 — ช่องที่ไม่ติ๊กต้องกว้างเท่าช่องที่ติ๊ก */
+    private static final java.util.regex.Pattern TICK_BLANK_KEY = java.util.regex.Pattern.compile(
+            "^final_level_[0-9]+$");
+
+    /** Stands in for an unticked "( ✓ )" until {@link #pinTickFont} gives it the width of a ✓. */
+    private static final String TICK_BLANK = "\uE000";
+
     /** ช่องยาวที่กินทั้งบรรทัด — ชื่อผลงาน */
     private static final java.util.regex.Pattern LONG_BLANK_KEY = java.util.regex.Pattern.compile(
             "^(asst|assoc|prof)_(research|other|book)_working_[0-9]+$");
@@ -2121,6 +2216,9 @@ public class DocumentGenerationService {
         }
         if (CHECKBOX_BLANK_KEY.matcher(key).matches()) {
             return "\u2610";
+        }
+        if (TICK_BLANK_KEY.matcher(key).matches()) {
+            return TICK_BLANK;
         }
         java.util.regex.Matcher number = NUMBER_BLANK_KEY.matcher(key);
         if (number.matches()) {
@@ -2181,7 +2279,7 @@ public class DocumentGenerationService {
 
     /** A run whose text holds a ✓: its attributes, its rPr, its w:t attributes, its text. */
     private static final java.util.regex.Pattern TICK_RUN = java.util.regex.Pattern.compile(
-            "<w:r(\\s[^>]*)?>(?:<w:rPr>((?:(?!</w:rPr>).)*)</w:rPr>)?<w:t(?:\\s[^>]*)?>([^<]*✓[^<]*)</w:t></w:r>",
+            "<w:r(\\s[^>]*)?>(?:<w:rPr>((?:(?!</w:rPr>).)*)</w:rPr>)?<w:t(?:\\s[^>]*)?>([^<]*[✓" + TICK_BLANK + "][^<]*)</w:t></w:r>",
             java.util.regex.Pattern.DOTALL);
 
     private static final java.util.regex.Pattern RUN_FONTS = java.util.regex.Pattern.compile("<w:rFonts[^>]*/>");
@@ -2196,6 +2294,23 @@ public class DocumentGenerationService {
      * แต่ Linux อาจได้ DejaVu Sans ซึ่งหน้าตาต่างกัน ติ๊กที่ผู้ลงนามเติมตอนเซ็น
      * ({@code PdfIncrementService}) วาดจากโครงร่าง ✓ ของ OpenSymbol จึงต้องตรึงฟอนต์ไว้ให้เหมือนกัน
      */
+    /** OpenSymbol's advance widths, in its 2048 units per em: the ✓ and the space. */
+    private static final int TICK_ADVANCE = 1613, SPACE_ADVANCE = 1024;
+
+    private static final java.util.regex.Pattern RUN_SIZE = java.util.regex.Pattern.compile("<w:sz w:val=\"(\\d+)\"/>");
+
+    /**
+     * An OpenSymbol space stretched by character spacing to the width of a ✓, so an
+     * unticked "( )" is as wide as a ticked "(✓)" and the labels after them line up.
+     */
+    private static String blankTickRPr(String tickRPr) {
+        java.util.regex.Matcher size = RUN_SIZE.matcher(tickRPr);
+        int halfPoints = size.find() ? Integer.parseInt(size.group(1)) : 24;
+        // w:spacing is in twentieths of a point, w:sz in half-points
+        long extra = Math.round((TICK_ADVANCE - SPACE_ADVANCE) / 2048.0 * halfPoints * 10);
+        return tickRPr + "<w:spacing w:val=\"" + extra + "\"/>";
+    }
+
     static String pinTickFont(String xml) {
         java.util.regex.Matcher m = TICK_RUN.matcher(xml);
         StringBuilder out = new StringBuilder();
@@ -2206,13 +2321,15 @@ public class DocumentGenerationService {
                     ? RUN_FONTS.matcher(rPr).replaceFirst(java.util.regex.Matcher.quoteReplacement(TICK_FONTS))
                     : rPr.replaceFirst("^((?:<w:rStyle[^>]*/>)?)", "$1" + TICK_FONTS);
             StringBuilder runs = new StringBuilder();
-            for (String part : m.group(3).split("(?<=✓)|(?=✓)")) {
+            for (String part : m.group(3).split("(?<=[✓" + TICK_BLANK + "])|(?=[✓" + TICK_BLANK + "])")) {
                 if (part.isEmpty()) {
                     continue;
                 }
+                boolean blank = part.equals(TICK_BLANK);
                 runs.append("<w:r").append(runAttrs).append("><w:rPr>")
-                        .append(part.equals("✓") ? tickRPr : rPr)
-                        .append("</w:rPr><w:t xml:space=\"preserve\">").append(part).append("</w:t></w:r>");
+                        .append(blank ? blankTickRPr(tickRPr) : part.equals("✓") ? tickRPr : rPr)
+                        .append("</w:rPr><w:t xml:space=\"preserve\">").append(blank ? " " : part)
+                        .append("</w:t></w:r>");
             }
             m.appendReplacement(out, java.util.regex.Matcher.quoteReplacement(runs.toString()));
         }

@@ -210,9 +210,11 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("committee_member_3", "กรรมการ (คนที่ 3)",
                             "committee_3_name", "COMMITTEE", 3))),
 
+            // วันที่ใต้ชื่อประธานคือวันที่ประธานลงนามจริง ระบบเติมให้ตอนลงนาม ไม่ต้องกรอกในฟอร์ม
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 8), List.of(
                     new SignatureSlot("committee_chair", "ประธานคณะอนุกรรมการ",
-                            "committee_president_name", "COMMITTEE", 1))),
+                            "committee_president_name", "COMMITTEE", 1, null,
+                            SignerMarks.signedDate("sign_date")))),
 
             Map.entry(new DocKey(SignatureModule.ACADEMIC, 9), List.of(
                     new SignatureSlot("dean", "คณบดี", "dean_name", "DEAN", 1))),

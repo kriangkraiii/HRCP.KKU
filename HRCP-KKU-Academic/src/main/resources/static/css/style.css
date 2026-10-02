@@ -8137,3 +8137,73 @@ form[id^="doc"][id$="Form"] .form-control[readonly] {
   color: var(--bs-secondary-color);
   cursor: not-allowed;
 }
+/* ช่องเวลาแบบ 24 ชั่วโมง (time_picker_24.js) — หน้าตาตามช่องเวลาเดิมของเบราว์เซอร์:
+   ไอคอนนาฬิกาในช่องด้านขวา รายการชั่วโมง/นาทีเป็นสองคอลัมน์ แผงขาวมีเงา ค่าที่เลือกเป็นพื้นฟ้าอ่อน */
+.time24 {
+  position: relative;
+}
+.time24 .time24-input {
+  padding-right: 2.25rem;
+  font-variant-numeric: tabular-nums;
+}
+.time24 .time24-btn {
+  position: absolute;
+  top: 0;
+  right: 0;
+  height: 100%;
+  width: 2.25rem;
+  border: 0;
+  background: transparent;
+  color: var(--bs-body-color);
+  cursor: pointer;
+}
+.time24 .time24-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.time24 .time24-menu.show {
+  display: flex;
+  top: 100%;
+  left: 0;
+  min-width: 0;
+  margin-top: 2px;
+  padding: 4px;
+  gap: 2px;
+  border: 1px solid var(--bs-border-color);
+  border-radius: 6px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+.time24 .time24-col {
+  height: 13.5rem;
+  width: 3.5rem;
+  overflow-y: auto;
+  /* ไม่มีแถบเลื่อน (แบบช่องเวลาเดิม) — ยังเลื่อนด้วยล้อเมาส์/นิ้วได้ */
+  scrollbar-width: none;
+}
+.time24 .time24-col::-webkit-scrollbar {
+  display: none;
+}
+.time24 .time24-col .dropdown-item {
+  height: 2rem;
+  padding: 0;
+  border-radius: 4px;
+  font-size: 0.95rem;
+  line-height: 2rem;
+  font-variant-numeric: tabular-nums;
+  color: var(--bs-body-color);
+}
+.time24 .time24-col .dropdown-item:hover,
+.time24 .time24-col .dropdown-item:focus {
+  background-color: var(--bs-tertiary-bg);
+  color: var(--bs-body-color);
+}
+.time24 .time24-col .dropdown-item.active,
+.time24 .time24-col .dropdown-item.active:hover {
+  background-color: #cfe8fc;
+  color: #0b3a66;
+}
+[data-theme="dark"] .time24 .time24-col .dropdown-item.active,
+[data-theme="dark"] .time24 .time24-col .dropdown-item.active:hover {
+  background-color: rgba(59, 130, 246, 0.35);
+  color: #e6f0ff;
+}

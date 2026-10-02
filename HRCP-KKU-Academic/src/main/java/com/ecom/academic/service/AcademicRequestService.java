@@ -385,8 +385,8 @@ public class AcademicRequestService {
         List<AcademicDocument> docs = getDocumentsByType(request.getId(), documentType);
         if (docs.isEmpty()) {
             // ยังไม่มีแถวเลย — เปิดแถวร่างให้ เพื่อไม่ให้เลขที่กรอกไว้หายไปเฉย ๆ
-            Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
-                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, null, includeAdminFields);
+            Map<String, String> merged = withDerivedExpiry(documentType, DocumentFieldOwnership.mergeOfficeFields(
+                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, null, includeAdminFields));
             saveDraft(request, documentType, writeJson(merged), label, null);
             return 1;
         }
@@ -408,8 +408,8 @@ public class AcademicRequestService {
                             doc.getId(), doc.getCopyNumber());
                 }
             }
-            Map<String, String> merged = DocumentFieldOwnership.mergeOfficeFields(
-                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, existing, includeAdminFields);
+            Map<String, String> merged = withDerivedExpiry(documentType, DocumentFieldOwnership.mergeOfficeFields(
+                    com.ecom.academic.model.SignatureModule.ACADEMIC, documentType, submitted, existing, includeAdminFields));
             doc.setJsonData(writeJson(merged));
             // ไฟล์ที่สร้างไว้จากข้อมูลชุดก่อนไม่มีค่าที่เพิ่งกรอก — ทิ้งไป ทางสำรองจะได้สร้างใหม่
             doc.setGeneratedFilePath(null);
@@ -482,6 +482,16 @@ public class AcademicRequestService {
      */
     public boolean isOfficeIssued(Long requestId, int documentType) {
         if (!isSigningComplete(requestId, documentType)) {
+            return false;
+        }
+        // เอกสารลงนามแบบใส่ทับ: เลขที่และวันที่ลงไฟล์ตอนเจ้าหน้าที่กดออกเลข (ลงนามปิดไฟล์) เท่านั้น
+        // ค่าที่กรอกไว้ก่อนส่งเวียนอยู่ในข้อมูลแต่ยังไม่อยู่บนหนังสือ — ถือว่ายังไม่ออก ไม่อย่างนั้น
+        // หน้าเอกสารจะล็อกทุกช่องจนกดออกเลขไม่ได้ และหนังสือค้างแบบไม่มีเลขที่ไปตลอด
+        boolean unlockedIncremental = signatureRequestRepository.findBlockingEnvelopes(
+                com.ecom.academic.model.SignatureModule.ACADEMIC, requestId, documentType).stream()
+                .anyMatch(e -> e.getStatus() == com.ecom.academic.model.SignatureRequestStatus.COMPLETED
+                        && e.isIncremental() && e.getPdfLockedAt() == null);
+        if (unlockedIncremental) {
             return false;
         }
         List<AcademicDocument> docs = getDocumentsByType(requestId, documentType);
@@ -1156,6 +1166,7 @@ public class AcademicRequestService {
      * - Doc 4 ลงนามครบ → SUB_COMMITTEE_APPOINTED
      * - Doc 5 ลงนามครบ → MEETING_SCHEDULED
      * - Doc 7 ลงนามครบ → COMPLETED_PASS หรือ COMPLETED_FAIL (ตามผลคะแนน)
+     * - Doc 8 ลงนามครบ → COLLEGE_ENDORSED
      * - Doc 9 ลงนามครบ → COMPLETED
      *
      * <p>ผู้เรียกจริงคือ {@link SignedDocumentStatusAdvancer} ตอนซองลายเซ็นปิด ไม่ใช่ตอน
@@ -1211,12 +1222,26 @@ public class AcademicRequestService {
                     }
                 }
             }
+            case 8 -> {
+                // ประธานลงนามแบบรับรองผล = กรรมการประจำวิทยาลัยฯ รับรองผลแล้ว (ข้อ 9-10)
+                if (request.getCurrentStatus().canMoveTo(RequestStatus.COLLEGE_ENDORSED)) {
+                    updateStatus(requestId, RequestStatus.COLLEGE_ENDORSED, changedBy,
+                            "อัพเดตอัตโนมัติ: ประธานลงนามรับรองผลการประเมิน", sendNotify);
+                }
+            }
             case 9 -> {
                 // Unconditional until now, so saving this document on a request
                 // that had been refused turned that refusal into "เสร็จสิ้น" and
                 // mailed the applicant to say so (GAP-31). It also has to wait
                 // for the college board's endorsement (ข้อ 9-10) — the document
                 // is still saved either way, only the status holds back.
+                // คำร้องที่ลงนามเอกสารที่ 8 ไปก่อนมีขั้นรับรองอัตโนมัติยังค้างที่ "แจ้งผล - ผ่าน" —
+                // ถ้าแบบรับรองลงนามครบแล้วจริง ก็ผ่านขั้นรับรองได้ก่อน
+                if (request.getCurrentStatus() == RequestStatus.COMPLETED_PASS && isSigningComplete(requestId, 8)) {
+                    updateStatus(requestId, RequestStatus.COLLEGE_ENDORSED, changedBy,
+                            "อัพเดตอัตโนมัติ: ประธานลงนามรับรองผลการประเมิน", false);
+                    request = requestRepository.findById(requestId).orElse(request);
+                }
                 if (request.getCurrentStatus().canMoveTo(RequestStatus.COMPLETED)) {
                     updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน", sendNotify);
@@ -1654,8 +1679,54 @@ public class AcademicRequestService {
             case 5 -> carriedIntoDoc5(request);
             case 7 -> carriedIntoDoc7(request);
             case 8 -> carriedIntoDoc8(request);
+            case 9 -> carriedIntoDoc9(request);
             default -> Map.of();
         };
+    }
+
+    /**
+     * หนังสือแจ้งผล (เอกสารที่ 9) คณบดีลงนามครบแล้ว — ผู้ยื่นเปิดดูได้แล้ว แจ้งในระบบและทางอีเมล
+     *
+     * @param letterJson เนื้อหนังสือที่ลงนาม (frozen) — เลขที่ วันที่ และวันหมดอายุบนหนังสือจริง
+     */
+    public void notifyResultLetterIssued(Long requestId, String letterJson) {
+        Map<String, String> letter = Map.of();
+        try {
+            if (letterJson != null && !letterJson.isBlank()) {
+                letter = new com.fasterxml.jackson.databind.ObjectMapper().readValue(letterJson,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                        });
+            }
+        } catch (Exception e) {
+            log.warn("Result letter of request {} is not readable JSON: {}", requestId, e.toString());
+        }
+        emailService.sendResultLetterEmail(requestId, new java.util.HashMap<>(letter));
+    }
+
+    /** ผู้ยื่นเห็นหนังสือแจ้งผลเมื่อคณบดีลงนามครบแล้วเท่านั้น ระหว่างนั้นเป็นร่าง */
+    public boolean isResultLetterIssued(Long requestId) {
+        return isSigningComplete(requestId, 9);
+    }
+
+    /** ผลการประเมินมีอายุ 3 ปีนับจากวันที่หนังสือแจ้งผล (เอกสารที่ 9) ออก */
+    private static final int EVALUATION_VALID_YEARS = 3;
+
+    /**
+     * เอกสารที่ 9: วันหมดอายุคำนวณจากวันที่หนังสือออกเสมอ ไม่รับค่าที่กรอกมา
+     * วันที่หนังสือยังว่าง (ยังไม่ออกเลข) วันหมดอายุก็ยังว่าง
+     *
+     * <p>นับตามประมวลกฎหมายแพ่งและพาณิชย์: เริ่มนับวันถัดจากวันออกหนังสือ ระยะเวลาเป็นปีสิ้นสุด
+     * ในวันก่อนหน้าวันที่ตรงกันของปีสุดท้าย — ออก 2 ต.ค. 2569 ใช้ได้ถึง 1 ต.ค. 2572
+     */
+    public static Map<String, String> withDerivedExpiry(int documentType, Map<String, String> data) {
+        if (documentType != 9 || data == null) {
+            return data;
+        }
+        Map<String, String> result = new java.util.LinkedHashMap<>(data);
+        LocalDateTime issued = parseThaiDate(data.get("date"));
+        result.put("expiration_date",
+                issued == null ? "" : formatThaiDate(issued.minusDays(1).plusYears(EVALUATION_VALID_YEARS)));
+        return result;
     }
 
     /**
@@ -1696,6 +1767,7 @@ public class AcademicRequestService {
      */
     public Map<String, String> withCarriedFields(AcademicRequest request, int documentType,
             Map<String, String> data) {
+        data = withDerivedExpiry(documentType, data);
         Map<String, String> carried = carriedFields(request, documentType);
         if (carried.isEmpty()) {
             return data;
@@ -1858,6 +1930,37 @@ public class AcademicRequestService {
     private Map<String, String> carriedIntoDoc8(AcademicRequest request) {
         Map<String, String> carried = new java.util.LinkedHashMap<>();
         putCommittee(carried, "committee_president_name", doc4AsSaved(request), "committee_1_name");
+        carried.values().removeIf(v -> v == null || v.isBlank());
+        return carried;
+    }
+
+    /**
+     * หนังสือแจ้งผล (เอกสารที่ 9): ผู้ยื่นและวิชาจากเอกสารที่ 1 การประชุมจากเอกสารที่ 8
+     * และระดับผลการประเมินจากเอกสารที่ 7 — แก้ที่ต้นทาง ไม่ใช่ที่หนังสือ
+     */
+    private Map<String, String> carriedIntoDoc9(AcademicRequest request) {
+        Map<String, String> doc1 = firstDocumentJson(request.getId(), 1);
+        Map<String, String> doc7 = firstDocumentJson(request.getId(), 7);
+        Map<String, String> doc8 = firstDocumentJson(request.getId(), 8);
+        UserDtls applicant = request.getApplicant();
+
+        Map<String, String> carried = new java.util.LinkedHashMap<>();
+        carried.put("applicant_title", doc1.getOrDefault("title", applicant != null ? applicant.getTitle() : null));
+        carried.put("applicant_name", doc1.getOrDefault("applicant_name", applicant != null ? applicant.getName() : null));
+        carried.put("course_name", doc1.get("course_name"));
+        carried.put("course_code", doc1.get("course_code"));
+        carried.put("semester", firstNonBlank(doc1.get("semester"), doc1.get("academic_year")));
+        carried.put("requested_position", "✓".equals(doc1.get("chk1")) ? "ผู้ช่วยศาสตราจารย์"
+                : "✓".equals(doc1.get("chk2")) ? "รองศาสตราจารย์" : null);
+        carried.put("evaluation_date", doc8.get("meeting_date"));
+        carried.put("faculty_board_meeting_no", doc8.get("meeting_no"));
+        carried.put("faculty_board_meeting_date", doc8.get("meeting_date"));
+        String level = firstNonBlank(doc7.get("eval_result_level"),
+                Doc7Scoring.evalLevelFromScore(doc7.get("scorex")));
+        carried.put("result_level", level);
+        if (level != null && !level.isBlank()) {
+            carried.put("is_qualified", "ไม่ผ่าน".equals(level) ? "ไม่มี" : "มี");
+        }
         carried.values().removeIf(v -> v == null || v.isBlank());
         return carried;
     }

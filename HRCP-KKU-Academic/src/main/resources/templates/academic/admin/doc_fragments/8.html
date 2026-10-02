@@ -52,20 +52,12 @@
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า</label>
-                                <input type="text" name="applicant_title" class="form-control" list="titleList7" placeholder="คำนำหน้า"
+                                <input type="text" name="applicant_title" class="form-control" readonly placeholder="คำนำหน้า"
                                     th:value="${(doc1Data != null ? doc1Data.getOrDefault('title', (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title)) : (request.applicant.academicPosition != null && !request.applicant.academicPosition.isEmpty() ? request.applicant.academicPosition : request.applicant.title))}">
-                                <datalist id="titleList7">
-                                    <option value="นาย">
-                                    <option value="นาง">
-                                    <option value="นางสาว">
-                                    <option value="ผู้ช่วยศาสตราจารย์">
-                                    <option value="รองศาสตราจารย์">
-                                    <option value="ศาสตราจารย์">
-                                </datalist>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อผู้ขอรับการประเมิน</label>
-                                <input type="text" name="applicant_name" class="form-control"
+                                <input type="text" name="applicant_name" class="form-control" readonly
                                     th:value="${(doc1Data != null ? doc1Data.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name)}">
                             </div>
                         </div>
@@ -80,7 +72,7 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk pe-none" id="fl1" data-hidden="fl1_val"
+                                    <input type="checkbox" class="form-check-input final-level-chk" disabled id="fl1" data-hidden="fl1_val"
                                         th:checked="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'ชำนาญ'}"
                                         data-action="noop">
                                     <input type="hidden" name="final_level_1" id="fl1_val"
@@ -88,7 +80,7 @@
                                     <label class="form-check-label" for="fl1">ชำนาญ</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk pe-none" id="fl2" data-hidden="fl2_val"
+                                    <input type="checkbox" class="form-check-input final-level-chk" disabled id="fl2" data-hidden="fl2_val"
                                         th:checked="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'ชำนาญพิเศษ'}"
                                         data-action="noop">
                                     <input type="hidden" name="final_level_2" id="fl2_val"
@@ -96,7 +88,7 @@
                                     <label class="form-check-label" for="fl2">ชำนาญพิเศษ</label>
                                 </div>
                                 <div class="form-check">
-                                    <input type="checkbox" class="form-check-input final-level-chk pe-none" id="fl3" data-hidden="fl3_val"
+                                    <input type="checkbox" class="form-check-input final-level-chk" disabled id="fl3" data-hidden="fl3_val"
                                         th:checked="${doc7Data != null && doc7Data.getOrDefault('eval_result_level', '') == 'เชี่ยวชาญ'}"
                                         data-action="noop">
                                     <input type="hidden" name="final_level_3" id="fl3_val"
@@ -137,18 +129,6 @@
                                     data-person-picker data-role="COMMITTEE">
                             </div>
                         </div>
-                        <h5 class="border-bottom pb-2 mb-3">วันที่ลงนาม</h5>
-                        <div class="row mb-3">
-                            <div class="col-md-6">
-                                <label class="form-label">วันที่ลงนาม</label>
-                                <div class="input-group">
-                                    <input type="text" name="sign_date" class="form-control thai-full-date">
-                                    <input type="date" class="thai-date-picker">
-                                    <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
-                                </div>
-                            </div>
-                        </div>
-
 
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: notifyCheckbox}"></th:block>
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>

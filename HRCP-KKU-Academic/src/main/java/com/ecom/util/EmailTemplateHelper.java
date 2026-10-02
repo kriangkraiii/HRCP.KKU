@@ -390,6 +390,39 @@ public final class EmailTemplateHelper {
     }
 
     /**
+     * หนังสือแจ้งผลการประเมินผลการสอน (เอกสารที่ 9) ออกแล้ว — พาผู้ยื่นไปเปิดดูในระบบ
+     */
+    public static String buildResultLetterEmail(String applicantName, String requestCode, String memoNo,
+            String issuedDate, String resultLevel, String expiryDate, String viewUrl) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
+          .append(escapeHtml(applicantName)).append("</strong>,</p>");
+        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>หนังสือแจ้งผลการประเมินผลการสอนตามคำร้องหมายเลข <strong>#")
+          .append(escapeHtml(requestCode)).append("</strong> ของท่านออกแล้ว ท่านเปิดดูและดาวน์โหลดหนังสือได้ในระบบ</p>");
+
+        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;padding:16px 20px;border-radius:8px;margin:20px 0;font-size:14px;color:#1e293b;line-height:1.8;'>");
+        appendRow(sb, "เลขที่หนังสือ", memoNo);
+        appendRow(sb, "ลงวันที่", issuedDate);
+        appendRow(sb, "ผลการประเมิน", resultLevel);
+        appendRow(sb, "ใช้ประกอบการขอกำหนดตำแหน่งได้ภายในวันที่", expiryDate);
+        sb.append("</div>");
+
+        sb.append("<div style='text-align:center;margin:30px 0;'>");
+        sb.append("<a href='").append(escapeHtml(viewUrl)).append("' target='_blank' style='background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;text-decoration:none;padding:14px 32px;font-size:15px;font-weight:600;border-radius:8px;display:inline-block;box-shadow:0 4px 12px rgba(37,99,235,0.25);'>เปิดดูหนังสือแจ้งผล</a>");
+        sb.append("</div>");
+
+        return wrapLayout("หนังสือแจ้งผลการประเมินผลการสอน", "ออกหนังสือแล้ว", sb.toString());
+    }
+
+    private static void appendRow(StringBuilder sb, String label, String value) {
+        if (value == null || value.isBlank()) {
+            return;
+        }
+        sb.append("<div><span style='color:#64748b;'>").append(escapeHtml(label)).append(":</span> <strong>")
+          .append(escapeHtml(value)).append("</strong></div>");
+    }
+
+    /**
      * หนังสือเชิญเป็นกรรมการ (เอกสารที่ 5) ถึงกรรมการท่านหนึ่ง พร้อมทางเปิดดูเอกสารของผู้ยื่น
      *
      * @param committeeName ชื่อกรรมการตามที่พิมพ์ในหนังสือเชิญ (มีคำนำหน้าแล้ว)

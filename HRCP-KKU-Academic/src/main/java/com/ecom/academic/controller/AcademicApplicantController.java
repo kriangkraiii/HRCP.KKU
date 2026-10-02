@@ -131,6 +131,17 @@ public class AcademicApplicantController {
     /** เอกสารที่ผู้ยื่นสามารถเห็นได้ (doc type 1, 2, 9) */
     private static final List<Integer> APPLICANT_VISIBLE_DOC_TYPES = Arrays.asList(1, 2, 9);
 
+    /**
+     * ผู้ยื่นเปิดเอกสารประเภทนี้ได้หรือไม่ — หนังสือแจ้งผล (เอกสารที่ 9) เห็นได้เมื่อออกเลขที่และวันที่แล้ว
+     * เท่านั้น ก่อนหน้านั้นเป็นร่างที่ผลและวันหมดอายุยังไม่เป็นทางการ
+     */
+    private boolean applicantMaySee(Long requestId, Integer documentType) {
+        if (documentType == null || !APPLICANT_VISIBLE_DOC_TYPES.contains(documentType)) {
+            return false;
+        }
+        return documentType != 9 || requestService.isResultLetterIssued(requestId);
+    }
+
     private static final String EDIT_LOCKED_MESSAGE =
             "ไม่สามารถแก้ไขเอกสารได้ เนื่องจากส่งคำร้องไปแล้ว — จะแก้ไขได้ต่อเมื่อเจ้าหน้าที่ส่งเอกสารกลับมาให้แก้ไขเท่านั้น";
 
@@ -1031,7 +1042,7 @@ public class AcademicApplicantController {
         // ผู้ยื่นเห็นเฉพาะเอกสารที่ 0, 1, 8
         List<AcademicDocument> allDocuments = requestService.getDocumentsSorted(id);
         List<AcademicDocument> visibleDocuments = allDocuments.stream()
-                .filter(d -> APPLICANT_VISIBLE_DOC_TYPES.contains(d.getDocumentType()))
+                .filter(d -> applicantMaySee(id, d.getDocumentType()))
                 .collect(Collectors.toList());
 
         for (AcademicDocument d : visibleDocuments) {
@@ -1179,7 +1190,7 @@ public class AcademicApplicantController {
                 .orElseThrow(() -> new RuntimeException("Document not found"));
 
         // เอกสารที่ผู้ยื่นเห็นได้: 1, 2 (ของตัวเอง) และ 9 (หนังสือแจ้งผล) ที่เหลือมีรายชื่อกรรมการ
-        if (!APPLICANT_VISIBLE_DOC_TYPES.contains(doc.getDocumentType())) {
+        if (!applicantMaySee(id, doc.getDocumentType())) {
             return ResponseEntity.status(403).build();
         }
 
@@ -1234,7 +1245,7 @@ public class AcademicApplicantController {
         UserDtls viewer = getUser(principal);
         if (owner == null || viewer == null
                 || !owner.getApplicant().getId().equals(viewer.getId())
-                || !APPLICANT_VISIBLE_DOC_TYPES.contains(type)) {
+                || !applicantMaySee(id, type)) {
             return ResponseEntity.status(403).build();
         }
 

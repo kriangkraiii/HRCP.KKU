@@ -1,6 +1,7 @@
 package com.ecom.academic.service;
 
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -51,9 +52,57 @@ public class AcademicEmailService {
         return requestRepository.findByIdWithApplicant(requestId).orElse(null);
     }
 
+    @org.springframework.beans.factory.annotation.Value("${app.public-base-url:https://hrd.computing.kku.ac.th}")
+    private String publicBaseUrl;
+
     @Async
     public void sendStatusChangeEmail(Long requestId, RequestStatus oldStatus, RequestStatus newStatus) {
         sendStatusChangeEmail(requestId, oldStatus, newStatus, null);
+    }
+
+    /**
+     * หนังสือแจ้งผล (เอกสารที่ 9) ออกเลขที่และวันที่แล้ว — แจ้งผู้ยื่นในระบบและทางอีเมล พร้อมลิงก์เปิดดูหนังสือ
+     *
+     * @param letter ข้อมูลเอกสารที่ 9 ที่บันทึกแล้ว (เลขที่ วันที่ ผลประเมิน วันหมดอายุ)
+     */
+    @Async
+    public void sendResultLetterEmail(Long requestId, Map<String, String> letter) {
+        try {
+            AcademicRequest request = reload(requestId);
+            if (request == null || request.getApplicant() == null) {
+                return;
+            }
+            String code = request.getRequestCode() != null ? request.getRequestCode() : String.valueOf(request.getId());
+            String link = "/user/academic/request/" + request.getId();
+            notificationService.sendNotification(request.getApplicant(), null,
+                    "หนังสือแจ้งผลการประเมินผลการสอนออกแล้ว",
+                    "หนังสือแจ้งผลการประเมินผลการสอนของคำร้อง #" + code + " ออกแล้ว กดเพื่อเปิดดูหนังสือ",
+                    link, com.ecom.model.NotificationType.ACADEMIC_STATUS_UPDATE, true);
+
+            if (Boolean.FALSE.equals(request.getApplicant().getIsEnable())) {
+                return;
+            }
+            String applicantEmail = request.getApplicant().getEmail();
+            if (applicantEmail == null || applicantEmail.isEmpty()
+                    || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail)) {
+                return;
+            }
+            String body = com.ecom.util.EmailTemplateHelper.buildResultLetterEmail(
+                    request.getApplicant().getName(), code,
+                    letter.get("memo_no"), letter.get("date"), letter.get("result_level"),
+                    letter.get("expiration_date"), publicBaseUrl + link);
+
+            MimeMessage message = mailSender.createMimeMessage();
+            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+            helper.setFrom(com.ecom.util.EmailTemplateHelper.resolveSenderEmail(senderEmail), com.ecom.util.EmailTemplateHelper.SENDER_NAME);
+            helper.setTo(applicantEmail);
+            helper.setSubject("หนังสือแจ้งผลการประเมินผลการสอน (#" + code + ") ออกแล้ว");
+            helper.setText(body, true);
+            com.ecom.util.EmailTemplateHelper.attachLogos(helper);
+            mailSender.send(message);
+        } catch (Exception e) {
+            System.err.println("Result letter email sending failed: " + e.getMessage());
+        }
     }
 
     /**

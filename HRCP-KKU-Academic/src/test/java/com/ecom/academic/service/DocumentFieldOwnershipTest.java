@@ -295,13 +295,29 @@ class DocumentFieldOwnershipTest {
     class OfficeFields {
 
         @Test
-        @DisplayName("เฟส 1 เอกสาร 1 และ 9 มีทั้งเลขที่หนังสือและวันที่")
+        @DisplayName("เฟส 1 เอกสาร 1 มีทั้งเลขที่หนังสือและวันที่")
         void phase1DocumentsWithAMemoHeader() {
-            for (int type : new int[] { 1, 9 }) {
-                assertThat(DocumentFieldOwnership.officeFields(P1, type))
-                        .as("เอกสารเฟส 1 ที่ %d", type)
-                        .containsExactlyInAnyOrder("memo_no", "date");
-            }
+            assertThat(DocumentFieldOwnership.officeFields(P1, 1))
+                    .containsExactlyInAnyOrder("memo_no", "date");
+        }
+
+        @Test
+        @DisplayName("เฟส 1 เอกสาร 9 ลงเลขที่และวันที่ก่อนส่งให้คณบดีลงนาม ไม่มีขั้นออกเลขทีหลัง")
+        void phase1Document9PrintsItsMemoHeaderBeforeSigning() {
+            assertThat(DocumentFieldOwnership.officeFields(P1, 9)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("เอกสาร 9: วันหมดอายุครบ 3 ปีในวันก่อนวันที่หนังสือออก")
+        void doc9ExpiryCountsThreeYearsFromTheIssueDate() {
+            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of("date", "2 ตุลาคม 2569")))
+                    .containsEntry("expiration_date", "1 ตุลาคม 2572");
+            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of("date", "29 กุมภาพันธ์ 2567")))
+                    .containsEntry("expiration_date", "28 กุมภาพันธ์ 2570");
+            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of("date", "")))
+                    .containsEntry("expiration_date", "");
+            assertThat(AcademicRequestService.withDerivedExpiry(8, java.util.Map.of("date", "2 ตุลาคม 2569")))
+                    .doesNotContainKey("expiration_date");
         }
 
         @Test

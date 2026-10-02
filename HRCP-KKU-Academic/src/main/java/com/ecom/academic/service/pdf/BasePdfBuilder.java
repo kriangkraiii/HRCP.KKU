@@ -74,7 +74,12 @@ public final class BasePdfBuilder {
     public static final String LOCK_FIELD = "doc_lock";
     private static final String TOKEN = "@@OVL_%s@@";
     private static final char NBSP = ' ';
-    private static final int SLOT_PNG_WIDTH = 500, SLOT_PNG_HEIGHT = 180;
+    /**
+     * Slot placeholders are told apart by their pixel size, so LibreOffice must not
+     * resample them. It downsamples images above 300 dpi on export: at 250 px a slot
+     * keeps its pixels down to 2.1 cm wide (doc_7 prints its text-box slots at 3.3 cm).
+     */
+    private static final int SLOT_PNG_WIDTH = 250, SLOT_PNG_HEIGHT = 90;
     private static final int MIN_RUN = 12;
 
     /** What the builder needs from the document pipeline. */
