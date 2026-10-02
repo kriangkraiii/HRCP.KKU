@@ -211,11 +211,9 @@ class AttachmentConstraintsTest {
     }
 
     @Test
-    @DisplayName("บันทึกเอกสารที่ 2 (submit) แม้ไม่มีไฟล์แนบก็สามารถบันทึกสำเร็จ (ไม่บังคับแนบ)")
-    void submitDoc2_zeroAttachments_shouldSucceed() throws Exception {
-        when(requestService.countActiveAttachments(1L)).thenReturn(0L);
-        when(requestService.getTotalAttachmentSize(1L)).thenReturn(0L);
-        when(documentService.generateDocument(eq(1L), eq(2), anyString(), any())).thenReturn("generated/doc2.docx");
+    @DisplayName("บันทึกเอกสารที่ 2 (submit) โดยไม่มีไฟล์แนบจะถูกปฏิเสธ — เอกสารชุดนี้ส่งต่อให้กรรมการ")
+    void submitDoc2_zeroAttachments_shouldBeRejected() throws Exception {
+        when(requestService.countAttachments(1L)).thenReturn(0L);
 
         Map<String, String> formData = new java.util.HashMap<>();
         formData.put("action", "submit");
@@ -227,14 +225,14 @@ class AttachmentConstraintsTest {
 
         String result = applicantController.submitDocument2(1L, formData, "submit", principal, redirectAttributes);
 
-        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document/2?saved=1");
-        verify(requestService).saveDocument(eq(sampleRequest), eq(2), anyString(), eq("generated/doc2.docx"), anyString(), any());
+        assertThat(result).isEqualTo("redirect:/user/academic/request/1/document-2?error=no_attachments");
+        verify(requestService, never()).saveDocument(any(), eq(2), anyString(), anyString(), anyString(), any());
     }
 
     @Test
     @DisplayName("บันทึกเอกสารที่ 2 (submit) เมื่อมีไฟล์แนบและขนาดไม่เกิน 75 MB จะสำเร็จ")
     void submitDoc2_all5SlotsPresent_shouldSucceed() throws Exception {
-        when(requestService.countActiveAttachments(1L)).thenReturn(1L);
+        when(requestService.countAttachments(1L)).thenReturn(1L);
         when(requestService.getTotalAttachmentSize(1L)).thenReturn(10L * 1024L * 1024L);
         when(documentService.generateDocument(eq(1L), eq(2), anyString(), any())).thenReturn("generated/doc2.docx");
 
@@ -255,7 +253,7 @@ class AttachmentConstraintsTest {
     @Test
     @DisplayName("บันทึกเอกสารที่ 2 (submit) เมื่อขนาดไฟล์แนบรวมเกิน 75 MB จะถูกปฏิเสธ")
     void submitDoc2_slotOver75MB_shouldBeRejected() throws Exception {
-        when(requestService.countActiveAttachments(1L)).thenReturn(1L);
+        when(requestService.countAttachments(1L)).thenReturn(1L);
         when(requestService.getTotalAttachmentSize(1L)).thenReturn(76L * 1024L * 1024L); // 76 MB > 75 MB
 
         Map<String, String> formData = new java.util.HashMap<>();
@@ -314,7 +312,7 @@ class AttachmentConstraintsTest {
     @Test
     @DisplayName("การยื่นเอกสารที่ 2 โดยมีลิงก์แนบ นับเป็นรายการที่ผ่านเกณฑ์")
     void submitDoc2_withLinkAttachments_shouldSucceed() throws Exception {
-        when(requestService.countActiveAttachments(1L)).thenReturn(2L);
+        when(requestService.countAttachments(1L)).thenReturn(2L);
         when(requestService.getTotalAttachmentSize(1L)).thenReturn(1024L * 1024L);
         when(documentService.generateDocument(eq(1L), eq(2), anyString(), any())).thenReturn("generated/doc2.docx");
 
