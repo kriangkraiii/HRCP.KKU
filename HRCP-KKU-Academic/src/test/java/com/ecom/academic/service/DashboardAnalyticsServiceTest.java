@@ -100,9 +100,7 @@ class DashboardAnalyticsServiceTest {
                 "2568", "2/2568", "ดีเด่น", "01/01/2565", "01/01/2568",
                 LocalDateTime.now().minusDays(10), -10L, "อาจารย์", AcademicRank.ASSOCIATE_PROFESSOR);
 
-        when(acadService.summarize(req1)).thenReturn(summary1);
-        when(acadService.summarize(req2)).thenReturn(summary2);
-        when(acadService.summarize(req3)).thenReturn(summary3);
+        when(acadService.summarizeAll(any())).thenReturn(Map.of(1L, summary1, 2L, summary2, 3L, summary3));
 
         Map<String, Object> result = analyticsService.getEvaluationExpiryAnalytics("all");
         assertNotNull(result);
@@ -127,11 +125,13 @@ class DashboardAnalyticsServiceTest {
         applicant.setLastName("สอนดี");
 
         AcademicRequest req1 = new AcademicRequest();
+        req1.setId(10L);
         req1.setRequestCode("KKU-ACAD-2569-0010");
         req1.setCurrentStatus(RequestStatus.RECEIVED);
         req1.setApplicant(applicant);
 
         AcademicRequest req2 = new AcademicRequest();
+        req2.setId(20L);
         req2.setRequestCode("KKU-ACAD-2568-0020");
         req2.setCurrentStatus(RequestStatus.COMPLETED);
         req2.setApplicant(applicant);
@@ -148,8 +148,7 @@ class DashboardAnalyticsServiceTest {
                 "2568", "2/2568", "ดีมาก", "05/05/2568", "05/05/2571",
                 null, null, "อาจารย์", null);
 
-        when(acadService.summarize(req1)).thenReturn(summary1);
-        when(acadService.summarize(req2)).thenReturn(summary2);
+        when(acadService.summarizeAll(any())).thenReturn(Map.of(10L, summary1, 20L, summary2));
 
         // Filter by 2569
         Map<String, Object> result2569 = analyticsService.getYearlySubjectAnalytics("2569");
@@ -190,14 +189,14 @@ class DashboardAnalyticsServiceTest {
 
     @Test
     void testEvaluationQualityMetrics() {
-        when(acadRepo.countByCurrentStatusIn(List.of(
-                RequestStatus.COMPLETED_PASS,
-                RequestStatus.COLLEGE_ENDORSED,
-                RequestStatus.COMPLETED))).thenReturn(9L);
-        when(acadRepo.countByCurrentStatus(RequestStatus.COMPLETED_FAIL)).thenReturn(1L);
-        when(acadRepo.countByCurrentStatusIn(List.of(
-                RequestStatus.COMPLETED_REVISE,
-                RequestStatus.REVISION_SUBMITTED))).thenReturn(2L);
+        when(acadRepo.countGroupedByStatus()).thenReturn(List.of(
+                new Object[] { RequestStatus.COMPLETED_PASS, 5L },
+                new Object[] { RequestStatus.COLLEGE_ENDORSED, 2L },
+                new Object[] { RequestStatus.COMPLETED, 2L },
+                new Object[] { RequestStatus.COMPLETED_FAIL, 1L },
+                new Object[] { RequestStatus.COMPLETED_REVISE, 1L },
+                new Object[] { RequestStatus.REVISION_SUBMITTED, 1L },
+                new Object[] { RequestStatus.RECEIVED, 4L }));
         when(acadRepo.findAllNonDraftWithApplicant()).thenReturn(List.of());
 
         Map<String, Object> metrics = analyticsService.getEvaluationQualityMetrics();
@@ -205,6 +204,41 @@ class DashboardAnalyticsServiceTest {
         assertEquals(90, metrics.get("passRate")); // 9 / (9 + 1) = 90%
         assertEquals(9L, metrics.get("passedCount"));
         assertEquals(1L, metrics.get("failedCount"));
+        assertEquals(2L, metrics.get("revisingCount"));
+    }
+
+    @Test
+    void kpiAndStatusDistributionComeFromOneGroupedCountPerModule() {
+        when(acadRepo.countGroupedByStatus()).thenReturn(List.of(
+                new Object[] { RequestStatus.DRAFT, 2L },
+                new Object[] { RequestStatus.RECEIVED, 3L },
+                new Object[] { RequestStatus.COMPLETED_PASS, 4L },
+                new Object[] { RequestStatus.COMPLETED, 5L },
+                new Object[] { RequestStatus.COMPLETED_FAIL, 1L },
+                new Object[] { RequestStatus.REVISION_SUBMITTED, 1L }));
+        when(posRepo.countGroupedByStatus()).thenReturn(List.of(
+                new Object[] { PositionRequestStatus.DRAFT, 1L },
+                new Object[] { PositionRequestStatus.DOCUMENT_RECEIVED, 2L },
+                new Object[] { PositionRequestStatus.REVISION_REQUESTED, 1L },
+                new Object[] { PositionRequestStatus.SENT_TO_HR, 3L }));
+        when(userRepo.count()).thenReturn(40L);
+
+        Map<String, Long> kpi = analyticsService.getKpiSummary();
+        assertEquals(16L, kpi.get("totalAcad"));
+        assertEquals(7L, kpi.get("totalPos"));
+        assertEquals(3L, kpi.get("draftRequests"));
+        assertEquals(9L, kpi.get("completedRequests")); // COMPLETED 5 + COMPLETED_FAIL 1 + SENT_TO_HR 3
+        assertEquals(11L, kpi.get("activeRequests")); // 23 - 9 - 3
+        assertEquals(9L, kpi.get("passedEval")); // COMPLETED_PASS 4 + COMPLETED 5
+        assertEquals(3L, kpi.get("sentToHr"));
+        assertEquals(40L, kpi.get("totalUsers"));
+
+        Map<String, Long> dist = analyticsService.getStatusDistribution();
+        assertEquals(3L, dist.get("แบบร่าง"));
+        assertEquals(2L, dist.get("รอแก้ไข")); // REVISION_SUBMITTED 1 + REVISION_REQUESTED 1
+        assertEquals(4L, dist.get("ผ่านการประเมิน"));
+        assertEquals(8L, dist.get("เสร็จสิ้น")); // COMPLETED 5 + SENT_TO_HR 3
+        assertEquals(1L, dist.get("ไม่ผ่าน"));
     }
 
     @Test

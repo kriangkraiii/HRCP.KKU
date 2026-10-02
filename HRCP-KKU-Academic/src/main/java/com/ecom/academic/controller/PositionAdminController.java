@@ -137,18 +137,8 @@ public class PositionAdminController {
         model.addAttribute("requests", requests);
         model.addAttribute("statuses", PositionRequestStatus.values());
 
-        java.util.Map<Long, java.util.Map<String, String>> doc2DataMap = new java.util.HashMap<>();
-        for (PositionRequest req : requests) {
-            List<PositionDocument> doc2List = positionService.getDocumentsByType(req.getId(), 2);
-            if (!doc2List.isEmpty()) {
-                try {
-                    java.util.Map<String, String> doc2Data = objectMapper.readValue(doc2List.get(0).getJsonData(),
-                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
-                    doc2DataMap.put(req.getId(), doc2Data);
-                } catch (Exception e) { /* ignore */ }
-            }
-        }
-        model.addAttribute("doc2DataMap", doc2DataMap);
+        model.addAttribute("doc2DataMap",
+                positionService.documentDataFor(requests.stream().map(PositionRequest::getId).toList(), 2));
 
         return "academic/position/admin/requests";
     }

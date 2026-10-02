@@ -72,18 +72,23 @@ public class DevAccountSwitchService {
      * way back is always listed.
      */
     public List<Option> options(UserDtls current, HttpSession session) {
-        List<String> emails = new ArrayList<>(testAccounts.addresses());
-        userRepository.findByEmailStartingWithIgnoreCase(TestAccountRegistry.TEST_PREFIX).stream()
-                .map(UserDtls::getEmail)
-                .filter(e -> emails.stream().noneMatch(e::equalsIgnoreCase))
-                .forEach(emails::add);
+        // แถบนี้อยู่ในทุกหน้าของแอดมิน บัญชีที่ขึ้นต้นด้วย test ได้มาครบจาก query แรกแล้ว
+        // จึงค้นทีละอีเมลเฉพาะบัญชีที่เหลือ — เดิมค้นใหม่ทุกบัญชี สิบกว่า query ต่อหน้า
+        List<UserDtls> users = new ArrayList<>(
+                userRepository.findByEmailStartingWithIgnoreCase(TestAccountRegistry.TEST_PREFIX));
+        List<String> remaining = new ArrayList<>(testAccounts.addresses());
         String origin = originalEmail(session);
-        if (origin != null && emails.stream().noneMatch(origin::equalsIgnoreCase)) {
-            emails.add(origin);
+        if (origin != null) {
+            remaining.add(origin);
         }
-
-        return emails.stream()
+        remaining.stream()
+                .filter(e -> users.stream().noneMatch(u -> e.equalsIgnoreCase(u.getEmail())))
+                .distinct()
                 .map(userRepository::findByEmailIgnoreCase)
+                .filter(u -> u != null && users.stream().noneMatch(seen -> seen.getEmail().equalsIgnoreCase(u.getEmail())))
+                .forEach(users::add);
+
+        return users.stream()
                 .filter(u -> u != null && Boolean.TRUE.equals(u.getIsEnable()))
                 .map(u -> new Option(u.getEmail(),
                         u.getName() != null && !u.getName().isBlank() ? u.getName() : u.getEmail(),

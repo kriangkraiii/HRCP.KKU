@@ -84,7 +84,7 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
             """)
     List<PositionRequest> findDraftByApplicantId(@Param("userId") Integer userId);
 
-    @Query("SELECT r FROM PositionRequest r ORDER BY r.createdAt DESC")
+    @Query("SELECT r FROM PositionRequest r LEFT JOIN FETCH r.applicant ORDER BY r.createdAt DESC")
     List<PositionRequest> findAllOrderByCreatedAtDesc();
 
     @Query("SELECT r FROM PositionRequest r WHERE r.currentStatus = :status ORDER BY r.createdAt DESC")
@@ -151,6 +151,10 @@ public interface PositionRequestRepository extends JpaRepository<PositionRequest
     List<PositionRequest> searchForAdmin(@Param("pattern") String pattern);
 
     // ── Dashboard Analytics ──────────────────────────────────────────────
+
+    /** จำนวนคำร้องแยกตามสถานะในคราวเดียว — แถวละ {@code [status, count]} แทนการนับทีละสถานะ */
+    @Query("SELECT r.currentStatus, COUNT(r) FROM PositionRequest r GROUP BY r.currentStatus")
+    List<Object[]> countGroupedByStatus();
 
     long countByCurrentStatus(PositionRequestStatus status);
 

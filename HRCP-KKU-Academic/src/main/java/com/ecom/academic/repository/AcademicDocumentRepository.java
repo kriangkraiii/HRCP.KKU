@@ -30,6 +30,22 @@ public interface AcademicDocumentRepository extends JpaRepository<AcademicDocume
      */
     List<AcademicDocument> findByRequestIdAndDocumentTypeOrderByCopyNumberAsc(Long requestId, Integer documentType);
 
+    /**
+     * ข้อมูลฟอร์มของเอกสารประเภทที่ระบุ ของหลายคำร้องในคราวเดียว — แถวละ
+     * {@code [requestId, documentType, jsonData]} เรียงแบบเดียวกับ
+     * {@link #findByRequestIdAndDocumentTypeOrderByCopyNumberAsc}
+     *
+     * <p>หน้ารายการเคยเรียกเมธอดข้างบนทีละคำร้อง แดชบอร์ดจึงยิงหลายพัน query ต่อการเปิดหนึ่งครั้ง
+     * ดึงเฉพาะคอลัมน์ที่ใช้ ไม่โหลดเป็น entity เพราะผู้เรียกแค่อ่าน
+     */
+    @Query("""
+            SELECT d.request.id, d.documentType, d.jsonData FROM AcademicDocument d
+            WHERE d.request.id IN :requestIds AND d.documentType IN :types
+            ORDER BY d.request.id, d.documentType, d.copyNumber
+            """)
+    List<Object[]> findJsonData(@Param("requestIds") java.util.Collection<Long> requestIds,
+            @Param("types") java.util.Collection<Integer> types);
+
     List<AcademicDocument> findByRequestIdOrderByDocumentTypeAscCopyNumberAsc(Long requestId);
 
     // File manager queries

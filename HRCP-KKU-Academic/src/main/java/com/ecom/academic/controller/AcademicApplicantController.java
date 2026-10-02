@@ -34,7 +34,6 @@ import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRank;
 import com.ecom.academic.model.AcademicRequest;
-import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
@@ -199,19 +198,9 @@ public class AcademicApplicantController {
             model.addAttribute("latestEvaluationExpiry", latestExpiry);
         }
 
-        // ดึงข้อมูลรายวิชาจาก doc_1 สำหรับทุกคำร้อง
-        Map<Long, Map<String, String>> doc1DataMap = new java.util.HashMap<>();
-        for (AcademicRequest req : requests) {
-            List<AcademicDocument> doc1List = requestService.getDocumentsByType(req.getId(), 1);
-            if (!doc1List.isEmpty()) {
-                try {
-                    Map<String, String> doc1Data = objectMapper.readValue(doc1List.get(0).getJsonData(),
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
-                    doc1DataMap.put(req.getId(), doc1Data);
-                } catch (Exception e) { /* ignore */ }
-            }
-        }
-        model.addAttribute("doc1DataMap", doc1DataMap);
+        // ดึงข้อมูลรายวิชาจาก doc_1 ของทุกคำร้องใน query เดียว
+        model.addAttribute("doc1DataMap",
+                requestService.documentDataFor(requests.stream().map(AcademicRequest::getId).toList(), 1));
         // เอกสารที่เจ้าหน้าที่ส่งกลับให้แก้ — สถานะคำร้องไม่เปลี่ยน การ์ดจึงต้องบอกเอง
         Map<Long, com.ecom.academic.service.RevisionProgress.Summary> sentBackMap = requestService.revisionProgressFor(requests);
         model.addAttribute("sentBackMap", sentBackMap);
@@ -239,19 +228,9 @@ public class AcademicApplicantController {
         model.addAttribute("positionProgressSteps", PositionRequestStatus.getProgressSteps());
         model.addAttribute("hasActivePositionRequest", positionRequestService.hasActiveRequest(user.getId()));
 
-        // ดึงข้อมูลตำแหน่งจาก doc_2 สำหรับทุก position request
-        Map<Long, Map<String, String>> posDoc2DataMap = new java.util.HashMap<>();
-        for (PositionRequest posReq : positionRequests) {
-            List<PositionDocument> doc2List = positionRequestService.getDocumentsByType(posReq.getId(), 2);
-            if (!doc2List.isEmpty()) {
-                try {
-                    Map<String, String> doc2Data = objectMapper.readValue(doc2List.get(0).getJsonData(),
-                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
-                    posDoc2DataMap.put(posReq.getId(), doc2Data);
-                } catch (Exception e) { /* ignore */ }
-            }
-        }
-        model.addAttribute("posDoc2DataMap", posDoc2DataMap);
+        // ดึงข้อมูลตำแหน่งจาก doc_2 ของทุก position request ใน query เดียว
+        model.addAttribute("posDoc2DataMap", positionRequestService.documentDataFor(
+                positionRequests.stream().map(PositionRequest::getId).toList(), 2));
 
         return "academic/applicant/dashboard";
     }

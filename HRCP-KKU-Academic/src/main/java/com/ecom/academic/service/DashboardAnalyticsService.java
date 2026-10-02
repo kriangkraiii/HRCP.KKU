@@ -80,31 +80,43 @@ public class DashboardAnalyticsService {
 
     // ── KPI Summary ──────────────────────────────────────────────────────
 
+    /**
+     * คำร้องประเมินที่ไม่ใช่แบบร่างพร้อมผลสรุปของแต่ละคำร้อง — หลายส่วนของแดชบอร์ดใช้ชุดเดียวกัน
+     * controller จึงโหลดครั้งเดียวแล้วส่งต่อ แทนที่แต่ละส่วนจะโหลดเองและสรุปทีละคำร้อง
+     */
+    public record Evaluations(List<AcademicRequest> requests, Map<Long, EvaluationSummary> summaries) {
+        EvaluationSummary summaryOf(AcademicRequest request) {
+            return summaries.get(request.getId());
+        }
+    }
+
+    public Evaluations loadEvaluations() {
+        List<AcademicRequest> requests = acadRepo.findAllNonDraftWithApplicant();
+        return new Evaluations(requests, acadService.summarizeAll(requests));
+    }
+
     /** Key performance indicators displayed at the top of the dashboard. */
     public Map<String, Long> getKpiSummary() {
-        long totalAcad = acadRepo.count();
-        long totalPos = posRepo.count();
+        Map<RequestStatus, Long> acad = academicStatusCounts();
+        Map<PositionRequestStatus, Long> pos = positionStatusCounts();
+        long totalAcad = acad.values().stream().mapToLong(Long::longValue).sum();
+        long totalPos = pos.values().stream().mapToLong(Long::longValue).sum();
 
-        List<RequestStatus> acadTerminal = List.of(RequestStatus.COMPLETED, RequestStatus.COMPLETED_FAIL);
-        List<PositionRequestStatus> posTerminal = List.of(PositionRequestStatus.SENT_TO_HR);
-        List<RequestStatus> acadDraft = List.of(RequestStatus.DRAFT);
-        List<PositionRequestStatus> posDraft = List.of(PositionRequestStatus.DRAFT);
-
-        long completedAcad = acadRepo.countByCurrentStatusIn(acadTerminal);
-        long completedPos = posRepo.countByCurrentStatusIn(posTerminal);
-        long draftAcad = acadRepo.countByCurrentStatus(RequestStatus.DRAFT);
-        long draftPos = posRepo.countByCurrentStatus(PositionRequestStatus.DRAFT);
+        long completedAcad = countOf(acad, RequestStatus.COMPLETED, RequestStatus.COMPLETED_FAIL);
+        long completedPos = countOf(pos, PositionRequestStatus.SENT_TO_HR);
+        long draftAcad = countOf(acad, RequestStatus.DRAFT);
+        long draftPos = countOf(pos, PositionRequestStatus.DRAFT);
 
         long totalRequests = totalAcad + totalPos;
         long activeRequests = totalRequests - (completedAcad + completedPos) - (draftAcad + draftPos);
         long completedRequests = completedAcad + completedPos;
         long totalUsers = userRepo.count();
 
-        long passedEval = acadRepo.countByCurrentStatusIn(List.of(
+        long passedEval = countOf(acad,
                 RequestStatus.COMPLETED_PASS,
                 RequestStatus.COLLEGE_ENDORSED,
-                RequestStatus.COMPLETED));
-        long sentToHr = posRepo.countByCurrentStatus(PositionRequestStatus.SENT_TO_HR);
+                RequestStatus.COMPLETED);
+        long sentToHr = countOf(pos, PositionRequestStatus.SENT_TO_HR);
 
         Map<String, Long> kpi = new LinkedHashMap<>();
         kpi.put("totalRequests", totalRequests);
@@ -159,32 +171,32 @@ public class DashboardAnalyticsService {
 
     /** Groups all requests by high-level status for the doughnut chart. */
     public Map<String, Long> getStatusDistribution() {
-        long draft = acadRepo.countByCurrentStatus(RequestStatus.DRAFT)
-                   + posRepo.countByCurrentStatus(PositionRequestStatus.DRAFT);
+        Map<RequestStatus, Long> acad = academicStatusCounts();
+        Map<PositionRequestStatus, Long> pos = positionStatusCounts();
+
+        long draft = countOf(acad, RequestStatus.DRAFT) + countOf(pos, PositionRequestStatus.DRAFT);
 
         long active = 0;
         for (RequestStatus s : RequestStatus.values()) {
             if (!s.isTerminal() && !s.isDraft()) {
-                active += acadRepo.countByCurrentStatus(s);
+                active += countOf(acad, s);
             }
         }
         for (PositionRequestStatus s : PositionRequestStatus.values()) {
             if (!s.isTerminal() && !s.isDraft()) {
-                active += posRepo.countByCurrentStatus(s);
+                active += countOf(pos, s);
             }
         }
 
-        long completed = acadRepo.countByCurrentStatus(RequestStatus.COMPLETED)
-                       + posRepo.countByCurrentStatus(PositionRequestStatus.SENT_TO_HR);
+        long completed = countOf(acad, RequestStatus.COMPLETED)
+                       + countOf(pos, PositionRequestStatus.SENT_TO_HR);
 
-        long passedOrEndorsed = acadRepo.countByCurrentStatus(RequestStatus.COMPLETED_PASS)
-                              + acadRepo.countByCurrentStatus(RequestStatus.COLLEGE_ENDORSED);
+        long passedOrEndorsed = countOf(acad, RequestStatus.COMPLETED_PASS, RequestStatus.COLLEGE_ENDORSED);
 
-        long failed = acadRepo.countByCurrentStatus(RequestStatus.COMPLETED_FAIL);
+        long failed = countOf(acad, RequestStatus.COMPLETED_FAIL);
 
-        long revising = acadRepo.countByCurrentStatus(RequestStatus.COMPLETED_REVISE)
-                      + acadRepo.countByCurrentStatus(RequestStatus.REVISION_SUBMITTED)
-                      + posRepo.countByCurrentStatus(PositionRequestStatus.REVISION_REQUESTED);
+        long revising = countOf(acad, RequestStatus.COMPLETED_REVISE, RequestStatus.REVISION_SUBMITTED)
+                      + countOf(pos, PositionRequestStatus.REVISION_REQUESTED);
 
         Map<String, Long> dist = new LinkedHashMap<>();
         dist.put("แบบร่าง", draft);
@@ -263,7 +275,11 @@ public class DashboardAnalyticsService {
      * Aggregates evaluation expiration data, countdowns, and position request usage.
      */
     public Map<String, Object> getEvaluationExpiryAnalytics(String filter) {
-        List<AcademicRequest> requests = acadRepo.findAllNonDraftWithApplicant();
+        return getEvaluationExpiryAnalytics(filter, loadEvaluations());
+    }
+
+    public Map<String, Object> getEvaluationExpiryAnalytics(String filter, Evaluations evaluations) {
+        List<AcademicRequest> requests = evaluations.requests();
         Set<Long> linkedEvalIds = new HashSet<>(posRepo.findLinkedEvaluationIds());
 
         List<EvaluationExpiryItem> allItems = new ArrayList<>();
@@ -278,7 +294,7 @@ public class DashboardAnalyticsService {
         for (AcademicRequest req : requests) {
             if (req.getCurrentStatus() != null && req.getCurrentStatus().carriesAPassedResult()) {
                 totalPassed++;
-                EvaluationSummary summary = acadService.summarize(req);
+                EvaluationSummary summary = evaluations.summaryOf(req);
                 Long daysLeft = summary != null ? summary.daysLeft() : null;
                 boolean hasPos = linkedEvalIds.contains(req.getId());
                 if (!hasPos) {
@@ -380,14 +396,18 @@ public class DashboardAnalyticsService {
     // ── Yearly Subject Submissions Analytics ─────────────────────────────
 
     public Map<String, Object> getYearlySubjectAnalytics(String selectedYear) {
-        List<AcademicRequest> requests = acadRepo.findAllNonDraftWithApplicant();
+        return getYearlySubjectAnalytics(selectedYear, loadEvaluations());
+    }
+
+    public Map<String, Object> getYearlySubjectAnalytics(String selectedYear, Evaluations evaluations) {
+        List<AcademicRequest> requests = evaluations.requests();
 
         List<SubjectSubmissionItem> items = new ArrayList<>();
         Map<String, Long> subjectCounts = new LinkedHashMap<>();
         Set<String> distinctYears = new TreeSet<>(Comparator.reverseOrder());
 
         for (AcademicRequest req : requests) {
-            EvaluationSummary summary = acadService.summarize(req);
+            EvaluationSummary summary = evaluations.summaryOf(req);
             String year = summary != null ? summary.academicYear() : null;
             if (year == null || year.isBlank()) {
                 year = req.getCreatedAt() != null ? String.valueOf(req.getCreatedAt().getYear() + 543) : "";
@@ -471,24 +491,28 @@ public class DashboardAnalyticsService {
     // ── Evaluation Quality & Pass Rate ───────────────────────────────────
 
     public Map<String, Object> getEvaluationQualityMetrics() {
-        long passedCount = acadRepo.countByCurrentStatusIn(List.of(
+        return getEvaluationQualityMetrics(loadEvaluations());
+    }
+
+    public Map<String, Object> getEvaluationQualityMetrics(Evaluations evaluations) {
+        Map<RequestStatus, Long> acad = academicStatusCounts();
+        long passedCount = countOf(acad,
                 RequestStatus.COMPLETED_PASS,
                 RequestStatus.COLLEGE_ENDORSED,
-                RequestStatus.COMPLETED));
+                RequestStatus.COMPLETED);
 
-        long failedCount = acadRepo.countByCurrentStatus(RequestStatus.COMPLETED_FAIL);
-        long revisingCount = acadRepo.countByCurrentStatusIn(List.of(
+        long failedCount = countOf(acad, RequestStatus.COMPLETED_FAIL);
+        long revisingCount = countOf(acad,
                 RequestStatus.COMPLETED_REVISE,
-                RequestStatus.REVISION_SUBMITTED));
+                RequestStatus.REVISION_SUBMITTED);
 
         long totalEvaluated = passedCount + failedCount;
         int passRate = totalEvaluated > 0 ? (int) Math.round((passedCount * 100.0) / totalEvaluated) : 100;
 
-        List<AcademicRequest> requests = acadRepo.findAllNonDraftWithApplicant();
         Map<String, Long> levelCounts = new LinkedHashMap<>();
-        for (AcademicRequest req : requests) {
+        for (AcademicRequest req : evaluations.requests()) {
             if (req.getCurrentStatus() != null && req.getCurrentStatus().carriesAPassedResult()) {
-                EvaluationSummary summary = acadService.summarize(req);
+                EvaluationSummary summary = evaluations.summaryOf(req);
                 String level = summary != null ? summary.resultLevel() : null;
                 if (level == null || level.isBlank()) {
                     level = "ผ่านเกณฑ์";
@@ -509,6 +533,14 @@ public class DashboardAnalyticsService {
     // ── Stalled & SLA Bottleneck Analytics ──────────────────────────────
 
     public Map<String, Object> getStalledRequestAnalytics() {
+        return getStalledRequestAnalytics(acadRepo.findAllNonDraftWithApplicant());
+    }
+
+    public Map<String, Object> getStalledRequestAnalytics(Evaluations evaluations) {
+        return getStalledRequestAnalytics(evaluations.requests());
+    }
+
+    private Map<String, Object> getStalledRequestAnalytics(List<AcademicRequest> acadRequests) {
         LocalDate today = LocalDate.now();
         List<StalledRequestItem> stalledItems = new ArrayList<>();
         long totalStalled14 = 0;
@@ -521,7 +553,6 @@ public class DashboardAnalyticsService {
                 RequestStatus.DRAFT
         );
 
-        List<AcademicRequest> acadRequests = acadRepo.findAllNonDraftWithApplicant();
         long completedAcadCount = 0;
         long completedAcadDaysSum = 0;
 
@@ -741,6 +772,32 @@ public class DashboardAnalyticsService {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────
+
+    /** นับทุกสถานะใน query เดียว — เดิมนับทีละสถานะ เกือบสามสิบ query ต่อการเปิดแดชบอร์ด */
+    private Map<RequestStatus, Long> academicStatusCounts() {
+        Map<RequestStatus, Long> counts = new java.util.EnumMap<>(RequestStatus.class);
+        for (Object[] row : acadRepo.countGroupedByStatus()) {
+            counts.put((RequestStatus) row[0], ((Number) row[1]).longValue());
+        }
+        return counts;
+    }
+
+    private Map<PositionRequestStatus, Long> positionStatusCounts() {
+        Map<PositionRequestStatus, Long> counts = new java.util.EnumMap<>(PositionRequestStatus.class);
+        for (Object[] row : posRepo.countGroupedByStatus()) {
+            counts.put((PositionRequestStatus) row[0], ((Number) row[1]).longValue());
+        }
+        return counts;
+    }
+
+    @SafeVarargs
+    private static <S> long countOf(Map<S, Long> counts, S... statuses) {
+        long total = 0;
+        for (S s : statuses) {
+            total += counts.getOrDefault(s, 0L);
+        }
+        return total;
+    }
 
     /** The envelope's module; the column is NOT NULL, but default to ACADEMIC defensively. */
     private static SignatureModule moduleOf(SignatureStep s) {

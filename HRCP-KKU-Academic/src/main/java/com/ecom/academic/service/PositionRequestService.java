@@ -873,6 +873,35 @@ public class PositionRequestService {
     }
 
     /**
+     * ข้อมูลฟอร์มของเอกสารประเภทหนึ่ง ของหลายคำร้องใน query เดียว — ฉบับแรกตามลำดับของ
+     * {@link #getDocumentsByType} ที่มีข้อมูล หน้ารายการเคยเรียก getDocumentsByType ทีละคำร้อง
+     * คำร้องที่ยังไม่มีเอกสารนี้จะไม่อยู่ใน map
+     */
+    public Map<Long, Map<String, String>> documentDataFor(java.util.Collection<Long> requestIds, int documentType) {
+        Map<Long, Map<String, String>> result = new java.util.HashMap<>();
+        List<Long> ids = requestIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        for (int from = 0; from < ids.size(); from += AcademicRequestService.IN_CLAUSE_CHUNK) {
+            List<Long> chunk = ids.subList(from, Math.min(from + AcademicRequestService.IN_CLAUSE_CHUNK, ids.size()));
+            for (Object[] row : documentRepository.findJsonData(chunk, documentType)) {
+                Long requestId = (Long) row[0];
+                String json = (String) row[1];
+                if (result.containsKey(requestId) || json == null || json.isBlank()) {
+                    continue;
+                }
+                try {
+                    result.put(requestId, objectMapper.readValue(json,
+                            new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                            }));
+                } catch (Exception e) {
+                    log.warn("Could not read document {} of position request {}: {}", documentType, requestId,
+                            e.getMessage());
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
      * เขียนเลขที่หนังสือและวันที่ลงทุกแถวของเอกสารฉบับนี้ หลังลงนามครบแล้ว
      *
      * <p>คู่แฝดของ {@code AcademicRequestService.saveOfficeFieldsAcrossCopies} — สองเฟส

@@ -109,6 +109,10 @@ public interface AcademicRequestRepository extends JpaRepository<AcademicRequest
 
     // ── Dashboard Analytics ──────────────────────────────────────────────
 
+    /** จำนวนคำร้องแยกตามสถานะในคราวเดียว — แถวละ {@code [status, count]} แทนการนับทีละสถานะ */
+    @Query("SELECT r.currentStatus, COUNT(r) FROM AcademicRequest r GROUP BY r.currentStatus")
+    List<Object[]> countGroupedByStatus();
+
     long countByCurrentStatus(RequestStatus status);
 
     long countByCurrentStatusIn(List<RequestStatus> statuses);

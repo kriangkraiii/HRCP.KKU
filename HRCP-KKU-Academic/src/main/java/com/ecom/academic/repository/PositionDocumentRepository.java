@@ -22,6 +22,18 @@ public interface PositionDocumentRepository extends JpaRepository<PositionDocume
     List<PositionDocument> findByRequestIdAndDocType(@Param("requestId") Long requestId,
             @Param("docType") Integer docType);
 
+    /**
+     * ข้อมูลฟอร์มของเอกสารประเภทหนึ่ง ของหลายคำร้องในคราวเดียว — แถวละ {@code [requestId, jsonData]}
+     * เรียงแบบเดียวกับ {@link #findByRequestIdAndDocType} เพื่อไม่ต้องยิง query ทีละคำร้อง
+     */
+    @Query("""
+            SELECT d.request.id, d.jsonData FROM PositionDocument d
+            WHERE d.request.id IN :requestIds AND d.documentType = :docType AND d.isDeleted = false
+            ORDER BY d.request.id, d.isDraft ASC, d.copyNumber ASC, d.id DESC
+            """)
+    List<Object[]> findJsonData(@Param("requestIds") java.util.Collection<Long> requestIds,
+            @Param("docType") Integer docType);
+
     @Query("SELECT d FROM PositionDocument d WHERE d.request.id = :requestId AND d.documentType = :docType AND d.isDraft = true AND d.isDeleted = false")
     Optional<PositionDocument> findDraftByRequestIdAndDocType(@Param("requestId") Long requestId,
             @Param("docType") Integer docType);

@@ -136,36 +136,23 @@ public class PositionApplicantController {
         model.addAttribute("sentBackMap", sentBackMap);
         model.addAttribute("positionDocLabels", positionService.getAdminDocLabels());
 
-        // ดึงข้อมูลตำแหน่งจาก doc_2 สำหรับทุกคำร้อง
-        java.util.Map<Long, java.util.Map<String, String>> doc2DataMap = new java.util.HashMap<>();
-        for (PositionRequest req : requests) {
-            List<PositionDocument> doc2List = positionService.getDocumentsByType(req.getId(), 2);
-            if (!doc2List.isEmpty()) {
-                try {
-                    java.util.Map<String, String> doc2Data = objectMapper.readValue(doc2List.get(0).getJsonData(),
-                            new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
-                    doc2DataMap.put(req.getId(), doc2Data);
-                } catch (Exception e) { /* ignore */ }
-            }
-        }
-        model.addAttribute("doc2DataMap", doc2DataMap);
+        // ดึงข้อมูลตำแหน่งจาก doc_2 ของทุกคำร้องใน query เดียว
+        model.addAttribute("doc2DataMap",
+                positionService.documentDataFor(requests.stream().map(PositionRequest::getId).toList(), 2));
 
-        // ดึงข้อมูลรายวิชาและผลประเมินจากเอกสารที่ 9 (Phase 1 เดิม 8) ผ่าน linkedEvaluation
+        // ดึงข้อมูลรายวิชาและผลประเมินจากเอกสารที่ 9 (Phase 1 เดิม 8) ผ่าน linkedEvaluation — query เดียว
         java.util.Map<Long, java.util.Map<String, String>> evalDoc9DataMap = new java.util.HashMap<>();
         java.util.Map<Long, String> evalRequestCodeMap = new java.util.HashMap<>();
+        java.util.Map<Long, java.util.Map<String, String>> doc9ByEvaluation = academicService.documentDataFor(
+                requests.stream().filter(r -> r.getLinkedEvaluation() != null)
+                        .map(r -> r.getLinkedEvaluation().getId()).toList(), 9);
         for (PositionRequest req : requests) {
             if (req.getLinkedEvaluation() != null) {
                 evalRequestCodeMap.put(req.getId(), req.getLinkedEvaluation().getRequestCode());
-                try {
-                    List<com.ecom.academic.model.AcademicDocument> doc9List = academicService
-                            .getDocumentsByType(req.getLinkedEvaluation().getId(), 9);
-                    if (!doc9List.isEmpty() && doc9List.get(0).getJsonData() != null) {
-                        java.util.Map<String, String> doc9Data = objectMapper.readValue(
-                                doc9List.get(0).getJsonData(),
-                                new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, String>>() {});
-                        evalDoc9DataMap.put(req.getId(), doc9Data);
-                    }
-                } catch (Exception e) { /* ignore */ }
+                java.util.Map<String, String> doc9Data = doc9ByEvaluation.get(req.getLinkedEvaluation().getId());
+                if (doc9Data != null) {
+                    evalDoc9DataMap.put(req.getId(), doc9Data);
+                }
             }
         }
         // Also check draft request

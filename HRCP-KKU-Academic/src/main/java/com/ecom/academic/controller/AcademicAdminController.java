@@ -177,15 +177,18 @@ public class AcademicAdminController {
         model.addAttribute("rankLabels", new ArrayList<>(rankDist.keySet()));
         model.addAttribute("rankValues", new ArrayList<>(rankDist.values()));
 
+        // หลายส่วนข้างล่างใช้คำร้องประเมินชุดเดียวกัน — โหลดและสรุปครั้งเดียว
+        DashboardAnalyticsService.Evaluations evaluations = dashboardAnalytics.loadEvaluations();
+
         // Expiry Tracker Analytics
-        Map<String, Object> expiryData = dashboardAnalytics.getEvaluationExpiryAnalytics(expiryFilter);
+        Map<String, Object> expiryData = dashboardAnalytics.getEvaluationExpiryAnalytics(expiryFilter, evaluations);
         model.addAttribute("expirySummary", expiryData.get("summary"));
         model.addAttribute("expiryItems", expiryData.get("items"));
         model.addAttribute("allExpiryItems", expiryData.get("allItems"));
         model.addAttribute("selectedExpiryFilter", expiryData.get("selectedFilter"));
 
         // Yearly Subject Submissions Analytics
-        Map<String, Object> subjectData = dashboardAnalytics.getYearlySubjectAnalytics(selectedYear);
+        Map<String, Object> subjectData = dashboardAnalytics.getYearlySubjectAnalytics(selectedYear, evaluations);
         model.addAttribute("subjectItems", subjectData.get("items"));
         model.addAttribute("topSubjects", subjectData.get("topSubjects"));
         model.addAttribute("availableYears", subjectData.get("availableYears"));
@@ -205,7 +208,7 @@ public class AcademicAdminController {
         model.addAttribute("posMajorValues", byMajor != null ? new ArrayList<>(byMajor.values()) : List.of());
 
         // Evaluation Quality & Pass Rate
-        Map<String, Object> qualityData = dashboardAnalytics.getEvaluationQualityMetrics();
+        Map<String, Object> qualityData = dashboardAnalytics.getEvaluationQualityMetrics(evaluations);
         model.addAttribute("qualityMetrics", qualityData);
         @SuppressWarnings("unchecked")
         Map<String, Long> levelCounts = (Map<String, Long>) qualityData.get("levelCounts");
@@ -213,7 +216,7 @@ public class AcademicAdminController {
         model.addAttribute("qualityValues", levelCounts != null ? new ArrayList<>(levelCounts.values()) : List.of());
 
         // Stalled & SLA Bottlenecks
-        Map<String, Object> stalledData = dashboardAnalytics.getStalledRequestAnalytics();
+        Map<String, Object> stalledData = dashboardAnalytics.getStalledRequestAnalytics(evaluations);
         model.addAttribute("stalledData", stalledData);
         model.addAttribute("stalledItems", stalledData.get("items"));
         model.addAttribute("totalStalled14", stalledData.get("totalStalled14"));
@@ -331,16 +334,18 @@ public class AcademicAdminController {
         model.addAttribute("activeType", typeFilter);
 
         // Phase 2: Position requests data
+        List<PositionRequest> allPositionRequests = List.of();
         try {
             String posSearch = httpRequest.getParameter("posSearch");
             String posStatus = httpRequest.getParameter("posStatus");
 
+            allPositionRequests = positionRequestService.findAll();
             List<PositionRequest> positionRequests;
             if (posSearch != null && !posSearch.trim().isEmpty()) {
                 positionRequests = positionRequestService.searchByNameOrEmail(posSearch.trim());
                 model.addAttribute("posSearch", posSearch.trim());
             } else {
-                positionRequests = positionRequestService.findAll();
+                positionRequests = allPositionRequests;
             }
 
             // Filter out drafts
@@ -399,21 +404,13 @@ public class AcademicAdminController {
         long evalTotal = allRequests.stream().filter(r -> !r.getCurrentStatus().isDraft()).count();
         model.addAttribute("evaluationTotalCount", evalTotal);
 
-        // ดึงข้อมูลรายวิชาจาก doc_1 สำหรับทุกคำร้องประเมินผล
-        Map<Long, Map<String, String>> doc1DataMap = new HashMap<>();
-        for (AcademicRequest req : allRequests) {
-            if (!req.getCurrentStatus().isDraft()) {
-                List<AcademicDocument> doc1List = requestService.getDocumentsByType(req.getId(), 1);
-                if (!doc1List.isEmpty()) {
-                    try {
-                        Map<String, String> doc1Data = objectMapper.readValue(doc1List.get(0).getJsonData(),
-                                new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
-                        doc1DataMap.put(req.getId(), doc1Data);
-                    } catch (Exception e) { /* ignore */ }
-                }
-            }
-        }
-        model.addAttribute("doc1DataMap", doc1DataMap);
+        // ดึงข้อมูลรายวิชาจาก doc_1 เฉพาะคำร้องที่หน้านี้แสดง ใน query เดียว — มุมมองปกติแสดงเฉพาะ
+        // คำร้องที่ยังไม่ปิด เดิมโหลดของทุกคำร้องทีละรายการ รวมคำร้องที่ปิดแล้วซึ่งไม่ได้แสดงเลย
+        List<AcademicRequest> shownRequests = model.containsAttribute("activeStatus") ? allRequests : pendingRequests;
+        model.addAttribute("doc1DataMap", requestService.documentDataFor(shownRequests.stream()
+                .filter(r -> !r.getCurrentStatus().isDraft())
+                .map(AcademicRequest::getId)
+                .toList(), 1));
 
         // Build autocomplete suggestions from all applicants
         java.util.Set<String> suggestionsSet = new java.util.LinkedHashSet<>();
@@ -423,16 +420,11 @@ public class AcademicAdminController {
                 if (req.getApplicant().getEmail() != null) suggestionsSet.add(req.getApplicant().getEmail());
             }
         }
-        try {
-            List<PositionRequest> posAll = positionRequestService.findAll();
-            for (PositionRequest pr : posAll) {
-                if (!pr.getCurrentStatus().isDraft() && pr.getApplicant() != null) {
-                    if (pr.getApplicant().getName() != null) suggestionsSet.add(pr.getApplicant().getName());
-                    if (pr.getApplicant().getEmail() != null) suggestionsSet.add(pr.getApplicant().getEmail());
-                }
+        for (PositionRequest pr : allPositionRequests) {
+            if (!pr.getCurrentStatus().isDraft() && pr.getApplicant() != null) {
+                if (pr.getApplicant().getName() != null) suggestionsSet.add(pr.getApplicant().getName());
+                if (pr.getApplicant().getEmail() != null) suggestionsSet.add(pr.getApplicant().getEmail());
             }
-        } catch (Exception e) {
-            auditLogFailed(e);
         }
         try {
             String suggestionsJson = objectMapper.writeValueAsString(new java.util.ArrayList<>(suggestionsSet));

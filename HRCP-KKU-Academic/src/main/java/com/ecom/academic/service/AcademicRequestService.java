@@ -31,6 +31,15 @@ public class AcademicRequestService {
 
     private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(AcademicRequestService.class);
 
+    /** ObjectMapper ใช้ร่วมกันได้และสร้างแพง — ไม่สร้างใหม่ทุกครั้งที่อ่านเอกสาร */
+    private static final com.fasterxml.jackson.databind.ObjectMapper JSON =
+            new com.fasterxml.jackson.databind.ObjectMapper();
+    private static final com.fasterxml.jackson.core.type.TypeReference<Map<String, String>> STRING_MAP =
+            new com.fasterxml.jackson.core.type.TypeReference<>() {
+            };
+    /** PostgreSQL รับ bind parameter ได้จำกัด จึงแบ่ง IN (...) เป็นชุด */
+    static final int IN_CLAUSE_CHUNK = 1000;
+
     private static final Map<Integer, String> DOC_LABELS = new LinkedHashMap<>();
     static {
         DOC_LABELS.put(1, "บันทึกข้อความ ขอรับการประเมินผลการสอน โดยผู้ขอรับการประเมิน");
@@ -130,11 +139,8 @@ public class AcademicRequestService {
     }
 
     public List<AcademicRequest> findAll() {
-        List<AcademicRequest> all = requestRepository.findAllByOrderByCreatedAtDesc();
-        // กรอง draft ออก - แอดมินไม่ต้องเห็น
-        return all.stream()
-                .filter(r -> r.getCurrentStatus() != RequestStatus.DRAFT)
-                .collect(java.util.stream.Collectors.toList());
+        // ไม่รวม draft — แอดมินไม่ต้องเห็น และโหลดผู้ยื่นมาพร้อมกัน หน้ารายการแสดงชื่อทุกแถว
+        return new java.util.ArrayList<>(requestRepository.findAllNonDraftWithApplicant());
     }
 
     /**
@@ -1451,9 +1457,64 @@ public class AcademicRequestService {
         if (request == null) {
             return null;
         }
-        Map<String, String> doc9 = documentData(request.getId(), 9);
-        Map<String, String> doc1 = documentData(request.getId(), 1);
+        return summarize(request, documentData(request.getId(), 1), documentData(request.getId(), 9));
+    }
 
+    /**
+     * {@link #summarize(AcademicRequest)} ของหลายคำร้องพร้อมกัน โดยอ่านเอกสาร 1 และ 9
+     * ของทุกคำร้องใน query เดียว — แดชบอร์ดเคยเรียกทีละคำร้อง สองครั้งต่อคำร้อง
+     *
+     * @return ผลสรุปตาม id ของคำร้อง ครบทุกคำร้องที่ส่งเข้ามา
+     */
+    public Map<Long, EvaluationSummary> summarizeAll(java.util.Collection<AcademicRequest> requests) {
+        Map<Long, EvaluationSummary> result = new java.util.HashMap<>();
+        if (requests == null || requests.isEmpty()) {
+            return result;
+        }
+        List<Long> ids = requests.stream().map(AcademicRequest::getId).toList();
+        Map<Integer, Map<Long, Map<String, String>>> byType = documentDataFor(ids, List.of(1, 9));
+        for (AcademicRequest request : requests) {
+            result.put(request.getId(), summarize(request,
+                    byType.get(1).getOrDefault(request.getId(), Map.of()),
+                    byType.get(9).getOrDefault(request.getId(), Map.of())));
+        }
+        return result;
+    }
+
+    /**
+     * ข้อมูลฟอร์มของเอกสารประเภทหนึ่ง ของหลายคำร้องในคราวเดียว — ฉบับแรกที่มีข้อมูล
+     * แบบเดียวกับที่ {@link #summarize(AcademicRequest)} อ่าน คำร้องที่ยังไม่มีเอกสารนี้จะไม่อยู่ใน map
+     */
+    public Map<Long, Map<String, String>> documentDataFor(java.util.Collection<Long> requestIds, int documentType) {
+        return documentDataFor(requestIds, List.of(documentType)).get(documentType);
+    }
+
+    private Map<Integer, Map<Long, Map<String, String>>> documentDataFor(java.util.Collection<Long> requestIds,
+            List<Integer> types) {
+        Map<Integer, Map<Long, Map<String, String>>> byType = new java.util.HashMap<>();
+        types.forEach(t -> byType.put(t, new java.util.HashMap<>()));
+        List<Long> ids = requestIds.stream().filter(java.util.Objects::nonNull).distinct().toList();
+        for (int from = 0; from < ids.size(); from += IN_CLAUSE_CHUNK) {
+            List<Long> chunk = ids.subList(from, Math.min(from + IN_CLAUSE_CHUNK, ids.size()));
+            for (Object[] row : documentRepository.findJsonData(chunk, types)) {
+                Long requestId = (Long) row[0];
+                Map<Long, Map<String, String>> forType = byType.get((Integer) row[1]);
+                String json = (String) row[2];
+                if (forType.containsKey(requestId) || json == null || json.isBlank()) {
+                    continue;
+                }
+                try {
+                    forType.put(requestId, JSON.readValue(json, STRING_MAP));
+                } catch (Exception e) {
+                    log.warn("Could not read document {} of evaluation {}: {}", row[1], requestId, e.getMessage());
+                }
+            }
+        }
+        return byType;
+    }
+
+    private EvaluationSummary summarize(AcademicRequest request, Map<String, String> doc1,
+            Map<String, String> doc9) {
         String rawDoc1Year = doc1.get("academic_year");
         String rawSemester = firstNonBlank(doc9.get("semester"), doc1.get("semester"), rawDoc1Year);
         String semester = firstNonBlank(semesterOf(rawSemester), rawSemester);
@@ -1515,10 +1576,7 @@ public class AcademicRequestService {
                 continue;
             }
             try {
-                return new com.fasterxml.jackson.databind.ObjectMapper().readValue(
-                        doc.getJsonData(),
-                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
-                        });
+                return JSON.readValue(doc.getJsonData(), STRING_MAP);
             } catch (Exception e) {
                 log.warn("Could not read document {} of evaluation {}: {}", documentType,
                         requestId, e.getMessage());
