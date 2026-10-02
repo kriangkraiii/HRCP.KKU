@@ -47,6 +47,9 @@ public class TestAccountSeeder implements CommandLineRunner {
             new Seed("test.assocdean@kku.ac.th", "รองคณบดี", "ทดสอบ", "ROLE_USER", "DEAN"),
             new Seed("test.dean@kku.ac.th", "คณบดี", "ทดสอบ", "ROLE_ADMIN", "DEAN"),
             new Seed("test.committee@kku.ac.th", "ประธานกรรมการ", "ทดสอบ", "ROLE_USER", "COMMITTEE"),
+            // กรรมการคนที่ 2 และ 3 — เอกสารที่ 7 ลงนามครบสามคน (docs/PLAN-committee-signers.md)
+            new Seed("test.committee2@kku.ac.th", "สมพร", "กรรมการประเมิน", "ROLE_USER", "COMMITTEE"),
+            new Seed("test.committee3@kku.ac.th", "วันทนา", "กรรมการประเมิน", "ROLE_USER", "COMMITTEE"),
             new Seed("test.author1@kku.ac.th", "ผู้ประพันธ์อันดับแรก", "ทดสอบ", "ROLE_USER", null),
             new Seed("test.author2@kku.ac.th", "ผู้ประพันธ์บรรณกิจ", "ทดสอบ", "ROLE_USER", null));
 

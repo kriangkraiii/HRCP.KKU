@@ -41,6 +41,8 @@
 | 4 | **รองคณบดี** | `associate_dean` | `test.assocdean@kku.ac.th` | `test1234` | `ROLE_USER` | `DEAN` | ศ.ดร.วิชัย รองคณบดีฝ่ายวิชาการ |
 | 5 | **คณบดี** | `dean` | `test.dean@kku.ac.th` | `test1234` | `ROLE_ADMIN` | `DEAN` | ศ.ดร.ประสิทธิ์ คณบดีวิทยาลัยฯ |
 | 6 | **ประธานคณะกรรมการ** | `committee_chair` | `test.committee@kku.ac.th` | `test1234` | `ROLE_USER` | `COMMITTEE` | ภก.ดร.บุญมี ประธานกรรมการ |
+| 6.1 | **อนุกรรมการ (ภายนอก / คนที่ 2)** | `committee_member_2` | `test.committee2@kku.ac.th` | `test1234` | `ROLE_USER` | `COMMITTEE` | รศ.ดร.สมพร กรรมการประเมิน |
+| 6.2 | **อนุกรรมการและเลขานุการ (คนที่ 3)** | `committee_member_3` | `test.committee3@kku.ac.th` | `test1234` | `ROLE_USER` | `COMMITTEE` | ผศ.ดร.วันทนา กรรมการประเมิน |
 | 7 | **ผู้ประพันธ์อันดับแรก** | `first_author` | `test.author1@kku.ac.th` | `test1234` | `ROLE_USER` | - | อ.ดร.กิตติ ร่วมวิจัยหนึ่ง |
 | 8 | **ผู้ประพันธ์บรรณกิจ** | `corresponding_author` | `test.author2@kku.ac.th` | `test1234` | `ROLE_USER` | - | ดร.สุภาวดี ผู้ประพันธ์บรรณกิจ |
 
