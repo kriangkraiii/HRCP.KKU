@@ -145,7 +145,7 @@ public class CommitteeDocumentMailer {
             }
         }
 
-        String applicantName = request.getApplicant() != null ? request.getApplicant().getName() : "-";
+        String applicantName = request.getApplicant() != null ? SignerNameResolver.printedName(request.getApplicant()) : "-";
         String link = filesPath(request.getId());
         UserDtls actor = sentBy != null ? sentBy : envelope.getInitiatedBy();
         List<String> delivered = new ArrayList<>();
@@ -157,7 +157,8 @@ public class CommitteeDocumentMailer {
                 MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
                 helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
                 helper.setTo(email);
-                helper.setSubject("ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิประเมินผลการสอน — คำร้อง #" + code + " (" + applicantName + ")");
+                helper.setSubject("ขอเรียนเชิญเป็นกรรมการผู้ทรงคุณวุฒิประเมินผลการสอนของ " + applicantName
+                        + " (รหัสคำร้อง " + code + ")");
                 helper.setText(EmailTemplateHelper.buildCommitteeInvitationEmail(letter.name(), code, applicantName,
                         publicBaseUrl + link, files, links), true);
                 EmailTemplateHelper.attachLogos(helper);

@@ -194,7 +194,7 @@ public class SystemAlertService {
 
     private String body(UserDtls admin, Level level, String source, String detail, String stamp) {
         return com.ecom.util.EmailTemplateHelper.buildSystemAlertEmail(
-                admin.getName() != null ? admin.getName() : "ผู้ดูแลระบบ",
+                com.ecom.util.EmailTemplateHelper.formalName(admin),
                 level.heading,
                 level.colour,
                 level.icon,

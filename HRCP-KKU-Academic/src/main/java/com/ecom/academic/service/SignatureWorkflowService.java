@@ -95,6 +95,10 @@ public class SignatureWorkflowService {
     /** รหัสยืนยันทางอีเมลของทางสำรองเดียวกัน */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.ecom.service.TwoFactorService twoFactorService;
+
+    /** เนื้อหาอีเมล: คำร้องของใคร และสิ่งที่ผู้ลงนามภายนอกต้องทำ — ไม่มีก็ส่งอีเมลแบบไม่มีส่วนนี้ */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private SignerBriefing briefing;
     private final com.ecom.service.SignatureImageStorage signatureImageStorage;
 
     public SignatureWorkflowService(
@@ -1789,7 +1793,36 @@ public class SignatureWorkflowService {
                 step == null ? null : step.getRoleLabel(),
                 step == null ? null : step.getSignerNameSnapshot(),
                 step == null ? null : step.getDeclineReason(),
-                unproxiedRecipients);
+                unproxiedRecipients,
+                caseSummaryFor(envelope),
+                briefingFor(envelope, step));
+    }
+
+    /** ข้อมูลประกอบอีเมลเท่านั้น — อ่านไม่ได้ก็ส่งอีเมลโดยไม่มีส่วนนี้ ห้ามทำให้การลงนามล้ม */
+    private SignerBriefing.CaseSummary caseSummaryFor(SignatureRequest envelope) {
+        if (briefing == null) {
+            return null;
+        }
+        try {
+            return briefing.caseOf(envelope.getModule(), envelope.getRequestId()).orElse(null);
+        } catch (RuntimeException e) {
+            log.warn("Could not describe request {} {} for a signing email: {}", envelope.getModule(),
+                    envelope.getRequestId(), e.toString());
+            return null;
+        }
+    }
+
+    private SignerBriefing.Briefing briefingFor(SignatureRequest envelope, SignatureStep step) {
+        if (briefing == null || step == null || envelope.getDocumentType() == null) {
+            return null;
+        }
+        try {
+            return briefing.forSlot(envelope.getModule(), envelope.getRequestId(), envelope.getDocumentType(),
+                    step.getSlotKey()).orElse(null);
+        } catch (RuntimeException e) {
+            log.warn("Could not brief signer of step {}: {}", step.getId(), e.toString());
+            return null;
+        }
     }
 
     /**

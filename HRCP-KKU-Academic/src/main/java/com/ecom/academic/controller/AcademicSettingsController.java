@@ -193,10 +193,10 @@ public class AcademicSettingsController {
 
             helper.setFrom(sender, senderName);
             helper.setTo(recipient);
-            helper.setSubject("[CP HRD] KKU SMTP Relay Test (" + timestampStr + ")");
+            helper.setSubject("[CP HRD] ทดสอบการส่งอีเมลของระบบผ่าน KKU SMTP Relay (" + timestampStr + ")");
 
             String htmlBody = EmailTemplateHelper.buildDiagnosticTestEmail(
-                    admin.getName(),
+                    EmailTemplateHelper.formalName(admin),
                     recipient,
                     "10.198.110.27 (Client IP: " + clientIp + ")",
                     mailHost + ":" + mailPort + " (STARTTLS)",

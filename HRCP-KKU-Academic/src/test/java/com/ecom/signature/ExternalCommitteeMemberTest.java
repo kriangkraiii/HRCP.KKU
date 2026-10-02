@@ -134,6 +134,19 @@ class ExternalCommitteeMemberTest extends AbstractFlowTest {
                 true, ActorContext.none(), chairPin, null);
         assertThat(chairSigned.ok()).as(chairSigned.error()).isTrue();
 
+        // อีเมลขอให้ลงนามถึงกรรมการภายนอก: จดหมายทางการที่บอกว่าเป็นเรื่องของใคร ฐานะอะไร และลงนามอย่างไร
+        String guestEmail = guest.getEmail();
+        awaitCondition("อีเมลขอให้ลงนามถึงกรรมการภายนอก", () -> mail().to(guestEmail).stream()
+                .anyMatch(m -> m.subjectContains("ขอความอนุเคราะห์ลงนาม")));
+        var ask = mail().to(guestEmail).stream().filter(m -> m.subjectContains("ขอความอนุเคราะห์ลงนาม")).findFirst()
+                .orElseThrow();
+        assertThat(ask.subject()).contains("สมชาย ทดสอบยื่น");
+        assertThat(ask.body()).contains("รศ.ดร.วิภา ภายนอก")
+                .contains("อนุกรรมการประเมินผลการสอน (ผู้ทรงคุณวุฒิภายนอก)")
+                .contains("ขั้นตอนการลงนาม")
+                .contains("http").contains("/esign/sign/" + steps.get(1).getId())
+                .contains("จึงเรียนมาเพื่อโปรดพิจารณาลงนาม");
+
         assertThat(signatureWorkflow.sendSigningOtp(steps.get(1).getId(), fresh(guest))).isNull();
         String otp = twoFactorService.generateOtp(fresh(guest));
         var guestSigned = signatureWorkflow.sign(steps.get(1).getId(), fresh(guest), data.signatureFor(guest).getId(),

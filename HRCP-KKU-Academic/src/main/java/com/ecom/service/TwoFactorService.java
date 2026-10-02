@@ -93,18 +93,18 @@ public class TwoFactorService {
             String subject;
             String purposeText;
             if ("LOGIN".equals(purpose)) {
-                subject = "รหัส OTP สำหรับเข้าสู่ระบบ - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
-                purposeText = "เข้าสู่ระบบ";
+                subject = "รหัสยืนยันตัวตน (OTP) สำหรับการเข้าสู่ระบบ - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
+                purposeText = "การเข้าสู่ระบบ";
             } else if ("SIGN".equals(purpose)) {
                 // ผู้ลงนามภายนอกที่ไม่มี Digital ID — ยืนยันตัวตนทางอีเมลก่อนระบบประทับรับรองแทน
-                subject = "รหัส OTP สำหรับยืนยันตัวตนก่อนลงนามเอกสาร - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
-                purposeText = "ยืนยันตัวตนก่อนลงนามเอกสาร";
+                subject = "รหัสยืนยันตัวตน (OTP) สำหรับการลงนามเอกสารอิเล็กทรอนิกส์ - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
+                purposeText = "การลงนามเอกสารอิเล็กทรอนิกส์";
             } else {
-                subject = "รหัส OTP สำหรับยืนยันอีเมล - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
-                purposeText = "ยืนยันอีเมล";
+                subject = "รหัสยืนยันตัวตน (OTP) สำหรับการยืนยันอีเมล - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
+                purposeText = "การยืนยันอีเมล";
             }
 
-            String body = com.ecom.util.EmailTemplateHelper.buildOtpEmail(user.getName(), otp, purposeText, OTP_EXPIRY_MINUTES);
+            String body = com.ecom.util.EmailTemplateHelper.buildOtpEmail(com.ecom.util.EmailTemplateHelper.formalName(user), otp, purposeText, OTP_EXPIRY_MINUTES);
 
             if (com.ecom.util.EmailTemplateHelper.isTestEmail(user.getEmail())) {
                 logger.info("Test account OTP generated for {} [{}] => OTP: {}", user.getEmail(), purpose, otp);

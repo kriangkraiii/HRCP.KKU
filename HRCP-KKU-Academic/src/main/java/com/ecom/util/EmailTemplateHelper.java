@@ -137,331 +137,370 @@ public final class EmailTemplateHelper {
         return sb.toString();
     }
 
+    // =====================================================================
+    // จดหมายแบบทางการ — ทุกอีเมลขึ้นต้น "เรื่อง / เรียน" บอกว่าเป็นเรื่องอะไร ต้องทำอะไร แล้วปิดท้ายแบบหนังสือราชการ
+    // =====================================================================
+
+    /** ผู้ส่งที่ลงท้ายจดหมาย — หน่วยงานที่ดูแลงานในระบบนี้ */
+    public static final String SIGN_OFF_UNIT = "ภารกิจด้านทรัพยากรบุคคล";
+    public static final String SIGN_OFF_ORG = "วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น";
+
     /**
-     * Builds OTP verification email for 2FA login or email verification.
+     * ชื่อสำหรับขึ้นต้นจดหมาย: คำนำหน้า/ตำแหน่งทางวิชาการติดกับชื่อ-สกุล เช่น "รศ.ดร.วิภา ใจดี"
+     * ไม่มีคำนำหน้าใช้ "คุณ" — ไม่ขึ้นต้นด้วยชื่อเปล่า ๆ
+     */
+    public static String formalName(com.ecom.model.UserDtls user) {
+        if (user == null) {
+            return "ท่าน";
+        }
+        String name = user.getName();
+        if (name == null || name.isBlank()) {
+            String first = user.getFirstName() == null ? "" : user.getFirstName().strip();
+            String last = user.getLastName() == null ? "" : user.getLastName().strip();
+            name = (first + " " + last).strip();
+        }
+        if (name.isBlank()) {
+            return "ท่าน";
+        }
+        String title = user.getTitle() == null ? "" : user.getTitle().strip();
+        return title.isEmpty() ? "คุณ" + name.strip() : title + name.strip();
+    }
+
+    /** ประกอบเนื้อจดหมายทีละส่วน ข้อความทุกส่วน escape ให้แล้ว ยกเว้นที่ชื่อเมธอดลงท้ายด้วย Html */
+    public static final class Letter {
+        private final StringBuilder sb = new StringBuilder();
+
+        private Letter() {
+        }
+
+        /** เริ่มจดหมาย: เรื่อง แล้ว เรียน */
+        public static Letter of(String subject, String salutationName) {
+            Letter l = new Letter();
+            if (subject != null && !subject.isBlank()) {
+                l.sb.append("<p style='font-size:14px;color:#1e293b;margin:0 0 6px 0;'><strong>เรื่อง</strong>&nbsp;&nbsp;")
+                        .append(escapeHtml(subject)).append("</p>");
+            }
+            l.sb.append("<p style='font-size:14px;color:#1e293b;margin:0 0 18px 0;'><strong>เรียน</strong>&nbsp;&nbsp;")
+                    .append(escapeHtml(salutationName == null || salutationName.isBlank() ? "ท่าน" : salutationName))
+                    .append("</p>");
+            return l;
+        }
+
+        public Letter para(String text) {
+            return text == null || text.isBlank() ? this : paraHtml(escapeHtml(text));
+        }
+
+        public Letter paraHtml(String html) {
+            sb.append("<p style='font-size:14px;color:#334155;margin:0 0 14px 0;text-indent:2.5em;'>").append(html).append("</p>");
+            return this;
+        }
+
+        /** ตารางรายละเอียด แถวที่ค่าว่างไม่แสดง */
+        public Letter details(java.util.Map<String, String> rows) {
+            sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e3a8a;border-radius:8px;padding:14px 18px;margin:4px 0 18px 0;'>");
+            sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='4' style='font-size:14px;'>");
+            rows.forEach((label, value) -> {
+                if (value != null && !value.isBlank()) {
+                    sb.append("<tr><td width='34%' valign='top' style='color:#64748b;font-weight:600;'>").append(escapeHtml(label))
+                            .append("</td><td style='color:#1e293b;'>").append(escapeHtml(value)).append("</td></tr>");
+                }
+            });
+            sb.append("</table></div>");
+            return this;
+        }
+
+        /** สิ่งที่ผู้รับต้องทำ เรียงตามลำดับ */
+        public Letter steps(String heading, java.util.List<String> items) {
+            if (items == null || items.isEmpty()) {
+                return this;
+            }
+            sb.append("<p style='font-size:14px;color:#1e293b;font-weight:600;margin:0 0 6px 0;'>").append(escapeHtml(heading)).append("</p>");
+            sb.append("<ol style='font-size:14px;color:#334155;margin:0 0 16px 0;padding-left:22px;'>");
+            for (String item : items) {
+                sb.append("<li style='margin-bottom:6px;'>").append(escapeHtml(item)).append("</li>");
+            }
+            sb.append("</ol>");
+            return this;
+        }
+
+        /** กล่องเน้นข้อความ — tone: info, warn, danger, success */
+        public Letter note(String tone, String heading, String text) {
+            String[] c = switch (tone == null ? "info" : tone) {
+                case "warn" -> new String[] { "#fffbeb", "#fde68a", "#d97706", "#92400e" };
+                case "danger" -> new String[] { "#fef2f2", "#fecaca", "#dc2626", "#991b1b" };
+                case "success" -> new String[] { "#f0fdf4", "#bbf7d0", "#16a34a", "#166534" };
+                default -> new String[] { "#eff6ff", "#bfdbfe", "#2563eb", "#1e3a8a" };
+            };
+            sb.append("<div style='background:").append(c[0]).append(";border:1px solid ").append(c[1])
+                    .append(";border-left:4px solid ").append(c[2]).append(";border-radius:8px;padding:12px 16px;margin:0 0 16px 0;font-size:14px;'>");
+            if (heading != null && !heading.isBlank()) {
+                sb.append("<div style='font-weight:700;color:").append(c[3]).append(";margin-bottom:4px;'>").append(escapeHtml(heading)).append("</div>");
+            }
+            sb.append("<div style='color:#1e293b;white-space:pre-wrap;'>").append(escapeHtml(text)).append("</div></div>");
+            return this;
+        }
+
+        /** ส่วนที่ผู้เรียกประกอบ HTML เอง (เช่น รหัส OTP) */
+        public Letter html(String html) {
+            sb.append(html);
+            return this;
+        }
+
+        public Letter button(String label, String url) {
+            if (url == null || url.isBlank()) {
+                return this;
+            }
+            sb.append("<div style='text-align:center;margin:22px 0 10px 0;'><a href='").append(escapeHtml(url))
+                    .append("' target='_blank' style='display:inline-block;background-color:#0d47a1;color:#ffffff;text-decoration:none;padding:12px 28px;border-radius:6px;font-weight:600;font-size:15px;'>")
+                    .append(escapeHtml(label)).append("</a></div>");
+            sb.append("<p style='font-size:12px;color:#94a3b8;text-align:center;margin:0 0 18px 0;word-break:break-all;'>หากปุ่มไม่ทำงาน กรุณาคัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์: ")
+                    .append(escapeHtml(url)).append("</p>");
+            return this;
+        }
+
+        /** ปิดจดหมาย เช่น "จึงเรียนมาเพื่อโปรดทราบ" แล้วลงท้ายด้วยหน่วยงาน */
+        public String close(String closingLine) {
+            sb.append("<p style='font-size:14px;color:#334155;margin:18px 0 22px 0;text-indent:2.5em;'>").append(escapeHtml(closingLine)).append("</p>");
+            sb.append("<p style='font-size:14px;color:#1e293b;margin:0;text-align:center;line-height:1.7;'>")
+                    .append(SIGN_OFF_UNIT).append("<br>").append(SIGN_OFF_ORG).append("</p>");
+            return sb.toString();
+        }
+    }
+
+    /** กล่องเน้นข้อความแบบเดียวกับใน {@link Letter} สำหรับส่วนที่ผู้เรียกแนบเพิ่ม */
+    public static String noteHtml(String tone, String heading, String text) {
+        Letter l = new Letter();
+        l.note(tone, heading, text);
+        return l.sb.toString();
+    }
+
+    private static java.util.Map<String, String> rows(String... labelValue) {
+        java.util.Map<String, String> m = new java.util.LinkedHashMap<>();
+        for (int i = 0; i + 1 < labelValue.length; i += 2) {
+            m.put(labelValue[i], labelValue[i + 1]);
+        }
+        return m;
+    }
+
+    /**
+     * รหัส OTP สำหรับยืนยันตัวตน
+     *
+     * @param name ชื่อสำหรับขึ้นต้นจดหมาย ({@link #formalName})
      */
     public static String buildOtpEmail(String name, String otp, String purposeText, int expiryMinutes) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(name != null ? name : "ผู้ใช้งาน")).append("</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>ท่านได้ส่งคำขอรหัสยืนยันตัวตน (OTP) สำหรับ <strong>")
-          .append(escapeHtml(purposeText)).append("</strong> ในระบบตำแหน่งทางวิชาการ</p>");
-
-        sb.append("<div style='text-align:center;margin:28px 0;'>");
-        sb.append("<div style='display:inline-block;background:#f0f7ff;border:2px dashed #2563eb;border-radius:12px;padding:16px 36px;'>");
-        sb.append("<div style='font-size:12px;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;'>รหัส OTP ของท่าน</div>");
-        sb.append("<span style='font-size:34px;font-weight:700;color:#1e3a8a;letter-spacing:6px;font-family:monospace;'>")
-          .append(escapeHtml(otp)).append("</span>");
-        sb.append("</div>");
-        sb.append("</div>");
-
-        sb.append("<div style='background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:12px 16px;border-radius:6px;margin:20px 0;font-size:13px;color:#92400e;'>");
-        sb.append("รหัสนี้มีอายุการใช้งาน <strong>").append(expiryMinutes).append(" นาที</strong> เพื่อความปลอดภัย กรุณาอย่าเปิดเผยรหัสนี้แก่ผู้อื่น");
-        sb.append("</div>");
-
-        sb.append("<p style='font-size:12px;color:#94a3b8;margin:20px 0 0 0;'>หากท่านไม่ได้เป็นผู้ทำรายการดังกล่าว กรุณาเพิกเฉยต่ออีเมลฉบับนี้ หรือติดต่อผู้ดูแลระบบทันที</p>");
-
-        return wrapLayout("รหัส OTP ยืนยันตัวตน", purposeText, sb.toString());
+        String code = "<div style='text-align:center;margin:8px 0 20px 0;'>"
+                + "<div style='display:inline-block;background:#f0f7ff;border:2px dashed #2563eb;border-radius:12px;padding:14px 36px;'>"
+                + "<div style='font-size:12px;color:#64748b;margin-bottom:4px;'>รหัสยืนยันตัวตน (OTP)</div>"
+                + "<span style='font-size:34px;font-weight:700;color:#1e3a8a;letter-spacing:6px;font-family:monospace;'>"
+                + escapeHtml(otp) + "</span></div></div>";
+        String body = Letter.of("รหัสยืนยันตัวตนสำหรับ" + purposeText, name)
+                .para("ตามที่ท่านได้ขอรหัสยืนยันตัวตน (OTP) สำหรับ" + purposeText
+                        + " ในระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ ขอแจ้งรหัสของท่าน ดังนี้")
+                .html(code)
+                .note("warn", null, "รหัสนี้ใช้ได้ภายใน " + expiryMinutes + " นาที และใช้ได้เพียงครั้งเดียว"
+                        + " เพื่อความปลอดภัย กรุณาอย่าเปิดเผยรหัสนี้แก่ผู้อื่น รวมถึงเจ้าหน้าที่")
+                .para("หากท่านไม่ได้เป็นผู้ขอรหัสนี้ ไม่ต้องดำเนินการใด ๆ และโปรดแจ้งผู้ดูแลระบบ")
+                .close("จึงเรียนมาเพื่อโปรดทราบ");
+        return wrapLayout("รหัสยืนยันตัวตน (OTP)", purposeText, body);
     }
 
-    /**
-     * Builds Password Reset email.
-     */
+    /** ลิงก์ตั้งรหัสผ่านใหม่ */
     public static String buildPasswordResetEmail(String resetUrl) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>ผู้ใช้งานระบบ</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>ระบบได้รับคำขอตั้งค่ารหัสผ่านใหม่สำหรับบัญชีของท่าน กรุณาคลิกปุ่มด้านล่างเพื่อดำเนินการตั้งรหัสผ่านใหม่:</p>");
+        return buildPasswordResetEmail(null, resetUrl);
+    }
 
-        sb.append("<div style='text-align:center;margin:30px 0;'>");
-        sb.append("<a href='").append(escapeHtml(resetUrl)).append("' target='_blank' style='background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;text-decoration:none;padding:14px 32px;font-size:15px;font-weight:600;border-radius:8px;display:inline-block;box-shadow:0 4px 12px rgba(37,99,235,0.25);'>ตั้งรหัสผ่านใหม่</a>");
-        sb.append("</div>");
-
-        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;color:#64748b;word-break:break-all;'>");
-        sb.append("หากปุ่มด้านบนไม่ทำงาน สามารถคัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์ได้:<br>");
-        sb.append("<a href='").append(escapeHtml(resetUrl)).append("' style='color:#2563eb;'>").append(escapeHtml(resetUrl)).append("</a>");
-        sb.append("</div>");
-
-        sb.append("<p style='font-size:12px;color:#94a3b8;margin:20px 0 0 0;'>หากท่านไม่ได้ร้องขอการรีเซ็ตรหัสผ่าน บัญชีของท่านยังคงปลอดภัยและสามารถเพิกเฉยต่ออีเมลฉบับนี้ได้</p>");
-
-        return wrapLayout("รีเซ็ตรหัสผ่าน", "ความปลอดภัยของบัญชี", sb.toString());
+    public static String buildPasswordResetEmail(String name, String resetUrl) {
+        String body = Letter.of("การตั้งรหัสผ่านใหม่", name == null ? "ผู้ใช้งานระบบ" : name)
+                .para("ระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ ได้รับคำขอตั้งรหัสผ่านใหม่สำหรับบัญชีของท่าน"
+                        + " ท่านสามารถตั้งรหัสผ่านใหม่ได้โดยกดปุ่มด้านล่าง")
+                .button("ตั้งรหัสผ่านใหม่", resetUrl)
+                .para("หากท่านไม่ได้ขอตั้งรหัสผ่านใหม่ บัญชีของท่านยังปลอดภัย ไม่ต้องดำเนินการใด ๆ")
+                .close("จึงเรียนมาเพื่อโปรดทราบ");
+        return wrapLayout("การตั้งรหัสผ่านใหม่", "ความปลอดภัยของบัญชี", body);
     }
 
     /**
-     * Builds Status Update email for Teaching Evaluation or Academic Position requests.
+     * แจ้งผู้ยื่นว่าคำร้องเปลี่ยนสถานะ
+     *
+     * @param applicantName  ชื่อสำหรับขึ้นต้นจดหมาย ({@link #formalName})
+     * @param meaning        สถานะนี้หมายถึงอะไร และขั้นต่อไปคืออะไร
+     * @param extraDetailsHtml ส่วนเพิ่มเติม เช่น เหตุผลที่ส่งคืน (ประกอบด้วย {@link Letter} ไม่ได้ เพราะมาจากผู้เรียก)
      */
     public static String buildStatusChangeEmail(String applicantName, String requestType, String requestCode,
             String oldStatusLabel, String newStatusLabel, String statusColor, String extraDetailsHtml) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(applicantName)).append("</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>คำร้องของท่านในระบบบริหารตำแหน่งทางวิชาการ ได้รับการอัปเดตสถานะเรียบร้อยแล้ว ดังมีรายละเอียดต่อไปนี้:</p>");
-
-        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:18px 20px;margin-bottom:20px;'>");
-        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='6' style='font-size:14px;'>");
-        sb.append("<tr><td width='35%' style='color:#64748b;font-weight:600;'>ประเภทคำร้อง:</td><td style='color:#1e293b;font-weight:600;'>").append(escapeHtml(requestType)).append("</td></tr>");
-        sb.append("<tr><td style='color:#64748b;font-weight:600;'>รหัสคำร้อง:</td><td style='color:#1e293b;font-weight:600;'>#").append(escapeHtml(requestCode)).append("</td></tr>");
-        if (oldStatusLabel != null && !oldStatusLabel.isBlank() && !"-".equals(oldStatusLabel)) {
-            sb.append("<tr><td style='color:#64748b;font-weight:600;'>สถานะเดิม:</td><td style='color:#64748b;'>").append(escapeHtml(oldStatusLabel)).append("</td></tr>");
-        }
-        sb.append("<tr><td style='color:#64748b;font-weight:600;'>สถานะปัจจุบัน:</td><td><span style='background-color:").append(statusColor != null ? statusColor : "#1e3a8a").append(";color:#ffffff;font-size:13px;font-weight:600;padding:3px 12px;border-radius:20px;display:inline-block;'>").append(escapeHtml(newStatusLabel)).append("</span></td></tr>");
-        sb.append("</table>");
-        sb.append("</div>");
-
-        if (extraDetailsHtml != null && !extraDetailsHtml.isBlank()) {
-            sb.append(extraDetailsHtml);
-        }
-
-        sb.append("<p style='font-size:14px;color:#475569;margin:20px 0 0 0;'>ท่านสามารถเข้าสู่ระบบเพื่อตรวจสอบรายละเอียดเอกสารหรือดำเนินการในขั้นตอนต่อไป</p>");
-
-        return wrapLayout("แจ้งเตือนสถานะคำร้อง", requestType, sb.toString());
+        return buildStatusChangeEmail(applicantName, requestType, requestCode, oldStatusLabel, newStatusLabel,
+                statusColor, null, extraDetailsHtml);
     }
 
-    /**
-     * Builds Admin Alert for a newly submitted request.
-     */
+    public static String buildStatusChangeEmail(String applicantName, String requestType, String requestCode,
+            String oldStatusLabel, String newStatusLabel, String statusColor, String meaning, String extraDetailsHtml) {
+        String body = Letter.of("แจ้งความคืบหน้า" + requestType + " (รหัส " + requestCode + ")", applicantName)
+                .para("ตามที่ท่านได้ยื่น" + requestType + " ไว้ในระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ ขอแจ้งความคืบหน้า ดังนี้")
+                .details(rows("ประเภทคำร้อง", requestType,
+                        "รหัสคำร้อง", requestCode,
+                        "สถานะเดิม", "-".equals(oldStatusLabel) ? null : oldStatusLabel,
+                        "สถานะปัจจุบัน", newStatusLabel))
+                .para(meaning)
+                .html(extraDetailsHtml == null ? "" : extraDetailsHtml)
+                .para("ท่านสามารถตรวจสอบรายละเอียดเพิ่มเติมได้โดยเข้าสู่ระบบ")
+                .close("จึงเรียนมาเพื่อโปรดทราบ");
+        return wrapLayout("แจ้งความคืบหน้าคำร้อง", requestType, body);
+    }
+
+    /** แจ้งเจ้าหน้าที่ว่ามีคำร้องใหม่ */
     public static String buildAdminNewRequestEmail(String adminName, String applicantName, String applicantEmail,
             String requestType, String requestCode, String targetPosition) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(adminName)).append("</strong> (ผู้ดูแลระบบ),</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>มีคำร้องใหม่ยื่นเข้ามาในระบบ กรุณาเข้าตรวจสอบและดำเนินการ:</p>");
-
-        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #1e3a8a;border-radius:8px;padding:16px 20px;margin-bottom:20px;'>");
-        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='5' style='font-size:14px;'>");
-        sb.append("<tr><td width='35%' style='color:#64748b;font-weight:600;'>ผู้ยื่นคำร้อง:</td><td style='color:#1e293b;font-weight:600;'>").append(escapeHtml(applicantName)).append("</td></tr>");
-        sb.append("<tr><td style='color:#64748b;font-weight:600;'>อีเมล:</td><td style='color:#2563eb;'>").append(escapeHtml(applicantEmail)).append("</td></tr>");
-        sb.append("<tr><td style='color:#64748b;font-weight:600;'>ประเภทคำร้อง:</td><td style='color:#1e293b;'>").append(escapeHtml(requestType)).append("</td></tr>");
-        sb.append("<tr><td style='color:#64748b;font-weight:600;'>รหัสคำร้อง:</td><td style='color:#1e293b;font-weight:600;'>#").append(escapeHtml(requestCode)).append("</td></tr>");
-        if (targetPosition != null && !targetPosition.isBlank()) {
-            sb.append("<tr><td style='color:#64748b;font-weight:600;'>ตำแหน่งที่ขอ:</td><td style='color:#d97706;font-weight:600;'>").append(escapeHtml(targetPosition)).append("</td></tr>");
-        }
-        sb.append("</table>");
-        sb.append("</div>");
-
-        sb.append("<p style='font-size:13px;color:#64748b;'>กรุณาเข้าสู่ระบบผู้ดูแลเพื่อตรวจสอบเอกสารและพิจารณาดำเนินการ</p>");
-
-        return wrapLayout("มีคำร้องใหม่ในระบบ", "แจ้งเตือนเจ้าหน้าที่", sb.toString());
+        String body = Letter.of("มี" + requestType + "ยื่นเข้ามาใหม่ (รหัส " + requestCode + ")", adminName)
+                .para(applicantName + " ได้ยื่น" + requestType + " เข้ามาในระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์"
+                        + " รายละเอียดดังนี้")
+                .details(rows("ผู้ยื่นคำร้อง", applicantName,
+                        "อีเมล", applicantEmail,
+                        "ประเภทคำร้อง", requestType,
+                        "รหัสคำร้อง", requestCode,
+                        "ตำแหน่งที่ขอ", targetPosition))
+                .para("ขอให้ตรวจสอบความครบถ้วนของเอกสาร และดำเนินการตามขั้นตอนต่อไป")
+                .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
+        return wrapLayout("คำร้องใหม่ในระบบ", "แจ้งเจ้าหน้าที่", body);
     }
 
-    /**
-     * Builds Subcommittee Suggestion / Revision Request email.
-     */
+    /** ข้อเสนอแนะของคณะอนุกรรมการที่ผู้ยื่นต้องแก้ไข */
     public static String buildSuggestionEmail(String applicantName, String requestCode, String suggestionsText) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(applicantName)).append("</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>คณะอนุกรรมการประเมินผลการสอนได้ให้ข้อเสนอแนะเกี่ยวกับคำร้องหมายเลข <strong>#")
-          .append(escapeHtml(requestCode)).append("</strong> ของท่าน โดยมีรายละเอียดดังต่อไปนี้:</p>");
-
-        sb.append("<div style='background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #d97706;padding:16px 20px;border-radius:8px;margin:20px 0;'>");
-        sb.append("<div style='font-weight:700;color:#92400e;margin-bottom:8px;font-size:14px;'>ข้อเสนอแนะจากคณะอนุกรรมการ:</div>");
-        sb.append("<div style='color:#1e293b;font-size:14px;white-space:pre-wrap;line-line-height:1.6;'>")
-          .append(escapeHtml(suggestionsText != null ? suggestionsText : "")).append("</div>");
-        sb.append("</div>");
-
-        sb.append("<div style='background:#fef2f2;border:1px solid #fee2e2;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#991b1b;font-size:13px;font-weight:500;'>");
-        sb.append("กรุณาเข้าสู่ระบบเพื่อแก้ไขเอกสารตามข้อเสนอแนะและยื่นเอกสารฉบับปรับปรุง");
-        sb.append("</div>");
-
-        return wrapLayout("ข้อเสนอแนะจากคณะอนุกรรมการ", "กรุณาแก้ไขเอกสาร", sb.toString());
+        String body = Letter.of("ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน และการแก้ไขเอกสาร (รหัส " + requestCode + ")",
+                        applicantName)
+                .para("ตามที่คณะอนุกรรมการประเมินผลการสอนได้ประเมินผลการสอนของท่าน คณะอนุกรรมการมีข้อเสนอแนะ"
+                        + " และขอให้ท่านปรับปรุงเอกสาร ดังนี้")
+                .note("warn", "ข้อเสนอแนะจากคณะอนุกรรมการ", suggestionsText == null ? "" : suggestionsText)
+                .steps("สิ่งที่ท่านต้องดำเนินการ", java.util.List.of(
+                        "เข้าสู่ระบบ แล้วเปิดคำร้องรหัส " + requestCode,
+                        "แก้ไขเอกสารตามข้อเสนอแนะข้างต้น",
+                        "ส่งเอกสารฉบับแก้ไขผ่านระบบ วิทยาลัยฯ จะเสนอคณะอนุกรรมการพิจารณาอีกครั้ง"))
+                .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
+        return wrapLayout("ข้อเสนอแนะจากคณะอนุกรรมการ", "ขอให้แก้ไขเอกสาร", body);
     }
 
-    /**
-     * ข้อเสนอแนะแจ้งเพื่อทราบ — คณะอนุกรรมการไม่ได้ให้แก้ไขเอกสาร กระบวนการดำเนินต่อตามปกติ
-     */
+    /** ข้อเสนอแนะแจ้งเพื่อทราบ — ไม่ต้องแก้ไขเอกสาร กระบวนการดำเนินต่อตามปกติ */
     public static String buildSuggestionNoticeEmail(String applicantName, String requestCode, String suggestionsText) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(applicantName)).append("</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>คณะอนุกรรมการประเมินผลการสอนได้พิจารณาคำร้องหมายเลข <strong>#")
-          .append(escapeHtml(requestCode)).append("</strong> ของท่านแล้ว โดยมีข้อเสนอแนะดังนี้:</p>");
-
-        sb.append("<div style='background:#f0fdf4;border:1px solid #dcfce7;border-left:4px solid #16a34a;padding:16px 20px;border-radius:8px;margin:20px 0;'>");
-        sb.append("<div style='font-weight:700;color:#166534;margin-bottom:8px;font-size:14px;'>ข้อเสนอแนะจากคณะอนุกรรมการ:</div>");
-        sb.append("<div style='color:#1e293b;font-size:14px;white-space:pre-wrap;line-height:1.6;'>")
-          .append(escapeHtml(suggestionsText != null ? suggestionsText : "")).append("</div>");
-        sb.append("</div>");
-
-        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:12px 16px;margin-bottom:20px;color:#334155;font-size:13px;font-weight:500;'>");
-        sb.append("แจ้งเพื่อทราบ ท่านไม่ต้องแก้ไขเอกสาร เจ้าหน้าที่จะดำเนินการขั้นตอนถัดไปให้");
-        sb.append("</div>");
-
-        return wrapLayout("ข้อเสนอแนะจากคณะอนุกรรมการ", "แจ้งเพื่อทราบ", sb.toString());
+        String body = Letter.of("ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน (รหัส " + requestCode + ")", applicantName)
+                .para("ตามที่คณะอนุกรรมการประเมินผลการสอนได้ประเมินผลการสอนของท่านแล้ว คณะอนุกรรมการมีข้อเสนอแนะ"
+                        + " เพื่อเป็นประโยชน์ในการพัฒนาการสอน ดังนี้")
+                .note("success", "ข้อเสนอแนะจากคณะอนุกรรมการ", suggestionsText == null ? "" : suggestionsText)
+                .para("ข้อเสนอแนะนี้แจ้งเพื่อทราบ ท่านไม่ต้องแก้ไขเอกสาร วิทยาลัยฯ จะดำเนินการในขั้นตอนต่อไปให้")
+                .close("จึงเรียนมาเพื่อโปรดทราบ");
+        return wrapLayout("ข้อเสนอแนะจากคณะอนุกรรมการ", "แจ้งเพื่อทราบ", body);
     }
 
     /**
      * หนังสือเชิญเป็นกรรมการ (เอกสารที่ 5) ถึงกรรมการท่านหนึ่ง พร้อมทางเปิดดูเอกสารของผู้ยื่น
      *
+     * @param committeeName ชื่อกรรมการตามที่พิมพ์ในหนังสือเชิญ (มีคำนำหน้าแล้ว)
+     * @param applicantName ชื่อผู้ขอรับการประเมินพร้อมคำนำหน้า
      * @param files ชื่อไฟล์ที่ผู้ยื่นแนบ — เปิดได้จากหน้า {@code filesUrl} หลังเข้าสู่ระบบ
      * @param links ลิงก์ที่ผู้ยื่นแนบ (ชื่อ, URL) — เปิดได้จากอีเมลโดยตรง
      */
     public static String buildCommitteeInvitationEmail(String committeeName, String requestCode,
             String applicantName, String filesUrl, java.util.List<String> files,
             java.util.List<java.util.Map.Entry<String, String>> links) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(committeeName)).append("</strong></p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น ขอเรียนเชิญท่านเป็นกรรมการผู้ทรงคุณวุฒิประเมินผลการสอนของ <strong>")
-          .append(escapeHtml(applicantName)).append("</strong> (คำร้อง #").append(escapeHtml(requestCode))
-          .append(") รายละเอียดตามหนังสือเชิญที่แนบมากับอีเมลฉบับนี้</p>");
-
-        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;padding:16px 20px;border-radius:8px;margin:20px 0;'>");
-        sb.append("<div style='font-weight:700;color:#1e3a8a;margin-bottom:8px;font-size:14px;'>เอกสารประกอบการประเมินผลการสอนของผู้ยื่น</div>");
+        StringBuilder list = new StringBuilder();
         if (files.isEmpty() && links.isEmpty()) {
-            sb.append("<div style='color:#92400e;font-size:13px;'>ผู้ยื่นไม่ได้แนบเอกสารประกอบไว้ในระบบ กรุณาติดต่อเจ้าหน้าที่เพื่อขอรับเอกสาร</div>");
+            list.append(noteHtml("warn", null, "ผู้ขอรับการประเมินไม่ได้แนบเอกสารประกอบไว้ในระบบ"
+                    + " กรุณาติดต่อภารกิจด้านทรัพยากรบุคคลเพื่อขอรับเอกสาร"));
         } else {
-            sb.append("<ul style='margin:0;padding-left:20px;color:#1e293b;font-size:14px;line-height:1.7;'>");
+            list.append("<p style='font-size:14px;color:#1e293b;font-weight:600;margin:0 0 6px 0;'>เอกสารประกอบการประเมินของผู้ขอรับการประเมิน</p>");
+            list.append("<ul style='margin:0 0 16px 0;padding-left:22px;color:#334155;font-size:14px;line-height:1.7;'>");
             for (String file : files) {
-                sb.append("<li>").append(escapeHtml(file)).append("</li>");
+                list.append("<li>").append(escapeHtml(file)).append("</li>");
             }
             for (java.util.Map.Entry<String, String> link : links) {
-                sb.append("<li><a href='").append(escapeHtml(link.getValue()))
-                  .append("' target='_blank' style='color:#2563eb;'>").append(escapeHtml(link.getKey())).append("</a></li>");
+                list.append("<li><a href='").append(escapeHtml(link.getValue()))
+                        .append("' target='_blank' style='color:#2563eb;'>").append(escapeHtml(link.getKey())).append("</a></li>");
             }
-            sb.append("</ul>");
+            list.append("</ul>");
         }
-        sb.append("</div>");
 
+        Letter letter = Letter.of("ขอเรียนเชิญเป็นกรรมการผู้ทรงคุณวุฒิประเมินผลการสอน", committeeName)
+                .para("ด้วยวิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น ได้แต่งตั้งคณะอนุกรรมการประเมินผลการสอนของ "
+                        + applicantName + " (รหัสคำร้อง " + requestCode + ") โดยมีท่านเป็นกรรมการ"
+                        + " วิทยาลัยฯ จึงขอเรียนเชิญท่านเป็นกรรมการผู้ทรงคุณวุฒิ ตามหนังสือเชิญที่แนบมากับอีเมลฉบับนี้"
+                        + " ซึ่งระบุวัน เวลา และสถานที่ประเมินผลการสอน")
+                .details(rows("ผู้ขอรับการประเมิน", applicantName,
+                        "รหัสคำร้อง", requestCode,
+                        "สิ่งที่แนบมาด้วย", "หนังสือเชิญเป็นกรรมการผู้ทรงคุณวุฒิ (ไฟล์แนบ)"))
+                .html(list.toString());
         if (!files.isEmpty()) {
-            sb.append("<div style='text-align:center;margin:30px 0;'>");
-            sb.append("<a href='").append(escapeHtml(filesUrl)).append("' target='_blank' style='background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#ffffff;text-decoration:none;padding:14px 32px;font-size:15px;font-weight:600;border-radius:8px;display:inline-block;box-shadow:0 4px 12px rgba(37,99,235,0.25);'>เปิดดูเอกสารของผู้ยื่น</a>");
-            sb.append("</div>");
-            sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;padding:12px 16px;border-radius:6px;font-size:12px;color:#64748b;word-break:break-all;'>");
-            sb.append("เข้าสู่ระบบด้วยอีเมลที่ได้รับหนังสือฉบับนี้ หากปุ่มด้านบนไม่ทำงาน คัดลอกลิงก์นี้ไปเปิดในเบราว์เซอร์:<br>");
-            sb.append("<a href='").append(escapeHtml(filesUrl)).append("' style='color:#2563eb;'>").append(escapeHtml(filesUrl)).append("</a>");
-            sb.append("</div>");
+            letter.button("เปิดดูเอกสารของผู้ขอรับการประเมิน", filesUrl)
+                    .para("การเปิดดูเอกสาร ท่านต้องเข้าสู่ระบบด้วยอีเมลที่ได้รับหนังสือฉบับนี้");
         }
-
-        return wrapLayout("ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", "ประเมินผลการสอน", sb.toString());
+        String body = letter
+                .steps("สิ่งที่วิทยาลัยฯ ขอความอนุเคราะห์จากท่าน", java.util.List.of(
+                        "ศึกษาเอกสารประกอบการประเมินของผู้ขอรับการประเมิน",
+                        "ร่วมประเมินผลการสอนตามวัน เวลา และสถานที่ที่ระบุในหนังสือเชิญ",
+                        "ภายหลังการประเมิน ลงนามในแบบประเมินผลการสอนผ่านระบบ โดยระบบจะส่งอีเมลแจ้งท่านเมื่อถึงลำดับการลงนาม"))
+                .close("จึงเรียนมาเพื่อโปรดพิจารณา และขอขอบคุณมา ณ โอกาสนี้");
+        return wrapLayout("ขอเรียนเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", "ประเมินผลการสอน", body);
     }
 
-    /**
-     * Builds Teaching Evaluation Expiry Reminder email.
-     */
+    /** ผลการประเมินผลการสอนใกล้หมดอายุ */
     public static String buildEvaluationExpiryEmail(String recipientName, String requestCode, String alertLabel,
             long daysLeft, String formattedExpiryDate) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(recipientName)).append("</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>ระบบขอแจ้งเตือนวันหมดอายุของผลการประเมินผลการสอนของท่าน เพื่อให้ท่านสามารถดำเนินการยื่นคำขอตำแหน่งทางวิชาการได้ทันตามกำหนดเวลา:</p>");
-
-        sb.append("<div style='background:#fffbeb;border:1px solid #fef3c7;border-left:4px solid #f59e0b;padding:18px 20px;border-radius:8px;margin:20px 0;'>");
-        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='5' style='font-size:14px;'>");
-        sb.append("<tr><td width='35%' style='color:#92400e;font-weight:600;'>รหัสคำร้อง:</td><td style='color:#1e293b;font-weight:600;'>#").append(escapeHtml(requestCode)).append("</td></tr>");
-        sb.append("<tr><td style='color:#92400e;font-weight:600;'>ระยะเวลาคงเหลือ:</td><td style='color:#dc2626;font-weight:700;font-size:16px;'>").append(daysLeft).append(" วัน (ภายใน ").append(escapeHtml(alertLabel)).append(")</td></tr>");
-        sb.append("<tr><td style='color:#92400e;font-weight:600;'>วันหมดอายุ:</td><td style='color:#1e293b;font-weight:600;'>").append(escapeHtml(formattedExpiryDate)).append("</td></tr>");
-        sb.append("</table>");
-        sb.append("</div>");
-
-        sb.append("<p style='font-size:14px;color:#475569;'>หากท่านประสงค์จะยื่นคำขอตำแหน่งทางวิชาการ กรุณาดำเนินการก่อนที่ผลการประเมินการสอนจะหมดอายุ</p>");
-
-        return wrapLayout("แจ้งเตือนวันหมดอายุผลประเมินการสอน", "ระยะเวลาคงเหลือ " + daysLeft + " วัน", sb.toString());
+        String body = Letter.of("ผลการประเมินผลการสอนใกล้หมดอายุ (รหัส " + requestCode + ")", recipientName)
+                .para("ผลการประเมินผลการสอนของท่าน ซึ่งใช้ประกอบการขอกำหนดตำแหน่งทางวิชาการ จะหมดอายุในอีก "
+                        + daysLeft + " วัน รายละเอียดดังนี้")
+                .details(rows("รหัสคำร้อง", requestCode,
+                        "วันหมดอายุ", formattedExpiryDate,
+                        "ระยะเวลาคงเหลือ", daysLeft + " วัน (แจ้งเตือนล่วงหน้า " + alertLabel + ")"))
+                .para("หากท่านประสงค์จะขอกำหนดตำแหน่งทางวิชาการโดยใช้ผลการประเมินนี้"
+                        + " กรุณายื่นคำขอผ่านระบบก่อนวันหมดอายุ หากเลยกำหนดจะต้องขอรับการประเมินผลการสอนใหม่")
+                .close("จึงเรียนมาเพื่อโปรดทราบ");
+        return wrapLayout("ผลการประเมินผลการสอนใกล้หมดอายุ", "คงเหลือ " + daysLeft + " วัน", body);
     }
 
-    /**
-     * Builds System Alert Email for Admins.
-     */
+    /** เหตุขัดข้องของระบบ ถึงผู้ดูแลระบบ */
     public static String buildSystemAlertEmail(String adminName, String heading, String levelColor,
             String levelIcon, String source, String detail, String timestamp) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:15px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(adminName)).append("</strong> (ผู้ดูแลระบบ),</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 16px 0;'>ระบบตรวจพบเหตุการณ์แจ้งเตือนสถานะการทำงาน ดังนี้:</p>");
-
-        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid ").append(levelColor).append(";padding:16px 20px;border-radius:8px;margin-bottom:20px;'>");
-        sb.append("<div style='font-weight:700;color:#1e293b;font-size:15px;margin-bottom:6px;'>")
-          .append(levelIcon != null && !levelIcon.isBlank() ? escapeHtml(levelIcon) + " " : "")
-          .append(escapeHtml(heading)).append("</div>");
-        sb.append("<div style='font-size:13px;color:#64748b;margin-bottom:8px;'>แหล่งที่มา: <strong>").append(escapeHtml(source)).append("</strong> | เวลา: ").append(escapeHtml(timestamp)).append("</div>");
-        sb.append("<div style='background:#ffffff;border:1px solid #cbd5e1;padding:12px;border-radius:6px;font-size:13px;color:#334155;white-space:pre-wrap;font-family:monospace;'>")
-          .append(escapeHtml(detail)).append("</div>");
-        sb.append("</div>");
-
-        return wrapLayout("แจ้งเตือนระบบ: " + heading, source, sb.toString());
+        String body = Letter.of("แจ้งเหตุขัดข้องของระบบ: " + heading, adminName)
+                .para("ระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ ตรวจพบเหตุการณ์ที่ควรได้รับการตรวจสอบ รายละเอียดดังนี้")
+                .details(rows("เหตุการณ์", (levelIcon != null && !levelIcon.isBlank() ? levelIcon + " " : "") + heading,
+                        "ส่วนของระบบ", source,
+                        "เวลา", timestamp))
+                .html("<div style='background:#ffffff;border:1px solid #cbd5e1;padding:12px;border-radius:6px;font-size:13px;color:#334155;white-space:pre-wrap;font-family:monospace;margin:0 0 16px 0;'>"
+                        + escapeHtml(detail) + "</div>")
+                .para("ขอให้ตรวจสอบสาเหตุและดำเนินการแก้ไขตามความเหมาะสม")
+                .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
+        return wrapLayout("แจ้งเหตุขัดข้องของระบบ", source, body);
     }
 
     /**
-     * Builds Feedback / Issue Report email body.
+     * รายงานปัญหาหรือข้อเสนอแนะจากผู้ใช้งาน
      *
-     * @param senderName  display name of the person filing the report
-     * @param senderEmail their email address
-     * @param category    ปัญหาระบบ / ข้อเสนอแนะ / อื่นๆ
-     * @param subject     free-text subject
-     * @param detail      full description of the issue or suggestion
-     * @param imageCount  number of attached images (shown as info, actual files are MIME attachments)
+     * @param imageCount จำนวนภาพที่แนบมากับอีเมล
      */
     public static String buildFeedbackEmail(String senderName, String senderEmail,
             String category, String subject, String detail, int imageCount) {
-        StringBuilder sb = new StringBuilder();
-
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>ผู้รับเรื่อง</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>มีรายงานปัญหา/ข้อเสนอแนะจากผู้ใช้งานในระบบ CP HRD ดังมีรายละเอียดต่อไปนี้:</p>");
-
-        // Info card
-        sb.append("<div style='background:#f8fafc;border:1px solid #e2e8f0;border-left:4px solid #2563eb;border-radius:8px;padding:16px 20px;margin-bottom:20px;'>");
-        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='5' style='font-size:14px;'>");
-        sb.append("<tr><td width='30%' style='color:#64748b;font-weight:600;'>ผู้แจ้ง:</td><td style='color:#1e293b;font-weight:600;'>")
-          .append(escapeHtml(senderName)).append("</td></tr>");
-        sb.append("<tr><td style='color:#64748b;font-weight:600;'>อีเมลผู้แจ้ง:</td><td style='color:#2563eb;'>")
-          .append(escapeHtml(senderEmail)).append("</td></tr>");
-        sb.append("<tr><td style='color:#64748b;font-weight:600;'>ประเภท:</td><td><span style='display:inline-block;background:");
-
-        // Color-code the category badge
-        String badgeColor;
-        if ("ปัญหาระบบ".equals(category)) {
-            badgeColor = "#dc2626";
-        } else if ("ข้อเสนอแนะ".equals(category)) {
-            badgeColor = "#2563eb";
-        } else {
-            badgeColor = "#64748b";
-        }
-        sb.append(badgeColor).append(";color:#ffffff;font-size:12px;font-weight:600;padding:2px 10px;border-radius:20px;'>")
-          .append(escapeHtml(category)).append("</span></td></tr>");
-
-        sb.append("<tr><td style='color:#64748b;font-weight:600;'>หัวข้อ:</td><td style='color:#1e293b;font-weight:600;'>")
-          .append(escapeHtml(subject)).append("</td></tr>");
-        if (imageCount > 0) {
-            sb.append("<tr><td style='color:#64748b;font-weight:600;'>ภาพแนบ:</td><td style='color:#1e293b;'>")
-              .append(imageCount).append(" ไฟล์ (ดูไฟล์แนบท้ายอีเมล)</td></tr>");
-        }
-        sb.append("</table>");
-        sb.append("</div>");
-
-        // Detail box
-        sb.append("<div style='background:#ffffff;border:1px solid #e2e8f0;border-radius:8px;padding:16px 20px;margin-bottom:20px;'>");
-        sb.append("<div style='font-weight:700;color:#1e293b;margin-bottom:8px;font-size:14px;'>รายละเอียด:</div>");
-        sb.append("<div style='color:#334155;font-size:14px;white-space:pre-wrap;line-height:1.7;'>")
-          .append(escapeHtml(detail)).append("</div>");
-        sb.append("</div>");
-
-        sb.append("<p style='font-size:12px;color:#94a3b8;margin:20px 0 0 0;'>อีเมลฉบับนี้ถูกส่งจากระบบ CP HRD โดยผู้ใช้งานข้างต้น ท่านสามารถตอบกลับอีเมลนี้เพื่อติดต่อผู้แจ้งโดยตรง</p>");
-
-        return wrapLayout("รายงานปัญหา/ข้อเสนอแนะ", category, sb.toString());
+        String body = Letter.of(category + ": " + subject, "ผู้ดูแลระบบ")
+                .para(senderName + " ได้แจ้ง" + category + "เกี่ยวกับระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ รายละเอียดดังนี้")
+                .details(rows("ผู้แจ้ง", senderName,
+                        "อีเมลผู้แจ้ง", senderEmail,
+                        "ประเภท", category,
+                        "หัวข้อ", subject,
+                        "ภาพประกอบ", imageCount > 0 ? imageCount + " ไฟล์ (แนบท้ายอีเมลนี้)" : null))
+                .note("info", "รายละเอียด", detail == null ? "" : detail)
+                .para("ขอให้พิจารณาดำเนินการ ท่านสามารถตอบกลับอีเมลฉบับนี้เพื่อติดต่อผู้แจ้งได้โดยตรง")
+                .close("จึงเรียนมาเพื่อโปรดพิจารณา");
+        return wrapLayout("รายงานปัญหา/ข้อเสนอแนะ", category, body);
     }
 
-    /**
-     * Builds SMTP Relay Diagnostic Test email.
-     */
+    /** ทดสอบการส่งอีเมลของระบบ */
     public static String buildDiagnosticTestEmail(String adminName, String targetEmail, String serverIp, String smtpHost, String timestamp) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("<p style='font-size:16px;color:#1e293b;margin:0 0 12px 0;'>เรียน <strong>")
-          .append(escapeHtml(adminName != null ? adminName : "ผู้ดูแลระบบ")).append("</strong>,</p>");
-        sb.append("<p style='font-size:14px;color:#475569;margin:0 0 20px 0;'>อีเมลนี้เป็นการทดสอบการทำงานของระบบส่งอีเมล <strong>KKU SMTP Relay</strong> ในระบบ CP HRD (College of Computing Human Resource Development System)</p>");
-
-        sb.append("<div style='background:#ecfdf5;border:1px solid #a7f3d0;border-left:4px solid #10b981;border-radius:10px;padding:18px 20px;margin-bottom:20px;'>");
-        sb.append("<div style='font-weight:700;color:#065f46;font-size:15px;margin-bottom:8px;'><span style='font-size:18px;margin-right:6px;'>✓</span> เชื่อมต่อและส่งผ่าน KKU SMTP Relay สำเร็จ</div>");
-        sb.append("<table width='100%' border='0' cellspacing='0' cellpadding='6' style='font-size:13px;'>");
-        sb.append("<tr><td width='35%' style='color:#047857;font-weight:600;'>เซิร์ฟเวอร์ SMTP:</td><td style='color:#1e293b;font-family:monospace;'>").append(escapeHtml(smtpHost)).append("</td></tr>");
-        sb.append("<tr><td style='color:#047857;font-weight:600;'>เซิร์ฟเวอร์ต้นทาง (Server IP):</td><td style='color:#1e293b;font-family:monospace;'>").append(escapeHtml(serverIp)).append("</td></tr>");
-        sb.append("<tr><td style='color:#047857;font-weight:600;'>ผู้ส่ง (From):</td><td style='color:#1e293b;font-family:monospace;'>").append(escapeHtml(DEFAULT_SENDER_EMAIL)).append("</td></tr>");
-        sb.append("<tr><td style='color:#047857;font-weight:600;'>ผู้รับ (To):</td><td style='color:#1e293b;font-family:monospace;'>").append(escapeHtml(targetEmail)).append("</td></tr>");
-        sb.append("<tr><td style='color:#047857;font-weight:600;'>เวลาที่ส่ง (Timestamp):</td><td style='color:#1e293b;'>").append(escapeHtml(timestamp)).append(" (ICT)</td></tr>");
-        sb.append("</table>");
-        sb.append("</div>");
-
-        sb.append("<p style='font-size:13px;color:#64748b;margin:16px 0 0 0;'>หากท่านได้รับอีเมลนี้ แสดงว่าการตั้งค่า IP-Whitelisted Relay และการจัดส่งอีเมลทั้งภายในและภายนอกมหาวิทยาลัยขอนแก่นทำงานได้อย่างสมบูรณ์</p>");
-
-        return wrapLayout("ทดสอบระบบส่งอีเมล (SMTP Test)", "Diagnostic Check", sb.toString());
+        String body = Letter.of("ทดสอบการส่งอีเมลของระบบ", adminName == null ? "ผู้ดูแลระบบ" : adminName)
+                .para("อีเมลฉบับนี้ส่งเพื่อทดสอบการส่งอีเมลของระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์"
+                        + " ผ่าน KKU SMTP Relay การที่ท่านได้รับอีเมลนี้แสดงว่าการตั้งค่าการส่งอีเมลทำงานได้ตามปกติ")
+                .details(rows("เซิร์ฟเวอร์ SMTP", smtpHost,
+                        "เซิร์ฟเวอร์ต้นทาง", serverIp,
+                        "ผู้ส่ง", DEFAULT_SENDER_EMAIL,
+                        "ผู้รับ", targetEmail,
+                        "เวลาที่ส่ง", timestamp + " (เวลาประเทศไทย)"))
+                .close("จึงเรียนมาเพื่อโปรดทราบ");
+        return wrapLayout("ทดสอบการส่งอีเมล", "ตรวจสอบระบบ", body);
     }
 
     private static String escapeHtml(String text) {

@@ -266,11 +266,25 @@
         return true;
     };
 
+    /**
+     * เอกสารที่เชิญมาลงนาม — อ่านจาก data-auto-draft ของฟอร์ม (/api/draft/{academic|position}/{id}/{doc})
+     * ให้หนังสือเชิญบอกได้ว่าเป็นคำร้องของใคร และท่านอยู่ในฐานะอะไร
+     */
+    Picker.prototype.inviteContext = function () {
+        var form = this.form || this.input.closest('form');
+        var url = form ? form.getAttribute('data-auto-draft') : null;
+        var m = url ? url.match(/\/api\/draft\/(academic|position)\/(\d+)\/(\d+)/) : null;
+        if (!m) return {};
+        return { module: m[1].toUpperCase(), requestId: Number(m[2]), documentType: Number(m[3]), field: this.input.name };
+    };
+
     /** เพิ่มผู้ลงนามจากนอก มข. — สร้างบัญชีภายนอก + อีเมลเชิญ แล้วเลือกคนนั้นทันที */
     Picker.prototype.openExternal = function () {
         var self = this;
         var modal = externalModal();
         modal.onSubmit = function (data, done) {
+            var context = self.inviteContext();
+            Object.keys(context).forEach(function (k) { data[k] = context[k]; });
             fetch('/api/people/external', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'X-HRCP-CT': csrfToken() },
@@ -305,10 +319,11 @@
         header.appendChild(close);
         var body = el('div', 'modal-body');
         body.appendChild(el('p', 'small text-muted',
-            'ระบบจะสร้างบัญชีผู้ลงนามภายนอกและส่งอีเมลเชิญ ผู้ลงนามเข้าระบบด้วย KKU SSO ด้วยอีเมลนี้ '
-            + 'และลงนามด้วย Digital ID ของหน่วยงานตัวเอง หรือยืนยันตัวตนทางอีเมลหากไม่มี'));
+            'ระบบจะสร้างบัญชีผู้ลงนามภายนอก และส่งหนังสือเชิญทางอีเมล ซึ่งระบุคำร้องที่เกี่ยวข้อง ฐานะของผู้ลงนาม '
+            + 'และวิธีลงนาม ผู้ลงนามเข้าระบบด้วย KKU SSO ด้วยอีเมลนี้ และลงนามด้วย Digital ID ของหน่วยงานตัวเอง '
+            + 'หรือยืนยันตัวตนทางอีเมลหากไม่มี'));
         var fields = [
-            ['title', 'คำนำหน้า / ตำแหน่งวิชาการ', false, 'เช่น รศ.ดร.'],
+            ['title', 'คำนำหน้า / ตำแหน่งทางวิชาการ', true, 'เช่น รศ.ดร., นาย, นาง'],
             ['firstName', 'ชื่อ', true, ''],
             ['lastName', 'นามสกุล', true, ''],
             ['email', 'อีเมล', true, 'name@example.ac.th'],

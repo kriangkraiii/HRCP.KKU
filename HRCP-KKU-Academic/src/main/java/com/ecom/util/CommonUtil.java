@@ -37,9 +37,11 @@ public class CommonUtil {
 
 		helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
 		helper.setTo(reciepentEmail);
-		helper.setSubject("Password Reset - CP HRD (College of Computing, KKU)");
+		helper.setSubject("การตั้งรหัสผ่านใหม่ - ระบบพัฒนาบุคลากร วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น");
 
-		String content = EmailTemplateHelper.buildPasswordResetEmail(url);
+		UserDtls owner = userRepository.findByEmail(reciepentEmail);
+		String content = EmailTemplateHelper.buildPasswordResetEmail(
+				owner != null ? EmailTemplateHelper.formalName(owner) : null, url);
 		helper.setText(content, true);
 		EmailTemplateHelper.attachLogos(helper);
 		mailSender.send(message);
@@ -56,9 +58,12 @@ public class CommonUtil {
 
 		helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
 		helper.setTo(recipientEmail);
-		helper.setSubject("First-time Login OTP - CP HRD (College of Computing, KKU)");
+		helper.setSubject("รหัสยืนยันตัวตนสำหรับการเข้าสู่ระบบครั้งแรก - วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น");
 
-		String content = EmailTemplateHelper.buildOtpEmail(recipientEmail, otp, "เข้าสู่ระบบครั้งแรก", 5);
+		// ขึ้นต้นจดหมายด้วยชื่อเจ้าของบัญชี ไม่ใช่อีเมล
+		UserDtls owner = userRepository.findByEmail(recipientEmail);
+		String content = EmailTemplateHelper.buildOtpEmail(
+				owner != null ? EmailTemplateHelper.formalName(owner) : "ผู้ใช้งานระบบ", otp, "การเข้าสู่ระบบครั้งแรก", 5);
 		helper.setText(content, true);
 		EmailTemplateHelper.attachLogos(helper);
 		mailSender.send(message);

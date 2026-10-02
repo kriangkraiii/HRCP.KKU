@@ -17,6 +17,8 @@ import com.ecom.model.UserDtls;
  * caller's thread, inside the transaction, and only plain values cross over.
  *
  * @param recipients who to tell; already-loaded accounts, not proxies
+ * @param caseSummary whose request this document belongs to, or null when it could not be read
+ * @param briefing    what an outside signer is being asked to do in this step, or null
  */
 public record SignatureNotice(
         Long envelopeId,
@@ -30,7 +32,9 @@ public record SignatureNotice(
         String roleLabel,
         String signerName,
         String declineReason,
-        List<UserDtls> recipients) {
+        List<UserDtls> recipients,
+        com.ecom.academic.service.SignerBriefing.CaseSummary caseSummary,
+        com.ecom.academic.service.SignerBriefing.Briefing briefing) {
 
     /** A label that is always safe to print. */
     public String safeDocumentLabel() {

@@ -38,7 +38,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 @DisplayName("เอกสารที่ 5: ส่งหนังสือเชิญพร้อมเอกสารของผู้ยื่นถึงกรรมการ")
 class CommitteeInvitationEmailTest extends AbstractFlowTest {
 
-    private static final String SUBJECT = "ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ";
+    private static final String SUBJECT = "เป็นกรรมการผู้ทรงคุณวุฒิประเมินผลการสอน";
     private static final String LINK_URL = "https://drive.example.invalid/teaching-plan";
     /** อีเมลออกหลังสร้างหนังสือที่ลงนามแล้ว (ผ่าน LibreOffice) จึงช้ากว่าการแจ้งเตือนทั่วไป */
     private static final long RENDER_TIMEOUT_MS = 60_000;
@@ -147,7 +147,7 @@ class CommitteeInvitationEmailTest extends AbstractFlowTest {
             signDoc5(doc5(committeeNames()));
 
             awaitCondition("อีเมลหนังสือเชิญถึงกรรมการคนที่ 1", RENDER_TIMEOUT_MS, () -> !invitationsTo(committee[0]).isEmpty());
-            assertThat(invitationsTo(committee[0]).get(0).body()).contains("ผู้ยื่นไม่ได้แนบเอกสารประกอบไว้ในระบบ");
+            assertThat(invitationsTo(committee[0]).get(0).body()).contains("ผู้ขอรับการประเมินไม่ได้แนบเอกสารประกอบไว้ในระบบ");
         }
 
         @Test

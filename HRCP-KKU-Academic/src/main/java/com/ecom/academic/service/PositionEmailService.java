@@ -90,7 +90,8 @@ public class PositionEmailService {
             if (applicantEmail == null || applicantEmail.isEmpty() || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail))
                 return;
 
-            String subject = "อัปเดตสถานะคำร้องขอตำแหน่งทางวิชาการ (" + request.getRequestCode() + ") - " + newStatus.getThaiLabel();
+            String subject = "แจ้งความคืบหน้าคำขอกำหนดตำแหน่งทางวิชาการ (รหัส " + request.getRequestCode() + "): "
+                    + newStatus.getThaiLabel();
             String body = buildStatusEmailBody(request, oldStatus, newStatus, note);
 
             MimeMessage message = mailSender.createMimeMessage();
@@ -141,10 +142,11 @@ public class PositionEmailService {
             if (admin == null || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
                 return;
             }
-            String subject = "แจ้งเตือนคำร้องขอตำแหน่งทางวิชาการใหม่ (" + request.getRequestCode() + ") - " + request.getApplicant().getName();
+            String applicantName = com.ecom.util.EmailTemplateHelper.formalName(request.getApplicant());
+            String subject = "คำขอกำหนดตำแหน่งทางวิชาการใหม่ (รหัส " + request.getRequestCode() + ") จาก " + applicantName;
             String body = com.ecom.util.EmailTemplateHelper.buildAdminNewRequestEmail(
-                    admin.getName(),
-                    request.getApplicant().getName(),
+                    com.ecom.util.EmailTemplateHelper.formalName(admin),
+                    applicantName,
                     request.getApplicant().getEmail(),
                     "คำร้องขอตำแหน่งทางวิชาการ",
                     request.getRequestCode(),
@@ -186,24 +188,45 @@ public class PositionEmailService {
 
         String extraDetails = "";
         if (request.getTargetPosition() != null && !request.getTargetPosition().isBlank()) {
-            extraDetails = "<div style='background:#f1f5f9;border:1px solid #cbd5e1;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
-                    + "ตำแหน่งทางวิชาการที่ยื่นขอ: <strong style='color:#1e293b;'>" + request.getTargetPosition() + "</strong>"
-                    + "</div>";
+            extraDetails = com.ecom.util.EmailTemplateHelper.noteHtml("info", null,
+                    "ตำแหน่งทางวิชาการที่ขอ: " + request.getTargetPosition().strip());
         }
         if (hasNote(note)) {
-            extraDetails += "<div style='background:#fffbeb;border:1px solid #fcd34d;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
-                    + "<div style='font-weight:600;color:#92400e;margin-bottom:4px;'>" + noteLabel(newStatus) + "</div>"
-                    + "<div>" + org.springframework.web.util.HtmlUtils.htmlEscape(note.trim()) + "</div>"
-                    + "</div>";
+            extraDetails += com.ecom.util.EmailTemplateHelper.noteHtml("warn",
+                    noteLabel(newStatus).replaceAll(":$", ""), note.trim());
         }
 
         return com.ecom.util.EmailTemplateHelper.buildStatusChangeEmail(
-                request.getApplicant().getName(),
-                "คำร้องขอตำแหน่งทางวิชาการ",
+                com.ecom.util.EmailTemplateHelper.formalName(request.getApplicant()),
+                "คำขอกำหนดตำแหน่งทางวิชาการ",
                 request.getRequestCode(),
                 oldStatus != null ? oldStatus.getThaiLabel() : "-",
                 newStatus.getThaiLabel(),
                 statusColor,
+                meaningOf(newStatus),
                 extraDetails);
+    }
+
+    /** สถานะนี้หมายถึงอะไรสำหรับผู้ขอ และขั้นต่อไปคืออะไร */
+    static String meaningOf(PositionRequestStatus newStatus) {
+        return switch (newStatus) {
+            case DRAFT -> "คำขอของท่านอยู่ในสถานะแบบร่าง ท่านสามารถแก้ไขเอกสารและยื่นคำขอได้เมื่อพร้อม";
+            case DOCUMENT_RECEIVED -> "วิทยาลัยฯ ได้รับคำขอกำหนดตำแหน่งทางวิชาการของท่านแล้ว"
+                    + " เจ้าหน้าที่จะตรวจสอบความถูกต้องและครบถ้วนของเอกสารต่อไป";
+            case DOCUMENT_VERIFICATION -> "เจ้าหน้าที่อยู่ระหว่างตรวจสอบความถูกต้องและครบถ้วนของเอกสาร"
+                    + " หากต้องแก้ไขเอกสาร วิทยาลัยฯ จะแจ้งให้ท่านทราบ";
+            case SCREENING_COMMITTEE -> "คำขอของท่านได้รับการเสนอเข้าวาระการประชุมคณะกรรมการกลั่นกรองฯ แล้ว"
+                    + " ผลการพิจารณาจะแจ้งให้ท่านทราบภายหลังการประชุม";
+            case REVISION_REQUESTED -> "ขอให้ท่านแก้ไขเอกสารตามรายละเอียดข้างล่างนี้ แก้ไขในระบบ และลงนามใหม่ในเอกสารที่แก้ไข"
+                    + " แล้วส่งกลับมาให้วิทยาลัยฯ ดำเนินการต่อ";
+            case SCREENING_APPROVED -> "ที่ประชุมคณะกรรมการกลั่นกรองฯ ได้รับรองมติแล้ว"
+                    + " ขั้นต่อไปวิทยาลัยฯ จะเสนอวาระต่อคณะกรรมการประจำวิทยาลัยฯ";
+            case COLLEGE_COMMITTEE -> "คำขอของท่านได้รับการเสนอเข้าวาระการประชุมคณะกรรมการประจำวิทยาลัยฯ แล้ว"
+                    + " ผลการพิจารณาจะแจ้งให้ท่านทราบภายหลังการประชุม";
+            case COLLEGE_APPROVED -> "คณะกรรมการประจำวิทยาลัยฯ ได้รับรองมติแล้ว"
+                    + " ขั้นต่อไปวิทยาลัยฯ จะส่งเรื่องไปยังกองทรัพยากรบุคคล มหาวิทยาลัยขอนแก่น";
+            case SENT_TO_HR -> "วิทยาลัยฯ ได้ส่งคำขอของท่านไปยังกองทรัพยากรบุคคล มหาวิทยาลัยขอนแก่น แล้ว"
+                    + " ขั้นตอนต่อจากนี้ดำเนินการตามกระบวนการของมหาวิทยาลัย";
+        };
     }
 }

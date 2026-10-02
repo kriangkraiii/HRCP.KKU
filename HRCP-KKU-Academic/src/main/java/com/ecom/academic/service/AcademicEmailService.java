@@ -95,8 +95,9 @@ public class AcademicEmailService {
                 return;
 
             String subject = isReturn(oldStatus, newStatus)
-                    ? "คำร้องขอประเมินผลการสอน (#" + request.getId() + ") ถูกส่งคืนให้แก้ไข"
-                    : "อัปเดตสถานะคำร้องขอประเมินผลการสอน (#" + request.getId() + ") - " + newStatus.getThaiLabel();
+                    ? "คำร้องขอรับการประเมินผลการสอน (รหัส " + request.getId() + ") ถูกส่งคืนเพื่อแก้ไข"
+                    : "แจ้งความคืบหน้าคำร้องขอรับการประเมินผลการสอน (รหัส " + request.getId() + "): "
+                            + newStatus.getThaiLabel();
             String body = buildEmailBody(request, oldStatus, newStatus, note);
 
             MimeMessage message = mailSender.createMimeMessage();
@@ -150,10 +151,11 @@ public class AcademicEmailService {
             if (admin == null || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
                 return;
             }
-            String subject = "แจ้งเตือนคำร้องขอรับการประเมินใหม่ (#" + request.getId() + ") - " + request.getApplicant().getName();
+            String applicantName = com.ecom.util.EmailTemplateHelper.formalName(request.getApplicant());
+            String subject = "คำร้องขอรับการประเมินผลการสอนใหม่ (รหัส " + request.getId() + ") จาก " + applicantName;
             String body = com.ecom.util.EmailTemplateHelper.buildAdminNewRequestEmail(
-                    admin.getName(),
-                    request.getApplicant().getName(),
+                    com.ecom.util.EmailTemplateHelper.formalName(admin),
+                    applicantName,
                     request.getApplicant().getEmail(),
                     "คำร้องขอรับการประเมินผลการสอน",
                     String.valueOf(request.getId()),
@@ -191,21 +193,47 @@ public class AcademicEmailService {
         // วันประชุมและสถานที่เป็นความลับทางราชการ ผู้ยื่นไม่ได้เข้าประชุมด้วย
         // อีเมลจึงบอกแค่ว่าคำร้องเดินมาถึงขั้นนี้แล้ว ไม่แนบรายละเอียดการนัดหมาย
         if (isReturn(oldStatus, newStatus)) {
-            extraDetails = "<div style='background:#fffbeb;border:1px solid #fcd34d;padding:12px 16px;border-radius:6px;margin-bottom:16px;font-size:13px;'>"
-                    + "<div style='font-weight:600;color:#92400e;margin-bottom:4px;'>เหตุผลที่ส่งคืน:</div>"
-                    + "<div>" + org.springframework.web.util.HtmlUtils.htmlEscape(note != null ? note : "-") + "</div>"
-                    + "<div style='margin-top:8px;'>กรุณาแก้ไขเอกสาร ลงนามอิเล็กทรอนิกส์ใหม่ แล้วยื่นคำร้องอีกครั้ง</div>"
-                    + "</div>";
+            extraDetails = com.ecom.util.EmailTemplateHelper.noteHtml("warn", "เหตุผลที่ส่งคืน",
+                    note != null && !note.isBlank() ? note.trim() : "-");
         }
 
         return com.ecom.util.EmailTemplateHelper.buildStatusChangeEmail(
-                request.getApplicant().getName(),
-                "คำร้องขอประเมินผลการสอน",
+                com.ecom.util.EmailTemplateHelper.formalName(request.getApplicant()),
+                "คำร้องขอรับการประเมินผลการสอน",
                 String.valueOf(request.getId()),
                 oldStatus != null ? oldStatus.getThaiLabel() : "-",
                 newStatus.getThaiLabel(),
                 statusColor,
+                meaningOf(oldStatus, newStatus),
                 extraDetails);
+    }
+
+    /** สถานะนี้หมายถึงอะไรสำหรับผู้ยื่น และขั้นต่อไปคืออะไร */
+    static String meaningOf(RequestStatus oldStatus, RequestStatus newStatus) {
+        if (isReturn(oldStatus, newStatus)) {
+            return "คำร้องของท่านถูกส่งคืนเป็นแบบร่างด้วยเหตุผลข้างล่างนี้ ขอให้ท่านแก้ไขเอกสาร ลงนามอิเล็กทรอนิกส์ใหม่"
+                    + " แล้วยื่นคำร้องอีกครั้ง";
+        }
+        return switch (newStatus) {
+            case DRAFT -> "คำร้องของท่านอยู่ในสถานะแบบร่าง ท่านสามารถแก้ไขเอกสารและยื่นคำร้องได้เมื่อพร้อม";
+            case RECEIVED -> "วิทยาลัยฯ ได้รับคำร้องของท่านแล้ว เจ้าหน้าที่จะตรวจสอบเอกสาร"
+                    + " และเสนอแต่งตั้งคณะอนุกรรมการประเมินผลการสอนต่อไป";
+            case SUB_COMMITTEE_APPOINTED -> "คณบดีได้ลงนามคำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอนแล้ว"
+                    + " ขั้นต่อไปวิทยาลัยฯ จะนัดหมายคณะอนุกรรมการเพื่อประเมินผลการสอนของท่าน";
+            case MEETING_SCHEDULED -> "วิทยาลัยฯ ได้นัดหมายคณะอนุกรรมการเพื่อประเมินผลการสอนของท่านแล้ว"
+                    + " ผลการประเมินจะแจ้งให้ท่านทราบภายหลังการประเมิน";
+            case COMPLETED_PASS -> "คณะอนุกรรมการได้ประเมินแล้ว ผลการสอนของท่านผ่านเกณฑ์"
+                    + " ขั้นต่อไปวิทยาลัยฯ จะเสนอคณะกรรมการประจำวิทยาลัยฯ เพื่อรับรองผลการประเมิน";
+            case COMPLETED_REVISE -> "คณะอนุกรรมการได้ประเมินแล้ว และขอให้ท่านปรับปรุงเอกสารตามข้อเสนอแนะ"
+                    + " กรุณาตรวจสอบข้อเสนอแนะในระบบ แก้ไข แล้วส่งเอกสารฉบับแก้ไข";
+            case REVISION_SUBMITTED -> "วิทยาลัยฯ ได้รับเอกสารฉบับแก้ไขของท่านแล้ว และจะเสนอคณะอนุกรรมการพิจารณาอีกครั้ง";
+            case COLLEGE_ENDORSED -> "คณะกรรมการประจำวิทยาลัยฯ ได้รับรองผลการประเมินผลการสอนของท่านแล้ว"
+                    + " วิทยาลัยฯ จะจัดทำบันทึกข้อความแจ้งผลการประเมินอย่างเป็นทางการต่อไป";
+            case COMPLETED -> "การประเมินผลการสอนของท่านเสร็จสิ้นแล้ว ท่านสามารถดาวน์โหลดบันทึกข้อความแจ้งผลการประเมินได้ในระบบ"
+                    + " และใช้ผลการประเมินนี้ประกอบการขอกำหนดตำแหน่งทางวิชาการได้จนกว่าผลการประเมินจะหมดอายุ";
+            case COMPLETED_FAIL -> "คณะอนุกรรมการได้ประเมินแล้ว ผลการสอนของท่านยังไม่ผ่านเกณฑ์"
+                    + " หากมีข้อสงสัย กรุณาติดต่อภารกิจด้านทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์";
+        };
     }
 
     /**
@@ -222,9 +250,9 @@ public class AcademicEmailService {
             if (applicantEmail == null || applicantEmail.isEmpty() || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail))
                 return;
 
-            String subject = "ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน (#" + request.getId() + ") - กรุณาแก้ไขเอกสาร";
+            String subject = "ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน และการแก้ไขเอกสาร (รหัส " + request.getId() + ")";
             String body = com.ecom.util.EmailTemplateHelper.buildSuggestionEmail(
-                    request.getApplicant().getName(),
+                    com.ecom.util.EmailTemplateHelper.formalName(request.getApplicant()),
                     String.valueOf(request.getId()),
                     suggestionsText);
 
@@ -266,9 +294,9 @@ public class AcademicEmailService {
             if (applicantEmail == null || applicantEmail.isEmpty() || com.ecom.util.EmailTemplateHelper.isTestEmail(applicantEmail))
                 return;
 
-            String subject = "ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน (#" + request.getId() + ") - แจ้งเพื่อทราบ";
+            String subject = "ข้อเสนอแนะจากคณะอนุกรรมการประเมินผลการสอน (รหัส " + request.getId() + ") แจ้งเพื่อทราบ";
             String body = com.ecom.util.EmailTemplateHelper.buildSuggestionNoticeEmail(
-                    request.getApplicant().getName(),
+                    com.ecom.util.EmailTemplateHelper.formalName(request.getApplicant()),
                     String.valueOf(request.getId()),
                     suggestionsText);
 

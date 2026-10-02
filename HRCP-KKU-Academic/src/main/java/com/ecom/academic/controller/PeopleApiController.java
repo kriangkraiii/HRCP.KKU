@@ -52,12 +52,31 @@ public class PeopleApiController {
     private final UserRepository users;
     private final StaffMemberService staffMembers;
     private final ExternalSignerService externalSigners;
+    private final com.ecom.academic.service.SignerBriefing briefing;
+    private final com.ecom.academic.repository.AcademicRequestRepository academicRequests;
+    private final com.ecom.academic.repository.PositionRequestRepository positionRequests;
 
     public PeopleApiController(UserRepository users, StaffMemberService staffMembers,
-            ExternalSignerService externalSigners) {
+            ExternalSignerService externalSigners, com.ecom.academic.service.SignerBriefing briefing,
+            com.ecom.academic.repository.AcademicRequestRepository academicRequests,
+            com.ecom.academic.repository.PositionRequestRepository positionRequests) {
         this.users = users;
         this.staffMembers = staffMembers;
         this.externalSigners = externalSigners;
+        this.briefing = briefing;
+        this.academicRequests = academicRequests;
+        this.positionRequests = positionRequests;
+    }
+
+    /**
+     * ผู้ลงนามภายนอกที่จะเชิญ พร้อมเอกสารที่เชิญมาลงนาม (ไม่บังคับ) — ใช้เขียนหนังสือเชิญให้บอกได้ว่า
+     * เป็นคำร้องของใคร เรื่องอะไร ท่านอยู่ในฐานะอะไร
+     *
+     * @param module       ACADEMIC หรือ POSITION
+     * @param field        ช่องชื่อผู้ลงนามในแบบฟอร์ม เช่น committee_2_name
+     */
+    public record ExternalInvite(String title, String firstName, String lastName, String email, String affiliation,
+            String module, Long requestId, Integer documentType, String field) {
     }
 
     /**
@@ -99,7 +118,7 @@ public class PeopleApiController {
 
     /** เพิ่มผู้ลงนามจากนอก มข. — สร้างบัญชีภายนอกและส่งอีเมลเชิญ (ถ้ามีบัญชีอยู่แล้วคืนบัญชีเดิม) */
     @PostMapping("/external")
-    public ResponseEntity<?> addExternal(@RequestBody ExternalSignerService.Invite invite, Principal principal) {
+    public ResponseEntity<?> addExternal(@RequestBody ExternalInvite invite, Principal principal) {
         UserDtls caller = principal == null ? null : users.findByEmail(principal.getName());
         if (caller == null) {
             return ResponseEntity.status(401).build();
@@ -108,10 +127,43 @@ public class PeopleApiController {
             return ResponseEntity.status(403).build();
         }
         try {
-            UserDtls signer = externalSigners.invite(invite, caller);
+            UserDtls signer = externalSigners.invite(
+                    new ExternalSignerService.Invite(invite.title(), invite.firstName(), invite.lastName(),
+                            invite.email(), invite.affiliation()),
+                    caller, briefingFor(invite, caller));
             return ResponseEntity.ok(toPerson(signer, false, STAFF.contains(caller.getRole())));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    /**
+     * เรื่องที่เชิญมา — เฉพาะเจ้าหน้าที่ หรือผู้ยื่นของคำร้องนั้นเอง ชื่อผู้ยื่นจะอยู่ในอีเมลเชิญ
+     * จึงห้ามใครส่งรหัสคำร้องของคนอื่นมาให้ระบบเขียนชื่อนั้นส่งออกไปยังอีเมลที่ตัวเองกรอก
+     */
+    private com.ecom.academic.service.SignerBriefing.Briefing briefingFor(ExternalInvite invite, UserDtls caller) {
+        if (invite.module() == null || invite.requestId() == null || invite.documentType() == null) {
+            return null;
+        }
+        com.ecom.academic.model.SignatureModule module;
+        try {
+            module = com.ecom.academic.model.SignatureModule.valueOf(invite.module().strip().toUpperCase(java.util.Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        boolean staff = STAFF.contains(caller.getRole());
+        if (!staff) {
+            Integer owner = module == com.ecom.academic.model.SignatureModule.ACADEMIC
+                    ? academicRequests.findById(invite.requestId()).map(r -> r.getApplicant().getId()).orElse(null)
+                    : positionRequests.findById(invite.requestId()).map(r -> r.getApplicant().getId()).orElse(null);
+            if (owner == null || !owner.equals(caller.getId())) {
+                return null;
+            }
+        }
+        try {
+            return briefing.forField(module, invite.requestId(), invite.documentType(), invite.field()).orElse(null);
+        } catch (RuntimeException e) {
+            return null; // หนังสือเชิญยังส่งได้แบบไม่มีรายละเอียดเรื่อง
         }
     }
 

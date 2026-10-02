@@ -48,6 +48,9 @@ public class SignatureNotifier {
     @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}")
     private String senderEmail;
 
+    @Value("${app.public-base-url:https://hrd.computing.kku.ac.th}")
+    private String publicBaseUrl = "https://hrd.computing.kku.ac.th";
+
     public SignatureNotifier(NotificationService notificationService, JavaMailSender mailSender,
             com.ecom.repository.UserRepository userRepository) {
         this.notificationService = notificationService;
@@ -66,7 +69,8 @@ public class SignatureNotifier {
         for (UserDtls recipient : notice.recipients()) {
             notify(recipient, title, message, "/esign/sign/" + notice.stepId(),
                     NotificationType.SIGNATURE_REQUESTED, true);
-            email(recipient, title, buildRequestEmail(notice));
+            email(recipient, "ขอความอนุเคราะห์ลงนาม: " + notice.safeDocumentLabel() + aboutWhom(notice),
+                    buildRequestEmail(notice, recipient, false));
         }
     }
 
@@ -79,7 +83,8 @@ public class SignatureNotifier {
         for (UserDtls recipient : notice.recipients()) {
             notify(recipient, title, message, "/esign/sign/" + notice.stepId(),
                     NotificationType.SIGNATURE_REMINDER, true);
-            email(recipient, title, buildRequestEmail(notice));
+            email(recipient, "ขอเตือนการลงนาม: " + notice.safeDocumentLabel() + aboutWhom(notice),
+                    buildRequestEmail(notice, recipient, true));
         }
     }
 
@@ -97,17 +102,18 @@ public class SignatureNotifier {
         String title = "ถึงกำหนดที่ตั้งเตือนไว้: " + notice.safeDocumentLabel();
         String message = "เลยกำหนดที่ท่านตั้งเตือนไว้สำหรับ \"" + notice.safeDocumentLabel() + "\" แล้ว "
                 + "ท่านยังลงนามได้ตามปกติ และยื่นคำร้องได้เมื่อลงนามครบ";
-        String body = EmailTemplateHelper.wrapLayout("ถึงกำหนดที่ตั้งเตือนไว้", "แจ้งเตือน",
-                "<p>เอกสาร <strong>" + escape(notice.safeDocumentLabel()) + "</strong> "
-                        + "ยังรอลายเซ็นของท่านอยู่ และเลยวันที่ท่านตั้งเตือนไว้แล้ว</p>"
-                        + "<p>กำหนดนี้เป็น<strong>เพียงการแจ้งเตือน</strong> "
-                        + "เอกสารยังไม่ถูกปิด ท่านลงนามเมื่อใดก็ได้ "
-                        + "และยื่นคำร้องได้ทันทีที่ลงนามครบทุกฉบับ</p>");
 
         for (UserDtls recipient : notice.recipients()) {
             notify(recipient, title, message, "/esign/sign/" + notice.stepId(),
                     NotificationType.SIGNATURE_REMINDER, true);
-            email(recipient, title, body);
+            String body = EmailTemplateHelper.Letter.of("ถึงกำหนดที่ท่านตั้งเตือนไว้สำหรับการลงนาม", formal(recipient))
+                    .para("เอกสาร “" + notice.safeDocumentLabel() + "” ยังรอการลงนามของท่าน และถึงวันที่ท่านตั้งเตือนไว้แล้ว")
+                    .note("info", null, "กำหนดนี้เป็นเพียงการแจ้งเตือน เอกสารยังไม่ถูกปิด ท่านลงนามได้ตามปกติ"
+                            + " และยื่นคำร้องได้ทันทีที่ลงนามครบทุกฉบับ")
+                    .button("เข้าสู่ระบบเพื่อลงนาม", link("/esign/sign/" + notice.stepId()))
+                    .close("จึงเรียนมาเพื่อโปรดทราบ");
+            email(recipient, "ถึงกำหนดที่ตั้งเตือนไว้: " + notice.safeDocumentLabel(),
+                    EmailTemplateHelper.wrapLayout("ถึงกำหนดที่ตั้งเตือนไว้", "แจ้งเตือน", body));
         }
     }
 
@@ -116,16 +122,20 @@ public class SignatureNotifier {
     public void notifyCompleted(SignatureNotice notice) {
         String title = "ลงนามครบแล้ว: " + notice.safeDocumentLabel();
         String message = "ผู้ลงนามทุกคนลงนามในเอกสารเรียบร้อยแล้ว (" + notice.progressLabel() + ")";
-        String body = EmailTemplateHelper.wrapLayout("ลงนามครบทุกขั้นตอน", "เสร็จสิ้น",
-                "<p>เอกสาร <strong>" + escape(notice.safeDocumentLabel()) + "</strong> "
-                        + "ได้รับการลงนามครบทุกขั้นตอนแล้ว</p>"
-                        + "<p>รหัสตรวจสอบเอกสาร: <strong>"
-                        + escape(notice.verificationCode()) + "</strong></p>");
 
         for (UserDtls recipient : notice.recipients()) {
             notify(recipient, title, message, notice.module().adminLink(notice.requestId()),
                     NotificationType.SIGNATURE_COMPLETED, false);
-            email(recipient, title, body);
+            String body = EmailTemplateHelper.Letter.of("เอกสาร “" + notice.safeDocumentLabel() + "” ลงนามครบแล้ว",
+                            formal(recipient))
+                    .para("เอกสาร “" + notice.safeDocumentLabel() + "”" + ofCase(notice)
+                            + " ได้รับการลงนามครบทุกตำแหน่งแล้ว")
+                    .details(caseRows(notice, "ความคืบหน้า", notice.progressLabel()))
+                    .para("ท่านสามารถดาวน์โหลดเอกสารที่ลงนามแล้ว และดำเนินการในขั้นตอนต่อไปได้ในระบบ")
+                    .button("เปิดคำร้องในระบบ", link(notice.module().adminLink(notice.requestId())))
+                    .close("จึงเรียนมาเพื่อโปรดทราบ");
+            email(recipient, "ลงนามครบแล้ว: " + notice.safeDocumentLabel() + aboutWhom(notice),
+                    EmailTemplateHelper.wrapLayout("เอกสารลงนามครบแล้ว", "เสร็จสิ้น", body));
         }
     }
 
@@ -134,17 +144,23 @@ public class SignatureNotifier {
     public void notifyDeclined(SignatureNotice notice) {
         String title = "ปฏิเสธการลงนาม: " + notice.safeDocumentLabel();
         String message = notice.signerName() + " ปฏิเสธการลงนาม — เหตุผล: " + notice.declineReason();
-        String body = EmailTemplateHelper.wrapLayout("ปฏิเสธการลงนาม", "ต้องดำเนินการ",
-                "<p><strong>" + escape(notice.signerName()) + "</strong> ปฏิเสธการลงนามในเอกสาร "
-                        + "<strong>" + escape(notice.safeDocumentLabel()) + "</strong></p>"
-                        + "<p>เหตุผล: " + escape(notice.declineReason()) + "</p>"
-                        + "<p>เอกสารถูกปลดล็อกให้แก้ไขได้แล้ว "
-                        + "เมื่อแก้ไขเรียบร้อยจึงส่งเวียนลงนามใหม่อีกครั้ง</p>");
 
         for (UserDtls recipient : notice.recipients()) {
             notify(recipient, title, message, notice.module().adminLink(notice.requestId()),
                     NotificationType.SIGNATURE_DECLINED, true);
-            email(recipient, title, body);
+            String body = EmailTemplateHelper.Letter.of("ผู้ลงนามไม่ลงนามในเอกสาร “" + notice.safeDocumentLabel() + "”",
+                            formal(recipient))
+                    .para(nameOr(notice.signerName(), "ผู้ลงนาม") + " ในฐานะ" + nameOr(notice.roleLabel(), "ผู้ลงนาม")
+                            + " ไม่ลงนามในเอกสาร “" + notice.safeDocumentLabel() + "”" + ofCase(notice)
+                            + " การเวียนลงนามจึงหยุดลง")
+                    .details(caseRows(notice, null, null))
+                    .note("danger", "เหตุผล", nameOr(notice.declineReason(), "-"))
+                    .para("ระบบได้ปลดล็อกเอกสารให้แก้ไขได้แล้ว ขอให้ตรวจสอบและแก้ไขตามเหตุผลข้างต้น"
+                            + " แล้วส่งเวียนลงนามใหม่อีกครั้ง")
+                    .button("เปิดคำร้องในระบบ", link(notice.module().adminLink(notice.requestId())))
+                    .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
+            email(recipient, "ผู้ลงนามไม่ลงนาม: " + notice.safeDocumentLabel() + aboutWhom(notice),
+                    EmailTemplateHelper.wrapLayout("ผู้ลงนามไม่ลงนามในเอกสาร", "ต้องดำเนินการ", body));
         }
     }
 
@@ -155,9 +171,15 @@ public class SignatureNotifier {
         for (UserDtls recipient : notice.recipients()) {
             notify(recipient, title, "การเวียนลงนามในเอกสารนี้ถูกยกเลิกแล้ว",
                     "/esign/inbox", NotificationType.SYSTEM, false);
-            email(recipient, title, EmailTemplateHelper.wrapLayout("ยกเลิกการเวียนลงนาม", "แจ้งเพื่อทราบ",
-                    "<p>การเวียนลงนามในเอกสาร <strong>" + escape(notice.safeDocumentLabel())
-                            + "</strong> ถูกยกเลิกโดยผู้ส่งเอกสาร</p>"));
+            String body = EmailTemplateHelper.Letter.of("ยกเลิกการขอให้ลงนามในเอกสาร “" + notice.safeDocumentLabel() + "”",
+                            formal(recipient))
+                    .para("ตามที่วิทยาลัยการคอมพิวเตอร์ได้ขอความอนุเคราะห์ท่านลงนามในเอกสาร “"
+                            + notice.safeDocumentLabel() + "”" + ofCase(notice)
+                            + " บัดนี้ผู้ส่งเอกสารได้ยกเลิกการเวียนลงนามแล้ว ท่านจึงไม่ต้องลงนามในเอกสารดังกล่าว"
+                            + " หากมีการส่งเอกสารฉบับใหม่ ระบบจะแจ้งท่านอีกครั้ง")
+                    .close("จึงเรียนมาเพื่อโปรดทราบ และขออภัยในความไม่สะดวก");
+            email(recipient, "ยกเลิกการขอให้ลงนาม: " + notice.safeDocumentLabel() + aboutWhom(notice),
+                    EmailTemplateHelper.wrapLayout("ยกเลิกการเวียนลงนาม", "แจ้งเพื่อทราบ", body));
         }
     }
 
@@ -176,16 +198,19 @@ public class SignatureNotifier {
         String who = signerName != null && !signerName.isBlank() ? signerName : "ผู้ลงนาม";
         String title = "ผลการตรวจสอบ: " + answer + " — " + safeDoc;
         String message = who + " ลงนามแล้วและบันทึก" + question + "เป็น \"" + answer + "\"";
-        String body = EmailTemplateHelper.wrapLayout("ผลการตรวจสอบจากผู้ลงนาม", "ต้องดำเนินการ",
-                "<p><strong>" + escape(who) + "</strong> ลงนามในเอกสาร <strong>"
-                        + escape(safeDoc) + "</strong> เรียบร้อยแล้ว</p>"
-                        + "<p>" + escape(question) + ": <strong>" + escape(answer) + "</strong></p>"
-                        + "<p>การเวียนลงนามดำเนินต่อไปตามปกติ กรุณาตรวจสอบว่าต้องดำเนินการใดเพิ่มเติมหรือไม่</p>");
 
         for (UserDtls recipient : recipients) {
             notify(recipient, title, message, module.adminLink(requestId),
                     NotificationType.SIGNATURE_DECLINED, true);
-            email(recipient, title, body);
+            String body = EmailTemplateHelper.Letter.of("ผลการตรวจสอบในเอกสาร “" + safeDoc + "”", formal(recipient))
+                    .para(who + " ได้ลงนามในเอกสาร “" + safeDoc + "” ของ" + module.getThaiLabel()
+                            + " รหัส " + requestId + " แล้ว และได้บันทึกผลการตรวจสอบที่ควรทราบ ดังนี้")
+                    .note("warn", question, answer)
+                    .para("การเวียนลงนามยังดำเนินต่อไปตามปกติ ขอให้ตรวจสอบว่าต้องดำเนินการใดเพิ่มเติมหรือไม่")
+                    .button("เปิดคำร้องในระบบ", link(module.adminLink(requestId)))
+                    .close("จึงเรียนมาเพื่อโปรดพิจารณา");
+            email(recipient, "ผลการตรวจสอบ “" + answer + "”: " + safeDoc,
+                    EmailTemplateHelper.wrapLayout("ผลการตรวจสอบจากผู้ลงนาม", "ควรตรวจสอบ", body));
         }
     }
 
@@ -225,11 +250,22 @@ public class SignatureNotifier {
 
         notify(applicant, title, message, userLink, NotificationType.SIGNATURE_DECLINED, true);
 
-        String body = EmailTemplateHelper.wrapLayout("แจ้งให้แก้ไขข้อมูลและลงนามใหม่", "ต้องดำเนินการ",
-                "<p>เจ้าหน้าที่ได้ตรวจสอบเอกสาร <strong>" + escape(safeDoc) + "</strong> และขอให้ท่านแก้ไขข้อมูลพร้อมลงนามใหม่อีกครั้ง</p>"
-                        + (reason != null && !reason.isBlank() ? "<p><strong>เหตุผลที่ส่งกลับ:</strong> " + escape(reason) + "</p>" : "")
-                        + "<p>ระบบได้ปลดล็อกเอกสารให้ท่านสามารถเข้าสู่ระบบเพื่อแก้ไขและลงนามใหม่ได้ทันที</p>");
-        email(applicant, title, body);
+        EmailTemplateHelper.Letter letter = EmailTemplateHelper.Letter.of(
+                        "ขอให้แก้ไขเอกสาร “" + safeDoc + "” และลงนามใหม่", EmailTemplateHelper.formalName(applicant))
+                .para("เจ้าหน้าที่ได้ตรวจสอบเอกสาร “" + safeDoc + "” ของ" + module.getThaiLabel() + " รหัส " + requestId
+                        + " ของท่านแล้ว และขอให้ท่านแก้ไขข้อมูลพร้อมลงนามใหม่");
+        if (reason != null && !reason.isBlank()) {
+            letter.note("warn", "สิ่งที่ต้องแก้ไข", reason.trim());
+        }
+        String body = letter
+                .steps("สิ่งที่ท่านต้องดำเนินการ", List.of(
+                        "เข้าสู่ระบบ แล้วเปิดเอกสาร “" + safeDoc + "” (ระบบปลดล็อกให้แก้ไขได้แล้ว)",
+                        "แก้ไขข้อมูลตามรายละเอียดข้างต้น",
+                        "ลงนามอิเล็กทรอนิกส์ในเอกสารฉบับแก้ไข เจ้าหน้าที่จะตรวจสอบและดำเนินการต่อ"))
+                .button("เปิดเอกสารเพื่อแก้ไข", link(userLink))
+                .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
+        email(applicant, "ขอให้แก้ไขเอกสารและลงนามใหม่: " + safeDoc,
+                EmailTemplateHelper.wrapLayout("ขอให้แก้ไขเอกสารและลงนามใหม่", "ต้องดำเนินการ", body));
     }
 
     /**
@@ -245,10 +281,6 @@ public class SignatureNotifier {
         String who = applicantName != null && !applicantName.isBlank() ? applicantName : "ผู้ยื่นคำร้อง";
         String title = "ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว: " + safeDoc;
         String message = who + " แก้ไขเอกสาร " + safeDoc + " ตามที่ส่งกลับเรียบร้อยแล้ว กรุณาตรวจสอบและดำเนินการต่อ";
-        String body = EmailTemplateHelper.wrapLayout("ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว", "ต้องดำเนินการ",
-                "<p><strong>" + escape(who) + "</strong> ได้แก้ไขเอกสาร <strong>" + escape(safeDoc)
-                        + "</strong> ตามที่ส่งกลับเรียบร้อยแล้ว</p>"
-                        + "<p>กรุณาตรวจสอบความถูกต้อง และส่งเวียนลงนามต่อตามขั้นตอน</p>");
         List<UserDtls> admins;
         try {
             admins = userRepository.findByRole("ROLE_ADMIN");
@@ -258,7 +290,14 @@ public class SignatureNotifier {
         }
         for (UserDtls admin : admins) {
             notify(admin, title, message, module.adminLink(requestId), NotificationType.REVISION_SUBMITTED, true);
-            email(admin, title, body);
+            String body = EmailTemplateHelper.Letter.of("ผู้ยื่นส่งเอกสาร “" + safeDoc + "” ฉบับแก้ไขแล้ว", formal(admin))
+                    .para(who + " ได้แก้ไขเอกสาร “" + safeDoc + "” ของ" + module.getThaiLabel() + " รหัส " + requestId
+                            + " ตามที่ส่งกลับ และลงนามในฉบับแก้ไขเรียบร้อยแล้ว")
+                    .para("ขอให้ตรวจสอบความถูกต้อง และส่งเวียนลงนามต่อตามขั้นตอน")
+                    .button("เปิดคำร้องในระบบ", link(module.adminLink(requestId)))
+                    .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
+            email(admin, "ผู้ยื่นส่งเอกสารฉบับแก้ไขแล้ว: " + safeDoc + " (" + who + ")",
+                    EmailTemplateHelper.wrapLayout("ผู้ยื่นส่งเอกสารฉบับแก้ไขแล้ว", "ต้องดำเนินการ", body));
         }
     }
 
@@ -308,42 +347,98 @@ public class SignatureNotifier {
         }
     }
 
-    private String buildRequestEmail(SignatureNotice notice) {
-        StringBuilder body = new StringBuilder();
-        body.append("<p style='font-size: 15px; line-height: 1.6;'>เรียน <strong>").append(escape(notice.signerName())).append("</strong></p>");
-        body.append("<p style='font-size: 14px; line-height: 1.6;'>วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น ขอความอนุเคราะห์ท่านในการตรวจสอบและลงนามในเอกสารอิเล็กทรอนิกส์ตามรายละเอียดดังต่อไปนี้:</p>");
-        
-        body.append("<div style='background-color: #f8fafc; border: 1px solid #e2e8f0; border-left: 4px solid #0d47a1; padding: 15px 18px; border-radius: 8px; margin: 16px 0;'>");
-        body.append("<table style='width: 100%; border-collapse: collapse; font-size: 14px;'>");
-        body.append("<tr><td style='padding: 4px 0; color: #64748b; width: 140px;'>เอกสาร:</td><td style='padding: 4px 0; font-weight: 600; color: #0f172a;'>").append(escape(notice.safeDocumentLabel())).append("</td></tr>");
-        body.append("<tr><td style='padding: 4px 0; color: #64748b;'>ประเภทคำร้อง:</td><td style='padding: 4px 0; color: #0f172a;'>").append(escape(notice.module().getThaiLabel())).append("</td></tr>");
-        body.append("<tr><td style='padding: 4px 0; color: #64748b;'>ตำแหน่งที่ลงนาม:</td><td style='padding: 4px 0; font-weight: 600; color: #0d47a1;'>").append(escape(notice.roleLabel())).append("</td></tr>");
-        body.append("<tr><td style='padding: 4px 0; color: #64748b;'>รหัสตรวจสอบ:</td><td style='padding: 4px 0; font-family: monospace; color: #475569;'>").append(escape(notice.verificationCode())).append("</td></tr>");
-        body.append("</table>");
-        body.append("</div>");
+    /**
+     * ขอให้ลงนาม — บอกว่าเป็นเอกสารของคำร้องใคร ลงนามในฐานะอะไร ภายในเมื่อใด และลงนามอย่างไร
+     * ผู้ลงนามจากนอก มข. ได้คำอธิบายเพิ่ม ว่าเรื่องนี้คืออะไร และสิ่งที่ต้องทำทีละขั้น
+     */
+    private String buildRequestEmail(SignatureNotice notice, UserDtls recipient, boolean reminder) {
+        String doc = notice.safeDocumentLabel();
+        boolean outsider = recipient != null && recipient.isExternal();
+        SignerBriefing.Briefing brief = notice.briefing();
 
+        EmailTemplateHelper.Letter letter = EmailTemplateHelper.Letter.of(
+                (reminder ? "ขอเตือนการลงนามในเอกสาร “" : "ขอความอนุเคราะห์ลงนามในเอกสาร “") + doc + "”",
+                formal(recipient));
+        if (outsider && brief != null) {
+            letter.para("ด้วยวิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น อยู่ระหว่างดำเนินการ" + brief.matter()
+                    + " ซึ่งท่านได้รับการเสนอชื่อเป็น" + brief.role());
+        }
+        letter.para((reminder ? "เอกสาร “" + doc + "”" + ofCase(notice) + " ยังรอการลงนามของท่าน"
+                : "บัดนี้ถึงลำดับที่ท่านต้องลงนามในเอกสาร “" + doc + "”" + ofCase(notice))
+                + " ในฐานะ" + nameOr(notice.roleLabel(), "ผู้ลงนาม")
+                + " วิทยาลัยฯ จึงขอความอนุเคราะห์ท่านตรวจสอบเอกสารและลงนามผ่านระบบอิเล็กทรอนิกส์");
+
+        java.util.Map<String, String> rows = caseRows(notice, "ลงนามในฐานะ", notice.roleLabel());
         if (notice.dueAt() != null) {
             long daysLeft = java.time.Duration.between(LocalDateTime.now(), notice.dueAt()).toDays();
-            String timeText = daysLeft >= 0 ? " (เหลือเวลาประมาณ " + (daysLeft == 0 ? "วันนี้" : daysLeft + " วัน") + ")" : " (เลยกำหนดเวลา)";
-            body.append("<div style='background-color: #fffbeb; border: 1px solid #fde68a; border-radius: 6px; padding: 12px 16px; margin: 16px 0; color: #92400e; font-size: 14px;'>");
-            body.append("<strong>กำหนดลงนามภายใน:</strong> ").append(notice.dueAt().format(DUE_FORMAT)).append(timeText);
-            body.append("</div>");
+            rows.put("กำหนดลงนามภายใน", notice.dueAt().format(DUE_FORMAT)
+                    + (daysLeft >= 0 ? " (เหลือประมาณ " + (daysLeft == 0 ? "ไม่ถึง 1 วัน" : daysLeft + " วัน") + ")"
+                            : " (เลยกำหนดแล้ว)"));
         }
+        rows.put("รหัสตรวจสอบเอกสาร", notice.verificationCode());
+        letter.details(rows);
 
-        String signLink = "/esign/sign/" + notice.stepId();
-        body.append("<p style='font-size: 14px; color: #475569; margin-top: 20px;'>ท่านสามารถตรวจสอบเอกสารฉบับจริงและลงนามผ่านระบบด้วยบัญชี <strong>KKU SSO</strong> โดยกดปุ่มด้านล่างนี้:</p>");
-        body.append("<div style='text-align: center; margin: 24px 0;'>");
-        body.append("<a href='").append(signLink).append("' style='display: inline-block; background-color: #0d47a1; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; box-shadow: 0 2px 4px rgba(13, 71, 161, 0.2);'>เข้าสู่ระบบ KKU SSO เพื่อลงนาม</a>");
-        body.append("</div>");
-        body.append("<p style='font-size: 12px; color: #94a3b8; text-align: center;'>หากปุ่มไม่ทำงาน สามารถเข้าสู่ระบบและไปที่เมนู <strong>\"รอลงนาม\"</strong> ได้โดยตรง</p>");
-
-        return EmailTemplateHelper.wrapLayout("ขอความอนุเคราะห์ลงนามเอกสารอิเล็กทรอนิกส์", "รอลงนาม", body.toString());
+        if (outsider) {
+            List<String> steps = new java.util.ArrayList<>();
+            if (brief != null) {
+                steps.addAll(brief.duties());
+            }
+            steps.add("กดปุ่ม “เข้าสู่ระบบเพื่อลงนาม” ด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO โดยใช้อีเมล "
+                    + recipient.getEmail());
+            steps.add("ตรวจสอบเอกสาร แล้วลงนาม หากท่านมีใบรับรองอิเล็กทรอนิกส์ (Digital ID) ของหน่วยงาน สามารถใช้ลงนามได้"
+                    + " หากไม่มี ระบบจะส่งรหัสยืนยันตัวตนไปยังอีเมลนี้เพื่อใช้ประกอบการลงนาม");
+            letter.steps("ขั้นตอนการลงนาม", steps);
+        } else {
+            letter.para("ท่านสามารถตรวจสอบเอกสารและลงนามได้โดยกดปุ่มด้านล่าง แล้วเข้าสู่ระบบด้วย KKU SSO");
+        }
+        String body = letter
+                .button("เข้าสู่ระบบเพื่อลงนาม", link("/esign/sign/" + notice.stepId()))
+                .close("จึงเรียนมาเพื่อโปรดพิจารณาลงนาม และขอขอบคุณมา ณ โอกาสนี้");
+        return EmailTemplateHelper.wrapLayout(
+                reminder ? "ขอเตือนการลงนามเอกสารอิเล็กทรอนิกส์" : "ขอความอนุเคราะห์ลงนามเอกสารอิเล็กทรอนิกส์",
+                outsider ? "ผู้ลงนามภายนอก" : "รอลงนาม", body);
     }
 
-    private String escape(String value) {
-        if (value == null) {
-            return "";
-        }
-        return value.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;");
+    /** ชื่อขึ้นต้นจดหมายของผู้รับ */
+    private static String formal(UserDtls recipient) {
+        return EmailTemplateHelper.formalName(recipient);
     }
+
+    /** ต่อท้ายหัวเรื่องอีเมล: " — คำร้องของ ..." ให้รู้ตั้งแต่กล่องจดหมายว่าเป็นเรื่องของใคร */
+    private static String aboutWhom(SignatureNotice notice) {
+        return notice.caseSummary() == null ? "" : " — " + notice.caseSummary().matter();
+    }
+
+    /** ต่อท้ายชื่อเอกสารในประโยค: " ของคำร้อง..." */
+    private static String ofCase(SignatureNotice notice) {
+        return notice.caseSummary() == null ? "" : " ของ" + notice.caseSummary().matter();
+    }
+
+    /** แถวรายละเอียดของคำร้อง ตามด้วยแถวเพิ่มเติม (ถ้ามี) */
+    private static java.util.Map<String, String> caseRows(SignatureNotice notice, String extraLabel, String extraValue) {
+        java.util.Map<String, String> rows = new java.util.LinkedHashMap<>();
+        rows.put("เอกสาร", notice.safeDocumentLabel());
+        rows.put("ประเภทคำร้อง", notice.module() == null ? null : notice.module().getThaiLabel());
+        if (notice.caseSummary() != null) {
+            rows.put("ผู้ยื่นคำร้อง", notice.caseSummary().applicant());
+            rows.put("รหัสคำร้อง", notice.caseSummary().requestCode());
+        }
+        if (extraLabel != null) {
+            rows.put(extraLabel, extraValue);
+        }
+        return rows;
+    }
+
+    private static String nameOr(String value, String fallback) {
+        return value == null || value.isBlank() ? fallback : value;
+    }
+
+    /** ลิงก์เต็มสำหรับใส่ในอีเมล — ลิงก์แบบ "/esign/..." เปิดจากโปรแกรมอีเมลไม่ได้ */
+    private String link(String path) {
+        if (path == null) {
+            return null;
+        }
+        return path.startsWith("http") ? path : publicBaseUrl.replaceAll("/+$", "") + path;
+    }
+
 }
