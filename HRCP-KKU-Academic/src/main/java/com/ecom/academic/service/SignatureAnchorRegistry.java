@@ -326,6 +326,22 @@ public class SignatureAnchorRegistry {
                     "firstauthor_name", "",
                     "corres_name", "")));
 
+    /**
+     * ช่องชื่อผู้ลงนามที่ดึงมาจากเอกสารก่อนหน้า แก้ในฉบับนี้ไม่ได้ (AcademicRequestService.carriedFields)
+     * → เอกสารที่ต้องไปแก้ ชื่อที่ผูกบัญชีไม่ได้จึงแก้ที่ต้นทาง ไม่ใช่ค้นหาในช่องที่ล็อก
+     */
+    private static final Map<DocKey, Map<String, String>> CARRIED_NAME_FIELDS = Map.of(
+            new DocKey(SignatureModule.ACADEMIC, 7), Map.of(
+                    "committee_1_name", "เอกสารที่ 3",
+                    "committee_2_name", "เอกสารที่ 3",
+                    "committee_3_name", "เอกสารที่ 3"),
+            new DocKey(SignatureModule.ACADEMIC, 8), Map.of("committee_president_name", "เอกสารที่ 3"));
+
+    /** เอกสารที่ชื่อในช่องนี้ถูกเลือกไว้ หรือ null เมื่อเลือกในฉบับนี้เอง */
+    public static String nameCarriedFrom(SignatureModule module, int documentType, String nameField) {
+        return CARRIED_NAME_FIELDS.getOrDefault(new DocKey(module, documentType), Map.of()).get(nameField);
+    }
+
     /** ผู้ลงนามของเอกสารนี้ (บางตำแหน่ง) มาจากชื่อที่เลือกในแบบฟอร์มหรือไม่ */
     public static boolean isSignerNamedInForm(SignatureModule module, int documentType) {
         return SIGNER_NAME_FIELDS.containsKey(new DocKey(module, documentType));

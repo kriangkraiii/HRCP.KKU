@@ -72,4 +72,61 @@ class PersonPickerBrowserTest extends PlaywrightTestBase {
         page.waitForFunction("v => document.querySelector('input[name=dean_name]').value === v", printed);
         assertThat(page.locator("input[name=dean_name__signer]").inputValue()).isEqualTo(String.valueOf(dean.getId()));
     }
+
+    private Locator option(String text) {
+        return page.locator(".person-picker-menu.show .dropdown-item",
+                new com.microsoft.playwright.Page.LocatorOptions().setHasText(text));
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 3: เลือกกรรมการคนที่ 1 แล้ว ช่องคนที่ 2 และ 3 ไม่มีคนนั้นให้เลือกอีก")
+    void aCommitteeMemberCannotBePickedTwice() {
+        UserDtls officer = data.admin();
+        UserDtls[] committee = data.committee();
+        AcademicRequest request = data.evaluation(data.applicant(), RequestStatus.RECEIVED);
+        String first = SignerNameResolver.printedName(committee[0]);
+        String second = SignerNameResolver.printedName(committee[1]);
+
+        signIn(officer.getEmail(), TestDataFactory.PASSWORD);
+        page.navigate("/admin/academic/request/" + request.getId() + "/document/3");
+
+        Locator seat1 = page.locator("input[name=committee_1_name]");
+        seat1.fill("กรรมการ");
+        option(first).first().waitFor();
+        option(first).first().dispatchEvent("mousedown");
+        assertThat(page.locator("input[name=committee_1_name__signer]").inputValue())
+                .isEqualTo(String.valueOf(committee[0].getId()));
+
+        for (String seat : new String[] { "committee_2_name", "committee_3_name" }) {
+            Locator input = page.locator("input[name=" + seat + "]");
+            input.fill("กรรมการ");
+            option(second).first().waitFor();
+            assertThat(option(first).count()).as("%s ต้องไม่มี %s ให้เลือกซ้ำ", seat, first).isZero();
+            input.evaluate("e => e.blur()");
+            page.waitForFunction("n => !document.querySelector('.person-picker-menu.show')", null);
+        }
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 3: ร่างเก่าที่เลือกคนเดียวกันไว้สองช่อง — ช่องหลังขึ้นสีแดงให้เลือกใหม่")
+    void aSavedDuplicateIsFlagged() {
+        UserDtls officer = data.admin();
+        AcademicRequest request = data.evaluation(data.applicant(), RequestStatus.RECEIVED);
+        java.util.Map<String, String> fields = new java.util.LinkedHashMap<>(data.committeeFields());
+        fields.put("committee_3_name", fields.get("committee_1_name"));
+        fields.put("committee_3_name__signer", fields.get("committee_1_name__signer"));
+        try {
+            data.academicDocument(request, 3, new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(fields));
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+
+        signIn(officer.getEmail(), TestDataFactory.PASSWORD);
+        page.navigate("/admin/academic/request/" + request.getId() + "/document/3");
+        page.waitForFunction("() => document.querySelector('input[name=committee_3_name]').classList.contains('is-invalid')", null);
+
+        assertThat(page.locator("input[name=committee_1_name]").getAttribute("class")).doesNotContain("is-invalid");
+        assertThat(page.locator("input[name=committee_3_name]").locator("xpath=..").innerText())
+                .contains("ถูกเลือกในช่องอื่นแล้ว");
+    }
 }

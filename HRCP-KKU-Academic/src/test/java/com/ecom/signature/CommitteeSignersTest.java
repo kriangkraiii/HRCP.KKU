@@ -206,4 +206,118 @@ class CommitteeSignersTest extends AbstractFlowTest {
         assertThat(signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(result.request().getId()))
                 .extracting(s -> s.getSigner().getId()).containsExactly(chair.getId());
     }
+
+    /** เอกสารที่ 3 แบบเก่า: พิมพ์ชื่อเอง ไม่มีรหัสบัญชีคู่กัน */
+    private void doc3Typed(String first, String second, String third) {
+        data.academicDocument(request, 3, "{\"committee_1_name\":\"" + first + "\",\"committee_2_name\":\"" + second
+                + "\",\"committee_3_name\":\"" + third + "\"}");
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 3: กรรมการที่ไม่มีบัญชีในระบบ — ส่งเวียนคำสั่งแต่งตั้งไม่ได้")
+    void doc3WithAnUnknownMemberCannotCirculate() {
+        String json = "{\"committee_1_name\":\"" + printed(chair) + "\",\"committee_1_name__signer\":\""
+                + chair.getId() + "\",\"committee_2_name\":\"ผู้ทรงคุณวุฒิที่ไม่มีบัญชี\",\"committee_3_name\":\""
+                + printed(member3) + "\",\"committee_3_name__signer\":\"" + member3.getId() + "\"}";
+
+        var result = signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 3, "เอกสารที่ 3",
+                json, List.of(), null, officer, ActorContext.none());
+
+        assertThat(result.ok()).isFalse();
+        assertThat(result.error()).contains("กรรมการคนที่ 2").contains("ผู้ทรงคุณวุฒิที่ไม่มีบัญชี")
+                .contains("ค้นหาแล้วเลือก");
+    }
+
+    @Test
+    @DisplayName("คำร้องเก่า: ชื่อที่พิมพ์ไว้ตรงกับบัญชีเดียว — เอกสารที่ 7 ยังส่งเวียนได้ ผู้ลงนามคือบัญชีนั้น")
+    void aTypedNameThatMatchesOneAccountStillWorks() throws Exception {
+        doc3Typed(printed(chair), printed(member2), printed(member3));
+        saveDraft(7, "{\"sec_score_1\":\"4\"}");
+
+        var result = signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 7, "เอกสารที่ 7",
+                json(academicService.getLatestDocumentData(request.getId(), 7)), List.of(), null, officer,
+                ActorContext.none());
+
+        assertThat(result.ok()).as(result.error()).isTrue();
+        assertThat(signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(result.request().getId()))
+                .extracting(s -> s.getSigner().getId())
+                .containsExactly(chair.getId(), member2.getId(), member3.getId());
+    }
+
+    @Test
+    @DisplayName("คำร้องเก่า: ชื่อที่ไม่มีบัญชี — หน้าเอกสารที่ 7 เตือนตั้งแต่เปิด และการส่งเวียนบอกให้แก้ที่เอกสารที่ 3")
+    void aTypedNameWithoutAnAccountPointsBackToDoc3() throws Exception {
+        doc3Typed(printed(chair), "รศ.ดร. ไม่มีบัญชี", printed(member3));
+
+        String html = mvc.perform(get("/admin/academic/request/" + request.getId() + "/document/7").with(asOfficer()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var warning = Jsoup.parse(html).selectFirst("[data-carried-signer-problems]");
+        assertThat(warning).isNotNull();
+        assertThat(warning.text()).contains("กรรมการคนที่ 2").contains("ไม่มีบัญชี");
+        assertThat(warning.selectFirst("a[href$='/document/3']")).isNotNull();
+
+        saveDraft(7, "{\"sec_score_1\":\"4\"}");
+        var result = signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC, request.getId(), 7, "เอกสารที่ 7",
+                json(academicService.getLatestDocumentData(request.getId(), 7)), List.of(), null, officer,
+                ActorContext.none());
+        assertThat(result.ok()).isFalse();
+        assertThat(result.error()).contains("ไม่มีบัญชี").contains("แก้รายชื่อที่เอกสารที่ 3");
+    }
+
+    @Test
+    @DisplayName("กรรมการผูกบัญชีครบ — หน้าเอกสารที่ 7 ไม่มีคำเตือน")
+    void noWarningWhenEveryMemberHasAnAccount() throws Exception {
+        doc3Picks(chair, member2, member3);
+
+        String html = mvc.perform(get("/admin/academic/request/" + request.getId() + "/document/7").with(asOfficer()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(Jsoup.parse(html).selectFirst("[data-carried-signer-problems]")).isNull();
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 3: กดบันทึกโดยเลือกบัญชีเดียวกันเป็นกรรมการสองคน — ไม่บันทึก และบอกว่าคนไหนซ้ำ")
+    void doc3SaveRefusesTheSamePersonTwice() throws Exception {
+        String flash = mvc.perform(post("/admin/academic/request/" + request.getId() + "/document/3")
+                .with(asOfficer()).with(csrf())
+                .param("action", "draft")
+                .param("committee_1_name", printed(chair)).param("committee_1_name__signer", String.valueOf(chair.getId()))
+                .param("committee_2_name", printed(member2)).param("committee_2_name__signer", String.valueOf(member2.getId()))
+                .param("committee_3_name", printed(chair)).param("committee_3_name__signer", String.valueOf(chair.getId())))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .redirectedUrl("/admin/academic/request/" + request.getId() + "/document/3?error=committee_duplicate"))
+                .andReturn().getFlashMap().get("errorMsg").toString();
+
+        assertThat(flash).contains("กรรมการคนที่ 3").contains("กรรมการคนที่ 1");
+        assertThat(academicService.getDocumentsByType(request.getId(), 3)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 3: บันทึกร่างอัตโนมัติที่เลือกคนซ้ำ — ตอบ 422 พร้อมเหตุผล ไม่บันทึก")
+    void doc3AutoDraftRefusesTheSamePersonTwice() throws Exception {
+        String body = mvc.perform(post("/api/draft/academic/" + request.getId() + "/3")
+                .with(asOfficer()).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"committee_1_name\":\"" + printed(member2) + "\",\"committee_1_name__signer\":\""
+                        + member2.getId() + "\",\"committee_2_name\":\"" + printed(member2)
+                        + "\",\"committee_2_name__signer\":\"" + member2.getId() + "\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+
+        assertThat(body).contains("กรรมการคนที่ 2").contains("คนละคน");
+        assertThat(academicService.getDocumentsByType(request.getId(), 3)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ตรวจซ้ำทั้งรหัสบัญชีและชื่อ — ช่องเก่าที่พิมพ์ชื่อเองซ้ำกับช่องที่เลือกจากรายชื่อก็นับว่าซ้ำ")
+    void duplicatesAreCaughtByIdOrByName() {
+        String chairName = printed(chair);
+        assertThat(com.ecom.academic.service.NamedAccountResolver.duplicateCommitteeSeat(java.util.Map.of(
+                "committee_1_name", chairName, "committee_1_name__signer", String.valueOf(chair.getId()),
+                "committee_2_name", chairName))).contains("กรรมการคนที่ 2");
+        assertThat(com.ecom.academic.service.NamedAccountResolver.duplicateCommitteeSeat(java.util.Map.of(
+                "committee_1_name", chairName, "committee_1_name__signer", String.valueOf(chair.getId()),
+                "committee_2_name", printed(member2), "committee_2_name__signer", String.valueOf(member2.getId()),
+                "committee_3_name", ""))).isNull();
+    }
 }

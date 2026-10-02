@@ -59,9 +59,6 @@ class StatusAcrossSigningLifecycleTest extends AbstractFlowTest {
     @Autowired
     private SignedDocumentStatusAdvancer statusAdvancer;
 
-    /** เอกสารที่ 4 ต้องมีชื่ออนุกรรมการครบสามคนถึงจะเลื่อนขั้นได้ */
-    private static final String APPOINTMENT_ORDER = """
-            {"committee_1_name":"ก","committee_2_name":"ข","committee_3_name":"ค"}""";
 
     private UserDtls applicant;
     private UserDtls officer;
@@ -175,20 +172,24 @@ class StatusAcrossSigningLifecycleTest extends AbstractFlowTest {
         @DisplayName("ตัดสินจากฉบับที่ลงนาม: ไม่มีชื่ออนุกรรมการครบสาม สถานะก็ไม่เดิน")
         void theSignedContentDecides() {
             AcademicRequest complete = data.evaluation(applicant, RequestStatus.RECEIVED);
-            data.academicDocument(complete, 4, APPOINTMENT_ORDER);
+            data.academicDocument(complete, 4, data.appointmentOrder());
             signEveryStep(circulate(SignatureModule.ACADEMIC, complete.getId(), 4,
-                    APPOINTMENT_ORDER, officer,
+                    data.appointmentOrder(), officer,
                     List.of(new SignerAssignment("dean", dean.getId()))), officer);
 
             AcademicRequest halfDone = data.evaluation(data.otherApplicant(), RequestStatus.RECEIVED);
             data.academicDocument(halfDone, 4, "{\"committee_1_name\":\"ก\"}");
-            signEveryStep(circulate(SignatureModule.ACADEMIC, halfDone.getId(), 4,
-                    "{\"committee_1_name\":\"ก\"}", officer,
-                    List.of(new SignerAssignment("dean", dean.getId()))), officer);
+            // คำสั่งที่ไม่ได้ตั้งกรรมการครบสามคน (คนละบัญชี) ส่งให้คณบดีลงนามไม่ได้ตั้งแต่แรก
+            var refused = signatureWorkflow.createEnvelope(SignatureModule.ACADEMIC, halfDone.getId(), 4,
+                    "เอกสารที่ 4", "{\"committee_1_name\":\"ก\"}",
+                    List.of(new SignerAssignment("dean", dean.getId())), null, officer,
+                    com.ecom.academic.service.SignatureWorkflowService.ActorContext.none());
 
             assertThat(statusOf(complete.getId())).isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
+            assertThat(refused.ok()).isFalse();
+            assertThat(refused.error()).contains("รายชื่อกรรมการ").contains("กรรมการคนที่ 2");
             assertThat(statusOf(halfDone.getId()))
-                    .as("คำสั่งแต่งตั้งที่ไม่ได้ตั้งใคร ลงนามแล้วก็ยังไม่ได้แต่งตั้ง")
+                    .as("คำสั่งแต่งตั้งที่ไม่ได้ตั้งใคร ยังไม่ได้แต่งตั้ง")
                     .isEqualTo(RequestStatus.RECEIVED);
         }
 

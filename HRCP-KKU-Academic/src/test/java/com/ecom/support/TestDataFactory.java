@@ -202,6 +202,38 @@ public class TestDataFactory {
         return userRepository.save(u);
     }
 
+    /**
+     * คณะอนุกรรมการสามคนที่มีบัญชีในระบบ — ทั้งสามคนลงนามเอกสารที่ 7 คำสั่งแต่งตั้ง (เอกสารที่ 3/4)
+     * จึงต้องระบุคนที่ผูกกับบัญชีได้ครบสามคน คนละบัญชี
+     */
+    public UserDtls[] committee() {
+        return new UserDtls[] {
+                user("committee1@" + DOMAIN, "กรรมการ", "หนึ่ง", "ROLE_USER"),
+                user("committee2@" + DOMAIN, "กรรมการ", "สอง", "ROLE_USER"),
+                user("committee3@" + DOMAIN, "กรรมการ", "สาม", "ROLE_USER") };
+    }
+
+    /** ชื่อกรรมการสามคน (ตาม {@link #committee()}) พร้อมรหัสบัญชี แบบที่ตัวค้นหาชื่อบันทึก */
+    public java.util.Map<String, String> committeeFields() {
+        java.util.Map<String, String> fields = new java.util.LinkedHashMap<>();
+        UserDtls[] members = committee();
+        for (int i = 1; i <= members.length; i++) {
+            fields.put("committee_" + i + "_name",
+                    com.ecom.academic.service.SignerNameResolver.printedName(members[i - 1]));
+            fields.put("committee_" + i + "_name__signer", String.valueOf(members[i - 1].getId()));
+        }
+        return fields;
+    }
+
+    /** คำสั่งแต่งตั้งที่ระบุกรรมการครบสามคน (JSON ของเอกสารที่ 3/4) */
+    public String appointmentOrder() {
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(committeeFields());
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
     /** Persists a change a test made to an evaluation it already holds. */
     public AcademicRequest saveEvaluation(AcademicRequest request) {
         return academicRequests.save(request);

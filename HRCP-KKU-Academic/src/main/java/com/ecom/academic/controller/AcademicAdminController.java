@@ -629,6 +629,10 @@ public class AcademicAdminController {
 
         // ช่องที่ดึงจากเอกสารก่อนหน้า (เอกสารที่ 4, 5, 7) — แสดงแบบอ่านอย่างเดียว
         model.addAttribute("carried", requestService.carriedFields(request, type));
+        model.addAttribute("carriedSignerProblems", requestService.carriedSignerProblems(request, type));
+        // คำสั่งในเอกสารที่ 3 ลงนามแล้วแก้ไม่ได้ — คำร้องเก่าที่พิมพ์ชื่อกรรมการเองต้องทำให้ชื่อนั้นมีบัญชีแทน
+        model.addAttribute("committeeOrderSigned",
+                signatureWorkflow.isSigningComplete(SignatureModule.ACADEMIC, id, 3));
         // แนบรายการไฟล์เอกสารแนบของผู้ยื่น
         List<com.ecom.academic.model.AcademicAttachment> attachments = requestService.getAttachments(id);
         model.addAttribute("attachments", attachments);
@@ -803,6 +807,15 @@ public class AcademicAdminController {
 
         // ช่องที่ดึงจากเอกสารก่อนหน้าแก้ในฉบับนี้ไม่ได้ — ใช้ค่าจากเอกสารต้นทางเสมอ
         formData = requestService.withCarriedFields(request, type, formData);
+
+        // เอกสารที่ 3: กรรมการสามคนต้องเป็นคนละคน — หน้าเว็บกันไว้แล้ว แต่ POST ตรงต้องไม่ผ่านเช่นกัน
+        if (type == 3) {
+            String duplicate = com.ecom.academic.service.NamedAccountResolver.duplicateCommitteeSeat(formData);
+            if (duplicate != null) {
+                redirectAttributes.addFlashAttribute("errorMsg", duplicate);
+                return "redirect:/admin/academic/request/" + id + "/document/" + type + "?error=committee_duplicate";
+            }
+        }
 
         // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
         if ("draft".equals(action)) {

@@ -179,6 +179,9 @@ public abstract class AbstractFlowTest {
     @Autowired
     private com.ecom.academic.service.PositionRequestService flowPositionService;
 
+    @Autowired
+    private com.ecom.repository.UserRepository flowUsers;
+
     /**
      * เจ้าหน้าที่ตรวจเอกสารของผู้ยื่นแล้ว กรอกช่องของตัวเองครบ — ต้องทำก่อนส่งเวียนต่อ
      * (SignatureWorkflowService ปฏิเสธการส่งต่อเมื่อช่องของเจ้าหน้าที่ยังว่าง)
@@ -240,10 +243,11 @@ public abstract class AbstractFlowTest {
 
         for (com.ecom.academic.model.SignatureStep step
                 : signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId())) {
-            com.ecom.model.UserDtls signer = step.getSigner();
-            org.assertj.core.api.Assertions.assertThat(signer)
+            org.assertj.core.api.Assertions.assertThat(step.getSigner())
                     .as("ช่องลงนาม %s ไม่มีผู้ลงนาม", step.getSlotKey())
                     .isNotNull();
+            // step.getSigner() เป็น proxy ที่หลุดจาก session แล้ว — ผู้ลงนามจริงมาจากบัญชีที่โหลดใหม่ เหมือนผู้ใช้ที่ล็อกอิน
+            com.ecom.model.UserDtls signer = flowUsers.findById(step.getSigner().getId()).orElseThrow();
             var signature = data.signatureFor(signer);
             // ช่องที่ถามผลการพิจารณาบังคับตอบ — ตอบตัวเลือกแรกซึ่งเป็นด้านบวกเสมอ
             var question = signatureWorkflow.signerChoiceFor(step.getId());

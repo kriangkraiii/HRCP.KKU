@@ -79,6 +79,8 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
 
     private UserDtls professor;
     private UserDtls officer;
+    /** คณะอนุกรรมการสามคน — มีบัญชีในระบบ เพราะทั้งสามคนลงนามแบบประเมินผลการสอน (เอกสารที่ 7) */
+    private UserDtls[] committee;
     private UserSignature professorSignature;
     private String professorCertPin;
 
@@ -87,6 +89,10 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
     void aProfessorWalksTheWholeProcess() throws Exception {
         professor = data.applicant();
         officer = data.admin();
+        committee = new UserDtls[] {
+                data.user("committee1@" + com.ecom.support.TestDataFactory.DOMAIN, "กรรมการ", "หนึ่ง", "ROLE_USER"),
+                data.user("committee2@" + com.ecom.support.TestDataFactory.DOMAIN, "กรรมการ", "สอง", "ROLE_USER"),
+                data.user("committee3@" + com.ecom.support.TestDataFactory.DOMAIN, "กรรมการ", "สาม", "ROLE_USER") };
         professorSignature = data.signatureFor(professor);
         // ภาพลายเซ็นอย่างเดียวไม่พออีกต่อไป — ระบบบังคับให้ต้องมีใบรับรอง
         // Digital ID (.p12) ติดตั้งไว้ก่อนจึงจะลงนามได้
@@ -489,9 +495,11 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         // ข้อ 3 — อนุกรรมการประเมินการสอน จำนวน 3 คน
         // ชื่อฟิลด์ตรงกับ doc_fragments/3.html ซึ่งสร้างด้วย th:name
         // และตรงกับ placeholder {{committee_N_name}} ในเทมเพลต docx
-        fields.put("committee_1_name", "รศ.ดร. กรรมการ หนึ่ง");
-        fields.put("committee_2_name", "รศ.ดร. กรรมการ สอง");
-        fields.put("committee_3_name", "ผศ.ดร. กรรมการ สาม");
+        // ชื่อตามบัญชีในระบบ — กรรมการทั้งสามคนเป็นผู้ลงนามเอกสารที่ 7 (จับคู่บัญชีจากชื่อ)
+        for (int i = 1; i <= 3; i++) {
+            fields.put("committee_" + i + "_name",
+                    com.ecom.academic.service.SignerNameResolver.printedName(committee[i - 1]));
+        }
         return officerFields(fields);
     }
 

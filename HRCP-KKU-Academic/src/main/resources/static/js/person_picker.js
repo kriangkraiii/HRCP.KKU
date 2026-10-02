@@ -18,6 +18,7 @@
 
     var SUFFIX = '__signer';
     var DEFAULT_HINT = 'เลือกจากรายชื่อในระบบ — ผู้ที่เลือกคือผู้ลงนามตำแหน่งนี้';
+    var DUPLICATE_HINT = 'คนนี้ถูกเลือกในช่องอื่นแล้ว — แต่ละช่องต้องเป็นคนละคน กรุณาเลือกใหม่ ';
 
     function csrfToken() {
         var el = document.querySelector('input[name="_csrf"]') || document.querySelector('meta[name="_csrf"]');
@@ -126,6 +127,8 @@
         if (this.input.disabled || this.input.readOnly) return; // เอกสารล็อก — ไม่เตือนสิ่งที่แก้ไม่ได้
         // ชื่อที่บันทึกไว้ก่อนมีตัวค้นหา (ไม่มีรหัสบัญชีคู่กัน) — ให้เลือกใหม่จากรายชื่อ
         this.mark(!this.input.value || !!this.hidden.value);
+        // ร่างเก่าที่เลือกคนเดียวกันไว้สองช่อง — ช่องหลังต้องเลือกใหม่
+        if (this.isDuplicate(this.hidden.value)) this.mark(false, DUPLICATE_HINT);
     };
 
     Picker.prototype.restore = function () {
@@ -140,11 +143,11 @@
         this.mark(!this.input.value || !!this.hidden.value);
     };
 
-    Picker.prototype.mark = function (ok) {
+    Picker.prototype.mark = function (ok, message) {
         this.input.classList.toggle('is-invalid', !ok);
         this.hint.classList.toggle('text-danger', !ok);
         if (!ok) {
-            this.hint.firstChild.textContent = 'ชื่อนี้ยังไม่ได้เลือกจากรายชื่อในระบบ — กรุณาค้นหาแล้วเลือกใหม่ ';
+            this.hint.firstChild.textContent = message || 'ชื่อนี้ยังไม่ได้เลือกจากรายชื่อในระบบ — กรุณาค้นหาแล้วเลือกใหม่ ';
         } else {
             this.hint.firstChild.textContent = this.hintText + ' ';
         }
@@ -174,6 +177,22 @@
             if (hidden && hidden.value) taken.push(hidden.value);
         });
         return taken;
+    };
+
+    /** ช่องที่อยู่ก่อนหน้าในกลุ่มเลือกคนนี้ไว้แล้ว (ช่องแรกที่เลือกถือว่าถูก ช่องหลังต้องเปลี่ยน) */
+    Picker.prototype.isDuplicate = function (userId) {
+        if (!this.group || !userId) return false;
+        var self = this;
+        var scope = this.form || document;
+        var before = true;
+        var dup = false;
+        scope.querySelectorAll('[data-person-picker][data-distinct-group="' + this.group + '"]').forEach(function (other) {
+            if (other === self.input) { before = false; return; }
+            if (!before) return;
+            var hidden = scope.querySelector('input[name="' + other.name + SUFFIX + '"]');
+            if (hidden && hidden.value === String(userId)) dup = true;
+        });
+        return dup;
     };
 
     Picker.prototype.render = function (people, q) {
@@ -223,6 +242,12 @@
     };
 
     Picker.prototype.choose = function (person) {
+        // ช่องอื่นในกลุ่มเลือกคนนี้ไปแล้ว (เช่น เพิ่มคนนอก มข. ด้วยอีเมลที่มีบัญชีอยู่แล้ว) — ไม่รับ
+        if (person && this.takenByOthers().indexOf(String(person.userId)) >= 0) {
+            this.close();
+            this.mark(false, DUPLICATE_HINT);
+            return false;
+        }
         this.input.value = person ? person.name : '';
         this.hidden.value = person ? String(person.userId) : '';
         this.selectedName = this.input.value;
@@ -238,6 +263,7 @@
         // บันทึกร่างอัตโนมัติฟัง input/change ของฟอร์ม — ช่องซ่อนถูกเก็บไปด้วยในรอบเดียวกัน
         this.input.dispatchEvent(new Event('input', { bubbles: true }));
         this.input.dispatchEvent(new Event('change', { bubbles: true }));
+        return true;
     };
 
     /** เพิ่มผู้ลงนามจากนอก มข. — สร้างบัญชีภายนอก + อีเมลเชิญ แล้วเลือกคนนั้นทันที */
@@ -253,8 +279,7 @@
                 return r.json().then(function (body) { return { ok: r.ok, body: body }; });
             }).then(function (res) {
                 if (res.ok) {
-                    self.choose(res.body);
-                    done(null);
+                    done(self.choose(res.body) ? null : 'คนนี้ถูกเลือกในช่องอื่นแล้ว — แต่ละช่องต้องเป็นคนละคน');
                 } else {
                     done((res.body && res.body.error) || 'เพิ่มผู้ลงนามไม่สำเร็จ');
                 }

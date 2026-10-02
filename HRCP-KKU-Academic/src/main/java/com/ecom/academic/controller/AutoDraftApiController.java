@@ -130,6 +130,16 @@ public class AutoDraftApiController {
             }
             jsonData = filtered;
 
+            // เอกสารที่ 3: กรรมการสามคนต้องเป็นคนละคน — ไม่บันทึกร่างที่เลือกคนซ้ำ (ปุ่มส่งเวียนก็บันทึกผ่านทางนี้)
+            if (isAdmin && docType == 3) {
+                Map<String, String> fields = parseFields(jsonData);
+                String duplicate = fields == null ? null
+                        : com.ecom.academic.service.NamedAccountResolver.duplicateCommitteeSeat(fields);
+                if (duplicate != null) {
+                    return ResponseEntity.unprocessableEntity().body(Map.of("error", duplicate));
+                }
+            }
+
             // ช่องที่ดึงจากเอกสารก่อนหน้าแก้ในฉบับนี้ไม่ได้ — ปุ่มส่งเวียนลงนามบันทึกผ่านทางนี้
             // จึงต้องใช้ค่าจากเอกสารต้นทางที่นี่ด้วย ไม่ใช่แค่ล็อกช่องบนหน้าเว็บ
             if (isAdmin && !academicService.carriedFields(request, docType).isEmpty()) {

@@ -84,6 +84,10 @@ public class AcademicRequestService {
 
     private final com.ecom.service.UploadPaths uploadPaths;
 
+    /** ไม่มีในเทสที่สร้าง service เอง — ตอนนั้นตรวจแค่ว่ามีชื่อครบ */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private NamedAccountResolver accounts;
+
     public AcademicRequestService(
             AcademicRequestRepository requestRepository,
             AcademicDocumentRepository documentRepository,
@@ -736,6 +740,10 @@ public class AcademicRequestService {
      * blank line in it (GAP-35).
      *
      * <p>The document is still saved either way; only the status waits.
+     *
+     * <p>All three sign the evaluation (doc 7), so each name must also belong to
+     * an account — by the id the person picker stored, or a unique name match
+     * for orders saved before the picker — and no account may hold two seats.
      */
     boolean namesThreeSubCommitteeMembers(String jsonData) {
         if (jsonData == null || jsonData.isBlank()) {
@@ -746,6 +754,15 @@ public class AcademicRequestService {
                     .readValue(jsonData,
                             new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
                             });
+            if (accounts != null) {
+                // กรรมการทั้งสามคนลงนามเอกสารที่ 7 — ต้องผูกกับบัญชีในระบบได้ และเป็นคนละบัญชีกัน
+                List<String> problems = accounts.committeeProblems(data);
+                if (!problems.isEmpty()) {
+                    log.info("เอกสารที่ 4 ยังแต่งตั้งไม่ได้: {} — สถานะยังไม่เปลี่ยน", problems);
+                    return false;
+                }
+                return true;
+            }
             for (int i = 1; i <= 3; i++) {
                 Object name = data.get("committee_" + i + "_name");
                 if (name == null || name.toString().isBlank()) {
@@ -759,6 +776,7 @@ public class AcademicRequestService {
             return false;
         }
     }
+
 
     /**
      * เหตุผลที่คำร้องถูกส่งคืนให้ผู้ยื่นแก้ไข (Flow ข้อ 2) หรือ null ถ้าคำร้องไม่ได้อยู่ในสภาพถูกส่งคืน
@@ -1665,6 +1683,28 @@ public class AcademicRequestService {
             result.put(field, value);
         });
         return result;
+    }
+
+    /**
+     * กรรมการที่ดึงมาลงเอกสารที่ 7 / 8 แต่ผูกกับบัญชีไม่ได้ (คำร้องเก่าที่พิมพ์ชื่อเองก่อนมีตัวค้นหาชื่อ)
+     * — ช่องถูกล็อก จึงต้องบอกตั้งแต่เปิดหน้า ว่าส่งเวียนไม่ได้จนกว่าจะแก้รายชื่อที่เอกสารที่ 3
+     */
+    public List<String> carriedSignerProblems(AcademicRequest request, int documentType) {
+        if (accounts == null || (documentType != 7 && documentType != 8)) {
+            return List.of();
+        }
+        Map<String, String> carried = carriedFields(request, documentType);
+        if (documentType == 7) {
+            return NamedAccountResolver.COMMITTEE_FIELDS.stream().anyMatch(carried::containsKey)
+                    ? accounts.committeeProblems(carried) : List.of();
+        }
+        String chair = carried.get("committee_president_name");
+        if (chair == null) {
+            return List.of();
+        }
+        NamedAccountResolver.Resolution r = accounts.resolve(carried, "committee_president_name");
+        return r.problem() == null ? List.of()
+                : List.of("ประธาน “" + chair + "”: " + NamedAccountResolver.describe(r.problem()));
     }
 
     /** ข้อมูลผู้ยื่นจากเอกสารที่ 1 และรายชื่อกรรมการจากเอกสารที่ 3 */

@@ -36,7 +36,6 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
     private AcademicRequestService service;
 
     /** ข้อ 3 — คำสั่งแต่งตั้งต้องระบุอนุกรรมการครบ 3 คน จึงจะถือว่าแต่งตั้งแล้ว */
-    private static final String APPOINTMENT_ORDER = "{\"committee_1_name\":\"รศ.ดร. หนึ่ง\",\"committee_2_name\":\"รศ.ดร. สอง\",\"committee_3_name\":\"ผศ.ดร. สาม\"}";
 
     private RequestStatus statusOf(AcademicRequest request) {
         return service.findById(request.getId()).orElseThrow().getCurrentStatus();
@@ -60,7 +59,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
             // ข้อ 4 — คำสั่งแต่งตั้งคณะอนุกรรมการ (เอกสารที่ 4)
-            service.autoUpdateStatusByDocument(request.getId(), 4, staff, APPOINTMENT_ORDER, false);
+            service.autoUpdateStatusByDocument(request.getId(), 4, staff, data.appointmentOrder(), false);
             assertThat(statusOf(request)).isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
 
             // ข้อ 6 — นัดหมายวันประชุม (เอกสารที่ 5)
@@ -209,9 +208,10 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
                     + "/document/4")
                     .param("order_no", "123/2569")
                     .param("order_date", "5 กันยายน 2569")
-                    .param("committee_1_name", "รศ.ดร. หนึ่ง")
-                    .param("committee_2_name", "รศ.ดร. สอง")
-                    .param("committee_3_name", "ผศ.ดร. สาม")
+                    // กรรมการที่มีบัญชีในระบบ — คำสั่งที่ระบุคนที่ไม่มีบัญชีไม่ทำให้สถานะเดิน
+                    .param("committee_1_name", data.committeeFields().get("committee_1_name"))
+                    .param("committee_2_name", data.committeeFields().get("committee_2_name"))
+                    .param("committee_3_name", data.committeeFields().get("committee_3_name"))
                     .with(csrf())
                     .with(user(officer.getEmail()).roles("ADMIN"))),
                     "/admin/academic/request/" + request.getId());
@@ -239,7 +239,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls officer = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 4, officer, APPOINTMENT_ORDER, false);
+            service.autoUpdateStatusByDocument(request.getId(), 4, officer, data.appointmentOrder(), false);
 
             settle();
             assertThat(mail().to(TestDataFactory.APPLICANT_EMAIL))
@@ -254,7 +254,7 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls officer = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 4, officer, APPOINTMENT_ORDER, true);
+            service.autoUpdateStatusByDocument(request.getId(), 4, officer, data.appointmentOrder(), true);
 
             awaitCondition("อีเมลถึงผู้ยื่น",
                     () -> !mail().to(TestDataFactory.APPLICANT_EMAIL).isEmpty());
@@ -439,12 +439,43 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
             UserDtls applicant = data.applicant();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.RECEIVED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 4, data.admin(),
-                    "{\"committee_1_name\":\"รศ.ดร. หนึ่ง\",\"committee_2_name\":\"รศ.ดร. สอง\","
-                            + "\"committee_3_name\":\"ผศ.ดร. สาม\"}",
-                    false);
+            service.autoUpdateStatusByDocument(request.getId(), 4, data.admin(), data.appointmentOrder(), false);
 
             assertThat(statusOf(request)).isEqualTo(RequestStatus.SUB_COMMITTEE_APPOINTED);
+        }
+
+        @Test
+        @DisplayName("ครบ 3 ชื่อแต่มีคนที่ไม่มีบัญชีในระบบ — ยังไม่นับว่าแต่งตั้ง เพราะกรรมการทั้งสามต้องลงนามเอกสารที่ 7")
+        void aCommitteeMemberWithoutAnAccountDoesNotAdvanceTheStatus() {
+            AcademicRequest request = data.evaluation(data.applicant(), RequestStatus.RECEIVED);
+            java.util.Map<String, String> order = new java.util.LinkedHashMap<>(data.committeeFields());
+            order.put("committee_2_name", "รศ.ดร. คนที่ไม่มีบัญชี");
+            order.remove("committee_2_name__signer");
+
+            service.autoUpdateStatusByDocument(request.getId(), 4, data.admin(), json(order), false);
+
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.RECEIVED);
+        }
+
+        @Test
+        @DisplayName("บัญชีเดียวถูกระบุเป็นกรรมการสองคน — ยังไม่นับว่าแต่งตั้ง")
+        void oneAccountInTwoSeatsDoesNotAdvanceTheStatus() {
+            AcademicRequest request = data.evaluation(data.applicant(), RequestStatus.RECEIVED);
+            java.util.Map<String, String> order = new java.util.LinkedHashMap<>(data.committeeFields());
+            order.put("committee_3_name", order.get("committee_1_name"));
+            order.put("committee_3_name__signer", order.get("committee_1_name__signer"));
+
+            service.autoUpdateStatusByDocument(request.getId(), 4, data.admin(), json(order), false);
+
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.RECEIVED);
+        }
+
+        private String json(java.util.Map<String, String> fields) {
+            try {
+                return new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(fields);
+            } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+                throw new IllegalStateException(e);
+            }
         }
 
         @Test

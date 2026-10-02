@@ -77,8 +77,12 @@ class NamedSignerTest extends AbstractFlowTest {
     }
 
     private String doc3(String headName) {
+        // คำสั่งต้องระบุกรรมการที่มีบัญชีครบสามคน ไม่อย่างนั้นส่งเวียนไม่ได้ (ไม่ใช่เรื่องที่เทสนี้ทดสอบ)
+        StringBuilder committee = new StringBuilder();
+        data.committeeFields().forEach((k, v) -> committee.append(",\"").append(k).append("\":\"").append(v).append('"'));
         return "{\"department_head\":\"" + headName + "\",\"associate_dean_name\":\"" + names.get(assocDean)
-                + "\",\"dean_name\":\"" + names.get(dean) + "\",\"hr_staff_name\":\"" + names.get(officer) + "\"}";
+                + "\",\"dean_name\":\"" + names.get(dean) + "\",\"hr_staff_name\":\"" + names.get(officer) + "\""
+                + committee + "}";
     }
 
     private SignatureWorkflowService.Result send(String json, UserDtls chosenHead) {

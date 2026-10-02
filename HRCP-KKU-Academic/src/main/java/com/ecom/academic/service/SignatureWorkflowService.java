@@ -75,6 +75,7 @@ public class SignatureWorkflowService {
     private final UserRepository userRepository;
     private final SignatureNotifier notifier;
     private final StaffMemberService staffMemberService;
+    private final NamedAccountResolver accounts;
     private final SignatureVerificationService verificationService;
     private final SignedDocumentArchiver archiver;
     private final SignedDocumentStatusAdvancer statusAdvancer;
@@ -128,6 +129,7 @@ public class SignatureWorkflowService {
         this.userRepository = userRepository;
         this.notifier = notifier;
         this.staffMemberService = staffMemberService;
+        this.accounts = new NamedAccountResolver(userRepository, staffMemberService);
         this.verificationService = verificationService;
         this.archiver = archiver;
         this.statusAdvancer = statusAdvancer;
@@ -2004,6 +2006,16 @@ public class SignatureWorkflowService {
         } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
             return new NamedSigners(requested, "อ่านข้อมูลในเอกสารไม่ได้ กรุณาบันทึกเอกสารใหม่");
         }
+        if (module == SignatureModule.ACADEMIC && (documentType == 3 || documentType == 4)) {
+            // คำสั่งแต่งตั้งต้องระบุกรรมการที่มีบัญชีในระบบครบสามคน คนละบัญชี — ทั้งสามคนลงนามเอกสารที่ 7
+            // กันไว้ตั้งแต่ก่อนคณบดีลงนามคำสั่ง ไม่ใช่ไปเจอตอนส่งเวียนแบบประเมินหลังประชุมแล้ว
+            List<String> problems = accounts.committeeProblems(data);
+            if (!problems.isEmpty()) {
+                return new NamedSigners(requested, "รายชื่อกรรมการยังใช้ไม่ได้: " + String.join(" · ", problems)
+                        + (documentType == 3 ? " — กรุณาค้นหาแล้วเลือกจากรายชื่อในระบบ"
+                                : " — กรุณาแก้รายชื่อกรรมการที่เอกสารที่ 3"));
+            }
+        }
         java.util.Set<String> nameFields = SignatureAnchorRegistry.signerNameFields(module, documentType);
 
         List<SignerAssignment> result = new ArrayList<>();
@@ -2020,35 +2032,23 @@ public class SignatureWorkflowService {
                 continue;
             }
             bound.add(slot.slotKey());
-            Object chosenId = data.get(DocumentFieldOwnership.signerIdField(slot.anchorPlaceholder()));
-            UserDtls signer;
-            if (chosenId != null && !String.valueOf(chosenId).isBlank()) {
-                // ตัวค้นหาชื่อเก็บรหัสบัญชีของคนที่เลือกไว้คู่กับชื่อ — ใช้รหัส ไม่ต้องเดาจากชื่อ
-                signer = parseId(chosenId).flatMap(userRepository::findById)
-                        .filter(u -> Boolean.TRUE.equals(u.getIsEnable()))
-                        .orElse(null);
-                if (signer == null) {
-                    return new NamedSigners(requested, "บัญชีของ “" + name + "” (" + slot.roleLabel()
-                            + ") ถูกปิดหรือไม่มีในระบบแล้ว — กรุณาเลือกผู้ลงนามใหม่");
-                }
-                if (!normalizeName(SignerNameResolver.printedName(signer)).equals(name)) {
+            // ช่องที่ดึงจากเอกสารก่อนหน้าแก้ในฉบับนี้ไม่ได้ — บอกให้ไปแก้ที่ต้นทาง ไม่ใช่ให้ค้นหาในช่องที่ล็อกอยู่
+            String carriedFrom = SignatureAnchorRegistry.nameCarriedFrom(module, documentType, slot.anchorPlaceholder());
+            String fix = carriedFrom != null ? "กรุณาแก้รายชื่อที่" + carriedFrom
+                    : "กรุณาค้นหาแล้วเลือกจากรายชื่อในช่อง" + slot.roleLabel();
+            NamedAccountResolver.Resolution resolution = accounts.resolve(data, slot.anchorPlaceholder());
+            if (resolution.problem() != null) {
+                String why = switch (resolution.problem()) {
+                    case ACCOUNT_GONE -> "บัญชีของ “" + name + "” (" + slot.roleLabel()
+                            + ") ถูกปิดหรือไม่มีในระบบแล้ว";
                     // ชื่อในเอกสารถูกแก้หลังเลือก — ชื่อที่พิมพ์ลงเอกสารต้องเป็นคนที่ลงนามจริง
-                    return new NamedSigners(requested, "ชื่อ “" + name + "” (" + slot.roleLabel()
-                            + ") ไม่ตรงกับบัญชีที่เลือกไว้ — กรุณาค้นหาแล้วเลือกจากรายชื่อใหม่");
-                }
-            } else {
-                // ข้อมูลที่บันทึกก่อนมีตัวค้นหาชื่อ — จับคู่จากชื่อ
-                List<UserDtls> matches = usersNamed(name);
-                if (matches.isEmpty()) {
-                    return new NamedSigners(requested, "ไม่พบบัญชีผู้ใช้ของ “" + name + "” (" + slot.roleLabel()
-                            + ") ในระบบ — กรุณาค้นหาแล้วเลือกจากรายชื่อในช่อง" + slot.roleLabel());
-                }
-                if (matches.size() > 1) {
-                    return new NamedSigners(requested, "มีบัญชีชื่อ “" + name + "” มากกว่าหนึ่งคน ("
-                            + slot.roleLabel() + ") — กรุณาค้นหาแล้วเลือกจากรายชื่อในช่อง" + slot.roleLabel());
-                }
-                signer = matches.get(0);
+                    case NAME_CHANGED -> "ชื่อ “" + name + "” (" + slot.roleLabel() + ") ไม่ตรงกับบัญชีที่เลือกไว้";
+                    case NOT_FOUND -> "ไม่พบบัญชีผู้ใช้ของ “" + name + "” (" + slot.roleLabel() + ") ในระบบ";
+                    case AMBIGUOUS -> "มีบัญชีชื่อ “" + name + "” มากกว่าหนึ่งคน (" + slot.roleLabel() + ")";
+                };
+                return new NamedSigners(requested, why + " — " + fix);
             }
+            UserDtls signer = resolution.account();
             if ("COMMITTEE".equals(slot.defaultStaffRole())) {
                 // กรรมการแต่ละคนคือคนละคน — บัญชีเดียวลงนามสองตำแหน่งในแบบประเมินไม่ได้
                 Integer signerId = signer.getId();
@@ -2070,31 +2070,6 @@ public class SignatureWorkflowService {
         return new NamedSigners(result, null);
     }
 
-    private static java.util.Optional<Integer> parseId(Object raw) {
-        try {
-            return java.util.Optional.of(Integer.valueOf(String.valueOf(raw).strip()));
-        } catch (NumberFormatException e) {
-            return java.util.Optional.empty();
-        }
-    }
-
-    /** บัญชีที่เปิดใช้งานซึ่งชื่อที่พิมพ์ลงเอกสาร (หรือชื่อในทะเบียนบุคลากร) ตรงกับชื่อนี้ */
-    private List<UserDtls> usersNamed(String name) {
-        java.util.Map<Integer, UserDtls> found = new java.util.LinkedHashMap<>();
-        for (UserDtls u : userRepository.findAll()) {
-            if (Boolean.TRUE.equals(u.getIsEnable()) && normalizeName(SignerNameResolver.printedName(u)).equals(name)) {
-                found.put(u.getId(), u);
-            }
-        }
-        for (com.ecom.academic.model.StaffMember s : staffMemberService.findAllWithAccounts()) {
-            if (s.isSignable() && Boolean.TRUE.equals(s.getUser().getIsEnable())
-                    && normalizeName(s.getDisplayName()).equals(name)) {
-                found.putIfAbsent(s.getUser().getId(), s.getUser());
-            }
-        }
-        return new ArrayList<>(found.values());
-    }
-
     /**
      * ตำแหน่งที่กรอกให้คนนี้ในเอกสาร เก็บเป็นตำแหน่งของบัญชีเมื่อยังว่าง — ครั้งต่อไปตัวค้นหาชื่อเติมให้เอง
      * ไม่ทับค่าที่มีอยู่แล้ว (บางฉบับเขียนต่างจากปกติ เช่น "รักษาการแทน...")
@@ -2109,7 +2084,7 @@ public class SignatureWorkflowService {
 
     /** ชื่อสำหรับเทียบ: ตัดช่องว่างหัวท้าย และยุบช่องว่างซ้อนเป็นช่องเดียว */
     static String normalizeName(Object value) {
-        return value == null ? "" : String.valueOf(value).strip().replaceAll("\\s+", " ");
+        return NamedAccountResolver.normalize(value);
     }
 
     /**
