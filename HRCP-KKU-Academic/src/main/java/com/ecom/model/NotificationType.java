@@ -11,6 +11,7 @@ public enum NotificationType {
     SIGNATURE_COMPLETED("ลงนามครบทุกคนแล้ว", "fas fa-circle-check text-success"),
     SIGNATURE_DECLINED("ปฏิเสธการลงนาม", "fas fa-circle-xmark text-danger"),
     REVISION_SUBMITTED("ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว", "fas fa-paper-plane text-success"),
+    COMMITTEE_INVITATION("หนังสือเชิญเป็นกรรมการ", "fas fa-envelope-open-text text-primary"),
     SYSTEM("การแจ้งเตือนจากระบบ", "fas fa-bell text-secondary");
 
     private final String thaiLabel;

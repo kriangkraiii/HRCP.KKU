@@ -95,6 +95,9 @@ public class AcademicAdminController {
     @org.springframework.beans.factory.annotation.Autowired
     private com.ecom.academic.service.pdf.OfficeIssueService officeIssue;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.ecom.academic.service.CommitteeDocumentMailer committeeMailer;
+
     /** สถานะจริงของเอกสาร — ทุกหน้าใช้กติกาเดียวกัน */
     private final com.ecom.academic.service.DocumentProgress documentProgress;
 
@@ -1122,6 +1125,28 @@ public class AcademicAdminController {
                     return letters;
                 })
                 .orElse(List.of());
+    }
+
+    /**
+     * ส่งหนังสือเชิญถึงกรรมการทางอีเมลอีกครั้ง — ระบบส่งเองเมื่อเอกสารที่ 5 ลงนามครบ ปุ่มนี้มีไว้สำหรับ
+     * ตอนที่ส่งไม่สำเร็จ (ผูกบัญชีกรรมการไม่ได้ เซิร์ฟเวอร์อีเมลล่ม) หรือกรรมการขอให้ส่งใหม่
+     */
+    @PostMapping("/request/{id}/document/5/email-committee")
+    public String emailCommittee(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
+        var envelope = signatureWorkflow.findEnvelope(SignatureModule.ACADEMIC, id,
+                AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE).orElse(null);
+        if (envelope == null) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ยังไม่มีหนังสือเชิญเป็นกรรมการ (เอกสารที่ 5)");
+            return "redirect:/admin/academic/request/" + id;
+        }
+        UserDtls admin = getUser(principal);
+        com.ecom.academic.service.CommitteeDocumentMailer.Outcome outcome = committeeMailer.send(envelope.getId(), admin);
+        redirectAttributes.addFlashAttribute(outcome.sent() ? "succMsg" : "errorMsg", outcome.message());
+        if (outcome.sent()) {
+            adminLogService.log(principal.getName(), admin != null ? admin.getName() : principal.getName(),
+                    "EMAIL_COMMITTEE", outcome.message() + " (คำร้อง #" + id + ")", getClientIpAddress());
+        }
+        return "redirect:/admin/academic/request/" + id;
     }
 
     @GetMapping("/request/{id}/document/5/letter/{number}")

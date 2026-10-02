@@ -56,7 +56,7 @@ public class RecordingMailSender extends JavaMailSenderImpl {
     private final List<Sent> sent = new CopyOnWriteArrayList<>();
 
     /** One captured message, flattened into the parts assertions care about. */
-    public record Sent(List<String> to, String subject, String body) {
+    public record Sent(List<String> to, String subject, String body, List<String> attachments) {
 
         public boolean wentTo(String address) {
             return to.stream().anyMatch(a -> a.equalsIgnoreCase(address));
@@ -83,6 +83,7 @@ public class RecordingMailSender extends JavaMailSenderImpl {
         List<String> recipients = new ArrayList<>();
         String subject = null;
         String body = null;
+        List<String> attachments = new ArrayList<>();
         try {
             for (Message.RecipientType type : List.of(Message.RecipientType.TO,
                     Message.RecipientType.CC, Message.RecipientType.BCC)) {
@@ -96,11 +97,27 @@ public class RecordingMailSender extends JavaMailSenderImpl {
             }
             subject = message.getSubject();
             body = extractBody(message);
+            collectAttachmentNames(message.getContent(), attachments);
         } catch (Exception e) {
             throw new AssertionError("Could not read the captured message", e);
         }
         recipients.forEach(RecordingMailSender::rejectRealAddress);
-        return new Sent(List.copyOf(recipients), subject, body);
+        return new Sent(List.copyOf(recipients), subject, body, List.copyOf(attachments));
+    }
+
+    /** ชื่อไฟล์ที่แนบมากับอีเมล (ไม่รวมโลโก้ที่ฝังในเนื้อความ) */
+    private static void collectAttachmentNames(Object content, List<String> names) throws Exception {
+        if (!(content instanceof jakarta.mail.Multipart multipart)) {
+            return;
+        }
+        for (int i = 0; i < multipart.getCount(); i++) {
+            jakarta.mail.BodyPart part = multipart.getBodyPart(i);
+            if (jakarta.mail.Part.ATTACHMENT.equalsIgnoreCase(part.getDisposition())) {
+                names.add(jakarta.mail.internet.MimeUtility.decodeText(part.getFileName()));
+            } else {
+                collectAttachmentNames(part.getContent(), names);
+            }
+        }
     }
 
     /**

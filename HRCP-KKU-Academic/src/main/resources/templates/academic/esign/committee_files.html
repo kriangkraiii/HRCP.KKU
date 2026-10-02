@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+<section>
+    <div class="container py-4">
+
+        <div class="mb-3">
+            <a href="/esign/inbox" class="btn-back-pill">
+                <i class="fas fa-arrow-left"></i> กลับ
+            </a>
+        </div>
+
+        <div class="mb-3">
+            <h3 class="mb-1">
+                <i class="fas fa-folder-open text-primary me-2"></i> เอกสารประกอบการประเมินผลการสอน
+            </h3>
+            <p class="text-secondary mb-0">สำหรับกรรมการผู้ทรงคุณวุฒิ ตามหนังสือเชิญที่ส่งถึงท่านทางอีเมล</p>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-lg-4">
+                <div th:if="${requestSummary != null}" class="card card-academic">
+                    <div class="card-header bg-white">
+                        <i class="fas fa-file-lines"></i> ข้อมูลคำร้อง
+                    </div>
+                    <div class="card-body py-2">
+                        <dl class="row small mb-0">
+                            <dt class="col-5 text-secondary fw-normal">เลขที่คำร้อง</dt>
+                            <dd class="col-7 fw-semibold text-break" th:text="${requestSummary.requestCode() ?: '-'}">-</dd>
+
+                            <dt class="col-5 text-secondary fw-normal">ผู้ยื่นคำร้อง</dt>
+                            <dd class="col-7 text-break" th:text="${requestSummary.applicantName() ?: '-'}">-</dd>
+
+                            <dt class="col-5 text-secondary fw-normal">วันที่ยื่น</dt>
+                            <dd class="col-7"
+                                th:text="${requestSummary.submissionDate() != null
+                                        ? #temporals.format(requestSummary.submissionDate(), 'd MMM yyyy')
+                                        : '-'}">-</dd>
+
+                            <dt class="col-5 text-secondary fw-normal">สถานะคำร้อง</dt>
+                            <dd class="col-7 mb-0" th:text="${requestSummary.statusLabel() ?: '-'}">-</dd>
+                        </dl>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-lg-8">
+                <div class="card card-academic">
+                    <div class="card-header bg-white d-flex justify-content-between align-items-center">
+                        <span><i class="fas fa-paperclip"></i> เอกสารที่ผู้ยื่นแนบ</span>
+                        <span class="badge bg-light text-secondary border"
+                              th:text="${#lists.size(attachments)} + ' รายการ'">0 รายการ</span>
+                    </div>
+                    <div th:if="${#lists.isEmpty(attachments)}" class="card-body py-3 small text-secondary">
+                        ผู้ยื่นไม่ได้แนบเอกสารประกอบไว้ในระบบ กรุณาติดต่อเจ้าหน้าที่เพื่อขอรับเอกสาร
+                    </div>
+                    <ul th:unless="${#lists.isEmpty(attachments)}" class="list-group list-group-flush">
+                        <li class="list-group-item" th:each="att : ${attachments}">
+                            <a th:href="@{/esign/committee/academic/{requestId}/attachment/{attId}(requestId=${requestId}, attId=${att.id()})}"
+                               target="_blank" rel="noopener"
+                               class="d-flex align-items-start gap-2 text-decoration-none">
+                                <i class="fas fa-link text-info mt-1" th:if="${att.link()}"></i>
+                                <i class="fas fa-file-pdf text-danger mt-1" th:if="${!att.link() and att.extension() == 'PDF'}"></i>
+                                <i class="fas fa-file-word text-primary mt-1" th:if="${!att.link() and (att.extension() == 'DOCX' or att.extension() == 'DOC')}"></i>
+                                <i class="fas fa-file-zipper text-warning mt-1" th:if="${!att.link() and att.extension() == 'ZIP'}"></i>
+                                <i class="fas fa-file text-secondary mt-1"
+                                   th:if="${!att.link() and att.extension() != 'PDF' and att.extension() != 'DOCX' and att.extension() != 'DOC' and att.extension() != 'ZIP'}"></i>
+                                <span class="flex-grow-1 text-break">
+                                    <span th:text="${att.filename()}">ชื่อไฟล์</span>
+                                    <span class="d-block text-muted u-fs-075rem">
+                                        <span th:text="${att.link() ? 'ลิงก์' : (att.fileSize() != null ? (att.fileSize() > 1048576 ? #numbers.formatDecimal(att.fileSize() / 1048576.0, 1, 1) + ' MB' : #numbers.formatDecimal(att.fileSize() / 1024.0, 1, 1) + ' KB') : '-')}">-</span>
+                                        <span th:if="${att.uploadedAt() != null}"
+                                              th:text="' · ' + ${#temporals.format(att.uploadedAt(), 'd MMM yy')}"></span>
+                                    </span>
+                                </span>
+                                <i class="fas fa-arrow-up-right-from-square text-secondary small mt-1"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+</body>
+</html>

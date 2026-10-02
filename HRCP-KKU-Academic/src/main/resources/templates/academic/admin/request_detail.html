@@ -448,6 +448,21 @@
                       </div>
                     </div>
                   </div>
+                  <!--/* ระบบส่งหนังสือพร้อมทางเปิดดูเอกสารของผู้ยื่นถึงกรรมการเองเมื่อลงนามครบ — ปุ่มนี้สำหรับส่งซ้ำ */-->
+                  <div class="doc-grid-sub">
+                    <div th:if="${attachmentCount == 0}" class="small text-warning-emphasis mb-1">
+                      <i class="fas fa-triangle-exclamation me-1"></i>ผู้ยื่นไม่ได้แนบเอกสารประกอบ — อีเมลถึงกรรมการมีเฉพาะหนังสือเชิญ
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                      <small class="dgs-label"><i class="fas fa-envelope"></i> อีเมลถึงกรรมการ (ส่งอัตโนมัติเมื่อลงนามครบ)</small>
+                      <form th:action="|/admin/academic/request/${request.id}/document/5/email-committee|" method="post"
+                        data-confirm="ส่งหนังสือเชิญถึงกรรมการทั้งสามท่านทางอีเมลอีกครั้ง?">
+                        <button type="submit" class="btn btn-outline-secondary btn-sm">
+                          <i class="fas fa-paper-plane"></i> ส่งอีกครั้ง
+                        </button>
+                      </form>
+                    </div>
+                  </div>
                 </th:block>
                 <!-- Generated copies -->
                 <div th:each="doc : ${documents}"

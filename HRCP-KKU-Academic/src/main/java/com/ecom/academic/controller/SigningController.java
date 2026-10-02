@@ -82,6 +82,8 @@ public class SigningController {
     private final com.ecom.service.UploadPaths uploadPaths;
     /** ส่งกลับให้ผู้ยื่นแก้อยู่ — เจ้าหน้าที่ส่งเวียน/เริ่มเวียน/ส่งต่อไม่ได้จนกว่าผู้ยื่นจะลงนามฉบับแก้ไข */
     private final com.ecom.academic.service.ApplicantRevisionHold revisionHold;
+    /** กรรมการที่ได้รับแต่งตั้งเปิดดูเอกสารของผู้ยื่นได้ — ดู {@link #committeeFiles} */
+    private final com.ecom.academic.service.AcademicRequestService academicRequests;
 
     public SigningController(SignatureWorkflowService workflow,
             SignedDocumentRenderer renderer,
@@ -93,7 +95,9 @@ public class SigningController {
             UserDigitalCertificateService digitalCertificateService,
             DocumentGenerationService documentService,
             com.ecom.service.UploadPaths uploadPaths,
-            com.ecom.academic.service.ApplicantRevisionHold revisionHold) {
+            com.ecom.academic.service.ApplicantRevisionHold revisionHold,
+            com.ecom.academic.service.AcademicRequestService academicRequests) {
+        this.academicRequests = academicRequests;
         this.uploadPaths = uploadPaths;
         this.revisionHold = revisionHold;
         this.workflow = workflow;
@@ -394,7 +398,57 @@ public class SigningController {
         if (attachment == null) {
             return ResponseEntity.notFound().build();
         }
+        return serveAttachment(attachment, attachmentId);
+    }
 
+    /**
+     * เอกสารของผู้ยื่นสำหรับกรรมการผู้ทรงคุณวุฒิ — ปลายทางของปุ่มในอีเมลหนังสือเชิญ (เอกสารที่ 5)
+     *
+     * <p>กรรมการยังไม่มีขั้นลงนามในคำร้องตอนได้หนังสือเชิญ สิทธิ์จึงมาจากคำสั่งแต่งตั้งในเอกสารที่ 4
+     * ไม่ใช่จากขั้นลงนามเหมือน {@link #attachment} คนอื่นได้ "ไม่พบ" เหมือนคำร้องที่ไม่มีอยู่
+     */
+    @GetMapping("/committee/academic/{requestId}")
+    public String committeeFiles(@PathVariable Long requestId, Principal principal, Model model,
+            RedirectAttributes redirectAttributes) {
+        if (!canViewAsCommittee(requestId, currentUser(principal))) {
+            redirectAttributes.addFlashAttribute("errorMsg", "ไม่พบเอกสารของคำร้องนี้");
+            return "redirect:/esign/inbox";
+        }
+        model.addAttribute("requestId", requestId);
+        model.addAttribute("requestSummary", documentLabelResolver.summaryOf(SignatureModule.ACADEMIC, requestId));
+        model.addAttribute("attachments", documentLabelResolver.attachmentsOf(SignatureModule.ACADEMIC, requestId));
+        return "academic/esign/committee_files";
+    }
+
+    @GetMapping("/committee/academic/{requestId}/attachment/{attachmentId}")
+    public ResponseEntity<?> committeeAttachment(@PathVariable Long requestId, @PathVariable Long attachmentId,
+            Principal principal) throws IOException {
+        if (!canViewAsCommittee(requestId, currentUser(principal))) {
+            return ResponseEntity.notFound().build();
+        }
+        DocumentSnapshotProvider.SignerAttachment attachment = documentLabelResolver
+                .attachmentOf(SignatureModule.ACADEMIC, requestId, attachmentId)
+                .orElse(null);
+        if (attachment == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return serveAttachment(attachment, attachmentId);
+    }
+
+    private boolean canViewAsCommittee(Long requestId, UserDtls me) {
+        if (me == null) {
+            return false;
+        }
+        if ("ROLE_ADMIN".equals(me.getRole()) || "ROLE_STAFF".equals(me.getRole())) {
+            return academicRequests.findById(requestId).isPresent();
+        }
+        return academicRequests.findById(requestId)
+                .map(request -> academicRequests.isAppointedCommitteeMember(request, me))
+                .orElse(false);
+    }
+
+    private ResponseEntity<?> serveAttachment(DocumentSnapshotProvider.SignerAttachment attachment,
+            Long attachmentId) throws IOException {
         if (attachment.link()) {
             return ResponseEntity.status(HttpStatus.FOUND)
                     .location(URI.create(attachment.storedPath()))

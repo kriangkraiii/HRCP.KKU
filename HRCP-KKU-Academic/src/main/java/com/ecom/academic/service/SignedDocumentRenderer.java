@@ -376,9 +376,29 @@ public class SignedDocumentRenderer {
     public byte[] renderLetterForDownload(SignatureRequest envelope, String format, int letter, int letters)
             throws IOException {
         byte[] whole = renderForDownloadUnstamped(envelope, format);
+        return whole == null ? null : letterOf(envelope, whole, letter, letters);
+    }
+
+    /**
+     * ทุกฉบับจากการสร้างเอกสารครั้งเดียว — สำหรับส่งให้ทุกท่านพร้อมกัน ไม่ต้องสร้างทั้งไฟล์ซ้ำทีละฉบับ
+     *
+     * @return ฉบับที่ 1..{@code letters} ตามลำดับ หรือ null เมื่อสร้างเอกสารไม่ได้
+     */
+    public List<byte[]> renderLettersForDownload(SignatureRequest envelope, String format, int letters)
+            throws IOException {
+        byte[] whole = renderForDownloadUnstamped(envelope, format);
         if (whole == null) {
             return null;
         }
+        List<byte[]> out = new ArrayList<>();
+        for (int letter = 1; letter <= letters; letter++) {
+            out.add(letterOf(envelope, whole, letter, letters));
+        }
+        return out;
+    }
+
+    private static byte[] letterOf(SignatureRequest envelope, byte[] whole, int letter, int letters)
+            throws IOException {
         if (whole.length > 1 && whole[0] == 'P' && whole[1] == 'K') {
             byte[] one = DocxCopies.only(whole, letter);
             return envelope.isIncremental()

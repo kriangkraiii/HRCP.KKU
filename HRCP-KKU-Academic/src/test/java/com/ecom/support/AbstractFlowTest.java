@@ -127,7 +127,15 @@ public abstract class AbstractFlowTest {
      * @param description what is being waited for, used in the failure message
      */
     protected void awaitCondition(String description, java.util.function.BooleanSupplier condition) {
-        long deadline = System.currentTimeMillis() + 5_000;
+        awaitCondition(description, 5_000, condition);
+    }
+
+    /**
+     * @param timeoutMillis สำหรับงานเบื้องหลังที่ช้ากว่าการแจ้งเตือนทั่วไป เช่น สร้างเอกสารผ่าน LibreOffice
+     */
+    protected void awaitCondition(String description, long timeoutMillis,
+            java.util.function.BooleanSupplier condition) {
+        long deadline = System.currentTimeMillis() + timeoutMillis;
         while (System.currentTimeMillis() < deadline) {
             if (condition.getAsBoolean()) {
                 return;
@@ -139,7 +147,7 @@ public abstract class AbstractFlowTest {
                 throw new IllegalStateException("Interrupted while waiting for " + description, e);
             }
         }
-        throw new AssertionError("รอ 5 วินาทีแล้วยังไม่เกิด: " + description);
+        throw new AssertionError("รอ " + timeoutMillis / 1000 + " วินาทีแล้วยังไม่เกิด: " + description);
     }
 
     /** Waits until at least {@code expected} messages have been captured. */
