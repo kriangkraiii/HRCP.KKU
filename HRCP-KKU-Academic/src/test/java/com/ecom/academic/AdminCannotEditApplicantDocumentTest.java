@@ -247,12 +247,13 @@ class AdminCannotEditApplicantDocumentTest extends AbstractFlowTest {
                     .with(as(applicant)).with(csrf())
                     .param("action", "draft")
                     .param("memo_no", "ผู้ยื่นแต่งเอง")
-                    .param("applicant_name", "ชื่อจริงของผู้ยื่น"))
+                    // ช่องของผู้ยื่นที่ยังแก้ได้ (ชื่อ-คำนำหน้ามาจากข้อมูลบุคลากร ดู Doc1ProfileFieldsTest)
+                    .param("employee_type", "ข้าราชการ"))
                     .andExpect(status().is3xxRedirection());
 
             assertThat(academicService.getLatestDocumentData(request.getId(), 1))
                     .containsEntry("memo_no", "อว 1/2569")
-                    .containsEntry("applicant_name", "ชื่อจริงของผู้ยื่น");
+                    .containsEntry("employee_type", "ข้าราชการ");
         }
 
         @Test

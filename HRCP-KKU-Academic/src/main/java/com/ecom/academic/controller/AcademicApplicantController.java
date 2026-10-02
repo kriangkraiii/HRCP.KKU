@@ -333,8 +333,15 @@ public class AcademicApplicantController {
         List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 1);
         String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
         Map<String, String> doc1Data = autoFillHelper.getPreFilledAcademicDocData(request, 1, existingJson);
+        // คำนำหน้า ชื่อ และตำแหน่งปัจจุบันมาจากข้อมูลบุคลากรในระบบ — แสดงแบบอ่านอย่างเดียว
+        Map<String, String> profileLocked = requestService.applicantProfileFields(request);
+        if (!profileLocked.isEmpty()) {
+            doc1Data = new java.util.HashMap<>(doc1Data != null ? doc1Data : Map.of());
+            doc1Data.putAll(profileLocked);
+        }
 
         model.addAttribute("request", request);
+        model.addAttribute("profileLocked", profileLocked);
         model.addAttribute("existingDocs", existingDocs);
         model.addAttribute("existingData", existingJson);
         model.addAttribute("doc1Data", doc1Data);
@@ -385,6 +392,9 @@ public class AcademicApplicantController {
         // อย่างเดียว ซึ่งปิด JS หรือยิง POST ตรงก็ทะลุ
         formData = DocumentFieldOwnership.merge(SignatureModule.ACADEMIC, 1, false, formData,
                 requestService.getLatestDocumentData(id, 1));
+        // ช่องที่มาจากข้อมูลบุคลากรแก้ในฟอร์มไม่ได้ — ใช้ค่าจากโปรไฟล์เสมอ แม้ยิง POST ตรง
+        formData = new java.util.LinkedHashMap<>(formData);
+        formData.putAll(requestService.applicantProfileFields(request));
         String jsonData = objectMapper.writeValueAsString(formData);
 
         boolean isNew1 = requestService.getDocumentsByType(id, 1).isEmpty();

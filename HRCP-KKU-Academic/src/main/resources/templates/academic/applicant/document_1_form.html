@@ -70,12 +70,21 @@
                         <!-- ข้อมูลผู้ขอรับการประเมิน -->
                         <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-user"></i> ข้อมูลผู้ขอรับการประเมิน
                         </h5>
+                        <!-- คำนำหน้า ชื่อ และตำแหน่งปัจจุบันมาจากข้อมูลบุคลากรในระบบ เซิร์ฟเวอร์เขียนทับทุกครั้งที่บันทึก
+                             (AcademicRequestService.applicantProfileFields) — ประเภทบุคลากรยังเลือกเอง -->
+                        <p th:unless="${profileLocked == null or profileLocked.isEmpty()}" class="small text-muted mt-n2 mb-2">
+                            <i class="fas fa-lock me-1"></i>ดึงจากข้อมูลบุคลากรในระบบ — หากไม่ถูกต้องโปรดติดต่อเจ้าหน้าที่
+                        </p>
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
                                 <!-- currentTitle: อ่านผ่าน map['key'] เพราะ map.key จะโยน
                                      exception ถ้าไม่มีคีย์นั้น ซึ่งเกิดกับผู้ใช้ที่ยังไม่ได้ตั้งคำนำหน้า -->
-                                <select name="title" class="form-select" id="titleSelect" required
+                                <input th:if="${profileLocked != null and profileLocked.containsKey('title')}"
+                                    type="text" name="title" class="form-control" id="titleSelect" readonly required
+                                    th:value="${profileLocked['title']}">
+                                <select th:unless="${profileLocked != null and profileLocked.containsKey('title')}"
+                                        name="title" class="form-select" id="titleSelect" required
                                         th:with="storedTitle=${(dData != null ? dData['title'] : null) ?: request.applicant.title},
                                                  currentTitle=${#strings.trim(#strings.replace(storedTitle, 'ดร.', ''))}">
                                     <option value="">-- เลือก --</option>
@@ -92,6 +101,7 @@
                                 <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
                                 <input type="text" name="applicant_name" class="form-control"
                                     th:value="${dData != null ? dData.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
+                                    th:readonly="${profileLocked != null and profileLocked.containsKey('applicant_name')}"
                                     required placeholder="เช่น สมชาย ใจดี">
                             </div>
                         </div>
@@ -120,7 +130,11 @@
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่งทางวิชาการปัจจุบัน <span class="text-danger">*</span></label>
-                                <select name="current_position" class="form-select" required>
+                                <input th:if="${profileLocked != null and profileLocked.containsKey('current_position')}"
+                                    type="text" name="current_position" class="form-control" readonly required
+                                    th:value="${profileLocked['current_position']}">
+                                <select th:unless="${profileLocked != null and profileLocked.containsKey('current_position')}"
+                                        name="current_position" class="form-select" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="อาจารย์"
                                         th:selected="${(dData != null ? dData.getOrDefault('current_position', '') : (request.applicant.academicPosition ?: '')) == 'อาจารย์'}">
@@ -343,9 +357,14 @@
                             var normalTitles = ['นาย', 'นาง', 'นางสาว'];
                             var academicTitles = ['ผู้ช่วยศาสตราจารย์', 'รองศาสตราจารย์'];
 
+                            // คำนำหน้าที่มาจากข้อมูลบุคลากรเป็นช่องอ่านอย่างเดียว (ไม่ใช่ select) — ไม่ต้องสลับตัวเลือก
+                            var titleIsSelect = titleSelect.tagName === 'SELECT';
+
                             function updateTitleOptions() {
                                 var pos = posSelect.value;
-                                if (pos === 'ผู้ช่วยศาสตราจารย์' || pos === 'รองศาสตราจารย์') {
+                                if (!titleIsSelect) {
+                                    // ข้ามไปส่วนแนะนำตำแหน่งที่ขอ
+                                } else if (pos === 'ผู้ช่วยศาสตราจารย์' || pos === 'รองศาสตราจารย์') {
                                     // ซ่อน option ปกติ แสดง option ตำแหน่ง
                                     Array.from(titleSelect.options).forEach(function(opt) {
                                         if (normalTitles.indexOf(opt.value) !== -1) opt.hidden = true;

@@ -150,6 +150,17 @@ public class AutoDraftApiController {
                 }
             }
 
+            // เอกสารที่ 1 ของผู้ยื่น: คำนำหน้า ชื่อ และตำแหน่งปัจจุบันมาจากข้อมูลบุคลากรในระบบเสมอ
+            if (!isAdmin && docType == 1) {
+                Map<String, String> profile = academicService.applicantProfileFields(request);
+                Map<String, String> fields = parseFields(jsonData);
+                if (fields != null && !profile.isEmpty()) {
+                    Map<String, String> withProfile = new java.util.LinkedHashMap<>(fields);
+                    withProfile.putAll(profile);
+                    jsonData = new ObjectMapper().writeValueAsString(withProfile);
+                }
+            }
+
             // เอกสารที่ 7: ปุ่ม "ส่งเวียนลงนาม" บันทึกผ่านทางนี้ ไม่ใช่ปุ่มบันทึก — ถ้าไม่คำนวณผล
             // ตรงนี้ด้วย ซองจะแช่แข็งเอกสารที่ไม่มีระดับผลประเมิน และสถานะไม่เลื่อนเมื่อลงนามครบ
             if (isAdmin && docType == 7) {

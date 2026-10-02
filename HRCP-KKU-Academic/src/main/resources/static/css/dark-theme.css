@@ -2716,7 +2716,7 @@ body,
 
 
 /* ช่องที่ล็อกในฟอร์มเอกสาร — เข้มกว่าช่องที่กรอกได้ */
-[data-theme="dark"] #docForm .form-control[readonly] {
+[data-theme="dark"] form[id^="doc"][id$="Form"] .form-control[readonly] {
     background-color: var(--bg-card-header) !important;
     color: var(--text-secondary) !important;
 }

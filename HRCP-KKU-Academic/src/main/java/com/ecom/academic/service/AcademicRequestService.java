@@ -1659,6 +1659,34 @@ public class AcademicRequestService {
     }
 
     /**
+     * ช่องของผู้ยื่นในเอกสารที่ 1 ที่มาจากข้อมูลบุคลากรในระบบ — คำนำหน้า ชื่อ-นามสกุล
+     * และตำแหน่งทางวิชาการปัจจุบัน แก้ในฟอร์มไม่ได้ (ประเภทบุคลากรยังเลือกเอง)
+     * ช่องที่โปรไฟล์ยังว่างไม่อยู่ในผลลัพธ์ และยังกรอกเองได้
+     */
+    public Map<String, String> applicantProfileFields(AcademicRequest request) {
+        UserDtls applicant = request.getApplicant();
+        if (applicant == null) {
+            return Map.of();
+        }
+        String rawTitle = applicant.getTitle() == null ? "" : applicant.getTitle().trim();
+        // "ดร." อย่างเดียวไม่มีตำแหน่งทางวิชาการ — ในเอกสารใช้ "อาจารย์" (แบบเดียวกับตัวเลือกเดิมในฟอร์ม)
+        String title = rawTitle.equals("ดร.") ? "อาจารย์"
+                : com.ecom.util.AcademicTitleResolver.resolveThaiAcademicPosition(rawTitle.replace("ดร.", "").trim());
+        String name = applicant.getFirstName() != null && !applicant.getFirstName().isBlank()
+                ? (applicant.getFirstName().trim() + " "
+                        + (applicant.getLastName() == null ? "" : applicant.getLastName().trim())).trim()
+                : applicant.getName();
+
+        Map<String, String> fields = new java.util.LinkedHashMap<>();
+        fields.put("title", title);
+        fields.put("applicant_name", name);
+        fields.put("current_position",
+                com.ecom.util.AcademicTitleResolver.resolveThaiAcademicPosition(applicant.getAcademicPosition()));
+        fields.values().removeIf(v -> v == null || v.isBlank());
+        return fields;
+    }
+
+    /**
      * ข้อมูลที่จะบันทึกลงเอกสาร โดยแทนช่องที่ดึงจากเอกสารก่อนหน้าด้วยค่าจากต้นทาง
      *
      * <p>ช่องชื่อผู้ลงนามที่ถูกล็อก (เช่น ประธานกรรมการในเอกสารที่ 7) อาจมีรหัสบัญชีที่เคยเลือกไว้
