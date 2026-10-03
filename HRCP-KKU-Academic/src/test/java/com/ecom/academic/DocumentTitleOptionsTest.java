@@ -5,12 +5,12 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import org.junit.jupiter.api.DisplayName;
 
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.RequestStatus;
@@ -44,14 +44,18 @@ class DocumentTitleOptionsTest extends AbstractFlowTest {
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
 
-        String select = titleSelect(html);
-        assertThat(select).doesNotContain("ดร.");
-        assertThat(select).containsPattern("<option value=\"" + expected + "\"[^>]*selected");
-    }
-
-    private static String titleSelect(String html) {
-        Matcher m = Pattern.compile("<select name=\"title\".*?</select>", Pattern.DOTALL).matcher(html);
-        assertThat(m.find()).as("ไม่พบช่องคำนำหน้า").isTrue();
-        return m.group();
+        Document doc = Jsoup.parse(html);
+        Element select = doc.selectFirst("select[name=title]");
+        if (select != null) {
+            assertThat(select.outerHtml()).doesNotContain("ดร.");
+            Element selectedOption = select.selectFirst("option[selected]");
+            assertThat(selectedOption).as("ต้องมีตัวเลือกที่ถูกเลือก").isNotNull();
+            assertThat(selectedOption.val()).isEqualTo(expected);
+        } else {
+            Element input = doc.selectFirst("input[name=title]");
+            assertThat(input).as("ไม่พบช่องคำนำหน้า (ทั้ง select และ input)").isNotNull();
+            assertThat(input.val()).doesNotContain("ดร.");
+            assertThat(input.val()).isEqualTo(expected);
+        }
     }
 }

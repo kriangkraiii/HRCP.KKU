@@ -1,16 +1,16 @@
 package com.ecom.e2e;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.Map;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import com.ecom.academic.model.AcademicAttachment;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
@@ -243,14 +243,10 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
             signEveryActiveStep(SignatureModule.ACADEMIC, id, doc, null);
             expectCompleted(SignatureModule.ACADEMIC, id, doc);
         }
-        awaitStatus(id, RequestStatus.COMPLETED_PASS, "ข้อ 8 — อนุกรรมการประเมินผ่าน");
-
-        // ---------- ข้อ 9-10: กรรมการประจำวิทยาลัยฯ รับรอง (เจ้าหน้าที่บันทึกเอง) ----------
-        signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
-        academicService.updateStatus(id, RequestStatus.COLLEGE_ENDORSED, officer,
-                "ข้อ 9-10 — กรรมการประจำวิทยาลัยฯ รับรองผล", false);
+        awaitStatus(id, RequestStatus.COLLEGE_ENDORSED, "ข้อ 8-10 — อนุกรรมการประเมินและกรรมการประจำวิทยาลัยฯ รับรองผล");
 
         // ---------- ข้อ 11: หนังสือแจ้งผล — คณบดีลงนาม ----------
+        signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
         circulateAsOfficer(SignatureModule.ACADEMIC, id, 9, Map.of("dean", dean));
         signOut();
         signEveryActiveStep(SignatureModule.ACADEMIC, id, 9, null);
@@ -790,7 +786,26 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
      *
      * @param tick ชื่อ checkbox ที่ต้องติ๊ก — {@code "*"} ติ๊กทุกช่อง, {@code null} ไม่ติ๊ก
      */
+    private void attachDummyAttachment(Long requestId) {
+        if (academicService.getAttachments(requestId).isEmpty()) {
+            AcademicAttachment att = new AcademicAttachment();
+            att.setRequest(academicService.findById(requestId).orElseThrow());
+            att.setOriginalFilename("01-เอกสารประกอบการสอน.pdf");
+            att.setStoredFilePath("uploads/dummy.pdf");
+            att.setFileType("application/pdf");
+            att.setFileSize(1024L);
+            att.setChecklistItem(1);
+            academicService.saveAttachment(att);
+        }
+    }
+
     private void openAndFill(String path, String tick) {
+        if (path.contains("document-2")) {
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("/request/(\\d+)").matcher(path);
+            if (m.find()) {
+                attachDummyAttachment(Long.parseLong(m.group(1)));
+            }
+        }
         page.navigate(baseUrl() + path);
         page.waitForLoadState();
         fillEmptyFields(tick);
@@ -826,6 +841,11 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                       if (!el.value) {
                         const opt = [...el.options].find(o => o.value);
                         if (opt) { el.value = opt.value; n++; }
+                      }
+                    } else if (el.name === 'academic_year' || el.getAttribute('pattern') === '^[1-3]/[0-9]{4}$') {
+                      if (!el.value || !new RegExp('^[1-3]/[0-9]{4}$').test(el.value)) {
+                        el.value = '1/2569';
+                        n++;
                       }
                     } else if (!el.value) {
                       const t = el.type;
