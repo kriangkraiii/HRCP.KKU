@@ -197,23 +197,23 @@ class StatusAcrossSigningLifecycleTest extends AbstractFlowTest {
         @DisplayName("ลงนามครบแล้วลงเลขที่หนังสือ: เลขเข้า แต่สถานะไม่ขยับ")
         void numberingAfterSigningDoesNotMoveTheStatus() throws Exception {
             AcademicRequest request =
-                    data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
-            data.academicDocument(request, 9, "{\"memo_no\":\"อว 660301.26.4/\"}");
-            envelopeFor(SignatureModule.ACADEMIC, request.getId(), 9,
+                    data.evaluation(applicant, RequestStatus.RECEIVED);
+            data.academicDocument(request, 1, "{\"memo_no\":\"อว 660301.26.4/\"}");
+            envelopeFor(SignatureModule.ACADEMIC, request.getId(), 1,
                     SignatureRequestStatus.COMPLETED);
 
-            assertThat(redirectOf(post("/admin/academic/request/" + request.getId() + "/document/9")
+            assertThat(redirectOf(post("/admin/academic/request/" + request.getId() + "/document/1")
                     .with(as(officer)).with(csrf())
                     .param("memo_no", "อว 660301.26.4/ว.17")
                     .param("date", "๒๑ กันยายน ๒๕๖๙")))
-                    .endsWith("/document/9?saved=office");
+                    .endsWith("/document/1?saved=office");
 
-            assertThat(academicService.getLatestDocumentData(request.getId(), 9))
+            assertThat(academicService.getLatestDocumentData(request.getId(), 1))
                     .containsEntry("memo_no", "อว 660301.26.4/ว.17")
                     .containsEntry("date", "๒๑ กันยายน ๒๕๖๙");
             assertThat(statusOf(request.getId()))
                     .as("การออกเลขที่หนังสือเป็นงานสารบรรณ ไม่ใช่ขั้นตอนใหม่ของคำร้อง")
-                    .isEqualTo(RequestStatus.MEETING_SCHEDULED);
+                    .isEqualTo(RequestStatus.RECEIVED);
             assertThat(academicService.getStatusHistory(request.getId())).isEmpty();
         }
 

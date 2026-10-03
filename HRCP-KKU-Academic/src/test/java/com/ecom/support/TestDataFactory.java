@@ -162,7 +162,16 @@ public class TestDataFactory {
         }
         userRepository.findAll().stream()
                 .filter(u -> u.getEmail() != null && u.getEmail().endsWith("@" + DOMAIN))
-                .forEach(userRepository::delete);
+                .forEach(user -> {
+                    try {
+                        userRepository.delete(user);
+                    } catch (Exception e) {
+                        if (present.contains("notifications")) {
+                            jdbc.execute("DELETE FROM notifications");
+                        }
+                        userRepository.delete(user);
+                    }
+                });
     }
 
     // ------------------------------------------------------------------
