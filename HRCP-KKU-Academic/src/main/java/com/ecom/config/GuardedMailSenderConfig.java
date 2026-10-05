@@ -2,9 +2,11 @@ package com.ecom.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.mail.autoconfigure.MailSenderAutoConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.JavaMailSenderImpl;
@@ -16,8 +18,13 @@ import org.springframework.mail.javamail.JavaMailSenderImpl;
  * Spring Boot auto-configures, not as the {@code JavaMailSender} interface —
  * the wrapper is itself a {@code JavaMailSender}, so asking for the interface
  * would make the bean depend on itself.
+ *
+ * <p>This is an auto-configuration ordered after Boot's own mail setup, not a
+ * plain {@code @Configuration}: user configuration is processed before any
+ * auto-configuration, so {@code @ConditionalOnBean(JavaMailSenderImpl.class)}
+ * there never saw Boot's sender and the guard was silently never installed.
  */
-@Configuration
+@AutoConfiguration(after = MailSenderAutoConfiguration.class)
 public class GuardedMailSenderConfig {
 
     private static final Logger log = LoggerFactory.getLogger(GuardedMailSenderConfig.class);
@@ -25,9 +32,34 @@ public class GuardedMailSenderConfig {
     @Bean
     @Primary
     @ConditionalOnBean(JavaMailSenderImpl.class)
-    public JavaMailSender guardedMailSender(JavaMailSenderImpl delegate, TestAccountRegistry testAccounts) {
-        warnIfUnconfigured(delegate);
-        return new GuardedJavaMailSender(delegate, testAccounts);
+    public JavaMailSender guardedMailSender(JavaMailSenderImpl delegate, TestAccountRegistry testAccounts,
+            @Value("${app.auth.mode:dev}") String authMode,
+            @Value("${app.mail.dev-capture.enabled:true}") boolean captureEnabled,
+            @Value("${app.mail.dev-capture.port:1025}") int capturePort) {
+        boolean capture = captureEnabled && "dev".equalsIgnoreCase(authMode.trim());
+        if (capture) {
+            redirectToLocalCatchAll(delegate, capturePort);
+        } else {
+            warnIfUnconfigured(delegate);
+        }
+        return new GuardedJavaMailSender(delegate, testAccounts, capture);
+    }
+
+    /**
+     * In dev auth mode every email, test accounts included, goes to a local
+     * catch-all SMTP such as Mailpit instead of the real relay. Rewriting the
+     * delegate here, rather than trusting the configured host, is what makes
+     * unfiltered delivery safe: nothing can reach a real inbox from dev.
+     */
+    static void redirectToLocalCatchAll(JavaMailSenderImpl delegate, int port) {
+        delegate.setHost("localhost");
+        delegate.setPort(port);
+        delegate.setUsername(null);
+        delegate.setPassword(null);
+        delegate.getJavaMailProperties().setProperty("mail.smtp.auth", "false");
+        delegate.getJavaMailProperties().setProperty("mail.smtp.starttls.enable", "false");
+        delegate.getJavaMailProperties().setProperty("mail.smtp.starttls.required", "false");
+        log.warn("app.auth.mode=dev — อีเมลทุกฉบับ (รวมบัญชีทดสอบ) ถูกส่งไปที่ Mailpit localhost:{} ดูได้ที่ http://localhost:8025", port);
     }
 
     /**

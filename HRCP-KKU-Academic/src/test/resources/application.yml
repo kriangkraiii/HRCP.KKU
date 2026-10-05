@@ -2,6 +2,10 @@
 app:
   dev:
     seed-test-accounts: false
+  mail:
+    # เทสต์ต้องผ่านตัวกรองบัญชีทดสอบจริง ไม่ใช่โหมด Mailpit ของ app.auth.mode=dev
+    dev-capture:
+      enabled: false
   esign:
     # ระบบจริงลงนามแบบใส่ทับ (เรนเดอร์ PDF ผ่าน LibreOffice ทุกซอง และบังคับใช้ .p12)
     # เทสต์ส่วนใหญ่ทดสอบลำดับขั้นของงาน ไม่ใช่ไฟล์ PDF จึงใช้แบบเดิม

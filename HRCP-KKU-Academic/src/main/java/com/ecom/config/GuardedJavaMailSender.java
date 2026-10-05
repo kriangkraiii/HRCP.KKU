@@ -34,6 +34,11 @@ import jakarta.mail.internet.MimeMessage;
  *   <li>Otherwise test-account recipients are dropped from the address list,
  *       and genuine recipients are delivered to as normal.</li>
  * </ol>
+ *
+ * <p>Capture mode skips both rules. It is on when {@code app.auth.mode=dev},
+ * where {@link GuardedMailSenderConfig} has already pointed the delegate at a
+ * local catch-all SMTP such as Mailpit, so test-account notifications can be
+ * inspected without reaching a real inbox.
  */
 public class GuardedJavaMailSender implements JavaMailSender {
 
@@ -41,10 +46,17 @@ public class GuardedJavaMailSender implements JavaMailSender {
 
     private final JavaMailSender delegate;
     private final TestAccountRegistry testAccounts;
+    private final boolean captureAll;
 
     public GuardedJavaMailSender(JavaMailSender delegate, TestAccountRegistry testAccounts) {
+        this(delegate, testAccounts, false);
+    }
+
+    public GuardedJavaMailSender(JavaMailSender delegate, TestAccountRegistry testAccounts,
+            boolean captureAll) {
         this.delegate = delegate;
         this.testAccounts = testAccounts;
+        this.captureAll = captureAll;
     }
 
     // ------------------------------------------------------------------
@@ -67,6 +79,10 @@ public class GuardedJavaMailSender implements JavaMailSender {
 
     @Override
     public void send(MimeMessage... mimeMessages) throws MailException {
+        if (captureAll) {
+            delegate.send(mimeMessages);
+            return;
+        }
         List<MimeMessage> allowed = new ArrayList<>();
         for (MimeMessage message : mimeMessages) {
             if (permit(message)) {
@@ -99,6 +115,10 @@ public class GuardedJavaMailSender implements JavaMailSender {
 
     @Override
     public void send(SimpleMailMessage... simpleMessages) throws MailException {
+        if (captureAll) {
+            delegate.send(simpleMessages);
+            return;
+        }
         if (blockedByActor("simple message")) {
             return;
         }

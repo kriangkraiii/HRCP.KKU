@@ -117,4 +117,33 @@ class GuardedJavaMailSenderTest {
 
         verify(delegate).send(any(MimeMessage[].class));
     }
+
+    @Test
+    @DisplayName("โหมด dev capture — ส่งอีเมลบัญชีทดสอบเข้า SMTP ในเครื่องโดยไม่กรอง")
+    void captureModeDeliversTestAccountMail() throws Exception {
+        GuardedJavaMailSender capturing = new GuardedJavaMailSender(delegate, registry, true);
+        signedInAs("user@user.com");
+
+        capturing.send(messageTo("admin@admin.com"));
+
+        verify(delegate).send(any(MimeMessage[].class));
+    }
+
+    @Test
+    @DisplayName("โหมด dev — ชี้ SMTP ไป Mailpit ในเครื่องเสมอ ไม่ว่าตั้ง host ไว้เป็นอะไร")
+    void devModeRetargetsToLocalCatchAll() {
+        org.springframework.mail.javamail.JavaMailSenderImpl impl =
+                new org.springframework.mail.javamail.JavaMailSenderImpl();
+        impl.setHost("relay.example.invalid");
+        impl.setPort(587);
+        impl.setUsername("relay");
+        impl.getJavaMailProperties().setProperty("mail.smtp.starttls.enable", "true");
+
+        GuardedMailSenderConfig.redirectToLocalCatchAll(impl, 1025);
+
+        assertThat(impl.getHost()).isEqualTo("localhost");
+        assertThat(impl.getPort()).isEqualTo(1025);
+        assertThat(impl.getUsername()).isNull();
+        assertThat(impl.getJavaMailProperties().getProperty("mail.smtp.starttls.enable")).isEqualTo("false");
+    }
 }
