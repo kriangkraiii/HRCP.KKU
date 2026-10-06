@@ -413,8 +413,14 @@ public final class DocumentCompleteness {
         return m.matches() && !"used".equals(data.get(m.group(1) + "_" + m.group(2)));
     }
 
+    /** รหัสผลงานที่ตัวเลือก Scopus แนบไว้ข้างชื่อผลงาน — ช่องซ่อน ว่างเมื่อผู้ยื่นพิมพ์ชื่อผลงานเอง */
+    private static final Pattern SCOPUS_ID_FIELD = Pattern.compile("^.+_scopus_id_\\d+$");
+
     private static boolean isOptional(SignatureModule module, int documentType, String key,
             String targetPosition) {
+        if (SCOPUS_ID_FIELD.matcher(key).matches()) {
+            return true;
+        }
         Set<String> optional = OPTIONAL_FIELDS
                 .getOrDefault(module, Map.of())
                 .getOrDefault(documentType, Set.of());

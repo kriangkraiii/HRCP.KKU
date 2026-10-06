@@ -15,9 +15,7 @@ import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
-import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.repository.SignatureRequestRepository;
-import com.ecom.academic.repository.SignatureStepRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -44,9 +42,7 @@ public class TeachingEvaluationPartResolver {
     /** เอกสารที่ 8 ของ Phase 1 คือ "ส่วนที่ 3 แบบประเมินผลการสอน" ต้นทาง */
     static final int TEACHING_EVALUATION_DOCUMENT = 8;
 
-    static final String CHAIR_SLOT = "committee_chair";
-
-    /** ช่องลงนามของประธานในเทมเพลตเอกสารที่ 1 — ใช้วางรูปลายเซ็นจาก Phase 1 */
+    /** ช่องลงนามของประธานในเทมเพลตเอกสารที่ 1 — ประธานลงนามส่วนที่ ๓ ในซองของเอกสารนี้ */
     public static final String CHAIR_ANCHOR = "s3_chair_name";
 
     static final String UNIVERSITY = "มหาวิทยาลัยขอนแก่น";
@@ -58,18 +54,15 @@ public class TeachingEvaluationPartResolver {
     private final AcademicRequestService academicService;
     private final PositionRequestService positionService;
     private final SignatureRequestRepository envelopeRepository;
-    private final SignatureStepRepository stepRepository;
     private final SignerNameResolver signerNameResolver;
 
     public TeachingEvaluationPartResolver(AcademicRequestService academicService,
             PositionRequestService positionService,
             SignatureRequestRepository envelopeRepository,
-            SignatureStepRepository stepRepository,
             SignerNameResolver signerNameResolver) {
         this.academicService = academicService;
         this.positionService = positionService;
         this.envelopeRepository = envelopeRepository;
-        this.stepRepository = stepRepository;
         this.signerNameResolver = signerNameResolver;
     }
 
@@ -104,25 +97,15 @@ public class TeachingEvaluationPartResolver {
         put(fields, "s3_level", level != null && LEVELS.contains(level) ? level : null);
         put(fields, "s3_quality", qualityOf(level));
 
-        // ชื่อและวันที่ในเอกสารที่ 8 คือสิ่งที่พิมพ์อยู่บนเอกสารฉบับนั้น ใช้ก่อน ถ้าว่างค่อยถามซองลงนาม
+        // ชื่อประธานตามเอกสารที่ 8 ใช้ก่อน ถ้าว่างค่อยถามซองลงนาม — ส่วนวันที่ลงนามไม่ดึงมา
+        // ประธานลงนามส่วนนี้ใหม่ในเอกสารที่ 1 วันที่จึงมาจากขั้นลงนามของซองนี้ (SignatureAnchorRegistry)
         String chairName = doc8.get("committee_president_name");
-        String signDate = doc8.get("sign_date");
-        if (isBlank(chairName) || isBlank(signDate)) {
-            Optional<SignatureRequest> envelope = chairEnvelope(evaluation);
-            if (envelope.isPresent()) {
-                if (isBlank(chairName)) {
-                    chairName = signerNameResolver.namesForEnvelope(envelope.get())
-                            .get("committee_president_name");
-                }
-                if (isBlank(signDate)) {
-                    signDate = chairStep(envelope.get())
-                            .map(step -> AcademicRequestService.formatThaiDate(step.getSignedAt()))
-                            .orElse(null);
-                }
-            }
+        if (isBlank(chairName)) {
+            chairName = chairEnvelope(evaluation)
+                    .map(envelope -> signerNameResolver.namesForEnvelope(envelope).get("committee_president_name"))
+                    .orElse(null);
         }
         put(fields, "s3_chair_name", chairName);
-        put(fields, "s3_sign_date", signDate);
         return fields;
     }
 
@@ -188,33 +171,9 @@ public class TeachingEvaluationPartResolver {
                 .orElse(json);
     }
 
-    /**
-     * ขั้นลงนามของประธานคณะอนุกรรมการที่เซ็นเอกสารที่ 8 ของ Phase 1 แล้ว — รูปลายเซ็นของขั้นนี้
-     * ถูกวางซ้ำลงส่วนที่ ๓ ของเอกสารที่ 1 เพราะเป็นลายเซ็นเดียวกันบนข้อความเดียวกัน
-     */
-    @Transactional(readOnly = true)
-    public Optional<SignatureStep> chairSignatureFor(SignatureRequest positionEnvelope) {
-        if (positionEnvelope == null || positionEnvelope.getModule() != SignatureModule.POSITION
-                || positionEnvelope.getDocumentType() == null
-                || positionEnvelope.getDocumentType() != FULL_FORM_DOCUMENT
-                || positionEnvelope.getRequestId() == null) {
-            return Optional.empty();
-        }
-        return positionService.findById(positionEnvelope.getRequestId())
-                .map(PositionRequest::getLinkedEvaluation)
-                .flatMap(this::chairEnvelope)
-                .flatMap(this::chairStep);
-    }
-
     private Optional<SignatureRequest> chairEnvelope(AcademicRequest evaluation) {
         return envelopeRepository.findBlockingEnvelopes(SignatureModule.ACADEMIC, evaluation.getId(),
                 TEACHING_EVALUATION_DOCUMENT).stream().findFirst();
-    }
-
-    private Optional<SignatureStep> chairStep(SignatureRequest envelope) {
-        return stepRepository.findSignedSteps(envelope.getId()).stream()
-                .filter(step -> CHAIR_SLOT.equals(step.getSlotKey()))
-                .findFirst();
     }
 
     /**

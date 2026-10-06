@@ -178,6 +178,11 @@
         var found = [];
         toList(holder.getAttribute('data-missing-fields')).forEach(function (name) {
             var el = docForm.querySelector('[name="' + name + '"]');
+            // ช่องซ่อนพาไปที่ช่องที่ผู้ใช้กรอกจริงซึ่งอยู่คู่กัน
+            if (el && el.type === 'hidden') {
+                var pair = el.previousElementSibling;
+                el = pair && /^(INPUT|SELECT|TEXTAREA)$/.test(pair.tagName) ? pair : null;
+            }
             var label = el ? labelOf(el) : name;
             if (labels.indexOf(label) === -1) labels.push(label);
             if (el && isVisible(el)) found.push({ el: el, label: label });

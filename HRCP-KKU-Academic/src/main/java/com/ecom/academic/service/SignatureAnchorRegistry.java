@@ -237,7 +237,12 @@ public class SignatureAnchorRegistry {
                             "dean_name", "DEAN", 3,
                             new SignerChoice("dean_qualification_status", "ความเห็นคณบดี",
                                     List.of("เข้าข่าย", "ไม่เข้าข่าย"), "ไม่เข้าข่าย"),
-                            SignerMarks.signedDate("dean_sign_date")))),
+                            SignerMarks.signedDate("dean_sign_date")),
+                    // ส่วนที่ ๓ แบบประเมินผลการสอน — เนื้อความดึงจากผลประเมินใน Phase 1 แต่ประธาน
+                    // คณะอนุกรรมการลงนามรับรองในเอกสารฉบับนี้ใหม่ ไม่ใช้ลายเซ็นเดิมจาก Phase 1
+                    new SignatureSlot("committee_chair", "ประธานคณะอนุกรรมการประเมินผลการสอน",
+                            TeachingEvaluationPartResolver.CHAIR_ANCHOR, "COMMITTEE", 4, null,
+                            SignerMarks.signedDate("s3_sign_date")))),
 
             Map.entry(new DocKey(SignatureModule.POSITION, 2), List.of(
                     new SignatureSlot("applicant", "ผู้เสนอขอ",
@@ -369,7 +374,9 @@ public class SignatureAnchorRegistry {
      * ให้เขียนเอง ระบบเติมเฉพาะเมื่อลงนามในฐานะรักษาการแทน ({@link SignerNameResolver})
      */
     private static final Map<DocKey, Map<String, String>> SIGNER_POSITION_LINES = Map.of(
-            new DocKey(SignatureModule.POSITION, 1), Map.of("dean_name", "dean_position_line"));
+            new DocKey(SignatureModule.POSITION, 1), Map.of(
+                    "department_head_name", "head_position_line",
+                    "dean_name", "dean_position_line"));
 
     /**
      * ช่องที่พิมพ์ตำแหน่งของผู้ลงนามช่องนี้ — ช่องตำแหน่งคู่กับตัวค้นหาชื่อ หรือบรรทัดตำแหน่งในแบบฟอร์ม

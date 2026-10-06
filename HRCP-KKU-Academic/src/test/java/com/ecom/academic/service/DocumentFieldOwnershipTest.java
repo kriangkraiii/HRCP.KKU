@@ -202,7 +202,7 @@ class DocumentFieldOwnershipTest {
         void areDerivedFromTheSignatureRegistry() {
             assertThat(DocumentFieldOwnership.signerFields(P2, 1))
                     .containsExactlyInAnyOrder("qualification_status", "dean_qualification_status",
-                            "sign_date", "head_sign_date", "dean_sign_date");
+                            "sign_date", "head_sign_date", "dean_sign_date", "s3_sign_date");
         }
 
         @Test

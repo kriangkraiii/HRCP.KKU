@@ -140,9 +140,7 @@ public class SignedDocumentRenderer {
      * values and {@code pictures} in place of signatures still to come.
      *
      * <p>No office values and no signatures of this envelope: those arrive later as
-     * revisions on top. The teaching-evaluation chair's signature is different — it
-     * was given in another document before this one existed, so it is part of the
-     * base like any other printed text.
+     * revisions on top.
      */
     public byte[] renderBaseDocx(SignatureRequest envelope, java.util.Map<String, String> overrides,
             List<StampedSignature> pictures) throws IOException {
@@ -163,9 +161,6 @@ public class SignedDocumentRenderer {
         }
 
         List<StampedSignature> all = new ArrayList<>(pictures);
-        teachingEvaluationPartResolver.chairSignatureFor(envelope)
-                .map(step -> loadSignature(step, TeachingEvaluationPartResolver.CHAIR_ANCHOR))
-                .ifPresent(all::add);
 
         return envelope.getModule() == SignatureModule.ACADEMIC
                 ? documentGenerationService.generateSignedDocx(envelope.getDocumentType(), json, all)
@@ -643,13 +638,6 @@ public class SignedDocumentRenderer {
                 stamped.add(signature);
             }
         }
-
-        // ส่วนที่ ๓ ของแบบ ก.พ.ว. มข. ๐๓ คือแบบประเมินผลการสอนที่ประธานคณะอนุกรรมการเซ็นไว้แล้ว
-        // ในเอกสารที่ 8 ของ Phase 1 — ลายเซ็นเดียวกันบนข้อความเดียวกัน จึงวางรูปเดิมซ้ำ
-        // ไม่ได้ขอให้ประธานเซ็นใหม่
-        teachingEvaluationPartResolver.chairSignatureFor(envelope)
-                .map(step -> loadSignature(step, TeachingEvaluationPartResolver.CHAIR_ANCHOR))
-                .ifPresent(stamped::add);
 
         // Place preview signature onto active step's anchor if provided and not already signed
         if (previewStep != null && previewSig != null && previewStep.getAnchorPlaceholder() != null) {

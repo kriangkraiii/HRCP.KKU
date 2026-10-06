@@ -104,7 +104,7 @@ class DocumentWorkflowConfigServiceTest {
 
         List<SignatureSlot> slots = service.effectiveSlotsFor(SignatureModule.POSITION, 1);
 
-        assertThat(slots).extracting(SignatureSlot::slotKey).containsExactly("applicant", "head", "dean");
+        assertThat(slots).extracting(SignatureSlot::slotKey).containsExactly("applicant", "head", "dean", "committee_chair");
         assertThat(slots.get(1).choice().fieldKey()).isEqualTo("qualification_status");
         assertThat(slots.get(2).choice().options()).containsExactly("เข้าข่าย", "ไม่เข้าข่าย");
         assertThat(slots.get(2).marks().signedDateFieldKey()).isEqualTo("dean_sign_date");

@@ -833,7 +833,9 @@ public class DocumentGenerationService {
                 // drop the dot leader, so the image is not pushed off the margin.
                 int[] signLine = placement.signLine();
                 String line = xml.substring(signLine[0], signLine[1]);
-                String rewritten = placement.inTextBox()
+                // บรรทัดที่มีบทบาทต่อท้ายจุดไข่ปลา ("ลงชื่อ.......เจ้าของประวัติ") ลายเซ็นต้องอยู่แทนจุด
+                // ก่อนคำว่าเจ้าของประวัติ ไม่ใช่ต่อท้ายบรรทัด
+                String rewritten = placement.inTextBox() || hasTextAfterLeader(line)
                         ? stampInPlaceOfLeader(line, sig)
                         : stampOntoSignatureLine(line, sig);
                 edits.add(new Edit(signLine[0], signLine[1], rewritten));
@@ -1073,6 +1075,16 @@ public class DocumentGenerationService {
             return removeDotLeaders(paragraph.substring(0, runStart) + split + paragraph.substring(text.end()));
         }
         return stampOntoSignatureLine(paragraph, sig);
+    }
+
+    /** Whether the signature rule is followed by more text, e.g. the signer's role. */
+    private boolean hasTextAfterLeader(String paragraph) {
+        java.util.regex.Matcher leader = DOT_LEADER.matcher(paragraphText(paragraph));
+        int end = -1;
+        while (leader.find()) {
+            end = leader.end();
+        }
+        return end != -1 && !paragraphText(paragraph).substring(end).isBlank();
     }
 
     /** Blanks dot leaders inside {@code <w:t>} text, leaving all markup intact. */
@@ -2219,6 +2231,8 @@ public class DocumentGenerationService {
             Map.entry("dean_sign_date", "........เดือน.................พ.ศ. ........"),
             // ตำแหน่งใต้ชื่อคณบดี — เติมเฉพาะเมื่อลงนามในฐานะรักษาการแทน (SignerNameResolver)
             Map.entry("dean_position_line", ".................................................."),
+            // ตำแหน่งใต้ชื่อหัวหน้าสาขา — ข้อความเดิมของแบบฟอร์ม เว้นแต่ลงนามในฐานะรักษาการแทน
+            Map.entry("head_position_line", "..ผู้บังคับบัญชาระดับหัวหน้าภาควิชาหรือเทียบเท่า.."),
             Map.entry("s3_meeting_no", "......."),
             Map.entry("s3_meeting_date", "................"),
             Map.entry("s3_university", "................(มหาวิทยาลัย/สถาบัน)................................"),

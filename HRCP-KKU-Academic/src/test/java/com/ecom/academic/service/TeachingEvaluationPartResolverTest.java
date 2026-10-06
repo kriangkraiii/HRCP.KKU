@@ -39,7 +39,6 @@ class TeachingEvaluationPartResolverTest {
     private AcademicRequestService academicService;
     private PositionRequestService positionService;
     private SignatureRequestRepository envelopeRepository;
-    private SignatureStepRepository stepRepository;
     private SignerNameResolver signerNameResolver;
     private TeachingEvaluationPartResolver resolver;
 
@@ -51,10 +50,9 @@ class TeachingEvaluationPartResolverTest {
         academicService = mock(AcademicRequestService.class);
         positionService = mock(PositionRequestService.class);
         envelopeRepository = mock(SignatureRequestRepository.class);
-        stepRepository = mock(SignatureStepRepository.class);
         signerNameResolver = mock(SignerNameResolver.class);
         resolver = new TeachingEvaluationPartResolver(academicService, positionService,
-                envelopeRepository, stepRepository, signerNameResolver);
+                envelopeRepository, signerNameResolver);
 
         AcademicRequest evaluation = new AcademicRequest();
         evaluation.setId(EVALUATION_ID);
@@ -97,7 +95,7 @@ class TeachingEvaluationPartResolverTest {
                 .containsEntry("s3_level", "ชำนาญพิเศษ")
                 .containsEntry("s3_quality", "อยู่")
                 .containsEntry("s3_chair_name", "ศ.ดร.ประธาน อนุกรรมการ")
-                .containsEntry("s3_sign_date", "20 มกราคม 2569");
+                .as("วันที่ลงนามมาจากการลงนามในเอกสารที่ 1 ไม่ใช่จาก Phase 1").doesNotContainKey("s3_sign_date");
     }
 
     @Test
@@ -120,27 +118,19 @@ class TeachingEvaluationPartResolverTest {
     }
 
     @Test
-    @DisplayName("ชื่อและวันที่ของประธานที่เอกสารไม่ได้ระบุ ใช้จากขั้นลงนามของประธานแทน")
-    void chairFallsBackToTheSignedStep() {
+    @DisplayName("ชื่อประธานที่เอกสารไม่ได้ระบุ ใช้จากซองลงนามของเอกสารที่ 8 แทน")
+    void chairNameFallsBackToTheEnvelope() {
         doc8.remove("committee_president_name");
-        doc8.remove("sign_date");
         SignatureRequest envelope = new SignatureRequest();
         envelope.setId(55L);
         when(envelopeRepository.findBlockingEnvelopes(SignatureModule.ACADEMIC, EVALUATION_ID, 8))
                 .thenReturn(List.of(envelope));
         when(signerNameResolver.namesForEnvelope(envelope))
                 .thenReturn(Map.of("committee_president_name", "รศ.ดร.ผู้ลงนาม จริง"));
-        SignatureStep chair = new SignatureStep();
-        chair.setSlotKey("committee_chair");
-        chair.setStatus(SignatureStepStatus.SIGNED);
-        chair.setSignedAt(LocalDateTime.of(2026, 1, 20, 10, 0));
-        when(stepRepository.findSignedSteps(55L)).thenReturn(List.of(chair));
 
-        Map<String, String> fields = resolver.partThreeFields(request);
-
-        assertThat(fields)
+        assertThat(resolver.partThreeFields(request))
                 .containsEntry("s3_chair_name", "รศ.ดร.ผู้ลงนาม จริง")
-                .containsEntry("s3_sign_date", "20 มกราคม 2569");
+                .doesNotContainKey("s3_sign_date");
     }
 
     @Test
