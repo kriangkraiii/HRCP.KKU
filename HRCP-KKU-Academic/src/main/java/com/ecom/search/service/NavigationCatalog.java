@@ -109,6 +109,9 @@ public class NavigationCatalog {
             new Entry("การตั้งค่าระบบ", "ตั้งค่าระบบงานวิชาการและอีเมล",
                     "ตั้งค่า setting ระบบ อีเมล email",
                     "/admin/academic/settings", "fas fa-cog text-secondary", true),
+            new Entry("ประกาศหน้าเข้าสู่ระบบ", "พิมพ์ประกาศ เช่น แจ้งปิดปรับปรุงระบบ แล้วเลือกแสดงหรือไม่แสดง",
+                    "ประกาศ announcement ปิดปรับปรุง maintenance หน้าเข้าสู่ระบบ login แจ้งเตือน",
+                    "/admin/academic/settings/login-announcement", "fas fa-bullhorn text-warning", true),
             new Entry("สถานะดัชนีการค้นหา", "ตรวจสอบความครบถ้วนของ index และสั่งสร้างใหม่",
                     "index ดัชนี ค้นหา search reindex สถานะการค้นหา",
                     "/admin/search/status", "fas fa-magnifying-glass-chart text-secondary", true));

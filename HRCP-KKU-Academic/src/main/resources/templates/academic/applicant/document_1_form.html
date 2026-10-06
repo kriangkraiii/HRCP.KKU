@@ -17,9 +17,9 @@
                 </div>
                 <div class="card-body">
 
-                    <!-- ข้อความผลลัพธ์ขึ้นที่บล็อกกลางใน base_academic (succMsg/errorMsg) -->
+                    <!--/* ข้อความผลลัพธ์ขึ้นที่บล็อกกลางใน base_academic (succMsg/errorMsg) */-->
 
-                    <!-- ส่งคำร้องแล้ว: ฟอร์มอ่านอย่างเดียว แต่ยังเข้ามาลงนามได้ -->
+                    <!--/* ส่งคำร้องแล้ว: ฟอร์มอ่านอย่างเดียว แต่ยังเข้ามาลงนามได้ */-->
                     <div th:unless="${editable}" class="alert alert-secondary d-flex align-items-start gap-2">
                         <i class="fas fa-lock mt-1"></i>
                         <div>
@@ -36,7 +36,7 @@
                         </div>
                     </div>
 
-                    <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+                    <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
                     <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
@@ -46,17 +46,17 @@
                         th:with="dData=${doc1Data}">
                         <fieldset th:disabled="${!editable}" class="border-0 p-0 m-0">
 
-                        <!-- ข้อมูลบันทึกข้อความ -->
+                        <!--/* ข้อมูลบันทึกข้อความ */-->
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-file-signature"></i> ข้อมูลบันทึกข้อความ
                         </h5>
-                        <!--
+                        <!--/*
                           เลขที่หนังสือและวันที่เอกสารเป็นงานสารบรรณ ออกให้หลังเอกสารลงนามครบ
                           ผู้ยื่นจึงไม่มีช่องให้กรอกเลย และไม่ต้องส่งอะไรกลับมาด้วย — เซิร์ฟเวอร์
                           คืนค่าที่เจ้าหน้าที่กรอกไว้ให้เอง (DocumentFieldOwnership)
 
                           ช่องซ่อนแบบเดิมส่งค่ามาทับทุกครั้งที่กดบันทึก ซึ่งเป็นวิธีที่พังทันทีที่
                           เบราว์เซอร์ไม่ส่งค่ากลับ หรือมีคนยิง POST ตรง
-                        -->
+                        */-->
                         <div class="row mb-3">
                             <div class="col-md-6">
                                 <label class="form-label">เลขที่หนังสือและวันที่เอกสาร</label>
@@ -67,19 +67,19 @@
                             </div>
                         </div>
 
-                        <!-- ข้อมูลผู้ขอรับการประเมิน -->
+                        <!--/* ข้อมูลผู้ขอรับการประเมิน */-->
                         <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-user"></i> ข้อมูลผู้ขอรับการประเมิน
                         </h5>
-                        <!-- คำนำหน้า ชื่อ และตำแหน่งปัจจุบันมาจากข้อมูลบุคลากรในระบบ เซิร์ฟเวอร์เขียนทับทุกครั้งที่บันทึก
-                             (AcademicRequestService.applicantProfileFields) — ประเภทบุคลากรยังเลือกเอง -->
+                        <!--/* คำนำหน้า ชื่อ และตำแหน่งปัจจุบันมาจากข้อมูลบุคลากรในระบบ เซิร์ฟเวอร์เขียนทับทุกครั้งที่บันทึก
+                             (AcademicRequestService.applicantProfileFields) — ประเภทบุคลากรยังเลือกเอง */-->
                         <p th:unless="${profileLocked == null or profileLocked.isEmpty()}" class="small text-muted mt-n2 mb-2">
                             <i class="fas fa-lock me-1"></i>ดึงจากข้อมูลบุคลากรในระบบ — หากไม่ถูกต้องโปรดติดต่อเจ้าหน้าที่
                         </p>
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
-                                <!-- currentTitle: อ่านผ่าน map['key'] เพราะ map.key จะโยน
-                                     exception ถ้าไม่มีคีย์นั้น ซึ่งเกิดกับผู้ใช้ที่ยังไม่ได้ตั้งคำนำหน้า -->
+                                <!--/* currentTitle: อ่านผ่าน map['key'] เพราะ map.key จะโยน
+                                     exception ถ้าไม่มีคีย์นั้น ซึ่งเกิดกับผู้ใช้ที่ยังไม่ได้ตั้งคำนำหน้า */-->
                                 <input th:if="${profileLocked != null and profileLocked.containsKey('title')}"
                                     type="text" name="title" class="form-control" id="titleSelect" readonly required
                                     th:value="${profileLocked['title']}">
@@ -149,7 +149,7 @@
                             </div>
                         </div>
 
-                        <!-- ตำแหน่งที่ขอรับการประเมิน -->
+                        <!--/* ตำแหน่งที่ขอรับการประเมิน */-->
                         <h5 class="border-bottom pb-2 mb-3 mt-4">
                             <i class="fas fa-graduation-cap"></i> ขอรับการประเมินผลการสอนเพื่อขอกำหนดตำแหน่ง <span class="text-danger">*</span>
                         </h5>
@@ -189,7 +189,7 @@
                                     จึงขอประเมินได้เฉพาะตำแหน่งที่สูงกว่า
                                     <span th:if="${associateBlocked}">(ขอตำแหน่งศาสตราจารย์ไม่ต้องประเมินการสอน)</span>
                                 </div>
-                                <!-- Hidden inputs for backend binding -->
+                                <!--/* Hidden inputs for backend binding */-->
                                 <input type="hidden" name="chk1" id="chk1"
                                     th:value="${dData != null ? dData.getOrDefault('chk1', '') : ''}">
                                 <input type="hidden" name="chk2" id="chk2"
@@ -197,7 +197,7 @@
                             </div>
                         </div>
 
-                        <!-- ข้อมูลรายวิชา -->
+                        <!--/* ข้อมูลรายวิชา */-->
                         <h5 class="border-bottom pb-2 mb-3 mt-4"><i class="fas fa-book"></i> ข้อมูลรายวิชา</h5>
                         <div class="row mb-3">
                             <div class="col-md-4">
@@ -214,7 +214,7 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">ภาค/ปีการศึกษา <span class="text-danger">*</span></label>
-                                <!-- รูปแบบเดียวกับ DocumentCompleteness.SEMESTER_YEAR — เซิร์ฟเวอร์ไม่ให้ส่งลงนามถ้าผิดรูปแบบ -->
+                                <!--/* รูปแบบเดียวกับ DocumentCompleteness.SEMESTER_YEAR — เซิร์ฟเวอร์ไม่ให้ส่งลงนามถ้าผิดรูปแบบ */-->
                                 <input type="text" name="academic_year" id="academicYearInput" class="form-control"
                                     th:value="${dData != null ? dData.getOrDefault('academic_year', '') : ''}"
                                     placeholder="เช่น 1/2569" pattern="^[1-3]/[0-9]{4}$"
@@ -223,7 +223,7 @@
                             </div>
                         </div>
 
-                        <!-- Validation alert -->
+                        <!--/* Validation alert */-->
                         <div id="doc1ValidationAlert" class="alert alert-warning d-none mt-3 u-radius-10">
                             <i class="fas fa-exclamation-triangle"></i> <span id="doc1ValidationMsg"></span>
                         </div>
@@ -236,10 +236,10 @@
                         </div>
                     </form>
 
-            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
             <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
 
-                    <!-- เอกสารที่สร้างแล้ว -->
+                    <!--/* เอกสารที่สร้างแล้ว */-->
                     <div th:if="${existingDocs != null && !existingDocs.isEmpty()}" class="mt-4">
                         <h6 class="text-success"><i class="fas fa-check-circle"></i> เอกสารที่สร้างแล้ว</h6>
                         <div th:each="doc : ${existingDocs}" class="card doc-card generated mb-2 p-3">
@@ -256,7 +256,7 @@
                         </div>
                     </div>
 
-                    <!-- Preview CSS & JS -->
+                    <!--/* Preview CSS & JS */-->
                     <link rel="stylesheet" href="/css/doc_preview.css">
 
                     <input type="hidden" id="currentDocType" value="1">

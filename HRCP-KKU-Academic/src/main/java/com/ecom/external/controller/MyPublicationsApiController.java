@@ -54,6 +54,7 @@ public class MyPublicationsApiController {
             @RequestParam(required = false) String q,
             @RequestParam(name = "year_from", required = false) Integer yearFrom,
             @RequestParam(name = "year_to", required = false) Integer yearTo,
+            @RequestParam(required = false) String source,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
             Principal principal) {
@@ -63,7 +64,7 @@ public class MyPublicationsApiController {
             return ResponseEntity.status(401).build();
         }
 
-        Page<PublicationDto> result = scopusQuery.listOwn(user, yearFrom, yearTo, q, page, size);
+        Page<PublicationDto> result = scopusQuery.listOwn(user, yearFrom, yearTo, q, source, page, size);
 
         Map<String, Object> body = new HashMap<>();
         body.put("data", result.getContent());

@@ -11,13 +11,13 @@
 <section>
     <div class="container-fluid py-4 px-4">
 
-        <!-- Global Alerts -->
+        <!--/* Global Alerts */-->
         <div th:if="${warnMsg}" class="alert alert-warning alert-dismissible fade show mb-4 shadow-sm">
             <i class="fas fa-clock me-1"></i> [[${warnMsg}]]
             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
         </div>
 
-        <!-- Navigation Tabs -->
+        <!--/* Navigation Tabs */-->
         <ul class="nav nav-pills mb-4 gap-2 bg-white p-2 rounded-3 shadow-sm border" id="syncTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link px-4 py-2 fw-semibold"
@@ -47,7 +47,7 @@
         </ul>
 
         <div class="tab-content" id="syncTabsContent">
-            <!-- ==================== TAB 1: EXTERNAL SYNC ==================== -->
+            <!--/* ==================== TAB 1: EXTERNAL SYNC ==================== */-->
             <div class="tab-pane fade"
                  th:classappend="${activeTab != 'changes'} ? 'show active' : ''"
                  id="tab-sync"
@@ -65,7 +65,7 @@
                     </div>
 
                     <div class="card-body p-4">
-                        <!-- Current contents -->
+                        <!--/* Current contents */-->
                         <div class="row g-3 mb-4">
                             <div class="col-md-3">
                                 <div class="border rounded-3 p-3 text-center h-100 bg-light shadow-sm">
@@ -102,7 +102,7 @@
                             </div>
                         </div>
 
-                        <!-- Publication Source Breakdown Badges -->
+                        <!--/* Publication Source Breakdown Badges */-->
                         <div class="bg-light p-3 rounded-3 border mb-4 shadow-sm" th:if="${sourceCounts != null}">
                             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                                 <div class="fw-semibold text-secondary small">
@@ -131,10 +131,10 @@
                             </div>
                         </div>
 
-                        <!-- Manual triggers -->
+                        <!--/* Manual triggers */-->
                         <h5 class="mb-3 fw-bold"><i class="fas fa-play-circle text-primary me-2"></i>ดึงข้อมูลตอนนี้</h5>
                         <div class="row g-3 mb-4">
-                            <!-- Card 1: Faculty Directory -->
+                            <!--/* Card 1: Faculty Directory */-->
                             <div class="col-lg-3 col-md-6">
                                 <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
                                     <h6 class="fw-bold"><i class="fas fa-users text-primary me-1"></i> ข้อมูลอาจารย์</h6>
@@ -156,7 +156,7 @@
                                 </div>
                             </div>
 
-                            <!-- Card 2: Scopus Publications -->
+                            <!--/* Card 2: Scopus Publications */-->
                             <div class="col-lg-3 col-md-6">
                                 <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
                                     <h6 class="fw-bold"><i class="fas fa-book text-success me-1"></i> ผลงาน Scopus เดิม</h6>
@@ -178,7 +178,7 @@
                                 </div>
                             </div>
 
-                            <!-- Card 3: College Web Directory -->
+                            <!--/* Card 3: College Web Directory */-->
                             <div class="col-lg-3 col-md-6">
                                 <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white">
                                     <h6 class="fw-bold"><i class="fas fa-image text-info me-1"></i> รูป/ข้อมูลเว็บคณะ</h6>
@@ -194,7 +194,7 @@
                                 </div>
                             </div>
 
-                            <!-- Card 4: Multi-Source Publication Harvest (NEW) -->
+                            <!--/* Card 4: Multi-Source Publication Harvest (NEW) */-->
                             <div class="col-lg-3 col-md-6">
                                 <div class="border rounded-3 p-3 h-100 d-flex flex-column shadow-sm bg-white border-primary">
                                     <div class="d-flex align-items-center justify-content-between mb-1">
@@ -271,7 +271,7 @@
                                 </div>
                             </div>
 
-                            <!-- Card 5: KKU HR Regulations Sync -->
+                            <!--/* Card 5: KKU HR Regulations Sync */-->
                             <div class="col-12 mt-3">
                                 <div class="border rounded-3 p-3 d-flex flex-column flex-md-row align-items-md-center justify-content-between shadow-sm bg-white border-warning">
                                     <div class="me-md-3 mb-2 mb-md-0">
@@ -289,7 +289,7 @@
                             </div>
                         </div>
 
-                        <!-- Last run Dashboard Table -->
+                        <!--/* Last run Dashboard Table */-->
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                             <h5 class="mb-0 fw-bold"><i class="fas fa-clock-rotate-left text-success me-2"></i>ผลการทำงานล่าสุดและสถานะรอบวัน</h5>
                             <div class="d-flex gap-2 align-items-center flex-wrap">
@@ -360,7 +360,7 @@
                             </table>
                         </div>
 
-                        <!-- Schedule (All 9 Background Jobs Grouped by Category) -->
+                        <!--/* Schedule (All 9 Background Jobs Grouped by Category) */-->
                         <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-3">
                             <h5 class="mb-0 fw-bold"><i class="fas fa-calendar-check text-primary me-2"></i>ตารางเวลางานอัตโนมัติ</h5>
                             <small class="text-muted"><i class="fas fa-globe-asia me-1"></i>เวลาประเทศไทย</small>
@@ -418,7 +418,7 @@
 
             </div>
 
-            <!-- ==================== TAB 2: FACULTY CHANGES ==================== -->
+            <!--/* ==================== TAB 2: FACULTY CHANGES ==================== */-->
             <div class="tab-pane fade"
                  th:classappend="${activeTab == 'changes'} ? 'show active' : ''"
                  id="tab-changes"
@@ -458,14 +458,14 @@
                             </form>
                         </div>
 
-                        <!-- Nothing waiting -->
+                        <!--/* Nothing waiting */-->
                         <div th:if="${#lists.isEmpty(changes)}" class="alert alert-success mb-0 py-4 text-center">
                             <i class="fas fa-check-circle fs-3 text-success d-block mb-2"></i>
                             <h5 class="fw-bold">ไม่มีรายการรอตรวจสอบ</h5>
                             <p class="text-muted mb-0">ข้อมูลอาจารย์ในระบบตรงกับระบบ Fund Management เรียบร้อยแล้ว</p>
                         </div>
 
-                        <!-- One card per pending change -->
+                        <!--/* One card per pending change */-->
                         <div th:each="change : ${changes}" class="card mb-3 border-warning shadow-sm">
                             <div class="card-header bg-warning bg-opacity-10 d-flex justify-content-between align-items-center flex-wrap gap-2 border-warning">
                                 <div>
@@ -538,7 +538,7 @@
                     </div>
                 </div>
 
-                <!-- Decision history -->
+                <!--/* Decision history */-->
                 <div class="card card-sh" th:if="${!#lists.isEmpty(recent)}">
                     <div class="card-header bg-white py-3">
                         <h5 class="mb-0 fw-bold"><i class="fas fa-history text-secondary me-2"></i>ประวัติการตรวจสอบล่าสุด</h5>
@@ -580,7 +580,7 @@
 
     </div>
 
-    <!-- Modal Real-Time Progress for Multi-Source Harvest -->
+    <!--/* Modal Real-Time Progress for Multi-Source Harvest */-->
     <div class="modal fade" id="harvestProgressModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-labelledby="harvestProgressModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content shadow-lg border-0">
@@ -593,7 +593,7 @@
                     </span>
                 </div>
                 <div class="modal-body p-4">
-                    <!-- Main Real % Progress Bar -->
+                    <!--/* Main Real % Progress Bar */-->
                     <div class="d-flex justify-content-between align-items-center mb-1">
                         <span class="fw-semibold text-secondary small" id="harvestCurrentAction">กำลังเริ่มต้นเชื่อมต่อ API...</span>
                         <span class="fs-4 fw-bold text-primary" id="harvestPercentText">0%</span>
@@ -603,12 +603,12 @@
                              role="progressbar">0%</div>
                     </div>
 
-                    <!-- Current detailed task ticker -->
+                    <!--/* Current detailed task ticker */-->
                     <div class="p-2 mb-3 bg-light rounded-3 border small font-monospace text-truncate" id="harvestTaskTicker">
                         <i class="fas fa-terminal text-muted me-2"></i><span id="harvestTaskText">กำลังเตรียมข้อมูลอาจารย์...</span>
                     </div>
 
-                    <!-- Sources Step List -->
+                    <!--/* Sources Step List */-->
                     <h6 class="fw-bold mb-2 small text-secondary"><i class="fas fa-list-check me-1"></i>สถานะขั้นตอนแยกตามแหล่งข้อมูล:</h6>
                     <div class="list-group list-group-flush border rounded-3 overflow-hidden mb-3" id="harvestSourcesList">
                         <div class="list-group-item d-flex justify-content-between align-items-center py-2 px-3" data-src="OPENALEX">
@@ -629,7 +629,7 @@
                         </div>
                     </div>
 
-                    <!-- Completion Alert Box (Hidden until done) -->
+                    <!--/* Completion Alert Box (Hidden until done) */-->
                     <div class="alert alert-success d-none mb-0 small" id="harvestCompletionAlert">
                         <i class="fas fa-check-circle me-1"></i><strong id="harvestSummaryText">เสร็จสิ้นเรียบร้อย</strong>
                     </div>

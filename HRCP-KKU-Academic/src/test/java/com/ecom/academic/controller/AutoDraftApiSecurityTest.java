@@ -54,6 +54,9 @@ class AutoDraftApiSecurityTest {
     @Mock
     private SignatureWorkflowService signatureWorkflow;
 
+    @Mock
+    private com.ecom.academic.service.DocumentPrewarmService prewarmService;
+
     private AutoDraftApiController controller;
 
     private final Principal attackerPrincipal = () -> "attacker@test.com";
@@ -65,7 +68,7 @@ class AutoDraftApiSecurityTest {
     @BeforeEach
     void setUp() {
         controller = new AutoDraftApiController(academicService, positionService, userRepository,
-                signatureWorkflow);
+                signatureWorkflow, prewarmService);
 
         UserDtls attacker = new UserDtls();
         attacker.setId(1);

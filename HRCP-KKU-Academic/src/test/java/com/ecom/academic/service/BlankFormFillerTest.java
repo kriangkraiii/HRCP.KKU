@@ -70,8 +70,8 @@ class BlankFormFillerTest {
             """;
 
     @Test
-    @DisplayName("ผู้ขอที่ยังไม่เคยเป็น ผศ./รศ. — ข้อ ๒.๓/๒.๔ เป็นจุดไข่ปลา")
-    void unheldPositionsPrintDotLeaders() throws IOException {
+    @DisplayName("ผู้ขอที่ยังไม่เคยเป็น ผศ./รศ. — ไม่พิมพ์ข้อ ๒.๓/๒.๔ เลย (ไม่ใช่จุดไข่ปลา)")
+    void unheldPositionsAreNotPrinted() throws IOException {
         String xml = documentXml(new DocumentGenerationService()
                 .generateSignedP2Docx(1, NEVER_HELD_JSON, List.of()));
 
@@ -79,8 +79,8 @@ class BlankFormFillerTest {
         assertTrue(xml.contains("วันที่ ๑ มิถุนายน พ.ศ. ๒๕๖๐"), "วันแต่งตั้งอาจารย์ที่กรอกไว้ต้องยังอยู่");
         // ข้อความในเอกสารถูก Word หั่นข้าม run จึงต้องเทียบกับข้อความล้วน
         String text = plainText(xml);
-        assertTrue(text.contains("(โดยวิธี............)"), "วิธีแต่งตั้งที่ไม่ได้กรอกต้องเป็นจุดไข่ปลา");
-        assertTrue(text.contains("ในสาขาวิชา............"), "สาขาวิชาที่ไม่ได้กรอกต้องเป็นจุดไข่ปลา");
+        assertFalse(text.contains("ได้รับแต่งตั้งให้ดำรงตำแหน่งผู้ช่วยศาสตราจารย์"), "ข้อ ๒.๓ ต้องไม่พิมพ์");
+        assertFalse(text.contains("ได้รับแต่งตั้งให้ดำรงตำแหน่งรองศาสตราจารย์"), "ข้อ ๒.๔ ต้องไม่พิมพ์");
     }
 
     @Test

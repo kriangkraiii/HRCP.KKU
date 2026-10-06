@@ -1840,7 +1840,11 @@ public class AcademicRequestService {
      * ช่องที่โปรไฟล์ยังว่างไม่อยู่ในผลลัพธ์ และยังกรอกเองได้
      */
     public Map<String, String> applicantProfileFields(AcademicRequest request) {
-        UserDtls applicant = request.getApplicant();
+        return profileFieldsOf(request.getApplicant());
+    }
+
+    /** คำนำหน้า ชื่อ และตำแหน่งปัจจุบันของผู้ยื่นตามข้อมูลบุคลากร — ใช้ร่วมกับเฟส 2 ช่องที่ไม่มีค่าไม่อยู่ในผลลัพธ์ */
+    public static Map<String, String> profileFieldsOf(UserDtls applicant) {
         if (applicant == null) {
             return Map.of();
         }

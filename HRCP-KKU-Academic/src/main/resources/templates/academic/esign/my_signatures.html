@@ -6,7 +6,7 @@
 <section>
     <div class="container py-4" th:with="hasValidCert=${activeCertificate != null && !activeCertificate.expired}">
 
-        <!-- ปุ่มกลับ (ฝั่งซ้ายด้านบน) -->
+        <!--/* ปุ่มกลับ (ฝั่งซ้ายด้านบน) */-->
         <div class="mb-3">
             <a href="/esign/inbox"
                class="btn-back-pill"
@@ -15,13 +15,13 @@
             </a>
         </div>
 
-        <!-- Header -->
+        <!--/* Header */-->
         <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-4">
             <div>
                 <h3 class="mb-1"><i class="fas fa-signature text-primary me-2"></i> ลายเซ็นของฉัน</h3>
             </div>
 
-            <!-- Right Side Action: Certificate Status & Management Button (When Valid Cert Exists) -->
+            <!--/* Right Side Action: Certificate Status & Management Button (When Valid Cert Exists) */-->
             <div th:if="${hasValidCert}" class="d-flex align-items-center flex-wrap gap-2">
                 <span class="badge bg-success-subtle text-success border border-success-subtle py-2 px-3 rounded-pill d-inline-flex align-items-center gap-2">
                     <i class="fas fa-shield-halved"></i>
@@ -37,9 +37,9 @@
             </div>
         </div>
 
-        <!-- ==================== CASE 1: NO VALID CERTIFICATE (STEP 1: INSTALL P12 FIRST) ==================== -->
+        <!--/* ==================== CASE 1: NO VALID CERTIFICATE (STEP 1: INSTALL P12 FIRST) ==================== */-->
         <div th:if="${!hasValidCert}">
-            <!-- Step 1 Hero Card -->
+            <!--/* Step 1 Hero Card */-->
             <div class="card card-academic border-primary shadow-sm mb-4">
                 <div class="card-header bg-primary text-white py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                     <div class="d-flex align-items-center gap-2">
@@ -54,7 +54,7 @@
                     </button>
                 </div>
                 <div class="card-body p-4">
-                    <!-- Expired notice if applicable -->
+                    <!--/* Expired notice if applicable */-->
                     <div th:if="${activeCertificate != null && activeCertificate.expired}" class="alert alert-danger py-2 px-3 mb-3 small border-danger">
                         <i class="fas fa-triangle-exclamation me-1"></i>
                         <strong>ใบรับรองเดิมหมดอายุแล้ว</strong> กรุณาดาวน์โหลดไฟล์ .p12 ฉบับใหม่จาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener" class="fw-bold alert-link text-decoration-underline">i.kku.ac.th</a> แล้วติดตั้งด้านล่าง
@@ -65,7 +65,7 @@
                         <span th:replace="~{academic/_info_tip :: tip('การลงนามในระบบเป็นลายมือชื่อดิจิทัลแบบ PAdES ตาม พ.ร.บ.ว่าด้วยธุรกรรมทางอิเล็กทรอนิกส์ จึงต้องใช้ใบรับรองดิจิทัลส่วนบุคคล (.p12) ของมหาวิทยาลัยขอนแก่น ดาวน์โหลดได้จาก i.kku.ac.th')}"></span>
                     </p>
 
-                    <!-- Upload Form -->
+                    <!--/* Upload Form */-->
                     <div class="p-3 bg-light rounded-3 border">
                         <h6 class="fw-bold text-dark mb-3">
                             <i class="fas fa-cloud-arrow-up text-primary me-1"></i> อัปโหลดและติดตั้งไฟล์ใบรับรอง .p12
@@ -88,7 +88,7 @@
                                     <div class="form-text small">ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO</div>
                                 </div>
 
-                                <!-- Feedback Box -->
+                                <!--/* Feedback Box */-->
                                 <div class="col-12 d-none" id="verifyFeedbackBox">
                                     <div id="verifyFeedbackAlert" class="alert py-2 px-3 small mb-0"></div>
                                 </div>
@@ -110,7 +110,7 @@
                 </div>
             </div>
 
-            <!-- Step 2 Locked Card -->
+            <!--/* Step 2 Locked Card */-->
             <div class="sig-locked-card mb-4">
                 <div class="sig-locked-icon">
                     <i class="fas fa-lock"></i>
@@ -124,7 +124,7 @@
                 </span>
             </div>
 
-            <!-- Saved signatures note if user has previous signatures -->
+            <!--/* Saved signatures note if user has previous signatures */-->
             <div th:if="${!#lists.isEmpty(signatures)}" class="card card-academic mb-4">
                 <div class="card-header bg-white d-flex justify-content-between align-items-center">
                     <h6 class="mb-0 text-dark fw-bold">
@@ -153,9 +153,9 @@
             </div>
         </div>
 
-        <!-- ==================== CASE 2: HAS VALID CERTIFICATE (SIGNATURE CREATION & MANAGEMENT) ==================== -->
+        <!--/* ==================== CASE 2: HAS VALID CERTIFICATE (SIGNATURE CREATION & MANAGEMENT) ==================== */-->
         <div th:if="${hasValidCert}">
-            <!-- ==================== เพิ่ม / แก้ไขลายเซ็น ==================== -->
+            <!--/* ==================== เพิ่ม / แก้ไขลายเซ็น ==================== */-->
             <div class="card card-academic mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">
@@ -187,7 +187,7 @@
                         <input type="hidden" name="kind" id="sigKind" value="DRAW">
                         <input type="hidden" name="typedFont" id="sigTypedFont">
 
-                        <!-- แท็บเลือกวิธีสร้างลายเซ็น -->
+                        <!--/* แท็บเลือกวิธีสร้างลายเซ็น */-->
                         <div class="sig-tabs mb-3">
                             <button type="button" class="sig-tab" data-sig-tab="DRAW" aria-selected="true">
                                 วาด
@@ -201,7 +201,7 @@
                         </div>
 
                         <div class="row g-3">
-                            <!-- ฝั่งซ้าย: พื้นที่สร้างลายเซ็น -->
+                            <!--/* ฝั่งซ้าย: พื้นที่สร้างลายเซ็น */-->
                             <div class="col-lg-5">
 
                                 <div id="sigPanelDraw">
@@ -234,7 +234,7 @@
                                 </button>
                             </div>
 
-                            <!-- ฝั่งขวา: ตัวอย่างผลลัพธ์จริงที่จะถูกนำไปใช้ในเอกสาร -->
+                            <!--/* ฝั่งขวา: ตัวอย่างผลลัพธ์จริงที่จะถูกนำไปใช้ในเอกสาร */-->
                             <div class="col-lg-7">
                                 <label class="form-label">ตัวอย่างลายเซ็น</label>
                                 <div class="sig-preview-box">
@@ -284,7 +284,7 @@
                 </div>
             </div>
 
-            <!-- ==================== ลายเซ็นที่บันทึกไว้ ==================== -->
+            <!--/* ==================== ลายเซ็นที่บันทึกไว้ ==================== */-->
             <div class="card card-academic mb-4">
                 <div class="card-header bg-white">
                     <h5 class="mb-0">
@@ -343,7 +343,7 @@
                 </div>
             </div>
 
-            <!-- ==================== Modal จัดการใบรับรองดิจิทัล (.p12) ==================== -->
+            <!--/* ==================== Modal จัดการใบรับรองดิจิทัล (.p12) ==================== */-->
             <div class="modal fade" id="p12ManageModal" tabindex="-1" aria-labelledby="p12ManageModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered modal-lg">
                     <div class="modal-content">
@@ -354,7 +354,7 @@
                             <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                         </div>
                         <div class="modal-body p-4">
-                            <!-- Certificate Info Card -->
+                            <!--/* Certificate Info Card */-->
                             <div class="p-3 bg-light rounded-3 border mb-4">
                                 <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
                                     <div>
@@ -384,7 +384,7 @@
                                 </div>
                             </div>
 
-                            <!-- Replace / Update Certificate -->
+                            <!--/* Replace / Update Certificate */-->
                             <div class="card border border-dashed mb-3">
                                 <div class="card-body p-3">
                                     <h6 class="fw-bold text-dark mb-2">
@@ -408,7 +408,7 @@
                                                 <div class="form-text small">ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO</div>
                                             </div>
 
-                                            <!-- Feedback Box -->
+                                            <!--/* Feedback Box */-->
                                             <div class="col-12 d-none" id="verifyFeedbackBoxModal">
                                                 <div id="verifyFeedbackAlertModal" class="alert py-2 px-3 small mb-0"></div>
                                             </div>
@@ -443,10 +443,10 @@
 
     </div>
 
-    <!-- Reusable P12 Guide Modal -->
+    <!--/* Reusable P12 Guide Modal */-->
     <div th:replace="~{academic/esign/_p12_guide_modal :: p12GuideModal}"></div>
 
-    <script src="/vendor/pdfjs/pdf.min.js"></script>
+    <!--/* PDF.js is imported by signature_pad.js on first PDF upload */-->
     <script src="/js/signature_pad.js"></script>
 
     <script>

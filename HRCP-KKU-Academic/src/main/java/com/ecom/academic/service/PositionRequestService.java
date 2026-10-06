@@ -78,6 +78,8 @@ public class PositionRequestService {
 
     private final com.ecom.service.UploadPaths uploadPaths;
 
+    private final com.ecom.external.repository.ScopusPublicationRepository publicationRepository;
+
     public PositionRequestService(
             PositionRequestRepository requestRepository,
             PositionDocumentRepository documentRepository,
@@ -90,8 +92,10 @@ public class PositionRequestService {
             PositionAttachmentRepository attachmentRepository,
             com.ecom.academic.repository.SignatureRequestRepository signatureRequestRepository,
             PositionRequestPublicationRepository publicationLinkRepository,
-            com.ecom.service.UploadPaths uploadPaths) {
+            com.ecom.service.UploadPaths uploadPaths,
+            com.ecom.external.repository.ScopusPublicationRepository publicationRepository) {
         this.uploadPaths = uploadPaths;
+        this.publicationRepository = publicationRepository;
         this.requestRepository = requestRepository;
         this.documentRepository = documentRepository;
         this.statusHistoryRepository = statusHistoryRepository;
@@ -109,6 +113,12 @@ public class PositionRequestService {
 
     // ================== Document labels ==================
 
+    /**
+     * ชื่อเอกสารตามลำดับที่แสดง — เอกสารของผู้ยื่นก่อน ตามด้วยของเจ้าหน้าที่
+     *
+     * <p>key คือ document type ที่ใช้ใน URL ฐานข้อมูล และเทมเพลต ห้ามเปลี่ยน ส่วนเลขที่ผู้ใช้เห็น
+     * ("เอกสารที่ N") คือลำดับในแผนที่นี้ ดู {@link #docNumber(int)}
+     */
     private static final Map<Integer, String> DOC_LABELS = new LinkedHashMap<>();
     static {
         DOC_LABELS.put(1, "แบบ ก.พ.ว. มข. 03 (ส่วนที่ 1–5)");
@@ -117,9 +127,24 @@ public class PositionRequestService {
         DOC_LABELS.put(4, "บันทึกรับรองผลงานทางวิชาการ (วิทยานิพนธ์)");
         // 5 (แบบประเมินคุณสมบัติโดยผู้บังคับบัญชา) รวมเข้าเป็นส่วนที่ ๒ ของเอกสารที่ 1 แล้ว
         DOC_LABELS.put(6, "บันทึกข้อความจริยธรรมการวิจัย (Exemption)");
+        DOC_LABELS.put(9, "ลักษณะการมีส่วนร่วมในผลงาน");
         DOC_LABELS.put(7, "แบบฟอร์มตรวจสอบคุณสมบัติ (Checklist)");
         DOC_LABELS.put(8, "แบบสรุปรายละเอียดและรายชื่อผู้ทรงคุณวุฒิ");
-        DOC_LABELS.put(9, "ลักษณะการมีส่วนร่วมในผลงาน");
+    }
+
+    /**
+     * เลขที่แสดงเป็น "เอกสารที่ N" ของ document type นี้ — type 6 → 5, 9 → 6, 7 → 7, 8 → 8
+     * type ที่ไม่รู้จักคืนตัวเอง
+     */
+    public static int docNumber(int type) {
+        int n = 1;
+        for (int key : DOC_LABELS.keySet()) {
+            if (key == type) {
+                return n;
+            }
+            n++;
+        }
+        return type;
     }
 
     // Who owns which document — and which fields inside it — lives in
@@ -177,7 +202,12 @@ public class PositionRequestService {
     }
 
     public String getDocLabel(int type) {
-        return DOC_LABELS.getOrDefault(type, "เอกสารที่ " + type);
+        return DOC_LABELS.getOrDefault(type, "เอกสารที่ " + docNumber(type));
+    }
+
+    /** {@link #docNumber(int)} สำหรับเทมเพลต: {@code ${@positionRequestService.docNo(documentType)}} */
+    public int docNo(int type) {
+        return docNumber(type);
     }
 
     // ================== Eligibility ==================
@@ -383,6 +413,218 @@ public class PositionRequestService {
         } catch (Exception e) {
             return jsonData;
         }
+    }
+
+    public static final String FACULTY = "วิทยาลัยการคอมพิวเตอร์";
+    public static final String UNIVERSITY = "มหาวิทยาลัยขอนแก่น";
+
+    /** เอกสารที่มีช่องตำแหน่งปัจจุบัน ({@code current_position}) */
+    private static final Set<Integer> CURRENT_POSITION_DOCS = Set.of(1, 2, 4, 6);
+
+    /**
+     * ช่องในเอกสารของผู้ยื่นที่ระบบรู้ค่าอยู่แล้ว — ดึงมาใส่และล็อก ผู้ยื่นแก้เองไม่ได้
+     *
+     * <ul>
+     *   <li>ข้อมูลบุคลากร: คำนำหน้า ชื่อ และตำแหน่งปัจจุบัน (เหมือนเอกสารที่ 1–2 ของเฟส 1)
+     *       — เอกสารที่ 6 ใช้ช่อง {@code applicant_title} ส่วนเอกสารที่ 9 ไม่มีช่องคำนำหน้า</li>
+     *   <li>หน่วยงาน: คณะ มหาวิทยาลัย (เอกสารที่ 1) และสังกัด (เอกสารที่ 4)</li>
+     *   <li>เอกสารที่ 1 เป็นต้นฉบับ: สาขาวิชาในเอกสารที่ 2 ตามเอกสารที่ 1</li>
+     *   <li>งานสอนจากผลประเมินการสอน ({@link #teachingHistoryRows}) — เฉพาะรายวิชาและภาค/ปี
+     *       ระดับและชั่วโมงผู้ยื่นกรอกเอง</li>
+     * </ul>
+     *
+     * <p>ช่องที่หาค่าไม่ได้ไม่อยู่ในผลลัพธ์ จึงยังกรอกเองได้ ตำแหน่งที่ขอตรึงแยกไว้ที่
+     * {@link #pinTargetPosition}
+     */
+    public Map<String, String> lockedFields(PositionRequest request, int documentType) {
+        if (request == null || !APPLICANT_DOCS.contains(documentType)) {
+            return Map.of();
+        }
+        Map<String, String> profile = AcademicRequestService.profileFieldsOf(request.getApplicant());
+        Map<String, String> fields = new LinkedHashMap<>();
+        String title = profile.get("title");
+        if (title != null && documentType != 9) {
+            fields.put(documentType == 6 ? "applicant_title" : "title", title);
+        }
+        putIfPresent(fields, "applicant_name", profile.get("applicant_name"));
+        if (CURRENT_POSITION_DOCS.contains(documentType)) {
+            putIfPresent(fields, "current_position", profile.get("current_position"));
+        }
+        switch (documentType) {
+            case 1 -> {
+                fields.put("faculty", FACULTY);
+                fields.put("university", UNIVERSITY);
+                fields.putAll(teachingHistoryRows(request));
+            }
+            case 2 -> {
+                Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
+                putIfPresent(fields, "major", doc1 == null ? null : doc1.get("major"));
+            }
+            case 4 -> fields.put("affiliation", FACULTY + " " + UNIVERSITY);
+            default -> {
+            }
+        }
+        return fields;
+    }
+
+    private static void putIfPresent(Map<String, String> fields, String key, String value) {
+        if (!isBlank(value)) {
+            fields.put(key, value.trim());
+        }
+    }
+
+    /** เขียนทับช่องที่ล็อกด้วยค่าจากระบบ — ใช้ทุกทางที่ผู้ยื่นบันทึกเอกสาร */
+    public void pinLockedFields(PositionRequest request, int documentType, Map<String, String> formData) {
+        if (formData != null) {
+            formData.putAll(lockedFields(request, documentType));
+        }
+    }
+
+    /** JSON-in/JSON-out variant of {@link #pinLockedFields} for the auto-draft endpoint. */
+    public String pinLockedFieldsInJson(PositionRequest request, int documentType, String jsonData) {
+        Map<String, String> fields = lockedFields(request, documentType);
+        if (fields.isEmpty() || jsonData == null) {
+            return jsonData;
+        }
+        try {
+            Map<String, String> submitted = objectMapper.readValue(jsonData,
+                    new TypeReference<Map<String, String>>() {
+                    });
+            submitted.putAll(fields);
+            return objectMapper.writeValueAsString(submitted);
+        } catch (Exception e) {
+            return jsonData;
+        }
+    }
+
+    /** บรรทัดผลงานในแบบ ก.พ.ว. มข.๐๓: งานวิจัย ผลงานลักษณะอื่น ตำรา ของทุกระดับตำแหน่ง */
+    private static final Pattern WORK_LINE = Pattern.compile("^(asst|assoc|prof)_(research|other|book)_working_\\d+$");
+
+    /**
+     * ผลงานในเอกสารที่ 1 ของคำร้องนี้ที่ผู้ยื่นเคยใช้ยื่นคำร้องก่อนหน้าแล้ว — ใช้ซ้ำไม่ได้
+     *
+     * <p>ผลงานที่เลือกจากรายการถูกกันด้วยรหัสผลงานอยู่แล้ว ตัวนี้ครอบผลงานที่พิมพ์เองหรือแก้ข้อความ
+     * โดยเทียบกับผลงานในคำร้องอื่นของผู้ยื่นคนเดียวกันที่พ้นแบบร่างแล้ว และชื่อเรื่องของผลงานที่เคย
+     * เลือกจากรายการไปแล้วในคำร้องอื่น ({@link WorkReuseMatcher})
+     *
+     * @return ข้อความผลงานที่ซ้ำ ตามที่พิมพ์ในคำร้องนี้ — ว่างเมื่อไม่ซ้ำ
+     */
+    public List<String> reusedWorks(PositionRequest request) {
+        if (request == null || request.getApplicant() == null) {
+            return List.of();
+        }
+        List<String> mine = workLines(getLatestDocumentData(request.getId(), 1));
+        if (mine.isEmpty()) {
+            return List.of();
+        }
+        List<String> earlier = new java.util.ArrayList<>();
+        for (PositionRequest other : requestRepository.findByApplicantId(request.getApplicant().getId())) {
+            if (!other.getId().equals(request.getId()) && other.getCurrentStatus() != PositionRequestStatus.DRAFT) {
+                earlier.addAll(workLines(getLatestDocumentData(other.getId(), 1)));
+            }
+        }
+        // ผลงานที่ผูกกับคำร้องนี้เอง (คำร้องที่ถูกส่งกลับมาแก้) ไม่นับว่าใช้ไปแล้ว
+        Set<Long> ownLinks = new java.util.HashSet<>();
+        publicationLinkRepository.findByRequestId(request.getId()).forEach(l -> ownLinks.add(l.getPublicationId()));
+        List<Long> spentIds = publicationLinkRepository.findSpentPublicationIds(
+                request.getApplicant().getId(), Set.of(PositionRequestStatus.DRAFT)).stream()
+                .filter(id -> !ownLinks.contains(id))
+                .toList();
+        List<String> spentTitles = spentIds.isEmpty() ? List.of()
+                : publicationRepository.findAllById(spentIds).stream()
+                        .map(com.ecom.external.model.ScopusPublication::getTitle)
+                        .toList();
+        if (earlier.isEmpty() && spentTitles.isEmpty()) {
+            return List.of();
+        }
+        return mine.stream().filter(line -> WorkReuseMatcher.reused(line, earlier, spentTitles)).toList();
+    }
+
+    private static List<String> workLines(Map<String, String> doc1) {
+        if (doc1 == null) {
+            return List.of();
+        }
+        return doc1.entrySet().stream()
+                .filter(e -> WORK_LINE.matcher(e.getKey()).matches() && !isBlank(e.getValue()))
+                .map(e -> e.getValue().trim())
+                .toList();
+    }
+
+    private static final Pattern BE_YEAR = Pattern.compile("(25\\d\\d)");
+
+    /**
+     * แถวงานสอน (๓.๑ ของแบบ ก.พ.ว. มข. 03) เท่าที่ระบบรู้ — รายวิชาจากคำร้องประเมินผลการสอนของผู้ยื่น
+     * ย้อนหลัง ๓ ปีการศึกษา ผลประเมินที่ผูกกับคำร้องนี้ขึ้นก่อน ไม่ซ้ำรายวิชาและภาคเดียวกัน
+     *
+     * <p>ระบบไม่เก็บระดับ (ป.ตรี/บัณฑิต) และชั่วโมงต่อสัปดาห์ ช่องพวกนั้นผู้ยื่นกรอกเอง
+     *
+     * @return {@code teaching_subject_N} / {@code teaching_semester_N} เริ่มที่ N = 1 — ว่างเมื่อไม่มีข้อมูล
+     */
+    public Map<String, String> teachingHistoryRows(PositionRequest request) {
+        Map<String, String> rows = new LinkedHashMap<>();
+        if (request == null || request.getApplicant() == null) {
+            return rows;
+        }
+        List<AcademicRequest> evaluations = new java.util.ArrayList<>();
+        if (request.getLinkedEvaluation() != null) {
+            evaluations.add(request.getLinkedEvaluation());
+        }
+        academicRequestService.findByApplicant(request.getApplicant().getId()).stream()
+                .filter(e -> e.getCurrentStatus() != RequestStatus.DRAFT)
+                .filter(e -> evaluations.stream().noneMatch(x -> x.getId().equals(e.getId())))
+                .forEach(evaluations::add);
+        if (evaluations.isEmpty()) {
+            return rows;
+        }
+
+        Map<Long, EvaluationSummary> summaries = academicRequestService.summarizeAll(evaluations);
+        int oldestYear = LocalDate.now().getYear() + 543 - 3;
+        Set<String> seen = new java.util.HashSet<>();
+        int n = 0;
+        for (AcademicRequest evaluation : evaluations) {
+            EvaluationSummary s = summaries.get(evaluation.getId());
+            if (s == null || (isBlank(s.courseCode()) && isBlank(s.courseName()))) {
+                continue;
+            }
+            String semester = semesterLabel(s);
+            Integer year = beYear(semester != null ? semester : s.academicYear());
+            if (year != null && year < oldestYear) {
+                continue;
+            }
+            String subject = (nullToEmpty(s.courseCode()) + " " + nullToEmpty(s.courseName())).trim();
+            if (!seen.add(subject + "|" + nullToEmpty(semester))) {
+                continue;
+            }
+            n++;
+            rows.put("teaching_subject_" + n, subject);
+            if (semester != null) {
+                rows.put("teaching_semester_" + n, semester);
+            }
+        }
+        return rows;
+    }
+
+    /** "1/2568" — ภาคจากผลประเมิน ต่อปีการศึกษาเมื่อภาคไม่มีปีติดมา */
+    private static String semesterLabel(EvaluationSummary s) {
+        String semester = isBlank(s.semester()) ? null : s.semester().trim();
+        String year = isBlank(s.academicYear()) ? null : s.academicYear().trim();
+        if (semester == null) {
+            return year;
+        }
+        return semester.contains("/") || year == null ? semester : semester + "/" + year;
+    }
+
+    private static Integer beYear(String text) {
+        Matcher m = text == null ? null : BE_YEAR.matcher(text);
+        return m != null && m.find() ? Integer.valueOf(m.group(1)) : null;
+    }
+
+    private static boolean isBlank(String s) {
+        return s == null || s.isBlank();
+    }
+
+    private static String nullToEmpty(String s) {
+        return s == null ? "" : s.trim();
     }
 
     // ================== Request CRUD ==================
@@ -1273,7 +1515,7 @@ public class PositionRequestService {
             return null;
         }
         return "ยังเปลี่ยนสถานะไม่ได้ — เอกสารที่ส่งกลับให้แก้ไขยังลงนามใหม่ไม่ครบ: "
-                + pending.stream().map(t -> "เอกสารที่ " + t + " (" + getDocLabel(t) + ")")
+                + pending.stream().map(t -> "เอกสารที่ " + docNumber(t) + " (" + getDocLabel(t) + ")")
                         .reduce((a, b) -> a + ", " + b).orElse("")
                 + " — ผู้ยื่นต้องแก้และลงนามใหม่ และผู้ลงนามคนอื่นในเอกสารนั้นต้องลงนามใหม่ครบก่อน";
     }
@@ -1420,6 +1662,12 @@ public class PositionRequestService {
                 }
                 String value = entry.getValue();
                 if (value == null || value.isBlank()) {
+                    continue;
+                }
+                // แถวที่ลบข้อความทิ้งแล้ว — id เดิมยังค้างใน JSON เพราะการบันทึกรวมค่าใหม่ทับค่าเดิม
+                // ไม่ได้ลบคีย์ที่ไม่ได้ส่งมา นับเฉพาะแถวที่ยังมีผลงานอยู่จริง
+                String line = data.get(entry.getKey().replace("_scopus_id_", "_"));
+                if (line == null || line.isBlank()) {
                     continue;
                 }
                 try {

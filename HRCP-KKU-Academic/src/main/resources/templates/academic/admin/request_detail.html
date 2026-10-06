@@ -10,7 +10,7 @@
         </a>
       </div>
 
-      <!-- Alerts -->
+      <!--/* Alerts */-->
       <div th:if="${param.success != null}" class="alert alert-success alert-dismissible fade show">
         <i class="fas fa-check-circle"></i>
         <span th:if="${param.success[0] == 'status_updated'}">อัปเดตสถานะสำเร็จ</span>
@@ -35,7 +35,7 @@
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
       </div>
 
-      <!-- Hero Header -->
+      <!--/* Hero Header */-->
       <div class="detail-hero">
         <div class="detail-hero-info">
           <h4>
@@ -53,9 +53,9 @@
           th:text="${request.currentStatus.thaiLabel}"></span>
       </div>
 
-      <!-- Progress Tracker -->
+      <!--/* Progress Tracker */-->
       <div class="detail-progress">
-        <!-- เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ — กติกาเดียวกับหน้าผู้ยื่น (RequestStatus.stepStateAt) -->
+        <!--/* เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ — กติกาเดียวกับหน้าผู้ยื่น (RequestStatus.stepStateAt) */-->
         <div class="detail-progress-steps" th:with="cur=${request.currentStatus}">
           <th:block th:each="step, iterStat : ${progressSteps}">
             <div class="detail-progress-step"
@@ -74,7 +74,7 @@
         </div>
       </div>
 
-      <!-- Course Info -->
+      <!--/* Course Info */-->
       <div th:if="${doc1Data != null}" class="detail-info-card s-request-detail-1">
         <h6>
           <i class="fas fa-book u-text-primary-medium"></i>
@@ -114,9 +114,9 @@
       </div>
 
       <div class="row">
-        <!-- Left Column: Status + Attachments + History -->
+        <!--/* Left Column: Status + Attachments + History */-->
         <div class="col-md-5">
-          <!-- Status Update -->
+          <!--/* Status Update */-->
           <div class="detail-section">
             <div class="detail-section-header">
               <h5>
@@ -125,7 +125,7 @@
               </h5>
             </div>
             <div class="detail-section-body">
-              <!-- เอกสารที่ส่งกลับให้แก้ยังลงนามใหม่ไม่ครบ → เปลี่ยนสถานะไปข้างหน้าไม่ได้ (ฝั่งเซิร์ฟเวอร์ปฏิเสธด้วย) -->
+              <!--/* เอกสารที่ส่งกลับให้แก้ยังลงนามใหม่ไม่ครบ → เปลี่ยนสถานะไปข้างหน้าไม่ได้ (ฝั่งเซิร์ฟเวอร์ปฏิเสธด้วย) */-->
               <div th:if="${awaitingResignDocs != null and !#lists.isEmpty(awaitingResignDocs)}" class="alert alert-warning small" id="awaitingResignAlert">
                 <i class="fas fa-pen-nib me-1"></i>
                 <strong>รอลงนามใหม่หลังส่งกลับแก้ไข</strong> — ยังเดินเรื่องต่อไม่ได้จนกว่าเอกสารเหล่านี้จะลงนามใหม่ครบทุกช่อง:
@@ -136,14 +136,14 @@
                   <label class="form-label">สถานะใหม่</label>
                   <select name="status" id="statusSelect" class="form-select" required>
                     <option value="">-- เลือกสถานะ --</option>
-                    <!-- เฉพาะสถานะที่เปลี่ยนไปได้จริงจากสถานะปัจจุบัน ตามลำดับใน flow
-                         เดิมแสดงทุกสถานะ ทำให้กดข้ามขั้นตอนได้โดยไม่มีอะไรห้าม -->
-                    <!-- ข้อ 2 — คณบดีไม่เห็นชอบ: ส่งคืนคือการย้ายกลับไปเป็นแบบร่าง ป้ายจึงต้องบอกสิ่งที่เกิดขึ้นจริง -->
+                    <!--/* เฉพาะสถานะที่เปลี่ยนไปได้จริงจากสถานะปัจจุบัน ตามลำดับใน flow
+                         เดิมแสดงทุกสถานะ ทำให้กดข้ามขั้นตอนได้โดยไม่มีอะไรห้าม */-->
+                    <!--/* ข้อ 2 — คณบดีไม่เห็นชอบ: ส่งคืนคือการย้ายกลับไปเป็นแบบร่าง ป้ายจึงต้องบอกสิ่งที่เกิดขึ้นจริง */-->
                     <option th:each="s : ${allowedNextStatuses}" th:value="${s.name()}"
                       th:text="${s.name() == 'DRAFT'} ? 'ส่งคืนให้ผู้ยื่นแก้ไข (คณบดีไม่เห็นชอบ)' : ${s.thaiLabel}"></option>
                   </select>
                 </div>
-                <!-- ข้อ 15 — ฉบับแก้เข้าที่ประชุมรอบใหม่: ไม่เติมวันรอบแรกไว้ให้ ต้องกรอกวันใหม่ที่หลังวันเดิม -->
+                <!--/* ข้อ 15 — ฉบับแก้เข้าที่ประชุมรอบใหม่: ไม่เติมวันรอบแรกไว้ให้ ต้องกรอกวันใหม่ที่หลังวันเดิม */-->
                 <div class="mb-3 js-hidden" id="meetingFields"
                   th:with="rescheduling=${request.currentStatus.name() == 'REVISION_SUBMITTED'}">
                   <div th:replace="~{academic/admin/_meeting_fields :: fields(${request}, ${rescheduling}, 'statusMeeting')}"></div>
@@ -165,14 +165,14 @@
             </div>
           </div>
 
-          <!-- Document Repository -->
+          <!--/* Document Repository */-->
           <div class="detail-section">
             <div class="detail-section-header">
               <h5><i class="fas fa-folder-open"></i> เอกสารในคำร้อง</h5>
               <span class="badge bg-secondary" th:text="${attachmentCount} + ' / 10 ไฟล์'"></span>
             </div>
             <div class="detail-section-body">
-              <!-- Flow ข้อ 13-14: ฉบับแก้ไขที่ผู้ยื่นส่งกลับมา — เจ้าหน้าที่ส่งต่อให้คณะอนุกรรมการ -->
+              <!--/* Flow ข้อ 13-14: ฉบับแก้ไขที่ผู้ยื่นส่งกลับมา — เจ้าหน้าที่ส่งต่อให้คณะอนุกรรมการ */-->
               <div th:if="${!revisionRounds.isEmpty()}" class="alert alert-warning py-2" id="revisionFilesAdmin">
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                   <span class="fw-semibold"><i class="fas fa-file-pen me-1"></i> เอกสารฉบับแก้ไขจากผู้ยื่น</span>
@@ -182,14 +182,14 @@
                 </div>
                 <div th:replace="~{academic/_revision_files :: list(${revisionRounds}, '/admin/academic/request/' + ${request.id} + '/revision/')}"></div>
               </div>
-              <!-- คำร้องเก่าที่ส่งฉบับแก้ไว้ก่อนรองรับหลายไฟล์ (V36) -->
+              <!--/* คำร้องเก่าที่ส่งฉบับแก้ไว้ก่อนรองรับหลายไฟล์ (V36) */-->
               <div th:if="${revisionRounds.isEmpty() and request.revisionFilePath != null}" class="alert alert-warning d-flex align-items-center justify-content-between gap-2 py-2">
                 <span><i class="fas fa-file-pen me-1"></i> ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว</span>
                 <a th:href="@{'/admin/academic/request/' + ${request.id} + '/revision-file'}" class="btn btn-sm btn-outline-dark">
                   <i class="fas fa-download me-1"></i> ดาวน์โหลดฉบับแก้ไข
                 </a>
               </div>
-              <!-- Upload -->
+              <!--/* Upload */-->
               <form th:action="'/admin/academic/request/' + ${request.id} + '/upload-result'" method="post"
                 enctype="multipart/form-data" th:if="${attachmentCount < 20}">
                 <div class="input-group mb-3">
@@ -205,7 +205,7 @@
                 ถึงจำนวนเอกสารสูงสุดแล้ว (20 ไฟล์)
               </div>
 
-              <!-- List -->
+              <!--/* List */-->
               <div th:if="${#lists.isEmpty(attachments)}" class="admin-table-empty">
                 <i class="fas fa-inbox"></i>
                 <p>ยังไม่มีเอกสารเพิ่มเติม</p>
@@ -273,7 +273,7 @@
             </div>
           </div>
 
-          <!-- History Tabs: Status History & Edit History -->
+          <!--/* History Tabs: Status History & Edit History */-->
           <div class="detail-section">
             <div
               class="detail-section-header s-request-detail-2"
@@ -301,7 +301,7 @@
             <div
               class="detail-section-body history-scroll"
             >
-              <!-- Status History Pane -->
+              <!--/* Status History Pane */-->
               <div id="statusHistPane">
                 <div th:each="h : ${statusHistory}" class="history-entry">
                   <span
@@ -339,7 +339,7 @@
                 </div>
               </div>
 
-              <!-- Edit History Pane -->
+              <!--/* Edit History Pane */-->
               <div id="editHistPane" class="js-hidden">
                 <div class="mb-3">
                   <select
@@ -407,7 +407,7 @@
           </div>
         </div>
 
-        <!-- Right Column: Document Management -->
+        <!--/* Right Column: Document Management */-->
         <div class="col-md-7">
           <div class="detail-section">
             <div class="detail-section-header">
@@ -529,7 +529,7 @@
                     </form>
                   </div>
                 </div>
-                <!-- Generated copies -->
+                <!--/* Generated copies */-->
                 <div th:each="doc : ${documents}"
                   th:if="${doc.documentType == entry.key and !(entry.key == multiCopyDocType and !committeeLetters.isEmpty())}"
                   class="doc-grid-sub"

@@ -58,10 +58,10 @@
                         method="post" id="docForm"
                         th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
-                        <!-- Dynamic fragment inclusion based on documentType -->
+                        <!--/* Dynamic fragment inclusion based on documentType */-->
                         <th:block th:replace="~{academic/admin/doc_fragments/__${documentType}__ :: content}"></th:block>
 
-                        <!-- Draft saved alert -->
+                        <!--/* Draft saved alert */-->
                         <div th:if="${param.saved != null}" class="alert alert-success alert-dismissible fade show mt-3">
                             <i class="fas fa-save"></i> บันทึกแบบร่างสำเร็จ
                             <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -80,11 +80,11 @@
             </div>
         </div>
 
-        <!-- Hidden holders for Thymeleaf data (avoid inline JS expressions) -->
+        <!--/* Hidden holders for Thymeleaf data (avoid inline JS expressions) */-->
         <input type="hidden" id="currentDocType" th:value="${documentType}">
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
 
-        <!-- Preview CSS & JS -->
+        <!--/* Preview CSS & JS */-->
         <link rel="stylesheet" href="/css/doc_preview.css">
 
         <script>

@@ -17,11 +17,11 @@
                         [[${request.applicant.name}]]</small>
                 </div>
                 <div class="card-body">
-                    <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+                    <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
                     <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
-                    <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+                    <!--/* อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง */-->
                     <div
                         th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}">
                     </div>
@@ -134,9 +134,9 @@
                                         title="เลือกวันที่"><i class="fas fa-calendar-alt"></i></button>
                                 </div>
                             </div>
-                            <!-- ช่องเวลาแบบ 24 ชั่วโมง (time_picker_24.js) — input type="time" แสดง AM/PM ตามเครื่อง
+                            <!--/* ช่องเวลาแบบ 24 ชั่วโมง (time_picker_24.js) — input type="time" แสดง AM/PM ตามเครื่อง
                                  ช่องที่บันทึกจริงคือช่องซ่อน เก็บแบบที่พิมพ์ลงหนังสือ (09.30)
-                                 data-target ให้ล็อกตามช่องซ่อนตอนเอกสารเวียนลงนาม (_admin_field_lock) -->
+                                 data-target ให้ล็อกตามช่องซ่อนตอนเอกสารเวียนลงนาม (_admin_field_lock) */-->
                             <div class="col-md-2"><label class="form-label" for="scheduleTimeStart">เวลาเริ่ม</label>
                                 <input type="hidden" name="schedule_time_start">
                                 <div class="time24" data-target="schedule_time_start">
@@ -200,7 +200,7 @@
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
 
-                    <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+                    <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
                     <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
 
                 </div>
@@ -211,7 +211,7 @@
         <input type="hidden" id="existingDataHolder" th:if="${existingData != null}" th:value="${existingData}">
         <link rel="stylesheet" href="/css/doc_preview.css">
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
-        <!-- หลัง _common :: scripts — ต้องให้ช่องซ่อนถูกเติมค่าที่บันทึกไว้ก่อน -->
+        <!--/* หลัง _common :: scripts — ต้องให้ช่องซ่อนถูกเติมค่าที่บันทึกไว้ก่อน */-->
         <script src="/js/time_picker_24.js"></script>
 
         <script>

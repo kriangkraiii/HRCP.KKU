@@ -337,7 +337,9 @@ public class AcademicAdminController {
                 .filter(e -> !RequestStatus.valueOf(e.getKey()).isTerminal())
                 .mapToLong(Map.Entry::getValue).sum());
         model.addAttribute("requests", allRequests);
-        model.addAttribute("activeType", typeFilter);
+        // Only the two tabs are meaningful; anything else falls back to the default tab
+        model.addAttribute("activeType", "position".equals(typeFilter) || "evaluation".equals(typeFilter)
+                ? typeFilter : null);
 
         // Phase 2: Position requests data
         List<PositionRequest> allPositionRequests = List.of();

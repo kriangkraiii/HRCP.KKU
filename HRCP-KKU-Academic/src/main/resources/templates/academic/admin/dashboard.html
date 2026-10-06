@@ -4,7 +4,7 @@
 <body>
     <section>
         <div class="container-fluid py-4 dash">
-            <!-- ========== Header ========== -->
+            <!--/* ========== Header ========== */-->
             <div class="admin-header mb-4">
                 <div>
                     <h3 class="mb-1"><i class="fas fa-chart-line text-primary"></i> แดชบอร์ดงานวิชาการ</h3>
@@ -23,7 +23,7 @@
                 </div>
             </div>
 
-            <!-- ========== Needs attention: every item jumps to the table that lists it ========== -->
+            <!--/* ========== Needs attention: every item jumps to the table that lists it ========== */-->
             <div class="attention-strip mb-4" aria-label="งานที่ต้องดำเนินการ">
                 <h2 class="attention-title">ต้องดำเนินการ</h2>
                 <div class="attention-items"
@@ -59,7 +59,7 @@
                 </div>
             </div>
 
-            <!-- ========== KPI cards (each opens the list behind the number) ========== -->
+            <!--/* ========== KPI cards (each opens the list behind the number) ========== */-->
             <div class="dashboard-kpi-row">
                 <a href="/admin/academic/requests" class="kpi-card kpi-total">
                     <div class="kpi-card-body">
@@ -133,7 +133,7 @@
                 </a>
             </div>
 
-            <!-- ========== Trend & faculty profile ========== -->
+            <!--/* ========== Trend & faculty profile ========== */-->
             <div class="dashboard-charts-row">
                 <div class="chart-card chart-card-wide">
                     <div class="chart-card-header">
@@ -170,7 +170,7 @@
                 </div>
             </div>
 
-            <!-- ========== Operational overview ========== -->
+            <!--/* ========== Operational overview ========== */-->
             <div class="dashboard-charts-row dashboard-charts-row-secondary">
                 <div class="chart-card">
                     <div class="chart-card-header">
@@ -240,7 +240,7 @@
                 </div>
             </div>
 
-            <!-- ========== Work tables ========== -->
+            <!--/* ========== Work tables ========== */-->
             <div class="analytics-card mt-4" id="dashHub">
                 <div class="lifecycle-tab-bar" role="tablist" aria-label="ตารางติดตามงาน">
                     <button type="button" class="lifecycle-tab-btn active" role="tab" id="tab-expiry"
@@ -264,7 +264,7 @@
                     </button>
                 </div>
 
-                <!-- Search applies to whichever table is showing -->
+                <!--/* Search applies to whichever table is showing */-->
                 <div class="hub-toolbar">
                     <label class="hub-search">
                         <i class="fas fa-magnifying-glass" aria-hidden="true"></i>
@@ -273,7 +273,7 @@
                     <span class="hub-count" id="hubCount" aria-live="polite"></span>
                 </div>
 
-                <!-- Pane 1: Evaluation expiry -->
+                <!--/* Pane 1: Evaluation expiry */-->
                 <div class="lifecycle-tab-pane active" id="pane-expiry" role="tabpanel" aria-labelledby="tab-expiry">
                     <div class="pane-head">
                         <div class="expiry-alert-cards">
@@ -383,7 +383,7 @@
                     </div>
                 </div>
 
-                <!-- Pane 2: Subjects by academic year -->
+                <!--/* Pane 2: Subjects by academic year */-->
                 <div class="lifecycle-tab-pane" id="pane-subjects" role="tabpanel" aria-labelledby="tab-subjects" hidden>
                     <div class="pane-head">
                         <div class="filter-pills-bar" role="group" aria-label="กรองตามปีการศึกษา">
@@ -442,7 +442,7 @@
                     </div>
                 </div>
 
-                <!-- Pane 3: Pending e-signatures -->
+                <!--/* Pane 3: Pending e-signatures */-->
                 <div class="lifecycle-tab-pane" id="pane-signatures" role="tabpanel" aria-labelledby="tab-signatures" hidden>
                     <div class="pane-head">
                         <div class="filter-pills-bar" role="group" aria-label="กรองเอกสารรอลงนาม">
@@ -511,7 +511,7 @@
                     </div>
                 </div>
 
-                <!-- Pane 4: Stalled requests -->
+                <!--/* Pane 4: Stalled requests */-->
                 <div class="lifecycle-tab-pane" id="pane-stalled" role="tabpanel" aria-labelledby="tab-stalled" hidden>
                     <div class="pane-head">
                         <div class="filter-pills-bar" role="group" aria-label="กรองคำร้องค้าง">
@@ -571,8 +571,8 @@
             </div>
         </div>
 
-        <!-- Served locally: the CSP allows scripts from 'self' and cdnjs only, so the
-             old cdn.jsdelivr.net tag was blocked and took every button down with it. -->
+        <!--/* Served locally: the CSP allows scripts from 'self' and cdnjs only, so the
+             old cdn.jsdelivr.net tag was blocked and took every button down with it. */-->
         <script src="/vendor/chartjs/chart.umd.min.js"></script>
 
         <script th:inline="javascript">

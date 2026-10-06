@@ -37,7 +37,7 @@ public class ApplicantRevisionHold {
     /** ชื่อเอกสารที่รออยู่ สำหรับแสดงบนหน้าจอ เช่น "เอกสารที่ 1 (บันทึกข้อความ…)" */
     public List<String> pendingLabels(SignatureModule module, Long requestId) {
         return pending(module, requestId).stream()
-                .map(type -> "เอกสารที่ " + type + " (" + label(module, type) + ")")
+                .map(type -> "เอกสารที่ " + number(module, type) + " (" + label(module, type) + ")")
                 .toList();
     }
 
@@ -48,6 +48,10 @@ public class ApplicantRevisionHold {
             return null;
         }
         return "ยังดำเนินการต่อไม่ได้ — รอผู้ยื่นแก้ไขและลงนามใหม่: " + String.join(", ", labels);
+    }
+
+    private static int number(SignatureModule module, int type) {
+        return module == SignatureModule.POSITION ? PositionRequestService.docNumber(type) : type;
     }
 
     private String label(SignatureModule module, int type) {

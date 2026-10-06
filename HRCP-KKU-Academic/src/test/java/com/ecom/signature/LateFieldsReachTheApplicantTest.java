@@ -36,7 +36,7 @@ import com.ecom.support.AbstractFlowTest;
  * เอกสารที่ผู้ยื่นกรอกและลงนามแล้ว แอดมินกรอกต่อ แล้วส่งต่อให้คนอื่นลงนาม — ผู้ยื่นต้องเห็นฉบับล่าสุด
  *
  * <p>ใช้เอกสารที่ 3 เฟส 2 (แบบรับรองจริยธรรม): ผู้ยื่นลงนามตอนที่ 1 แอดมินกรอกวันที่ตรวจ
- * ({@code verify_date}) แล้วส่งต่อให้คณบดีลงนามตอนที่ 2
+ * ({@code dean_position}) แล้วส่งต่อให้คณบดีลงนามตอนที่ 2
  */
 @DisplayName("ค่าที่แอดมินกรอกหลังผู้ยื่นลงนาม และลายเซ็นของคนถัดไป ต้องถึงเอกสารที่ผู้ยื่นเห็น")
 class LateFieldsReachTheApplicantTest extends AbstractFlowTest {
@@ -117,15 +117,15 @@ class LateFieldsReachTheApplicantTest extends AbstractFlowTest {
     }
 
     @Test
-    @DisplayName("ผู้ยื่นเซ็นแล้ว ยังไม่ส่งต่อ: แอดมินกรอกวันที่ตรวจได้และขึ้นบนเอกสารทันที")
+    @DisplayName("ผู้ยื่นเซ็นแล้ว ยังไม่ส่งต่อ: แอดมินกรอกตำแหน่งคณบดีได้และขึ้นบนเอกสารทันที")
     void adminFieldsFilledBeforeForwardingShowUp() throws IOException {
         SignatureRequest envelope = applicantSigned();
         assertThat(workflow.awaitsMoreSigners(SignatureModule.POSITION, request.getId(), DOC_ETHICS)).isTrue();
 
         positionService.saveOfficeFieldsAcrossCopies(request, DOC_ETHICS,
-                Map.of("verify_date", "3 ตุลาคม 2569"), "แบบรับรองจริยธรรม", true);
+                Map.of("dean_position", "ผู้อำนวยการวิทยาลัยทดสอบ"), "แบบรับรองจริยธรรม", true);
 
-        assertThat(rendered(envelope)).contains("3 ตุลาคม 2569");
+        assertThat(rendered(envelope)).contains("ผู้อำนวยการวิทยาลัยทดสอบ");
     }
 
     @Test
@@ -133,7 +133,7 @@ class LateFieldsReachTheApplicantTest extends AbstractFlowTest {
     void forwardedRoundKeepsAdminFieldsAndAddsTheNextSignature() throws IOException {
         SignatureRequest envelope = applicantSigned();
         positionService.saveOfficeFieldsAcrossCopies(request, DOC_ETHICS,
-                Map.of("verify_date", "3 ตุลาคม 2569", "dean_position", "คณบดี"), "แบบรับรองจริยธรรม", true);
+                Map.of("dean_position", "ผู้อำนวยการวิทยาลัยทดสอบ"), "แบบรับรองจริยธรรม", true);
 
         Result forwarded = workflow.forwardToNextSigners(envelope.getId(),
                 List.of(new SignerAssignment("dean", dean.getId())), null, data.admin(), ActorContext.none());
@@ -143,7 +143,7 @@ class LateFieldsReachTheApplicantTest extends AbstractFlowTest {
 
         assertThat(rendered(envelope))
                 .as("ระหว่างรอคณบดี ค่าที่แอดมินกรอกต้องไม่หายไป")
-                .contains("3 ตุลาคม 2569");
+                .contains("ผู้อำนวยการวิทยาลัยทดสอบ");
 
         Result deanSigned = sign(dean, stepFor(envelope, "dean"));
         assertThat(deanSigned.ok()).as(deanSigned.error()).isTrue();
@@ -152,7 +152,7 @@ class LateFieldsReachTheApplicantTest extends AbstractFlowTest {
         assertThat(documentXml(docx).split("r:embed=\"rIdHrcpSig", -1).length - 1)
                 .as("มีรูปลายเซ็นสองรูป: ผู้ยื่นและคณบดี")
                 .isEqualTo(2);
-        assertThat(rendered(envelope)).contains("3 ตุลาคม 2569");
+        assertThat(rendered(envelope)).contains("ผู้อำนวยการวิทยาลัยทดสอบ");
     }
 
     @Test
@@ -160,7 +160,7 @@ class LateFieldsReachTheApplicantTest extends AbstractFlowTest {
     void afterEveryoneSignedAdminFieldsAreClosed() throws IOException {
         SignatureRequest envelope = applicantSigned();
         positionService.saveOfficeFieldsAcrossCopies(request, DOC_ETHICS,
-                Map.of("verify_date", "3 ตุลาคม 2569", "dean_position", "คณบดี"), "แบบรับรองจริยธรรม", true);
+                Map.of("dean_position", "ผู้อำนวยการวิทยาลัยทดสอบ"), "แบบรับรองจริยธรรม", true);
         workflow.forwardToNextSigners(envelope.getId(),
                 List.of(new SignerAssignment("dean", dean.getId())), null, data.admin(), ActorContext.none());
         sign(dean, stepFor(envelope, "dean"));

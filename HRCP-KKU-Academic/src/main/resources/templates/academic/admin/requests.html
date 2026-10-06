@@ -4,7 +4,7 @@
 <body>
     <section>
         <div class="container-fluid py-4">
-            <!-- ========== Header ========== -->
+            <!--/* ========== Header ========== */-->
             <div class="admin-header">
                 <h3><i class="fas fa-columns"></i> แดชบอร์ดจัดการคำร้อง</h3>
                 <div class="admin-header-actions">
@@ -14,7 +14,7 @@
                 </div>
             </div>
 
-            <!-- ========== Tab Bar (Segmented Control) ========== -->
+            <!--/* ========== Tab Bar (Segmented Control) ========== */-->
             <div class="admin-tab-bar" id="requestTabs" role="tablist">
                 <button class="admin-tab-btn" id="eval-tab" data-bs-toggle="tab" data-bs-target="#evalPane"
                     type="button" role="tab"
@@ -32,14 +32,14 @@
                 </button>
             </div>
 
-            <!-- ========== TAB CONTENT ========== -->
+            <!--/* ========== TAB CONTENT ========== */-->
             <div class="tab-content" id="requestTabContent">
 
-                <!-- ========== TAB 1: ประเมินผลการสอน ========== -->
+                <!--/* ========== TAB 1: ประเมินผลการสอน ========== */-->
                 <div class="tab-pane fade" id="evalPane" role="tabpanel"
                      th:classappend="${activeType == null || activeType == 'evaluation'} ? 'show active'">
 
-                    <!-- Status filter: grouped by who acts next -->
+                    <!--/* Status filter: grouped by who acts next */-->
                     <nav class="sf-bar" aria-label="กรองตามสถานะ">
                         <div class="sf-group">
                             <div class="sf-title"><i class="fas fa-layer-group"></i> ภาพรวม</div>
@@ -74,7 +74,7 @@
                         </div>
                     </nav>
 
-                    <!-- Search -->
+                    <!--/* Search */-->
                     <form action="/admin/academic/requests" method="get" class="admin-search">
                         <input type="hidden" name="type" value="evaluation">
                         <div class="admin-search-input">
@@ -95,7 +95,7 @@
                         พบ <strong th:text="${requests != null ? requests.size() : 0}"></strong> รายการ
                     </div>
 
-                    <!-- ========== FILTERED VIEW (single status) ========== -->
+                    <!--/* ========== FILTERED VIEW (single status) ========== */-->
                     <th:block th:if="${activeStatus != null}">
                         <div class="admin-table-wrap">
                             <div class="admin-table-header">
@@ -172,7 +172,7 @@
                         </div>
                     </th:block>
 
-                    <!-- ========== DEFAULT VIEW (pending) ========== -->
+                    <!--/* ========== DEFAULT VIEW (pending) ========== */-->
                     <th:block th:if="${activeStatus == null}">
                         <div class="admin-table-wrap">
                             <div class="admin-table-header">
@@ -246,11 +246,11 @@
                     </th:block>
                 </div>
 
-                <!-- ========== TAB 2: ขอตำแหน่งทางวิชาการ ========== -->
+                <!--/* ========== TAB 2: ขอตำแหน่งทางวิชาการ ========== */-->
                 <div class="tab-pane fade" id="posPane" role="tabpanel"
                      th:classappend="${activeType == 'position'} ? 'show active'">
 
-                    <!-- Status filter: grouped by who acts next -->
+                    <!--/* Status filter: grouped by who acts next */-->
                     <nav class="sf-bar" aria-label="กรองตามสถานะ">
                         <div class="sf-group">
                             <div class="sf-title"><i class="fas fa-layer-group"></i> ภาพรวม</div>
@@ -285,7 +285,7 @@
                         </div>
                     </nav>
 
-                    <!-- Search -->
+                    <!--/* Search */-->
                     <form action="/admin/academic/requests" method="get" class="admin-search">
                         <input type="hidden" name="type" value="position">
                         <div class="admin-search-input">
@@ -306,7 +306,7 @@
                         พบ <strong th:text="${positionRequests != null ? positionRequests.size() : 0}"></strong> รายการ
                     </div>
 
-                    <!-- Position Requests Table -->
+                    <!--/* Position Requests Table */-->
                     <div class="admin-table-wrap">
                         <div class="admin-table-header">
                             <h5 class="admin-table-title">

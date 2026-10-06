@@ -46,15 +46,19 @@ public class HomeController {
 
 	private final AdminLogService adminLogService;
 
+	private final com.ecom.service.LoginAnnouncementService loginAnnouncements;
+
 	public HomeController(
 			UserService userService,
 			CommonUtil commonUtil,
 			BCryptPasswordEncoder passwordEncoder,
-			AdminLogService adminLogService) {
+			AdminLogService adminLogService,
+			com.ecom.service.LoginAnnouncementService loginAnnouncements) {
 		this.userService = userService;
 		this.commonUtil = commonUtil;
 		this.passwordEncoder = passwordEncoder;
 		this.adminLogService = adminLogService;
+		this.loginAnnouncements = loginAnnouncements;
 	}
 
 	@ModelAttribute
@@ -90,7 +94,7 @@ public class HomeController {
 	@GetMapping({"/signin", "/signin/"})
 	public String login(@org.springframework.web.bind.annotation.RequestParam(name = "code", required = false) String code,
 			@org.springframework.web.bind.annotation.RequestParam(name = "error", required = false) String error,
-			HttpServletRequest request) {
+			HttpServletRequest request, org.springframework.ui.Model model) {
 		if (code != null && !code.isBlank()) {
 			logger.info("SSO returned to /signin with a code — handing over to the callback");
 			return "forward:/auth/callback/login";
@@ -127,6 +131,7 @@ public class HomeController {
 					+ "stage, and that the account signing in exists there.",
 					referrer, everythingItSent == null ? "" : everythingItSent);
 		}
+		loginAnnouncements.showing().ifPresent(text -> model.addAttribute("loginAnnouncement", text));
 		return "guest/login";
 	}
 

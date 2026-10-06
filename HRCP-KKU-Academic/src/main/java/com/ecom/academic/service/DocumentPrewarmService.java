@@ -27,13 +27,69 @@ public class DocumentPrewarmService {
     private final DocumentGenerationService documentGenerationService;
     private final AcademicDocumentRepository academicDocumentRepository;
     private final PositionDocumentRepository positionDocumentRepository;
+    private final TeachingEvaluationPartResolver teachingEvaluationPart;
+    private final java.util.concurrent.Executor executor;
+
+    /** รุ่นล่าสุดของแต่ละเอกสาร (requestId:type) ที่ขอให้ prewarm — งานที่ตกรุ่นแล้วข้ามไป */
+    private final java.util.Map<String, Long> latestPositionVersion = new java.util.concurrent.ConcurrentHashMap<>();
+    private final java.util.concurrent.atomic.AtomicLong versions = new java.util.concurrent.atomic.AtomicLong();
 
     public DocumentPrewarmService(DocumentGenerationService documentGenerationService,
             AcademicDocumentRepository academicDocumentRepository,
-            PositionDocumentRepository positionDocumentRepository) {
+            PositionDocumentRepository positionDocumentRepository,
+            @org.springframework.context.annotation.Lazy TeachingEvaluationPartResolver teachingEvaluationPart,
+            @org.springframework.beans.factory.annotation.Qualifier("docPrewarmExecutor")
+            java.util.concurrent.Executor executor) {
         this.documentGenerationService = documentGenerationService;
         this.academicDocumentRepository = academicDocumentRepository;
         this.positionDocumentRepository = positionDocumentRepository;
+        this.teachingEvaluationPart = teachingEvaluationPart;
+        this.executor = executor;
+    }
+
+    /**
+     * ข้อมูลเอกสารเฟส 2 แบบเดียวกับที่หน้าดูตัวอย่างและดาวน์โหลดใช้ (เติมส่วนที่ ๓ จากผลประเมินการสอน)
+     * — ไฟล์ .docx ต้องตรงกันทุกไบต์ แคช PDF จึงจะใช้ซ้ำได้
+     */
+    private String positionPreviewJson(Long requestId, int documentType, String jsonData) {
+        return teachingEvaluationPart.fillInto(requestId, documentType, jsonData);
+    }
+
+    /**
+     * แปลง PDF ล่วงหน้าหลังบันทึก (รวมบันทึกอัตโนมัติ) — พอผู้ใช้กดดูตัวอย่าง PDF มักพร้อมแล้ว
+     *
+     * <p>บันทึกอัตโนมัติเกิดถี่ เอกสารเดียวกันจึงแปลงเฉพาะรุ่นล่าสุด งานของรุ่นก่อนที่ยังรอคิวอยู่ข้ามไป
+     */
+    public void schedulePositionPrewarm(Long requestId, int documentType, String jsonData) {
+        if (requestId == null || jsonData == null || jsonData.isBlank()) {
+            return;
+        }
+        String key = requestId + ":" + documentType;
+        long version = versions.incrementAndGet();
+        latestPositionVersion.put(key, version);
+        executor.execute(() -> {
+            if (!Long.valueOf(version).equals(latestPositionVersion.get(key))) {
+                return;
+            }
+            prewarmPositionNow(requestId, documentType, jsonData);
+            latestPositionVersion.remove(key, version);
+        });
+    }
+
+    private void prewarmPositionNow(Long requestId, int documentType, String jsonData) {
+        if (!documentGenerationService.isPdfConversionAvailable()) {
+            return;
+        }
+        try {
+            long start = System.currentTimeMillis();
+            byte[] docx = documentGenerationService.generateP2PreviewDocx(documentType,
+                    positionPreviewJson(requestId, documentType, jsonData));
+            documentGenerationService.convertDocxToPdfCached(docx);
+            log.debug("Prewarmed Position Doc {} for request {} in {} ms", documentType, requestId,
+                    System.currentTimeMillis() - start);
+        } catch (Exception e) {
+            log.debug("Background prewarm for position doc {} skipped/failed: {}", documentType, e.getMessage());
+        }
     }
 
     /**
@@ -79,20 +135,8 @@ public class DocumentPrewarmService {
     /**
      * Pre-warm เอกสาร Phase 2 (Position Request) 1 รายการ
      */
-    @Async("docPrewarmExecutor")
     public void prewarmPositionDocument(Long requestId, int documentType, String jsonData) {
-        if (jsonData == null || jsonData.isBlank() || !documentGenerationService.isPdfConversionAvailable()) {
-            return;
-        }
-        try {
-            long start = System.currentTimeMillis();
-            byte[] docx = documentGenerationService.generateP2PreviewDocx(documentType, jsonData);
-            documentGenerationService.convertDocxToPdfCached(docx);
-            long elapsed = System.currentTimeMillis() - start;
-            log.debug("Prewarmed Position Doc {} for request {} in {} ms", documentType, requestId, elapsed);
-        } catch (Exception e) {
-            log.debug("Background prewarm for position doc {} skipped/failed: {}", documentType, e.getMessage());
-        }
+        schedulePositionPrewarm(requestId, documentType, jsonData);
     }
 
     /**
@@ -111,7 +155,8 @@ public class DocumentPrewarmService {
                     String json = doc.getJsonData();
                     if (json != null && !json.isBlank()) {
                         try {
-                            byte[] docx = documentGenerationService.generateP2PreviewDocx(doc.getDocumentType(), json);
+                            byte[] docx = documentGenerationService.generateP2PreviewDocx(doc.getDocumentType(),
+                                    positionPreviewJson(requestId, doc.getDocumentType(), json));
                             documentGenerationService.convertDocxToPdfCached(docx);
                         } catch (Exception ignored) {
                         }

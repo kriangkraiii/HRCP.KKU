@@ -23,11 +23,11 @@
                 </th:block>
             </div>
 
-            <!-- Evaluation Expiry Countdown + ข้อมูลรายวิชาและผลการประเมิน (รวมการ์ดเดียว) -->
+            <!--/* Evaluation Expiry Countdown + ข้อมูลรายวิชาและผลการประเมิน (รวมการ์ดเดียว) */-->
             <div th:if="${evaluationExpiryDate != null}" class="card mb-4 u-bdl-5px-solid-4caf50-r-12px-ov-hidden" id="expiryCountdownCard"
                >
                 <div class="card-body py-3">
-                    <!-- ส่วนที่ 1: Countdown -->
+                    <!--/* ส่วนที่ 1: Countdown */-->
                     <div class="d-flex justify-content-between align-items-center mb-2">
                         <h6 class="mb-0"><i class="fas fa-hourglass-half"></i> ผลประเมินการสอนคงเหลือ</h6>
                         <small class="text-muted" id="expiryDateLabel"></small>
@@ -41,7 +41,7 @@
                     </div>
                     <small class="text-muted mt-1 d-block" id="expiryWarning"></small>
 
-                    <!-- ส่วนที่ 2: ข้อมูลรายวิชาและผลการประเมินจากเอกสารที่ 8 -->
+                    <!--/* ส่วนที่ 2: ข้อมูลรายวิชาและผลการประเมินจากเอกสารที่ 8 */-->
                     <th:block th:if="${evalDoc9DataMap != null && !evalDoc9DataMap.isEmpty()}">
                         <div th:each="entry : ${evalDoc9DataMap}">
                             <hr class="my-3">
@@ -196,7 +196,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
 
-            <!-- Draft Request Card -->
+            <!--/* Draft Request Card */-->
             <div th:if="${draftRequest != null}" class="card card-academic mb-4 border-warning">
                 <div class="card-body">
                     <div class="d-flex justify-content-between align-items-start mb-3">
@@ -246,7 +246,7 @@
                         </div>
                     </div>
 
-                    <!-- ข้อมูลตำแหน่ง (จากเอกสารที่ 2) -->
+                    <!--/* ข้อมูลตำแหน่ง (จากเอกสารที่ 2) */-->
                     <div th:if="${doc2DataMap.containsKey(req.id)}" class="mb-3 p-2 rounded u-bg-f0f7f0-bdl-3px-solid-2e7d32-fs-0-9rem"
                        >
                         <i class="fas fa-user-tie text-success me-1"></i>
@@ -260,7 +260,7 @@
                          <div th:replace="~{academic/_sent_back_alert :: alert(${sentBackMap.get(req.id)}, ${positionDocLabels}, '/user/position/request/' + ${req.id})}"></div>
                     </th:block>
 
-                    <!-- Revision Alert -->
+                    <!--/* Revision Alert */-->
                     <div th:if="${req.currentStatus.name() == 'REVISION_REQUESTED'}" class="alert alert-warning py-2 mb-3 d-flex align-items-center">
                         <i class="fas fa-exclamation-triangle fs-5 me-2 text-warning"></i>
                         <div>
@@ -268,7 +268,7 @@
                         </div>
                     </div>
 
-                    <!-- Progress Tracker (7 Standard Steps) -->
+                    <!--/* Progress Tracker (7 Standard Steps) */-->
                     <div class="progress-tracker" th:with="pIdx=${req.currentStatus.progressIndex()}">
                         <div th:each="s, sStat : ${progressSteps}" class="progress-step"
                             th:classappend="${req.currentStatus.name() == 'REVISION_REQUESTED' && s.name() == 'DOCUMENT_VERIFICATION'} ? 'revise' :
@@ -287,7 +287,7 @@
                 </div>
             </div>
 
-            <!-- Pagination -->
+            <!--/* Pagination */-->
             <nav th:if="${requests != null && requests.size() > 5}" aria-label="Page navigation" id="paginationNav">
                 <div class="d-flex justify-content-between align-items-center mt-3">
                     <small class="text-muted" id="pageInfo"></small>
@@ -334,7 +334,7 @@
                     showPage(0);
                 })();
             </script>
-            <!-- Modal Confirm Cancel Position Draft -->
+            <!--/* Modal Confirm Cancel Position Draft */-->
             <div th:if="${draftRequest != null}" class="modal fade" id="cancelPosDraftModal" tabindex="-1" aria-labelledby="cancelPosDraftModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow">

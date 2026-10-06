@@ -10,7 +10,7 @@
     <section>
         <div class="container py-4">
 
-            <!-- Page Header -->
+            <!--/* Page Header */-->
             <div class="page-header">
                 <div class="page-header-text">
                     <h3 class="page-header-title">เอกสาร / ข้อบังคับ / ประกาศ</h3>
@@ -21,14 +21,14 @@
                 </a>
             </div>
 
-            <!-- Search -->
+            <!--/* Search */-->
             <div class="doc-search-wrap">
                 <i class="fas fa-search"></i>
                 <input type="text" id="docSearchInput" class="doc-search-v2"
                        placeholder="ค้นหาเอกสาร..." data-call-input="filterDocs" data-call-arg="value">
             </div>
 
-            <!-- Categories rendered by Thymeleaf -->
+            <!--/* Categories rendered by Thymeleaf */-->
             <div id="docContainer">
                 <div th:each="cat, stat : ${categories}"
                      class="doc-category"
@@ -60,7 +60,7 @@
 
         </div>
 
-        <!-- PDF Full-Screen Modal Overlay -->
+        <!--/* PDF Full-Screen Modal Overlay */-->
         <div id="pdfOverlay" class="doc-pdf-overlay" aria-hidden="true" role="dialog" aria-modal="true">
             <div class="doc-pdf-header">
                 <div class="doc-pdf-title-box">

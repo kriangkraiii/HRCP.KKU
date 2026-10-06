@@ -7,7 +7,7 @@
             <div class="row justify-content-center">
                 <div class="col-lg-8">
 
-                    <!-- Page Header -->
+                    <!--/* Page Header */-->
                     <div class="page-header">
                         <div class="page-header-text">
                             <h3 class="page-header-title"><i class="fas fa-comment-dots"></i> รายงานปัญหาและข้อเสนอแนะ</h3>
@@ -15,7 +15,7 @@
                         </div>
                     </div>
 
-                    <!-- Success/Error Alerts (แสดงในกรณีที่ base template ไม่ได้แสดง) -->
+                    <!--/* Success/Error Alerts (แสดงในกรณีที่ base template ไม่ได้แสดง) */-->
                     <div th:if="${success != null and succMsg == null}" class="alert alert-success alert-dismissible fade show">
                         <i class="fas fa-check-circle me-1"></i> [[${success}]]
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -25,17 +25,17 @@
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
                     </div>
 
-                    <!-- Feedback Form Card -->
+                    <!--/* Feedback Form Card */-->
                     <div class="card">
                         <div class="card-header bg-white">
                             <h5 class="mb-0"><i class="fas fa-paper-plane text-primary"></i> ส่งรายงาน</h5>
                         </div>
                         <div class="card-body">
                             <form id="feedbackForm" method="post" action="/user/feedback" enctype="multipart/form-data">
-                                <!-- CSRF token -->
+                                <!--/* CSRF token */-->
                                 <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}">
 
-                                <!-- Category -->
+                                <!--/* Category */-->
                                 <div class="mb-3">
                                     <label for="category" class="form-label fw-semibold">
                                         <i class="fas fa-tag text-primary"></i> ประเภท <span class="text-danger">*</span>
@@ -46,7 +46,7 @@
                                     </select>
                                 </div>
 
-                                <!-- Subject -->
+                                <!--/* Subject */-->
                                 <div class="mb-3">
                                     <label for="subject" class="form-label fw-semibold">
                                         <i class="fas fa-heading text-primary"></i> หัวข้อ <span class="text-danger">*</span>
@@ -59,7 +59,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Detail -->
+                                <!--/* Detail */-->
                                 <div class="mb-3">
                                     <label for="detail" class="form-label fw-semibold">
                                         <i class="fas fa-align-left text-primary"></i> รายละเอียด <span class="text-danger">*</span>
@@ -72,20 +72,20 @@
                                     </div>
                                 </div>
 
-                                <!-- Auto recipient notice -->
+                                <!--/* Auto recipient notice */-->
                                 <div class="alert alert-light border d-flex align-items-center mb-3 text-muted small py-2 px-3">
                                     <i class="fas fa-info-circle text-primary me-2"></i>
                                     <span>ระบบจะส่งรายงานถึงผู้ดูแลระบบ และส่งสำเนาถึงอีเมลของท่าน</span>
                                 </div>
 
-                                <!-- Image Attachments -->
+                                <!--/* Image Attachments */-->
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold">
                                         <i class="fas fa-images text-primary"></i> แนบภาพประกอบ
                                         <small class="text-muted fw-normal">(ไม่บังคับ, สูงสุด <span th:text="${maxImages}">3</span> ภาพ, ไม่เกิน 5MB/ภาพ)</small>
                                     </label>
 
-                                    <!-- Drop zone -->
+                                    <!--/* Drop zone */-->
                                     <div id="dropZone" class="feedback-drop-zone">
                                         <i class="fas fa-cloud-upload-alt fa-2x text-muted mb-2"></i>
                                         <p class="mb-1 text-muted">ลากไฟล์มาวางตรงนี้ หรือคลิกเพื่อเลือกไฟล์</p>
@@ -95,12 +95,12 @@
                                                class="d-none">
                                     </div>
 
-                                    <!-- Preview area -->
+                                    <!--/* Preview area */-->
                                     <div id="imagePreviewArea" class="feedback-preview-area d-none">
                                     </div>
                                 </div>
 
-                                <!-- Submit -->
+                                <!--/* Submit */-->
                                 <div class="d-flex justify-content-end gap-2">
                                     <a href="/user/academic/dashboard" class="btn btn-outline-secondary">
                                         <i class="fas fa-times"></i> ยกเลิก

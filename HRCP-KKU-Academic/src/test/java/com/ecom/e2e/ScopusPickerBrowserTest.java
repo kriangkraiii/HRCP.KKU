@@ -246,11 +246,16 @@ class ScopusPickerBrowserTest extends PlaywrightTestBase {
      */
     private void saveDocumentOne() {
         // position_form_validate.js เรียก preventDefault() แล้วขึ้นแถบเตือน เมื่อช่องที่
-        // มี required ยังว่าง ในแบบนี้มีสามช่อง: applicant_name, title และ target_position
-        // ผู้ใช้จริงกรอกครบก่อนกดบันทึกเสมอ เทสจึงต้องทำแบบเดียวกัน ไม่อย่างนั้น
-        // การกดบันทึกจะไม่เกิดอะไรขึ้นเลย แล้วไปล้มที่ assertion ถัดไปโดยชี้ผิดที่
+        // มี required ยังว่าง ผู้ใช้จริงกรอกครบก่อนกดบันทึกเสมอ เทสจึงต้องทำแบบเดียวกัน
+        // ไม่อย่างนั้นการกดบันทึกจะไม่เกิดอะไรขึ้นเลย แล้วไปล้มที่ assertion ถัดไปโดยชี้ผิดที่
         fillIfEmpty("applicant_name", "ผศ.ดร.สมชาย ทดสอบ");
         fillIfEmpty("title", "ผู้ช่วยศาสตราจารย์");
+        page.evaluate("""
+                () => document.querySelectorAll('#doc1Form [required]').forEach(el => {
+                  if (el.disabled || el.readOnly || el.type === 'hidden' || !el.offsetParent) return;
+                  if (!el.value) el.value = el.tagName === 'SELECT' ? (el.options[1] || {}).value : 'ทดสอบ';
+                })
+                """);
 
         page.locator("#panelSaveDocBtn, [data-action='save-doc-draft']").first().click();
         page.waitForLoadState();

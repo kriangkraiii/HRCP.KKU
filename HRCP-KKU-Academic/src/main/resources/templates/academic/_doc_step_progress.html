@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!--
+<!--/*
   ขั้นตอนของหน้าฟอร์มเอกสาร: กรอก → ตรวจสอบและลงนาม
 
   ผู้ใช้กรอกเสร็จแล้วไม่รู้ว่ายังต้องลงนามต่อ เพราะไม่มีอะไรบนหน้าบอกลำดับขั้น
@@ -15,7 +15,7 @@
   การย่อบนจอเล็กมาด้วยโดยไม่ต้องเพิ่ม CSS ใหม่
 
   ต้องมี model attribute: docSaved (boolean) และ signaturePanel (อาจเป็น null)
--->
+*/-->
 <div th:fragment="steps"
      th:with="signed=${signaturePanel != null and signaturePanel.locked},
               filled=${(docSaved != null and docSaved) or signed}"
@@ -42,10 +42,10 @@
     </div>
 </div>
 
-<!--
+<!--/*
   กล่องชี้ทางหลังกดบันทึก — ขึ้นเฉพาะตอนเพิ่งบันทึกเสร็จ (?saved=1) และยังไม่ได้ส่งลงนาม
   ปุ่มพาไปที่แผงลงนามท้ายหน้า ซึ่งเป็นสิ่งที่ผู้ใช้มองไม่เห็นเพราะอยู่ใต้ฟอร์มยาว ๆ
--->
+*/-->
 <div th:fragment="savedCallout"
      th:if="${param.saved != null and signaturePanel != null and signaturePanel.signable and !signaturePanel.locked}"
      class="alert alert-primary bg-primary-subtle border-0 text-dark p-3 rounded-3 mb-3">

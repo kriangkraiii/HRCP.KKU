@@ -4,7 +4,7 @@
 
 <body>
 <section>
-    <!-- Searchable Select Assets -->
+    <!--/* Searchable Select Assets */-->
     <link rel="stylesheet" th:href="@{/css/searchable_select.css}">
 
     <style>
@@ -24,6 +24,12 @@
             background: linear-gradient(135deg, rgba(30, 41, 59, 0.85) 0%, rgba(15, 23, 42, 0.85) 100%);
             border-color: rgba(51, 65, 85, 0.8);
             box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.25);
+        }
+        /* backdrop-filter ทำให้การ์ดเป็น stacking context — ยกการ์ดผู้รักษาการแทนขึ้นเหนือแท็บด้านล่าง
+           ไม่งั้นรายการ searchable-select ถูกแท็บหมวดวาดทับ */
+        #actingSigners {
+            position: relative;
+            z-index: 2;
         }
 
 
@@ -267,11 +273,11 @@
 
     <div class="container-fluid py-3 px-xl-4">
 
-        <!-- ==================== BREADCRUMB & HEADER ==================== -->
+        <!--/* ==================== BREADCRUMB & HEADER ==================== */-->
         <div class="matrix-header-card p-4 mb-4">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                 <div>
-                    <!-- Breadcrumbs -->
+                    <!--/* Breadcrumbs */-->
                     <nav aria-label="breadcrumb" class="mb-2">
                         <ol class="breadcrumb mb-0 small text-muted">
                             <li class="breadcrumb-item"><a href="/admin/academic/requests" class="text-decoration-none text-muted"><i class="fa-solid fa-house me-1"></i>หน้าหลัก</a></li>
@@ -298,8 +304,8 @@
             </div>
         </div>
 
-        <!-- ==================== ACTING SIGNERS (รักษาการแทน) ==================== -->
-        <!-- แต่ละตำแหน่งมีฟอร์มของตัวเอง และอยู่นอก signerMatrixForm (ฟอร์มซ้อนกันไม่ได้) -->
+        <!--/* ==================== ACTING SIGNERS (รักษาการแทน) ==================== */-->
+        <!--/* แต่ละตำแหน่งมีฟอร์มของตัวเอง และอยู่นอก signerMatrixForm (ฟอร์มซ้อนกันไม่ได้) */-->
         <div class="matrix-header-card p-4 mb-4" id="actingSigners">
             <h3 class="h5 fw-bold mb-1 d-flex align-items-center gap-2">
                 <i class="fa-solid fa-user-clock text-warning"></i>
@@ -378,9 +384,9 @@
             </div>
         </div>
 
-        <!-- ==================== ALERT NOTIFICATIONS ==================== -->
+        <!--/* ==================== ALERT NOTIFICATIONS ==================== */-->
 
-        <!-- ==================== TABS & FILTER TOOLBAR ==================== -->
+        <!--/* ==================== TABS & FILTER TOOLBAR ==================== */-->
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-3">
             <ul class="nav matrix-nav-tabs" id="workflowTab" role="tablist">
                 <li class="nav-item" role="presentation">
@@ -401,7 +407,7 @@
                 </li>
             </ul>
 
-            <!-- Quick Action Buttons -->
+            <!--/* Quick Action Buttons */-->
             <div class="d-flex align-items-center gap-2">
                 <div class="input-group input-group-sm u-maxw-280px">
                     <span class="input-group-text bg-light border-end-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
@@ -410,12 +416,12 @@
             </div>
         </div>
 
-        <!-- ==================== MAIN CONFIGURATION FORM ==================== -->
+        <!--/* ==================== MAIN CONFIGURATION FORM ==================== */-->
         <form th:action="@{/admin/academic/settings/signers}" method="post" id="signerMatrixForm">
 
             <div class="tab-content" id="workflowTabContent">
 
-                <!-- ==================== TAB 1: ACADEMIC (PHASE 1) ==================== -->
+                <!--/* ==================== TAB 1: ACADEMIC (PHASE 1) ==================== */-->
                 <div class="tab-pane fade show active" id="academic-pane" role="tabpanel">
                     <div class="accordion" id="accordionAcademic">
                         <div class="doc-accordion-item" th:each="docGroup, docIter : ${academicGroups}" th:attr="data-doc-title=${docGroup.documentTitle}">
@@ -453,7 +459,7 @@
                                             </thead>
                                             <tbody>
                                                 <tr th:each="slot : ${docGroup.slots}" class="slot-row" th:classappend="${!slot.isEnabled} ? 'is-disabled' : ''">
-                                                    <!-- Hidden Identification Fields -->
+                                                    <!--/* Hidden Identification Fields */-->
                                                     <td class="text-center">
                                                         <input type="hidden" name="modules" th:value="${slot.module}">
                                                         <input type="hidden" name="documentTypes" th:value="${slot.documentType}">
@@ -462,7 +468,7 @@
                                                         <input type="hidden" name="anchorPlaceholders" th:value="${slot.anchorPlaceholder}">
                                                         <input type="hidden" name="defaultStaffRoles" th:value="${slot.defaultStaffRole}">
 
-                                                        <!-- Toggle Switch -->
+                                                        <!--/* Toggle Switch */-->
                                                         <div class="form-check form-switch slot-switch d-inline-block">
                                                             <input class="form-check-input slot-enable-switch" type="checkbox"
                                                                    th:checked="${slot.isEnabled}"
@@ -491,7 +497,7 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <!-- If Applicant Slot: Locked to applicant account -->
+                                                        <!--/* If Applicant Slot: Locked to applicant account */-->
                                                         <div th:if="${slot.slotKey == 'applicant'}">
                                                             <input type="hidden" name="defaultSignerUserIds" value="">
                                                             <div class="applicant-locked-badge">
@@ -499,7 +505,7 @@
                                                             </div>
                                                         </div>
 
-                                                        <!-- If Executive/Staff Slot: Searchable dropdown -->
+                                                        <!--/* If Executive/Staff Slot: Searchable dropdown */-->
                                                         <div th:unless="${slot.slotKey == 'applicant'}">
                                                             <select name="defaultSignerUserIds" class="form-select form-select-sm searchable-select">
                                                                 <option value="">— ตรวจจับอัตโนมัติตามบทบาทบุคลากร —</option>
@@ -525,7 +531,7 @@
                     </div>
                 </div>
 
-                <!-- ==================== TAB 2: POSITION (PHASE 2) ==================== -->
+                <!--/* ==================== TAB 2: POSITION (PHASE 2) ==================== */-->
                 <div class="tab-pane fade" id="position-pane" role="tabpanel">
                     <div class="accordion" id="accordionPosition">
                         <div class="doc-accordion-item" th:each="docGroup, docIter : ${positionGroups}" th:attr="data-doc-title=${docGroup.documentTitle}">
@@ -563,7 +569,7 @@
                                             </thead>
                                             <tbody>
                                                 <tr th:each="slot : ${docGroup.slots}" class="slot-row" th:classappend="${!slot.isEnabled} ? 'is-disabled' : ''">
-                                                    <!-- Hidden Identification Fields -->
+                                                    <!--/* Hidden Identification Fields */-->
                                                     <td class="text-center">
                                                         <input type="hidden" name="modules" th:value="${slot.module}">
                                                         <input type="hidden" name="documentTypes" th:value="${slot.documentType}">
@@ -572,7 +578,7 @@
                                                         <input type="hidden" name="anchorPlaceholders" th:value="${slot.anchorPlaceholder}">
                                                         <input type="hidden" name="defaultStaffRoles" th:value="${slot.defaultStaffRole}">
 
-                                                        <!-- Toggle Switch -->
+                                                        <!--/* Toggle Switch */-->
                                                         <div class="form-check form-switch slot-switch d-inline-block">
                                                             <input class="form-check-input slot-enable-switch" type="checkbox"
                                                                    th:checked="${slot.isEnabled}"
@@ -601,7 +607,7 @@
                                                         </div>
                                                     </td>
                                                     <td>
-                                                        <!-- If Applicant Slot: Locked to applicant account -->
+                                                        <!--/* If Applicant Slot: Locked to applicant account */-->
                                                         <div th:if="${slot.slotKey == 'applicant'}">
                                                             <input type="hidden" name="defaultSignerUserIds" value="">
                                                             <div class="applicant-locked-badge">
@@ -609,7 +615,7 @@
                                                             </div>
                                                         </div>
 
-                                                        <!-- If Executive/Staff Slot: Searchable dropdown -->
+                                                        <!--/* If Executive/Staff Slot: Searchable dropdown */-->
                                                         <div th:unless="${slot.slotKey == 'applicant'}">
                                                             <select name="defaultSignerUserIds" class="form-select form-select-sm searchable-select">
                                                                 <option value="">— ตรวจจับอัตโนมัติตามบทบาทบุคลากร —</option>
@@ -637,7 +643,7 @@
 
             </div>
 
-            <!-- ==================== STICKY ACTION BAR ==================== -->
+            <!--/* ==================== STICKY ACTION BAR ==================== */-->
             <div class="matrix-sticky-footer">
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
                     <div class="d-flex align-items-center gap-2">
@@ -663,7 +669,7 @@
 
     <script th:src="@{/js/acting_signer_settings.js}"></script>
 
-    <!-- ==================== JAVASCRIPT LOGIC ==================== -->
+    <!--/* ==================== JAVASCRIPT LOGIC ==================== */-->
     <script>
         // Synchronize switch and row visual state
         function handleSlotSwitch(input) {

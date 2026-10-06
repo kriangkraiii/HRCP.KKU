@@ -2,7 +2,7 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!--
+<!--/*
   แถบบอกสถานะของเอกสารที่แอดมินเปิดดู
 
   มีสองเหตุผลที่ช่องถูกปิด และต้องแยกจากกันให้ชัด เพราะทางออกคนละทาง:
@@ -13,10 +13,10 @@
 
   ส่วนนี้เป็นเพียงการบอกผู้ใช้ให้เห็นชัด — ตัวที่บังคับใช้จริงคือ DocumentFieldOwnership.merge
   และ mergeOfficeFields ฝั่งเซิร์ฟเวอร์ ปิด JS แล้วยิง POST ตรงก็ยังกันอยู่
--->
+*/-->
 <div th:fragment="banner(module, requestId, documentType)">
 
-    <!-- กำลังเวียนลงนาม: ปิดสนิท ไม่มีช่องไหนแก้ได้ -->
+    <!--/* กำลังเวียนลงนาม: ปิดสนิท ไม่มีช่องไหนแก้ได้ */-->
     <div th:if="${lockedForSigning and !signingComplete}" class="alert alert-warning">
         <i class="fas fa-lock"></i>
         <strong>เอกสารอยู่ระหว่างการเวียนลงนาม</strong> — แก้ไขไม่ได้ทั้งฉบับ
@@ -26,7 +26,7 @@
         </div>
     </div>
 
-    <!-- ลงนามครบแล้ว: เหลือช่องสารบรรณ -->
+    <!--/* ลงนามครบแล้ว: เหลือช่องสารบรรณ */-->
     <div th:if="${signingComplete}" class="alert alert-info">
         <i class="fas fa-stamp"></i>
         <strong>เอกสารลงนามครบแล้ว</strong>
@@ -51,8 +51,8 @@
         <span th:replace="~{academic/_info_tip :: tip('ค่าที่กรอกจะแสดงบนเอกสารที่ลงนามแล้วทันที โดยไม่กระทบลายมือชื่อที่ลงไว้')}"></span>
     </div>
 
-    <!-- ส่งกลับให้ผู้ยื่นแล้ว รอผู้ยื่นแก้และลงนามใหม่ — ไม่มีอะไรให้เจ้าหน้าที่ทำจนกว่าผู้ยื่นจะลงนาม
-         เดิมหน้านี้ยังโชว์ปุ่มส่งกลับกับปุ่มเวียนลงนามเหมือนยังไม่ได้ส่งกลับ ดูเหมือนแก้/ส่งต่อได้ -->
+    <!--/* ส่งกลับให้ผู้ยื่นแล้ว รอผู้ยื่นแก้และลงนามใหม่ — ไม่มีอะไรให้เจ้าหน้าที่ทำจนกว่าผู้ยื่นจะลงนาม
+         เดิมหน้านี้ยังโชว์ปุ่มส่งกลับกับปุ่มเวียนลงนามเหมือนยังไม่ได้ส่งกลับ ดูเหมือนแก้/ส่งต่อได้ */-->
     <div th:if="${sentBackAwaitingResign != null and sentBackAwaitingResign and !lockedForSigning}"
          class="alert alert-warning d-flex align-items-start gap-3">
         <i class="fas fa-hourglass-half fa-lg mt-1"></i>
@@ -67,8 +67,8 @@
         </div>
     </div>
 
-    <!-- คำร้องพักไว้: เอกสารฉบับอื่นถูกส่งกลับให้ผู้ยื่นแก้ — ยังดำเนินการต่อในเอกสารฉบับนี้ไม่ได้
-         ส่งกลับเอกสารฉบับนี้เพิ่มได้ (รวบข้อแก้ไขส่งไปทีเดียว) ดู ApplicantRevisionHold -->
+    <!--/* คำร้องพักไว้: เอกสารฉบับอื่นถูกส่งกลับให้ผู้ยื่นแก้ — ยังดำเนินการต่อในเอกสารฉบับนี้ไม่ได้
+         ส่งกลับเอกสารฉบับนี้เพิ่มได้ (รวบข้อแก้ไขส่งไปทีเดียว) ดู ApplicantRevisionHold */-->
     <div th:if="${onHoldForApplicant != null and onHoldForApplicant
                   and !(sentBackAwaitingResign != null and sentBackAwaitingResign)}"
          class="alert alert-warning d-flex align-items-start gap-3">
@@ -82,7 +82,7 @@
         </div>
     </div>
 
-    <!-- เอกสารของผู้ยื่น -->
+    <!--/* เอกสารของผู้ยื่น */-->
     <div th:if="${readOnlyForAdmin and !lockedForSigning
                   and !(sentBackAwaitingResign != null and sentBackAwaitingResign)}"
          class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
@@ -103,8 +103,8 @@
         </button>
     </div>
 
-    <!-- เอกสารของผู้ยื่นที่ลงนามครบแล้ว — ที่ประชุม (เช่น กลั่นกรองฯ ข้อ 22) ยังสั่งแก้ได้
-         เดิมปุ่มส่งกลับหายไปทันทีที่ลงนามครบ เจ้าหน้าที่จึงตีกลับเอกสารฉบับนั้นไม่ได้เลย -->
+    <!--/* เอกสารของผู้ยื่นที่ลงนามครบแล้ว — ที่ประชุม (เช่น กลั่นกรองฯ ข้อ 22) ยังสั่งแก้ได้
+         เดิมปุ่มส่งกลับหายไปทันทีที่ลงนามครบ เจ้าหน้าที่จึงตีกลับเอกสารฉบับนั้นไม่ได้เลย */-->
     <div th:if="${readOnlyForAdmin and signingComplete and !(officeIssued != null and officeIssued)}"
          class="alert alert-secondary d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div>
@@ -118,7 +118,7 @@
         </button>
     </div>
 
-    <!-- อยู่นอก <form> ของเอกสาร เพราะเป็นการส่ง POST คนละปลายทาง -->
+    <!--/* อยู่นอก <form> ของเอกสาร เพราะเป็นการส่ง POST คนละปลายทาง */-->
     <div th:if="${readOnlyForAdmin and (!lockedForSigning or signingComplete)
                   and !(sentBackAwaitingResign != null and sentBackAwaitingResign)
                   and !(officeIssued != null and officeIssued)}" class="collapse mb-3" id="sendBackPanel">
@@ -135,7 +135,7 @@
         </form>
     </div>
 
-    <!-- บันทึกไม่สำเร็จเพราะเอกสารถูกล็อก (redirect กลับมาพร้อม param นี้) -->
+    <!--/* บันทึกไม่สำเร็จเพราะเอกสารถูกล็อก (redirect กลับมาพร้อม param นี้) */-->
     <div th:if="${param.error != null && param.error[0] == 'document_locked_for_signing'}"
          class="alert alert-danger">
         <i class="fas fa-triangle-exclamation"></i>
@@ -165,12 +165,12 @@
     </div>
 </div>
 
-<!--
+<!--/*
   ปุ่มบันทึกเลขที่หนังสือ/วันที่ของฟอร์มเฟส 2 — ฟอร์มเฟส 2 บันทึกผ่านร่างอัตโนมัติอย่างเดียว
   แต่ขั้นออกเลขต้องกดบันทึกเอง เพราะเลขกับวันที่ครบเมื่อไรเอกสารจะถูกปิด (ดู script ด้านล่าง)
   ขึ้นเฉพาะตอนลงนามครบ ไม่เหลือใครให้ส่งต่อ และยังไม่ได้ออกเลข — ช่วงที่ยังต้องส่งต่อใช้ร่างอัตโนมัติ
   ตามเดิม เพราะปุ่มส่งต่อบันทึกช่องของแอดมินผ่านทางนั้น
--->
+*/-->
 <th:block th:fragment="officeSave"
           th:if="${signingComplete != null and signingComplete
                    and issuesOffice != null and issuesOffice
@@ -184,7 +184,7 @@
     <th:block th:replace="~{academic/_admin_field_lock :: officeIssueDialog}"></th:block>
 </th:block>
 
-<!--
+<!--/*
   กล่องยืนยันการออกเลขที่หนังสือ — กดบันทึกก่อน แล้วค่อยกรอกรหัสผ่าน Digital ID ในกล่องนี้
   ใช้ร่วมกันทั้งสองเฟส (officeSave ของเฟส 2 และ _common :: buttons ของเฟส 1) เปิดด้วย
   window.openOfficeIssueDialog ใน script ด้านล่าง
@@ -194,7 +194,7 @@
   เซิร์ฟเวอร์ตัดค่านี้ทิ้งก่อนบันทึกลงเอกสาร
   data-office-pin: สคริปต์ล็อกช่องข้ามช่องนี้ ไม่งั้นถูกปิดจนพิมพ์ไม่ได้
   data-optional: ตัวตรวจช่องที่ต้องกรอก (doc_required_validate.js) ไม่นับช่องนี้เป็นช่องของเอกสาร
--->
+*/-->
 <div th:fragment="officeIssueDialog" class="modal fade" id="officeIssueModal" tabindex="-1"
      aria-labelledby="officeIssueModalTitle" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
@@ -222,7 +222,7 @@
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                <!-- เอกสารแบบเดิมไม่ได้ลงนามลงไฟล์ตอนออกเลข จึงไม่ใช้คำว่า "ลงนาม" -->
+                <!--/* เอกสารแบบเดิมไม่ได้ลงนามลงไฟล์ตอนออกเลข จึงไม่ใช้คำว่า "ลงนาม" */-->
                 <button type="button" class="btn btn-academic" data-office-issue-confirm>
                     <i class="fas fa-signature me-1"></i>
                     <span th:text="${officeSignsPdf != null and officeSignsPdf}
@@ -233,7 +233,7 @@
     </div>
 </div>
 
-<!--
+<!--/*
   ปิดช่องที่ผู้ใช้คนนี้ไม่ได้เป็นเจ้าของ ต้องวางหลังฟอร์มใน DOM
 
   จุดที่เคยรั่วและกันไว้แล้วตรงนี้:
@@ -241,7 +241,7 @@
     - ปุ่มไม่เคยถูกปิด ทั้งปุ่มเพิ่มแถว ปุ่มปฏิทิน และปุ่มบันทึก → ปิดด้วย
   ส่วน select_to_datalist.js ที่เปลี่ยน <select> เป็น <input> ใหม่ แก้ที่ตัวมันเองให้ยกสถานะ
   disabled ติดไปด้วย เพราะมันรันทีหลังและสร้าง element ใหม่ทั้งอัน
--->
+*/-->
 <th:block th:fragment="script(formId)">
     <script th:inline="javascript">
         // ขั้นออกเลขที่หนังสือ (ปุ่ม officeSave): บันทึกเมื่อกดปุ่มเท่านั้น ถ้าปล่อยร่างอัตโนมัติไว้

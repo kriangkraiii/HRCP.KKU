@@ -549,6 +549,17 @@ body {
     border: 1px solid #fde68a;
 }
 
+/* ประกาศจากผู้ดูแลระบบ — ขึ้นบรรทัดตามที่พิมพ์ ไอคอนอยู่บรรทัดแรก */
+.login-announcement {
+    align-items: flex-start;
+    white-space: pre-line;
+    line-height: 1.6;
+}
+
+.login-announcement > i {
+    margin-top: 4px;
+}
+
 .alert-dismissing {
     opacity: 0 !important;
     transform: translateY(-8px) scale(0.98) !important;

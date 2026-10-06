@@ -1,0 +1,135 @@
+package com.ecom.research;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.ecom.academic.model.PositionRequest;
+import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.service.PositionRequestService;
+import com.ecom.external.model.ScopusPublication;
+import com.ecom.model.UserDtls;
+import com.ecom.support.AbstractFlowTest;
+import com.ecom.support.TestDataFactory;
+
+/**
+ * ผลงานที่พิมพ์เอง (ไม่ได้เลือกจากรายการ) ก็ใช้ซ้ำไม่ได้ และรายการให้เลือกครอบทุกแหล่งข้อมูล
+ */
+@DisplayName("งานวิจัย: ผลงานที่พิมพ์เองใช้ซ้ำไม่ได้ และเลือกได้ทุกแหล่ง")
+class PositionWorkReuseTest extends AbstractFlowTest {
+
+    private static final long FS_ID = 7001L;
+    private static final String CITATION =
+            "Somchai J., Malee T. (2024). Deep learning for medical image classification. "
+                    + "Journal of Computing, 12(3), 1-10.";
+
+    @Autowired
+    private PositionRequestService positionService;
+
+    private UserDtls linkedApplicant() {
+        UserDtls applicant = data.applicant();
+        data.faculty(FS_ID, TestDataFactory.APPLICANT_EMAIL);
+        return applicant;
+    }
+
+    private PositionRequest requestWithWork(UserDtls applicant, PositionRequestStatus status, String work) {
+        PositionRequest request = data.positionRequest(applicant, status, null);
+        data.positionDocument(request, 1, "{\"assoc_research_working_1\":\"" + work + "\"}");
+        return request;
+    }
+
+    @Nested
+    @DisplayName("ผลงานที่พิมพ์เอง")
+    class TypedWorks {
+
+        @Test
+        @DisplayName("พิมพ์ผลงานเดิมที่ยื่นไปแล้ว (เว้นวรรค/เลขต่างกันนิดหน่อย) — ถือว่าซ้ำ")
+        void retypedWorkIsCaught() {
+            UserDtls applicant = linkedApplicant();
+            requestWithWork(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, CITATION);
+            PositionRequest draft = requestWithWork(applicant, PositionRequestStatus.DRAFT,
+                    "Somchai J.,  Malee T. (๒๕๖๗). Deep learning for medical image classification. "
+                            + "Journal of Computing, 12(3), 1-10");
+
+            assertThat(positionService.reusedWorks(draft)).hasSize(1);
+        }
+
+        @Test
+        @DisplayName("คำร้องก่อนหน้ายังเป็นแบบร่าง — ยังไม่นับว่าใช้ไปแล้ว")
+        void aDraftSpendsNothing() {
+            UserDtls applicant = linkedApplicant();
+            requestWithWork(applicant, PositionRequestStatus.DRAFT, CITATION);
+            PositionRequest draft = requestWithWork(applicant, PositionRequestStatus.DRAFT, CITATION);
+
+            assertThat(positionService.reusedWorks(draft)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("ผลงานคนละชิ้นในวารสารเดียวกัน — ไม่ซ้ำ")
+        void aDifferentWorkIsFine() {
+            UserDtls applicant = linkedApplicant();
+            requestWithWork(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, CITATION);
+            PositionRequest draft = requestWithWork(applicant, PositionRequestStatus.DRAFT,
+                    "Somchai J., Malee T. (2025). Graph neural networks for traffic forecasting in Khon Kaen. "
+                            + "Journal of Computing, 13(1), 20-31.");
+
+            assertThat(positionService.reusedWorks(draft)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("พิมพ์ชื่อเรื่องของผลงานที่เคยเลือกจากรายการไปแล้ว — ถือว่าซ้ำ")
+        void typingAPickedTitleIsCaught() {
+            UserDtls applicant = linkedApplicant();
+            ScopusPublication paper = data.publication(FS_ID, "Deep learning for medical image classification", 2024, 3);
+            data.recordPublicationUse(
+                    data.positionRequest(applicant, PositionRequestStatus.SENT_TO_HR, null), paper);
+            PositionRequest draft = requestWithWork(applicant, PositionRequestStatus.DRAFT, CITATION);
+
+            assertThat(positionService.reusedWorks(draft)).containsExactly(CITATION);
+        }
+
+        @Test
+        @DisplayName("ผลงานของผู้ยื่นคนอื่น — ไม่เกี่ยว")
+        void anotherApplicantsWorkDoesNotCount() {
+            UserDtls somchai = linkedApplicant();
+            requestWithWork(data.otherApplicant(), PositionRequestStatus.DOCUMENT_RECEIVED, CITATION);
+            PositionRequest draft = requestWithWork(somchai, PositionRequestStatus.DRAFT, CITATION);
+
+            assertThat(positionService.reusedWorks(draft)).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("รายการให้เลือก")
+    class Picker {
+
+        @Test
+        @DisplayName("ทุกแหล่งรวมกัน และแต่ละรายการบอกแหล่งที่มา — กรองตามแหล่งได้")
+        void everySourceIsOfferedAndFilterable() throws Exception {
+            UserDtls applicant = linkedApplicant();
+            data.publication(FS_ID, "ผลงานจาก Scopus", 2024, 3);
+            data.harvestedPublication(FS_ID, "ผลงานจาก ThaiJO", 2023, "THAIJO");
+            data.harvestedPublication(FS_ID, "ผลงานจาก OpenAlex", 2022, "OPENALEX");
+
+            mvc.perform(get("/api/my/publications").with(user(applicant.getEmail())))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.total").value(3));
+
+            mvc.perform(get("/api/my/publications").param("source", "THAIJO").with(user(applicant.getEmail())))
+                    .andExpect(jsonPath("$.total").value(1))
+                    .andExpect(jsonPath("$.data[0].title").value("ผลงานจาก ThaiJO"))
+                    .andExpect(jsonPath("$.data[0].dataSource").value("THAIJO"));
+
+            mvc.perform(get("/api/my/publications").param("source", "scopus").with(user(applicant.getEmail())))
+                    .andExpect(jsonPath("$.total").value(1))
+                    .andExpect(jsonPath("$.data[0].dataSource").value("SCOPUS"));
+        }
+    }
+}

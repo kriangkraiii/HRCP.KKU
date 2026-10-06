@@ -284,7 +284,10 @@ public class SignInService {
             // ผู้ลงนามภายนอกมาเพื่อลงนามอย่างเดียว — อีเมลที่ส่งถึงเขาชี้ไปที่ /esign เท่านั้น
             return path.startsWith("/esign/");
         }
-        return !path.startsWith("/admin/") || ROLE_ADMIN.equals(user.getRole());
+        // /admin/** ต้องเป็น ROLE_ADMIN และ /user/** ต้องเป็น ROLE_USER (SecurityConfig) แอดมินไม่มี ROLE_USER
+        // จึงพากลับไปหน้า /user/ ที่ค้างไว้ไม่ได้ — เช่นตอนสลับบัญชีทดสอบกลับมาเป็นแอดมิน จะเจอ 403
+        boolean admin = ROLE_ADMIN.equals(user.getRole());
+        return admin ? !path.startsWith("/user/") : !path.startsWith("/admin/");
     }
 
     /** Where a role lands after signing in. One answer for every entry point. */

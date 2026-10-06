@@ -178,8 +178,8 @@ class SignerChoiceTest extends AbstractFlowTest {
                     envelopes.findById(envelope.getId()).orElseThrow());
 
             assertThat(answers)
-                    .as("มีแค่คำตอบและวันที่ของหัวหน้าสาขา — ของคณบดียังไม่มีเพราะยังไม่ได้เซ็น")
-                    .containsOnlyKeys("qualification_status", "head_sign_date");
+                    .as("มีวันที่ของผู้ยื่น คำตอบและวันที่ของหัวหน้าสาขา — ของคณบดียังไม่มีเพราะยังไม่ได้เซ็น")
+                    .containsOnlyKeys("sign_date", "qualification_status", "head_sign_date");
         }
 
         @Test

@@ -24,7 +24,7 @@
 							<i class="fas fa-sync me-1"></i> ซิงก์ข้อมูลและรูปภาพจากเว็บไซต์คณะ
 						</button>
 					</form>
-					<!-- ผู้ลงนามภายนอกเพิ่มจากช่องชื่อผู้ลงนามในเอกสาร ("+ เพิ่มผู้ลงนามภายนอก มข.") -->
+					<!--/* ผู้ลงนามภายนอกเพิ่มจากช่องชื่อผู้ลงนามในเอกสาร ("+ เพิ่มผู้ลงนามภายนอก มข.") */-->
 					<a th:unless="${userType==3}" th:href="@{/admin/add-admin(type=${userType})}" class="btn btn-academic">
 						<i class="fas fa-plus me-1"></i>
 						<span th:if="${userType==1}">เพิ่มผู้ใช้งาน</span>
@@ -99,8 +99,8 @@
 											class="btn btn-sm btn-primary">
 											<i class="fa-solid fa-pen-to-square"></i> Edit
 										</a>
-										<!-- Only for accounts that actually have 2FA on — the way back
-										     in for someone who cannot open their OTP mailbox anymore. -->
+										<!--/* Only for accounts that actually have 2FA on — the way back
+										     in for someone who cannot open their OTP mailbox anymore. */-->
 										<a th:if="${u.twoFactorEnabled != null && u.twoFactorEnabled}"
 											href="#"
 											th:data-id="${u.id}"
@@ -130,7 +130,7 @@
 			</div>
 		</div>
 
-<!-- Delete Confirmation Modal -->
+<!--/* Delete Confirmation Modal */-->
 <div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
 	<div class="modal-dialog modal-dialog-centered">
 		<div class="modal-content">

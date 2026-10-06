@@ -6,7 +6,7 @@
 <section>
     <div class="container-fluid p-4">
 
-        <!-- Page Header -->
+        <!--/* Page Header */-->
         <div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-3">
             <div>
                 <h1 class="h3 fw-bold text-primary mb-1">
@@ -23,9 +23,9 @@
             </div>
         </div>
 
-        <!-- Notification Alerts -->
+        <!--/* Notification Alerts */-->
 
-        <!-- Filter & Search Toolbar -->
+        <!--/* Filter & Search Toolbar */-->
         <div class="card card-academic mb-4 shadow-sm border-0">
             <div class="card-body p-3">
                 <form method="get" th:action="@{/admin/academic/committee}" class="row g-2 align-items-center">
@@ -57,7 +57,7 @@
             </div>
         </div>
 
-        <!-- Committee Table Card -->
+        <!--/* Committee Table Card */-->
         <div class="card card-academic shadow-sm border-0">
             <div class="card-header bg-white py-3 d-flex justify-content-between align-items-center">
                 <h5 class="mb-0 fw-bold text-secondary">
@@ -162,7 +162,7 @@
 
     </div>
 
-    <!-- Modal เพิ่มผู้ทรงคุณวุฒิใหม่ -->
+    <!--/* Modal เพิ่มผู้ทรงคุณวุฒิใหม่ */-->
     <div class="modal fade" id="addCommitteeModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -173,9 +173,9 @@
                     </div>
                     <div class="modal-body p-4">
                         
-                        <!-- แท็บภาษาไทย / ภาษาอังกฤษ -->
+                        <!--/* แท็บภาษาไทย / ภาษาอังกฤษ */-->
                         <div class="row g-4">
-                            <!-- ฝั่งซ้าย: ข้อมูลภาษาไทย -->
+                            <!--/* ฝั่งซ้าย: ข้อมูลภาษาไทย */-->
                             <div class="col-lg-6 border-end pe-lg-4">
                                 <h6 class="fw-bold text-primary mb-3"><i class="fas fa-language me-1"></i> ข้อมูลภาษาไทย (Thai Information)</h6>
                                 <div class="row g-3">
@@ -209,7 +209,7 @@
                                 </div>
                             </div>
 
-                            <!-- ฝั่งขวา: ข้อมูลภาษาอังกฤษ -->
+                            <!--/* ฝั่งขวา: ข้อมูลภาษาอังกฤษ */-->
                             <div class="col-lg-6 ps-lg-4">
                                 <h6 class="fw-bold text-success mb-3"><i class="fas fa-globe me-1"></i> ข้อมูลภาษาอังกฤษ (English Information)</h6>
                                 <div class="row g-3">
@@ -246,7 +246,7 @@
 
                         <hr class="my-4">
 
-                        <!-- ส่วนข้อมูลการติดต่อและระบบลงนาม -->
+                        <!--/* ส่วนข้อมูลการติดต่อและระบบลงนาม */-->
                         <h6 class="fw-bold text-dark mb-3"><i class="fas fa-envelope-circle-check me-1"></i> ข้อมูลการติดต่อและการลงนาม (Contact & SSO)</h6>
                         <div class="row g-3">
                             <div class="col-md-4">
@@ -275,7 +275,7 @@
         </div>
     </div>
 
-    <!-- Modal แก้ไขผู้ทรงคุณวุฒิ -->
+    <!--/* Modal แก้ไขผู้ทรงคุณวุฒิ */-->
     <div class="modal fade" id="editCommitteeModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-centered">
             <div class="modal-content border-0 shadow">
@@ -288,7 +288,7 @@
                     <div class="modal-body p-4">
                         
                         <div class="row g-4">
-                            <!-- ฝั่งซ้าย: ข้อมูลภาษาไทย -->
+                            <!--/* ฝั่งซ้าย: ข้อมูลภาษาไทย */-->
                             <div class="col-lg-6 border-end pe-lg-4">
                                 <h6 class="fw-bold text-primary mb-3"><i class="fas fa-language me-1"></i> ข้อมูลภาษาไทย (Thai Information)</h6>
                                 <div class="row g-3">
@@ -322,7 +322,7 @@
                                 </div>
                             </div>
 
-                            <!-- ฝั่งขวา: ข้อมูลภาษาอังกฤษ -->
+                            <!--/* ฝั่งขวา: ข้อมูลภาษาอังกฤษ */-->
                             <div class="col-lg-6 ps-lg-4">
                                 <h6 class="fw-bold text-success mb-3"><i class="fas fa-globe me-1"></i> ข้อมูลภาษาอังกฤษ (English Information)</h6>
                                 <div class="row g-3">
@@ -359,7 +359,7 @@
 
                         <hr class="my-4">
 
-                        <!-- ส่วนข้อมูลการติดต่อและระบบลงนาม -->
+                        <!--/* ส่วนข้อมูลการติดต่อและระบบลงนาม */-->
                         <h6 class="fw-bold text-dark mb-3"><i class="fas fa-envelope-circle-check me-1"></i> ข้อมูลการติดต่อและการลงนาม (Contact & SSO)</h6>
                         <div class="row g-3">
                             <div class="col-md-4">
@@ -388,8 +388,10 @@
         </div>
     </div>
 
-    <!-- Delete Confirmation Form (Hidden) -->
-    <form class="u-hidden" id="deleteForm" method="post"></form>
+    <!--/* Delete Confirmation Form (Hidden) */-->
+    <form class="u-hidden" id="deleteForm" method="post">
+        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+    </form>
 
     <script>
         function openEditModal(btn) {

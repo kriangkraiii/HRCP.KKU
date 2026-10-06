@@ -62,6 +62,13 @@ class DocPreviewEngine {
         }
     }
 
+    /** เลข "เอกสารที่ N" ที่ผู้ใช้เห็น — เฟส 2 เรียงเอกสารผู้ยื่นก่อน ต้องตรงกับ PositionRequestService.docNumber */
+    getDocNumber() {
+        const isPosition = this.previewBasePath && this.previewBasePath.includes('position');
+        const posNumbers = { 6: 5, 9: 6 };
+        return isPosition && posNumbers[this.docType] ? posNumbers[this.docType] : this.docType;
+    }
+
     getCleanDocTitle() {
         return this.getDocTitle().replace(/[\/\\:*?"<>|\s]+/g, '_');
     }
@@ -125,7 +132,7 @@ class DocPreviewEngine {
 
         const docTitle = this.getDocTitle();
         const displayTitle = (this.docType !== null && this.docType !== undefined)
-            ? (docTitle ? `ตัวอย่างเอกสารที่ ${this.docType}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${this.docType}`)
+            ? (docTitle ? `ตัวอย่างเอกสารที่ ${this.getDocNumber()}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${this.getDocNumber()}`)
             : (docTitle || 'ตัวอย่างเอกสาร');
 
         this.overlay.innerHTML = `
@@ -610,7 +617,7 @@ class DocPreviewEngine {
             const isPosition = this.previewBasePath && this.previewBasePath.includes('position');
             const prefix = isPosition ? 'เอกสารตำแหน่งที่_' : 'เอกสารที่_';
             const cleanTitle = this.getCleanDocTitle();
-            let filename = prefix + this.docType + (cleanTitle ? '_' + cleanTitle : '');
+            let filename = prefix + this.getDocNumber() + (cleanTitle ? '_' + cleanTitle : '');
             if (this.tabs) {
                 filename += '_' + this.tabs[this.activeTab].label.replace(/[\/\\:*?"<>|\s]+/g, '_');
             }
@@ -700,7 +707,7 @@ document.addEventListener('click', function (e) {
         if (docPreview) {
             docPreview.standaloneUrl = null;
             const docTitle = docPreview.getDocTitle();
-            const displayTitle = docTitle ? `ตัวอย่างเอกสารที่ ${docPreview.docType}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${docPreview.docType}`;
+            const displayTitle = docTitle ? `ตัวอย่างเอกสารที่ ${docPreview.getDocNumber()}: ${docTitle}` : `ตัวอย่างเอกสารที่ ${docPreview.getDocNumber()}`;
             const titleEl = document.getElementById('docxTitleText');
             if (titleEl) titleEl.textContent = displayTitle;
             // เอกสารอยู่ในซองลงนามแล้ว — ค่าในฟอร์มไม่มีลายเซ็น ต้องเรนเดอร์จากซองแทน

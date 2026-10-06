@@ -159,16 +159,16 @@ class SignedCopyIsFrozenTest extends AbstractFlowTest {
     }
 
     @Test
-    @DisplayName("สำนักงานกรอกวันที่ตรวจหลังลงนามครบ สำเนาถูกสร้างใหม่และมีค่าที่กรอก")
+    @DisplayName("สำนักงานกรอกตำแหน่งคณบดีหลังลงนามครบ สำเนาถูกสร้างใหม่และมีค่าที่กรอก")
     void officeFieldsFilledAfterCompletionReachTheArchive() throws Exception {
         SignatureRequest envelope = completedEnvelope();
-        assertThat(text(renderer.renderForDownload(envelope, "docx"))).doesNotContain("3 ตุลาคม 2569");
+        assertThat(text(renderer.renderForDownload(envelope, "docx"))).doesNotContain("ผู้อำนวยการวิทยาลัยทดสอบ");
 
         positionService.saveOfficeFieldsAcrossCopies(request, DOC_ETHICS,
-                Map.of("verify_date", "3 ตุลาคม 2569"), "แบบรับรองจริยธรรม", true);
+                Map.of("dean_position", "ผู้อำนวยการวิทยาลัยทดสอบ"), "แบบรับรองจริยธรรม", true);
 
         byte[] served = renderer.renderForDownload(envelopes.findById(envelope.getId()).orElseThrow(), "docx");
-        assertThat(text(served)).contains("3 ตุลาคม 2569");
+        assertThat(text(served)).contains("ผู้อำนวยการวิทยาลัยทดสอบ");
         assertThat(Files.readAllBytes(downloadedDocx(envelope)))
                 .as("สำเนาที่เก็บไว้ต้องเป็นฉบับที่มีค่าใหม่แล้ว")
                 .isEqualTo(served);

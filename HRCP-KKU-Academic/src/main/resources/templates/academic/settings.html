@@ -8,7 +8,7 @@
                 <div class="col-lg-8">
                     <h3 class="mb-4"><i class="fas fa-cog"></i> การตั้งค่า</h3>
 
-                    <!-- Success/Error Alerts -->
+                    <!--/* Success/Error Alerts */-->
                     <div th:if="${success}" class="alert alert-success alert-dismissible fade show">
                         <i class="fas fa-check-circle"></i> [[${success}]]
                         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -19,7 +19,7 @@
                     </div>
 
                     <div id="settingsContainer">
-                        <!-- Section 1: General -->
+                        <!--/* Section 1: General */-->
                         <div class="card mb-4">
                             <div class="card-header bg-white">
                                 <h5 class="mb-0"><i class="fas fa-sliders-h text-primary"></i> ทั่วไป</h5>
@@ -58,7 +58,7 @@
                             </div>
                         </div>
 
-                        <!-- Section 2: Expiry Alerts -->
+                        <!--/* Section 2: Expiry Alerts */-->
                         <div class="card mb-4">
                             <div class="card-header bg-white">
                                 <h5 class="mb-0"><i class="fas fa-bell text-warning"></i>
@@ -139,7 +139,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Custom Expiry Alerts Section (Max 5) -->
+                                <!--/* Custom Expiry Alerts Section (Max 5) */-->
                                 <hr class="my-4">
                                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
                                     <div>
@@ -158,7 +158,7 @@
                                     </button>
                                 </div>
 
-                                <!-- Custom Alerts Cards -->
+                                <!--/* Custom Alerts Cards */-->
                                 <div id="customAlertsContainer" class="row g-3">
                                     <div th:if="${customAlerts == null || customAlerts.isEmpty()}" id="customAlertEmpty" class="col-12">
                                         <div class="text-center py-4 px-3 border border-dashed rounded-3 u-bg-var-bg-hover-rgba-0-0-0-0-02">
@@ -198,18 +198,18 @@
 
                     </div>
 
-                    <!-- Auto-save toast -->
+                    <!--/* Auto-save toast */-->
                     <div class="s-settings-1" id="saveToast">
                         <i class="fas fa-check-circle"></i> <span id="saveToastText">บันทึกแล้ว</span>
                     </div>
 
-                    <!-- Section 3: Security (2FA) — Outside form, uses AJAX -->
+                    <!--/* Section 3: Security (2FA) — Outside form, uses AJAX */-->
                     <div class="card mb-4 mt-4">
                         <div class="card-header bg-white">
                             <h5 class="mb-0"><i class="fas fa-shield-alt text-danger"></i> ความปลอดภัย</h5>
                         </div>
                         <div class="card-body">
-                            <!-- Email Verification -->
+                            <!--/* Email Verification */-->
                             <div class="d-flex justify-content-between align-items-center py-3 border-bottom">
                                 <div>
                                     <h6 class="mb-1">
@@ -236,7 +236,7 @@
                                 </div>
                             </div>
 
-                            <!-- 2FA Toggle -->
+                            <!--/* 2FA Toggle */-->
                             <div class="d-flex justify-content-between align-items-center py-3">
                                 <div>
                                     <h6 class="mb-1"><i class="fas fa-lock text-primary"></i> การยืนยันตัวตนสองขั้นตอน (2FA)</h6>
@@ -260,7 +260,7 @@
                         </div>
                     </div>
 
-                    <!-- Section 4: Admin SMTP Relay Diagnostic (Admin Only) -->
+                    <!--/* Section 4: Admin SMTP Relay Diagnostic (Admin Only) */-->
                     <div class="card mb-4 mt-4" th:if="${user != null and user.role == 'ROLE_ADMIN'}">
                         <div class="card-header bg-white d-flex justify-content-between align-items-center">
                             <h5 class="mb-0"><i class="fas fa-paper-plane text-primary"></i> ทดสอบการส่งอีเมล</h5>
@@ -302,16 +302,16 @@
                                 </div>
                             </div>
 
-                            <!-- Realtime Diagnostic Alert Box -->
+                            <!--/* Realtime Diagnostic Alert Box */-->
                             <div id="diagnosticAlertArea" class="mt-3 u-hidden"></div>
                         </div>
                     </div>
 
-                    <!-- OTP Verification Modal -->
+                    <!--/* OTP Verification Modal */-->
                     <div class="modal fade" id="otpModal" tabindex="-1">
                         <div class="modal-dialog modal-dialog-centered">
                             <div class="modal-content u-modal-soft">
-                                <!-- Header -->
+                                <!--/* Header */-->
                                 <div class="s-settings-2">
                                     <div class="s-settings-3">
                                         <i class="fas fa-shield-alt u-fs-24px-c-90caf9"></i>
@@ -321,19 +321,19 @@
                                     <button type="button" class="btn-close btn-close-white u-corner-close" data-bs-dismiss="modal"></button>
                                 </div>
 
-                                <!-- Body -->
+                                <!--/* Body */-->
                                 <div class="u-p-28px-28px-20px-ta-center">
-                                    <!-- Countdown -->
+                                    <!--/* Countdown */-->
                                     <div class="u-mb-20px" id="otpCountdownArea">
                                         <span class="s-settings-4">
                                             <i class="fas fa-clock"></i> OTP หมดอายุใน <span class="u-ff-monospace-fs-14px-fw-700" id="otpCountdown">5:00</span>
                                         </span>
                                     </div>
 
-                                    <!-- Alert Area -->
+                                    <!--/* Alert Area */-->
                                     <div id="otpAlertArea"></div>
 
-                                    <!-- OTP Input — 8 individual digits -->
+                                    <!--/* OTP Input — 8 individual digits */-->
                                     <div class="u-d-flex-gap-6px-jc-center-m-0-auto-24px" id="settingsOtpInputs">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="0" autocomplete="off">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="1" autocomplete="off">
@@ -345,17 +345,17 @@
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="6" autocomplete="off">
                                         <input type="text" maxlength="1" inputmode="numeric" class="otp-digit" data-idx="7" autocomplete="off">
                                     </div>
-                                    <!-- Hidden field for form -->
+                                    <!--/* Hidden field for form */-->
                                     <input type="hidden" id="emailOtpInput">
 
-                                    <!-- Verify Button -->
+                                    <!--/* Verify Button */-->
                                     <button type="button" class="btn w-100 s-settings-5" id="verifyOtpBtn" data-call="verifyEmailOtp" disabled
                                            >
                                         <i class="fas fa-check-circle"></i> ยืนยัน OTP
                                     </button>
                                 </div>
 
-                                <!-- Footer -->
+                                <!--/* Footer */-->
                                 <div class="u-p-0-28px-24px-ta-center">
                                     <div class="u-bdt-1px-solid-eee-pt-16px">
                                         <p class="u-fs-13px-c-999-m-0-0-8px">ไม่ได้รับรหัส?</p>
@@ -396,7 +396,7 @@
                         #resendOtpBtn:hover:not(:disabled) { background: #1a237e; color: #fff; }
                     </style>
 
-                    <!-- Modal: Add Custom Expiry Alert -->
+                    <!--/* Modal: Add Custom Expiry Alert */-->
                     <div class="modal fade" id="customAlertModal" tabindex="-1" aria-labelledby="customAlertModalLabel" aria-hidden="true">
                         <div class="modal-dialog modal-dialog-centered u-maxw-440px">
                             <div class="modal-content border-0 shadow u-r-16px-ov-hidden">

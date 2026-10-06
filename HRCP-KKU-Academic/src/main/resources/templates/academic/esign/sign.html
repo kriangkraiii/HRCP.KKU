@@ -23,7 +23,7 @@
             </p>
         </div>
 
-        <!-- Continuous Signing Queue Indicator -->
+        <!--/* Continuous Signing Queue Indicator */-->
         <div th:if="${queueTotal > 1}" class="card border-primary border-opacity-25 bg-primary bg-opacity-10 mb-3 shadow-sm">
             <div class="card-body py-2 px-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
                 <div class="d-flex align-items-center gap-2">
@@ -45,7 +45,7 @@
             </div>
         </div>
 
-        <!-- เลยกำหนดที่ตั้งเตือนไว้เอง: เตือนความจำเท่านั้น ยังลงนามได้ -->
+        <!--/* เลยกำหนดที่ตั้งเตือนไว้เอง: เตือนความจำเท่านั้น ยังลงนามได้ */-->
         <div th:if="${envelope.overdue and deadlineAdvisory}" class="alert alert-warning d-flex align-items-center flex-wrap gap-2 mb-3 shadow-sm">
             <div>
                 <i class="fas fa-bell fa-lg me-2"></i>
@@ -59,7 +59,7 @@
             </div>
         </div>
 
-        <!-- Overdue Alert & Extension Option -->
+        <!--/* Overdue Alert & Extension Option */-->
         <div th:if="${envelope.overdue and !deadlineAdvisory}" class="alert alert-danger d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3 shadow-sm">
             <div>
                 <i class="fas fa-triangle-exclamation fa-lg me-2"></i>
@@ -74,7 +74,7 @@
             </button>
         </div>
 
-        <!-- เจ้าหน้าที่เปิดดูขั้นของคนอื่น — ดูเอกสารได้ ลงนามแทนไม่ได้ -->
+        <!--/* เจ้าหน้าที่เปิดดูขั้นของคนอื่น — ดูเอกสารได้ ลงนามแทนไม่ได้ */-->
         <div th:if="${viewOnly}" class="alert alert-info" data-view-only>
             <i class="fas fa-eye"></i>
             ขั้นตอนนี้เป็นของ <strong th:text="${step.signerNameSnapshot != null ? step.signerNameSnapshot : step.signer.name}">ผู้ลงนาม</strong>
@@ -88,7 +88,7 @@
 
         <div class="row g-3 align-items-start">
 
-            <!-- ========== ฝั่งซ้าย: เอกสารตัวจริงที่กำลังจะลงนาม (Sticky Preview) ========== -->
+            <!--/* ========== ฝั่งซ้าย: เอกสารตัวจริงที่กำลังจะลงนาม (Sticky Preview) ========== */-->
             <div class="col-lg-7 esign-preview-sticky-col">
                 <div class="card card-academic shadow-sm esign-preview-card">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center py-2">
@@ -101,11 +101,11 @@
                         </div>
                     </div>
                     <div class="card-body p-0 esign-preview-card-body">
-                        <!-- เนื้อหาที่แสดงคือฉบับที่ถูก freeze ไว้ตอนส่งลงนาม
-                             ไม่ใช่ฟอร์มปัจจุบัน — สิ่งที่เห็นคือสิ่งที่จะถูกลงนามจริง -->
-                        <!-- วงเล็บที่ต่อท้าย @{...} ถูก Thymeleaf อ่านเป็น "รายการพารามิเตอร์ของ URL"
+                        <!--/* เนื้อหาที่แสดงคือฉบับที่ถูก freeze ไว้ตอนส่งลงนาม
+                             ไม่ใช่ฟอร์มปัจจุบัน — สิ่งที่เห็นคือสิ่งที่จะถูกลงนามจริง */-->
+                        <!--/* วงเล็บที่ต่อท้าย @{...} ถูก Thymeleaf อ่านเป็น "รายการพารามิเตอร์ของ URL"
                              ไม่ใช่การต่อสตริง จึงต้องส่งพารามิเตอร์ด้วยไวยากรณ์ @{...(name=value)}
-                             ของจริงเท่านั้น มิฉะนั้นจะได้ URL เพี้ยนจนโหลดไม่ขึ้น -->
+                             ของจริงเท่านั้น มิฉะนั้นจะได้ URL เพี้ยนจนโหลดไม่ขึ้น */-->
                         <div id="esign-pdf-container"
                              th:with="previewSigId=${defaultSignature != null
                                         ? defaultSignature.id
@@ -114,16 +114,16 @@
                              th:data-pdf-url="${previewSigId != null}
                                         ? @{/esign/sign/{stepId}/preview(stepId=${step.id}, userSignatureId=${previewSigId})}
                                         : @{/esign/sign/{stepId}/preview(stepId=${step.id})}">
-                            <!-- EsignPdfViewer will dynamically mount here -->
+                            <!--/* EsignPdfViewer will dynamically mount here */-->
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- ========== ฝั่งขวา: ลำดับการลงนาม + ยินยอม + ลงนาม ========== -->
+            <!--/* ========== ฝั่งขวา: ลำดับการลงนาม + ยินยอม + ลงนาม ========== */-->
             <div class="col-lg-5">
 
-                <!-- ข้อมูลคำร้อง — ผู้ลงนามต้องรู้ว่ากำลังพิจารณาเรื่องของใครก่อนเลือกเห็นควรหรือไม่ -->
+                <!--/* ข้อมูลคำร้อง — ผู้ลงนามต้องรู้ว่ากำลังพิจารณาเรื่องของใครก่อนเลือกเห็นควรหรือไม่ */-->
                 <div th:if="${requestSummary != null}" class="card card-academic mb-3">
                     <div class="card-header bg-white">
                         <i class="fas fa-folder-open"></i> ข้อมูลคำร้อง
@@ -158,8 +158,8 @@
                     </div>
                 </div>
 
-                <!-- ไฟล์แนบประกอบการพิจารณา — เปิดผ่าน /esign ที่ตรวจสิทธิ์ด้วยขั้นลงนาม
-                     ไม่ใช่ /admin ที่ผู้ลงนามซึ่งเป็น ROLE_USER เข้าไม่ได้ -->
+                <!--/* ไฟล์แนบประกอบการพิจารณา — เปิดผ่าน /esign ที่ตรวจสิทธิ์ด้วยขั้นลงนาม
+                     ไม่ใช่ /admin ที่ผู้ลงนามซึ่งเป็น ROLE_USER เข้าไม่ได้ */-->
                 <div class="card card-academic mb-3">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-paperclip"></i> ไฟล์แนบประกอบการพิจารณา<span th:replace="~{academic/_info_tip :: tip('ไฟล์แนบเป็นฉบับล่าสุดของคำร้อง ไม่ได้ถูกล็อกไว้พร้อมกับเอกสารที่ลงนาม')}"></span></span>
@@ -193,7 +193,7 @@
                     </ul>
                 </div>
 
-                <!-- ลำดับขั้นการลงนาม -->
+                <!--/* ลำดับขั้นการลงนาม */-->
                 <div class="card card-academic mb-3">
                     <div class="card-header bg-white">
                         <i class="fas fa-list-ol"></i> ลำดับการลงนาม
@@ -215,7 +215,7 @@
                     </ul>
                 </div>
 
-                <!-- แจ้งเตือนกรณีไม่มี Digital ID (.p12) หรือหมดอายุ - บังคับให้ติดตั้งก่อนจึงจะอนุญาตให้ลงนาม -->
+                <!--/* แจ้งเตือนกรณีไม่มี Digital ID (.p12) หรือหมดอายุ - บังคับให้ติดตั้งก่อนจึงจะอนุญาตให้ลงนาม */-->
                 <div th:if="${canSign and (myCert == null or myCert.expired) and !sealAvailable}" class="alert alert-danger border-danger shadow-sm mb-3">
                     <div class="d-flex align-items-start gap-3">
                         <i class="fas fa-id-card text-danger fs-2 mt-1"></i>
@@ -251,7 +251,7 @@
                 <!--/* ผู้ลงนามภายนอกที่ไม่มี Digital ID ลงนามได้ด้วยรหัสทางอีเมล (sealAvailable) — ดู SystemSealService */-->
                 <div th:if="${canSign and ((myCert != null and !myCert.expired) or sealAvailable)}">
 
-                    <!-- ไม่มีลายเซ็นเก็บไว้ ต้องไปสร้างก่อน -->
+                    <!--/* ไม่มีลายเซ็นเก็บไว้ ต้องไปสร้างก่อน */-->
                     <div th:if="${#lists.isEmpty(mySignatures)}" class="alert alert-warning">
                         <i class="fas fa-triangle-exclamation"></i>
                         ยังไม่มีลายเซ็นที่บันทึกไว้ กรุณา
@@ -272,7 +272,7 @@
                             </div>
                             <div class="card-body">
 
-                                <!-- Radio Cards: แสดงสถานะการเลือกชัดเจน พร้อมป้ายกำกับและขอบสีน้ำเงิน -->
+                                <!--/* Radio Cards: แสดงสถานะการเลือกชัดเจน พร้อมป้ายกำกับและขอบสีน้ำเงิน */-->
                                 <div class="row g-2" th:with="noDefault=${#lists.isEmpty(mySignatures.?[isDefault])}">
                                     <div class="col-12" th:each="sig, sigStat : ${mySignatures}">
                                         <input type="radio" class="btn-check sig-radio-item" name="userSignatureId"
@@ -315,7 +315,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Dynamic Live Selected Status Box -->
+                                <!--/* Dynamic Live Selected Status Box */-->
                                 <div class="alert alert-primary bg-primary-subtle border-primary-subtle d-flex align-items-center justify-content-between p-2 px-3 rounded-3 shadow-sm mt-3" id="activeSigNotice">
                                     <div class="d-flex align-items-center gap-2 text-break">
                                         <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 u-w-32px-h-32px">
@@ -341,7 +341,7 @@
                             </div>
                         </div>
 
-                        <!-- ผู้ลงนามภายนอกที่ไม่มี Digital ID: ยืนยันตัวตนทางอีเมล แล้วระบบประทับรับรองลงไฟล์แทน -->
+                        <!--/* ผู้ลงนามภายนอกที่ไม่มี Digital ID: ยืนยันตัวตนทางอีเมล แล้วระบบประทับรับรองลงไฟล์แทน */-->
                         <div th:if="${sealAvailable}" class="card card-academic mb-3 border-primary" data-email-otp-signing data-signing-credential>
                             <div class="card-header bg-primary bg-opacity-10 text-primary fw-semibold py-2">
                                 <i class="fas fa-envelope-circle-check me-1"></i> ยืนยันตัวตนทางอีเมล
@@ -363,7 +363,7 @@
                             </div>
                         </div>
 
-                        <!-- Digital ID (.p12) Verification Status -->
+                        <!--/* Digital ID (.p12) Verification Status */-->
                         <div th:if="${myCert != null and !myCert.expired}" class="card card-academic mb-3 border-success" data-signing-credential>
                             <div class="card-header bg-success bg-opacity-10 text-success fw-semibold py-2 d-flex justify-content-between align-items-center">
                                 <span><i class="fas fa-id-card me-1"></i> ลงนามด้วย Digital ID (.p12)</span>
@@ -385,13 +385,13 @@
                                     ออกโดย: <span th:text="${myCert.issuerDn}">Thai University Consortium CA</span>
                                 </div>
 
-                                <!-- รหัสผ่านบันทึกไว้แล้ว ลงนามได้โดยไม่ต้องกรอก -->
+                                <!--/* รหัสผ่านบันทึกไว้แล้ว ลงนามได้โดยไม่ต้องกรอก */-->
                                 <div th:if="${myCert.hasSavedPin() and !envelope.incremental}" class="alert alert-success border py-1 px-2 mb-0 small">
                                     <i class="fas fa-key text-success me-1"></i> ใช้รหัสผ่าน Digital ID ที่บันทึกไว้ ไม่ต้องกรอกใหม่
                                 </div>
 
-                                <!-- กรอกรหัสผ่าน: ใบรับรองที่ไม่ได้บันทึกรหัสไว้ และเอกสารที่ลงนามแบบใส่ทับ
-                                     (เซ็นลงไฟล์ด้วยกุญแจของท่านตอนนี้เลย จึงไม่ใช้รหัสที่บันทึกไว้) -->
+                                <!--/* กรอกรหัสผ่าน: ใบรับรองที่ไม่ได้บันทึกรหัสไว้ และเอกสารที่ลงนามแบบใส่ทับ
+                                     (เซ็นลงไฟล์ด้วยกุญแจของท่านตอนนี้เลย จึงไม่ใช้รหัสที่บันทึกไว้) */-->
                                 <div th:unless="${myCert.hasSavedPin() and !envelope.incremental}" class="mb-1">
                                     <label class="form-label small fw-semibold text-dark mb-1" for="digitalCertPin">
                                         <i class="fas fa-key text-primary me-1"></i> รหัสผ่าน Digital ID
@@ -408,9 +408,9 @@
                             </div>
                         </div>
 
-                        <!-- คำถามของช่องลงนาม — บางแบบฟอร์มขอ "ผลการตรวจสอบ" ไม่ใช่แค่ลายเซ็น
+                        <!--/* คำถามของช่องลงนาม — บางแบบฟอร์มขอ "ผลการตรวจสอบ" ไม่ใช่แค่ลายเซ็น
                              คำตอบผูกกับลายเซ็นของผู้ลงนาม ไม่ใช่ข้อมูลที่ผู้ยื่นกรอกมา จึงถูกเก็บไว้
-                             ที่ขั้นตอนลงนามและเติมลงเอกสารตอนพิมพ์เท่านั้น -->
+                             ที่ขั้นตอนลงนามและเติมลงเอกสารตอนพิมพ์เท่านั้น */-->
                         <div th:if="${signerChoice != null}" class="card card-academic mb-3 border-warning">
                             <div class="card-header bg-white">
                                 <i class="fas fa-clipboard-check text-warning"></i>
@@ -437,7 +437,7 @@
                                 <textarea name="signerComment" id="signerComment" class="form-control"
                                           rows="3" maxlength="1000"
                                           placeholder="ระบุข้อสังเกตหรือเหตุผลประกอบการพิจารณา (ถ้ามี)"></textarea>
-                                <!-- ตัวอย่างเอกสารวาดความเห็นไม่ลงเพราะยาวเกินช่อง — ตอนลงนามจริงจะถูกปฏิเสธ -->
+                                <!--/* ตัวอย่างเอกสารวาดความเห็นไม่ลงเพราะยาวเกินช่อง — ตอนลงนามจริงจะถูกปฏิเสธ */-->
                                 <div class="text-danger small mt-1" id="commentTooLong" hidden>
                                     <i class="fas fa-triangle-exclamation"></i>
                                     ความเห็นยาวเกินช่องในเอกสาร กรุณาย่อให้สั้นลงก่อนลงนาม
@@ -447,9 +447,9 @@
                             </div>
                         </div>
 
-                        <!-- คำรับรองของผู้ลงนาม — เป็นสาระสำคัญตาม พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์ ม.9
+                        <!--/* คำรับรองของผู้ลงนาม — เป็นสาระสำคัญตาม พ.ร.บ.ธุรกรรมทางอิเล็กทรอนิกส์ ม.9
                              ไม่มี checkbox: การกด "ยอมรับและลงนาม" ในหน้าต่างยืนยันคือการแสดงเจตนา
-                             ระบบบันทึกฉบับของข้อความ เวลา IP และอุปกรณ์ไว้เป็นหลักฐาน -->
+                             ระบบบันทึกฉบับของข้อความ เวลา IP และอุปกรณ์ไว้เป็นหลักฐาน */-->
                         <div class="card card-academic mb-3">
                             <div class="card-header bg-white">
                                 <i class="fas fa-scale-balanced"></i> คำรับรองของผู้ลงนาม
@@ -465,16 +465,16 @@
                             </div>
                         </div>
 
-                        <!-- ข้อความของปุ่มตอนเลือกไม่เห็นควรอยู่ใน data- ไม่ใช่ในสคริปต์ เพื่อให้
-                             หน้าที่ไม่ได้แสดงปุ่มนี้ไม่มีข้อความปุ่มติดไปกับ HTML -->
+                        <!--/* ข้อความของปุ่มตอนเลือกไม่เห็นควรอยู่ใน data- ไม่ใช่ในสคริปต์ เพื่อให้
+                             หน้าที่ไม่ได้แสดงปุ่มนี้ไม่มีข้อความปุ่มติดไปกับ HTML */-->
                         <button type="submit" class="btn btn-academic w-100" id="signSubmitBtn"
                                 data-stop-label="ยืนยันไม่เห็นควร และส่งกลับไปแก้ไข"
                                 th:attr="data-stop-confirm='ยืนยันผลการพิจารณา &quot;' + ${notApprovedValue} + '&quot;? การเวียนลงนามฉบับนี้จะหยุดและเอกสารถูกส่งกลับไปแก้ไข'">
                             <i class="fas fa-signature"></i> ลงนาม
                         </button>
 
-                        <!-- หน้าต่างยืนยันก่อนลงนาม: ทวนว่ากำลังเซ็นอะไร ในฐานะใด ด้วยลายเซ็นไหน
-                             consent=true ส่งไปกับปุ่มในหน้าต่างนี้เท่านั้น ฟอร์มที่ส่งทางอื่นเซิร์ฟเวอร์จะปฏิเสธ -->
+                        <!--/* หน้าต่างยืนยันก่อนลงนาม: ทวนว่ากำลังเซ็นอะไร ในฐานะใด ด้วยลายเซ็นไหน
+                             consent=true ส่งไปกับปุ่มในหน้าต่างนี้เท่านั้น ฟอร์มที่ส่งทางอื่นเซิร์ฟเวอร์จะปฏิเสธ */-->
                         <div class="modal fade" id="signConfirmModal" tabindex="-1"
                              aria-labelledby="signConfirmTitle" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
@@ -505,8 +505,8 @@
                                     </div>
                                     <div class="modal-footer">
                                         <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">ยกเลิก</button>
-                                        <!-- form= ผูกกับฟอร์มตรง ๆ: สคริปต์ส่วนกลางย้าย .modal ไปไว้ใต้ body
-                                             ให้พ้น stacking context ของคอลัมน์ ปุ่มจึงไม่ได้อยู่ในฟอร์มแล้วจริง ๆ -->
+                                        <!--/* form= ผูกกับฟอร์มตรง ๆ: สคริปต์ส่วนกลางย้าย .modal ไปไว้ใต้ body
+                                             ให้พ้น stacking context ของคอลัมน์ ปุ่มจึงไม่ได้อยู่ในฟอร์มแล้วจริง ๆ */-->
                                         <button type="submit" class="btn btn-academic" id="signConfirmBtn"
                                                 form="signForm" name="consent" value="true">
                                             <i class="fas fa-signature"></i> ยอมรับและลงนาม
@@ -517,8 +517,8 @@
                         </div>
                     </form>
 
-                    <!-- ปฏิเสธการลงนาม — เหลือไว้เฉพาะช่องที่ไม่ได้ถูกถามผลการพิจารณา
-                         ช่องที่ถูกถามมีทางปฏิเสธอยู่ในคำถามแล้ว (เลือกไม่เห็นควร) -->
+                    <!--/* ปฏิเสธการลงนาม — เหลือไว้เฉพาะช่องที่ไม่ได้ถูกถามผลการพิจารณา
+                         ช่องที่ถูกถามมีทางปฏิเสธอยู่ในคำถามแล้ว (เลือกไม่เห็นควร) */-->
                     <div class="card card-academic mt-3" th:if="${showDeclineForm}">
                         <div class="card-header bg-white">
                             <i class="fas fa-circle-xmark"></i> ปฏิเสธการลงนาม
@@ -558,7 +558,7 @@
         </div>
     </div>
 
-    <!-- Modal ขอขยายเวลาลงนาม (ไม่แสดงเมื่อกำหนดเวลาเป็นเพียงการแจ้งเตือน) -->
+    <!--/* Modal ขอขยายเวลาลงนาม (ไม่แสดงเมื่อกำหนดเวลาเป็นเพียงการแจ้งเตือน) */-->
     <div th:unless="${deadlineAdvisory}"
          class="modal fade" id="requestExtensionModal" tabindex="-1" aria-labelledby="requestExtensionModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
@@ -591,10 +591,10 @@
         </div>
     </div>
 
-    <!-- Reusable P12 Guide Modal -->
+    <!--/* Reusable P12 Guide Modal */-->
     <div th:replace="~{academic/esign/_p12_guide_modal :: p12GuideModal}"></div>
 
-    <!-- Interactive PDF Viewer Assets -->
+    <!--/* Interactive PDF Viewer Assets */-->
     <link rel="stylesheet" href="/css/esign_pdf_viewer.css?v=3.2">
     <script src="/js/esign_pdf_viewer.js?v=3.4"></script>
     <script src="/js/esign_consideration.js?v=1.3"></script>

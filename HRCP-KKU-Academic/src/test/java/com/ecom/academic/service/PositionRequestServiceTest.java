@@ -480,6 +480,18 @@ public class PositionRequestServiceTest {
         }
 
         @Test
+        void docNumber_NumbersApplicantDocumentsFirst() {
+            // เลขที่ผู้ใช้เห็นเรียงเอกสารผู้ยื่น (1,2,3,4,6,9) เป็น 1–6 ก่อน แล้วจึงเอกสารเจ้าหน้าที่ (7,8)
+            assertThat(positionService.getAdminDocLabels().keySet())
+                    .containsExactly(1, 2, 3, 4, 6, 9, 7, 8);
+            assertThat(PositionRequestService.docNumber(6)).isEqualTo(5);
+            assertThat(PositionRequestService.docNumber(9)).isEqualTo(6);
+            assertThat(PositionRequestService.docNumber(7)).isEqualTo(7);
+            assertThat(PositionRequestService.docNumber(8)).isEqualTo(8);
+            assertThat(PositionRequestService.docNumber(5)).isEqualTo(5);
+        }
+
+        @Test
         void getDocLabel_ReturnsCorrectLabel() {
             assertThat(positionService.getDocLabel(1)).contains("ก.พ.ว.").contains("ส่วนที่ 1–5");
             assertThat(positionService.getDocLabel(5)).isEqualTo("เอกสารที่ 5");

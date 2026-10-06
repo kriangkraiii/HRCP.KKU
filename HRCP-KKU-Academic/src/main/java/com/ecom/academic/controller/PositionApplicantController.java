@@ -413,6 +413,11 @@ public class PositionApplicantController {
         String existingData = existing.isEmpty() ? null : existing.get(0).getJsonData();
         Map<String, String> preFilledData = autoFillHelper.getPreFilledPositionDocData(request, type, existingData);
 
+        // ช่องที่ระบบรู้ค่า — แสดงแบบอ่านอย่างเดียว ค่าที่บันทึกไว้เดิมถูกแทนที่
+        Map<String, String> lockedFields = positionService.lockedFields(request, type);
+        existingData = withLockedFields(existingData, lockedFields);
+        model.addAttribute("lockedFields", lockedFields);
+
         model.addAttribute("request", request);
         model.addAttribute("documentType", type);
         model.addAttribute("documentLabel", positionService.getDocLabel(type));
@@ -430,6 +435,7 @@ public class PositionApplicantController {
         // ส่วนที่ ๓ ของแบบ ก.พ.ว. มข. ๐๓ ไม่มีช่องให้กรอก แสดงค่าที่จะดึงมาใส่ให้ดูเฉย ๆ
         if (type == 1) {
             model.addAttribute("partThree", teachingEvaluationPart.partThreeFields(request));
+            model.addAttribute("reusedWorks", positionService.reusedWorks(request));
         }
 
         // Load doc 1 data for cross-document auto-fill (for docs other than 1)
@@ -448,6 +454,26 @@ public class PositionApplicantController {
         DocumentFormSupport.addCompletenessRules(model, com.ecom.academic.model.SignatureModule.POSITION, type);
 
         return "academic/position/applicant/doc_form_" + type;
+    }
+
+    /** ข้อมูลที่หน้าฟอร์มใช้คืนค่าลงช่อง: ค่าที่บันทึกไว้ ทับด้วยช่องที่ล็อก */
+    private String withLockedFields(String savedJson, Map<String, String> lockedFields) {
+        if (lockedFields.isEmpty()) {
+            return savedJson;
+        }
+        try {
+            Map<String, String> data = new java.util.LinkedHashMap<>();
+            if (savedJson != null && !savedJson.isBlank()) {
+                data.putAll(objectMapper.readValue(savedJson,
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {
+                        }));
+            }
+            data.putAll(lockedFields);
+            return objectMapper.writeValueAsString(data);
+        } catch (Exception e) {
+            log.warn("Could not apply locked fields to saved form data", e);
+            return savedJson;
+        }
     }
 
     /**
@@ -473,13 +499,13 @@ public class PositionApplicantController {
         try {
             adminLogService.log(principal.getName(), user.getName(),
                     "SUBMIT_REVISION",
-                    "ยื่นการแก้ไขเอกสารที่ " + type + " คำร้องขอตำแหน่ง #" + id,
+                    "ยื่นการแก้ไขเอกสารที่ " + PositionRequestService.docNumber(type) + " คำร้องขอตำแหน่ง #" + id,
                     getClientIpAddress());
         } catch (Exception e) {
             auditLogFailed(e);
         }
         redirectAttributes.addFlashAttribute("succMsg",
-                "ยื่นการแก้ไขเอกสารที่ " + type + " เรียบร้อยแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบต่อไป");
+                "ยื่นการแก้ไขเอกสารที่ " + PositionRequestService.docNumber(type) + " เรียบร้อยแล้ว เจ้าหน้าที่จะดำเนินการตรวจสอบต่อไป");
         return "redirect:/user/position/request/" + id;
     }
 
@@ -520,6 +546,7 @@ public class PositionApplicantController {
                 false, formData, positionService.getLatestDocumentData(id, type));
         // The position asked for was fixed when the request was created.
         positionService.pinTargetPosition(request, merged);
+        positionService.pinLockedFields(request, type, merged);
 
         try {
             String jsonData = objectMapper.writeValueAsString(merged);
@@ -555,7 +582,8 @@ public class PositionApplicantController {
     // ================== Submit Request ==================
 
     @PostMapping("/request/{id}/submit")
-    public String submitRequest(@PathVariable Long id, Principal principal) {
+    public String submitRequest(@PathVariable Long id, Principal principal,
+            RedirectAttributes redirectAttributes) {
         UserDtls user = getUser(principal);
         PositionRequest request = positionService.findById(id)
                 .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง"));
@@ -589,6 +617,15 @@ public class PositionApplicantController {
                 com.ecom.academic.model.SignatureModule.POSITION, id, PositionRequestService.APPLICANT_DOCS);
         if (!unsignedSigDocs.isEmpty()) {
             return "redirect:/user/position/request/" + id + "?error=unsigned_docs";
+        }
+
+        // ผลงานที่ยื่นไปแล้วใช้ซ้ำไม่ได้ — ที่เลือกจากรายการกันด้วยรหัสผลงานแล้ว ตรงนี้กันที่พิมพ์เอง
+        List<String> reused = positionService.reusedWorks(request);
+        if (!reused.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMsg",
+                    "ส่งคำร้องไม่ได้ — ผลงานต่อไปนี้เคยใช้ยื่นคำร้องก่อนหน้าแล้ว ใช้ซ้ำไม่ได้ กรุณาแก้ไขเอกสารที่ 1 แล้วลงนามใหม่: "
+                            + String.join(" | ", reused));
+            return "redirect:/user/position/request/" + id;
         }
 
         positionService.submitRequest(request);
@@ -687,7 +724,7 @@ public class PositionApplicantController {
         }
 
         String cleanDocName = label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
-        String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + type + "_" + cleanDocName;
+        String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + PositionRequestService.docNumber(type) + "_" + cleanDocName;
 
         return PreviewResponseFactory.build(documentService, data, format, baseName);
     }

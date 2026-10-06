@@ -12,24 +12,24 @@
                 </a>
             </div>
 
-            <!-- Alerts -->
+            <!--/* Alerts */-->
 
             <form th:action="@{/user/update-profile}" method="post" enctype="multipart/form-data" id="profileForm">
                 <input type="hidden" th:value="${user.id}" name="id">
 
                 <div class="row g-4">
-                    <!-- Left: Identity Column -->
+                    <!--/* Left: Identity Column */-->
                     <div class="col-md-4">
                         <div class="profile-identity-card s-profile-1">
-                            <!-- Avatar -->
+                            <!--/* Avatar */-->
                             <div class="profile-avatar-wrap">
                                 <img id="avatarPreview" th:src="@{'/img/profile_img/' + ${#strings.isEmpty(user.profileImage) ? 'default.png' : user.profileImage}}"
                                      alt="รูปโปรไฟล์" class="profile-avatar-img"
                                      data-fallback="/img/profile_img/default.png">
-                                <!-- ผู้ยื่นเปลี่ยนรูปเองไม่ได้ (UserServiceImpl.updateUserProfile) -->
+                                <!--/* ผู้ยื่นเปลี่ยนรูปเองไม่ได้ (UserServiceImpl.updateUserProfile) */-->
                             </div>
 
-                            <!-- Name display -->
+                            <!--/* Name display */-->
                             <h4 class="profile-name" th:text="${user.name}">ชื่อผู้ใช้</h4>
                             <p class="profile-position" th:if="${user.academicPosition != null and user.academicPosition != ''}"
                                th:text="${user.academicPosition}">ตำแหน่ง</p>
@@ -43,7 +43,7 @@
                             </div>
                         </div>
 
-                        <!-- Change Password (Dev Mode only — In Production/SSO mode, passwords are authenticated centrally via KKU SSO) -->
+                        <!--/* Change Password (Dev Mode only — In Production/SSO mode, passwords are authenticated centrally via KKU SSO) */-->
                         <div class="profile-section u-card-delay-120" th:if="${!ssoMode}">
                             <button type="button" class="profile-pw-btn" data-bs-toggle="modal" data-bs-target="#changePasswordModal">
                                 <i class="fas fa-key"></i>
@@ -59,9 +59,9 @@
                         </div>
                     </div>
 
-                    <!-- Right: Form Column -->
+                    <!--/* Right: Form Column */-->
                     <div class="col-md-8">
-                        <!-- Section: Personal Info -->
+                        <!--/* Section: Personal Info */-->
                         <div class="profile-section s-profile-3">
                             <div class="profile-section-header">
                                 <i class="fas fa-user-circle"></i>
@@ -69,10 +69,10 @@
                             </div>
                             <div class="profile-section-body">
                                 <div class="row g-3">
-                                    <!-- คำนำหน้าฝังตำแหน่งวิชาการไว้ในตัวเอง (ผศ./รศ./ศ.) จึงล็อกคู่กับ
+                                    <!--/* คำนำหน้าฝังตำแหน่งวิชาการไว้ในตัวเอง (ผศ./รศ./ศ.) จึงล็อกคู่กับ
                                          ช่องตำแหน่งข้างล่าง ปล่อยให้เลือกเองได้ก็แค่ย้ายที่โกหก เพราะชื่อที่
                                          ประทับบนเอกสารและลายเซ็นอ่านจากช่องนี้ ไม่ใช่จากช่องตำแหน่ง
-                                         ตัวที่บังคับจริงคือ UserServiceImpl.updateUserProfile ฝั่งเซิร์ฟเวอร์ -->
+                                         ตัวที่บังคับจริงคือ UserServiceImpl.updateUserProfile ฝั่งเซิร์ฟเวอร์ */-->
                                     <div class="col-md-4">
                                         <label class="profile-label">คำนำหน้าชื่อ</label>
                                         <div class="profile-readonly-field">
@@ -101,8 +101,8 @@
                                         </div>
                                     </div>
                                 </div>
-                                <!-- ผู้ยื่นแก้ได้เฉพาะเบอร์โทรศัพท์ ที่เหลือมาจากทะเบียนบุคลากร มข.
-                                     ตัวที่บังคับจริงคือ UserServiceImpl.updateUserProfile -->
+                                <!--/* ผู้ยื่นแก้ได้เฉพาะเบอร์โทรศัพท์ ที่เหลือมาจากทะเบียนบุคลากร มข.
+                                     ตัวที่บังคับจริงคือ UserServiceImpl.updateUserProfile */-->
                                 <div class="row g-3 mt-1">
                                     <div class="col-md-6">
                                         <label class="profile-label">ชื่อ (อังกฤษ)</label>
@@ -122,7 +122,7 @@
                             </div>
                         </div>
 
-                        <!-- Section: Contact -->
+                        <!--/* Section: Contact */-->
                         <div class="profile-section u-card-delay-120">
                             <div class="profile-section-header">
                                 <i class="fas fa-address-book"></i>
@@ -146,16 +146,16 @@
                             </div>
                         </div>
 
-                        <!-- Section: Academic -->
+                        <!--/* Section: Academic */-->
                         <div class="profile-section s-profile-4">
                             <div class="profile-section-header">
                                 <i class="fas fa-graduation-cap"></i>
                                 <h5>ข้อมูลทางวิชาการ</h5>
                             </div>
-                            <!-- ตำแหน่งทางวิชาการเป็นข้อมูลทะเบียนบุคลากร ไม่ใช่ช่องกรอก:
+                            <!--/* ตำแหน่งทางวิชาการเป็นข้อมูลทะเบียนบุคลากร ไม่ใช่ช่องกรอก:
                                  AcademicRankPolicy ใช้ค่านี้ตัดสินว่าขอตำแหน่งไหนได้ ที่นี่จึงแสดงอย่างเดียว
                                  ตัวที่บังคับจริงคือ UserServiceImpl.updateUserProfile ฝั่งเซิร์ฟเวอร์
-                                 ปิด JS แล้วยิง POST ตรงก็ยังกันอยู่ -->
+                                 ปิด JS แล้วยิง POST ตรงก็ยังกันอยู่ */-->
                             <div class="profile-section-body">
                                 <div class="row g-3">
                                     <div class="col-md-6">
@@ -188,7 +188,7 @@
                             </div>
                         </div>
 
-                        <!-- Save Button -->
+                        <!--/* Save Button */-->
                         <div class="d-flex justify-content-end mt-2 s-profile-5">
                             <button type="submit" class="profile-save-btn">
                                 <i class="fas fa-save me-2"></i>บันทึกข้อมูล
@@ -201,7 +201,7 @@
     </div>
 </div>
 
-<!-- Change Password Modal -->
+<!--/* Change Password Modal */-->
 <div class="modal fade" id="changePasswordModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content u-modal-soft">

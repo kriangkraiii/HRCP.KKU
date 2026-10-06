@@ -13,7 +13,7 @@
           </a>
         </div>
 
-        <!-- Alerts -->
+        <!--/* Alerts */-->
         <div
           th:if="${param.success != null}"
           class="alert alert-success alert-dismissible fade show"
@@ -88,7 +88,7 @@
           ></button>
         </div>
 
-        <!-- Hero Header -->
+        <!--/* Hero Header */-->
         <div class="detail-hero">
           <div class="detail-hero-info">
             <h4>
@@ -123,7 +123,7 @@
           ></span>
         </div>
 
-        <!-- Position Info (from Doc 2) -->
+        <!--/* Position Info (from Doc 2) */-->
         <div
           th:if="${doc2Data != null}"
           class="detail-info-card s-request-detail-3"
@@ -166,7 +166,7 @@
           </div>
         </div>
 
-        <!-- Evaluation Results (Doc 8 from eval request) -->
+        <!--/* Evaluation Results (Doc 8 from eval request) */-->
         <div
           th:if="${evalDoc9Data != null}"
           class="detail-info-card s-request-detail-4"
@@ -267,7 +267,7 @@
           </div>
         </div>
 
-        <!-- Progress Tracker -->
+        <!--/* Progress Tracker */-->
         <div class="detail-progress">
           <div class="detail-progress-steps" th:with="pIdx=${request.currentStatus.progressIndex()}">
             <th:block th:each="step, iterStat : ${progressSteps}">
@@ -284,7 +284,7 @@
           </div>
         </div>
 
-        <!-- Draft Warning -->
+        <!--/* Draft Warning */-->
         <div th:if="${request.currentStatus.isDraft()}" class="draft-banner">
           <i class="fas fa-info-circle"></i>
           <div>
@@ -296,9 +296,9 @@
         </div>
 
         <div class="row">
-          <!-- Left Column -->
+          <!--/* Left Column */-->
           <div class="col-md-5">
-            <!-- Status Update -->
+            <!--/* Status Update */-->
             <div class="detail-section">
               <div class="detail-section-header">
                 <h5>
@@ -318,7 +318,7 @@
                     >
                   </p>
                 </div>
-                <!-- เอกสารที่ส่งกลับให้แก้ยังลงนามใหม่ไม่ครบ → เปลี่ยนสถานะไปข้างหน้าไม่ได้ (ฝั่งเซิร์ฟเวอร์ปฏิเสธด้วย) -->
+                <!--/* เอกสารที่ส่งกลับให้แก้ยังลงนามใหม่ไม่ครบ → เปลี่ยนสถานะไปข้างหน้าไม่ได้ (ฝั่งเซิร์ฟเวอร์ปฏิเสธด้วย) */-->
                 <div th:if="${awaitingResignDocs != null and !#lists.isEmpty(awaitingResignDocs)}" class="alert alert-warning small" id="awaitingResignAlert">
                   <i class="fas fa-pen-nib me-1"></i>
                   <strong>รอลงนามใหม่หลังส่งกลับแก้ไข</strong> — ยังเดินเรื่องต่อไม่ได้จนกว่าเอกสารเหล่านี้จะลงนามใหม่ครบทุกช่อง:
@@ -333,8 +333,8 @@
                     <label class="form-label">สถานะใหม่</label>
                     <select name="status" class="form-select" required>
                       <option value="">-- เลือก --</option>
-                      <!-- เฉพาะสถานะที่เปลี่ยนไปได้จริงจากสถานะปัจจุบัน ตามลำดับใน flow
-                           เดิมแสดงทุกสถานะ ทำให้กดข้ามขั้นตอนได้โดยไม่มีอะไรห้าม -->
+                      <!--/* เฉพาะสถานะที่เปลี่ยนไปได้จริงจากสถานะปัจจุบัน ตามลำดับใน flow
+                           เดิมแสดงทุกสถานะ ทำให้กดข้ามขั้นตอนได้โดยไม่มีอะไรห้าม */-->
                       <option
                         th:each="s : ${allowedNextStatuses}"
                         th:value="${s.name()}"
@@ -359,7 +359,7 @@
               </div>
             </div>
 
-            <!-- Document Archive -->
+            <!--/* Document Archive */-->
             <div class="detail-section">
               <div class="detail-section-header">
                 <h5><i class="fas fa-folder-open"></i> เอกสารในคำร้อง</h5>
@@ -495,7 +495,7 @@
               </div>
             </div>
 
-            <!-- History (Tabbed: Status + Edit) -->
+            <!--/* History (Tabbed: Status + Edit) */-->
             <div class="detail-section">
               <div
                 class="detail-section-header s-request-detail-2"
@@ -527,7 +527,7 @@
               <div
                 class="detail-section-body history-scroll"
               >
-                <!-- Status History -->
+                <!--/* Status History */-->
                 <div id="statusHistPane">
                   <div th:each="h : ${statusHistory}" class="history-entry">
                     <span
@@ -563,7 +563,7 @@
                     <p>ยังไม่มีประวัติสถานะ</p>
                   </div>
                 </div>
-                <!-- Edit History -->
+                <!--/* Edit History */-->
                 <div id="editHistPane" class="js-hidden">
                   <div class="mb-3">
                     <select
@@ -575,7 +575,7 @@
                       <option
                         th:each="entry : ${docLabels}"
                         th:value="${entry.key}"
-                        th:text="'เอกสารที่ ' + ${entry.key} + ' — ' + ${entry.value}"
+                        th:text="'เอกสารที่ ' + ${@positionRequestService.docNo(entry.key)} + ' — ' + ${entry.value}"
                       ></option>
                     </select>
                   </div>
@@ -594,7 +594,7 @@
                       </span>
                       <div class="history-entry-content">
                         <div class="history-entry-date">
-                          <strong th:text="${log.documentType == 0 ? 'ไฟล์ของคำร้อง' : 'เอกสารที่ ' + log.documentType}">เอกสาร</strong>
+                          <strong th:text="${log.documentType == 0 ? 'ไฟล์ของคำร้อง' : 'เอกสารที่ ' + @positionRequestService.docNo(log.documentType)}">เอกสาร</strong>
                         </div>
                         <div
                           class="history-entry-note"
@@ -631,7 +631,7 @@
             </div>
           </div>
 
-          <!-- Right Column: Document Management -->
+          <!--/* Right Column: Document Management */-->
           <div class="col-md-7">
             <div class="detail-section">
               <div class="detail-section-header">
@@ -650,20 +650,20 @@
                 <!--/* สีและป้ายมาจาก DocumentProgress ที่เดียว — เขียวเมื่อจบจริงเท่านั้น */-->
                 <div
                   th:each="entry : ${docLabels}"
-                  th:with="stage=${docProgress.get(entry.key)}"
+                  th:with="stage=${docProgress.get(entry.key)}, docNo=${@positionRequestService.docNo(entry.key)}"
                   class="doc-grid-item"
                   th:classappend="${stage.cardClass}"
                 >
                   <div>
                     <span class="doc-grid-item-title">
-                      เอกสารที่ [[${entry.key}]]: [[${entry.value}]]
+                      เอกสารที่ [[${docNo}]]: [[${entry.value}]]
                     </span>
                     <span class="badge ms-1" th:classappend="${stage.badgeClass}">
                       <i th:class="|fas ${stage.icon}|"></i> [[${stage.label}]]
                     </span>
                   </div>
                   <div class="doc-grid-item-actions">
-                    <!-- Draft: disabled -->
+                    <!--/* Draft: disabled */-->
                     <th:block th:if="${request.currentStatus.isDraft()}">
                       <span
                         class="btn btn-sm btn-outline-secondary disabled u-o-0-5-cur-not-allowed"
@@ -672,13 +672,13 @@
                         <i class="fas fa-lock"></i> รอยื่น
                       </span>
                     </th:block>
-                    <!-- Not draft: buttons -->
+                    <!--/* Not draft: buttons */-->
                     <th:block th:unless="${request.currentStatus.isDraft()}">
                       <button
                         type="button"
                         class="btn btn-sm btn-outline-info btn-doc-preview"
                         th:data-preview-url="|/admin/position/request/${request.id}/document/${entry.key}/download?format=pdf|"
-                        th:data-doc-title="|ตัวอย่างเอกสารที่ ${entry.key}: ${entry.value}|"
+                        th:data-doc-title="|ตัวอย่างเอกสารที่ ${docNo}: ${entry.value}|"
                         title="ดูตัวอย่างเอกสาร (PDF)"
                       >
                         <i class="fas fa-eye me-1"></i> ดูตัวอย่าง

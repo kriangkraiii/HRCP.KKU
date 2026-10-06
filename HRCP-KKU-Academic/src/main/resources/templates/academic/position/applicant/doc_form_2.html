@@ -12,7 +12,7 @@
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 2: หนังสือแจ้งความประสงค์เรื่องการรับรู้ข้อมูลเกี่ยวกับการขอกำหนดตำแหน่งทางวิชาการ</h3>
 
             <div th:replace="~{academic/_applicant_doc_gate :: banner}"></div>
-            <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+            <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
@@ -23,7 +23,9 @@
                         <div class="row g-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
-                                <select name="title" class="form-select" required data-academic-title>
+                                <input th:if="${lockedFields != null and lockedFields.containsKey('title')}" type="text" name="title" class="form-control" readonly required
+                                       th:value="${lockedFields['title']}" data-academic-title title="ดึงจากข้อมูลบุคลากรในระบบ แก้ไขไม่ได้">
+                                <select th:unless="${lockedFields != null and lockedFields.containsKey('title')}" name="title" class="form-select" required data-academic-title>
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย">นาย</option>
                                     <option value="นาง">นาง</option>
@@ -36,7 +38,8 @@
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
-                                <input type="text" name="applicant_name" class="form-control" required>
+                                <input type="text" name="applicant_name" class="form-control" required
+                                       th:readonly="${lockedFields != null and lockedFields.containsKey('applicant_name')}">
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">สถานะ</label>
@@ -58,7 +61,7 @@
                                     <option value="รองศาสตราจารย์" th:selected="${request.targetPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
                                     <option value="ศาสตราจารย์" th:selected="${request.targetPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
                                 </select>
-                                <!-- ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ -->
+                                <!--/* ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ */-->
                                 <input type="hidden" name="request_position" th:if="${request.targetPosition != null}" th:value="${request.targetPosition}">
                                 <div class="form-text" th:if="${request.targetPosition != null}">กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้</div>
                             </div>
@@ -95,13 +98,10 @@
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
-                    <a th:href="'/user/position/request/' + ${request.id}" class="btn-back-pill">
-                        <i class="fas fa-arrow-left"></i> กลับ
-                    </a>
                 </div>
             </form>
 
-            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
             <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
 
         </div>

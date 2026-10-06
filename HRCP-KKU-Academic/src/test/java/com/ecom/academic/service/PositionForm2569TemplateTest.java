@@ -147,8 +147,8 @@ class PositionForm2569TemplateTest {
                     .contains("เพื่อขอดำรงตำแหน่ง รองศาสตราจารย์")
                     .contains("(โดยวิธีปกติ)")
                     .contains("ของ ผศ.ดร.สมชาย ใจดีวิชาการ")
-                    .contains("๒.๕.๑ หัวหน้าสาขาวิชา")
-                    .contains("๔.๒.๑.๑ การจำแนกภาพด้วยการเรียนรู้เชิงลึก")
+                    .contains("๒.๔.๑ หัวหน้าสาขาวิชา")
+                    .contains("๔.๑.๑.๑ การจำแนกภาพด้วยการเรียนรู้เชิงลึก")
                     .contains("(ผศ.ดร.สมชาย ใจดีวิชาการ)");
         }
 
@@ -322,8 +322,8 @@ class PositionForm2569TemplateTest {
             String doc = render(1, data);
 
             assertThat(doc)
-                    .contains("๔.๒.๑.๑ การจำแนกภาพด้วยการเรียนรู้เชิงลึก")
-                    .contains("๔.๒.๑.๒ การตรวจจับวัตถุแบบเรียลไทม์")
+                    .contains("๔.๑.๑.๑ การจำแนกภาพด้วยการเรียนรู้เชิงลึก")
+                    .contains("๔.๑.๑.๒ การตรวจจับวัตถุแบบเรียลไทม์")
                     .contains("พ.ศ. ๒๕๖๕ และผลการพิจารณาคุณภาพอยู่ในระดับ ดี ตามเกณฑ์ที่มหาวิทยาลัยกำหนด)");
             // จบที่ "รองศาสตราจารย์มาแล้วหรือไม่" — คำถามของหัวข้อ ศ. ขึ้นต้นเหมือนกันทุกคำ
             assertThat(count(doc, "งานวิจัยนี้เคยใช้สำหรับการพิจารณาขอกำหนดตำแหน่งผู้ช่วยศาสตราจารย์ และ/หรือตำแหน่งรองศาสตราจารย์มาแล้วหรือไม่"))
@@ -355,14 +355,81 @@ class PositionForm2569TemplateTest {
         }
 
         @Test
-        @DisplayName("หัวข้อของตำแหน่งที่ไม่ได้ขอ พิมพ์ออกมาเหมือนแบบฟอร์มเปล่า — ยังมีเลขข้อ")
-        void unusedSectionsLookLikeTheBlankForm() throws IOException {
+        @DisplayName("ผู้ขอ รศ. — ไม่มีหัวข้อผลงานของ ผศ. และ ศ. ไม่มี ๒.๔ เดิม และข้อที่เหลือเลื่อนเลขขึ้นมาแทน")
+        void onlyTheRequestedRanksSectionsArePrinted() throws IOException {
             String doc = render(1, associateApplicant());
 
             assertThat(doc)
-                    .as("ผู้ขอ รศ. ไม่ได้กรอกหัวข้อของ ศ. — เลขท้ายต้องยังขึ้น ไม่ใช่ \"๔.๓.๑.\" ห้อยอยู่")
-                    .contains("๔.๓.๑.๑ ........")
-                    .contains("๔.๑.๑.๑ ........");
+                    .contains("๔.๑ ผลงานทางวิชาการที่เสนอเพื่อประกอบการพิจารณาตำแหน่งรองศาสตราจารย์")
+                    .contains("๔.๑.๑ งานวิจัย")
+                    .contains("๔.๑.๑.๑ การจำแนกภาพด้วยการเรียนรู้เชิงลึก")
+                    .contains("๒.๓ ได้รับแต่งตั้งให้ดำรงตำแหน่งผู้ช่วยศาสตราจารย์")
+                    .contains("๒.๔ ตำแหน่งอื่น ๆ")
+                    .contains("๒.๔.๑ หัวหน้าสาขาวิชา")
+                    .contains("๒.๕ การได้รับเชิญเป็นวิทยากร")
+                    .contains("๒.๕.๑ วิทยากรรับเชิญ ICCSE")
+                    .doesNotContain("ที่เสนอเพื่อประกอบการพิจารณาตำแหน่งผู้ช่วยศาสตราจารย์")
+                    .doesNotContain("ที่เสนอเพื่อประกอบการพิจารณาตำแหน่งศาสตราจารย์")
+                    .doesNotContain("ได้รับแต่งตั้งให้ดำรงตำแหน่งรองศาสตราจารย์")
+                    .doesNotContain("๔.๒ ").doesNotContain("๒.๖");
+            // ในหัวข้อของ รศ. เสนอแค่งานวิจัย — ผลงานลักษณะอื่นและตำราไม่พิมพ์
+            assertThat(doc).doesNotContain("๔.๑.๒").doesNotContain("๔.๑.๓")
+                    .contains("ผลงานทางวิชาการทุกประเภท")
+                    .contains("ขอรับรองว่าข้อความดังกล่าวข้างต้นเป็นความจริงทุกประการ");
+        }
+
+        @Test
+        @DisplayName("ไฟล์ที่สร้างไม่มีเวลาปัจจุบันติดมา — เนื้อหาเดิมได้ไบต์เดิม แคช PDF จึงใช้ซ้ำได้")
+        void renderedDocxIsDeterministic() throws IOException {
+            String json = mapper.writeValueAsString(associateApplicant());
+            byte[] first = service.generateP2PreviewDocx(1, json);
+
+            try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(first))) {
+                ZipEntry entry;
+                while ((entry = zip.getNextEntry()) != null) {
+                    assertThat(entry.getTimeLocal()).as(entry.getName())
+                            .isEqualTo(java.time.LocalDateTime.of(2020, 1, 1, 0, 0));
+                }
+            }
+            assertThat(service.generateP2PreviewDocx(1, json)).isEqualTo(first);
+        }
+
+        @Test
+        @DisplayName("ผู้ขอ ผศ. — ไม่มี ๒.๓ / ๒.๔ แม้จะมีค่าค้างในร่าง")
+        void anAssistantApplicantHasNoPriorRanks() throws IOException {
+            Map<String, String> data = associateApplicant();
+            data.put("target_position", "ผู้ช่วยศาสตราจารย์");
+            data.put("asst_research_working_no_1", "๑");
+            data.put("asst_research_working_1", "งานวิจัยของผู้ขอ ผศ.");
+
+            String doc = render(1, data);
+
+            assertThat(doc)
+                    .doesNotContain("๒.๓ ได้รับแต่งตั้ง").doesNotContain("๒.๔ ได้รับแต่งตั้ง")
+                    .contains("๔.๑.๑.๑ งานวิจัยของผู้ขอ ผศ.")
+                    .contains("๒.๓ ตำแหน่งอื่น ๆ")
+                    .contains("๒.๔ การได้รับเชิญเป็นวิทยากร")
+                    .doesNotContain("ที่เสนอเพื่อประกอบการพิจารณาตำแหน่งรองศาสตราจารย์");
+        }
+
+        @Test
+        @DisplayName("ข้อ \"ถ้ามี\" ที่ไม่ได้กรอก (อนุสาขา ๒.๕ ๒.๖ ๓.๕) ไม่พิมพ์ — ไม่มีจุดไข่ปลาค้าง")
+        void blankOptionalItemsAreHidden() throws IOException {
+            Map<String, String> data = associateApplicant();
+            for (String key : List.of("sub_major", "sub_major_code", "other_position_no_1", "other_position_1",
+                    "international_speaker_last_5_years_no_1", "international_speaker_last_5_years_1", "other")) {
+                data.remove(key);
+            }
+
+            String doc = render(1, data);
+
+            assertThat(doc)
+                    .doesNotContain("อนุสาขาวิชา")
+                    .doesNotContain("ตำแหน่งอื่น ๆ")
+                    .doesNotContain("การได้รับเชิญเป็นวิทยากร")
+                    .doesNotContain("งานอื่น ๆ ที่เกี่ยวข้อง")
+                    .contains("๓.๔ งานบริหาร")
+                    .contains("อายุราชการ");
         }
     }
 

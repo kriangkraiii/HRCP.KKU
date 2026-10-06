@@ -8,7 +8,7 @@
 <body>
 <section>
     <div class="container-fluid py-4">
-        <!-- Header -->
+        <!--/* Header */-->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <div>
                 <h4 class="fw-bold mb-1">
@@ -17,7 +17,7 @@
             </div>
         </div>
 
-        <!-- Summary Cards -->
+        <!--/* Summary Cards */-->
         <div class="row mb-4">
             <div class="col-md-3 mb-3">
                 <div class="card border-0 shadow-sm u-radius-12">
@@ -81,7 +81,7 @@
             </div>
         </div>
 
-        <!-- Tab Buttons -->
+        <!--/* Tab Buttons */-->
         <div class="d-flex gap-2 mb-4 flex-wrap">
             <div class="btn-group" role="group">
                 <a href="/admin/file-manager" class="btn u-r-10px-0-0-10px"
@@ -116,7 +116,7 @@
             </button>
         </div>
 
-        <!-- Search & Filter (Document tabs only) -->
+        <!--/* Search & Filter (Document tabs only) */-->
         <div th:if="${viewMode == 'files' || viewMode == 'trash'}" class="card border-0 shadow-sm mb-4 u-radius-12">
             <div class="card-body py-3">
                 <div class="row g-2 align-items-center">
@@ -146,7 +146,7 @@
             </div>
         </div>
 
-        <!-- File Table (Document tabs only) -->
+        <!--/* File Table (Document tabs only) */-->
         <div th:if="${viewMode == 'files' || viewMode == 'trash'}" class="card border-0 shadow-sm u-radius-12">
             <div class="card-body p-0">
                 <div th:if="${files == null || files.isEmpty()}" class="text-center py-5">
@@ -234,7 +234,7 @@
                                     <small th:text="${@thaiDateUtil.format(file.deletedAt)}"></small>
                                 </td>
                                 <td>
-                                    <!-- Active file actions -->
+                                    <!--/* Active file actions */-->
                                     <th:block th:if="${viewMode == 'files'}">
                                         <div class="btn-group">
                                             <a th:href="'/admin/file-manager/download/' + ${file.fileId.split('-')[0]} + '/' + ${file.fileId.split('-')[1]}"
@@ -255,7 +255,7 @@
                                             </button>
                                         </div>
                                     </th:block>
-                                    <!-- Trash actions -->
+                                    <!--/* Trash actions */-->
                                     <th:block th:if="${viewMode == 'trash'}">
                                         <div class="btn-group">
                                             <button class="btn btn-sm btn-outline-success"
@@ -282,12 +282,12 @@
         </div>
     </div>
 
-        <!-- Storage Content -->
+        <!--/* Storage Content */-->
         <div th:if="${viewMode == 'storage' || viewMode == 'storage-trash'}">
             <th:block th:include="academic/admin/storage_content"></th:block>
         </div>
 
-    <!-- Confirm Modal -->
+    <!--/* Confirm Modal */-->
     <div class="modal fade" id="confirmModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content u-r-16px-bd-none">
@@ -308,7 +308,7 @@
         </div>
     </div>
 
-    <!-- Toast Notification -->
+    <!--/* Toast Notification */-->
     <div class="position-fixed bottom-0 end-0 p-3 u-z-9999">
         <div id="toastNotif" class="toast align-items-center text-white border-0 u-radius-12" role="alert"
             >

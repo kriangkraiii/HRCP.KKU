@@ -5,21 +5,21 @@
     <section>
         <div class="container py-4">
 
-            <!-- Page Header -->
+            <!--/* Page Header */-->
             <div class="page-header">
                 <div class="page-header-text">
                     <h3 class="page-header-title">แดชบอร์ดผู้ยื่นคำร้อง</h3>
                 </div>
             </div>
 
-            <!-- Alert -->
+            <!--/* Alert */-->
             <div th:if="${param.error != null}" class="alert alert-warning alert-dismissible fade show" role="alert">
                 <i class="fas fa-exclamation-triangle me-2"></i>
                 <strong>ยื่นคำร้องไม่ได้</strong> เนื่องจากท่านมีคำร้องที่กำลังดำเนินการอยู่
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
 
-            <!-- ================== TAB NAVIGATION ================== -->
+            <!--/* ================== TAB NAVIGATION ================== */-->
             <ul class="nav nav-tabs dashboard-tabs" id="dashboardTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active" id="eval-tab" data-bs-toggle="tab" data-bs-target="#evalPane"
@@ -38,10 +38,10 @@
                 </li>
             </ul>
 
-            <!-- ================== TAB CONTENT ================== -->
+            <!--/* ================== TAB CONTENT ================== */-->
             <div class="tab-content" id="dashboardTabContent">
 
-                <!-- ========== TAB 1: ประเมินผลการสอน ========== -->
+                <!--/* ========== TAB 1: ประเมินผลการสอน ========== */-->
                 <div class="tab-pane fade show active" id="evalPane" role="tabpanel" aria-labelledby="eval-tab">
 
                     <div class="d-flex justify-content-end mb-3">
@@ -69,7 +69,7 @@
                         </th:block>
                     </div>
 
-                    <!-- แจ้งเตือนสำหรับ รศ. ที่ไม่ต้องประเมินการสอน -->
+                    <!--/* แจ้งเตือนสำหรับ รศ. ที่ไม่ต้องประเมินการสอน */-->
                     <div th:if="${isAssociateProfessor}" class="alert alert-success d-flex align-items-center justify-content-between p-3 mb-3 border-0 shadow-sm s-dashboard-1">
                         <div class="d-flex align-items-center">
                             <i class="fas fa-info-circle text-success fs-4 me-3"></i>
@@ -83,7 +83,7 @@
                         </a>
                     </div>
 
-                    <!-- แจ้งเตือนสำหรับ ศ. -->
+                    <!--/* แจ้งเตือนสำหรับ ศ. */-->
                     <div th:if="${isProfessor}" class="alert alert-info d-flex align-items-center p-3 mb-3 border-0 shadow-sm u-r-8px">
                         <i class="fas fa-award text-primary fs-4 me-3"></i>
                         <div class="ms-2">
@@ -97,7 +97,7 @@
                         <span>ท่านมีคำร้องที่กำลังดำเนินการอยู่ จะยื่นคำร้องใหม่ได้เมื่อคำร้องนี้เสร็จสิ้น</span>
                     </div>
 
-                    <!-- ข้อ 2 — คณบดีไม่เห็นชอบ: คำร้องถูกส่งคืนมาเป็นแบบร่างพร้อมเหตุผล -->
+                    <!--/* ข้อ 2 — คณบดีไม่เห็นชอบ: คำร้องถูกส่งคืนมาเป็นแบบร่างพร้อมเหตุผล */-->
                     <div th:if="${draftRequest != null and returnNote != null}"
                          class="alert alert-warning d-flex align-items-start gap-2">
                         <i class="fas fa-rotate-left mt-1"></i>
@@ -108,7 +108,7 @@
                         </div>
                     </div>
 
-                    <!-- Draft Banner -->
+                    <!--/* Draft Banner */-->
                     <div th:if="${draftRequest != null}" class="draft-banner">
                         <div class="draft-banner-text">
                             <strong><i class="fas fa-edit text-warning me-2"></i>คำร้องฉบับร่าง</strong>
@@ -126,14 +126,14 @@
                         </div>
                     </div>
 
-                    <!-- Empty State -->
+                    <!--/* Empty State */-->
                     <div th:if="${(requests == null || requests.isEmpty()) && draftRequest == null}"
                          class="empty-state-v2">
                         <div class="es-icon"><i class="fas fa-inbox"></i></div>
                         <p>ยังไม่มีคำร้อง กดปุ่ม "ยื่นคำร้องขอการประเมินการสอน" ด้านบนเพื่อเริ่มต้น</p>
                     </div>
 
-                    <!-- Academic Request Cards -->
+                    <!--/* Academic Request Cards */-->
                     <div th:each="req, iter : ${requests}" class="request-card-v2"
                         data-styled th:data-var-stagger="${(iter.index * 60) + 'ms'}"
                         th:attr="data-index=${iter.index}">
@@ -158,7 +158,7 @@
                             </div>
                         </div>
 
-                        <!-- ข้อมูลรายวิชา (จากเอกสารที่ 1) -->
+                        <!--/* ข้อมูลรายวิชา (จากเอกสารที่ 1) */-->
                         <div th:if="${doc1DataMap.containsKey(req.id)}" class="request-card-v2-course">
                             <i class="fas fa-book me-1 u-text-primary-medium"></i>
                             <span th:text="${doc1DataMap.get(req.id).getOrDefault('course_code', '')}"></span>
@@ -166,8 +166,8 @@
                             <span class="text-muted ms-2">ภาค/ปีการศึกษา <span th:text="${doc1DataMap.get(req.id).getOrDefault('academic_year', '-')}"></span></span>
                         </div>
 
-                        <!-- Progress Tracker -->
-                        <!-- เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ (ขั้นถัดจากสถานะปัจจุบัน) — กติกาอยู่ที่ RequestStatus.stepStateAt -->
+                        <!--/* Progress Tracker */-->
+                        <!--/* เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ (ขั้นถัดจากสถานะปัจจุบัน) — กติกาอยู่ที่ RequestStatus.stepStateAt */-->
                         <div class="timeline-v2" th:with="cur=${req.currentStatus}">
                             <div th:each="step, stepStat : ${progressSteps}" class="timeline-v2-step"
                                 th:with="st=${cur.stepStateAt(stepStat.index)}, icon=${st.iconFor(step)}"
@@ -189,7 +189,7 @@
                              <div th:replace="~{academic/_sent_back_alert :: alert(${sentBackMap.get(req.id)}, ${academicDocLabels}, '/user/academic/request/' + ${req.id})}"></div>
                         </th:block>
 
-                        <!-- Result Alerts -->
+                        <!--/* Result Alerts */-->
                         <div th:if="${req.currentStatus.name() == 'COMPLETED_PASS'}" class="result-alert ra-pass">
                             <div class="d-flex flex-wrap align-items-center justify-content-between w-100 gap-2">
                                 <div>
@@ -218,7 +218,7 @@
                             </div>
                         </div>
 
-                        <!-- Footer -->
+                        <!--/* Footer */-->
                         <div class="request-card-v2-footer">
                             <span th:if="${req.updatedAt != null}" class="update-text">
                                 <i class="fas fa-sync-alt me-1"></i>อัปเดตล่าสุด:
@@ -231,7 +231,7 @@
                         </div>
                     </div>
 
-                    <!-- Pagination -->
+                    <!--/* Pagination */-->
                     <nav th:if="${requests != null && requests.size() > 5}" aria-label="Page navigation" id="paginationNav">
                         <div class="d-flex justify-content-between align-items-center mt-3">
                             <small class="text-muted" id="pageInfo"></small>
@@ -252,7 +252,7 @@
 
                 </div>
 
-                <!-- ========== TAB 2: ตำแหน่งทางวิชาการ ========== -->
+                <!--/* ========== TAB 2: ตำแหน่งทางวิชาการ ========== */-->
                 <div class="tab-pane fade" id="posPane" role="tabpanel" aria-labelledby="pos-tab">
 
                     <div class="d-flex justify-content-end mb-3">
@@ -274,7 +274,7 @@
                         </th:block>
                     </div>
 
-                    <!-- Position Draft Banner -->
+                    <!--/* Position Draft Banner */-->
                     <div th:if="${positionDraft != null}" class="draft-banner">
                         <div class="draft-banner-text">
                             <strong><i class="fas fa-edit text-warning me-2"></i>คำร้องตำแหน่ง (ฉบับร่าง)</strong>
@@ -292,14 +292,14 @@
                         </div>
                     </div>
 
-                    <!-- Empty -->
+                    <!--/* Empty */-->
                     <div th:if="${(positionRequests == null || positionRequests.isEmpty()) && positionDraft == null}"
                          class="empty-state-v2">
                         <div class="es-icon"><i class="fas fa-inbox"></i></div>
                         <p>ยังไม่มีคำร้องขอตำแหน่ง กดปุ่ม "ยื่นคำร้องขอตำแหน่ง" ด้านบนเพื่อเริ่มต้น</p>
                     </div>
 
-                    <!-- Position Request Cards -->
+                    <!--/* Position Request Cards */-->
                     <div th:each="posReq, iter : ${positionRequests}" class="request-card-v2"
                          data-styled th:data-var-stagger="${(iter.index * 60) + 'ms'}">
 
@@ -323,7 +323,7 @@
                             </div>
                         </div>
 
-                        <!-- ข้อมูลตำแหน่ง -->
+                        <!--/* ข้อมูลตำแหน่ง */-->
                         <div th:if="${posDoc2DataMap.containsKey(posReq.id)}" class="request-card-v2-position">
                             <i class="fas fa-user-tie me-1 u-c-var-color-success"></i>
                             ตำแหน่งที่เสนอ: <strong th:text="${posDoc2DataMap.get(posReq.id).getOrDefault('request_position', '-')}"></strong>
@@ -334,7 +334,7 @@
                              <div th:replace="~{academic/_sent_back_alert :: alert(${positionSentBackMap.get(posReq.id)}, ${positionDocLabels}, '/user/position/request/' + ${posReq.id})}"></div>
                         </th:block>
 
-                        <!-- Position Progress Tracker -->
+                        <!--/* Position Progress Tracker */-->
                         <div class="timeline-v2 u-mb-var-space-md">
                             <th:block th:each="step, stepStat : ${positionProgressSteps}">
                                 <div class="timeline-v2-step"
@@ -354,7 +354,7 @@
                             </th:block>
                         </div>
 
-                        <!-- Footer -->
+                        <!--/* Footer */-->
                         <div class="request-card-v2-footer">
                             <span th:if="${posReq.updatedAt != null}" class="update-text">
                                 <i class="fas fa-sync-alt me-1"></i>อัปเดตล่าสุด:
@@ -370,7 +370,7 @@
                 </div>
             </div>
 
-            <!-- Modal Confirm Cancel Evaluation Draft -->
+            <!--/* Modal Confirm Cancel Evaluation Draft */-->
             <div class="modal fade" id="cancelEvalDraftModal" tabindex="-1" aria-labelledby="cancelEvalDraftModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow">
@@ -408,7 +408,7 @@
                 </div>
             </div>
 
-            <!-- Modal Confirm Cancel Position Draft -->
+            <!--/* Modal Confirm Cancel Position Draft */-->
             <div class="modal fade" id="cancelPosDraftModal" tabindex="-1" aria-labelledby="cancelPosDraftModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content border-0 shadow">
@@ -446,7 +446,7 @@
                 </div>
             </div>
 
-            <!-- Scripts -->
+            <!--/* Scripts */-->
             <script>
                 // Dynamic Modal Action URL Binding & Typed Confirmation
                 var cancelEvalModal = document.getElementById('cancelEvalDraftModal');

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 
-<!--
+<!--/*
   ช่องตำแหน่งทางวิชาการ ไทย + อังกฤษ คู่กัน สำหรับหน้าที่ยังแก้ค่านี้ได้ (ฝั่งแอดมิน/HR เท่านั้น)
 
   ทำไมต้องเป็น fragment: ก่อนหน้านี้ options ภาษาไทยถูก hardcode ซ้ำกัน 5 ที่ และเนื้อหาไม่ตรงกัน
@@ -11,7 +11,7 @@
   คู่ไทย-อังกฤษจึงมาจากคลาสเดียวฝั่งเซิร์ฟเวอร์ ไม่ใช่ตาราง JS ที่จะค่อย ๆ เพี้ยนจากกัน
 
   หน้าผู้ยื่น (user/profile.html) ไม่ใช้ fragment นี้ — ที่นั่นแสดงอย่างเดียว
--->
+*/-->
 
 <body>
   <div th:fragment="fields(positionTh, positionEn, labelClass, controlClass)" class="row g-3">
@@ -20,8 +20,8 @@
       <select name="academicPosition" class="form-select js-academic-position-th"
               th:classappend="${controlClass}">
         <option value="" th:selected="${positionTh == null or positionTh == ''}">-- ไม่ระบุ --</option>
-        <!-- ค่าเดิมที่ไม่ตรง 4 ตำแหน่งมาตรฐาน (เช่น "อาจารย์ ดร." ที่ sync มาจาก directory)
-             ต้องมีที่ยืนใน list ด้วย ไม่งั้นแค่แอดมินเปิดหน้านี้แล้วกดบันทึก ค่าเดิมก็หาย -->
+        <!--/* ค่าเดิมที่ไม่ตรง 4 ตำแหน่งมาตรฐาน (เช่น "อาจารย์ ดร." ที่ sync มาจาก directory)
+             ต้องมีที่ยืนใน list ด้วย ไม่งั้นแค่แอดมินเปิดหน้านี้แล้วกดบันทึก ค่าเดิมก็หาย */-->
         <option th:if="${positionTh != null and positionTh != ''
                         and !#lists.contains(academicRankThaiLabels, positionTh)}"
                 th:value="${positionTh}" th:text="${positionTh} + ' (ค่าเดิมในระบบ)'" selected>ค่าเดิม</option>
@@ -49,8 +49,8 @@
     </div>
   </div>
 
-  <!-- วางสคริปต์ไว้ในนี้ด้วย เพื่อให้หน้าที่ include fragment ได้พฤติกรรมติดมาเลย
-       ไม่ต้องไปจำว่าต้องเติม <script> ที่ท้ายหน้าอีกที -->
+  <!--/* วางสคริปต์ไว้ในนี้ด้วย เพื่อให้หน้าที่ include fragment ได้พฤติกรรมติดมาเลย
+       ไม่ต้องไปจำว่าต้องเติม <script> ที่ท้ายหน้าอีกที */-->
   <th:block th:fragment="script">
     <script src="/js/academic_position_sync.js"></script>
   </th:block>

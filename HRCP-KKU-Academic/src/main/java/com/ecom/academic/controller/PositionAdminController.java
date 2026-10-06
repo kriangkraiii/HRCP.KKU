@@ -184,7 +184,7 @@ public class PositionAdminController {
         model.addAttribute("allowedNextStatuses", request.getCurrentStatus().allowedNext());
         // เอกสารที่ส่งกลับให้แก้แล้วยังลงนามใหม่ไม่ครบ — ฟอร์มสถานะบอกไว้ก่อนเจ้าหน้าที่กดแล้วโดนปฏิเสธ
         model.addAttribute("awaitingResignDocs", positionService.documentsAwaitingResign(id).stream()
-                .map(t -> "เอกสารที่ " + t + " " + positionService.getDocLabel(t)).toList());
+                .map(t -> "เอกสารที่ " + PositionRequestService.docNumber(t) + " " + positionService.getDocLabel(t)).toList());
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
         model.addAttribute("editHistory", positionService.getEditHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
@@ -321,7 +321,7 @@ public class PositionAdminController {
         model.addAttribute("sentBackNote", positionService.getRevisionNote(id, type));
         model.addAttribute("onHoldForApplicant", onHold);
         model.addAttribute("onHoldDocs", awaitingApplicant.stream()
-                .map(t -> "เอกสารที่ " + t + " (" + positionService.getDocLabel(t) + ")").toList());
+                .map(t -> "เอกสารที่ " + PositionRequestService.docNumber(t) + " (" + positionService.getDocLabel(t) + ")").toList());
         model.addAttribute("adminEditableFields",
                 onHold ? List.of() : DocumentFieldOwnership.adminFields(SignatureModule.POSITION, type));
         // ออกเลขที่หนังสือและวันที่ครบแล้ว — เอกสารจบแล้ว ปิดทุกช่องรวมทั้งช่องสารบรรณเอง
@@ -493,7 +493,7 @@ public class PositionAdminController {
                 adminLogService.log(principal.getName(),
                         admin != null ? admin.getName() : principal.getName(),
                         "GENERATE_POSITION_DOCUMENT",
-                        "สร้างเอกสารที่ " + type + " (" + label + ") สำหรับคำร้องตำแหน่ง #" + id,
+                        "สร้างเอกสารที่ " + PositionRequestService.docNumber(type) + " (" + label + ") สำหรับคำร้องตำแหน่ง #" + id,
                         getClientIpAddress());
             } catch (Exception logEx) { /* ignore */ }
 
@@ -568,11 +568,11 @@ public class PositionAdminController {
             adminLogService.log(principal.getName(),
                     admin != null ? admin.getName() : principal.getName(),
                     "REQUEST_DOC_RESIGN",
-                    "ขอให้แก้ไขและลงนามใหม่ เอกสารที่ " + type + " สำหรับคำร้องตำแหน่ง #" + id + (reason != null && !reason.isBlank() ? " เหตุผล: " + reason : ""),
+                    "ขอให้แก้ไขและลงนามใหม่ เอกสารที่ " + PositionRequestService.docNumber(type) + " สำหรับคำร้องตำแหน่ง #" + id + (reason != null && !reason.isBlank() ? " เหตุผล: " + reason : ""),
                     getClientIpAddress());
         } catch (Exception logEx) { /* ignore */ }
 
-        redirectAttributes.addFlashAttribute("success", "ส่งคำขอแก้ไขและลงนามใหม่สำหรับเอกสารที่ " + type + " เรียบร้อยแล้ว");
+        redirectAttributes.addFlashAttribute("success", "ส่งคำขอแก้ไขและลงนามใหม่สำหรับเอกสารที่ " + PositionRequestService.docNumber(type) + " เรียบร้อยแล้ว");
         return "redirect:/admin/position/request/" + id;
     }
 
@@ -644,7 +644,7 @@ public class PositionAdminController {
         }
 
         String cleanDocName = label.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
-        String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + type + "_" + cleanDocName;
+        String baseName = request.getRequestCode() + "_เอกสารตำแหน่งที่_" + PositionRequestService.docNumber(type) + "_" + cleanDocName;
 
         return PreviewResponseFactory.build(documentService, data, format, baseName);
     }
@@ -701,7 +701,7 @@ public class PositionAdminController {
                             ? doc.getDocumentLabel()
                             : positionService.getDocLabel(doc.getDocumentType());
                     String cleanDocName = docLabel.replaceAll("[\\\\/:*?\"<>|\\s]+", "_");
-                    String entryName = "เอกสารตำแหน่งที่_" + doc.getDocumentType() + "_" + cleanDocName + ".docx";
+                    String entryName = "เอกสารตำแหน่งที่_" + PositionRequestService.docNumber(doc.getDocumentType()) + "_" + cleanDocName + ".docx";
                     zos.putNextEntry(new ZipEntry(entryName));
                     zos.write(docBytes);
                     zos.closeEntry();

@@ -55,6 +55,13 @@
             var inner = wrapper.querySelector('label');
             if (inner) return clean(inner.textContent);
         }
+        // ช่องในตาราง — ใช้หัวคอลัมน์เดียวกัน
+        var cell = el.closest('td');
+        var table = cell && cell.closest('table');
+        if (table) {
+            var th = table.querySelectorAll('thead th')[cell.cellIndex];
+            if (th && clean(th.textContent)) return clean(th.textContent);
+        }
         return el.getAttribute('placeholder') || el.name;
     }
 
@@ -158,6 +165,30 @@
         var box = panelForm.querySelector('.required-fields-error');
         if (box) box.hidden = true;
     }
+
+    /**
+     * เซิร์ฟเวอร์ปฏิเสธการส่งลงนามเพราะกรอกไม่ครบ แล้วส่งชื่อตัวแปรของช่องที่ขาดมา — แปลงเป็นชื่อช่อง
+     * จากป้ายกำกับในฟอร์ม และไฮไลต์ช่องที่มองเห็น รอให้สคริปต์ของฟอร์มเติมค่าและสร้างแถวก่อน
+     */
+    function explainServerMissing() {
+        var holder = document.querySelector('.missing-field-names[data-missing-fields]');
+        if (!holder) return;
+        var docForm = document.querySelector('form[id^="doc"]') || document;
+        var labels = [];
+        var found = [];
+        toList(holder.getAttribute('data-missing-fields')).forEach(function (name) {
+            var el = docForm.querySelector('[name="' + name + '"]');
+            var label = el ? labelOf(el) : name;
+            if (labels.indexOf(label) === -1) labels.push(label);
+            if (el && isVisible(el)) found.push({ el: el, label: label });
+        });
+        holder.textContent = 'ช่องที่ยังขาด: ' + labels.join(', ');
+        if (found.length) highlight(found);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(explainServerMissing, 600);
+    });
 
     window.DocRequiredFields = {
         /**

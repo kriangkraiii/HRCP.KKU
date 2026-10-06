@@ -52,7 +52,7 @@ public final class DocumentFieldOwnership {
                             "text_1", "text_2", "text_3", "text_4", "text_5",
                             "hr_staff_name")),
             SignatureModule.POSITION, Map.of(
-                    3, Set.of("dean_name", "dean_position", "verify_date"),
+                    3, Set.of("dean_name", "dean_position"),
                     4, Set.of("memo_no", "date", "department_head_name"),
                     6, Set.of("memo_no", "date", "applicant_signature_name", "dean_signature_name",
                             "position_title")));
@@ -161,6 +161,10 @@ public final class DocumentFieldOwnership {
                 SignatureAnchorRegistry.slotsOf(module, documentType)) {
             if (slot.choice() != null) {
                 keys.add(slot.choice().fieldKey());
+            }
+            // วันที่ใต้ลายเซ็นมาจากเวลาที่ลงนามจริง ค่าที่เคยพิมพ์ไว้ในฟอร์มไม่ใช่วันที่นั้น
+            if (slot.marks() != null && slot.marks().signedDateFieldKey() != null) {
+                keys.add(slot.marks().signedDateFieldKey());
             }
         }
         return keys;

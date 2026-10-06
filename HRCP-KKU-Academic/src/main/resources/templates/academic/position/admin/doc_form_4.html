@@ -11,23 +11,23 @@
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 4: บันทึกรับรองผลงานทางวิชาการ (วิทยานิพนธ์)</h3>
             <p class="small text-secondary mb-3"><i class="fas fa-user-pen me-1"></i> ผู้กรอก: ผู้ยื่นคำร้อง (เจ้าหน้าที่แก้ไขได้)</p>
 
-            <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+            <!--/* อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง */-->
             <div th:replace="~{academic/_admin_field_lock :: banner('position', ${request.id}, ${documentType})}"></div>
-            <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+            <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/4'" method="post" id="doc4Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/4'">
 
-                <!-- ข้อมูลบันทึกข้อความ -->
+                <!--/* ข้อมูลบันทึกข้อความ */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">หัวบันทึกข้อความ</h5></div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
                                 <label class="form-label">เลขที่หนังสือ</label>
-                                <!-- ใช้ th:value ไม่ใช่ value เฉย ๆ มิฉะนั้นเลขที่บันทึกไว้จะถูกค่าตั้งต้น
-                                     ทับทุกครั้งที่เปิดหน้านี้ใหม่ -->
+                                <!--/* ใช้ th:value ไม่ใช่ value เฉย ๆ มิฉะนั้นเลขที่บันทึกไว้จะถูกค่าตั้งต้น
+                                     ทับทุกครั้งที่เปิดหน้านี้ใหม่ */-->
                                 <input type="text" name="memo_no" class="form-control"
                                     placeholder="เช่น อว 660301.26.8/..."
                                     th:value="${docData != null and !#strings.isEmpty(docData['memo_no']) ? docData['memo_no'] : 'อว 660301.26.8/'}">
@@ -40,7 +40,7 @@
                     </div>
                 </div>
 
-                <!-- ข้อมูลผู้เสนอขอ -->
+                <!--/* ข้อมูลผู้เสนอขอ */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้เสนอขอ</h5></div>
                     <div class="card-body">
@@ -83,7 +83,7 @@
                     </div>
                 </div>
 
-                <!-- วิทยานิพนธ์ -->
+                <!--/* วิทยานิพนธ์ */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">วิทยานิพนธ์ที่จัดทำ</h5></div>
                     <div class="card-body">
@@ -112,7 +112,7 @@
                     </div>
                 </div>
 
-                <!-- บทความทางวิชาการ -->
+                <!--/* บทความทางวิชาการ */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">บทความทางวิชาการที่เสนอขอตำแหน่ง</h5></div>
                     <div class="card-body">
@@ -152,7 +152,7 @@
                     </div>
                 </div>
 
-                <!-- ผลงานวิจัย -->
+                <!--/* ผลงานวิจัย */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ผลงานวิจัยที่เสนอขอตำแหน่ง</h5></div>
                     <div class="card-body">
@@ -192,7 +192,7 @@
                     </div>
                 </div>
 
-                <!-- ผู้บังคับบัญชาชั้นต้น -->
+                <!--/* ผู้บังคับบัญชาชั้นต้น */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ผู้บังคับบัญชาชั้นต้น</h5></div>
                     <div class="card-body">
@@ -210,13 +210,10 @@
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
-                    <a th:href="'/admin/position/request/' + ${request.id}" class="btn-back-pill">
-                        <i class="fas fa-arrow-left"></i> กลับ
-                    </a>
                 </div>
             </form>
 
-            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
             <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
 
         </div>

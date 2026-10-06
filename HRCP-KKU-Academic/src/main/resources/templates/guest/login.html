@@ -15,10 +15,10 @@
 </head>
 
 <body>
-	<!-- Google Translate (hidden) -->
+	<!--/* Google Translate (hidden) */-->
 	<div id="google_translate_element"></div>
 
-	<!-- Language Switcher -->
+	<!--/* Language Switcher */-->
 	<div class="lang-dropdown">
 		<button type="button" class="lang-dropdown-btn" id="langDropdownBtn" aria-label="เปลี่ยนภาษา">
 			<i class="fas fa-language lang-icon" id="langDropdownIcon"></i>
@@ -30,7 +30,7 @@
 		</div>
 	</div>
 
-	<!-- Language Switcher Loading Overlay (Glassmorphism) -->
+	<!--/* Language Switcher Loading Overlay (Glassmorphism) */-->
 	<div id="langLoadingOverlay" class="lang-loading-overlay" aria-live="polite" aria-hidden="true">
 		<div class="lang-loading-card">
 			<div class="lang-loading-spinner">
@@ -98,21 +98,27 @@
 	</style>
 
 	<div class="guest-split">
-		<!-- Brand Panel -->
+		<!--/* Brand Panel */-->
 		<div class="guest-brand">
 			<div class="guest-brand-title"><span class="brand-cp">CP</span> <span class="brand-hrd">HRD</span></div>
 			<div class="guest-brand-sub">COLLEGE OF COMPUTING HUMAN RESOURCE DEVELOPMENT SYSTEM</div>
 			<div class="guest-footer">© <span th:text="${T(java.time.Year).now(T(java.time.ZoneId).of('Asia/Bangkok')).getValue() + 543}">2569</span> วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น</div>
 		</div>
 
-		<!-- Form Panel -->
+		<!--/* Form Panel */-->
 		<div class="guest-form">
 			<div class="guest-card">
 				<h1 class="guest-card-heading">เข้าสู่ระบบ</h1>
 				<p class="guest-card-sub" th:if="${ssoMode}">เข้าใช้งานด้วยบัญชี KKU ของมหาวิทยาลัยขอนแก่น</p>
 				<p class="guest-card-sub" th:unless="${ssoMode}">กรอกอีเมลและรหัสผ่านเพื่อเข้าใช้งาน</p>
 
-				<!-- Alerts -->
+				<!--/* ประกาศจากผู้ดูแลระบบ (ตั้งที่ /admin/academic/settings/login-announcement) */-->
+				<div th:if="${loginAnnouncement != null}" class="alert alert-warning login-announcement" role="status">
+					<i class="fas fa-bullhorn"></i>
+					<span th:text="${loginAnnouncement}">ประกาศ</span>
+				</div>
+
+				<!--/* Alerts */-->
 				<div th:if="${param.error}" class="alert alert-danger" id="errorAlert"
 					 th:data-blocked-until="${session.blockedUntilMillis}">
 					<i class="fas fa-exclamation-circle"></i>
@@ -132,13 +138,13 @@
 					<i class="fas fa-check-circle"></i>
 					<span th:text="${succMsg}"></span>
 				</div>
-				<!--
+				<!--/*
 				  ออกจากระบบแล้ว: ปิด session ฝั่ง SSO ต่อในเบื้องหลัง
 				  หน้า logout ของ SSO เป็น single-page app ที่ต้องบูตก่อนจึงจะทำงาน
 				  ถ้าพาผู้ใช้ไปรอที่นั่นจะค้างหลายวินาทีจนเข้าใจว่ากดไม่ติด
 				  โหลดใน iframe ซ่อนแทน ผู้ใช้เห็นหน้านี้ทันทีและ session ฝั่งโน้นก็ถูกปิดจริง
 				  (สองโดเมนอยู่ใต้ kku.ac.th เบราว์เซอร์จึงถือเป็น same-site และส่ง cookie ให้)
-				-->
+				*/-->
 				<iframe th:if="${param.logout != null and ssoLogoutUrl != null}"
 						th:src="${ssoLogoutUrl}"
 						class="sso-logout-frame"
@@ -150,14 +156,14 @@
 					<span th:text="${errorMsg}"></span>
 				</div>
 
-				<!-- SSO mode: a clean single button without local credentials -->
+				<!--/* SSO mode: a clean single button without local credentials */-->
 				<th:block th:if="${ssoMode}">
 					<a th:href="@{/auth/sso/login}" class="btn-guest-primary" id="ssoLoginBtn">
 						<i class="fas fa-university" aria-hidden="true"></i> เข้าสู่ระบบด้วย KKU SSO
 					</a>
 				</th:block>
 
-				<!-- Development mode: the original email/password login -->
+				<!--/* Development mode: the original email/password login */-->
 				<th:block th:unless="${ssoMode}">
 					<form th:action="@{/login}" method="post" id="loginForm">
 						<div class="form-group">

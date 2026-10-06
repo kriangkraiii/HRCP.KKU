@@ -66,8 +66,8 @@ public final class DocumentCompleteness {
                             "other_position_no_1", "other_position_1",
                             "international_speaker_last_5_years_no_1",
                             "international_speaker_last_5_years_1",
-                            // ๓.๕ งานอื่นๆ ที่เกี่ยวข้อง
-                            "other",
+                            // ๓.๒–๓.๕ งานวิจัย งานบริการวิชาการ งานบริหาร และงานอื่นๆ — ไม่ใช่ทุกคนจะมี
+                            "reseach", "academic_service", "administration", "other",
                             // อนุสาขาวิชาไม่ใช่ทุกสาขาจะมี
                             "sub_major", "sub_major_code"),
                     4, Set.of(
@@ -303,7 +303,8 @@ public final class DocumentCompleteness {
             if (key.endsWith(DocumentFieldOwnership.SIGNER_ID_SUFFIX)) {
                 continue;
             }
-            if (isOptional(module, documentType, key, targetPosition)) {
+            if (isOptional(module, documentType, key, targetPosition)
+                    || isUnusedWorkDetail(module, documentType, key, data)) {
                 continue;
             }
             if (academicDoc1HasChoice && ("chk1".equals(key) || "chk2".equals(key) || "chk3".equals(key))) {
@@ -361,7 +362,8 @@ public final class DocumentCompleteness {
                     continue;
                 }
             }
-            if (!isOptional(module, documentType, key, targetPosition)) {
+            if (!isOptional(module, documentType, key, targetPosition)
+                    && !isUnusedWorkDetail(module, documentType, key, data)) {
                 required.add(key);
             }
         }
@@ -394,6 +396,22 @@ public final class DocumentCompleteness {
     // =====================================================================
     // กติกา
     // =====================================================================
+
+    private static final Pattern WORK_USED_DETAIL = Pattern.compile(
+            "^((?:asst|assoc|prof)_used_(?:research|other|book))_(?:year|level)_(\\d+)$");
+
+    /**
+     * ปีและระดับคุณภาพของผลงานในเอกสารที่ 1 เฟส 2 มีความหมายเฉพาะผลงานที่ "เคยใช้" — เลือก
+     * "ไม่เคยใช้" แล้วฟอร์มซ่อนและล้างสองช่องนี้ จึงไม่นับเป็นช่องที่ขาด
+     */
+    private static boolean isUnusedWorkDetail(SignatureModule module, int documentType, String key,
+            Map<String, String> data) {
+        if (module != SignatureModule.POSITION || documentType != 1) {
+            return false;
+        }
+        Matcher m = WORK_USED_DETAIL.matcher(key);
+        return m.matches() && !"used".equals(data.get(m.group(1) + "_" + m.group(2)));
+    }
 
     private static boolean isOptional(SignatureModule module, int documentType, String key,
             String targetPosition) {

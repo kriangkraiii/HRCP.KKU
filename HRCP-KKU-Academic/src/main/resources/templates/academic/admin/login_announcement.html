@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="th" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{academic/base_academic :: layout(~{::section})}">
+
+<body>
+<section>
+    <style>
+        .announce-page { max-width: 960px; }
+        .announce-preview {
+            display: flex;
+            gap: 10px;
+            align-items: flex-start;
+            padding: 12px 16px;
+            border-radius: 10px;
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fde68a;
+            font-size: 0.9rem;
+            white-space: pre-line;
+            max-width: 420px;
+        }
+        .announce-preview.is-empty {
+            color: var(--text-muted, #64748b);
+            background: var(--bg-hover, #f8fafc);
+            border-style: dashed;
+            border-color: var(--border-color, #e2e8f0);
+        }
+        [data-theme="dark"] .announce-preview:not(.is-empty) {
+            background: rgba(253, 230, 138, 0.12);
+            color: #fcd34d;
+            border-color: rgba(253, 230, 138, 0.35);
+        }
+    </style>
+
+    <div class="container-fluid py-3 px-xl-4 announce-page">
+        <h2 class="h4 fw-bold mb-1 d-flex align-items-center gap-2">
+            <i class="fas fa-bullhorn text-warning"></i>
+            ประกาศหน้าเข้าสู่ระบบ
+        </h2>
+        <p class="text-secondary small mb-4">
+            ข้อความนี้ขึ้นเหนือฟอร์มเข้าสู่ระบบให้ทุกคนเห็นก่อนเข้าใช้งาน เช่น แจ้งปิดปรับปรุงระบบวันที่และช่วงเวลา
+            — ปิดแสดงแล้วข้อความยังเก็บไว้ เปิดใช้ซ้ำรอบหน้าได้
+        </p>
+
+        <form th:action="@{/admin/academic/settings/login-announcement}" method="post" class="card card-academic">
+            <div class="card-body d-flex flex-column gap-3">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" role="switch" id="announceEnabled"
+                           name="enabled" value="true" th:checked="${announcement.enabled}">
+                    <label class="form-check-label fw-semibold" for="announceEnabled">แสดงประกาศบนหน้าเข้าสู่ระบบ</label>
+                </div>
+
+                <div>
+                    <label class="form-label fw-semibold" for="announceMessage">ข้อความประกาศ</label>
+                    <textarea class="form-control" id="announceMessage" name="message" rows="5"
+                              th:maxlength="${maxLength}"
+                              placeholder="เช่น ระบบจะปิดปรับปรุงวันเสาร์ที่ 10 ตุลาคม 2569 เวลา 18.00–22.00 น. ขออภัยในความไม่สะดวก"
+                              th:text="${draftMessage != null ? draftMessage : announcement.message}"></textarea>
+                    <div class="form-text d-flex justify-content-between">
+                        <span>ขึ้นบรรทัดใหม่ได้ตามที่พิมพ์</span>
+                        <span><span id="announceCount">0</span> / <span th:text="${maxLength}">1000</span></span>
+                    </div>
+                </div>
+
+                <div>
+                    <div class="form-label fw-semibold mb-2">ตัวอย่างบนหน้าเข้าสู่ระบบ</div>
+                    <div class="announce-preview" id="announcePreview" aria-live="polite">
+                        <i class="fas fa-bullhorn mt-1"></i><span id="announcePreviewText"></span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                    <small class="text-muted" th:if="${announcement.updatedAt != null}">
+                        แก้ไขล่าสุด <span th:text="${#temporals.format(announcement.updatedAt, 'd/M/yyyy HH:mm')}">-</span>
+                        <span th:if="${announcement.updatedBy != null}" th:text="'โดย ' + ${announcement.updatedBy}"></span>
+                    </small>
+                    <button type="submit" class="btn btn-primary ms-auto">
+                        <i class="fas fa-floppy-disk me-1"></i>บันทึก
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        (function () {
+            var enabled = document.getElementById('announceEnabled');
+            var message = document.getElementById('announceMessage');
+            var count = document.getElementById('announceCount');
+            var preview = document.getElementById('announcePreview');
+            var previewText = document.getElementById('announcePreviewText');
+
+            function update() {
+                var text = message.value.trim();
+                count.textContent = message.value.length;
+                var showing = enabled.checked && text !== '';
+                preview.classList.toggle('is-empty', !showing);
+                previewText.textContent = showing ? text
+                        : (enabled.checked ? 'ยังไม่มีข้อความ — พิมพ์ข้อความก่อนเปิดแสดง' : 'ไม่แสดงประกาศ');
+            }
+
+            enabled.addEventListener('change', update);
+            message.addEventListener('input', update);
+            update();
+        })();
+    </script>
+</section>
+</body>
+</html>

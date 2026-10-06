@@ -11,14 +11,14 @@
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 3: แบบรับรองจริยธรรมและจรรยาบรรณทางวิชาการ</h3>
             <p class="small text-secondary mb-3"><i class="fas fa-user-pen me-1"></i> ผู้กรอก: ผู้ยื่นคำร้อง (เจ้าหน้าที่แก้ไขได้)</p>
 
-            <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+            <!--/* อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง */-->
             <div th:replace="~{academic/_admin_field_lock :: banner('position', ${request.id}, ${documentType})}"></div>
-            <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+            <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/3'" method="post" id="doc3Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/3'">
-                <!-- ตอนที่ 1: สำหรับผู้ขอ -->
+                <!--/* ตอนที่ 1: สำหรับผู้ขอ */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ตอนที่ 1: สำหรับผู้ขอ</h5></div>
                     <div class="card-body">
@@ -49,15 +49,11 @@
                                 <label class="form-label">ชื่อ-นามสกุล (ผู้เสนอขอฯ) <span class="text-danger">*</span></label>
                                 <input type="text" name="applicant_name" class="form-control" required>
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">วันที่รับรอง</label>
-                                <input type="text" name="certification_date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙">
-                            </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ตอนที่ 2: สำหรับคณะ/หน่วยงาน -->
+                <!--/* ตอนที่ 2: สำหรับคณะ/หน่วยงาน */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ตอนที่ 2: สำหรับคณะ/หน่วยงาน (หัวหน้าส่วนงาน)</h5></div>
                     <div class="card-body">
@@ -70,10 +66,6 @@
                                 <label class="form-label">ตำแหน่ง</label>
                                 <input type="text" name="dean_position" class="form-control" placeholder="เช่น คณบดีวิทยาลัยการคอมพิวเตอร์">
                             </div>
-                            <div class="col-md-4">
-                                <label class="form-label">วันที่ตรวจสอบ</label>
-                                <input type="text" name="verify_date" class="form-control" placeholder="เช่น ๑๕ มีนาคม พ.ศ. ๒๕๖๙">
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -82,13 +74,10 @@
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
-                    <a th:href="'/admin/position/request/' + ${request.id}" class="btn-back-pill">
-                        <i class="fas fa-arrow-left"></i> กลับ
-                    </a>
                 </div>
             </form>
 
-            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
             <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
 
         </div>

@@ -108,7 +108,7 @@ public class PositionDocumentPreviewController {
             }
             byte[] docxBytes = documentService.generateP2PreviewDocx(docType, jsonData);
 
-            String baseFilename = "เอกสารตำแหน่งที่_" + docType + "_" + getPositionDocTitle(docType);
+            String baseFilename = "เอกสารตำแหน่งที่_" + PositionRequestService.docNumber(docType) + "_" + getPositionDocTitle(docType);
             return PreviewResponseFactory.build(documentService, docxBytes, format, baseFilename);
         } catch (IOException e) {
             logger.error("Failed to generate position preview for docType {}: {}", docType, e.getMessage(), e);

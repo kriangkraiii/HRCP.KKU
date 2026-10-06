@@ -226,7 +226,8 @@ public class SignatureAnchorRegistry {
             // ถ้อยคำตัวเลือกตามแบบฟอร์มทางการ: หัวหน้าตอบ ครบถ้วน/ไม่ครบถ้วน คณบดีตอบ เข้าข่าย/ไม่เข้าข่าย
             Map.entry(new DocKey(SignatureModule.POSITION, 1), List.of(
                     new SignatureSlot("applicant", "เจ้าของประวัติ",
-                            "applicant_name", APPLICANT, 1),
+                            "applicant_name", APPLICANT, 1, null,
+                            SignerMarks.signedDate("sign_date")),
                     new SignatureSlot("head", "หัวหน้าสาขาวิชา",
                             "department_head_name", "HEAD", 2,
                             new SignerChoice("qualification_status", "ผลการตรวจสอบคุณสมบัติ",
@@ -242,11 +243,14 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("applicant", "ผู้เสนอขอ",
                             "applicant_name", APPLICANT, 1))),
 
+            // วันที่ใต้ลายเซ็นทั้งสองช่องคือวันที่ลงนามจริง ระบบเติมให้ตอนลงนาม ไม่ต้องกรอกในฟอร์ม
             Map.entry(new DocKey(SignatureModule.POSITION, 3), List.of(
                     new SignatureSlot("applicant", "ผู้เสนอขอ",
-                            "applicant_name", APPLICANT, 1),
+                            "applicant_name", APPLICANT, 1, null,
+                            SignerMarks.signedDate("certification_date")),
                     new SignatureSlot("dean", "คณบดี",
-                            "dean_name", "DEAN", 2))),
+                            "dean_name", "DEAN", 2, null,
+                            SignerMarks.signedDate("verify_date")))),
 
             Map.entry(new DocKey(SignatureModule.POSITION, 4), List.of(
                     new SignatureSlot("applicant", "ผู้เสนอขอ",

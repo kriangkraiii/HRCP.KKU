@@ -2,12 +2,12 @@
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
 
-<!--
+<!--/*
   ประตูแก้ไขเอกสารฝั่งผู้ยื่น (เฟส 2)
 
   เซิร์ฟเวอร์ปฏิเสธการบันทึกอยู่แล้วเมื่อเอกสารถูกล็อก ส่วนนี้ทำให้ผู้ยื่นรู้ตัวก่อนกรอก
   ไม่ใช่กรอกเสร็จแล้วค่อยเด้งกลับโดยไม่บอกเหตุผล
--->
+*/-->
 <div th:fragment="banner">
     <div th:if="${revisionRequested}" class="alert alert-warning">
         <i class="fas fa-rotate-left"></i> <strong>เอกสารนี้ถูกส่งกลับมาให้ท่านแก้ไข</strong>
@@ -35,7 +35,7 @@
     </div>
 </div>
 
-<!-- ปิดฟอร์มทั้งใบเมื่อแก้ไม่ได้ ต้องวางหลังฟอร์มใน DOM -->
+<!--/* ปิดฟอร์มทั้งใบเมื่อแก้ไม่ได้ ต้องวางหลังฟอร์มใน DOM */-->
 <th:block th:fragment="script(formId)">
     <script th:inline="javascript">
         (function () {
@@ -49,6 +49,34 @@
                 el.disabled = true;
             });
             form.removeAttribute('data-auto-draft');
+        })();
+
+        // ช่องที่ระบบดึงค่ามาให้ (PositionRequestService.lockedFields) — อ่านอย่างเดียว เซิร์ฟเวอร์เขียนทับตอนบันทึกอยู่แล้ว
+        // รอหลัง DOMContentLoaded หนึ่งจังหวะ: select_to_datalist.js เปลี่ยน <select> และสคริปต์ของฟอร์ม
+        // สร้างแถวงานสอนกับเติมค่าที่บันทึกไว้ในจังหวะนั้น
+        (function () {
+            var locked = /*[[${lockedFields}]]*/ null;
+            var form = document.getElementById(/*[[${formId}]]*/ '');
+            if (!locked || !form) return;
+            document.addEventListener('DOMContentLoaded', function () {
+                setTimeout(function () {
+                    Object.keys(locked).forEach(function (name) {
+                        form.querySelectorAll('[name="' + name + '"]').forEach(function (el) {
+                            if (el.type === 'hidden') return;
+                            el.value = locked[name];
+                            if (el.tagName === 'SELECT') {
+                                el.disabled = true; // ค่าที่ถูกต้องเซิร์ฟเวอร์ใส่ให้ตอนบันทึก
+                            } else {
+                                el.readOnly = true;
+                            }
+                            el.title = 'ดึงจากข้อมูลในระบบ แก้ไขไม่ได้';
+                            // แถวงานสอนที่ดึงมา ลบทิ้งไม่ได้
+                            var row = el.closest('tr');
+                            if (row) row.querySelectorAll('[data-action="removeClosest"]').forEach(function (b) { b.hidden = true; });
+                        });
+                    });
+                }, 0);
+            });
         })();
     </script>
 </th:block>

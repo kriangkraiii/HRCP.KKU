@@ -162,8 +162,16 @@ public class SignatureWorkflowService {
         }
     }
 
-    /** Outcome of an operation: either it worked, or here is why it did not. */
-    public record Result(SignatureRequest request, String error) {
+    /**
+     * Outcome of an operation: either it worked, or here is why it did not.
+     *
+     * @param missingFields ช่องที่ยังว่างเมื่อถูกปฏิเสธเพราะกรอกไม่ครบ — หน้าฟอร์มแปลงเป็นชื่อช่องให้ผู้ใช้เห็น
+     */
+    public record Result(SignatureRequest request, String error, List<String> missingFields) {
+        public Result(SignatureRequest request, String error) {
+            this(request, error, List.of());
+        }
+
         public boolean ok() {
             return error == null;
         }
@@ -633,8 +641,8 @@ public class SignatureWorkflowService {
                 frozenJson, snapshotProvider == null ? null
                         : snapshotProvider.targetPositionFor(module, requestId));
         if (!missing.isEmpty()) {
-            return Result.failed("กรอกข้อมูลในเอกสารยังไม่ครบ (ขาดอีก " + missing.size()
-                    + " ช่อง) กรุณากรอกให้ครบแล้วบันทึกก่อนส่งไปลงนาม");
+            return new Result(null, "กรอกข้อมูลในเอกสารยังไม่ครบ (ขาดอีก " + missing.size()
+                    + " ช่อง) กรุณากรอกให้ครบแล้วบันทึกก่อนส่งไปลงนาม", List.copyOf(missing));
         }
         List<String> malformed = DocumentCompleteness.malformedFields(module, documentType, frozenJson);
         if (!malformed.isEmpty()) {

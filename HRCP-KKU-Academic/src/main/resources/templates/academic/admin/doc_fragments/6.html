@@ -15,11 +15,11 @@
                     <small class="text-muted">คำร้อง [[${request.requestCode}]] — ผู้ยื่น: [[${request.applicant.name}]]</small>
                 </div>
                 <div class="card-body">
-                    <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+                    <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
                     <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
-                    <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+                    <!--/* อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง */-->
                     <div th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}"></div>
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
                         method="post" id="docForm"
@@ -41,17 +41,17 @@
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
 
-                        <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+                        <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
         <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
 
-                    <!-- สองทางเลือกหลังประชุม: ดำเนินการต่อ (มีหรือไม่มีข้อเสนอแนะก็ได้) หรือส่งกลับให้ผู้ยื่นแก้ไข
+                    <!--/* สองทางเลือกหลังประชุม: ดำเนินการต่อ (มีหรือไม่มีข้อเสนอแนะก็ได้) หรือส่งกลับให้ผู้ยื่นแก้ไข
                          เอกสารฉบับนี้ไม่มีผู้ลงนาม เดิมมีแต่ปุ่มส่งกลับ เอกสารจึงค้างเป็นร่างตลอดไป
-                         ปุ่มส่งข้อเสนอแนะ: ตอนกดยืนยัน สคริปต์ด้านล่างบันทึกแบบร่างให้ก่อนส่ง -->
+                         ปุ่มส่งข้อเสนอแนะ: ตอนกดยืนยัน สคริปต์ด้านล่างบันทึกแบบร่างให้ก่อนส่ง */-->
                     <div class="mt-3 border-top pt-3 d-flex flex-wrap gap-2">
                         <button type="button" class="btn btn-success" id="btnProceedDoc6">
                             <i class="fas fa-check"></i> บันทึกและดำเนินการเอกสารต่อ
                         </button>
-                        <!-- ส่งกลับให้แก้ได้เฉพาะหลังนัดหมายอนุกรรมการ (หรือส่งอีเมลซ้ำระหว่างรอแก้) ตาม RequestStatus.allowedNext -->
+                        <!--/* ส่งกลับให้แก้ได้เฉพาะหลังนัดหมายอนุกรรมการ (หรือส่งอีเมลซ้ำระหว่างรอแก้) ตาม RequestStatus.allowedNext */-->
                         <form th:if="${request.currentStatus.name() == 'MEETING_SCHEDULED' or request.currentStatus.name() == 'COMPLETED_REVISE'}"
                               th:action="'/admin/academic/request/' + ${request.id} + '/document/6/send-suggestion'" method="post" id="suggestionForm">
                             <button type="button" class="btn btn-warning" id="btnSendSuggestion">
@@ -74,7 +74,7 @@
             </div>
         </div>
 
-        <!-- Confirm Modal for sending suggestion (outside card to avoid stacking context issues) -->
+        <!--/* Confirm Modal for sending suggestion (outside card to avoid stacking context issues) */-->
         <div class="modal fade" id="suggestionConfirmModal" tabindex="-1" aria-hidden="true">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">

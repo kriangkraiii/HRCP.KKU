@@ -15,8 +15,8 @@
 						<div class="card-header bg-primary text-white d-flex justify-content-between align-items-center s-add-admin-1"
 						>
 							<h5 class="mb-0"><i class="fas fa-user-plus me-2"></i>เพิ่มบัญชีผู้ใช้งาน</h5>
-							<!-- type รับได้แค่ 1 หรือ 2 ตามตัวเลือกด้านล่าง ค่าที่ส่งมาแปลกๆ ให้ตกเป็น 1
-							     ไม่ต่อสตริงดิบลง href เพราะเป็นการเอาค่าจาก URL ไปวางในแอตทริบิวต์ตรงๆ -->
+							<!--/* type รับได้แค่ 1 หรือ 2 ตามตัวเลือกด้านล่าง ค่าที่ส่งมาแปลกๆ ให้ตกเป็น 1
+							     ไม่ต่อสตริงดิบลง href เพราะเป็นการเอาค่าจาก URL ไปวางในแอตทริบิวต์ตรงๆ */-->
 							<a th:href="@{/admin/users(type=${param.type != null and param.type[0] == '2' ? '2' : '1'})}" class="btn btn-outline-light btn-sm rounded-pill px-3">
 								<i class="fas fa-arrow-left me-1"></i> กลับ
 							</a>

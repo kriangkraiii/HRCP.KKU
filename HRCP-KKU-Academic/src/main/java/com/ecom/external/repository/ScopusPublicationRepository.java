@@ -67,6 +67,27 @@ public interface ScopusPublicationRepository extends JpaRepository<ScopusPublica
             @Param("excluded") Collection<Long> excluded,
             Pageable pageable);
 
+    /** {@link #findOwnedBy} เฉพาะผลงานจากแหล่งเดียว ({@code dataSource} เช่น SCOPUS, THAIJO) */
+    @Query("""
+            SELECT p FROM ScopusPublication p
+            WHERE p.fsUserId = :fsUserId
+              AND p.id NOT IN :excluded
+              AND COALESCE(p.dataSource, 'SCOPUS') = :dataSource
+              AND (:pattern IS NULL OR LOWER(p.title) LIKE :pattern
+                                    OR LOWER(p.publicationName) LIKE :pattern
+                                    OR LOWER(p.doi) LIKE :pattern)
+              AND (:yearFrom IS NULL OR p.publicationYear >= :yearFrom)
+              AND (:yearTo   IS NULL OR p.publicationYear <= :yearTo)
+            ORDER BY p.publicationYear DESC, p.citedBy DESC
+            """)
+    Page<ScopusPublication> findOwnedByFromSource(@Param("fsUserId") Long fsUserId,
+            @Param("yearFrom") Integer yearFrom,
+            @Param("yearTo") Integer yearTo,
+            @Param("pattern") String pattern,
+            @Param("excluded") Collection<Long> excluded,
+            @Param("dataSource") String dataSource,
+            Pageable pageable);
+
     /**
      * Aggregates the three numbers the position forms ask for, in one pass:
      * paper count, total citations and the h-index input set.

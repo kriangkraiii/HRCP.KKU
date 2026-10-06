@@ -1,8 +1,11 @@
 /**
- * Scopus publication picker.
+ * Publication picker.
  *
  * Replaces typing publication details by hand: the professor picks from their
- * own synced Scopus list and the selected rows are written into the form.
+ * own publications — synced from Scopus and harvested nightly from Crossref,
+ * OpenAlex, DBLP, ThaiJO and KKU IR — and the selected rows are written into
+ * the form. Each row shows where it came from and the list can be narrowed to
+ * one source.
  *
  * The list is always fetched from /api/my/publications, which is scoped to the
  * signed-in user on the server — this script has no way to request anyone
@@ -21,6 +24,23 @@
     'use strict';
 
     var MODAL_ID = 'scopusPickerModal';
+
+    /** dataSource ของผลงาน → ชื่อที่แสดง (ลำดับนี้คือลำดับในตัวกรอง) */
+    var SOURCES = [
+        ['SCOPUS', 'Scopus'],
+        ['OPENALEX', 'OpenAlex'],
+        ['CROSSREF', 'Crossref'],
+        ['DBLP', 'DBLP'],
+        ['THAIJO', 'ThaiJO'],
+        ['KKUIR', 'KKU IR']
+    ];
+
+    function sourceLabel(code) {
+        for (var i = 0; i < SOURCES.length; i++) {
+            if (SOURCES[i][0] === code) return SOURCES[i][1];
+        }
+        return code || 'Scopus';
+    }
     var state = {
         target: null,
         publications: [],
@@ -42,18 +62,24 @@
             '  <div class="modal-dialog modal-xl modal-dialog-scrollable">',
             '    <div class="modal-content">',
             '      <div class="modal-header">',
-            '        <h5 class="modal-title"><i class="fas fa-book"></i> เลือกผลงานจาก Scopus</h5>',
+            '        <h5 class="modal-title"><i class="fas fa-book"></i> เลือกผลงานจากฐานข้อมูลผลงาน</h5>',
             '        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="ปิด"></button>',
             '      </div>',
             '      <div class="modal-body">',
             '        <div class="row g-2 mb-3">',
-            '          <div class="col-md-6">',
+            '          <div class="col-md-5">',
             '            <input type="text" class="form-control" id="spSearch" placeholder="ค้นหาชื่อเรื่อง / วารสาร / DOI">',
             '          </div>',
             '          <div class="col-md-3">',
+            '            <select class="form-select" id="spSource" aria-label="แหล่งข้อมูล">',
+            '              <option value="">ทุกแหล่งข้อมูล</option>',
+            SOURCES.map(function (s) { return '              <option value="' + s[0] + '">' + s[1] + '</option>'; }).join(''),
+            '            </select>',
+            '          </div>',
+            '          <div class="col-md-2">',
             '            <input type="number" class="form-control" id="spYearFrom" placeholder="ปีเริ่มต้น">',
             '          </div>',
-            '          <div class="col-md-3">',
+            '          <div class="col-md-2">',
             '            <input type="number" class="form-control" id="spYearTo" placeholder="ปีสิ้นสุด">',
             '          </div>',
             '        </div>',
@@ -91,9 +117,11 @@
         var search = modal.querySelector('#spSearch');
         var yearFrom = modal.querySelector('#spYearFrom');
         var yearTo = modal.querySelector('#spYearTo');
+        var source = modal.querySelector('#spSource');
 
         var reload = debounce(function () { load(); }, 300);
         search.addEventListener('input', reload);
+        source.addEventListener('change', reload);
         yearFrom.addEventListener('change', reload);
         yearTo.addEventListener('change', reload);
 
@@ -116,8 +144,10 @@
         var q = modal.querySelector('#spSearch').value.trim();
         var from = modal.querySelector('#spYearFrom').value.trim();
         var to = modal.querySelector('#spYearTo').value.trim();
+        var source = modal.querySelector('#spSource').value;
 
         if (q) params.set('q', q);
+        if (source) params.set('source', source);
         if (from) params.set('year_from', from);
         if (to) params.set('year_to', to);
         params.set('size', '200');
@@ -188,6 +218,7 @@
         body.innerHTML =
             '<div class="fw-semibold">' + escapeHtml(p.title || '(ไม่มีชื่อเรื่อง)') + '</div>' +
             '<div class="small text-muted">' +
+            '<span class="badge text-bg-light border me-1" title="แหล่งข้อมูล">' + escapeHtml(sourceLabel(p.dataSource)) + '</span>' +
             escapeHtml(p.publicationName || '') +
             (p.year ? ' · ' + p.year : '') +
             (p.quartile ? ' · <span class="badge bg-success">' + escapeHtml(p.quartile) + '</span>' : '') +

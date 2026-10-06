@@ -19,6 +19,7 @@ import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.Doc7Scoring;
+import com.ecom.academic.service.DocumentPrewarmService;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.SignatureWorkflowService;
@@ -46,15 +47,19 @@ public class AutoDraftApiController {
 
     private final SignatureWorkflowService signatureWorkflow;
 
+    private final DocumentPrewarmService prewarmService;
+
     public AutoDraftApiController(
             AcademicRequestService academicService,
             PositionRequestService positionService,
             UserRepository userRepository,
-            SignatureWorkflowService signatureWorkflow) {
+            SignatureWorkflowService signatureWorkflow,
+            DocumentPrewarmService prewarmService) {
         this.academicService = academicService;
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.signatureWorkflow = signatureWorkflow;
+        this.prewarmService = prewarmService;
     }
 
     /** Auto-draft for Phase 1 (Teaching Evaluation) */
@@ -269,8 +274,14 @@ public class AutoDraftApiController {
                 String pinned = positionService.pinTargetPositionInJson(requestId, jsonData);
                 if (pinned != null)
                     jsonData = pinned;
+                // ช่องที่ระบบรู้ค่า (ชื่อ ตำแหน่ง หน่วยงาน งานสอน) ผู้ยื่นแก้ไม่ได้ — ปุ่มลงนามบันทึกผ่านทางนี้
+                String locked = positionService.pinLockedFieldsInJson(request, docType, jsonData);
+                if (locked != null)
+                    jsonData = locked;
             }
             positionService.saveDraft(request, docType, jsonData, label, filledBy);
+            // แปลง PDF รอไว้ — กดดูตัวอย่างหลังพิมพ์เสร็จจะไม่ต้องรอ LibreOffice
+            prewarmService.schedulePositionPrewarm(requestId, docType, jsonData);
 
             // Log every document edit
             positionService.logDocumentEdit(request, docType, label, user,

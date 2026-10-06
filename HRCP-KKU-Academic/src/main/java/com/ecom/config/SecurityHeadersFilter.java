@@ -99,8 +99,10 @@ public class SecurityHeadersFilter implements Filter {
                 // CSP further down.
                 httpRes.setHeader("X-Frame-Options", "SAMEORIGIN");
 
-                // Legacy XSS protection
-                httpRes.setHeader("X-XSS-Protection", "1; mode=block");
+                // The legacy XSS auditor is gone from current browsers, and where it
+                // survives its block mode can be abused to blank out parts of a page.
+                // OWASP now recommends switching it off; the CSP does the real work.
+                httpRes.setHeader("X-XSS-Protection", "0");
 
                 // Limit referrer information
                 httpRes.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");

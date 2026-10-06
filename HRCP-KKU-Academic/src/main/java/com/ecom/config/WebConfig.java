@@ -76,7 +76,11 @@ public class WebConfig implements WebMvcConfigurer {
 
 		// General static resources
 		registry.addResourceHandler("/css/**").addResourceLocations("classpath:/static/css/");
-		registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/");
+		// Our own scripts are served without their comments (JsCommentStripper);
+		// third-party files under /vendor are left exactly as published.
+		registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/")
+				.resourceChain(false)
+				.addTransformer(new CommentStrippingResourceTransformer());
 		registry.addResourceHandler("/img/**").addResourceLocations("classpath:/static/img/")
 				.setCacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(7)).cachePublic());
 

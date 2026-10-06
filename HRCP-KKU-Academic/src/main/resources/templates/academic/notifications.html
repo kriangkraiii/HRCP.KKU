@@ -8,7 +8,7 @@
 <body>
 <section>
     <div class="container-fluid py-4">
-        <!-- Page Header -->
+        <!--/* Page Header */-->
         <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
             <div>
                 <h4 class="fw-bold mb-1">
@@ -23,12 +23,12 @@
         </div>
 
         <div class="row g-4">
-            <!-- Left Column: Tabs Navigation -->
+            <!--/* Left Column: Tabs Navigation */-->
             <div class="col-lg-3 col-md-4">
                 <div class="card border-0 shadow-sm u-radius-16">
                     <div class="card-body p-2">
                         <div class="list-group list-group-flush border-0">
-                            <!-- All -->
+                            <!--/* All */-->
                             <a th:href="@{${isAdmin ? '/admin/notifications' : '/user/notifications'}(tab='all')}"
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 rounded-3 mb-1"
                                th:classappend="${currentTab == 'all'} ? 'active bg-primary text-white' : 'text-dark'">
@@ -39,7 +39,7 @@
                                       th:text="${tabCounts['all'] != null ? tabCounts['all'] : 0}">0</span>
                             </a>
 
-                            <!-- Unread -->
+                            <!--/* Unread */-->
                             <a th:href="@{${isAdmin ? '/admin/notifications' : '/user/notifications'}(tab='unread')}"
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 rounded-3 mb-1"
                                th:classappend="${currentTab == 'unread'} ? 'active bg-primary text-white' : 'text-dark'">
@@ -50,7 +50,7 @@
                                       th:text="${tabCounts['unread'] != null ? tabCounts['unread'] : 0}">0</span>
                             </a>
 
-                            <!-- Starred -->
+                            <!--/* Starred */-->
                             <a th:href="@{${isAdmin ? '/admin/notifications' : '/user/notifications'}(tab='starred')}"
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 rounded-3 mb-1"
                                th:classappend="${currentTab == 'starred'} ? 'active bg-primary text-white' : 'text-dark'">
@@ -61,7 +61,7 @@
                                       th:text="${tabCounts['starred'] != null ? tabCounts['starred'] : 0}">0</span>
                             </a>
 
-                            <!-- Important -->
+                            <!--/* Important */-->
                             <a th:href="@{${isAdmin ? '/admin/notifications' : '/user/notifications'}(tab='important')}"
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 rounded-3 mb-1"
                                th:classappend="${currentTab == 'important'} ? 'active bg-primary text-white' : 'text-dark'">
@@ -72,7 +72,7 @@
                                       th:text="${tabCounts['important'] != null ? tabCounts['important'] : 0}">0</span>
                             </a>
 
-                            <!-- Snoozed -->
+                            <!--/* Snoozed */-->
                             <a th:href="@{${isAdmin ? '/admin/notifications' : '/user/notifications'}(tab='snoozed')}"
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 rounded-3 mb-1"
                                th:classappend="${currentTab == 'snoozed'} ? 'active bg-primary text-white' : 'text-dark'">
@@ -85,7 +85,7 @@
 
                             <hr class="my-2">
 
-                            <!-- Trash -->
+                            <!--/* Trash */-->
                             <a th:href="@{${isAdmin ? '/admin/notifications' : '/user/notifications'}(tab='trash')}"
                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center py-2 px-3 border-0 rounded-3"
                                th:classappend="${currentTab == 'trash'} ? 'active bg-danger text-white' : 'text-muted'">
@@ -100,9 +100,9 @@
                 </div>
             </div>
 
-            <!-- Right Column: Notifications List & Search -->
+            <!--/* Right Column: Notifications List & Search */-->
             <div class="col-lg-9 col-md-8">
-                <!-- Search & Filters Toolbar -->
+                <!--/* Search & Filters Toolbar */-->
                 <div class="card border-0 shadow-sm mb-3 u-radius-16">
                     <div class="card-body py-2 px-3">
                         <form method="get" class="d-flex justify-content-between align-items-center flex-wrap gap-2">
@@ -128,10 +128,10 @@
                     </div>
                 </div>
 
-                <!-- Notifications List -->
+                <!--/* Notifications List */-->
                 <div class="card border-0 shadow-sm u-radius-16">
                     <div class="card-body p-0">
-                        <!-- Empty State -->
+                        <!--/* Empty State */-->
                         <div th:if="${notifications == null or notifications.empty}" class="text-center py-5">
                             <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 u-w-70px-h-70px-bg-rgba-13-71-161-0-08"
                                 >
@@ -141,7 +141,7 @@
                             <p class="text-muted small mb-0">ไม่พบการแจ้งเตือนในหมวดหมู่นี้</p>
                         </div>
 
-                        <!-- Notification Items -->
+                        <!--/* Notification Items */-->
                         <div th:unless="${notifications == null or notifications.empty}" class="list-group list-group-flush">
                             <div th:each="n : ${notifications.content}"
                                  class="list-group-item list-group-item-action p-3 notification-row position-relative u-tr-background-color-0-2s-cur-pointer"
@@ -166,16 +166,16 @@
                                  th:data-notif-action-icon="${n.getActionIconClass()}">
 
                                 <div class="d-flex align-items-start gap-3">
-                                    <!-- Star & Important Quick Actions -->
+                                    <!--/* Star & Important Quick Actions */-->
                                     <div class="d-flex flex-column align-items-center gap-2 pt-1" data-stop-propagation="1">
-                                        <!-- Star Button -->
+                                        <!--/* Star Button */-->
                                         <button type="button" class="btn btn-link p-0 text-decoration-none star-btn"
                                                 th:title="${n.isStarred} ? 'ยกเลิกติดดาว' : 'ติดดาว'"
                                                 data-notif-action="star" th:data-notif-id="${n.id}">
                                             <i class="fa-star" th:classappend="${n.isStarred} ? 'fas text-warning' : 'far text-muted'"></i>
                                         </button>
 
-                                        <!-- Important Button -->
+                                        <!--/* Important Button */-->
                                         <button type="button" class="btn btn-link p-0 text-decoration-none important-btn"
                                                 th:title="${n.isImportant} ? 'ยกเลิกสำคัญ' : 'ทำเครื่องหมายว่าสำคัญ'"
                                                 data-notif-action="important" th:data-notif-id="${n.id}">
@@ -183,13 +183,13 @@
                                         </button>
                                     </div>
 
-                                    <!-- Notification Icon -->
+                                    <!--/* Notification Icon */-->
                                     <div class="rounded-circle d-flex align-items-center justify-content-center flex-shrink-0 mt-1 u-w-40px-h-40px-bg-rgba-13-71-161-0-08"
                                         >
                                         <i th:class="${n.type != null ? n.type.iconClass : 'fas fa-bell text-primary'}"></i>
                                     </div>
 
-                                    <!-- Content Area -->
+                                    <!--/* Content Area */-->
                                     <div class="flex-grow-1 min-width-0">
                                         <div class="d-flex justify-content-between align-items-center mb-1 flex-wrap gap-1">
                                             <div class="d-flex align-items-center gap-2">
@@ -207,27 +207,27 @@
                                         <p class="mb-1 text-muted small text-break notif-message" th:text="${n.message}">ข้อความแจ้งเตือน</p>
                                     </div>
 
-                                    <!-- Actions Dropdown -->
+                                    <!--/* Actions Dropdown */-->
                                     <div class="dropdown flex-shrink-0" data-stop-propagation="1">
                                         <button class="btn btn-sm btn-light rounded-circle notif-kebab-btn u-w-32px-h-32px" type="button" data-bs-toggle="dropdown" aria-expanded="false">
                                             <i class="fas fa-ellipsis-v text-muted"></i>
                                         </button>
                                         <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 u-radius-12">
-                                            <!-- Open Detail Modal -->
+                                            <!--/* Open Detail Modal */-->
                                             <li>
                                                 <a class="dropdown-item" href="#" data-notif-action="viewDetail" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-eye me-2 text-info"></i>เปิดอ่านข้อความ
                                                 </a>
                                             </li>
 
-                                            <!-- Direct Link if available -->
+                                            <!--/* Direct Link if available */-->
                                             <li th:if="${n.link != null and !n.link.isEmpty()}">
                                                 <a class="dropdown-item text-primary" th:href="${n.link}">
                                                     <i th:class="${n.getActionIconClass()} + ' me-2'"></i><span th:text="${n.getActionBtnText()}">ไปยังหน้าที่เกี่ยวข้อง</span>
                                                 </a>
                                             </li>
 
-                                            <!-- Mark as Read / Unread -->
+                                            <!--/* Mark as Read / Unread */-->
                                             <li th:if="${!n.isRead}">
                                                 <a class="dropdown-item" href="#" data-notif-action="markRead" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-envelope-open me-2 text-primary"></i>ทำเครื่องหมายอ่านแล้ว
@@ -239,7 +239,7 @@
                                                 </a>
                                             </li>
 
-                                            <!-- Snooze Options -->
+                                            <!--/* Snooze Options */-->
                                             <li th:if="${!n.isDeleted and !n.isSnoozed()}">
                                                 <h6 class="dropdown-header"><i class="far fa-clock me-1"></i>เลื่อนการแจ้งเตือน</h6>
                                             </li>
@@ -271,7 +271,7 @@
 
                                             <li><hr class="dropdown-divider"></li>
 
-                                            <!-- Soft Delete / Restore / Permanent Delete -->
+                                            <!--/* Soft Delete / Restore / Permanent Delete */-->
                                             <li th:if="${!n.isDeleted}">
                                                 <a class="dropdown-item text-danger" href="#" data-notif-action="delete" th:data-notif-id="${n.id}">
                                                     <i class="fas fa-trash-alt me-2"></i>ลบการแจ้งเตือน
@@ -293,7 +293,7 @@
                             </div>
                         </div>
 
-                        <!-- Pagination -->
+                        <!--/* Pagination */-->
                         <div th:if="${notifications != null and notifications.totalPages > 1}" class="p-3 border-top d-flex justify-content-between align-items-center flex-wrap gap-2">
                             <small class="text-muted"
                                    th:text="'แสดงหน้าที่ ' + (${notifications.number} + 1) + ' จากทั้งหมด ' + ${notifications.totalPages} + ' หน้า (' + ${notifications.totalElements} + ' รายการ)'">

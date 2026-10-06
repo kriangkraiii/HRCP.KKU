@@ -149,9 +149,6 @@ class AdminFieldsRequiredTest extends AbstractFlowTest {
         SignatureRequest envelope = circulate(SignatureModule.POSITION, request.getId(), 3, doc3, applicant,
                 List.of(new SignerAssignment("applicant", applicant.getId())));
         applicantSigns(envelope);
-        positionService.saveOfficeFieldsAcrossCopies(request, 3,
-                Map.of("verify_date", "3 ตุลาคม 2569"), "เอกสารที่ 3", true);
-
         Result forwarded = signatureWorkflow.forwardToNextSigners(envelope.getId(),
                 List.of(new SignerAssignment("dean", dean.getId())), null, officer, ActorContext.none());
         assertThat(forwarded.ok()).isFalse();

@@ -159,10 +159,19 @@ public class ScopusQueryService {
      */
     public Page<PublicationDto> listOwn(UserDtls user, Integer yearFrom, Integer yearTo,
             String query, int page, int size) {
+        return listOwn(user, yearFrom, yearTo, query, null, page, size);
+    }
+
+    /**
+     * @param source แหล่งข้อมูล ({@code dataSource} เช่น SCOPUS, OPENALEX, THAIJO) — null คือทุกแหล่ง
+     */
+    public Page<PublicationDto> listOwn(UserDtls user, Integer yearFrom, Integer yearTo,
+            String query, String source, int page, int size) {
+        String dataSource = source == null || source.isBlank() ? null : source.trim().toUpperCase(java.util.Locale.ROOT);
         if (isUniversalAccessUser(user)) {
             String pattern = likePattern(query);
             PageRequest pageable = PageRequest.of(Math.max(page, 0), clampSize(size));
-            return publicationRepo.adminSearch(null, yearFrom, yearTo, pattern, null, pageable)
+            return publicationRepo.adminSearch(null, yearFrom, yearTo, pattern, dataSource, pageable)
                     .map(PublicationDto::from);
         }
 
@@ -175,9 +184,11 @@ public class ScopusQueryService {
         String pattern = likePattern(query);
         PageRequest pageable = PageRequest.of(Math.max(page, 0), clampSize(size));
 
-        return publicationRepo
-                .findOwnedBy(fsUserId.get(), yearFrom, yearTo, pattern, spentBy(user), pageable)
-                .map(PublicationDto::from);
+        Page<ScopusPublication> found = dataSource == null
+                ? publicationRepo.findOwnedBy(fsUserId.get(), yearFrom, yearTo, pattern, spentBy(user), pageable)
+                : publicationRepo.findOwnedByFromSource(fsUserId.get(), yearFrom, yearTo, pattern, spentBy(user),
+                        dataSource, pageable);
+        return found.map(PublicationDto::from);
     }
 
     /**

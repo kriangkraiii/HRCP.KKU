@@ -12,14 +12,23 @@
             <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 1: แบบ ก.พ.ว. มข. 03 (ส่วนที่ 1–5)</h3>
 
             <div th:replace="~{academic/_applicant_doc_gate :: banner}"></div>
-            <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+            <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
+
+            <!--/* ผลงานที่เคยยื่นไปแล้ว — ส่งคำร้องไม่ได้จนกว่าจะเอาออก (PositionRequestService.reusedWorks) */-->
+            <div th:if="${reusedWorks != null and !reusedWorks.isEmpty()}" class="alert alert-danger" id="reusedWorksAlert">
+                <i class="fas fa-ban me-1"></i>
+                <strong>ผลงานต่อไปนี้เคยใช้ยื่นคำร้องก่อนหน้าแล้ว ใช้ซ้ำไม่ได้</strong> — กรุณาเอาออกหรือเปลี่ยนเป็นผลงานอื่น
+                <ul class="mb-0 mt-1">
+                    <li th:each="w : ${reusedWorks}" th:text="${w}">ผลงาน</li>
+                </ul>
+            </div>
 
             <form th:action="'/user/position/request/' + ${request.id} + '/document/1'" method="post" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/1'" th:data-request-id="${request.id}" id="doc1Form">
 
                 
-                <!-- ========== ส่วนที่ 0: หน้าปกคำขอ ========== -->
+                <!--/* ========== ส่วนที่ 0: หน้าปกคำขอ ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลคำขอและผู้เสนอขอ</h5></div>
                     <div class="card-body">
@@ -33,24 +42,24 @@
                                     <option value="รองศาสตราจารย์" th:selected="${request.targetPosition == 'รองศาสตราจารย์'}">รองศาสตราจารย์</option>
                                     <option value="ศาสตราจารย์" th:selected="${request.targetPosition == 'ศาสตราจารย์'}">ศาสตราจารย์</option>
                                 </select>
-                                <!-- ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ -->
+                                <!--/* ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ */-->
                                 <input type="hidden" name="target_position" th:if="${request.targetPosition != null}" th:value="${request.targetPosition}">
                                 <div class="form-text" th:if="${request.targetPosition != null}">กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้</div>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">วิธีการ</label>
-                                <select name="method" class="form-select">
+                                <label class="form-label">วิธีการ <span class="text-danger">*</span></label>
+                                <select name="method" class="form-select" required>
                                     <option value="ปกติ">ปกติ</option>
                                     <option value="พิเศษ">พิเศษ</option>
                                 </select>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">สาขาวิชา</label>
-                                <input type="text" name="major" class="form-control">
+                                <label class="form-label">สาขาวิชา <span class="text-danger">*</span></label>
+                                <input type="text" name="major" class="form-control" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">รหัสสาขา</label>
-                                <input type="text" name="major_code" class="form-control">
+                                <label class="form-label">รหัสสาขา <span class="text-danger">*</span></label>
+                                <input type="text" name="major_code" class="form-control" required>
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">อนุสาขาวิชา</label>
@@ -62,7 +71,9 @@
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
-                                <select name="title" class="form-select" required data-academic-title>
+                                <input th:if="${lockedFields != null and lockedFields.containsKey('title')}" type="text" name="title" class="form-control" readonly required
+                                       th:value="${lockedFields['title']}" data-academic-title title="ดึงจากข้อมูลบุคลากรในระบบ แก้ไขไม่ได้">
+                                <select th:unless="${lockedFields != null and lockedFields.containsKey('title')}" name="title" class="form-select" required data-academic-title>
                                     <option value="">-- เลือก --</option>
                                     <option value="นาย">นาย</option>
                                     <option value="นาง">นาง</option>
@@ -75,36 +86,37 @@
                             </div>
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล <span class="text-danger">*</span></label>
-                                <input type="text" name="applicant_name" class="form-control" required>
+                                <input type="text" name="applicant_name" class="form-control" required
+                                       th:readonly="${lockedFields != null and lockedFields.containsKey('applicant_name')}">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">ภาค/สาขาวิชา</label>
-                                <input type="text" name="department" class="form-control">
+                                <label class="form-label">ภาค/สาขาวิชา <span class="text-danger">*</span></label>
+                                <input type="text" name="department" class="form-control" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">คณะ</label>
-                                <input type="text" name="faculty" class="form-control" value="วิทยาลัยการคอมพิวเตอร์">
+                                <label class="form-label">คณะ <span class="text-danger">*</span></label>
+                                <input type="text" name="faculty" class="form-control" required value="วิทยาลัยการคอมพิวเตอร์">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">มหาวิทยาลัย</label>
-                                <input type="text" name="university" class="form-control" value="มหาวิทยาลัยขอนแก่น">
+                                <label class="form-label">มหาวิทยาลัย <span class="text-danger">*</span></label>
+                                <input type="text" name="university" class="form-control" required value="มหาวิทยาลัยขอนแก่น">
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 1.1-1.3: ประวัติส่วนตัว ========== -->
+                <!--/* ========== ส่วนที่ 1.1-1.3: ประวัติส่วนตัว ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">๑. ประวัติส่วนตัว</h5></div>
                     <div class="card-body">
                         <div class="row g-3 mb-3">
                             <div class="col-md-5">
-                                <label class="form-label">๑.๑ เกิดเมื่อ</label>
-                                <input type="text" name="birth_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๓๐">
+                                <label class="form-label">๑.๑ เกิดเมื่อ <span class="text-danger">*</span></label>
+                                <input type="text" name="birth_date" class="form-control" required placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๓๐">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">๑.๒ อายุ (ปี)</label>
-                                <input type="text" name="age" class="form-control" data-age-of="birth_date">
+                                <label class="form-label">๑.๒ อายุ (ปี) <span class="text-danger">*</span></label>
+                                <input type="text" name="age" class="form-control" required data-age-of="birth_date">
                                 <div class="form-text">คำนวณจากวันเกิด แก้ไขได้</div>
                             </div>
                         </div>
@@ -115,28 +127,28 @@
                                 <i class="fas fa-plus"></i> เพิ่มแถว
                             </button>
                         </div>
-                        <p class="text-muted small">ระบุชื่อคุณวุฒิเต็มพร้อมสาขาวิชา เรียงจากคุณวุฒิสูงสุดตามลำดับ</p>
+                        <p class="text-muted small">ระบุชื่อคุณวุฒิเต็มพร้อมสาขาวิชา เรียงจากคุณวุฒิสูงสุดตามลำดับ — ต้องกรอกอย่างน้อยหนึ่งแถว</p>
                         <div class="table-responsive">
                             <table class="table table-bordered align-middle" id="eduTable">
                                 <thead class="table-light">
                                     <tr>
                                         <th>ลำดับ</th>
-                                        <th>วุฒิการศึกษา</th>
-                                        <th>สาขาวิชา</th>
-                                        <th>ปี พ.ศ. ที่จบ</th>
-                                        <th>สถาบัน</th>
-                                        <th>ประเทศ</th>
+                                        <th>วุฒิการศึกษา <span class="text-danger">*</span></th>
+                                        <th>สาขาวิชา <span class="text-danger">*</span></th>
+                                        <th>ปี พ.ศ. ที่จบ <span class="text-danger">*</span></th>
+                                        <th>สถาบัน <span class="text-danger">*</span></th>
+                                        <th>ประเทศ <span class="text-danger">*</span></th>
                                         <th></th>
                                     </tr>
                                 </thead>
                                 <tbody id="eduRows">
                                     <tr>
                                         <td><input type="text" name="education_no_1" class="form-control form-control-sm" value="๑.๓.๑"></td>
-                                        <td><input type="text" name="education_degree_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="education_major_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="education_year_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="education_institution_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="education_country_1" class="form-control form-control-sm"></td>
+                                        <td><input type="text" name="education_degree_1" class="form-control form-control-sm" required></td>
+                                        <td><input type="text" name="education_major_1" class="form-control form-control-sm" required></td>
+                                        <td><input type="text" name="education_year_1" class="form-control form-control-sm" required></td>
+                                        <td><input type="text" name="education_institution_1" class="form-control form-control-sm" required></td>
+                                        <td><input type="text" name="education_country_1" class="form-control form-control-sm" required></td>
                                         <td></td>
                                     </tr>
                                 </tbody>
@@ -145,71 +157,71 @@
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 2: ประวัติการรับราชการ ========== -->
+                <!--/* ========== ส่วนที่ 2: ประวัติการรับราชการ ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">๒. ประวัติการรับราชการ</h5></div>
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-5">
-                                <label class="form-label">๒.๑ ปัจจุบันดำรงตำแหน่ง</label>
-                                <input type="text" name="current_position" class="form-control" placeholder="เช่น อาจารย์">
+                                <label class="form-label">๒.๑ ปัจจุบันดำรงตำแหน่ง <span class="text-danger">*</span></label>
+                                <input type="text" name="current_position" class="form-control" required placeholder="เช่น อาจารย์">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">รับเงินเดือน (บาท)</label>
-                                <input type="text" name="current_salary" class="form-control">
+                                <label class="form-label">รับเงินเดือน (บาท) <span class="text-danger">*</span></label>
+                                <input type="text" name="current_salary" class="form-control" required>
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">๒.๒ วันที่ได้รับแต่งตั้งให้ดำรงตำแหน่งอาจารย์</label>
-                                <input type="text" name="lecturer_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๐">
+                                <label class="form-label">๒.๒ วันที่ได้รับแต่งตั้งให้ดำรงตำแหน่งอาจารย์ <span class="text-danger">*</span></label>
+                                <input type="text" name="lecturer_appointment_date" class="form-control" required placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๐">
                             </div>
                             <div class="col-12 svc-asst"><hr><h6 class="fw-bold">๒.๓ ตำแหน่งผู้ช่วยศาสตราจารย์</h6></div>
                             <div class="col-md-3 svc-asst">
-                                <label class="form-label">วิธีแต่งตั้ง</label>
-                                <select name="assistant_method" class="form-select">
+                                <label class="form-label">วิธีแต่งตั้ง <span class="text-danger">*</span></label>
+                                <select name="assistant_method" class="form-select" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="ปกติ">ปกติ</option>
                                     <option value="พิเศษ">พิเศษ</option>
                                 </select>
                             </div>
                             <div class="col-md-4 svc-asst">
-                                <label class="form-label">สาขาวิชา</label>
-                                <input type="text" name="assistant_department" class="form-control">
+                                <label class="form-label">สาขาวิชา <span class="text-danger">*</span></label>
+                                <input type="text" name="assistant_department" class="form-control" required>
                             </div>
                             <div class="col-md-5 svc-asst">
-                                <label class="form-label">วันที่แต่งตั้ง</label>
-                                <input type="text" name="assistant_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๓">
+                                <label class="form-label">วันที่แต่งตั้ง <span class="text-danger">*</span></label>
+                                <input type="text" name="assistant_appointment_date" class="form-control" required placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๓">
                             </div>
                             <div class="col-12 svc-assoc"><hr><h6 class="fw-bold">๒.๔ ตำแหน่งรองศาสตราจารย์</h6></div>
                             <div class="col-md-3 svc-assoc">
-                                <label class="form-label">วิธีแต่งตั้ง</label>
-                                <select name="associate_method" class="form-select">
+                                <label class="form-label">วิธีแต่งตั้ง <span class="text-danger">*</span></label>
+                                <select name="associate_method" class="form-select" required>
                                     <option value="">-- เลือก --</option>
                                     <option value="ปกติ">ปกติ</option>
                                     <option value="พิเศษ">พิเศษ</option>
                                 </select>
                             </div>
                             <div class="col-md-4 svc-assoc">
-                                <label class="form-label">สาขาวิชา</label>
-                                <input type="text" name="associate_department" class="form-control">
+                                <label class="form-label">สาขาวิชา <span class="text-danger">*</span></label>
+                                <input type="text" name="associate_department" class="form-control" required>
                             </div>
                             <div class="col-md-5 svc-assoc">
-                                <label class="form-label">วันที่แต่งตั้ง</label>
-                                <input type="text" name="associate_appointment_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๖">
+                                <label class="form-label">วันที่แต่งตั้ง <span class="text-danger">*</span></label>
+                                <input type="text" name="associate_appointment_date" class="form-control" required placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๖๖">
                             </div>
                             <div class="col-12"><hr></div>
                             <div class="col-md-3">
-                                <label class="form-label">อายุราชการ (ปี)</label>
-                                <input type="text" name="years" class="form-control">
+                                <label class="form-label">อายุราชการ (ปี) <span class="text-danger">*</span></label>
+                                <input type="text" name="years" class="form-control" required>
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">อายุราชการ (เดือน)</label>
-                                <input type="text" name="months" class="form-control">
+                                <label class="form-label">อายุราชการ (เดือน) <span class="text-danger">*</span></label>
+                                <input type="text" name="months" class="form-control" required>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 2.5-2.6: ตำแหน่งอื่นๆ & วิทยากร ========== -->
+                <!--/* ========== ส่วนที่ 2.5-2.6: ตำแหน่งอื่นๆ & วิทยากร ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">๒.๕ ตำแหน่งอื่นๆ</h5>
@@ -238,7 +250,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 3: ภาระงานย้อนหลัง ========== -->
+                <!--/* ========== ส่วนที่ 3: ภาระงานย้อนหลัง ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">๓. ภาระงานย้อนหลัง ๓ ปี</h5></div>
                     <div class="card-body">
@@ -262,9 +274,9 @@
                                 </thead>
                                 <tbody id="teachRows">
                                     <tr>
-                                        <td><input type="text" name="teaching_level_1" class="form-control form-control-sm" placeholder="เช่น ป.ตรี"></td>
+                                        <td><select name="teaching_level_1" class="form-select form-select-sm"><option value="">-- เลือก --</option><option value="ปริญญาตรี">ปริญญาตรี</option><option value="บัณฑิตศึกษา">บัณฑิตศึกษา</option></select></td>
                                         <td><input type="text" name="teaching_subject_1" class="form-control form-control-sm"></td>
-                                        <td><input type="text" name="teaching_hours_per_week_1" class="form-control form-control-sm"></td>
+                                        <td><input type="number" name="teaching_hours_per_week_1" class="form-control form-control-sm" min="0" step="any" inputmode="decimal"></td>
                                         <td><input type="text" name="teaching_semester_1" class="form-control form-control-sm"></td>
                                         <td></td>
                                     </tr>
@@ -290,7 +302,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 4.1: ผลงานทางวิชาการ (ผศ) ========== -->
+                <!--/* ========== ส่วนที่ 4.1: ผลงานทางวิชาการ (ผศ) ========== */-->
                 <div class="card card-academic mb-4" id="sectionAsst">
                     <div class="card-header bg-white"><h5 class="mb-0">๔. ผลงานทางวิชาการ</h5></div>
                     <div class="card-body">
@@ -323,7 +335,7 @@
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["asstResearch"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
 
                         <h6 class="fw-bold">๔.๑.๒ ผลงานทางวิชาการในลักษณะอื่น</h6>
@@ -355,7 +367,7 @@
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["asstOther"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
 
                         <h6 class="fw-bold">๔.๑.๓ ตำราหรือหนังสือ</h6>
@@ -387,12 +399,12 @@
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["asstBook"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 5: ผลงาน (รศ) ========== -->
+                <!--/* ========== ส่วนที่ 5: ผลงาน (รศ) ========== */-->
                 <div class="card card-academic mb-4" id="sectionAssoc">
                     <div class="card-header bg-white"><h5 class="mb-0">๔. ผลงานทางวิชาการ</h5></div>
                     <div class="card-body">
@@ -421,7 +433,7 @@
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["assocResearch"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
 
                         <h6 class="fw-bold">๔.๒.๒ ผลงานทางวิชาการในลักษณะอื่น</h6>
@@ -449,7 +461,7 @@
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["assocOther"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
 
                         <h6 class="fw-bold">๔.๒.๓ ตำราหรือหนังสือ</h6>
@@ -477,13 +489,13 @@
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["assocBook"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
 
                     </div>
                 </div>
 
-                <!-- ========== ส่วนที่ 6: ผลงาน (ศ) ========== -->
+                <!--/* ========== ส่วนที่ 6: ผลงาน (ศ) ========== */-->
                 <div class="card card-academic mb-4" id="sectionProf">
                     <div class="card-header bg-white"><h5 class="mb-0">๔. ผลงานทางวิชาการ</h5></div>
                     <div class="card-body">
@@ -512,7 +524,7 @@
                             <i class="fas fa-plus"></i> เพิ่มงานวิจัย
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["profResearch"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
 
                         <h6 class="fw-bold">๔.๓.๒ ผลงานทางวิชาการในลักษณะอื่น</h6>
@@ -540,7 +552,7 @@
                             <i class="fas fa-plus"></i> เพิ่มผลงาน
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["profOther"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
 
                         <h6 class="fw-bold">๔.๓.๓ ตำราหรือหนังสือ</h6>
@@ -568,27 +580,14 @@
                             <i class="fas fa-plus"></i> เพิ่มตำรา/หนังสือ
                         </button>
                         <button type="button" class="btn btn-sm btn-success mb-3" data-call="openScopusPreset" data-call-args='["profBook"]'>
-                            <i class="fas fa-book"></i> เลือกจาก Scopus
+                            <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน
                         </button>
 
                     </div>
                 </div>
 
-                <!-- ========== ลงชื่อ ========== -->
-                <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">ลงชื่อ</h5></div>
-                    <div class="card-body">
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label class="form-label">วันที่ลงนาม</label>
-                                <input type="text" name="sign_date" class="form-control" placeholder="เช่น ๑๐ มีนาคม พ.ศ. ๒๕๖๙">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- ========== ส่วนที่ ๒–๕ (ไม่มีช่องให้กรอก) ========== -->
-                <!-- ห้ามใส่ input ในการ์ดนี้ — ช่องที่อยู่ในฟอร์มจะถูกบันทึกลง JSON แล้ว DocumentCompleteness นับเป็นช่องบังคับ -->
+                <!--/* ========== ส่วนที่ ๒–๕ (ไม่มีช่องให้กรอก) ========== */-->
+                <!--/* ห้ามใส่ input ในการ์ดนี้ — ช่องที่อยู่ในฟอร์มจะถูกบันทึกลง JSON แล้ว DocumentCompleteness นับเป็นช่องบังคับ */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ส่วนที่ ๒–๕ ของแบบ ก.พ.ว. มข. ๐๓</h5></div>
                     <div class="card-body small">
@@ -616,13 +615,10 @@
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
-                    <a th:href="'/user/position/request/' + ${request.id}" class="btn-back-pill">
-                        <i class="fas fa-arrow-left"></i> กลับ
-                    </a>
                 </div>
             </form>
 
-            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
             <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
 
         </div>
@@ -655,9 +651,9 @@
                 counters.teach++;
                 const n = counters.teach;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" name="teaching_level_${n}" class="form-control form-control-sm"></td>
+                row.innerHTML = `<td><select name="teaching_level_${n}" class="form-select form-select-sm"><option value="">-- เลือก --</option><option value="ปริญญาตรี">ปริญญาตรี</option><option value="บัณฑิตศึกษา">บัณฑิตศึกษา</option></select></td>
                     <td><input type="text" name="teaching_subject_${n}" class="form-control form-control-sm"></td>
-                    <td><input type="text" name="teaching_hours_per_week_${n}" class="form-control form-control-sm"></td>
+                    <td><input type="number" name="teaching_hours_per_week_${n}" class="form-control form-control-sm" min="0" step="any" inputmode="decimal"></td>
                     <td><input type="text" name="teaching_semester_${n}" class="form-control form-control-sm"></td>
                     <td><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest="tr"><i class="fas fa-times"></i></button></td>`;
                 document.getElementById('teachRows').appendChild(row);
@@ -828,6 +824,9 @@
                 document.querySelectorAll('.svc-assoc').forEach(function (el) {
                     el.style.display = showAssoc ? '' : 'none';
                 });
+                // บังคับกรอกเฉพาะข้อที่แสดงอยู่ — ช่อง required ที่ซ่อนไว้ทำให้เบราว์เซอร์ส่งฟอร์มไม่ได้
+                document.querySelectorAll('.svc-asst [name]').forEach(function (el) { el.required = showAsst; });
+                document.querySelectorAll('.svc-assoc [name]').forEach(function (el) { el.required = showAssoc; });
             });
 
             // Load existing data
@@ -941,6 +940,83 @@
 
         <link rel="stylesheet" href="/css/doc_preview.css">
         <script>initDocPreview('doc1Form', 1, '/api/position/preview');</script>
+        <script>
+            (function () {
+                const LEVELS = ['ดี', 'ดีมาก', 'ดีเด่น', 'ดีเด่นมาก'];
+                function enhance() {
+                    document.querySelectorAll('input[name*="_used_"][name*="_year_"]').forEach(el => {
+                        el.inputMode = 'numeric';
+                        el.maxLength = 4;
+                    });
+                    let dl = document.getElementById('qualityLevelList');
+                    if (!dl) {
+                        dl = document.createElement('datalist');
+                        dl.id = 'qualityLevelList';
+                        dl.innerHTML = LEVELS.map(l => `<option value="${l}"></option>`).join('');
+                        document.body.appendChild(dl);
+                    }
+                    document.querySelectorAll('input[type="text"][name*="_used_"][name*="_level_"]:not([data-combo-list])').forEach(el => {
+                        el.placeholder = '-- ระดับคุณภาพ --';
+                        el.setAttribute('list', dl.id);
+                        if (window.DatalistCombo) DatalistCombo.attach(el);
+                    });
+                }
+                document.addEventListener('input', e => {
+                    const el = e.target;
+                    if (el.name && el.name.includes('_used_') && el.name.includes('_year_')) {
+                        const v = el.value.replace(/[^0-9๐-๙]/g, '').slice(0, 4);
+                        if (v !== el.value) el.value = v;
+                    }
+                });
+                document.addEventListener('click', e => { if (e.target.closest('[data-call]')) setTimeout(enhance); });
+                enhance();
+                [300, 1000, 2500].forEach(t => setTimeout(enhance, t));
+            })();
+        </script>
+        <script>
+            (function () {
+                const thai = n => String(n).replace(/\d/g, d => '๐๑๒๓๔๕๖๗๘๙'[d]);
+                function renumber() {
+                    const groups = new Map();
+                    document.querySelectorAll('input[name*="_working_no_"]').forEach(el => {
+                        el.readOnly = true;
+                        const key = el.name.replace(/_\d+$/, '');
+                        if (!groups.has(key)) groups.set(key, []);
+                        groups.get(key).push(el);
+                    });
+                    groups.forEach(list => list.forEach((el, i) => { el.value = thai(i + 1); }));
+                }
+                document.addEventListener('click', () => setTimeout(renumber));
+                renumber();
+                [300, 1000, 2500].forEach(t => setTimeout(renumber, t));
+            })();
+        </script>
+        <script>
+            (function () {
+                function usedFields(radio) {
+                    const m = radio.name.match(/^(.*)_(\d+)$/);
+                    if (!m) return [];
+                    return ['year', 'level'].map(k => document.querySelector(`[name="${m[1]}_${k}_${m[2]}"]`)).filter(Boolean);
+                }
+                function sync(clear) {
+                    document.querySelectorAll('input[type="radio"][value="used"]').forEach(r => {
+                        const show = r.checked;
+                        usedFields(r).forEach(f => {
+                            const row = f.closest('.row');
+                            const box = row && !row.contains(r) ? row : f.parentElement;
+                            box.style.display = show ? '' : 'none';
+                            if (!show && clear) f.value = '';
+                        });
+                    });
+                }
+                document.addEventListener('change', e => {
+                    if (e.target.type === 'radio' && /^(not_)?used$/.test(e.target.value)) sync(true);
+                });
+                document.addEventListener('click', e => { if (e.target.closest('[data-call="addWorkRow"]')) setTimeout(() => sync(false)); });
+                sync(false);
+                [300, 1000, 2500].forEach(t => setTimeout(() => sync(false), t));
+            })();
+        </script>
     <th:block th:replace="~{academic/_applicant_doc_gate :: script('doc1Form')}"></th:block>
     </section>
 </body>

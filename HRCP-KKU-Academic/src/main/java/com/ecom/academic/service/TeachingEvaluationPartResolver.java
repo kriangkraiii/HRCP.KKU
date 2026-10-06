@@ -131,6 +131,20 @@ public class TeachingEvaluationPartResolver {
      *
      * @return JSON ชุดใหม่ หรือชุดเดิมเมื่อไม่มีอะไรต้องเติมหรืออ่านไม่ได้
      */
+    /**
+     * เหมือน {@link #fillInto(PositionRequest, int, String)} แต่โหลดคำร้องเองในธุรกรรมนี้ — สำหรับงานเบื้องหลัง
+     * ที่ไม่มี session เปิดอยู่ (ผลประเมินที่ผูกไว้เป็น lazy อ่านนอก session ไม่ได้)
+     */
+    @Transactional(readOnly = true)
+    public String fillInto(Long requestId, int documentType, String json) {
+        if (documentType != FULL_FORM_DOCUMENT || requestId == null) {
+            return json;
+        }
+        return positionService.findById(requestId)
+                .map(request -> fillInto(request, documentType, json))
+                .orElse(json);
+    }
+
     @Transactional(readOnly = true)
     public String fillInto(PositionRequest request, int documentType, String json) {
         if (documentType != FULL_FORM_DOCUMENT || request == null || json == null || json.isBlank()) {

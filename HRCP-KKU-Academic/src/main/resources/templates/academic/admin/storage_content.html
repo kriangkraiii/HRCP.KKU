@@ -1,5 +1,5 @@
-<!-- Storage Tab Content Fragment - included in file_manager.html -->
-<!-- Breadcrumb -->
+<!--/* Storage Tab Content Fragment - included in file_manager.html */-->
+<!--/* Breadcrumb */-->
 <nav th:if="${viewMode == 'storage'}" aria-label="breadcrumb" class="mb-3">
     <ol class="breadcrumb mb-0 p-2 bg-light u-radius-10">
         <li class="breadcrumb-item">
@@ -16,7 +16,7 @@
     </ol>
 </nav>
 
-<!-- Toolbar -->
+<!--/* Toolbar */-->
 <div th:if="${viewMode == 'storage'}" class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
     <div class="d-flex gap-2 flex-wrap align-items-center">
         <button class="btn btn-primary u-radius-10" data-call="showCreateFolderModal">
@@ -37,13 +37,13 @@
     </div>
 </div>
 
-<!-- Drop Zone -->
+<!--/* Drop Zone */-->
 <div th:if="${viewMode == 'storage'}" id="dropZone" class="card border-2 border-dashed mb-4 text-center py-4 storage-dropzone js-hidden">
     <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
     <p class="text-muted mb-0">วางไฟล์ที่นี่เพื่ออัปโหลด</p>
 </div>
 
-<!-- Folders Grid -->
+<!--/* Folders Grid */-->
 <div th:if="${viewMode == 'storage' && subFolders != null && !subFolders.isEmpty()}" class="mb-4">
     <h6 class="text-muted mb-3"><i class="fas fa-folder me-1"></i> โฟลเดอร์</h6>
     <div class="row g-3">
@@ -73,7 +73,7 @@
     </div>
 </div>
 
-<!-- Files Grid -->
+<!--/* Files Grid */-->
 <div th:if="${viewMode == 'storage'}">
     <h6 class="text-muted mb-3"><i class="fas fa-file me-1"></i> ไฟล์</h6>
     <div th:if="${storageFiles == null || storageFiles.isEmpty()}" class="text-center py-4">
@@ -129,7 +129,7 @@
     </div>
 </div>
 
-<!-- Storage Trash View -->
+<!--/* Storage Trash View */-->
 <div th:if="${viewMode == 'storage-trash'}">
     <div th:if="${storageTrashFiles == null || storageTrashFiles.isEmpty()}" class="text-center py-5">
         <i class="fas fa-trash-alt fa-3x text-muted mb-3 d-block"></i>

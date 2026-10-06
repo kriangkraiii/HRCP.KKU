@@ -84,11 +84,11 @@ class OfficeFieldResolverTest {
         envelope.setDocumentType(3);
         envelope.setStatus(SignatureRequestStatus.IN_PROGRESS);
         when(positionService.getLatestDocumentData(7L, 3))
-                .thenReturn(Map.of("verify_date", "๓ ตุลาคม ๒๕๖๙", "applicant_name", "ชื่อที่แก้ทีหลัง"));
+                .thenReturn(Map.of("dean_position", "ผู้อำนวยการวิทยาลัยทดสอบ", "applicant_name", "ชื่อที่แก้ทีหลัง"));
 
         String json = resolver.fillInto(envelope, "{\"applicant_name\":\"สมชาย ใจดี\"}");
 
-        assertThat(json).contains("๓ ตุลาคม ๒๕๖๙");
+        assertThat(json).contains("ผู้อำนวยการวิทยาลัยทดสอบ");
         // ช่องของผู้ยื่นต้องเป็นฉบับที่ลงนามไว้เสมอ
         assertThat(json).contains("สมชาย ใจดี").doesNotContain("ชื่อที่แก้ทีหลัง");
     }

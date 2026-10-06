@@ -122,27 +122,14 @@ class EsignPdfViewer {
     }
 
     async ensurePdfJsLoaded() {
-        if (window.pdfjsLib) {
-            if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
-                window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
-            }
-            return;
+        // PDF.js 4+ ships only as an ES module; importing the same URL twice
+        // returns the same instance, so this is safe to call from every viewer.
+        if (!window.pdfjsLib) {
+            window.pdfjsLib = await import('/vendor/pdfjs/pdf.min.mjs');
         }
-
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = '/vendor/pdfjs/pdf.min.js';
-            script.onload = () => {
-                if (window.pdfjsLib) {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
-                    resolve();
-                } else {
-                    reject(new Error('PDF.js library failed to initialize'));
-                }
-            };
-            script.onerror = () => reject(new Error('Failed to load PDF.js'));
-            document.head.appendChild(script);
-        });
+        if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs';
+        }
     }
 
     /**
@@ -177,7 +164,9 @@ class EsignPdfViewer {
         const loadingTask = window.pdfjsLib.getDocument({
             url: url,
             cMapUrl: '/vendor/pdfjs/cmaps/',
-            cMapPacked: true
+            cMapPacked: true,
+            standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
+            wasmUrl: '/vendor/pdfjs/wasm/'
         });
 
         const pdfDoc = await loadingTask.promise;
@@ -264,14 +253,11 @@ class EsignPdfViewer {
             pageContainer.style.width = `${Math.round(viewport.width)}px`;
 
             const canvas = document.createElement('canvas');
-            const ctx = canvas.getContext('2d');
 
             canvas.width = Math.round(viewport.width * dpr);
             canvas.height = Math.round(viewport.height * dpr);
             canvas.style.width = `${Math.round(viewport.width)}px`;
             canvas.style.height = `${Math.round(viewport.height)}px`;
-
-            ctx.scale(dpr, dpr);
 
             const badge = document.createElement('div');
             badge.className = 'esign-page-badge';
@@ -281,7 +267,13 @@ class EsignPdfViewer {
             pageContainer.appendChild(badge);
             staged.push(pageContainer);
 
-            await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+            // PDF.js 5+ takes the canvas itself (passing a context is deprecated),
+            // so HiDPI scaling goes through the render transform.
+            await page.render({
+                canvas: canvas,
+                viewport: viewport,
+                transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : null
+            }).promise;
 
             if (stale()) return false;
         }

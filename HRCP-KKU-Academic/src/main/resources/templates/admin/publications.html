@@ -21,7 +21,7 @@
             </a>
         </div>
 
-        <!-- ภาพรวม -->
+        <!--/* ภาพรวม */-->
         <div class="row g-3 mb-4">
             <div class="col-md-4">
                 <div class="card card-academic h-100">
@@ -51,7 +51,7 @@
                 </div>
             </div>
 
-            <!-- ผลงานมาจากหลายแหล่งแล้ว ไม่ใช่ Scopus อย่างเดียว จึงต้องบอกได้ว่าอะไรมาจากไหน -->
+            <!--/* ผลงานมาจากหลายแหล่งแล้ว ไม่ใช่ Scopus อย่างเดียว จึงต้องบอกได้ว่าอะไรมาจากไหน */-->
             <div class="col-12" th:if="${sourceCounts != null and !sourceCounts.isEmpty()}">
                 <div class="card card-academic">
                     <div class="card-body py-2 d-flex flex-wrap align-items-center gap-2">
@@ -73,7 +73,7 @@
             </div>
         </div>
 
-        <!-- ตัวกรอง -->
+        <!--/* ตัวกรอง */-->
         <div class="card card-academic mb-4">
             <div class="card-body">
                 <form method="get" action="/admin/publications" class="row g-2 align-items-end">
@@ -118,7 +118,7 @@
             </div>
         </div>
 
-        <!-- ผลลัพธ์ -->
+        <!--/* ผลลัพธ์ */-->
         <div class="card card-academic">
             <div class="card-body">
 
@@ -167,8 +167,8 @@
                                     <div class="small text-muted text-truncate u-maxw-48rem"
                                          th:if="${p.authorNames}" th:text="${p.authorNames}"></div>
 
-                                    <!-- บทคัดย่อยาวเฉลี่ยพันกว่าตัวอักษร กางไว้ทุกแถวจะอ่านตารางไม่ออก
-                                         จึงซ่อนไว้หลังปุ่ม ให้กดดูเฉพาะเรื่องที่สนใจ -->
+                                    <!--/* บทคัดย่อยาวเฉลี่ยพันกว่าตัวอักษร กางไว้ทุกแถวจะอ่านตารางไม่ออก
+                                         จึงซ่อนไว้หลังปุ่ม ให้กดดูเฉพาะเรื่องที่สนใจ */-->
                                     <div class="mt-2 d-flex flex-wrap gap-2 align-items-center">
                                         <button th:if="${row.hasAbstract()}" type="button"
                                                 class="btn btn-sm btn-outline-secondary py-0"
@@ -198,13 +198,13 @@
                                         </div>
                                     </div>
                                 </td>
-                                <!-- ผลงานเก็บแค่รหัสเจ้าของ เลยต้องเทียบชื่อจากรายชื่ออาจารย์
-                                     ถ้าเทียบไม่ได้ (เพิ่งลาออกจากต้นทาง) แสดงรหัสไว้ ดีกว่าเว้นว่าง -->
+                                <!--/* ผลงานเก็บแค่รหัสเจ้าของ เลยต้องเทียบชื่อจากรายชื่ออาจารย์
+                                     ถ้าเทียบไม่ได้ (เพิ่งลาออกจากต้นทาง) แสดงรหัสไว้ ดีกว่าเว้นว่าง */-->
                                 <td class="small"
                                     th:text="${authorNames.get(row.fsUserId) != null
                                               ? authorNames.get(row.fsUserId)
                                               : 'รหัส ' + row.fsUserId}">-</td>
-                                <!-- แหล่งที่มาของแถวนี้ กดเพื่อกรองเฉพาะแหล่งนั้น -->
+                                <!--/* แหล่งที่มาของแถวนี้ กดเพื่อกรองเฉพาะแหล่งนั้น */-->
                                 <td class="small">
                                     <a th:href="@{/admin/publications(source=${p.dataSource})}"
                                        class="badge text-decoration-none"
@@ -232,7 +232,7 @@
                         </table>
                     </div>
 
-                    <!-- แบ่งหน้า — ต้องพาตัวกรองไปด้วย ไม่งั้นหน้า 2 จะกลายเป็นผลลัพธ์คนละชุด -->
+                    <!--/* แบ่งหน้า — ต้องพาตัวกรองไปด้วย ไม่งั้นหน้า 2 จะกลายเป็นผลลัพธ์คนละชุด */-->
                     <nav th:if="${publications.totalPages > 1}" class="mt-3">
                         <ul class="pagination pagination-sm mb-0 justify-content-center">
                             <li class="page-item" th:classappend="${publications.first} ? 'disabled'">

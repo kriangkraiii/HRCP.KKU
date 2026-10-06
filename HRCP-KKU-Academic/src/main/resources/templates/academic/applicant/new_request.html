@@ -5,7 +5,7 @@
     <section>
         <div class="container py-4">
 
-            <!-- Alert messages -->
+            <!--/* Alert messages */-->
             <div th:if="${success != null}" class="alert alert-success alert-dismissible fade show">
                 <i class="fas fa-check-circle me-1"></i> [[${success}]]
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
@@ -22,7 +22,7 @@
                 <i class="fas fa-check-circle me-1"></i> ดำเนินการสำเร็จ
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
             </div>
-            <!-- ข้อ 2 — คณบดีไม่เห็นชอบ: คำร้องถูกส่งคืนมาเป็นแบบร่างพร้อมเหตุผล -->
+            <!--/* ข้อ 2 — คณบดีไม่เห็นชอบ: คำร้องถูกส่งคืนมาเป็นแบบร่างพร้อมเหตุผล */-->
             <div th:if="${returnNote != null}" class="alert alert-warning d-flex align-items-start gap-2">
                 <i class="fas fa-rotate-left mt-1"></i>
                 <div>
@@ -44,7 +44,7 @@
                 </a>
             </div>
 
-            <!-- Page Header -->
+            <!--/* Page Header */-->
             <div class="page-header">
                 <div class="page-header-text">
                     <h3 class="page-header-title">ยื่นคำร้องใหม่</h3>
@@ -52,7 +52,7 @@
                 <span class="badge bg-secondary fs-6">แบบร่าง</span>
             </div>
 
-            <!-- Step Progress -->
+            <!--/* Step Progress */-->
             <div class="step-progress">
                 <!--/* เขียวเมื่อกรอกและลงนามแล้วเท่านั้น — กรอกอย่างเดียวยังส่งคำร้องไม่ได้ */-->
                 <div class="step-progress-item" th:classappend="${hasDoc1 and doc1Signed} ? 'sp-completed' : 'sp-active'" id="stepInd1">
@@ -81,10 +81,10 @@
                 </div>
             </div>
 
-            <!-- Document Checklist -->
+            <!--/* Document Checklist */-->
             <div class="doc-checklist">
 
-                <!-- เอกสารที่ 1 -->
+                <!--/* เอกสารที่ 1 */-->
                 <div class="doc-checklist-item" th:classappend="${hasDoc1} ? (${doc1Signed} ? 'dci-done' : 'dci-pending') : ''">
                     <div class="doc-checklist-icon">
                         <i th:if="${hasDoc1 and doc1Signed}" class="fas fa-check"></i>
@@ -112,7 +112,7 @@
                     </div>
                 </div>
 
-                <!-- เอกสารที่ 2 -->
+                <!--/* เอกสารที่ 2 */-->
                 <div class="doc-checklist-item" th:classappend="${hasDoc2} ? (${doc2Signed} ? 'dci-done' : 'dci-pending') : ''">
                     <div class="doc-checklist-icon">
                         <i th:if="${hasDoc2 and doc2Signed}" class="fas fa-check"></i>
@@ -141,7 +141,7 @@
                 </div>
             </div>
 
-            <!-- Submit Section -->
+            <!--/* Submit Section */-->
             <div class="submit-section" th:classappend="${hasDoc1 and hasDoc2 and applicantSignaturesComplete} ? 'submit-section-ready' : ''">
                 <th:block th:if="${hasDoc1 and hasDoc2 and applicantSignaturesComplete}">
                     <div class="d-flex align-items-center gap-2 mb-3">
@@ -187,7 +187,7 @@
                 </th:block>
             </div>
 
-            <!-- Confirmation Modal -->
+            <!--/* Confirmation Modal */-->
             <div class="modal fade" id="confirmSubmitModal" tabindex="-1" aria-labelledby="confirmSubmitModalLabel" aria-hidden="true">
                 <div class="modal-dialog modal-dialog-centered">
                     <div class="modal-content">

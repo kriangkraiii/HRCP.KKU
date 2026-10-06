@@ -48,15 +48,16 @@ class PositionDocumentEditGateTest extends AbstractFlowTest {
 
     private PositionRequest requestWith(PositionRequestStatus status) {
         PositionRequest request = data.positionRequest(applicant, status, null);
-        data.positionDocument(request, APPLICANT_DOC, "{\"applicant_name\":\"เดิม\"}");
+        data.positionDocument(request, APPLICANT_DOC, "{\"department\":\"เดิม\"}");
         return request;
     }
 
+    /** แก้ช่องสาขาวิชา — ไม่ใช่ชื่อ เพราะชื่อผู้ยื่นถูกล็อกตามข้อมูลบุคลากร ไม่ว่าเอกสารจะเปิดให้แก้หรือไม่ */
     private void applicantSaves(PositionRequest request, int type, String name) throws Exception {
         mvc.perform(post("/user/position/request/" + request.getId() + "/document/" + type)
                 .with(user(applicant.getEmail()).roles("USER")).with(csrf())
                 .param("action", "draft")
-                .param("applicant_name", name))
+                .param("department", name))
                 .andExpect(status().is3xxRedirection());
     }
 
@@ -91,7 +92,7 @@ class PositionDocumentEditGateTest extends AbstractFlowTest {
             applicantSaves(request, APPLICANT_DOC, "ผู้ยื่นแอบแก้หลังยื่นแล้ว");
 
             assertThat(positionService.getLatestDocumentData(request.getId(), APPLICANT_DOC))
-                    .containsEntry("applicant_name", "เดิม");
+                    .containsEntry("department", "เดิม");
         }
 
         @Test
@@ -133,7 +134,7 @@ class PositionDocumentEditGateTest extends AbstractFlowTest {
             applicantSaves(request, APPLICANT_DOC, "ชื่อที่แก้แล้ว");
 
             assertThat(positionService.getLatestDocumentData(request.getId(), APPLICANT_DOC))
-                    .containsEntry("applicant_name", "ชื่อที่แก้แล้ว");
+                    .containsEntry("department", "ชื่อที่แก้แล้ว");
         }
 
         @Test

@@ -15,18 +15,18 @@
                     <small class="text-muted">คำร้อง [[${request.requestCode}]] — ผู้ยื่น: [[${request.applicant.name}]]</small>
                 </div>
                 <div class="card-body">
-                    <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+                    <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
                     <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
-                    <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+                    <!--/* อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง */-->
                     <div th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}"></div>
                     <form th:action="'/admin/academic/request/' + ${request.id} + '/document/' + ${documentType}"
                         method="post" id="docForm"
                         th:attr="data-auto-draft='/api/draft/academic/' + ${request.id} + '/' + ${documentType}">
 
 
-                        <!-- ข้อมูลผู้เสนอขอ -->
+                        <!--/* ข้อมูลผู้เสนอขอ */-->
                         <h5 class="border-bottom pb-2 mb-3">ข้อมูลผู้เสนอขอ</h5>
                         <p th:if="${carried.containsKey('applicant_name')}" class="small text-muted mt-n2 mb-2"><i class="fas fa-lock me-1"></i>ดึงจากเอกสารที่ 4 — แก้ไขที่เอกสารที่ 1 หรือ 4</p>
                         <div class="row mb-4">
@@ -60,7 +60,7 @@
 
                         <p class="text-muted mb-3">กรอกคะแนนส่วนละ 1 ค่า (0–5) ระบบคำนวณคะแนนถ่วงน้ำหนักให้</p>
 
-                        <!-- ส่วนที่ ๑ -->
+                        <!--/* ส่วนที่ ๑ */-->
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h6 class="mb-0">๑. ปริมาณคุณภาพของเอกสารและหลักฐานที่ใช้ในการประเมินการสอน <span class="badge bg-secondary">ค่าน้ำหนัก ๒๐</span></h6>
@@ -84,7 +84,7 @@
                             </div>
                         </div>
 
-                        <!-- ส่วนที่ ๒ -->
+                        <!--/* ส่วนที่ ๒ */-->
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h6 class="mb-0">๒. ความสามารถด้านการวางแผนการสอนและการประเมินผลการเรียนการสอน <span class="badge bg-secondary">ค่าน้ำหนัก ๓๐</span></h6>
@@ -108,7 +108,7 @@
                             </div>
                         </div>
 
-                        <!-- ส่วนที่ ๓ -->
+                        <!--/* ส่วนที่ ๓ */-->
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h6 class="mb-0">๓. ความสามารถด้านการจัดการเรียนการสอน <span class="badge bg-secondary">ค่าน้ำหนัก 30</span></h6>
@@ -132,7 +132,7 @@
                             </div>
                         </div>
 
-                        <!-- ส่วนที่ ๔ -->
+                        <!--/* ส่วนที่ ๔ */-->
                         <div class="card mb-3">
                             <div class="card-header bg-light">
                                 <h6 class="mb-0">๔. ความเป็นผู้มีคุณธรรมจริยธรรม และวิญญาณความเป็นครู <span class="badge bg-secondary">ค่าน้ำหนัก 20</span></h6>
@@ -156,7 +156,7 @@
                             </div>
                         </div>
 
-                        <!-- สรุปคะแนนรวม -->
+                        <!--/* สรุปคะแนนรวม */-->
                         <div class="card bg-light mb-4">
                             <div class="card-body">
                                 <div class="row align-items-center">
@@ -171,7 +171,7 @@
                             </div>
                         </div>
 
-                        <!-- สรุปผลการประเมิน (Checkboxes) -->
+                        <!--/* สรุปผลการประเมิน (Checkboxes) */-->
                         <div class="card border-primary mb-4">
                             <div class="card-header bg-primary text-white">
                                 <h5 class="mb-0">สรุปผลการประเมิน ผู้ถูกประเมินมีผลการสอนอยู่ในระดับ</h5>
@@ -210,7 +210,7 @@
                             </div>
                         </div>
 
-                        <!-- กรรมการ -->
+                        <!--/* กรรมการ */-->
                         <h5 class="border-bottom pb-2 mb-3">กรรมการ</h5>
                         <div th:if="${carriedSignerProblems != null and !carriedSignerProblems.isEmpty()}" class="alert alert-warning" role="alert" data-carried-signer-problems>
                             <i class="fas fa-triangle-exclamation me-1"></i>
@@ -252,7 +252,7 @@
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
 
-                        <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+                        <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
         <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
 
                 </div>

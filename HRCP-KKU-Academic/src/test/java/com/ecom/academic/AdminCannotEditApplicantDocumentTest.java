@@ -158,18 +158,16 @@ class AdminCannotEditApplicantDocumentTest extends AbstractFlowTest {
             PositionRequest request = data.positionRequest(applicant,
                     PositionRequestStatus.DOCUMENT_RECEIVED, null);
             data.positionDocument(request, 3,
-                    "{\"certification_date\":\"๑๐ มีนาคม ๒๕๖๙\",\"applicant_name\":\"ผู้ยื่นกรอกไว้\"}");
+                    "{\"applicant_name\":\"ผู้ยื่นกรอกไว้\"}");
 
             mvc.perform(post("/admin/position/request/" + request.getId() + "/document/3")
                     .with(as(officer)).with(csrf())
                     .param("dean_name", "คณบดีตัวจริง")
-                    .param("certification_date", "วันที่แอดมินแก้")
                     .param("applicant_name", "แอดมินแอบแก้"))
                     .andExpect(status().is3xxRedirection());
 
             assertThat(positionService.getLatestDocumentData(request.getId(), 3))
                     .containsEntry("dean_name", "คณบดีตัวจริง")
-                    .containsEntry("certification_date", "๑๐ มีนาคม ๒๕๖๙")
                     .containsEntry("applicant_name", "ผู้ยื่นกรอกไว้");
         }
 

@@ -15,9 +15,9 @@
                     <small class="text-muted">คำร้อง [[${request.requestCode}]] — ผู้ยื่น: [[${request.applicant.name}]]</small>
                 </div>
                 <div class="card-body">
-                    <!-- อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง -->
+                    <!--/* อยู่นอก <form> เพราะแถบนี้มี form ส่งกลับให้ผู้ยื่นของตัวเอง */-->
                     <div th:replace="~{academic/_admin_field_lock :: banner('academic', ${request.id}, ${documentType})}"></div>
-                    <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+                    <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
                     <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
                     <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
@@ -126,7 +126,7 @@
                                         <label class="form-check-label fw-semibold" for="targetPos2">รองศาสตราจารย์</label>
                                     </div>
                                 </div>
-                                <!-- Hidden inputs for backend binding -->
+                                <!--/* Hidden inputs for backend binding */-->
                                 <input type="hidden" name="chk1" id="chk1"
                                     th:value="${doc1Data != null ? doc1Data.getOrDefault('chk1', '') : ''}">
                                 <input type="hidden" name="chk2" id="chk2"
@@ -160,7 +160,7 @@
                         <th:block th:replace="~{academic/admin/doc_fragments/_common :: buttons}"></th:block>
                     </form>
 
-                        <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+                        <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
         <div th:replace="~{academic/admin/doc_fragments/_common :: signaturePanel}"></div>
 
                 </div>

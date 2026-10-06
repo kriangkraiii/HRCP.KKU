@@ -6,7 +6,7 @@
 <section>
     <div class="container-fluid py-4">
 
-        <!-- ปุ่มกลับ (ฝั่งซ้ายด้านบน) -->
+        <!--/* ปุ่มกลับ (ฝั่งซ้ายด้านบน) */-->
         <div class="mb-3">
             <a th:href="${isAdmin} ? '/admin/academic/requests' : '/user/academic/dashboard'"
                class="btn-back-pill"
@@ -15,7 +15,7 @@
             </a>
         </div>
 
-        <!-- Top Header & Fast Actions -->
+        <!--/* Top Header & Fast Actions */-->
         <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4">
             <div>
                 <h3 class="mb-1 fw-bold">
@@ -42,9 +42,9 @@
             </div>
         </div>
 
-        <!-- Alert Messages -->
+        <!--/* Alert Messages */-->
 
-        <!-- Nav Tabs -->
+        <!--/* Nav Tabs */-->
         <ul class="nav nav-pills mb-4 bg-light p-2 rounded-3 border" id="esignTabs" role="tablist">
             <li class="nav-item" role="presentation">
                 <button class="nav-link active fw-semibold d-flex align-items-center gap-2 px-3"
@@ -82,12 +82,12 @@
 
         <div class="tab-content" id="esignTabsContent">
 
-            <!-- ============================================================= -->
-            <!-- TAB 1: รอฉันลงนาม (My Pending Tasks)                          -->
-            <!-- ============================================================= -->
+            <!--/* ============================================================= */-->
+            <!--/* TAB 1: รอฉันลงนาม (My Pending Tasks)                          */-->
+            <!--/* ============================================================= */-->
             <div class="tab-pane fade show active" id="content-pending" role="tabpanel">
 
-                <!-- KPI Summary Cards -->
+                <!--/* KPI Summary Cards */-->
                 <div class="row g-3 mb-4" th:if="${!#lists.isEmpty(pendingSteps)}">
                     <div class="col-sm-6 col-lg-4">
                         <div class="card border-0 shadow-sm rounded-3 bg-primary bg-opacity-10 h-100">
@@ -130,7 +130,7 @@
                     </div>
                 </div>
 
-                <!-- Filter & Search Toolbar -->
+                <!--/* Filter & Search Toolbar */-->
                 <div class="card border-0 shadow-sm rounded-3 mb-4" th:if="${!#lists.isEmpty(pendingSteps)}">
                     <div class="card-body p-3">
                         <div class="row g-3 align-items-center">
@@ -160,7 +160,7 @@
                     </div>
                 </div>
 
-                <!-- Empty State -->
+                <!--/* Empty State */-->
                 <div th:if="${#lists.isEmpty(pendingSteps)}" class="card border-0 shadow-sm rounded-4">
                     <div class="card-body text-center py-5">
                         <div class="rounded-circle bg-light d-inline-flex p-4 mb-3">
@@ -173,7 +173,7 @@
                     </div>
                 </div>
 
-                <!-- Document Grid -->
+                <!--/* Document Grid */-->
                 <div class="row g-3" id="inboxCardsGrid" th:unless="${#lists.isEmpty(pendingSteps)}">
                     <div class="col-md-6 col-xl-4 inbox-card-item"
                          th:each="step : ${pendingSteps}"
@@ -185,7 +185,7 @@
                             <div class="card-body p-4 d-flex flex-column justify-content-between">
 
                                 <div>
-                                    <!-- Header / Badge -->
+                                    <!--/* Header / Badge */-->
                                     <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
                                         <span class="badge rounded-pill"
                                               th:classappend="${step.signatureRequest.module.name() == 'ACADEMIC'} ? 'bg-info bg-opacity-10 text-info border border-info border-opacity-25' : 'bg-primary bg-opacity-10 text-primary border border-primary border-opacity-25'"
@@ -200,13 +200,13 @@
                                         </span>
                                     </div>
 
-                                    <!-- Document Title -->
+                                    <!--/* Document Title */-->
                                     <h5 class="fw-bold text-dark mb-2 line-clamp-2"
                                         th:text="${step.signatureRequest.documentLabel} ?: ('เอกสารที่ ' + ${step.signatureRequest.documentType})">
                                         ชื่อเอกสาร
                                     </h5>
 
-                                    <!-- Role Info -->
+                                    <!--/* Role Info */-->
                                     <div class="bg-light rounded-3 p-2 mb-3 small">
                                         <div class="d-flex justify-content-between text-secondary mb-1">
                                             <span>ลงนามในตำแหน่ง:</span>
@@ -218,7 +218,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- Due Date -->
+                                    <!--/* Due Date */-->
                                     <div class="small mb-3" th:if="${step.signatureRequest.dueAt != null}">
                                         <span class="text-secondary"><i class="far fa-calendar-alt me-1"></i> กำหนดลงนาม:</span>
                                         <span class="fw-medium" th:classappend="${step.signatureRequest.overdue} ? 'text-danger fw-bold' : 'text-dark'"
@@ -228,7 +228,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Action Buttons -->
+                                <!--/* Action Buttons */-->
                                 <div class="d-flex gap-2 pt-2 border-top">
                                     <a th:href="@{'/esign/sign/' + ${step.id}}" class="btn btn-primary flex-grow-1">
                                         <i class="fas fa-signature me-1"></i> ตรวจสอบและลงนาม
@@ -245,7 +245,7 @@
                             </div>
                         </div>
 
-                        <!-- Modal ขอขยายเวลาลงนามรายใบ -->
+                        <!--/* Modal ขอขยายเวลาลงนามรายใบ */-->
                         <div th:if="${step.signatureRequest.overdue}"
                              class="modal fade" th:id="'modal-ext-' + ${step.id}" tabindex="-1" aria-hidden="true">
                             <div class="modal-dialog modal-dialog-centered">
@@ -282,7 +282,7 @@
                     </div>
                 </div>
 
-                <!-- No Results from Search Filter -->
+                <!--/* No Results from Search Filter */-->
                 <div id="noSearchResults" class="card border-0 shadow-sm rounded-4 d-none">
                     <div class="card-body text-center py-5">
                         <i class="fas fa-magnifying-glass fa-2x text-secondary opacity-50 mb-2"></i>
@@ -292,9 +292,9 @@
 
             </div>
 
-            <!-- ============================================================= -->
-            <!-- TAB 2: เอกสารที่ฉันส่งไปลงนาม (Sent / In Progress Tracking)    -->
-            <!-- ============================================================= -->
+            <!--/* ============================================================= */-->
+            <!--/* TAB 2: เอกสารที่ฉันส่งไปลงนาม (Sent / In Progress Tracking)    */-->
+            <!--/* ============================================================= */-->
             <div class="tab-pane fade" id="content-sent" role="tabpanel">
 
                 <div th:if="${#lists.isEmpty(sentEnvelopes)}" class="card border-0 shadow-sm rounded-4">
@@ -310,7 +310,7 @@
                 </div>
 
                 <div class="row g-3" th:unless="${#lists.isEmpty(sentEnvelopes)}">
-                    <!-- held = ซองเปิดอยู่แต่ไม่มีใครถึงคิวเลย แปลว่าถูกหน่วงไว้รอยื่นคำร้อง -->
+                    <!--/* held = ซองเปิดอยู่แต่ไม่มีใครถึงคิวเลย แปลว่าถูกหน่วงไว้รอยื่นคำร้อง */-->
                     <div class="col-12" th:each="env : ${sentEnvelopes}"
                          th:with="held=${!env.activeStep().isPresent()}">
                         <div class="card border-0 shadow-sm rounded-3">
@@ -339,7 +339,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Signature Steps Progress Chain -->
+                                <!--/* Signature Steps Progress Chain */-->
                                 <div class="p-3 bg-light rounded-3">
                                     <div class="text-secondary small fw-semibold mb-2">
                                         <i class="fas fa-route text-primary me-1"></i> ลำดับขั้นตอนการลงนาม:
@@ -382,10 +382,10 @@
 
             </div>
 
-            <!-- ============================================================= -->
-            <!-- TAB 3: ประวัติการลงนาม (เฉพาะที่ฉันลงนาม)                       -->
-            <!--   ลงนามครบแล้ว = ซอง COMPLETED, รอผู้อื่นลงนาม = ซอง IN_PROGRESS -->
-            <!-- ============================================================= -->
+            <!--/* ============================================================= */-->
+            <!--/* TAB 3: ประวัติการลงนาม (เฉพาะที่ฉันลงนาม)                       */-->
+            <!--/*   ลงนามครบแล้ว = ซอง COMPLETED, รอผู้อื่นลงนาม = ซอง IN_PROGRESS */-->
+            <!--/* ============================================================= */-->
             <div class="tab-pane fade" id="content-history" role="tabpanel"
                  th:with="historyTotal=${historyCompletedCount + historyPendingCount}">
 
@@ -401,7 +401,7 @@
                     </div>
                 </div>
 
-                <!-- ตัวกรอง + ค้นหาที่ฝั่งเซิร์ฟเวอร์ เพื่อให้ค้นได้ทุกหน้า ไม่ใช่แค่หน้าที่เปิดอยู่ -->
+                <!--/* ตัวกรอง + ค้นหาที่ฝั่งเซิร์ฟเวอร์ เพื่อให้ค้นได้ทุกหน้า ไม่ใช่แค่หน้าที่เปิดอยู่ */-->
                 <div class="card border-0 shadow-sm rounded-3 mb-4" th:unless="${historyTotal == 0}">
                     <div class="card-body p-3">
                         <div class="row g-3 align-items-center">
@@ -501,7 +501,7 @@
                                         </div>
                                     </div>
 
-                                    <!-- ลำดับผู้ลงนามทั้งซอง: ใครลงนามแล้ว ใครถึงคิว ใครยังรอ -->
+                                    <!--/* ลำดับผู้ลงนามทั้งซอง: ใครลงนามแล้ว ใครถึงคิว ใครยังรอ */-->
                                     <div class="mb-3 small history-chain">
                                         <div class="text-secondary fw-semibold mb-1">
                                             <i class="fas fa-route text-primary me-1"></i> ลำดับการลงนาม
@@ -544,7 +544,7 @@
                     </div>
                 </div>
 
-                <!-- แบ่งหน้า: หน้าแรกคือรายการล่าสุด แสดงหน้าแรกและหน้าสุดท้ายเสมอ (-1 = ช่วงที่ย่อไว้) -->
+                <!--/* แบ่งหน้า: หน้าแรกคือรายการล่าสุด แสดงหน้าแรกและหน้าสุดท้ายเสมอ (-1 = ช่วงที่ย่อไว้) */-->
                 <div id="historyPager" th:if="${signedHistory.totalPages > 0}"
                      class="d-flex justify-content-between align-items-center flex-wrap gap-2 mt-4">
                     <small class="text-secondary"
@@ -573,9 +573,9 @@
 
             </div>
 
-            <!-- ============================================================= -->
-            <!-- TAB 4: ภาพรวมกำลังเวียนลงนามทั้งหมด (Admin / Staff Overview)  -->
-            <!-- ============================================================= -->
+            <!--/* ============================================================= */-->
+            <!--/* TAB 4: ภาพรวมกำลังเวียนลงนามทั้งหมด (Admin / Staff Overview)  */-->
+            <!--/* ============================================================= */-->
             <div class="tab-pane fade" id="content-all-active" role="tabpanel" th:if="${isAdmin}">
 
                 <div th:if="${#lists.isEmpty(allActiveEnvelopes)}" class="card border-0 shadow-sm rounded-4">
@@ -609,7 +609,7 @@
                                     </div>
                                 </div>
 
-                                <!-- Step Flow -->
+                                <!--/* Step Flow */-->
                                 <div class="p-3 bg-light rounded-3">
                                     <div class="d-flex align-items-center flex-wrap gap-2">
                                         <th:block th:each="st, stIter : ${env.steps}">
@@ -653,7 +653,7 @@
 
     </div>
 
-    <!-- Tab Switch & Search Filter Scripts -->
+    <!--/* Tab Switch & Search Filter Scripts */-->
     <script>
     function switchEsignTab(tabId) {
         var tabTriggerEl = document.getElementById(tabId);
@@ -784,7 +784,7 @@
     })();
     </script>
 
-    <!-- Modal: Quick Verify Code for Mobile & General use -->
+    <!--/* Modal: Quick Verify Code for Mobile & General use */-->
     <div class="modal fade" id="verifyCodeModal" tabindex="-1" aria-labelledby="verifyCodeModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered u-maxw-440px">
             <div class="modal-content border-0 shadow u-r-16px-ov-hidden">
@@ -800,7 +800,7 @@
                             รหัส 10 หลักอยู่ที่มุมล่างของเอกสาร หรือในอีเมลแจ้งเตือน
                         </p>
 
-                        <!-- Alert Box for Non-existent / Error Codes -->
+                        <!--/* Alert Box for Non-existent / Error Codes */-->
                         <div id="verifyCodeAlert" class="alert alert-danger py-2 px-3 mb-3 small d-none" role="alert"></div>
 
                         <div class="mb-3">

@@ -5,7 +5,7 @@
     <div class="container py-4">
         <h3 class="mb-4"><i class="fas fa-cloud"></i> ที่เก็บไฟล์ของฉัน</h3>
 
-        <!-- Summary Cards -->
+        <!--/* Summary Cards */-->
         <div class="row mb-4">
             <div class="col-md-4 mb-3">
                 <div class="card border-0 shadow-sm u-radius-12">
@@ -51,7 +51,7 @@
             </div>
         </div>
 
-        <!-- Storage Quota Bar -->
+        <!--/* Storage Quota Bar */-->
         <div class="card border-0 shadow-sm mb-4 u-radius-12">
             <div class="card-body py-3">
                 <div class="d-flex justify-content-between align-items-center mb-2">
@@ -88,10 +88,10 @@
             </button>
         </div>
 
-        <!-- ================== Storage View ================== -->
+        <!--/* ================== Storage View ================== */-->
         <div th:if="${viewMode == 'storage'}">
 
-            <!-- Breadcrumb -->
+            <!--/* Breadcrumb */-->
             <nav aria-label="breadcrumb" class="mb-3">
                 <ol class="breadcrumb mb-0 p-2 bg-light u-radius-10">
                     <li class="breadcrumb-item">
@@ -106,7 +106,7 @@
                 </ol>
             </nav>
 
-            <!-- Toolbar -->
+            <!--/* Toolbar */-->
             <div class="d-flex gap-2 mb-3 flex-wrap">
                 <button class="btn btn-primary u-radius-10" data-call="showCreateFolderModal">
                     <i class="fas fa-folder-plus me-1"></i> สร้างโฟลเดอร์
@@ -119,13 +119,13 @@
                 </form>
             </div>
 
-            <!-- Drop Zone -->
+            <!--/* Drop Zone */-->
             <div id="dropZone" class="card border-2 border-dashed mb-4 text-center py-4 storage-dropzone js-hidden">
                 <i class="fas fa-cloud-upload-alt fa-2x text-primary mb-2"></i>
                 <p class="text-muted mb-0">วางไฟล์ที่นี่เพื่ออัปโหลด (.pdf, .docx, .doc, .zip)</p>
             </div>
 
-            <!-- Folders Grid -->
+            <!--/* Folders Grid */-->
             <div th:if="${subFolders != null && !subFolders.isEmpty()}" class="mb-4">
                 <h6 class="text-muted mb-3"><i class="fas fa-folder me-1"></i> โฟลเดอร์</h6>
                 <div class="row g-3">
@@ -155,7 +155,7 @@
                 </div>
             </div>
 
-            <!-- Files Table -->
+            <!--/* Files Table */-->
             <div>
                 <h6 class="text-muted mb-3"><i class="fas fa-file me-1"></i> ไฟล์</h6>
                 <div th:if="${storageFiles == null || storageFiles.isEmpty()}" class="text-center py-4">
@@ -194,7 +194,7 @@
             </div>
         </div>
 
-        <!-- ================== Trash View ================== -->
+        <!--/* ================== Trash View ================== */-->
         <div th:if="${viewMode == 'storage-trash'}">
             <div th:if="${storageTrashFiles == null || storageTrashFiles.isEmpty()}" class="text-center py-5">
                 <i class="fas fa-trash-alt fa-3x text-muted mb-3 d-block"></i>
@@ -224,7 +224,7 @@
         </div>
     </div>
 
-    <!-- Confirm Modal -->
+    <!--/* Confirm Modal */-->
     <div class="modal fade" id="confirmModal" tabindex="-1">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content u-r-16px-bd-none">
@@ -240,7 +240,7 @@
         </div>
     </div>
 
-    <!-- Toast -->
+    <!--/* Toast */-->
     <div class="position-fixed top-0 end-0 p-3 u-z-11000">
         <div id="actionToast" class="toast align-items-center border-0" role="alert">
             <div class="d-flex">
@@ -250,7 +250,7 @@
         </div>
     </div>
 
-    <!-- ==================== Upload Modal ==================== -->
+    <!--/* ==================== Upload Modal ==================== */-->
     <div id="uploadModal" class="upload-modal-overlay js-hidden">
         <div class="upload-modal-content">
             <div class="upload-modal-header">
@@ -261,7 +261,7 @@
                 <button type="button" class="btn-close" data-call="closeUploadModal" id="uploadModalCloseBtn"></button>
             </div>
             <div class="upload-modal-body" id="uploadFileList">
-                <!-- File items will be added here dynamically -->
+                <!--/* File items will be added here dynamically */-->
             </div>
             <div class="upload-modal-footer">
                 <div class="d-flex justify-content-between align-items-center w-100">

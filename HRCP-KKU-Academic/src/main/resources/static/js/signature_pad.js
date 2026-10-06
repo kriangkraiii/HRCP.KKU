@@ -529,27 +529,15 @@
 
     /* --------------------------------------------------------------- upload */
 
-    function ensurePdfJs() {
-        if (window.pdfjsLib) {
-            if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
-                window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
-            }
-            return Promise.resolve(window.pdfjsLib);
+    // PDF.js 4+ ships only as an ES module, so it is imported on first use.
+    async function ensurePdfJs() {
+        if (!window.pdfjsLib) {
+            window.pdfjsLib = await import('/vendor/pdfjs/pdf.min.mjs');
         }
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = '/vendor/pdfjs/pdf.min.js';
-            script.onload = () => {
-                if (window.pdfjsLib) {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.js';
-                    resolve(window.pdfjsLib);
-                } else {
-                    reject(new Error('PDF.js failed to initialize'));
-                }
-            };
-            script.onerror = () => reject(new Error('Failed to load PDF.js'));
-            document.head.appendChild(script);
-        });
+        if (!window.pdfjsLib.GlobalWorkerOptions.workerSrc) {
+            window.pdfjsLib.GlobalWorkerOptions.workerSrc = '/vendor/pdfjs/pdf.worker.min.mjs';
+        }
+        return window.pdfjsLib;
     }
 
     async function handlePdfUpload(file) {
@@ -557,16 +545,20 @@
             previewEmpty.textContent = 'กำลังประมวลผลไฟล์ PDF...';
             const pdfjs = await ensurePdfJs();
             const buffer = await file.arrayBuffer();
-            const pdf = await pdfjs.getDocument({ data: buffer }).promise;
+            const pdf = await pdfjs.getDocument({
+                data: buffer,
+                cMapUrl: '/vendor/pdfjs/cmaps/',
+                cMapPacked: true,
+                standardFontDataUrl: '/vendor/pdfjs/standard_fonts/',
+                wasmUrl: '/vendor/pdfjs/wasm/'
+            }).promise;
             const page = await pdf.getPage(1);
             const viewport = page.getViewport({ scale: 2.0 });
 
             const pdfCanvas = document.createElement('canvas');
             pdfCanvas.width = viewport.width;
             pdfCanvas.height = viewport.height;
-            const pdfCtx = pdfCanvas.getContext('2d');
-
-            await page.render({ canvasContext: pdfCtx, viewport: viewport }).promise;
+            await page.render({ canvas: pdfCanvas, viewport: viewport }).promise;
 
             const processed = processCanvasBackground(pdfCanvas);
             const trimmed = trimToInk(processed);

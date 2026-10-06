@@ -12,7 +12,7 @@
             <h3 class="mb-4"><i class="fas fa-user-shield"></i> เอกสารที่ 7: แบบฟอร์มตรวจสอบคุณสมบัติและเอกสารประกอบ</h3>
             <p class="small text-secondary mb-3"><i class="fas fa-user-pen me-1"></i> ผู้กรอก: เจ้าหน้าที่</p>
 
-            <!-- ขั้นตอน: กรอก → ตรวจสอบและลงนาม -->
+            <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
@@ -20,7 +20,7 @@
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/7'" method="post" id="doc7Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/7'"
 >
 
-                <!-- ========== ส่วนที่ 1: ข้อมูลผู้ขอ ========== -->
+                <!--/* ========== ส่วนที่ 1: ข้อมูลผู้ขอ ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้ขอ</h5></div>
                     <div class="card-body">
@@ -72,7 +72,7 @@
                     </div>
                 </div>
 
-                <!-- วุฒิการศึกษา -->
+                <!--/* วุฒิการศึกษา */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">วุฒิการศึกษา</h5></div>
                     <div class="card-body">
@@ -105,7 +105,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ตำแหน่งที่ขอ ========== -->
+                <!--/* ========== ตำแหน่งที่ขอ ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ตำแหน่งที่ขอ</h5></div>
                     <div class="card-body">
@@ -151,7 +151,7 @@
                     </div>
                 </div>
 
-                <!-- ========== เอกสารประกอบคำขอ ========== -->
+                <!--/* ========== เอกสารประกอบคำขอ ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">เอกสารประกอบคำขอ</h5></div>
                     <div class="card-body">
@@ -176,7 +176,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ประเภทผลงาน ========== -->
+                <!--/* ========== ประเภทผลงาน ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ประเภทผลงานที่ยื่น</h5></div>
                     <div class="card-body">
@@ -215,7 +215,7 @@
                     </div>
                 </div>
 
-                <!-- ========== งานวิจัย (loop) ========== -->
+                <!--/* ========== งานวิจัย (loop) ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">รายละเอียดงานวิจัย</h5>
@@ -257,7 +257,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ผลงานวิชาการอื่น (loop) ========== -->
+                <!--/* ========== ผลงานวิชาการอื่น (loop) ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">ผลงานทางวิชาการในลักษณะอื่น</h5>
@@ -280,7 +280,7 @@
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_patent_1" value="☑"><label class="form-check-label u-fs-085em">สิทธิบัตร</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_software_1" value="☑"><label class="form-check-label u-fs-085em">ซอฟต์แวร์</label></div></div>
                             </div>
-                            <!-- ===== การเผยแพร่ตามประเภท (conditional) ===== -->
+                            <!--/* ===== การเผยแพร่ตามประเภท (conditional) ===== */-->
                             <div class="other-type-panel mt-2 border-top pt-2" data-for="is_industry">
                                 <label class="form-label fw-bold text-primary u-fs-085em">1. อุตสาหกรรม — การเผยแพร่</label>
                                 <div class="row g-1">
@@ -366,7 +366,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ผลงานรับใช้สังคม (loop) ========== -->
+                <!--/* ========== ผลงานรับใช้สังคม (loop) ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">ผลงานรับใช้ท้องถิ่นและสังคม</h5>
@@ -398,7 +398,7 @@
                     </div>
                 </div>
 
-                <!-- ========== ตำรา/หนังสือ (loop) ========== -->
+                <!--/* ========== ตำรา/หนังสือ (loop) ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">ตำรา / หนังสือ</h5>
@@ -438,7 +438,7 @@
                     </div>
                 </div>
 
-                <!-- ========== บทความทางวิชาการ (loop) ========== -->
+                <!--/* ========== บทความทางวิชาการ (loop) ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">บทความทางวิชาการ (สังคม/มนุษยศาสตร์)</h5>
@@ -467,14 +467,14 @@
                     </div>
                 </div>
 
-                <!-- ========== แบ่งส่วน: เจ้าหน้าที่กรอก ========== -->
+                <!--/* ========== แบ่งส่วน: เจ้าหน้าที่กรอก ========== */-->
                 <hr class="my-4 border-2 border-warning">
                 <div class="alert alert-warning d-flex align-items-center mb-4">
                     <i class="fas fa-user-shield me-2 fa-lg"></i>
                     <div><strong>ส่วนของเจ้าหน้าที่</strong> — กรอกโดยเจ้าหน้าที่เท่านั้น</div>
                 </div>
 
-                <!-- ========== ส่วนที่ 3: ผู้ตรวจสอบ ========== -->
+                <!--/* ========== ส่วนที่ 3: ผู้ตรวจสอบ ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ส่วนที่ 3: ผลการตรวจสอบ</h5></div>
                     <div class="card-body">
@@ -508,13 +508,10 @@
                     <button type="button" class="btn btn-outline-primary" data-action="docPreviewShow">
                         <i class="fas fa-eye"></i> ดูตัวอย่างเอกสาร
                     </button>
-                    <a th:href="'/admin/position/request/' + ${request.id}" class="btn-back-pill">
-                        <i class="fas fa-arrow-left"></i> กลับ
-                    </a>
                 </div>
             </form>
 
-            <!-- แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง -->
+            <!--/* แผงลงนาม: อยู่นอก <form> ของเอกสาร เพราะมี form ของตัวเอง */-->
             <div th:replace="~{academic/esign/_signature_panel :: panel}"></div>
 
         </div>

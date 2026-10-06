@@ -40,7 +40,7 @@
                 </div>
 
                 <div class="d-flex flex-wrap gap-2">
-                    <!-- DOI คือทางไปอ่านฉบับเต็มที่สำนักพิมพ์ ส่วน Scopus ให้หน้าบรรณานุกรม -->
+                    <!--/* DOI คือทางไปอ่านฉบับเต็มที่สำนักพิมพ์ ส่วน Scopus ให้หน้าบรรณานุกรม */-->
                     <a th:if="${p.doi}" th:href="'https://doi.org/' + ${p.doi}"
                        target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary">
                         <i class="fas fa-file-lines"></i> อ่านฉบับเต็ม (DOI)
@@ -53,7 +53,7 @@
             </div>
         </div>
 
-        <!-- บทคัดย่อ -->
+        <!--/* บทคัดย่อ */-->
         <div class="card card-academic mb-4">
             <div class="card-header bg-white">
                 <h6 class="mb-0"><i class="fas fa-align-left"></i> บทคัดย่อ</h6>
@@ -67,7 +67,7 @@
             </div>
         </div>
 
-        <!-- คำสำคัญ -->
+        <!--/* คำสำคัญ */-->
         <div class="card card-academic mb-4" th:if="${!row.keywords.isEmpty()}">
             <div class="card-header bg-white">
                 <h6 class="mb-0"><i class="fas fa-tags"></i> คำสำคัญ</h6>
@@ -78,7 +78,7 @@
             </div>
         </div>
 
-        <!-- ข้อมูลบรรณานุกรม -->
+        <!--/* ข้อมูลบรรณานุกรม */-->
         <div class="card card-academic">
             <div class="card-header bg-white">
                 <h6 class="mb-0"><i class="fas fa-circle-info"></i> ข้อมูลอ้างอิง</h6>

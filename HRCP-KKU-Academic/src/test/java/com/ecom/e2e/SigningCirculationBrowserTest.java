@@ -461,7 +461,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         // ผู้เสนอขอต้องกลับมาแก้เอกสารได้
         signIn(TestDataFactory.APPLICANT_EMAIL, TestDataFactory.PASSWORD);
         page.navigate(baseUrl() + "/user/position/request/" + id + "/document/1");
-        Locator field = page.locator("form[data-auto-draft] input[name='applicant_name']");
+        // ชื่อผู้ยื่นล็อกตามข้อมูลบุคลากรเสมอ — วัดสิทธิ์แก้จากช่องที่ผู้ยื่นกรอกเอง
+        Locator field = page.locator("form[data-auto-draft] input[name='birth_date']");
         assertThat(field.count()).as("ต้องเปิดฟอร์มเอกสารที่ 1 ได้").isPositive();
         assertThat(field.first().isEditable())
                 .as("คณบดีตีกลับแล้ว ผู้เสนอขอต้องแก้เอกสารที่ 1 ได้ — ซอง: " + after.getStatus())
@@ -611,8 +612,10 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         assertThat(sentBackAlert.count()).as("ผู้เสนอขอต้องเห็นว่าต้องแก้และลงนามใหม่").isPositive();
         assertThat(sentBackAlert.innerText()).contains("ข้อความรับรองจริยธรรม");
         openAndFill("/user/position/request/" + id + "/document/3", null);
-        assertThat(page.locator("form[data-auto-draft] [name='applicant_name']").first().isEditable())
-                .as("ผู้เสนอขอต้องแก้เอกสารที่ถูกส่งกลับได้").isTrue();
+        // เอกสารที่ 3 เหลือแค่ช่องที่ดึงจากข้อมูลบุคลากร (วันที่รับรองระบบเติมตอนลงนาม) — วัดจากตัวฟอร์ม
+        // ประตูเอกสารถอด data-auto-draft ออกเมื่อแก้ไม่ได้
+        assertThat(page.locator("form[data-auto-draft]").count())
+                .as("ผู้เสนอขอต้องแก้เอกสารที่ถูกส่งกลับได้").isPositive();
         sendForSignature("ผู้เสนอขอ ลงนามเอกสารที่ 3 ใหม่");
         signHere("ผู้เสนอขอ ลงนามเอกสารที่ 3 ใหม่", null);
         page.navigate(baseUrl() + "/user/position/request/" + id);

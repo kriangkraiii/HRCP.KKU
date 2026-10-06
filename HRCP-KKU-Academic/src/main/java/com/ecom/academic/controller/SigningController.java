@@ -926,6 +926,9 @@ public class SigningController {
     private void flashOutcome(Result result, RedirectAttributes redirectAttributes) {
         if (!result.ok()) {
             redirectAttributes.addFlashAttribute("errorMsg", result.error());
+            if (!result.missingFields().isEmpty()) {
+                redirectAttributes.addFlashAttribute("missingFields", result.missingFields());
+            }
             return;
         }
         SignatureRequest saved = result.request();

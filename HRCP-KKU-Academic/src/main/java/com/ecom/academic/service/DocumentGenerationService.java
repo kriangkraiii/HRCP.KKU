@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.Semaphore;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
@@ -354,6 +355,14 @@ public class DocumentGenerationService {
         return processTemplate(templateStream, placeholders, docType, signatures, null);
     }
 
+    /**
+     * เวลาของทุกไฟล์ใน .docx ที่สร้าง — ตายตัว เนื้อหาเดียวกันจึงได้ไบต์เดียวกันทุกครั้ง
+     *
+     * <p>ถ้าไม่ตั้ง ZipOutputStream ใส่เวลาปัจจุบันให้เอง แคช PDF ซึ่งใช้ SHA-256 ของไฟล์ .docx เป็นคีย์
+     * จึงไม่เคยเจอของเดิม กดดูตัวอย่างเอกสารเดิมซ้ำก็ต้องรอ LibreOffice แปลงใหม่ทุกครั้ง
+     */
+    private static final java.time.LocalDateTime FIXED_ENTRY_TIME = java.time.LocalDateTime.of(2020, 1, 1, 0, 0);
+
     private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType,
             List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
@@ -407,6 +416,10 @@ public class DocumentGenerationService {
                     if (xml.contains("{{")) {
                         // Step 1: Defragment - รวม placeholder ที่ Word แยกข้าม <w:t> กลับเป็นชิ้นเดียว
                         xml = defragmentPlaceholders(xml);
+
+                        // Step 1.4: แบบ ก.พ.ว. มข.๐๓ (เฟส 2) — ตัดหัวข้อที่ไม่ได้กรอกหรือไม่ใช่ของตำแหน่งที่ขอ
+                        // ก่อนโคลนแถว เพราะแถวที่โคลนจากหัวข้อที่ตัดไปแล้วไม่มีที่อยู่
+                        xml = Phase2FullFormPruner.prune(xml, placeholders);
 
                         // Step 1.5: Dynamic row cloning - เพิ่มแถวตารางสำหรับนวิจัยที่เกิน 5 รายการ
                         xml = expandDynamicRows(xml, placeholders);
@@ -470,6 +483,7 @@ public class DocumentGenerationService {
                 }
 
                 ZipEntry newEntry = new ZipEntry(entryName);
+                newEntry.setTimeLocal(FIXED_ENTRY_TIME);
                 zos.putNextEntry(newEntry);
                 zos.write(data);
                 zos.closeEntry();
@@ -478,7 +492,9 @@ public class DocumentGenerationService {
             // Image parts last. Entry order is not significant to Word or
             // LibreOffice, and appending leaves the template's own entries alone.
             for (PreparedSignature sig : prepared) {
-                zos.putNextEntry(new ZipEntry(WORD_MEDIA_DIR + sig.mediaName()));
+                ZipEntry media = new ZipEntry(WORD_MEDIA_DIR + sig.mediaName());
+                media.setTimeLocal(FIXED_ENTRY_TIME);
+                zos.putNextEntry(media);
                 zos.write(sig.pngBytes());
                 zos.closeEntry();
             }
@@ -2196,6 +2212,9 @@ public class DocumentGenerationService {
             Map.entry("requested_rank", "...................................."),
             Map.entry("qualification_status", "(ครบถ้วน / ไม่ครบถ้วน)"),
             Map.entry("dean_qualification_status", "...(เข้าข่าย/ไม่เข้าข่าย)"),
+            Map.entry("sign_date", "........เดือน.................พ.ศ......"),
+            Map.entry("certification_date", "........เดือน.................พ.ศ......"),
+            Map.entry("verify_date", "........เดือน.................พ.ศ......"),
             Map.entry("head_sign_date", "........เดือน.................พ.ศ......"),
             Map.entry("dean_sign_date", "........เดือน.................พ.ศ. ........"),
             // ตำแหน่งใต้ชื่อคณบดี — เติมเฉพาะเมื่อลงนามในฐานะรักษาการแทน (SignerNameResolver)
@@ -2360,6 +2379,22 @@ public class DocumentGenerationService {
     /** cache ผลการค้นหา soffice: null = ยังไม่เคยหา, "" = หาแล้วไม่เจอ */
     private volatile String cachedSofficePath = null;
 
+    /** การแปลงที่กำลังทำอยู่ ตามคีย์เดียวกับแคช — ให้คำขอไฟล์เดียวกันรอผลร่วมกัน */
+    private final Map<String, CompletableFuture<byte[]>> pdfInFlight = new java.util.concurrent.ConcurrentHashMap<>();
+
+    private static byte[] awaitConversion(CompletableFuture<byte[]> running) throws IOException {
+        try {
+            return running.get(PDF_TIMEOUT_SECONDS * 2, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new IOException("PDF conversion interrupted while waiting for a running conversion", e);
+        } catch (java.util.concurrent.ExecutionException e) {
+            throw e.getCause() instanceof IOException io ? io : new IOException(e.getCause());
+        } catch (java.util.concurrent.TimeoutException e) {
+            throw new IOException("PDF conversion timeout waiting for a running conversion", e);
+        }
+    }
+
     /**
      * L1 In-Memory LRU cache ของ PDF ที่แปลงแล้ว
      */
@@ -2442,19 +2477,34 @@ public class DocumentGenerationService {
             }
         }
 
-        // 3. Cache miss → แปลงสดด้วย LibreOffice (~300-500ms ด้วย Profile Pool)
-        byte[] pdf = convertDocxToPdf(docxBytes);
-        
-        // เก็บลงทั้ง L1 และ L2
-        pdfCache.put(key, pdf);
-        try {
-            Files.createDirectories(DISK_CACHE_DIR);
-            Files.write(diskCachedFile, pdf, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
-        } catch (IOException e) {
-            log.warn("Failed to write to disk cache: {}", e.getMessage());
+        // 3. ไฟล์เดียวกันกำลังแปลงอยู่ (เช่น prewarm หลังบันทึกอัตโนมัติ แล้วผู้ใช้กดดูตัวอย่างพอดี)
+        //    รอผลของงานนั้น ไม่แปลงซ้อน — LibreOffice มีไม่กี่ process งานซ้ำทำให้ทุกคนช้าลง
+        CompletableFuture<byte[]> mine = new CompletableFuture<>();
+        CompletableFuture<byte[]> running = pdfInFlight.putIfAbsent(key, mine);
+        if (running != null) {
+            return awaitConversion(running);
         }
 
-        return pdf;
+        // 4. Cache miss → แปลงสดด้วย LibreOffice
+        try {
+            byte[] pdf = convertDocxToPdf(docxBytes);
+
+            // เก็บลงทั้ง L1 และ L2
+            pdfCache.put(key, pdf);
+            try {
+                Files.createDirectories(DISK_CACHE_DIR);
+                Files.write(diskCachedFile, pdf, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+            } catch (IOException e) {
+                log.warn("Failed to write to disk cache: {}", e.getMessage());
+            }
+            mine.complete(pdf);
+            return pdf;
+        } catch (IOException | RuntimeException e) {
+            mine.completeExceptionally(e);
+            throw e;
+        } finally {
+            pdfInFlight.remove(key, mine);
+        }
     }
 
     /** ไบต์ชุดนี้เป็นไฟล์ PDF อยู่แล้วหรือไม่ (ดูจาก magic bytes) */

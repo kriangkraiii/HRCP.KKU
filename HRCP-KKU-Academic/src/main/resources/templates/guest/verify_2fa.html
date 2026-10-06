@@ -27,20 +27,20 @@
                     ระบบส่งรหัส OTP 8 หลักไปที่อีเมล<br>
                     <span class="email-badge"><i class="fas fa-envelope"></i> [[${maskedEmail}]]</span>
                 </p>
-                <!-- Says why an extra step appeared after the university's own login screen. -->
+                <!--/* Says why an extra step appeared after the university's own login screen. */-->
                 <p class="guest-card-sub u-fs-0-9em" th:if="${loginMethod == 'SSO'}">
                     <i class="fas fa-university"></i> ยืนยันตัวตนกับ KKU SSO แล้ว กรุณายืนยันด้วยรหัส OTP
                 </p>
 
-                <!-- Alerts -->
+                <!--/* Alerts */-->
                 <div th:if="${success}" class="alert alert-success">
                     <i class="fas fa-check-circle"></i> <span th:text="${success}"></span>
                 </div>
                 <div th:if="${error}" class="alert alert-danger">
                     <i class="fas fa-exclamation-circle"></i> <span th:text="${error}"></span>
                 </div>
-                <!-- Set outside the controller (e.g. by the rate limiter) and drained
-                     by GlobalModelAdvice, which every other screen also renders. -->
+                <!--/* Set outside the controller (e.g. by the rate limiter) and drained
+                     by GlobalModelAdvice, which every other screen also renders. */-->
                 <div th:if="${errorMsg}" class="alert alert-danger">
                     <i class="fas fa-exclamation-circle"></i> <span th:text="${errorMsg}"></span>
                 </div>

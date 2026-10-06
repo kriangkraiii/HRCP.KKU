@@ -220,6 +220,15 @@ class SignInServiceTest {
     }
 
     @Test
+    @DisplayName("ลิงก์หน้าผู้ยื่นที่ค้างไว้ แล้วเข้า/สลับกลับเป็นแอดมิน — พาไปแดชบอร์ดแอดมินแทนหน้า 403")
+    void aUserLinkDoesNotStrandAnAdmin() {
+        openedWhileSignedOut("/user/position/request/4/document/1", null);
+
+        assertThat(signInService.destinationFor(request, response, user("ROLE_ADMIN", false)))
+                .isEqualTo("/admin/academic/dashboard");
+    }
+
+    @Test
     @DisplayName("ผู้ลงนามภายนอกกลับได้เฉพาะหน้าลงนาม")
     void anExternalSignerOnlyReturnsToSigningPages() {
         openedWhileSignedOut("/user/academic/dashboard", null);
