@@ -59,9 +59,11 @@ class PositionTitleSelectBrowserTest extends PlaywrightTestBase {
         PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT, null);
 
         assertThat(selectedTitle(draft, 3)).isEqualTo("รองศาสตราจารย์");
-        // รายการให้เลือก — <datalist> ที่ช่องชี้ไป หรือตัว <select> เองถ้ายังไม่ถูกเปลี่ยน
+        // รายการให้เลือก — <datalist> ที่ช่องชี้ไป (ถอด list ออกแล้วเก็บ id ไว้ที่ data-combo-list)
+        // หรือตัว <select> เองถ้ายังไม่ถูกเปลี่ยน
         String options = (String) page.evalOnSelector("[data-academic-title]",
-                "el => (el.list ? el.list.innerHTML : el.innerHTML)");
+                "el => { const l = el.list || document.getElementById(el.dataset.comboList || '');"
+                        + " return l ? l.innerHTML : el.innerHTML; }");
         assertThat(options).doesNotContain("ดร.");
     }
 }

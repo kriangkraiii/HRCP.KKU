@@ -195,6 +195,60 @@ public class AcademicEmailService {
         }
     }
 
+    /**
+     * ข้อ 13 → 14 — ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว เจ้าหน้าที่ต้องตรวจแล้วส่งต่อคณะอนุกรรมการ
+     * และนัดประชุมรอบใหม่ — แจ้งในระบบทุกคน และอีเมลถึงผู้ที่เปิดรับอีเมล
+     */
+    @Async
+    public void sendRevisionSubmittedToAdmins(Long requestId) {
+        try {
+            AcademicRequest request = reload(requestId);
+            if (request == null || request.getApplicant() == null) {
+                return;
+            }
+            String applicantName = com.ecom.util.EmailTemplateHelper.formalName(request.getApplicant());
+            String adminLink = "/admin/academic/request/" + request.getId();
+            notificationService.notifyAdmins(request.getApplicant(),
+                    "ผู้ยื่นส่งเอกสารประเมินการสอนฉบับแก้ไขแล้ว",
+                    applicantName + " ส่งเอกสารฉบับแก้ไขของคำร้อง #" + request.getId()
+                            + " แล้ว กรุณาตรวจและส่งต่อคณะอนุกรรมการ พร้อมนัดประชุมรอบใหม่",
+                    adminLink, com.ecom.model.NotificationType.REVISION_SUBMITTED, true);
+
+            for (UserDtls admin : userRepository.findByRole("ROLE_ADMIN")) {
+                if (Boolean.FALSE.equals(admin.getIsEnable())
+                        || !Boolean.TRUE.equals(admin.getEmailNotificationEnabled())
+                        || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
+                    continue;
+                }
+                String body = com.ecom.util.EmailTemplateHelper.Letter
+                        .of("ผู้ยื่นส่งเอกสารประเมินการสอนฉบับแก้ไขแล้ว",
+                                com.ecom.util.EmailTemplateHelper.formalName(admin))
+                        .para(applicantName + " ได้ส่งเอกสารประเมินการสอนที่แก้ไขตามข้อเสนอแนะของคณะอนุกรรมการ"
+                                + " สำหรับคำร้องรหัส " + request.getId() + " เรียบร้อยแล้ว")
+                        .steps("สิ่งที่ต้องดำเนินการ", List.of(
+                                "ตรวจเอกสารฉบับแก้ไขในหน้ารายละเอียดคำร้อง",
+                                "ส่งเอกสารฉบับแก้ไขให้คณะอนุกรรมการประเมินการสอนพิจารณา",
+                                "นัดหมายวันประชุมคณะอนุกรรมการรอบใหม่ในระบบ"))
+                        .button("เปิดคำร้องในระบบ", publicBaseUrl.replaceAll("/+$", "") + adminLink)
+                        .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
+
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(com.ecom.util.EmailTemplateHelper.resolveSenderEmail(senderEmail),
+                        com.ecom.util.EmailTemplateHelper.SENDER_NAME);
+                helper.setTo(admin.getEmail());
+                helper.setSubject("ผู้ยื่นส่งเอกสารฉบับแก้ไขแล้ว: คำร้องขอรับการประเมินผลการสอน (รหัส "
+                        + request.getId() + ") จาก " + applicantName);
+                helper.setText(com.ecom.util.EmailTemplateHelper.wrapLayout(
+                        "ผู้ยื่นส่งเอกสารฉบับแก้ไขแล้ว", "ต้องดำเนินการ", body), true);
+                com.ecom.util.EmailTemplateHelper.attachLogos(helper);
+                mailSender.send(message);
+            }
+        } catch (Exception e) {
+            System.err.println("Revision-submitted admin notification failed: " + e.getMessage());
+        }
+    }
+
     private void sendAdminNotification(UserDtls admin, AcademicRequest request) {
         try {
             if (admin == null || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {

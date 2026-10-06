@@ -147,10 +147,10 @@ public class TestDataFactory {
                 "position_status_history", "position_document",
                 "position_request_publication", "position_request",
                 // Academic side: children → request
-                "academic_document_edit_log", "academic_attachment",
+                "academic_document_edit_log", "academic_attachment", "academic_revision_file",
                 "request_status_history", "academic_document", "academic_request",
                 // Standalone
-                "user_signature", "user_digital_certificate",
+                "user_signature", "user_digital_certificate", "acting_signer",
                 "notifications", "scopus_publication", "fs_faculty")) {
             if (present.contains(table)) {
                 jdbc.execute("DELETE FROM " + table);

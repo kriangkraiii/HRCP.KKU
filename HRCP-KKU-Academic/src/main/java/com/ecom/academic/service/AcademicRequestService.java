@@ -1,6 +1,7 @@
 package com.ecom.academic.service;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -179,7 +180,18 @@ public class AcademicRequestService {
             boolean sendNotification) {
         AcademicRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
+        if (request.getCurrentStatus() == RequestStatus.REVISION_SUBMITTED
+                && newStatus == RequestStatus.MEETING_SCHEDULED) {
+            // ข้อ 15 — ฉบับแก้เข้าที่ประชุมรอบใหม่ ไม่ระบุวันก็จะเหลือวันประชุมรอบแรกค้างไว้ในระบบ
+            throw new IllegalStateException(
+                    "ส่งฉบับแก้ไขเข้าที่ประชุมอนุกรรมการต้องระบุวันประชุมรอบใหม่");
+        }
+        return changeStatus(request, newStatus, changedBy, note, sendNotification);
+    }
 
+    private AcademicRequest changeStatus(AcademicRequest request, RequestStatus newStatus, UserDtls changedBy,
+            String note, boolean sendNotification) {
+        Long requestId = request.getId();
         RequestStatus oldStatus = request.getCurrentStatus();
         requireLegalTransition(oldStatus, newStatus, requestId);
         // เอกสารที่ส่งกลับให้แก้ต้องลงนามใหม่ครบก่อนเรื่องจะเดินต่อ — ส่วนการตีกลับ
@@ -218,6 +230,10 @@ public class AcademicRequestService {
             // id so the background thread reads its own copy of the row.
             Long notifyId = request.getId();
             afterCommit.run(() -> emailService.sendStatusChangeEmail(notifyId, oldStatus, newStatus, note));
+            if (newStatus == RequestStatus.REVISION_SUBMITTED && oldStatus != newStatus) {
+                // ข้อ 14 เป็นงานของเจ้าหน้าที่ — ไม่แจ้ง คำร้องก็รออยู่เงียบ ๆ ในแดชบอร์ด
+                afterCommit.run(() -> emailService.sendRevisionSubmittedToAdmins(notifyId));
+            }
         }
 
         return request;
@@ -226,17 +242,47 @@ public class AcademicRequestService {
     @Transactional
     public AcademicRequest setMeetingDate(Long requestId, LocalDateTime meetingDate, String location,
             UserDtls changedBy) {
+        return scheduleMeeting(requestId, meetingDate, null, location, changedBy);
+    }
+
+    /** นัดประชุมคณะอนุกรรมการ: วันเวลาเริ่ม เวลาสิ้นสุด (ไม่บังคับ) และสถานที่ */
+    @Transactional
+    public AcademicRequest scheduleMeeting(Long requestId, LocalDateTime start, LocalTime end,
+            String location, UserDtls changedBy) {
         AcademicRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
+        if (start == null) {
+            throw new IllegalStateException("กรุณาระบุวันประชุม");
+        }
+        if (end != null && !end.isAfter(start.toLocalTime())) {
+            throw new IllegalStateException("เวลาสิ้นสุดการประชุมต้องอยู่หลังเวลาเริ่ม");
+        }
+        LocalDateTime lastMeeting = request.getMeetingDate();
+        boolean revisionRound = request.getCurrentStatus() == RequestStatus.REVISION_SUBMITTED;
+        if (revisionRound && lastMeeting != null && !start.isAfter(lastMeeting)) {
+            throw new IllegalStateException("วันประชุมพิจารณาฉบับแก้ไขต้องอยู่หลังวันประชุมครั้งก่อน ("
+                    + thaiDateTime(lastMeeting) + ")");
+        }
 
-        request.setMeetingDate(meetingDate);
+        request.setMeetingDate(start);
+        request.setMeetingEndTime(end);
         request.setMeetingLocation(location);
         requestRepository.save(request);
 
-        updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
-                "นัดหมายวันประชุม: " + meetingDate.toString());
+        String when = end == null ? thaiDateTime(start)
+                : thaiDateTime(start).replace(" น.", "") + "–%02d:%02d น.".formatted(end.getHour(), end.getMinute());
+        AcademicRequest scheduled = changeStatus(request, RequestStatus.MEETING_SCHEDULED, changedBy,
+                "นัดหมายวันประชุม: " + when, true);
+        if (revisionRound) {
+            // ข้อ 14 — กรรมการต้องรู้วันนัดรอบใหม่และได้เห็นฉบับแก้ (รอบแรกส่งไปกับหนังสือเชิญเอกสารที่ 5)
+            afterCommit.run(() -> events.publishEvent(new RevisionMeetingScheduled(requestId, changedBy)));
+        }
+        return scheduled;
+    }
 
-        return request;
+    private static String thaiDateTime(LocalDateTime at) {
+        return "%d/%d/%d %02d:%02d น.".formatted(at.getDayOfMonth(), at.getMonthValue(), at.getYear() + 543,
+                at.getHour(), at.getMinute());
     }
 
     public AcademicRequest setResultFile(Long requestId, String filePath) {
@@ -1201,7 +1247,8 @@ public class AcademicRequestService {
                 // Doc 6 auto-status is handled separately via /send-suggestion endpoint
             }
             case 5 -> {
-                if (request.getCurrentStatus().canMoveTo(RequestStatus.MEETING_SCHEDULED)) {
+                // หนังสือเชิญเป็นของการประชุมรอบแรก — รอบพิจารณาฉบับแก้ต้องนัดวันใหม่ผ่าน setMeetingDate
+                if (request.getCurrentStatus() == RequestStatus.SUB_COMMITTEE_APPOINTED) {
                     updateStatus(requestId, RequestStatus.MEETING_SCHEDULED, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", sendNotify);
                 }

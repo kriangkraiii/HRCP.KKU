@@ -51,11 +51,19 @@
                         <button type="button" class="btn btn-success" id="btnProceedDoc6">
                             <i class="fas fa-check"></i> บันทึกและดำเนินการเอกสารต่อ
                         </button>
-                        <form th:action="'/admin/academic/request/' + ${request.id} + '/document/6/send-suggestion'" method="post" id="suggestionForm">
+                        <!-- ส่งกลับให้แก้ได้เฉพาะหลังนัดหมายอนุกรรมการ (หรือส่งอีเมลซ้ำระหว่างรอแก้) ตาม RequestStatus.allowedNext -->
+                        <form th:if="${request.currentStatus.name() == 'MEETING_SCHEDULED' or request.currentStatus.name() == 'COMPLETED_REVISE'}"
+                              th:action="'/admin/academic/request/' + ${request.id} + '/document/6/send-suggestion'" method="post" id="suggestionForm">
                             <button type="button" class="btn btn-warning" id="btnSendSuggestion">
                                 <i class="fas fa-envelope"></i> ส่งข้อเสนอแนะถึงผู้ยื่นทางอีเมลเพื่อทำการแก้ไขเอกสาร
                             </button>
                         </form>
+                    </div>
+                    <div th:if="${request.currentStatus.name() == 'REVISION_SUBMITTED'}" class="alert alert-info py-2 mt-2 mb-0 small">
+                        <i class="fas fa-circle-info me-1"></i>
+                        ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว — ตรวจไฟล์แล้ว
+                        <a th:href="'/admin/academic/request/' + ${request.id} + '#revisionMeetingRow'">นัดประชุมพิจารณาฉบับแก้ไข</a>
+                        (ใต้เอกสารที่ 5 ในหน้ารายละเอียดคำร้อง) ก่อนส่งข้อเสนอแนะรอบใหม่
                     </div>
                     <small class="text-muted d-block mt-2">
                         ไม่มีข้อเสนอแนะ หรือมีแต่ไม่ต้องแก้ไขเอกสาร กด "บันทึกและดำเนินการเอกสารต่อ" —

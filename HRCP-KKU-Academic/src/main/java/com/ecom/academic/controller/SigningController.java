@@ -84,6 +84,7 @@ public class SigningController {
     private final com.ecom.academic.service.ApplicantRevisionHold revisionHold;
     /** กรรมการที่ได้รับแต่งตั้งเปิดดูเอกสารของผู้ยื่นได้ — ดู {@link #committeeFiles} */
     private final com.ecom.academic.service.AcademicRequestService academicRequests;
+    private final com.ecom.academic.service.AcademicRevisionService revisions;
 
     public SigningController(SignatureWorkflowService workflow,
             SignedDocumentRenderer renderer,
@@ -96,8 +97,10 @@ public class SigningController {
             DocumentGenerationService documentService,
             com.ecom.service.UploadPaths uploadPaths,
             com.ecom.academic.service.ApplicantRevisionHold revisionHold,
-            com.ecom.academic.service.AcademicRequestService academicRequests) {
+            com.ecom.academic.service.AcademicRequestService academicRequests,
+            com.ecom.academic.service.AcademicRevisionService revisions) {
         this.academicRequests = academicRequests;
+        this.revisions = revisions;
         this.uploadPaths = uploadPaths;
         this.revisionHold = revisionHold;
         this.workflow = workflow;
@@ -417,7 +420,19 @@ public class SigningController {
         model.addAttribute("requestId", requestId);
         model.addAttribute("requestSummary", documentLabelResolver.summaryOf(SignatureModule.ACADEMIC, requestId));
         model.addAttribute("attachments", documentLabelResolver.attachmentsOf(SignatureModule.ACADEMIC, requestId));
+        // ข้อ 14 — ฉบับแก้ที่ผู้ยื่นส่งกลับมา ปลายทางของอีเมลนัดประชุมพิจารณาฉบับแก้ไข
+        model.addAttribute("revisionRounds", revisions.byRound(requestId));
         return "academic/esign/committee_files";
+    }
+
+    @GetMapping("/committee/academic/{requestId}/revision/{fileId}")
+    public ResponseEntity<?> committeeRevision(@PathVariable Long requestId, @PathVariable Long fileId,
+            Principal principal) throws IOException {
+        if (!canViewAsCommittee(requestId, currentUser(principal))) {
+            return ResponseEntity.notFound().build();
+        }
+        java.util.Optional<com.ecom.academic.model.AcademicRevisionFile> file = revisions.find(requestId, fileId);
+        return file.isPresent() ? revisions.serve(file.get()) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/committee/academic/{requestId}/attachment/{attachmentId}")

@@ -67,32 +67,19 @@
                     <h5><i class="fas fa-tasks me-2"></i>สถานะการดำเนินการ</h5>
                 </div>
                 <div class="section-card-body">
-                    <div class="timeline-v2" th:with="pIdx=${request.currentStatus.progressIndex()}">
-                        <!-- เส้นทางหลัก -->
-                        <!-- ขั้นสุดท้ายที่ไปถึงแล้ว = จบกระบวนการ ใช้ t-final (เขียวเข้ม) ไม่ใช่ t-active (ฟ้า/กระพริบ) -->
+                    <!-- เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ (ขั้นถัดจากสถานะปัจจุบัน) — กติกาอยู่ที่ RequestStatus.stepStateAt -->
+                    <div class="timeline-v2" th:with="cur=${request.currentStatus}">
                         <div th:each="step, stepStat : ${progressSteps}" class="timeline-v2-step"
-                            th:classappend="${pIdx > stepStat.index} ? 't-completed' :
-                                     (${pIdx == stepStat.index} ? (${stepStat.last} ? 't-final' : 't-active') : '')">
+                            th:with="st=${cur.stepStateAt(stepStat.index)}, icon=${st.iconFor(step)}"
+                            th:classappend="${st.timelineClass}">
                             <div class="timeline-v2-icon">
-                                <i th:class="'fas ' + ${step.icon}" th:if="${pIdx >= stepStat.index}"></i>
-                                <i class="fas fa-circle u-fs-0-45rem" th:unless="${pIdx >= stepStat.index}"></i>
+                                <i th:if="${icon != null}" th:class="'fas ' + ${icon}"></i>
+                                <i class="fas fa-circle u-fs-0-45rem" th:if="${icon == null}"></i>
                             </div>
-                            <div class="timeline-v2-label" th:text="${step.thaiLabel}"></div>
+                            <div class="timeline-v2-label" th:text="${step.stepLabel}"></div>
+                            <div class="timeline-v2-hint" th:if="${stepStat.index == cur.focusIndex()}"
+                                th:text="${cur.stepHint}"></div>
                         </div>
-
-                        <!-- ขั้นตอนที่แตกออกจากเส้นทางหลัก (แก้ไข / ไม่ผ่าน / ไม่รับคำร้อง) -->
-                        <th:block th:if="${request.currentStatus.name() == 'COMPLETED_REVISE'}">
-                            <div class="timeline-v2-step t-revise">
-                                <div class="timeline-v2-icon"><i class="fas fa-circle-exclamation"></i></div>
-                                <div class="timeline-v2-label">แจ้งผล - แก้ไข</div>
-                            </div>
-                        </th:block>
-                        <th:block th:if="${request.currentStatus.name() == 'COMPLETED_FAIL'}">
-                            <div class="timeline-v2-step t-rejected">
-                                <div class="timeline-v2-icon"><i class="fas fa-circle-xmark"></i></div>
-                                <div class="timeline-v2-label">แจ้งผล - ไม่ผ่าน</div>
-                            </div>
-                        </th:block>
                     </div>
                 </div>
             </div>
@@ -108,19 +95,89 @@
                 <i class="fas fa-exclamation-triangle"></i>
                 <div>
                     <span>ต้องแก้ไขเอกสาร</span>
-                    <div class="ra-detail">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์
-                        และแนบไฟล์ฉบับแก้ไขด้านล่าง เพื่อให้เจ้าหน้าที่ส่งต่อคณะอนุกรรมการ</div>
-                    <!-- Flow ข้อ 13 — เดิมมีปลายทางรับไฟล์แต่ไม่มีฟอร์ม ผู้ยื่นจึงส่งฉบับแก้ในระบบไม่ได้ -->
-                    <form th:action="@{'/user/academic/upload-revision/' + ${request.id}}" method="post"
-                          enctype="multipart/form-data" class="d-flex flex-wrap gap-2 mt-2">
-                        <input type="file" name="file" class="form-control form-control-sm w-auto" required
-                               accept=".pdf,.doc,.docx,.zip">
-                        <button type="submit" class="btn btn-warning btn-sm">
-                            <i class="fas fa-upload me-1"></i> ส่งเอกสารที่แก้ไขแล้ว
-                        </button>
+                    
+                    <!-- Flow ข้อ 13 — แนบได้หลายไฟล์และลิงก์ ส่งพร้อมกันทั้งชุดแล้วสถานะจึงเปลี่ยน -->
+                    <form id="revisionForm" th:action="@{'/user/academic/upload-revision/' + ${request.id}}" method="post"
+                          enctype="multipart/form-data" class="revision-form mt-2"
+                          th:attr="data-max-items=${revisionMaxItems}">
+                        <div class="d-flex flex-wrap gap-2">
+                            <label class="btn btn-outline-secondary btn-sm mb-0">
+                                <i class="fas fa-paperclip me-1"></i> เลือกไฟล์
+                                <input type="file" id="revisionFilePicker" class="d-none" multiple
+                                       accept=".pdf,.doc,.docx,.zip">
+                            </label>
+                            <button type="button" id="revisionShowLink" class="btn btn-outline-secondary btn-sm">
+                                <i class="fas fa-link me-1"></i> เพิ่มลิงก์
+                            </button>
+                        </div>
+                        <div id="revisionLinkRow" class="input-group input-group-sm mt-2 d-none">
+                            <input type="url" id="revisionLinkUrl" class="form-control" placeholder="https://drive.google.com/...">
+                            <input type="text" id="revisionLinkTitle" class="form-control" placeholder="ชื่อเอกสาร (ไม่บังคับ)">
+                            <button type="button" id="revisionAddLink" class="btn btn-secondary">
+                                <i class="fas fa-plus me-1"></i> เพิ่ม
+                            </button>
+                        </div>
+                        <div id="revisionLinkError" class="small text-danger mt-1 d-none"></div>
+
+                        <!-- ไฟล์และลิงก์ที่จะส่งจริง สคริปต์เติมจากรายการที่ผู้ยื่นเลือก -->
+                        <input type="file" name="files" id="revisionFilesField" class="d-none" multiple>
+                        <div id="revisionLinkFields"></div>
+
+                        <div class="revision-pending mt-2">
+                            <div class="small fw-semibold mb-1">เอกสารที่แนบ (<span id="revisionCount">0</span>)</div>
+                            <ul id="revisionPendingList" class="revision-files"></ul>
+                            <div id="revisionEmpty" class="small text-muted">ยังไม่ได้แนบเอกสาร</div>
+                        </div>
+                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mt-2">
+                            <small class="text-muted">.pdf, .doc, .docx, .zip ไฟล์ละไม่เกิน 75 MB รวมไม่เกิน 100 MB
+                                · สูงสุด [[${revisionMaxItems}]] รายการ</small>
+                            <button type="button" id="revisionSubmitBtn" class="btn btn-warning btn-sm" disabled>
+                                <i class="fas fa-upload me-1"></i> ส่งเอกสารที่แก้ไขแล้ว
+                            </button>
+                        </div>
                     </form>
                 </div>
             </div>
+
+            <!-- ฉบับแก้ที่ส่งไปแล้ว — ผู้ยื่นตรวจได้ว่าส่งอะไรไปบ้าง ในแต่ละรอบ -->
+            <div th:if="${!revisionRounds.isEmpty()}" class="section-card mb-4" id="revisionHistory">
+                <div class="section-card-header">
+                    <h5><i class="fas fa-file-pen me-2"></i>เอกสารฉบับแก้ไขที่ส่งแล้ว</h5>
+                </div>
+                <div class="section-card-body">
+                    <div th:replace="~{academic/_revision_files :: list(${revisionRounds}, '/user/academic/request/' + ${request.id} + '/revision/')}"></div>
+                </div>
+            </div>
+
+            <!-- ยืนยันก่อนส่งฉบับแก้ — ข้อความเดียวกับตอนยื่นคำร้อง -->
+            <div th:if="${request.currentStatus.name() == 'COMPLETED_REVISE'}" class="modal fade" id="confirmRevisionModal"
+                 tabindex="-1" aria-labelledby="confirmRevisionModalLabel" aria-hidden="true">
+                <div class="modal-dialog modal-dialog-centered">
+                    <div class="modal-content">
+                        <div class="modal-header bg-warning-subtle border-warning">
+                            <h5 class="modal-title" id="confirmRevisionModalLabel">
+                                <i class="fas fa-exclamation-triangle text-warning me-2"></i> ข้อควรทราบก่อนส่งเอกสารที่แก้ไข
+                            </h5>
+                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                        </div>
+                        <div class="modal-body text-center py-4">
+                            <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                            <p class="fs-5 mb-3">กรุณาตรวจสอบความถูกต้อง และนำส่งเอกสารฉบับพิมพ์ (กระดาษ)<br>ให้นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</p>
+                            <div class="text-start small">
+                                <div class="fw-semibold mb-1">เอกสารที่จะส่ง (<span id="revisionConfirmCount">0</span>)</div>
+                                <ul id="revisionConfirmList" class="revision-files mb-0"></ul>
+                            </div>
+                        </div>
+                        <div class="modal-footer justify-content-center border-0 pb-4">
+                            <button type="button" class="btn btn-outline-secondary btn-lg" data-bs-dismiss="modal">ยกเลิก</button>
+                            <button type="submit" form="revisionForm" id="revisionConfirmSubmit" class="btn btn-academic btn-lg px-4">
+                                <i class="fas fa-check-circle me-2"></i> รับทราบ และส่งเอกสาร
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script th:if="${request.currentStatus.name() == 'COMPLETED_REVISE'}" th:src="@{/js/revision_upload.js}"></script>
             <!-- ข้อเสนอแนะจากคณะอนุกรรมการ (เอกสารที่ 6) — ขึ้นเมื่อแจ้งผู้ยื่นแล้วเท่านั้น -->
             <div th:if="${committeeSuggestions != null}" class="result-alert"
                  th:classappend="${request.currentStatus.name() == 'COMPLETED_REVISE'} ? 'ra-revise' : 'ra-pass'"

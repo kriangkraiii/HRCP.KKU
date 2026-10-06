@@ -47,6 +47,15 @@
             </div>
 
             <div class="col-lg-8">
+                <!--/* ข้อ 14 — ฉบับแก้ที่ผู้ยื่นส่งกลับมา: กรรมการพิจารณาในการประชุมรอบใหม่ */-->
+                <div th:if="${!revisionRounds.isEmpty()}" class="card card-academic mb-3" id="committeeRevisionFiles">
+                    <div class="card-header bg-white">
+                        <i class="fas fa-file-pen text-warning"></i> เอกสารฉบับแก้ไขจากผู้ยื่น
+                    </div>
+                    <div class="card-body py-2">
+                        <div th:replace="~{academic/_revision_files :: list(${revisionRounds}, '/esign/committee/academic/' + ${requestId} + '/revision/')}"></div>
+                    </div>
+                </div>
                 <div class="card card-academic">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <span><i class="fas fa-paperclip"></i> เอกสารที่ผู้ยื่นแนบ</span>

@@ -197,7 +197,7 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
                 .as("ข้อ 8 — ผลการประเมินจากคณะอนุกรรมการ")
                 .isEqualTo(RequestStatus.COMPLETED_PASS);
         assertThat(academicService.getDocumentsByType(id, 7).get(0).getJsonData())
-                .as("คะแนน 4.5 ทั้งสี่ส่วน = 90 คะแนน ต้องได้ระดับ 'เชี่ยวชาญ'")
+                .as("คะแนน 5/4/5/4 = 90 คะแนน ต้องได้ระดับ 'เชี่ยวชาญ'")
                 .contains("\"eval_result_level\":\"เชี่ยวชาญ\"");
 
         // --- ข้อ 9-10: คณะกรรมการประจำวิทยาลัยฯ ประชุมรับรองผลประเมินการสอน ---
@@ -512,13 +512,15 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
      * directly, as this test first tried, is silently ignored and the request
      * scores zero, which reads as "ไม่ผ่าน".
      *
-     * <p>4.5 in every section gives (4.5/5) × 100 = 90 → เชี่ยวชาญ.
+     * <p>Section scores are whole numbers only. 5/4/5/4 with weights 20/30/30/20
+     * gives 20 + 24 + 30 + 16 = 90 → เชี่ยวชาญ.
      */
     private Map<String, String> evaluationScoreFields() {
         Map<String, String> fields = new LinkedHashMap<>();
-        for (int section = 1; section <= 4; section++) {
-            fields.put("sec_score_" + section, "4.5");
-        }
+        fields.put("sec_score_1", "5");
+        fields.put("sec_score_2", "4");
+        fields.put("sec_score_3", "5");
+        fields.put("sec_score_4", "4");
         fields.put("evaluator_name", officer.getName());
         return officerFields(fields);
     }

@@ -2198,6 +2198,8 @@ public class DocumentGenerationService {
             Map.entry("dean_qualification_status", "...(เข้าข่าย/ไม่เข้าข่าย)"),
             Map.entry("head_sign_date", "........เดือน.................พ.ศ......"),
             Map.entry("dean_sign_date", "........เดือน.................พ.ศ. ........"),
+            // ตำแหน่งใต้ชื่อคณบดี — เติมเฉพาะเมื่อลงนามในฐานะรักษาการแทน (SignerNameResolver)
+            Map.entry("dean_position_line", ".................................................."),
             Map.entry("s3_meeting_no", "......."),
             Map.entry("s3_meeting_date", "................"),
             Map.entry("s3_university", "................(มหาวิทยาลัย/สถาบัน)................................"),

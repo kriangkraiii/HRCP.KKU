@@ -1,0 +1,88 @@
+/* ============================================================
+   Dev Form Filler — โหลดเฉพาะ app.auth.mode=dev (dev_form_filler.js)
+   แถบเส้นประสีอำพัน ให้ดูออกทันทีว่าไม่ใช่ส่วนของระบบจริง
+   ============================================================ */
+
+.dev-fill-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.75rem;
+    margin-bottom: 1rem;
+    padding: 0.6rem 0.85rem;
+    border: 1.5px dashed #d97706;
+    border-radius: 0.5rem;
+    background: #fffbeb;
+    color: #78350f;
+    font-size: 0.9rem;
+}
+
+.dev-fill-tag {
+    padding: 0.1rem 0.45rem;
+    border-radius: 0.25rem;
+    background: #d97706;
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+.dev-fill-btn {
+    background: #f59e0b;
+    border: 0;
+    color: #1f1300;
+    font-weight: 600;
+}
+
+.dev-fill-btn:hover,
+.dev-fill-btn:focus-visible {
+    background: #d97706;
+    color: #fff;
+}
+
+.dev-fill-status[data-tone="ok"],
+.dev-fill-log li[data-tone="ok"] { color: #15803d; }
+
+.dev-fill-status[data-tone="warn"],
+.dev-fill-log li[data-tone="warn"] { color: #b45309; }
+
+.dev-fill-status[data-tone="error"],
+.dev-fill-log li[data-tone="error"] { color: #b91c1c; }
+
+.dev-fill-log {
+    flex-basis: 100%;
+    margin: 0;
+    padding-left: 1.25rem;
+    font-size: 0.85rem;
+}
+
+.dev-fill-log:empty {
+    display: none;
+}
+
+/* ต้องมี layout จริง (ไม่ใช่ display:none) — ตัวกรอกข้ามช่องที่มองไม่เห็น */
+.dev-fill-frame {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 1280px;
+    height: 900px;
+    border: 0;
+    opacity: 0;
+    pointer-events: none;
+}
+
+[data-theme="dark"] .dev-fill-bar {
+    background: rgba(245, 158, 11, 0.08);
+    border-color: #b45309;
+    color: #fcd34d;
+}
+
+[data-theme="dark"] .dev-fill-status[data-tone="ok"],
+[data-theme="dark"] .dev-fill-log li[data-tone="ok"] { color: #4ade80; }
+
+[data-theme="dark"] .dev-fill-status[data-tone="warn"],
+[data-theme="dark"] .dev-fill-log li[data-tone="warn"] { color: #fbbf24; }
+
+[data-theme="dark"] .dev-fill-status[data-tone="error"],
+[data-theme="dark"] .dev-fill-log li[data-tone="error"] { color: #f87171; }

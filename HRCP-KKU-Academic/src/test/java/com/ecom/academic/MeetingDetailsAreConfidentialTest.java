@@ -126,7 +126,9 @@ class MeetingDetailsAreConfidentialTest extends AbstractFlowTest {
 
         assertThat(html)
                 .as("ช่องกรอกวันนัดและสถานที่ต้องยังอยู่ฝั่งเจ้าหน้าที่")
-                .contains("name=\"meetingDate\"")
+                .contains("name=\"meetingDay\"")
+                .contains("name=\"meetingStart\"")
+                .contains("name=\"meetingEnd\"")
                 .contains("name=\"meetingLocation\"")
                 .contains(SECRET_LOCATION);
     }

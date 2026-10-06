@@ -32,10 +32,16 @@
         return node;
     }
 
-    function search(q, role) {
+    // context: ช่องไหนของเอกสารไหน (inviteContext) — เซิร์ฟเวอร์ใช้หาผู้รักษาการแทนของตำแหน่งนั้น
+    function search(q, role, context) {
         var params = new URLSearchParams();
         if (q) params.set('q', q);
         if (role) params.set('role', role);
+        if (context && context.module) {
+            params.set('module', context.module);
+            params.set('documentType', String(context.documentType));
+            params.set('field', context.field);
+        }
         return fetch('/api/people?' + params.toString(), { headers: { 'Accept': 'application/json' } })
             .then(function (r) { return r.ok ? r.json() : []; })
             .catch(function () { return []; });
@@ -53,6 +59,8 @@
         this.selectedName = null;
         this.timer = null;
         this.seq = 0;
+        // dev_form_filler.js เลือกผู้ลงนามผ่านตัว picker เพื่อให้ช่องรหัสบัญชีซ่อนตรงกับชื่อ
+        input.__personPicker = this;
         this.build();
     }
 
@@ -159,10 +167,15 @@
         // ช่องที่แสดงชื่อคนที่เลือกอยู่ — โฟกัสแล้วแสดงคนที่แนะนำ ไม่ใช่ค้นด้วยชื่อเดิม
         if (q === this.selectedName) q = '';
         var seq = ++this.seq;
-        search(q, this.role).then(function (people) {
+        this.searchPeople(q).then(function (people) {
             // ผลที่กลับมาช้ากว่าการเลือกหรือการพิมพ์ครั้งถัดไป — ไม่ใช่รายการที่ต้องแสดงแล้ว
             if (seq === self.seq) self.render(people, q);
         });
+    };
+
+    /** ค้นรายชื่อสำหรับช่องนี้ — dev_form_filler.js ใช้ทางเดียวกันเพื่อให้ได้รายการเดียวกับที่ผู้ใช้เห็น */
+    Picker.prototype.searchPeople = function (q) {
+        return search(q, this.role, this.inviteContext());
     };
 
     /** รหัสบัญชีที่ช่องอื่นในกลุ่มเดียวกันเลือกไว้แล้ว */
@@ -216,8 +229,9 @@
             item.type = 'button';
             item.appendChild(el('div', 'fw-semibold', p.name));
             var detail = [p.position, p.affiliation, p.email].filter(Boolean).join(' · ');
-            if (detail || p.external) {
+            if (detail || p.external || p.acting) {
                 var line = el('div', 'small text-muted', detail);
+                if (p.acting) line.appendChild(el('span', 'badge bg-warning-subtle text-warning-emphasis ms-1', 'รักษาการแทน'));
                 if (p.external) line.appendChild(el('span', 'badge bg-secondary-subtle text-secondary ms-1', 'ภายนอก'));
                 item.appendChild(line);
             }

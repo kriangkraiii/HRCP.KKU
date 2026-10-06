@@ -48,6 +48,14 @@ public class DocumentWorkflowConfigService {
         this.userRepository = userRepository;
     }
 
+    /** ผู้รักษาการแทน — ไม่มี (เช่นในเทสที่สร้าง service เอง) ก็ใช้ผู้ลงนามเริ่มต้นตามเดิม */
+    private ActingSignerService actingSigners;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setActingSigners(ActingSignerService actingSigners) {
+        this.actingSigners = actingSigners;
+    }
+
     /**
      * Returns the active signature slots for a document, in configured step order.
      * Falls back to SignatureAnchorRegistry if no database config exists yet.
@@ -102,9 +110,11 @@ public class DocumentWorkflowConfigService {
     /**
      * Returns default signer user IDs for each slotKey of a document.
      * Prefers custom config from DB; falls back to automatic role matching from staff members.
+     * A slot with an acting signer switched on goes to the acting signer instead of either.
      */
     public Map<String, Integer> defaultSignerUserIds(SignatureModule module, int documentType) {
         Map<String, Integer> defaults = new HashMap<>();
+        Map<String, ActingSignerService.Acting> acting = actingSigners != null ? actingSigners.allActive() : Map.of();
         List<DocumentWorkflowConfig> configs = repository.findByModuleAndDocumentType(module, documentType);
         Map<String, DocumentWorkflowConfig> configMap = new HashMap<>();
         if (configs != null) {
@@ -115,6 +125,12 @@ public class DocumentWorkflowConfigService {
 
         List<SignatureSlot> slots = registry.slotsFor(module, documentType);
         for (SignatureSlot slot : slots) {
+            ActingSignerService.Acting actingSigner = acting.get(slot.slotKey());
+            if (actingSigner != null) {
+                defaults.put(slot.slotKey(), actingSigner.user().getId());
+                continue;
+            }
+
             DocumentWorkflowConfig cfg = configMap.get(slot.slotKey());
             if (cfg != null && cfg.getDefaultSigner() != null) {
                 defaults.put(slot.slotKey(), cfg.getDefaultSigner().getId());

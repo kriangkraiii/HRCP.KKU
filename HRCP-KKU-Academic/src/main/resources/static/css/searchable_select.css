@@ -233,3 +233,80 @@
 [data-theme="dark"] .searchable-select-empty {
     color: #94a3b8;
 }
+
+/* ============================================================
+   Datalist combo — ช่องพิมพ์อิสระที่มีรายการให้เลือก (select_to_datalist.js)
+   ใช้หน้าตาเดียวกับ Searchable Select ด้านบน แต่รายการแขวนไว้ที่ <body>
+   แบบ fixed เพื่อไม่ให้ถูกตัดใน .table-responsive หรือการ์ดที่ overflow
+   ============================================================ */
+
+.dl-combo-input {
+    padding-right: 2.25rem;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236c757d' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.75rem center;
+    background-size: 14px 10px;
+    cursor: pointer;
+}
+
+.dl-combo-input:focus {
+    cursor: text;
+}
+
+.dl-combo-input[readonly],
+.dl-combo-input:disabled {
+    background-image: none;
+    cursor: default;
+}
+
+.dl-combo-menu.searchable-select-dropdown {
+    position: fixed;
+    right: auto;
+    z-index: 1070;
+    margin: 4px 0 0;
+    padding: 4px;
+}
+
+.dl-combo-menu.searchable-select-dropdown.is-dropup {
+    margin: 0 0 4px;
+}
+
+.dl-combo-menu .searchable-select-item {
+    border-bottom: 0;
+    border-radius: 0.375rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.95rem;
+}
+
+.dl-combo-menu .searchable-select-item + .searchable-select-item {
+    margin-top: 2px;
+}
+
+.dl-combo-menu .searchable-select-item.is-selected::after {
+    content: "\f00c";
+    font-family: "Font Awesome 6 Free", "Font Awesome 5 Free";
+    font-weight: 900;
+    float: right;
+    font-size: 0.8rem;
+    line-height: 1.6;
+}
+
+[data-theme="dark"] .dl-combo-input {
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%239ca3af' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='m2 5 6 6 6-6'/%3e%3c/svg%3e");
+}
+
+[data-theme="dark"] .dl-combo-input[readonly],
+[data-theme="dark"] .dl-combo-input:disabled {
+    background-image: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+    .dl-combo-menu.show {
+        animation: dl-combo-in var(--duration-fast, 150ms) var(--ease-out-quart, ease-out);
+    }
+}
+
+@keyframes dl-combo-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: none; }
+}

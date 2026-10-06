@@ -17,6 +17,7 @@ import com.ecom.academic.dto.DocumentWorkflowSlotDTO;
 import com.ecom.academic.dto.SignerOptionDTO;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.StaffMember;
+import com.ecom.academic.service.ActingSignerService;
 import com.ecom.academic.service.DocumentWorkflowConfigService;
 import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
@@ -30,14 +31,17 @@ public class DocumentWorkflowConfigController {
     private final DocumentWorkflowConfigService workflowConfigService;
     private final StaffMemberService staffMemberService;
     private final UserRepository userRepository;
+    private final ActingSignerService actingSigners;
 
     public DocumentWorkflowConfigController(
             DocumentWorkflowConfigService workflowConfigService,
             StaffMemberService staffMemberService,
-            UserRepository userRepository) {
+            UserRepository userRepository,
+            ActingSignerService actingSigners) {
         this.workflowConfigService = workflowConfigService;
         this.staffMemberService = staffMemberService;
         this.userRepository = userRepository;
+        this.actingSigners = actingSigners;
     }
 
     @GetMapping
@@ -72,6 +76,7 @@ public class DocumentWorkflowConfigController {
         availableSigners.sort(java.util.Comparator.comparing(SignerOptionDTO::displayName,
                 java.util.Comparator.nullsLast(String::compareToIgnoreCase)));
         model.addAttribute("availableSigners", availableSigners);
+        model.addAttribute("actingRows", actingSigners.rows());
 
         return "academic/admin/signer_settings";
     }
@@ -124,6 +129,43 @@ public class DocumentWorkflowConfigController {
 
         workflowConfigService.saveConfigs(dtos);
         redirectAttributes.addFlashAttribute("succMsg", "บันทึกการตั้งค่าผู้ลงนามและลำดับขั้นตอนเรียบร้อยแล้ว");
+        return "redirect:/admin/academic/settings/signers";
+    }
+
+    /**
+     * เปิด/ปิดการรักษาการแทนของหนึ่งตำแหน่ง — มีผลกับช่องของตำแหน่งนั้นในทุกเอกสาร
+     * เฉพาะซองที่ส่งลงนามหลังจากนี้ ซองที่ส่งไปแล้วยังรอผู้ลงนามเดิม
+     */
+    @PostMapping("/acting")
+    public String saveActing(
+            @RequestParam("slotKey") String slotKey,
+            @RequestParam(value = "active", defaultValue = "false") boolean active,
+            @RequestParam(value = "actingUserId", required = false) String actingUserId,
+            @RequestParam(value = "positionTitle", required = false) String positionTitle,
+            java.security.Principal principal,
+            RedirectAttributes redirectAttributes) {
+        Integer userId = null;
+        if (actingUserId != null && !actingUserId.isBlank()) {
+            try {
+                userId = Integer.valueOf(actingUserId.trim());
+            } catch (NumberFormatException ignored) {
+                // เลือกไม่ได้ก็เหมือนไม่ได้เลือก — save() บอกให้เลือกเอง
+            }
+        }
+        String label = ActingSignerService.ROLES.stream()
+                .filter(r -> r.slotKey().equals(slotKey))
+                .map(ActingSignerService.Role::label)
+                .findFirst()
+                .orElse("");
+        try {
+            UserDtls actor = principal == null ? null : userRepository.findByEmail(principal.getName());
+            actingSigners.save(slotKey, active, userId, positionTitle, actor);
+            redirectAttributes.addFlashAttribute("succMsg", active
+                    ? "เปิดการรักษาการแทน" + label + "แล้ว — มีผลกับเอกสารที่ส่งลงนามหลังจากนี้"
+                    : "ปิดการรักษาการแทน" + label + "แล้ว — เอกสารที่ส่งลงนามหลังจากนี้กลับไปใช้ผู้ลงนามตามปกติ");
+        } catch (IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+        }
         return "redirect:/admin/academic/settings/signers";
     }
 

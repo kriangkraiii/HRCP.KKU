@@ -35,6 +35,15 @@ public class AuthModeProperties {
         return MODE_PRODUCTION.equals(mode) || "sso".equals(mode);
     }
 
+    /**
+     * Exactly {@code dev} — not merely "not SSO". Developer-only tools such as the
+     * test-data form filler key off this, so an unrecognised mode value never
+     * switches them on.
+     */
+    public boolean isDevMode() {
+        return MODE_DEV.equals(mode);
+    }
+
     /** Local password login is available only outside SSO mode. */
     public boolean isPasswordLoginEnabled() {
         return !isSsoMode();

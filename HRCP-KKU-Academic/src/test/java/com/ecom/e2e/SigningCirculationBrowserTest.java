@@ -504,9 +504,17 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
             shot("no-revision-upload");
             throw new AssertionError("ข้อ 13: ผู้ยื่นไม่มีช่องทางส่งเอกสารที่แก้ไขแล้วกลับมาในหน้าคำร้อง");
         }
-        upload.locator("input[type='file']").setInputFiles(new com.microsoft.playwright.options.FilePayload(
+        upload.locator("#revisionFilePicker").setInputFiles(new com.microsoft.playwright.options.FilePayload(
                 "เอกสารประเมินการสอน-แก้ไข.pdf", "application/pdf", "%PDF-1.4 revised".getBytes()));
-        clickAndSettle(upload.locator("button[type='submit']"), "ผู้ยื่นส่งฉบับแก้ไข");
+        assertThat(page.locator("#revisionPendingList").innerText())
+                .as("ข้อ 13 — ไฟล์ที่เลือกต้องขึ้นในรายการเอกสารที่แนบก่อนส่ง")
+                .contains("เอกสารประเมินการสอน-แก้ไข.pdf");
+        page.locator("#revisionSubmitBtn").click();
+        page.locator("#confirmRevisionModal.show").waitFor();
+        assertThat(page.locator("#confirmRevisionModal").innerText())
+                .as("ข้อ 13 — ก่อนส่งต้องเตือนให้นำส่งฉบับพิมพ์ (กระดาษ)แก่นักทรัพยากรบุคคล")
+                .contains("ฉบับพิมพ์ (กระดาษ)");
+        clickAndSettle(page.locator("#revisionConfirmSubmit"), "ผู้ยื่นส่งฉบับแก้ไข");
         assertNoErrorFlash("ผู้ยื่นส่งฉบับแก้ไข");
         awaitStatus(id, RequestStatus.REVISION_SUBMITTED, "ข้อ 13 — ส่งเอกสารที่แก้ไขแล้ว");
         signOut();
@@ -514,7 +522,7 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         // ---------- ข้อ 14-15: เจ้าหน้าที่เห็นไฟล์ฉบับแก้ ส่งอนุฯ และนัดประชุมใหม่ ----------
         signIn(TestDataFactory.ADMIN_EMAIL, TestDataFactory.PASSWORD);
         page.navigate(baseUrl() + "/admin/academic/request/" + id);
-        Locator revisionLink = page.locator("a[href*='/revision-file']");
+        Locator revisionLink = page.locator("#revisionFilesAdmin a[href*='/revision/']");
         assertThat(revisionLink.count()).as("ข้อ 14 — เจ้าหน้าที่ต้องเปิดไฟล์ที่ผู้ยื่นแก้ไขมาได้").isPositive();
         var download = page.waitForDownload(() -> revisionLink.first().click());
         assertThat(download.suggestedFilename()).contains("แก้ไข");
@@ -752,6 +760,14 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                     + form.locator("select[name='status']").innerText().replaceAll("\\s+", " "));
         }
         form.locator("select[name='status']").selectOption(status);
+        // ข้อ 15 — นัดประชุมรอบพิจารณาฉบับแก้ไขต้องกรอกวันใหม่ (ปฏิทินไทย + ช่องเวลา 24 ชั่วโมง)
+        if (form.locator(".meeting-fields[data-required]").count() > 0) {
+            form.locator("[name='meetingDay']").evaluate("(el, v) => { el.value = v; el.dispatchEvent(new Event('change')); }",
+                    java.time.LocalDate.now().plusDays(7).toString());
+            form.locator("[data-target='meetingStart'] .time24-input").fill("09:00");
+            form.locator("[data-target='meetingEnd'] .time24-input").fill("12:00");
+            form.locator("[data-target='meetingEnd'] .time24-input").blur();
+        }
         Locator noteField = form.locator("[name='note']");
         if (noteField.count() > 0) {
             noteField.first().fill(note);

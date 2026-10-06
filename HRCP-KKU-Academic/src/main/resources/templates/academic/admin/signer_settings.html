@@ -298,6 +298,86 @@
             </div>
         </div>
 
+        <!-- ==================== ACTING SIGNERS (รักษาการแทน) ==================== -->
+        <!-- แต่ละตำแหน่งมีฟอร์มของตัวเอง และอยู่นอก signerMatrixForm (ฟอร์มซ้อนกันไม่ได้) -->
+        <div class="matrix-header-card p-4 mb-4" id="actingSigners">
+            <h3 class="h5 fw-bold mb-1 d-flex align-items-center gap-2">
+                <i class="fa-solid fa-user-clock text-warning"></i>
+                ผู้รักษาการแทน
+            </h3>
+            <p class="text-secondary small mb-3">
+                ตั้งครั้งเดียวต่อหนึ่งตำแหน่ง แล้วใช้กับช่องลงนามของตำแหน่งนั้นในทุกเอกสาร ทั้งหมวดที่ 1 และ 2
+                เอกสารพิมพ์ตำแหน่งใต้ชื่อว่า "รักษาการแทน" ตามด้วยตำแหน่งเต็มที่กรอก
+                — มีผลกับเอกสารที่ส่งลงนามหลังจากบันทึกเท่านั้น เอกสารที่ส่งไปแล้วยังรอผู้ลงนามเดิม
+            </p>
+            <div class="row g-3">
+                <div class="col-lg-4" th:each="row : ${actingRows}">
+                    <form th:action="@{/admin/academic/settings/signers/acting}" method="post"
+                          class="border rounded-3 p-3 h-100 d-flex flex-column gap-2 acting-signer-form"
+                          th:attr="data-slot=${row.role.slotKey}">
+                        <input type="hidden" name="slotKey" th:value="${row.role.slotKey}">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="fw-bold" th:text="${row.role.label}">คณบดี</span>
+                            <span th:if="${row.active}" class="badge bg-warning-subtle text-warning-emphasis">เปิดอยู่</span>
+                            <span th:unless="${row.active}" class="badge bg-secondary-subtle text-secondary">ปิดอยู่</span>
+                        </div>
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" role="switch" name="active" value="true"
+                                   th:id="'actingActive_' + ${row.role.slotKey}" th:checked="${row.active}">
+                            <label class="form-check-label small" th:for="'actingActive_' + ${row.role.slotKey}">
+                                เปิดใช้การรักษาการแทน
+                            </label>
+                        </div>
+                        <div>
+                            <label class="form-label small mb-1" th:for="'actingUser_' + ${row.role.slotKey}">ผู้รักษาการแทน</label>
+                            <select name="actingUserId" class="form-select form-select-sm searchable-select"
+                                    th:id="'actingUser_' + ${row.role.slotKey}">
+                                <option value="">— เลือกผู้รักษาการแทน —</option>
+                                <option th:each="signer : ${availableSigners}"
+                                        th:value="${signer.userId}"
+                                        th:selected="${signer.userId != null and signer.userId == row.userId}"
+                                        th:attr="data-department=${signer.department}"
+                                        th:text="${signer.displayName} + ' (' + ${signer.email} + ')'">
+                                    อาจารย์ (user@kku.ac.th)
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label small mb-1" th:for="'actingPosition_' + ${row.role.slotKey}">
+                                ตำแหน่งที่รักษาการแทน
+                            </label>
+                            <div class="input-group input-group-sm">
+                                <span class="input-group-text">รักษาการแทน</span>
+                                <input type="text" name="positionTitle" class="form-control" maxlength="255"
+                                       th:id="'actingPosition_' + ${row.role.slotKey}"
+                                       th:value="${row.positionTitle}"
+                                       th:placeholder="${row.role.example}"
+                                       th:attr="data-auto=${row.suggested}">
+                            </div>
+                            <div class="form-text">
+                                ระบบเขียนตำแหน่งเต็มให้แล้ว แก้ได้ถ้าไม่ตรง<span th:if="${row.role.slotKey == 'head'}">
+                                — เลือกผู้รักษาการแทนแล้วระบบเติมสาขาวิชาของผู้นั้นให้</span>
+                            </div>
+                        </div>
+                        <div class="small text-secondary" th:if="${row.userName != null and !#strings.isEmpty(row.printedPosition())}">
+                            พิมพ์ในเอกสาร:
+                            <div class="text-body">(<span th:text="${row.userName}">ชื่อ</span>)</div>
+                            <div class="text-body" th:text="${row.printedPosition()}">รักษาการแทนคณบดีวิทยาลัยการคอมพิวเตอร์</div>
+                        </div>
+                        <div class="small text-muted" th:if="${row.updatedAt != null}">
+                            แก้ไขล่าสุด <span th:text="${#temporals.format(row.updatedAt, 'd/M/yyyy HH:mm')}">-</span>
+                            <span th:if="${row.updatedBy != null}" th:text="'โดย ' + ${row.updatedBy}"></span>
+                        </div>
+                        <div class="mt-auto pt-1">
+                            <button type="submit" class="btn btn-sm btn-primary">
+                                <i class="fa-solid fa-floppy-disk me-1"></i>บันทึก
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- ==================== ALERT NOTIFICATIONS ==================== -->
 
         <!-- ==================== TABS & FILTER TOOLBAR ==================== -->
@@ -580,6 +660,8 @@
         </form>
 
     </div>
+
+    <script th:src="@{/js/acting_signer_settings.js}"></script>
 
     <!-- ==================== JAVASCRIPT LOGIC ==================== -->
     <script>

@@ -397,9 +397,9 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
                     "ส่งเอกสารที่แก้ไขแล้ว", false);
             assertThat(statusOf(request)).isEqualTo(RequestStatus.REVISION_SUBMITTED);
 
-            // ข้อ 14-15 — เจ้าหน้าที่ส่งเข้าที่ประชุมอนุกรรมการอีกรอบ
-            service.updateStatus(request.getId(), RequestStatus.MEETING_SCHEDULED, staff,
-                    "นัดประชุมพิจารณาเอกสารที่แก้ไข", false);
+            // ข้อ 14-15 — เจ้าหน้าที่ส่งเข้าที่ประชุมอนุกรรมการอีกรอบ (ต้องมีวันประชุมรอบใหม่)
+            service.setMeetingDate(request.getId(), java.time.LocalDateTime.now().plusDays(7),
+                    "ห้องประชุม", staff);
 
             // แล้ววนตามกรณีไม่มีแก้ไข: ข้อ 9 → 10 → 11
             service.autoUpdateStatusByDocument(request.getId(), 7, staff,

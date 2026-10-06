@@ -56,6 +56,18 @@ public class ThaiDateUtil {
         return out.toString();
     }
 
+    private static final String[] THAI_MONTHS = { "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม",
+            "มิถุนายน", "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม" };
+    private static final String[] THAI_WEEKDAYS = { "จันทร์", "อังคาร", "พุธ", "พฤหัสบดี", "ศุกร์", "เสาร์",
+            "อาทิตย์" };
+
+    /** LocalDate → "วันจันทร์ที่ 5 ตุลาคม 2569" แบบที่เขียนในหนังสือนัดประชุม */
+    public static String fullDate(LocalDate d) {
+        if (d == null) return "-";
+        return "วัน" + THAI_WEEKDAYS[d.getDayOfWeek().getValue() - 1] + "ที่ " + d.getDayOfMonth() + " "
+                + THAI_MONTHS[d.getMonthValue() - 1] + " " + (d.getYear() + 543);
+    }
+
     /** LocalDateTime → "dd/MM/2569 HH:mm" */
     public String format(LocalDateTime dt) {
         if (dt == null) return "-";

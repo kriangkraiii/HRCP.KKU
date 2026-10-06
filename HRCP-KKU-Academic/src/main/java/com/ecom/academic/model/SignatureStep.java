@@ -118,6 +118,15 @@ public class SignatureStep {
     @Column(name = "signer_position_snapshot", length = 255)
     private String signerPositionSnapshot;
 
+    /**
+     * ตำแหน่งที่พิมพ์ใต้ชื่อเมื่อขั้นนี้มอบให้ผู้รักษาการแทน เช่น "รักษาการแทนคณบดีวิทยาลัยการคอมพิวเตอร์"
+     *
+     * <p>จำไว้ ณ ตอนสร้างขั้น ({@code ActingSignerService}) — ปิดการรักษาการแทนทีหลัง เอกสารของซองนี้
+     * ก็ยังพิมพ์ตามที่เป็นตอนส่ง null แปลว่าไม่ได้ลงนามในฐานะรักษาการแทน
+     */
+    @Column(name = "acting_position", length = 300)
+    private String actingPosition;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 20, nullable = false)
     private SignatureStepStatus status = SignatureStepStatus.WAITING;
@@ -299,6 +308,14 @@ public class SignatureStep {
 
     public void setSignerPositionSnapshot(String signerPositionSnapshot) {
         this.signerPositionSnapshot = signerPositionSnapshot;
+    }
+
+    public String getActingPosition() {
+        return actingPosition;
+    }
+
+    public void setActingPosition(String actingPosition) {
+        this.actingPosition = actingPosition;
     }
 
     public SignatureStepStatus getStatus() {

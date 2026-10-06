@@ -42,11 +42,7 @@
                     <!--/* ข้อมูลการนัดหมายและรายชื่อกรรมการเป็นความลับทางราชการ ผู้ยื่นไม่ได้ร่วม
                          จึงไม่แสดงที่นี่ เจ้าหน้าที่ดูและแก้ได้จากหน้าผู้ดูแลระบบตามเดิม */-->
 
-                    <!-- ข้อความเพิ่มเติมตามสถานะ -->
-                    <div th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}" class="alert alert-warning mb-3 py-2">
-                        <i class="fas fa-exclamation-triangle me-2"></i>
-                        กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์
-                    </div>
+                    
 
                     <a th:href="'/user/academic/request/' + ${req.id}" class="btn btn-outline-primary btn-sm">
                         <i class="fas fa-eye"></i> ดูรายละเอียด

@@ -59,6 +59,14 @@ public class SignerNameResolver {
         this.userRepository = userRepository;
     }
 
+    /** ผู้รักษาการแทน — ไม่มี (เช่นในเทสที่สร้างตัวนี้เอง) ก็ไม่พิมพ์ตำแหน่งรักษาการแทน */
+    private ActingSignerService actingSigners;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    public void setActingSigners(ActingSignerService actingSigners) {
+        this.actingSigners = actingSigners;
+    }
+
     /**
      * เติมชื่อผู้ลงนามลงใน JSON ของเอกสาร เฉพาะช่องที่ยังว่าง
      *
@@ -74,17 +82,26 @@ public class SignerNameResolver {
         Map<String, String> names = new LinkedHashMap<>(namesForEnvelope(envelope));
         // คำตอบของผู้ลงนามเดินทางเส้นเดียวกับชื่อ — เติมตอน render ไม่แตะ frozenJson
         names.putAll(choicesForEnvelope(envelope));
-        if (names.isEmpty()) {
+        Map<String, String> actingPositions = actingPositionsForEnvelope(envelope);
+        if (names.isEmpty() && actingPositions.isEmpty()) {
             return json;
         }
 
         try {
             Map<String, Object> data = objectMapper.readValue(json,
                     new TypeReference<Map<String, Object>>() {});
-            boolean changed = false;
+            boolean changed = fillUnassignedActingPositions(envelope, data);
             for (Map.Entry<String, String> entry : names.entrySet()) {
                 Object current = data.get(entry.getKey());
                 if (current == null || String.valueOf(current).isBlank()) {
+                    data.put(entry.getKey(), entry.getValue());
+                    changed = true;
+                }
+            }
+            // ทับค่าในแบบฟอร์ม — ช่องตำแหน่งถูกเติมด้วยตำแหน่งปกติของคนที่เลือก ตอนที่เขาลงนามในฐานะ
+            // รักษาการแทน เอกสารต้องพิมพ์ฐานะที่เขาลงนามจริง
+            for (Map.Entry<String, String> entry : actingPositions.entrySet()) {
+                if (!entry.getValue().equals(data.get(entry.getKey()))) {
                     data.put(entry.getKey(), entry.getValue());
                     changed = true;
                 }
@@ -116,6 +133,66 @@ public class SignerNameResolver {
             }
         }
         return names;
+    }
+
+    /**
+     * ตำแหน่งรักษาการแทนของขั้นที่มอบให้ผู้รักษาการแทน แยกตามช่องตำแหน่งในเทมเพลต
+     *
+     * <p>อ่านจากที่ขั้นจำไว้ตอนสร้าง ({@code SignatureStep.actingPosition}) ไม่ใช่จากการตั้งค่าตอนนี้
+     * ปิดการรักษาการแทนไปแล้ว เอกสารของซองนี้ก็ยังพิมพ์ตามฐานะที่ลงนาม
+     */
+    public Map<String, String> actingPositionsForEnvelope(SignatureRequest envelope) {
+        Map<String, String> positions = new LinkedHashMap<>();
+        for (SignatureStep step : stepRepository.findStepsWithSigner(envelope.getId())) {
+            if (step.getStatus() == SignatureStepStatus.SKIPPED || step.getAnchorPlaceholder() == null
+                    || step.getActingPosition() == null || step.getActingPosition().isBlank()) {
+                continue;
+            }
+            String field = SignatureAnchorRegistry.printedPositionFieldFor(
+                    envelope.getModule(), envelope.getDocumentType(), step.getAnchorPlaceholder());
+            if (field != null) {
+                positions.put(field, step.getActingPosition());
+            }
+        }
+        return positions;
+    }
+
+    /**
+     * ช่องที่ยังไม่มีใครถูกมอบหมาย และชื่อในแบบฟอร์มยังว่าง — ชื่อที่จะเติมคือผู้รักษาการแทน
+     * ({@link #expectedNames}) ตำแหน่งจึงต้องเป็นตำแหน่งรักษาการแทนคู่กัน ไม่ใช่ปล่อยว่าง
+     */
+    private boolean fillUnassignedActingPositions(SignatureRequest envelope, Map<String, Object> data) {
+        if (actingSigners == null) {
+            return false;
+        }
+        java.util.Set<String> assigned = new java.util.HashSet<>();
+        for (SignatureStep step : stepRepository.findStepsWithSigner(envelope.getId())) {
+            if (step.getStatus() != SignatureStepStatus.SKIPPED && step.getSlotKey() != null) {
+                assigned.add(step.getSlotKey());
+            }
+        }
+        boolean changed = false;
+        for (SignatureSlot slot : workflowConfigService.effectiveSlotsFor(
+                envelope.getModule(), envelope.getDocumentType())) {
+            if (assigned.contains(slot.slotKey()) || !isBlank(data.get(slot.anchorPlaceholder()))) {
+                continue;
+            }
+            String field = SignatureAnchorRegistry.printedPositionFieldFor(
+                    envelope.getModule(), envelope.getDocumentType(), slot.anchorPlaceholder());
+            if (field == null || !isBlank(data.get(field))) {
+                continue;
+            }
+            var acting = actingSigners.activeFor(slot.slotKey());
+            if (acting.isPresent()) {
+                data.put(field, acting.get().printedPosition());
+                changed = true;
+            }
+        }
+        return changed;
+    }
+
+    private static boolean isBlank(Object value) {
+        return value == null || String.valueOf(value).isBlank();
     }
 
     /**

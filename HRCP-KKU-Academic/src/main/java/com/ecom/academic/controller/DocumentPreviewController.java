@@ -93,48 +93,9 @@ public class DocumentPreviewController {
 
         try {
             // ============ Document 7: คำนวณคะแนนถ่วงน้ำหนักฝั่ง server ============
+            // ใช้ตัวคำนวณเดียวกับตอนบันทึก — เดิมคำนวณซ้ำแบบปัดเศษก่อน preview จึงสรุประดับไม่ตรงกับเอกสารจริง
             if (docType == 7) {
-                int[] weights = { 20, 30, 30, 20 };
-                double grandTotal = 0;
-
-                for (int sec = 1; sec <= 4; sec++) {
-                    String secScoreVal = formData.getOrDefault("sec_score_" + sec, "0");
-                    double secScore = 0;
-                    try {
-                        secScore = Double.parseDouble(secScoreVal);
-                    } catch (NumberFormatException e) {
-                        secScore = 0;
-                    }
-
-                    for (int range = 1; range <= 5; range++) {
-                        String key = "score" + sec + range;
-                        boolean inRange = false;
-                        if (range == 1)
-                            inRange = (secScore > 0 && secScore <= 1);
-                        else if (range == 2)
-                            inRange = (secScore > 1 && secScore <= 2);
-                        else if (range == 3)
-                            inRange = (secScore > 2 && secScore <= 3);
-                        else if (range == 4)
-                            inRange = (secScore > 3 && secScore <= 4);
-                        else if (range == 5)
-                            inRange = (secScore > 4 && secScore <= 5);
-                        // ช่วงที่ตรง → ใส่คะแนน, ช่วงอื่น → ว่าง
-                        formData.put(key, inRange ? String.valueOf(secScore) : "");
-                    }
-
-                    double weighted = (secScore / 5.0) * weights[sec - 1];
-                    formData.put("score" + sec + "x", "%.2f".formatted(weighted));
-                    grandTotal += weighted;
-                }
-
-                formData.put("scorex", "%.2f".formatted(grandTotal));
-
-                long roundedTotal = Math.round(grandTotal);
-                formData.put("ch1", roundedTotal <= 56 ? "☑" : "☐");
-                formData.put("ch2", (roundedTotal >= 57 && roundedTotal <= 70) ? "☑" : "☐");
-                formData.put("ch3", (roundedTotal >= 71 && roundedTotal <= 85) ? "☑" : "☐");
-                formData.put("ch4", (roundedTotal >= 86 && roundedTotal <= 100) ? "☑" : "☐");
+                com.ecom.academic.service.Doc7Scoring.derive(formData);
             }
 
             // ============ chk checkbox: ติ๊กอันเดียว อันอื่นเป็น " " ============

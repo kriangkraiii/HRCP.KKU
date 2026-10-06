@@ -360,6 +360,38 @@ public class SignatureAnchorRegistry {
         return field == null || field.isEmpty() ? null : field;
     }
 
+    /**
+     * ช่องตำแหน่งใต้ชื่อผู้ลงนาม ของเอกสารที่ผู้ลงนามไม่ได้เลือกในแบบฟอร์ม — แบบฟอร์มจริงเว้นจุดไข่ปลาไว้
+     * ให้เขียนเอง ระบบเติมเฉพาะเมื่อลงนามในฐานะรักษาการแทน ({@link SignerNameResolver})
+     */
+    private static final Map<DocKey, Map<String, String>> SIGNER_POSITION_LINES = Map.of(
+            new DocKey(SignatureModule.POSITION, 1), Map.of("dean_name", "dean_position_line"));
+
+    /**
+     * ช่องที่พิมพ์ตำแหน่งของผู้ลงนามช่องนี้ — ช่องตำแหน่งคู่กับตัวค้นหาชื่อ หรือบรรทัดตำแหน่งในแบบฟอร์ม
+     *
+     * @return ชื่อช่อง หรือ null เมื่อเอกสารไม่มีที่พิมพ์ตำแหน่งของช่องนี้
+     */
+    public static String printedPositionFieldFor(SignatureModule module, int documentType, String nameField) {
+        String paired = positionFieldFor(module, documentType, nameField);
+        if (paired != null) {
+            return paired;
+        }
+        return SIGNER_POSITION_LINES.getOrDefault(new DocKey(module, documentType), Map.of()).get(nameField);
+    }
+
+    /** ตำแหน่งลงนามที่ใช้ช่องชื่อนี้ในเอกสารนี้ หรือ null เมื่อไม่ใช่ช่องชื่อผู้ลงนาม */
+    public static String slotKeyForNameField(SignatureModule module, int documentType, String nameField) {
+        if (nameField == null) {
+            return null;
+        }
+        return slotsOf(module, documentType).stream()
+                .filter(slot -> nameField.equals(slot.anchorPlaceholder()))
+                .map(SignatureSlot::slotKey)
+                .findFirst()
+                .orElse(null);
+    }
+
     /** ช่องของเอกสารนี้ที่เจ้าหน้าที่ผู้ตรวจลงนามเอง */
     public static java.util.Set<String> reviewerSignedSlots(SignatureModule module, int documentType) {
         return REVIEWER_SIGNED.getOrDefault(new DocKey(module, documentType), java.util.Set.of());

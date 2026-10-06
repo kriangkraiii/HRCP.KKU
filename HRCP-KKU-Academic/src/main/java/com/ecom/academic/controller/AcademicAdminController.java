@@ -38,12 +38,14 @@ import com.ecom.academic.model.AcademicAttachment;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.AcademicRevisionFile;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.Doc7Scoring;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.AcademicRevisionService;
 import com.ecom.academic.service.DashboardAnalyticsService;
 import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
@@ -136,6 +138,10 @@ public class AcademicAdminController {
     private final com.ecom.academic.service.SignedDocumentRenderer signedDocumentRenderer;
 
     private final com.ecom.service.UploadPaths uploadPaths;
+
+    /** ไม่มีในเทสที่สร้าง controller เอง — ใช้เฉพาะหน้ารายละเอียดคำร้องกับการเปิดฉบับแก้ */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AcademicRevisionService revisionService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -479,6 +485,8 @@ public class AcademicAdminController {
                 DocumentFieldOwnership.applicantDocuments(SignatureModule.ACADEMIC));
         model.addAttribute("attachments", requestService.getAttachments(id));
         model.addAttribute("attachmentCount", requestService.countAttachments(id));
+        // Flow ข้อ 13-14: ฉบับแก้ทุกรอบที่ผู้ยื่นส่งกลับมา รอบล่าสุดก่อน
+        model.addAttribute("revisionRounds", revisionService.byRound(id));
 
         // สีและป้ายของกล่องเอกสาร — ใช้กติกาเดียวกับทุกหน้า ดู DocumentProgress
         model.addAttribute("docProgress", documentProgress.of(SignatureModule.ACADEMIC, id,
@@ -516,6 +524,9 @@ public class AcademicAdminController {
             @RequestParam(value = "note", required = false) String note,
             @RequestParam(value = "meetingDate", required = false) String meetingDateStr,
             @RequestParam(value = "meetingLocation", required = false) String meetingLocation,
+            @RequestParam(value = "meetingDay", required = false) String meetingDay,
+            @RequestParam(value = "meetingStart", required = false) String meetingStart,
+            @RequestParam(value = "meetingEnd", required = false) String meetingEnd,
             Principal principal,
             org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
         try {
@@ -528,7 +539,15 @@ public class AcademicAdminController {
 
             RequestStatus newStatus = RequestStatus.valueOf(status);
 
-            if (newStatus == RequestStatus.MEETING_SCHEDULED && meetingDateStr != null && !meetingDateStr.isEmpty()) {
+            // ฟอร์มนัดประชุมส่งวัน (ISO) กับเวลาแบบหนังสือราชการ (09.30) แยกกัน เหมือนเอกสารที่ 5
+            LocalDateTime meetingStartAt = meetingDay != null && !meetingDay.isBlank()
+                    ? java.time.LocalDate.parse(meetingDay).atTime(meetingTime(meetingStart, "เวลาเริ่มประชุม"))
+                    : null;
+            if (newStatus == RequestStatus.MEETING_SCHEDULED && meetingStartAt != null) {
+                java.time.LocalTime endAt = meetingEnd != null && !meetingEnd.isBlank()
+                        ? meetingTime(meetingEnd, "เวลาสิ้นสุดการประชุม") : null;
+                requestService.scheduleMeeting(id, meetingStartAt, endAt, meetingLocation, admin);
+            } else if (newStatus == RequestStatus.MEETING_SCHEDULED && meetingDateStr != null && !meetingDateStr.isEmpty()) {
                 LocalDateTime meetingDate = LocalDateTime.parse(meetingDateStr, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
                 requestService.setMeetingDate(id, meetingDate, meetingLocation, admin);
             } else {
@@ -556,6 +575,16 @@ public class AcademicAdminController {
                     : e.getClass().getSimpleName() + ": " + e.getMessage());
             return "redirect:/admin/academic/request/" + id + "?error=status_update_failed";
         }
+    }
+
+    /** "09.30" หรือ "09:30" (แบบที่ช่องเวลา 24 ชั่วโมงเก็บ) เป็นเวลา */
+    private static java.time.LocalTime meetingTime(String text, String what) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^\\s*(\\d{1,2})[.:](\\d{2})\\s*$")
+                .matcher(text == null ? "" : text);
+        if (!m.matches() || Integer.parseInt(m.group(1)) > 23 || Integer.parseInt(m.group(2)) > 59) {
+            throw new IllegalStateException("กรุณาระบุ" + what + "ให้ถูกต้อง (เช่น 09.30)");
+        }
+        return java.time.LocalTime.of(Integer.parseInt(m.group(1)), Integer.parseInt(m.group(2)));
     }
 
     @GetMapping("/request/{id}/document/{type}")
@@ -812,6 +841,14 @@ public class AcademicAdminController {
             }
         }
 
+        if (type == 7) {
+            String scoreProblem = Doc7Scoring.nonWholeScoreProblem(formData);
+            if (scoreProblem != null) {
+                redirectAttributes.addFlashAttribute("errorMsg", scoreProblem);
+                return "redirect:/admin/academic/request/" + id + "/document/" + type;
+            }
+        }
+
         // ============ Draft: บันทึกแบบร่าง (เก็บ JSON ไม่สร้างไฟล์) ============
         if ("draft".equals(action)) {
             String jsonData = objectMapper.writeValueAsString(
@@ -1002,6 +1039,18 @@ public class AcademicAdminController {
                 .orElseThrow(() -> new RuntimeException("Request not found"));
         UserDtls admin = getUser(principal);
 
+        // ส่งกลับให้แก้ได้เฉพาะหลังประชุมอนุกรรมการ — เมื่อผู้ยื่นส่งฉบับแก้มาแล้ว ต้องส่งต่ออนุกรรมการ
+        // (นัดหมายใหม่) ก่อน ไม่เช่นนั้น updateStatus ปฏิเสธแล้วหน้าพังเป็น 500
+        RequestStatus current = request.getCurrentStatus();
+        if (current != RequestStatus.COMPLETED_REVISE && !current.canMoveTo(RequestStatus.COMPLETED_REVISE)) {
+            redirectAttributes.addFlashAttribute("errorMsg", current == RequestStatus.REVISION_SUBMITTED
+                    ? "ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว — นัดประชุมพิจารณาฉบับแก้ไขก่อน (ใต้เอกสารที่ 5 ในหน้ารายละเอียดคำร้อง)"
+                            + " แล้วจึงส่งข้อเสนอแนะรอบใหม่ได้"
+                    : "ส่งข้อเสนอแนะเพื่อแก้ไขได้หลังนัดหมายคณะอนุกรรมการเท่านั้น (สถานะปัจจุบัน: "
+                            + current.getThaiLabel() + ")");
+            return "redirect:/admin/academic/request/" + id + "/document/6";
+        }
+
         // ดึงข้อเสนอแนะจาก doc_6 JSON
         String suggestionsText = "";
         List<AcademicDocument> docList = requestService.getDocumentsByType(id, 6);
@@ -1133,6 +1182,19 @@ public class AcademicAdminController {
         }
         UserDtls admin = getUser(principal);
         com.ecom.academic.service.CommitteeDocumentMailer.Outcome outcome = committeeMailer.send(envelope.getId(), admin);
+        redirectAttributes.addFlashAttribute(outcome.sent() ? "succMsg" : "errorMsg", outcome.message());
+        if (outcome.sent()) {
+            adminLogService.log(principal.getName(), admin != null ? admin.getName() : principal.getName(),
+                    "EMAIL_COMMITTEE", outcome.message() + " (คำร้อง #" + id + ")", getClientIpAddress());
+        }
+        return "redirect:/admin/academic/request/" + id;
+    }
+
+    /** ส่งอีเมลนัดประชุมพิจารณาฉบับแก้ไขถึงกรรมการอีกครั้ง — ระบบส่งเองตอนนัด ปุ่มนี้สำหรับตอนที่ส่งไม่สำเร็จ */
+    @PostMapping("/request/{id}/revision-meeting/email-committee")
+    public String emailRevisionMeeting(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
+        UserDtls admin = getUser(principal);
+        com.ecom.academic.service.CommitteeDocumentMailer.Outcome outcome = committeeMailer.sendRevisionMeeting(id, admin);
         redirectAttributes.addFlashAttribute(outcome.sent() ? "succMsg" : "errorMsg", outcome.message());
         if (outcome.sent()) {
             adminLogService.log(principal.getName(), admin != null ? admin.getName() : principal.getName(),
@@ -1368,6 +1430,14 @@ public class AcademicAdminController {
                 .contentType(MediaType.parseMediaType(contentType != null ? contentType : "application/octet-stream"))
                 .contentLength(Files.size(path))
                 .body(new FileSystemResource(path));
+    }
+
+    /** ฉบับแก้รายการหนึ่งที่ผู้ยื่นส่งมา — ไฟล์ดาวน์โหลด ลิงก์ส่งต่อไปยังปลายทาง */
+    @GetMapping("/request/{id}/revision/{fileId}")
+    public ResponseEntity<Resource> downloadRevision(@PathVariable Long id, @PathVariable Long fileId)
+            throws IOException {
+        java.util.Optional<AcademicRevisionFile> file = revisionService.find(id, fileId);
+        return file.isPresent() ? revisionService.serve(file.get()) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/request/{id}/attachment/{attachmentId}/download")

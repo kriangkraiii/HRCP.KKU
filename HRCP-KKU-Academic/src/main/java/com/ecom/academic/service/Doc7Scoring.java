@@ -57,6 +57,31 @@ public final class Doc7Scoring {
         }
     }
 
+    /**
+     * คะแนนรายส่วนต้องเป็นจำนวนเต็ม — เกณฑ์ระดับผลการสอน (ไม่เกิน 56 / 57-70 / 71-85 / 86-100)
+     * เขียนไว้สำหรับคะแนนรวมจำนวนเต็ม คะแนนทศนิยมจะตกช่องว่างระหว่างช่วงที่ระเบียบไม่ได้กำหนด
+     *
+     * @return ข้อความแจ้งเจ้าหน้าที่ หรือ {@code null} เมื่อถูกต้อง (ช่องว่างยังไม่นับ)
+     */
+    public static String nonWholeScoreProblem(Map<String, String> formData) {
+        for (String key : SECTION_KEYS) {
+            String v = formData.get(key);
+            if (v == null || v.isBlank()) {
+                continue;
+            }
+            try {
+                double score = Double.parseDouble(v.trim());
+                if (score != Math.rint(score)) {
+                    return "คะแนนรายส่วนต้องเป็นจำนวนเต็ม 0–5 (ส่วนที่ " + key.substring(key.length() - 1)
+                            + " กรอกไว้ " + v.trim() + ")";
+                }
+            } catch (NumberFormatException e) {
+                // ไม่ใช่ตัวเลข — derive นับเป็น 0 เหมือนเดิม
+            }
+        }
+        return null;
+    }
+
     /** เติมคะแนนถ่วงน้ำหนัก คะแนนรวม ช่องติ๊กผลสรุป และ {@code eval_result_level} ลงใน formData */
     public static void derive(Map<String, String> formData) {
         clampSectionScores(formData);

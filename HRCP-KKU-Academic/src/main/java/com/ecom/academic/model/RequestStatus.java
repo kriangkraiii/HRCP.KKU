@@ -78,6 +78,14 @@ public enum RequestStatus {
     }
 
     /**
+     * ป้ายบนแถบความคืบหน้า — ขั้นแจ้งผลเป็นกลาง ผลจริง (ผ่าน/แก้ไข/ไม่ผ่าน) แสดงด้วยสีและไอคอน
+     * ไม่เช่นนั้นคำร้องที่ไม่ผ่านจะมีขั้น "แจ้งผล - ผ่าน" ค้างอยู่บนเส้นทาง
+     */
+    public String getStepLabel() {
+        return this == COMPLETED_PASS ? "แจ้งผล" : thaiLabel;
+    }
+
+    /**
      * แถบสถานะหน้าแอดมิน: สถานะที่แอดมินต้องทำขั้นต่อไป เรียงตามเส้นทางหลัก
      * แล้วตามด้วยวงจรแก้ไข — แบ่งกลุ่มตามว่าใครถือลูกอยู่ ไม่ใช่ลำดับใน enum
      */
@@ -164,6 +172,48 @@ public enum RequestStatus {
             }
         }
         return -1;
+    }
+
+    /**
+     * ขั้นที่กำลังดำเนินการบนแถบความคืบหน้า หรือ -1 เมื่อไม่มี (แบบร่าง / เสร็จสิ้น)
+     *
+     * <p>ชื่อสถานะคือเหตุการณ์ที่เกิดไปแล้ว — "นัดหมายคณะอนุกรรมการ" แปลว่านัดแล้ว
+     * ขั้นของสถานะปัจจุบันจึงเสร็จแล้ว ส่วนที่กำลังดำเนินการคือขั้นถัดไป
+     */
+    public int focusIndex() {
+        if (this == DRAFT || this == COMPLETED) {
+            return -1;
+        }
+        return progressIndex() + 1;
+    }
+
+    /** สถานะของขั้นที่ {@code index} บนแถบความคืบหน้า เมื่อคำร้องอยู่ในสถานะนี้ */
+    public ProgressStepState stepStateAt(int index) {
+        int reached = progressIndex();
+        if (index <= reached) {
+            return this == COMPLETED && index == getProgressSteps().length - 1
+                    ? ProgressStepState.FINAL : ProgressStepState.DONE;
+        }
+        if (index != focusIndex()) {
+            return ProgressStepState.PENDING;
+        }
+        return switch (this) {
+            case COMPLETED_REVISE, REVISION_SUBMITTED -> ProgressStepState.REVISE;
+            case COMPLETED_FAIL -> ProgressStepState.REJECTED;
+            default -> ProgressStepState.CURRENT;
+        };
+    }
+
+    /** คำอธิบายใต้ขั้นที่กำลังดำเนินการ ({@link #focusIndex()}) */
+    public String getStepHint() {
+        return switch (this) {
+            case DRAFT, COMPLETED -> null;
+            case MEETING_SCHEDULED -> "รอผลการประชุม";
+            case COMPLETED_REVISE -> "รอผู้ยื่นแก้ไข";
+            case REVISION_SUBMITTED -> "ส่งแก้ไขแล้ว · รอพิจารณารอบใหม่";
+            case COMPLETED_FAIL -> "ไม่ผ่าน";
+            default -> "กำลังดำเนินการ";
+        };
     }
 
     /** สถานะที่ถือว่าเสร็จสิ้นแล้ว (ยื่นคำร้องใหม่ได้) */

@@ -2585,6 +2585,23 @@ body.modal-open .sidebar-toggle {
   font-weight: 600;
 }
 
+/* คำอธิบายใต้ขั้นที่กำลังดำเนินการ — บอกตรง ๆ ว่ายังไม่เสร็จ ไม่ต้องเดาจากสี */
+.timeline-v2-hint {
+  margin: 2px auto 0;
+  max-width: 95px;
+  font-size: 0.62rem;
+  line-height: 1.25;
+  color: var(--color-primary-medium, #1565c0);
+}
+
+.timeline-v2-step.t-revise .timeline-v2-hint {
+  color: var(--color-warning, #f57f17);
+}
+
+.timeline-v2-step.t-rejected .timeline-v2-hint {
+  color: var(--color-danger, #c62828);
+}
+
 /* ===== Step Progress (Horizontal Wizard) ===== */
 .step-progress {
   display: flex;
@@ -4316,6 +4333,31 @@ body.modal-open .sidebar-toggle {
   color: var(--color-success-dark, #1b5e20);
 }
 
+/* Outcome Step: แจ้งผล - แก้ไข / ไม่ผ่าน */
+.detail-progress-step.dp-revise .detail-progress-dot {
+  background: var(--color-warning, #f57f17) !important;
+  border-color: var(--color-warning, #f57f17) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(245, 127, 23, 0.25);
+}
+
+.detail-progress-step.dp-revise .detail-progress-step-label {
+  font-weight: 800;
+  color: var(--color-warning, #f57f17);
+}
+
+.detail-progress-step.dp-rejected .detail-progress-dot {
+  background: var(--color-danger, #c62828) !important;
+  border-color: var(--color-danger, #c62828) !important;
+  color: #ffffff !important;
+  box-shadow: 0 0 0 4px rgba(198, 40, 40, 0.25);
+}
+
+.detail-progress-step.dp-rejected .detail-progress-step-label {
+  font-weight: 800;
+  color: var(--color-danger, #c62828);
+}
+
 .detail-progress-step-label {
   margin-top: 10px;
   font-size: 0.76rem;
@@ -4325,6 +4367,24 @@ body.modal-open .sidebar-toggle {
   max-width: 105px;
   word-break: break-word;
   transition: color 0.3s ease;
+}
+
+/* คำอธิบายใต้ขั้นที่กำลังดำเนินการ — บอกตรง ๆ ว่ายังไม่เสร็จ ไม่ต้องเดาจากสี */
+.detail-progress-step-hint {
+  margin-top: 2px;
+  font-size: 0.68rem;
+  line-height: 1.3;
+  text-align: center;
+  max-width: 105px;
+  color: var(--color-primary-medium, #1565c0);
+}
+
+.detail-progress-step.dp-revise .detail-progress-step-hint {
+  color: var(--color-warning, #f57f17);
+}
+
+.detail-progress-step.dp-rejected .detail-progress-step-hint {
+  color: var(--color-danger, #c62828);
 }
 
 /* ===== Draft Banner ===== */
@@ -4512,6 +4572,27 @@ body.modal-open .sidebar-toggle {
 .doc-grid-sub a,
 .doc-grid-sub button {
   font-size: 0.78rem;
+}
+
+/* แถวนัดประชุมรอบฉบับแก้ไข — งานที่รอเจ้าหน้าที่อยู่ จึงเด่นกว่าแถวไฟล์ */
+.doc-grid-sub.dgs-meeting {
+  border-left: 3px solid var(--color-primary-medium, #1565c0);
+  background: rgba(21, 101, 192, 0.06);
+  border-radius: 0 var(--radius-sm, 6px) var(--radius-sm, 6px) 0;
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+/* ช่องวันที่ประชุม: แสดงวันแบบไทย กดที่ช่องเพื่อเปิดปฏิทินได้ (ไม่ใช่ช่องที่ล็อก) */
+.meeting-fields .meeting-day-text[readonly] {
+  background-color: var(--bs-body-bg);
+  cursor: pointer;
+}
+
+.dgs-meeting-title {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--color-primary-medium, #1565c0);
 }
 
 /* ===== History Entry ===== */
@@ -8206,4 +8287,51 @@ form[id^="doc"][id$="Form"] .form-control[readonly] {
 [data-theme="dark"] .time24 .time24-col .dropdown-item.active:hover {
   background-color: rgba(59, 130, 246, 0.35);
   color: #e6f0ff;
+}
+
+/* ===== Revision files (Flow ข้อ 13-14) ===== */
+.revision-files {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.revision-file {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 8px;
+  background: var(--bg-card, #ffffff);
+  color: var(--text-body, #1e293b);
+  margin-bottom: 0.35rem;
+}
+
+.revision-file .fa-file-pdf { color: #c62828; }
+.revision-file .fa-file-word { color: #1565c0; }
+.revision-file .fa-file-zipper { color: #6d4c41; }
+.revision-file .fa-link { color: #0277bd; }
+
+.revision-file-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.revision-round {
+  border: 1px solid var(--border-color, #e2e8f0);
+  border-radius: 10px;
+  padding: 0.5rem 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.revision-round[open] .revision-round-head {
+  margin-bottom: 0.5rem;
+}
+
+.revision-round-head {
+  cursor: pointer;
 }

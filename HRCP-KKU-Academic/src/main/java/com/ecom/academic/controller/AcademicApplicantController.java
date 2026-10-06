@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.security.Principal;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,7 @@ import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRank;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.AcademicRevisionFile;
 import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.model.RequestStatus;
@@ -41,6 +43,7 @@ import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicEmailService;
 import com.ecom.academic.service.AcademicRankPolicy;
 import com.ecom.academic.service.AcademicRequestService;
+import com.ecom.academic.service.AcademicRevisionService;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.PositionRequestService;
@@ -124,6 +127,10 @@ public class AcademicApplicantController {
     }
 
     private final com.ecom.service.UploadPaths uploadPaths;
+
+    /** ไม่มีในเทสที่สร้าง controller เอง — ใช้เฉพาะหน้าคำร้องกับการส่งฉบับแก้ */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AcademicRevisionService revisionService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -440,6 +447,12 @@ public class AcademicApplicantController {
         List<AcademicDocument> existingDocs = requestService.getDocumentsByType(id, 2);
         String existingJson = !existingDocs.isEmpty() ? existingDocs.get(0).getJsonData() : null;
         Map<String, String> doc2Data = autoFillHelper.getPreFilledAcademicDocData(request, 2, existingJson);
+        // คำนำหน้าและชื่อผู้ยื่นมาจากข้อมูลบุคลากรในระบบ — แสดงแบบอ่านอย่างเดียว
+        Map<String, String> profileLocked = doc2ProfileFields(request);
+        if (!profileLocked.isEmpty()) {
+            doc2Data = new java.util.HashMap<>(doc2Data != null ? doc2Data : Map.of());
+            doc2Data.putAll(profileLocked);
+        }
 
         // Slot-based attachments (1-5) for backward compatibility
         Map<Integer, List<AcademicAttachment>> attachmentsBySlot = requestService.getAttachmentsGroupedBySlot(id);
@@ -466,6 +479,7 @@ public class AcademicApplicantController {
         model.addAttribute("existingDocs", existingDocs);
         model.addAttribute("existingData", existingJson);
         model.addAttribute("doc2Data", doc2Data);
+        model.addAttribute("profileLocked", profileLocked);
         model.addAttribute("attachments", attachments);
         model.addAttribute("totalBytes", totalBytes);
         model.addAttribute("totalSizeFormatted", totalSizeFormatted);
@@ -511,6 +525,9 @@ public class AcademicApplicantController {
         // คอลัมน์ "เจ้าหน้าที่" และหมายเหตุเป็นของแอดมิน ผู้ยื่นติ๊กได้เฉพาะคอลัมน์ "เจ้าตัว"
         formData = DocumentFieldOwnership.merge(SignatureModule.ACADEMIC, 2, false, formData,
                 requestService.getLatestDocumentData(id, 2));
+        // ช่องที่มาจากข้อมูลบุคลากรแก้ในฟอร์มไม่ได้ — ใช้ค่าจากโปรไฟล์เสมอ แม้ยิง POST ตรง
+        formData = new java.util.LinkedHashMap<>(formData);
+        formData.putAll(doc2ProfileFields(request));
         String jsonData = objectMapper.writeValueAsString(formData);
 
         boolean isNew2 = requestService.getDocumentsByType(id, 2).isEmpty();
@@ -553,6 +570,13 @@ public class AcademicApplicantController {
         redirectAttributes.addFlashAttribute("succMsg",
                 "บันทึกเอกสารที่ 2 เรียบร้อยแล้ว");
         return DocumentFormSupport.redirectAfterSave(SignatureModule.ACADEMIC, id, 2, false);
+    }
+
+    /** เอกสารที่ 2 มีแค่คำนำหน้าและชื่อผู้ยื่น — ไม่มีช่องตำแหน่งปัจจุบัน */
+    private Map<String, String> doc2ProfileFields(AcademicRequest request) {
+        Map<String, String> fields = new java.util.LinkedHashMap<>(requestService.applicantProfileFields(request));
+        fields.keySet().retainAll(List.of("title", "applicant_name"));
+        return fields;
     }
 
     // ==================== แนบไฟล์ประกอบการประเมินผลการสอน (เอกสารที่ 2) ====================
@@ -1057,6 +1081,8 @@ public class AcademicApplicantController {
         model.addAttribute("revisionNoteDoc1", requestService.getRevisionNote(id, 1));
         model.addAttribute("revisionNoteDoc2", requestService.getRevisionNote(id, 2));
         model.addAttribute("committeeSuggestions", requestService.committeeSuggestionsFor(request));
+        model.addAttribute("revisionRounds", revisionService.byRound(id));
+        model.addAttribute("revisionMaxItems", AcademicRevisionService.MAX_ITEMS);
 
         // ดึงข้อมูลจาก doc_1 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
         List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);
@@ -1077,10 +1103,18 @@ public class AcademicApplicantController {
         return "academic/applicant/request_detail";
     }
 
+    /**
+     * ข้อ 13 — ผู้ยื่นส่งเอกสารที่แก้ไขแล้วกลับมา หลายไฟล์และลิงก์ในครั้งเดียว
+     *
+     * <p>เดิมรับไฟล์เดียวและรอบใหม่ลบไฟล์รอบก่อนทิ้ง ฉบับแก้ที่มีหลายเอกสารจึงต้องรวมเป็น zip เอง
+     */
     @PostMapping("/upload-revision/{id}")
     public String uploadRevision(@PathVariable Long id,
-            @RequestParam("file") MultipartFile file,
-            Principal principal) throws IOException {
+            @RequestParam(value = "files", required = false) List<MultipartFile> files,
+            @RequestParam(value = "linkUrl", required = false) List<String> linkUrls,
+            @RequestParam(value = "linkTitle", required = false) List<String> linkTitles,
+            Principal principal,
+            RedirectAttributes redirectAttributes) throws IOException {
         AcademicRequest request = requestService.findById(id)
                 .orElseThrow(() -> new RuntimeException("Request not found"));
 
@@ -1089,60 +1123,47 @@ public class AcademicApplicantController {
             return "redirect:/user/academic/dashboard";
         }
 
-        // Validate file type (document-only)
-        try {
-            documentFileTypeValidator.validate(file.getOriginalFilename());
-        } catch (IllegalArgumentException e) {
-            return "redirect:/user/academic/request/" + id + "?error=" + java.net.URLEncoder.encode(e.getMessage(), "UTF-8");
-        }
-
-        String oldRevisionPath = request.getRevisionFilePath();
-
-        Path uploadDir = uploadPaths.dir("academic", String.valueOf(id), "revisions");
-        Files.createDirectories(uploadDir);
-        String safeFilename = FileUtils.sanitizeFilename(file.getOriginalFilename());
-        Path target = uploadDir.resolve(safeFilename);
-        file.transferTo(target);
-        String filePath = uploadPaths.toStored(target);
-
-        requestService.setRevisionFile(id, filePath);
-        requestService.logDocumentChange(request, AcademicRequestService.REQUEST_FILES_DOC_TYPE,
-                "เอกสารฉบับแก้ไข: " + file.getOriginalFilename(), user, AcademicDocumentEditLog.EditAction.FILE_UPLOADED);
-
-        // ข้อ 13 — ส่งเอกสารที่แก้แล้วกลับมายังคณะอนุกรรมการ
-        //
-        // Until now this stored the file and left the status at "แจ้งผล - แก้ไข",
-        // which is neither terminal nor able to move on: the applicant could not
-        // start a new request and the officer had nothing telling them work had
-        // come back. The revise branch was a dead end (GAP-34).
-        if (request.getCurrentStatus() == RequestStatus.COMPLETED_REVISE) {
-            requestService.updateStatus(id, RequestStatus.REVISION_SUBMITTED, user,
-                    "ผู้ขอกำหนดตำแหน่งส่งเอกสารที่แก้ไขแล้ว: " + file.getOriginalFilename());
-        }
-
-        // Delete old revision file from disk
-        if (oldRevisionPath != null && !oldRevisionPath.isBlank() && !oldRevisionPath.equals(filePath)) {
-            try {
-                Path oldRevision = uploadPaths.resolve(oldRevisionPath);
-                if (oldRevision != null) {
-                    Files.deleteIfExists(oldRevision);
-                }
-            } catch (Exception e) {
-                log.warn("Failed to delete previous revision file: {}", e.getMessage());
+        List<AcademicRevisionService.LinkInput> links = new ArrayList<>();
+        if (linkUrls != null) {
+            for (int i = 0; i < linkUrls.size(); i++) {
+                String title = linkTitles != null && i < linkTitles.size() ? linkTitles.get(i) : null;
+                links.add(new AcademicRevisionService.LinkInput(linkUrls.get(i), title));
             }
         }
 
-        // Log activity
+        List<AcademicRevisionFile> saved;
+        try {
+            saved = revisionService.submit(request, files, links, user);
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+            return "redirect:/user/academic/request/" + id;
+        }
+
         try {
             adminLogService.log(principal.getName(), user.getName(),
                     "UPLOAD_REVISION",
-                    "อัปโหลดเอกสารแก้ไขสำหรับคำร้อง #" + id + " (" + file.getOriginalFilename() + ")",
+                    "ส่งเอกสารแก้ไขสำหรับคำร้อง #" + id + " (" + saved.size() + " รายการ)",
                     getClientIpAddress());
         } catch (Exception e) {
             auditLogFailed(e);
         }
 
-        return "redirect:/user/academic/request/" + id + "?success=uploaded";
+        redirectAttributes.addFlashAttribute("succMsg",
+                "ส่งเอกสารที่แก้ไขแล้ว " + saved.size() + " รายการเรียบร้อย อย่าลืมนำส่งฉบับพิมพ์ (กระดาษ) ให้นักทรัพยากรบุคคล");
+        return "redirect:/user/academic/request/" + id;
+    }
+
+    /** ผู้ยื่นเปิดฉบับแก้ที่ส่งไปแล้ว */
+    @GetMapping("/request/{id}/revision/{fileId}")
+    public ResponseEntity<Resource> downloadRevision(@PathVariable Long id, @PathVariable Long fileId,
+            Principal principal) throws IOException {
+        AcademicRequest request = requestService.findById(id)
+                .orElseThrow(() -> new RuntimeException("Request not found"));
+        if (!request.getApplicant().getId().equals(getUser(principal).getId())) {
+            return ResponseEntity.status(403).build();
+        }
+        Optional<AcademicRevisionFile> file = revisionService.find(id, fileId);
+        return file.isPresent() ? revisionService.serve(file.get()) : ResponseEntity.notFound().build();
     }
 
     @GetMapping("/download/{id}/{docId}")

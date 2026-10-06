@@ -167,31 +167,19 @@
                         </div>
 
                         <!-- Progress Tracker -->
-                        <div class="timeline-v2" th:with="pIdx=${req.currentStatus.progressIndex()}">
-                            <!-- ขั้นสุดท้ายที่ไปถึงแล้ว = จบกระบวนการ ใช้ t-final (เขียวเข้ม) ไม่ใช่ t-active (ฟ้า/กระพริบ) -->
+                        <!-- เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ (ขั้นถัดจากสถานะปัจจุบัน) — กติกาอยู่ที่ RequestStatus.stepStateAt -->
+                        <div class="timeline-v2" th:with="cur=${req.currentStatus}">
                             <div th:each="step, stepStat : ${progressSteps}" class="timeline-v2-step"
-                                th:classappend="${pIdx > stepStat.index} ? 't-completed' :
-                                         (${pIdx == stepStat.index} ? (${stepStat.last} ? 't-final' : 't-active') : '')">
+                                th:with="st=${cur.stepStateAt(stepStat.index)}, icon=${st.iconFor(step)}"
+                                th:classappend="${st.timelineClass}">
                                 <div class="timeline-v2-icon">
-                                    <i th:class="'fas ' + ${step.icon}" th:if="${pIdx >= stepStat.index}"></i>
-                                    <i class="fas fa-circle u-fs-0-45rem" th:unless="${pIdx >= stepStat.index}"></i>
+                                    <i th:if="${icon != null}" th:class="'fas ' + ${icon}"></i>
+                                    <i class="fas fa-circle u-fs-0-45rem" th:if="${icon == null}"></i>
                                 </div>
-                                <div class="timeline-v2-label" th:text="${step.thaiLabel}"></div>
+                                <div class="timeline-v2-label" th:text="${step.stepLabel}"></div>
+                                <div class="timeline-v2-hint" th:if="${stepStat.index == cur.focusIndex()}"
+                                    th:text="${cur.stepHint}"></div>
                             </div>
-
-                            <!-- ขั้นตอนที่แตกออกจากเส้นทางหลัก (แก้ไข / ไม่ผ่าน / ไม่รับคำร้อง) -->
-                            <th:block th:if="${req.currentStatus.name() == 'COMPLETED_REVISE'}">
-                                <div class="timeline-v2-step t-revise">
-                                    <div class="timeline-v2-icon"><i class="fas fa-circle-exclamation"></i></div>
-                                    <div class="timeline-v2-label">แจ้งผล - แก้ไข</div>
-                                </div>
-                            </th:block>
-                            <th:block th:if="${req.currentStatus.name() == 'COMPLETED_FAIL'}">
-                                <div class="timeline-v2-step t-rejected">
-                                    <div class="timeline-v2-icon"><i class="fas fa-circle-xmark"></i></div>
-                                    <div class="timeline-v2-label">แจ้งผล - ไม่ผ่าน</div>
-                                </div>
-                            </th:block>
                         </div>
 
                         <!--/* ข้อมูลการนัดหมายและรายชื่อกรรมการเป็นความลับทางราชการ ผู้ยื่นไม่ได้ร่วม
@@ -216,7 +204,7 @@
                             <i class="fas fa-exclamation-triangle"></i>
                             <div>
                                 <span>ต้องแก้ไขเอกสาร</span>
-                                <div class="ra-detail">กรุณานำส่งเอกสารที่แก้ไขแล้ว <strong>(ฉบับจริง)</strong> ให้แก่นักทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์</div>
+                                
                             </div>
                         </div>
                         <div th:if="${req.currentStatus.name() == 'COMPLETED'}" class="result-alert ra-completed">

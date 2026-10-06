@@ -19,7 +19,8 @@
     <link rel="stylesheet" href="/css/dark-theme.css?v=3.9">
     <link rel="stylesheet" href="/css/doc_preview.css?v=3.0">
     <link rel="stylesheet" href="/css/esign.css?v=3.2">
-    <link rel="stylesheet" href="/css/searchable_select.css?v=1.0">
+    <link rel="stylesheet" href="/css/searchable_select.css?v=1.1">
+    <link th:if="${devFormFill}" rel="stylesheet" href="/css/dev_form_filler.css?v=1">
     <script th:inline="javascript">
         // Anti-flash: apply user's server-side theme BEFORE paint
         (function(){var t=/*[[${user != null && user.themePreference != null ? user.themePreference : 'light'}]]*/ 'light';
@@ -1114,8 +1115,10 @@
         });
     </script>
 <!-- ตัวค้นหาชื่อผู้ลงนาม — ต้องรันก่อน DOMContentLoaded (สร้างช่องซ่อนรหัสบัญชีให้สคริปต์ของหน้าเติมค่าที่บันทึกไว้) -->
-<script src="/js/person_picker.js?v=2"></script>
-<script src="/js/select_to_datalist.js?v=3"></script>
+<script src="/js/person_picker.js?v=4"></script>
+<script src="/js/select_to_datalist.js?v=4"></script>
+<!-- โหมด dev เท่านั้น: ปุ่มกรอกข้อมูลทดสอบในฟอร์มเอกสาร (GlobalModelAdvice.devFormFill) -->
+<script th:if="${devFormFill}" src="/js/dev_form_filler.js?v=2"></script>
 <script src="/js/thai_date_autofill.js"></script>
 <script src="/js/theme-switcher.js"></script>
 

@@ -2,8 +2,11 @@
  * Auto-converts <select> elements inside doc forms to <input> + <datalist>
  * so users can BOTH select from options AND type custom values.
  *
- * Usage: include this script at the bottom of any doc_form_X.html
- *        <script src="/js/select_to_datalist.js"></script>
+ * Every input[list] in a doc form then gets a styled dropdown (DatalistCombo)
+ * in place of the browser's datalist popup. The list attribute moves to
+ * data-combo-list; the <datalist> stays as the source of options.
+ *
+ * Loaded on every page by base_academic.html.
  */
 document.addEventListener('DOMContentLoaded', function () {
     // ค่าที่บันทึกไว้ — ช่องนี้พิมพ์ค่าเองได้ (เช่นคำนำหน้าที่ไม่มีในรายการ) แต่ <select> ที่เซิร์ฟเวอร์
@@ -74,4 +77,157 @@ document.addEventListener('DOMContentLoaded', function () {
         sel.parentNode.insertBefore(datalist, sel);
         sel.remove();
     });
+
+    // ป๊อปอัปของ <datalist> เบราว์เซอร์วาดเอง แต่ง CSS ไม่ได้ (Chrome ขึ้นกล่องดำทึบ ไม่เข้ากับธีม)
+    // จึงถอด list ออกแล้วใช้รายการที่วาดเองแทน — ตัว <datalist> ยังอยู่ในหน้าเป็นแหล่งตัวเลือก
+    // และอ่านใหม่ทุกครั้งที่เปิด รายการที่สคริปต์อื่นเติมทีหลังจึงขึ้นด้วย ช่องยังพิมพ์ค่าเองได้เหมือนเดิม
+    document.querySelectorAll('form[id^="doc"] input[list]:not([data-person-picker])').forEach(DatalistCombo.attach);
 });
+
+var DatalistCombo = (function () {
+    var seq = 0;
+
+    function optionsOf(input) {
+        var list = document.getElementById(input.dataset.comboList);
+        if (!list) return [];
+        var seen = {};
+        var out = [];
+        list.querySelectorAll('option').forEach(function (o) {
+            var v = (o.value || o.textContent || '').trim();
+            if (v && !seen[v]) { seen[v] = true; out.push(v); }
+        });
+        return out;
+    }
+
+    function attach(input) {
+        if (input.dataset.comboList) return;
+        input.dataset.comboList = input.getAttribute('list');
+        input.removeAttribute('list');
+        input.classList.add('dl-combo-input');
+        input.setAttribute('autocomplete', 'off');
+        input.setAttribute('role', 'combobox');
+        input.setAttribute('aria-autocomplete', 'list');
+        input.setAttribute('aria-expanded', 'false');
+
+        var menu = document.createElement('ul');
+        menu.id = 'dlCombo' + (++seq);
+        menu.className = 'searchable-select-dropdown searchable-select-options dl-combo-menu';
+        menu.setAttribute('role', 'listbox');
+        input.setAttribute('aria-controls', menu.id);
+        document.body.appendChild(menu);
+
+        var items = [];
+        var active = -1;
+
+        function isOpen() { return menu.classList.contains('show'); }
+
+        function locked() { return input.disabled || input.readOnly; }
+
+        function place() {
+            var r = input.getBoundingClientRect();
+            menu.style.left = r.left + 'px';
+            menu.style.width = r.width + 'px';
+            var below = window.innerHeight - r.bottom;
+            var up = below < Math.min(menu.scrollHeight, 280) + 8 && r.top > below;
+            menu.classList.toggle('is-dropup', up);
+            menu.style.top = up ? '' : r.bottom + 'px';
+            menu.style.bottom = up ? (window.innerHeight - r.top) + 'px' : '';
+        }
+
+        function setActive(i) {
+            if (active >= 0 && items[active]) items[active].classList.remove('is-focused');
+            active = i;
+            if (active >= 0 && items[active]) {
+                items[active].classList.add('is-focused');
+                items[active].scrollIntoView({ block: 'nearest' });
+                input.setAttribute('aria-activedescendant', items[active].id);
+            } else {
+                input.removeAttribute('aria-activedescendant');
+            }
+        }
+
+        // filter: ข้อความที่พิมพ์ — ว่างหรือ null คือแสดงทุกตัวเลือก
+        function open(filter) {
+            if (locked()) return;
+            var q = (filter || '').trim().toLowerCase();
+            var current = input.value.trim();
+            var values = optionsOf(input).filter(function (v) {
+                return !q || v.toLowerCase().indexOf(q) !== -1;
+            });
+            if (!values.length) { close(); return; }
+
+            menu.innerHTML = '';
+            items = values.map(function (v, i) {
+                var li = document.createElement('li');
+                li.id = menu.id + '_' + i;
+                li.className = 'searchable-select-item';
+                li.setAttribute('role', 'option');
+                li.dataset.value = v;
+                li.textContent = v;
+                if (v === current) {
+                    li.classList.add('is-selected');
+                    li.setAttribute('aria-selected', 'true');
+                }
+                menu.appendChild(li);
+                return li;
+            });
+            active = -1;
+            menu.classList.add('show');
+            input.setAttribute('aria-expanded', 'true');
+            place();
+            var sel = menu.querySelector('.is-selected');
+            if (sel) sel.scrollIntoView({ block: 'nearest' });
+        }
+
+        function close() {
+            if (!isOpen()) return;
+            menu.classList.remove('show');
+            input.setAttribute('aria-expanded', 'false');
+            input.removeAttribute('aria-activedescendant');
+            active = -1;
+        }
+
+        function choose(li) {
+            input.value = li.dataset.value;
+            close();
+            // สคริปต์ของหน้าฟังทั้งสองแบบ (เช่นช่องตำแหน่งที่ขอฟัง change บน document)
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        input.addEventListener('mousedown', function () {
+            if (isOpen()) close(); else open(null);
+        });
+        input.addEventListener('input', function (e) {
+            // เหตุการณ์ที่ choose() ส่งเองไม่ใช่การพิมพ์ — ไม่ต้องเปิดรายการกลับขึ้นมา
+            if (e.isTrusted) open(input.value);
+        });
+        input.addEventListener('blur', close);
+        input.addEventListener('keydown', function (e) {
+            if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+                e.preventDefault();
+                if (!isOpen()) { open(null); return; }
+                var n = items.length;
+                setActive(e.key === 'ArrowDown' ? (active + 1) % n : (active <= 0 ? n - 1 : active - 1));
+            } else if (e.key === 'Enter' && isOpen() && active >= 0) {
+                e.preventDefault(); // อย่าให้ Enter ที่ใช้เลือกตัวเลือกส่งฟอร์มไปด้วย
+                choose(items[active]);
+            } else if (e.key === 'Escape' && isOpen()) {
+                e.preventDefault();
+                close();
+            }
+        });
+
+        // กดค้างบนรายการไม่ให้ช่องเสียโฟกัส มิฉะนั้น blur ปิดรายการก่อนที่ click จะถึง
+        menu.addEventListener('mousedown', function (e) { e.preventDefault(); });
+        menu.addEventListener('click', function (e) {
+            var li = e.target.closest('.searchable-select-item');
+            if (li) choose(li);
+        });
+
+        window.addEventListener('scroll', function () { if (isOpen()) place(); }, true);
+        window.addEventListener('resize', function () { if (isOpen()) place(); });
+    }
+
+    return { attach: attach, optionsOf: optionsOf };
+})();

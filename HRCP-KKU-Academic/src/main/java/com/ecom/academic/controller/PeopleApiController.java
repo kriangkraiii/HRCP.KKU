@@ -44,9 +44,10 @@ public class PeopleApiController {
      * @param position    ตำแหน่งที่พิมพ์ในเอกสาร ใช้เติมช่องตำแหน่งข้างชื่อ อาจว่าง
      * @param email       ปิดบางส่วนเมื่อผู้ถามไม่ใช่เจ้าหน้าที่
      * @param recommended มีบทบาทตรงกับตำแหน่งที่ถาม (ทะเบียนบุคลากร) — ขึ้นก่อน
+     * @param acting      ผู้รักษาการแทนของช่องที่ถาม — {@code position} เป็นตำแหน่งรักษาการแทนเต็ม
      */
     public record Person(Integer userId, String name, String position, String affiliation, String email,
-            boolean recommended, boolean external) {
+            boolean recommended, boolean external, boolean acting) {
     }
 
     private final UserRepository users;
@@ -55,6 +56,10 @@ public class PeopleApiController {
     private final com.ecom.academic.service.SignerBriefing briefing;
     private final com.ecom.academic.repository.AcademicRequestRepository academicRequests;
     private final com.ecom.academic.repository.PositionRequestRepository positionRequests;
+
+    /** ผู้รักษาการแทน — ไม่มีก็แนะนำตามบทบาทอย่างเดียวเหมือนเดิม */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecom.academic.service.ActingSignerService actingSigners;
 
     public PeopleApiController(UserRepository users, StaffMemberService staffMembers,
             ExternalSignerService externalSigners, com.ecom.academic.service.SignerBriefing briefing,
@@ -82,10 +87,17 @@ public class PeopleApiController {
     /**
      * @param q    คำค้น (ชื่อ อีเมล ตำแหน่ง หน่วยงาน) — ว่างคืนผู้ที่มีบทบาทตรงก่อน
      * @param role บทบาทของตำแหน่ง ({@code staff_member.staff_role} เช่น DEAN, HEAD, HR) — ไม่บังคับ
+     * @param module       ACADEMIC/POSITION ของแบบฟอร์มที่ถาม — คู่กับ documentType และ field ใช้หาว่า
+     *                     ช่องนี้คือตำแหน่งลงนามไหน แล้วแนะนำผู้รักษาการแทนของตำแหน่งนั้นก่อน
+     * @param field        ช่องชื่อผู้ลงนามในแบบฟอร์ม เช่น dean_name
      */
     @GetMapping
     public ResponseEntity<List<Person>> search(@RequestParam(value = "q", required = false) String q,
-            @RequestParam(value = "role", required = false) String role, Principal principal) {
+            @RequestParam(value = "role", required = false) String role,
+            @RequestParam(value = "module", required = false) String module,
+            @RequestParam(value = "documentType", required = false) Integer documentType,
+            @RequestParam(value = "field", required = false) String field,
+            Principal principal) {
         UserDtls caller = principal == null ? null : users.findByEmail(principal.getName());
         if (caller == null) {
             return ResponseEntity.status(401).build();
@@ -100,18 +112,22 @@ public class PeopleApiController {
             }
         }
         String needle = normalize(q);
+        com.ecom.academic.service.ActingSignerService.Acting acting = actingFor(module, documentType, field);
 
         List<Person> found = new ArrayList<>();
         for (UserDtls u : users.findAll()) {
             if (!Boolean.TRUE.equals(u.getIsEnable())) {
                 continue;
             }
-            Person p = toPerson(u, recommended.contains(u.getId()), fullEmail);
+            Person p = acting != null && acting.user().getId().equals(u.getId())
+                    ? actingPerson(u, acting, fullEmail)
+                    : toPerson(u, recommended.contains(u.getId()), fullEmail);
             if (needle.isEmpty() ? p.recommended() : matches(u, p, needle)) {
                 found.add(p);
             }
         }
-        found.sort(Comparator.comparing(Person::recommended).reversed()
+        found.sort(Comparator.comparing(Person::acting).reversed()
+                .thenComparing(Comparator.comparing(Person::recommended).reversed())
                 .thenComparing(Person::name, Comparator.nullsLast(String::compareTo)));
         return ResponseEntity.ok(found.size() > MAX_RESULTS ? found.subList(0, MAX_RESULTS) : found);
     }
@@ -169,7 +185,31 @@ public class PeopleApiController {
 
     private static Person toPerson(UserDtls u, boolean recommended, boolean fullEmail) {
         return new Person(u.getId(), SignerNameResolver.printedName(u), u.getPositionTitle(), u.getAffiliation(),
-                fullEmail ? u.getEmail() : maskEmail(u.getEmail()), recommended, u.isExternal());
+                fullEmail ? u.getEmail() : maskEmail(u.getEmail()), recommended, u.isExternal(), false);
+    }
+
+    /** ตำแหน่งคือ "รักษาการแทน..." เต็ม — ตัวค้นหาชื่อเติมค่านี้ลงช่องตำแหน่งข้างชื่อ */
+    private static Person actingPerson(UserDtls u, com.ecom.academic.service.ActingSignerService.Acting acting,
+            boolean fullEmail) {
+        return new Person(u.getId(), SignerNameResolver.printedName(u), acting.printedPosition(), u.getAffiliation(),
+                fullEmail ? u.getEmail() : maskEmail(u.getEmail()), true, u.isExternal(), true);
+    }
+
+    /** ผู้รักษาการแทนของช่องชื่อที่ถาม — ไม่บอกว่าเป็นช่องไหนก็ไม่มี */
+    private com.ecom.academic.service.ActingSignerService.Acting actingFor(String module, Integer documentType,
+            String field) {
+        if (actingSigners == null || module == null || documentType == null || field == null) {
+            return null;
+        }
+        com.ecom.academic.model.SignatureModule parsed;
+        try {
+            parsed = com.ecom.academic.model.SignatureModule.valueOf(module.strip().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+        String slotKey = com.ecom.academic.service.SignatureAnchorRegistry.slotKeyForNameField(
+                parsed, documentType, field);
+        return slotKey == null ? null : actingSigners.activeFor(slotKey).orElse(null);
     }
 
     private static boolean matches(UserDtls u, Person p, String needle) {

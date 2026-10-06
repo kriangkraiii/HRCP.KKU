@@ -1,0 +1,7 @@
+# ค่าที่ต้องชนะ application.properties ของ main — ไฟล์ .properties ที่ระดับเดียวกันชนะ .yml
+# เสมอ ค่าใน ../application.yml จึงถูกทับเงียบ ๆ แต่ classpath:/config/ มาก่อน classpath:/
+app:
+  mail:
+    # เทสต์ต้องผ่านตัวกรองบัญชีทดสอบจริง ไม่ใช่โหมด Mailpit ของ app.auth.mode=dev
+    dev-capture:
+      enabled: false

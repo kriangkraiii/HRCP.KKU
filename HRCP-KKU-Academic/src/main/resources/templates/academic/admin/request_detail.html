@@ -55,16 +55,20 @@
 
       <!-- Progress Tracker -->
       <div class="detail-progress">
-        <div class="detail-progress-steps" th:with="pIdx=${request.currentStatus.progressIndex()}">
+        <!-- เขียว = เสร็จแล้ว, น้ำเงิน = กำลังดำเนินการ — กติกาเดียวกับหน้าผู้ยื่น (RequestStatus.stepStateAt) -->
+        <div class="detail-progress-steps" th:with="cur=${request.currentStatus}">
           <th:block th:each="step, iterStat : ${progressSteps}">
             <div class="detail-progress-step"
-                 th:classappend="${pIdx > iterStat.index} ? 'dp-done' : (${pIdx == iterStat.index} ? (${iterStat.last} ? 'dp-done dp-final' : 'dp-active') : '')">
+                 th:with="st=${cur.stepStateAt(iterStat.index)}, icon=${st.iconFor(step)}"
+                 th:classappend="${st.detailClass}">
               <div th:if="${!iterStat.last}" class="detail-step-line"
-                   th:classappend="${pIdx > iterStat.index} ? 'line-done' : ''"></div>
+                   th:classappend="${st.reached} ? 'line-done' : ''"></div>
               <div class="detail-progress-dot">
-                <i class="fas" th:classappend="${step.icon}"></i>
+                <i class="fas" th:classappend="${icon != null} ? ${icon} : ${step.icon}"></i>
               </div>
-              <div class="detail-progress-step-label" th:text="${step.thaiLabel}"></div>
+              <div class="detail-progress-step-label" th:text="${step.stepLabel}"></div>
+              <div class="detail-progress-step-hint" th:if="${iterStat.index == cur.focusIndex()}"
+                   th:text="${cur.stepHint}"></div>
             </div>
           </th:block>
         </div>
@@ -139,13 +143,16 @@
                       th:text="${s.name() == 'DRAFT'} ? 'ส่งคืนให้ผู้ยื่นแก้ไข (คณบดีไม่เห็นชอบ)' : ${s.thaiLabel}"></option>
                   </select>
                 </div>
-                <div class="mb-3 js-hidden" id="meetingFields">
-                  <label class="form-label">วันเวลาประชุม</label>
-                  <input type="datetime-local" name="meetingDate" class="form-control"
-                    th:value="${request.meetingDate}" />
-                  <label class="form-label mt-2">สถานที่ประชุม</label>
-                  <input type="text" name="meetingLocation" class="form-control" th:value="${request.meetingLocation}"
-                    placeholder="เช่น ห้องประชุมสารบรรณ ชั้น 1" />
+                <!-- ข้อ 15 — ฉบับแก้เข้าที่ประชุมรอบใหม่: ไม่เติมวันรอบแรกไว้ให้ ต้องกรอกวันใหม่ที่หลังวันเดิม -->
+                <div class="mb-3 js-hidden" id="meetingFields"
+                  th:with="rescheduling=${request.currentStatus.name() == 'REVISION_SUBMITTED'}">
+                  <div th:replace="~{academic/admin/_meeting_fields :: fields(${request}, ${rescheduling}, 'statusMeeting')}"></div>
+                  <small th:if="${rescheduling}" id="previousMeetingHint" class="text-muted d-block mt-1">
+                    <i class="fas fa-calendar-plus me-1"></i>ระบุวันประชุมรอบพิจารณาฉบับแก้ไข
+                    <th:block th:if="${request.meetingDate != null}"
+                      th:text="'(ประชุมครั้งก่อน ' + ${#temporals.format(request.meetingDate, 'd/M/')}
+                               + ${request.meetingDate.year + 543} + ' ' + ${#temporals.format(request.meetingDate, 'HH.mm')} + ' น.)'"></th:block>
+                  </small>
                 </div>
                 <div class="mb-3">
                   <label class="form-label" id="noteLabel">หมายเหตุ</label>
@@ -166,7 +173,17 @@
             </div>
             <div class="detail-section-body">
               <!-- Flow ข้อ 13-14: ฉบับแก้ไขที่ผู้ยื่นส่งกลับมา — เจ้าหน้าที่ส่งต่อให้คณะอนุกรรมการ -->
-              <div th:if="${request.revisionFilePath != null}" class="alert alert-warning d-flex align-items-center justify-content-between gap-2 py-2">
+              <div th:if="${!revisionRounds.isEmpty()}" class="alert alert-warning py-2" id="revisionFilesAdmin">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                  <span class="fw-semibold"><i class="fas fa-file-pen me-1"></i> เอกสารฉบับแก้ไขจากผู้ยื่น</span>
+                  <span th:if="${request.currentStatus.name() == 'REVISION_SUBMITTED'}" class="badge bg-warning text-dark">
+                    รอส่งต่อคณะอนุกรรมการ
+                  </span>
+                </div>
+                <div th:replace="~{academic/_revision_files :: list(${revisionRounds}, '/admin/academic/request/' + ${request.id} + '/revision/')}"></div>
+              </div>
+              <!-- คำร้องเก่าที่ส่งฉบับแก้ไว้ก่อนรองรับหลายไฟล์ (V36) -->
+              <div th:if="${revisionRounds.isEmpty() and request.revisionFilePath != null}" class="alert alert-warning d-flex align-items-center justify-content-between gap-2 py-2">
                 <span><i class="fas fa-file-pen me-1"></i> ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว</span>
                 <a th:href="@{'/admin/academic/request/' + ${request.id} + '/revision-file'}" class="btn btn-sm btn-outline-dark">
                   <i class="fas fa-download me-1"></i> ดาวน์โหลดฉบับแก้ไข
@@ -464,6 +481,54 @@
                     </div>
                   </div>
                 </th:block>
+                <!--/* ข้อ 14-15 — รอบแรกเลื่อนเป็น "นัดหมาย" เองเมื่อหนังสือเชิญลงนามครบ แต่รอบพิจารณาฉบับแก้
+                     ต้องมีวันประชุมใหม่ จึงนัดได้ตรงนี้เลย ไม่ต้องไปเลือกสถานะเองที่ฟอร์มอัปเดตสถานะ */-->
+                <div th:if="${entry.key == multiCopyDocType and request.currentStatus.name() == 'REVISION_SUBMITTED'}"
+                  class="doc-grid-sub dgs-meeting" id="revisionMeetingRow"
+                  th:with="blocked=${awaitingResignDocs != null and !#lists.isEmpty(awaitingResignDocs)}">
+                  <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-1">
+                    <span class="dgs-meeting-title">
+                      <i class="fas fa-calendar-plus me-1"></i> นัดประชุมพิจารณาฉบับแก้ไข
+                    </span>
+                    <a th:if="${!revisionRounds.isEmpty()}" href="#revisionFilesAdmin" class="small">
+                      <i class="fas fa-file-pen me-1"></i>ดูไฟล์ฉบับแก้ไขจากผู้ยื่น
+                    </a>
+                  </div>
+                  <small class="text-muted d-block mb-2">
+                    ผู้ยื่นส่งเอกสารที่แก้ไขแล้ว — ระบุวันประชุมรอบใหม่ ระบบจะเปลี่ยนสถานะเป็น "นัดหมายคณะอนุกรรมการ"
+                    แจ้งผู้ยื่น และส่งอีเมลนัดประชุมพร้อมไฟล์ฉบับแก้ถึงกรรมการ 3 ท่านตามคำสั่งแต่งตั้ง (เอกสารที่ 4)
+                    <th:block th:if="${request.meetingDate != null}"
+                      th:text="'(ประชุมครั้งก่อน ' + ${#temporals.format(request.meetingDate, 'd/M/')}
+                               + ${request.meetingDate.year + 543} + ' ' + ${#temporals.format(request.meetingDate, 'HH.mm')} + ' น.)'"></th:block>
+                  </small>
+                  <div th:if="${blocked}" class="small text-warning-emphasis mb-2">
+                    <i class="fas fa-pen-nib me-1"></i>นัดได้เมื่อเอกสารที่ส่งกลับให้แก้ลงนามใหม่ครบ:
+                    [[${#strings.listJoin(awaitingResignDocs, ', ')}]]
+                  </div>
+                  <form th:action="'/admin/academic/request/' + ${request.id} + '/status'" method="post"
+                    id="revisionMeetingForm">
+                    <input type="hidden" name="status" value="MEETING_SCHEDULED" />
+                    <div th:replace="~{academic/admin/_meeting_fields :: fields(${request}, true, 'revisionMeeting')}"></div>
+                    <div class="d-flex justify-content-end mt-2">
+                      <button type="submit" class="btn btn-sm btn-primary" th:disabled="${blocked}">
+                        <i class="fas fa-calendar-check me-1"></i> นัดประชุม
+                      </button>
+                    </div>
+                  </form>
+                </div>
+                <!--/* นัดรอบฉบับแก้ไขแล้ว: ระบบส่งอีเมลนัดถึงกรรมการเองตอนนัด — ปุ่มนี้สำหรับส่งซ้ำ */-->
+                <div th:if="${entry.key == multiCopyDocType and request.currentStatus.name() == 'MEETING_SCHEDULED'
+                             and !revisionRounds.isEmpty()}" class="doc-grid-sub" id="revisionMeetingEmailRow">
+                  <div class="d-flex justify-content-between align-items-center">
+                    <small class="dgs-label"><i class="fas fa-envelope"></i> อีเมลนัดประชุมพิจารณาฉบับแก้ไขถึงกรรมการ (ส่งอัตโนมัติเมื่อนัด)</small>
+                    <form th:action="|/admin/academic/request/${request.id}/revision-meeting/email-committee|" method="post"
+                      data-confirm="ส่งอีเมลนัดประชุมพิจารณาฉบับแก้ไขถึงกรรมการทั้งสามท่านอีกครั้ง?">
+                      <button type="submit" class="btn btn-outline-secondary btn-sm">
+                        <i class="fas fa-paper-plane"></i> ส่งอีกครั้ง
+                      </button>
+                    </form>
+                  </div>
+                </div>
                 <!-- Generated copies -->
                 <div th:each="doc : ${documents}"
                   th:if="${doc.documentType == entry.key and !(entry.key == multiCopyDocType and !committeeLetters.isEmpty())}"
@@ -492,12 +557,14 @@
       </div>
     </div>
 
+    <script src="/js/time_picker_24.js"></script>
     <script>
       document
         .getElementById("statusSelect")
         .addEventListener("change", function () {
+          const scheduling = this.value === "MEETING_SCHEDULED";
           document.getElementById("meetingFields").style.display =
-            this.value === "MEETING_SCHEDULED" ? "block" : "none";
+            scheduling ? "block" : "none";
 
           // ส่งคืนโดยไม่บอกเหตุผล = ให้ผู้ยื่นเดาว่าต้องแก้อะไร ฝั่ง server ก็ปฏิเสธเช่นกัน
           const returning = this.value === "DRAFT";
@@ -507,6 +574,65 @@
             ? "เหตุผลที่ส่งคืน (จำเป็น)"
             : "หมายเหตุ";
         });
+
+      // ช่องนัดประชุม (_meeting_fields) — วันแสดงแบบไทย พ.ศ. แบบเอกสารที่ 5 ค่าที่ส่งคือช่อง date ที่ซ่อนไว้
+      (function () {
+        const THAI_MONTHS = ["มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+          "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"];
+
+        function thaiDate(iso) {
+          const p = (iso || "").split("-");
+          return p.length === 3 ? +p[2] + " " + THAI_MONTHS[+p[1] - 1] + " " + (+p[0] + 543) : "";
+        }
+
+        function minutes(t) {
+          const m = /^(\d{2})[.:](\d{2})$/.exec(t || "");
+          return m ? +m[1] * 60 + +m[2] : null;
+        }
+
+        document.querySelectorAll(".meeting-fields").forEach(function (fields) {
+          const form = fields.closest("form");
+          const picker = fields.querySelector("[name='meetingDay']");
+          const dayText = fields.querySelector(".meeting-day-text");
+          const start = form.querySelector("[name='meetingStart']");
+          const end = form.querySelector("[name='meetingEnd']");
+          const error = fields.querySelector(".meeting-fields-error");
+
+          dayText.value = thaiDate(picker.value);
+          const openPicker = function () { picker.showPicker(); };
+          fields.querySelector(".thai-date-btn").addEventListener("click", openPicker);
+          dayText.addEventListener("click", openPicker);
+          picker.addEventListener("change", function () {
+            dayText.value = thaiDate(picker.value);
+            dayText.classList.remove("is-invalid");
+          });
+
+          form.addEventListener("submit", function (e) {
+            const status = form.querySelector("[name='status']");
+            if (status && status.value !== "MEETING_SCHEDULED") return;
+            // รอบแรกนัดโดยไม่ระบุวันได้ (ปกติระบบนัดให้เองจากเอกสารที่ 5) — กรอกวันแล้วต้องครบ
+            if (!fields.hasAttribute("data-required") && !picker.value && !start.value && !end.value) return;
+
+            const s = minutes(start.value), f = minutes(end.value);
+            const problems = [];
+            dayText.classList.toggle("is-invalid", !picker.value);
+            if (!picker.value) problems.push("วันที่ประชุม");
+            fields.querySelector("[data-target='meetingStart'] .time24-input").classList.toggle("is-invalid", s === null);
+            if (s === null) problems.push("เวลาเริ่ม");
+            const badEnd = f === null || (s !== null && f <= s);
+            fields.querySelector("[data-target='meetingEnd'] .time24-input").classList.toggle("is-invalid", badEnd);
+            if (f === null) problems.push("เวลาสิ้นสุด");
+
+            if (problems.length || badEnd) {
+              e.preventDefault();
+              error.textContent = problems.length
+                ? "กรุณาระบุ" + problems.join(" ")
+                : "เวลาสิ้นสุดต้องอยู่หลังเวลาเริ่ม";
+              error.classList.remove("js-hidden");
+            }
+          });
+        });
+      })();
 
       document.querySelectorAll(".btn-pdf-print").forEach((btn) => {
         btn.addEventListener("click", function () {

@@ -66,12 +66,21 @@
                              วิธีเดิมพึ่งเบราว์เซอร์ล้วน ๆ ปิด JS หรือยิง POST ตรงก็ลบค่าของเจ้าหน้าที่ได้ -->
 
                         <h5 class="border-bottom pb-2 mb-3"><i class="fas fa-user"></i> ข้อมูลผู้ยื่นคำร้อง</h5>
+                        <!-- คำนำหน้าและชื่อมาจากข้อมูลบุคลากรในระบบ เซิร์ฟเวอร์เขียนทับทุกครั้งที่บันทึก
+                             (AcademicRequestService.applicantProfileFields) -->
+                        <p th:unless="${profileLocked == null or profileLocked.isEmpty()}" class="small text-muted mt-n2 mb-2">
+                            <i class="fas fa-lock me-1"></i>ดึงจากข้อมูลบุคลากรในระบบ — หากไม่ถูกต้องโปรดติดต่อเจ้าหน้าที่
+                        </p>
                         <div class="row mb-3">
                             <div class="col-md-3">
                                 <label class="form-label">คำนำหน้า <span class="text-danger">*</span></label>
                                 <!-- currentTitle: อ่านผ่าน map['key'] เพราะ map.key จะโยน
                                      exception ถ้าไม่มีคีย์นั้น ซึ่งเกิดกับผู้ใช้ที่ยังไม่ได้ตั้งคำนำหน้า -->
-                                <select name="title" class="form-select" id="titleSelect" required
+                                <input th:if="${profileLocked != null and profileLocked.containsKey('title')}"
+                                    type="text" name="title" class="form-control" id="titleSelect" readonly required
+                                    th:value="${profileLocked['title']}">
+                                <select th:unless="${profileLocked != null and profileLocked.containsKey('title')}"
+                                        name="title" class="form-select" id="titleSelect" required
                                         th:with="storedTitle=${(dData != null ? dData['title'] : null) ?: request.applicant.title},
                                                  currentTitle=${#strings.trim(#strings.replace(storedTitle, 'ดร.', ''))}">
                                     <option value="">-- เลือก --</option>
@@ -87,7 +96,8 @@
                             <div class="col-md-5">
                                 <label class="form-label">ชื่อ-นามสกุล ผู้ยื่น <span class="text-danger">*</span></label>
                                 <input type="text" name="applicant_name" class="form-control" required placeholder="เช่น สมชาย ใจดี"
-                                    th:value="${dData != null ? dData.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}">
+                                    th:value="${dData != null ? dData.getOrDefault('applicant_name', request.applicant.name) : request.applicant.name}"
+                                    th:readonly="${profileLocked != null and profileLocked.containsKey('applicant_name')}">
                             </div>
                         </div>
 

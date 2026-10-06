@@ -1520,6 +1520,17 @@ body,
     color: #94a3b8;
 }
 
+/* #1565c0 จมบนพื้นมืด — ใช้ฟ้าอ่อนแทนสำหรับคำอธิบายขั้นที่กำลังดำเนินการ */
+[data-theme="dark"] .timeline-v2-step.t-active .timeline-v2-hint,
+[data-theme="dark"] .detail-progress-step.dp-active .detail-progress-step-hint,
+[data-theme="dark"] .dgs-meeting-title {
+    color: #90caf9;
+}
+
+[data-theme="dark"] .doc-grid-sub.dgs-meeting {
+    background: rgba(144, 202, 249, 0.08);
+}
+
 /* Floating doc buttons - Liquid Obsidian Glass */
 [data-theme="dark"] .floating-doc-btn {
     box-shadow: 0 8px 32px rgba(0, 0, 0, 0.55), inset 0 1px 1px rgba(255, 255, 255, 0.15) !important;
@@ -1701,7 +1712,9 @@ body,
 
 [data-theme="dark"] .detail-progress-step.dp-done .detail-progress-dot,
 [data-theme="dark"] .detail-progress-step.dp-active .detail-progress-dot,
-[data-theme="dark"] .detail-progress-step.dp-final .detail-progress-dot {
+[data-theme="dark"] .detail-progress-step.dp-final .detail-progress-dot,
+[data-theme="dark"] .detail-progress-step.dp-revise .detail-progress-dot,
+[data-theme="dark"] .detail-progress-step.dp-rejected .detail-progress-dot {
     color: #ffffff !important;
 }
 

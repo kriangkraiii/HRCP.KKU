@@ -37,6 +37,8 @@ public class GuardedMailSenderConfig {
             @Value("${app.mail.dev-capture.enabled:true}") boolean captureEnabled,
             @Value("${app.mail.dev-capture.port:1025}") int capturePort) {
         boolean capture = captureEnabled && "dev".equalsIgnoreCase(authMode.trim());
+        // บริการส่งอีเมลแต่ละตัวยังข้ามบัญชีทดสอบเองก่อนถึงตัวส่ง — ต้องปิดด้วย ไม่งั้นแจ้งเตือนไม่ถึง Mailpit
+        com.ecom.util.EmailTemplateHelper.setDevCapture(capture);
         if (capture) {
             redirectToLocalCatchAll(delegate, capturePort);
         } else {

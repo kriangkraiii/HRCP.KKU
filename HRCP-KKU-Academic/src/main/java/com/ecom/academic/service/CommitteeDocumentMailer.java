@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.model.AcademicDocumentEditLog;
 import com.ecom.academic.model.AcademicRequest;
+import com.ecom.academic.model.AcademicRevisionFile;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.model.SignatureRequest;
 import com.ecom.academic.model.SignatureRequestStatus;
@@ -25,6 +26,7 @@ import com.ecom.model.NotificationType;
 import com.ecom.model.UserDtls;
 import com.ecom.service.NotificationService;
 import com.ecom.util.EmailTemplateHelper;
+import com.ecom.util.ThaiDateUtil;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
@@ -39,6 +41,9 @@ import jakarta.mail.internet.MimeMessage;
  *
  * <p>ส่งเมื่อกรรมการทุกท่านผูกกับบัญชีที่มีอีเมลได้และสร้างหนังสือได้ครบเท่านั้น ถ้าส่งไปบางท่าน
  * แล้วหยุด การกดส่งซ้ำจะทำให้ท่านที่ได้แล้วได้ซ้ำอีก
+ *
+ * <p>รอบพิจารณาฉบับแก้ไข (ข้อ 14-15) ไม่มีหนังสือเชิญใหม่ — ส่งอีเมลนัดวันเวลาสถานที่รอบใหม่
+ * พร้อมรายการฉบับแก้ถึงกรรมการตามคำสั่งแต่งตั้ง ดู {@link #sendRevisionMeeting}
  */
 @Service
 public class CommitteeDocumentMailer {
@@ -61,6 +66,7 @@ public class CommitteeDocumentMailer {
     private final DocumentSnapshotProvider snapshots;
     private final JavaMailSender mailSender;
     private final NotificationService notifications;
+    private final AcademicRevisionService revisions;
     private final String senderEmail;
     private final String publicBaseUrl;
 
@@ -72,6 +78,7 @@ public class CommitteeDocumentMailer {
             DocumentSnapshotProvider snapshots,
             JavaMailSender mailSender,
             NotificationService notifications,
+            AcademicRevisionService revisions,
             @Value("${app.mail.from:${spring.mail.username:noreply@kku.ac.th}}") String senderEmail,
             @Value("${app.public-base-url:https://hrd.computing.kku.ac.th}") String publicBaseUrl) {
         this.envelopes = envelopes;
@@ -82,6 +89,7 @@ public class CommitteeDocumentMailer {
         this.snapshots = snapshots;
         this.mailSender = mailSender;
         this.notifications = notifications;
+        this.revisions = revisions;
         this.senderEmail = senderEmail;
         this.publicBaseUrl = publicBaseUrl.replaceAll("/+$", "");
     }
@@ -186,6 +194,123 @@ public class CommitteeDocumentMailer {
                     + " ไม่สำเร็จ" + (delivered.isEmpty() ? "" : " (ส่งถึง " + String.join(", ", delivered) + " แล้ว)"));
         }
         return new Outcome(true, "ส่งหนังสือเชิญถึงกรรมการทางอีเมลแล้ว: " + String.join(", ", delivered));
+    }
+
+    /** นัดรอบฉบับแก้ไขแล้ว — ส่งไม่ได้ก็แจ้งเจ้าหน้าที่ให้แก้แล้วกดส่งซ้ำจากหน้าคำร้อง */
+    @Async
+    @org.springframework.context.event.EventListener
+    @Transactional
+    public void onRevisionMeetingScheduled(RevisionMeetingScheduled event) {
+        Outcome outcome = sendRevisionMeeting(event.requestId(), event.scheduledBy());
+        if (!outcome.sent()) {
+            notifications.notifyAdmins(null, "ส่งอีเมลนัดประชุมพิจารณาฉบับแก้ไขถึงกรรมการไม่สำเร็จ", outcome.message(),
+                    "/admin/academic/request/" + event.requestId(), NotificationType.SYSTEM, true);
+        }
+    }
+
+    /**
+     * อีเมลนัดประชุมพิจารณาฉบับแก้ไขถึงกรรมการสามท่านตามคำสั่งแต่งตั้ง (เอกสารที่ 4)
+     * วันเวลาสถานที่จากการนัดล่าสุดของคำร้อง ฉบับแก้จากรอบล่าสุดที่ผู้ยื่นส่งมา
+     *
+     * @param sentBy เจ้าหน้าที่ที่นัดหรือกดส่งซ้ำ
+     */
+    @Transactional
+    public Outcome sendRevisionMeeting(Long requestId, UserDtls sentBy) {
+        AcademicRequest request = requestRepository.findByIdWithApplicant(requestId).orElse(null);
+        if (request == null) {
+            return new Outcome(false, "ไม่พบคำร้อง");
+        }
+        String code = request.getRequestCode() != null ? request.getRequestCode() : String.valueOf(request.getId());
+        if (request.getMeetingDate() == null) {
+            return new Outcome(false, "คำร้อง #" + code + " ยังไม่มีวันประชุม");
+        }
+
+        List<String> problems = new ArrayList<>();
+        Map<String, String> appointed = requests.appointedCommittee(request);
+        List<String> names = new ArrayList<>();
+        List<UserDtls> recipients = new ArrayList<>();
+        for (int i = 1; i <= NamedAccountResolver.COMMITTEE_FIELDS.size(); i++) {
+            String seat = NamedAccountResolver.COMMITTEE_FIELDS.get(i - 1);
+            String name = NamedAccountResolver.normalize(appointed.get(seat));
+            if (name.isEmpty()) {
+                problems.add("กรรมการคนที่ " + i + ": ไม่มีชื่อในคำสั่งแต่งตั้ง (เอกสารที่ 4)");
+                continue;
+            }
+            NamedAccountResolver.Resolution r = accounts.resolve(appointed, seat);
+            if (r.account() == null) {
+                problems.add("กรรมการคนที่ " + i + " “" + name + "”: " + NamedAccountResolver.describe(r.problem()));
+            } else if (r.account().getEmail() == null || r.account().getEmail().isBlank()) {
+                problems.add("กรรมการคนที่ " + i + " “" + name + "”: บัญชีไม่มีอีเมล");
+            } else {
+                names.add(name);
+                recipients.add(r.account());
+            }
+        }
+        if (!problems.isEmpty()) {
+            String message = "ยังไม่ได้ส่งอีเมลนัดประชุมพิจารณาฉบับแก้ไขคำร้อง #" + code + " ถึงกรรมการ — "
+                    + String.join("; ", problems);
+            log.warn(message);
+            return new Outcome(false, message);
+        }
+
+        List<String> files = new ArrayList<>();
+        List<Map.Entry<String, String>> links = new ArrayList<>();
+        for (AcademicRevisionFile f : revisions.latestRound(request.getId())) {
+            if (f.isLink()) {
+                links.add(Map.entry(f.getOriginalFilename(), f.getStoredPath()));
+            } else {
+                files.add(f.getOriginalFilename());
+            }
+        }
+
+        String applicantName = request.getApplicant() != null ? SignerNameResolver.printedName(request.getApplicant()) : "-";
+        String when = meetingTime(request);
+        String link = filesPath(request.getId());
+        List<String> delivered = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        for (int i = 0; i < recipients.size(); i++) {
+            UserDtls member = recipients.get(i);
+            String email = member.getEmail();
+            try {
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(EmailTemplateHelper.resolveSenderEmail(senderEmail), EmailTemplateHelper.SENDER_NAME);
+                helper.setTo(email);
+                helper.setSubject("ขอเชิญประชุมพิจารณาเอกสารฉบับแก้ไขของ " + applicantName + " (รหัสคำร้อง " + code + ")");
+                helper.setText(EmailTemplateHelper.buildRevisionMeetingEmail(names.get(i), code, applicantName, when,
+                        request.getMeetingLocation(), publicBaseUrl + link, files, links), true);
+                EmailTemplateHelper.attachLogos(helper);
+                mailSender.send(message);
+            } catch (Exception e) {
+                log.warn("ส่งอีเมลนัดประชุมฉบับแก้ไขคำร้อง #{} ถึง {} ไม่สำเร็จ: {}", code, email, e.toString());
+                failed.add(names.get(i) + " <" + email + ">");
+                continue;
+            }
+            delivered.add(names.get(i) + " <" + email + ">");
+            notifications.sendNotification(member, sentBy, "นัดประชุมพิจารณาเอกสารฉบับแก้ไข",
+                    "คำร้อง #" + code + " ของ " + applicantName + " — " + when, link,
+                    NotificationType.COMMITTEE_INVITATION, true);
+        }
+
+        if (!delivered.isEmpty()) {
+            requests.logDocumentChange(request, AcademicRequestService.COMMITTEE_COPIES_DOC_TYPE,
+                    "ส่งอีเมลนัดประชุมพิจารณาฉบับแก้ไขถึงกรรมการ: " + String.join(", ", delivered), sentBy,
+                    AcademicDocumentEditLog.EditAction.COMMITTEE_EMAILED);
+        }
+        if (!failed.isEmpty()) {
+            return new Outcome(false, "ส่งอีเมลนัดประชุมพิจารณาฉบับแก้ไขคำร้อง #" + code + " ถึง " + String.join(", ", failed)
+                    + " ไม่สำเร็จ" + (delivered.isEmpty() ? "" : " (ส่งถึง " + String.join(", ", delivered) + " แล้ว)"));
+        }
+        return new Outcome(true, "ส่งอีเมลนัดประชุมพิจารณาฉบับแก้ไขถึงกรรมการแล้ว: " + String.join(", ", delivered));
+    }
+
+    /** "วันจันทร์ที่ 5 ตุลาคม 2569 เวลา 09.00 – 12.30 น." */
+    private static String meetingTime(AcademicRequest request) {
+        java.time.LocalDateTime start = request.getMeetingDate();
+        String from = "%02d.%02d".formatted(start.getHour(), start.getMinute());
+        java.time.LocalTime end = request.getMeetingEndTime();
+        String to = end == null ? "" : " – %02d.%02d".formatted(end.getHour(), end.getMinute());
+        return ThaiDateUtil.fullDate(start.toLocalDate()) + " เวลา " + from + to + " น.";
     }
 
     /**

@@ -119,4 +119,28 @@ class Doc6ProceedTest extends AbstractFlowTest {
         assertThat(Jsoup.parse(applicantPage()).getElementById("committeeSuggestions").text())
                 .contains("ควรเพิ่มตัวอย่างในบทที่ 2");
     }
+
+    /**
+     * ผู้ยื่นส่งฉบับแก้มาแล้ว ("ส่งเอกสารแก้ไขแล้ว") ไปต่อได้ทางเดียวคือนัดหมายอนุกรรมการ
+     * เดิมปุ่มยังโผล่ และกดแล้ว updateStatus ปฏิเสธจนหน้าพังเป็น 500
+     */
+    @Test
+    @DisplayName("ผู้ยื่นส่งฉบับแก้แล้ว: ไม่มีปุ่มส่งกลับ และยิงตรงก็ได้ข้อความแทนหน้าพัง")
+    void afterTheRevisionIsInItCannotBeSentBackYet() throws Exception {
+        request = data.evaluation(applicant, RequestStatus.REVISION_SUBMITTED);
+
+        String html = mvc.perform(get(doc6()).with(asOfficer()))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(Jsoup.parse(html).getElementById("btnSendSuggestion")).isNull();
+
+        mvc.perform(post(doc6() + "/send-suggestion").with(asOfficer()).with(csrf()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(doc6()))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash()
+                        .attribute("errorMsg", org.hamcrest.Matchers.containsString("นัดประชุมพิจารณาฉบับแก้ไข")));
+
+        assertThat(academicService.findById(request.getId()).orElseThrow().getCurrentStatus())
+                .isEqualTo(RequestStatus.REVISION_SUBMITTED);
+        verify(emailService, never()).sendSuggestionEmail(eq(request.getId()), anyString());
+    }
 }

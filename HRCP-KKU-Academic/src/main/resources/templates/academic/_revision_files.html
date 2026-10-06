@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+
+<!--
+  เอกสารฉบับแก้ไขที่ผู้ยื่นส่งกลับมา (Flow ข้อ 13-14) — ใช้ทั้งหน้าผู้ยื่นและหน้าเจ้าหน้าที่
+
+  rounds     Map<Integer, List<AcademicRevisionFile>>  รอบล่าสุดก่อน
+  linkBase   เช่น /user/academic/request/5/revision/  (ต่อท้ายด้วย id ของรายการ)
+-->
+
+<th:block th:fragment="list(rounds, linkBase)">
+    <details th:each="entry, st : ${rounds}" class="revision-round" th:open="${st.first}">
+        <summary class="revision-round-head">
+            <span class="fw-semibold">รอบที่ [[${entry.key}]]</span>
+            <span th:if="${st.first}" class="badge bg-warning text-dark ms-1">ล่าสุด</span>
+            <span class="text-muted small ms-2">
+                ส่งเมื่อ <span th:text="${@thaiDateUtil.format(entry.value[0].uploadedAt)}"></span>
+                · [[${entry.value.size()}]] รายการ
+            </span>
+        </summary>
+        <ul class="revision-files">
+            <li th:each="f : ${entry.value}" class="revision-file">
+                <i class="fas fa-fw" th:classappend="${f.icon}"></i>
+                <span class="revision-file-name" th:text="${f.originalFilename}" th:title="${f.originalFilename}"></span>
+                <small class="text-muted text-nowrap" th:text="${f.link} ? 'ลิงก์' : ${f.sizeLabel}"></small>
+                <a th:href="${linkBase + f.id}" th:target="${f.link} ? '_blank' : null" rel="noopener noreferrer"
+                   class="btn btn-sm btn-outline-primary text-nowrap">
+                    <i class="fas" th:classappend="${f.link} ? 'fa-arrow-up-right-from-square' : 'fa-download'"></i>
+                    <span th:text="${f.link} ? 'เปิดลิงก์' : 'ดาวน์โหลด'"></span>
+                </a>
+            </li>
+        </ul>
+    </details>
+</th:block>
+
+</body>
+</html>

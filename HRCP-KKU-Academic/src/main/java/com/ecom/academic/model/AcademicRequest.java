@@ -1,6 +1,7 @@
 package com.ecom.academic.model;
 
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -56,6 +57,10 @@ public class AcademicRequest {
 
     @Column(name = "meeting_location")
     private String meetingLocation;
+
+    /** เวลาสิ้นสุดการประชุม — วันและเวลาเริ่มอยู่ที่ {@link #meetingDate} */
+    @Column(name = "meeting_end_time")
+    private LocalTime meetingEndTime;
 
     @Column(name = "result_file_path")
     private String resultFilePath;
@@ -161,6 +166,14 @@ public class AcademicRequest {
 
     public void setMeetingLocation(String meetingLocation) {
         this.meetingLocation = meetingLocation;
+    }
+
+    public LocalTime getMeetingEndTime() {
+        return meetingEndTime;
+    }
+
+    public void setMeetingEndTime(LocalTime meetingEndTime) {
+        this.meetingEndTime = meetingEndTime;
     }
 
     public String getResultFilePath() {

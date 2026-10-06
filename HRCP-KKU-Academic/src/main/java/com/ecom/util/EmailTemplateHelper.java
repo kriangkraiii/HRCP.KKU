@@ -63,7 +63,22 @@ public final class EmailTemplateHelper {
             log.warn("Skipping email with no recipient address — this is a data problem, not a test account");
             return true;
         }
+        if (devCapture) {
+            return false;
+        }
         return com.ecom.config.TestAccountRegistry.isConfiguredTestAccount(email);
+    }
+
+    /**
+     * Dev capture mode: every email goes to the local catch-all (Mailpit), so
+     * there is no real inbox to protect and test accounts must not be skipped —
+     * otherwise every rehearsal notification vanishes before reaching the
+     * sender. Set by {@code GuardedMailSenderConfig}.
+     */
+    private static volatile boolean devCapture;
+
+    public static void setDevCapture(boolean enabled) {
+        devCapture = enabled;
     }
 
     /**
@@ -470,6 +485,54 @@ public final class EmailTemplateHelper {
                         "ภายหลังการประเมิน ลงนามในแบบประเมินผลการสอนผ่านระบบ โดยระบบจะส่งอีเมลแจ้งท่านเมื่อถึงลำดับการลงนาม"))
                 .close("จึงเรียนมาเพื่อโปรดพิจารณา และขอขอบคุณมา ณ โอกาสนี้");
         return wrapLayout("ขอเรียนเชิญเป็นกรรมการผู้ทรงคุณวุฒิ", "ประเมินผลการสอน", body);
+    }
+
+    /**
+     * นัดประชุมพิจารณาเอกสารฉบับแก้ไข ถึงกรรมการแต่ละท่าน (Flow ข้อ 14-15)
+     *
+     * @param when  วันเวลาประชุม เช่น "วันจันทร์ที่ 5 ตุลาคม 2569 เวลา 09.00 – 12.30 น."
+     * @param files ชื่อไฟล์ฉบับแก้ (เปิดผ่านหน้าเอกสารของผู้ยื่นในระบบ)
+     * @param links ลิงก์ฉบับแก้ที่ผู้ยื่นส่งมา (ชื่อ → URL)
+     */
+    public static String buildRevisionMeetingEmail(String committeeName, String requestCode,
+            String applicantName, String when, String location, String filesUrl, java.util.List<String> files,
+            java.util.List<java.util.Map.Entry<String, String>> links) {
+        StringBuilder list = new StringBuilder();
+        if (files.isEmpty() && links.isEmpty()) {
+            list.append(noteHtml("warn", null, "ผู้ขอรับการประเมินไม่ได้ส่งไฟล์ฉบับแก้ไขไว้ในระบบ"
+                    + " กรุณาติดต่อภารกิจด้านทรัพยากรบุคคลเพื่อขอรับเอกสาร"));
+        } else {
+            list.append("<p style='font-size:14px;color:#1e293b;font-weight:600;margin:0 0 6px 0;'>เอกสารฉบับแก้ไขของผู้ขอรับการประเมิน</p>");
+            list.append("<ul style='margin:0 0 16px 0;padding-left:22px;color:#334155;font-size:14px;line-height:1.7;'>");
+            for (String file : files) {
+                list.append("<li>").append(escapeHtml(file)).append("</li>");
+            }
+            for (java.util.Map.Entry<String, String> link : links) {
+                list.append("<li><a href='").append(escapeHtml(link.getValue()))
+                        .append("' target='_blank' style='color:#2563eb;'>").append(escapeHtml(link.getKey())).append("</a></li>");
+            }
+            list.append("</ul>");
+        }
+
+        Letter letter = Letter.of("ขอเชิญประชุมพิจารณาเอกสารฉบับแก้ไข", committeeName)
+                .para("ตามที่ท่านได้ร่วมประเมินผลการสอนของ " + applicantName + " (รหัสคำร้อง " + requestCode + ")"
+                        + " และคณะอนุกรรมการมีมติให้แก้ไขเอกสาร บัดนี้ผู้ขอรับการประเมินได้ส่งเอกสารฉบับแก้ไขแล้ว"
+                        + " วิทยาลัยฯ จึงขอเรียนเชิญท่านประชุมพิจารณาเอกสารฉบับแก้ไข ตามวัน เวลา และสถานที่ดังนี้")
+                .details(rows("ผู้ขอรับการประเมิน", applicantName,
+                        "รหัสคำร้อง", requestCode,
+                        "วันเวลาประชุม", when,
+                        "สถานที่", location == null || location.isBlank() ? "-" : location))
+                .html(list.toString());
+        if (!files.isEmpty()) {
+            letter.button("เปิดดูเอกสารฉบับแก้ไข", filesUrl)
+                    .para("การเปิดดูเอกสาร ท่านต้องเข้าสู่ระบบด้วยอีเมลที่ได้รับหนังสือฉบับนี้");
+        }
+        String body = letter
+                .steps("สิ่งที่วิทยาลัยฯ ขอความอนุเคราะห์จากท่าน", java.util.List.of(
+                        "ศึกษาเอกสารฉบับแก้ไขของผู้ขอรับการประเมิน",
+                        "ร่วมประชุมพิจารณาตามวัน เวลา และสถานที่ข้างต้น"))
+                .close("จึงเรียนมาเพื่อโปรดพิจารณา และขอขอบคุณมา ณ โอกาสนี้");
+        return wrapLayout("ขอเชิญประชุมพิจารณาเอกสารฉบับแก้ไข", "ประเมินผลการสอน", body);
     }
 
     /** ผลการประเมินผลการสอนใกล้หมดอายุ */

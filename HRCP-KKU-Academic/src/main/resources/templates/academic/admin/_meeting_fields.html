@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!--/* ช่องนัดประชุมคณะอนุกรรมการ — วันแบบไทย (พ.ศ.) และเวลาเริ่ม/สิ้นสุดแบบ 24 ชั่วโมง เหมือนเอกสารที่ 5
+     ช่อง datetime-local แสดง AM/PM และปีคริสต์ศักราชตามเครื่อง ไม่ตรงกับที่พิมพ์ลงหนังสือ
+
+     ส่งไปกับฟอร์ม: meetingDay (yyyy-MM-dd), meetingStart / meetingEnd (09.30), meetingLocation
+     rescheduling = รอบพิจารณาฉบับแก้ไข: ไม่เติมวันรอบแรกไว้ให้ และบังคับกรอก (data-required)
+     ต้องโหลด /js/time_picker_24.js และสคริปต์ช่องวันในหน้าที่ใช้ */-->
+<th:block th:fragment="fields(request, rescheduling, idPrefix)">
+  <div class="row g-2 meeting-fields"
+    th:with="prefill=${!rescheduling and request.meetingDate != null}"
+    th:attr="data-required=${rescheduling ? 'true' : null}">
+    <div class="col-sm-6">
+      <label class="form-label small mb-1" th:for="${idPrefix + 'Day'}">วันที่ประชุม</label>
+      <div class="input-group input-group-sm">
+        <input type="text" th:id="${idPrefix + 'Day'}" class="form-control thai-full-date meeting-day-text"
+          readonly placeholder="เลือกวันที่" />
+        <input type="date" name="meetingDay" class="thai-date-picker"
+          th:value="${prefill ? #temporals.format(request.meetingDate, 'yyyy-MM-dd') : null}"
+          th:attr="min=${rescheduling and request.meetingDate != null}
+                     ? ${#temporals.format(request.meetingDate, 'yyyy-MM-dd')} : null" />
+        <button type="button" class="btn btn-outline-secondary thai-date-btn" title="เลือกวันที่">
+          <i class="fas fa-calendar-alt"></i>
+        </button>
+      </div>
+    </div>
+    <div class="col-6 col-sm-3">
+      <label class="form-label small mb-1" th:for="${idPrefix + 'Start'}">เวลาเริ่ม</label>
+      <input type="hidden" name="meetingStart"
+        th:value="${prefill ? #temporals.format(request.meetingDate, 'HH.mm') : null}" />
+      <div class="time24" data-target="meetingStart">
+        <input type="text" th:id="${idPrefix + 'Start'}" class="form-control form-control-sm time24-input"
+          data-target="meetingStart" placeholder="--:--" />
+      </div>
+    </div>
+    <div class="col-6 col-sm-3">
+      <label class="form-label small mb-1" th:for="${idPrefix + 'End'}">เวลาสิ้นสุด</label>
+      <input type="hidden" name="meetingEnd"
+        th:value="${prefill and request.meetingEndTime != null ? #temporals.format(request.meetingEndTime, 'HH.mm') : null}" />
+      <div class="time24" data-target="meetingEnd">
+        <input type="text" th:id="${idPrefix + 'End'}" class="form-control form-control-sm time24-input"
+          data-target="meetingEnd" placeholder="--:--" />
+      </div>
+    </div>
+    <div class="col-12">
+      <label class="form-label small mb-1" th:for="${idPrefix + 'Location'}">สถานที่ประชุม</label>
+      <input type="text" name="meetingLocation" th:id="${idPrefix + 'Location'}"
+        class="form-control form-control-sm" th:value="${request.meetingLocation}"
+        placeholder="เช่น ห้องประชุมสารบรรณ ชั้น 1" />
+    </div>
+    <div class="col-12 small text-danger meeting-fields-error js-hidden" role="alert"></div>
+  </div>
+</th:block>
+</body>
+</html>

@@ -96,6 +96,10 @@ public class SignatureWorkflowService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.ecom.service.TwoFactorService twoFactorService;
 
+    /** ผู้รักษาการแทน — ขั้นที่มอบให้ผู้รักษาการแทนจำตำแหน่ง "รักษาการแทน..." ไว้ตอนสร้าง */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private ActingSignerService actingSigners;
+
     /** เนื้อหาอีเมล: คำร้องของใคร และสิ่งที่ผู้ลงนามภายนอกต้องทำ — ไม่มีก็ส่งอีเมลแบบไม่มีส่วนนี้ */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private SignerBriefing briefing;
@@ -747,6 +751,10 @@ public class SignatureWorkflowService {
             step.setSigner(signer);
             step.setSignerNameSnapshot(signer.getName());
             step.setSignerPositionSnapshot(signer.getAcademicPosition());
+            // ตอนนี้เท่านั้น — ซองที่สร้างก่อนเปิดการรักษาการแทนไม่ถูกย้อนแก้
+            if (actingSigners != null) {
+                step.setActingPosition(actingSigners.actingPositionFor(slot.slotKey(), signer.getId()));
+            }
             step.setStatus(SignatureStepStatus.WAITING);
 
             envelope.addStep(step);
@@ -1016,7 +1024,8 @@ public class SignatureWorkflowService {
                 if (signerEmail == null && signature.getUser() != null) {
                     signerEmail = signature.getUser().getEmail();
                 }
-                String signerPosition = step.getSignerPositionSnapshot();
+                String signerPosition = step.getActingPosition() != null
+                        ? step.getActingPosition() : step.getSignerPositionSnapshot();
                 if ((signerPosition == null || signerPosition.isBlank()) && signature.getUser() != null) {
                     signerPosition = signature.getUser().getAcademicPosition();
                 }
@@ -1953,11 +1962,21 @@ public class SignatureWorkflowService {
                 recommended.put(slot.slotKey(), List.of());
                 continue;
             }
-            recommended.put(slot.slotKey(),
+            List<com.ecom.academic.dto.SignerOptionDTO> byRole =
                     staffMemberService.findByRoleWithAccountStatus(slot.defaultStaffRole()).stream()
                             .filter(com.ecom.academic.model.StaffMember::isSignable)
                             .map(com.ecom.academic.dto.SignerOptionDTO::from)
-                            .toList());
+                            .toList();
+            // ผู้รักษาการแทนขึ้นก่อน — อาจไม่มีบทบาทนี้ในทะเบียนบุคลากรเลย (เช่น รองคณบดีรักษาการแทนคณบดี)
+            ActingSignerService.Acting acting = actingSigners != null
+                    ? actingSigners.activeFor(slot.slotKey()).orElse(null) : null;
+            if (acting != null) {
+                List<com.ecom.academic.dto.SignerOptionDTO> withActing = new java.util.ArrayList<>();
+                withActing.add(com.ecom.academic.dto.SignerOptionDTO.fromUser(acting.user()));
+                byRole.stream().filter(o -> !acting.user().getId().equals(o.userId())).forEach(withActing::add);
+                byRole = withActing;
+            }
+            recommended.put(slot.slotKey(), byRole);
         }
 
         // 3. Everyone with an ACTIVE account (Staff members + Admins/Staff/Users)

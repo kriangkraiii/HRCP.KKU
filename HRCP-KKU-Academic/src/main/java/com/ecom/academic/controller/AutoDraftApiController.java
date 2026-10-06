@@ -168,6 +168,10 @@ public class AutoDraftApiController {
                 if (fields != null) {
                     Map<String, String> derived = new java.util.LinkedHashMap<>(fields);
                     Doc7Scoring.clampSectionScores(derived);
+                    String scoreProblem = Doc7Scoring.nonWholeScoreProblem(derived);
+                    if (scoreProblem != null) {
+                        return ResponseEntity.badRequest().body(Map.of("error", scoreProblem));
+                    }
                     if (Doc7Scoring.hasAllSectionScores(derived)) {
                         Doc7Scoring.derive(derived);
                     }

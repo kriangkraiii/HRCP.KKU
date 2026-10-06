@@ -98,6 +98,9 @@ public class GlobalModelAdvice {
                     model.addAttribute("pendingSignatureCount", 0L);
                 }
 
+                // Dev mode only: the "fill with test data" buttons on document forms.
+                model.addAttribute("devFormFill", authProperties.isDevMode());
+
                 // Dev mode only: the top-bar switcher into test accounts.
                 HttpSession session = request != null ? request.getSession(false) : null;
                 if (devAccountSwitch.isAvailable(user, session)) {

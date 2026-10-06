@@ -663,7 +663,8 @@ public class SignedDocumentRenderer {
                     if (signerEmail == null && previewSig.getUser() != null) {
                         signerEmail = previewSig.getUser().getEmail();
                     }
-                    String signerPosition = previewStep.getSignerPositionSnapshot();
+                    String signerPosition = previewStep.getActingPosition() != null
+                            ? previewStep.getActingPosition() : previewStep.getSignerPositionSnapshot();
                     if ((signerPosition == null || signerPosition.isBlank()) && previewSig.getUser() != null) {
                         signerPosition = previewSig.getUser().getAcademicPosition();
                     }
