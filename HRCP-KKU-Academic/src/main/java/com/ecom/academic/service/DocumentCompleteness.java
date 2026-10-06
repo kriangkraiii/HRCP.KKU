@@ -248,6 +248,17 @@ public final class DocumentCompleteness {
     }
 
 
+    /** ชั่วโมงสอนประจำวิชาขั้นต่ำ เทียบหน่วยกิตระบบทวิภาค (ประกาศ มข. 1669/2569 ข้อ 7) */
+    public static final int MIN_TEACHING_CREDITS = 3;
+
+    private static boolean meetsTeachingLoad(String credits) {
+        try {
+            return Double.parseDouble(com.ecom.util.ThaiDateUtil.toArabicDigits(credits).trim()) >= MIN_TEACHING_CREDITS;
+        } catch (NumberFormatException e) {
+            return false;
+        }
+    }
+
     /** ภาค/ปีการศึกษา: ภาค 1–3 (3 = ภาคฤดูร้อน) ทับปี พ.ศ. สี่หลัก เช่น 1/2569 */
     public static final Pattern SEMESTER_YEAR = Pattern.compile("^[1-3]/\\d{4}$");
 
@@ -261,11 +272,17 @@ public final class DocumentCompleteness {
             return List.of();
         }
         Map<String, String> data = parse(json);
+        List<String> problems = new ArrayList<>();
         String year = data == null ? null : data.get("academic_year");
         if (year != null && !year.isBlank() && !SEMESTER_YEAR.matcher(year.trim()).matches()) {
-            return List.of("ภาค/ปีการศึกษา ต้องกรอกเป็น ภาค/ปี เช่น 1/2569");
+            problems.add("ภาค/ปีการศึกษา ต้องกรอกเป็น ภาค/ปี เช่น 1/2569");
         }
-        return List.of();
+        String credits = data == null ? null : data.get("teaching_credits");
+        if (credits != null && !credits.isBlank() && !meetsTeachingLoad(credits)) {
+            problems.add("ชั่วโมงสอนในรายวิชาต้องไม่น้อยกว่า " + MIN_TEACHING_CREDITS
+                    + " หน่วยกิต (45 ชั่วโมงสอน) ตามประกาศ มข. 1669/2569 ข้อ 7");
+        }
+        return problems;
     }
 
     /**

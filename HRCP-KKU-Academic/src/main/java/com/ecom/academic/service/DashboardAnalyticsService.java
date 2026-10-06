@@ -103,7 +103,8 @@ public class DashboardAnalyticsService {
         long totalPos = pos.values().stream().mapToLong(Long::longValue).sum();
 
         long completedAcad = countOf(acad, RequestStatus.COMPLETED, RequestStatus.COMPLETED_FAIL);
-        long completedPos = countOf(pos, PositionRequestStatus.SENT_TO_HR);
+        // ส่งออกแล้วและขั้นหลังจากนั้น (มติสภา / ขอทบทวน) ถือว่าจบงานฝั่งวิทยาลัย
+        long completedPos = countOf(pos, POSITION_HANDED_OVER);
         long draftAcad = countOf(acad, RequestStatus.DRAFT);
         long draftPos = countOf(pos, PositionRequestStatus.DRAFT);
 
@@ -116,7 +117,7 @@ public class DashboardAnalyticsService {
                 RequestStatus.COMPLETED_PASS,
                 RequestStatus.COLLEGE_ENDORSED,
                 RequestStatus.COMPLETED);
-        long sentToHr = countOf(pos, PositionRequestStatus.SENT_TO_HR);
+        long sentToHr = countOf(pos, POSITION_HANDED_OVER);
 
         Map<String, Long> kpi = new LinkedHashMap<>();
         kpi.put("totalRequests", totalRequests);
@@ -189,11 +190,12 @@ public class DashboardAnalyticsService {
         }
 
         long completed = countOf(acad, RequestStatus.COMPLETED)
-                       + countOf(pos, PositionRequestStatus.SENT_TO_HR);
+                       + countOf(pos, POSITION_HANDED_OVER);
 
         long passedOrEndorsed = countOf(acad, RequestStatus.COMPLETED_PASS, RequestStatus.COLLEGE_ENDORSED);
 
-        long failed = countOf(acad, RequestStatus.COMPLETED_FAIL);
+        long failed = countOf(acad, RequestStatus.SUBCOMMITTEE_FAIL, RequestStatus.COLLEGE_ENDORSED_FAIL,
+                RequestStatus.COMPLETED_FAIL);
 
         long revising = countOf(acad, RequestStatus.COMPLETED_REVISE, RequestStatus.REVISION_SUBMITTED)
                       + countOf(pos, PositionRequestStatus.REVISION_REQUESTED);
@@ -501,7 +503,8 @@ public class DashboardAnalyticsService {
                 RequestStatus.COLLEGE_ENDORSED,
                 RequestStatus.COMPLETED);
 
-        long failedCount = countOf(acad, RequestStatus.COMPLETED_FAIL);
+        long failedCount = countOf(acad, RequestStatus.SUBCOMMITTEE_FAIL, RequestStatus.COLLEGE_ENDORSED_FAIL,
+                RequestStatus.COMPLETED_FAIL);
         long revisingCount = countOf(acad,
                 RequestStatus.COMPLETED_REVISE,
                 RequestStatus.REVISION_SUBMITTED);
@@ -593,10 +596,8 @@ public class DashboardAnalyticsService {
             }
         }
 
-        Set<PositionRequestStatus> posTerminal = Set.of(
-                PositionRequestStatus.SENT_TO_HR,
-                PositionRequestStatus.DRAFT
-        );
+        Set<PositionRequestStatus> posTerminal = new java.util.HashSet<>(java.util.List.of(POSITION_HANDED_OVER));
+        posTerminal.add(PositionRequestStatus.DRAFT);
 
         List<PositionRequest> posRequests = posRepo.findAllNonDraftWithApplicant();
         for (PositionRequest pr : posRequests) {
@@ -789,6 +790,11 @@ public class DashboardAnalyticsService {
         }
         return counts;
     }
+
+    /** คำร้องขอตำแหน่งที่ส่งออกกองทรัพยากรบุคคลแล้ว รวมขั้นหลังส่งออก (มติสภามหาวิทยาลัย / ขอทบทวน) */
+    private static final PositionRequestStatus[] POSITION_HANDED_OVER = {
+            PositionRequestStatus.SENT_TO_HR, PositionRequestStatus.COUNCIL_APPROVED,
+            PositionRequestStatus.COUNCIL_REJECTED, PositionRequestStatus.APPEAL_SUBMITTED };
 
     @SafeVarargs
     private static <S> long countOf(Map<S, Long> counts, S... statuses) {

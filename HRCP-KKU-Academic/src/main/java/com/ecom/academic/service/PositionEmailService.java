@@ -74,7 +74,9 @@ public class PositionEmailService {
                 boolean isImportant = newStatus == PositionRequestStatus.REVISION_REQUESTED
                         || newStatus == PositionRequestStatus.SCREENING_APPROVED
                         || newStatus == PositionRequestStatus.COLLEGE_APPROVED
-                        || newStatus == PositionRequestStatus.SENT_TO_HR;
+                        || newStatus == PositionRequestStatus.SENT_TO_HR
+                        || newStatus == PositionRequestStatus.COUNCIL_APPROVED
+                        || newStatus == PositionRequestStatus.COUNCIL_REJECTED;
                 String notifTitle = "อัปเดตสถานะขอตำแหน่ง: " + newStatus.getThaiLabel();
                 String notifMsg = "คำร้องขอตำแหน่งทางวิชาการ (" + request.getRequestCode() + ") ของท่าน ได้รับการปรับสถานะเป็น " + newStatus.getThaiLabel()
                         + (hasNote(note) ? " " + noteLabel(newStatus) + " " + note.trim() : "");
@@ -179,7 +181,8 @@ public class PositionEmailService {
     private String buildStatusEmailBody(PositionRequest request,
             PositionRequestStatus oldStatus, PositionRequestStatus newStatus, String note) {
         String statusColor = switch (newStatus) {
-            case SCREENING_APPROVED, COLLEGE_APPROVED -> "#16a34a";
+            case SCREENING_APPROVED, COLLEGE_APPROVED, COUNCIL_APPROVED -> "#16a34a";
+            case COUNCIL_REJECTED -> "#dc2626";
             case REVISION_REQUESTED -> "#d97706";
             case SENT_TO_HR -> "#0d9488";
             case DRAFT -> "#64748b";
@@ -227,6 +230,12 @@ public class PositionEmailService {
                     + " ขั้นต่อไปวิทยาลัยฯ จะส่งเรื่องไปยังกองทรัพยากรบุคคล มหาวิทยาลัยขอนแก่น";
             case SENT_TO_HR -> "วิทยาลัยฯ ได้ส่งคำขอของท่านไปยังกองทรัพยากรบุคคล มหาวิทยาลัยขอนแก่น แล้ว"
                     + " ขั้นตอนต่อจากนี้ดำเนินการตามกระบวนการของมหาวิทยาลัย";
+            case COUNCIL_APPROVED -> "สภามหาวิทยาลัยขอนแก่นมีมติกำหนดตำแหน่งทางวิชาการให้ท่านแล้ว";
+            case COUNCIL_REJECTED -> "สภามหาวิทยาลัยขอนแก่นมีมติไม่กำหนดตำแหน่งทางวิชาการ"
+                    + " หากท่านประสงค์ขอทบทวนผลการพิจารณา ขอได้ไม่เกิน 2 ครั้ง โดยแสดงเหตุผลทางวิชาการ"
+                    + " ยื่นที่วิทยาลัยฯ ภายใน 90 วันนับตั้งแต่วันที่รับทราบมติ (ข้อบังคับ มข. พ.ศ. 2569 ข้อ 35)";
+            case APPEAL_SUBMITTED -> "วิทยาลัยฯ ได้ยื่นขอทบทวนผลการพิจารณาของท่านแล้ว"
+                    + " ผลการทบทวนจะแจ้งให้ท่านทราบเมื่อสภามหาวิทยาลัยมีมติ";
         };
     }
 }

@@ -44,7 +44,7 @@ public class SignedDocumentArchiver {
      * @param envelopeId the completed envelope; re-loaded here because the
      *                   caller's entity belongs to a transaction that has ended
      */
-    @Async("docPrewarmExecutor")
+    @Async("signedArchiveExecutor")
     @Transactional
     public void archive(Long envelopeId) {
         SignatureRequest envelope = requestRepository.findByIdWithSteps(envelopeId).orElse(null);

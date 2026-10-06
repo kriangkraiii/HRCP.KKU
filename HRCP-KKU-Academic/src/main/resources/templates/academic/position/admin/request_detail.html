@@ -331,7 +331,7 @@
                 >
                   <div class="mb-3">
                     <label class="form-label">สถานะใหม่</label>
-                    <select name="status" class="form-select" required>
+                    <select name="status" id="positionStatusSelect" class="form-select" required>
                       <option value="">-- เลือก --</option>
                       <!--/* เฉพาะสถานะที่เปลี่ยนไปได้จริงจากสถานะปัจจุบัน ตามลำดับใน flow
                            เดิมแสดงทุกสถานะ ทำให้กดข้ามขั้นตอนได้โดยไม่มีอะไรห้าม */-->
@@ -343,10 +343,41 @@
                       ></option>
                     </select>
                   </div>
+                  <!--/* มติกรรมการประจำวิทยาลัยฯ — วันที่สภามหาวิทยาลัยรับเรื่อง (ประกาศ มข. 1670/2569 ข้อ 6) */-->
+                  <div class="mb-3 js-hidden status-dates" data-for="COLLEGE_APPROVED">
+                    <label class="form-label" for="collegeResolutionDate">วันที่คณะกรรมการประจำวิทยาลัยฯ มีมติ (จำเป็น)</label>
+                    <input type="date" id="collegeResolutionDate" name="collegeResolutionDate" class="form-control" />
+                    <label class="form-label mt-2" for="correctionsReceivedDate">มติให้แก้ไข: วันที่ได้รับเอกสารแก้ไขครบตามมติ (ถ้ามี)</label>
+                    <input type="date" id="correctionsReceivedDate" name="correctionsReceivedDate" class="form-control" />
+                    <small class="text-muted d-block mt-1">ต้องส่งเรื่องให้กองทรัพยากรบุคคลภายใน 3 วันทำการนับถัดจากวันดังกล่าว</small>
+                    <div th:if="${councilUnpublishedWorks > 0}" class="alert alert-warning py-1 px-2 mt-2 mb-0 small">
+                      <i class="fas fa-triangle-exclamation me-1"></i>
+                      เอกสารที่ 7 มีผลงาน <strong th:text="${councilUnpublishedWorks}">1</strong> รายการที่มีเพียงหนังสือตอบรับ ยังไม่ได้ตีพิมพ์
+                      — วันที่สภามหาวิทยาลัยรับเรื่องอาจเลื่อนเป็นวันที่ได้รับฉบับตีพิมพ์ (ประกาศ มข. 1670/2569 ข้อ 6 (6))
+                    </div>
+                  </div>
+                  <!--/* มติสภามหาวิทยาลัย — เริ่มนับ 90 วันของการขอทบทวน (ข้อบังคับ 2569 ข้อ 35) */-->
+                  <div class="mb-3 js-hidden status-dates" data-for="COUNCIL_APPROVED COUNCIL_REJECTED">
+                    <label class="form-label" for="councilResolutionDate">วันที่สภามหาวิทยาลัยมีมติ (จำเป็น)</label>
+                    <input type="date" id="councilResolutionDate" name="councilResolutionDate" class="form-control" />
+                    <label class="form-label mt-2" for="councilAcknowledgedDate">วันที่ผู้ขอรับทราบมติ (จำเป็นเมื่อไม่อนุมัติ)</label>
+                    <input type="date" id="councilAcknowledgedDate" name="councilAcknowledgedDate" class="form-control" />
+                  </div>
+                  <!--/* ขอทบทวน (ข้อบังคับ 2569 ข้อ 35–36) — ยื่นที่ส่วนงาน แล้วคณะกรรมการประจำส่วนงานเห็นชอบก่อนเสนอมหาวิทยาลัย */-->
+                  <div class="mb-3 js-hidden status-dates" data-for="APPEAL_SUBMITTED">
+                    <label class="form-label" for="appealReceivedDate">วันที่ส่วนงานรับเรื่องขอทบทวน (จำเป็น)</label>
+                    <input type="date" id="appealReceivedDate" name="appealReceivedDate" class="form-control" />
+                    <small class="text-muted d-block mt-1">ถือเป็นวันที่สภามหาวิทยาลัยรับเรื่อง และต้องอยู่ภายใน 90 วันนับตั้งแต่วันที่รับทราบมติ</small>
+                    <label class="form-label mt-2" for="appealEndorsedDate">วันที่คณะกรรมการประจำส่วนงานเห็นชอบให้เสนอขอทบทวน (จำเป็น)</label>
+                    <input type="date" id="appealEndorsedDate" name="appealEndorsedDate" class="form-control" />
+                    <small class="text-muted d-block mt-1">ขอทบทวนได้เฉพาะคำชี้แจงต่อผลงานเดิม — ถ้ามีผลงานใหม่หรือแก้ไขผลงานเดิม
+                      ต้องยื่นขอกำหนดตำแหน่งใหม่ (ข้อบังคับ 2569 ข้อ 36)</small>
+                  </div>
                   <div class="mb-3">
-                    <label class="form-label">หมายเหตุ</label>
+                    <label class="form-label" id="positionNoteLabel">หมายเหตุ</label>
                     <textarea
                       name="note"
+                      id="positionStatusNote"
                       class="form-control"
                       rows="2"
                       placeholder="ระบุหมายเหตุ (ไม่บังคับ)"
@@ -356,6 +387,68 @@
                     <i class="fas fa-save"></i> อัปเดตสถานะ
                   </button>
                 </form>
+              </div>
+            </div>
+
+            <!--/* วันที่สภามหาวิทยาลัยรับเรื่อง (1670/2569 ข้อ 6) และการขอทบทวน (ข้อบังคับ 2569 ข้อ 35) */-->
+            <div class="detail-section" th:if="${councilReceiptDate != null or request.councilResolutionDate != null}" id="councilTimeline">
+              <div class="detail-section-header">
+                <h5><i class="fas fa-calendar-day"></i> วันรับเรื่องและมติสภามหาวิทยาลัย</h5>
+              </div>
+              <div class="detail-section-body small">
+                <th:block th:if="${councilReceiptDate != null}">
+                  <div>
+                    วันที่สภามหาวิทยาลัยรับเรื่อง (ถ้าส่งทันกำหนด):
+                    <strong th:text="${councilReceiptDate.dayOfMonth + '/' + councilReceiptDate.monthValue + '/' + (councilReceiptDate.year + 543)}"></strong>
+                    <span th:if="${request.correctionsReceivedDate != null}" class="text-muted">(วันที่ได้รับเอกสารแก้ไขครบตามมติ)</span>
+                    <span th:unless="${request.correctionsReceivedDate != null}" class="text-muted">(วันที่กรรมการประจำวิทยาลัยฯ มีมติ)</span>
+                  </div>
+                  <div>
+                    ต้องส่งกองทรัพยากรบุคคลภายใน:
+                    <strong th:text="${councilSendDeadline.dayOfMonth + '/' + councilSendDeadline.monthValue + '/' + (councilSendDeadline.year + 543)}"></strong>
+                    <span th:if="${councilSentOn != null}" class="ms-1"
+                      th:text="'(ส่งแล้ว ' + ${councilSentOn.dayOfMonth + '/' + councilSentOn.monthValue + '/' + (councilSentOn.year + 543)} + ')'"></span>
+                  </div>
+                  <div th:if="${councilUnpublishedWorks > 0}" class="alert alert-warning py-1 px-2 mt-1 mb-1">
+                    <i class="fas fa-triangle-exclamation me-1"></i>
+                    มีผลงาน <strong th:text="${councilUnpublishedWorks}">1</strong> รายการที่ยังไม่ได้ตีพิมพ์ (มีเพียงหนังสือตอบรับ) —
+                    วันที่สภามหาวิทยาลัยรับเรื่องคือวันที่หน่วยงานได้รับฉบับตีพิมพ์ ถ้าเป็น DOI ของ Crossref ใช้วันที่ได้เลข DOI
+                    เว้นแต่ ก.พ.ว. เห็นว่าผลงานที่ตีพิมพ์แล้วผ่านเกณฑ์เพียงพอ (ประกาศ มข. 1670/2569 ข้อ 6 (6))
+                  </div>
+                  <div th:if="${councilSentLate}" class="alert alert-warning py-1 px-2 mt-1 mb-1">
+                    <i class="fas fa-triangle-exclamation me-1"></i>
+                    เกินกำหนด 3 วันทำการ — วันที่สภามหาวิทยาลัยรับเรื่องจะเป็นวันที่กองทรัพยากรบุคคลได้รับเรื่องที่ครบถ้วน
+                    (ประกาศ มข. 1670/2569 ข้อ 6)
+                  </div>
+                </th:block>
+                <th:block th:if="${request.councilResolutionDate != null}">
+                  <hr class="my-2" />
+                  <div>
+                    มติสภามหาวิทยาลัย:
+                    <strong th:text="${request.councilResolutionDate.dayOfMonth + '/' + request.councilResolutionDate.monthValue + '/' + (request.councilResolutionDate.year + 543)}"></strong>
+                    <span th:if="${request.councilAcknowledgedDate != null}"
+                      th:text="'· ผู้ขอรับทราบ ' + ${request.councilAcknowledgedDate.dayOfMonth + '/' + request.councilAcknowledgedDate.monthValue + '/' + (request.councilAcknowledgedDate.year + 543)}"></span>
+                  </div>
+                  <div th:if="${request.currentStatus.name() == 'COUNCIL_REJECTED' or request.currentStatus.name() == 'APPEAL_SUBMITTED'}">
+                    ขอทบทวนแล้ว <strong th:text="${appealsUsed}">0</strong> / <span th:text="${appealMax}">2</span> ครั้ง
+                    <th:block th:if="${councilAppealDeadline != null and request.currentStatus.name() == 'COUNCIL_REJECTED'}">
+                      · ยื่นได้ถึง <strong th:text="${councilAppealDeadline.dayOfMonth + '/' + councilAppealDeadline.monthValue + '/' + (councilAppealDeadline.year + 543)}"></strong>
+                      (90 วันนับตั้งแต่วันที่รับทราบมติ)
+                    </th:block>
+                    <div th:if="${request.currentStatus.name() == 'COUNCIL_REJECTED' and councilAppealProblem != null}"
+                      class="text-danger" th:text="${councilAppealProblem}"></div>
+                    <div th:if="${request.currentStatus.name() == 'APPEAL_SUBMITTED' and request.appealReceivedDate != null}">
+                      ส่วนงานรับเรื่องขอทบทวน
+                      <strong th:text="${request.appealReceivedDate.dayOfMonth + '/' + request.appealReceivedDate.monthValue + '/' + (request.appealReceivedDate.year + 543)}"></strong>
+                      (วันที่สภามหาวิทยาลัยรับเรื่อง)
+                      <th:block th:if="${request.appealEndorsedDate != null}">
+                        · คณะกรรมการประจำส่วนงานเห็นชอบ
+                        <strong th:text="${request.appealEndorsedDate.dayOfMonth + '/' + request.appealEndorsedDate.monthValue + '/' + (request.appealEndorsedDate.year + 543)}"></strong>
+                      </th:block>
+                    </div>
+                  </div>
+                </th:block>
+                <small class="text-muted d-block mt-2" th:text="'* ' + ${workingDaysNote}"></small>
               </div>
             </div>
 
@@ -750,6 +843,28 @@
               "/download?format=pdf";
           });
         });
+
+        // ช่องวันที่ของสถานะ (มติกรรมการประจำวิทยาลัยฯ / มติสภามหาวิทยาลัย) และเหตุผลขอทบทวน
+        var positionStatusSelect = document.getElementById("positionStatusSelect");
+        if (positionStatusSelect) {
+          positionStatusSelect.addEventListener("change", function () {
+            var value = this.value;
+            document.querySelectorAll(".status-dates").forEach(function (box) {
+              var shown = box.dataset.for.split(" ").indexOf(value) >= 0;
+              box.classList.toggle("js-hidden", !shown);
+            });
+            document.getElementById("collegeResolutionDate").required = value === "COLLEGE_APPROVED";
+            document.getElementById("councilResolutionDate").required =
+              value === "COUNCIL_APPROVED" || value === "COUNCIL_REJECTED";
+            document.getElementById("councilAcknowledgedDate").required = value === "COUNCIL_REJECTED";
+            var appeal = value === "APPEAL_SUBMITTED";
+            document.getElementById("appealReceivedDate").required = appeal;
+            document.getElementById("appealEndorsedDate").required = appeal;
+            document.getElementById("positionStatusNote").required = appeal;
+            document.getElementById("positionNoteLabel").textContent = appeal
+              ? "เหตุผลทางวิชาการที่ขอทบทวน (จำเป็น)" : "หมายเหตุ";
+          });
+        }
 
         // Edit history document filter
         var editFilter = document.getElementById("editHistFilter");

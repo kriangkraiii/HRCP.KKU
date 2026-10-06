@@ -134,18 +134,23 @@
               <form th:action="'/admin/academic/request/' + ${request.id} + '/status'" method="post">
                 <div class="mb-3">
                   <label class="form-label">สถานะใหม่</label>
-                  <select name="status" id="statusSelect" class="form-select" required>
+                  <select name="status" id="statusSelect" class="form-select" required th:data-current="${request.currentStatus.name()}">
                     <option value="">-- เลือกสถานะ --</option>
                     <!--/* เฉพาะสถานะที่เปลี่ยนไปได้จริงจากสถานะปัจจุบัน ตามลำดับใน flow
                          เดิมแสดงทุกสถานะ ทำให้กดข้ามขั้นตอนได้โดยไม่มีอะไรห้าม */-->
                     <!--/* ข้อ 2 — คณบดีไม่เห็นชอบ: ส่งคืนคือการย้ายกลับไปเป็นแบบร่าง ป้ายจึงต้องบอกสิ่งที่เกิดขึ้นจริง */-->
+                    <!--/* ขอทบทวน (1669/2569 ข้อ 10.3) — หัวหน้าส่วนงานรับทบทวน หรือยืนผลเดิม */-->
                     <option th:each="s : ${allowedNextStatuses}" th:value="${s.name()}"
-                      th:text="${s.name() == 'DRAFT'} ? 'ส่งคืนให้ผู้ยื่นแก้ไข (คณบดีไม่เห็นชอบ)' : ${s.thaiLabel}"></option>
+                      th:with="appeal=${request.currentStatus.name() == 'APPEAL_SUBMITTED'}"
+                      th:text="${s.name() == 'DRAFT'} ? 'ส่งคืนให้ผู้ยื่นแก้ไข (คณบดีไม่เห็นชอบ)'
+                             : (${appeal and s.name() == 'MEETING_SCHEDULED'} ? 'รับทบทวน — นัดประชุมคณะอนุกรรมการรอบใหม่'
+                             : (${appeal and s.name() == 'COMPLETED_FAIL'} ? 'ยืนผลเดิม (ไม่ผ่าน)' : ${s.thaiLabel}))"></option>
                   </select>
                 </div>
                 <!--/* ข้อ 15 — ฉบับแก้เข้าที่ประชุมรอบใหม่: ไม่เติมวันรอบแรกไว้ให้ ต้องกรอกวันใหม่ที่หลังวันเดิม */-->
                 <div class="mb-3 js-hidden" id="meetingFields"
-                  th:with="rescheduling=${request.currentStatus.name() == 'REVISION_SUBMITTED'}">
+                  th:with="rescheduling=${request.currentStatus.name() == 'REVISION_SUBMITTED'
+                                          or request.currentStatus.name() == 'APPEAL_SUBMITTED'}">
                   <div th:replace="~{academic/admin/_meeting_fields :: fields(${request}, ${rescheduling}, 'statusMeeting')}"></div>
                   <small th:if="${rescheduling}" id="previousMeetingHint" class="text-muted d-block mt-1">
                     <i class="fas fa-calendar-plus me-1"></i>ระบุวันประชุมรอบพิจารณาฉบับแก้ไข
@@ -162,6 +167,36 @@
                   <i class="fas fa-save"></i> บันทึกสถานะ
                 </button>
               </form>
+            </div>
+          </div>
+
+          <!--/* คุณสมบัติกรรมการประเมินการสอน (ประกาศ มข. 1669/2569 ข้อ 8) */-->
+          <div th:if="${committeeRankWarnings != null and !committeeRankWarnings.isEmpty()}" class="alert alert-warning small" id="committeeRankWarnings">
+            <i class="fas fa-user-check me-1"></i>
+            <strong>ตรวจคุณสมบัติกรรมการประเมินการสอน</strong> (ประกาศ มข. 1669/2569 ข้อ 8)
+            <ul class="mb-0 mt-1"><li th:each="w : ${committeeRankWarnings}" th:text="${w}">กรรมการ</li></ul>
+          </div>
+
+          <!--/* กำหนดเวลาตามประกาศ มข. 1669/2569 ข้อ 10.3 */-->
+          <div class="detail-section" th:if="${evaluationDeadlines != null and !evaluationDeadlines.isEmpty()}" id="evaluationDeadlines">
+            <div class="detail-section-header">
+              <h5><i class="fas fa-hourglass-half"></i> กำหนดเวลาตามประกาศ มข. 1669/2569</h5>
+            </div>
+            <div class="detail-section-body">
+              <ul class="list-unstyled mb-2">
+                <li th:each="d : ${evaluationDeadlines}" class="mb-2"
+                  th:with="late=${d.overdue(today)}">
+                  <div class="fw-semibold" th:text="${d.label()}">กำหนดเวลา</div>
+                  <div class="small">
+                    ครบกำหนด <span th:text="${d.due().dayOfMonth + '/' + d.due().monthValue + '/' + (d.due().year + 543)}"></span>
+                    <span th:if="${d.met()}" th:class="${late} ? 'badge bg-danger ms-1' : 'badge bg-success ms-1'"
+                      th:text="${late} ? 'ดำเนินการเกินกำหนด' : 'ดำเนินการแล้ว'"></span>
+                    <span th:unless="${d.met()}" th:class="${late} ? 'badge bg-danger ms-1' : 'badge bg-warning text-dark ms-1'"
+                      th:text="${late} ? 'เกินกำหนดแล้ว' : 'ยังไม่ครบกำหนด'"></span>
+                  </div>
+                </li>
+              </ul>
+              <small class="text-muted" th:text="'* ' + ${workingDaysNote}"></small>
             </div>
           </div>
 
@@ -568,11 +603,14 @@
 
           // ส่งคืนโดยไม่บอกเหตุผล = ให้ผู้ยื่นเดาว่าต้องแก้อะไร ฝั่ง server ก็ปฏิเสธเช่นกัน
           const returning = this.value === "DRAFT";
+          // ยืนผลเดิมหลังขอทบทวน ต้องบอกเหตุผลของหัวหน้าส่วนงาน
+          const upholding = this.value === "COMPLETED_FAIL"
+            && this.dataset.current === "APPEAL_SUBMITTED";
           const note = document.getElementById("statusNote");
-          note.required = returning;
+          note.required = returning || upholding;
           document.getElementById("noteLabel").textContent = returning
             ? "เหตุผลที่ส่งคืน (จำเป็น)"
-            : "หมายเหตุ";
+            : upholding ? "เหตุผลที่ยืนผลเดิม (จำเป็น)" : "หมายเหตุ";
         });
 
       // ช่องนัดประชุม (_meeting_fields) — วันแสดงแบบไทย พ.ศ. แบบเอกสารที่ 5 ค่าที่ส่งคือช่อง date ที่ซ่อนไว้

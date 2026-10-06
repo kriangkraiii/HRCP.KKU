@@ -215,7 +215,7 @@ public class PositionApplicantController {
         model.addAttribute("hasUsable", choices.stream()
                 .anyMatch(com.ecom.academic.dto.EvaluationChoice::usable));
         model.addAttribute("hasAny", !choices.isEmpty());
-        // ขอ ศ. โดยไม่ใช้ผลประเมินการสอน — วิธีปกติของ รศ. เท่านั้น
+        // ขอ ศ. ไม่ต้องใช้ผลประเมินการสอน ไม่ว่าจะดำรงตำแหน่งใดอยู่ (1669/2569 ข้อ 6)
         model.addAttribute("canApplyForProfessor",
                 positionService.rankProblemForProfessor(user).isEmpty());
 
@@ -325,6 +325,15 @@ public class PositionApplicantController {
 
         if (!request.getApplicant().getId().equals(user.getId())) {
             return "redirect:/user/position/dashboard";
+        }
+
+        // ขอทบทวนผลหลังสภามหาวิทยาลัยไม่อนุมัติ (ข้อบังคับ 2569 ข้อ 35) — บอกกำหนดให้ผู้ยื่นรู้
+        if (request.getCurrentStatus() == PositionRequestStatus.COUNCIL_REJECTED) {
+            java.time.LocalDate appealBy = com.ecom.academic.service.CouncilTimeline.appealDeadline(request);
+            model.addAttribute("councilAppealDeadline", appealBy == null ? null
+                    : com.ecom.academic.service.AcademicRequestService.formatThaiDate(appealBy.atStartOfDay()));
+            model.addAttribute("appealsLeft", com.ecom.academic.service.CouncilTimeline.MAX_APPEALS
+                    - com.ecom.academic.service.CouncilTimeline.appealsUsed(positionService.getStatusHistory(id)));
         }
 
         // Which teaching evaluation this request was built on, so the applicant

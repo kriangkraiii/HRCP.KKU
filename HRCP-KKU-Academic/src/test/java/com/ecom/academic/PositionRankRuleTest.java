@@ -248,34 +248,35 @@ class PositionRankRuleTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("หน้าเริ่มคำร้อง มีทางลัดขอ ศ. (ไม่ใช้ผลประเมิน) ให้ รศ. เท่านั้น")
-        void theProfessorShortcutIsOfferedOnlyToAssociateProfessors() throws Exception {
-            UserDtls associate = applicantHolding("รองศาสตราจารย์");
-            String offered = mvc.perform(get("/user/position/new-request")
-                    .with(user(associate.getEmail()).roles("USER")))
-                    .andReturn().getResponse().getContentAsString();
-            assertThat(offered).contains("/user/position/create-professor-request");
-
-            for (String position : new String[] { "ศาสตราจารย์", "ผู้ช่วยศาสตราจารย์", "อาจารย์" }) {
+        @DisplayName("หน้าเริ่มคำร้อง มีทางขอ ศ. (ไม่ใช้ผลประเมิน) ให้ทุกคนที่ยังไม่เป็น ศ. — 1669/2569 ข้อ 6")
+        void theProfessorShortcutIsOfferedToEveryoneBelowProfessor() throws Exception {
+            for (String position : new String[] { "รองศาสตราจารย์", "ผู้ช่วยศาสตราจารย์", "อาจารย์" }) {
                 UserDtls applicant = applicantHolding(position);
-                String notOffered = mvc.perform(get("/user/position/new-request")
+                String offered = mvc.perform(get("/user/position/new-request")
                         .with(user(applicant.getEmail()).roles("USER")))
                         .andReturn().getResponse().getContentAsString();
-                assertThat(notOffered).as(position)
-                        .doesNotContain("/user/position/create-professor-request");
+                assertThat(offered).as(position).contains("/user/position/create-professor-request");
             }
+
+            UserDtls professor = applicantHolding("ศาสตราจารย์");
+            String notOffered = mvc.perform(get("/user/position/new-request")
+                    .with(user(professor.getEmail()).roles("USER")))
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(notOffered).doesNotContain("/user/position/create-professor-request");
         }
 
         @Test
-        @DisplayName("ผศ. ขอ ศ. ผ่านทางลัด — ไม่สร้างคำร้อง ต้องใช้ผลประเมินการสอน")
-        void anAssistantProfessorCannotTakeTheProfessorShortcut() throws Exception {
+        @DisplayName("ผศ. ขอ ศ. (วิธีพิเศษ) โดยไม่ใช้ผลประเมิน — สร้างคำร้องได้ เพราะขอ ศ. ไม่ต้องประเมินการสอน")
+        void anAssistantProfessorCanApplyForProfessorWithoutAnEvaluation() throws Exception {
             UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
 
             mvc.perform(post("/user/position/create-professor-request")
                     .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
-                    .andExpect(redirectedUrl("/user/position/dashboard?error=evaluation_required"));
+                    .andExpect(redirectedUrlPattern("/user/position/request/*"));
 
-            assertThat(positionService.findDraftByApplicant(applicant.getId())).isEmpty();
+            PositionRequest draft = positionService.findDraftByApplicant(applicant.getId()).orElseThrow();
+            assertThat(draft.getTargetPosition()).isEqualTo("ศาสตราจารย์");
+            assertThat(draft.getLinkedEvaluation()).isNull();
         }
 
         @Test
@@ -349,6 +350,30 @@ class PositionRankRuleTest extends AbstractFlowTest {
         }
 
         @Test
+        @DisplayName("ขอ รศ. ด้วยผลระดับชำนาญ (ตัดสินก่อนมีเกณฑ์ข้อ 9.4) — ไม่ส่ง")
+        void anAssociateRequestBackedByAnExpertLevelResultIsRefused() throws Exception {
+            UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
+            AcademicRequest evaluation = data.evaluationFor(applicant,
+                    AcademicRank.ASSOCIATE_PROFESSOR, "ผู้ช่วยศาสตราจารย์", "ชำนาญ");
+            PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
+                    evaluation, "รองศาสตราจารย์");
+
+            expectRefusal(applicant, draft, "level_below_rank");
+        }
+
+        @Test
+        @DisplayName("ผลประเมินหมดอายุระหว่างค้างเป็นแบบร่าง — ไม่ส่ง (1669/2569 ข้อ 7)")
+        void anEvaluationThatLapsedWhileDraftingIsRefused() throws Exception {
+            UserDtls applicant = applicantHolding("อาจารย์");
+            AcademicRequest evaluation = data.evaluationFor(applicant,
+                    AcademicRank.ASSISTANT_PROFESSOR, "อาจารย์", "ชำนาญ", "1 ตุลาคม 2569");
+            PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
+                    evaluation, "ผู้ช่วยศาสตราจารย์");
+
+            expectRefusal(applicant, draft, "evaluation_unusable");
+        }
+
+        @Test
         @DisplayName("ขอ ผศ. โดยไม่มีผลประเมินการสอน — ไม่ส่ง")
         void anAssistantProfessorRequestWithoutAnEvaluationIsRefused() throws Exception {
             UserDtls applicant = applicantHolding("อาจารย์");
@@ -359,13 +384,13 @@ class PositionRankRuleTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("ผศ. ขอ ศ. โดยไม่มีผลประเมินการสอน (แบบร่างที่หลุดมาก่อนแก้) — ไม่ส่ง")
-        void anAssistantProfessorsProfessorRequestWithoutAnEvaluationIsRefused() throws Exception {
+        @DisplayName("ผศ. ขอ ศ. โดยไม่มีผลประเมินการสอน — กติกาตำแหน่งผ่าน ไปติดที่เอกสารยังไม่ครบแทน")
+        void anAssistantProfessorsProfessorRequestNeedsNoEvaluation() throws Exception {
             UserDtls applicant = applicantHolding("ผู้ช่วยศาสตราจารย์");
             PositionRequest draft = data.positionRequest(applicant, PositionRequestStatus.DRAFT,
                     null, "ศาสตราจารย์");
 
-            expectRefusal(applicant, draft, "evaluation_required");
+            expectRefusal(applicant, draft, "incomplete_docs");
         }
 
         @Test

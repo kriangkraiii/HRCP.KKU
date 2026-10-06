@@ -39,8 +39,23 @@ public enum RequestStatus {
     /** ข้อ 11 — แจ้งผลให้ผู้ขอกำหนดตำแหน่งทราบ กระบวนการเฟส 1 จบ */
     COMPLETED("เสร็จสิ้น", "fa-flag-checkered", "#1b5e20"),
 
-    /** ข้อ 8 — มติที่ประชุมคณะอนุกรรมการ: ไม่ผ่าน */
-    COMPLETED_FAIL("แจ้งผล - ไม่ผ่าน", "fa-times-circle", "#d32f2f");
+    /**
+     * ข้อ 8 — มติที่ประชุมคณะอนุกรรมการ: ไม่ผ่าน ยังต้องให้กรรมการประจำวิทยาลัยฯ รับรองก่อนแจ้งผล
+     * (ประกาศ มข. ฉบับที่ 1669/2569 ข้อ 10.3 และแผนภาพขั้นที่ 4 — รับรองทั้งผลที่ผ่านและไม่ผ่าน)
+     */
+    SUBCOMMITTEE_FAIL("มติอนุกรรมการ - ไม่ผ่าน", "fa-times-circle", "#c62828"),
+
+    /** ข้อ 9-10 — กรรมการประจำวิทยาลัยฯ รับรองผลที่ไม่ผ่านแล้ว รอแจ้งผลภายใน 7 วันทำการ */
+    COLLEGE_ENDORSED_FAIL("รับรองผล (ไม่ผ่าน) โดยกรรมการประจำวิทยาลัยฯ", "fa-landmark", "#b71c1c"),
+
+    /** ข้อ 11 — แจ้งผลไม่ผ่านให้ผู้ขอทราบอย่างเป็นทางการ เริ่มนับกำหนดขอทบทวน */
+    COMPLETED_FAIL("แจ้งผล - ไม่ผ่าน", "fa-times-circle", "#d32f2f"),
+
+    /**
+     * ผู้ยื่นขอทบทวนผลที่ไม่ผ่านต่อหัวหน้าส่วนงาน ภายใน 30 วันทำการนับจากวันที่ทราบผล
+     * (ประกาศ มข. ฉบับที่ 1669/2569 ข้อ 10.3) — หัวหน้าส่วนงานรับทบทวน (นัดประชุมรอบใหม่) หรือยืนผลเดิม
+     */
+    APPEAL_SUBMITTED("ขอทบทวนผลการประเมิน", "fa-scale-balanced", "#6a1b9a");
 
     private final String thaiLabel;
     private final String icon;
@@ -72,7 +87,10 @@ public enum RequestStatus {
             case COMPLETED_REVISE -> "รอผู้ยื่นแก้ไข";
             case REVISION_SUBMITTED -> "ส่งแก้ไขแล้ว";
             case COLLEGE_ENDORSED -> "รับรองโดยวิทยาลัย";
+            case SUBCOMMITTEE_FAIL -> "ไม่ผ่าน · รอรับรอง";
+            case COLLEGE_ENDORSED_FAIL -> "ไม่ผ่าน · รอแจ้งผล";
             case COMPLETED_FAIL -> "ไม่ผ่าน";
+            case APPEAL_SUBMITTED -> "ขอทบทวนผล";
             default -> thaiLabel;
         };
     }
@@ -91,7 +109,8 @@ public enum RequestStatus {
      */
     public static List<RequestStatus> awaitingAdmin() {
         return List.of(RECEIVED, SUB_COMMITTEE_APPOINTED, MEETING_SCHEDULED,
-                COMPLETED_PASS, COLLEGE_ENDORSED, REVISION_SUBMITTED);
+                COMPLETED_PASS, COLLEGE_ENDORSED, SUBCOMMITTEE_FAIL, COLLEGE_ENDORSED_FAIL, REVISION_SUBMITTED,
+                APPEAL_SUBMITTED);
     }
 
     /** แถบสถานะหน้าแอดมิน: ลูกอยู่ที่ผู้ยื่น (ข้อ 12-13) */
@@ -122,14 +141,21 @@ public enum RequestStatus {
             case RECEIVED -> EnumSet.of(SUB_COMMITTEE_APPOINTED, DRAFT);
             case SUB_COMMITTEE_APPOINTED -> EnumSet.of(MEETING_SCHEDULED);
             case MEETING_SCHEDULED ->
-                EnumSet.of(COMPLETED_PASS, COMPLETED_REVISE, COMPLETED_FAIL);
+                EnumSet.of(COMPLETED_PASS, COMPLETED_REVISE, SUBCOMMITTEE_FAIL);
             // ข้อ 9-10 — ผลจากอนุกรรมการต้องผ่านการรับรองของกรรมการประจำวิทยาลัยฯ ก่อนแจ้งผล
             case COMPLETED_PASS -> EnumSet.of(COLLEGE_ENDORSED);
             // ข้อ 12-15 — วงจรแก้ไข: ผู้ยื่นส่งกลับ แล้ววนเข้าที่ประชุมอนุกรรมการอีกรอบ
             case COMPLETED_REVISE -> EnumSet.of(REVISION_SUBMITTED);
             case REVISION_SUBMITTED -> EnumSet.of(MEETING_SCHEDULED);
             case COLLEGE_ENDORSED -> EnumSet.of(COMPLETED);
-            case COMPLETED, COMPLETED_FAIL -> EnumSet.noneOf(RequestStatus.class);
+            // 1669/2569 ข้อ 10.3 — ผลไม่ผ่านก็ต้องผ่านการรับรองของกรรมการประจำวิทยาลัยฯ ก่อนแจ้งผล
+            case SUBCOMMITTEE_FAIL -> EnumSet.of(COLLEGE_ENDORSED_FAIL);
+            case COLLEGE_ENDORSED_FAIL -> EnumSet.of(COMPLETED_FAIL);
+            // 1669/2569 ข้อ 10.3 — ไม่ผ่านแล้วขอทบทวนได้ (ครั้งเดียว ภายใน 30 วันทำการ ตรวจที่ service)
+            case COMPLETED_FAIL -> EnumSet.of(APPEAL_SUBMITTED);
+            // หัวหน้าส่วนงานรับทบทวน → ประชุมอนุกรรมการรอบใหม่ หรือยืนผลเดิม
+            case APPEAL_SUBMITTED -> EnumSet.of(MEETING_SCHEDULED, COMPLETED_FAIL);
+            case COMPLETED -> EnumSet.noneOf(RequestStatus.class);
         };
     }
 
@@ -159,7 +185,8 @@ public enum RequestStatus {
     public int progressIndex() {
         RequestStatus onMainPath = switch (this) {
             case DRAFT -> null;
-            case COMPLETED_REVISE, REVISION_SUBMITTED, COMPLETED_FAIL -> MEETING_SCHEDULED;
+            case COMPLETED_REVISE, REVISION_SUBMITTED, SUBCOMMITTEE_FAIL, COLLEGE_ENDORSED_FAIL, COMPLETED_FAIL,
+                    APPEAL_SUBMITTED -> MEETING_SCHEDULED;
             default -> this;
         };
         if (onMainPath == null) {
@@ -198,8 +225,8 @@ public enum RequestStatus {
             return ProgressStepState.PENDING;
         }
         return switch (this) {
-            case COMPLETED_REVISE, REVISION_SUBMITTED -> ProgressStepState.REVISE;
-            case COMPLETED_FAIL -> ProgressStepState.REJECTED;
+            case COMPLETED_REVISE, REVISION_SUBMITTED, APPEAL_SUBMITTED -> ProgressStepState.REVISE;
+            case SUBCOMMITTEE_FAIL, COLLEGE_ENDORSED_FAIL, COMPLETED_FAIL -> ProgressStepState.REJECTED;
             default -> ProgressStepState.CURRENT;
         };
     }
@@ -211,7 +238,10 @@ public enum RequestStatus {
             case MEETING_SCHEDULED -> "รอผลการประชุม";
             case COMPLETED_REVISE -> "รอผู้ยื่นแก้ไข";
             case REVISION_SUBMITTED -> "ส่งแก้ไขแล้ว · รอพิจารณารอบใหม่";
+            case SUBCOMMITTEE_FAIL -> "ไม่ผ่าน · รอกรรมการประจำวิทยาลัยฯ รับรอง";
+            case COLLEGE_ENDORSED_FAIL -> "ไม่ผ่าน · รับรองแล้ว รอแจ้งผล";
             case COMPLETED_FAIL -> "ไม่ผ่าน";
+            case APPEAL_SUBMITTED -> "ขอทบทวนผล · รอหัวหน้าส่วนงานพิจารณา";
             default -> "กำลังดำเนินการ";
         };
     }
@@ -219,6 +249,11 @@ public enum RequestStatus {
     /** สถานะที่ถือว่าเสร็จสิ้นแล้ว (ยื่นคำร้องใหม่ได้) */
     public boolean isTerminal() {
         return this == COMPLETED || this == COMPLETED_FAIL;
+    }
+
+    /** ผลการประเมินไม่ผ่าน ไม่ว่าจะรอรับรอง รอแจ้งผล หรือแจ้งผลแล้ว */
+    public boolean carriesAFailedResult() {
+        return this == SUBCOMMITTEE_FAIL || this == COLLEGE_ENDORSED_FAIL || this == COMPLETED_FAIL;
     }
 
     /** สถานะ draft - ยังไม่ส่งคำร้อง */

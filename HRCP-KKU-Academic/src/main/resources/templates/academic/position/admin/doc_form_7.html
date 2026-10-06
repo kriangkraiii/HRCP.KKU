@@ -203,7 +203,7 @@
                                 <input type="text" name="academic_articles_social_only" class="form-control form-control-sm mt-1" placeholder="จำนวน">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label fw-bold">ผลงานรับใช้สังคม</label>
+                                <label class="form-label fw-bold">ผลงานรับใช้ท้องถิ่นและสังคม</label>
                                 <div class="form-check"><input class="form-check-input" type="checkbox" name="social_service_works_chk" value="☑" id="ssChk"><label class="form-check-label" for="ssChk">เลือก</label></div>
                                 <input type="text" name="social_service_works" class="form-control form-control-sm mt-1" placeholder="จำนวน">
                             </div>
@@ -279,6 +279,7 @@
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_creative_art_1" value="☑"><label class="form-check-label u-fs-085em">สร้างสรรค์ ศิลปะ</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_patent_1" value="☑"><label class="form-check-label u-fs-085em">สิทธิบัตร</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_software_1" value="☑"><label class="form-check-label u-fs-085em">ซอฟต์แวร์</label></div></div>
+                                <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_innovation_1" value="☑"><label class="form-check-label u-fs-085em">นวัตกรรม</label></div></div>
                             </div>
                             <!--/* ===== การเผยแพร่ตามประเภท (conditional) ===== */-->
                             <div class="other-type-panel mt-2 border-top pt-2" data-for="is_industry">
@@ -361,6 +362,7 @@
                             <div class="row g-2 mt-2">
                                 <div class="col-md-6"><input type="text" name="patent_evidence_1" class="form-control form-control-sm" placeholder="หลักฐานสิทธิบัตร (ถ้ามี)"></div>
                                 <div class="col-md-6"><input type="text" name="software_evidence_1" class="form-control form-control-sm" placeholder="หลักฐานซอฟต์แวร์ (ถ้ามี)"></div>
+                                <div class="col-md-6"><input type="text" name="innovation_evidence_1" class="form-control form-control-sm" placeholder="หลักฐานผลงานนวัตกรรม (ถ้ามี)"></div>
                             </div>
                         </div>
                     </div>
@@ -660,11 +662,13 @@
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_creative_art_${n}" value="☑"><label class="form-check-label u-fs-085em">สร้างสรรค์ ศิลปะ</label></div></div>
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_patent_${n}" value="☑"><label class="form-check-label u-fs-085em">สิทธิบัตร</label></div></div>
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_software_${n}" value="☑"><label class="form-check-label u-fs-085em">ซอฟต์แวร์</label></div></div>
+                                <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_innovation_${n}" value="☑"><label class="form-check-label u-fs-085em">นวัตกรรม</label></div></div>
                     </div>
                     ${otherTypePanelsHtml(n)}
                     <div class="row g-2 mt-2">
                         <div class="col-md-6"><input type="text" name="patent_evidence_${n}" class="form-control form-control-sm" placeholder="หลักฐานสิทธิบัตร (ถ้ามี)"></div>
                         <div class="col-md-6"><input type="text" name="software_evidence_${n}" class="form-control form-control-sm" placeholder="หลักฐานซอฟต์แวร์ (ถ้ามี)"></div>
+                                <div class="col-md-6"><input type="text" name="innovation_evidence_${n}" class="form-control form-control-sm" placeholder="หลักฐานผลงานนวัตกรรม (ถ้ามี)"></div>
                     </div>`;
                 document.getElementById('otherBlocks').appendChild(div);
             }

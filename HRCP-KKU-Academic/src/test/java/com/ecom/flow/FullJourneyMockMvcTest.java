@@ -351,6 +351,8 @@ class FullJourneyMockMvcTest extends AbstractFlowTest {
         expectAccepted(mvc.perform(post("/admin/position/request/" + id + "/status")
                 .param("status", target.name())
                 .param("note", step)
+                // ประกาศ มข. 1670/2569 ข้อ 6 — มติกรรมการประจำวิทยาลัยฯ ต้องระบุวันที่มีมติ
+                .param("collegeResolutionDate", java.time.LocalDate.now().toString())
                 .with(csrf()).with(asOfficer())), "/admin/position/request/" + id);
 
         assertThat(positionService.findById(id).orElseThrow().getCurrentStatus())

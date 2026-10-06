@@ -120,7 +120,7 @@ public class AcademicEmailService {
                 boolean isImportant = isReturn(oldStatus, newStatus)
                         || newStatus == RequestStatus.COMPLETED_REVISE
                         || newStatus == RequestStatus.COMPLETED_PASS
-                        || newStatus == RequestStatus.COMPLETED_FAIL;
+                        || newStatus.carriesAFailedResult();
                 String notifTitle = isReturn(oldStatus, newStatus)
                         ? "คำร้องขอประเมินผลการสอนถูกส่งคืนให้แก้ไข"
                         : "อัปเดตสถานะการประเมิน: " + newStatus.getThaiLabel();
@@ -249,6 +249,61 @@ public class AcademicEmailService {
         }
     }
 
+    /**
+     * ผู้ยื่นขอทบทวนผลการประเมินที่ไม่ผ่าน (1669/2569 ข้อ 10.3) — เจ้าหน้าที่ต้องเสนอหัวหน้าส่วนงานพิจารณา
+     * แจ้งในระบบทุกคน และอีเมลถึงผู้ที่เปิดรับอีเมล
+     */
+    @Async
+    public void sendAppealSubmittedToAdmins(Long requestId) {
+        try {
+            AcademicRequest request = reload(requestId);
+            if (request == null || request.getApplicant() == null) {
+                return;
+            }
+            String applicantName = com.ecom.util.EmailTemplateHelper.formalName(request.getApplicant());
+            String adminLink = "/admin/academic/request/" + request.getId();
+            notificationService.notifyAdmins(request.getApplicant(),
+                    "ผู้ยื่นขอทบทวนผลการประเมินผลการสอน",
+                    applicantName + " ขอทบทวนผลการประเมินของคำร้อง #" + request.getId()
+                            + " กรุณาเสนอหัวหน้าส่วนงานพิจารณา",
+                    adminLink, com.ecom.model.NotificationType.ACADEMIC_STATUS_UPDATE, true);
+
+            for (UserDtls admin : userRepository.findByRole("ROLE_ADMIN")) {
+                if (Boolean.FALSE.equals(admin.getIsEnable())
+                        || !Boolean.TRUE.equals(admin.getEmailNotificationEnabled())
+                        || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
+                    continue;
+                }
+                String body = com.ecom.util.EmailTemplateHelper.Letter
+                        .of("ผู้ยื่นขอทบทวนผลการประเมินผลการสอน",
+                                com.ecom.util.EmailTemplateHelper.formalName(admin))
+                        .para(applicantName + " ขอทบทวนผลการประเมินผลการสอนที่ไม่ผ่าน"
+                                + " สำหรับคำร้องรหัส " + request.getId()
+                                + " ตามประกาศมหาวิทยาลัยขอนแก่น ฉบับที่ 1669/2569 ข้อ 10.3")
+                        .steps("สิ่งที่ต้องดำเนินการ", List.of(
+                                "อ่านเหตุผลที่ขอทบทวนในประวัติสถานะของคำร้อง",
+                                "เสนอหัวหน้าส่วนงานพิจารณา",
+                                "รับทบทวน: นัดประชุมคณะอนุกรรมการรอบใหม่ / ยืนผลเดิม: เปลี่ยนสถานะเป็น \"แจ้งผล - ไม่ผ่าน\" พร้อมเหตุผล"))
+                        .button("เปิดคำร้องในระบบ", publicBaseUrl.replaceAll("/+$", "") + adminLink)
+                        .close("จึงเรียนมาเพื่อโปรดดำเนินการ");
+
+                MimeMessage message = mailSender.createMimeMessage();
+                MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
+                helper.setFrom(com.ecom.util.EmailTemplateHelper.resolveSenderEmail(senderEmail),
+                        com.ecom.util.EmailTemplateHelper.SENDER_NAME);
+                helper.setTo(admin.getEmail());
+                helper.setSubject("ขอทบทวนผลการประเมิน: คำร้องขอรับการประเมินผลการสอน (รหัส "
+                        + request.getId() + ") จาก " + applicantName);
+                helper.setText(com.ecom.util.EmailTemplateHelper.wrapLayout(
+                        "ผู้ยื่นขอทบทวนผลการประเมิน", "ต้องดำเนินการ", body), true);
+                com.ecom.util.EmailTemplateHelper.attachLogos(helper);
+                mailSender.send(message);
+            }
+        } catch (Exception e) {
+            System.err.println("Appeal-submitted admin notification failed: " + e.getMessage());
+        }
+    }
+
     private void sendAdminNotification(UserDtls admin, AcademicRequest request) {
         try {
             if (admin == null || com.ecom.util.EmailTemplateHelper.isTestEmail(admin.getEmail())) {
@@ -287,7 +342,8 @@ public class AcademicEmailService {
         String statusColor = switch (newStatus) {
             case COMPLETED_PASS, COMPLETED -> "#16a34a";
             case COMPLETED_REVISE, DRAFT -> "#d97706";
-            case COMPLETED_FAIL -> "#dc2626";
+            case SUBCOMMITTEE_FAIL, COLLEGE_ENDORSED_FAIL, COMPLETED_FAIL -> "#dc2626";
+            case APPEAL_SUBMITTED -> "#6a1b9a";
             case RECEIVED -> "#2563eb";
             default -> newStatus.getColor() != null ? newStatus.getColor() : "#1e3a8a";
         };
@@ -334,8 +390,19 @@ public class AcademicEmailService {
                     + " วิทยาลัยฯ จะจัดทำบันทึกข้อความแจ้งผลการประเมินอย่างเป็นทางการต่อไป";
             case COMPLETED -> "การประเมินผลการสอนของท่านเสร็จสิ้นแล้ว ท่านสามารถดาวน์โหลดบันทึกข้อความแจ้งผลการประเมินได้ในระบบ"
                     + " และใช้ผลการประเมินนี้ประกอบการขอกำหนดตำแหน่งทางวิชาการได้จนกว่าผลการประเมินจะหมดอายุ";
-            case COMPLETED_FAIL -> "คณะอนุกรรมการได้ประเมินแล้ว ผลการสอนของท่านยังไม่ผ่านเกณฑ์"
-                    + " หากมีข้อสงสัย กรุณาติดต่อภารกิจด้านทรัพยากรบุคคล วิทยาลัยการคอมพิวเตอร์";
+            case SUBCOMMITTEE_FAIL -> "คณะอนุกรรมการได้ประเมินแล้ว ผลการสอนของท่านยังไม่ผ่านเกณฑ์ของตำแหน่งที่ขอ"
+                    + " ขั้นต่อไปวิทยาลัยฯ จะเสนอคณะกรรมการประจำวิทยาลัยฯ เพื่อรับรองผลการประเมิน"
+                    + " แล้วแจ้งผลอย่างเป็นทางการ";
+            case COLLEGE_ENDORSED_FAIL -> "คณะกรรมการประจำวิทยาลัยฯ ได้รับรองผลการประเมินผลการสอนของท่านแล้ว"
+                    + " วิทยาลัยฯ จะจัดทำบันทึกข้อความแจ้งผลการประเมินอย่างเป็นทางการต่อไป";
+            case COMPLETED_FAIL -> oldStatus == RequestStatus.APPEAL_SUBMITTED
+                    ? "หัวหน้าส่วนงานได้พิจารณาคำขอทบทวนแล้ว และยืนผลการประเมินเดิม"
+                            + " เหตุผลดูได้ที่ประวัติสถานะในหน้าคำร้อง"
+                    : "วิทยาลัยฯ แจ้งผลการประเมินอย่างเป็นทางการแล้ว ผลการสอนของท่านยังไม่ผ่านเกณฑ์ของตำแหน่งที่ขอ"
+                            + " หากท่านเห็นว่าไม่ได้รับความเป็นธรรม ขอทบทวนต่อหัวหน้าส่วนงานได้ที่หน้าคำร้องในระบบ"
+                            + " ภายใน 30 วันทำการนับจากวันที่ทราบผล (ประกาศ มข. ฉบับที่ 1669/2569 ข้อ 10.3)";
+            case APPEAL_SUBMITTED -> "วิทยาลัยฯ ได้รับคำขอทบทวนผลการประเมินของท่านแล้ว"
+                    + " หัวหน้าส่วนงานจะพิจารณาและแจ้งผลให้ท่านทราบ";
         };
     }
 

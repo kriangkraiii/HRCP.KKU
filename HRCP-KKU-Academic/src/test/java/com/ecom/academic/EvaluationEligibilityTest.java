@@ -246,13 +246,14 @@ class EvaluationEligibilityTest extends AbstractFlowTest {
                     null, null, 0);
 
             LocalDateTime latest = academicService.getLatestEvaluationExpiry(applicant.getId());
-            assertThat(latest).isEqualTo(LocalDateTime.of(2029, 8, 10, 0, 0));
+            // ครบ 3 ปีในวันก่อนวันที่ตรงกัน (ป.พ.พ.) — นับจากวันประเมินการสอน (1669/2569 ข้อ 7)
+            assertThat(latest).isEqualTo(LocalDateTime.of(2029, 8, 9, 0, 0));
 
             var usable = academicService.findUsableEvaluations(applicant.getId());
             assertThat(usable).hasSize(1);
             var summary = academicService.summarize(usable.get(0));
             assertThat(summary.expiryAt()).isEqualTo(latest);
-            assertThat(summary.expiryDate()).isEqualTo("10 สิงหาคม 2572");
+            assertThat(summary.expiryDate()).isEqualTo("9 สิงหาคม 2572");
         }
 
         @Test

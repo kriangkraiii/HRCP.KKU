@@ -9,7 +9,13 @@ public enum PositionRequestStatus {
     SCREENING_APPROVED("รับรองมติกลั่นกรองฯ", "fa-stamp", "#2e7d32"),
     COLLEGE_COMMITTEE("เสนอวาระคณะกรรมการวิทยาลัยฯ", "fa-landmark", "#7b1fa2"),
     COLLEGE_APPROVED("รับรองมติคณะกรรมการวิทยาลัยฯ", "fa-file-circle-check", "#1b5e20"),
-    SENT_TO_HR("ส่งออกกองทรัพยากรบุคคล มข.", "fa-paper-plane", "#004d40");
+    SENT_TO_HR("ส่งออกกองทรัพยากรบุคคล มข.", "fa-paper-plane", "#004d40"),
+    /** สภามหาวิทยาลัยมีมติกำหนดตำแหน่ง — จบกระบวนการ */
+    COUNCIL_APPROVED("สภามหาวิทยาลัยอนุมัติ", "fa-award", "#1b5e20"),
+    /** สภามหาวิทยาลัยมีมติไม่กำหนดตำแหน่ง — ขอทบทวนได้ไม่เกิน 2 ครั้ง ภายใน 90 วันนับจากวันรับทราบมติ (ข้อบังคับ 2569 ข้อ 35) */
+    COUNCIL_REJECTED("สภามหาวิทยาลัยไม่อนุมัติ", "fa-circle-xmark", "#c62828"),
+    /** ยื่นขอทบทวนผลการพิจารณาแล้ว รอ ก.พ.ว. และสภามหาวิทยาลัยพิจารณา */
+    APPEAL_SUBMITTED("ยื่นขอทบทวนผลการพิจารณา", "fa-scale-balanced", "#6a1b9a");
 
     private final String thaiLabel;
     private final String icon;
@@ -43,6 +49,9 @@ public enum PositionRequestStatus {
             case COLLEGE_COMMITTEE -> "เสนอกรรมการวิทยาลัยฯ";
             case COLLEGE_APPROVED -> "รับรองมติวิทยาลัยฯ";
             case SENT_TO_HR -> "ส่งกองทรัพยากรบุคคลแล้ว";
+            case COUNCIL_APPROVED -> "สภาฯ อนุมัติ";
+            case COUNCIL_REJECTED -> "สภาฯ ไม่อนุมัติ";
+            case APPEAL_SUBMITTED -> "ขอทบทวนผล";
             default -> thaiLabel;
         };
     }
@@ -58,9 +67,9 @@ public enum PositionRequestStatus {
         return java.util.List.of(REVISION_REQUESTED);
     }
 
-    /** แถบสถานะหน้าแอดมิน: ปิดแล้ว */
+    /** แถบสถานะหน้าแอดมิน: ปิดแล้วในฝั่งวิทยาลัย — ส่งออกแล้ว รวมถึงผลจากสภาและการขอทบทวน */
     public static java.util.List<PositionRequestStatus> closed() {
-        return java.util.List.of(SENT_TO_HR);
+        return java.util.List.of(SENT_TO_HR, COUNCIL_APPROVED, COUNCIL_REJECTED, APPEAL_SUBMITTED);
     }
 
     /** Bootstrap badge class derived from color */
@@ -72,6 +81,10 @@ public enum PositionRequestStatus {
                 return "warning";
             case SENT_TO_HR:
                 return "dark";
+            case COUNCIL_APPROVED:
+                return "success";
+            case COUNCIL_REJECTED:
+                return "danger";
             default:
                 return "primary";
         }
@@ -86,7 +99,8 @@ public enum PositionRequestStatus {
                 SCREENING_APPROVED,
                 COLLEGE_COMMITTEE,
                 COLLEGE_APPROVED,
-                SENT_TO_HR
+                SENT_TO_HR,
+                COUNCIL_APPROVED
         };
     }
 
@@ -115,7 +129,11 @@ public enum PositionRequestStatus {
             case COLLEGE_APPROVED -> java.util.EnumSet.of(SENT_TO_HR);
             // ผู้ยื่นแก้แล้วส่งกลับ เข้าสู่การตรวจสอบเอกสารอีกรอบ
             case REVISION_REQUESTED -> java.util.EnumSet.of(DOCUMENT_VERIFICATION);
-            case SENT_TO_HR -> java.util.EnumSet.noneOf(PositionRequestStatus.class);
+            // หลังส่งออก: บันทึกมติสภามหาวิทยาลัย และการขอทบทวน (ข้อบังคับ 2569 ข้อ 35)
+            // จำนวนครั้งและกำหนด 90 วันตรวจที่ PositionRequestService เพราะต้องดูประวัติ
+            case SENT_TO_HR, APPEAL_SUBMITTED -> java.util.EnumSet.of(COUNCIL_APPROVED, COUNCIL_REJECTED);
+            case COUNCIL_REJECTED -> java.util.EnumSet.of(APPEAL_SUBMITTED);
+            case COUNCIL_APPROVED -> java.util.EnumSet.noneOf(PositionRequestStatus.class);
         };
     }
 
@@ -133,6 +151,8 @@ public enum PositionRequestStatus {
             case DRAFT -> null;
             // ส่งแก้ไขคือการถอยกลับมาที่ขั้นตรวจสอบเอกสาร
             case REVISION_REQUESTED -> DOCUMENT_VERIFICATION;
+            // ยังไม่ได้รับการกำหนดตำแหน่ง — ค้างอยู่ที่ขั้นส่งออก รอผลสภาฯ / ผลการทบทวน
+            case COUNCIL_REJECTED, APPEAL_SUBMITTED -> SENT_TO_HR;
             default -> this;
         };
         if (onMainPath == null) {
@@ -147,9 +167,13 @@ public enum PositionRequestStatus {
         return -1;
     }
 
-    /** Terminal status — process is finished */
+    /**
+     * จบงานฝั่งวิทยาลัยแล้ว — ส่งออกกองทรัพยากรบุคคลไปแล้ว ขั้นหลังจากนั้น (มติสภา การขอทบทวน)
+     * เป็นการบันทึกตามผลของมหาวิทยาลัย ผู้ยื่นจึงเริ่มคำร้องใหม่ได้ตั้งแต่ส่งออก เหมือนเดิม
+     */
     public boolean isTerminal() {
-        return this == SENT_TO_HR;
+        return this == SENT_TO_HR || this == COUNCIL_APPROVED || this == COUNCIL_REJECTED
+                || this == APPEAL_SUBMITTED;
     }
 
     /** Draft — not yet submitted */

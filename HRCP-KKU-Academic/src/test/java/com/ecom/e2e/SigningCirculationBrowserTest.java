@@ -771,6 +771,10 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
             form.locator("[data-target='meetingEnd'] .time24-input").fill("12:00");
             form.locator("[data-target='meetingEnd'] .time24-input").blur();
         }
+        // ประกาศ มข. 1670/2569 ข้อ 6 — มติกรรมการประจำวิทยาลัยฯ ต้องระบุวันที่มีมติ
+        if ("COLLEGE_APPROVED".equals(status)) {
+            form.locator("[name='collegeResolutionDate']").fill(java.time.LocalDate.now().toString());
+        }
         Locator noteField = form.locator("[name='note']");
         if (noteField.count() > 0) {
             noteField.first().fill(note);
@@ -868,7 +872,7 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
                       }
                     } else if (!el.value) {
                       const t = el.type;
-                      el.value = t === 'number' ? '1'
+                      el.value = t === 'number' ? (el.min || '1')
                                : t === 'date' ? '2026-09-01'
                                : t === 'datetime-local' ? '2026-09-01T10:00'
                                : t === 'time' ? '10:00'

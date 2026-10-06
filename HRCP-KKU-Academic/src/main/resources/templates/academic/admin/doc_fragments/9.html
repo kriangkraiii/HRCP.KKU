@@ -109,11 +109,11 @@
                                 <label class="form-label">คุณภาพ</label>
                                 <input type="text" name="is_qualified" class="form-control"
                                     th:value="${carried.containsKey('is_qualified') ? carried['is_qualified'] : ''}" readonly>
-                                <small class="text-muted">กำหนดจากผลประเมิน: ผ่าน = มี, ไม่ผ่าน = ไม่มี</small>
+                                <small class="text-muted">มี = ระดับถึงเกณฑ์ของตำแหน่งที่ขอ (ผศ. ไม่ต่ำกว่าชำนาญ, รศ. ไม่ต่ำกว่าชำนาญพิเศษ)</small>
                             </div>
                             <div class="col-md-4"><label class="form-label">วันหมดอายุ</label>
                                 <input type="text" name="expiration_date" class="form-control" readonly>
-                                <small class="text-muted">ครบ 3 ปีนับจากวันที่หนังสือออก</small>
+                                <small class="text-muted">ครบ 3 ปีนับจากวันประเมินการสอน (ประกาศ มข. 1669/2569 ข้อ 7)</small>
                             </div>
                         </div>
                         <h5 class="border-bottom pb-2 mb-3">ลงนาม</h5>
@@ -148,7 +148,7 @@
         <link rel="stylesheet" href="/css/doc_preview.css">
         <th:block th:replace="~{academic/admin/doc_fragments/_common :: scripts}"></th:block>
         <script>
-            // วันหมดอายุ = วันที่หนังสือออก + 3 ปี (เซิร์ฟเวอร์คำนวณซ้ำตอนบันทึก — ที่นี่แค่แสดงทันที)
+            // วันหมดอายุ = วันประเมินการสอน + 3 ปี (เซิร์ฟเวอร์คำนวณซ้ำตอนบันทึก — ที่นี่แค่แสดงทันที)
             (function() {
                 var thaiMonths = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
                     'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
@@ -169,15 +169,16 @@
                 }
 
                 function calculateExpiry() {
-                    var issuedInput = document.querySelector('input[name="date"]');
+                    var evaluatedInput = document.querySelector('input[name="evaluation_date"]')
+                        || document.querySelector('input[name="faculty_board_meeting_date"]');
                     var expiryInput = document.querySelector('input[name="expiration_date"]');
                     if (!expiryInput) return;
-                    var d = issuedInput ? parseThaiDate(issuedInput.value.trim()) : null;
+                    var d = evaluatedInput ? parseThaiDate(evaluatedInput.value.trim()) : null;
                     if (!d) {
                         expiryInput.value = '';
                         return;
                     }
-                    // นับตาม ป.พ.พ.: ครบ 3 ปีในวันก่อนหน้าวันที่ตรงกัน (ออก 2 ต.ค. 2569 → 1 ต.ค. 2572)
+                    // นับตาม ป.พ.พ.: ครบ 3 ปีในวันก่อนหน้าวันที่ตรงกัน (ประเมิน 2 ต.ค. 2569 → 1 ต.ค. 2572)
                     d.setFullYear(d.getFullYear() + 3);
                     d.setDate(d.getDate() - 1);
                     expiryInput.value = toThaiDate(d);
@@ -186,15 +187,16 @@
                 document.addEventListener('DOMContentLoaded', function() {
                     // หลังข้อมูลเดิมถูกเติมลงฟอร์มแล้ว
                     setTimeout(calculateExpiry, 150);
-                    var issuedInput = document.querySelector('input[name="date"]');
-                    if (issuedInput) {
-                        issuedInput.addEventListener('change', calculateExpiry);
-                        issuedInput.addEventListener('input', calculateExpiry);
-                        var picker = issuedInput.closest('.input-group')?.querySelector('.thai-date-picker');
+                    ['evaluation_date', 'faculty_board_meeting_date'].forEach(function(name) {
+                        var input = document.querySelector('input[name="' + name + '"]');
+                        if (!input) return;
+                        input.addEventListener('change', calculateExpiry);
+                        input.addEventListener('input', calculateExpiry);
+                        var picker = input.closest('.input-group')?.querySelector('.thai-date-picker');
                         if (picker) {
                             picker.addEventListener('change', function() { setTimeout(calculateExpiry, 100); });
                         }
-                    }
+                    });
                 });
             })();
         </script>

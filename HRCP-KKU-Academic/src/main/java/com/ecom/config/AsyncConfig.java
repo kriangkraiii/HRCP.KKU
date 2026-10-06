@@ -127,6 +127,9 @@ public class AsyncConfig implements AsyncConfigurer {
     /**
      * Dedicated executor for background PDF pre-generation and cache warming.
      * Runs at slightly reduced thread priority so user-facing web requests have precedence.
+     *
+     * <p>thread ไม่ได้กำหนดว่าใช้ LibreOffice พร้อมกันกี่ตัว — {@code DocumentPrewarmService} จำกัดงานแปลง
+     * ไว้ที่จำนวน process − 1 จึงเหลือ process ว่างให้ผู้ใช้ที่กด "ดูตัวอย่าง" อย่างน้อย 1 ตัวเสมอ
      */
     @Bean("docPrewarmExecutor")
     public Executor docPrewarmExecutor() {
@@ -137,6 +140,23 @@ public class AsyncConfig implements AsyncConfigurer {
         executor.setThreadNamePrefix("doc-prewarm-");
         executor.setThreadPriority(Thread.NORM_PRIORITY - 1);
         executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardOldestPolicy());
+        executor.initialize();
+        return executor;
+    }
+
+    /**
+     * เก็บสำเนาเอกสารที่ลงนามครบแล้ว — แยกจาก {@code docPrewarmExecutor} ซึ่งทำทีละงาน
+     * งานเก็บเอกสารจริงต้องไม่ต่อคิวหลังงานแปลงล่วงหน้า และต้องไม่ถูกทิ้งเมื่อคิวงานแปลงเต็ม
+     */
+    @Bean("signedArchiveExecutor")
+    public Executor signedArchiveExecutor() {
+        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(2);
+        executor.setMaxPoolSize(4);
+        executor.setQueueCapacity(200);
+        executor.setThreadNamePrefix("signed-archive-");
+        executor.setThreadPriority(Thread.NORM_PRIORITY - 1);
+        executor.setRejectedExecutionHandler(new ThreadPoolExecutor.CallerRunsPolicy());
         executor.initialize();
         return executor;
     }

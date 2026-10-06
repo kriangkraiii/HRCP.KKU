@@ -309,15 +309,16 @@ class DocumentFieldOwnershipTest {
         }
 
         @Test
-        @DisplayName("เอกสาร 9: วันหมดอายุครบ 3 ปีในวันก่อนวันที่หนังสือออก")
-        void doc9ExpiryCountsThreeYearsFromTheIssueDate() {
-            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of("date", "2 ตุลาคม 2569")))
+        @DisplayName("เอกสาร 9: วันหมดอายุครบ 3 ปีนับจากวันประเมินการสอน ไม่ใช่วันที่หนังสือออก (1669/2569 ข้อ 7)")
+        void doc9ExpiryCountsThreeYearsFromTheEvaluationDate() {
+            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of(
+                    "evaluation_date", "2 ตุลาคม 2569", "date", "20 ตุลาคม 2569")))
                     .containsEntry("expiration_date", "1 ตุลาคม 2572");
-            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of("date", "29 กุมภาพันธ์ 2567")))
+            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of("evaluation_date", "29 กุมภาพันธ์ 2567")))
                     .containsEntry("expiration_date", "28 กุมภาพันธ์ 2570");
-            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of("date", "")))
+            assertThat(AcademicRequestService.withDerivedExpiry(9, java.util.Map.of("date", "2 ตุลาคม 2569")))
                     .containsEntry("expiration_date", "");
-            assertThat(AcademicRequestService.withDerivedExpiry(8, java.util.Map.of("date", "2 ตุลาคม 2569")))
+            assertThat(AcademicRequestService.withDerivedExpiry(8, java.util.Map.of("evaluation_date", "2 ตุลาคม 2569")))
                     .doesNotContainKey("expiration_date");
         }
 

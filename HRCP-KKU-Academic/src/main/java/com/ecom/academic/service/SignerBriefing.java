@@ -46,7 +46,7 @@ public class SignerBriefing {
     }
 
     /** ชื่อเอกสารตามที่ระบบแสดง (AcademicAdminController.DOC_LABELS) — ผู้ลงนามจะเห็นชื่อเดียวกันในหน้าลงนาม */
-    private static final String EVALUATION_FORM = "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66";
+    private static final String EVALUATION_FORM = "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1669-69";
 
     private final AcademicRequestRepository academicRequests;
     private final AcademicDocumentRepository academicDocuments;

@@ -53,6 +53,11 @@ class RequestStatusProgressTest {
                 .containsExactly(DONE, DONE, DONE, REVISE, PENDING, PENDING);
         assertThat(bar(RequestStatus.COMPLETED_FAIL))
                 .containsExactly(DONE, DONE, DONE, REJECTED, PENDING, PENDING);
+        // ไม่ผ่านที่รอรับรอง / รับรองแล้วรอแจ้งผล — ยังเป็นผลไม่ผ่านที่ขั้นแจ้งผลเหมือนกัน
+        assertThat(bar(RequestStatus.SUBCOMMITTEE_FAIL))
+                .containsExactly(DONE, DONE, DONE, REJECTED, PENDING, PENDING);
+        assertThat(bar(RequestStatus.COLLEGE_ENDORSED_FAIL))
+                .containsExactly(DONE, DONE, DONE, REJECTED, PENDING, PENDING);
     }
 
     @Test

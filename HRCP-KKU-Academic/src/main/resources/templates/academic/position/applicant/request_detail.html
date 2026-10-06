@@ -40,10 +40,30 @@
                 <span th:if="${param.error[0] == 'position_mismatch'}">
                     ยื่นคำร้องนี้ไม่ได้ เนื่องจากตำแหน่งที่ขอไม่ตรงกับผลการประเมินผลการสอน
                 </span>
+                <span th:if="${param.error[0] == 'level_below_rank'}">
+                    ยื่นคำร้องนี้ไม่ได้ เนื่องจากระดับผลการประเมินผลการสอนไม่ถึงเกณฑ์ของตำแหน่งที่ขอ
+                    (ผู้ช่วยศาสตราจารย์ไม่ต่ำกว่าระดับชำนาญ รองศาสตราจารย์ไม่ต่ำกว่าระดับชำนาญพิเศษ)
+                </span>
+                <span th:if="${param.error[0] == 'evaluation_unusable'}">
+                    ยื่นคำร้องนี้ไม่ได้ เนื่องจากผลการประเมินผลการสอนที่เลือกไว้ใช้ไม่ได้แล้ว เช่น หมดอายุ
+                    (ใช้ได้ 3 ปีนับจากวันประเมินการสอน ตามประกาศ มข. ฉบับที่ 1669/2569 ข้อ 7)
+                </span>
                 <span th:unless="${param.error[0] == 'incomplete_docs' or param.error[0] == 'rank_not_higher'
                         or param.error[0] == 'evaluation_required' or param.error[0] == 'position_mismatch'
-                        or param.error[0] == 'already_professor'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
+                        or param.error[0] == 'already_professor' or param.error[0] == 'level_below_rank'
+                        or param.error[0] == 'evaluation_unusable'}">เกิดข้อผิดพลาดในการส่งคำร้อง</span>
                 <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+
+            <!--/* สภามหาวิทยาลัยไม่อนุมัติ — ขอทบทวนได้ไม่เกิน 2 ครั้ง ภายใน 90 วัน (ข้อบังคับ มข. พ.ศ. 2569 ข้อ 35) */-->
+            <div th:if="${request.currentStatus.name() == 'COUNCIL_REJECTED'}" class="alert alert-warning" id="councilAppealInfo">
+                <i class="fas fa-scale-balanced me-1"></i>
+                <strong>สภามหาวิทยาลัยมีมติไม่กำหนดตำแหน่ง</strong>
+                <p class="mb-0 mt-1">หากท่านประสงค์ขอทบทวนผลการพิจารณา ให้แสดงเหตุผลทางวิชาการและยื่นที่วิทยาลัยฯ
+                    เพื่อเสนอคณะกรรมการประจำวิทยาลัยฯ ภายใน 90 วันนับตั้งแต่วันที่รับทราบมติ
+                    <th:block th:if="${councilAppealDeadline != null}">— ภายในวันที่ <strong th:text="${councilAppealDeadline}"></strong></th:block>
+                    <th:block th:if="${appealsLeft != null}"> (ขอทบทวนได้อีก <span th:text="${appealsLeft}"></span> ครั้ง)</th:block>
+                </p>
             </div>
 
             <!--/* Page Header */-->

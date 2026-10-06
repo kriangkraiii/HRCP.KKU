@@ -51,21 +51,14 @@ public final class AcademicRankPolicy {
     }
 
     /**
-     * การขอตำแหน่งนี้ต้องใช้ผลประเมินการสอนหรือไม่
+     * การขอตำแหน่งนี้ต้องใช้ผลประเมินการสอนหรือไม่ — ขอ ผศ./รศ. ต้องใช้เสมอ ขอ ศ. ไม่ต้องใช้ไม่ว่าจะมาจากตำแหน่งใด
+     * (ประกาศ มข. ฉบับที่ 1669/2569 ข้อ ๖, ข้อบังคับ พ.ศ. 2569 ข้อ ๑๗.๒.๑ และ ๑๘.๓) อาจารย์หรือ ผศ. ที่ข้ามขั้นไปขอ ศ.
+     * โดยวิธีพิเศษก็ดำเนินการแบบเดียวกับ ศ. วิธีปกติ จึงไม่ต้องประเมินการสอนเช่นกัน
      *
-     * <p>ขอ ผศ./รศ. ต้องใช้เสมอ ส่วน ศ. ขึ้นกับว่ามาจากไหน: รศ. ขอ ศ. เป็นวิธีปกติ ข้ามการประเมินได้
-     * แต่อาจารย์หรือ ผศ. ข้ามขั้นไปขอ ศ. เป็นวิธีพิเศษ ต้องเลือกผลประเมินการสอนก่อนเสมอ
-     * ดู {@link AcademicRank#requiresTeachingEvaluation()} ซึ่งตอบจากตำแหน่งที่ขออย่างเดียว
+     * <p>{@code current} ยังรับไว้เพื่อให้ผู้เรียกไม่ต้องเปลี่ยน แต่ไม่มีผลต่อคำตอบแล้ว
      */
     public static boolean requiresTeachingEvaluation(AcademicRank current, AcademicRank target) {
-        if (target == null) {
-            return false;
-        }
-        if (target.requiresTeachingEvaluation()) {
-            return true;
-        }
-        return target == AcademicRank.PROFESSOR
-                && (current == null || current.compareTo(AcademicRank.ASSOCIATE_PROFESSOR) < 0);
+        return target != null && target.requiresTeachingEvaluation();
     }
 
     /** @return ข้อความแจ้งเหตุผล ถ้าตำแหน่งที่ขอไม่สูงกว่าตำแหน่งปัจจุบัน */

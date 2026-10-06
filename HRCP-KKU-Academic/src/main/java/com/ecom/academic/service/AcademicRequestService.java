@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.ecom.academic.dto.EvaluationSummary;
+import com.ecom.academic.model.AcademicRank;
 import com.ecom.academic.model.AcademicAttachment;
 import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
@@ -49,7 +50,7 @@ public class AcademicRequestService {
         DOC_LABELS.put(4, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน");
         DOC_LABELS.put(5, "บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ");
         DOC_LABELS.put(6, "ข้อเสนอแนะจากคณะอนุกรรมการ");
-        DOC_LABELS.put(7, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66");
+        DOC_LABELS.put(7, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1669-69");
         DOC_LABELS.put(8, "ส่วนที่ 3 แบบประเมินผลการสอน");
         DOC_LABELS.put(9, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
     }
@@ -186,6 +187,11 @@ public class AcademicRequestService {
             throw new IllegalStateException(
                     "ส่งฉบับแก้ไขเข้าที่ประชุมอนุกรรมการต้องระบุวันประชุมรอบใหม่");
         }
+        if (request.getCurrentStatus() == RequestStatus.APPEAL_SUBMITTED
+                && newStatus == RequestStatus.MEETING_SCHEDULED) {
+            throw new IllegalStateException(
+                    "รับทบทวนผลการประเมินต้องระบุวันประชุมคณะอนุกรรมการรอบใหม่");
+        }
         return changeStatus(request, newStatus, changedBy, note, sendNotification);
     }
 
@@ -208,6 +214,10 @@ public class AcademicRequestService {
         if (returnedToApplicant && (note == null || note.isBlank())) {
             // ผู้ยื่นต้องรู้ว่าต้องแก้อะไร การส่งคืนโดยไม่มีเหตุผลเท่ากับให้เดา
             throw new IllegalArgumentException("กรุณาระบุเหตุผลที่ส่งคืนคำร้องให้ผู้ยื่นแก้ไข");
+        }
+        if (oldStatus == RequestStatus.APPEAL_SUBMITTED && newStatus == RequestStatus.COMPLETED_FAIL
+                && (note == null || note.isBlank())) {
+            throw new IllegalArgumentException("กรุณาระบุเหตุผลที่หัวหน้าส่วนงานยืนผลการประเมินเดิม");
         }
         request.setCurrentStatus(newStatus);
         requestRepository.save(request);
@@ -259,9 +269,10 @@ public class AcademicRequestService {
         }
         LocalDateTime lastMeeting = request.getMeetingDate();
         boolean revisionRound = request.getCurrentStatus() == RequestStatus.REVISION_SUBMITTED;
-        if (revisionRound && lastMeeting != null && !start.isAfter(lastMeeting)) {
-            throw new IllegalStateException("วันประชุมพิจารณาฉบับแก้ไขต้องอยู่หลังวันประชุมครั้งก่อน ("
-                    + thaiDateTime(lastMeeting) + ")");
+        boolean appealRound = request.getCurrentStatus() == RequestStatus.APPEAL_SUBMITTED;
+        if ((revisionRound || appealRound) && lastMeeting != null && !start.isAfter(lastMeeting)) {
+            throw new IllegalStateException((appealRound ? "วันประชุมทบทวนผล" : "วันประชุมพิจารณาฉบับแก้ไข")
+                    + "ต้องอยู่หลังวันประชุมครั้งก่อน (" + thaiDateTime(lastMeeting) + ")");
         }
 
         request.setMeetingDate(start);
@@ -278,6 +289,63 @@ public class AcademicRequestService {
             afterCommit.run(() -> events.publishEvent(new RevisionMeetingScheduled(requestId, changedBy)));
         }
         return scheduled;
+    }
+
+    // ================== ขอทบทวนผล และกำหนดเวลา (ประกาศ มข. 1669/2569 ข้อ 10.3) ==================
+
+    /** กำหนดเวลาตามประกาศที่เริ่มนับแล้วของคำร้องนี้ */
+    public List<EvaluationTimeline.Deadline> deadlines(Long requestId) {
+        return EvaluationTimeline.of(getStatusHistory(requestId));
+    }
+
+    /** วันสุดท้ายที่ขอทบทวนผลได้ — null ถ้าคำร้องนี้ไม่เคยแจ้งผลไม่ผ่าน */
+    public java.time.LocalDate appealDeadline(Long requestId) {
+        return EvaluationTimeline.appealDeadline(getStatusHistory(requestId));
+    }
+
+    /**
+     * เหตุที่ผู้ยื่นยังขอทบทวนผลไม่ได้ หรือ {@code null} เมื่อขอได้ — ขอได้ครั้งเดียว เฉพาะผลที่ไม่ผ่าน
+     * ภายใน 30 วันทำการ และต้องไม่มีคำร้องอื่นที่ยังดำเนินการอยู่ (คำร้องหนึ่งคนเดินได้ทีละฉบับ)
+     */
+    public String appealProblem(AcademicRequest request, java.time.LocalDate today) {
+        if (request.getCurrentStatus() != RequestStatus.COMPLETED_FAIL) {
+            return "ขอทบทวนได้เฉพาะคำร้องที่แจ้งผลไม่ผ่าน";
+        }
+        List<RequestStatusHistory> history = getStatusHistory(request.getId());
+        if (EvaluationTimeline.alreadyAppealed(history)) {
+            return "คำร้องนี้ขอทบทวนผลไปแล้ว ขอได้ครั้งเดียว";
+        }
+        java.time.LocalDate deadline = EvaluationTimeline.appealDeadline(history);
+        if (deadline != null && today.isAfter(deadline)) {
+            return "พ้นกำหนดขอทบทวนแล้ว (ภายใน " + EvaluationTimeline.APPEAL_WORKING_DAYS
+                    + " วันทำการ ครบเมื่อ " + formatThaiDate(deadline.atStartOfDay()) + ")";
+        }
+        if (request.getApplicant() != null && hasActiveRequest(request.getApplicant().getId())) {
+            return "ท่านมีคำร้องประเมินผลการสอนฉบับอื่นที่ยังดำเนินการอยู่";
+        }
+        return null;
+    }
+
+    /** ผู้ยื่นขอทบทวนผลที่ไม่ผ่านต่อหัวหน้าส่วนงาน — เหตุผลจำเป็น เก็บไว้ในประวัติสถานะ */
+    @Transactional
+    public AcademicRequest submitAppeal(Long requestId, UserDtls applicant, String reason) {
+        AcademicRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("Request not found: " + requestId));
+        if (applicant == null || request.getApplicant() == null
+                || !request.getApplicant().getId().equals(applicant.getId())) {
+            throw new IllegalStateException("ขอทบทวนได้เฉพาะคำร้องของท่านเอง");
+        }
+        if (reason == null || reason.isBlank()) {
+            throw new IllegalArgumentException("กรุณาระบุเหตุผลที่ขอทบทวนผลการประเมิน");
+        }
+        String problem = appealProblem(request, java.time.LocalDate.now());
+        if (problem != null) {
+            throw new IllegalStateException(problem);
+        }
+        AcademicRequest appealed = changeStatus(request, RequestStatus.APPEAL_SUBMITTED, applicant,
+                "เหตุผลที่ขอทบทวน: " + reason.trim(), true);
+        afterCommit.run(() -> emailService.sendAppealSubmittedToAdmins(requestId));
+        return appealed;
     }
 
     private static String thaiDateTime(LocalDateTime at) {
@@ -335,7 +403,7 @@ public class AcademicRequestService {
                     String evalDate = firstNonBlank(data.get("evaluation_date"), data.get("faculty_board_meeting_date"));
                     LocalDateTime parsedEvalDate = parseThaiDate(evalDate);
                     if (parsedEvalDate != null) {
-                        expiry = parsedEvalDate.plusYears(3);
+                        expiry = expiryFromEvaluation(parsedEvalDate);
                     }
                 }
                 if (expiry != null) {
@@ -489,7 +557,7 @@ public class AcademicRequestService {
      */
     private static final java.util.EnumSet<RequestStatus> CLOSED_STATUSES = java.util.EnumSet.of(
             RequestStatus.COMPLETED, RequestStatus.COMPLETED_PASS, RequestStatus.COMPLETED_REVISE,
-            RequestStatus.COMPLETED_FAIL);
+            RequestStatus.SUBCOMMITTEE_FAIL, RequestStatus.COLLEGE_ENDORSED_FAIL, RequestStatus.COMPLETED_FAIL);
 
     /**
      * ผู้ยื่นแก้ไขเอกสารฉบับนี้ได้หรือไม่
@@ -1217,9 +1285,9 @@ public class AcademicRequestService {
      * อัพเดตสถานะอัตโนมัติตามเอกสารที่ลงนามครบแล้ว
      * - Doc 4 ลงนามครบ → SUB_COMMITTEE_APPOINTED
      * - Doc 5 ลงนามครบ → MEETING_SCHEDULED
-     * - Doc 7 ลงนามครบ → COMPLETED_PASS หรือ COMPLETED_FAIL (ตามผลคะแนน)
-     * - Doc 8 ลงนามครบ → COLLEGE_ENDORSED
-     * - Doc 9 ลงนามครบ → COMPLETED
+     * - Doc 7 ลงนามครบ → COMPLETED_PASS หรือ SUBCOMMITTEE_FAIL (ตามผลคะแนน)
+     * - Doc 8 ลงนามครบ → COLLEGE_ENDORSED หรือ COLLEGE_ENDORSED_FAIL
+     * - Doc 9 ลงนามครบ → COMPLETED หรือ COMPLETED_FAIL
      *
      * <p>ผู้เรียกจริงคือ {@link SignedDocumentStatusAdvancer} ตอนซองลายเซ็นปิด ไม่ใช่ตอน
      * เจ้าหน้าที่กดบันทึกเอกสารอีกต่อไป — การบันทึกคือการร่างเสร็จ ไม่ใช่ขั้นตอนเสร็จ
@@ -1260,8 +1328,9 @@ public class AcademicRequestService {
                             new com.fasterxml.jackson.core.type.TypeReference<java.util.Map<String, Object>>() {
                             });
                     String evalLevel = data.getOrDefault("eval_result_level", "").toString();
-                    RequestStatus outcome = "ไม่ผ่าน".equals(evalLevel)
-                            ? RequestStatus.COMPLETED_FAIL
+                    // ผ่านหรือไม่ขึ้นกับตำแหน่งที่ขอ — "ชำนาญ" ผ่านเกณฑ์ ผศ. แต่ไม่ผ่านเกณฑ์ รศ. (1669/2569 ข้อ ๙.๔)
+                    RequestStatus outcome = Doc7Scoring.fallsShortOf(evalLevel, requestedRank(requestId))
+                            ? RequestStatus.SUBCOMMITTEE_FAIL
                             : RequestStatus.COMPLETED_PASS;
                     if (!evalLevel.isEmpty()
                             && request.getCurrentStatus().canMoveTo(outcome)) {
@@ -1277,8 +1346,9 @@ public class AcademicRequestService {
             }
             case 8 -> {
                 // ประธานลงนามแบบรับรองผล = กรรมการประจำวิทยาลัยฯ รับรองผลแล้ว (ข้อ 9-10)
-                if (request.getCurrentStatus().canMoveTo(RequestStatus.COLLEGE_ENDORSED)) {
-                    updateStatus(requestId, RequestStatus.COLLEGE_ENDORSED, changedBy,
+                RequestStatus endorsed = endorsementOf(request.getCurrentStatus());
+                if (endorsed != null) {
+                    updateStatus(requestId, endorsed, changedBy,
                             "อัพเดตอัตโนมัติ: ประธานลงนามรับรองผลการประเมิน", sendNotify);
                 }
             }
@@ -1290,17 +1360,30 @@ public class AcademicRequestService {
                 // is still saved either way, only the status holds back.
                 // คำร้องที่ลงนามเอกสารที่ 8 ไปก่อนมีขั้นรับรองอัตโนมัติยังค้างที่ "แจ้งผล - ผ่าน" —
                 // ถ้าแบบรับรองลงนามครบแล้วจริง ก็ผ่านขั้นรับรองได้ก่อน
-                if (request.getCurrentStatus() == RequestStatus.COMPLETED_PASS && isSigningComplete(requestId, 8)) {
-                    updateStatus(requestId, RequestStatus.COLLEGE_ENDORSED, changedBy,
+                RequestStatus endorsed = endorsementOf(request.getCurrentStatus());
+                if (endorsed != null && isSigningComplete(requestId, 8)) {
+                    updateStatus(requestId, endorsed, changedBy,
                             "อัพเดตอัตโนมัติ: ประธานลงนามรับรองผลการประเมิน", false);
                     request = requestRepository.findById(requestId).orElse(request);
                 }
-                if (request.getCurrentStatus().canMoveTo(RequestStatus.COMPLETED)) {
-                    updateStatus(requestId, RequestStatus.COMPLETED, changedBy,
+                RequestStatus announced = request.getCurrentStatus() == RequestStatus.COLLEGE_ENDORSED_FAIL
+                        ? RequestStatus.COMPLETED_FAIL
+                        : RequestStatus.COMPLETED;
+                if (request.getCurrentStatus().canMoveTo(announced)) {
+                    updateStatus(requestId, announced, changedBy,
                             "อัพเดตอัตโนมัติ: บันทึกเอกสารแจ้งผลการประเมิน", sendNotify);
                 }
             }
         }
+    }
+
+    /** สถานะหลังกรรมการประจำวิทยาลัยฯ รับรองผล (ข้อ 9-10) — null ถ้าสถานะนี้ยังไม่ถึงขั้นรับรอง */
+    private static RequestStatus endorsementOf(RequestStatus current) {
+        return switch (current) {
+            case COMPLETED_PASS -> RequestStatus.COLLEGE_ENDORSED;
+            case SUBCOMMITTEE_FAIL -> RequestStatus.COLLEGE_ENDORSED_FAIL;
+            default -> null;
+        };
     }
 
     /**
@@ -1326,7 +1409,7 @@ public class AcademicRequestService {
 
     /**
      * ค้นหาวันหมดอายุผลประเมินล่าสุดของผู้ใช้
-     * คำนวณ: วันอนุมัติใน Doc 9 + 5 ปี
+     * คำนวณ: วันประเมินการสอนในเอกสารที่ 9 + 3 ปี ({@link #expiryFromEvaluation})
      */
     public LocalDateTime getLatestEvaluationExpiry(Integer applicantId) {
         // Find completed requests (COMPLETED_PASS or COMPLETED)
@@ -1355,7 +1438,7 @@ public class AcademicRequestService {
                         if (dateStr != null && !dateStr.isEmpty()) {
                             LocalDateTime approvalDate = parseThaiDate(dateStr);
                             if (approvalDate != null) {
-                                LocalDateTime computedExpiry = approvalDate.plusYears(3);
+                                LocalDateTime computedExpiry = expiryFromEvaluation(approvalDate);
                                 if (!computedExpiry.equals(req.getEvaluationExpiryDate())) {
                                     req.setEvaluationExpiryDate(computedExpiry);
                                     requestRepository.save(req);
@@ -1605,7 +1688,7 @@ public class AcademicRequestService {
         }
         LocalDateTime evaluated = parseThaiDate(evaluationDate);
         if (evaluated != null) {
-            return evaluated.plusYears(3);
+            return expiryFromEvaluation(evaluated);
         }
         if (request.getEvaluationExpiryDate() != null) {
             return request.getEvaluationExpiryDate();
@@ -1683,7 +1766,7 @@ public class AcademicRequestService {
         if (status == null || status.isDraft()) {
             return "ยังไม่ได้ยื่นคำร้องประเมิน";
         }
-        if (status == RequestStatus.COMPLETED_FAIL) {
+        if (status.carriesAFailedResult()) {
             return "ผลการประเมินไม่ผ่าน";
         }
         if (!status.carriesAPassedResult()) {
@@ -1695,7 +1778,8 @@ public class AcademicRequestService {
         if (doc9s.isEmpty() || doc9s.get(0).getJsonData() == null) {
             return "ยังไม่ได้ออกหนังสือแจ้งผลการประเมิน";
         }
-        return "ผลการประเมินหมดอายุแล้ว";
+        String shortfall = levelShortfall(request);
+        return shortfall != null ? shortfall : "ผลการประเมินหมดอายุแล้ว";
     }
 
     /** Evaluations this applicant has submitted, newest first — drafts are not choices. */
@@ -1719,7 +1803,26 @@ public class AcademicRequestService {
         if (doc9s.isEmpty() || doc9s.get(0).getJsonData() == null) {
             return false;
         }
-        return !isEvaluationExpired(doc9s.get(0).getJsonData());
+        return !isEvaluationExpired(doc9s.get(0).getJsonData()) && levelShortfall(request) == null;
+    }
+
+    /**
+     * ระดับผลการประเมินไม่ถึงเกณฑ์ของตำแหน่งที่ขอ (1669/2569 ข้อ ๙.๔) — เช่นได้ "ชำนาญ" แต่ขอ รศ.
+     * คำร้องที่ตัดสินก่อนมีกติกานี้อาจค้างสถานะ "ผ่าน" ไว้ ต้องไม่ใช้ยื่นขอตำแหน่งได้
+     *
+     * @return ข้อความอธิบาย หรือ {@code null} เมื่อถึงเกณฑ์หรือยังไม่รู้ระดับ (เอกสารเก่าที่ไม่มีระดับไม่ถูกตัดสิทธิ์)
+     */
+    private String levelShortfall(AcademicRequest request) {
+        Map<String, String> doc9 = documentData(request.getId(), 9);
+        String level = firstNonBlank(doc9.get("result_level"), doc9.get("eval_result_level"),
+                documentData(request.getId(), 7).get("eval_result_level"));
+        AcademicRank rank = requestedRank(request.getId());
+        if (!Doc7Scoring.fallsShortOf(level, rank)) {
+            return null;
+        }
+        return "ผลการประเมินระดับ" + level.trim() + " ไม่ถึงเกณฑ์ของตำแหน่ง"
+                + (rank == null ? "ที่ขอ" : rank.thaiLabel())
+                + " (ต้องไม่ต่ำกว่าระดับ" + Doc7Scoring.minimumLevelFor(rank) + ")";
     }
 
     /**
@@ -1813,24 +1916,29 @@ public class AcademicRequestService {
         return isSigningComplete(requestId, 9);
     }
 
-    /** ผลการประเมินมีอายุ 3 ปีนับจากวันที่หนังสือแจ้งผล (เอกสารที่ 9) ออก */
+    /** ผลการประเมินมีอายุ 3 ปีนับจากวันประเมินการสอน (ประกาศ มข. ฉบับที่ 1669/2569 ข้อ ๗ วรรคสอง) */
     private static final int EVALUATION_VALID_YEARS = 3;
 
     /**
-     * เอกสารที่ 9: วันหมดอายุคำนวณจากวันที่หนังสือออกเสมอ ไม่รับค่าที่กรอกมา
-     * วันที่หนังสือยังว่าง (ยังไม่ออกเลข) วันหมดอายุก็ยังว่าง
-     *
-     * <p>นับตามประมวลกฎหมายแพ่งและพาณิชย์: เริ่มนับวันถัดจากวันออกหนังสือ ระยะเวลาเป็นปีสิ้นสุด
-     * ในวันก่อนหน้าวันที่ตรงกันของปีสุดท้าย — ออก 2 ต.ค. 2569 ใช้ได้ถึง 1 ต.ค. 2572
+     * วันสุดท้ายที่ผลประเมินใช้ได้ — นับตามประมวลกฎหมายแพ่งและพาณิชย์: เริ่มนับวันถัดจากวันประเมิน
+     * ระยะเวลาเป็นปีสิ้นสุดในวันก่อนหน้าวันที่ตรงกันของปีสุดท้าย — ประเมิน 2 ต.ค. 2569 ใช้ได้ถึง 1 ต.ค. 2572
+     */
+    public static LocalDateTime expiryFromEvaluation(LocalDateTime evaluated) {
+        return evaluated == null ? null : evaluated.minusDays(1).plusYears(EVALUATION_VALID_YEARS);
+    }
+
+    /**
+     * เอกสารที่ 9: วันหมดอายุคำนวณจากวันประเมินการสอน ({@code evaluation_date} ซึ่งดึงมาจากวันประชุม
+     * ในเอกสารที่ 8) เสมอ ไม่รับค่าที่กรอกมา และไม่ใช่วันที่หนังสือออก — วันประเมินยังว่าง วันหมดอายุก็ยังว่าง
      */
     public static Map<String, String> withDerivedExpiry(int documentType, Map<String, String> data) {
         if (documentType != 9 || data == null) {
             return data;
         }
         Map<String, String> result = new java.util.LinkedHashMap<>(data);
-        LocalDateTime issued = parseThaiDate(data.get("date"));
-        result.put("expiration_date",
-                issued == null ? "" : formatThaiDate(issued.minusDays(1).plusYears(EVALUATION_VALID_YEARS)));
+        LocalDateTime evaluated = parseThaiDate(firstNonBlank(data.get("evaluation_date"),
+                data.get("faculty_board_meeting_date")));
+        result.put("expiration_date", evaluated == null ? "" : formatThaiDate(expiryFromEvaluation(evaluated)));
         return result;
     }
 
@@ -1876,10 +1984,9 @@ public class AcademicRequestService {
      */
     public Map<String, String> withCarriedFields(AcademicRequest request, int documentType,
             Map<String, String> data) {
-        data = withDerivedExpiry(documentType, data);
         Map<String, String> carried = carriedFields(request, documentType);
         if (carried.isEmpty()) {
-            return data;
+            return withDerivedExpiry(documentType, data);
         }
         Map<String, String> saved = getLatestDocumentData(request.getId(), documentType);
         Map<String, String> result = new java.util.LinkedHashMap<>(data);
@@ -1891,7 +1998,8 @@ public class AcademicRequestService {
             }
             result.put(field, value);
         });
-        return result;
+        // วันหมดอายุนับจากวันประเมิน ซึ่งเป็นช่องที่ดึงมา จึงต้องคำนวณหลังรวมช่องที่ดึงมาแล้ว
+        return withDerivedExpiry(documentType, result);
     }
 
     /**
@@ -2068,10 +2176,58 @@ public class AcademicRequestService {
                 Doc7Scoring.evalLevelFromScore(doc7.get("scorex")));
         carried.put("result_level", level);
         if (level != null && !level.isBlank()) {
-            carried.put("is_qualified", "ไม่ผ่าน".equals(level) ? "ไม่มี" : "มี");
+            carried.put("is_qualified",
+                    Doc7Scoring.fallsShortOf(level, AcademicRank.fromDoc1Checks(doc1)) ? "ไม่มี" : "มี");
         }
         carried.values().removeIf(v -> v == null || v.isBlank());
         return carried;
+    }
+
+    /**
+     * กรรมการประเมินการสอนที่ตำแหน่งทางวิชาการ (ตามคำนำหน้าชื่อในเอกสารที่ 3/4) ต่ำกว่าตำแหน่งที่ผู้ขอเสนอ
+     * — ประกาศ มข. 1669/2569 ข้อ 8 ให้แต่งตั้งได้เมื่อไม่มีผู้มีคุณสมบัติ แต่ต้องมีประสบการณ์สอนในระดับอุดมศึกษา
+     * ไม่น้อยกว่า 7 ปี ระบบไม่มีข้อมูลประสบการณ์สอน จึงเตือนให้เจ้าหน้าที่ตรวจ ไม่ได้ห้าม
+     */
+    public List<String> committeeRankWarnings(AcademicRequest request) {
+        AcademicRank requested = requestedRank(request.getId());
+        if (requested == null) {
+            return List.of();
+        }
+        Map<String, String> doc3 = firstDocumentJson(request.getId(), 3);
+        Map<String, String> doc4 = firstDocumentJson(request.getId(), 4);
+        List<String> warnings = new java.util.ArrayList<>();
+        for (String field : List.of("committee_1_name", "committee_2_name", "committee_3_name")) {
+            String name = firstNonBlank(doc4.get(field), doc3.get(field));
+            if (name == null || name.isBlank()) {
+                continue;
+            }
+            AcademicRank rank = rankFromNamePrefix(name);
+            if (rank == null || rank.compareTo(requested) < 0) {
+                warnings.add(name.trim() + " — ตำแหน่งทางวิชาการต่ำกว่าตำแหน่งที่ขอ (" + requested.thaiLabel()
+                        + ") ต้องมีประสบการณ์สอนในระดับอุดมศึกษาไม่น้อยกว่า 7 ปี");
+            }
+        }
+        return warnings;
+    }
+
+    /** ตำแหน่งทางวิชาการจากคำนำหน้าชื่อ เช่น "รศ.ดร.สมชาย" — ดูเฉพาะต้นชื่อ ไม่ให้ชื่อที่บังเอิญมี "ผศ" อยู่กลางคำหลอก */
+    static AcademicRank rankFromNamePrefix(String name) {
+        String n = name.strip().replace(" ", "");
+        if (n.startsWith("รองศาสตราจารย์") || n.startsWith("รศ.")) {
+            return AcademicRank.ASSOCIATE_PROFESSOR;
+        }
+        if (n.startsWith("ผู้ช่วยศาสตราจารย์") || n.startsWith("ผศ.")) {
+            return AcademicRank.ASSISTANT_PROFESSOR;
+        }
+        if (n.startsWith("ศาสตราจารย์") || n.startsWith("ศ.")) {
+            return AcademicRank.PROFESSOR;
+        }
+        return null;
+    }
+
+    /** ตำแหน่งที่คำร้องประเมินการสอนนี้ขอ ตามช่องที่ติ๊กในเอกสารที่ 1 — null ถ้ายังไม่ได้เลือก */
+    private AcademicRank requestedRank(Long requestId) {
+        return AcademicRank.fromDoc1Checks(firstDocumentJson(requestId, 1));
     }
 
     private Map<String, String> firstDocumentJson(Long requestId, int type) {

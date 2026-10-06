@@ -1,7 +1,9 @@
 package com.ecom.academic.service;
 
+import java.util.List;
 import java.util.Map;
 
+import com.ecom.academic.model.AcademicRank;
 import com.ecom.util.ThaiDateUtil;
 
 /**
@@ -15,6 +17,29 @@ import com.ecom.util.ThaiDateUtil;
 public final class Doc7Scoring {
 
     private static final String[] SECTION_KEYS = { "sec_score_1", "sec_score_2", "sec_score_3", "sec_score_4" };
+
+    /** คะแนนรวมต่ำสุดของระดับชำนาญ — ต่ำกว่านี้ไม่ผ่าน (ประกาศ มข. ฉบับที่ 1669/2569 ข้อ ๙.๓) */
+    public static final double PASS_SCORE = 56;
+
+    /** ระดับผลการสอนเรียงจากต่ำไปสูง */
+    private static final List<String> LEVELS = List.of("ไม่ผ่าน", "ชำนาญ", "ชำนาญพิเศษ", "เชี่ยวชาญ");
+
+    /**
+     * ระดับต่ำสุดที่ตำแหน่งที่ขอต้องได้ (ประกาศ มข. ฉบับที่ 1669/2569 ข้อ ๙.๔) — ผศ. ชำนาญ, รศ. ชำนาญพิเศษ
+     * ตำแหน่งอื่นหรือไม่รู้ตำแหน่ง ขอแค่ไม่ต่ำกว่าชำนาญ
+     */
+    public static String minimumLevelFor(AcademicRank rank) {
+        return rank == AcademicRank.ASSOCIATE_PROFESSOR ? "ชำนาญพิเศษ" : "ชำนาญ";
+    }
+
+    /**
+     * ผลประเมินระดับนี้ต่ำกว่าเกณฑ์ของตำแหน่งที่ขอหรือไม่ — "ชำนาญ" ผ่านเกณฑ์ ผศ. แต่ต่ำกว่าเกณฑ์ รศ.
+     * ตัดสินเฉพาะระดับที่รู้จัก ค่าที่ว่างหรือเขียนแบบอื่น (ข้อมูลเก่า) ไม่ถูกตัดสิทธิ์จากกติกานี้
+     */
+    public static boolean fallsShortOf(String level, AcademicRank rank) {
+        int index = level == null ? -1 : LEVELS.indexOf(level.trim());
+        return index >= 0 && index < LEVELS.indexOf(minimumLevelFor(rank));
+    }
 
     private Doc7Scoring() {
     }
@@ -58,21 +83,21 @@ public final class Doc7Scoring {
     }
 
     /**
-     * คะแนนรายส่วนต้องเป็นจำนวนเต็ม — เกณฑ์ระดับผลการสอน (ไม่เกิน 56 / 57-70 / 71-85 / 86-100)
-     * เขียนไว้สำหรับคะแนนรวมจำนวนเต็ม คะแนนทศนิยมจะตกช่องว่างระหว่างช่วงที่ระเบียบไม่ได้กำหนด
+     * คะแนนรายส่วนมีทศนิยมได้ไม่เกิน 1 ตำแหน่ง — แบบฟอร์มตามประกาศ มข. ฉบับที่ 1669/2569
+     * แบ่งระดับการประเมินเป็นช่วง ๐–๑, ๑.๑–๒, ๒.๑–๓, ๓.๑–๔, ๔.๑–๕ ค่าอย่าง 1.05 จึงไม่อยู่ในช่วงใดของแบบฟอร์ม
      *
      * @return ข้อความแจ้งเจ้าหน้าที่ หรือ {@code null} เมื่อถูกต้อง (ช่องว่างยังไม่นับ)
      */
-    public static String nonWholeScoreProblem(Map<String, String> formData) {
+    public static String scorePrecisionProblem(Map<String, String> formData) {
         for (String key : SECTION_KEYS) {
             String v = formData.get(key);
             if (v == null || v.isBlank()) {
                 continue;
             }
             try {
-                double score = Double.parseDouble(v.trim());
-                if (score != Math.rint(score)) {
-                    return "คะแนนรายส่วนต้องเป็นจำนวนเต็ม 0–5 (ส่วนที่ " + key.substring(key.length() - 1)
+                double tenths = Double.parseDouble(v.trim()) * 10;
+                if (Math.abs(tenths - Math.rint(tenths)) > 1e-9) {
+                    return "คะแนนรายส่วนกรอกได้ 0–5 ทศนิยมไม่เกิน 1 ตำแหน่ง (ส่วนที่ " + key.substring(key.length() - 1)
                             + " กรอกไว้ " + v.trim() + ")";
                 }
             } catch (NumberFormatException e) {
@@ -132,8 +157,8 @@ public final class Doc7Scoring {
         formData.put("scorex", "%.2f".formatted(grandTotal));
 
         // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์ (ใช้คะแนนจริง ไม่ปัดขึ้น)
-        formData.put("ch1", grandTotal <= 56 ? "☑" : "☐");
-        formData.put("ch2", (grandTotal > 56 && grandTotal <= 70) ? "☑" : "☐");
+        formData.put("ch1", grandTotal < PASS_SCORE ? "☑" : "☐");
+        formData.put("ch2", (grandTotal >= PASS_SCORE && grandTotal <= 70) ? "☑" : "☐");
         formData.put("ch3", (grandTotal > 70 && grandTotal <= 85) ? "☑" : "☐");
         formData.put("ch4", grandTotal > 85 ? "☑" : "☐");
 
@@ -141,7 +166,12 @@ public final class Doc7Scoring {
         formData.put("eval_result_level", evalLevelFromScore(grandTotal));
     }
 
-    /** สรุประดับผลการประเมินจากคะแนนรวม (รับได้ทั้งเลขไทยและ Arabic) */
+    /**
+     * สรุประดับผลการประเมินจากคะแนนรวม (รับได้ทั้งเลขไทยและ Arabic)
+     *
+     * <p>ประกาศ มข. ฉบับที่ 1669/2569 ข้อ ๙.๓: ต่ำกว่า ๕๖ ไม่ผ่าน, ๕๖–๗๐ ชำนาญ, ๗๑–๘๕ ชำนาญพิเศษ,
+     * ๘๖–๑๐๐ เชี่ยวชาญ — คะแนนที่ตกระหว่างช่วง (เช่น 70.4) นับขึ้นช่วงบน ไม่ให้ตกช่องว่าง
+     */
     public static String evalLevelFromScore(Object rawScore) {
         if (rawScore == null)
             return "";
@@ -151,7 +181,7 @@ public final class Doc7Scoring {
         try {
             // ใช้คะแนนจริงตามช่วงเกณฑ์ ไม่ปัดเศษขึ้น
             double score = Double.parseDouble(s);
-            if (score <= 56)
+            if (score < PASS_SCORE)
                 return "ไม่ผ่าน";
             if (score <= 70)
                 return "ชำนาญ";

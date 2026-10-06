@@ -1795,6 +1795,8 @@ body.modal-open .sidebar-toggle {
   color: var(--color-warning, #f57f17);
 }
 
+.status-SUBCOMMITTEE_FAIL,
+.status-COLLEGE_ENDORSED_FAIL,
 .status-COMPLETED_FAIL {
   background: #ffebee;
   color: var(--color-danger, #c62828);

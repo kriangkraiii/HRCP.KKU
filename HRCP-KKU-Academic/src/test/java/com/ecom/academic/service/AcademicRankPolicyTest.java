@@ -158,12 +158,12 @@ class AcademicRankPolicyTest {
         }
 
         @Test
-        @DisplayName("อาจารย์ หรือ ผศ. ขอ ศ. (วิธีพิเศษ) — ต้องใช้")
-        void skippingToProfessorDoes() {
+        @DisplayName("อาจารย์ หรือ ผศ. ขอ ศ. (วิธีพิเศษ) — ไม่ต้องใช้ (1669/2569 ข้อ 6, ข้อบังคับ 2569 ข้อ 18.3)")
+        void skippingToProfessorDoesNot() {
             assertThat(AcademicRankPolicy.requiresTeachingEvaluation(AcademicRank.ASSISTANT_PROFESSOR,
-                    AcademicRank.PROFESSOR)).isTrue();
+                    AcademicRank.PROFESSOR)).isFalse();
             assertThat(AcademicRankPolicy.requiresTeachingEvaluation(AcademicRank.LECTURER,
-                    AcademicRank.PROFESSOR)).isTrue();
+                    AcademicRank.PROFESSOR)).isFalse();
         }
 
         @Test

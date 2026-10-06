@@ -63,7 +63,7 @@ class ExternalInvitationEmailTest extends AbstractFlowTest {
                 .contains("การประเมินผลการสอนของ ผศ.ดร.สมชาย ทดสอบยื่น เพื่อประกอบการขอกำหนดตำแหน่งรองศาสตราจารย์")
                 .contains("CP353001")
                 .contains("ร่วมประเมินผลการสอน")
-                .contains("แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66")
+                .contains("แบบฟอร์มประเมินการสอน ตามประกาศ มข.1669-69")
                 .contains("KKU SSO").contains("wipa@partner.example.invalid")
                 .contains(officer.getEmail())
                 .contains("จึงเรียนมาเพื่อโปรดพิจารณา");

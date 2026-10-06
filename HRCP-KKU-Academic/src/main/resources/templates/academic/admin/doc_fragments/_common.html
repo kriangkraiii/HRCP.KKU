@@ -215,7 +215,7 @@
 
         // ==================== Auto-calculate weighted scores for Document 6 ====================
         const sectionWeights = { 1: 20, 2: 30, 3: 30, 4: 20 };
-        const rangeLabels = ['', 'ช่วง ๑ (0-1)', 'ช่วง ๒ (1.01-2)', 'ช่วง ๓ (2.01-3)', 'ช่วง ๔ (3.01-4)', 'ช่วง ๕ (4.01-5)'];
+        const rangeLabels = ['', 'ช่วง ๑ (0-1)', 'ช่วง ๒ (1.1-2)', 'ช่วง ๓ (2.1-3)', 'ช่วง ๔ (3.1-4)', 'ช่วง ๕ (4.1-5)'];
 
         function getScoreRange(score) {
             if (score <= 0) return 0;
@@ -274,8 +274,8 @@
 
             const roundedTotal = Math.round(total * 100) / 100;
 
-            // เกณฑ์เดียวกับ Doc7Scoring.evalLevelFromScore — เดิมเว้นช่วง 56–57, 70–71, 85–86 ไว้ คะแนนทศนิยมจึงไม่ติ๊กช่องใดเลย
-            if (roundedTotal <= 56) {
+            // เกณฑ์เดียวกับ Doc7Scoring.evalLevelFromScore (ประกาศ มข. 1669/2569) — ต่ำกว่า 56 ไม่ผ่าน คะแนนระหว่างช่วงนับขึ้นช่วงบน
+            if (roundedTotal < 56) {
                 chk1.checked = true;
                 ch1Val.value = '☑';
             } else if (roundedTotal <= 70) {
@@ -291,10 +291,10 @@
         }
 
         // คะแนนรายส่วน 0–5: max="5" ไม่กันการพิมพ์ จึงบีบค่าเองทันทีที่พิมพ์ (เซิร์ฟเวอร์บีบซ้ำ — Doc7Scoring)
-        // คะแนนต้องเป็นจำนวนเต็มเสมอ (เซิร์ฟเวอร์ปฏิเสธทศนิยม — Doc7Scoring.nonWholeScoreProblem)
+        // ทศนิยมได้ 1 ตำแหน่งตามช่วงในแบบฟอร์ม 1669/2569 (เซิร์ฟเวอร์ตรวจซ้ำ — Doc7Scoring.scorePrecisionProblem)
         document.querySelectorAll('.sec-score-single').forEach(input => {
             input.addEventListener('keydown', function (e) {
-                if (['.', ',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
+                if ([',', 'e', 'E', '+', '-'].includes(e.key)) e.preventDefault();
             });
             input.addEventListener('input', function () {
                 const max = parseFloat(this.max);
@@ -302,6 +302,7 @@
                 const v = parseFloat(this.value);
                 if (!isNaN(v) && !isNaN(max) && v > max) this.value = max;
                 if (!isNaN(v) && !isNaN(min) && v < min) this.value = min;
+                if (/\.\d{2,}$/.test(this.value)) this.value = this.value.replace(/(\.\d)\d+$/, '$1');
                 calculateDoc6Scores();
             });
         });

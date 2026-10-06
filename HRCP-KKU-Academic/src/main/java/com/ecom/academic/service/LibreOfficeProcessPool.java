@@ -64,7 +64,7 @@ public class LibreOfficeProcessPool {
 
     public LibreOfficeProcessPool(
             @Value("${app.pdf.office-pool.enabled:true}") boolean enabled,
-            @Value("${app.pdf.office-pool.processes:2}") int processes,
+            @Value("${app.pdf.office-pool.processes:4}") int processes,
             @Value("${app.pdf.office-pool.warm-on-startup:true}") boolean warmOnStartup) {
         this.enabled = enabled;
         this.processes = Math.max(1, processes);

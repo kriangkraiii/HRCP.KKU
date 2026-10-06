@@ -30,6 +30,13 @@ public class DocumentPrewarmService {
     private final TeachingEvaluationPartResolver teachingEvaluationPart;
     private final java.util.concurrent.Executor executor;
 
+    /**
+     * จำนวนงานแปลงล่วงหน้าที่ใช้ LibreOffice พร้อมกันได้ = จำนวน process ใน pool − 1 (อย่างน้อย 1)
+     * executor มีหลาย thread ได้ (สร้าง DOCX ขนานกันไป) แต่ต้องเหลือ process ว่างให้ผู้ใช้ที่กด
+     * "ดูตัวอย่าง" อย่างน้อย 1 ตัวเสมอ — ไม่งั้นผู้ใช้ต้องต่อคิวหลังงานเบื้องหลัง
+     */
+    private final java.util.concurrent.Semaphore conversionPermits;
+
     /** รุ่นล่าสุดของแต่ละเอกสาร (requestId:type) ที่ขอให้ prewarm — งานที่ตกรุ่นแล้วข้ามไป */
     private final java.util.Map<String, Long> latestPositionVersion = new java.util.concurrent.ConcurrentHashMap<>();
     private final java.util.concurrent.atomic.AtomicLong versions = new java.util.concurrent.atomic.AtomicLong();
@@ -39,7 +46,9 @@ public class DocumentPrewarmService {
             PositionDocumentRepository positionDocumentRepository,
             @org.springframework.context.annotation.Lazy TeachingEvaluationPartResolver teachingEvaluationPart,
             @org.springframework.beans.factory.annotation.Qualifier("docPrewarmExecutor")
-            java.util.concurrent.Executor executor) {
+            java.util.concurrent.Executor executor,
+            @org.springframework.beans.factory.annotation.Value("${app.pdf.office-pool.processes:4}") int officeProcesses) {
+        this.conversionPermits = new java.util.concurrent.Semaphore(Math.max(1, officeProcesses - 1), true);
         this.documentGenerationService = documentGenerationService;
         this.academicDocumentRepository = academicDocumentRepository;
         this.positionDocumentRepository = positionDocumentRepository;
@@ -84,7 +93,7 @@ public class DocumentPrewarmService {
             long start = System.currentTimeMillis();
             byte[] docx = documentGenerationService.generateP2PreviewDocx(documentType,
                     positionPreviewJson(requestId, documentType, jsonData));
-            documentGenerationService.convertDocxToPdfCached(docx);
+            convertInBackground(docx);
             log.debug("Prewarmed Position Doc {} for request {} in {} ms", documentType, requestId,
                     System.currentTimeMillis() - start);
         } catch (Exception e) {
@@ -103,7 +112,7 @@ public class DocumentPrewarmService {
         try {
             long start = System.currentTimeMillis();
             byte[] docx = documentGenerationService.generatePreviewDocx(documentType, jsonData);
-            documentGenerationService.convertDocxToPdfCached(docx);
+            convertInBackground(docx);
             long elapsed = System.currentTimeMillis() - start;
             log.debug("Prewarmed Academic Doc {} for request {} in {} ms", documentType, requestId, elapsed);
         } catch (Exception e) {
@@ -124,7 +133,7 @@ public class DocumentPrewarmService {
             long start = System.currentTimeMillis();
             byte[] docx = documentGenerationService.generatePreviewDocxForCopy(documentType, jsonData,
                     committeeName, committeePosition);
-            documentGenerationService.convertDocxToPdfCached(docx);
+            convertInBackground(docx);
             long elapsed = System.currentTimeMillis() - start;
             log.debug("Prewarmed Academic Copy Doc {} for request {} in {} ms", documentType, requestId, elapsed);
         } catch (Exception e) {
@@ -157,7 +166,7 @@ public class DocumentPrewarmService {
                         try {
                             byte[] docx = documentGenerationService.generateP2PreviewDocx(doc.getDocumentType(),
                                     positionPreviewJson(requestId, doc.getDocumentType(), json));
-                            documentGenerationService.convertDocxToPdfCached(docx);
+                            convertInBackground(docx);
                         } catch (Exception ignored) {
                         }
                     }
@@ -169,7 +178,7 @@ public class DocumentPrewarmService {
                     if (json != null && !json.isBlank()) {
                         try {
                             byte[] docx = documentGenerationService.generatePreviewDocx(doc.getDocumentType(), json);
-                            documentGenerationService.convertDocxToPdfCached(docx);
+                            convertInBackground(docx);
                         } catch (Exception ignored) {
                         }
                     }
@@ -178,5 +187,25 @@ public class DocumentPrewarmService {
         } catch (Exception e) {
             log.debug("Prewarm all documents for request {} finished with note: {}", requestId, e.getMessage());
         }
+    }
+
+    /** แปลง PDF ลงแคช โดยไม่ใช้ LibreOffice เกินโควตาของงานเบื้องหลัง ({@link #conversionPermits}) */
+    private void convertInBackground(byte[] docx) throws java.io.IOException {
+        try {
+            conversionPermits.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return;
+        }
+        try {
+            documentGenerationService.convertDocxToPdfCached(docx);
+        } finally {
+            conversionPermits.release();
+        }
+    }
+
+    /** จำนวนงานแปลงเบื้องหลังที่รันพร้อมกันได้ — สำหรับทดสอบ */
+    int backgroundConversionLimit() {
+        return conversionPermits.availablePermits();
     }
 }

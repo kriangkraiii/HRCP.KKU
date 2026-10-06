@@ -155,7 +155,7 @@ public class AcademicAdminController {
         DOC_LABELS.put(4, "คำสั่งแต่งตั้งคณะอนุกรรมการประเมินผลการสอน");
         DOC_LABELS.put(5, "บันทึกข้อความ ขอเชิญเป็นกรรมการผู้ทรงคุณวุฒิ");
         DOC_LABELS.put(6, "ข้อเสนอแนะจากคณะอนุกรรมการ");
-        DOC_LABELS.put(7, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1607-66");
+        DOC_LABELS.put(7, "แบบฟอร์มประเมินการสอน ตามประกาศ มข.1669-69");
         DOC_LABELS.put(8, "ส่วนที่ 3 แบบประเมินผลการสอน");
         DOC_LABELS.put(9, "บันทึกข้อความ แจ้งผลการประเมินผลการสอน");
     }
@@ -477,6 +477,11 @@ public class AcademicAdminController {
 
         model.addAttribute("statusHistory", requestService.getStatusHistory(id));
         model.addAttribute("editHistory", requestService.getEditHistory(id));
+        // กำหนดเวลาตามประกาศ มข. 1669/2569 ข้อ 10.3 (45 / 7 / 30 วันทำการ)
+        model.addAttribute("evaluationDeadlines", requestService.deadlines(id));
+        model.addAttribute("committeeRankWarnings", requestService.committeeRankWarnings(request));
+        model.addAttribute("today", java.time.LocalDate.now());
+        model.addAttribute("workingDaysNote", com.ecom.util.WorkingDays.NOTE);
         model.addAttribute("docLabels", DOC_LABELS);
         // เลขเอกสารมาจากที่เดียว ไม่ฮาร์ดโค้ดในเทมเพลต — ตอนเลื่อนเลขเอกสารทั้งชุดครั้งก่อน
         // ป้าย "3 สำเนา" กับปุ่มขอให้เซ็นใหม่ไม่ได้เลื่อนตาม เลยไปชี้เอกสารผิดฉบับอยู่นาน
@@ -844,7 +849,7 @@ public class AcademicAdminController {
         }
 
         if (type == 7) {
-            String scoreProblem = Doc7Scoring.nonWholeScoreProblem(formData);
+            String scoreProblem = Doc7Scoring.scorePrecisionProblem(formData);
             if (scoreProblem != null) {
                 redirectAttributes.addFlashAttribute("errorMsg", scoreProblem);
                 return "redirect:/admin/academic/request/" + id + "/document/" + type;
@@ -1614,8 +1619,6 @@ public class AcademicAdminController {
 
             case 5 -> RequestStatus.MEETING_SCHEDULED;
 
-            case 9 -> RequestStatus.COMPLETED;
-
             default -> null;
 
         };
@@ -1625,6 +1628,16 @@ public class AcademicAdminController {
             // เอกสารที่ 7 แยกสองทางตามคะแนน จึงบอกเป็นช่วงแทนที่จะระบุสถานะเดียว
 
             return "สถานะคำร้องจะเปลี่ยนตามผลการประเมิน (ผ่าน/ไม่ผ่าน)";
+
+        }
+
+        if (type == 9) {
+
+            // แจ้งผลทั้งผลที่ผ่านและไม่ผ่าน (1669/2569 ข้อ 10.3)
+
+            return "สถานะคำร้องจะเปลี่ยนเป็น: " + RequestStatus.COMPLETED.getThaiLabel()
+
+                    + " หรือ " + RequestStatus.COMPLETED_FAIL.getThaiLabel() + " ตามผลการประเมิน";
 
         }
 

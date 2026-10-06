@@ -39,6 +39,7 @@ import com.ecom.academic.model.PositionRequestStatus;
 import com.ecom.academic.service.DocumentCompleteness;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.DocumentGenerationService;
+import com.ecom.academic.service.CouncilTimeline;
 import com.ecom.academic.service.PositionRequestService;
 import com.ecom.academic.service.StaffMemberService;
 import com.ecom.model.UserDtls;
@@ -188,6 +189,7 @@ public class PositionAdminController {
         model.addAttribute("statusHistory", positionService.getStatusHistory(id));
         model.addAttribute("editHistory", positionService.getEditHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
+        addCouncilTimeline(model, request);
 
         // Attachments
         model.addAttribute("attachments", positionService.getAttachments(id));
@@ -239,6 +241,12 @@ public class PositionAdminController {
     public String updateStatus(@PathVariable Long id,
             @RequestParam("status") String statusStr,
             @RequestParam(value = "note", required = false) String note,
+            @RequestParam(value = "collegeResolutionDate", required = false) String collegeResolutionDate,
+            @RequestParam(value = "correctionsReceivedDate", required = false) String correctionsReceivedDate,
+            @RequestParam(value = "councilResolutionDate", required = false) String councilResolutionDate,
+            @RequestParam(value = "councilAcknowledgedDate", required = false) String councilAcknowledgedDate,
+            @RequestParam(value = "appealReceivedDate", required = false) String appealReceivedDate,
+            @RequestParam(value = "appealEndorsedDate", required = false) String appealEndorsedDate,
             Principal principal,
             org.springframework.web.servlet.mvc.support.RedirectAttributes redirectAttributes) {
         try {
@@ -259,7 +267,10 @@ public class PositionAdminController {
             }
 
             PositionRequestStatus newStatus = PositionRequestStatus.valueOf(statusStr);
-            positionService.updateStatus(id, newStatus, admin, note);
+            positionService.updateStatus(id, newStatus, admin, note, new PositionRequestService.StatusDates(
+                    isoDate(collegeResolutionDate), isoDate(correctionsReceivedDate),
+                    isoDate(councilResolutionDate), isoDate(councilAcknowledgedDate),
+                    isoDate(appealReceivedDate), isoDate(appealEndorsedDate)));
 
             // Log activity
             try {
@@ -278,6 +289,31 @@ public class PositionAdminController {
         }
 
         return "redirect:/admin/position/request/" + id + "?success=status_updated";
+    }
+
+    /**
+     * วันที่สภามหาวิทยาลัยรับเรื่อง (1670/2569 ข้อ 6) และกำหนดขอทบทวน (ข้อบังคับ 2569 ข้อ 35)
+     * — แสดงเมื่อบันทึกมติกรรมการประจำวิทยาลัยฯ แล้ว
+     */
+    private void addCouncilTimeline(Model model, PositionRequest request) {
+        List<com.ecom.academic.model.PositionStatusHistory> history = positionService.getStatusHistory(request.getId());
+        java.time.LocalDate today = java.time.LocalDate.now();
+        model.addAttribute("councilReceiptDate", CouncilTimeline.receiptDate(request));
+        model.addAttribute("councilSendDeadline", CouncilTimeline.sendDeadline(request));
+        model.addAttribute("councilSentOn", CouncilTimeline.sentOn(history));
+        model.addAttribute("councilSentLate", CouncilTimeline.sentLate(request, history, today));
+        model.addAttribute("appealsUsed", CouncilTimeline.appealsUsed(history));
+        model.addAttribute("appealMax", CouncilTimeline.MAX_APPEALS);
+        model.addAttribute("councilAppealDeadline", CouncilTimeline.appealDeadline(request));
+        model.addAttribute("councilAppealProblem", CouncilTimeline.appealProblem(request, history, today));
+        model.addAttribute("councilUnpublishedWorks",
+                CouncilTimeline.unpublishedAcceptedWorks(positionService.getLatestDocumentData(request.getId(), 7)));
+        model.addAttribute("workingDaysNote", com.ecom.util.WorkingDays.NOTE);
+    }
+
+    /** ช่อง {@code <input type="date">} ส่งมาเป็น yyyy-MM-dd ช่องว่างคือไม่ได้กรอก */
+    private static java.time.LocalDate isoDate(String value) {
+        return value == null || value.isBlank() ? null : java.time.LocalDate.parse(value.trim());
     }
 
     // ================== Document Forms ==================

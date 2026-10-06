@@ -316,8 +316,33 @@ public class TestDataFactory {
         return passedEvaluation(applicant, "CP001101", "2568", target, currentPosition);
     }
 
+    /**
+     * Same as {@link #evaluationFor(UserDtls, AcademicRank, String)} but with the
+     * result level written on document 9 — for results that were marked passed
+     * yet fall short of the rank they asked for.
+     */
+    public AcademicRequest evaluationFor(UserDtls applicant, AcademicRank target,
+            String currentPosition, String resultLevel) {
+        return passedEvaluation(applicant, "CP001101", "2568", target, currentPosition, resultLevel, null);
+    }
+
+    /** Same as above with the {@code expiration_date} document 9 states — a past date makes the result lapsed. */
+    public AcademicRequest evaluationFor(UserDtls applicant, AcademicRank target,
+            String currentPosition, String resultLevel, String expirationDate) {
+        return passedEvaluation(applicant, "CP001101", "2568", target, currentPosition, resultLevel,
+                expirationDate);
+    }
+
     private AcademicRequest passedEvaluation(UserDtls applicant, String courseCode,
             String academicYear, AcademicRank target, String currentPosition) {
+        // ระดับต่ำสุดที่ผ่านเกณฑ์ของตำแหน่งที่ขอ (1669/2569 ข้อ ๙.๔)
+        String level = target == AcademicRank.ASSOCIATE_PROFESSOR ? "ชำนาญพิเศษ" : "ชำนาญ";
+        return passedEvaluation(applicant, courseCode, academicYear, target, currentPosition, level, null);
+    }
+
+    private AcademicRequest passedEvaluation(UserDtls applicant, String courseCode,
+            String academicYear, AcademicRank target, String currentPosition, String resultLevel,
+            String expirationDate) {
         String tick = switch (target) {
             case ASSISTANT_PROFESSOR -> "chk1";
             case ASSOCIATE_PROFESSOR -> "chk2";
@@ -333,7 +358,8 @@ public class TestDataFactory {
         String sem = academicYear != null && academicYear.contains("/") ? academicYear : "1/" + academicYear;
         String doc9Json = "{\"evaluation_result\":\"ผ่าน\",\"course_code\":\"" + courseCode
                 + "\",\"course_name\":\"วิชาทดสอบ " + courseCode
-                + "\",\"result_level\":\"ชำนาญ\",\"semester\":\"" + sem + "\"}";
+                + "\",\"result_level\":\"" + resultLevel + "\",\"semester\":\"" + sem + "\""
+                + (expirationDate == null ? "" : ",\"expiration_date\":\"" + expirationDate + "\"") + "}";
         academicDocument(r, 9, doc9Json);
         return r;
     }

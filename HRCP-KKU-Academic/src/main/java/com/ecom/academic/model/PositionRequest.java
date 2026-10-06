@@ -1,5 +1,6 @@
 package com.ecom.academic.model;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -79,6 +80,30 @@ public class PositionRequest {
 
     @Column(name = "submission_date")
     private LocalDateTime submissionDate;
+
+    /** วันที่คณะกรรมการประจำวิทยาลัยฯ มีมติเห็นชอบ (ประกาศ มข. 1670/2569 ข้อ 6) */
+    @Column(name = "college_resolution_date")
+    private LocalDate collegeResolutionDate;
+
+    /** มติให้แก้ไข: วันที่ได้รับเอกสารแก้ไขครบตามมติ — เป็นวันที่สภามหาวิทยาลัยรับเรื่องแทนวันมติ */
+    @Column(name = "corrections_received_date")
+    private LocalDate correctionsReceivedDate;
+
+    /** วันที่สภามหาวิทยาลัยมีมติกำหนด/ไม่กำหนดตำแหน่ง (รอบล่าสุด) */
+    @Column(name = "council_resolution_date")
+    private LocalDate councilResolutionDate;
+
+    /** วันที่ผู้ขอรับทราบมติสภา (รอบล่าสุด) — เริ่มนับ 90 วันของการขอทบทวน (ข้อบังคับ 2569 ข้อ 35) */
+    @Column(name = "council_acknowledged_date")
+    private LocalDate councilAcknowledgedDate;
+
+    /** ขอทบทวน: วันที่หน่วยงานของส่วนงานรับเรื่อง — ถือเป็นวันที่สภามหาวิทยาลัยรับเรื่อง (ข้อบังคับ 2569 ข้อ 35) รอบล่าสุด */
+    @Column(name = "appeal_received_date")
+    private LocalDate appealReceivedDate;
+
+    /** ขอทบทวน: วันที่คณะกรรมการประจำส่วนงานเห็นชอบให้เสนอมหาวิทยาลัย (ข้อ 35) รอบล่าสุด */
+    @Column(name = "appeal_endorsed_date")
+    private LocalDate appealEndorsedDate;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
@@ -201,6 +226,54 @@ public class PositionRequest {
 
     public void setSubMajorCode(String subMajorCode) {
         this.subMajorCode = subMajorCode;
+    }
+
+    public LocalDate getCollegeResolutionDate() {
+        return collegeResolutionDate;
+    }
+
+    public void setCollegeResolutionDate(LocalDate collegeResolutionDate) {
+        this.collegeResolutionDate = collegeResolutionDate;
+    }
+
+    public LocalDate getCorrectionsReceivedDate() {
+        return correctionsReceivedDate;
+    }
+
+    public void setCorrectionsReceivedDate(LocalDate correctionsReceivedDate) {
+        this.correctionsReceivedDate = correctionsReceivedDate;
+    }
+
+    public LocalDate getCouncilResolutionDate() {
+        return councilResolutionDate;
+    }
+
+    public void setCouncilResolutionDate(LocalDate councilResolutionDate) {
+        this.councilResolutionDate = councilResolutionDate;
+    }
+
+    public LocalDate getCouncilAcknowledgedDate() {
+        return councilAcknowledgedDate;
+    }
+
+    public void setCouncilAcknowledgedDate(LocalDate councilAcknowledgedDate) {
+        this.councilAcknowledgedDate = councilAcknowledgedDate;
+    }
+
+    public LocalDate getAppealReceivedDate() {
+        return appealReceivedDate;
+    }
+
+    public void setAppealReceivedDate(LocalDate appealReceivedDate) {
+        this.appealReceivedDate = appealReceivedDate;
+    }
+
+    public LocalDate getAppealEndorsedDate() {
+        return appealEndorsedDate;
+    }
+
+    public void setAppealEndorsedDate(LocalDate appealEndorsedDate) {
+        this.appealEndorsedDate = appealEndorsedDate;
     }
 
     public LocalDateTime getSubmissionDate() {

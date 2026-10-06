@@ -48,6 +48,34 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
     }
 
     @Nested
+    @DisplayName("ระดับผลต้องถึงเกณฑ์ของตำแหน่งที่ขอ (1669/2569 ข้อ 9.4)")
+    class LevelForTheRequestedRank {
+
+        private RequestStatus outcomeOf(String requestedTick, String level) {
+            UserDtls applicant = data.applicant();
+            UserDtls staff = data.admin();
+            AcademicRequest request = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
+            data.academicDocument(request, 1, "{\"" + requestedTick + "\":\"✓\"}");
+            service.autoUpdateStatusByDocument(request.getId(), 7, staff,
+                    "{\"eval_result_level\":\"" + level + "\"}", false);
+            return statusOf(request);
+        }
+
+        @Test
+        @DisplayName("ขอ รศ. ได้ระดับชำนาญ — ไม่ผ่าน")
+        void anAssociateRequestAtExpertLevelFails() {
+            assertThat(outcomeOf("chk2", "ชำนาญ")).isEqualTo(RequestStatus.SUBCOMMITTEE_FAIL);
+        }
+
+        @Test
+        @DisplayName("ขอ รศ. ได้ระดับชำนาญพิเศษ — ผ่าน, ขอ ผศ. ได้ระดับชำนาญ — ผ่าน")
+        void resultsThatMeetTheBarPass() {
+            assertThat(outcomeOf("chk2", "ชำนาญพิเศษ")).isEqualTo(RequestStatus.COMPLETED_PASS);
+            assertThat(outcomeOf("chk1", "ชำนาญ")).isEqualTo(RequestStatus.COMPLETED_PASS);
+        }
+    }
+
+    @Nested
     @DisplayName("เส้นทางหลักตามเอกสาร")
     class HappyPath {
 
@@ -101,16 +129,39 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("ผลประเมิน 'ไม่ผ่าน' ในเอกสารที่ 7 → COMPLETED_FAIL")
-        void failingResultEndsTheProcess() {
+        @DisplayName("ผลไม่ผ่านต้องผ่านการรับรองของกรรมการประจำวิทยาลัยฯ ก่อนแจ้งผล (1669/2569 ข้อ 10.3)")
+        void failingResultIsEndorsedBeforeItIsAnnounced() {
             UserDtls applicant = data.applicant();
+            UserDtls staff = data.admin();
             AcademicRequest request = data.evaluation(applicant, RequestStatus.MEETING_SCHEDULED);
 
-            service.autoUpdateStatusByDocument(request.getId(), 7, data.admin(),
+            // ข้อ 8 — มติคณะอนุกรรมการ: ไม่ผ่าน ยังไม่ใช่ผลที่แจ้งผู้ยื่นอย่างเป็นทางการ
+            service.autoUpdateStatusByDocument(request.getId(), 7, staff,
                     "{\"eval_result_level\":\"ไม่ผ่าน\"}", false);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.SUBCOMMITTEE_FAIL);
+            assertThat(statusOf(request).isTerminal()).isFalse();
 
-            assertThat(service.findById(request.getId()).orElseThrow().getCurrentStatus())
-                    .isEqualTo(RequestStatus.COMPLETED_FAIL);
+            // หนังสือแจ้งผลก่อนรับรอง — สถานะรอ
+            service.autoUpdateStatusByDocument(request.getId(), 9, staff, null, false);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.SUBCOMMITTEE_FAIL);
+
+            // ข้อ 9-10 — ประธานลงนามแบบรับรองผล
+            service.autoUpdateStatusByDocument(request.getId(), 8, staff, null, false);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.COLLEGE_ENDORSED_FAIL);
+
+            // ข้อ 11 — แจ้งผลอย่างเป็นทางการ จึงนับ 30 วันทำการของการขอทบทวนได้
+            service.autoUpdateStatusByDocument(request.getId(), 9, staff, null, false);
+            assertThat(statusOf(request)).isEqualTo(RequestStatus.COMPLETED_FAIL);
+
+            assertThat(historyOf(request.getId())).containsExactly(RequestStatus.COMPLETED_FAIL,
+                    RequestStatus.COLLEGE_ENDORSED_FAIL, RequestStatus.SUBCOMMITTEE_FAIL);
+        }
+
+        @Test
+        @DisplayName("ผลไม่ผ่านที่ยังไม่แจ้งอย่างเป็นทางการ — ยังขอทบทวนไม่ได้")
+        void anUnannouncedFailCannotBeAppealed() {
+            AcademicRequest request = data.evaluation(data.applicant(), RequestStatus.SUBCOMMITTEE_FAIL);
+            assertThat(service.appealProblem(request, java.time.LocalDate.now())).contains("แจ้งผลไม่ผ่าน");
         }
 
         @Test
@@ -483,9 +534,10 @@ class AcademicStatusFlowTest extends AbstractFlowTest {
         void noOpenStatusIsADeadEnd() {
             for (RequestStatus status : RequestStatus.values()) {
                 if (status.isTerminal()) {
+                    // ทางออกเดียวจากสถานะปลายทางคือขอทบทวนผลที่ไม่ผ่าน (1669/2569 ข้อ 10.3)
                     assertThat(status.allowedNext())
-                            .as("%s เป็นสถานะปลายทาง ต้องไปไหนต่อไม่ได้", status)
-                            .isEmpty();
+                            .as("%s เป็นสถานะปลายทาง ไปต่อได้แค่ขอทบทวน", status)
+                            .isSubsetOf(RequestStatus.APPEAL_SUBMITTED);
                 } else {
                     assertThat(status.allowedNext())
                             .as("%s ไม่ใช่สถานะปลายทาง แต่ไปต่อไม่ได้ = ผู้ยื่นติดอยู่ตรงนี้", status)

@@ -38,6 +38,9 @@ services:
       EMAIL_USERNAME: ${EMAIL_USERNAME:-}
       EMAIL_PASSWORD: ${EMAIL_PASSWORD:-}
       TZ: Asia/Bangkok
+      # LibreOffice ที่เปิดค้างไว้แปลง DOCX → PDF: งานแปลงล่วงหน้าใช้ได้ process − 1 ตัว (เหลือ 1 ตัวให้ผู้ใช้กดดูตัวอย่าง)
+      # 3 process ≈ RAM เพิ่ม 150–200 MB ต่อตัว
+      PDF_OFFICE_POOL_PROCESSES: ${PDF_OFFICE_POOL_PROCESSES:-3}
     ports:
       - "8081:8081"
     volumes:

@@ -434,6 +434,32 @@ class PositionForm2569TemplateTest {
     }
 
     @Nested
+    @DisplayName("เอกสารที่ 3 — แบบรับรองจริยธรรมและจรรยาบรรณทางวิชาการ")
+    class DocumentThree {
+
+        @Test
+        @DisplayName("อ้างข้อบังคับของพนักงาน พ.ศ. 2569 และข้าราชการ พ.ศ. 2565 แยกกัน")
+        void citesTheRegulationThatAppliesToEachEmploymentType() throws IOException {
+            String doc = render(3, new LinkedHashMap<>());
+            assertThat(doc)
+                    .contains("สำหรับพนักงานมหาวิทยาลัยขอนแก่น พ.ศ. 2569")
+                    .contains("สำหรับข้าราชการพลเรือนในสถาบันอุดมศึกษา พ.ศ. 2565")
+                    .doesNotContain("และพนักงานมหาวิทยาลัย พ.ศ. 2565");
+        }
+
+        @Test
+        @DisplayName("ครบ 7 ข้อตามข้อบังคับ พ.ศ. 2569 ข้อ 16.1.5")
+        void listsAllSevenEthicsRules() throws IOException {
+            String doc = render(3, new LinkedHashMap<>());
+            assertThat(doc)
+                    .contains("(fabrication)").contains("(falsification)")
+                    .contains("หลักฐานแสดงการอนุญาตจากคณะกรรมการจริยธรรมการวิจัยของสถาบันที่มีการดำเนินการ")
+                    .contains("7) ")
+                    .contains("ถูกไล่ออกหรือปลดออกจากตำแหน่งเพราะกระทำผิดวินัยร้ายแรง");
+        }
+    }
+
+    @Nested
     @DisplayName("เอกสารที่ 9 — แบบแสดงหลักฐานการมีส่วนร่วม")
     class DocumentNine {
 

@@ -995,6 +995,22 @@ public class AcademicApplicantController {
     /**
      * ยกเลิกแบบร่างคำร้องประเมินผลการสอน (ต้องพิมพ์ยืนยันก่อนลบ)
      */
+    /** ผลไม่ผ่าน → ขอทบทวนต่อหัวหน้าส่วนงาน (ประกาศ มข. 1669/2569 ข้อ 10.3) */
+    @PostMapping("/request/{id}/appeal")
+    public String submitAppeal(@PathVariable Long id,
+            @RequestParam(value = "reason", required = false) String reason,
+            Principal principal, RedirectAttributes redirectAttributes) {
+        UserDtls user = getUser(principal);
+        try {
+            requestService.submitAppeal(id, user, reason);
+            redirectAttributes.addFlashAttribute("succMsg",
+                    "ส่งคำขอทบทวนผลการประเมินแล้ว วิทยาลัยฯ จะเสนอหัวหน้าส่วนงานพิจารณาและแจ้งผลให้ท่านทราบ");
+        } catch (IllegalStateException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMsg", e.getMessage());
+        }
+        return "redirect:/user/academic/request/" + id;
+    }
+
     @PostMapping("/request/{id}/cancel-draft")
     public String cancelDraftRequest(@PathVariable Long id,
             @RequestParam(value = "confirmCode", required = false) String confirmCode,
@@ -1083,6 +1099,15 @@ public class AcademicApplicantController {
         model.addAttribute("committeeSuggestions", requestService.committeeSuggestionsFor(request));
         model.addAttribute("revisionRounds", revisionService.byRound(id));
         model.addAttribute("revisionMaxItems", AcademicRevisionService.MAX_ITEMS);
+        // 1669/2569 ข้อ 10.3 — ผลไม่ผ่านขอทบทวนต่อหัวหน้าส่วนงานได้ภายใน 30 วันทำการ
+        if (request.getCurrentStatus() == RequestStatus.COMPLETED_FAIL
+                || request.getCurrentStatus() == RequestStatus.APPEAL_SUBMITTED) {
+            java.time.LocalDate appealDeadline = requestService.appealDeadline(id);
+            model.addAttribute("appealDeadline", appealDeadline == null ? null
+                    : AcademicRequestService.formatThaiDate(appealDeadline.atStartOfDay()));
+            model.addAttribute("appealProblem", requestService.appealProblem(request, java.time.LocalDate.now()));
+            model.addAttribute("workingDaysNote", com.ecom.util.WorkingDays.NOTE);
+        }
 
         // ดึงข้อมูลจาก doc_1 เพื่อแสดงข้อมูลรายวิชาในหน้ารายละเอียดคำร้อง
         List<AcademicDocument> doc1List = requestService.getDocumentsByType(id, 1);

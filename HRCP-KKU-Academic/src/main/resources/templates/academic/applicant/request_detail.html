@@ -91,6 +91,13 @@
             <div th:if="${request.currentStatus.name() == 'COMPLETED_PASS'}" class="result-alert ra-pass">
                 <i class="fas fa-check-circle"></i> <span>ผ่านการประเมิน</span>
             </div>
+            <!--/* 1669/2569 ข้อ 10.3 — ผลไม่ผ่านต้องรับรองแล้วจึงแจ้งผล กำหนดขอทบทวนเริ่มนับจากวันแจ้งผล */-->
+            <div th:if="${request.currentStatus.name() == 'SUBCOMMITTEE_FAIL' or request.currentStatus.name() == 'COLLEGE_ENDORSED_FAIL'}"
+                 class="result-alert ra-revise">
+                <i class="fas fa-hourglass-half"></i>
+                <span>ผลการประเมินยังไม่ผ่าน — รอกรรมการประจำวิทยาลัยฯ รับรองและแจ้งผลอย่างเป็นทางการ
+                    ขอทบทวนผลได้หลังได้รับแจ้งผล</span>
+            </div>
             <div th:if="${request.currentStatus.name() == 'COMPLETED_REVISE'}" class="result-alert ra-revise">
                 <i class="fas fa-exclamation-triangle"></i>
                 <div>
@@ -193,6 +200,32 @@
             </div>
             <div th:if="${request.currentStatus.name() == 'COMPLETED'}" class="result-alert ra-completed">
                 <i class="fas fa-flag-checkered"></i> <span>คำร้องดำเนินการเสร็จสิ้นแล้ว</span>
+            </div>
+
+            <!--/* ผลไม่ผ่าน — ขอทบทวนต่อหัวหน้าส่วนงานได้ภายใน 30 วันทำการ (ประกาศ มข. 1669/2569 ข้อ 10.3) */-->
+            <div th:if="${request.currentStatus.name() == 'COMPLETED_FAIL'}" class="result-alert ra-revise" id="appealBox">
+                <i class="fas fa-scale-balanced"></i>
+                <div class="flex-grow-1">
+                    <span>ขอทบทวนผลการประเมิน</span>
+                    <div class="ra-detail">
+                        หากท่านเห็นว่าไม่ได้รับความเป็นธรรม ขอทบทวนต่อหัวหน้าส่วนงานได้ภายใน 30 วันทำการนับจากวันที่ทราบผล
+                        <th:block th:if="${appealDeadline != null}">— ภายในวันที่ <strong th:text="${appealDeadline}">วันที่</strong></th:block>
+                        <small class="d-block text-muted" th:text="'* ' + ${workingDaysNote}"></small>
+                    </div>
+                    <form th:if="${appealProblem == null}" th:action="@{'/user/academic/request/' + ${request.id} + '/appeal'}"
+                        method="post" class="mt-2">
+                        <label for="appealReason" class="form-label small mb-1">เหตุผลที่ขอทบทวน (จำเป็น)</label>
+                        <textarea id="appealReason" name="reason" class="form-control" rows="3" required maxlength="2000"></textarea>
+                        <button type="submit" class="btn btn-academic btn-sm mt-2">
+                            <i class="fas fa-paper-plane me-1"></i> ส่งคำขอทบทวน
+                        </button>
+                    </form>
+                    <div th:unless="${appealProblem == null}" class="ra-detail mt-1" th:text="${appealProblem}">ขอทบทวนไม่ได้</div>
+                </div>
+            </div>
+            <div th:if="${request.currentStatus.name() == 'APPEAL_SUBMITTED'}" class="result-alert ra-revise" id="appealPending">
+                <i class="fas fa-scale-balanced"></i>
+                <span>ส่งคำขอทบทวนผลการประเมินแล้ว — รอหัวหน้าส่วนงานพิจารณา</span>
             </div>
 
             <!--/* แอดมินส่งเอกสารกลับมาให้แก้ไข */-->

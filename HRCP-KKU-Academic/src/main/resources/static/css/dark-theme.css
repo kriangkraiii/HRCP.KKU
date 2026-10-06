@@ -486,6 +486,8 @@
     color: #ffcc80 !important;
 }
 
+[data-theme="dark"] .status-SUBCOMMITTEE_FAIL,
+[data-theme="dark"] .status-COLLEGE_ENDORSED_FAIL,
 [data-theme="dark"] .status-COMPLETED_FAIL {
     background: rgba(198, 40, 40, 0.22) !important;
     color: #ef9a9a !important;

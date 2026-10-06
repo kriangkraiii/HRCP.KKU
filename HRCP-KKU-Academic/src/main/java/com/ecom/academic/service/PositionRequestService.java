@@ -292,6 +292,8 @@ public class PositionRequestService {
     public static final String ERROR_RANK_NOT_HIGHER = "rank_not_higher";
     public static final String ERROR_EVALUATION_REQUIRED = "evaluation_required";
     public static final String ERROR_POSITION_MISMATCH = "position_mismatch";
+    public static final String ERROR_LEVEL_BELOW_RANK = "level_below_rank";
+    public static final String ERROR_EVALUATION_UNUSABLE = "evaluation_unusable";
     public static final String ERROR_ALREADY_PROFESSOR = "already_professor";
 
     /** ศาสตราจารย์เป็นตำแหน่งสูงสุด — ยื่นคำร้องขอตำแหน่งใหม่ไม่ได้ ดูจากโปรไฟล์ */
@@ -321,8 +323,7 @@ public class PositionRequestService {
     /**
      * ปัญหาของการเริ่มคำร้องขอ ศ. โดยไม่ใช้ผลประเมิน ถ้ามี — ยังไม่มีเอกสาร จึงดูตำแหน่งจากโปรไฟล์
      *
-     * <p>ทางนี้เป็นวิธีปกติของ รศ. เท่านั้น อาจารย์หรือ ผศ. ที่ขอ ศ. ต้องเริ่มจากผลประเมินการสอน
-     * ซึ่งเอกสารที่ 1 ติ๊กขอ ศ. ไว้ (วิธีพิเศษ) ผ่าน {@code /create-request}
+     * <p>ใช้ได้ทั้ง รศ. (วิธีปกติ) และอาจารย์/ผศ. ที่ข้ามขั้น (วิธีพิเศษ) เพราะขอ ศ. ไม่ต้องประเมินการสอน
      */
     public Optional<String> rankProblemForProfessor(UserDtls applicant) {
         if (AcademicRankPolicy.holdsHighestRank(applicant)) {
@@ -344,8 +345,9 @@ public class PositionRequestService {
      * ตรวจกติกาตำแหน่งอีกรอบตอนยื่น — แบบร่างค้างได้เป็นสัปดาห์ และข้อมูลเก่าอาจสร้างก่อนมีกติกานี้
      *
      * <ul>
-     * <li>ขอ ผศ./รศ. ต้องมีผลประเมินการสอน ขอ ศ. ไม่ต้องเฉพาะ รศ. (อาจารย์/ผศ. ขอ ศ. เป็นวิธีพิเศษ ต้องมี)
-     * <li>ตำแหน่งที่ขอต้องตรงกับที่ผลประเมินระบุ
+     * <li>ขอ ผศ./รศ. ต้องมีผลประเมินการสอน ขอ ศ. ไม่ต้องมี (1669/2569 ข้อ ๖)
+     * <li>ตำแหน่งที่ขอต้องตรงกับที่ผลประเมินระบุ และระดับผลต้องถึงเกณฑ์ของตำแหน่งนั้น (ข้อ ๙.๔)
+     * <li>ผลประเมินยังใช้ได้ ณ วันที่ยื่น — ร่างที่สร้างตอนผลยังไม่หมดอายุอาจมายื่นหลังครบ 3 ปีแล้ว (ข้อ ๗)
      * <li>ต้องสูงกว่าตำแหน่งปัจจุบัน — ยึดเอกสารแรกที่กรอก: เอกสารที่ 1 ของผลประเมิน แล้วเอกสารที่ 1
      * ของคำร้องนี้ แล้วค่อยโปรไฟล์
      * </ul>
@@ -375,6 +377,13 @@ public class PositionRequestService {
         }
         if (evaluation != null && evaluation.targetRank() != null && evaluation.targetRank() != target) {
             return Optional.of(ERROR_POSITION_MISMATCH);
+        }
+        // ผลที่ตัดสินก่อนมีกติกา 1669/2569 ข้อ ๙.๔ อาจค้างสถานะผ่านไว้ทั้งที่ระดับไม่ถึงเกณฑ์ของตำแหน่งที่ขอ
+        if (evaluation != null && Doc7Scoring.fallsShortOf(evaluation.resultLevel(), target)) {
+            return Optional.of(ERROR_LEVEL_BELOW_RANK);
+        }
+        if (evaluation != null && !academicRequestService.isUsableEvaluation(request.getLinkedEvaluation())) {
+            return Optional.of(ERROR_EVALUATION_UNUSABLE);
         }
         return AcademicRankPolicy.rankViolation(current, target).map(message -> ERROR_RANK_NOT_HIGHER);
     }
@@ -906,6 +915,101 @@ public class PositionRequestService {
         }
 
         return request;
+    }
+
+    /**
+     * วันที่ที่บันทึกพร้อมการเปลี่ยนสถานะ — ใช้เฉพาะสถานะที่ต้องมี (ช่องอื่นปล่อย null)
+     *
+     * @param collegeResolution    วันมติกรรมการประจำวิทยาลัยฯ (จำเป็นเมื่อ {@code COLLEGE_APPROVED})
+     * @param correctionsReceived  มติให้แก้ไข: วันที่ได้รับเอกสารแก้ไขครบ (ไม่บังคับ)
+     * @param councilResolution    วันมติสภามหาวิทยาลัย (จำเป็นเมื่อบันทึกผลสภา)
+     * @param councilAcknowledged  วันที่ผู้ขอรับทราบมติ (จำเป็นเมื่อสภาไม่อนุมัติ เพื่อนับ 90 วัน)
+     * @param appealReceived       ขอทบทวน: วันที่หน่วยงานของส่วนงานรับเรื่อง (จำเป็น — ใช้นับ 90 วันและเป็นวันสภารับเรื่อง)
+     * @param appealEndorsed       ขอทบทวน: วันที่คณะกรรมการประจำส่วนงานเห็นชอบให้เสนอมหาวิทยาลัย (จำเป็น)
+     */
+    public record StatusDates(java.time.LocalDate collegeResolution, java.time.LocalDate correctionsReceived,
+            java.time.LocalDate councilResolution, java.time.LocalDate councilAcknowledged,
+            java.time.LocalDate appealReceived, java.time.LocalDate appealEndorsed) {
+
+        public static final StatusDates NONE = new StatusDates(null, null, null, null);
+
+        public StatusDates(java.time.LocalDate collegeResolution, java.time.LocalDate correctionsReceived,
+                java.time.LocalDate councilResolution, java.time.LocalDate councilAcknowledged) {
+            this(collegeResolution, correctionsReceived, councilResolution, councilAcknowledged, null, null);
+        }
+
+        /** วันที่ของการขอทบทวน (ข้อบังคับ 2569 ข้อ 35) */
+        public static StatusDates appeal(java.time.LocalDate received, java.time.LocalDate endorsed) {
+            return new StatusDates(null, null, null, null, received, endorsed);
+        }
+    }
+
+    /**
+     * เปลี่ยนสถานะพร้อมบันทึกวันที่ตามประกาศ มข. 1670/2569 (วันสภารับเรื่อง) และข้อบังคับ 2569 ข้อ 35 (ขอทบทวน)
+     */
+    @Transactional
+    public PositionRequest updateStatus(Long requestId, PositionRequestStatus newStatus, UserDtls changedBy,
+            String note, StatusDates dates) {
+        PositionRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("ไม่พบคำร้อง ID: " + requestId));
+        java.time.LocalDate today = java.time.LocalDate.now();
+        StatusDates d = dates == null ? StatusDates.NONE : dates;
+        switch (newStatus) {
+            case COLLEGE_APPROVED -> {
+                requireDate(d.collegeResolution(), "วันที่คณะกรรมการประจำวิทยาลัยฯ มีมติ", today);
+                if (d.correctionsReceived() != null) {
+                    requireDate(d.correctionsReceived(), "วันที่ได้รับเอกสารแก้ไขครบตามมติ", today);
+                    if (d.correctionsReceived().isBefore(d.collegeResolution())) {
+                        throw new IllegalStateException("วันที่ได้รับเอกสารแก้ไขต้องไม่ก่อนวันที่มีมติ");
+                    }
+                }
+                request.setCollegeResolutionDate(d.collegeResolution());
+                request.setCorrectionsReceivedDate(d.correctionsReceived());
+            }
+            case COUNCIL_APPROVED, COUNCIL_REJECTED -> {
+                requireDate(d.councilResolution(), "วันที่สภามหาวิทยาลัยมีมติ", today);
+                if (newStatus == PositionRequestStatus.COUNCIL_REJECTED || d.councilAcknowledged() != null) {
+                    requireDate(d.councilAcknowledged(), "วันที่ผู้ขอรับทราบมติ", today);
+                    if (d.councilAcknowledged().isBefore(d.councilResolution())) {
+                        throw new IllegalStateException("วันที่รับทราบมติต้องไม่ก่อนวันที่สภามหาวิทยาลัยมีมติ");
+                    }
+                }
+                request.setCouncilResolutionDate(d.councilResolution());
+                request.setCouncilAcknowledgedDate(d.councilAcknowledged());
+            }
+            case APPEAL_SUBMITTED -> {
+                // ข้อ 35 — ยื่นที่ส่วนงาน (วันรับเรื่อง = วันสภารับเรื่อง) แล้วคณะกรรมการประจำส่วนงานเห็นชอบก่อนเสนอมหาวิทยาลัย
+                requireDate(d.appealReceived(), "วันที่ส่วนงานรับเรื่องขอทบทวน", today);
+                requireDate(d.appealEndorsed(), "วันที่คณะกรรมการประจำส่วนงานเห็นชอบให้เสนอขอทบทวน", today);
+                if (d.appealEndorsed().isBefore(d.appealReceived())) {
+                    throw new IllegalStateException("วันที่คณะกรรมการประจำส่วนงานเห็นชอบต้องไม่ก่อนวันที่รับเรื่องขอทบทวน");
+                }
+                // 90 วันนับถึงวันที่ส่วนงานรับเรื่อง ไม่ใช่วันที่เจ้าหน้าที่มาบันทึก
+                String problem = CouncilTimeline.appealProblem(request, getStatusHistory(requestId),
+                        d.appealReceived());
+                if (problem != null) {
+                    throw new IllegalStateException(problem);
+                }
+                if (note == null || note.isBlank()) {
+                    throw new IllegalArgumentException("กรุณาระบุเหตุผลทางวิชาการที่ขอทบทวน (ข้อบังคับ 2569 ข้อ 35)");
+                }
+                request.setAppealReceivedDate(d.appealReceived());
+                request.setAppealEndorsedDate(d.appealEndorsed());
+            }
+            default -> {
+            }
+        }
+        requestRepository.save(request);
+        return updateStatus(requestId, newStatus, changedBy, note, true);
+    }
+
+    private static void requireDate(java.time.LocalDate date, String what, java.time.LocalDate today) {
+        if (date == null) {
+            throw new IllegalStateException("กรุณาระบุ" + what);
+        }
+        if (date.isAfter(today)) {
+            throw new IllegalStateException(what + "ต้องไม่เป็นวันในอนาคต");
+        }
     }
 
     @Transactional
