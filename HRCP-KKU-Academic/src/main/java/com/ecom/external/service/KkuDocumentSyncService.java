@@ -112,6 +112,10 @@ public class KkuDocumentSyncService {
         if (docRepo.count() == 0) {
             log.info("KkuRegulationDoc table is empty on startup. Triggering initial sync...");
             syncNow();
+        } else if (!docRepo.existsByCategoryStartingWith(CIVIL_SERVANT_AUDIENCE)) {
+            // ซิงค์ไว้ก่อนเพิ่มหน้าข้าราชการ — ดึงใหม่ทันที ไม่ต้องรอรอบรายเดือน
+            log.info("No civil-servant documents yet. Triggering sync of every source page...");
+            syncNow();
         } else {
             fixStaleIsNewFlags();
         }
@@ -310,6 +314,37 @@ public class KkuDocumentSyncService {
         }
 
         return new ArrayList<>(groupMap.values());
+    }
+
+    /** Tab label for documents from the employee page (categories without an audience prefix) */
+    public static final String EMPLOYEE_AUDIENCE = "พนักงานมหาวิทยาลัย";
+
+    private static final String AUDIENCE_SEPARATOR = " · ";
+
+    /**
+     * Documents split into one tab per audience — พนักงานมหาวิทยาลัย first, then ข้าราชการ — with the
+     * "ข้าราชการ · " prefix taken off the category titles inside its own tab. Empty tabs are left out.
+     */
+    public Map<String, List<CategoryGroup>> getDocumentsByAudience() {
+        Map<String, Map<String, CategoryGroup>> byAudience = new LinkedHashMap<>();
+        byAudience.put(EMPLOYEE_AUDIENCE, new LinkedHashMap<>());
+        byAudience.put(CIVIL_SERVANT_AUDIENCE, new LinkedHashMap<>());
+        String civilPrefix = CIVIL_SERVANT_AUDIENCE + AUDIENCE_SEPARATOR;
+        for (KkuRegulationDoc doc : docRepo.findAllByOrderByDisplayOrderAscIdAsc()) {
+            String cat = doc.getCategory();
+            boolean civil = cat.startsWith(civilPrefix);
+            String title = civil ? cat.substring(civilPrefix.length()) : cat;
+            byAudience.get(civil ? CIVIL_SERVANT_AUDIENCE : EMPLOYEE_AUDIENCE)
+                    .computeIfAbsent(title, k -> new CategoryGroup(k, doc.getCategoryIcon(), doc.getCategoryColor()))
+                    .addDoc(doc);
+        }
+        Map<String, List<CategoryGroup>> tabs = new LinkedHashMap<>();
+        byAudience.forEach((audience, groups) -> {
+            if (!groups.isEmpty()) {
+                tabs.put(audience, new ArrayList<>(groups.values()));
+            }
+        });
+        return tabs;
     }
 
     /**

@@ -20,6 +20,8 @@ public interface KkuRegulationDocRepository extends JpaRepository<KkuRegulationD
 
     long countByIsNewTrue();
 
+    boolean existsByCategoryStartingWith(String prefix);
+
     @Query("SELECT DISTINCT d.category FROM KkuRegulationDoc d ORDER BY MIN(d.displayOrder) ASC")
     List<String> findDistinctCategoriesOrdered();
 }

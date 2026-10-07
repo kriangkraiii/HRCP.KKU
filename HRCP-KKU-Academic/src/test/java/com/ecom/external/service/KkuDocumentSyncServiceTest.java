@@ -83,6 +83,40 @@ class KkuDocumentSyncServiceTest {
         verify(docRepo).save(employee);
     }
 
+    /** หน้าเอกสารของผู้ยื่นแยกแท็บพนักงาน/ข้าราชการ — หมวดในแท็บไม่ต้องมีคำนำหน้า "ข้าราชการ · " ซ้ำ */
+    @Test
+    void getDocumentsByAudience_splitsEmployeeAndCivilServantTabs() {
+        KkuRegulationDoc employee = new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "ข้อบังคับ 2569", "u1", "a.pdf", 1);
+        KkuRegulationDoc civil = new KkuRegulationDoc("ข้าราชการ · ประกาศ ก.พ.อ.", "ก.พ.อ. 2568", "u2", "b.pdf", 1001);
+        when(docRepo.findAllByOrderByDisplayOrderAscIdAsc()).thenReturn(List.of(employee, civil));
+
+        var tabs = syncService.getDocumentsByAudience();
+
+        assertEquals(List.of("พนักงานมหาวิทยาลัย", "ข้าราชการ"), List.copyOf(tabs.keySet()));
+        assertEquals("ข้อบังคับมหาวิทยาลัยขอนแก่น", tabs.get("พนักงานมหาวิทยาลัย").get(0).getTitle());
+        assertEquals("ประกาศ ก.พ.อ.", tabs.get("ข้าราชการ").get(0).getTitle());
+        assertEquals(1, tabs.get("ข้าราชการ").get(0).getDocs().size());
+    }
+
+    /** ฐานข้อมูลที่ซิงค์ไว้ก่อนมีหน้าข้าราชการ — เปิดระบบแล้วต้องดึงใหม่เอง ไม่ต้องรอรอบรายเดือน */
+    @Test
+    void onStartup_syncsWhenCivilServantDocumentsAreMissing() {
+        when(docRepo.count()).thenReturn(42L);
+        when(docRepo.existsByCategoryStartingWith("ข้าราชการ")).thenReturn(false);
+        java.util.List<String> fetched = new java.util.ArrayList<>();
+        KkuDocumentSyncService service = new KkuDocumentSyncService(parser, docRepo, syncStateRepo) {
+            @Override
+            protected String fetchHtml(String url) {
+                fetched.add(url);
+                return "";
+            }
+        };
+
+        service.onStartup();
+
+        assertEquals(2, fetched.size());
+    }
+
     @Test
     void getGroupedDocuments_groupsByCategoryCorrectly() {
         KkuRegulationDoc doc1 = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ 2565", "http://example.com/1.pdf", "1.pdf", 1);

@@ -15,7 +15,8 @@ import jakarta.persistence.Table;
 
 /**
  * Entity representing a synchronized KKU HR regulation / announcement document.
- * Sourced automatically from https://hr2.kku.ac.th/?page_id=5546
+ * Sourced automatically from https://hr2.kku.ac.th/?page_id=5546 (พนักงาน) and https://hr2.kku.ac.th/?page_id=5532
+ * (ข้าราชการ — categories prefixed "ข้าราชการ · ")
  */
 @EntityListeners(com.ecom.search.index.SearchIndexListener.class)
 @Entity

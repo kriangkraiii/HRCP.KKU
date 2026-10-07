@@ -246,8 +246,8 @@ public class AcademicApplicantController {
 
     @GetMapping("/documents")
     public String documentsLibrary(Model model) {
-        List<com.ecom.external.service.KkuDocumentSyncService.CategoryGroup> categories = kkuDocSyncService.getGroupedDocuments();
-        model.addAttribute("categories", categories);
+        // แท็บละกลุ่มผู้ยื่น: พนักงานมหาวิทยาลัย (หน้า 5546) / ข้าราชการ (หน้า 5532 — เกณฑ์ ก.พ.อ.)
+        model.addAttribute("audiences", kkuDocSyncService.getDocumentsByAudience());
         return "academic/applicant/documents";
     }
 

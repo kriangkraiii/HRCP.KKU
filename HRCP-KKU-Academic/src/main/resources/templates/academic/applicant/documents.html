@@ -14,8 +14,7 @@
             <div class="page-header">
                 <div class="page-header-text">
                     <h3 class="page-header-title">เอกสาร / ข้อบังคับ / ประกาศ</h3>
-                    <p class="page-header-sub">เอกสารอ้างอิงจากกองทรัพยากรบุคคล มหาวิทยาลัยขอนแก่น
-                        — หมวดที่ขึ้นต้นด้วย "ข้าราชการ" ใช้กับผู้ยื่นที่เป็นข้าราชการ (ตามเกณฑ์ ก.พ.อ.)</p>
+                    <p class="page-header-sub">เอกสารอ้างอิงจากกองทรัพยากรบุคคล มหาวิทยาลัยขอนแก่น — เลือกแท็บตามสถานะของท่าน</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="https://hr2.kku.ac.th/?page_id=5546" target="_blank" rel="noopener" class="btn btn-outline-primary btn-sm">
@@ -34,12 +33,31 @@
                        placeholder="ค้นหาเอกสาร..." data-call-input="filterDocs" data-call-arg="value">
             </div>
 
+            <!--/* แท็บตามกลุ่มผู้ยื่น — พนักงานใช้ข้อบังคับ มข. พ.ศ. 2569, ข้าราชการใช้เกณฑ์ ก.พ.อ. */-->
+            <div class="doc-audience-tabs" role="tablist" th:if="${audiences.size() > 1}">
+                <button th:each="tab, ts : ${audiences}" type="button" role="tab"
+                        class="doc-audience-tab" th:classappend="${ts.index == 0} ? ' is-active' : ''"
+                        th:attr="aria-selected=${ts.index == 0}, data-audience=${ts.index}"
+                        data-call="showAudience" data-call-arg="self">
+                    <i th:class="${tab.key == 'ข้าราชการ'} ? 'fas fa-user-tie me-1' : 'fas fa-users me-1'"></i>
+                    <span th:text="${tab.key}">พนักงานมหาวิทยาลัย</span>
+                </button>
+            </div>
+
             <!--/* Categories rendered by Thymeleaf */-->
             <div id="docContainer">
-                <div th:each="cat, stat : ${categories}"
+              <div th:each="tab, ts : ${audiences}" class="doc-audience-pane" role="tabpanel"
+                   th:classappend="${ts.index != 0} ? ' js-hidden' : ''" th:attr="data-audience=${ts.index}">
+                <p th:if="${tab.key == 'ข้าราชการ'}" class="doc-audience-note">
+                    <i class="fas fa-circle-info me-1"></i>
+                    ข้าราชการใช้หลักเกณฑ์ตามประกาศ ก.พ.อ. พ.ศ. 2564 และที่แก้ไขเพิ่มเติม (ฉบับที่ 3 พ.ศ. 2568)
+                    ตามข้อบังคับ มข. ฉบับข้าราชการ พ.ศ. 2565 — ส่วนการประเมินการสอน (ประกาศ มข. 1669/2569)
+                    และวันรับเรื่อง (1670/2569) ใช้ร่วมกับพนักงาน ดูได้ที่แท็บพนักงานมหาวิทยาลัย
+                </p>
+                <div th:each="cat, stat : ${tab.value}"
                      class="doc-category"
                      th:classappend="${stat.index == 0} ? ' is-open' : ''"
-                     th:attr="data-cat=${stat.index}"
+                     th:attr="data-cat=${ts.index + '-' + stat.index}"
                      data-styled th:data-var-cat-delay="${(stat.index * 80) + 'ms'}">
                     <div class="doc-category-header" data-call="toggleCat" data-call-arg="self">
                         <i th:class="${cat.icon != null and !cat.icon.isEmpty() ? cat.icon : 'fas fa-landmark'} + ' cat-icon'"
@@ -62,6 +80,7 @@
                         </a>
                     </div>
                 </div>
+              </div>
             </div>
 
         </div>
@@ -192,6 +211,20 @@
             if (!header) return;
             var cat = header.closest('.doc-category');
             if (cat) cat.classList.toggle('is-open');
+        }
+
+        // แท็บพนักงาน / ข้าราชการ
+        function showAudience(tab){
+            if (!tab) return;
+            var target = tab.getAttribute('data-audience');
+            document.querySelectorAll('.doc-audience-tab').forEach(function(t){
+                var on = t.getAttribute('data-audience') === target;
+                t.classList.toggle('is-active', on);
+                t.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            document.querySelectorAll('.doc-audience-pane').forEach(function(p){
+                p.classList.toggle('js-hidden', p.getAttribute('data-audience') !== target);
+            });
         }
 
         // Click handler for PDF preview
