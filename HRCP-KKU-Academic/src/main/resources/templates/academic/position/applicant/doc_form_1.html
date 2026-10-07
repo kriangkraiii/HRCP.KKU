@@ -19,9 +19,26 @@
             <!--/* ผลงานที่เคยยื่นไปแล้ว — ส่งคำร้องไม่ได้จนกว่าจะเอาออก (PositionRequestService.reusedWorks) */-->
             <div th:if="${reusedWorks != null and !reusedWorks.isEmpty()}" class="alert alert-danger" id="reusedWorksAlert">
                 <i class="fas fa-ban me-1"></i>
-                <strong>ผลงานต่อไปนี้เคยใช้ยื่นคำร้องก่อนหน้าแล้ว ใช้ซ้ำไม่ได้</strong> — กรุณาเอาออกหรือเปลี่ยนเป็นผลงานอื่น
+                <strong>ผลงานต่อไปนี้อยู่ในคำร้องอื่นที่ยังไม่มีมติสภามหาวิทยาลัย ใช้ซ้ำไม่ได้</strong> — กรุณาเอาออกหรือเปลี่ยนเป็นผลงานอื่น
                 <ul class="mb-0 mt-1">
                     <li th:each="w : ${reusedWorks}" th:text="${w}">ผลงาน</li>
+                </ul>
+            </div>
+
+            <!--/* ผลงานจากคำร้องที่สภามีมติแล้ว — ใช้ได้ แต่ต้องระบุว่าเคยใช้ (PositionRequestService.earlierUses) */-->
+            <div th:if="${earlierUses != null and !earlierUses.isEmpty()}" class="alert alert-warning" id="earlierUsesAlert">
+                <i class="fas fa-clock-rotate-left me-1"></i>
+                <strong>ผลงานต่อไปนี้เคยใช้ยื่นขอตำแหน่งมาแล้ว</strong> — ใช้ได้ตามข้อบังคับ ข้อ ๓๔
+                แต่ต้องติ๊ก "เคยใช้" พร้อมระบุปี พ.ศ. และผลระดับคุณภาพ มิฉะนั้นส่งคำร้องไม่ได้
+                <ul class="mb-0 mt-1">
+                    <li th:each="u : ${earlierUses}">
+                        <span th:text="${u.work}">ผลงาน</span>
+                        <span class="text-muted small">— คำร้อง <span th:text="${u.requestCode}">-</span><th:block th:if="${u.councilDate != null}">,
+                            มติสภาปี พ.ศ. <span th:text="${u.councilDate.year + 543}">-</span></th:block></span>
+                        <span th:unless="${u.disclosed}" class="badge text-bg-danger">ยังไม่ระบุว่าเคยใช้</span>
+                        <span th:if="${u.overFiveYears}" class="badge text-bg-secondary"
+                              title="ข้อ ๓๔ ให้ใช้ผลประเมินเดิมได้ภายใน ๕ ปีนับจากมติสภา เกินกว่านั้นกรรมการอาจประเมินใหม่">มติสภาเกิน ๕ ปี</span>
+                    </li>
                 </ul>
             </div>
 
@@ -301,6 +318,8 @@
                         <textarea name="other" class="form-control" rows="4"></textarea>
                     </div>
                 </div>
+
+                <div th:replace="~{academic/_work_reuse_rules :: rules}"></div>
 
                 <!--/* ========== ส่วนที่ 4.1: ผลงานทางวิชาการ (ผศ) ========== */-->
                 <div class="card card-academic mb-4" id="sectionAsst">

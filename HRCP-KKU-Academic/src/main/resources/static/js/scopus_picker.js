@@ -19,6 +19,11 @@
  *     yearPrefix:     'assoc_used_research_year', // optional year input
  *     addRow: function () { ... }               // called when more rows are needed
  *   });
+ *
+ * Optional, for forms whose rows are not named {prefix}_{n}:
+ *   titleName: function (n) { return 'des_research' + n; },
+ *   trackIds:  false,  // do not attach the publication id (the work is put forward on another document)
+ *   onRow:     function (n, row) { ... }  // fill the row's other columns from {quartile, dataSource, year}
  */
 (function (window, document) {
     'use strict';
@@ -94,6 +99,7 @@
             '          <i class="fas fa-info-circle"></i> ',
             '          รายการที่เลือกจะถูกใส่ในช่องว่างช่องแรก และ<strong>ยังแก้ไขข้อความได้เอง</strong>ทีหลัง',
             '          — ข้อมูลที่กรอกไว้แล้วจะไม่ถูกเขียนทับ หากต้องการกรอกเองทั้งหมดก็ไม่ต้องใช้หน้านี้',
+            '          <br>ผลงานในคำร้องที่ยังไม่มีมติสภามหาวิทยาลัยจะไม่แสดงในรายการนี้ — ผลงานจากคำร้องที่มีมติแล้วเลือกได้ แต่ต้องระบุว่า "เคยใช้" ในเอกสารที่ ๑',
             '        </div>',
             '        <div id="spList" class="list-group"></div>',
             '      </div>',
@@ -299,18 +305,22 @@
         }
     }
 
+    function titleNameOf(target, n) {
+        return target.titleName ? target.titleName(n) : target.titlePrefix + '_' + n;
+    }
+
     function fillRowsInternal(target, rows) {
-        var startAt = firstEmptyIndex(target.titlePrefix);
+        var startAt = firstEmptyIndex(target);
         var needed = startAt + rows.length - 1;
 
         // Grow the container until every publication has a row to land in.
         // The attempt cap matters: if addRow ever stops producing inputs under
         // the expected name, an uncapped loop would hang the browser tab.
         var attempts = 0;
-        while (countRows(target.titlePrefix) < needed && typeof target.addRow === 'function') {
-            var before = countRows(target.titlePrefix);
+        while (countRows(target) < needed && typeof target.addRow === 'function') {
+            var before = countRows(target);
             target.addRow();
-            if (countRows(target.titlePrefix) === before || ++attempts > 500) {
+            if (countRows(target) === before || ++attempts > 500) {
                 console.warn('Scopus picker: addRow stopped adding rows for', target.titlePrefix);
                 break;
             }
@@ -319,11 +329,16 @@
         var filled = 0;
         rows.forEach(function (row, i) {
             var n = startAt + i;
-            if (!setValue(target.titlePrefix + '_' + n, row.citation)) {
+            if (!setValue(titleNameOf(target, n), row.citation)) {
                 return;
             }
             filled++;
-            rememberPublicationId(target.titlePrefix, n, row.id);
+            if (target.trackIds !== false) {
+                rememberPublicationId(target.titlePrefix, n, row.id);
+            }
+            if (typeof target.onRow === 'function') {
+                target.onRow(n, row);
+            }
 
             if (target.quartilePrefix && row.quartile) {
                 var radio = document.querySelector(
@@ -344,18 +359,18 @@
         }
     }
 
-    function firstEmptyIndex(prefix) {
+    function firstEmptyIndex(target) {
         for (var n = 1; n <= 200; n++) {
-            var el = document.querySelector('[name="' + prefix + '_' + n + '"]');
+            var el = document.querySelector('[name="' + titleNameOf(target, n) + '"]');
             if (!el) return n;
             if (!el.value.trim()) return n;
         }
         return 1;
     }
 
-    function countRows(prefix) {
+    function countRows(target) {
         var n = 0;
-        while (document.querySelector('[name="' + prefix + '_' + (n + 1) + '"]')) n++;
+        while (document.querySelector('[name="' + titleNameOf(target, n + 1) + '"]')) n++;
         return n;
     }
 

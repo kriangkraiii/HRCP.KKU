@@ -1,6 +1,5 @@
 package com.ecom.external.service;
 
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -54,12 +53,13 @@ public class ScopusQueryService {
     private final PositionRequestPublicationRepository publicationLinkRepo;
 
     /**
-     * Statuses that consume nothing: a draft has not been submitted. There is no
-     * refusal status — the flow only ever sends a request back for revision, and
-     * a request under revision is still putting its papers forward.
+     * Statuses that consume nothing: a draft has not been submitted, and a request
+     * the university council has decided (approved or not) frees its works to be
+     * put forward again — ข้อบังคับ มข. พ.ศ. 2569 ข้อ 34. Everything in between,
+     * including a request under revision or under appeal, still holds its papers.
      */
     private static final Set<PositionRequestStatus> STATUSES_THAT_FREE_A_PUBLICATION =
-            EnumSet.of(PositionRequestStatus.DRAFT);
+            PositionRequestStatus.worksReleasing();
 
     /**
      * Stands in for "nothing is spent". {@code NOT IN ()} is not valid SQL, so the

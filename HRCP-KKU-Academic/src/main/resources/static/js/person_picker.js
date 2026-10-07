@@ -97,7 +97,7 @@
         this.hint = el('div', 'form-text person-picker-hint', this.hintText + ' ');
         wrap.appendChild(this.hint);
         if (this.allowExternal) {
-            var add = el('button', 'btn btn-link btn-sm p-0 ms-1 align-baseline', '+ เพิ่มผู้ลงนามนอก มข.');
+            var add = el('button', 'btn btn-link btn-sm p-0 ms-1 align-baseline', '+ เพิ่มผู้ลงนามภายนอก');
             add.type = 'button';
             add.addEventListener('click', function () { self.openExternal(); });
             this.hint.appendChild(add);
@@ -240,7 +240,7 @@
             self.menu.appendChild(item);
         });
         if (this.allowExternal) {
-            var add = el('button', 'dropdown-item text-primary small', '+ เพิ่มผู้ลงนามนอก มข. ด้วยอีเมล');
+            var add = el('button', 'dropdown-item text-primary small', '+ เพิ่มผู้ลงนามภายนอก ด้วยอีเมล');
             add.type = 'button';
             add.addEventListener('mousedown', function (e) { e.preventDefault(); self.close(); self.openExternal(); });
             this.menu.appendChild(el('div', 'dropdown-divider'));
@@ -326,7 +326,7 @@
         var dialog = el('div', 'modal-dialog modal-dialog-centered');
         var content = el('form', 'modal-content');
         var header = el('div', 'modal-header');
-        header.appendChild(el('h5', 'modal-title', 'เพิ่มผู้ลงนามนอก มข.'));
+        header.appendChild(el('h5', 'modal-title', 'เพิ่มผู้ลงนามภายนอก'));
         var close = el('button', 'btn-close');
         close.type = 'button';
         close.setAttribute('data-bs-dismiss', 'modal');

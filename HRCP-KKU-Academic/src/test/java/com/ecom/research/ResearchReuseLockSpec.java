@@ -84,10 +84,10 @@ class ResearchReuseLockSpec extends AbstractFlowTest {
         }
 
         @Test
-        @DisplayName("ล็อกตลอดทุกสถานะหลังส่ง จนถึงส่งออกกองทรัพยากรบุคคล")
+        @DisplayName("ล็อกตลอดทุกสถานะหลังส่ง จนกว่าสภามหาวิทยาลัยมีมติ (รวมส่งออก มข. และขอทบทวน)")
         void lockHoldsThroughEveryPostDraftStatus() throws Exception {
             for (PositionRequestStatus status : PositionRequestStatus.values()) {
-                if (status == PositionRequestStatus.DRAFT) {
+                if (status.releasesWorks()) {
                     continue;
                 }
                 data.reset();

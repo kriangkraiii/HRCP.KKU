@@ -48,6 +48,10 @@
                             <input class="form-check-input" type="checkbox" name="chk_coauthor" value="☑" id="chkCoauthor">
                             <label class="form-check-label" for="chkCoauthor">ผู้นิพนธ์ร่วม (co-author)</label>
                         </div>
+                        <div class="form-text">
+                            เป็นทั้งผู้ประพันธ์อันดับแรกและผู้ประพันธ์บรรณกิจได้ (ต้องมีผู้ร่วมงานลงนามรับรองด้วย)
+                            ส่วนผู้นิพนธ์ร่วมเลือกคู่กับสองข้อแรกไม่ได้ — เอกสารแนบท้ายข้อบังคับ มข. พ.ศ. ๒๕๖๙ ข้อ ๓.๑ และ ๓.๔
+                        </div>
                     </div>
                 </div>
 
@@ -202,6 +206,22 @@
                             }
                         }
                     } catch(e) {}
+                }
+            });
+        </script>
+
+        <script>
+            // ผู้ประพันธ์อันดับแรก + บรรณกิจ เลือกพร้อมกันได้ ผู้นิพนธ์ร่วมเลือกคู่กับสองข้อนั้นไม่ได้
+            document.addEventListener('change', function (e) {
+                const fa = document.getElementById('chkFA');
+                const corr = document.getElementById('chkCorr');
+                const co = document.getElementById('chkCoauthor');
+                if (!e.target.checked) return;
+                if (e.target === co) {
+                    [fa, corr].forEach(el => { if (el.checked) { el.checked = false; el.dispatchEvent(new Event('input', { bubbles: true })); } });
+                } else if ((e.target === fa || e.target === corr) && co.checked) {
+                    co.checked = false;
+                    co.dispatchEvent(new Event('input', { bubbles: true }));
                 }
             });
         </script>

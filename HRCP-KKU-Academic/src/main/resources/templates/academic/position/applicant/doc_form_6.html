@@ -85,13 +85,39 @@
                     </div>
                 </div>
 
+                <!--/* จำนวนงานวิจัยตามข้อบังคับ มข. พ.ศ. 2569 ข้อ 16 — สาขาวิทยาศาสตร์และเทคโนโลยี */-->
+                <div class="alert alert-info small" th:if="${request.targetPosition != null}" th:switch="${request.targetPosition}">
+                    <div class="fw-bold mb-1"><i class="fas fa-circle-info"></i> งานวิจัยที่ต้องใช้ขอตำแหน่ง<span th:text="${request.targetPosition}">-</span> (ข้อบังคับ มข. พ.ศ. ๒๕๖๙)</div>
+                    <ul class="mb-0 ps-3" th:case="'ผู้ช่วยศาสตราจารย์'">
+                        <li>คุณภาพระดับ B: งานวิจัย <strong>๒ เรื่อง</strong> หรือ งานวิจัย ๑ เรื่อง + ผลงานทางวิชาการในลักษณะอื่น ๑ รายการ หรือ งานวิจัย ๑ เรื่อง + ตำราหรือหนังสือ ๑ เล่ม</li>
+                        <li>อย่างน้อย ๑ เรื่องต้องเป็น First author หรือ Corresponding author</li>
+                    </ul>
+                    <ul class="mb-0 ps-3" th:case="'รองศาสตราจารย์'">
+                        <li>วิธีที่ ๑ (ระดับ B): งานวิจัย <strong>๒ เรื่อง</strong> + ตำราหรือหนังสือ ๑ เล่ม หรือ งานวิจัย ๑ เรื่อง + ผลงานในลักษณะอื่น ๑ รายการ + ตำราหรือหนังสือ ๑ เล่ม (อย่างน้อย ๑ เรื่องเป็น First/Corresponding author)</li>
+                        <li>วิธีที่ ๒: งานวิจัยอย่างน้อย <strong>๓ เรื่อง</strong> (ระดับ A ≥ ๒, ระดับ B ≥ ๑) หรือ งานวิจัยระดับ A ≥ ๒ เรื่อง + ผลงานในลักษณะอื่นระดับ B ≥ ๑ (เรื่องระดับ A อย่างน้อย ๒ เรื่องเป็น First/Corresponding author)</li>
+                        <li>วิธีที่ ๓: งานวิจัยอย่างน้อย <strong>๑๐ เรื่อง</strong> ใน Scopus Q1–Q2 หลังได้ ผศ. (First/Corresponding author ≥ ๕) + อ้างอิงรวม ≥ ๕๐๐ + h-index ≥ ๘ + หัวหน้าโครงการทุนภายนอก ≥ ๕ โครงการ</li>
+                    </ul>
+                    <ul class="mb-0 ps-3" th:case="'ศาสตราจารย์'">
+                        <li>วิธีที่ ๑ (ระดับ A): งานวิจัยอย่างน้อย <strong>๕ เรื่อง</strong> ในฐานข้อมูลนานาชาติ + ตำราหรือหนังสือ ≥ ๑ เล่ม (First/Corresponding author ≥ ๒) หรือ งานวิจัย ≥ ๑ เรื่องรวมกับผลงานในลักษณะอื่นอย่างน้อย ๕ เรื่อง + ตำราหรือหนังสือ ≥ ๑ เล่ม</li>
+                        <li>วิธีที่ ๒: งานวิจัยอย่างน้อย <strong>๕ เรื่อง</strong> (ระดับ A+ ≥ ๒, ระดับ A ≥ ๓) หรือ งานวิจัยรวมกับผลงานในลักษณะอื่น ≥ ๕ เรื่อง (A+ ≥ ๒, A ≥ ๓) หรือ งานวิจัยระดับ A อย่างน้อย <strong>๑๐ เรื่อง</strong> (First/Corresponding author ≥ ๖)</li>
+                        <li>วิธีที่ ๓: งานวิจัยอย่างน้อย <strong>๑๐ เรื่อง</strong> ใน Scopus Q1–Q2 หลังได้ รศ. + อ้างอิงรวม ≥ ๑,๐๐๐ + h-index ≥ ๑๘ + หัวหน้าโครงการทุนภายนอก ≥ ๑๐ โครงการ</li>
+                    </ul>
+                </div>
+
+                <div th:replace="~{academic/_work_reuse_rules :: rules}"></div>
+
                 <!--/* ตารางผลงานวิจัย (เพิ่มได้ไม่จำกัด) */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">รายการผลงานวิจัย</h5>
-                        <button type="button" class="btn btn-success btn-sm" id="btnAddResearch">
-                            <i class="fas fa-plus-circle"></i> เพิ่มรายการ
-                        </button>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-outline-primary btn-sm" id="btnPickResearch">
+                                <i class="fas fa-book"></i> เลือกจากฐานข้อมูลผลงาน (Scopus)
+                            </button>
+                            <button type="button" class="btn btn-success btn-sm" id="btnAddResearch">
+                                <i class="fas fa-plus-circle"></i> เพิ่มรายการ
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <div class="table-responsive">
@@ -232,6 +258,25 @@
 
                 window.syncCountInput = syncCountInput;
 
+                // เลือกผลงานจากฐานข้อมูลผลงาน — ไม่ผูกรหัสผลงานกับคำร้อง เพราะผลงานชุดเดียวกันผูกไว้ที่เอกสารที่ 1 แล้ว
+                const SOURCE_LABELS = { SCOPUS: 'Scopus', OPENALEX: 'OpenAlex', CROSSREF: 'Crossref', DBLP: 'DBLP', THAIJO: 'ThaiJO', KKUIR: 'KKU IR' };
+                document.getElementById('btnPickResearch').addEventListener('click', function () {
+                    ScopusPicker.open({
+                        titlePrefix: 'des_research',
+                        titleName: n => 'des_research' + n,
+                        trackIds: false,
+                        addRow: function () { addResearchRow(); syncCountInput(); },
+                        onRow: function (n, row) {
+                            const db = document.querySelector('[name="data' + n + '"]');
+                            if (db && !db.value.trim()) {
+                                const source = SOURCE_LABELS[row.dataSource] || row.dataSource || 'Scopus';
+                                db.value = row.quartile ? source + ' (' + row.quartile + ')' : source;
+                                db.dispatchEvent(new Event('input', { bubbles: true }));
+                            }
+                        }
+                    });
+                });
+
                 const existingData = /*[[${existingData}]]*/ null;
                 if (existingData) {
                     try {
@@ -271,6 +316,7 @@
             window.AUTOFILL_DOC1 = /*[[${doc1Data}]]*/ null;
         </script>
         <script src="/js/position_autofill.js"></script>
+        <script src="/js/scopus_picker.js"></script>
         <script src="/js/position_form_validate.js"></script>
 
         <link rel="stylesheet" href="/css/doc_preview.css">

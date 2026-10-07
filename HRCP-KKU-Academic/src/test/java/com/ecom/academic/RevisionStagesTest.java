@@ -1,9 +1,6 @@
 package com.ecom.academic;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 
 import java.util.List;
 
@@ -129,28 +126,6 @@ class RevisionStagesTest extends AbstractFlowTest {
     }
 
     @Test
-    @DisplayName("เอกสารที่ไม่มีช่องลงนามของผู้ยื่น: กดยื่นการแก้ไขแล้วแก้ต่อไม่ได้ และแจ้งเจ้าหน้าที่")
-    void documentWithoutApplicantSlotIsSubmittedByButton() throws Exception {
-        PositionRequest request = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
-        data.positionDocument(request, 6, DOC);
-        positionService.openDocumentForRevision(request.getId(), 6, "แก้ข้อมูล");
-
-        assertThat(positionService.canSubmitRevision(request, 6)).isTrue();
-        assertThat(positionService.revisionProgress(request).documents().get(6).stage()).isEqualTo(Stage.TO_EDIT);
-
-        mvc.perform(post("/user/position/request/" + request.getId() + "/document/6/submit-revision")
-                .with(user(applicant.getEmail()).roles("USER")).with(csrf()));
-
-        assertThat(positionService.canApplicantEditDocument(request, 6))
-                .as("ยื่นแล้วประตูแก้ไขต้องปิด").isFalse();
-        assertThat(positionService.canSubmitRevision(request, 6)).isFalse();
-        assertThat(positionService.revisionProgress(request).documents())
-                .as("คณบดียังไม่เคยลงนามฉบับนี้ ไม่มีใครต้องลงนามใหม่ จึงจบทันที")
-                .doesNotContainKey(6);
-        awaitCondition("เจ้าหน้าที่ได้รับแจ้งว่าผู้ยื่นแก้ไขแล้ว", this::officerWasToldOfRevision);
-    }
-
-    @Test
     @DisplayName("เอกสารที่มีช่องลงนามของผู้ยื่น ใช้ปุ่มยื่นการแก้ไขข้ามการลงนามไม่ได้")
     void signedDocumentsCannotBeSubmittedByButton() {
         PositionRequest request = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
@@ -160,21 +135,5 @@ class RevisionStagesTest extends AbstractFlowTest {
         assertThat(positionService.canSubmitRevision(request, 2)).isFalse();
         assertThat(positionService.submitRevision(request, 2, applicant)).isNotNull();
         assertThat(positionService.canApplicantEditDocument(request, 2)).isTrue();
-    }
-
-    @Test
-    @DisplayName("ส่งกลับรอบใหม่หลังยื่นแล้ว: ต้องแก้ไขอีกครั้ง")
-    void sendingBackAgainReopensTheDocument() throws Exception {
-        PositionRequest request = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
-        data.positionDocument(request, 6, DOC);
-        positionService.openDocumentForRevision(request.getId(), 6, "รอบแรก");
-        assertThat(positionService.submitRevision(request, 6, applicant)).isNull();
-        assertThat(positionService.canApplicantEditDocument(request, 6)).isFalse();
-
-        Thread.sleep(5); // เวลาส่งกลับรอบใหม่ต้องอยู่หลังเวลายื่น
-        positionService.openDocumentForRevision(request.getId(), 6, "รอบสอง");
-
-        assertThat(positionService.canApplicantEditDocument(request, 6)).isTrue();
-        assertThat(positionService.revisionProgress(request).documents().get(6).note()).isEqualTo("รอบสอง");
     }
 }

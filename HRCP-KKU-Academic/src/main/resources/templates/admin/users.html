@@ -24,7 +24,7 @@
 							<i class="fas fa-sync me-1"></i> ซิงก์ข้อมูลและรูปภาพจากเว็บไซต์คณะ
 						</button>
 					</form>
-					<!--/* ผู้ลงนามภายนอกเพิ่มจากช่องชื่อผู้ลงนามในเอกสาร ("+ เพิ่มผู้ลงนามภายนอก มข.") */-->
+					<!--/* ผู้ลงนามภายนอกเพิ่มจากช่องชื่อผู้ลงนามในเอกสาร ("+ เพิ่มผู้ลงนามภายนอก") */-->
 					<a th:unless="${userType==3}" th:href="@{/admin/add-admin(type=${userType})}" class="btn btn-academic">
 						<i class="fas fa-plus me-1"></i>
 						<span th:if="${userType==1}">เพิ่มผู้ใช้งาน</span>

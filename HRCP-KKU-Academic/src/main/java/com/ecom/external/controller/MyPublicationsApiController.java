@@ -121,6 +121,7 @@ public class MyPublicationsApiController {
             row.put("title", p.title());
             row.put("year", p.year());
             row.put("quartile", p.quartile());
+            row.put("dataSource", p.dataSource());
             out.add(row);
         }
 

@@ -263,9 +263,12 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("head", "ผู้บังคับบัญชาชั้นต้น",
                             "department_head_name", "HEAD", 2))),
 
+            // บันทึกจริยธรรมการวิจัยในมนุษย์: ผู้ขอลงนามก่อน แล้วคณบดี — ตามบรรทัดลงนามในเทมเพลต
             Map.entry(new DocKey(SignatureModule.POSITION, 6), List.of(
+                    new SignatureSlot("applicant", "ผู้ขอกำหนดตำแหน่งทางวิชาการ",
+                            "applicant_name", APPLICANT, 1),
                     new SignatureSlot("dean", "คณบดี",
-                            "dean_signature_name", "DEAN", 1))),
+                            "dean_signature_name", "DEAN", 2))),
 
             Map.entry(new DocKey(SignatureModule.POSITION, 7), List.of(
                     new SignatureSlot("hr", "เจ้าหน้าที่ผู้ตรวจสอบ",

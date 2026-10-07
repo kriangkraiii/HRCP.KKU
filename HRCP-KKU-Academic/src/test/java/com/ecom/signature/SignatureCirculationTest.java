@@ -625,8 +625,8 @@ class SignatureCirculationTest extends AbstractFlowTest {
             // give would leave the applicant unable to submit and unable to see why.
             assertThat(workflow.getUnsignedApplicantDocTypes(SignatureModule.POSITION,
                     request.getId(), PositionRequestService.APPLICANT_DOCS))
-                    .as("เอกสาร 1,2,3,4,9 ต้องมีลายเซ็นผู้ยื่น ส่วนเอกสาร 6 เป็นของคณบดี")
-                    .containsExactly(1, 2, 3, 4, 9);
+                    .as("เอกสารของผู้ยื่นทุกฉบับต้องมีลายเซ็นผู้ยื่น — เอกสาร 6 ผู้ยื่นลงนามก่อนคณบดี")
+                    .containsExactly(1, 2, 3, 4, 6, 9);
         }
     }
 }

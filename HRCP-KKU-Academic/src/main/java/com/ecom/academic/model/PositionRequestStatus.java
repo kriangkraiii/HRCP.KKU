@@ -176,6 +176,30 @@ public enum PositionRequestStatus {
                 || this == APPEAL_SUBMITTED;
     }
 
+    /** สภามหาวิทยาลัยมีมติแล้ว (อนุมัติหรือไม่อนุมัติ) และไม่ได้ขอทบทวน */
+    public boolean isCouncilDecided() {
+        return this == COUNCIL_APPROVED || this == COUNCIL_REJECTED;
+    }
+
+    /**
+     * ผลงานในคำร้องสถานะนี้ไม่ถูกจองไว้ — แบบร่างยังไม่ได้ยื่น ส่วนคำร้องที่สภามีมติแล้ว
+     * นำผลงานมาใช้ยื่นใหม่ได้ตามข้อบังคับ มข. พ.ศ. 2569 ข้อ 34 โดยต้องระบุว่า "เคยใช้"
+     */
+    public boolean releasesWorks() {
+        return this == DRAFT || isCouncilDecided();
+    }
+
+    /** สถานะทั้งหมดที่ {@link #releasesWorks()} */
+    public static java.util.Set<PositionRequestStatus> worksReleasing() {
+        java.util.Set<PositionRequestStatus> set = java.util.EnumSet.noneOf(PositionRequestStatus.class);
+        for (PositionRequestStatus s : values()) {
+            if (s.releasesWorks()) {
+                set.add(s);
+            }
+        }
+        return set;
+    }
+
     /** Draft — not yet submitted */
     public boolean isDraft() {
         return this == DRAFT;

@@ -445,6 +445,7 @@ public class PositionApplicantController {
         if (type == 1) {
             model.addAttribute("partThree", teachingEvaluationPart.partThreeFields(request));
             model.addAttribute("reusedWorks", positionService.reusedWorks(request));
+            model.addAttribute("earlierUses", positionService.earlierUses(request));
         }
 
         // Load doc 1 data for cross-document auto-fill (for docs other than 1)
@@ -634,6 +635,18 @@ public class PositionApplicantController {
             redirectAttributes.addFlashAttribute("errorMsg",
                     "ส่งคำร้องไม่ได้ — ผลงานต่อไปนี้เคยใช้ยื่นคำร้องก่อนหน้าแล้ว ใช้ซ้ำไม่ได้ กรุณาแก้ไขเอกสารที่ 1 แล้วลงนามใหม่: "
                             + String.join(" | ", reused));
+            return "redirect:/user/position/request/" + id;
+        }
+
+        // ผลงานจากคำร้องที่สภามีมติแล้วใช้ใหม่ได้ (ข้อบังคับ 2569 ข้อ 34) แต่ต้องระบุว่าเคยใช้ พร้อมปีและผลระดับคุณภาพ
+        List<String> undisclosed = positionService.earlierUses(request).stream()
+                .filter(u -> !u.disclosed())
+                .map(PositionRequestService.EarlierUse::work)
+                .toList();
+        if (!undisclosed.isEmpty()) {
+            redirectAttributes.addFlashAttribute("errorMsg",
+                    "ส่งคำร้องไม่ได้ — ผลงานต่อไปนี้เคยใช้ยื่นขอตำแหน่งมาแล้ว กรุณาติ๊ก \"เคยใช้\" พร้อมระบุปี พ.ศ. "
+                            + "และผลระดับคุณภาพในเอกสารที่ 1 แล้วลงนามใหม่: " + String.join(" | ", undisclosed));
             return "redirect:/user/position/request/" + id;
         }
 

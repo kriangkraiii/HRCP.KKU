@@ -145,21 +145,6 @@ class PositionPhaseParityTest extends AbstractFlowTest {
             awaitCondition("log CANCEL_DRAFT ของคำร้องนี้", () -> logged("CANCEL_DRAFT", draft.getId()));
         }
 
-        @Test
-        @DisplayName("ยื่นการแก้ไขเอกสารที่ถูกส่งกลับ")
-        void submittingARevisionIsLogged() throws Exception {
-            UserDtls applicant = data.applicant();
-            PositionRequest request = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
-            data.positionDocument(request, 6, DOC);
-            positionService.openDocumentForRevision(request.getId(), 6, "แก้ข้อมูล");
-
-            mvc.perform(post("/user/position/request/" + request.getId() + "/document/6/submit-revision")
-                    .with(csrf()).with(user(applicant.getEmail()).roles("USER")))
-                    .andExpect(status().is3xxRedirection());
-
-            awaitCondition("log SUBMIT_REVISION ของคำร้องนี้", () -> logged("SUBMIT_REVISION", request.getId()));
-        }
-
         private boolean logged(String action, Long requestId) {
             return adminLogs.findByActionContaining(action).stream()
                     .anyMatch(l -> l.getDetails() != null && l.getDetails().endsWith("#" + requestId));

@@ -521,11 +521,12 @@ public class PositionRequestService {
     private static final Pattern WORK_LINE = Pattern.compile("^(asst|assoc|prof)_(research|other|book)_working_\\d+$");
 
     /**
-     * ผลงานในเอกสารที่ 1 ของคำร้องนี้ที่ผู้ยื่นเคยใช้ยื่นคำร้องก่อนหน้าแล้ว — ใช้ซ้ำไม่ได้
+     * ผลงานในเอกสารที่ 1 ของคำร้องนี้ที่อยู่ในคำร้องอื่นซึ่งยังดำเนินการอยู่ — ใช้ซ้ำไม่ได้
      *
      * <p>ผลงานที่เลือกจากรายการถูกกันด้วยรหัสผลงานอยู่แล้ว ตัวนี้ครอบผลงานที่พิมพ์เองหรือแก้ข้อความ
-     * โดยเทียบกับผลงานในคำร้องอื่นของผู้ยื่นคนเดียวกันที่พ้นแบบร่างแล้ว และชื่อเรื่องของผลงานที่เคย
-     * เลือกจากรายการไปแล้วในคำร้องอื่น ({@link WorkReuseMatcher})
+     * โดยเทียบกับผลงานในคำร้องอื่นของผู้ยื่นคนเดียวกันที่พ้นแบบร่างแล้วแต่สภายังไม่มีมติ และชื่อเรื่องของผลงานที่เคย
+     * เลือกจากรายการไปแล้วในคำร้องเหล่านั้น ({@link WorkReuseMatcher}) ผลงานจากคำร้องที่สภามีมติแล้ว
+     * นำมาใช้ใหม่ได้ ดู {@link #earlierUses}
      *
      * @return ข้อความผลงานที่ซ้ำ ตามที่พิมพ์ในคำร้องนี้ — ว่างเมื่อไม่ซ้ำ
      */
@@ -539,7 +540,7 @@ public class PositionRequestService {
         }
         List<String> earlier = new java.util.ArrayList<>();
         for (PositionRequest other : requestRepository.findByApplicantId(request.getApplicant().getId())) {
-            if (!other.getId().equals(request.getId()) && other.getCurrentStatus() != PositionRequestStatus.DRAFT) {
+            if (!other.getId().equals(request.getId()) && !other.getCurrentStatus().releasesWorks()) {
                 earlier.addAll(workLines(getLatestDocumentData(other.getId(), 1)));
             }
         }
@@ -547,7 +548,7 @@ public class PositionRequestService {
         Set<Long> ownLinks = new java.util.HashSet<>();
         publicationLinkRepository.findByRequestId(request.getId()).forEach(l -> ownLinks.add(l.getPublicationId()));
         List<Long> spentIds = publicationLinkRepository.findSpentPublicationIds(
-                request.getApplicant().getId(), Set.of(PositionRequestStatus.DRAFT)).stream()
+                request.getApplicant().getId(), PositionRequestStatus.worksReleasing()).stream()
                 .filter(id -> !ownLinks.contains(id))
                 .toList();
         List<String> spentTitles = spentIds.isEmpty() ? List.of()
@@ -558,6 +559,77 @@ public class PositionRequestService {
             return List.of();
         }
         return mine.stream().filter(line -> WorkReuseMatcher.reused(line, earlier, spentTitles)).toList();
+    }
+
+    /**
+     * ผลงานในเอกสารที่ 1 ที่เคยใช้ในคำร้องซึ่งสภามหาวิทยาลัยมีมติแล้ว
+     *
+     * @param work         ผลงานตามที่พิมพ์ในคำร้องนี้
+     * @param requestCode  คำร้องที่เคยใช้
+     * @param councilDate  วันที่สภามีมติ (อาจไม่มีในคำร้องเก่า)
+     * @param disclosed    ติ๊ก "เคยใช้" และกรอกปี พ.ศ. กับผลระดับคุณภาพแล้ว
+     * @param overFiveYears มติสภาเกิน ๕ ปีแล้ว — ข้อ ๓๔ ให้ใช้ผลประเมินเดิมได้ภายใน ๕ ปี
+     */
+    public record EarlierUse(String work, String requestCode, java.time.LocalDate councilDate,
+            boolean disclosed, boolean overFiveYears) {
+    }
+
+    /** ช่อง "เคยใช้/ไม่เคยใช้" ของบรรทัดผลงาน: asst_research_working_3 → asst_used_research_3 */
+    private static final Pattern WORK_LINE_PARTS =
+            Pattern.compile("^(asst|assoc|prof)_(research|other|book)_working_(\\d+)$");
+
+    /**
+     * ผลงานในเอกสารที่ 1 ที่เคยใช้ยื่นในคำร้องซึ่งสภามีมติแล้ว (อนุมัติหรือไม่อนุมัติ)
+     *
+     * <p>ข้อบังคับ มข. พ.ศ. 2569 ข้อ 34 และแบบ ก.พ.ว. มข.๐๓ ให้นำผลงานเดิมมาใช้ใหม่ได้ โดยผู้ยื่นต้องระบุว่า
+     * "เคยใช้" พร้อมปี พ.ศ. และผลระดับคุณภาพ — ส่งคำร้องไม่ได้จนกว่าจะระบุครบ ({@link EarlierUse#disclosed})
+     * ส่วนมติที่เกิน ๕ ปีเป็นคำเตือน ไม่ใช่ข้อห้าม เพราะระบบไม่รู้ว่าเข้าเงื่อนไขสาขาวิชาเดิมหรือไม่
+     */
+    public List<EarlierUse> earlierUses(PositionRequest request) {
+        if (request == null || request.getApplicant() == null) {
+            return List.of();
+        }
+        Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
+        if (doc1 == null) {
+            return List.of();
+        }
+        List<PositionRequest> decided = requestRepository.findByApplicantId(request.getApplicant().getId()).stream()
+                .filter(o -> !o.getId().equals(request.getId()) && o.getCurrentStatus().isCouncilDecided())
+                .toList();
+        if (decided.isEmpty()) {
+            return List.of();
+        }
+        java.time.LocalDate fiveYearsAgo = java.time.LocalDate.now().minusYears(5);
+        List<EarlierUse> uses = new java.util.ArrayList<>();
+        for (Map.Entry<String, String> entry : doc1.entrySet()) {
+            Matcher key = WORK_LINE_PARTS.matcher(entry.getKey());
+            if (!key.matches() || isBlank(entry.getValue())) {
+                continue;
+            }
+            String line = entry.getValue().trim();
+            for (PositionRequest other : decided) {
+                List<Long> ids = publicationLinkRepository.findByRequestId(other.getId()).stream()
+                        .map(com.ecom.academic.model.PositionRequestPublication::getPublicationId)
+                        .toList();
+                List<String> titles = ids.isEmpty() ? List.of()
+                        : publicationRepository.findAllById(ids).stream()
+                                .map(com.ecom.external.model.ScopusPublication::getTitle)
+                                .toList();
+                if (!WorkReuseMatcher.reused(line, workLines(getLatestDocumentData(other.getId(), 1)), titles)) {
+                    continue;
+                }
+                String used = key.group(1) + "_used_" + key.group(2);
+                String n = key.group(3);
+                boolean disclosed = "used".equals(doc1.get(used + "_" + n))
+                        && !isBlank(doc1.get(used + "_year_" + n))
+                        && !isBlank(doc1.get(used + "_level_" + n));
+                java.time.LocalDate councilDate = other.getCouncilResolutionDate();
+                uses.add(new EarlierUse(line, other.getRequestCode(), councilDate, disclosed,
+                        councilDate != null && councilDate.isBefore(fiveYearsAgo)));
+                break;
+            }
+        }
+        return uses;
     }
 
     private static List<String> workLines(Map<String, String> doc1) {
