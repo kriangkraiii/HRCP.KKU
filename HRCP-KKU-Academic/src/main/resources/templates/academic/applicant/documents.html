@@ -1,10 +1,6 @@
 <!DOCTYPE html>
 <html lang="th" xmlns:th="http://www.thymeleaf.org" th:replace="~{academic/base_academic :: layout(~{::section})}">
 <head>
-<link rel="dns-prefetch" href="https://docs.google.com">
-<link rel="preconnect" href="https://docs.google.com" crossorigin>
-<link rel="dns-prefetch" href="https://hr2.kku.ac.th">
-<link rel="preconnect" href="https://hr2.kku.ac.th" crossorigin>
 </head>
 <body>
     <section>
@@ -69,7 +65,7 @@
                     <div class="doc-category-body">
                         <a th:each="d : ${cat.docs}"
                            class="doc-item-v2 doc-searchable"
-                           th:attr="data-name=${d.title}, data-pdf-url=${d.fileUrl}, data-pdf-name=${d.title}"
+                           th:attr="data-name=${d.title}, data-pdf-url=@{/user/academic/documents/{id}/file(id=${d.id})}, data-download-url=${d.fileUrl}, data-pdf-name=${d.title}"
                            href="#">
                             <i class="fas fa-file-pdf di-icon"></i>
                             <span class="di-name">
@@ -232,7 +228,12 @@
             var link = e.target.closest('[data-pdf-url]');
             if(!link) return;
             e.preventDefault();
-            openPdfOverlay(link.dataset.pdfUrl, link.dataset.pdfName);
+            // มือถือแสดง PDF ใน iframe ไม่ได้ (Android ดาวน์โหลดแทน, iOS เห็นแค่หน้าแรก) — เปิดแท็บใหม่ให้ตัวอ่านของเครื่องแสดงเต็มจอ
+            if (window.matchMedia && window.matchMedia('(pointer: coarse)').matches) {
+                window.open(link.dataset.pdfUrl, '_blank', 'noopener');
+                return;
+            }
+            openPdfOverlay(link.dataset.pdfUrl, link.dataset.pdfName, link.dataset.downloadUrl);
         });
 
         // Search
@@ -255,7 +256,7 @@
 
         // PDF Overlay
         var _pdfTimeout;
-        function openPdfOverlay(url, title){
+        function openPdfOverlay(url, title, downloadUrl){
             teleportPdfOverlay();
             var overlay = document.getElementById('pdfOverlay');
             if (!overlay) return;
@@ -270,18 +271,16 @@
             if (spinner) spinner.style.display = 'block';
             if (frame) {
                 frame.style.opacity = '0';
-                var embedUrl = url;
-                if (url && url.startsWith('http') && !url.includes('docs.google.com/viewer')) {
-                    embedUrl = 'https://docs.google.com/viewer?url=' + encodeURIComponent(url) + '&embedded=true';
-                }
-                frame.src = embedUrl;
+                // ไฟล์มาจากเซิร์ฟเวอร์ของเราเอง (KkuDocumentFileService) เบราว์เซอร์แสดงด้วยตัวอ่าน PDF ของมัน
+                // ไม่ผ่าน Google Docs Viewer ที่ต้องรอ Google ดึงและแปลงไฟล์หลายวินาที
+                frame.src = url + '#view=FitH';
                 frame.onload = function(){
                     if (spinner) spinner.style.display = 'none';
                     frame.style.opacity = '1';
                 };
             }
 
-            if (downloadLink) downloadLink.href = url || '#';
+            if (downloadLink) downloadLink.href = downloadUrl || url || '#';
 
             clearTimeout(_pdfTimeout);
             _pdfTimeout = setTimeout(function(){

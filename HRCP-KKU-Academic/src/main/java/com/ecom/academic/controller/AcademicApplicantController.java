@@ -132,6 +132,10 @@ public class AcademicApplicantController {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private AcademicRevisionService revisionService;
 
+    /** ไม่มีในเทสที่สร้าง controller เอง — ใช้เฉพาะการเปิดไฟล์ในคลังเอกสาร */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.ecom.external.service.KkuDocumentFileService kkuDocFileService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /** เอกสารที่ผู้ยื่นสามารถเห็นได้ (doc type 1, 2, 9) */
@@ -249,6 +253,36 @@ public class AcademicApplicantController {
         // แท็บละกลุ่มผู้ยื่น: พนักงานมหาวิทยาลัย (หน้า 5546) / ข้าราชการ (หน้า 5532 — เกณฑ์ ก.พ.อ.)
         model.addAttribute("audiences", kkuDocSyncService.getDocumentsByAudience());
         return "academic/applicant/documents";
+    }
+
+    /**
+     * ไฟล์ PDF ของคลังเอกสาร ส่งจากโดเมนของเราเอง ให้เบราว์เซอร์แสดงด้วยตัวอ่าน PDF ของมัน — hr2 ห้ามฝังข้ามโดเมน
+     * และ Google Docs Viewer ช้า ดึงจาก hr2 ไม่ได้ ส่งต่อไปที่ไฟล์ต้นทางแทน ไม่ให้ผู้ยื่นเปิดไม่ได้เลย
+     */
+    @GetMapping("/documents/{id}/file")
+    public ResponseEntity<byte[]> documentFile(@PathVariable Long id) {
+        if (kkuDocFileService == null) {
+            return ResponseEntity.notFound().build();
+        }
+        java.util.Optional<com.ecom.external.model.KkuRegulationDoc> found = kkuDocFileService.find(id);
+        if (found.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        com.ecom.external.model.KkuRegulationDoc doc = found.get();
+        try {
+            byte[] pdf = kkuDocFileService.bytes(doc);
+            return ResponseEntity.ok()
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .header(HttpHeaders.CONTENT_DISPOSITION, org.springframework.http.ContentDisposition.inline()
+                            .filename(doc.getFileKey(), java.nio.charset.StandardCharsets.UTF_8).build().toString())
+                    .cacheControl(org.springframework.http.CacheControl.maxAge(java.time.Duration.ofDays(1)).cachePrivate())
+                    .body(pdf);
+        } catch (java.io.IOException e) {
+            log.warn("Serving KKU document {} from {} failed: {}", id, doc.getFileUrl(), e.getMessage());
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FOUND)
+                    .location(java.net.URI.create(doc.getFileUrl().strip().replace(" ", "%20")))
+                    .build();
+        }
     }
 
     @GetMapping("/history")

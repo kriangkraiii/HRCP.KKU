@@ -45,4 +45,24 @@ class DocumentLibraryTabsTest extends AbstractFlowTest {
                 .contains(">ประกาศ ก.พ.อ.<")
                 .doesNotContain("ข้าราชการ · ประกาศ ก.พ.อ.");
     }
+
+    @Test
+    @DisplayName("เปิดเอกสารผ่านเซิร์ฟเวอร์ของเรา ไม่ผ่าน Google Docs Viewer — ไฟล์นอก hr2 ไม่ส่งต่อ")
+    void documentsOpenThroughOurOwnEndpoint() throws Exception {
+        docs.deleteAll();
+        KkuRegulationDoc onHr = docs.save(new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "ข้อบังคับ 2569",
+                "https://hr2.kku.ac.th/a.pdf", "a.pdf", 1));
+        KkuRegulationDoc elsewhere = docs.save(new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "ไฟล์ภายนอก",
+                "https://evil.example.com/x.pdf", "x.pdf", 2));
+        UserDtls applicant = data.applicant();
+
+        String html = mvc.perform(get("/user/academic/documents").with(user(applicant.getEmail()).roles("USER")))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("data-pdf-url=\"/user/academic/documents/" + onHr.getId() + "/file\"")
+                .doesNotContain("docs.google.com/viewer");
+
+        mvc.perform(get("/user/academic/documents/" + elsewhere.getId() + "/file")
+                .with(user(applicant.getEmail()).roles("USER")))
+                .andExpect(status().isNotFound());
+    }
 }
