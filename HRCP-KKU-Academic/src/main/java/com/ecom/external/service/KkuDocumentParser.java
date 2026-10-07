@@ -18,7 +18,9 @@ import org.springframework.stereotype.Component;
 import com.ecom.external.model.KkuRegulationDoc;
 
 /**
- * Parser for KKU HR regulations and announcements page (https://hr2.kku.ac.th/?page_id=5546).
+ * Parser for KKU HR regulations and announcements pages — พนักงานมหาวิทยาลัย (https://hr2.kku.ac.th/?page_id=5546)
+ * and ข้าราชการ (https://hr2.kku.ac.th/?page_id=5532). Both pages share one layout: Fusion builder columns, each
+ * opened by a section heading and followed by PDF links.
  */
 @Component
 public class KkuDocumentParser {
@@ -26,6 +28,9 @@ public class KkuDocumentParser {
     private static final Logger log = LoggerFactory.getLogger(KkuDocumentParser.class);
     private static final Pattern YEAR_4DIGIT_PATTERN = Pattern.compile("25[0-9]{2}");
     private static final Pattern YEAR_2DIGIT_PATTERN = Pattern.compile("(?:/|_|\\b)([567][0-9])\\b");
+
+    /** The page's own title heading — names who the page is for, not a section of documents */
+    private static final java.util.Set<String> PAGE_TITLES = java.util.Set.of("พนักงานมหาวิทยาลัย", "ข้าราชการ");
 
     public static class ParsedCategory {
         private final String category;
@@ -50,6 +55,14 @@ public class KkuDocumentParser {
      * Parses the HTML of page_id=5546 into a list of KkuRegulationDoc entities.
      */
     public List<KkuRegulationDoc> parse(String html) {
+        return parse(html, null);
+    }
+
+    /**
+     * @param audience who the page is for, put in front of every category (e.g. "ข้าราชการ") so documents from two
+     *                 pages stay in separate groups — {@code null} keeps the categories as they are
+     */
+    public List<KkuRegulationDoc> parse(String html, String audience) {
         List<KkuRegulationDoc> results = new ArrayList<>();
         if (html == null || html.isBlank()) {
             return results;
@@ -67,7 +80,7 @@ public class KkuDocumentParser {
                 Elements headerEl = col.select(".fusion-title h2, .fusion-title h3, .fusion-title h4, .fusion-title h5, h2, h3, h4, h5");
                 if (!headerEl.isEmpty()) {
                     String headerText = headerEl.first().text().trim();
-                    if (!headerText.isBlank() && !headerText.equalsIgnoreCase("พนักงานมหาวิทยาลัย") && !headerText.contains("Home")) {
+                    if (!headerText.isBlank() && !PAGE_TITLES.contains(headerText) && !headerText.contains("Home")) {
                         currentCategory = mapCategory(headerText);
                     }
                 }
@@ -90,10 +103,11 @@ public class KkuDocumentParser {
                     String fileKey = extractFileKey(href);
                     String year = extractYear(title + " " + href);
 
+                    String category = categoryNamedByTitle(title, currentCategory);
                     KkuRegulationDoc docEntity = new KkuRegulationDoc();
-                    docEntity.setCategory(currentCategory);
-                    docEntity.setCategoryIcon(getCategoryIcon(currentCategory));
-                    docEntity.setCategoryColor(getCategoryColor(currentCategory));
+                    docEntity.setCategory(withAudience(audience, category));
+                    docEntity.setCategoryIcon(getCategoryIcon(category));
+                    docEntity.setCategoryColor(getCategoryColor(category));
                     docEntity.setTitle(title);
                     docEntity.setFileUrl(href);
                     docEntity.setFileKey(fileKey);
@@ -120,7 +134,8 @@ public class KkuDocumentParser {
                         String title = cleanTitle(rawTitle);
                         String category = guessCategoryFromTitle(title);
                         String year = extractYear(title);
-                        KkuRegulationDoc item = new KkuRegulationDoc(category, title, href, extractFileKey(href), ++globalOrder);
+                        KkuRegulationDoc item = new KkuRegulationDoc(withAudience(audience, category), title, href,
+                                extractFileKey(href), ++globalOrder);
                         item.setCategoryIcon(getCategoryIcon(category));
                         item.setCategoryColor(getCategoryColor(category));
                         item.setPublishedYear(year);
@@ -139,14 +154,33 @@ public class KkuDocumentParser {
         return results;
     }
 
+    private static String withAudience(String audience, String category) {
+        return audience == null || audience.isBlank() ? category : audience + " · " + category;
+    }
+
     private String mapCategory(String header) {
         String h = header.trim();
+        // ก.พ.อ. ก่อน "ประกาศ" — ไม่อย่างนั้น "ประกาศ ก.พ.อ." ถูกจัดเป็นประกาศของมหาวิทยาลัย
+        if (h.contains("ก.พ.อ")) return h.contains("แนวปฏิบัติ") ? "แนวปฏิบัติและหนังสือเวียน ก.พ.อ." : "ประกาศ ก.พ.อ.";
+        // "เอกสารแนบท้ายข้อบังคับ…" มีคำว่าข้อบังคับอยู่ข้างใน จึงต้องตรวจก่อน
+        if (h.contains("แนบท้าย")) return "เอกสารแนบท้ายข้อบังคับฯ";
         if (h.contains("ข้อบังคับ")) return "ข้อบังคับมหาวิทยาลัยขอนแก่น";
         if (h.contains("ประกาศ")) return "ประกาศมหาวิทยาลัยขอนแก่น";
         if (h.contains("แนบท้าย")) return "เอกสารแนบท้ายข้อบังคับฯ";
         if (h.contains("กลุ่ม 4") || h.contains("เฉพาะด้าน")) return "คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 4 เฉพาะด้าน)";
         if (h.contains("คำจำกัดความ") || h.contains("กลุ่ม 1") || h.contains("กลุ่ม 2") || h.contains("กลุ่ม 3")) return "คำจำกัดความฯ ผลงานทางวิชาการ (กลุ่ม 1-3)";
         return h;
+    }
+
+    /**
+     * ชื่อเอกสารที่ขึ้นต้นด้วยประเภทของตัวเอง ("ข้อบังคับ…", "ประกาศมหาวิทยาลัย…", "ประกาศ ก.พ.อ…") ชนะหัวข้อของคอลัมน์
+     * — หน้าเว็บวางประกาศ มข. ไว้ใต้หัวข้อข้อบังคับได้ (หน้า 5532) ชื่ออื่น ๆ ใช้หัวข้อของคอลัมน์ตามเดิม
+     */
+    private String categoryNamedByTitle(String title, String sectionCategory) {
+        if (title.startsWith("ประกาศ ก.พ.อ")) return "ประกาศ ก.พ.อ.";
+        if (title.startsWith("ประกาศมหาวิทยาลัย")) return "ประกาศมหาวิทยาลัยขอนแก่น";
+        if (title.startsWith("ข้อบังคับมหาวิทยาลัย")) return "ข้อบังคับมหาวิทยาลัยขอนแก่น";
+        return sectionCategory;
     }
 
     private String guessCategoryFromTitle(String title) {
@@ -159,6 +193,7 @@ public class KkuDocumentParser {
     }
 
     private String getCategoryIcon(String category) {
+        if (category.contains("ก.พ.อ")) return "fas fa-building-columns";
         if (category.contains("ข้อบังคับ")) return "fas fa-landmark";
         if (category.contains("ประกาศ")) return "fas fa-scroll";
         if (category.contains("แนบท้าย")) return "fas fa-paperclip";
@@ -168,6 +203,7 @@ public class KkuDocumentParser {
     }
 
     private String getCategoryColor(String category) {
+        if (category.contains("ก.พ.อ")) return "#00695c";
         if (category.contains("ข้อบังคับ")) return "var(--color-primary-medium, #1565c0)";
         if (category.contains("ประกาศ")) return "#ef6c00";
         if (category.contains("แนบท้าย")) return "#2e7d32";

@@ -37,6 +37,52 @@ class KkuDocumentSyncServiceTest {
         syncService = new KkuDocumentSyncService(parser, docRepo, syncStateRepo);
     }
 
+    /** ดึงจากหน้าของพนักงาน (5546) และข้าราชการ (5532) ในรอบเดียว — หน้าหนึ่งล่มอีกหน้ายังบันทึกได้ */
+    @Test
+    void syncNow_readsEverySourcePage() {
+        KkuRegulationDoc employee = new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "ข้อบังคับ 2569", "u1", "a.pdf", 1);
+        KkuRegulationDoc civil = new KkuRegulationDoc("ข้าราชการ · ประกาศ ก.พ.อ.", "ก.พ.อ. 2568", "u2", "b.pdf", 1);
+        when(parser.parse("employee-html", null)).thenReturn(List.of(employee));
+        when(parser.parse("civil-html", "ข้าราชการ")).thenReturn(List.of(civil));
+        when(docRepo.findByFileKey(any())).thenReturn(Optional.empty());
+
+        KkuDocumentSyncService service = new KkuDocumentSyncService(parser, docRepo, syncStateRepo) {
+            @Override
+            protected String fetchHtml(String url) {
+                return url.contains("5546") ? "employee-html" : "civil-html";
+            }
+        };
+        KkuDocumentSyncService.SyncResult result = service.syncNow();
+
+        assertTrue(result.isSuccess(), result.getMessage());
+        assertEquals(2, result.getTotalParsed());
+        verify(docRepo).save(employee);
+        verify(docRepo).save(civil);
+        assertTrue(civil.getDisplayOrder() > employee.getDisplayOrder(), "เอกสารข้าราชการต่อท้ายเอกสารพนักงาน");
+    }
+
+    @Test
+    void syncNow_keepsWhatOnePageGaveWhenTheOtherFails() {
+        KkuRegulationDoc employee = new KkuRegulationDoc("ข้อบังคับมหาวิทยาลัยขอนแก่น", "ข้อบังคับ 2569", "u1", "a.pdf", 1);
+        when(parser.parse("employee-html", null)).thenReturn(List.of(employee));
+        when(docRepo.findByFileKey(any())).thenReturn(Optional.empty());
+
+        KkuDocumentSyncService service = new KkuDocumentSyncService(parser, docRepo, syncStateRepo) {
+            @Override
+            protected String fetchHtml(String url) throws java.io.IOException {
+                if (url.contains("5532")) {
+                    throw new java.io.IOException("blocked");
+                }
+                return "employee-html";
+            }
+        };
+        KkuDocumentSyncService.SyncResult result = service.syncNow();
+
+        assertFalse(result.isSuccess());
+        assertTrue(result.getMessage().contains("5532"), result.getMessage());
+        verify(docRepo).save(employee);
+    }
+
     @Test
     void getGroupedDocuments_groupsByCategoryCorrectly() {
         KkuRegulationDoc doc1 = new KkuRegulationDoc("ข้อบังคับ", "ข้อบังคับ 2565", "http://example.com/1.pdf", "1.pdf", 1);

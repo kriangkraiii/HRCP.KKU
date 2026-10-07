@@ -23,7 +23,8 @@ import com.ecom.external.repository.FsSyncStateRepository;
 import com.ecom.external.repository.KkuRegulationDocRepository;
 
 /**
- * Service to synchronize KKU HR regulations and announcements from https://hr2.kku.ac.th/?page_id=5546.
+ * Service to synchronize KKU HR regulations and announcements from the HR site's two academic-rank pages —
+ * พนักงานมหาวิทยาลัย (https://hr2.kku.ac.th/?page_id=5546) and ข้าราชการ (https://hr2.kku.ac.th/?page_id=5532).
  * Runs on a monthly schedule via cron and supports manual trigger by administrators.
  */
 @Service
@@ -32,8 +33,20 @@ public class KkuDocumentSyncService {
     private static final Logger log = LoggerFactory.getLogger(KkuDocumentSyncService.class);
     public static final String SYNC_TYPE = "kku_regulations";
 
-    @Value("${kku.hr.sync.url:https://hr2.kku.ac.th/?page_id=5546}")
-    private String kkuHrUrl;
+    public static final String EMPLOYEE_URL = "https://hr2.kku.ac.th/?page_id=5546";
+    public static final String CIVIL_SERVANT_URL = "https://hr2.kku.ac.th/?page_id=5532";
+
+    /** Category prefix for the civil-servant page — its documents follow ก.พ.อ. criteria, not the employee regulation */
+    public static final String CIVIL_SERVANT_AUDIENCE = "ข้าราชการ";
+
+    /** Gap in displayOrder between pages, so the second page's documents always list after the first's */
+    private static final int ORDER_STRIDE = 1000;
+
+    @Value("${kku.hr.sync.url:" + EMPLOYEE_URL + "}")
+    private String kkuHrUrl = EMPLOYEE_URL;
+
+    @Value("${kku.hr.sync.civil-servant-url:" + CIVIL_SERVANT_URL + "}")
+    private String civilServantUrl = CIVIL_SERVANT_URL;
 
     @Value("${kku.hr.sync.enabled:true}")
     private boolean syncEnabled;
@@ -152,7 +165,8 @@ public class KkuDocumentSyncService {
     }
 
     /**
-     * Performs synchronization from https://hr2.kku.ac.th/?page_id=5546.
+     * Performs synchronization from every source page. A page that cannot be fetched or parsed does not stop the
+     * others — what was read is saved, and the run is reported as failed with the page that broke.
      */
     @Transactional
     public synchronized SyncResult syncNow() {
@@ -162,16 +176,32 @@ public class KkuDocumentSyncService {
         state.setLastStatus(FsSyncState.STATUS_RUNNING);
 
         try {
-            log.info("Fetching KKU HR regulations from {}", kkuHrUrl);
-            String html = Jsoup.connect(kkuHrUrl)
-                    .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-                    .timeout(30000)
-                    .get()
-                    .html();
-
-            List<KkuRegulationDoc> parsedDocs = parser.parse(html);
+            List<KkuRegulationDoc> parsedDocs = new ArrayList<>();
+            java.util.Set<String> seenKeys = new java.util.HashSet<>();
+            List<String> failures = new ArrayList<>();
+            String[][] sources = { { kkuHrUrl, null }, { civilServantUrl, CIVIL_SERVANT_AUDIENCE } };
+            for (int i = 0; i < sources.length; i++) {
+                String url = sources[i][0];
+                try {
+                    log.info("Fetching KKU HR regulations from {}", url);
+                    List<KkuRegulationDoc> fromPage = parser.parse(fetchHtml(url), sources[i][1]);
+                    if (fromPage.isEmpty()) {
+                        failures.add(url + " (ไม่พบเอกสาร)");
+                    }
+                    for (KkuRegulationDoc doc : fromPage) {
+                        // ไฟล์เดียวกันอยู่ได้ทั้งสองหน้า — หน้าแรกที่เจอเป็นเจ้าของ ไม่อย่างนั้นหมวดจะสลับไปมาทุกรอบ
+                        if (seenKeys.add(doc.getFileKey())) {
+                            doc.setDisplayOrder(i * ORDER_STRIDE + (doc.getDisplayOrder() == null ? 0 : doc.getDisplayOrder()));
+                            parsedDocs.add(doc);
+                        }
+                    }
+                } catch (Exception e) {
+                    log.warn("Fetching {} failed: {}", url, e.getMessage());
+                    failures.add(url + " (" + e.getMessage() + ")");
+                }
+            }
             if (parsedDocs.isEmpty()) {
-                String errMsg = "No documents found while parsing " + kkuHrUrl;
+                String errMsg = "No documents found while parsing " + String.join(", ", failures);
                 log.warn(errMsg);
                 state.setLastStatus(FsSyncState.STATUS_FAILED);
                 state.setMessage(errMsg);
@@ -227,17 +257,21 @@ public class KkuDocumentSyncService {
             }
 
             long duration = System.currentTimeMillis() - startTime;
-            state.setLastStatus(FsSyncState.STATUS_OK);
-            state.setLastSuccessAt(LocalDateTime.now());
+            boolean complete = failures.isEmpty();
+            state.setLastStatus(complete ? FsSyncState.STATUS_OK : FsSyncState.STATUS_FAILED);
+            if (complete) {
+                state.setLastSuccessAt(LocalDateTime.now());
+            }
             state.setRowsProcessed(parsedDocs.size());
             state.setDurationMs(duration);
-            String msg = String.format("ซิงค์สำเร็จ: พบ %d รายการ (เพิ่มใหม่ %d, อัปเดต %d) ในเวลา %d ms",
-                    parsedDocs.size(), added, updated, duration);
+            String msg = String.format("%s: พบ %d รายการ (เพิ่มใหม่ %d, อัปเดต %d) ในเวลา %d ms",
+                    complete ? "ซิงค์สำเร็จ" : "ซิงค์ได้บางส่วน", parsedDocs.size(), added, updated, duration)
+                    + (complete ? "" : " — ดึงไม่ได้: " + String.join(", ", failures));
             state.setMessage(msg);
             syncStateRepo.save(state);
 
             log.info(msg);
-            return new SyncResult(true, parsedDocs.size(), added, updated, msg);
+            return new SyncResult(complete, parsedDocs.size(), added, updated, msg);
 
         } catch (Exception e) {
             long duration = System.currentTimeMillis() - startTime;
@@ -251,6 +285,14 @@ public class KkuDocumentSyncService {
 
             return new SyncResult(false, 0, 0, 0, errMsg);
         }
+    }
+
+    protected String fetchHtml(String url) throws java.io.IOException {
+        return Jsoup.connect(url)
+                .userAgent("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
+                .timeout(30000)
+                .get()
+                .html();
     }
 
     /**

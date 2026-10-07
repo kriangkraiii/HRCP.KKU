@@ -460,6 +460,18 @@ class PositionForm2569TemplateTest {
     }
 
     @Nested
+    @DisplayName("เอกสารที่ 7 — แบบตรวจสอบคุณสมบัติ")
+    class DocumentSeven {
+
+        @Test
+        @DisplayName("อ้างประกาศ ก.พ.อ. 2564 พร้อมฉบับแก้ไข (ฉบับที่ 3 พ.ศ. 2568 คือเกณฑ์ปัจจุบันของข้าราชการ)")
+        void citesTheAmendedKpoCriteria() throws IOException {
+            assertThat(render(7, new LinkedHashMap<>()))
+                    .contains("พ.ศ. 2564 และที่แก้ไขเพิ่มเติม");
+        }
+    }
+
+    @Nested
     @DisplayName("เอกสารที่ 9 — แบบแสดงหลักฐานการมีส่วนร่วม")
     class DocumentNine {
 
