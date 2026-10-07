@@ -21,6 +21,12 @@ public final class Doc7Scoring {
     /** คะแนนรวมต่ำสุดของระดับชำนาญ — ต่ำกว่านี้ไม่ผ่าน (ประกาศ มข. ฉบับที่ 1669/2569 ข้อ ๙.๓) */
     public static final double PASS_SCORE = 56;
 
+    /** คะแนนรวมต่ำสุดของระดับชำนาญพิเศษ (ข้อ ๙.๓.๓ "๗๑ - ๘๕") */
+    public static final double SPECIAL_EXPERT_SCORE = 71;
+
+    /** คะแนนรวมต่ำสุดของระดับเชี่ยวชาญ (ข้อ ๙.๓.๔ "๘๖ - ๑๐๐") */
+    public static final double EXPERT_SCORE = 86;
+
     /** ระดับผลการสอนเรียงจากต่ำไปสูง */
     private static final List<String> LEVELS = List.of("ไม่ผ่าน", "ชำนาญ", "ชำนาญพิเศษ", "เชี่ยวชาญ");
 
@@ -158,9 +164,9 @@ public final class Doc7Scoring {
 
         // สรุปผลการประเมิน: ติ้กช่องตามเกณฑ์ (ใช้คะแนนจริง ไม่ปัดขึ้น)
         formData.put("ch1", grandTotal < PASS_SCORE ? "☑" : "☐");
-        formData.put("ch2", (grandTotal >= PASS_SCORE && grandTotal <= 70) ? "☑" : "☐");
-        formData.put("ch3", (grandTotal > 70 && grandTotal <= 85) ? "☑" : "☐");
-        formData.put("ch4", grandTotal > 85 ? "☑" : "☐");
+        formData.put("ch2", (grandTotal >= PASS_SCORE && grandTotal < SPECIAL_EXPERT_SCORE) ? "☑" : "☐");
+        formData.put("ch3", (grandTotal >= SPECIAL_EXPERT_SCORE && grandTotal < EXPERT_SCORE) ? "☑" : "☐");
+        formData.put("ch4", grandTotal >= EXPERT_SCORE ? "☑" : "☐");
 
         // กำหนด eval_level จากผลคะแนนเพื่อส่งต่อไป doc8/doc9
         formData.put("eval_result_level", evalLevelFromScore(grandTotal));
@@ -170,7 +176,8 @@ public final class Doc7Scoring {
      * สรุประดับผลการประเมินจากคะแนนรวม (รับได้ทั้งเลขไทยและ Arabic)
      *
      * <p>ประกาศ มข. ฉบับที่ 1669/2569 ข้อ ๙.๓: ต่ำกว่า ๕๖ ไม่ผ่าน, ๕๖–๗๐ ชำนาญ, ๗๑–๘๕ ชำนาญพิเศษ,
-     * ๘๖–๑๐๐ เชี่ยวชาญ — คะแนนที่ตกระหว่างช่วง (เช่น 70.4) นับขึ้นช่วงบน ไม่ให้ตกช่องว่าง
+     * ๘๖–๑๐๐ เชี่ยวชาญ — ทุกขอบใช้หลักเดียวกับ "ต่ำกว่า ๕๖ ไม่ผ่าน": ต้องถึงคะแนนต่ำสุดของช่วงจึงเข้าช่วงนั้น
+     * คะแนนที่ตกระหว่างช่วง (เช่น 70.6) จึงยังอยู่ช่วงล่าง
      */
     public static String evalLevelFromScore(Object rawScore) {
         if (rawScore == null)
@@ -183,9 +190,9 @@ public final class Doc7Scoring {
             double score = Double.parseDouble(s);
             if (score < PASS_SCORE)
                 return "ไม่ผ่าน";
-            if (score <= 70)
+            if (score < SPECIAL_EXPERT_SCORE)
                 return "ชำนาญ";
-            if (score <= 85)
+            if (score < EXPERT_SCORE)
                 return "ชำนาญพิเศษ";
             return "เชี่ยวชาญ";
         } catch (NumberFormatException e) {

@@ -22,4 +22,23 @@ class TeachingLoadRuleTest {
         assertThat(problems("{\"teaching_credits\":\"2\"}")).singleElement().asString().contains("3 หน่วยกิต");
         assertThat(problems("{\"teaching_credits\":\"\"}")).isEmpty();
     }
+
+    private static java.util.List<String> positionProblems(String json) {
+        return DocumentCompleteness.malformedFields(SignatureModule.POSITION, 1, json);
+    }
+
+    @Test
+    @DisplayName("ขอ ศ. ไม่ผ่านเฟส 1 — งานสอนในเอกสารที่ 1 เฟส 2 ต้องมีวิชาที่สอน 3 ชม./สัปดาห์ขึ้นไป (ข้อบังคับ 2569 ข้อ 16.3.2)")
+    void aProfessorRequestNeedsOneCourseOfThreeHoursAWeek() {
+        String prof = "\"target_position\":\"ศาสตราจารย์\"";
+        assertThat(positionProblems("{" + prof + ",\"teaching_hours_per_week_1\":\"1.5\","
+                + "\"teaching_hours_per_week_2\":\"3\"}")).isEmpty();
+        assertThat(positionProblems("{" + prof + ",\"teaching_hours_per_week_1\":\"1.5\","
+                + "\"teaching_hours_per_week_2\":\"2\"}"))
+                .singleElement().asString().contains("16.3.2");
+        assertThat(positionProblems("{" + prof + ",\"teaching_hours_per_week_1\":\"\"}"))
+                .as("ยังไม่ได้กรอก — ด่านช่องว่างอยู่ที่อื่น").isEmpty();
+        assertThat(positionProblems("{\"target_position\":\"รองศาสตราจารย์\",\"teaching_hours_per_week_1\":\"1\"}"))
+                .as("ผศ./รศ. ตรวจภาระสอนแล้วที่เอกสารที่ 1 ของการประเมินการสอน").isEmpty();
+    }
 }

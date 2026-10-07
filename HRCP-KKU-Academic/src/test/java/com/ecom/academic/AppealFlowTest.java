@@ -218,6 +218,20 @@ class AppealFlowTest extends AbstractFlowTest {
         }
 
         @Test
+        @DisplayName("ผู้ยื่นที่เป็นข้าราชการ — ระบบรู้ เพราะใช้ข้อบังคับฉบับ พ.ศ. 2565 ไม่ใช่ฉบับพนักงาน พ.ศ. 2569")
+        void aCivilServantApplicantIsRecognised() {
+            PositionRequest civilServant = data.positionRequest(data.applicant(), PositionRequestStatus.DRAFT, null);
+            data.positionDocument(civilServant, 2, "{\"status\":\"ข้าราชการ\"}");
+            PositionRequest employee = data.positionRequest(data.applicant(), PositionRequestStatus.DRAFT, null);
+            data.positionDocument(employee, 2, "{\"status\":\"พนักงานมหาวิทยาลัย\"}");
+
+            assertThat(positionService.isCivilServant(civilServant)).isTrue();
+            assertThat(positionService.isCivilServant(employee)).isFalse();
+            assertThat(positionService.isCivilServant(data.positionRequest(data.applicant(),
+                    PositionRequestStatus.DRAFT, null))).as("ไม่มีข้อมูล ถือเป็นพนักงาน").isFalse();
+        }
+
+        @Test
         @DisplayName("สภาไม่อนุมัติต้องระบุวันรับทราบมติ — ใช้นับ 90 วัน")
         void rejectionNeedsTheAcknowledgementDate() {
             PositionRequest request = sentToHr();

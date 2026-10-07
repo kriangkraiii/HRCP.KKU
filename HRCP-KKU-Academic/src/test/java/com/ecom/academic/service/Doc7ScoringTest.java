@@ -46,11 +46,12 @@ class Doc7ScoringTest {
     }
 
     // ประกาศ มข. 1669/2569 ข้อ ๙.๓: "ต่ำกว่า ๕๖ ไม่ผ่าน" และ "๕๖-๗๐ ชำนาญ" — ๕๖ พอดีผ่าน
-    // ส่วนเศษระหว่างช่วงนับขึ้นไปช่วงบน ไม่ให้ตกช่องว่าง
+    // ทุกขอบใช้หลักเดียวกับ "ต่ำกว่า ๕๖": ต้องถึง ๗๑ จึงเป็นชำนาญพิเศษ ถึง ๘๖ จึงเป็นเชี่ยวชาญ — ๗๐.๖ ยังเป็นชำนาญ
     @org.junit.jupiter.params.ParameterizedTest(name = "{0} → {1}")
     @org.junit.jupiter.params.provider.CsvSource({
             "0, ไม่ผ่าน", "55.6, ไม่ผ่าน", "56, ชำนาญ", "56.4, ชำนาญ", "70, ชำนาญ",
-            "70.5, ชำนาญพิเศษ", "85, ชำนาญพิเศษ", "85.8, เชี่ยวชาญ", "100, เชี่ยวชาญ"
+            "70.6, ชำนาญ", "71, ชำนาญพิเศษ", "85, ชำนาญพิเศษ", "85.8, ชำนาญพิเศษ", "86, เชี่ยวชาญ",
+            "100, เชี่ยวชาญ"
     })
     @DisplayName("ระดับผลการสอนตามเกณฑ์คะแนนรวม")
     void levelFollowsTheScoreBands(String score, String level) {
@@ -76,6 +77,19 @@ class Doc7ScoringTest {
         assertThat(m).containsEntry("scorex", "56.00")
                 .containsEntry("ch1", "☐")
                 .containsEntry("ch2", "☑")
+                .containsEntry("eval_result_level", "ชำนาญ");
+    }
+
+    @Test
+    @DisplayName("คะแนนรวม 70.6 (3.5/3.5/3.6/3.5) ยังไม่ถึง 71 — ติ๊กช่องชำนาญ ไม่ใช่ชำนาญพิเศษ")
+    void seventyPointSixStaysExpert() {
+        Map<String, String> m = scores("3.5", "3.5", "3.6", "3.5");
+
+        Doc7Scoring.derive(m);
+
+        assertThat(m).containsEntry("scorex", "70.60")
+                .containsEntry("ch2", "☑")
+                .containsEntry("ch3", "☐")
                 .containsEntry("eval_result_level", "ชำนาญ");
     }
 

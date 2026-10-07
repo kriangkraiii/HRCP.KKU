@@ -274,14 +274,14 @@
 
             const roundedTotal = Math.round(total * 100) / 100;
 
-            // เกณฑ์เดียวกับ Doc7Scoring.evalLevelFromScore (ประกาศ มข. 1669/2569) — ต่ำกว่า 56 ไม่ผ่าน คะแนนระหว่างช่วงนับขึ้นช่วงบน
+            // เกณฑ์เดียวกับ Doc7Scoring.evalLevelFromScore (ประกาศ มข. 1669/2569) — ต้องถึง 56 / 71 / 86 จึงเข้าช่วงชำนาญ / ชำนาญพิเศษ / เชี่ยวชาญ
             if (roundedTotal < 56) {
                 chk1.checked = true;
                 ch1Val.value = '☑';
-            } else if (roundedTotal <= 70) {
+            } else if (roundedTotal < 71) {
                 chk2.checked = true;
                 ch2Val.value = '☑';
-            } else if (roundedTotal <= 85) {
+            } else if (roundedTotal < 86) {
                 chk3.checked = true;
                 ch3Val.value = '☑';
             } else {

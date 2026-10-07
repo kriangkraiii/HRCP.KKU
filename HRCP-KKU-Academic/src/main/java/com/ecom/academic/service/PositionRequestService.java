@@ -918,6 +918,24 @@ public class PositionRequestService {
     }
 
     /**
+     * ผู้ยื่นเป็นข้าราชการ (ช่องสถานะในเอกสารที่ 2 หรือเอกสารที่ 1 ของผลประเมินการสอนที่ผูกไว้) — ข้าราชการใช้ข้อบังคับ มข.
+     * ฉบับข้าราชการพลเรือนในสถาบันอุดมศึกษา พ.ศ. 2565 ไม่ใช่ฉบับพนักงาน พ.ศ. 2569 ที่ระบบตรวจตาม ไม่มีข้อมูลถือเป็นพนักงาน
+     */
+    public boolean isCivilServant(PositionRequest request) {
+        if (request == null || request.getId() == null) {
+            return false;
+        }
+        Map<String, String> doc2 = getLatestDocumentData(request.getId(), 2);
+        String status = doc2 == null ? null : doc2.get("status");
+        if ((status == null || status.isBlank()) && request.getLinkedEvaluation() != null) {
+            Map<String, String> evaluationDoc1 = academicRequestService
+                    .getLatestDocumentData(request.getLinkedEvaluation().getId(), 1);
+            status = evaluationDoc1 == null ? null : evaluationDoc1.get("employee_type");
+        }
+        return "ข้าราชการ".equals(status == null ? null : status.trim());
+    }
+
+    /**
      * วันที่ที่บันทึกพร้อมการเปลี่ยนสถานะ — ใช้เฉพาะสถานะที่ต้องมี (ช่องอื่นปล่อย null)
      *
      * @param collegeResolution    วันมติกรรมการประจำวิทยาลัยฯ (จำเป็นเมื่อ {@code COLLEGE_APPROVED})

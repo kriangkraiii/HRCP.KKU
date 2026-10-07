@@ -190,6 +190,7 @@ public class PositionAdminController {
         model.addAttribute("editHistory", positionService.getEditHistory(id));
         model.addAttribute("progressSteps", PositionRequestStatus.getProgressSteps());
         addCouncilTimeline(model, request);
+        model.addAttribute("civilServant", positionService.isCivilServant(request));
 
         // Attachments
         model.addAttribute("attachments", positionService.getAttachments(id));

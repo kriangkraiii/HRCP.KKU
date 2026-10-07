@@ -259,6 +259,34 @@ public final class DocumentCompleteness {
         }
     }
 
+    /** งานสอนในเอกสารที่ 1 เฟส 2: {@code teaching_hours_per_week_N} */
+    private static final Pattern TEACHING_HOURS = Pattern.compile("^teaching_hours_per_week_\\d+$");
+
+    /**
+     * ขอ ศ. ไม่ผ่านการประเมินการสอน ภาระสอนจึงไม่ได้ตรวจที่เฟส 1 — ข้อบังคับ 2569 ข้อ 16.3.2 ยังกำหนดให้มีชั่วโมงสอน
+     * ประจำวิชาใดวิชาหนึ่งเทียบได้ไม่น้อยกว่า 3 หน่วยกิตระบบทวิภาค ตารางงานสอนเก็บเป็นชั่วโมง/สัปดาห์ จึงถือ 3 ชม./สัปดาห์
+     * (45 ชั่วโมงต่อภาค ตามที่ประกาศ 1669/2569 ข้อ 7 เทียบไว้) ตรวจเมื่อกรอกชั่วโมงแล้วอย่างน้อยหนึ่งแถว
+     */
+    private static List<String> professorTeachingLoadProblems(Map<String, String> data) {
+        if (data == null || !"ศาสตราจารย์".equals(data.get("target_position"))) {
+            return List.of();
+        }
+        boolean anyFilled = false;
+        for (Map.Entry<String, String> e : data.entrySet()) {
+            if (!TEACHING_HOURS.matcher(e.getKey()).matches() || e.getValue() == null || e.getValue().isBlank()) {
+                continue;
+            }
+            anyFilled = true;
+            if (meetsTeachingLoad(e.getValue())) {
+                return List.of();
+            }
+        }
+        return anyFilled
+                ? List.of("งานสอนต้องมีรายวิชาที่สอนไม่น้อยกว่า " + MIN_TEACHING_CREDITS
+                        + " ชั่วโมง/สัปดาห์ (เทียบ 3 หน่วยกิตระบบทวิภาค) อย่างน้อย 1 วิชา ตามข้อบังคับ มข. พ.ศ. 2569 ข้อ 16.3.2")
+                : List.of();
+    }
+
     /** ภาค/ปีการศึกษา: ภาค 1–3 (3 = ภาคฤดูร้อน) ทับปี พ.ศ. สี่หลัก เช่น 1/2569 */
     public static final Pattern SEMESTER_YEAR = Pattern.compile("^[1-3]/\\d{4}$");
 
@@ -268,6 +296,9 @@ public final class DocumentCompleteness {
      * @return ข้อความบอกผู้ใช้ทีละช่อง ว่างแปลว่าถูกรูปแบบทุกช่อง
      */
     public static List<String> malformedFields(SignatureModule module, int documentType, String json) {
+        if (module == SignatureModule.POSITION && documentType == 1) {
+            return professorTeachingLoadProblems(parse(json));
+        }
         if (module != SignatureModule.ACADEMIC || documentType != 1) {
             return List.of();
         }
