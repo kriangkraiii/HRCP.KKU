@@ -113,6 +113,11 @@ public class SignedDocumentRenderer {
     }
 
     private byte[] renderDocx(SignatureRequest envelope, List<StampedSignature> signatures) throws IOException {
+        return renderDocx(envelope, signatures, DocumentGenerationService.SIGNATURE_HEIGHTS_EMU.get(0));
+    }
+
+    private byte[] renderDocx(SignatureRequest envelope, List<StampedSignature> signatures, long signatureHeightEmu)
+            throws IOException {
         String json = envelope.getFrozenJson();
         if (json == null || json.isBlank()) {
             json = "{}";
@@ -129,9 +134,15 @@ public class SignedDocumentRenderer {
 
         return envelope.getModule() == SignatureModule.ACADEMIC
                 ? documentGenerationService.generateSignedDocx(
-                        envelope.getDocumentType(), json, signatures)
+                        envelope.getDocumentType(), json, signatures, signatureHeightEmu)
                 : documentGenerationService.generateSignedP2Docx(
-                        envelope.getDocumentType(), json, signatures);
+                        envelope.getDocumentType(), json, signatures, signatureHeightEmu);
+    }
+
+    /** The document with {@code signatures} stamped in, as large as they go without adding a page. */
+    private DocumentGenerationService.Fitted fitted(SignatureRequest envelope, List<StampedSignature> signatures) throws IOException {
+        return documentGenerationService.fitSignatures(height -> renderDocx(envelope, signatures, height),
+                signatures.isEmpty() ? null : renderUnsignedDocx(envelope));
     }
 
     /**
@@ -144,6 +155,12 @@ public class SignedDocumentRenderer {
      */
     public byte[] renderBaseDocx(SignatureRequest envelope, java.util.Map<String, String> overrides,
             List<StampedSignature> pictures) throws IOException {
+        return renderBaseDocx(envelope, overrides, pictures, DocumentGenerationService.SIGNATURE_HEIGHTS_EMU.get(0));
+    }
+
+    /** As above, with {@code pictures} printed at most {@code signatureHeightEmu} tall. */
+    public byte[] renderBaseDocx(SignatureRequest envelope, java.util.Map<String, String> overrides,
+            List<StampedSignature> pictures, long signatureHeightEmu) throws IOException {
         String json = envelope.getFrozenJson();
         if (json == null || json.isBlank()) {
             json = "{}";
@@ -163,8 +180,8 @@ public class SignedDocumentRenderer {
         List<StampedSignature> all = new ArrayList<>(pictures);
 
         return envelope.getModule() == SignatureModule.ACADEMIC
-                ? documentGenerationService.generateSignedDocx(envelope.getDocumentType(), json, all)
-                : documentGenerationService.generateSignedP2Docx(envelope.getDocumentType(), json, all);
+                ? documentGenerationService.generateSignedDocx(envelope.getDocumentType(), json, all, signatureHeightEmu)
+                : documentGenerationService.generateSignedP2Docx(envelope.getDocumentType(), json, all, signatureHeightEmu);
     }
 
     /** Whether the envelope's document prints Thai numerals (๑ ๒ ๓) rather than 1 2 3. */
@@ -205,7 +222,11 @@ public class SignedDocumentRenderer {
         synchronized (archiveLocks.computeIfAbsent(envelope.getId(), id -> new Object())) {
             try {
                 String key = archiveKey(envelope);
-                byte[] docx = renderDocx(envelope);
+                boolean incremental = envelope.isIncremental() && pdfRevisions != null;
+                DocumentGenerationService.Fitted signedCopy = incremental
+                        ? new DocumentGenerationService.Fitted(renderDocx(envelope), null)
+                        : fitted(envelope, collectSignatures(envelope));
+                byte[] docx = signedCopy.docx();
                 Path dir = archiveDir(envelope);
                 Files.createDirectories(dir);
                 String base = archiveBaseName(envelope);
@@ -217,7 +238,7 @@ public class SignedDocumentRenderer {
 
                 Path pdfTarget = dir.resolve(base + ".pdf");
                 String pdfPath = null;
-                if (envelope.isIncremental() && pdfRevisions != null) {
+                if (incremental) {
                     // The signers' own file, byte for byte: re-rendering it would drop
                     // every signature, and re-signing it is exactly what this mode ended.
                     byte[] signed = pdfRevisions.latest(envelope.getId());
@@ -225,8 +246,8 @@ public class SignedDocumentRenderer {
                         writeAtomically(pdfTarget, signed);
                         pdfPath = uploadPaths.toStored(pdfTarget);
                     }
-                } else if (documentGenerationService.isPdfConversionAvailable()) {
-                    byte[] pdf = documentGenerationService.convertDocxToPdfCached(docx);
+                } else {
+                    byte[] pdf = signedCopy.pdf();
                     if (pdf != null && pdf.length > 0) {
                         try {
                             pdf = digitalCertificateService.applyDigitalSignaturesToEnvelope(pdf, envelope, null);
@@ -600,11 +621,7 @@ public class SignedDocumentRenderer {
      * Renders document as PDF with collected signatures and optional preview signature.
      */
     public byte[] renderPdf(SignatureRequest envelope, SignatureStep previewStep, com.ecom.academic.model.UserSignature previewSig) throws IOException {
-        byte[] docx = renderDocx(envelope, previewStep, previewSig);
-        if (!documentGenerationService.isPdfConversionAvailable()) {
-            return null;
-        }
-        return documentGenerationService.convertDocxToPdfCached(docx);
+        return fitted(envelope, collectSignatures(envelope, previewStep, previewSig)).pdf();
     }
 
     /**

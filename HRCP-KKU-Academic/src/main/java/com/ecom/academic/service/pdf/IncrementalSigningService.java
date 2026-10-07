@@ -32,6 +32,7 @@ import com.ecom.academic.model.SignatureStep;
 import com.ecom.academic.model.SignedPdfRevision;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.DocumentFieldOwnership;
+import com.ecom.academic.service.DocumentGenerationService;
 import com.ecom.academic.service.DocumentGenerationService.StampedSignature;
 import com.ecom.academic.service.DocumentWorkflowConfigService;
 import com.ecom.academic.service.SignatureAnchorRegistry.SignatureSlot;
@@ -173,9 +174,15 @@ public class IncrementalSigningService {
         BasePdfBuilder.Result base = builder.build(new BasePdfBuilder.Renderer() {
             @Override
             public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures) throws IOException {
+                return docx(overrides, pictures, DocumentGenerationService.SIGNATURE_HEIGHTS_EMU.get(0));
+            }
+
+            @Override
+            public byte[] docx(Map<String, String> overrides, List<BasePdfBuilder.SlotPicture> pictures,
+                    long signatureHeightEmu) throws IOException {
                 return renderer.renderBaseDocx(envelope, overrides, pictures.stream()
                         .map(p -> new StampedSignature(p.anchorPlaceholder(), p.png(), p.width(), p.height()))
-                        .toList());
+                        .toList(), signatureHeightEmu);
             }
 
             @Override

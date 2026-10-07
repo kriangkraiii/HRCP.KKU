@@ -47,6 +47,10 @@ import org.apache.pdfbox.pdmodel.interactive.form.PDPushButton;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.pdfbox.text.TextPosition;
 import org.apache.pdfbox.util.Matrix;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import com.ecom.academic.service.DocumentGenerationService;
 
 /**
  * Builds revision 0 of a signed document: the rendered page with every place a
@@ -70,6 +74,8 @@ import org.apache.pdfbox.util.Matrix;
  */
 public final class BasePdfBuilder {
 
+    private static final Logger log = LoggerFactory.getLogger(BasePdfBuilder.class);
+
     /** Name of the invisible signature field that closes the document. */
     public static final String LOCK_FIELD = "doc_lock";
     private static final String TOKEN = "@@OVL_%s@@";
@@ -86,6 +92,16 @@ public final class BasePdfBuilder {
     public interface Renderer {
         /** DOCX of the envelope with the given values and slot pictures (anchor → png, width, height). */
         byte[] docx(Map<String, String> overrides, List<SlotPicture> pictures) throws IOException;
+
+        /**
+         * As {@link #docx(Map, List)}, with the slot pictures printed at most
+         * {@code signatureHeightEmu} tall. A renderer that cannot shrink them
+         * renders them full size.
+         */
+        default byte[] docx(Map<String, String> overrides, List<SlotPicture> pictures, long signatureHeightEmu)
+                throws IOException {
+            return docx(overrides, pictures);
+        }
 
         byte[] toPdf(byte[] docx) throws IOException;
     }
@@ -141,7 +157,36 @@ public final class BasePdfBuilder {
         }
     }
 
+    /**
+     * Builds revision 0 with signature places as large as they go without adding a
+     * page: a signature place is a line as tall as the signature, and a few of them
+     * stacked can push the last lines of the document onto a page of their own.
+     * Steps down {@link DocumentGenerationService#SIGNATURE_HEIGHTS_EMU} until the
+     * base has no more pages than the document without them, or the smallest is reached.
+     */
     public Result build(Renderer renderer, List<TextSpec> texts, List<SlotSpec> slots)
+            throws IOException, BaseBuildException {
+        List<Long> heights = DocumentGenerationService.SIGNATURE_HEIGHTS_EMU;
+        Result base = buildAt(renderer, texts, slots, heights.get(0));
+        if (slots.isEmpty()) {
+            return base;
+        }
+        int unsigned = pageCount(renderer.toPdf(renderer.docx(Map.of(), List.of())));
+        for (int i = 1; i < heights.size() && pageCount(base.pdf()) > unsigned; i++) {
+            base = buildAt(renderer, texts, slots, heights.get(i));
+            log.info("Signature places at most {} cm tall so the base keeps its {} page(s): now {}",
+                    Math.round(heights.get(i) / 36000.0) / 10.0, unsigned, pageCount(base.pdf()));
+        }
+        return base;
+    }
+
+    private static int pageCount(byte[] pdf) throws IOException {
+        try (PDDocument doc = Loader.loadPDF(pdf)) {
+            return doc.getNumberOfPages();
+        }
+    }
+
+    private Result buildAt(Renderer renderer, List<TextSpec> texts, List<SlotSpec> slots, long signatureHeightEmu)
             throws IOException, BaseBuildException {
         Map<String, Integer> wanted = new LinkedHashMap<>();
         Map<String, Integer> lines = new LinkedHashMap<>();
@@ -160,7 +205,7 @@ public final class BasePdfBuilder {
             byWidth.put(w, slots.get(i));
         }
 
-        byte[] template = renderer.docx(overrides, pictures);
+        byte[] template = renderer.docx(overrides, pictures, signatureHeightEmu);
         Map<String, Integer> original = new LinkedHashMap<>(wanted);
         // Fields that sit on a line of their own even at the shortest reserve: the
         // template's own layout breaks there, so they keep their full length.

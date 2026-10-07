@@ -200,11 +200,22 @@ public class DocumentGenerationService {
      */
     public byte[] generateSignedDocx(int documentType, String jsonData,
             List<StampedSignature> signatures) throws IOException {
+        return generateSignedDocx(documentType, jsonData, signatures, SIGNATURE_MAX_HEIGHT_EMU);
+    }
+
+    /**
+     * As {@link #generateSignedDocx(int, String, List)}, with every signature
+     * printed at most {@code signatureHeightEmu} tall — one of
+     * {@link #SIGNATURE_HEIGHTS_EMU}, for a document that full-size signatures
+     * push onto another page.
+     */
+    public byte[] generateSignedDocx(int documentType, String jsonData,
+            List<StampedSignature> signatures, long signatureHeightEmu) throws IOException {
         Map<String, Object> dataMap = parseJsonData(jsonData);
         if (isCommitteeBundle(documentType, dataMap)) {
             return renderCommitteeBundle(dataMap, placeholders -> processTemplate(
                     new ClassPathResource(TEMPLATE_DIR + "doc_5.docx").getInputStream(), placeholders, documentType,
-                    signatures));
+                    signatures, null, signatureHeightEmu));
         }
         Map<String, String> placeholders = flattenMap(dataMap, "");
 
@@ -213,7 +224,8 @@ public class DocumentGenerationService {
 
         preprocessPlaceholders(documentType, placeholders);
 
-        return processTemplate(resource.getInputStream(), placeholders, documentType, signatures);
+        return processTemplate(resource.getInputStream(), placeholders, documentType, signatures, null,
+                signatureHeightEmu);
     }
 
     /**
@@ -251,6 +263,12 @@ public class DocumentGenerationService {
     /** Phase 2 counterpart of {@link #generateSignedDocx}. */
     public byte[] generateSignedP2Docx(int documentType, String jsonData,
             List<StampedSignature> signatures) throws IOException {
+        return generateSignedP2Docx(documentType, jsonData, signatures, SIGNATURE_MAX_HEIGHT_EMU);
+    }
+
+    /** Phase 2 counterpart of {@link #generateSignedDocx(int, String, List, long)}. */
+    public byte[] generateSignedP2Docx(int documentType, String jsonData,
+            List<StampedSignature> signatures, long signatureHeightEmu) throws IOException {
         Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
@@ -261,7 +279,8 @@ public class DocumentGenerationService {
 
         preprocessPlaceholders(documentType, placeholders);
 
-        return processTemplate(resource.getInputStream(), placeholders, documentType, signatures);
+        return processTemplate(resource.getInputStream(), placeholders, documentType, signatures, null,
+                signatureHeightEmu);
     }
 
     public byte[] generatePreviewDocxForCopy(int documentType, String jsonData,
@@ -365,12 +384,19 @@ public class DocumentGenerationService {
 
     private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType,
             List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
+        return processTemplate(templateStream, placeholders, docType, signatures, verification,
+                SIGNATURE_MAX_HEIGHT_EMU);
+    }
+
+    private byte[] processTemplate(InputStream templateStream, Map<String, String> placeholders, int docType,
+            List<StampedSignature> signatures, VerificationStamp verification, long signatureHeightEmu)
+            throws IOException {
         ByteArrayOutputStream result = new ByteArrayOutputStream();
 
         // Relationship ids and media filenames are decided before the zip is
         // walked: [Content_Types].xml and document.xml.rels are emitted ahead of
         // document.xml, and all three have to agree on the same names.
-        List<PreparedSignature> prepared = prepareSignatures(signatures);
+        List<PreparedSignature> prepared = prepareSignatures(signatures, signatureHeightEmu);
 
         // The QR rides the same image plumbing as a signature: one more part,
         // one more relationship. anchorPlaceholder stays null because it is
@@ -432,7 +458,7 @@ public class DocumentGenerationService {
                         // token is split across runs in most templates; after it,
                         // the token it anchors on no longer exists.
                         if (!prepared.isEmpty() && entryName.equals("word/document.xml")) {
-                            xml = insertSignatures(xml, prepared);
+                            xml = insertSignatures(xml, prepared, signatureHeightEmu);
                             if (verification != null) {
                                 xml = appendVerificationBlock(xml, verification, qr);
                             }
@@ -557,6 +583,15 @@ public class DocumentGenerationService {
     private static final long SIGNATURE_MAX_HEIGHT_EMU = (long) (1.8 * EMU_PER_CM);
 
     /**
+     * Heights a signature may print at, largest first. A signed line is as tall as
+     * its signature, so a document with several signers can grow by a few lines
+     * and push its last ones onto a page of their own; the signed PDF then steps
+     * down this list until it has as many pages as the unsigned document.
+     */
+    public static final List<Long> SIGNATURE_HEIGHTS_EMU = List.of(
+            SIGNATURE_MAX_HEIGHT_EMU, (long) (1.4 * EMU_PER_CM), (long) (1.0 * EMU_PER_CM));
+
+    /**
      * Ceiling for a signature stamped inside a text box. A text box does not grow
      * with its content and LibreOffice clips what overflows it, so a full-size
      * signature can vanish from the page — doc_7 stacks three committee
@@ -567,14 +602,6 @@ public class DocumentGenerationService {
     /** EMUs per twip, the unit Word measures line heights in. 1 twip = 1/1440 inch. */
     private static final long EMU_PER_TWIP = 635L;
 
-    /**
-     * Height every stamped signature line is pinned to.
-     *
-     * <p>The ceiling rather than each image's own height: a row stays level only
-     * if all of its signature lines are the same height, whatever shape the
-     * signatures happen to be.
-     */
-    private static final long SIGNATURE_LINE_HEIGHT_TWIPS = SIGNATURE_MAX_HEIGHT_EMU / EMU_PER_TWIP;
 
     /** A span of the document to swap for new markup. */
     private record Edit(int start, int end, String markup) {
@@ -592,7 +619,7 @@ public class DocumentGenerationService {
     /** Characters used to draw the "sign here" rule; several templates mix them. */
     private static final String DOT_LEADER_CHARS = ".…ฯ";
 
-    private List<PreparedSignature> prepareSignatures(List<StampedSignature> signatures) {
+    private List<PreparedSignature> prepareSignatures(List<StampedSignature> signatures, long maxHeightEmu) {
         if (signatures == null || signatures.isEmpty()) {
             return List.of();
         }
@@ -609,10 +636,10 @@ public class DocumentGenerationService {
             long width = SIGNATURE_WIDTH_EMU;
             long height = sig.widthPx() > 0
                     ? Math.round(width * (double) sig.heightPx() / sig.widthPx())
-                    : SIGNATURE_MAX_HEIGHT_EMU;
-            if (height > SIGNATURE_MAX_HEIGHT_EMU) {
-                width = Math.round(width * (double) SIGNATURE_MAX_HEIGHT_EMU / height);
-                height = SIGNATURE_MAX_HEIGHT_EMU;
+                    : maxHeightEmu;
+            if (height > maxHeightEmu) {
+                width = Math.round(width * (double) maxHeightEmu / height);
+                height = maxHeightEmu;
             }
 
             prepared.add(new PreparedSignature(
@@ -776,7 +803,11 @@ public class DocumentGenerationService {
      * <p>Works back to front so that inserting text never invalidates the offsets
      * of signatures still to be placed.
      */
-    private String insertSignatures(String xml, List<PreparedSignature> signatures) {
+    private String insertSignatures(String xml, List<PreparedSignature> signatures, long maxHeightEmu) {
+        // The ceiling rather than each image's own height: a row stays level only
+        // if all of its signature lines are the same height, whatever shape the
+        // signatures happen to be.
+        long lineTwips = maxHeightEmu / EMU_PER_TWIP;
         List<Edit> edits = new ArrayList<>();
 
         // Cells that gain a signature line of their own. Collected before any
@@ -807,7 +838,7 @@ public class DocumentGenerationService {
             int[] signLine = precedingSignatureLine(xml, namePara[0]);
             boolean inTextBox = enclosingElement(xml, namePara[0], "w:txbxContent") != null;
             if (inTextBox) {
-                sig = sig.shrunkTo(TEXT_BOX_SIGNATURE_MAX_HEIGHT_EMU);
+                sig = sig.shrunkTo(Math.min(TEXT_BOX_SIGNATURE_MAX_HEIGHT_EMU, maxHeightEmu));
             }
             placements.add(new Placement(sig, namePara, signLine, inTextBox));
 
@@ -844,9 +875,9 @@ public class DocumentGenerationService {
             // aligned with the name underneath it in every template.
             String pPr = paragraphProperties(xml, namePara[0], namePara[1]);
             edits.add(new Edit(namePara[0], namePara[0],
-                    "<w:p>" + withFixedSignatureHeight(pPr) + signatureDrawingRun(sig) + "</w:p>"));
+                    "<w:p>" + withFixedSignatureHeight(pPr, lineTwips) + signatureDrawingRun(sig) + "</w:p>"));
 
-            edits.addAll(spacerEditsForRowOf(xml, namePara[0], signedCellStarts, paddedCellStarts));
+            edits.addAll(spacerEditsForRowOf(xml, namePara[0], signedCellStarts, paddedCellStarts, lineTwips));
         }
 
         // Apply back to front so that each edit's offsets are still valid when it
@@ -939,7 +970,7 @@ public class DocumentGenerationService {
      *                         two signers in one row do not both pad a third
      */
     private List<Edit> spacerEditsForRowOf(String xml, int signedNameParagraphStart,
-            Set<Integer> signedCellStarts, Set<Integer> paddedCellStarts) {
+            Set<Integer> signedCellStarts, Set<Integer> paddedCellStarts, long lineTwips) {
 
         int[] row = enclosingElement(xml, signedNameParagraphStart, "w:tr");
         if (row == null) {
@@ -959,7 +990,7 @@ public class DocumentGenerationService {
                 continue;
             }
             String pPr = paragraphProperties(xml, namePara[0], namePara[1]);
-            spacers.add(new Edit(namePara[0], namePara[0], "<w:p>" + withFixedSignatureHeight(pPr) + "</w:p>"));
+            spacers.add(new Edit(namePara[0], namePara[0], "<w:p>" + withFixedSignatureHeight(pPr, lineTwips) + "</w:p>"));
         }
         return spacers;
     }
@@ -973,9 +1004,9 @@ public class DocumentGenerationService {
      * prints shorter than a tall one, and two people signing the same row would
      * still have their names at different heights.
      */
-    private String withFixedSignatureHeight(String pPr) {
+    private String withFixedSignatureHeight(String pPr, long lineTwips) {
         String spacing = "<w:spacing w:before=\"0\" w:after=\"0\" w:line=\""
-                + SIGNATURE_LINE_HEIGHT_TWIPS + "\" w:lineRule=\"atLeast\"/>";
+                + lineTwips + "\" w:lineRule=\"atLeast\"/>";
         String rPr = "<w:rPr><w:sz w:val=\"2\"/><w:szCs w:val=\"2\"/></w:rPr>";
 
         if (pPr == null || pPr.isEmpty()) {
@@ -2456,8 +2487,10 @@ public class DocumentGenerationService {
 
     /**
      * L2 Persistent Disk Cache Directory
+     *
+     * <p>"-v2": PDF ในแคชเดิมแปลงก่อนตัดหน้าว่างทิ้ง ({@link #convertDocxToPdf}) — ห้ามหยิบมาใช้ต่อ
      */
-    private static final Path DISK_CACHE_DIR = Path.of(System.getProperty("java.io.tmpdir"), "hrcp-pdf-cache");
+    private static final Path DISK_CACHE_DIR = Path.of(System.getProperty("java.io.tmpdir"), "hrcp-pdf-cache-v2");
 
     /**
      * Persistent Profile Pool Directory (ไม่ต้องสร้าง/ลบโปรไฟล์ใหม่ทุกรอบเพื่อลด cold start I/O)
@@ -2554,6 +2587,51 @@ public class DocumentGenerationService {
         }
     }
 
+    /** A signed document at a given signature height (one of {@link #SIGNATURE_HEIGHTS_EMU}). */
+    @FunctionalInterface
+    public interface SignedRendering {
+        byte[] docx(long signatureHeightEmu) throws IOException;
+    }
+
+    /** A signed document and its PDF; {@code pdf} is null without LibreOffice. */
+    public record Fitted(byte[] docx, byte[] pdf) {
+    }
+
+    /**
+     * The signed document with its signatures as large as they go without adding a
+     * page: a signed line is as tall as its signature, and three signers in a row
+     * (เอกสารที่ 9 เฟส 2) push the note under them onto a page of its own. Steps
+     * down {@link #SIGNATURE_HEIGHTS_EMU} until the PDF has no more pages than
+     * {@code unsignedDocx}, or the smallest is reached.
+     *
+     * @param unsignedDocx the same document without signatures, or null when there
+     *                     are none to fit
+     */
+    public Fitted fitSignatures(SignedRendering signed, byte[] unsignedDocx) throws IOException {
+        byte[] docx = signed.docx(SIGNATURE_HEIGHTS_EMU.get(0));
+        if (!isPdfConversionAvailable()) {
+            return new Fitted(docx, null);
+        }
+        byte[] pdf = convertDocxToPdfCached(docx);
+        if (unsignedDocx == null) {
+            return new Fitted(docx, pdf);
+        }
+        int unsigned = pageCount(convertDocxToPdfCached(unsignedDocx));
+        for (int i = 1; i < SIGNATURE_HEIGHTS_EMU.size() && pageCount(pdf) > unsigned; i++) {
+            docx = signed.docx(SIGNATURE_HEIGHTS_EMU.get(i));
+            pdf = convertDocxToPdfCached(docx);
+            log.info("Signatures printed at most {} cm tall so the signed document keeps its {} page(s): now {}",
+                    Math.round(SIGNATURE_HEIGHTS_EMU.get(i) * 10.0 / EMU_PER_CM) / 10.0, unsigned, pageCount(pdf));
+        }
+        return new Fitted(docx, pdf);
+    }
+
+    private static int pageCount(byte[] pdf) throws IOException {
+        try (org.apache.pdfbox.pdmodel.PDDocument doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+            return doc.getNumberOfPages();
+        }
+    }
+
     /** ไบต์ชุดนี้เป็นไฟล์ PDF อยู่แล้วหรือไม่ (ดูจาก magic bytes) */
     private static boolean isPdfBytes(byte[] bytes) {
         return bytes != null && bytes.length >= 5
@@ -2561,7 +2639,25 @@ public class DocumentGenerationService {
                 && bytes[3] == 'F' && bytes[4] == '-';
     }
 
+    /**
+     * แปลง DOCX → PDF แล้วตัดหน้าว่างที่ LibreOffice ดันออกมาทิ้ง
+     *
+     * <p>รูปลายเซ็นหรือช่องที่จองไว้ทำให้ย่อหน้าสูงขึ้นนิดเดียวก็พอให้ย่อหน้าว่างท้ายหน้าล้นไปเป็นหน้าใหม่
+     * ทั้งหน้า — ตัดที่นี่ที่เดียวครอบทุกเส้นทาง: ตัวอย่างก่อนลงนาม PDF ตั้งต้นของการลงนามแบบ incremental
+     * และไฟล์ที่ลงนามครบแล้ว ดู {@link com.ecom.academic.service.pdf.BlankPages}
+     */
     public byte[] convertDocxToPdf(byte[] docxBytes) throws IOException {
+        byte[] pdf = convertWithLibreOffice(docxBytes);
+        try {
+            return com.ecom.academic.service.pdf.BlankPages.drop(pdf);
+        } catch (IOException | RuntimeException e) {
+            // การตัดหน้าว่างเป็นงานเก็บกวาด — อ่านไฟล์ไม่ได้ก็ยังส่งผลแปลงเดิมไป ไม่ทำให้การแปลงล้ม
+            log.warn("Could not check the converted PDF for empty pages: {}", e.toString());
+            return pdf;
+        }
+    }
+
+    private byte[] convertWithLibreOffice(byte[] docxBytes) throws IOException {
         String soffice = resolveLibreOffice();
         if (soffice.isEmpty()) {
             throw new IOException("LibreOffice not found. " +
