@@ -449,6 +449,9 @@ public class DocumentGenerationService {
                             String token = "{{" + ph.getKey() + "}}";
                             if (xml.contains(token)) {
                                 String raw = ph.getValue();
+                                if (TICK_BLANK_KEY.matcher(ph.getKey()).matches()) {
+                                    raw = plainTick(raw);
+                                }
                                 // แปลงเลขก่อน escape เสมอ มิฉะนั้นจะไปโดนตัวเลขใน entity
                                 // หรือใน markup ที่ escapeXml แทรกเข้ามาเอง
                                 if (thaiNumeralTemplate && raw != null) {
@@ -467,15 +470,9 @@ public class DocumentGenerationService {
                         xml = fillRemainingPlaceholders(xml);
 
                         // Step 3: Checkbox rendering
-                        if (docType == 4) {
-                            // Doc 4: ใช้ ✔ เฉยๆ ไม่มีกรอบ — แปลงค่าเก่า ☑→✔, ☐→ว่าง
-                            xml = xml.replace("\u2611\uFE0E", "\u2714");
-                            xml = xml.replace("\u2611", "\u2714");
-                            xml = xml.replace("\u2610", "");
-                        } else {
-                            // เอกสารอื่น: ☑/☐ → MS Gothic font runs (กล่อง)
-                            xml = renderCheckboxes(xml);
-                        }
+                        // ☑/☐ → MS Gothic font runs (กล่อง) — ช่องติ๊กไม่มีกรอบ (TICK_BLANK_KEY)
+                        // เป็น ✓ หรือช่องว่างไปแล้วตั้งแต่ step 2
+                        xml = renderCheckboxes(xml);
                         xml = pinTickFont(xml);
                     }
 
@@ -2182,9 +2179,20 @@ public class DocumentGenerationService {
     private static final java.util.regex.Pattern CHECKBOX_BLANK_KEY = java.util.regex.Pattern.compile(
             "^(asst|assoc|prof)_(not_used|is_used)_(research|other|book)_[0-9]+$");
 
-    /** ช่อง "( ✓ )" ระดับผลการประเมินของเอกสารที่ 8 — ช่องที่ไม่ติ๊กต้องกว้างเท่าช่องที่ติ๊ก */
+    /**
+     * ช่อง "( ✓ )" ที่ไม่มีกรอบ — ช่องที่ไม่ติ๊กต้องกว้างเท่าช่องที่ติ๊ก: ระดับผลการประเมินของเอกสารที่ 8
+     * ความประสงค์เรื่องรายชื่อกรรมการของเอกสารที่ 2 เฟส 2 และวิทยานิพนธ์/การเป็นส่วนหนึ่งของการศึกษา
+     * ของเอกสารที่ 4 เฟส 2
+     */
     private static final java.util.regex.Pattern TICK_BLANK_KEY = java.util.regex.Pattern.compile(
-            "^final_level_[0-9]+$");
+            "^final_level_[0-9]+$|^(not_)?wish_to_know_committee_names$"
+                    + "|^(master|doctoral)_thesis$|^(academic_paper|research)_(not|is)_part_edu$");
+
+    /** ค่าของช่อง {@link #TICK_BLANK_KEY} — ฟอร์มเก็บเป็น ☑/☐ หรือ ✔/ว่าง พิมพ์เป็น ✓ หรือช่องว่าง */
+    private static String plainTick(String raw) {
+        String t = raw == null ? "" : raw.strip();
+        return "☑".equals(t) || "☑︎".equals(t) || "✓".equals(t) || "✔".equals(t) ? "✓" : "";
+    }
 
     /** Stands in for an unticked "( ✓ )" until {@link #pinTickFont} gives it the width of a ✓. */
     private static final String TICK_BLANK = "\uE000";

@@ -1384,8 +1384,10 @@
     });
 
     // Method 2: Poll every second — if body is locked but no modal is open, unlock
+    // overlay ที่ทำเอง (ตัวดู PDF / ตัวอย่างเอกสาร) ล็อกการเลื่อนหน้าโดยตั้งใจ — ห้ามปลดล็อก
+    // ไม่งั้นแถบเลื่อนของหน้ากลับมาทับแถบเลื่อนของตัวดู PDF จนลากเลื่อนเอกสารไม่ได้
     setInterval(function() {
-        var hasOpenModal = document.querySelector('.modal.show');
+        var hasOpenModal = document.querySelector('.modal.show, .doc-pdf-overlay.is-active, .docx-preview-overlay.active');
         if (hasOpenModal) return; // modal is legitimately open, do nothing
         
         var isLocked = window.getComputedStyle(document.body).overflow === 'hidden';
