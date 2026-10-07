@@ -433,12 +433,12 @@ public final class DocumentCompleteness {
      * และตัวตรวจฝั่งเบราว์เซอร์ดูเฉพาะช่องที่มองเห็น
      */
     public static Set<String> optionalFields(SignatureModule module, int documentType) {
-        return OPTIONAL_FIELDS.getOrDefault(module, Map.of()).getOrDefault(documentType, Set.of());
+        return OPTIONAL_FIELDS.getOrDefault(module, Map.of()).getOrDefault(PositionDocTypes.base(documentType), Set.of());
     }
 
     /** คำนำหน้าชื่อช่องของตารางที่เพิ่มแถวได้ — แถวที่ ๒ ขึ้นไปไม่บังคับ */
     public static Set<String> repeatablePrefixes(SignatureModule module, int documentType) {
-        return REPEATABLE_PREFIXES.getOrDefault(module, Map.of()).getOrDefault(documentType, Set.of());
+        return REPEATABLE_PREFIXES.getOrDefault(module, Map.of()).getOrDefault(PositionDocTypes.base(documentType), Set.of());
     }
 
     // =====================================================================
@@ -471,12 +471,12 @@ public final class DocumentCompleteness {
         }
         Set<String> optional = OPTIONAL_FIELDS
                 .getOrDefault(module, Map.of())
-                .getOrDefault(documentType, Set.of());
+                .getOrDefault(PositionDocTypes.base(documentType), Set.of());
         if (optional.contains(key)) {
             return true;
         }
-        if (module == SignatureModule.POSITION && RETIRED_POSITION_FIELDS.containsKey(documentType)
-                && RETIRED_POSITION_FIELDS.get(documentType).matcher(key).matches()) {
+        if (module == SignatureModule.POSITION && RETIRED_POSITION_FIELDS.containsKey(PositionDocTypes.base(documentType))
+                && RETIRED_POSITION_FIELDS.get(PositionDocTypes.base(documentType)).matcher(key).matches()) {
             return true;
         }
         if (isExtraRepeatedRow(module, documentType, key)) {
@@ -489,7 +489,7 @@ public final class DocumentCompleteness {
     private static boolean isExtraRepeatedRow(SignatureModule module, int documentType, String key) {
         Set<String> prefixes = REPEATABLE_PREFIXES
                 .getOrDefault(module, Map.of())
-                .getOrDefault(documentType, Set.of());
+                .getOrDefault(PositionDocTypes.base(documentType), Set.of());
         for (String prefix : prefixes) {
             if (!key.startsWith(prefix)) {
                 continue;

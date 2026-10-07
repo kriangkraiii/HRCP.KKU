@@ -9,14 +9,19 @@
                 </a>
             </div>
 
-            <h3 class="mb-4"><i class="fas fa-file-alt"></i> เอกสารที่ 6: แบบแสดงหลักฐานการมีส่วนร่วมในผลงานทางวิชาการ</h3>
+            <h3 class="mb-2"><i class="fas fa-file-alt"></i> เอกสารที่ 6: แบบแสดงหลักฐานการมีส่วนร่วมในผลงานทางวิชาการ</h3>
+            <!--/* แยกฉบับตามงานวิจัยในเอกสารที่ 1 — เอกสารแนบท้ายข้อบังคับ มข. พ.ศ. 2569 ข้อ 3.3 */-->
+            <p class="text-muted mb-4" th:if="${workNo != null and workNo > 0}">
+                งานวิจัยที่ <span th:text="${workNo}">1</span> — กรอกและลงนามแยกฉบับสำหรับงานวิจัยแต่ละเรื่อง
+                ผู้ประพันธ์อันดับแรกและผู้ประพันธ์บรรณกิจของเรื่องนี้ลงนามรับรองในฉบับนี้
+            </p>
 
             <div th:replace="~{academic/_applicant_doc_gate :: banner}"></div>
             <!--/* ขั้นตอน: กรอก → ตรวจสอบและลงนาม */-->
             <div th:replace="~{academic/_doc_step_progress :: steps}"></div>
             <div th:replace="~{academic/_doc_step_progress :: savedCallout}"></div>
 
-            <form th:action="'/user/position/request/' + ${request.id} + '/document/9'" method="post" id="doc9Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/9'"
+            <form th:action="'/user/position/request/' + ${request.id} + '/document/' + ${documentType}" method="post" id="doc9Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/' + ${documentType}"
 >
 
                 <!--/* ข้อมูลผลงาน */-->
@@ -26,7 +31,13 @@
                         <div class="row g-3">
                             <div class="col-12">
                                 <label class="form-label">ชื่อผลงาน <span class="text-danger">*</span></label>
-                                <input type="text" name="title_name" class="form-control" required>
+                                <input type="text" name="title_name" class="form-control" required
+                                       th:readonly="${lockedFields != null and lockedFields.containsKey('title_name')}"
+                                       th:value="${lockedFields != null ? lockedFields['title_name'] : null}"
+                                       title="ตามงานวิจัยในเอกสารที่ 1 แก้ไขที่เอกสารที่ 1">
+                                <div class="form-text" th:if="${lockedFields != null and lockedFields.containsKey('title_name')}">
+                                    ดึงจากงานวิจัยในเอกสารที่ 1 — ถ้าต้องแก้ชื่อผลงาน ให้แก้ที่เอกสารที่ 1
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -50,7 +61,8 @@
                         </div>
                         <div class="form-text">
                             เป็นทั้งผู้ประพันธ์อันดับแรกและผู้ประพันธ์บรรณกิจได้ (ต้องมีผู้ร่วมงานลงนามรับรองด้วย)
-                            ส่วนผู้นิพนธ์ร่วมเลือกคู่กับสองข้อแรกไม่ได้ — เอกสารแนบท้ายข้อบังคับ มข. พ.ศ. ๒๕๖๙ ข้อ ๓.๑ และ ๓.๔
+                            ส่วนผู้นิพนธ์ร่วมเลือกคู่กับสองข้อแรกไม่ได้ — ติ๊กข้อหนึ่งแล้วข้อที่ขัดกันจะถูกล็อก
+                            ต้องเอาติ๊กออกก่อนจึงเลือกอีกข้อได้ (เอกสารแนบท้ายข้อบังคับ มข. พ.ศ. ๒๕๖๙ ข้อ ๓.๑ และ ๓.๔)
                         </div>
                     </div>
                 </div>
@@ -210,20 +222,39 @@
             });
         </script>
 
+        <style>
+            .form-check-input.role-locked { opacity: .35; pointer-events: none; }
+            .form-check-input.role-locked + .form-check-label { opacity: .5; }
+        </style>
         <script>
-            // ผู้ประพันธ์อันดับแรก + บรรณกิจ เลือกพร้อมกันได้ ผู้นิพนธ์ร่วมเลือกคู่กับสองข้อนั้นไม่ได้
-            document.addEventListener('change', function (e) {
-                const fa = document.getElementById('chkFA');
-                const corr = document.getElementById('chkCorr');
-                const co = document.getElementById('chkCoauthor');
-                if (!e.target.checked) return;
-                if (e.target === co) {
-                    [fa, corr].forEach(el => { if (el.checked) { el.checked = false; el.dispatchEvent(new Event('input', { bubbles: true })); } });
-                } else if ((e.target === fa || e.target === corr) && co.checked) {
-                    co.checked = false;
-                    co.dispatchEvent(new Event('input', { bubbles: true }));
+            // ผู้ประพันธ์อันดับแรก + บรรณกิจ เลือกพร้อมกันได้ ผู้นิพนธ์ร่วมเลือกคู่กับสองข้อนั้นไม่ได้ — ข้อที่ขัดกันถูกล็อก
+            // ล็อกด้วยหน้าตาและกันการคลิก ไม่ใช้ disabled เพราะ auto_draft.js ข้ามช่อง disabled ค่า ☐ จะไม่ถูกบันทึก
+            (function () {
+                function lock(el, locked) {
+                    el.classList.toggle('role-locked', locked);
+                    el.setAttribute('aria-disabled', locked ? 'true' : 'false');
+                    el.title = locked ? 'เลือกคู่กับข้อที่ติ๊กไว้ไม่ได้ — เอาติ๊กข้อนั้นออกก่อน' : '';
                 }
-            });
+                function sync() {
+                    const fa = document.getElementById('chkFA');
+                    const corr = document.getElementById('chkCorr');
+                    const co = document.getElementById('chkCoauthor');
+                    if (!fa || !corr || !co) return;
+                    const lockAuthors = co.checked;
+                    const lockCo = fa.checked || corr.checked;
+                    lock(fa, lockAuthors);
+                    lock(corr, lockAuthors);
+                    lock(co, lockCo);
+                }
+                document.addEventListener('click', e => {
+                    if (e.target.classList && e.target.classList.contains('role-locked')) e.preventDefault();
+                }, true);
+                document.addEventListener('change', e => {
+                    if (['chkFA', 'chkCorr', 'chkCoauthor'].includes(e.target.id)) sync();
+                });
+                // หลังเติมค่าที่บันทึกไว้ (DOMContentLoaded ของฟอร์ม)
+                document.addEventListener('DOMContentLoaded', () => setTimeout(sync, 0));
+            })();
         </script>
 
         <script th:inline="javascript">

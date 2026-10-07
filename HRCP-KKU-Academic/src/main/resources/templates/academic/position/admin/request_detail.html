@@ -754,7 +754,7 @@
               <div class="detail-section-body">
                 <!--/* สีและป้ายมาจาก DocumentProgress ที่เดียว — เขียวเมื่อจบจริงเท่านั้น */-->
                 <div
-                  th:each="entry : ${docLabels}"
+                  th:each="entry : ${docRows}"
                   th:with="stage=${docProgress.get(entry.key)}, docNo=${@positionRequestService.docNo(entry.key)}"
                   class="doc-grid-item"
                   th:classappend="${stage.cardClass}"
@@ -806,7 +806,7 @@
                         <button
                           type="button"
                           class="btn btn-sm btn-outline-danger btn-pdf-print"
-                          th:attr="data-request-id=${request.id},data-doc-type=${entry.key},data-doc-label=${docLabels.get(entry.key)}"
+                          th:attr="data-request-id=${request.id},data-doc-type=${entry.key},data-doc-label=${entry.value}"
                           title="พิมพ์/บันทึก PDF"
                         >
                           <i class="fas fa-file-pdf"></i> PDF

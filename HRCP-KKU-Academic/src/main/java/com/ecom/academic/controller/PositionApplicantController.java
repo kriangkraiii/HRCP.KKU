@@ -354,28 +354,43 @@ public class PositionApplicantController {
         // For applicant, only show applicant-fillable docs
         Map<Integer, String> docLabels = positionService.getApplicantDocLabels();
 
+        // เอกสารที่ 9 แยกฉบับตามงานวิจัยในเอกสารที่ 1 (PositionDocTypes)
+        Map<Integer, String> workCopies = positionService.workCopies(request);
+        List<Integer> applicantDocTypes = positionService.applicantDocTypes(request);
+
         // ตรวจสอบลายเซ็นผู้ยื่นในแต่ละเอกสาร
         Map<Integer, Boolean> docSignedMap = new HashMap<>();
-        for (Integer docType : PositionRequestService.APPLICANT_DOCS) {
+        for (Integer docType : applicantDocTypes) {
             docSignedMap.put(docType, signatureWorkflow.isApplicantSignatureCompleted(
                     com.ecom.academic.model.SignatureModule.POSITION, id, docType));
         }
         List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
-                com.ecom.academic.model.SignatureModule.POSITION, id, PositionRequestService.APPLICANT_DOCS);
-        boolean applicantSignaturesComplete = unsignedSigDocs.isEmpty();
+                com.ecom.academic.model.SignatureModule.POSITION, id, applicantDocTypes);
+        boolean applicantSignaturesComplete = unsignedSigDocs.isEmpty() && !workCopies.isEmpty();
 
         model.addAttribute("request", request);
         model.addAttribute("completedDocs", completedDocs);
         model.addAttribute("documents", documents);
         model.addAttribute("docLabels", docLabels);
         // สีสถานะของเอกสาร — กติกาเดียวกับหน้าเจ้าหน้าที่ เขียวเมื่อจบจริงเท่านั้น
-        model.addAttribute("docProgress", documentProgress.of(
-                com.ecom.academic.model.SignatureModule.POSITION, id, docLabels.keySet(),
-                documents.stream()
-                        .map(d -> new com.ecom.academic.service.DocumentProgress.Row(d.getDocumentType(),
-                                Boolean.TRUE.equals(d.getIsDraft()), d.getJsonData()))
-                        .toList()));
-        model.addAttribute("applicantDocs", PositionRequestService.APPLICANT_DOCS);
+        java.util.Set<Integer> progressTypes = new java.util.LinkedHashSet<>(docLabels.keySet());
+        progressTypes.addAll(workCopies.keySet());
+        Map<Integer, com.ecom.academic.service.DocumentProgress.Stage> docProgress = new java.util.LinkedHashMap<>(
+                documentProgress.of(com.ecom.academic.model.SignatureModule.POSITION, id, progressTypes,
+                        documents.stream()
+                                .map(d -> new com.ecom.academic.service.DocumentProgress.Row(d.getDocumentType(),
+                                        Boolean.TRUE.equals(d.getIsDraft()), d.getJsonData()))
+                                .toList()));
+        // การ์ดเอกสารที่ 9 รวมทุกฉบับ — ฉบับที่ช้าที่สุดเป็นตัวกำหนด
+        docProgress.put(com.ecom.academic.service.PositionDocTypes.WORK_PARTICIPATION,
+                com.ecom.academic.service.DocumentProgress.weakest(
+                        workCopies.keySet().stream().map(docProgress::get).toList()));
+        model.addAttribute("docProgress", docProgress);
+        model.addAttribute("workCopies", workCopies);
+        model.addAttribute("applicantDocs", applicantDocTypes);
+        long completedRequired = applicantDocTypes.stream().filter(completedDocs::contains).count();
+        model.addAttribute("completedRequiredCount", completedRequired);
+        model.addAttribute("allDocsCompleted", !workCopies.isEmpty() && completedRequired == applicantDocTypes.size());
         model.addAttribute("docSignedMap", docSignedMap);
         model.addAttribute("unsignedSigDocs", unsignedSigDocs);
         // เอกสารที่เจ้าหน้าที่ส่งกลับมาให้แก้และยังไม่ได้ลงนามใหม่ — ลงนามแล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
@@ -413,8 +428,17 @@ public class PositionApplicantController {
         }
 
         // เอกสารของแอดมิน (7, 8) ผู้ยื่นเปิดไม่ได้เลย
-        if (!PositionRequestService.APPLICANT_DOCS.contains(type)) {
+        if (!PositionRequestService.isApplicantDocType(type)) {
             return "redirect:/user/position/request/" + id;
+        }
+        // เอกสารที่ 9 แยกฉบับตามงานวิจัย: เปิดฉบับแรก หรือกลับไปหน้าคำร้องเมื่อยังไม่มีงานวิจัยในเอกสารที่ 1
+        // ฉบับของงานวิจัยที่ถูกเอาออกจากเอกสารที่ 1 แล้วไม่ต้องใช้ จึงไม่เปิดให้
+        if (type == com.ecom.academic.service.PositionDocTypes.WORK_PARTICIPATION
+                || (com.ecom.academic.service.PositionDocTypes.isWorkCopy(type)
+                        && !positionService.workCopies(request).containsKey(type))) {
+            return positionService.workCopies(request).keySet().stream().findFirst()
+                    .map(first -> "redirect:/user/position/request/" + id + "/document/" + first)
+                    .orElse("redirect:/user/position/request/" + id + "?error=no_research_works");
         }
 
         // Load existing data
@@ -430,6 +454,7 @@ public class PositionApplicantController {
         model.addAttribute("request", request);
         model.addAttribute("documentType", type);
         model.addAttribute("documentLabel", positionService.getDocLabel(type));
+        model.addAttribute("workNo", com.ecom.academic.service.PositionDocTypes.copyNo(type));
         model.addAttribute("existingData", existingData);
         model.addAttribute("preFilledData", preFilledData);
         model.addAttribute("docData", preFilledData);
@@ -463,7 +488,7 @@ public class PositionApplicantController {
         model.addAttribute("docSaved", positionService.getLatestDocumentData(id, type) != null);
         DocumentFormSupport.addCompletenessRules(model, com.ecom.academic.model.SignatureModule.POSITION, type);
 
-        return "academic/position/applicant/doc_form_" + type;
+        return "academic/position/applicant/doc_form_" + com.ecom.academic.service.PositionDocTypes.base(type);
     }
 
     /** ข้อมูลที่หน้าฟอร์มใช้คืนค่าลงช่อง: ค่าที่บันทึกไว้ ทับด้วยช่องที่ล็อก */
@@ -533,7 +558,8 @@ public class PositionApplicantController {
             return "redirect:/user/position/dashboard";
         }
 
-        if (!PositionRequestService.APPLICANT_DOCS.contains(type)) {
+        if (!PositionRequestService.isApplicantDocType(type)
+                || type == com.ecom.academic.service.PositionDocTypes.WORK_PARTICIPATION) {
             return "redirect:/user/position/request/" + id;
         }
 
@@ -616,15 +642,18 @@ public class PositionApplicantController {
         }
 
         // Check all applicant docs are completed
+        // เอกสารที่ 9 ต้องครบทุกงานวิจัยในเอกสารที่ 1 — ยังไม่มีงานวิจัยเลยก็ส่งไม่ได้
+        List<Integer> applicantDocTypes = positionService.applicantDocTypes(request);
         List<Integer> completed = positionService.getCompletedDocTypes(id);
-        boolean allDone = PositionRequestService.APPLICANT_DOCS.stream().allMatch(completed::contains);
+        boolean allDone = !positionService.workCopies(request).isEmpty()
+                && applicantDocTypes.stream().allMatch(completed::contains);
         if (!allDone) {
             return "redirect:/user/position/request/" + id + "?error=incomplete_docs";
         }
 
         // Check all applicant docs requiring signature are signed
         List<Integer> unsignedSigDocs = signatureWorkflow.getUnsignedApplicantDocTypes(
-                com.ecom.academic.model.SignatureModule.POSITION, id, PositionRequestService.APPLICANT_DOCS);
+                com.ecom.academic.model.SignatureModule.POSITION, id, applicantDocTypes);
         if (!unsignedSigDocs.isEmpty()) {
             return "redirect:/user/position/request/" + id + "?error=unsigned_docs";
         }
@@ -682,7 +711,7 @@ public class PositionApplicantController {
 
         // เอกสารของแอดมิน (7, 8) มีรายชื่อผู้ทรงคุณวุฒิ ผู้ยื่นโหลดไม่ได้ — หน้าจอไม่มีลิงก์ให้
         // แต่ยิง URL ตรงก็ต้องไม่ได้ไฟล์ เหมือนเอกสารที่ผู้ยื่นเห็นไม่ได้ของเฟส 1
-        if (!PositionRequestService.APPLICANT_DOCS.contains(type)) {
+        if (!PositionRequestService.isApplicantDocType(type)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
 

@@ -56,12 +56,17 @@ public class DocumentWorkflowConfigService {
         this.actingSigners = actingSigners;
     }
 
+    /** การตั้งค่าผู้ลงนามของฉบับแยกตามผลงาน (เอกสารที่ 9 เฟส 2) เก็บไว้ที่เอกสารที่ 9 ({@link PositionDocTypes}) */
+    private static int configType(SignatureModule module, int documentType) {
+        return module == SignatureModule.POSITION ? PositionDocTypes.base(documentType) : documentType;
+    }
+
     /**
      * Returns the active signature slots for a document, in configured step order.
      * Falls back to SignatureAnchorRegistry if no database config exists yet.
      */
     public List<SignatureSlot> effectiveSlotsFor(SignatureModule module, int documentType) {
-        List<DocumentWorkflowConfig> configs = repository.findByModuleAndDocumentType(module, documentType);
+        List<DocumentWorkflowConfig> configs = repository.findByModuleAndDocumentType(module, configType(module, documentType));
         if (configs == null || configs.isEmpty()) {
             return registry.slotsFor(module, documentType);
         }
@@ -115,7 +120,7 @@ public class DocumentWorkflowConfigService {
     public Map<String, Integer> defaultSignerUserIds(SignatureModule module, int documentType) {
         Map<String, Integer> defaults = new HashMap<>();
         Map<String, ActingSignerService.Acting> acting = actingSigners != null ? actingSigners.allActive() : Map.of();
-        List<DocumentWorkflowConfig> configs = repository.findByModuleAndDocumentType(module, documentType);
+        List<DocumentWorkflowConfig> configs = repository.findByModuleAndDocumentType(module, configType(module, documentType));
         Map<String, DocumentWorkflowConfig> configMap = new HashMap<>();
         if (configs != null) {
             for (DocumentWorkflowConfig c : configs) {

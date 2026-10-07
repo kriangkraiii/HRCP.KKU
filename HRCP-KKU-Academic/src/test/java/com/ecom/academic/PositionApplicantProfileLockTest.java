@@ -98,9 +98,11 @@ class PositionApplicantProfileLockTest extends AbstractFlowTest {
     @Test
     @DisplayName("เปิดฟอร์ม — ชื่อที่บันทึกไว้เดิมถูกแทนด้วยชื่อจากข้อมูลบุคลากร และช่องเป็นแบบอ่านอย่างเดียว")
     void formShowsLockedName() throws Exception {
-        data.positionDocument(request, 9, "{\"applicant_name\":\"ชื่อเก่า\"}");
+        // เอกสารที่ 9 แยกฉบับตามงานวิจัยในเอกสารที่ 1 — ฉบับของงานวิจัยแถวที่ 1 คือ 901
+        data.positionDocument(request, 1, "{\"target_position\":\"ผู้ช่วยศาสตราจารย์\",\"asst_research_working_1\":\"งานวิจัย\"}");
+        data.positionDocument(request, 901, "{\"applicant_name\":\"ชื่อเก่า\"}");
 
-        assertThat(formData(9)).containsEntry("applicant_name", NAME).doesNotContainKey("title");
+        assertThat(formData(901)).containsEntry("applicant_name", NAME).doesNotContainKey("title");
 
         String html = mvc.perform(get("/user/position/request/" + request.getId() + "/document/1")
                 .with(as(applicant)))

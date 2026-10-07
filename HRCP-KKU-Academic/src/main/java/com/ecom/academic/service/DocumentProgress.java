@@ -83,6 +83,16 @@ public class DocumentProgress {
         return stages;
     }
 
+    /**
+     * สถานะรวมของเอกสารที่แยกหลายฉบับ (เอกสารที่ 9 เฟส 2 แยกตามผลงาน) — ฉบับที่ช้าที่สุดเป็นตัวกำหนด
+     * ไม่มีฉบับเลยถือว่ายังไม่เริ่ม
+     */
+    public static Stage weakest(Collection<Stage> stages) {
+        return stages.stream()
+                .min(java.util.Comparator.comparingInt(Stage::ordinal))
+                .orElse(Stage.NOT_STARTED);
+    }
+
     public Stage stageOf(SignatureModule module, Long requestId, int type, List<Row> rows) {
         if (rows.isEmpty()) {
             return Stage.NOT_STARTED;

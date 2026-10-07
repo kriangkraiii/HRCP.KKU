@@ -137,6 +137,7 @@ public class PositionRequestService {
      * type ที่ไม่รู้จักคืนตัวเอง
      */
     public static int docNumber(int type) {
+        type = PositionDocTypes.base(type);
         int n = 1;
         for (int key : DOC_LABELS.keySet()) {
             if (key == type) {
@@ -202,7 +203,76 @@ public class PositionRequestService {
     }
 
     public String getDocLabel(int type) {
+        if (PositionDocTypes.isWorkCopy(type)) {
+            return DOC_LABELS.get(PositionDocTypes.WORK_PARTICIPATION) + " — งานวิจัยที่ " + PositionDocTypes.copyNo(type);
+        }
         return DOC_LABELS.getOrDefault(type, "เอกสารที่ " + docNumber(type));
+    }
+
+    // ================== เอกสารที่ 9 แยกตามผลงาน ==================
+
+    /** ช่องงานวิจัยของแต่ละตำแหน่งในเอกสารที่ 1: asst_research_working_N ฯลฯ */
+    private static final Map<String, String> RESEARCH_PREFIX = Map.of(
+            "ผู้ช่วยศาสตราจารย์", "asst",
+            "รองศาสตราจารย์", "assoc",
+            "ศาสตราจารย์", "prof");
+
+    /**
+     * ฉบับของเอกสารที่ 9 ที่คำร้องนี้ต้องมี — หนึ่งฉบับต่องานวิจัยในเอกสารที่ 1 ของตำแหน่งที่ขอ
+     * (เอกสารแนบท้ายข้อบังคับ มข. พ.ศ. 2569 ข้อ 3.3)
+     *
+     * <p>เลขฉบับคือเลขแถวในเอกสารที่ 1 ({@code assoc_research_working_3} → {@link PositionDocTypes#copyType 903})
+     * ลบแถวอื่นทิ้งแล้วเลขของฉบับที่เหลือไม่เลื่อน ข้อมูลที่กรอกไว้จึงไม่ย้ายไปอยู่ผิดเรื่อง
+     *
+     * @return {copy type → ชื่อผลงาน} เรียงตามเลขแถว ว่างเมื่อยังไม่ได้กรอกงานวิจัย
+     */
+    public Map<Integer, String> workCopies(PositionRequest request) {
+        Map<Integer, String> copies = new java.util.TreeMap<>();
+        if (request == null || request.getId() == null) {
+            return copies;
+        }
+        Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
+        if (doc1 == null) {
+            return copies;
+        }
+        String target = request.getTargetPosition();
+        if (isBlank(target)) {
+            target = doc1.get("target_position");
+        }
+        String prefix = target == null ? null : RESEARCH_PREFIX.get(target.trim());
+        if (prefix == null) {
+            return copies;
+        }
+        Pattern row = Pattern.compile("^" + prefix + "_research_working_(\\d+)$");
+        for (Map.Entry<String, String> e : doc1.entrySet()) {
+            Matcher m = row.matcher(e.getKey());
+            if (!m.matches() || isBlank(e.getValue())) {
+                continue;
+            }
+            int n = Integer.parseInt(m.group(1));
+            if (n >= 1 && n <= 99) {
+                copies.put(PositionDocTypes.copyType(n), e.getValue().trim());
+            }
+        }
+        return copies;
+    }
+
+    /** เอกสารของผู้ยื่นที่คำร้องนี้ต้องมี — เอกสารที่ 9 แทนด้วยฉบับของแต่ละงานวิจัย */
+    public List<Integer> applicantDocTypes(PositionRequest request) {
+        List<Integer> types = new java.util.ArrayList<>();
+        for (int type : APPLICANT_DOCS) {
+            if (type == PositionDocTypes.WORK_PARTICIPATION) {
+                types.addAll(workCopies(request).keySet());
+            } else {
+                types.add(type);
+            }
+        }
+        return types;
+    }
+
+    /** type นี้เป็นเอกสารของผู้ยื่น (รวมฉบับแยกตามผลงานของเอกสารที่ 9) */
+    public static boolean isApplicantDocType(int type) {
+        return APPLICANT_DOCS.contains(PositionDocTypes.base(type));
     }
 
     /** {@link #docNumber(int)} สำหรับเทมเพลต: {@code ${@positionRequestService.docNo(documentType)}} */
@@ -446,13 +516,13 @@ public class PositionRequestService {
      * {@link #pinTargetPosition}
      */
     public Map<String, String> lockedFields(PositionRequest request, int documentType) {
-        if (request == null || !APPLICANT_DOCS.contains(documentType)) {
+        if (request == null || !isApplicantDocType(documentType)) {
             return Map.of();
         }
         Map<String, String> profile = AcademicRequestService.profileFieldsOf(request.getApplicant());
         Map<String, String> fields = new LinkedHashMap<>();
         String title = profile.get("title");
-        if (title != null && documentType != 9) {
+        if (title != null && PositionDocTypes.base(documentType) != PositionDocTypes.WORK_PARTICIPATION) {
             fields.put(documentType == 6 ? "applicant_title" : "title", title);
         }
         putIfPresent(fields, "applicant_name", profile.get("applicant_name"));
@@ -472,6 +542,10 @@ public class PositionRequestService {
             }
             case 4 -> fields.put("affiliation", FACULTY + " " + UNIVERSITY);
             default -> {
+                // ฉบับแยกตามผลงาน: ชื่อผลงานตามแถวในเอกสารที่ 1
+                if (PositionDocTypes.isWorkCopy(documentType)) {
+                    putIfPresent(fields, "title_name", workCopies(request).get(documentType));
+                }
             }
         }
         return fields;
@@ -1445,6 +1519,10 @@ public class PositionRequestService {
         if (!DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, documentType)) {
             return false;
         }
+        // เอกสารที่ 9 กรอกแยกฉบับตามงานวิจัย (PositionDocTypes) — ไม่มีฉบับรวมให้บันทึกแล้ว
+        if (documentType == PositionDocTypes.WORK_PARTICIPATION) {
+            return false;
+        }
         // ก่อนดูว่าเป็นแบบร่าง — ผู้ยื่นลงนามเอกสารของตัวเองได้ตั้งแต่ยังไม่ส่งคำร้อง ถ้าเช็กทีหลัง
         // เอกสารที่ลงนามแล้วถูกเขียนทับได้ (บันทึกร่างอัตโนมัติที่ยิงช้า หรือ POST ตรง)
         if (isDocumentLockedForSigning(request.getId(), documentType)) {
@@ -1507,7 +1585,7 @@ public class PositionRequestService {
         if (request == null || request.getCurrentStatus() == null || request.getCurrentStatus().isDraft()) {
             return sentBack;
         }
-        for (int docType : DocumentFieldOwnership.applicantDocuments(com.ecom.academic.model.SignatureModule.POSITION)) {
+        for (int docType : applicantDocTypes(request)) {
             if (isRevisionRequested(request.getId(), docType) && canApplicantEditDocument(request, docType)) {
                 String note = getRevisionNote(request.getId(), docType);
                 sentBack.put(docType, note != null ? note : "");

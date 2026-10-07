@@ -75,7 +75,8 @@ public class PositionDocumentPreviewController {
     }
 
     public static String getPositionDocTitle(int docType) {
-        return POSITION_DOC_TITLES.getOrDefault(docType, "เอกสาร");
+        return POSITION_DOC_TITLES.getOrDefault(
+                com.ecom.academic.service.PositionDocTypes.base(docType), "เอกสาร");
     }
 
     @PostMapping("/{docType}")
@@ -86,7 +87,7 @@ public class PositionDocumentPreviewController {
             @RequestBody Map<String, String> formData,
             Authentication authentication) {
         // ผู้ยื่นดูตัวอย่างได้เฉพาะเอกสารของตัวเอง ที่เหลือเป็นงานฝั่งเจ้าหน้าที่ (เหมือนเฟส 1)
-        if (isApplicant(authentication) && !PositionRequestService.APPLICANT_DOCS.contains(docType)) {
+        if (isApplicant(authentication) && !PositionRequestService.isApplicantDocType(docType)) {
             logger.warn("Applicant {} attempted to preview admin position document type {}",
                     authentication.getName(), docType);
             return ResponseEntity.status(HttpStatus.FORBIDDEN).build();

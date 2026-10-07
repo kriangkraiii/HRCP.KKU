@@ -79,7 +79,7 @@ public final class DocumentFieldOwnership {
 
     /** เอกสารฉบับนี้เป็นของผู้ยื่นหรือไม่ — ที่ไม่รู้จักถือว่าเป็นของแอดมิน ปลอดภัยไว้ก่อน */
     public static boolean isApplicantDocument(SignatureModule module, int documentType) {
-        return APPLICANT_DOCUMENTS.getOrDefault(module, Set.of()).contains(documentType);
+        return APPLICANT_DOCUMENTS.getOrDefault(module, Set.of()).contains(PositionDocTypes.base(documentType));
     }
 
     /** เอกสารที่ผู้ยื่นเป็นเจ้าของในเฟสนี้ เรียงจากน้อยไปมาก */
@@ -93,7 +93,7 @@ public final class DocumentFieldOwnership {
             return Set.of();
         }
         return ADMIN_FIELDS.getOrDefault(module, Map.of())
-                .getOrDefault(documentType, Set.of());
+                .getOrDefault(PositionDocTypes.base(documentType), Set.of());
     }
 
     /**
@@ -105,7 +105,7 @@ public final class DocumentFieldOwnership {
      */
     public static Set<String> officeFields(SignatureModule module, int documentType) {
         return OFFICE_FIELDS.getOrDefault(module, Map.of())
-                .getOrDefault(documentType, Set.of());
+                .getOrDefault(PositionDocTypes.base(documentType), Set.of());
     }
 
     /**
@@ -128,7 +128,7 @@ public final class DocumentFieldOwnership {
      * ก็เท่ากับไม่ได้ตีกลับ เพราะเอกสารของแอดมินนั้นผู้ยื่นมองไม่เห็นด้วยซ้ำ
      */
     public static boolean isApplicantOwned(SignatureModule module, int documentType) {
-        return APPLICANT_DOCUMENTS.getOrDefault(module, Set.of()).contains(documentType);
+        return APPLICANT_DOCUMENTS.getOrDefault(module, Set.of()).contains(PositionDocTypes.base(documentType));
     }
 
     /**

@@ -161,8 +161,18 @@ public class PositionAdminController {
         }
         // มีเนื้อหาแล้ว (บันทึกหรือส่งลงนามแล้ว) — ใช้เลือกปุ่ม "แก้ไข" กับ "กรอก" และปุ่มดาวน์โหลด
         // สีและป้ายสถานะดู docProgress ซึ่งใช้กติกาเดียวกับทุกหน้า
+        // เอกสารที่ 9 แยกฉบับตามงานวิจัยในเอกสารที่ 1 — แสดงทีละฉบับแทนแถวเดียว (PositionDocTypes)
+        Map<Integer, String> workCopies = positionService.workCopies(request);
+        Map<Integer, String> docRows = new java.util.LinkedHashMap<>();
+        positionService.getAdminDocLabels().forEach((type, label) -> {
+            if (type == com.ecom.academic.service.PositionDocTypes.WORK_PARTICIPATION && !workCopies.isEmpty()) {
+                workCopies.keySet().forEach(copy -> docRows.put(copy, positionService.getDocLabel(copy)));
+            } else {
+                docRows.put(type, label);
+            }
+        });
         Map<Integer, com.ecom.academic.service.DocumentProgress.Stage> docProgress =
-                documentProgress.of(SignatureModule.POSITION, id, positionService.getAdminDocLabels().keySet(),
+                documentProgress.of(SignatureModule.POSITION, id, docRows.keySet(),
                         documents.stream()
                                 .map(d -> new com.ecom.academic.service.DocumentProgress.Row(d.getDocumentType(),
                                         Boolean.TRUE.equals(d.getIsDraft()), d.getJsonData()))
@@ -178,6 +188,7 @@ public class PositionAdminController {
         model.addAttribute("completedDocs", completedDocs);
         model.addAttribute("docProgress", docProgress);
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
+        model.addAttribute("docRows", docRows);
         model.addAttribute("statuses", PositionRequestStatus.values());
         // Only the moves the process allows from where this request stands.
         // Offering the whole list invited exactly the mistake the guard now
@@ -332,6 +343,12 @@ public class PositionAdminController {
         if (request.getCurrentStatus().isDraft()) {
             return "redirect:/admin/position/request/" + id + "?error=still_a_draft";
         }
+        // เอกสารที่ 9 แยกฉบับตามงานวิจัย — เปิดฉบับแรก
+        if (type == com.ecom.academic.service.PositionDocTypes.WORK_PARTICIPATION) {
+            return positionService.workCopies(request).keySet().stream().findFirst()
+                    .map(first -> "redirect:/admin/position/request/" + id + "/document/" + first)
+                    .orElse("redirect:/admin/position/request/" + id);
+        }
 
         List<PositionDocument> existing = positionService.getDocumentsByType(id, type);
         String existingData = existing.isEmpty() ? null : existing.get(0).getJsonData();
@@ -420,7 +437,7 @@ public class PositionAdminController {
         model.addAttribute("docSaved", positionService.getLatestDocumentData(id, type) != null);
         DocumentFormSupport.addCompletenessRules(model, SignatureModule.POSITION, type);
 
-        return "academic/position/admin/doc_form_" + type;
+        return "academic/position/admin/doc_form_" + com.ecom.academic.service.PositionDocTypes.base(type);
     }
 
     @PostMapping("/request/{id}/document/{type}")

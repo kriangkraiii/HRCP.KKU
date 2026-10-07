@@ -100,7 +100,7 @@ public class SignerBriefing {
             int seat = committeeSeat(field);
             return seat == 0 ? Optional.empty() : evaluation(requestId, seat, false);
         }
-        if (module == SignatureModule.POSITION && documentType == 9) {
+        if (module == SignatureModule.POSITION && PositionDocTypes.base(documentType) == PositionDocTypes.WORK_PARTICIPATION) {
             return author(requestId, field.startsWith("firstauthor"));
         }
         return Optional.empty();
@@ -120,7 +120,7 @@ public class SignerBriefing {
             };
             return seat == 0 ? Optional.empty() : evaluation(requestId, seat, true);
         }
-        if (module == SignatureModule.POSITION && documentType == 9
+        if (module == SignatureModule.POSITION && PositionDocTypes.base(documentType) == PositionDocTypes.WORK_PARTICIPATION
                 && (slotKey.equals("first_author") || slotKey.equals("corresponding_author"))) {
             return author(requestId, slotKey.equals("first_author"));
         }

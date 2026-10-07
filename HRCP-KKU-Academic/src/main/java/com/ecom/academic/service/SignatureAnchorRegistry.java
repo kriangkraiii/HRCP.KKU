@@ -150,6 +150,12 @@ public class SignatureAnchorRegistry {
     private record DocKey(SignatureModule module, int documentType) {
     }
 
+    /** ฉบับแยกตามผลงานของเอกสารที่ 9 เฟส 2 ใช้ช่องลงนามของเอกสารที่ 9 ({@link PositionDocTypes}) */
+    private static DocKey key(SignatureModule module, int documentType) {
+        return new DocKey(module, module == SignatureModule.POSITION
+                ? PositionDocTypes.base(documentType) : documentType);
+    }
+
     private static final String APPLICANT = null;
 
     private static final Map<DocKey, List<SignatureSlot>> SLOTS = Map.ofEntries(
@@ -299,7 +305,7 @@ public class SignatureAnchorRegistry {
 
     /** ช่องนี้ต้องเป็นเจ้าหน้าที่ที่กดยืนยันเองหรือไม่ */
     public static boolean isSignedByReviewer(SignatureModule module, int documentType, String slotKey) {
-        return REVIEWER_SIGNED.getOrDefault(new DocKey(module, documentType), java.util.Set.of()).contains(slotKey);
+        return REVIEWER_SIGNED.getOrDefault(key(module, documentType), java.util.Set.of()).contains(slotKey);
     }
 
     /**
@@ -353,22 +359,22 @@ public class SignatureAnchorRegistry {
 
     /** เอกสารที่ชื่อในช่องนี้ถูกเลือกไว้ หรือ null เมื่อเลือกในฉบับนี้เอง */
     public static String nameCarriedFrom(SignatureModule module, int documentType, String nameField) {
-        return CARRIED_NAME_FIELDS.getOrDefault(new DocKey(module, documentType), Map.of()).get(nameField);
+        return CARRIED_NAME_FIELDS.getOrDefault(key(module, documentType), Map.of()).get(nameField);
     }
 
     /** ผู้ลงนามของเอกสารนี้ (บางตำแหน่ง) มาจากชื่อที่เลือกในแบบฟอร์มหรือไม่ */
     public static boolean isSignerNamedInForm(SignatureModule module, int documentType) {
-        return SIGNER_NAME_FIELDS.containsKey(new DocKey(module, documentType));
+        return SIGNER_NAME_FIELDS.containsKey(key(module, documentType));
     }
 
     /** ช่องชื่อผู้ลงนามที่เป็นตัวค้นหาชื่อของเอกสารนี้ — ผู้ลงนามตำแหน่งนั้นคือคนที่เลือกในช่อง */
     public static java.util.Set<String> signerNameFields(SignatureModule module, int documentType) {
-        return SIGNER_NAME_FIELDS.getOrDefault(new DocKey(module, documentType), Map.of()).keySet();
+        return SIGNER_NAME_FIELDS.getOrDefault(key(module, documentType), Map.of()).keySet();
     }
 
     /** ช่องตำแหน่งที่คู่กับช่องชื่อ หรือ null เมื่อไม่มี */
     public static String positionFieldFor(SignatureModule module, int documentType, String nameField) {
-        String field = SIGNER_NAME_FIELDS.getOrDefault(new DocKey(module, documentType), Map.of()).get(nameField);
+        String field = SIGNER_NAME_FIELDS.getOrDefault(key(module, documentType), Map.of()).get(nameField);
         return field == null || field.isEmpty() ? null : field;
     }
 
@@ -391,7 +397,7 @@ public class SignatureAnchorRegistry {
         if (paired != null) {
             return paired;
         }
-        return SIGNER_POSITION_LINES.getOrDefault(new DocKey(module, documentType), Map.of()).get(nameField);
+        return SIGNER_POSITION_LINES.getOrDefault(key(module, documentType), Map.of()).get(nameField);
     }
 
     /** ตำแหน่งลงนามที่ใช้ช่องชื่อนี้ในเอกสารนี้ หรือ null เมื่อไม่ใช่ช่องชื่อผู้ลงนาม */
@@ -408,7 +414,7 @@ public class SignatureAnchorRegistry {
 
     /** ช่องของเอกสารนี้ที่เจ้าหน้าที่ผู้ตรวจลงนามเอง */
     public static java.util.Set<String> reviewerSignedSlots(SignatureModule module, int documentType) {
-        return REVIEWER_SIGNED.getOrDefault(new DocKey(module, documentType), java.util.Set.of());
+        return REVIEWER_SIGNED.getOrDefault(key(module, documentType), java.util.Set.of());
     }
 
     /** The signature positions for a document, in signing order. Empty if unsignable. */
@@ -424,7 +430,7 @@ public class SignatureAnchorRegistry {
      * no Spring lifecycle of its own.
      */
     public static List<SignatureSlot> slotsOf(SignatureModule module, int documentType) {
-        return SLOTS.getOrDefault(new DocKey(module, documentType), List.of())
+        return SLOTS.getOrDefault(key(module, documentType), List.of())
                 .stream()
                 .sorted(java.util.Comparator.comparingInt(SignatureSlot::order))
                 .toList();

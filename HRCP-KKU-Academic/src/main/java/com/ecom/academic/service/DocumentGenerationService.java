@@ -250,10 +250,12 @@ public class DocumentGenerationService {
     /** Phase 2 counterpart of the verification-stamped render. */
     public byte[] generateSignedP2Docx(int documentType, String jsonData,
             List<StampedSignature> signatures, VerificationStamp verification) throws IOException {
+        documentType = PositionDocTypes.base(documentType);
         Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
         aliasFirstRowFields(placeholders);
+        normalizePhase2(documentType, placeholders);
 
         ClassPathResource resource = new ClassPathResource(TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx");
         preprocessPlaceholders(documentType, placeholders);
@@ -269,10 +271,12 @@ public class DocumentGenerationService {
     /** Phase 2 counterpart of {@link #generateSignedDocx(int, String, List, long)}. */
     public byte[] generateSignedP2Docx(int documentType, String jsonData,
             List<StampedSignature> signatures, long signatureHeightEmu) throws IOException {
+        documentType = PositionDocTypes.base(documentType);
         Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
         aliasFirstRowFields(placeholders);
+        normalizePhase2(documentType, placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
@@ -314,10 +318,12 @@ public class DocumentGenerationService {
 
     /** Preview-only (in-memory) for Phase 2 position documents */
     public byte[] generateP2PreviewDocx(int documentType, String jsonData) throws IOException {
+        documentType = PositionDocTypes.base(documentType);
         Map<String, Object> dataMap = parseJsonData(jsonData);
         Map<String, String> placeholders = flattenMap(dataMap, "");
         mapUsedCheckboxes(placeholders);
         aliasFirstRowFields(placeholders);
+        normalizePhase2(documentType, placeholders);
 
         String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
@@ -335,8 +341,11 @@ public class DocumentGenerationService {
         // จะไม่ตรงกับที่ผู้ใช้เห็นในหน้า "ดูตัวอย่างเอกสาร"
         mapUsedCheckboxes(placeholders);
         aliasFirstRowFields(placeholders);
+        // ฉบับแยกตามผลงานใช้เทมเพลตของเอกสารที่ 9 แต่บันทึกไฟล์แยกตามเลขฉบับ
+        int templateType = PositionDocTypes.base(documentType);
+        normalizePhase2(templateType, placeholders);
 
-        String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + documentType + ".docx";
+        String templateFile = TEMPLATE_DIR + "Phase2/p2doc_" + templateType + ".docx";
         ClassPathResource resource = new ClassPathResource(templateFile);
 
         Path outputDir = uploadPaths.dir("academic", "position", String.valueOf(request.getId()));
@@ -345,9 +354,9 @@ public class DocumentGenerationService {
         Path outputFile = outputDir.resolve("p2doc_" + documentType + ".docx");
         String outputPath = uploadPaths.toStored(outputFile);
 
-        preprocessPlaceholders(documentType, placeholders);
+        preprocessPlaceholders(templateType, placeholders);
 
-        byte[] result = processTemplate(resource.getInputStream(), placeholders, documentType);
+        byte[] result = processTemplate(resource.getInputStream(), placeholders, templateType);
 
         Files.write(outputFile, result);
 
@@ -1882,6 +1891,26 @@ public class DocumentGenerationService {
     // Doc 4: Field Name Remapping & Dynamic List Expansion
     // =====================================================================
 
+    /**
+     * เอกสารที่ 9 เฟส 2: ผู้นิพนธ์ร่วมเป็นพร้อมกับผู้ประพันธ์อันดับแรกหรือบรรณกิจไม่ได้ (เอกสารแนบท้ายข้อบังคับ
+     * มข. พ.ศ. 2569 ข้อ 3.1) — ติ๊กผู้นิพนธ์ร่วมไว้ สองช่องแรกพิมพ์เป็นช่องว่าง ช่องที่ไม่ได้ติ๊กพิมพ์เป็นกล่องว่าง
+     */
+    public static void normalizePhase2(int documentType, Map<String, String> placeholders) {
+        if (documentType != PositionDocTypes.WORK_PARTICIPATION) {
+            return;
+        }
+        boolean coauthor = "☑".equals(trimmed(placeholders.get("chk_coauthor")));
+        for (String key : List.of("chk_ firstauthor", "chk_corresp", "chk_coauthor")) {
+            String v = trimmed(placeholders.get(key));
+            boolean ticked = "☑".equals(v) && (key.equals("chk_coauthor") || !coauthor);
+            placeholders.put(key, ticked ? "☑" : "☐");
+        }
+    }
+
+    private static String trimmed(String s) {
+        return s == null ? "" : s.strip();
+    }
+
     /** จุดเดียวสำหรับปรับ placeholder ก่อนแทนค่าลงเทมเพลต */
     private void preprocessPlaceholders(int documentType, Map<String, String> placeholders) {
         if (documentType == 4) {
@@ -1936,7 +1965,7 @@ public class DocumentGenerationService {
      * @param phase2 true for the Phase 2 templates (p2doc_N)
      */
     public boolean templateUsesThaiNumerals(boolean phase2, int documentType) {
-        String file = TEMPLATE_DIR + (phase2 ? "Phase2/p2doc_" : "doc_") + documentType + ".docx";
+        String file = TEMPLATE_DIR + (phase2 ? "Phase2/p2doc_" + PositionDocTypes.base(documentType) : "doc_" + documentType) + ".docx";
         return thaiNumeralTemplates.computeIfAbsent(file, f -> {
             try (ZipInputStream zis = new ZipInputStream(new ClassPathResource(f).getInputStream())) {
                 ZipEntry entry;

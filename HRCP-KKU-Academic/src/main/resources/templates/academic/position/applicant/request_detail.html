@@ -164,7 +164,35 @@
                             </span>
                         </div>
                     </div>
-                    <div class="card-body d-flex flex-wrap gap-2 align-items-center">
+                    <!--/* เอกสารที่ 9: หนึ่งฉบับต่องานวิจัยในเอกสารที่ 1 (PositionDocTypes) */-->
+                    <div class="card-body" th:if="${entry.key == 9}">
+                        <div th:if="${workCopies == null or workCopies.isEmpty()}" class="text-muted">
+                            <i class="fas fa-circle-info me-1"></i> กรอกงานวิจัยในเอกสารที่ 1 ก่อน — ระบบจะสร้างเอกสารนี้ให้หนึ่งฉบับต่องานวิจัยหนึ่งเรื่อง
+                        </div>
+                        <div th:each="w, ws : ${workCopies}" class="d-flex flex-wrap gap-2 align-items-center py-2"
+                             th:classappend="${!ws.last} ? 'border-bottom'" th:with="cs=${docProgress.get(w.key)}">
+                            <div class="flex-grow-1 me-2">
+                                <div class="fw-semibold">งานวิจัยที่ [[${w.key - 900}]]</div>
+                                <div class="small text-muted text-truncate" th:text="${w.value}" th:title="${w.value}">ชื่อผลงาน</div>
+                            </div>
+                            <span th:if="${unsignedSigDocs != null and completedDocs.contains(w.key) and unsignedSigDocs.contains(w.key)}"
+                                  class="badge bg-warning-subtle text-warning border border-warning-subtle">
+                                <i class="fas fa-pen-nib me-1"></i>รอผู้ยื่นลงนาม
+                            </span>
+                            <span class="badge" th:classappend="${cs.badgeClass}"><i th:class="|fas ${cs.icon} me-1|"></i>[[${cs.label}]]</span>
+                            <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${w.key}"
+                               class="btn btn-sm" th:classappend="${completedDocs.contains(w.key)} ? 'btn-outline-success' : 'btn-academic'">
+                                <i th:class="${completedDocs.contains(w.key)} ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>
+                                [[${completedDocs.contains(w.key)} ? 'แก้ไข/ลงนาม' : 'กรอกเอกสาร']]
+                            </a>
+                            <a th:if="${completedDocs.contains(w.key)}"
+                               th:href="'/user/position/request/' + ${request.id} + '/document/' + ${w.key} + '/download?format=pdf'"
+                               class="btn btn-sm btn-outline-danger" title="ดาวน์โหลด PDF">
+                                <i class="fas fa-file-pdf me-1"></i> PDF
+                            </a>
+                        </div>
+                    </div>
+                    <div class="card-body d-flex flex-wrap gap-2 align-items-center" th:unless="${entry.key == 9}">
                         <button type="button"
                             class="btn btn-outline-info btn-doc-preview"
                             th:data-preview-url="|/user/position/request/${request.id}/document/${entry.key}/download?format=pdf|"
@@ -194,7 +222,7 @@
                 <ul class="mb-0 mt-1">
                     <li th:each="e : ${sentBackDocs}">
                         <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${e.key}"
-                           th:text="'เอกสาร: ' + ${docLabels.get(e.key)}">เอกสาร</a>
+                           th:text="'เอกสาร: ' + ${@positionRequestService.getDocLabel(e.key)}">เอกสาร</a>
                         <span th:if="${!#strings.isEmpty(e.value)}" th:text="' — เหตุผล: ' + ${e.value}"></span>
                     </li>
                 </ul>
@@ -206,7 +234,7 @@
                     <h4 class="mb-0"><i class="fas fa-check-double"></i> ตรวจสอบและส่งคำร้อง</h4>
                 </div>
                 <div class="card-body">
-                    <th:block th:if="${#lists.size(completedDocs) >= #lists.size(applicantDocs) and applicantSignaturesComplete}">
+                    <th:block th:if="${allDocsCompleted and applicantSignaturesComplete}">
                         <div class="alert alert-success mb-3">
                             <i class="fas fa-check-circle me-2"></i> เอกสารและลายเซ็นครบถ้วน พร้อมส่งคำร้อง
                         </div>
@@ -215,7 +243,7 @@
                             <i class="fas fa-paper-plane me-1"></i> ส่งคำร้อง
                         </button>
                     </th:block>
-                    <th:block th:if="${#lists.size(completedDocs) >= #lists.size(applicantDocs) and !applicantSignaturesComplete}">
+                    <th:block th:if="${allDocsCompleted and !applicantSignaturesComplete}">
                         <div class="alert alert-warning mb-3">
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             กรุณาลงนามเอกสารที่มีสถานะ "รอผู้ยื่นลงนาม" ให้ครบก่อนส่งคำร้อง
@@ -224,11 +252,11 @@
                             <i class="fas fa-lock me-1"></i> รอดำเนินการลงนาม
                         </button>
                     </th:block>
-                    <th:block th:unless="${#lists.size(completedDocs) >= #lists.size(applicantDocs)}">
+                    <th:block th:unless="${allDocsCompleted}">
                         <div class="alert alert-warning mb-3">
                             <i class="fas fa-exclamation-triangle me-2"></i>
                             กรุณากรอกเอกสารให้ครบทุกรายการก่อนส่งคำร้อง
-                            (<span th:text="${#lists.size(completedDocs)}"></span>/<span th:text="${#lists.size(applicantDocs)}"></span>)
+                            (<span th:text="${completedRequiredCount}"></span>/<span th:text="${#lists.size(applicantDocs)}"></span>)
                         </div>
                         <button class="btn btn-secondary btn-lg" disabled>
                             <i class="fas fa-paper-plane me-1"></i> ส่งคำร้อง
