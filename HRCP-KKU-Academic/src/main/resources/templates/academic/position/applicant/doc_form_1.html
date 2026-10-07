@@ -143,7 +143,7 @@
                                 </thead>
                                 <tbody id="eduRows">
                                     <tr>
-                                        <td><input type="text" name="education_no_1" class="form-control form-control-sm" value="๑.๓.๑"></td>
+                                        <td><input type="text" name="education_no_1" class="form-control form-control-sm" value="๑.๓.๑" readonly></td>
                                         <td><input type="text" name="education_degree_1" class="form-control form-control-sm" required></td>
                                         <td><input type="text" name="education_major_1" class="form-control form-control-sm" required></td>
                                         <td><input type="text" name="education_year_1" class="form-control form-control-sm" required></td>
@@ -232,7 +232,7 @@
                     <div class="card-body">
                         <div id="otherPosRows">
                             <div class="row g-2 mb-2">
-                                <div class="col-1"><input type="text" name="other_position_no_1" class="form-control form-control-sm" value="๑"></div>
+                                <div class="col-1"><input type="text" name="other_position_no_1" class="form-control form-control-sm" value="๑" readonly></div>
                                 <div class="col-10"><input type="text" name="other_position_1" class="form-control form-control-sm" placeholder="ตำแหน่ง สังกัด วัน เดือน ปี"></div>
                             </div>
                         </div>
@@ -243,7 +243,7 @@
                         </button>
                         <div id="speakerRows">
                             <div class="row g-2 mb-2">
-                                <div class="col-1"><input type="text" name="international_speaker_last_5_years_no_1" class="form-control form-control-sm" value="๑"></div>
+                                <div class="col-1"><input type="text" name="international_speaker_last_5_years_no_1" class="form-control form-control-sm" value="๑" readonly></div>
                                 <div class="col-10"><input type="text" name="international_speaker_last_5_years_1" class="form-control form-control-sm" placeholder="รายละเอียดการเป็นวิทยากร"></div>
                             </div>
                         </div>
@@ -637,7 +637,7 @@
                 counters.edu++;
                 const n = counters.edu;
                 const row = document.createElement('tr');
-                row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm" value="๑.๓.${toThaiNum(n)}"></td>
+                row.innerHTML = `<td><input type="text" name="education_no_${n}" class="form-control form-control-sm" value="๑.๓.${toThaiNum(n)}" readonly></td>
                     <td><input type="text" name="education_degree_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_major_${n}" class="form-control form-control-sm"></td>
                     <td><input type="text" name="education_year_${n}" class="form-control form-control-sm"></td>
@@ -666,7 +666,7 @@
                 const div = document.createElement('div');
                 div.className = 'border rounded p-3 mb-2';
                 div.innerHTML = `<div class="row g-2">
-                    <div class="col-1"><input type="text" name="${namePrefix}_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
+                    <div class="col-1"><input type="text" name="${namePrefix}_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}" readonly></div>
                     <div class="col-5"><input type="text" name="${namePrefix}_${n}" class="form-control form-control-sm" placeholder="ชื่อผลงาน"></div>
                     <div class="col-4">
                         <div class="form-check form-check-inline">
@@ -690,7 +690,7 @@
                 const n = counters.otherPos;
                 const div = document.createElement('div');
                 div.className = 'row g-2 mb-2';
-                div.innerHTML = `<div class="col-1"><input type="text" name="other_position_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
+                div.innerHTML = `<div class="col-1"><input type="text" name="other_position_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}" readonly></div>
                     <div class="col-10"><input type="text" name="other_position_${n}" class="form-control form-control-sm" placeholder="ตำแหน่ง สังกัด วัน เดือน ปี"></div>
                     <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".row"><i class="fas fa-times"></i></button></div>`;
                 document.getElementById('otherPosRows').appendChild(div);
@@ -701,7 +701,7 @@
                 const n = counters.speaker;
                 const div = document.createElement('div');
                 div.className = 'row g-2 mb-2';
-                div.innerHTML = `<div class="col-1"><input type="text" name="international_speaker_last_5_years_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}"></div>
+                div.innerHTML = `<div class="col-1"><input type="text" name="international_speaker_last_5_years_no_${n}" class="form-control form-control-sm" value="${toThaiNum(n)}" readonly></div>
                     <div class="col-10"><input type="text" name="international_speaker_last_5_years_${n}" class="form-control form-control-sm" placeholder="รายละเอียด"></div>
                     <div class="col-1"><button type="button" class="btn btn-sm btn-outline-danger" data-action="removeClosest" data-closest=".row"><i class="fas fa-times"></i></button></div>`;
                 document.getElementById('speakerRows').appendChild(div);
@@ -985,6 +985,14 @@
                         groups.get(key).push(el);
                     });
                     groups.forEach(list => list.forEach((el, i) => { el.value = thai(i + 1); }));
+                    // ลำดับของแถวที่เพิ่มด้วยปุ่มเพิ่มแถว — ระบบเรียงให้ แก้เองไม่ได้
+                    const numbered = { education_no_: '๑.๓.', other_position_no_: '', international_speaker_last_5_years_no_: '' };
+                    Object.keys(numbered).forEach(prefix => {
+                        document.querySelectorAll(`input[name^="${prefix}"]`).forEach((el, i) => {
+                            el.readOnly = true;
+                            el.value = numbered[prefix] + thai(i + 1);
+                        });
+                    });
                 }
                 document.addEventListener('click', () => setTimeout(renumber));
                 renumber();

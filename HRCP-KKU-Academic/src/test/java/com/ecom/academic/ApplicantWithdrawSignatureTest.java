@@ -291,5 +291,26 @@ class ApplicantWithdrawSignatureTest extends AbstractFlowTest {
             assertThat(mvc.perform(get(url).with(as(applicant))).andReturn().getResponse().getContentAsString())
                     .doesNotContain("ถอนลายเซ็นเพื่อแก้ไข");
         }
+
+        @Test
+        @DisplayName("เฟส 2 เซ็นแล้ว: ฟอร์มล็อก บอกให้ถอนลายเซ็นก่อนแก้ — ช่องที่สร้างทีหลังก็ล็อกด้วย")
+        void positionFormLocksOnceSignedAndPointsToWithdraw() throws Exception {
+            PositionRequest request = data.positionRequest(applicant, PositionRequestStatus.DRAFT, null);
+            String json = "{\"applicant_name\":\"สมชาย ใจดี\"}";
+            data.positionDocument(request, 3, json);
+            var created = signatureWorkflow.createEnvelope(SignatureModule.POSITION, request.getId(), 3,
+                    "เอกสารที่ 3", json, List.of(new SignerAssignment("applicant", applicant.getId())),
+                    null, applicant, ActorContext.none());
+            assertThat(created.error()).isNull();
+            sign(applicantStep(created.request()), applicant);
+
+            assertThat(positionService.canApplicantEditDocument(request, 3)).isFalse();
+            String page = mvc.perform(get("/user/position/request/" + request.getId() + "/document/3")
+                    .with(as(applicant))).andReturn().getResponse().getContentAsString();
+            assertThat(page)
+                    .contains("เอกสารถูกล็อก")
+                    .contains("กรุณากด \"ถอนลายเซ็นเพื่อแก้ไข\"")
+                    .contains("MutationObserver");
+        }
     }
 }

@@ -148,6 +148,26 @@ class PositionApplicantProfileLockTest extends AbstractFlowTest {
     }
 
     @Test
+    @DisplayName("สถานะในเอกสารที่ 2 ตามประเภทบุคลากรในเอกสารที่ 1 ของผลประเมินการสอนที่เลือก")
+    void doc2StatusFollowsEvaluationDoc1() throws Exception {
+        data.academicDocument(linked, 1, "{\"employee_type\":\"ข้าราชการ\"}");
+
+        assertThat(formData(2)).containsEntry("status", "ข้าราชการ");
+        String html = mvc.perform(get("/user/position/request/" + request.getId() + "/document/2")
+                .with(as(applicant)))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).containsPattern("name=\"status\" class=\"form-control\" readonly");
+
+        mvc.perform(post("/api/draft/position/" + request.getId() + "/2")
+                .with(as(applicant)).with(csrf())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"status\":\"พนักงานมหาวิทยาลัย\"}"))
+                .andExpect(status().isOk());
+        assertThat(positionService.getLatestDocumentData(request.getId(), 2))
+                .containsEntry("status", "ข้าราชการ");
+    }
+
+    @Test
     @DisplayName("ตำแหน่งปัจจุบัน หน่วยงาน และสาขาวิชาตามเอกสารที่ 1 ถูกล็อก")
     void derivedFieldsAreLocked() throws Exception {
         data.positionDocument(request, 1, "{\"major\":\"วิทยาการคอมพิวเตอร์\"}");

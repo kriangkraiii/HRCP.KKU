@@ -468,12 +468,23 @@ public class PositionRequestService {
             case 2 -> {
                 Map<String, String> doc1 = getLatestDocumentData(request.getId(), 1);
                 putIfPresent(fields, "major", doc1 == null ? null : doc1.get("major"));
+                putIfPresent(fields, "status", evaluationEmployeeType(request));
             }
             case 4 -> fields.put("affiliation", FACULTY + " " + UNIVERSITY);
             default -> {
             }
         }
         return fields;
+    }
+
+    /** ประเภทบุคลากรที่เลือกในเอกสารที่ 1 ของผลประเมินการสอนที่ผูกกับคำร้องนี้ */
+    private String evaluationEmployeeType(PositionRequest request) {
+        if (request.getLinkedEvaluation() == null) {
+            return null;
+        }
+        Map<String, String> evaluationDoc1 = academicRequestService
+                .getLatestDocumentData(request.getLinkedEvaluation().getId(), 1);
+        return evaluationDoc1 == null ? null : evaluationDoc1.get("employee_type");
     }
 
     private static void putIfPresent(Map<String, String> fields, String key, String value) {
@@ -927,10 +938,8 @@ public class PositionRequestService {
         }
         Map<String, String> doc2 = getLatestDocumentData(request.getId(), 2);
         String status = doc2 == null ? null : doc2.get("status");
-        if ((status == null || status.isBlank()) && request.getLinkedEvaluation() != null) {
-            Map<String, String> evaluationDoc1 = academicRequestService
-                    .getLatestDocumentData(request.getLinkedEvaluation().getId(), 1);
-            status = evaluationDoc1 == null ? null : evaluationDoc1.get("employee_type");
+        if (status == null || status.isBlank()) {
+            status = evaluationEmployeeType(request);
         }
         return "ข้าราชการ".equals(status == null ? null : status.trim());
     }

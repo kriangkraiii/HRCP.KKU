@@ -30,8 +30,14 @@
         </form>
     </div>
     <div th:if="${editable != null and !editable}" class="alert alert-secondary">
-        <i class="fas fa-lock"></i> เอกสารนี้แก้ไขไม่ได้ในขณะนี้
-        <div class="small text-muted mt-1">หากต้องแก้ไข กรุณาติดต่อเจ้าหน้าที่เพื่อส่งเอกสารกลับมา</div>
+        <th:block th:if="${signaturePanel != null and signaturePanel.applicantMayWithdraw}">
+            <i class="fas fa-lock"></i> <strong>เอกสารถูกล็อก</strong> เนื่องจากลงนามแล้ว
+            <div class="small text-muted mt-1">หากต้องแก้ไข กรุณากด "ถอนลายเซ็นเพื่อแก้ไข" ที่แผงลงนามด้านล่างก่อน เมื่อแก้เสร็จต้องลงนามใหม่</div>
+        </th:block>
+        <th:block th:unless="${signaturePanel != null and signaturePanel.applicantMayWithdraw}">
+            <i class="fas fa-lock"></i> เอกสารนี้แก้ไขไม่ได้ในขณะนี้
+            <div class="small text-muted mt-1">หากต้องแก้ไข กรุณาติดต่อเจ้าหน้าที่เพื่อส่งเอกสารกลับมา</div>
+        </th:block>
     </div>
 </div>
 
@@ -44,10 +50,19 @@
             var form = document.getElementById(/*[[${formId}]]*/ '');
             if (!form) return;
 
-            form.querySelectorAll('input, select, textarea, button').forEach(function (el) {
-                if (el.dataset.action === 'docPreviewShow') return; // ดูตัวอย่างยังทำได้
-                el.disabled = true;
-            });
+            function lock(root) {
+                var fields = root.matches && root.matches('input, select, textarea, button') ? [root] : [];
+                if (root.querySelectorAll) fields = fields.concat([].slice.call(root.querySelectorAll('input, select, textarea, button')));
+                fields.forEach(function (el) {
+                    if (el.dataset.action === 'docPreviewShow') return; // ดูตัวอย่างยังทำได้
+                    el.disabled = true;
+                });
+            }
+            lock(form);
+            // ช่องที่สร้างทีหลัง (แถวที่เติมจากข้อมูลที่บันทึกไว้, select_to_datalist.js) ต้องล็อกด้วย
+            new MutationObserver(function (mutations) {
+                mutations.forEach(function (m) { m.addedNodes.forEach(lock); });
+            }).observe(form, { childList: true, subtree: true });
             form.removeAttribute('data-auto-draft');
         })();
 

@@ -42,14 +42,17 @@
                                        th:readonly="${lockedFields != null and lockedFields.containsKey('applicant_name')}">
                             </div>
                             <div class="col-md-4">
-                                <label class="form-label">สถานะ</label>
-                                <select name="status" class="form-select">
+                                <label class="form-label">ประเภทบุคลากร <span class="text-danger">*</span></label>
+                                <!--/* ตามประเภทบุคลากรในเอกสารที่ 1 ของผลประเมินการสอนที่เลือก */-->
+                                <input th:if="${lockedFields != null and lockedFields.containsKey('status')}" type="text" name="status" class="form-control" readonly
+                                       th:value="${lockedFields['status']}" title="ตามเอกสารที่ 1 ของผลประเมินการสอนที่เลือก แก้ไขไม่ได้">
+                                <select th:unless="${lockedFields != null and lockedFields.containsKey('status')}" name="status" class="form-select">
                                     <option value="ข้าราชการ">ข้าราชการ</option>
                                     <option value="พนักงานมหาวิทยาลัย" selected>พนักงานมหาวิทยาลัย</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">ตำแหน่งปัจจุบัน</label>
+                                <label class="form-label">ตำแหน่งปัจจุบัน <span class="text-danger">*</span></label>
                                 <input type="text" name="current_position" class="form-control" placeholder="เช่น อาจารย์">
                             </div>
                             <div class="col-md-6">
@@ -66,7 +69,7 @@
                                 <div class="form-text" th:if="${request.targetPosition != null}">กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้</div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">สาขาวิชา</label>
+                                <label class="form-label">สาขาวิชา <span class="text-danger">*</span></label>
                                 <input type="text" name="major" class="form-control" placeholder="เช่น วิทยาการคอมพิวเตอร์">
                             </div>
                         </div>
