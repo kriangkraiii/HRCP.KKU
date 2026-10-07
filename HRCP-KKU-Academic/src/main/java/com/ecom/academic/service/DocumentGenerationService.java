@@ -1853,6 +1853,9 @@ public class DocumentGenerationService {
 
     /** จุดเดียวสำหรับปรับ placeholder ก่อนแทนค่าลงเทมเพลต */
     private void preprocessPlaceholders(int documentType, Map<String, String> placeholders) {
+        if (documentType == 4) {
+            dropUntickedDoc4Details(placeholders);
+        }
         if (documentType == 5 || documentType == 4) {
             preprocessDoc5Placeholders(placeholders);
         }
@@ -2005,6 +2008,28 @@ public class DocumentGenerationService {
             }
             placeholders.put("index", "1. ");
             placeholders.put("research_title", titleValue.toString());
+        }
+    }
+
+    /**
+     * เอกสารที่ 4 เฟส 2: รายละเอียดของข้อที่ไม่ได้ติ๊กไม่พิมพ์ — ชื่อวิทยานิพนธ์ของระดับที่ไม่ได้ติ๊ก
+     * และจำนวน/รายชื่อ/การศึกษาเพิ่มเติม เมื่อไม่ได้เลือก "เป็นส่วนหนึ่งของการศึกษา"
+     * (ฟอร์มซ่อนช่องเหล่านี้ แต่ค่าที่เคยกรอกไว้ยังอยู่ในข้อมูล)
+     */
+    static void dropUntickedDoc4Details(Map<String, String> placeholders) {
+        if (!"✓".equals(plainTick(placeholders.get("master_thesis")))) {
+            placeholders.remove("master_thesis_title");
+        }
+        if (!"✓".equals(plainTick(placeholders.get("doctoral_thesis")))) {
+            placeholders.remove("doctoral_thesis_title");
+        }
+        if (!"✓".equals(plainTick(placeholders.get("academic_paper_is_part_edu")))) {
+            placeholders.keySet().removeIf(k -> k.startsWith("paper_title_")
+                    || k.equals("academic_paper_count") || k.equals("academic_paper_additional_detail"));
+        }
+        if (!"✓".equals(plainTick(placeholders.get("research_is_part_edu")))) {
+            placeholders.keySet().removeIf(k -> k.startsWith("research_title_")
+                    || k.equals("research_count") || k.equals("research_additional_detail"));
         }
     }
 

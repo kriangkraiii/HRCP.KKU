@@ -97,7 +97,7 @@
                                     <input class="form-check-input" type="checkbox" name="master_thesis" value="✔" id="chkMaster">
                                     <label class="form-check-label" for="chkMaster">ระดับปริญญาโท</label>
                                 </div>
-                                <div class="ms-4 mb-3">
+                                <div class="ms-4 mb-3" data-show-when="#chkMaster">
                                     <label class="form-label">ชื่อวิทยานิพนธ์ปริญญาโท</label>
                                     <input type="text" name="master_thesis_title" class="form-control">
                                 </div>
@@ -107,7 +107,7 @@
                                     <input class="form-check-input" type="checkbox" name="doctoral_thesis" value="✔" id="chkDoc">
                                     <label class="form-check-label" for="chkDoc">ระดับปริญญาเอก</label>
                                 </div>
-                                <div class="ms-4">
+                                <div class="ms-4" data-show-when="#chkDoc">
                                     <label class="form-label">ชื่อวิทยานิพนธ์ปริญญาเอก</label>
                                     <input type="text" name="doctoral_thesis_title" class="form-control">
                                 </div>
@@ -131,7 +131,7 @@
                         </div>
                         <input type="hidden" name="academic_paper_is_part_edu" value="">
 
-                        <div class="row g-3" id="academicPaperSection">
+                        <div class="row g-3" id="academicPaperSection" data-show-when="#apIsPart">
                             <div class="col-md-4">
                                 <label class="form-label">จำนวนเรื่อง</label>
                                 <input type="number" name="academic_paper_count" class="form-control" min="0" value="0" readonly>
@@ -171,7 +171,7 @@
                         </div>
                         <input type="hidden" name="research_is_part_edu" value="">
 
-                        <div class="row g-3">
+                        <div class="row g-3" id="researchSection" data-show-when="#resIsPart">
                             <div class="col-md-4">
                                 <label class="form-label">จำนวนเรื่อง</label>
                                 <input type="number" name="research_count" class="form-control" min="0" value="0" readonly>
@@ -289,6 +289,22 @@
                 });
             });
 
+            // ช่องที่ต้องกรอกเฉพาะเมื่อติ๊ก — ชื่อวิทยานิพนธ์ และรายการผลงานเมื่อ "เป็นส่วนหนึ่งของการศึกษา"
+            // ข้อที่ไม่ได้ติ๊กไม่ต้องกรอก ระบบไม่พิมพ์ค่าของข้อนั้นลงเอกสาร (DocumentGenerationService)
+            function syncConditionalSections() {
+                document.querySelectorAll('#doc4Form [data-show-when]').forEach(section => {
+                    const trigger = document.querySelector(section.dataset.showWhen);
+                    const show = !!(trigger && trigger.checked);
+                    section.hidden = !show;
+                    section.querySelectorAll('input[type="text"]').forEach(el => { el.required = show; });
+                });
+            }
+            document.addEventListener('change', e => {
+                if (e.target.matches('#chkMaster, #chkDoc, [name="academic_paper_status"], [name="research_status"]')) {
+                    syncConditionalSections();
+                }
+            });
+
             document.addEventListener('DOMContentLoaded', function() {
                 const existingData = /*[[${existingData}]]*/ null;
                 if (existingData) {
@@ -339,6 +355,7 @@
                 // Initial count update
                 updatePaperCount();
                 updateResearchCount();
+                syncConditionalSections();
             });
         </script>
 

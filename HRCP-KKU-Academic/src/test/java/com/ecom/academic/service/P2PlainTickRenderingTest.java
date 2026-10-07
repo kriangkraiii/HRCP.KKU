@@ -71,4 +71,25 @@ class P2PlainTickRenderingTest {
         assertThat(xml.split(">✓</w:t>", -1)).hasSize(5);
         assertThat(xml.split(BLANK_TICK, -1)).hasSize(3);
     }
+
+    @Test
+    @DisplayName("เอกสาร 4: ข้อที่ไม่ได้ติ๊กไม่พิมพ์รายละเอียด — ชื่อวิทยานิพนธ์ และรายชื่อผลงานเมื่อไม่เป็นส่วนหนึ่งของการศึกษา")
+    void doc4SkipsDetailsOfUntickedItems() throws IOException {
+        String xml = documentXml(service.generateP2PreviewDocx(4, """
+                {"master_thesis":"","master_thesis_title":"วิทยานิพนธ์โทที่ไม่ได้ติ๊ก",
+                 "doctoral_thesis":"✔","doctoral_thesis_title":"วิทยานิพนธ์เอก",
+                 "academic_paper_not_part_edu":"✔","academic_paper_is_part_edu":"",
+                 "academic_paper_count":"1","paper_title_1":"บทความที่ไม่ใช่ส่วนหนึ่ง",
+                 "academic_paper_additional_detail":"รายละเอียดบทความ",
+                 "research_not_part_edu":"","research_is_part_edu":"✔",
+                 "research_count":"1","research_title_1":"งานวิจัยที่เป็นส่วนหนึ่ง",
+                 "research_additional_detail":"รายละเอียดงานวิจัย"}"""));
+
+        assertThat(xml).doesNotContain("วิทยานิพนธ์โทที่ไม่ได้ติ๊ก")
+                .doesNotContain("บทความที่ไม่ใช่ส่วนหนึ่ง")
+                .doesNotContain("รายละเอียดบทความ");
+        assertThat(xml).contains("วิทยานิพนธ์เอก")
+                .contains("งานวิจัยที่เป็นส่วนหนึ่ง")
+                .contains("รายละเอียดงานวิจัย");
+    }
 }
