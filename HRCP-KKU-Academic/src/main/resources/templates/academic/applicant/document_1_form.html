@@ -223,17 +223,27 @@
                             </div>
                         </div>
                         <!--/* ประกาศ มข. 1669/2569 ข้อ 7 — ต้องมีชั่วโมงสอนประจำวิชาในหลักสูตรอย่างน้อย 1 รายวิชา
-                             ไม่น้อยกว่า 3 หน่วยกิต หรือ 45 ชั่วโมงสอนในระบบทวิภาคต่อปี — เซิร์ฟเวอร์ตรวจซ้ำ (DocumentCompleteness) */-->
+                             เทียบค่าไม่น้อยกว่า 3 หน่วยกิต หรือ 45 ชั่วโมงสอนในระบบทวิภาคต่อปี
+                             นับชั่วโมงที่ผู้ยื่นสอนเอง ไม่ใช่หน่วยกิตของวิชา — เซิร์ฟเวอร์ตรวจซ้ำ (DocumentCompleteness) */-->
                         <div class="row mb-3">
                             <div class="col-md-4">
-                                <label class="form-label" for="teachingCredits">ชั่วโมงสอนของท่านในรายวิชานี้ (เทียบหน่วยกิต) <span class="text-danger">*</span></label>
-                                <input type="number" name="teaching_credits" id="teachingCredits" class="form-control"
-                                    th:value="${dData != null ? dData.getOrDefault('teaching_credits', '') : ''}"
-                                    min="3" max="30" step="0.5" inputmode="decimal" placeholder="เช่น 3" required>
+                                <label class="form-label" for="courseCredits">หน่วยกิตของรายวิชา <span class="text-danger">*</span></label>
+                                <input type="number" name="course_credits" id="courseCredits" class="form-control"
+                                    th:value="${dData != null ? dData.getOrDefault('course_credits', '') : ''}"
+                                    min="0.5" max="30" step="0.5" inputmode="decimal" placeholder="เช่น 3" required>
                             </div>
-                            <div class="col-md-8 d-flex align-items-end">
-                                <small class="text-muted">ต้องไม่น้อยกว่า 3 หน่วยกิต หรือ 45 ชั่วโมงสอนในระบบทวิภาคต่อปี
-                                    (15 ชั่วโมงสอน = 1 หน่วยกิต) ตามประกาศมหาวิทยาลัยขอนแก่น ฉบับที่ 1669/2569 ข้อ 7</small>
+                            <div class="col-md-4">
+                                <label class="form-label" for="teachingHours">ชั่วโมงที่ท่านสอนเองในรายวิชานี้ (ชม./ปีการศึกษา) <span class="text-danger">*</span></label>
+                                <input type="number" name="teaching_hours" id="teachingHours" class="form-control"
+                                    th:value="${dData != null ? dData.getOrDefault('teaching_hours', '') : ''}"
+                                    min="45" max="1000" step="0.5" inputmode="decimal" placeholder="เช่น 45" required>
+                                <div class="form-text" id="teachingHoursEquiv"></div>
+                                <div class="invalid-feedback">ต้องไม่น้อยกว่า 45 ชั่วโมงต่อปี (เทียบ 3 หน่วยกิต)</div>
+                            </div>
+                            <div class="col-md-4 d-flex align-items-end">
+                                <small class="text-muted">นับเฉพาะชั่วโมงที่ท่านสอนเอง (กรณีสอนร่วม นับเฉพาะส่วนของท่าน)
+                                    ต้องไม่น้อยกว่า 45 ชั่วโมงสอนในระบบทวิภาคต่อปี หรือเทียบ 3 หน่วยกิต (15 ชั่วโมงสอน = 1 หน่วยกิต)
+                                    ตามประกาศมหาวิทยาลัยขอนแก่น ฉบับที่ 1669/2569 ข้อ 7</small>
                             </div>
                         </div>
 
@@ -429,6 +439,26 @@
                             check();
                         })();
 
+                        // === ชั่วโมงที่สอนเอง: แสดงหน่วยกิตที่เทียบได้ และเตือนทันทีเมื่อต่ำกว่า 45 ชม./ปี ===
+                        (function() {
+                            var input = document.getElementById('teachingHours');
+                            var equiv = document.getElementById('teachingHoursEquiv');
+                            if (!input || !equiv) return;
+                            function check() {
+                                var hours = parseFloat(input.value);
+                                if (isNaN(hours)) {
+                                    equiv.textContent = '';
+                                    input.classList.remove('is-invalid');
+                                    return;
+                                }
+                                equiv.textContent = 'เทียบเท่า ' + (Math.round(hours / 15 * 100) / 100) + ' หน่วยกิต';
+                                input.classList.toggle('is-invalid', hours < 45);
+                            }
+                            input.addEventListener('input', check);
+                            input.addEventListener('blur', check);
+                            check();
+                        })();
+
                         // === Form Validation ===
                         (function() {
                             var form = document.getElementById('doc1Form');
@@ -477,6 +507,14 @@
                                     errors.push('ภาค/ปีการศึกษา');
                                 } else if (!/^[1-3]\/\d{4}$/.test(academicYear.value.trim())) {
                                     errors.push('ภาค/ปีการศึกษา ต้องอยู่ในรูปแบบ เช่น 1/2569');
+                                }
+                                var courseCredits = form.querySelector('[name="course_credits"]');
+                                var teachingHours = form.querySelector('[name="teaching_hours"]');
+                                if (!courseCredits || !(parseFloat(courseCredits.value) > 0)) errors.push('หน่วยกิตของรายวิชา');
+                                if (!teachingHours || !teachingHours.value.trim()) {
+                                    errors.push('ชั่วโมงที่ท่านสอนเองในรายวิชานี้');
+                                } else if (!(parseFloat(teachingHours.value) >= 45)) {
+                                    errors.push('ชั่วโมงที่ท่านสอนเองต้องไม่น้อยกว่า 45 ชั่วโมงต่อปี');
                                 }
 
                                 if (errors.length > 0) {

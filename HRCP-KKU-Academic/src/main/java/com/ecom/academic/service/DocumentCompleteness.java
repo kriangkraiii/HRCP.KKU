@@ -251,11 +251,26 @@ public final class DocumentCompleteness {
     /** ชั่วโมงสอนประจำวิชาขั้นต่ำ เทียบหน่วยกิตระบบทวิภาค (ประกาศ มข. 1669/2569 ข้อ 7) */
     public static final int MIN_TEACHING_CREDITS = 3;
 
+    /**
+     * ประกาศ มข. 1669/2569 ข้อ 7: "ชั่วโมงสอนที่เทียบค่าไม่น้อยกว่า ๓ หน่วยกิต หรือ ๔๕ ชั่วโมงสอน ในระบบทวิภาคต่อปี"
+     * — นับชั่วโมงที่ผู้ยื่นสอนเองในวิชานั้นต่อปีการศึกษา ไม่ใช่หน่วยกิตของวิชา (สอนร่วมได้ส่วนเดียว)
+     */
+    public static final int MIN_TEACHING_HOURS_PER_YEAR = 45;
+
     private static boolean meetsTeachingLoad(String credits) {
+        return atLeast(credits, MIN_TEACHING_CREDITS);
+    }
+
+    private static boolean atLeast(String number, double min) {
+        Double value = parseNumber(number);
+        return value != null && value >= min;
+    }
+
+    private static Double parseNumber(String number) {
         try {
-            return Double.parseDouble(com.ecom.util.ThaiDateUtil.toArabicDigits(credits).trim()) >= MIN_TEACHING_CREDITS;
+            return Double.parseDouble(com.ecom.util.ThaiDateUtil.toArabicDigits(number).trim());
         } catch (NumberFormatException e) {
-            return false;
+            return null;
         }
     }
 
@@ -265,7 +280,7 @@ public final class DocumentCompleteness {
     /**
      * ขอ ศ. ไม่ผ่านการประเมินการสอน ภาระสอนจึงไม่ได้ตรวจที่เฟส 1 — ข้อบังคับ 2569 ข้อ 16.3.2 ยังกำหนดให้มีชั่วโมงสอน
      * ประจำวิชาใดวิชาหนึ่งเทียบได้ไม่น้อยกว่า 3 หน่วยกิตระบบทวิภาค ตารางงานสอนเก็บเป็นชั่วโมง/สัปดาห์ จึงถือ 3 ชม./สัปดาห์
-     * (45 ชั่วโมงต่อภาค ตามที่ประกาศ 1669/2569 ข้อ 7 เทียบไว้) ตรวจเมื่อกรอกชั่วโมงแล้วอย่างน้อยหนึ่งแถว
+     * (1 หน่วยกิตทฤษฎี = 1 ชม./สัปดาห์) ตรวจเมื่อกรอกชั่วโมงแล้วอย่างน้อยหนึ่งแถว
      */
     private static List<String> professorTeachingLoadProblems(Map<String, String> data) {
         if (data == null || !"ศาสตราจารย์".equals(data.get("target_position"))) {
@@ -308,8 +323,21 @@ public final class DocumentCompleteness {
         if (year != null && !year.isBlank() && !SEMESTER_YEAR.matcher(year.trim()).matches()) {
             problems.add("ภาค/ปีการศึกษา ต้องกรอกเป็น ภาค/ปี เช่น 1/2569");
         }
+        String courseCredits = data == null ? null : data.get("course_credits");
+        Double courseCreditValue = courseCredits == null ? null : parseNumber(courseCredits);
+        if (courseCredits != null && !courseCredits.isBlank() && (courseCreditValue == null || courseCreditValue <= 0)) {
+            problems.add("หน่วยกิตของรายวิชาต้องเป็นตัวเลขมากกว่า 0");
+        }
+        String hours = data == null ? null : data.get("teaching_hours");
         String credits = data == null ? null : data.get("teaching_credits");
-        if (credits != null && !credits.isBlank() && !meetsTeachingLoad(credits)) {
+        if (hours != null && !hours.isBlank()) {
+            if (!atLeast(hours, MIN_TEACHING_HOURS_PER_YEAR)) {
+                problems.add("ชั่วโมงที่ท่านสอนเองในรายวิชานี้ต้องไม่น้อยกว่า " + MIN_TEACHING_HOURS_PER_YEAR
+                        + " ชั่วโมงต่อปี (เทียบ " + MIN_TEACHING_CREDITS
+                        + " หน่วยกิตระบบทวิภาค) ตามประกาศ มข. 1669/2569 ข้อ 7");
+            }
+        } else if (credits != null && !credits.isBlank() && !meetsTeachingLoad(credits)) {
+            // ร่างที่บันทึกก่อนแยกช่อง — มีแต่ชั่วโมงสอนแบบเทียบหน่วยกิต
             problems.add("ชั่วโมงสอนในรายวิชาต้องไม่น้อยกว่า " + MIN_TEACHING_CREDITS
                     + " หน่วยกิต (45 ชั่วโมงสอน) ตามประกาศ มข. 1669/2569 ข้อ 7");
         }

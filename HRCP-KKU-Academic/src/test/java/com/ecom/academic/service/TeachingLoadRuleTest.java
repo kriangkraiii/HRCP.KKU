@@ -15,7 +15,30 @@ class TeachingLoadRuleTest {
     }
 
     @Test
-    @DisplayName("3 หน่วยกิตขึ้นไปผ่าน ต่ำกว่านั้นส่งลงนามไม่ได้ ช่องที่ยังว่างไม่นับ (ด่านช่องว่างอยู่ที่อื่น)")
+    @DisplayName("ชั่วโมงที่สอนเองต้องได้ 45 ชม./ปีขึ้นไป ไม่ว่าวิชาจะกี่หน่วยกิต — สอนร่วมวิชา 3 หน่วยกิตแค่ 15 ชม. ไม่ผ่าน")
+    void ownTeachingHoursMustReachFortyFiveAYear() {
+        assertThat(problems("{\"course_credits\":\"3\",\"teaching_hours\":\"45\"}")).isEmpty();
+        assertThat(problems("{\"course_credits\":\"2\",\"teaching_hours\":\"๖๐\"}"))
+                .as("ประกาศนับชั่วโมงต่อปี ไม่ได้กำหนดหน่วยกิตของวิชา").isEmpty();
+        assertThat(problems("{\"course_credits\":\"3\",\"teaching_hours\":\"15\"}"))
+                .singleElement().asString().contains("45 ชั่วโมงต่อปี");
+        assertThat(problems("{\"course_credits\":\"3\",\"teaching_hours\":\"\"}")).isEmpty();
+    }
+
+    @Test
+    @DisplayName("ช่องชั่วโมงใหม่ใช้ตัดสินก่อนช่องหน่วยกิตเดิม และหน่วยกิตของวิชาต้องเป็นตัวเลขมากกว่า 0")
+    void hoursTakePrecedenceOverLegacyCredits() {
+        assertThat(problems("{\"teaching_credits\":\"3\",\"teaching_hours\":\"30\"}"))
+                .singleElement().asString().contains("45 ชั่วโมงต่อปี");
+        assertThat(problems("{\"teaching_credits\":\"1\",\"teaching_hours\":\"45\"}")).isEmpty();
+        assertThat(problems("{\"course_credits\":\"0\",\"teaching_hours\":\"45\"}"))
+                .singleElement().asString().contains("หน่วยกิตของรายวิชา");
+        assertThat(problems("{\"course_credits\":\"สาม\",\"teaching_hours\":\"45\"}"))
+                .singleElement().asString().contains("หน่วยกิตของรายวิชา");
+    }
+
+    @Test
+    @DisplayName("ร่างเก่าที่มีแต่ช่องเทียบหน่วยกิต: 3 หน่วยกิตขึ้นไปผ่าน ต่ำกว่านั้นส่งลงนามไม่ได้ ช่องที่ยังว่างไม่นับ")
     void creditsMustReachThree() {
         assertThat(problems("{\"academic_year\":\"1/2569\",\"teaching_credits\":\"3\"}")).isEmpty();
         assertThat(problems("{\"teaching_credits\":\"๔.๕\"}")).isEmpty();
