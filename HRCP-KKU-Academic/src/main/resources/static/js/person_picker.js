@@ -7,6 +7,7 @@
  *   - เก็บรหัสบัญชีในช่องซ่อน "<name>__signer" (DocumentFieldOwnership.SIGNER_ID_SUFFIX) คู่กับชื่อ
  *     คนที่เลือกคือผู้ลงนามตำแหน่งนั้น (SignatureWorkflowService.signersNamedInForm)
  *   - เติมช่องตำแหน่ง (data-position-field) จากตำแหน่งที่บันทึกไว้ในบัญชี — ยังแก้เองได้
+ *     ยกเว้นช่องตำแหน่งที่มี data-picker-fill (readonly): ค่ามาจากคนที่เลือกเท่านั้น
  *   - data-allow-external: เพิ่มผู้ลงนามจากนอก มข. ด้วยอีเมลได้ (ExternalSignerService)
  *   - data-picker-hint: คำอธิบายของช่อง แทนข้อความตั้งต้น (เช่น ช่องที่คนที่เลือกไปลงนามในเอกสารฉบับอื่น)
  *     แสดงเป็นปุ่ม (i) ข้างป้ายกำกับ (info_tip.js) — บรรทัดใต้ช่องเหลือไว้แค่คำเตือนและปุ่มเพิ่มผู้ลงนามภายนอก
@@ -328,10 +329,13 @@
         this.input.value = person ? person.name : '';
         this.hidden.value = person ? String(person.userId) : '';
         this.selectedName = this.input.value;
-        if (person && person.position && this.positionField) {
+        if (this.positionField) {
             var pos = (this.form || document).querySelector('[name="' + this.positionField + '"]');
-            if (pos && !pos.disabled && !pos.readOnly) {
-                pos.value = person.position;
+            // data-picker-fill: ช่องตำแหน่งที่พิมพ์เองไม่ได้ (readonly) ค่ามาจากคนที่เลือกเท่านั้น
+            // เลือกคนใหม่ก็เปลี่ยนตาม ล้างชื่อก็ล้างตำแหน่ง — ตำแหน่งต้องเป็นของคนในช่องชื่อเสมอ
+            var pickerOwned = pos && pos.hasAttribute('data-picker-fill');
+            if (pos && !pos.disabled && (pickerOwned || (!pos.readOnly && person && person.position))) {
+                pos.value = person && person.position ? person.position : '';
                 pos.dispatchEvent(new Event('input', { bubbles: true }));
             }
         }

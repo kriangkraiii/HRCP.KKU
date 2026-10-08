@@ -354,11 +354,25 @@
             // ถ้ายังเหลือช่องให้กรอกอยู่ ปุ่มบันทึกต้องกดได้ ไม่งั้นกรอกเลขที่หนังสือแล้วบันทึกไม่ได้
             var nothingToFill = editable.size === 0;
 
+            // ปุ่มที่อยู่ติดช่องที่เจ้าหน้าที่กรอกได้ (เช่นปุ่มเลือกคน) — ปุ่มอื่นแก้ข้อมูลของผู้ยื่น
+            function besideEditableField(el) {
+                var box = el.closest('.input-group, td, [class*="col-"]');
+                if (!box) return false;
+                return Array.prototype.some.call(box.querySelectorAll('[name]'), function (f) {
+                    return editable.has(f.name);
+                });
+            }
+
             function lock(el) {
                 if (el.tagName === 'BUTTON') {
                     // ดูตัวอย่างไม่ได้แก้อะไร — ระหว่างเวียนยิ่งต้องดูได้ (เรนเดอร์จากซองที่ลงนามแล้ว)
                     if (el.matches('[data-action="docPreviewShow"]')) return;
-                    if (nothingToFill) el.disabled = true;
+                    // ปุ่มบันทึกของเจ้าหน้าที่ (และกล่องยืนยันออกเลข) — ปิดเฉพาะตอนไม่มีอะไรให้กรอก
+                    var saves = el.type === 'submit' || el.hasAttribute('data-office-save') || el.closest('.modal');
+                    if (nothingToFill || (!saves && !besideEditableField(el))) {
+                        // ปุ่มเพิ่ม/ลบแถว: ช่องล็อกแล้วแต่ปุ่มยังกดได้ จะเพิ่มหรือลบผลงานของผู้ยื่นได้
+                        el.disabled = true;
+                    }
                     return;
                 }
                 // ช่องติ๊กที่ไม่มี name แต่เขียนค่าลงช่องซ่อนผ่าน data-target (.chk-toggle เช่นคอลัมน์

@@ -64,7 +64,10 @@
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">ตำแหน่ง</label>
-                                <input type="text" name="dean_position" class="form-control" placeholder="เช่น คณบดีวิทยาลัยการคอมพิวเตอร์">
+                                <!--/* ตำแหน่งมาจากบัญชีของคนที่เลือกในช่องชื่อ (person_picker.js) พิมพ์เองไม่ได้ */-->
+                                <input type="text" name="dean_position" class="form-control bg-light" readonly data-picker-fill
+                                       placeholder="ระบบเติมให้เมื่อเลือกชื่อจากรายชื่อ" title="ตำแหน่งตามบัญชีของผู้ที่เลือก แก้ไขไม่ได้">
+                                <div class="form-text">ถ้าตำแหน่งไม่ถูกต้อง ให้แก้ที่ข้อมูลบุคลากรของผู้นั้น</div>
                             </div>
                         </div>
                     </div>
