@@ -67,6 +67,7 @@ public class IncrementalSigningService {
     /** Lazily: the office-value resolver sits on top of the request services, which sit on top of us. */
     private final org.springframework.beans.factory.ObjectProvider<com.ecom.academic.service.OfficeFieldResolver> officeFields;
     private final com.ecom.academic.repository.SignatureRequestRepository envelopes;
+    private final LongTermValidation longTerm;
     private final boolean enabled;
     private final Set<String> documents;
     private final PdfIncrementService pdf = new PdfIncrementService(ThaiText.sarabun());
@@ -77,6 +78,7 @@ public class IncrementalSigningService {
             DocumentWorkflowConfigService workflowConfig,
             org.springframework.beans.factory.ObjectProvider<com.ecom.academic.service.OfficeFieldResolver> officeFields,
             com.ecom.academic.repository.SignatureRequestRepository envelopes,
+            LongTermValidation longTerm,
             @Value("${app.esign.pdf-mode:incremental}") String mode,
             @Value("${app.esign.incremental-docs:ACADEMIC:1,ACADEMIC:2,ACADEMIC:3,ACADEMIC:4,ACADEMIC:5,ACADEMIC:7,ACADEMIC:8,ACADEMIC:9,POSITION:1,POSITION:2,POSITION:3,POSITION:4,POSITION:6,POSITION:7,POSITION:8,POSITION:9}") String documents) {
         this.renderer = renderer;
@@ -84,6 +86,7 @@ public class IncrementalSigningService {
         this.workflowConfig = workflowConfig;
         this.officeFields = officeFields;
         this.envelopes = envelopes;
+        this.longTerm = longTerm;
         this.enabled = "incremental".equalsIgnoreCase(mode.trim());
         this.documents = new LinkedHashSet<>();
         for (String d : documents.split(",")) {
@@ -337,6 +340,8 @@ public class IncrementalSigningService {
 
         String why = reason != null ? reason
                 : "ลงนามในตำแหน่ง \"" + (step.getRoleLabel() != null ? step.getRoleLabel() : slot.roleLabel()) + "\"";
+        // ตราประทับเวลาจากหน่วยงานรับรองเวลา (เมื่อตั้งค่าไว้) — ลายมือชื่อยังตรวจผ่านหลังใบรับรองหมดอายุ
+        signer = longTerm.prepare(signer);
         byte[] next = pdf.sign(current, new PdfIncrementService.SignSpec(signer, sigField, own, locked, certify,
                 imagePng, printedName, why, LOCATION, calendar(step.getSignedAt()), nameField(slot)));
         int no = revisions.append(envelope, current, next, SignedPdfRevision.Kind.SIGN, step.getId(),
@@ -345,6 +350,7 @@ public class IncrementalSigningService {
         // หนังสือที่พิมพ์หลายฉบับในไฟล์เดียว: ฉบับที่ตัดแยกต้องมีใบรับรองของผู้ลงนามด้วย และกุญแจมีอยู่ตอนนี้เท่านั้น
         renderer.storeSignedLetters(envelope, next, no, sigField, signer, printedName, why, LOCATION,
                 calendar(step.getSignedAt()));
+        appendValidationData(envelope, next, step.getSigner() != null ? step.getSigner().getId() : null);
         return no;
     }
 
@@ -603,12 +609,27 @@ public class IncrementalSigningService {
         }
         byte[] current = latest(envelope);
         LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Bangkok"));
+        signer = longTerm.prepare(signer);
         byte[] next = pdf.sign(current, new PdfIncrementService.SignSpec(signer, BasePdfBuilder.LOCK_FIELD, Map.of(),
                 null, false, null, printedName, "ออกเลขที่หนังสือและปิดเอกสาร", LOCATION, calendar(now)));
         int no = revisions.append(envelope, current, next, SignedPdfRevision.Kind.LOCK, null,
                 actor != null ? actor.getId() : null, signer.fingerprint());
+        // DSS เพิ่มได้หลังลายมือชื่อปิดเอกสาร — ไม่ใช่การแก้เนื้อหาหรือช่องในแบบฟอร์ม
+        appendValidationData(envelope, next, actor != null ? actor.getId() : null);
         envelope.setPdfLockedAt(now);
         return no;
+    }
+
+    /**
+     * สายใบรับรองและสถานะ ณ ตอนนี้ของลายมือชื่อที่เพิ่งลง ต่อท้ายเป็น revision ของตัวเอง (PAdES LT)
+     *
+     * <p>ทำในธุรกรรมเดียวกับลายมือชื่อ — ตั้งไว้ว่าต้องมีแต่ดึงไม่ได้ ลายมือชื่อนี้ย้อนกลับทั้งหมด
+     */
+    private void appendValidationData(SignatureRequest envelope, byte[] signed, Integer actorUserId) throws IOException {
+        byte[] withData = longTerm.validationDataFor(signed);
+        if (withData != null) {
+            revisions.append(envelope, signed, withData, SignedPdfRevision.Kind.LTV, null, actorUserId, null);
+        }
     }
 
     /** The current signed PDF of an INCREMENTAL envelope. */

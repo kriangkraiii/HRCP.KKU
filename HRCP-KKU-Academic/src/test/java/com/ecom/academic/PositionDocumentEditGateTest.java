@@ -123,6 +123,40 @@ class PositionDocumentEditGateTest extends AbstractFlowTest {
                     positionService.findById(request.getId()).orElseThrow(), APPLICANT_DOC)).isTrue();
             assertThat(positionService.getRevisionNote(request.getId(), APPLICANT_DOC))
                     .isEqualTo("ชื่อรายวิชาไม่ตรงกับที่ลงทะเบียน");
+            // สถานะคำร้องบอกว่าลูกอยู่ที่ผู้ยื่น — ไม่ค้างที่ "รับคำร้อง"
+            assertThat(positionService.findById(request.getId()).orElseThrow().getCurrentStatus())
+                    .isEqualTo(PositionRequestStatus.REVISION_REQUESTED);
+        }
+
+        @Test
+        @DisplayName("คำร้องที่ส่งกลับไว้ก่อนหน้า ถูกปรับเป็นส่งแก้ไขย้อนหลัง — ที่ไม่มีอะไรค้างไม่ถูกแตะ")
+        void earlierSendBacksAreBackfilled() {
+            PositionRequest sentBack = requestWith(PositionRequestStatus.DOCUMENT_RECEIVED);
+            positionService.openDocumentForRevision(sentBack.getId(), APPLICANT_DOC, "แก้สาขา");
+            PositionRequest untouched = requestWith(PositionRequestStatus.DOCUMENT_RECEIVED);
+
+            positionService.backfillRevisionRequested();
+
+            assertThat(positionService.findById(sentBack.getId()).orElseThrow().getCurrentStatus())
+                    .isEqualTo(PositionRequestStatus.REVISION_REQUESTED);
+            assertThat(positionService.findById(untouched.getId()).orElseThrow().getCurrentStatus())
+                    .isEqualTo(PositionRequestStatus.DOCUMENT_RECEIVED);
+        }
+
+        @Test
+        @DisplayName("ยังแก้ไม่เสร็จ สถานะยังเป็นส่งแก้ไข — เสร็จครบแล้วกลับเข้าขั้นตรวจสอบเอกสาร")
+        void theRequestReturnsToVerificationOnceNothingIsOutstanding() {
+            PositionRequest request = requestWith(PositionRequestStatus.REVISION_REQUESTED);
+            positionService.openDocumentForRevision(request.getId(), APPLICANT_DOC, "แก้สาขา");
+
+            positionService.resumeAfterRevision(request.getId(), applicant);
+            assertThat(positionService.findById(request.getId()).orElseThrow().getCurrentStatus())
+                    .isEqualTo(PositionRequestStatus.REVISION_REQUESTED);
+
+            PositionRequest done = requestWith(PositionRequestStatus.REVISION_REQUESTED);
+            positionService.resumeAfterRevision(done.getId(), applicant);
+            assertThat(positionService.findById(done.getId()).orElseThrow().getCurrentStatus())
+                    .isEqualTo(PositionRequestStatus.DOCUMENT_VERIFICATION);
         }
 
         @Test

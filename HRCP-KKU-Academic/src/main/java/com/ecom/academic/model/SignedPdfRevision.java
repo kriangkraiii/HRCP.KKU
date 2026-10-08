@@ -30,7 +30,9 @@ public class SignedPdfRevision {
         /** Values filled by the office, unsigned. */
         FILL,
         /** The final signature that freezes the document. */
-        LOCK
+        LOCK,
+        /** Certificates and their status for the signature before it (PAdES LT, document security store). */
+        LTV
     }
 
     @Id

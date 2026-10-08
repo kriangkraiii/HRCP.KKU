@@ -22,6 +22,8 @@ public class DocumentProgress {
         NOT_STARTED("รอกรอก", "fa-clock", ""),
         DRAFT("ร่าง", "fa-pencil", "dgi-draft"),
         AWAITING_SIGNATURE("รอลงนาม", "fa-pen-nib", "dgi-draft"),
+        /** ส่วนของผู้ยื่นลงนามแล้ว ผู้ลงนามที่เหลือรอเจ้าหน้าที่ตรวจแล้วส่งต่อ */
+        AWAITING_FORWARD("รอเจ้าหน้าที่ส่งต่อ", "fa-paper-plane", "dgi-draft"),
         AWAITING_OFFICE("รอออกเลข", "fa-hashtag", "dgi-draft"),
         DONE("เสร็จแล้ว", "fa-check", "dgi-completed");
 
@@ -41,6 +43,14 @@ public class DocumentProgress {
 
         public String getIcon() {
             return icon;
+        }
+
+        /**
+         * ป้ายในหน้าของผู้ยื่นขณะคำร้องยังไม่ส่ง — เจ้าหน้าที่ส่งต่อได้หลังผู้ยื่นส่งคำร้องเท่านั้น
+         * "รอลงนาม" หรือ "รอเจ้าหน้าที่" ทำให้ผู้ยื่นนึกว่าต้องรอคนอื่น ทั้งที่ขั้นถัดไปคือตัวเขาเอง
+         */
+        public String getLabelBeforeSubmit() {
+            return this == AWAITING_FORWARD ? "รอยื่นคำร้อง" : label;
         }
 
         /** คลาสของกล่องเอกสารในหน้าคำร้อง (dgi-completed = เขียว, dgi-draft = ส้ม) */
@@ -103,6 +113,9 @@ public class DocumentProgress {
             return Stage.DRAFT;
         }
         boolean needsSignature = !SignatureAnchorRegistry.slotsOf(module, type).isEmpty();
+        if (needsSignature && signatureWorkflow.awaitsStaffRelease(module, requestId, type)) {
+            return Stage.AWAITING_FORWARD;
+        }
         if (needsSignature && !(signatureWorkflow.isSigningComplete(module, requestId, type)
                 && !signatureWorkflow.awaitsMoreSigners(module, requestId, type))) {
             return Stage.AWAITING_SIGNATURE;

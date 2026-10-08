@@ -1575,10 +1575,75 @@ public class PositionRequestService {
     }
 
     /**
+     * เจ้าหน้าที่ส่งเอกสารกลับให้แก้ — คำร้องเป็น "ส่งแก้ไข" ลูกอยู่ที่ผู้ยื่น
+     *
+     * <p>ไม่ส่งอีเมลสถานะ: การส่งกลับแจ้งผู้ยื่นพร้อมเหตุผลของเอกสารแต่ละฉบับอยู่แล้ว
+     * ({@code SignatureNotifier.notifyResignRequested}) ส่งกลับหลายฉบับ สถานะเปลี่ยนครั้งเดียว
+     * ขั้นที่ส่งกลับไม่ได้ตาม flow (เช่น หลังรับรองมติแล้ว) สถานะคงเดิม เอกสารยังถูกส่งกลับตามปกติ
+     */
+    @Transactional
+    public void markRevisionRequested(Long requestId, int documentType, UserDtls admin, String reason) {
+        PositionRequest request = requestRepository.findById(requestId).orElse(null);
+        if (request == null || !request.getCurrentStatus().canMoveTo(PositionRequestStatus.REVISION_REQUESTED)) {
+            return;
+        }
+        updateStatus(requestId, PositionRequestStatus.REVISION_REQUESTED, admin,
+                "ส่งกลับให้แก้ไขเอกสารที่ " + docNumber(documentType)
+                        + (reason != null && !reason.isBlank() ? " — " + reason.trim() : ""),
+                false);
+    }
+
+    /**
+     * คำร้องที่ถูกส่งกลับก่อนการส่งกลับจะเปลี่ยนสถานะ ({@link #markRevisionRequested}) — ยังมีเอกสารค้าง
+     * แต่สถานะยังเป็นขั้นเดิม ปรับเป็น "ส่งแก้ไข" ให้ตรงกับคำร้องที่ส่งกลับหลังจากนี้
+     *
+     * <p>รันซ้ำได้: คำร้องที่เป็น "ส่งแก้ไข" แล้วหรือไม่มีเอกสารค้างไม่ถูกแตะ ขั้นที่ flow ไม่ให้ส่งกลับก็ไม่แตะ
+     * ไม่ส่งอีเมล — ผู้ยื่นได้รับแจ้งเรื่องเอกสารที่ส่งกลับไปแล้วตั้งแต่ตอนนั้น
+     *
+     * @return จำนวนคำร้องที่ปรับสถานะ
+     */
+    @Transactional
+    public int backfillRevisionRequested() {
+        int moved = 0;
+        for (PositionRequestStatus status : PositionRequestStatus.values()) {
+            if (!status.canMoveTo(PositionRequestStatus.REVISION_REQUESTED)) {
+                continue;
+            }
+            for (PositionRequest request : requestRepository.findByStatus(status)) {
+                // ค้างจริงเท่านั้น: ยังลงนามใหม่ไม่ครบ หรือผู้ยื่นยังต้องแก้ — ที่ยื่นการแก้ไขแล้วไม่มีเหตุการณ์
+                // ไหนพากลับออกจาก "ส่งแก้ไข" อีก ถ้าย้ายเข้าไปจะค้างอยู่ตรงนั้น
+                if (resignBlocker(request.getId()) == null && !revisionProgress(request).isActionRequired()) {
+                    continue;
+                }
+                updateStatus(request.getId(), PositionRequestStatus.REVISION_REQUESTED, null,
+                        "อัพเดตย้อนหลัง: มีเอกสารที่ส่งกลับให้แก้ไขค้างอยู่", false);
+                moved++;
+            }
+        }
+        return moved;
+    }
+
+    /**
+     * เอกสารที่ส่งกลับแก้และลงนามใหม่ครบทุกช่องแล้ว — กลับเข้าขั้นตรวจสอบเอกสาร (Flow ข้อ 22 NO → 19)
+     *
+     * <p>ยังมีฉบับที่ค้าง (ผู้ยื่นยังไม่แก้ หรือผู้ลงนามคนอื่นยังไม่ลงนามซ้ำ) ก็ยังเป็น "ส่งแก้ไข"
+     * — {@link #updateStatus} กันไว้ด้วย {@code resignBlocker} อยู่แล้ว ตรงนี้แค่ไม่ไปชนมัน
+     */
+    @Transactional
+    public void resumeAfterRevision(Long requestId, UserDtls changedBy) {
+        PositionRequest request = requestRepository.findById(requestId).orElse(null);
+        if (request == null || request.getCurrentStatus() != PositionRequestStatus.REVISION_REQUESTED
+                || resignBlocker(requestId) != null || revisionProgress(request).isActionRequired()) {
+            return;
+        }
+        updateStatus(requestId, PositionRequestStatus.DOCUMENT_VERIFICATION, changedBy,
+                "อัพเดตอัตโนมัติ: แก้ไขและลงนามเอกสารที่ส่งกลับครบแล้ว", false);
+    }
+
+    /**
      * เอกสารที่เจ้าหน้าที่ส่งกลับให้ผู้ยื่นแก้ และผู้ยื่นยังแก้/ลงนามใหม่ไม่เสร็จ → เหตุผล ("" ถ้าไม่ได้ระบุ)
      *
-     * <p>สถานะคำร้องไม่เปลี่ยนตอนส่งกลับ (ยังเป็น "รับคำร้อง" ฯลฯ) ผู้ยื่นจึงรู้ได้จากรายการนี้เท่านั้น
-     * ใช้กฎเดียวกับประตูแก้ไขเอกสาร: ลงนามใหม่แล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
+     * <p>ใช้กฎเดียวกับประตูแก้ไขเอกสาร: ลงนามใหม่แล้วเอกสารถูกล็อก จึงหลุดจากรายการเอง
      */
     public java.util.Map<Integer, String> sentBackDocuments(PositionRequest request) {
         java.util.Map<Integer, String> sentBack = new java.util.LinkedHashMap<>();
@@ -1686,6 +1751,7 @@ public class PositionRequestService {
         docs.forEach(d -> d.setRevisionSubmittedAt(now));
         documentRepository.saveAll(docs);
         logDocumentEdit(request, documentType, null, applicant, PositionDocumentEditLog.EditAction.REVISION_SUBMITTED);
+        resumeAfterRevision(request.getId(), applicant);
         return null;
     }
 

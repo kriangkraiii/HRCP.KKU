@@ -160,7 +160,7 @@
                                 <i class="fas fa-pen-nib me-1"></i>รอผู้ยื่นลงนาม
                             </span>
                             <span class="badge fs-6" th:classappend="${stage.badgeClass}">
-                                <i th:class="|fas ${stage.icon} me-1|"></i>[[${stage.label}]]
+                                <i th:class="|fas ${stage.icon} me-1|"></i>[[${request.currentStatus.draft} ? ${stage.labelBeforeSubmit} : ${stage.label}]]
                             </span>
                         </div>
                     </div>
@@ -169,6 +169,21 @@
                         <div th:if="${workCopies == null or workCopies.isEmpty()}" class="text-muted">
                             <i class="fas fa-circle-info me-1"></i> กรอกงานวิจัยในเอกสารที่ 1 ก่อน — ระบบจะสร้างเอกสารนี้ให้หนึ่งฉบับต่องานวิจัยหนึ่งเรื่อง
                         </div>
+                        <!--/* งานวิจัยเกิน 3 เรื่อง: ยุบรายการไว้ แสดงสรุปจำนวนฉบับในแต่ละขั้น กดดูรายละเอียดเมื่อต้องการ */-->
+                        <th:block th:with="manyWorks=${workCopies != null and workCopies.size() > 3}">
+                        <div th:if="${manyWorks}" class="d-flex align-items-center gap-2 flex-wrap">
+                            <span class="fw-semibold">งานวิจัย [[${workCopies.size()}]] เรื่อง</span>
+                            <span th:each="st : ${workCopyStages}" class="badge" th:classappend="${st.key.badgeClass}">
+                                <i th:class="|fas ${st.key.icon} me-1|"></i>[[${request.currentStatus.draft} ? ${st.key.labelBeforeSubmit} : ${st.key.label}]] [[${st.value}]]
+                            </span>
+                            <button type="button" class="btn btn-sm btn-outline-secondary ms-auto work-copy-toggle"
+                                    data-bs-toggle="collapse" data-bs-target="#workCopyList"
+                                    aria-expanded="false" aria-controls="workCopyList">
+                                <span class="when-collapsed">ดูรายละเอียด</span><span class="when-expanded">ซ่อนรายละเอียด</span>
+                                <i class="fas fa-chevron-down ms-1"></i>
+                            </button>
+                        </div>
+                        <div id="workCopyList" th:classappend="${manyWorks} ? 'collapse mt-2 border-top'">
                         <!--/* ชื่อผลงานยาว (citation เต็ม) — ตัดเหลือสองบรรทัด ชื่อเต็มดูได้ที่ tooltip
                              ปุ่มรวมเป็นกลุ่มเดียวชิดขวา จอแคบจึงลงมาอยู่ใต้ชื่อพร้อมกันทั้งกลุ่ม */-->
                         <div th:each="w, ws : ${workCopies}" class="work-copy-row py-2"
@@ -182,7 +197,7 @@
                                       class="badge bg-warning-subtle text-warning border border-warning-subtle">
                                     <i class="fas fa-pen-nib me-1"></i>รอผู้ยื่นลงนาม
                                 </span>
-                                <span class="badge" th:classappend="${cs.badgeClass}"><i th:class="|fas ${cs.icon} me-1|"></i>[[${cs.label}]]</span>
+                                <span class="badge" th:classappend="${cs.badgeClass}"><i th:class="|fas ${cs.icon} me-1|"></i>[[${request.currentStatus.draft} ? ${cs.labelBeforeSubmit} : ${cs.label}]]</span>
                                 <button type="button"
                                     class="btn btn-sm btn-outline-info btn-doc-preview"
                                     th:data-preview-url="|/user/position/request/${request.id}/document/${w.key}/download?format=pdf|"
@@ -202,6 +217,8 @@
                                 </a>
                             </div>
                         </div>
+                        </div>
+                        </th:block>
                     </div>
                     <div class="card-body d-flex flex-wrap gap-2 align-items-center" th:unless="${entry.key == 9}">
                         <button type="button"
@@ -383,6 +400,11 @@
                 .work-copy-row { flex-direction: column; align-items: stretch; }
                 .work-copy-actions { justify-content: flex-start; min-width: 0; flex-wrap: wrap; }
             }
+            /* ปุ่มยุบ/ขยายรายการงานวิจัย — ข้อความและลูกศรตามสถานะที่ Bootstrap ตั้งให้ */
+            .work-copy-toggle[aria-expanded="true"] .when-collapsed,
+            .work-copy-toggle[aria-expanded="false"] .when-expanded { display: none; }
+            .work-copy-toggle .fa-chevron-down { transition: transform .2s; }
+            .work-copy-toggle[aria-expanded="true"] .fa-chevron-down { transform: rotate(180deg); }
             .step-indicator {
                 width: 36px; height: 36px; border-radius: 50%;
                 background: #f0f0f0; color: #999;

@@ -189,6 +189,17 @@ public class PositionAdminController {
         model.addAttribute("docProgress", docProgress);
         model.addAttribute("docLabels", positionService.getAdminDocLabels());
         model.addAttribute("docRows", docRows);
+        // เอกสารที่ 9 เกิน 3 ฉบับ: ยุบแถวรายฉบับไว้ใต้แถวสรุป (จำนวนฉบับในแต่ละขั้น) กดดูรายละเอียดเมื่อต้องการ
+        model.addAttribute("workCopyKeys", workCopies.keySet());
+        model.addAttribute("firstWorkCopy", workCopies.isEmpty() ? null : workCopies.keySet().iterator().next());
+        model.addAttribute("manyWorkCopies", workCopies.size() > 3);
+        model.addAttribute("workCopyOverall", com.ecom.academic.service.DocumentProgress.weakest(
+                workCopies.keySet().stream().map(docProgress::get).toList()));
+        model.addAttribute("workCopyStages", workCopies.keySet().stream()
+                .map(docProgress::get)
+                .collect(java.util.stream.Collectors.groupingBy(s -> s,
+                        () -> new java.util.EnumMap<>(com.ecom.academic.service.DocumentProgress.Stage.class),
+                        java.util.stream.Collectors.counting())));
         model.addAttribute("statuses", PositionRequestStatus.values());
         // Only the moves the process allows from where this request stands.
         // Offering the whole list invited exactly the mistake the guard now
@@ -406,6 +417,9 @@ public class PositionAdminController {
 
         boolean lockedForSigning = signatureWorkflow.isDocumentLocked(SignatureModule.POSITION, id, type);
         model.addAttribute("lockedForSigning", lockedForSigning);
+        // ช่องที่ระบบดึงมา — อ่านอย่างเดียว (saveDocument กับ auto-draft เขียนทับซ้ำอีกชั้น)
+        model.addAttribute("lockedFields", type == 7 && !lockedForSigning
+                ? autoFillHelper.doc7LockedFields(request) : Map.of());
         model.addAttribute("signingComplete", lockedForSigning
                 && signatureWorkflow.isSigningComplete(SignatureModule.POSITION, id, type));
         // Role-specific lists so each signer dropdown offers the right people.
@@ -521,6 +535,11 @@ public class PositionAdminController {
             // ส่วนเอกสารของแอดมินเองรวมกับของเดิม เพื่อให้ช่องติ๊กที่ไม่ได้ติ๊กไม่ถูกล้างทิ้ง
             formData = DocumentFieldOwnership.merge(SignatureModule.POSITION, type, true, formData,
                     positionService.getLatestDocumentData(id, type));
+            if (type == 7) {
+                // ช่องที่ระบบดึงมาแก้จากหน้าเว็บไม่ได้ — ค่าที่ส่งมาทางอื่นก็ไม่มีผล
+                formData = new java.util.LinkedHashMap<>(formData);
+                formData.putAll(autoFillHelper.doc7LockedFields(request));
+            }
 
             String jsonData = objectMapper.writeValueAsString(formData);
             String label = positionService.getDocLabel(type);
@@ -614,6 +633,7 @@ public class PositionAdminController {
         if (DocumentFieldOwnership.isApplicantDocument(SignatureModule.POSITION, type)) {
             positionService.openDocumentForRevision(id, type, reason);
         }
+        positionService.markRevisionRequested(id, type, admin, reason);
         positionService.findById(id).ifPresent(r -> positionService.logDocumentChange(r, type,
                 reason != null && !reason.isBlank() ? "เหตุผล: " + reason : null, admin,
                 PositionDocumentEditLog.EditAction.RESIGN_REQUESTED));

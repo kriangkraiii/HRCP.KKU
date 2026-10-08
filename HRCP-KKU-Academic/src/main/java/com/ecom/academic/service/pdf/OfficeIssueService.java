@@ -66,6 +66,11 @@ public class OfficeIssueService {
         } catch (PdfIncrementService.DoesNotFitException e) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
             return "เลขที่หนังสือหรือวันที่ยาวเกินช่องในเอกสาร กรุณาย่อให้สั้นลง";
+        } catch (TimestampClient.TimestampUnavailableException
+                | LongTermValidation.ValidationDataUnavailableException e) {
+            log.warn("Envelope {}: closing signature not made: {}", envelopeId, e.getMessage());
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+            return "ติดต่อบริการประทับเวลาหรือตรวจสถานะใบรับรองไม่ได้ ยังไม่ได้บันทึกเลขที่หนังสือ กรุณาลองใหม่อีกครั้งในอีกสักครู่";
         } catch (Exception e) {
             log.error("Envelope {}: could not issue and close the signed PDF", envelopeId, e);
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();

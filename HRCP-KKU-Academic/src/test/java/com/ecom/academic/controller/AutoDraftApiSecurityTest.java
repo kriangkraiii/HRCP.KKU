@@ -68,7 +68,8 @@ class AutoDraftApiSecurityTest {
     @BeforeEach
     void setUp() {
         controller = new AutoDraftApiController(academicService, positionService, userRepository,
-                signatureWorkflow, prewarmService);
+                signatureWorkflow, prewarmService,
+                org.mockito.Mockito.mock(com.ecom.academic.service.DocumentDataAutoFillHelper.class));
 
         UserDtls attacker = new UserDtls();
         attacker.setId(1);

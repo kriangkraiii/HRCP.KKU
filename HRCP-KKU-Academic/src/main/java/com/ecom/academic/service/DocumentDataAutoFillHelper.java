@@ -6,6 +6,7 @@ import java.util.Map;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.ecom.academic.dto.EvaluationSummary;
@@ -13,6 +14,7 @@ import com.ecom.academic.model.AcademicDocument;
 import com.ecom.academic.model.AcademicRequest;
 import com.ecom.academic.model.PositionDocument;
 import com.ecom.academic.model.PositionRequest;
+import com.ecom.external.repository.FsFacultyRepository;
 import com.ecom.model.UserDtls;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -36,8 +38,16 @@ public class DocumentDataAutoFillHelper {
      */
     private final AcademicRequestService academicRequestService;
 
+    /** Faculty directory synced from Fund Management — optional, absent in plain unit tests. */
+    private FsFacultyRepository facultyRepository;
+
     public DocumentDataAutoFillHelper(AcademicRequestService academicRequestService) {
         this.academicRequestService = academicRequestService;
+    }
+
+    @Autowired(required = false)
+    void setFacultyRepository(FsFacultyRepository facultyRepository) {
+        this.facultyRepository = facultyRepository;
     }
 
     // ==================== Academic Request (Teaching Evaluation) ====================
@@ -195,23 +205,83 @@ public class DocumentDataAutoFillHelper {
             }
         }
 
-        // 3. Overlay existing saved JSON data (Highest Priority)
+        Map<String, String> saved = Map.of();
         if (existingJson != null && !existingJson.isBlank()) {
             try {
-                Map<String, String> saved = objectMapper.readValue(existingJson, new TypeReference<Map<String, String>>() {});
-                if (saved != null) {
-                    for (Map.Entry<String, String> e : saved.entrySet()) {
-                        if (e.getValue() != null && !e.getValue().isBlank()) {
-                            data.put(e.getKey(), e.getValue());
-                        }
-                    }
+                Map<String, String> parsed = objectMapper.readValue(existingJson, new TypeReference<Map<String, String>>() {});
+                if (parsed != null) {
+                    saved = parsed;
                 }
             } catch (Exception e) {
                 log.warn("Failed to parse existing JSON for position doc {}: {}", docType, e.getMessage());
             }
         }
 
+        // 3. Overlay existing saved JSON data (Highest Priority)
+        for (Map.Entry<String, String> e : saved.entrySet()) {
+            if (e.getValue() != null && !e.getValue().isBlank()) {
+                data.put(e.getKey(), e.getValue());
+            }
+        }
+
+        // 4. Doc 7 (checklist) has its own field names — see Doc7AutoFill. What the
+        // system knows is locked and beats the saved value; DEFAULT_ONLY fields are
+        // starting values only (a saved ☐ is the officer unticking it).
+        if (docType == 7 && request != null) {
+            Map<String, String> derived = doc7Derived(request);
+            data.putAll(Doc7AutoFill.locked(derived));
+            for (String field : Doc7AutoFill.DEFAULT_ONLY) {
+                String savedValue = saved.get(field);
+                if (derived.containsKey(field) && (savedValue == null || savedValue.isBlank())) {
+                    data.put(field, derived.get(field));
+                }
+            }
+        }
+
         return data;
+    }
+
+    /** Doc 7 fields the officer may not change — the save paths write these back over whatever was sent. */
+    public Map<String, String> doc7LockedFields(PositionRequest request) {
+        return request == null ? Map.of() : Doc7AutoFill.locked(doc7Derived(request));
+    }
+
+    /** JSON-in/JSON-out variant of {@link #doc7LockedFields} for the auto-draft endpoint. */
+    public String pinDoc7LockedFieldsInJson(PositionRequest request, String jsonData) {
+        Map<String, String> locked = doc7LockedFields(request);
+        if (locked.isEmpty() || jsonData == null) {
+            return jsonData;
+        }
+        try {
+            Map<String, String> data = new java.util.LinkedHashMap<>(
+                    objectMapper.readValue(jsonData, new TypeReference<Map<String, String>>() {}));
+            data.putAll(locked);
+            return objectMapper.writeValueAsString(data);
+        } catch (Exception e) {
+            log.warn("Could not pin locked doc 7 fields into draft JSON: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    private Map<String, String> doc7Derived(PositionRequest request) {
+        Map<Integer, Map<String, String>> docs = request.getDocuments() == null
+                ? Map.of() : parseAllPositionDocs(request.getDocuments());
+        EvaluationSummary evaluation = request.getLinkedEvaluation() == null
+                ? null : academicRequestService.summarize(request.getLinkedEvaluation());
+        Map<String, String> derived = Doc7AutoFill.derive(request, docs.get(1), docs.get(2), docs.get(4),
+                evaluation == null ? null : evaluation.resultLevel(), request.getLinkedEvaluation() != null,
+                request.getSubmissionDate() != null ? request.getSubmissionDate().toLocalDate() : java.time.LocalDate.now());
+
+        // ผู้ยื่นหลายคนไม่ได้กรอกเบอร์ในโปรไฟล์ — ฟอร์มของผู้ยื่นเติมจากทะเบียนบุคลากร (/api/my/profile)
+        // แต่ทางนั้นคืนข้อมูลของคนที่ล็อกอินอยู่ เจ้าหน้าที่จึงต้องค้นทะเบียนของผู้ยื่นฝั่งเซิร์ฟเวอร์เอง
+        if (facultyRepository != null && request.getApplicant() != null
+                && (!derived.containsKey("phone_mobile") || !derived.containsKey("email"))) {
+            facultyRepository.findByEmailNormalized(request.getApplicant().getEmail()).ifPresent(f -> {
+                putIfAbsent(derived, "phone_mobile", f.getTel());
+                putIfAbsent(derived, "email", f.getEmail());
+            });
+        }
+        return derived;
     }
 
     /** Writes a value only when there is one and nothing has claimed the key. */

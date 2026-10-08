@@ -19,6 +19,7 @@ import com.ecom.academic.model.PositionRequest;
 import com.ecom.academic.model.SignatureModule;
 import com.ecom.academic.service.AcademicRequestService;
 import com.ecom.academic.service.Doc7Scoring;
+import com.ecom.academic.service.DocumentDataAutoFillHelper;
 import com.ecom.academic.service.DocumentPrewarmService;
 import com.ecom.academic.service.DocumentFieldOwnership;
 import com.ecom.academic.service.PositionRequestService;
@@ -49,17 +50,21 @@ public class AutoDraftApiController {
 
     private final DocumentPrewarmService prewarmService;
 
+    private final DocumentDataAutoFillHelper autoFillHelper;
+
     public AutoDraftApiController(
             AcademicRequestService academicService,
             PositionRequestService positionService,
             UserRepository userRepository,
             SignatureWorkflowService signatureWorkflow,
-            DocumentPrewarmService prewarmService) {
+            DocumentPrewarmService prewarmService,
+            DocumentDataAutoFillHelper autoFillHelper) {
         this.academicService = academicService;
         this.positionService = positionService;
         this.userRepository = userRepository;
         this.signatureWorkflow = signatureWorkflow;
         this.prewarmService = prewarmService;
+        this.autoFillHelper = autoFillHelper;
     }
 
     /** Auto-draft for Phase 1 (Teaching Evaluation) */
@@ -276,6 +281,11 @@ public class AutoDraftApiController {
                     jsonData = pinned;
                 // ช่องที่ระบบรู้ค่า (ชื่อ ตำแหน่ง หน่วยงาน งานสอน) ผู้ยื่นแก้ไม่ได้ — ปุ่มลงนามบันทึกผ่านทางนี้
                 String locked = positionService.pinLockedFieldsInJson(request, docType, jsonData);
+                if (locked != null)
+                    jsonData = locked;
+            } else if (docType == 7) {
+                // ช่องที่ระบบดึงมาในเอกสารที่ 7 เจ้าหน้าที่แก้ไม่ได้ — ปุ่มส่งลงนามบันทึกผ่านทางนี้
+                String locked = autoFillHelper.pinDoc7LockedFieldsInJson(request, jsonData);
                 if (locked != null)
                     jsonData = locked;
             }

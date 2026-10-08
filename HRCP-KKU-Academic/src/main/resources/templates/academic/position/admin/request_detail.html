@@ -271,14 +271,17 @@
         <div class="detail-progress">
           <div class="detail-progress-steps" th:with="pIdx=${request.currentStatus.progressIndex()}">
             <th:block th:each="step, iterStat : ${progressSteps}">
+              <!--/* ส่งแก้ไขถอยมาที่ขั้นตรวจสอบเอกสาร — ระบายสีและเขียนว่าส่งแก้ไข ไม่ให้ดูเหมือนกำลังตรวจตามปกติ */-->
               <div class="detail-progress-step"
-                   th:classappend="${pIdx > iterStat.index} ? 'dp-done' : (${pIdx == iterStat.index} ? (${iterStat.last} ? 'dp-done dp-final' : 'dp-active') : '')">
+                   th:with="revising=${request.currentStatus.name() == 'REVISION_REQUESTED' and step.name() == 'DOCUMENT_VERIFICATION'}"
+                   th:classappend="${revising} ? 'dp-revise' : (${pIdx > iterStat.index} ? 'dp-done' : (${pIdx == iterStat.index} ? (${iterStat.last} ? 'dp-done dp-final' : 'dp-active') : ''))">
                 <div th:if="${!iterStat.last}" class="detail-step-line"
                      th:classappend="${pIdx > iterStat.index} ? 'line-done' : ''"></div>
                 <div class="detail-progress-dot">
-                  <i class="fas" th:classappend="${step.icon}"></i>
+                  <i class="fas" th:classappend="${revising} ? 'fa-circle-exclamation' : ${step.icon}"></i>
                 </div>
-                <div class="detail-progress-step-label" th:text="${step.thaiLabel}"></div>
+                <div class="detail-progress-step-label"
+                     th:text="${revising} ? ${request.currentStatus.thaiLabel} : ${step.thaiLabel}"></div>
               </div>
             </th:block>
           </div>
@@ -753,11 +756,32 @@
               </div>
               <div class="detail-section-body">
                 <!--/* สีและป้ายมาจาก DocumentProgress ที่เดียว — เขียวเมื่อจบจริงเท่านั้น */-->
+                <th:block th:each="entry : ${docRows}"
+                  th:with="stage=${docProgress.get(entry.key)}, docNo=${@positionRequestService.docNo(entry.key)},
+                           foldedCopy=${manyWorkCopies and workCopyKeys.contains(entry.key)}">
+                <!--/* เอกสารที่ 9 เกิน 3 ฉบับ: แถวสรุปก่อนฉบับแรก — ฉบับรายงานวิจัยยุบไว้ (collapse) กดดูรายละเอียดเมื่อต้องการ */-->
+                <div th:if="${manyWorkCopies and entry.key == firstWorkCopy}"
+                     class="doc-grid-item" th:classappend="${workCopyOverall.cardClass}">
+                  <div>
+                    <span class="doc-grid-item-title">
+                      เอกสารที่ [[${docNo}]]: [[${docLabels.get(9)}]] — งานวิจัย [[${workCopyKeys.size()}]] เรื่อง
+                    </span>
+                    <span th:each="st : ${workCopyStages}" class="badge ms-1" th:classappend="${st.key.badgeClass}">
+                      <i th:class="|fas ${st.key.icon}|"></i> [[${st.key.label}]] [[${st.value}]]
+                    </span>
+                  </div>
+                  <div class="doc-grid-item-actions">
+                    <button type="button" class="btn btn-sm btn-outline-secondary work-copy-toggle"
+                            data-bs-toggle="collapse" data-bs-target=".work-copy-item"
+                            aria-expanded="false">
+                      <span class="when-collapsed">ดูรายละเอียด</span><span class="when-expanded">ซ่อนรายละเอียด</span>
+                      <i class="fas fa-chevron-down ms-1"></i>
+                    </button>
+                  </div>
+                </div>
                 <div
-                  th:each="entry : ${docRows}"
-                  th:with="stage=${docProgress.get(entry.key)}, docNo=${@positionRequestService.docNo(entry.key)}"
                   class="doc-grid-item"
-                  th:classappend="${stage.cardClass}"
+                  th:classappend="${stage.cardClass} + (${foldedCopy} ? ' collapse work-copy-item' : '')"
                 >
                   <div>
                     <span class="doc-grid-item-title">
@@ -815,11 +839,24 @@
                     </th:block>
                   </div>
                 </div>
+                </th:block>
               </div>
             </div>
           </div>
         </div>
       </div>
+
+      <style>
+        /* เอกสารที่ 9 ที่ยุบไว้: ฉบับรายงานวิจัยเยื้องใต้แถวสรุป ปุ่มเปลี่ยนข้อความ/ลูกศรตามสถานะที่ Bootstrap ตั้ง */
+        .doc-grid-item.work-copy-item { margin-left: 1.5rem; }
+        /* กาง/ยุบทันที — แถวมี padding/margin/border ที่ไม่ไหลตามความสูง และ transition ของ .doc-grid-item
+           ทับ transition ของ Bootstrap ทำให้แต่ละแถวกระตุกทีละแถว */
+        .doc-grid-item.work-copy-item.collapsing { transition: none; }
+        .work-copy-toggle[aria-expanded="true"] .when-collapsed,
+        .work-copy-toggle[aria-expanded="false"] .when-expanded { display: none; }
+        .work-copy-toggle .fa-chevron-down { transition: transform .2s; }
+        .work-copy-toggle[aria-expanded="true"] .fa-chevron-down { transform: rotate(180deg); }
+      </style>
 
       <script>
         // History tab switching (pure JS, no Bootstrap pills)

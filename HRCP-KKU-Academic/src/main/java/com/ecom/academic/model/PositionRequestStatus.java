@@ -118,7 +118,8 @@ public enum PositionRequestStatus {
     public java.util.Set<PositionRequestStatus> allowedNext() {
         return switch (this) {
             case DRAFT -> java.util.EnumSet.of(DOCUMENT_RECEIVED);
-            case DOCUMENT_RECEIVED -> java.util.EnumSet.of(DOCUMENT_VERIFICATION);
+            // เจ้าหน้าที่ตรวจเอกสารตั้งแต่รับคำร้อง — ส่งกลับให้แก้ได้ก่อนลงนามแบบตรวจสอบคุณสมบัติ
+            case DOCUMENT_RECEIVED -> java.util.EnumSet.of(DOCUMENT_VERIFICATION, REVISION_REQUESTED);
             case DOCUMENT_VERIFICATION ->
                 java.util.EnumSet.of(SCREENING_COMMITTEE, REVISION_REQUESTED);
             case SCREENING_COMMITTEE ->

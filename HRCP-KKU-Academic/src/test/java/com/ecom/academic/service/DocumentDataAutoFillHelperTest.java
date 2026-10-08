@@ -172,4 +172,76 @@ class DocumentDataAutoFillHelperTest {
         assertEquals("สมชาย ใจดีวิชาการ", data.get("applicant_name"));
         assertEquals("วิทยาลัยการคอมพิวเตอร์", data.get("faculty"));
     }
+
+    /**
+     * เอกสารที่ 7: ค่าที่ระบบดึงมาล็อกไว้และชนะค่าที่บันทึกไว้เสมอ — รวมถึงเอกสารที่บันทึกไว้ก่อนมีการดึงข้อมูล
+     * ซึ่งฟอร์มเก็บช่องที่ไม่ติ๊กเป็น ☐ ทั้งกลุ่ม ส่วนช่องที่ระบบไม่รู้ค่ายังเป็นของเจ้าหน้าที่
+     */
+    @Test
+    void doc7LockedValuesBeatWhatWasSaved() {
+        AcademicRequestService evaluations = org.mockito.Mockito.mock(AcademicRequestService.class);
+        org.mockito.Mockito.when(evaluations.summarize(org.mockito.ArgumentMatchers.any()))
+                .thenReturn(new com.ecom.academic.dto.EvaluationSummary(1L, "EV-1", null, null, null, null,
+                        "ชำนาญพิเศษ", null, null, null, null, null, null));
+        DocumentDataAutoFillHelper helper = new DocumentDataAutoFillHelper(evaluations);
+
+        PositionRequest request = new PositionRequest();
+        request.setId(203L);
+        request.setApplicant(testUser);
+        request.setTargetPosition("รองศาสตราจารย์");
+        request.setLinkedEvaluation(new AcademicRequest());
+        PositionDocument doc1 = new PositionDocument();
+        doc1.setDocumentType(1);
+        doc1.setJsonData("{\"department\":\"สาขาวิชาวิทยาการคอมพิวเตอร์\",\"assoc_research_working_1\":\"งานวิจัย A\"}");
+        request.setDocuments(new ArrayList<>(List.of(doc1)));
+
+        String saved = """
+                {"is_req_asst":"☑","is_req_assoc":"☐",
+                 "is_teach_asst":"☐","is_teach_assoc":"☐","is_teach_prof":"☐",
+                 "eval_skilled":"☑","eval_highly_skilled":"☐",
+                 "is_req_03":"☐","email":"typo@kku.ac.th","total_stories":"4",
+                 "hr_officer_name":"เจ้าหน้าที่ผู้ตรวจ","boss_eval_10_sets":"☑"}""";
+        Map<String, String> data = helper.getPreFilledPositionDocData(request, 7, saved);
+
+        assertEquals("☑", data.get("is_req_assoc"));
+        assertEquals("☐", data.get("is_req_asst"), "ติ๊กซ้อนในกลุ่มเดียวกันไม่ได้");
+        assertEquals("☑", data.get("is_teach_assoc"));
+        assertEquals("☑", data.get("eval_highly_skilled"), "ระดับตามผลประเมินการสอน");
+        assertEquals("☐", data.get("eval_skilled"));
+        // เอกสารประกอบ: ติ๊กให้ตั้งต้น แต่เจ้าหน้าที่เอาออกได้เมื่อเอกสารจริงไม่ครบ
+        assertEquals("☐", data.get("is_req_03"), "เจ้าหน้าที่เอาติ๊กออกไว้");
+        assertEquals("☑", data.get("is_req_05"), "ยังไม่เคยบันทึก — ติ๊กตามเอกสารที่ 1 ที่มีในระบบ");
+        assertEquals("☑", data.get("teaching_eval_1_set"));
+        assertEquals("user@user.com", data.get("email"));
+        assertEquals("งานวิจัย A", data.get("research_working_title_1"));
+        // ช่องที่ระบบไม่รู้ค่า และจำนวนผลงานรวม ยังเป็นของเจ้าหน้าที่
+        assertEquals("4", data.get("total_stories"));
+        assertEquals("เจ้าหน้าที่ผู้ตรวจ", data.get("hr_officer_name"));
+        assertEquals("☑", data.get("boss_eval_10_sets"));
+
+        Map<String, String> locked = helper.doc7LockedFields(request);
+        assertTrue(locked.containsKey("email"));
+        assertTrue(!locked.containsKey("total_stories") && !locked.containsKey("hr_officer_name"));
+        assertTrue(!locked.containsKey("is_req_03") && !locked.containsKey("teaching_eval_1_set"),
+                "เอกสารประกอบต้องไม่ล็อก");
+    }
+
+    @Test
+    void doc7DraftsCannotOverwriteLockedFields() throws Exception {
+        PositionRequest request = new PositionRequest();
+        request.setId(204L);
+        request.setApplicant(testUser);
+        request.setTargetPosition("รองศาสตราจารย์");
+        request.setDocuments(new ArrayList<>());
+
+        String pinned = autoFillHelper.pinDoc7LockedFieldsInJson(request,
+                "{\"applicant_firstname\":\"แก้ชื่อ\",\"is_teach_asst\":\"☑\",\"reason_if_none\":\"หมายเหตุ\"}");
+        Map<String, String> data = new com.fasterxml.jackson.databind.ObjectMapper().readValue(pinned,
+                new com.fasterxml.jackson.core.type.TypeReference<Map<String, String>>() {});
+
+        assertEquals("สมชาย", data.get("applicant_firstname"));
+        assertEquals("☐", data.get("is_teach_asst"));
+        assertEquals("☑", data.get("is_teach_assoc"));
+        assertEquals("หมายเหตุ", data.get("reason_if_none"));
+    }
 }

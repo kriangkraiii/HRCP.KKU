@@ -243,10 +243,50 @@ public class SignatureWorkflowService {
             return false;
         }
         List<SignatureStep> steps = stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId());
+        // ช่องแบบแถว (บรรณกิจเพิ่มเติมของเอกสารที่ 9) นับเฉพาะแถวที่อยู่ในเอกสารฉบับนี้ — ช่องสำรองที่ไม่ได้ใช้ไม่ใช่ผู้ลงนามที่ค้าง
+        Map<String, Object> frozen = frozenData(envelope);
         return slotsFor(module, documentType).stream()
+                .filter(slot -> SignatureAnchorRegistry.slotInDocument(module, documentType, slot.slotKey(), frozen))
                 .anyMatch(slot -> steps.stream().noneMatch(step ->
                         slot.slotKey().equalsIgnoreCase(step.getSlotKey())
                                 && step.getStatus() != SignatureStepStatus.SKIPPED));
+    }
+
+    /**
+     * ส่วนที่ไม่ต้องรอใครลงนามเสร็จแล้ว ที่เหลือรอเจ้าหน้าที่ตรวจแล้วส่งต่อ — ไม่มีขั้นไหนเดินต่อเองได้
+     *
+     * <p>สองแบบ: ซองปิดแล้วแต่ยังมีช่องที่ไม่ได้ส่งต่อ ({@link #awaitsMoreSigners}) หรือซองยังเปิด
+     * ผู้ลงนามที่เหลือติดด่านตรวจ (ยังไม่ส่งเวียน) และไม่มีใครถือขั้นที่ต้องลงนามอยู่
+     * ด่านตรวจเปิดหลังผู้ยื่นส่งคำร้อง ฝั่งผู้ยื่นจึงอ่านได้ว่า "รอยื่นคำร้อง"
+     */
+    public boolean awaitsStaffRelease(SignatureModule module, Long requestId, int documentType) {
+        SignatureRequest envelope = findBlockingEnvelope(module, requestId, documentType).orElse(null);
+        if (envelope == null) {
+            return false;
+        }
+        if (envelope.getStatus() == SignatureRequestStatus.COMPLETED) {
+            return awaitsMoreSigners(module, requestId, documentType);
+        }
+        if (envelope.isCirculationStarted()) {
+            return false;
+        }
+        List<SignatureStep> steps = stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId());
+        return steps.stream().noneMatch(s -> s.getStatus() == SignatureStepStatus.ACTIVE)
+                && steps.stream().anyMatch(s -> s.getStatus() == SignatureStepStatus.WAITING);
+    }
+
+    private static Map<String, Object> frozenData(SignatureRequest envelope) {
+        String json = envelope.getFrozenJson();
+        if (json == null || json.isBlank()) {
+            return Map.of();
+        }
+        try {
+            return new com.fasterxml.jackson.databind.ObjectMapper().readValue(json,
+                    new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                    });
+        } catch (com.fasterxml.jackson.core.JsonProcessingException e) {
+            return Map.of();
+        }
     }
 
     /**
@@ -1206,6 +1246,13 @@ public class SignatureWorkflowService {
         } catch (IllegalStateException e) {
             log.warn("Envelope {} step {}: could not sign the PDF: {}", envelope.getId(), step.getId(), e.getMessage());
             return "เอกสารมีการเปลี่ยนแปลงระหว่างลงนาม กรุณาเปิดหน้าลงนามใหม่แล้วลองอีกครั้ง";
+        } catch (com.ecom.academic.service.pdf.TimestampClient.TimestampUnavailableException e) {
+            // ลายมือชื่อต้องมีตราประทับเวลา (app.esign.tsa.required) — ไม่มีอะไรถูกบันทึก ลองใหม่ได้
+            log.warn("Envelope {} step {}: no timestamp: {}", envelope.getId(), step.getId(), e.getMessage());
+            return "ติดต่อบริการประทับเวลาไม่ได้ จึงยังไม่ได้ลงนาม กรุณาลองใหม่อีกครั้งในอีกสักครู่";
+        } catch (com.ecom.academic.service.pdf.LongTermValidation.ValidationDataUnavailableException e) {
+            log.warn("Envelope {} step {}: no validation data: {}", envelope.getId(), step.getId(), e.getMessage());
+            return "ตรวจสถานะใบรับรองกับผู้ออกใบรับรองไม่ได้ จึงยังไม่ได้ลงนาม กรุณาลองใหม่อีกครั้งในอีกสักครู่";
         } catch (Exception e) {
             log.error("Envelope {} step {}: could not sign the PDF", envelope.getId(), step.getId(), e);
             return "ลงนามลงไฟล์เอกสารไม่สำเร็จ กรุณาลองใหม่อีกครั้ง";

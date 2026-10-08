@@ -1026,6 +1026,8 @@ class SignatureWorkflowServiceTest {
         assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
         assertThat(stepOf(envelope, "dean").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
         assertThat(workflow.findInbox(head)).isEmpty();
+        // ป้ายสถานะ "รอเจ้าหน้าที่ส่งต่อ" (ฝั่งผู้ยื่นก่อนส่งคำร้อง: "รอยื่นคำร้อง") ไม่ใช่ "รอลงนาม"
+        assertThat(workflow.awaitsStaffRelease(MODULE, envelope.getRequestId(), envelope.getDocumentType())).isTrue();
     }
 
     @Test
@@ -1041,6 +1043,7 @@ class SignatureWorkflowServiceTest {
         assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
         assertThat(stepOf(envelope, "dean").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
         assertThat(workflow.findInbox(head)).hasSize(1);
+        assertThat(workflow.awaitsStaffRelease(MODULE, envelope.getRequestId(), envelope.getDocumentType())).isFalse();
     }
 
     @Test
@@ -1223,5 +1226,9 @@ class SignatureWorkflowServiceTest {
 
         assertThat(requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow().getStatus())
                 .isEqualTo(SignatureRequestStatus.COMPLETED);
+        // ช่องบรรณกิจสำรองที่ไม่มีแถวในเอกสาร (คนที่ 3 ขึ้นไป) ไม่ใช่ผู้ลงนามที่ค้าง — ป้ายต้องไม่ขึ้น "รอลงนาม"
+        assertThat(workflow.isSigningComplete(MODULE, envelope.getRequestId(), 901)).isTrue();
+        assertThat(workflow.awaitsMoreSigners(MODULE, envelope.getRequestId(), 901)).isFalse();
+        assertThat(workflow.awaitsStaffRelease(MODULE, envelope.getRequestId(), 901)).isFalse();
     }
 }

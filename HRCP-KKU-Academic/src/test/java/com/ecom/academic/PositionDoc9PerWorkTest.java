@@ -166,6 +166,36 @@ class PositionDoc9PerWorkTest extends AbstractFlowTest {
     }
 
     @Test
+    @DisplayName("งานวิจัยเกิน 3 เรื่อง — ทั้งหน้าผู้ยื่นและหน้าเจ้าหน้าที่ยุบรายการไว้ใต้แถวสรุป")
+    void manyWorksAreFolded() throws Exception {
+        PositionRequest many = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null,
+                "รองศาสตราจารย์");
+        data.positionDocument(many, 1, """
+                {"assoc_research_working_1":"เรื่องที่ 1","assoc_research_working_2":"เรื่องที่ 2",
+                 "assoc_research_working_3":"เรื่องที่ 3","assoc_research_working_4":"เรื่องที่ 4"}""");
+
+        String applicantPage = mvc.perform(get("/user/position/request/" + many.getId()).with(asApplicant(applicant)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(applicantPage).contains("งานวิจัย 4 เรื่อง").contains("ดูรายละเอียด")
+                .contains("id=\"workCopyList\"").contains("/document/904");
+
+        UserDtls officer = data.admin();
+        String adminPage = mvc.perform(get("/admin/position/request/" + many.getId())
+                .with(user(officer.getEmail()).roles("ADMIN")))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(adminPage).contains("งานวิจัย 4 เรื่อง").contains("ดูรายละเอียด")
+                .contains("collapse work-copy-item").contains("/document/904");
+
+        // สองเรื่อง (คำร้องหลักของเทสต์นี้) ไม่ยุบ
+        String fewPage = mvc.perform(get("/user/position/request/" + request.getId()).with(asApplicant(applicant)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(fewPage).doesNotContain("ดูรายละเอียด</span>");
+    }
+
+    @Test
     @DisplayName("ปุ่มดูตัวอย่างของงานวิจัยที่ยังไม่ได้กรอก — ได้ไฟล์ PDF ของฉบับนั้น")
     void previewOfAWorkCopyIsAPdf() throws Exception {
         org.junit.jupiter.api.Assumptions.assumeTrue(new DocumentGenerationService().isPdfConversionAvailable(),

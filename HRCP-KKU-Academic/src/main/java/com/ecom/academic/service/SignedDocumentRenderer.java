@@ -584,10 +584,15 @@ public class SignedDocumentRenderer {
             // Signed or not yet, the real document is the file the signers are signing —
             // with what the office has saved since the last signature drawn in (written to the
             // file when the next signer signs). เจ้าหน้าที่ติ๊กแล้วต้องเห็นในตัวอย่างทันที
-            byte[] signed = pdfRevisions.latest(envelope.getId());
-            if (signed != null) {
-                var viewer = incrementalSigning != null ? incrementalSigning.getIfAvailable() : null;
-                return viewer != null ? viewer.latestForViewing(envelope) : signed;
+            try {
+                byte[] signed = pdfRevisions.latest(envelope.getId());
+                if (signed != null) {
+                    var viewer = incrementalSigning != null ? incrementalSigning.getIfAvailable() : null;
+                    return viewer != null ? viewer.latestForViewing(envelope) : signed;
+                }
+            } catch (IOException | RuntimeException e) {
+                // ซองที่ลงนามครบมีสำเนาที่เก็บไว้ด้านล่าง — ยังได้เอกสารที่มีลายเซ็น ไม่ใช่ไฟล์ก่อนลงนาม
+                log.warn("Could not read the incrementally signed PDF of envelope {}: {}", envelope.getId(), e.toString());
             }
         }
         // ลงนามครบแล้ว — ส่งสำเนาที่เก็บไว้ ไม่สร้างใหม่จากเทมเพลตของรุ่นที่ deploy อยู่

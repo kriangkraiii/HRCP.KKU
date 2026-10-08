@@ -15,6 +15,7 @@ import java.util.HexFormat;
 
 import org.apache.pdfbox.pdmodel.interactive.digitalsignature.SignatureInterface;
 import org.bouncycastle.asn1.ASN1EncodableVector;
+import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DERSet;
 import org.bouncycastle.asn1.cms.Attribute;
 import org.bouncycastle.asn1.cms.AttributeTable;
@@ -31,7 +32,10 @@ import org.bouncycastle.asn1.x509.IssuerSerial;
 import org.bouncycastle.cert.jcajce.JcaCertStore;
 import org.bouncycastle.cms.CMSAttributeTableGenerator;
 import org.bouncycastle.cms.CMSProcessableByteArray;
+import org.bouncycastle.cms.CMSSignedData;
 import org.bouncycastle.cms.CMSSignedDataGenerator;
+import org.bouncycastle.cms.SignerInformation;
+import org.bouncycastle.cms.SignerInformationStore;
 import org.bouncycastle.cms.DefaultSignedAttributeTableGenerator;
 import org.bouncycastle.cms.jcajce.JcaSignerInfoGeneratorBuilder;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
@@ -43,12 +47,20 @@ import org.bouncycastle.operator.jcajce.JcaDigestCalculatorProviderBuilder;
  * <p>Carries signing-certificate-v2 and no signing-time attribute — PAdES takes
  * the time from the signature dictionary's /M. The key lives only as long as this
  * object; nothing here is stored.
+ *
+ * <p>With a {@link TimestampClient} ({@link #timestampWith}) the signature also carries a
+ * signature-time-stamp from a trusted authority — baseline T — so it still validates after
+ * the signer's certificate has expired.
  */
 public final class CmsSigner implements SignatureInterface {
+
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(CmsSigner.class);
 
     private final PrivateKey key;
     private final X509Certificate certificate;
     private final Certificate[] chain;
+    private TimestampClient timestamps;
+    private boolean timestampRequired = true;
 
     private CmsSigner(PrivateKey key, Certificate[] chain) {
         this.key = key;
@@ -75,6 +87,24 @@ public final class CmsSigner implements SignatureInterface {
 
     public X509Certificate certificate() {
         return certificate;
+    }
+
+    /** The certificate chain from the .p12, signer first. */
+    public Certificate[] chain() {
+        return chain.clone();
+    }
+
+    /**
+     * Timestamps each signature made with this key.
+     *
+     * @param required when the authority cannot be reached: true refuses to sign
+     *                 ({@link TimestampClient.TimestampUnavailableException}), false signs without
+     *                 a timestamp — a signature that will stop validating once the certificate expires
+     */
+    public CmsSigner timestampWith(TimestampClient client, boolean required) {
+        this.timestamps = client;
+        this.timestampRequired = required;
+        return this;
     }
 
     /** SHA-256 of the DER certificate, lowercase hex. */
@@ -106,11 +136,36 @@ public final class CmsSigner implements SignatureInterface {
                     .setSignedAttributeGenerator(signed)
                     .build(new JcaContentSignerBuilder(alg).build(key), certificate));
             gen.addCertificates(new JcaCertStore(Arrays.asList(chain)));
-            return gen.generate(new CMSProcessableByteArray(content.readAllBytes()), false).getEncoded();
+            CMSSignedData signedData = gen.generate(new CMSProcessableByteArray(content.readAllBytes()), false);
+            return (timestamps == null ? signedData : withTimestamp(signedData)).getEncoded();
         } catch (IOException e) {
             throw e;
         } catch (Exception e) {
             throw new IOException("Could not create the CMS signature: " + e.getMessage(), e);
         }
+    }
+
+    /** Adds the authority's signature-time-stamp over the signature value (ETSI EN 319 122-1, PAdES baseline T). */
+    private CMSSignedData withTimestamp(CMSSignedData signedData) throws IOException {
+        SignerInformation signer = signedData.getSignerInfos().getSigners().iterator().next();
+        byte[] token;
+        try {
+            token = timestamps.stamp(signer.getSignature());
+        } catch (TimestampClient.TimestampUnavailableException e) {
+            if (timestampRequired) {
+                throw e;
+            }
+            log.warn("Signing without a timestamp ({}); the signature will not validate after {} expires",
+                    e.getMessage(), certificate.getNotAfter());
+            return signedData;
+        }
+        Attribute attribute = new Attribute(PKCSObjectIdentifiers.id_aa_signatureTimeStampToken,
+                new DERSet(ASN1Primitive.fromByteArray(token)));
+        AttributeTable unsigned = signer.getUnsignedAttributes() == null
+                ? new AttributeTable(new ASN1EncodableVector())
+                : signer.getUnsignedAttributes();
+        SignerInformation stamped = SignerInformation.replaceUnsignedAttributes(signer, unsigned.add(
+                attribute.getAttrType(), attribute.getAttrValues().getObjectAt(0)));
+        return CMSSignedData.replaceSigners(signedData, new SignerInformationStore(stamped));
     }
 }

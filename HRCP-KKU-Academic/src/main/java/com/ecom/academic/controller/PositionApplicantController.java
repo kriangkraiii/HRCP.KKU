@@ -387,6 +387,12 @@ public class PositionApplicantController {
                         workCopies.keySet().stream().map(docProgress::get).toList()));
         model.addAttribute("docProgress", docProgress);
         model.addAttribute("workCopies", workCopies);
+        // สรุปของรายการงานวิจัยที่ยุบไว้ — จำนวนฉบับในแต่ละขั้น เรียงตามลำดับขั้น
+        model.addAttribute("workCopyStages", workCopies.keySet().stream()
+                .map(docProgress::get)
+                .collect(java.util.stream.Collectors.groupingBy(s -> s,
+                        () -> new java.util.EnumMap<>(com.ecom.academic.service.DocumentProgress.Stage.class),
+                        java.util.stream.Collectors.counting())));
         model.addAttribute("applicantDocs", applicantDocTypes);
         long completedRequired = applicantDocTypes.stream().filter(completedDocs::contains).count();
         model.addAttribute("completedRequiredCount", completedRequired);
@@ -736,7 +742,9 @@ public class PositionApplicantController {
             try {
                 data = signedDocumentRenderer.renderForDownload(envelope, format);
             } catch (Exception e) {
-                // fall through to saved draft file if render fails
+                // ตกไปใช้ไฟล์ก่อนลงนาม (ไม่มีลายเซ็น) — ต้องเห็นใน log ไม่อย่างนั้นไม่มีใครรู้ว่าทำไมลายเซ็นหาย
+                log.warn("Could not render signed document of envelope {} (request {}, document {}); serving the unsigned file",
+                        envelope.getId(), id, type, e);
             }
         }
 

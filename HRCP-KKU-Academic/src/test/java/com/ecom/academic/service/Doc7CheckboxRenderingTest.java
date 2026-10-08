@@ -72,4 +72,24 @@ class Doc7CheckboxRenderingTest {
         assertTrue(xml.contains("☐"),
                 "ช่องที่ยังไม่ติ๊กต้องแสดงกล่องว่าง ☐ — ไม่ใช่ถูกลบทิ้ง");
     }
+
+    /**
+     * แถวจริยธรรมการวิจัยเคยใช้ placeholder {{status}} ชื่อเดียวกับสถานะผู้ขอ
+     * เอกสารจึงขึ้น "พนักงานมหาวิทยาลัย มี / พนักงานมหาวิทยาลัย ไม่มี" แทนช่องติ๊ก
+     */
+    @Test
+    @DisplayName("จริยธรรมการวิจัย: ขึ้นช่องติ๊กมี/ไม่มี ไม่ใช่สถานะผู้ขอ")
+    void rendersEthicsAsCheckboxes() throws IOException {
+        String json = """
+                {"status":"พนักงานมหาวิทยาลัย",
+                 "research_working_title_1":"ผลงานวิจัยทดสอบ",
+                 "ethics_status_1":"not_have",
+                 "reason_e_1":"ไม่ได้ทำวิจัยในคน"}
+                """;
+        String text = documentXml(service.generateP2PreviewDocx(7, json)).replaceAll("<[^>]+>", "");
+
+        assertFalse(text.contains("พนักงานมหาวิทยาลัย มี"), "ต้องไม่เอาสถานะผู้ขอไปใส่แถวจริยธรรม");
+        assertTrue(text.contains("☐ มี"), text);
+        assertTrue(text.contains("☑ ไม่มี เนื่องจากไม่ได้ทำวิจัยในคน"), text);
+    }
 }

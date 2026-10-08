@@ -20,6 +20,12 @@
             <form th:action="'/admin/position/request/' + ${request.id} + '/document/7'" method="post" id="doc7Form" th:attr="data-auto-draft='/api/draft/position/' + ${request.id} + '/7'"
 >
 
+                <div th:if="${lockedFields != null and !lockedFields.isEmpty()}" class="alert alert-info d-flex align-items-start mb-4">
+                    <i class="fas fa-lock me-2 mt-1"></i>
+                    <div>ช่องที่มีไอคอน <i class="fas fa-lock small"></i> ระบบดึงมาจากข้อมูลของผู้ยื่น (โปรไฟล์ เอกสารที่ 1, 2, 4 และผลประเมินการสอน) จึงแก้ไขไม่ได้
+                        — ถ้าข้อมูลไม่ถูกต้อง ให้ส่งกลับให้ผู้ยื่นแก้ที่เอกสารต้นทาง</div>
+                </div>
+
                 <!--/* ========== ส่วนที่ 1: ข้อมูลผู้ขอ ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ข้อมูลผู้ขอ</h5></div>
@@ -72,27 +78,36 @@
                     </div>
                 </div>
 
-                <!--/* วุฒิการศึกษา */-->
+                <!--/* ระยะเวลาการปฏิบัติงาน (ตามวุฒิ) + ชื่อวิทยานิพนธ์ — เรียง ปี เดือน วัน ตามแบบฟอร์ม */-->
                 <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">วุฒิการศึกษา</h5></div>
+                    <div class="card-header bg-white"><h5 class="mb-0">ระยะเวลาการปฏิบัติงาน</h5></div>
                     <div class="card-body">
+                        <p class="small text-secondary mb-2">ระยะเวลาที่ปฏิบัติหน้าที่อาจารย์ตามวุฒิที่ถือ ระบบนับจากวันที่ได้รับแต่งตั้งเป็นอาจารย์ (เอกสารที่ 1) ถึงวันที่ยื่นคำร้องให้เฉพาะกรณีที่สำเร็จการศึกษาก่อนเป็นอาจารย์ กรณีอื่นกรุณากรอกเอง</p>
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">ปริญญาโท — วัน/เดือน/ปี ที่สำเร็จ</label>
+                                <label class="form-label">ปริญญาโท</label>
                                 <div class="row g-1">
-                                    <div class="col-4"><input type="text" name="m_days" class="form-control form-control-sm" placeholder="วัน"></div>
-                                    <div class="col-4"><input type="text" name="m_months" class="form-control form-control-sm" placeholder="เดือน"></div>
-                                    <div class="col-4"><input type="text" name="m_years" class="form-control form-control-sm" placeholder="ปี พ.ศ."></div>
+                                    <div class="col-4"><div class="input-group input-group-sm"><input type="text" name="m_years" class="form-control" inputmode="numeric"><span class="input-group-text">ปี</span></div></div>
+                                    <div class="col-4"><div class="input-group input-group-sm"><input type="text" name="m_months" class="form-control" inputmode="numeric"><span class="input-group-text">เดือน</span></div></div>
+                                    <div class="col-4"><div class="input-group input-group-sm"><input type="text" name="m_days" class="form-control" inputmode="numeric"><span class="input-group-text">วัน</span></div></div>
                                 </div>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">ปริญญาเอก — วัน/เดือน/ปี ที่สำเร็จ</label>
+                                <label class="form-label">ปริญญาเอก</label>
                                 <div class="row g-1">
-                                    <div class="col-4"><input type="text" name="d_days" class="form-control form-control-sm" placeholder="วัน"></div>
-                                    <div class="col-4"><input type="text" name="d_months" class="form-control form-control-sm" placeholder="เดือน"></div>
-                                    <div class="col-4"><input type="text" name="d_years" class="form-control form-control-sm" placeholder="ปี พ.ศ."></div>
+                                    <div class="col-4"><div class="input-group input-group-sm"><input type="text" name="d_years" class="form-control" inputmode="numeric"><span class="input-group-text">ปี</span></div></div>
+                                    <div class="col-4"><div class="input-group input-group-sm"><input type="text" name="d_months" class="form-control" inputmode="numeric"><span class="input-group-text">เดือน</span></div></div>
+                                    <div class="col-4"><div class="input-group input-group-sm"><input type="text" name="d_days" class="form-control" inputmode="numeric"><span class="input-group-text">วัน</span></div></div>
                                 </div>
                             </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card card-academic mb-4">
+                    <div class="card-header bg-white"><h5 class="mb-0">ชื่อวิทยานิพนธ์ของผู้เสนอขอกำหนดตำแหน่งฯ</h5></div>
+                    <div class="card-body">
+                        <div class="row g-3">
                             <div class="col-md-6">
                                 <label class="form-label">ชื่อวิทยานิพนธ์ ป.โท</label>
                                 <input type="text" name="master_thesis_titles" class="form-control">
@@ -226,6 +241,7 @@
                             <div class="row g-2">
                                 <div class="col-12"><input type="text" name="research_working_title_1" class="form-control" placeholder="ชื่อผลงานวิจัย"></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_published_1" value="☑"><label class="form-check-label">ตีพิมพ์แล้ว</label></div></div>
+                                <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_pending_1" value="☑"><label class="form-check-label">รอตีพิมพ์</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="pending_letter_1" value="☑"><label class="form-check-label">หนังสือตอบรับ</label></div></div>
                                 <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="content_certified_1" value="☑"><label class="form-check-label">รับรองเนื้อหา</label></div></div>
                             </div>
@@ -469,13 +485,6 @@
                     </div>
                 </div>
 
-                <!--/* ========== แบ่งส่วน: เจ้าหน้าที่กรอก ========== */-->
-                <hr class="my-4 border-2 border-warning">
-                <div class="alert alert-warning d-flex align-items-center mb-4">
-                    <i class="fas fa-user-shield me-2 fa-lg"></i>
-                    <div><strong>ส่วนของเจ้าหน้าที่</strong> — กรอกโดยเจ้าหน้าที่เท่านั้น</div>
-                </div>
-
                 <!--/* ========== ส่วนที่ 3: ผู้ตรวจสอบ ========== */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white"><h5 class="mb-0">ส่วนที่ 3: ผลการตรวจสอบ</h5></div>
@@ -614,6 +623,7 @@
                     <div class="row g-2 mt-1"><div class="col-12"><input type="text" name="research_working_title_${n}" class="form-control" placeholder="ชื่อผลงานวิจัย"></div></div>
                     <div class="row g-2 mt-2">
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_published_${n}" value="☑"><label class="form-check-label">ตีพิมพ์แล้ว</label></div></div>
+                        <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="is_pending_${n}" value="☑"><label class="form-check-label">รอตีพิมพ์</label></div></div>
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="pending_letter_${n}" value="☑"><label class="form-check-label">หนังสือตอบรับ</label></div></div>
                         <div class="col-md-3"><div class="form-check"><input class="form-check-input" type="checkbox" name="content_certified_${n}" value="☑"><label class="form-check-label">รับรองเนื้อหา</label></div></div>
                     </div>
@@ -761,11 +771,14 @@
 
             document.addEventListener('DOMContentLoaded', function() {
                 /* --- Bind conditional panels for initial block #1 --- */
-                /* --- Restore existing draft data --- */
-                const existingData = /*[[${existingData}]]*/ null;
-                if (existingData) {
+                /* --- Restore saved data, on top of what DocumentDataAutoFillHelper pulled from the applicant's documents --- */
+                /* ส่งเวียนลงนามแล้ว: แสดงตามที่บันทึกไว้เท่านั้น หน้าจอต้องตรงกับฉบับที่ลงนาม */
+                const savedJson = /*[[${existingData}]]*/ null;
+                const data = /*[[${lockedForSigning}]]*/ false
+                        ? (savedJson ? JSON.parse(savedJson) : null)
+                        : /*[[${docData}]]*/ null;
+                if (data) {
                     try {
-                        const data = JSON.parse(existingData);
 
                         // ---- Step 1: Detect max indices for each dynamic block group ----
                         const blockGroups = {
@@ -813,6 +826,44 @@
                     } catch(e) { console.error('Draft restore error:', e); }
                 }
             });
+
+            /* ช่องที่ระบบดึงมา (DocumentDataAutoFillHelper.doc7LockedFields) — อ่านอย่างเดียว เซิร์ฟเวอร์เขียนทับตอนบันทึกอยู่แล้ว
+               รอหนึ่งจังหวะหลัง DOMContentLoaded: สคริปต์ด้านบนสร้างบล็อกผลงานและเติมค่าในจังหวะนั้น */
+            (function () {
+                const locked = /*[[${lockedFields}]]*/ null;
+                const form = document.getElementById('doc7Form');
+                if (!locked || !form || !Object.keys(locked).length) return;
+                const preventToggle = function (e) { e.preventDefault(); };
+                document.addEventListener('DOMContentLoaded', function () {
+                    setTimeout(function () {
+                        Object.keys(locked).forEach(function (name) {
+                            form.querySelectorAll('[name="' + name + '"]').forEach(function (el) {
+                                if (el.type === 'checkbox') {
+                                    el.checked = locked[name] === '☑';
+                                    el.addEventListener('click', preventToggle);
+                                    el.setAttribute('aria-readonly', 'true');
+                                    el.closest('.form-check')?.classList.add('opacity-75');
+                                } else if (el.tagName === 'SELECT') {
+                                    el.value = locked[name];
+                                    el.disabled = true; // ค่าที่ถูกต้องเซิร์ฟเวอร์ใส่ให้ตอนบันทึก
+                                } else {
+                                    el.value = locked[name];
+                                    el.readOnly = true;
+                                    el.classList.add('bg-light');
+                                }
+                                el.title = 'ดึงจากข้อมูลในระบบ แก้ไขไม่ได้';
+                                const label = el.closest('[class*="col-"]')?.querySelector(':scope > .form-label');
+                                if (label && !label.querySelector('.fa-lock')) {
+                                    label.insertAdjacentHTML('beforeend', ' <i class="fas fa-lock text-secondary small"></i>');
+                                }
+                                // บล็อกผลงานที่ดึงมา ลบทิ้งไม่ได้
+                                el.closest('.border.rounded')?.querySelectorAll('[data-action="removeClosest"]')
+                                        .forEach(function (b) { b.hidden = true; });
+                            });
+                        });
+                    }, 0);
+                });
+            })();
         </script>
 
         <link rel="stylesheet" href="/css/doc_preview.css">
