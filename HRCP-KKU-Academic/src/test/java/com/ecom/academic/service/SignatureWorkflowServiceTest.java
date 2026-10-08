@@ -1074,4 +1074,84 @@ class SignatureWorkflowServiceTest {
         assertThat(envelope.isCirculationStarted()).isTrue();
         assertThat(stepOf(envelope, "head").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
     }
+
+    // =====================================================================
+    // เอกสารที่ 9: ผู้ขอเป็นผู้ประพันธ์อันดับแรก/บรรณกิจเอง — ลงนามทุกช่องของตัวเองในครั้งเดียว
+    // =====================================================================
+
+    /** แบบแสดงหลักฐานการมีส่วนร่วม — ช่องชื่อผู้ประพันธ์เลือกด้วยตัวค้นหาชื่อ (ชื่อ + รหัสบัญชี) */
+    private String doc9Json(UserDtls applicant, UserDtls firstAuthor, UserDtls corresponding) {
+        return "{\"applicant_name\":\"" + applicant.getName() + "\","
+                + "\"title_name\":\"ผลงานทดสอบ\","
+                + "\"role_des1\":\"ริเริ่ม\","
+                + "\"firstauthor_name\":\"" + firstAuthor.getName() + "\","
+                + "\"firstauthor_name__signer\":\"" + firstAuthor.getId() + "\","
+                + "\"corres_name\":\"" + corresponding.getName() + "\","
+                + "\"corres_name__signer\":\"" + corresponding.getId() + "\"}";
+    }
+
+    private SignatureRequest createDoc9Envelope(PositionRequest request, UserDtls applicant,
+            UserDtls firstAuthor, UserDtls corresponding) {
+        // ผู้ขอส่งแค่ช่องของตัวเอง — ช่องผู้ประพันธ์มาจากชื่อในแบบฟอร์ม (signersNamedInForm)
+        Result created = workflow.createEnvelope(MODULE, request.getId(), 9,
+                "แบบแสดงหลักฐานการมีส่วนร่วม", doc9Json(applicant, firstAuthor, corresponding),
+                List.of(new SignerAssignment("applicant", applicant.getId())),
+                null, applicant, ActorContext.none());
+        assertThat(created.ok()).as(created.error()).isTrue();
+        return created.request();
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 9: ผู้ขอเป็นทั้งผู้ประพันธ์อันดับแรกและบรรณกิจ — ลงนามครั้งเดียวครบทุกช่อง")
+    void applicantSignsEveryOwnSlotInOneGo() throws IOException {
+        UserDtls applicant = newUser("doc9-all-" + RUN.get() + "@kku.ac.th", "ROLE_USER");
+        UserSignature signature = newSignature(applicant);
+        SignatureRequest envelope = createDoc9Envelope(newDraftRequest(applicant), applicant, applicant, applicant);
+
+        assertThat(workflow.alsoSignedWith(stepOf(envelope, "applicant").getId()))
+                .containsExactly("ผู้ประพันธ์อันดับแรก", "ผู้ประพันธ์บรรณกิจ");
+
+        Result signed = signStep(stepOf(envelope, "applicant").getId(), applicant,
+                signature.getId(), true, ActorContext.none());
+
+        assertThat(signed.ok()).as(signed.error()).isTrue();
+        SignatureRequest after = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
+        assertThat(after.getSteps()).allMatch(s -> s.getStatus() == SignatureStepStatus.SIGNED);
+        assertThat(stepOf(after, "first_author").getEvidenceHmac()).isNotBlank();
+        assertThat(after.getStatus()).as("ไม่มีผู้ลงนามคนอื่น — ครบทันที").isEqualTo(SignatureRequestStatus.COMPLETED);
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 9: ผู้ขอเป็นผู้ประพันธ์อันดับแรก บรรณกิจเป็นคนอื่น — ช่องคนอื่นยังรอเจ้าหน้าที่ส่งเวียน")
+    void applicantSignsOwnSlotButOthersWaitForRelease() throws IOException {
+        UserDtls applicant = newUser("doc9-first-" + RUN.get() + "@kku.ac.th", "ROLE_USER");
+        UserSignature signature = newSignature(applicant);
+        PositionRequest request = newDraftRequest(applicant);
+        SignatureRequest envelope = createDoc9Envelope(request, applicant, applicant, head);
+
+        assertThat(signStep(stepOf(envelope, "applicant").getId(), applicant,
+                signature.getId(), true, ActorContext.none()).ok()).isTrue();
+
+        SignatureRequest after = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
+        assertThat(stepOf(after, "first_author").getStatus()).isEqualTo(SignatureStepStatus.SIGNED);
+        assertThat(stepOf(after, "corresponding_author").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+        // ลายเซ็นช่องผู้ประพันธ์ของผู้ขอเอง ไม่ใช่ "ผู้ลงนามท่านอื่น" — ยังถอนกลับไปแก้ได้
+        assertThat(workflow.applicantWithdrawBlocker(after, applicant)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 9: ผู้ประพันธ์เป็นคนอื่นทั้งคู่ — ผู้ขอลงนามเฉพาะช่องของตัวเอง")
+    void applicantDoesNotSignOtherAuthorsSlots() throws IOException {
+        UserDtls applicant = newUser("doc9-none-" + RUN.get() + "@kku.ac.th", "ROLE_USER");
+        UserSignature signature = newSignature(applicant);
+        SignatureRequest envelope = createDoc9Envelope(newDraftRequest(applicant), applicant, head, dean);
+
+        assertThat(workflow.alsoSignedWith(stepOf(envelope, "applicant").getId())).isEmpty();
+        assertThat(signStep(stepOf(envelope, "applicant").getId(), applicant,
+                signature.getId(), true, ActorContext.none()).ok()).isTrue();
+
+        SignatureRequest after = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
+        assertThat(stepOf(after, "first_author").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+        assertThat(stepOf(after, "corresponding_author").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+    }
 }

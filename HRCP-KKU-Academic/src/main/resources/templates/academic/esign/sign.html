@@ -408,6 +408,17 @@
                             </div>
                         </div>
 
+                        <!--/* ช่องที่ผู้ขอเป็นเองตามสถานะในแบบฟอร์ม — ลงนามไปพร้อมกันในครั้งนี้ (SignatureWorkflowService.alsoSignedWith) */-->
+                        <div th:if="${alsoSignedWith != null and !#lists.isEmpty(alsoSignedWith)}"
+                             class="alert alert-info small d-flex gap-2 mb-3">
+                            <i class="fas fa-layer-group mt-1"></i>
+                            <div>
+                                การลงนามครั้งนี้ลงนามในช่อง
+                                <strong th:text="${#strings.listJoin(alsoSignedWith, ' และ ')}">ผู้ประพันธ์อันดับแรก</strong>
+                                ด้วย ตามสถานะของท่านที่ติ๊กไว้ในเอกสาร — ไม่ต้องกลับมาลงนามช่องนั้นอีก
+                            </div>
+                        </div>
+
                         <!--/* คำถามของช่องลงนาม — บางแบบฟอร์มขอ "ผลการตรวจสอบ" ไม่ใช่แค่ลายเซ็น
                              คำตอบผูกกับลายเซ็นของผู้ลงนาม ไม่ใช่ข้อมูลที่ผู้ยื่นกรอกมา จึงถูกเก็บไว้
                              ที่ขั้นตอนลงนามและเติมลงเอกสารตอนพิมพ์เท่านั้น */-->

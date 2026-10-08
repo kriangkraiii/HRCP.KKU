@@ -459,6 +459,8 @@ public class PositionApplicantController {
         model.addAttribute("preFilledData", preFilledData);
         model.addAttribute("docData", preFilledData);
         model.addAttribute("user", user);
+        // ชื่อแบบเดียวกับที่ตัวค้นหาชื่อเก็บ — เอกสารที่ 9 ใช้เลือกผู้ขอเป็นผู้ลงนามตามสถานะที่ติ๊ก
+        model.addAttribute("userPrintedName", com.ecom.academic.service.SignerNameResolver.printedName(user));
 
         // ประตูแก้ไข — เทมเพลตปิดฟอร์มและแสดงเหตุผลที่ถูกส่งกลับจากสามค่านี้
         model.addAttribute("editable", positionService.canApplicantEditDocument(request, type));

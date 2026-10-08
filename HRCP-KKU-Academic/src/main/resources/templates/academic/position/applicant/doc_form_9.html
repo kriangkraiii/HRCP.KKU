@@ -256,6 +256,69 @@
                 document.addEventListener('DOMContentLoaded', () => setTimeout(sync, 0));
             })();
         </script>
+        <script th:inline="javascript">
+            // ติ๊กว่าผู้ขอเป็นผู้ประพันธ์อันดับแรก/บรรณกิจ → ช่องผู้ลงนามตำแหน่งนั้นคือผู้ขอ ล็อกไว้จนกว่าจะเอาติ๊กออก
+            // เลือกผ่านตัวค้นหาชื่อ (person_picker.js) เพื่อให้รหัสบัญชีซ่อนตรงกับชื่อ เซิร์ฟเวอร์จับคู่ผู้ลงนามจากสองค่านี้
+            (function () {
+                const me = {
+                    userId: /*[[${user.id}]]*/ null,
+                    name: /*[[${userPrintedName}]]*/ ''
+                };
+                const BINDINGS = [['chkFA', 'firstauthor_name'], ['chkCorr', 'corres_name']];
+                const NOTE = 'ท่านติ๊กว่าเป็นตำแหน่งนี้ในข้อ ข. — ท่านลงนามช่องนี้เอง ถ้าเป็นคนอื่น ให้เอาติ๊กออกก่อน';
+
+                function apply(chk, field, userAction) {
+                    const input = document.querySelector(`[name="${field}"]`);
+                    const picker = input && input.__personPicker;
+                    if (!picker || !me.userId || !me.name) return;
+                    const wrap = input.parentNode;
+                    const hint = wrap.querySelector('.person-picker-hint');
+                    let note = wrap.querySelector('.self-signer-note');
+                    const isMe = picker.hidden.value === String(me.userId);
+
+                    if (chk.checked) {
+                        if (!isMe && !input.disabled) picker.choose({ userId: me.userId, name: me.name });
+                        if (!note) {
+                            note = document.createElement('div');
+                            note.className = 'form-text self-signer-note';
+                            note.textContent = NOTE;
+                            wrap.appendChild(note);
+                        }
+                    } else if (isMe && userAction) {
+                        picker.choose(null); // ผู้ขอไม่ใช่ตำแหน่งนี้แล้ว — ให้เลือกผู้ประพันธ์ตัวจริง
+                    }
+                    const locked = chk.checked;
+                    if (!input.disabled) input.readOnly = locked;
+                    if (hint) hint.hidden = locked;
+                    if (note) note.hidden = !locked;
+                    showInPanel(field, picker.hidden.value === String(me.userId));
+                }
+
+                // แผงลงนาม: ช่องที่ผู้ขอเป็นเองลงนามพร้อมกับช่องผู้ขอ (SignatureWorkflowService.sign) ไม่ต้องรอเจ้าหน้าที่
+                function showInPanel(field, mine) {
+                    const box = document.querySelector(`[data-slot-field="${field}"]`);
+                    if (!box) return;
+                    box.querySelector('[data-slot-note]').textContent = mine
+                        ? '— ท่านลงนามช่องนี้พร้อมกันในครั้งเดียว'
+                        : '— เจ้าหน้าที่จะส่งให้ลงนามต่อ';
+                    const icon = box.querySelector('[data-slot-icon]');
+                    icon.className = (mine ? 'fas fa-user-check text-success' : 'fas fa-user-clock text-muted') + ' me-1';
+                }
+
+                function applyAll(userAction) {
+                    BINDINGS.forEach(([id, field]) => {
+                        const chk = document.getElementById(id);
+                        if (chk) apply(chk, field, userAction);
+                    });
+                }
+
+                document.addEventListener('change', e => {
+                    if (BINDINGS.some(([id]) => id === e.target.id)) applyAll(true);
+                });
+                // ตัวค้นหาชื่อจำค่าที่บันทึกไว้ตอน load — ผูกหลังจากนั้น
+                window.addEventListener('load', () => setTimeout(() => applyAll(false), 0));
+            })();
+        </script>
 
         <script th:inline="javascript">
             window.AUTOFILL_USER = {

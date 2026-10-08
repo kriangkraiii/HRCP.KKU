@@ -1,0 +1,79 @@
+package com.ecom.signature;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
+
+import java.util.List;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.test.context.TestPropertySource;
+
+import com.ecom.academic.model.PositionRequestStatus;
+import com.ecom.academic.model.SignatureModule;
+import com.ecom.academic.model.SignatureRequest;
+import com.ecom.academic.model.SignatureRequestStatus;
+import com.ecom.academic.model.SignatureStep;
+import com.ecom.academic.model.SignatureStepStatus;
+import com.ecom.academic.model.SignedPdfRevision;
+import com.ecom.academic.model.UserSignature;
+import com.ecom.academic.service.DocumentGenerationService;
+import com.ecom.academic.service.PositionDocTypes;
+import com.ecom.academic.service.SignatureWorkflowService;
+import com.ecom.academic.service.pdf.SignedPdfRevisionService;
+import com.ecom.model.UserDtls;
+import com.ecom.support.AbstractFlowTest;
+import com.ecom.support.TestCertificates;
+
+/**
+ * เอกสารที่ 9 เฟส 2 แบบใส่ทับ (ฉบับแยกตามผลงาน 901 ใช้กติกาของเอกสารที่ 9): ผู้ขอที่เป็นผู้ประพันธ์อันดับแรกและบรรณกิจเอง ลงนามครั้งเดียว ได้ลายมือชื่อดิจิทัล
+ * ในไฟล์ครบทุกช่องของตัวเอง — ช่องละหนึ่ง revision ด้วยใบรับรองเดียวกัน
+ */
+@TestPropertySource(properties = { "app.esign.pdf-mode=incremental", "app.esign.incremental-docs=POSITION:9",
+        "app.esign.p12-master-key=AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=" })
+@DisplayName("เอกสารที่ 9 — ผู้ขอลงนามทุกช่องของตัวเองลงไฟล์ในครั้งเดียว")
+class ApplicantHeldSlotsSigningTest extends AbstractFlowTest {
+
+    @Autowired
+    private SignedPdfRevisionService revisions;
+
+    @BeforeEach
+    void needsLibreOffice() {
+        assumeTrue(new DocumentGenerationService().isPdfConversionAvailable(), "LibreOffice is not installed");
+    }
+
+    @Test
+    @DisplayName("ลงนามครั้งเดียว: ไฟล์มีลายมือชื่อของผู้ขอ ผู้ประพันธ์อันดับแรก และบรรณกิจ")
+    void oneSigningPutsEveryOwnSlotIntoThePdf() {
+        UserDtls applicant = data.applicant();
+        UserSignature signature = data.signatureFor(applicant);
+        data.digitalCertificateFor(applicant);
+        var request = data.positionRequest(applicant, PositionRequestStatus.DRAFT, null);
+        String json = "{\"applicant_name\":\"" + applicant.getName() + "\","
+                + "\"title_name\":\"ผลงานทดสอบ\",\"role_des1\":\"ริเริ่ม\","
+                + "\"chk_ firstauthor\":\"☑\",\"chk_corresp\":\"☑\","
+                + "\"firstauthor_name\":\"" + applicant.getName() + "\","
+                + "\"firstauthor_name__signer\":\"" + applicant.getId() + "\","
+                + "\"corres_name\":\"" + applicant.getName() + "\","
+                + "\"corres_name__signer\":\"" + applicant.getId() + "\"}";
+        SignatureRequest envelope = circulate(SignatureModule.POSITION, request.getId(),
+                PositionDocTypes.copyType(1), json, applicant,
+                List.of(new SignatureWorkflowService.SignerAssignment("applicant", applicant.getId())));
+        SignatureStep applicantStep = signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId())
+                .get(0);
+
+        var result = signatureWorkflow.sign(applicantStep.getId(), applicant, signature.getId(), true,
+                SignatureWorkflowService.ActorContext.none(), TestCertificates.PIN);
+
+        assertThat(result.ok()).as(result.error()).isTrue();
+        assertThat(signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId()))
+                .extracting(SignatureStep::getStatus)
+                .containsOnly(SignatureStepStatus.SIGNED);
+        assertThat(revisions.chain(envelope.getId())).extracting(SignedPdfRevision::getKind)
+                .containsExactly(SignedPdfRevision.Kind.BASE, SignedPdfRevision.Kind.SIGN,
+                        SignedPdfRevision.Kind.SIGN, SignedPdfRevision.Kind.SIGN);
+        assertThat(result.request().getStatus()).isEqualTo(SignatureRequestStatus.COMPLETED);
+    }
+}

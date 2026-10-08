@@ -303,6 +303,35 @@ public class SignatureAnchorRegistry {
     private static final Map<DocKey, java.util.Set<String>> REVIEWER_SIGNED = Map.of(
             new DocKey(SignatureModule.ACADEMIC, 2), java.util.Set.of("hr"));
 
+    /**
+     * ช่องที่ผู้ขอเป็นเองได้ตามสถานะที่ติ๊กในแบบฟอร์ม — เมื่อชื่อในช่องคือผู้ขอ ผู้ขอลงนามช่องนี้
+     * พร้อมกับช่องของตัวเองในครั้งเดียว ไม่ต้องรอเจ้าหน้าที่ส่งเวียนมาให้ลงนามซ้ำ
+     *
+     * <p>เอกสารที่ 9 เฟส 2: ผู้ขอเป็นผู้ประพันธ์อันดับแรกและ/หรือผู้ประพันธ์บรรณกิจได้
+     */
+    private static final Map<DocKey, java.util.Set<String>> APPLICANT_MAY_HOLD = Map.of(
+            new DocKey(SignatureModule.POSITION, 9), java.util.Set.of("first_author", "corresponding_author"));
+
+    /** ช่องนี้ผู้ขอเป็นเองได้ ({@link #APPLICANT_MAY_HOLD}) */
+    public static boolean applicantMayHold(SignatureModule module, int documentType, String slotKey) {
+        return APPLICANT_MAY_HOLD.getOrDefault(key(module, documentType), java.util.Set.of()).contains(slotKey);
+    }
+
+    /**
+     * ขั้นนี้เป็นลายเซ็นของผู้ขอเอง — ช่องผู้ขอ หรือช่องที่ผู้ขอเป็นเองได้และผู้ลงนามคือผู้ขอ
+     *
+     * @param applicantUserId บัญชีผู้ขอ (ผู้ลงนามช่องผู้ขอ) หรือ null เมื่อไม่รู้
+     */
+    public static boolean isApplicantOwnStep(SignatureModule module, int documentType,
+            com.ecom.academic.model.SignatureStep step, Integer applicantUserId) {
+        if ("applicant".equalsIgnoreCase(step.getSlotKey())) {
+            return true;
+        }
+        return applicantUserId != null && step.getSigner() != null
+                && applicantUserId.equals(step.getSigner().getId())
+                && applicantMayHold(module, documentType, step.getSlotKey());
+    }
+
     /** ช่องนี้ต้องเป็นเจ้าหน้าที่ที่กดยืนยันเองหรือไม่ */
     public static boolean isSignedByReviewer(SignatureModule module, int documentType, String slotKey) {
         return REVIEWER_SIGNED.getOrDefault(key(module, documentType), java.util.Set.of()).contains(slotKey);

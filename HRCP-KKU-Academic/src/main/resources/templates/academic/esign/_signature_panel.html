@@ -603,10 +603,12 @@
                         </div>
 
                         <!--/* สำหรับ Applicant: ปิดไว้และแสดงข้อความแนะนำ */-->
-                        <div th:unless="${signaturePanel.isAdminViewer}" class="p-2 border rounded bg-light text-secondary small">
-                            <i class="fas fa-user-clock text-muted me-1"></i>
+                        <!--/* data-slot-field: สคริปต์ของแบบฟอร์มเปลี่ยนข้อความได้ เมื่อผู้ยื่นเป็นตำแหน่งนี้เอง (เอกสารที่ 9) */-->
+                        <div th:unless="${signaturePanel.isAdminViewer}" class="p-2 border rounded bg-light text-secondary small"
+                             th:attr="data-slot-field=${slot.anchorPlaceholder}">
+                            <i class="fas fa-user-clock text-muted me-1" data-slot-icon></i>
                             <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
-                            <span class="text-muted">— เจ้าหน้าที่จะส่งให้ลงนามต่อ</span>
+                            <span class="text-muted" data-slot-note>— เจ้าหน้าที่จะส่งให้ลงนามต่อ</span>
                             <input type="hidden" name="signerUserIds" value="">
                         </div>
                     </div>

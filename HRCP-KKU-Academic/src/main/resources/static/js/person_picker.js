@@ -162,6 +162,8 @@
     };
 
     Picker.prototype.query = function () {
+        // ช่องที่สคริปต์ของหน้าล็อกไว้ภายหลัง (เช่น เอกสารที่ 9 ผูกกับผู้ขอตามสถานะที่ติ๊ก)
+        if (this.input.disabled || this.input.readOnly) return;
         var self = this;
         var q = this.input.value.trim();
         // ช่องที่แสดงชื่อคนที่เลือกอยู่ — โฟกัสแล้วแสดงคนที่แนะนำ ไม่ใช่ค้นด้วยชื่อเดิม

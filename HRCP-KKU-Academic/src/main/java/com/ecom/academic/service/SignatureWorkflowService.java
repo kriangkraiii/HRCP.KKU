@@ -1018,6 +1018,92 @@ public class SignatureWorkflowService {
             return Result.failed("เนื้อหาเอกสารถูกแก้ไขหลังส่งลงนาม ลายเซ็นทั้งหมดเป็นโมฆะ");
         }
 
+        SigningAuth auth = new SigningAuth(authMethodToUse, usedCert, usedFingerprint, usedPin, systemSealed);
+        String problem = recordSignature(envelope, step, signature, actingUser, actor, auth,
+                choice != null ? signerChoice : null, signerComment);
+        if (problem != null) {
+            // Nothing of this signature may remain: the step, its evidence and
+            // any PDF revision go back together.
+            org.springframework.transaction.interceptor.TransactionAspectSupport
+                    .currentTransactionStatus().setRollbackOnly();
+            return Result.failed(problem);
+        }
+
+        audit(envelope, step.getId(), SignatureAuditEventType.SIGNED, actingUser, actor,
+                "ลงนามในตำแหน่ง \"" + step.getRoleLabel() + "\""
+                        + (choice != null ? " — " + choice.question() + ": " + signerChoice : "")
+                        + (step.getSignerComment() != null
+                                ? " — ความเห็น: " + step.getSignerComment()
+                                : ""));
+
+        if (choice != null && signerChoice.equals(choice.alertValue())) {
+            announceAdverseFinding(envelope, step, choice, signerChoice);
+        }
+        if ("applicant".equalsIgnoreCase(step.getSlotKey())) {
+            // ช่องที่ผู้ขอเป็นเองตามสถานะในแบบฟอร์ม (เช่น ผู้ประพันธ์อันดับแรกในเอกสารที่ 9) ลงนามไปพร้อมกัน
+            // ด้วยลายเซ็นและ Digital ID เดียวกันในครั้งนี้ — ไม่ต้องรอเจ้าหน้าที่ส่งเวียนกลับมาให้ลงนามซ้ำ
+            // ลงไฟล์แยกช่องละหนึ่งลายมือชื่อดิจิทัลตามปกติ ช่องใดลงไม่สำเร็จ ทั้งหมดย้อนกลับพร้อมกัน
+            for (SignatureStep own : applicantHeldSteps(envelope, step)) {
+                problem = recordSignature(envelope, own, signature, actingUser, actor, auth, null, null);
+                if (problem != null) {
+                    org.springframework.transaction.interceptor.TransactionAspectSupport
+                            .currentTransactionStatus().setRollbackOnly();
+                    return Result.failed(problem);
+                }
+                audit(envelope, own.getId(), SignatureAuditEventType.SIGNED, actingUser, actor,
+                        "ลงนามในตำแหน่ง \"" + own.getRoleLabel() + "\" พร้อมกับช่องผู้ขอ");
+            }
+            announceRevisionIfSentBack(envelope, step);
+        }
+
+        activateNextStep(envelope, actor);
+        return new Result(requestRepository.save(envelope), null);
+    }
+
+    /**
+     * ตำแหน่งที่ลงนามไปพร้อมกันเมื่อผู้ขอลงนามขั้นนี้ — หน้าลงนามบอกผู้ขอก่อนกดยอมรับ
+     *
+     * @return ชื่อตำแหน่งตามลำดับลงนาม ว่างเมื่อขั้นนี้ไม่ใช่ช่องผู้ขอหรือไม่มีช่องอื่นของผู้ขอ
+     */
+    @Transactional(readOnly = true)
+    public List<String> alsoSignedWith(Long stepId) {
+        SignatureStep step = stepRepository.findByIdWithRequest(stepId).orElse(null);
+        if (step == null || !"applicant".equalsIgnoreCase(step.getSlotKey())) {
+            return List.of();
+        }
+        SignatureRequest envelope = requestRepository.findByIdWithSteps(step.getSignatureRequest().getId())
+                .orElse(null);
+        if (envelope == null) {
+            return List.of();
+        }
+        return applicantHeldSteps(envelope, step).stream().map(SignatureStep::getRoleLabel).toList();
+    }
+
+    /** วิธียืนยันตัวตนของการลงนามครั้งนี้ — ใช้ซ้ำกับทุกช่องที่ผู้ขอลงนามพร้อมกัน */
+    private record SigningAuth(String method, com.ecom.academic.model.UserDigitalCertificate cert,
+            String fingerprint, String pin, boolean systemSealed) {
+    }
+
+    /**
+     * ช่องที่ผู้ขอเป็นเองและยังรอลงนามในซองนี้ ({@link SignatureAnchorRegistry#isApplicantOwnStep})
+     * ไม่รวมช่องผู้ขอที่กำลังลงนาม
+     */
+    private List<SignatureStep> applicantHeldSteps(SignatureRequest envelope, SignatureStep applicantStep) {
+        return envelope.getSteps().stream()
+                .filter(s -> !s.getId().equals(applicantStep.getId()))
+                .filter(s -> s.getStatus() == SignatureStepStatus.WAITING)
+                .filter(envelope::isApplicantOwn)
+                .sorted(java.util.Comparator.comparingInt(SignatureStep::getStepOrder))
+                .toList();
+    }
+
+    /**
+     * บันทึกลายเซ็นลงขั้นหนึ่ง: หลักฐาน ภาพลายเซ็น และลายมือชื่อดิจิทัลในไฟล์ (เอกสารที่ลงนามทีละขั้น)
+     *
+     * @return เหตุที่ลงไฟล์ไม่สำเร็จ หรือ null เมื่อสำเร็จ — ผู้เรียกต้องย้อนธุรกรรมเมื่อไม่สำเร็จ
+     */
+    private String recordSignature(SignatureRequest envelope, SignatureStep step, UserSignature signature,
+            UserDtls actingUser, ActorContext actor, SigningAuth auth, String signerChoice, String signerComment) {
         step.setStatus(SignatureStepStatus.SIGNED);
         step.setSignedAt(LocalDateTime.now().truncatedTo(java.time.temporal.ChronoUnit.MICROS));
         step.setUserSignature(signature);
@@ -1057,17 +1143,17 @@ public class SignatureWorkflowService {
             }
         }
         step.setImagePathSnapshot(imagePathSnapshot);
-        if (choice != null) {
+        if (signerChoice != null) {
             step.setSignerChoiceValue(signerChoice);
         }
         step.setSignerComment(blankToNull(truncate(signerComment, 1000)));
         step.setConsentAccepted(true);
         step.setConsentTextVersion(SignatureStep.CONSENT_TEXT_VERSION);
-        step.setAuthMethod(authMethodToUse);
-        if (usedCert != null) {
-            step.setDigitalCertSubject(usedCert.getSubjectDn());
-            step.setDigitalCertificateId(usedCert.getId());
-            step.setCertFingerprintSha256(usedFingerprint);
+        step.setAuthMethod(auth.method());
+        if (auth.cert() != null) {
+            step.setDigitalCertSubject(auth.cert().getSubjectDn());
+            step.setDigitalCertificateId(auth.cert().getId());
+            step.setCertFingerprintSha256(auth.fingerprint());
         }
         step.setIpAddress(actor.ipAddress());
         step.setUserAgent(truncate(actor.userAgent(), 500));
@@ -1080,33 +1166,10 @@ public class SignatureWorkflowService {
         stepRepository.save(step);
 
         if (envelope.isIncremental()) {
-            String problem = systemSealed ? sealIntoPdf(envelope, step, actingUser)
-                    : signIntoPdf(envelope, step, usedCert, usedPin);
-            if (problem != null) {
-                // Nothing of this signature may remain: the step, its evidence and
-                // any PDF revision go back together.
-                org.springframework.transaction.interceptor.TransactionAspectSupport
-                        .currentTransactionStatus().setRollbackOnly();
-                return Result.failed(problem);
-            }
+            return auth.systemSealed() ? sealIntoPdf(envelope, step, actingUser)
+                    : signIntoPdf(envelope, step, auth.cert(), auth.pin());
         }
-
-        audit(envelope, step.getId(), SignatureAuditEventType.SIGNED, actingUser, actor,
-                "ลงนามในตำแหน่ง \"" + step.getRoleLabel() + "\""
-                        + (choice != null ? " — " + choice.question() + ": " + signerChoice : "")
-                        + (step.getSignerComment() != null
-                                ? " — ความเห็น: " + step.getSignerComment()
-                                : ""));
-
-        if (choice != null && signerChoice.equals(choice.alertValue())) {
-            announceAdverseFinding(envelope, step, choice, signerChoice);
-        }
-        if ("applicant".equalsIgnoreCase(step.getSlotKey())) {
-            announceRevisionIfSentBack(envelope, step);
-        }
-
-        activateNextStep(envelope, actor);
-        return new Result(requestRepository.save(envelope), null);
+        return null;
     }
 
     /**
@@ -1567,9 +1630,11 @@ public class SignatureWorkflowService {
             return Optional.of("ส่งคำร้องไปแล้ว หากต้องแก้ไขเอกสาร กรุณาติดต่อเจ้าหน้าที่ให้ส่งกลับมาแก้ไข");
         }
         // อ่านจาก repository ไม่ใช่ envelope.getSteps() — ตัวเรียกบางทางได้ซองที่หลุดจาก session แล้ว
+        // ช่องที่ผู้ขอลงนามพร้อมกับช่องของตัวเอง (เช่น ผู้ประพันธ์อันดับแรก) ไม่ใช่ "ผู้ลงนามท่านอื่น"
         boolean othersSigned = stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId())
                 .stream()
-                .anyMatch(step -> !"applicant".equalsIgnoreCase(step.getSlotKey()) && step.getSignedAt() != null);
+                .anyMatch(step -> step.getSignedAt() != null && !SignatureAnchorRegistry.isApplicantOwnStep(
+                        envelope.getModule(), envelope.getDocumentType(), step, user.getId()));
         if (othersSigned) {
             return Optional.of("มีผู้ลงนามท่านอื่นลงนามในเอกสารนี้แล้ว กรุณาติดต่อเจ้าหน้าที่ให้ส่งกลับมาแก้ไข");
         }

@@ -245,6 +245,8 @@ public class SigningController {
         String signerName = myCert != null ? myCert.getCommonName() : me.getName();
         model.addAttribute("consentStatement", SignatureStep.consentStatement(
                 signerName, step.getRoleLabel(), envelope.getDocumentLabel()));
+        // ช่องที่ผู้ขอเป็นเอง (เช่น ผู้ประพันธ์อันดับแรก) ลงนามไปพร้อมกันในครั้งนี้
+        model.addAttribute("alsoSignedWith", isSigner ? workflow.alsoSignedWith(stepId) : List.of());
         model.addAttribute("queueTotal", queueTotal);
         model.addAttribute("queueIndex", queueIndex);
         model.addAttribute("deadlineAdvisory", deadlineAdvisory);

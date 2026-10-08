@@ -176,13 +176,32 @@ public class SignatureRequest {
     public List<SignatureStep> forwardedStepsToWithdraw() {
         boolean applicantSigned = steps.stream().anyMatch(s -> "applicant".equalsIgnoreCase(s.getSlotKey())
                 && s.getStatus() == SignatureStepStatus.SIGNED);
-        List<SignatureStep> others = steps.stream().filter(s -> !"applicant".equalsIgnoreCase(s.getSlotKey())).toList();
+        List<SignatureStep> others = steps.stream().filter(s -> !isApplicantOwn(s)).toList();
         if (!applicantSigned || others.stream().anyMatch(s -> s.getStatus() == SignatureStepStatus.SIGNED)) {
             return List.of();
         }
         return others.stream()
                 .filter(s -> s.getStatus() == SignatureStepStatus.WAITING || s.getStatus() == SignatureStepStatus.ACTIVE)
                 .toList();
+    }
+
+    /** บัญชีผู้ขอ — ผู้ลงนามช่องผู้ขอในซองนี้ หรือ null เมื่อซองไม่มีช่องผู้ขอ */
+    public Integer applicantUserId() {
+        return steps.stream()
+                .filter(s -> "applicant".equalsIgnoreCase(s.getSlotKey()) && s.getSigner() != null)
+                .map(s -> s.getSigner().getId())
+                .findFirst()
+                .orElse(null);
+    }
+
+    /**
+     * ขั้นของผู้ขอเอง — ช่องผู้ขอ และช่องที่ผู้ขอเป็นเองตามสถานะในแบบฟอร์ม ซึ่งลงนามพร้อมกันในครั้งเดียว
+     * ({@code SignatureAnchorRegistry#isApplicantOwnStep})
+     */
+    public boolean isApplicantOwn(SignatureStep step) {
+        return com.ecom.academic.service.SignatureAnchorRegistry.isApplicantOwnStep(module,
+                documentType == null ? 0 : documentType, step,
+                applicantUserId());
     }
 
     public long signedCount() {
