@@ -85,7 +85,10 @@ class SignedPageCountTest {
         List<DynamicTest> tests = new ArrayList<>();
         for (SignatureModule module : registry.modules()) {
             for (int docType : registry.signableDocumentTypes(module)) {
-                List<SignatureSlot> slots = registry.slotsFor(module, docType);
+                // ช่องแบบแถว (บรรณกิจเพิ่มเติมของเอกสารที่ 9) มีเฉพาะเมื่อผู้ขอเพิ่มแถว — ตัวอย่างนี้ไม่มีแถว
+                List<SignatureSlot> slots = registry.slotsFor(module, docType).stream()
+                        .filter(s -> !com.ecom.academic.service.SignatureAnchorRegistry.isRowSlot(module, docType, s.slotKey()))
+                        .toList();
                 tests.add(DynamicTest.dynamicTest(module + " doc " + docType + " (" + slots.size() + " จุดลงนาม)",
                         () -> check.check(module, docType, slots)));
             }

@@ -88,12 +88,12 @@
                     </div>
                 </div>
 
-                <!--/* ลงชื่อ + ผู้ร่วมงาน (dynamic) */-->
+                <!--/* ผู้ลงนาม: แถวที่เพิ่มคือผู้ประพันธ์บรรณกิจเพิ่มเติม (ชื่อช่อง coauthor_name_N ตามร่างเดิม) */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">ผู้ลงนาม / ผู้ร่วมงาน</h5>
+                        <h5 class="mb-0">ผู้ลงนาม</h5>
                         <button type="button" class="btn btn-success btn-sm" id="btnAddCoauthor">
-                            <i class="fas fa-plus-circle"></i> เพิ่มผู้ร่วมงาน
+                            <i class="fas fa-plus-circle"></i> เพิ่มผู้ประพันธ์บรรณกิจ
                         </button>
                     </div>
                     <div class="card-body">
@@ -184,10 +184,14 @@
                         const data = JSON.parse(existingData);
 
                         // Restore co-authors
-                        let maxCo = 0;
-                        for (const key of Object.keys(data)) {
-                            const m = key.match(/^coauthor_name_(\d+)$/);
-                            if (m) maxCo = Math.max(maxCo, parseInt(m[1]));
+                        // ตามจำนวนแถวที่บันทึกไว้ — ชื่อของแถวที่ลบไปแล้วยังค้างใน JSON
+                        let maxCo = parseInt(data.coauthor_count, 10);
+                        if (isNaN(maxCo)) {
+                            maxCo = 0;
+                            for (const key of Object.keys(data)) {
+                                const m = key.match(/^coauthor_name_(\d+)$/);
+                                if (m) maxCo = Math.max(maxCo, parseInt(m[1]));
+                            }
                         }
                         for (let i = 1; i <= maxCo; i++) {
                             addCoauthorRow(data[`coauthor_name_${i}`], data[`coauthor_role_${i}`]);

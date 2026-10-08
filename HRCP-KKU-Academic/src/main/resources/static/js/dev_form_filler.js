@@ -128,6 +128,8 @@
 
     function editable(el) {
         if (el.disabled || el.readOnly || el.type === 'hidden') return false;
+        // ช่องที่แบบฟอร์มล็อกไว้เพราะขัดกับช่องที่ติ๊กแล้ว (เช่น เอกสารที่ 9 ผู้นิพนธ์ร่วม) — ผู้ใช้ก็ติ๊กไม่ได้
+        if (el.getAttribute('aria-disabled') === 'true') return false;
         if (SKIP_NAMES.indexOf(el.name) !== -1) return false;
         // ส่วนที่ซ่อนตามตำแหน่งที่ขอ — DocumentCompleteness ไม่นับอยู่แล้ว และไม่ควรมีเนื้อหาในเอกสาร
         return el.getClientRects().length > 0;

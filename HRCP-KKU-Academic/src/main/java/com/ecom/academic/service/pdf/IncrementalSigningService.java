@@ -94,7 +94,10 @@ public class IncrementalSigningService {
     }
 
     public boolean isEnabledFor(SignatureModule module, int documentType) {
-        return enabled && documents.contains(module.name() + ":" + documentType);
+        // ฉบับแยกตามผลงานของเอกสารที่ 9 (901, 902, ...) ใช้กติกาของเอกสารที่ 9 (PositionDocTypes.base)
+        int type = module == SignatureModule.POSITION
+                ? com.ecom.academic.service.PositionDocTypes.base(documentType) : documentType;
+        return enabled && documents.contains(module.name() + ":" + type);
     }
 
     // ------------------------------------------------------------------ revision 0
@@ -151,7 +154,16 @@ public class IncrementalSigningService {
     }
 
     private void prepare(SignatureRequest envelope) throws IOException, BasePdfBuilder.BaseBuildException {
-        List<SignatureSlot> slots = workflowConfig.effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType());
+        // ช่องแบบแถว (บรรณกิจเพิ่มเติมของเอกสารที่ 9) มีที่ลงนามในไฟล์เฉพาะแถวที่อยู่ในเอกสารนี้จริง
+        Map<String, Object> frozen = envelope.getFrozenJson() == null ? Map.of()
+                : json.readValue(envelope.getFrozenJson(),
+                        new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() {
+                        });
+        List<SignatureSlot> slots = workflowConfig.effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType())
+                .stream()
+                .filter(s -> com.ecom.academic.service.SignatureAnchorRegistry.slotInDocument(
+                        envelope.getModule(), envelope.getDocumentType(), s.slotKey(), frozen))
+                .toList();
 
         List<BasePdfBuilder.TextSpec> texts = new ArrayList<>();
         Set<String> seen = new LinkedHashSet<>();
@@ -410,6 +422,7 @@ public class IncrementalSigningService {
      *
      * @throws PdfIncrementService.DoesNotFitException when the comment does not fit its box
      */
+    @Transactional(readOnly = true)
     public byte[] preview(SignatureRequest envelope, SignatureStep step, byte[] imagePng, String choice,
             String comment) throws IOException {
         // ช่องที่สำนักงานกรอกไว้แล้วจะถูกเขียนลงไฟล์ตอนลงนาม (sign → syncLateValues) — แสดงให้เห็นตั้งแต่ตอนนี้
@@ -427,7 +440,25 @@ public class IncrementalSigningService {
         thaiDateDigits(own, slot, envelope);
         own.keySet().retainAll(fields);
         putNameIfBlank(own, slot, step, fields, values(current));
-        return pdf.preview(current, "sig_" + slot.slotKey(), own, nameField(slot), imagePng);
+        byte[] preview = pdf.preview(current, "sig_" + slot.slotKey(), own, nameField(slot), imagePng);
+
+        // ช่องที่ผู้ขอเป็นเอง (เช่น ผู้ประพันธ์ในเอกสารที่ 9) ลงนามไปพร้อมกันในครั้งนี้ — ตัวอย่างต้องเห็นลายเซ็น
+        // ทุกช่องเหมือนไฟล์ที่จะได้ ไม่ใช่แค่ช่องผู้ขอ
+        var steps = envelopes.findByIdWithSteps(envelope.getId()).map(SignatureRequest::getSteps).orElse(List.of());
+        for (var held : com.ecom.academic.service.SignatureAnchorRegistry.heldWithApplicant(
+                envelope.getModule(), envelope.getDocumentType(), step, steps)) {
+            SignatureSlot heldSlot = workflowConfig.effectiveSlotsFor(envelope.getModule(), envelope.getDocumentType())
+                    .stream().filter(s -> s.slotKey().equals(held.getSlotKey())).findFirst().orElse(null);
+            if (heldSlot == null || !fields.contains("sig_" + heldSlot.slotKey())) {
+                continue;
+            }
+            Map<String, String> heldOwn = ownValues(heldSlot, LocalDateTime.now(ZoneId.of("Asia/Bangkok")), null, null);
+            thaiDateDigits(heldOwn, heldSlot, envelope);
+            heldOwn.keySet().retainAll(fields);
+            putNameIfBlank(heldOwn, heldSlot, held, fields, values(preview));
+            preview = pdf.preview(preview, "sig_" + heldSlot.slotKey(), heldOwn, nameField(heldSlot), imagePng);
+        }
+        return preview;
     }
 
     /**

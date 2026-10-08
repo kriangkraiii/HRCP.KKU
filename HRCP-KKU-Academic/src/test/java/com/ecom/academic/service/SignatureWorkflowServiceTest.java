@@ -1084,6 +1084,10 @@ class SignatureWorkflowServiceTest {
         return "{\"applicant_name\":\"" + applicant.getName() + "\","
                 + "\"title_name\":\"ผลงานทดสอบ\","
                 + "\"role_des1\":\"ริเริ่ม\","
+                // ข้อ ข. ต้องติ๊กสถานะผู้ขออย่างน้อยหนึ่งข้อ — ตามชื่อผู้ประพันธ์ที่เลือก
+                + "\"chk_ firstauthor\":\"" + (firstAuthor == applicant ? "☑" : "☐") + "\","
+                + "\"chk_corresp\":\"" + (corresponding == applicant ? "☑" : "☐") + "\","
+                + "\"chk_coauthor\":\"" + (firstAuthor != applicant && corresponding != applicant ? "☑" : "☐") + "\","
                 + "\"firstauthor_name\":\"" + firstAuthor.getName() + "\","
                 + "\"firstauthor_name__signer\":\"" + firstAuthor.getId() + "\","
                 + "\"corres_name\":\"" + corresponding.getName() + "\","
@@ -1110,6 +1114,11 @@ class SignatureWorkflowServiceTest {
 
         assertThat(workflow.alsoSignedWith(stepOf(envelope, "applicant").getId()))
                 .containsExactly("ผู้ประพันธ์อันดับแรก", "ผู้ประพันธ์บรรณกิจ");
+        // รายการลำดับการลงนามแสดง "ลงนามพร้อมข้อ 1" แทน "รอคิว"
+        SignatureRequest before = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
+        assertThat(before.isSignedWithApplicant(stepOf(before, "first_author"))).isTrue();
+        assertThat(before.isSignedWithApplicant(stepOf(before, "corresponding_author"))).isTrue();
+        assertThat(before.applicantStepOrder()).isEqualTo(1);
 
         Result signed = signStep(stepOf(envelope, "applicant").getId(), applicant,
                 signature.getId(), true, ActorContext.none());
@@ -1122,8 +1131,8 @@ class SignatureWorkflowServiceTest {
     }
 
     @Test
-    @DisplayName("เอกสารที่ 9: ผู้ขอเป็นผู้ประพันธ์อันดับแรก บรรณกิจเป็นคนอื่น — ช่องคนอื่นยังรอเจ้าหน้าที่ส่งเวียน")
-    void applicantSignsOwnSlotButOthersWaitForRelease() throws IOException {
+    @DisplayName("เอกสารที่ 9: ผู้ขอเป็นผู้ประพันธ์อันดับแรก บรรณกิจเป็นคนอื่น — บรรณกิจได้รับแจ้งทันที ไม่รอเจ้าหน้าที่")
+    void otherAuthorIsAskedRightAfterTheApplicantSigns() throws IOException {
         UserDtls applicant = newUser("doc9-first-" + RUN.get() + "@kku.ac.th", "ROLE_USER");
         UserSignature signature = newSignature(applicant);
         PositionRequest request = newDraftRequest(applicant);
@@ -1133,25 +1142,86 @@ class SignatureWorkflowServiceTest {
                 signature.getId(), true, ActorContext.none()).ok()).isTrue();
 
         SignatureRequest after = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
+        assertThat(after.isCirculationStarted()).as("เจ้าหน้าที่ยังไม่ได้ปล่อยเวียน").isFalse();
         assertThat(stepOf(after, "first_author").getStatus()).isEqualTo(SignatureStepStatus.SIGNED);
-        assertThat(stepOf(after, "corresponding_author").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
-        // ลายเซ็นช่องผู้ประพันธ์ของผู้ขอเอง ไม่ใช่ "ผู้ลงนามท่านอื่น" — ยังถอนกลับไปแก้ได้
+        assertThat(stepOf(after, "corresponding_author").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
+        // ลายเซ็นช่องผู้ประพันธ์ของผู้ขอเอง ไม่ใช่ "ผู้ลงนามท่านอื่น" — ยังถอนกลับไปแก้ได้จนกว่าบรรณกิจจะลงนาม
         assertThat(workflow.applicantWithdrawBlocker(after, applicant)).isEmpty();
+
+        assertThat(signStep(stepOf(after, "corresponding_author").getId(), head,
+                headSignature.getId(), true, ActorContext.none()).ok()).isTrue();
+        SignatureRequest done = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
+        assertThat(done.getStatus()).isEqualTo(SignatureRequestStatus.COMPLETED);
     }
 
     @Test
-    @DisplayName("เอกสารที่ 9: ผู้ประพันธ์เป็นคนอื่นทั้งคู่ — ผู้ขอลงนามเฉพาะช่องของตัวเอง")
+    @DisplayName("เอกสารที่ 9: ผู้ประพันธ์เป็นคนอื่นทั้งคู่ — ผู้ขอลงนามเฉพาะช่องของตัวเอง แล้วส่งต่อให้ผู้ประพันธ์ทันที")
     void applicantDoesNotSignOtherAuthorsSlots() throws IOException {
         UserDtls applicant = newUser("doc9-none-" + RUN.get() + "@kku.ac.th", "ROLE_USER");
         UserSignature signature = newSignature(applicant);
         SignatureRequest envelope = createDoc9Envelope(newDraftRequest(applicant), applicant, head, dean);
 
         assertThat(workflow.alsoSignedWith(stepOf(envelope, "applicant").getId())).isEmpty();
+        SignatureRequest before = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
+        assertThat(before.isSignedWithApplicant(stepOf(before, "first_author"))).as("คนอื่น — รอคิวจริง").isFalse();
         assertThat(signStep(stepOf(envelope, "applicant").getId(), applicant,
                 signature.getId(), true, ActorContext.none()).ok()).isTrue();
 
+        // ผู้ประพันธ์ที่ผู้ขอเลือกเองลงนามต่อตามลำดับทันที — อันดับแรกก่อน แล้วบรรณกิจ
         SignatureRequest after = requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow();
-        assertThat(stepOf(after, "first_author").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+        assertThat(stepOf(after, "first_author").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
         assertThat(stepOf(after, "corresponding_author").getStatus()).isEqualTo(SignatureStepStatus.WAITING);
+        assertThat(signStep(stepOf(after, "first_author").getId(), head,
+                headSignature.getId(), true, ActorContext.none()).ok()).isTrue();
+        assertThat(stepOf(requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow(), "corresponding_author")
+                .getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
+    }
+
+    @Test
+    @DisplayName("เอกสารที่ 9: ผู้ประพันธ์บรรณกิจเพิ่มเติมลงนามในระบบ ต่อจากบรรณกิจคนแรก — แถวที่ลบไปแล้วไม่ถูกเรียกลงนาม")
+    void extraCorrespondingAuthorsSignInTurn() throws Exception {
+        UserDtls applicant = newUser("doc9-extra-" + RUN.get() + "@kku.ac.th", "ROLE_USER");
+        UserDtls extra = newUser("doc9-extra-corr-" + RUN.get() + "@kku.ac.th", "ROLE_USER");
+        UserDtls removed = newUser("doc9-removed-" + RUN.get() + "@kku.ac.th", "ROLE_USER");
+        UserSignature signature = newSignature(applicant);
+        UserSignature extraSignature = newSignature(extra);
+        java.util.Map<String, String> data = new java.util.LinkedHashMap<>();
+        data.put("applicant_name", applicant.getName());
+        data.put("title_name", "ผลงานทดสอบ");
+        data.put("role_des1", "ริเริ่ม");
+        data.put("chk_coauthor", "☑");
+        data.put("firstauthor_name", head.getName());
+        data.put("firstauthor_name__signer", String.valueOf(head.getId()));
+        data.put("corres_name", dean.getName());
+        data.put("corres_name__signer", String.valueOf(dean.getId()));
+        data.put("coauthor_count", "1");
+        data.put("coauthor_name_1", extra.getName());
+        data.put("coauthor_name_1__signer", String.valueOf(extra.getId()));
+        // แถวที่ 2 ถูกลบไปแล้ว แต่ร่างที่รวมค่าทับยังมีชื่อค้างอยู่
+        data.put("coauthor_name_2", removed.getName());
+        data.put("coauthor_name_2__signer", String.valueOf(removed.getId()));
+
+        Result created = workflow.createEnvelope(MODULE, newDraftRequest(applicant).getId(), 901,
+                "แบบแสดงหลักฐานการมีส่วนร่วม", new com.fasterxml.jackson.databind.ObjectMapper().writeValueAsString(data),
+                List.of(new SignerAssignment("applicant", applicant.getId())), null, applicant, ActorContext.none());
+        assertThat(created.ok()).as(created.error()).isTrue();
+        SignatureRequest envelope = created.request();
+        assertThat(stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId()))
+                .extracting(SignatureStep::getSlotKey)
+                .containsExactly("applicant", "first_author", "corresponding_author", "corresponding_author_2");
+        assertThat(stepOf(envelope, "corresponding_author_2").getSigner().getId()).isEqualTo(extra.getId());
+
+        assertThat(signStep(stepOf(envelope, "applicant").getId(), applicant, signature.getId(), true,
+                ActorContext.none()).ok()).isTrue();
+        assertThat(signStep(stepOf(envelope, "first_author").getId(), head, headSignature.getId(), true,
+                ActorContext.none()).ok()).isTrue();
+        assertThat(signStep(stepOf(envelope, "corresponding_author").getId(), dean, deanSignature.getId(), true,
+                ActorContext.none()).ok()).isTrue();
+        assertThat(stepOf(envelope, "corresponding_author_2").getStatus()).isEqualTo(SignatureStepStatus.ACTIVE);
+        assertThat(signStep(stepOf(envelope, "corresponding_author_2").getId(), extra, extraSignature.getId(), true,
+                ActorContext.none()).ok()).isTrue();
+
+        assertThat(requestRepository.findByIdWithSteps(envelope.getId()).orElseThrow().getStatus())
+                .isEqualTo(SignatureRequestStatus.COMPLETED);
     }
 }

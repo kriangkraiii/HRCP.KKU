@@ -12,8 +12,7 @@
             <h3 class="mb-2"><i class="fas fa-file-alt"></i> เอกสารที่ 6: แบบแสดงหลักฐานการมีส่วนร่วมในผลงานทางวิชาการ</h3>
             <!--/* แยกฉบับตามงานวิจัยในเอกสารที่ 1 — เอกสารแนบท้ายข้อบังคับ มข. พ.ศ. 2569 ข้อ 3.3 */-->
             <p class="text-muted mb-4" th:if="${workNo != null and workNo > 0}">
-                งานวิจัยที่ <span th:text="${workNo}">1</span> — กรอกและลงนามแยกฉบับสำหรับงานวิจัยแต่ละเรื่อง
-                ผู้ประพันธ์อันดับแรกและผู้ประพันธ์บรรณกิจของเรื่องนี้ลงนามรับรองในฉบับนี้
+                งานวิจัยที่ <span th:text="${workNo}">1</span><span th:replace="~{academic/_info_tip :: tip('กรอกและลงนามแยกฉบับสำหรับงานวิจัยแต่ละเรื่อง ผู้ประพันธ์อันดับแรกและผู้ประพันธ์บรรณกิจของเรื่องนี้ลงนามรับรองในฉบับนี้')}"></span>
             </p>
 
             <div th:replace="~{academic/_applicant_doc_gate :: banner}"></div>
@@ -30,22 +29,22 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-12">
-                                <label class="form-label">ชื่อผลงาน <span class="text-danger">*</span></label>
+                                <label class="form-label">ชื่อผลงาน <span class="text-danger">*</span><th:block th:if="${lockedFields != null and lockedFields.containsKey('title_name')}"><span
+                                        th:replace="~{academic/_info_tip :: tip('ดึงจากงานวิจัยในเอกสารที่ 1 — ถ้าต้องแก้ชื่อผลงาน ให้แก้ที่เอกสารที่ 1')}"></span></th:block></label>
                                 <input type="text" name="title_name" class="form-control" required
                                        th:readonly="${lockedFields != null and lockedFields.containsKey('title_name')}"
                                        th:value="${lockedFields != null ? lockedFields['title_name'] : null}"
                                        title="ตามงานวิจัยในเอกสารที่ 1 แก้ไขที่เอกสารที่ 1">
-                                <div class="form-text" th:if="${lockedFields != null and lockedFields.containsKey('title_name')}">
-                                    ดึงจากงานวิจัยในเอกสารที่ 1 — ถ้าต้องแก้ชื่อผลงาน ให้แก้ที่เอกสารที่ 1
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!--/* สถานะผู้ขอ */-->
-                <div class="card card-academic mb-4">
-                    <div class="card-header bg-white"><h5 class="mb-0">ข. สถานะผู้ขอในผลงาน</h5></div>
+                <!--/* data-missing-key: เซิร์ฟเวอร์ตอบ applicant_role เมื่อไม่ติ๊กสักข้อ (DocumentCompleteness.APPLICANT_ROLE) */-->
+                <div class="card card-academic mb-4" id="applicantRoleCard"
+                     data-missing-key="applicant_role" data-missing-label="ข. สถานะผู้ขอในผลงาน (ติ๊กอย่างน้อยหนึ่งข้อ)">
+                    <div class="card-header bg-white"><h5 class="mb-0">ข. สถานะผู้ขอในผลงาน <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip('ติ๊กอย่างน้อยหนึ่งข้อ — เป็นทั้งผู้ประพันธ์อันดับแรกและผู้ประพันธ์บรรณกิจได้ ส่วนผู้นิพนธ์ร่วมเลือกคู่กับสองข้อแรกไม่ได้')}"></span></h5></div>
                     <div class="card-body">
                         <div class="form-check mb-2">
                             <input class="form-check-input" type="checkbox" name="chk_ firstauthor" value="☑" id="chkFA">
@@ -59,11 +58,8 @@
                             <input class="form-check-input" type="checkbox" name="chk_coauthor" value="☑" id="chkCoauthor">
                             <label class="form-check-label" for="chkCoauthor">ผู้นิพนธ์ร่วม (co-author)</label>
                         </div>
-                        <div class="form-text">
-                            เป็นทั้งผู้ประพันธ์อันดับแรกและผู้ประพันธ์บรรณกิจได้ (ต้องมีผู้ร่วมงานลงนามรับรองด้วย)
-                            ส่วนผู้นิพนธ์ร่วมเลือกคู่กับสองข้อแรกไม่ได้ — ติ๊กข้อหนึ่งแล้วข้อที่ขัดกันจะถูกล็อก
-                            ต้องเอาติ๊กออกก่อนจึงเลือกอีกข้อได้ (เอกสารแนบท้ายข้อบังคับ มข. พ.ศ. ๒๕๖๙ ข้อ ๓.๑ และ ๓.๔)
-                        </div>
+                        <!--/* คำเตือนเมื่อยังไม่ติ๊ก หรือติ๊กขัดกัน — ข้อความเติมจากสคริปต์ (validate) */-->
+                        <div class="small text-danger mt-2" id="applicantRoleError" hidden></div>
                     </div>
                 </div>
 
@@ -102,13 +98,18 @@
                     </div>
                 </div>
 
-                <!--/* ลงชื่อ + ผู้ร่วมงาน (dynamic) */-->
+                <!--/* ผู้ลงนาม: ผู้ขอ ผู้ประพันธ์อันดับแรก และผู้ประพันธ์บรรณกิจ (บทความมีบรรณกิจได้หลายคน — เพิ่มเป็นแถว)
+                     ทุกคนลงนามในระบบ (SignatureAnchorRegistry.workParticipationSlots) */-->
                 <div class="card card-academic mb-4">
                     <div class="card-header bg-white d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">ผู้ลงนาม / ผู้ร่วมงาน</h5>
-                        <button type="button" class="btn btn-success btn-sm" id="btnAddCoauthor">
-                            <i class="fas fa-plus-circle"></i> เพิ่มผู้ร่วมงาน
-                        </button>
+                        <h5 class="mb-0">ผู้ลงนาม</h5>
+                        <div class="d-flex align-items-center">
+                            <!--/* ครบ 10 แถวแล้วปุ่มถูกปิด — บอกเหตุผลเป็นปุ่ม (i) */-->
+                            <span id="coauthorLimitTip" hidden><span th:replace="~{academic/_info_tip :: tip('เพิ่มผู้ประพันธ์บรรณกิจได้สูงสุด 10 คน (รวมเป็น 11 คนกับช่องบรรณกิจด้านบน)')}"></span></span>
+                            <button type="button" class="btn btn-success btn-sm ms-2" id="btnAddCoauthor">
+                                <i class="fas fa-plus-circle"></i> เพิ่มผู้ประพันธ์บรรณกิจ
+                            </button>
+                        </div>
                     </div>
                     <div class="card-body">
                         <!--/* Fixed signers */-->
@@ -124,10 +125,11 @@
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">ผู้ประพันธ์บรรณกิจ (Corresponding)</label>
-                                <input type="text" name="corres_name" class="form-control" data-person-picker data-allow-external>
+                                <input type="text" name="corres_name" class="form-control" data-person-picker data-allow-external
+                                       data-distinct-group="corresponding">
                             </div>
                         </div>
-                        <!--/* Dynamic co-authors */-->
+                        <!--/* ผู้ประพันธ์บรรณกิจเพิ่มเติม — ชื่อช่อง coauthor_name_N ตามร่างเดิม */-->
                         <div id="coauthorBlocks"></div>
                         <input type="hidden" name="coauthor_count" id="coauthorCountField" value="0">
                     </div>
@@ -147,31 +149,39 @@
 
         <script th:inline="javascript">
             let coauthorCount = 0;
+            // เท่ากับ SignatureAnchorRegistry.MAX_EXTRA_CORRESPONDING — แถวละหนึ่งช่องลงนาม
+            const MAX_EXTRA_CORRESPONDING = 10;
 
-            function addCoauthorRow(nameVal, roleVal) {
+            // ผู้ประพันธ์บรรณกิจเพิ่มเติม: เลือกจากรายชื่อในระบบ หรือเพิ่มผู้ลงนามภายนอกด้วยอีเมล (person_picker.js)
+            // แถวที่ N คือบรรณกิจคนที่ N+1 ลงนามในระบบต่อจากผู้ขอทันที ห้ามเลือกคนเดียวกับบรรณกิจช่องอื่น
+            function addCoauthorRow(nameVal, signerId, fromUser) {
+                if (coauthorCount >= MAX_EXTRA_CORRESPONDING) return;
                 coauthorCount++;
                 const n = coauthorCount;
                 const div = document.createElement('div');
-                div.className = 'row g-2 mb-2 align-items-end coauthor-row';
+                div.className = 'row g-2 mb-2 align-items-start coauthor-row';
                 div.setAttribute('data-idx', n);
                 div.innerHTML = `
-                    <div class="col-md-1 text-center"><span class="badge bg-secondary">${n}</span></div>
-                    <div class="col-md-9">
-                        <input type="text" name="coauthor_name_${n}" class="form-control form-control-sm"
-                               placeholder="ชื่อ-นามสกุล" value="${escHtml(nameVal || '')}">
+                    <div class="col-md-3 pt-2"><label class="small fw-semibold mb-0">ผู้ประพันธ์บรรณกิจ คนที่ <span class="coauthor-no">${n + 1}</span></label></div>
+                    <div class="col-md-7">
+                        <input type="text" name="coauthor_name_${n}" class="form-control" value="${escHtml(nameVal || '')}"
+                               data-person-picker data-allow-external data-distinct-group="corresponding">
                     </div>
                     <div class="col-md-2">
-                        <button type="button" class="btn btn-outline-danger btn-sm" data-call="removeCoauthor" data-call-arg="self">
+                        <button type="button" class="btn btn-outline-danger btn-sm mt-1" data-call="removeCoauthor" data-call-arg="self">
                             <i class="fas fa-trash-alt"></i> ลบ
                         </button>
                     </div>`;
                 document.getElementById('coauthorBlocks').appendChild(div);
-                document.getElementById('coauthorCountField').value = coauthorCount;
+                const picker = window.PersonPicker && window.PersonPicker.attach(div.querySelector('input[data-person-picker]'));
+                if (picker && signerId) picker.hidden.value = signerId;
+                updateCoauthorCount(fromUser);
             }
 
             function removeCoauthor(btn) {
                 btn.closest('.coauthor-row').remove();
                 renumberCoauthors();
+                updateCoauthorCount(true);
             }
 
             function renumberCoauthors() {
@@ -180,32 +190,47 @@
                 rows.forEach((row, i) => {
                     const num = i + 1;
                     row.setAttribute('data-idx', num);
-                    row.querySelector('.badge').textContent = num;
+                    row.querySelector('.coauthor-no').textContent = num + 1;
+                    // รวมช่องซ่อนรหัสบัญชี coauthor_name_N__signer ของตัวค้นหาชื่อด้วย
                     row.querySelectorAll('input').forEach(input => {
-                        input.name = input.name.replace(/_\d+$/, '_' + num);
+                        input.name = input.name.replace(/_\d+(__signer)?$/, '_' + num + '$1');
                     });
                 });
-                document.getElementById('coauthorCountField').value = coauthorCount;
+            }
+
+            // จำนวนแถวคือแหล่งความจริง — ร่างรวมค่าใหม่ทับค่าเดิม ชื่อของแถวที่ลบยังค้างอยู่ใน JSON
+            // notify: ผู้ใช้เพิ่ม/ลบแถว — บอกบันทึกร่างอัตโนมัติและแผงลงนาม (ตอนเติมร่างที่บันทึกไว้ไม่ต้อง)
+            function updateCoauthorCount(notify) {
+                const field = document.getElementById('coauthorCountField');
+                field.value = coauthorCount;
+                if (notify) field.dispatchEvent(new Event('change', { bubbles: true }));
+                const full = coauthorCount >= MAX_EXTRA_CORRESPONDING;
+                document.getElementById('btnAddCoauthor').disabled = full;
+                document.getElementById('coauthorLimitTip').hidden = !full;
             }
 
             function escHtml(s) { return s ? s.replace(/"/g, '&quot;').replace(/</g, '&lt;') : ''; }
 
             document.addEventListener('DOMContentLoaded', function() {
-                document.getElementById('btnAddCoauthor').addEventListener('click', () => addCoauthorRow());
+                document.getElementById('btnAddCoauthor').addEventListener('click', () => addCoauthorRow('', '', true));
 
                 const existingData = /*[[${existingData}]]*/ null;
                 if (existingData) {
                     try {
                         const data = JSON.parse(existingData);
 
-                        // Restore co-authors
-                        let maxCo = 0;
-                        for (const key of Object.keys(data)) {
-                            const m = key.match(/^coauthor_name_(\d+)$/);
-                            if (m) maxCo = Math.max(maxCo, parseInt(m[1]));
+                        // ผู้ประพันธ์บรรณกิจเพิ่มเติม — ตามจำนวนแถวที่บันทึกไว้ ไม่ใช่คีย์ที่ค้างจากแถวที่ลบไปแล้ว
+                        // ร่างเก่าที่ไม่มี coauthor_count ใช้เลขแถวสูงสุดที่พบแทน
+                        let maxCo = parseInt(data.coauthor_count, 10);
+                        if (isNaN(maxCo)) {
+                            maxCo = 0;
+                            for (const key of Object.keys(data)) {
+                                const m = key.match(/^coauthor_name_(\d+)$/);
+                                if (m) maxCo = Math.max(maxCo, parseInt(m[1]));
+                            }
                         }
                         for (let i = 1; i <= maxCo; i++) {
-                            addCoauthorRow(data[`coauthor_name_${i}`], data[`coauthor_role_${i}`]);
+                            addCoauthorRow(data[`coauthor_name_${i}`], data[`coauthor_name_${i}__signer`]);
                         }
 
                         // Restore other fields
@@ -225,6 +250,8 @@
         <style>
             .form-check-input.role-locked { opacity: .35; pointer-events: none; }
             .form-check-input.role-locked + .form-check-label { opacity: .5; }
+            /* เซิร์ฟเวอร์ตอบว่ายังไม่ติ๊กสถานะ — doc_required_validate.js ใส่ .is-invalid ให้ทั้งการ์ด */
+            #applicantRoleCard.is-invalid { border: 1px solid var(--bs-danger); }
         </style>
         <script>
             // ผู้ประพันธ์อันดับแรก + บรรณกิจ เลือกพร้อมกันได้ ผู้นิพนธ์ร่วมเลือกคู่กับสองข้อนั้นไม่ได้ — ข้อที่ขัดกันถูกล็อก
@@ -242,9 +269,34 @@
                     if (!fa || !corr || !co) return;
                     const lockAuthors = co.checked;
                     const lockCo = fa.checked || corr.checked;
-                    lock(fa, lockAuthors);
-                    lock(corr, lockAuthors);
-                    lock(co, lockCo);
+                    // ล็อกเฉพาะข้อที่ยังไม่ติ๊ก — ข้อที่ติ๊กอยู่ต้องเอาออกได้เสมอ ไม่อย่างนั้นร่างที่ติ๊กขัดกันไว้แล้ว
+                    // (เช่น ติ๊กครบสามข้อ) จะถูกล็อกทุกข้อจนแก้ไม่ได้
+                    lock(fa, lockAuthors && !fa.checked);
+                    lock(corr, lockAuthors && !corr.checked);
+                    lock(co, lockCo && !co.checked);
+                    validate(fa.checked || corr.checked || co.checked, co.checked && lockCo);
+                }
+                // ต้องติ๊กอย่างน้อยหนึ่งข้อ และผู้นิพนธ์ร่วมคู่กับสองข้อแรกไม่ได้ (DocumentCompleteness) — ปุ่มส่งลงนาม
+                // อยู่คนละฟอร์ม บอก sign_presave.js ผ่าน data-sign-blocked เหมือนเอกสารที่ 2
+                function validate(any, conflict) {
+                    const problem = conflict
+                        ? 'ยังส่งไปลงนามไม่ได้ — ผู้นิพนธ์ร่วมเลือกคู่กับผู้ประพันธ์อันดับแรกหรือผู้ประพันธ์บรรณกิจไม่ได้ กรุณาเอาติ๊กข้อที่ไม่ใช่ออก'
+                        : !any ? 'ยังส่งไปลงนามไม่ได้ — กรุณาติ๊ก ข. สถานะผู้ขอในผลงาน อย่างน้อยหนึ่งข้อ' : null;
+                    const form = document.getElementById('doc9Form');
+                    if (form) {
+                        if (problem) form.setAttribute('data-sign-blocked', problem);
+                        else form.removeAttribute('data-sign-blocked');
+                    }
+                    // บนการ์ดแสดงเฉพาะติ๊กขัดกัน (ร่างเก่าอาจติ๊กไว้แล้ว) — "ติ๊กอย่างน้อยหนึ่งข้อ" อยู่ในปุ่ม (i)
+                    // ที่หัวข้อ และแผงลงนามบอกเหตุผลเองตอนกดส่ง
+                    const show = conflict;
+                    const error = document.getElementById('applicantRoleError');
+                    if (error) {
+                        error.hidden = !show;
+                        if (problem) error.textContent = problem.replace('ยังส่งไปลงนามไม่ได้ — ', '');
+                    }
+                    const card = document.getElementById('applicantRoleCard');
+                    if (card) card.classList.toggle('border-danger', show);
                 }
                 document.addEventListener('click', e => {
                     if (e.target.classList && e.target.classList.contains('role-locked')) e.preventDefault();
@@ -252,6 +304,13 @@
                 document.addEventListener('change', e => {
                     if (['chkFA', 'chkCorr', 'chkCoauthor'].includes(e.target.id)) sync();
                 });
+                // กดส่งลงนามทั้งที่ยังไม่ติ๊ก — ชี้ให้เห็นที่ข้อ ข. ด้วย ไม่ใช่แค่ข้อความในแผงลงนาม
+                document.addEventListener('submit', e => {
+                    const form = document.getElementById('doc9Form');
+                    if (!form || !form.hasAttribute('data-sign-blocked') || !e.target.hasAttribute('data-presave-doc')) return;
+                    sync();
+                    document.getElementById('applicantRoleCard').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, true);
                 // หลังเติมค่าที่บันทึกไว้ (DOMContentLoaded ของฟอร์ม)
                 document.addEventListener('DOMContentLoaded', () => setTimeout(sync, 0));
             })();
@@ -264,26 +323,27 @@
                     userId: /*[[${user.id}]]*/ null,
                     name: /*[[${userPrintedName}]]*/ ''
                 };
-                const BINDINGS = [['chkFA', 'firstauthor_name'], ['chkCorr', 'corres_name']];
+                // ช่องติ๊ก → ช่องชื่อผู้ลงนาม (ห้ามเขียนอาร์เรย์ซ้อนติดกัน: Thymeleaf อ่านวงเล็บเหลี่ยมคู่เป็น expression)
+                const BINDINGS = Object.entries({ chkFA: 'firstauthor_name', chkCorr: 'corres_name' });
                 const NOTE = 'ท่านติ๊กว่าเป็นตำแหน่งนี้ในข้อ ข. — ท่านลงนามช่องนี้เอง ถ้าเป็นคนอื่น ให้เอาติ๊กออกก่อน';
 
                 function apply(chk, field, userAction) {
                     const input = document.querySelector(`[name="${field}"]`);
                     const picker = input && input.__personPicker;
                     if (!picker || !me.userId || !me.name) return;
-                    const wrap = input.parentNode;
-                    const hint = wrap.querySelector('.person-picker-hint');
-                    let note = wrap.querySelector('.self-signer-note');
+                    const hint = input.parentNode.querySelector('.person-picker-hint');
                     const isMe = picker.hidden.value === String(me.userId);
+                    // คำอธิบายตอนล็อกเป็นปุ่ม (i) ข้างป้ายกำกับ แทนปุ่ม (i) ปกติของตัวค้นหาชื่อ
+                    let note = picker.tip && picker.tip.parentNode
+                        ? picker.tip.parentNode.querySelector('.self-signer-tip') : null;
+                    if (!note && picker.tip && picker.tip.parentNode && window.InfoTip) {
+                        note = window.InfoTip.create(NOTE);
+                        note.classList.add('self-signer-tip');
+                        picker.tip.insertAdjacentElement('afterend', note);
+                    }
 
                     if (chk.checked) {
                         if (!isMe && !input.disabled) picker.choose({ userId: me.userId, name: me.name });
-                        if (!note) {
-                            note = document.createElement('div');
-                            note.className = 'form-text self-signer-note';
-                            note.textContent = NOTE;
-                            wrap.appendChild(note);
-                        }
                     } else if (isMe && userAction) {
                         picker.choose(null); // ผู้ขอไม่ใช่ตำแหน่งนี้แล้ว — ให้เลือกผู้ประพันธ์ตัวจริง
                     }
@@ -291,18 +351,40 @@
                     if (!input.disabled) input.readOnly = locked;
                     if (hint) hint.hidden = locked;
                     if (note) note.hidden = !locked;
-                    showInPanel(field, picker.hidden.value === String(me.userId));
+                    if (picker.tip) picker.tip.hidden = locked;
+                    showInPanel(field);
                 }
 
-                // แผงลงนาม: ช่องที่ผู้ขอเป็นเองลงนามพร้อมกับช่องผู้ขอ (SignatureWorkflowService.sign) ไม่ต้องรอเจ้าหน้าที่
-                function showInPanel(field, mine) {
+                // แผงลงนาม: ช่องผู้ประพันธ์แสดงชื่อที่เลือกในเอกสาร — ผู้ขอเองลงนามพร้อมกับช่องผู้ขอ
+                // คนอื่นได้รับแจ้งให้ลงนามทันทีหลังผู้ขอลงนาม ไม่รอเจ้าหน้าที่ (SignatureAnchorRegistry.isApplicantSide)
+                function showInPanel(field) {
                     const box = document.querySelector(`[data-slot-field="${field}"]`);
-                    if (!box) return;
-                    box.querySelector('[data-slot-note]').textContent = mine
-                        ? '— ท่านลงนามช่องนี้พร้อมกันในครั้งเดียว'
-                        : '— เจ้าหน้าที่จะส่งให้ลงนามต่อ';
-                    const icon = box.querySelector('[data-slot-icon]');
-                    icon.className = (mine ? 'fas fa-user-check text-success' : 'fas fa-user-clock text-muted') + ' me-1';
+                    const input = document.querySelector(`[name="${field}"]`);
+                    if (!box || !input) return;
+                    const signerId = (document.querySelector(`[name="${field}__signer"]`) || {}).value || '';
+                    const name = input.value.trim();
+                    let note, state;
+                    if (!name) {
+                        note = '— ยังไม่ได้เลือกชื่อในเอกสาร';
+                        state = 'empty';
+                    } else if (!signerId) {
+                        note = '— “' + name + '” ยังไม่ได้เลือกจากรายชื่อในระบบ';
+                        state = 'problem';
+                    } else if (signerId === String(me.userId)) {
+                        note = '— ท่านลงนามช่องนี้พร้อมกันในครั้งเดียว';
+                        state = 'mine';
+                    } else {
+                        note = '— ' + name + ' · ระบบส่งให้ลงนามต่อทันทีหลังท่านลงนาม';
+                        state = 'other';
+                    }
+                    box.querySelector('[data-slot-note]').textContent = note;
+                    box.classList.toggle('border-danger', state === 'problem');
+                    box.querySelector('[data-slot-icon]').className = 'fas me-1 ' + ({
+                        empty: 'fa-user-clock text-muted',
+                        problem: 'fa-triangle-exclamation text-danger',
+                        mine: 'fa-user-check text-success',
+                        other: 'fa-user-pen text-primary'
+                    })[state];
                 }
 
                 function applyAll(userAction) {
@@ -314,9 +396,21 @@
 
                 document.addEventListener('change', e => {
                     if (BINDINGS.some(([id]) => id === e.target.id)) applyAll(true);
+                    // เลือก/ล้างชื่อในตัวค้นหาชื่อ — แผงลงนามแสดงตามทันที (รวมบรรณกิจเพิ่มเติม coauthor_name_N)
+                    if (BINDINGS.some(([, field]) => field === e.target.name) || ROW_FIELD.test(e.target.name)) {
+                        showInPanel(e.target.name);
+                    }
+                    // เพิ่ม/ลบแถว — เลขแถวเลื่อน ชื่อในแผงต้องตามแถวใหม่ทุกช่อง
+                    if (e.target.name === 'coauthor_count') showRowsInPanel();
                 });
+                const ROW_FIELD = /^coauthor_name_\d+$/;
+                function showRowsInPanel() {
+                    document.querySelectorAll('#coauthorBlocks input[name]').forEach(input => {
+                        if (ROW_FIELD.test(input.name)) showInPanel(input.name);
+                    });
+                }
                 // ตัวค้นหาชื่อจำค่าที่บันทึกไว้ตอน load — ผูกหลังจากนั้น
-                window.addEventListener('load', () => setTimeout(() => applyAll(false), 0));
+                window.addEventListener('load', () => setTimeout(() => { applyAll(false); showRowsInPanel(); }, 0));
             })();
         </script>
 

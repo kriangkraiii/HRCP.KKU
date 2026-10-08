@@ -71,7 +71,8 @@
                                 <input type="text" name="affiliation" class="form-control" value="วิทยาลัยการคอมพิวเตอร์ มหาวิทยาลัยขอนแก่น">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">ขอกำหนดตำแหน่ง <span class="text-danger">*</span></label>
+                                <label class="form-label">ขอกำหนดตำแหน่ง <span class="text-danger">*</span><th:block th:if="${request.targetPosition != null}"><span
+                                        th:replace="~{academic/_info_tip :: tip('กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้')}"></span></th:block></label>
                                 <select name="request_position" class="form-select" required
                                         th:disabled="${request.targetPosition != null}">
                                     <option value="">-- เลือก --</option>
@@ -81,7 +82,6 @@
                                 </select>
                                 <!--/* ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ */-->
                                 <input type="hidden" name="request_position" th:if="${request.targetPosition != null}" th:value="${request.targetPosition}">
-                                <div class="form-text" th:if="${request.targetPosition != null}">กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้</div>
                             </div>
                         </div>
                     </div>

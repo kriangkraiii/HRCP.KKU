@@ -518,20 +518,25 @@ class PositionForm2569TemplateTest {
         }
 
         @Test
-        @DisplayName("ผู้ร่วมงานได้ช่องลงนามของตัวเอง ใช้คำตามแบบใหม่")
-        void coauthorsGetTheirOwnSignatureBlock() throws IOException {
+        @DisplayName("ผู้ประพันธ์บรรณกิจเพิ่มเติมได้ช่องลงนามของตัวเอง ระบุว่าเป็นผู้ประพันธ์บรรณกิจ")
+        void extraCorrespondingAuthorsGetTheirOwnSignatureBlock() throws IOException {
             Map<String, String> data = sample();
-            data.put("coauthor_count", "1");
+            data.put("coauthor_count", "2");
             data.put("coauthor_name_1", "อ.ดร.สมศักดิ์ รักเรียน");
+            data.put("coauthor_name_2", "Prof. Jane Doe");
+            // แถวที่ลบไปแล้วแต่ชื่อยังค้างในร่าง — ไม่พิมพ์
+            data.put("coauthor_name_3", "ชื่อที่ลบไปแล้ว");
 
             String doc = render(9, data);
 
             assertThat(doc)
                     .contains("(อ.ดร.สมศักดิ์ รักเรียน)")
-                    .contains("ผู้นิพนธ์ร่วม (Co-author)");
+                    .contains("(Prof. Jane Doe)")
+                    .doesNotContain("ชื่อที่ลบไปแล้ว")
+                    .doesNotContain("Co-author");
             assertThat(count(doc, "ผู้ประพันธ์บรรณกิจ (Corresponding author)"))
-                    .as("บล็อกของผู้ประพันธ์บรรณกิจต้องเหลือหนึ่งเดียว ไม่ถูกโคลนซ้ำ")
-                    .isEqualTo(1);
+                    .as("บล็อกต้นแบบหนึ่ง + บรรณกิจเพิ่มเติมสองคน")
+                    .isEqualTo(3);
         }
     }
 }

@@ -183,6 +183,13 @@
                                     <i class="fas fa-pen-nib me-1"></i>รอผู้ยื่นลงนาม
                                 </span>
                                 <span class="badge" th:classappend="${cs.badgeClass}"><i th:class="|fas ${cs.icon} me-1|"></i>[[${cs.label}]]</span>
+                                <button type="button"
+                                    class="btn btn-sm btn-outline-info btn-doc-preview"
+                                    th:data-preview-url="|/user/position/request/${request.id}/document/${w.key}/download?format=pdf|"
+                                    th:data-doc-title="|เอกสารที่ ${iterStat.count}: ${entry.value} — งานวิจัยที่ ${w.key - 900}|"
+                                    title="ดูตัวอย่างเอกสาร (PDF)">
+                                    <i class="fas fa-eye me-1"></i> ดูตัวอย่าง
+                                </button>
                                 <a th:href="'/user/position/request/' + ${request.id} + '/document/' + ${w.key}"
                                    class="btn btn-sm" th:classappend="${completedDocs.contains(w.key)} ? 'btn-outline-success' : 'btn-academic'">
                                     <i th:class="${completedDocs.contains(w.key)} ? 'fas fa-edit' : 'fas fa-plus-circle'"></i>

@@ -183,6 +183,14 @@
                 var pair = el.previousElementSibling;
                 el = pair && /^(INPUT|SELECT|TEXTAREA)$/.test(pair.tagName) ? pair : null;
             }
+            // กติกาที่ไม่ใช่ช่องเดียว (เช่น เอกสารที่ 9 ต้องติ๊กสถานะอย่างน้อยหนึ่งข้อ) — ส่วนของฟอร์มประกาศตัวด้วย data-missing-key
+            var group = el ? null : docForm.querySelector('[data-missing-key="' + name + '"]');
+            if (group) {
+                var groupLabel = group.getAttribute('data-missing-label') || name;
+                if (labels.indexOf(groupLabel) === -1) labels.push(groupLabel);
+                if (isVisible(group)) found.push({ el: group, label: groupLabel });
+                return;
+            }
             var label = el ? labelOf(el) : name;
             if (labels.indexOf(label) === -1) labels.push(label);
             if (el && isVisible(el)) found.push({ el: el, label: label });

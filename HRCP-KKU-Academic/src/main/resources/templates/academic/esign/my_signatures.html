@@ -78,14 +78,13 @@
                                     <div class="form-text small">ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener">i.kku.ac.th</a></div>
                                 </div>
                                 <div class="col-md-6">
-                                    <label class="form-label small fw-semibold">รหัสผ่านของไฟล์ .p12 <span class="text-danger">*</span></label>
+                                    <label class="form-label small fw-semibold">รหัสผ่านของไฟล์ .p12 <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip('ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO')}"></span></label>
                                     <div class="input-group">
                                         <input type="password" id="certPasswordInput" name="pin" class="form-control" placeholder="รหัสผ่านของไฟล์ .p12" required autocomplete="off">
                                         <button type="button" class="btn btn-outline-secondary" id="btnToggleCertPwd" tabindex="-1">
                                             <i class="fas fa-eye"></i>
                                         </button>
                                     </div>
-                                    <div class="form-text small">ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO</div>
                                 </div>
 
                                 <!--/* Feedback Box */-->
@@ -212,21 +211,17 @@
                                 </div>
 
                                 <div id="sigPanelUpload" class="d-none">
-                                    <label class="form-label">เลือกไฟล์รูปลายเซ็น หรือ PDF</label>
+                                    <label class="form-label">เลือกไฟล์รูปลายเซ็น หรือ PDF<span th:replace="~{academic/_info_tip :: tip('รองรับ PNG, JPG และ PDF')}"></span></label>
                                     <input type="file" id="sigUpload" class="form-control" accept="image/png,image/jpeg,image/jpg,image/webp,application/pdf,.pdf">
-                                    <div class="form-text">
-                                        รองรับ PNG, JPG และ PDF
-                                    </div>
                                 </div>
 
                                 <div id="sigPanelType" class="d-none">
-                                    <label class="form-label">พิมพ์ชื่อ</label>
+                                    <label class="form-label">พิมพ์ชื่อ<span th:replace="~{academic/_info_tip :: tip('ระบบจะแปลงข้อความเป็นรูปลายเซ็นให้อัตโนมัติ')}"></span></label>
                                     <input type="text" id="sigTypedText" name="typedText" class="form-control"
                                            maxlength="120"
                                            th:value="${editing != null} ? ${editing.typedText} : ''"
                                            th:data-user-email="${currentUser != null ? currentUser.email : ''}"
                                            placeholder="ชื่อ นามสกุล">
-                                    <div class="form-text">ระบบจะแปลงข้อความเป็นรูปลายเซ็นให้อัตโนมัติ</div>
                                 </div>
 
                                 <button type="button" id="sigClearBtn" class="btn btn-outline-secondary btn-sm mt-3">
@@ -398,14 +393,13 @@
                                                 <div class="form-text small">ดาวน์โหลดจาก <a href="https://i.kku.ac.th" target="_blank" rel="noopener">i.kku.ac.th</a></div>
                                             </div>
                                             <div class="col-md-6">
-                                                <label class="form-label small fw-semibold">รหัสผ่านของไฟล์ .p12 <span class="text-danger">*</span></label>
+                                                <label class="form-label small fw-semibold">รหัสผ่านของไฟล์ .p12 <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip('ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO')}"></span></label>
                                                 <div class="input-group input-group-sm">
                                                     <input type="password" id="certPasswordInputModal" name="pin" class="form-control" placeholder="รหัสผ่านของไฟล์ .p12" required autocomplete="off">
                                                     <button type="button" class="btn btn-outline-secondary" id="btnToggleCertPwdModal" tabindex="-1">
                                                         <i class="fas fa-eye"></i>
                                                     </button>
                                                 </div>
-                                                <div class="form-text small">ไม่ใช่รหัสผ่านอีเมลหรือ KKU SSO</div>
                                             </div>
 
                                             <!--/* Feedback Box */-->

@@ -33,7 +33,7 @@
       </select>
     </div>
     <div class="col-md-6">
-      <label th:class="${labelClass}" class="form-label fw-bold">ตำแหน่งวิชาการ (อังกฤษ)</label>
+      <label th:class="${labelClass}" class="form-label fw-bold">ตำแหน่งวิชาการ (อังกฤษ)<span th:replace="~{academic/_info_tip :: tip('เปลี่ยนตามตำแหน่งภาษาไทย แก้ไขได้')}"></span></label>
       <select name="academicPositionEn" class="form-select js-academic-position-en"
               th:classappend="${controlClass}">
         <option value="" th:selected="${positionEn == null or positionEn == ''}">-- ไม่ระบุ --</option>
@@ -45,7 +45,6 @@
                 th:selected="${positionEn == rank.englishLabel()}"
                 th:text="${rank.englishLabel()}">Position</option>
       </select>
-      <div class="form-text">เปลี่ยนตามตำแหน่งภาษาไทย แก้ไขได้</div>
     </div>
   </div>
 

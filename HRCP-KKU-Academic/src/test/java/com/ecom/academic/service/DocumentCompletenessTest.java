@@ -321,6 +321,7 @@ class DocumentCompletenessTest {
             data.put("title_name", "ผลงานวิจัย");
             data.put("role_des1", "ริเริ่ม");
             data.put("applicant_name", "สมชาย ใจดี");
+            data.put("chk_coauthor", "☑");
             for (String key : List.of("chk_essen", "group1_research", "chkgroup2_1", "chkgroup3_book",
                     "des_journal", "des_ patent", "des_poster")) {
                 data.put(key, "");
@@ -337,10 +338,81 @@ class DocumentCompletenessTest {
             Map<String, String> data = new LinkedHashMap<>();
             data.put("title_name", "");
             data.put("des_journal", "");
+            data.put("chk_coauthor", "☑");
 
             assertThat(DocumentCompleteness.missingApplicantFields(
                     SignatureModule.POSITION, 9, json(data), null))
                     .containsExactly("title_name");
+        }
+    }
+
+    @Nested
+    @DisplayName("เอกสารที่ 9 ข้อ ข. สถานะผู้ขอในผลงาน — ต้องติ๊กอย่างน้อยหนึ่งข้อ")
+    class ApplicantRole {
+
+        private Map<String, String> doc9(String firstAuthor, String corresponding, String coauthor) {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("title_name", "ผลงานวิจัย");
+            data.put("role_des1", "ริเริ่ม");
+            data.put("applicant_name", "สมชาย ใจดี");
+            data.put("chk_ firstauthor", firstAuthor);
+            data.put("chk_corresp", corresponding);
+            data.put("chk_coauthor", coauthor);
+            return data;
+        }
+
+        @Test
+        @DisplayName("ไม่ติ๊กสักข้อ (บันทึกเป็น ☐) — ส่งไปลงนามไม่ได้ ทั้งฉบับรวมและฉบับแยกตามผลงาน")
+        void noRoleTickedBlocks() {
+            String json = json(doc9("☐", "☐", "☐"));
+
+            assertThat(DocumentCompleteness.missingApplicantFields(SignatureModule.POSITION, 9, json, null))
+                    .containsExactly(DocumentCompleteness.APPLICANT_ROLE);
+            assertThat(DocumentCompleteness.missingApplicantFields(SignatureModule.POSITION, 901, json, null))
+                    .containsExactly(DocumentCompleteness.APPLICANT_ROLE);
+        }
+
+        @Test
+        @DisplayName("ร่างเก่าที่ไม่มีช่องสถานะเลย ก็ต้องติ๊กก่อนเหมือนกัน")
+        void missingRoleKeysBlock() {
+            Map<String, String> data = doc9("☐", "☐", "☐");
+            data.keySet().removeIf(k -> k.startsWith("chk_"));
+
+            assertThat(DocumentCompleteness.missingApplicantFields(SignatureModule.POSITION, 902, json(data), null))
+                    .containsExactly(DocumentCompleteness.APPLICANT_ROLE);
+        }
+
+        @Test
+        @DisplayName("ติ๊กข้อใดข้อหนึ่ง หรือผู้ประพันธ์อันดับแรกคู่กับบรรณกิจ — ผ่าน")
+        void anyRoleTickedPasses() {
+            for (Map<String, String> data : List.of(doc9("☑", "☐", "☐"), doc9("☐", "☑", "☐"),
+                    doc9("☐", "☐", "☑"), doc9("☑", "☑", "☐"))) {
+                assertThat(DocumentCompleteness.missingApplicantFields(SignatureModule.POSITION, 901, json(data), null))
+                        .as("%s", data).isEmpty();
+            }
+        }
+
+        @Test
+        @DisplayName("ผู้นิพนธ์ร่วมคู่กับผู้ประพันธ์อันดับแรกหรือบรรณกิจ (เช่น ติ๊กครบสามข้อ) — ส่งไปลงนามไม่ได้")
+        void coauthorWithAuthorRoleIsRefused() {
+            for (Map<String, String> data : List.of(doc9("☑", "☑", "☑"), doc9("☑", "☐", "☑"), doc9("☐", "☑", "☑"))) {
+                assertThat(DocumentCompleteness.malformedFields(SignatureModule.POSITION, 902, json(data)))
+                        .as("%s", data).singleElement().asString().contains("ผู้นิพนธ์ร่วม");
+            }
+            for (Map<String, String> data : List.of(doc9("☑", "☑", "☐"), doc9("☐", "☐", "☑"))) {
+                assertThat(DocumentCompleteness.malformedFields(SignatureModule.POSITION, 902, json(data)))
+                        .as("%s", data).isEmpty();
+            }
+        }
+
+        @Test
+        @DisplayName("เอกสารอื่นไม่มีกติกานี้")
+        void otherDocumentsAreUnaffected() {
+            Map<String, String> data = new LinkedHashMap<>();
+            data.put("applicant_name", "สมชาย ใจดี");
+
+            assertThat(DocumentCompleteness.missingApplicantFields(SignatureModule.POSITION, 4, json(data), null))
+                    .isEmpty();
         }
     }
 

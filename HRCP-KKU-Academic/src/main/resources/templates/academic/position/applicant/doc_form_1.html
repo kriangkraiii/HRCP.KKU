@@ -51,7 +51,8 @@
                     <div class="card-body">
                         <div class="row g-3">
                             <div class="col-md-4">
-                                <label class="form-label">ตำแหน่งที่ขอ <span class="text-danger">*</span></label>
+                                <label class="form-label">ตำแหน่งที่ขอ <span class="text-danger">*</span><th:block th:if="${request.targetPosition != null}"><span
+                                        th:replace="~{academic/_info_tip :: tip('กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้')}"></span></th:block></label>
                                 <select name="target_position" class="form-select" required
                                         th:disabled="${request.targetPosition != null}" id="targetPos">
                                     <option value="">-- เลือก --</option>
@@ -61,7 +62,6 @@
                                 </select>
                                 <!--/* ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ */-->
                                 <input type="hidden" name="target_position" th:if="${request.targetPosition != null}" th:value="${request.targetPosition}">
-                                <div class="form-text" th:if="${request.targetPosition != null}">กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้</div>
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">วิธีการ <span class="text-danger">*</span></label>
@@ -132,9 +132,8 @@
                                 <input type="text" name="birth_date" class="form-control" required placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๓๐">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">๑.๒ อายุ (ปี) <span class="text-danger">*</span></label>
+                                <label class="form-label">๑.๒ อายุ (ปี) <span class="text-danger">*</span><span th:replace="~{academic/_info_tip :: tip('คำนวณจากวันเกิด แก้ไขได้')}"></span></label>
                                 <input type="text" name="age" class="form-control" required data-age-of="birth_date">
-                                <div class="form-text">คำนวณจากวันเกิด แก้ไขได้</div>
                             </div>
                         </div>
 

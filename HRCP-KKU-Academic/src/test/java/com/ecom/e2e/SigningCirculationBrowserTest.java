@@ -274,7 +274,8 @@ class SigningCirculationBrowserTest extends PlaywrightTestBase {
         // ---------- ข้อ 16-17, 19: เอกสารของผู้เสนอขอ ----------
         for (int doc : new int[] { 1, 2, 3, 4, 6, 9 }) {
             String who = "ผู้เสนอขอ เอกสารตำแหน่งที่ " + doc;
-            openAndFill("/user/position/request/" + id + "/document/" + doc, null);
+            // เอกสารที่ 9 ข้อ ข. ต้องติ๊กสถานะอย่างน้อยหนึ่งข้อ — ผู้เสนอขอในเทสต์นี้ไม่ใช่ผู้ประพันธ์ (author1/2 เป็น) จึงเป็นผู้นิพนธ์ร่วม
+            openAndFill("/user/position/request/" + id + "/document/" + doc, doc == 9 ? "chk_coauthor" : null);
             boolean applicantSigns = com.ecom.academic.service.SignatureAnchorRegistry.slotsOf(SignatureModule.POSITION, doc).stream()
                     .anyMatch(slot -> "applicant".equals(slot.slotKey()));
             if (applicantSigns) {

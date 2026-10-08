@@ -204,6 +204,28 @@ public class SignatureRequest {
                 applicantUserId());
     }
 
+    /**
+     * ขั้นนี้ลงนามไปพร้อมกับช่องผู้ขอที่ถึงคิวอยู่ (เช่น ผู้ขอเป็นผู้ประพันธ์ในเอกสารที่ 9) — รายการลำดับการลงนาม
+     * แสดงว่า "ลงนามพร้อมกัน" แทน "รอคิว" เพราะไม่ได้รอใคร ({@code SignatureAnchorRegistry#heldWithApplicant})
+     */
+    public boolean isSignedWithApplicant(SignatureStep step) {
+        if (step == null || step.getStatus() != SignatureStepStatus.WAITING) {
+            return false;
+        }
+        SignatureStep applicant = steps.stream()
+                .filter(s -> "applicant".equalsIgnoreCase(s.getSlotKey()) && s.getStatus() == SignatureStepStatus.ACTIVE)
+                .findFirst().orElse(null);
+        return applicant != null && com.ecom.academic.service.SignatureAnchorRegistry.heldWithApplicant(module,
+                documentType == null ? 0 : documentType, applicant, steps).stream()
+                .anyMatch(s -> s.getId() != null && s.getId().equals(step.getId()));
+    }
+
+    /** ลำดับของช่องผู้ขอ — ใช้บอกว่า "ลงนามพร้อมข้อ N" */
+    public Integer applicantStepOrder() {
+        return steps.stream().filter(s -> "applicant".equalsIgnoreCase(s.getSlotKey()))
+                .map(SignatureStep::getStepOrder).findFirst().orElse(null);
+    }
+
     public long signedCount() {
         return steps.stream().filter(s -> s.getStatus() == SignatureStepStatus.SIGNED).count();
     }

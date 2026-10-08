@@ -160,6 +160,12 @@ class TemplateReadinessTest {
                 for (String k : keys) {
                     filled.put(k, "ตัวอย่าง");
                 }
+                // ช่องแบบแถว (บรรณกิจเพิ่มเติมของเอกสารที่ 9) มีเฉพาะแถวที่อยู่ในเอกสาร — ตัวอย่างนี้ไม่มีแถว
+                final SignatureModule rowModule = module;
+                final int rowType = type;
+                slots = slots.stream()
+                        .filter(s -> SignatureAnchorRegistry.slotInDocument(rowModule, rowType, s.slotKey(), filled))
+                        .toList();
                 List<BasePdfBuilder.TextSpec> texts = new ArrayList<>();
                 Set<String> seen = new LinkedHashSet<>();
                 for (String f : DocumentFieldOwnership.lateFields(module, type)) {

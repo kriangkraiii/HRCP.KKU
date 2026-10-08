@@ -68,12 +68,17 @@ class PhaseTwoSignerCertificatesTest extends AbstractFlowTest {
         UserDtls admin = data.admin();
         UserDtls applicant = data.applicant();
         var request = data.positionRequest(applicant, PositionRequestStatus.DRAFT, null);
-        List<SignatureSlot> slots = SignatureAnchorRegistry.slotsOf(SignatureModule.POSITION, documentType);
+        // เอกสารที่ 9: บรรณกิจเพิ่มเติมสองแถว (คนที่ 2 และ 3) — ช่องแถวที่เหลือไม่อยู่ในเอกสาร
+        List<SignatureSlot> slots = SignatureAnchorRegistry.slotsOf(SignatureModule.POSITION, documentType).stream()
+                .filter(s -> !SignatureAnchorRegistry.isRowSlot(SignatureModule.POSITION, documentType, s.slotKey())
+                        || s.slotKey().matches("corresponding_author_[23]"))
+                .toList();
         var nameFields = SignatureAnchorRegistry.signerNameFields(SignatureModule.POSITION, documentType);
 
         // ผู้ลงนามแต่ละช่องเป็นคนละคน มี Digital ID ของตัวเอง — ชื่อในใบรับรองคือชื่อบัญชี
         Map<String, UserDtls> signers = new LinkedHashMap<>();
         Map<String, String> json = new LinkedHashMap<>();
+        json.put("coauthor_count", "2");
         List<SignatureWorkflowService.SignerAssignment> assignments = new ArrayList<>();
         for (SignatureSlot slot : slots) {
             // ชื่อภาษาอังกฤษ: ใบรับรองทดสอบใช้ชื่อบัญชีเป็น CN
@@ -90,6 +95,8 @@ class PhaseTwoSignerCertificatesTest extends AbstractFlowTest {
             }
         }
         json.put("applicant_name", SignerNameResolver.printedName(applicant));
+        // เอกสารที่ 9: ผู้ขอไม่ได้เป็นผู้ประพันธ์ทั้งสองตำแหน่งในเทสต์นี้ — เป็นผู้นิพนธ์ร่วม
+        json.put("chk_coauthor", "☑");
         UserDtls initiator = signers.containsKey("applicant") ? applicant : admin;
 
         SignatureRequest envelope = circulate(SignatureModule.POSITION, request.getId(), documentType,

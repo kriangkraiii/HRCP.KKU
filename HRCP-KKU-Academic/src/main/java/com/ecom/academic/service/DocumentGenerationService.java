@@ -2110,6 +2110,55 @@ public class DocumentGenerationService {
      * <w:p>...({{corres_name}})</w:p>
      * <w:p>...ผู้ประพันธ์บรรณกิจ (Corresponding author)</w:p>
      */
+    /**
+     * ย่อหน้าว่างที่จัดรูปแบบเหมือนย่อหน้าแรกของบล็อก (ระยะบรรทัด ตัวอักษร) — ใช้เว้นบรรทัดระหว่างบล็อกลงนาม
+     */
+    static String emptyParagraphLike(String block) {
+        java.util.regex.Matcher pPr = java.util.regex.Pattern.compile("<w:pPr>.*?</w:pPr>", java.util.regex.Pattern.DOTALL)
+                .matcher(block);
+        String props = pPr.find() ? pPr.group().replace("<w:keepNext/>", "") : "";
+        return "<w:p>" + props + "</w:p>";
+    }
+
+    /**
+     * ตั้ง "keep with next" ให้ทุกย่อหน้าในบล็อกลงนามยกเว้นย่อหน้าสุดท้าย — Word/LibreOffice จะไม่ตัดหน้า
+     * ระหว่าง "ลงชื่อ" ชื่อในวงเล็บ และตำแหน่ง
+     */
+    static String keepSignatureBlockTogether(String block) {
+        java.util.regex.Matcher p = java.util.regex.Pattern.compile("<w:p[ >].*?</w:p>", java.util.regex.Pattern.DOTALL)
+                .matcher(block);
+        List<int[]> paragraphs = new ArrayList<>();
+        while (p.find()) {
+            paragraphs.add(new int[] { p.start(), p.end() });
+        }
+        StringBuilder out = new StringBuilder(block);
+        // ทำจากท้ายไปหน้า ตำแหน่งของย่อหน้าก่อนหน้าจะได้ไม่เลื่อน — ข้ามย่อหน้าสุดท้าย (ตำแหน่ง)
+        for (int i = paragraphs.size() - 2; i >= 0; i--) {
+            int[] at = paragraphs.get(i);
+            String para = block.substring(at[0], at[1]);
+            if (para.contains("<w:keepNext/>")) {
+                continue;
+            }
+            String kept;
+            int pPr = para.indexOf("<w:pPr>");
+            if (pPr >= 0) {
+                int after = pPr + "<w:pPr>".length();
+                // w:pStyle ต้องมาก่อนเสมอตาม schema — keepNext ตามหลังได้
+                java.util.regex.Matcher style = java.util.regex.Pattern.compile("^<w:pStyle [^>]*/>")
+                        .matcher(para.substring(after));
+                if (style.find()) {
+                    after += style.end();
+                }
+                kept = para.substring(0, after) + "<w:keepNext/>" + para.substring(after);
+            } else {
+                int open = para.indexOf('>') + 1;
+                kept = para.substring(0, open) + "<w:pPr><w:keepNext/></w:pPr>" + para.substring(open);
+            }
+            out.replace(at[0], at[1], kept);
+        }
+        return out.toString();
+    }
+
     private String expandCoauthorSignatures(String xml, Map<String, String> placeholders) {
         String countStr = placeholders.get("coauthor_count");
         if (countStr == null || countStr.isEmpty()) {
@@ -2168,17 +2217,21 @@ public class DocumentGenerationService {
         pSignEnd += "</w:p>".length();
 
         String fullBlock;
-        int insertAfter;
+        int blockStart;
 
         if (pSignEnd <= pNameStart) {
             // 3 paragraphs ต่อเนื่อง: ลงชื่อ + ชื่อ + ตำแหน่ง
-            fullBlock = xml.substring(pSignStart, pRoleEnd);
-            insertAfter = pRoleEnd;
+            blockStart = pSignStart;
         } else {
             // ใช้ 2 paragraphs (ชื่อ + ตำแหน่ง)
-            fullBlock = xml.substring(pNameStart, pRoleEnd);
-            insertAfter = pRoleEnd;
+            blockStart = pNameStart;
         }
+        // บล็อกลงนามไม่แยกหน้า — "ลงชื่อ" กับชื่อในวงเล็บติดกับบรรทัดถัดไปเสมอ ทั้งบล็อกต้นแบบและบล็อกที่เพิ่ม
+        fullBlock = keepSignatureBlockTogether(xml.substring(blockStart, pRoleEnd));
+        xml = xml.substring(0, blockStart) + fullBlock + xml.substring(pRoleEnd);
+        int insertAfter = blockStart + fullBlock.length();
+        // เว้นบรรทัดก่อนบล็อกที่เพิ่มเหมือนระยะระหว่างบล็อกลงนามในแบบฟอร์ม (ย่อหน้าว่างสองบรรทัด)
+        String spacer = emptyParagraphLike(fullBlock);
 
         // สร้าง signature blocks สำหรับ co-authors
         StringBuilder coauthorBlocks = new StringBuilder();
@@ -2188,13 +2241,11 @@ public class DocumentGenerationService {
                 continue;
 
             String block = fullBlock;
-            // แทนชื่อ: {{corres_name}} → {{coauthor_name_N}}
+            // แทนชื่อ: {{corres_name}} → {{coauthor_name_N}} — แถวที่เพิ่มคือผู้ประพันธ์บรรณกิจเพิ่มเติม
+            // บทบาทใต้ชื่อจึงคงเป็น "ผู้ประพันธ์บรรณกิจ (Corresponding author)" ตามบล็อกต้นแบบ
+            // ชื่อช่องยังเป็น coauthor_name_N ตามร่างเดิม ช่องลงนามคือ corresponding_author_(N+1)
             block = block.replace("{{corres_name}}", "{{coauthor_name_" + i + "}}");
-            // แทนบทบาท: "ผู้ประพันธ์บรรณกิจ (Corresponding author)" → "ผู้นิพนธ์ร่วม (Co-author)"
-            // ใช้คำตามแบบฟอร์ม พ.ศ. 2569 ซึ่งเรียกผู้ร่วมงานว่า "ผู้นิพนธ์ร่วม (co-author)"
-            block = block.replace("Corresponding author", "Co-author");
-            block = block.replace("ผู้ประพันธ์บรรณกิจ", "ผู้นิพนธ์ร่วม");
-            coauthorBlocks.append(block);
+            coauthorBlocks.append(spacer).append(spacer).append(block);
         }
 
         if (coauthorBlocks.length() > 0) {

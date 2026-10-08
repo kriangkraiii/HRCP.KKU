@@ -350,7 +350,9 @@
                         </div>
                         <div>
                             <label class="form-label small mb-1" th:for="'actingPosition_' + ${row.role.slotKey}">
-                                ตำแหน่งที่รักษาการแทน
+                                ตำแหน่งที่รักษาการแทน<span th:replace="~{academic/_info_tip :: tip(${row.role.slotKey == 'head'}
+                                    ? 'ระบบเขียนตำแหน่งเต็มให้แล้ว แก้ได้ถ้าไม่ตรง — เลือกผู้รักษาการแทนแล้วระบบเติมสาขาวิชาของผู้นั้นให้'
+                                    : 'ระบบเขียนตำแหน่งเต็มให้แล้ว แก้ได้ถ้าไม่ตรง')}"></span>
                             </label>
                             <div class="input-group input-group-sm">
                                 <span class="input-group-text">รักษาการแทน</span>
@@ -359,10 +361,6 @@
                                        th:value="${row.positionTitle}"
                                        th:placeholder="${row.role.example}"
                                        th:attr="data-auto=${row.suggested}">
-                            </div>
-                            <div class="form-text">
-                                ระบบเขียนตำแหน่งเต็มให้แล้ว แก้ได้ถ้าไม่ตรง<span th:if="${row.role.slotKey == 'head'}">
-                                — เลือกผู้รักษาการแทนแล้วระบบเติมสาขาวิชาของผู้นั้นให้</span>
                             </div>
                         </div>
                         <div class="small text-secondary" th:if="${row.userName != null and !#strings.isEmpty(row.printedPosition())}">

@@ -183,6 +183,10 @@ class DocumentRenderTest {
         for (SignatureModule module : registry.modules()) {
             for (int docType : registry.signableDocumentTypes(module)) {
                 for (SignatureSlot slot : registry.slotsFor(module, docType)) {
+                    // ช่องแบบแถว (บรรณกิจเพิ่มเติมของเอกสารที่ 9) มีเฉพาะเมื่อผู้ขอเพิ่มแถว — ตัวอย่างนี้ไม่มีแถว
+                    if (com.ecom.academic.service.SignatureAnchorRegistry.isRowSlot(module, docType, slot.slotKey())) {
+                        continue;
+                    }
                     String name = module + "-doc" + docType + "-" + slot.anchorPlaceholder()
                             .replaceAll("[^A-Za-z0-9ก-๙_]", "");
 

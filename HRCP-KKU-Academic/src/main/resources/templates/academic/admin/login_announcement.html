@@ -51,14 +51,13 @@
                 </div>
 
                 <div>
-                    <label class="form-label fw-semibold" for="announceMessage">ข้อความประกาศ</label>
+                    <label class="form-label fw-semibold" for="announceMessage">ข้อความประกาศ<span th:replace="~{academic/_info_tip :: tip('ขึ้นบรรทัดใหม่ได้ตามที่พิมพ์')}"></span></label>
                     <textarea class="form-control" id="announceMessage" name="message" rows="5"
                               th:maxlength="${maxLength}"
                               placeholder="เช่น ระบบจะปิดปรับปรุงวันเสาร์ที่ 10 ตุลาคม 2569 เวลา 18.00–22.00 น. ขออภัยในความไม่สะดวก"
                               th:text="${draftMessage != null ? draftMessage : announcement.message}"></textarea>
-                    <div class="form-text d-flex justify-content-between">
-                        <span>ขึ้นบรรทัดใหม่ได้ตามที่พิมพ์</span>
-                        <span><span id="announceCount">0</span> / <span th:text="${maxLength}">1000</span></span>
+                    <div class="form-text text-end">
+                        <span id="announceCount">0</span> / <span th:text="${maxLength}">1000</span>
                     </div>
                 </div>
 

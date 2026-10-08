@@ -87,7 +87,12 @@
                             </div>
                         </div>
                         <div class="d-flex align-items-center gap-2">
+                            <!--/* ช่องที่ผู้ขอเป็นเองลงนามไปพร้อมกับข้อของผู้ขอ — ไม่ได้รอใคร */-->
+                            <span class="badge rounded-pill px-2 py-1 bg-warning"
+                                  th:if="${signaturePanel.activeEnvelope.isSignedWithApplicant(s)}"
+                                  th:text="'ลงนามพร้อมข้อ ' + ${signaturePanel.activeEnvelope.applicantStepOrder()}">ลงนามพร้อมข้อ 1</span>
                             <span class="badge rounded-pill px-2 py-1"
+                                  th:unless="${signaturePanel.activeEnvelope.isSignedWithApplicant(s)}"
                                   th:classappend="'bg-' + ${s.status.color}"
                                   th:text="${s.status.thaiLabel}">สถานะ</span>
                             <!--/* เฉพาะผู้ลงนามของขั้นนี้ — เดิมขึ้นให้เจ้าหน้าที่ทุกขั้น ดูเหมือนลงนามแทนได้ (เซิร์ฟเวอร์ปฏิเสธอยู่แล้ว) */-->
@@ -219,10 +224,9 @@
                             </div>
 
                             <div class="col-md-6" th:unless="${signaturePanel.reviewerSignsNext}">
-                                <label class="form-label">กำหนดลงนามภายใน (ไม่บังคับ)</label>
+                                <label class="form-label">กำหนดลงนามภายใน (ไม่บังคับ)<span th:replace="~{academic/_info_tip :: tip('ปล่อยว่างไว้เพื่อใช้กำหนดเวลาเดิม')}"></span></label>
                                 <input type="datetime-local" name="dueAt" class="form-control"
                                        th:value="${signaturePanel.activeEnvelope.dueAt != null ? #temporals.format(signaturePanel.activeEnvelope.dueAt, 'yyyy-MM-dd''T''HH:mm') : ''}">
-                                <div class="form-text">ปล่อยว่างไว้เพื่อใช้กำหนดเวลาเดิม</div>
                             </div>
                         </div>
 
@@ -324,11 +328,10 @@
                             </div>
                             <div class="modal-body p-4">
                                 <div class="mb-3">
-                                    <label class="form-label fw-semibold">กำหนดวันเวลาลงนามใหม่</label>
+                                    <label class="form-label fw-semibold">กำหนดวันเวลาลงนามใหม่<span th:replace="~{academic/_info_tip :: tip('ระบบจะอัปเดตกำหนดเวลาและแจ้งเตือนผู้ลงนามในลำดับปัจจุบัน')}"></span></label>
                                     <input type="datetime-local" name="dueAt" class="form-control"
                                            th:value="${signaturePanel.activeEnvelope.dueAt != null ? #temporals.format(signaturePanel.activeEnvelope.dueAt, 'yyyy-MM-dd''T''HH:mm') : ''}"
                                            required>
-                                    <div class="form-text">ระบบจะอัปเดตกำหนดเวลาและแจ้งเตือนผู้ลงนามในลำดับปัจจุบัน</div>
                                 </div>
                             </div>
                             <div class="modal-footer">
@@ -414,9 +417,8 @@
                         </div>
                         <div class="modal-body p-4">
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">กำหนดวันเวลาลงนามใหม่</label>
+                                <label class="form-label fw-semibold">กำหนดวันเวลาลงนามใหม่<span th:replace="~{academic/_info_tip :: tip('ระบบจะแจ้งผู้ลงนามลำดับถัดไป')}"></span></label>
                                 <input type="datetime-local" name="dueAt" class="form-control" required>
-                                <div class="form-text">ระบบจะแจ้งผู้ลงนามลำดับถัดไป</div>
                             </div>
                         </div>
                         <div class="modal-footer">
@@ -487,7 +489,10 @@
                         <i class="fas fa-pen-nib text-primary fa-lg mt-1"></i>
                         <div>
                             <strong class="d-block mb-1">ลงนามเอกสารฉบับนี้</strong>
-                            <p class="small text-secondary mb-0" th:if="${#lists.size(signaturePanel.slots) > 1}">
+                            <p class="small text-secondary mb-0" th:if="${#lists.size(signaturePanel.slots) > 1 and signaturePanel.routedByApplicant}">
+                                ท่านลงนามก่อน แล้วระบบส่งให้ผู้ลงนามตามชื่อที่ท่านเลือกในเอกสารลงนามต่อทันที
+                            </p>
+                            <p class="small text-secondary mb-0" th:if="${#lists.size(signaturePanel.slots) > 1 and !signaturePanel.routedByApplicant}">
                                 ท่านลงนามก่อน ส่วนผู้ลงนามคนอื่น เจ้าหน้าที่จะส่งให้ลงนามต่อหลังท่านยื่นคำร้อง
                             </p>
                             <p class="small text-secondary mb-0" th:unless="${#lists.size(signaturePanel.slots) > 1}">
@@ -506,7 +511,10 @@
             </div>
 
             <div class="row g-3">
-                <div class="col-md-6" th:each="slot, iter : ${signaturePanel.slots}">
+                <!--/* ช่องแบบแถว (บรรณกิจเพิ่มเติมของเอกสารที่ 9): ซ่อนไว้ แสดงเมื่อแถวนั้นอยู่ในแบบฟอร์ม (สคริปต์ท้ายแผง) */-->
+                <div class="col-md-6" th:each="slot, iter : ${signaturePanel.slots}"
+                     th:attr="data-row-slot=${signaturePanel.isRowSlot(slot.slotKey) ? slot.anchorPlaceholder : null}"
+                     th:hidden="${signaturePanel.isRowSlot(slot.slotKey)}">
                     
                     <!--/* ============ 1. ผู้ยื่นคำร้อง (Applicant) — เซ็นด้วยตนเองเท่านั้น ไม่ต้องเลือก ============
                          เฉพาะช่อง applicant — ช่องผู้ร่วมประพันธ์ (ไม่มีบทบาทบุคลากร) เป็นคนละคนกับผู้ยื่น
@@ -603,12 +611,13 @@
                         </div>
 
                         <!--/* สำหรับ Applicant: ปิดไว้และแสดงข้อความแนะนำ */-->
-                        <!--/* data-slot-field: สคริปต์ของแบบฟอร์มเปลี่ยนข้อความได้ เมื่อผู้ยื่นเป็นตำแหน่งนี้เอง (เอกสารที่ 9) */-->
+                        <!--/* ช่องฝั่งผู้ขอ (data-slot-field): สคริปต์ของแบบฟอร์มแสดงชื่อที่เลือกในเอกสาร (เอกสารที่ 9) */-->
                         <div th:unless="${signaturePanel.isAdminViewer}" class="p-2 border rounded bg-light text-secondary small"
-                             th:attr="data-slot-field=${slot.anchorPlaceholder}">
+                             th:attr="data-slot-field=${signaturePanel.isApplicantSide(slot.slotKey) ? slot.anchorPlaceholder : null}">
                             <i class="fas fa-user-clock text-muted me-1" data-slot-icon></i>
-                            <span th:text="${slot.roleLabel}">ตำแหน่ง</span>
-                            <span class="text-muted" data-slot-note>— เจ้าหน้าที่จะส่งให้ลงนามต่อ</span>
+                            <span th:text="${slot.roleLabel}" data-slot-name>ตำแหน่ง</span>
+                            <span class="text-muted" data-slot-note
+                                  th:text="${signaturePanel.isApplicantSide(slot.slotKey)} ? '— ยังไม่ได้เลือกชื่อในเอกสาร' : '— เจ้าหน้าที่จะส่งให้ลงนามต่อ'">— เจ้าหน้าที่จะส่งให้ลงนามต่อ</span>
                             <input type="hidden" name="signerUserIds" value="">
                         </div>
                     </div>
@@ -617,15 +626,13 @@
 
                 <!--/* แอดมินตั้งกำหนดที่มีผลบังคับ / ผู้ยื่นตั้งไว้เตือนตัวเองเท่านั้น */-->
                 <div class="col-md-6">
-                    <label class="form-label"
-                           th:text="${signaturePanel.isAdminViewer}
+                    <label class="form-label"><span th:text="${signaturePanel.isAdminViewer}
                                     ? 'กำหนดลงนามภายใน (ไม่บังคับ)'
-                                    : 'ตั้งเตือนให้ลงนามภายใน (ไม่บังคับ)'">กำหนดลงนามภายใน (ไม่บังคับ)</label>
-                    <input type="datetime-local" name="dueAt" class="form-control">
-                    <div class="form-text"
-                         th:text="${signaturePanel.isAdminViewer}
+                                    : 'ตั้งเตือนให้ลงนามภายใน (ไม่บังคับ)'">กำหนดลงนามภายใน (ไม่บังคับ)</span><span
+                           th:replace="~{academic/_info_tip :: tip(${signaturePanel.isAdminViewer}
                                   ? 'ระบบจะเตือนซ้ำเมื่อใกล้ครบกำหนด'
-                                  : 'ใช้เตือนความจำเท่านั้น เลยกำหนดแล้วยังลงนามได้ตามปกติ'">ระบบจะเตือนซ้ำเมื่อใกล้ครบกำหนด</div>
+                                  : 'ใช้เตือนความจำเท่านั้น เลยกำหนดแล้วยังลงนามได้ตามปกติ')}"></span></label>
+                    <input type="datetime-local" name="dueAt" class="form-control">
                 </div>
             </div>
 
@@ -649,12 +656,29 @@
         </form>
     </div>
 
+    <!--/* ช่องแบบแถว: แสดงเฉพาะแถวที่มีอยู่ในแบบฟอร์มตอนนี้ — เพิ่ม/ลบ/เรียงเลขแถวใหม่ ตามทันที */-->
+    <script th:if="${!signaturePanel.rowSlots.isEmpty()}">
+        (function () {
+            function refresh() {
+                document.querySelectorAll('[data-row-slot]').forEach(function (box) {
+                    var field = box.getAttribute('data-row-slot');
+                    box.hidden = !document.querySelector('form[id^="doc"] [name="' + field + '"]');
+                });
+            }
+            document.addEventListener('DOMContentLoaded', function () {
+                refresh();
+                var form = document.querySelector('form[id^="doc"]');
+                if (form) new MutationObserver(refresh).observe(form, { childList: true, subtree: true, attributes: true, attributeFilter: ['name'] });
+            });
+        })();
+    </script>
+
     <!--/* ผู้ลงนามตามชื่อในแบบฟอร์ม — named_signer.js จับคู่ชื่อที่กรอกกับรายชื่อนี้ */-->
     <th:block th:if="${signaturePanel.signerNamedInForm}">
         <script th:inline="javascript">
             window.NAMED_SIGNER_CANDIDATES = /*[[${signaturePanel.namedCandidates()}]]*/ [];
         </script>
-        <script src="/js/named_signer.js"></script>
+        <script src="/js/named_signer.js?v=2"></script>
     </th:block>
 </div>
 

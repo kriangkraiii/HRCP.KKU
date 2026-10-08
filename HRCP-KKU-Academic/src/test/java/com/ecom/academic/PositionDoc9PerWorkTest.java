@@ -158,6 +158,25 @@ class PositionDoc9PerWorkTest extends AbstractFlowTest {
         assertThat(page).contains("งานวิจัยที่ 1").contains("งานวิจัยที่ 3")
                 .contains("/document/901").contains("/document/903")
                 .contains("งานวิจัยเรื่องที่สาม");
+        // ปุ่มดูตัวอย่างของแต่ละงานวิจัย — เปิด PDF ของฉบับนั้นได้แม้ยังไม่ได้กรอก (เหมือนเอกสารฉบับอื่น)
+        for (int copy : new int[] { 901, 903 }) {
+            String url = "/user/position/request/" + request.getId() + "/document/" + copy + "/download?format=pdf";
+            assertThat(page).contains("data-preview-url=\"" + url + "\"");
+        }
+    }
+
+    @Test
+    @DisplayName("ปุ่มดูตัวอย่างของงานวิจัยที่ยังไม่ได้กรอก — ได้ไฟล์ PDF ของฉบับนั้น")
+    void previewOfAWorkCopyIsAPdf() throws Exception {
+        org.junit.jupiter.api.Assumptions.assumeTrue(new DocumentGenerationService().isPdfConversionAvailable(),
+                "LibreOffice is not installed");
+        var response = mvc.perform(get("/user/position/request/" + request.getId() + "/document/903/download")
+                        .param("format", "pdf").with(asApplicant(applicant)))
+                .andExpect(status().isOk())
+                .andReturn().getResponse();
+        assertThat(response.getContentType()).contains("pdf");
+        assertThat(new String(response.getContentAsByteArray(), 0, 5, java.nio.charset.StandardCharsets.ISO_8859_1))
+                .isEqualTo("%PDF-");
     }
 
     @Test

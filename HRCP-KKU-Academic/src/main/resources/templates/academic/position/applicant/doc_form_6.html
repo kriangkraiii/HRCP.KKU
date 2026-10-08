@@ -65,7 +65,8 @@
                                 <input type="text" name="current_position" class="form-control" placeholder="เช่น อาจารย์">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">ตำแหน่งที่ขอ <span class="text-danger">*</span></label>
+                                <label class="form-label">ตำแหน่งที่ขอ <span class="text-danger">*</span><th:block th:if="${request.targetPosition != null}"><span
+                                        th:replace="~{academic/_info_tip :: tip('กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้')}"></span></th:block></label>
                                 <select name="target_position" class="form-select" required
                                         th:disabled="${request.targetPosition != null}">
                                     <option value="">-- เลือก --</option>
@@ -75,7 +76,6 @@
                                 </select>
                                 <!--/* ตำแหน่งที่ขอตั้งไว้ตั้งแต่สร้างคำร้อง (ตามผลประเมินการสอน หรือ ศ.) แก้ในฟอร์มไม่ได้ */-->
                                 <input type="hidden" name="target_position" th:if="${request.targetPosition != null}" th:value="${request.targetPosition}">
-                                <div class="form-text" th:if="${request.targetPosition != null}">กำหนดไว้ตั้งแต่สร้างคำร้อง แก้ไขในแบบฟอร์มไม่ได้</div>
                             </div>
                             <div class="col-md-3">
                                 <label class="form-label">จำนวนงานวิจัย</label>

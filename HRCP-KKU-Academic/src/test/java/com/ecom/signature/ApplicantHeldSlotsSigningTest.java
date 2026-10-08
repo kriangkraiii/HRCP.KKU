@@ -39,6 +39,26 @@ class ApplicantHeldSlotsSigningTest extends AbstractFlowTest {
     @Autowired
     private SignedPdfRevisionService revisions;
 
+    @Autowired
+    private com.ecom.academic.service.pdf.IncrementalSigningService incrementalSigning;
+
+    @Autowired
+    private com.ecom.academic.repository.SignatureRequestRepository envelopes;
+
+    @Autowired
+    private org.springframework.transaction.PlatformTransactionManager txManager;
+
+    private static byte[] samplePng() throws java.io.IOException {
+        var image = new java.awt.image.BufferedImage(120, 48, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        var g = image.createGraphics();
+        g.setColor(java.awt.Color.BLACK);
+        g.drawLine(5, 40, 115, 8);
+        g.dispose();
+        var out = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "png", out);
+        return out.toByteArray();
+    }
+
     @BeforeEach
     void needsLibreOffice() {
         assumeTrue(new DocumentGenerationService().isPdfConversionAvailable(), "LibreOffice is not installed");
@@ -64,6 +84,31 @@ class ApplicantHeldSlotsSigningTest extends AbstractFlowTest {
         SignatureStep applicantStep = signatureSteps.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId())
                 .get(0);
 
+        // ตัวอย่างก่อนลงนาม: ลายเซ็นต้องขึ้นทุกช่องที่จะลงนามพร้อมกัน ไม่ใช่แค่ช่องผู้ขอ
+        try {
+            // ในคำขอจริงมี session ตลอดคำขอ (open-in-view) — เทสต์จำลองด้วยธุรกรรม
+            byte[] png = samplePng();
+            byte[] preview = new org.springframework.transaction.support.TransactionTemplate(txManager).execute(tx -> {
+                try {
+                    return incrementalSigning.preview(envelopes.findByIdWithSteps(envelope.getId()).orElseThrow(),
+                            signatureSteps.findById(applicantStep.getId()).orElseThrow(), png, null, null);
+                } catch (java.io.IOException e) {
+                    throw new IllegalStateException(e);
+                }
+            });
+            try (var doc = org.apache.pdfbox.Loader.loadPDF(preview)) {
+                var form = doc.getDocumentCatalog().getAcroForm();
+                for (String field : List.of("sig_applicant", "sig_first_author", "sig_corresponding_author")) {
+                    var widget = form.getField(field).getWidgets().get(0);
+                    var stream = widget.getAppearance().getNormalAppearance().getAppearanceStream();
+                    assertThat(stream.getResources().getXObjectNames()).as("ตัวอย่าง %s ต้องมีภาพลายเซ็น", field)
+                            .isNotEmpty();
+                }
+            }
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
+
         var result = signatureWorkflow.sign(applicantStep.getId(), applicant, signature.getId(), true,
                 SignatureWorkflowService.ActorContext.none(), TestCertificates.PIN);
 
@@ -75,5 +120,22 @@ class ApplicantHeldSlotsSigningTest extends AbstractFlowTest {
                 .containsExactly(SignedPdfRevision.Kind.BASE, SignedPdfRevision.Kind.SIGN,
                         SignedPdfRevision.Kind.SIGN, SignedPdfRevision.Kind.SIGN);
         assertThat(result.request().getStatus()).isEqualTo(SignatureRequestStatus.COMPLETED);
+
+        // ลายเซ็นต้องมองเห็นในทุกบล็อกของผู้ขอ — ช่องลายเซ็นของแต่ละบทบาทมีภาพอยู่บนหน้า ไม่ใช่แค่ลายมือชื่อในไฟล์
+        byte[] pdf = revisions.latest(envelope.getId());
+        try (var doc = org.apache.pdfbox.Loader.loadPDF(pdf)) {
+            var form = doc.getDocumentCatalog().getAcroForm();
+            for (String field : List.of("sig_applicant", "sig_first_author", "sig_corresponding_author")) {
+                var sig = (org.apache.pdfbox.pdmodel.interactive.form.PDSignatureField) form.getField(field);
+                assertThat(sig).as(field).isNotNull();
+                assertThat(sig.getValue()).as("%s ต้องลงนามแล้ว", field).isNotNull();
+                var widget = sig.getWidgets().get(0);
+                assertThat(widget.getRectangle().getWidth() * widget.getRectangle().getHeight())
+                        .as("%s ต้องมีพื้นที่บนหน้า", field).isGreaterThan(0f);
+                assertThat(widget.getAppearance()).as("%s ต้องมีภาพลายเซ็น", field).isNotNull();
+            }
+        } catch (java.io.IOException e) {
+            throw new IllegalStateException(e);
+        }
     }
 }

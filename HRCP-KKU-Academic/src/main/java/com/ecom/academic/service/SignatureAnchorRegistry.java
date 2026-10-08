@@ -286,13 +286,91 @@ public class SignatureAnchorRegistry {
                     new SignatureSlot("hr", "นักทรัพยากรบุคคล",
                             "name_admin", "HR", 1))),
 
-            Map.entry(new DocKey(SignatureModule.POSITION, 9), List.of(
-                    new SignatureSlot("applicant", "ผู้ขอกำหนดตำแหน่งทางวิชาการ",
-                            "applicant_name", APPLICANT, 1),
-                    new SignatureSlot("first_author", "ผู้ประพันธ์อันดับแรก",
-                            "firstauthor_name", APPLICANT, 2),
-                    new SignatureSlot("corresponding_author", "ผู้ประพันธ์บรรณกิจ",
-                            "corres_name", APPLICANT, 3))));
+            Map.entry(new DocKey(SignatureModule.POSITION, 9), workParticipationSlots()));
+
+    /**
+     * ผู้ประพันธ์บรรณกิจเพิ่มเติมของเอกสารที่ 9 (บทความหนึ่งมีบรรณกิจได้หลายคน) — แถวที่ผู้ขอกด
+     * "เพิ่มผู้ประพันธ์บรรณกิจ" ในแบบฟอร์ม แต่ละแถวเป็นช่องลงนามของตัวเอง
+     *
+     * <p>ชื่อช่องในแบบฟอร์มยังเป็น {@code coauthor_name_N} ตามร่างที่บันทึกไว้ก่อนหน้า ช่องลงนามคือ
+     * {@code corresponding_author_(N+1)} — แถวที่ N คือบรรณกิจคนที่ N+1 ต่อจาก {@code corres_name}
+     * ใช้เฉพาะแถวที่มีอยู่จริงในเอกสาร ({@link #slotInDocument})
+     */
+    public static final int MAX_EXTRA_CORRESPONDING = 10;
+    private static final String EXTRA_CORRESPONDING_FIELD = "coauthor_name_";
+    private static final String EXTRA_CORRESPONDING_SLOT = "corresponding_author_";
+
+    private static List<SignatureSlot> workParticipationSlots() {
+        List<SignatureSlot> slots = new java.util.ArrayList<>(List.of(
+                new SignatureSlot("applicant", "ผู้ขอกำหนดตำแหน่งทางวิชาการ",
+                        "applicant_name", APPLICANT, 1),
+                new SignatureSlot("first_author", "ผู้ประพันธ์อันดับแรก",
+                        "firstauthor_name", APPLICANT, 2),
+                new SignatureSlot("corresponding_author", "ผู้ประพันธ์บรรณกิจ",
+                        "corres_name", APPLICANT, 3)));
+        for (int row = 1; row <= MAX_EXTRA_CORRESPONDING; row++) {
+            slots.add(new SignatureSlot(EXTRA_CORRESPONDING_SLOT + (row + 1),
+                    "ผู้ประพันธ์บรรณกิจ (คนที่ " + (row + 1) + ")",
+                    EXTRA_CORRESPONDING_FIELD + row, APPLICANT, 3 + row));
+        }
+        return List.copyOf(slots);
+    }
+
+    /** แถวของช่องลงนามนี้ในแบบฟอร์ม (บรรณกิจเพิ่มเติมของเอกสารที่ 9) หรือ 0 เมื่อไม่ใช่ช่องแบบแถว */
+    private static int extraRowOf(SignatureModule module, int documentType, String slotKey) {
+        if (module != SignatureModule.POSITION || PositionDocTypes.base(documentType) != PositionDocTypes.WORK_PARTICIPATION
+                || slotKey == null || !slotKey.startsWith(EXTRA_CORRESPONDING_SLOT)) {
+            return 0;
+        }
+        try {
+            return Integer.parseInt(slotKey.substring(EXTRA_CORRESPONDING_SLOT.length())) - 1;
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
+    /** ช่องลงนามที่มีหรือไม่มีก็ได้ตามจำนวนแถวที่ผู้ขอเพิ่มในแบบฟอร์ม */
+    public static boolean isRowSlot(SignatureModule module, int documentType, String slotKey) {
+        return extraRowOf(module, documentType, slotKey) > 0;
+    }
+
+    /** ช่องลงนามแบบแถวของเอกสารนี้ */
+    public static java.util.Set<String> rowSlots(SignatureModule module, int documentType) {
+        java.util.Set<String> keys = new java.util.LinkedHashSet<>();
+        for (SignatureSlot slot : slotsOf(module, documentType)) {
+            if (isRowSlot(module, documentType, slot.slotKey())) {
+                keys.add(slot.slotKey());
+            }
+        }
+        return keys;
+    }
+
+    /**
+     * ช่องลงนามนี้อยู่ในเอกสารฉบับนี้จริงหรือไม่ — ช่องปกติมีเสมอ ช่องแบบแถวมีเมื่อแถวนั้นอยู่ในจำนวนแถว
+     * ({@code coauthor_count}) และมีชื่อ
+     *
+     * <p>ร่างที่บันทึกรวมค่าใหม่ทับค่าเดิม แถวที่ลบไปแล้วจึงยังมีชื่อค้างใน JSON — นับตามจำนวนแถว
+     * ไม่ใช่ตามคีย์ที่เหลืออยู่ เหมือนที่ {@code DocumentGenerationService.expandCoauthorSignatures} พิมพ์
+     */
+    public static boolean slotInDocument(SignatureModule module, int documentType, String slotKey,
+            Map<String, ?> data) {
+        int row = extraRowOf(module, documentType, slotKey);
+        if (row == 0) {
+            return true;
+        }
+        if (data == null) {
+            return false;
+        }
+        int count;
+        try {
+            Object raw = data.get("coauthor_count");
+            count = raw == null ? 0 : Integer.parseInt(String.valueOf(raw).trim());
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        Object name = data.get(EXTRA_CORRESPONDING_FIELD + row);
+        return row <= count && name != null && !String.valueOf(name).isBlank();
+    }
 
     /**
      * ช่องที่เจ้าหน้าที่ผู้ตรวจเอกสารลงนามเองเสมอ — ไม่มีการเลือกผู้ลงนามหรือส่งต่อให้คนอื่น
@@ -304,17 +382,34 @@ public class SignatureAnchorRegistry {
             new DocKey(SignatureModule.ACADEMIC, 2), java.util.Set.of("hr"));
 
     /**
-     * ช่องที่ผู้ขอเป็นเองได้ตามสถานะที่ติ๊กในแบบฟอร์ม — เมื่อชื่อในช่องคือผู้ขอ ผู้ขอลงนามช่องนี้
-     * พร้อมกับช่องของตัวเองในครั้งเดียว ไม่ต้องรอเจ้าหน้าที่ส่งเวียนมาให้ลงนามซ้ำ
+     * ช่องฝั่งผู้ขอ — ผู้ขอเลือกผู้ลงนามเองในแบบฟอร์ม และเป็นเองได้ตามสถานะที่ติ๊ก
+     * <ul>
+     *   <li>ชื่อในช่องคือผู้ขอ: ผู้ขอลงนามช่องนี้พร้อมกับช่องของตัวเองในครั้งเดียว</li>
+     *   <li>ชื่อในช่องคือคนอื่น: ระบบส่งให้คนนั้นลงนามต่อทันทีหลังผู้ขอลงนาม ไม่รอด่านตรวจของเจ้าหน้าที่
+     *       — ผู้ลงนามเป็นผู้ร่วมงานที่ผู้ขอเลือกเอง ไม่ใช่สายบังคับบัญชาที่เจ้าหน้าที่ต้องตรวจก่อนส่ง</li>
+     * </ul>
      *
-     * <p>เอกสารที่ 9 เฟส 2: ผู้ขอเป็นผู้ประพันธ์อันดับแรกและ/หรือผู้ประพันธ์บรรณกิจได้
+     * <p>เอกสารที่ 9 เฟส 2: ผู้ประพันธ์อันดับแรกและผู้ประพันธ์บรรณกิจ
      */
     private static final Map<DocKey, java.util.Set<String>> APPLICANT_MAY_HOLD = Map.of(
-            new DocKey(SignatureModule.POSITION, 9), java.util.Set.of("first_author", "corresponding_author"));
+            new DocKey(SignatureModule.POSITION, 9), workParticipationSlots().stream()
+                    .map(SignatureSlot::slotKey)
+                    .filter(k -> !"applicant".equals(k))
+                    .collect(java.util.stream.Collectors.toUnmodifiableSet()));
 
     /** ช่องนี้ผู้ขอเป็นเองได้ ({@link #APPLICANT_MAY_HOLD}) */
     public static boolean applicantMayHold(SignatureModule module, int documentType, String slotKey) {
         return APPLICANT_MAY_HOLD.getOrDefault(key(module, documentType), java.util.Set.of()).contains(slotKey);
+    }
+
+    /** ช่องผู้ขอ หรือช่องฝั่งผู้ขอ — เดินต่อได้โดยไม่รอด่านตรวจของเจ้าหน้าที่ */
+    public static boolean isApplicantSide(SignatureModule module, int documentType, String slotKey) {
+        return "applicant".equalsIgnoreCase(slotKey) || applicantMayHold(module, documentType, slotKey);
+    }
+
+    /** ช่องฝั่งผู้ขอของเอกสารนี้ ไม่รวมช่องผู้ขอเอง ({@link #APPLICANT_MAY_HOLD}) */
+    public static java.util.Set<String> applicantSideSlots(SignatureModule module, int documentType) {
+        return APPLICANT_MAY_HOLD.getOrDefault(key(module, documentType), java.util.Set.of());
     }
 
     /**
@@ -330,6 +425,29 @@ public class SignatureAnchorRegistry {
         return applicantUserId != null && step.getSigner() != null
                 && applicantUserId.equals(step.getSigner().getId())
                 && applicantMayHold(module, documentType, step.getSlotKey());
+    }
+
+    /**
+     * ขั้นที่ลงนามไปพร้อมกับช่องผู้ขอ — ช่องที่ผู้ขอเป็นเองและยังรอลงนาม ({@link #isApplicantOwnStep})
+     * ใช้ทั้งตอนลงนามจริงและตอนแสดงตัวอย่าง ตัวอย่างจึงเห็นลายเซ็นตรงกับที่จะได้
+     *
+     * @param applicantStep ขั้นที่กำลังลงนาม — ว่างเมื่อไม่ใช่ช่องผู้ขอ
+     * @param steps         ทุกขั้นของซองนี้
+     */
+    public static List<com.ecom.academic.model.SignatureStep> heldWithApplicant(SignatureModule module,
+            int documentType, com.ecom.academic.model.SignatureStep applicantStep,
+            java.util.Collection<com.ecom.academic.model.SignatureStep> steps) {
+        if (applicantStep == null || !"applicant".equalsIgnoreCase(applicantStep.getSlotKey())
+                || applicantStep.getSigner() == null) {
+            return List.of();
+        }
+        Integer applicantId = applicantStep.getSigner().getId();
+        return steps.stream()
+                .filter(s -> !s.getId().equals(applicantStep.getId()))
+                .filter(s -> s.getStatus() == com.ecom.academic.model.SignatureStepStatus.WAITING)
+                .filter(s -> isApplicantOwnStep(module, documentType, s, applicantId))
+                .sorted(java.util.Comparator.comparingInt(com.ecom.academic.model.SignatureStep::getStepOrder))
+                .toList();
     }
 
     /** ช่องนี้ต้องเป็นเจ้าหน้าที่ที่กดยืนยันเองหรือไม่ */
@@ -371,9 +489,10 @@ public class SignatureAnchorRegistry {
                     "hr_officer_name", "hr_officer_position",
                     "dean_name", "dean_position")),
             Map.entry(new DocKey(SignatureModule.POSITION, 8), Map.of("name_admin", "")),
-            Map.entry(new DocKey(SignatureModule.POSITION, 9), Map.of(
-                    "firstauthor_name", "",
-                    "corres_name", "")));
+            // ผู้ประพันธ์ทุกช่อง รวมบรรณกิจเพิ่มเติม (coauthor_name_N) เลือกด้วยตัวค้นหาชื่อ ไม่มีช่องตำแหน่งคู่
+            Map.entry(new DocKey(SignatureModule.POSITION, 9), workParticipationSlots().stream()
+                    .filter(slot -> !"applicant".equals(slot.slotKey()))
+                    .collect(java.util.stream.Collectors.toUnmodifiableMap(SignatureSlot::anchorPlaceholder, slot -> ""))));
 
     /**
      * ช่องชื่อผู้ลงนามที่ดึงมาจากเอกสารก่อนหน้า แก้ในฉบับนี้ไม่ได้ (AcademicRequestService.carriedFields)

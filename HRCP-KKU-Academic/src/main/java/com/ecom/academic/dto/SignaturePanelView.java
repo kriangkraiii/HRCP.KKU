@@ -36,6 +36,10 @@ import com.ecom.academic.service.SignatureAnchorRegistry.SignatureSlot;
  *                           setting a new deadline, or null
  * @param reviewerSlots      slots the reviewing staff member always signs themselves
  *                           ({@code SignatureAnchorRegistry#isSignedByReviewer}) — no picker
+ * @param applicantSideSlots ช่องที่ผู้ขอเลือกผู้ลงนามเองในแบบฟอร์ม ระบบส่งต่อทันทีหลังผู้ขอลงนาม
+ *                           ไม่รอด่านตรวจของเจ้าหน้าที่ ({@code SignatureAnchorRegistry#applicantSideSlots})
+ * @param rowSlots           ช่องที่มีตามแถวที่ผู้ขอเพิ่มในแบบฟอร์ม (บรรณกิจเพิ่มเติมของเอกสารที่ 9) —
+ *                           แผงแสดงเฉพาะแถวที่มีอยู่ ({@code SignatureAnchorRegistry#rowSlots})
  */
 public record SignaturePanelView(
         List<SignatureSlot> slots,
@@ -51,7 +55,9 @@ public record SignaturePanelView(
         SignatureRequest revivableEnvelope,
         boolean applicantMayWithdraw,
         java.util.Set<String> reviewerSlots,
-        java.util.Set<String> namedFields) {
+        java.util.Set<String> namedFields,
+        java.util.Set<String> applicantSideSlots,
+        java.util.Set<String> rowSlots) {
 
     /**
      * บัญชีที่แผงใช้แสดงผู้ลงนามตามที่เลือกในแบบฟอร์ม (named_signer.js หาจากรหัสบัญชีในช่อง
@@ -88,7 +94,7 @@ public record SignaturePanelView(
             SignerOptionDTO currentUserOption,
             SignatureRequest activeEnvelope,
             boolean signable) {
-        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false, java.util.Set.of(), java.util.Set.of());
+        this(slots, recommendedOptions, otherOptions, defaultSignerUserIds, applicantOption, currentUserOption, activeEnvelope, signable, false, false, null, false, java.util.Set.of(), java.util.Set.of(), java.util.Set.of(), java.util.Set.of());
     }
 
     /**
@@ -214,7 +220,23 @@ public record SignaturePanelView(
         }
         return activeEnvelope.getSteps().stream()
                 .anyMatch(s -> s.getStatus() == com.ecom.academic.model.SignatureStepStatus.WAITING
-                        && !"applicant".equalsIgnoreCase(s.getSlotKey()));
+                        && !"applicant".equalsIgnoreCase(s.getSlotKey()) && !isApplicantSide(s.getSlotKey()));
+    }
+
+    /** ช่องที่ผู้ขอเลือกผู้ลงนามเองในแบบฟอร์ม — ส่งต่อทันทีหลังผู้ขอลงนาม ไม่ต้องรอเจ้าหน้าที่ */
+    public boolean isApplicantSide(String slotKey) {
+        return applicantSideSlots != null && applicantSideSlots.contains(slotKey);
+    }
+
+    /** ช่องที่มีตามแถวในแบบฟอร์ม — แผงซ่อนไว้จนกว่าแถวนั้นจะอยู่ในฟอร์ม */
+    public boolean isRowSlot(String slotKey) {
+        return rowSlots != null && rowSlots.contains(slotKey);
+    }
+
+    /** ผู้ลงนามคนอื่นทุกคนผู้ขอเลือกเองในแบบฟอร์ม — ไม่มีใครต้องรอเจ้าหน้าที่ส่งเวียน */
+    public boolean isRoutedByApplicant() {
+        return slots != null && slots.stream().anyMatch(s -> isApplicantSide(s.slotKey()))
+                && slots.stream().allMatch(s -> "applicant".equalsIgnoreCase(s.slotKey()) || isApplicantSide(s.slotKey()));
     }
 
     /**
@@ -259,6 +281,6 @@ public record SignaturePanelView(
     /** An empty panel, for documents with no signature block. */
     public static SignaturePanelView unsignable() {
         return new SignaturePanelView(List.of(), Map.of(), List.of(), Map.of(), null, null, null, false, false, false, null, false,
-                java.util.Set.of(), java.util.Set.of());
+                java.util.Set.of(), java.util.Set.of(), java.util.Set.of(), java.util.Set.of());
     }
 }

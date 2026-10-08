@@ -23,7 +23,8 @@
     }
 
     function bind(box) {
-        var field = fieldFor(box.getAttribute('data-named-signer'));
+        var fieldName = box.getAttribute('data-named-signer');
+        var field = null;
         var label = box.querySelector('[data-named-signer-label]');
         var hint = box.querySelector('[data-named-signer-hint]');
         var hidden = box.querySelector('input[name="signerUserIds"]');
@@ -37,6 +38,8 @@
         }
 
         function update() {
+            // หาช่องทุกครั้ง — ช่องแบบแถว (บรรณกิจเพิ่มเติมของเอกสารที่ 9) ถูกสร้างหลังแผงนี้ และเรียงเลขใหม่ได้
+            field = fieldFor(fieldName);
             hidden.value = '';
             if (!field) {
                 show('—', 'ไม่พบช่องชื่อของตำแหน่งนี้ในหน้า', true);
@@ -73,10 +76,8 @@
             }
         }
 
-        if (field) {
-            field.addEventListener('input', update);
-            field.addEventListener('change', update);
-        }
+        document.addEventListener('input', function (e) { if (e.target.name === fieldName) update(); });
+        document.addEventListener('change', function (e) { if (e.target.name === fieldName) update(); });
         update();
         // ค่าที่บันทึกไว้ถูกเติมลงฟอร์มด้วยสคริปต์ตอน DOMContentLoaded (ไม่มี input event) — อ่านซ้ำเมื่อหน้าโหลดเสร็จ
         window.addEventListener('load', update);

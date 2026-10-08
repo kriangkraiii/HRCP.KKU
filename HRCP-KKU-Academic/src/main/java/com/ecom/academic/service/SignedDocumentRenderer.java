@@ -691,6 +691,15 @@ public class SignedDocumentRenderer {
                         log.warn("Could not measure preview signature image {}: {}", previewSig.getImagePath(), e.toString());
                     }
                     stamped.add(new StampedSignature(previewStep.getAnchorPlaceholder(), png, width, height));
+                    // ช่องที่ผู้ขอเป็นเองและลงนามไปพร้อมกัน (เช่น ผู้ประพันธ์ในเอกสารที่ 9) — ตัวอย่างเห็นลายเซ็นทุกช่อง
+                    for (SignatureStep held : SignatureAnchorRegistry.heldWithApplicant(envelope.getModule(),
+                            envelope.getDocumentType(), previewStep,
+                            stepRepository.findBySignatureRequestIdOrderByStepOrderAsc(envelope.getId()))) {
+                        String anchor = held.getAnchorPlaceholder();
+                        if (anchor != null && stamped.stream().noneMatch(s -> anchor.equals(s.anchorPlaceholder()))) {
+                            stamped.add(new StampedSignature(anchor, png, width, height));
+                        }
+                    }
                 }
             }
         }

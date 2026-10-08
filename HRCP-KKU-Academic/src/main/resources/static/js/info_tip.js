@@ -14,6 +14,29 @@
 
   var SELECTOR = '.info-tip[data-bs-toggle="popover"]';
 
+  /**
+   * ปุ่ม (i) สำหรับช่องที่ JavaScript สร้างหรือจัดการเอง (เช่น person_picker.js) — markup เดียวกับ _info_tip.html
+   * ข้อความใส่เป็น attribute ไม่ใช่ HTML จึงไม่ต้อง escape เอง
+   */
+  window.InfoTip = {
+    create: function (text) {
+      var el = document.createElement('span');
+      el.className = 'info-tip';
+      el.setAttribute('role', 'button');
+      el.tabIndex = 0;
+      el.setAttribute('aria-label', 'ข้อมูลเพิ่มเติม');
+      el.setAttribute('data-bs-toggle', 'popover');
+      el.setAttribute('data-bs-trigger', 'focus');
+      el.setAttribute('data-bs-placement', 'auto');
+      el.setAttribute('data-bs-content', text);
+      var icon = document.createElement('i');
+      icon.className = 'fas fa-circle-info';
+      icon.setAttribute('aria-hidden', 'true');
+      el.appendChild(icon);
+      return el;
+    }
+  };
+
   function popoverFor(el) {
     if (!window.bootstrap || !window.bootstrap.Popover) {
       return null;

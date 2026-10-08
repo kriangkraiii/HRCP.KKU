@@ -314,6 +314,9 @@ public final class DocumentCompleteness {
         if (module == SignatureModule.POSITION && documentType == 1) {
             return professorTeachingLoadProblems(parse(json));
         }
+        if (module == SignatureModule.POSITION && PositionDocTypes.base(documentType) == PositionDocTypes.WORK_PARTICIPATION) {
+            return applicantRoleConflict(parse(json));
+        }
         if (module != SignatureModule.ACADEMIC || documentType != 1) {
             return List.of();
         }
@@ -398,8 +401,40 @@ public final class DocumentCompleteness {
                 missing.add(key);
             }
         }
+        if (module == SignatureModule.POSITION && PositionDocTypes.base(documentType) == PositionDocTypes.WORK_PARTICIPATION
+                && APPLICANT_ROLE_FIELDS.stream().noneMatch(key -> isTicked(data.get(key)))) {
+            missing.add(APPLICANT_ROLE);
+        }
         return missing;
     }
+
+    /**
+     * เอกสารที่ 9 ข้อ ข. สถานะผู้ขอในผลงาน — ต้องติ๊กอย่างน้อยหนึ่งข้อ ผู้ขอเป็นผู้ประพันธ์อันดับแรก
+     * และ/หรือบรรณกิจ หรือเป็นผู้นิพนธ์ร่วม อย่างใดอย่างหนึ่งเสมอ (เอกสารแนบท้ายข้อบังคับ มข. พ.ศ. 2569 ข้อ 3.1, 3.4)
+     *
+     * <p>ช่องที่ไม่ติ๊กถูกบันทึกเป็น "☐" ซึ่งไม่ว่าง ด่านช่องว่างข้างบนจึงจับไม่ได้ ต้องตรวจแยก
+     */
+    private static final List<String> APPLICANT_ROLE_FIELDS = List.of("chk_ firstauthor", "chk_corresp", "chk_coauthor");
+
+    /**
+     * ผู้นิพนธ์ร่วมเป็นพร้อมผู้ประพันธ์อันดับแรกหรือบรรณกิจไม่ได้ (เอกสารแนบท้ายข้อบังคับ ข้อ 3.1, 3.4)
+     *
+     * <p>แบบฟอร์มล็อกข้อที่ขัดกันไว้ แต่ล็อกด้วยหน้าตาเท่านั้น ร่างที่เติมด้วยเครื่องมือหรือส่งตรงจึงติ๊กครบได้
+     * เอกสารที่ติ๊กขัดกันพิมพ์ออกมาเป็นผู้นิพนธ์ร่วมอย่างเดียว ({@code DocumentGenerationService}) ไม่ตรงกับที่ผู้ขอกรอก
+     */
+    private static List<String> applicantRoleConflict(Map<String, String> data) {
+        if (data == null || !isTicked(data.get("chk_coauthor"))) {
+            return List.of();
+        }
+        if (isTicked(data.get("chk_ firstauthor")) || isTicked(data.get("chk_corresp"))) {
+            return List.of("ข. สถานะผู้ขอในผลงาน: ผู้นิพนธ์ร่วมเลือกคู่กับผู้ประพันธ์อันดับแรกหรือผู้ประพันธ์บรรณกิจไม่ได้"
+                    + " — กรุณาเอาติ๊กข้อที่ไม่ใช่ออก");
+        }
+        return List.of();
+    }
+
+    /** ชื่อที่ส่งกลับไปเมื่อยังไม่ติ๊กสถานะ — doc_form_9.html ผูกป้ายกำกับไว้ด้วย data-missing-key */
+    public static final String APPLICANT_ROLE = "applicant_role";
 
     /**
      * ชื่อช่องที่ผู้ยื่นต้องกรอกในเอกสารฉบับนี้ — ฝั่งเบราว์เซอร์ใช้บอกผู้ใช้ว่าขาดช่องไหน
@@ -451,7 +486,8 @@ public final class DocumentCompleteness {
             return false;
         }
         String t = val.trim();
-        return "✓".equals(t) || "✔".equals(t) || "on".equalsIgnoreCase(t);
+        // ☑ คือค่าของช่องติ๊กในฟอร์มเฟส 2 (เช่น เอกสารที่ 9) — ไม่ติ๊กบันทึกเป็น ☐
+        return "✓".equals(t) || "✔".equals(t) || "☑".equals(t) || "on".equalsIgnoreCase(t);
     }
 
     /**

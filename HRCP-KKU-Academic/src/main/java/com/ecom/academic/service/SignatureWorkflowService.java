@@ -1089,12 +1089,8 @@ public class SignatureWorkflowService {
      * ไม่รวมช่องผู้ขอที่กำลังลงนาม
      */
     private List<SignatureStep> applicantHeldSteps(SignatureRequest envelope, SignatureStep applicantStep) {
-        return envelope.getSteps().stream()
-                .filter(s -> !s.getId().equals(applicantStep.getId()))
-                .filter(s -> s.getStatus() == SignatureStepStatus.WAITING)
-                .filter(envelope::isApplicantOwn)
-                .sorted(java.util.Comparator.comparingInt(SignatureStep::getStepOrder))
-                .toList();
+        return SignatureAnchorRegistry.heldWithApplicant(envelope.getModule(), envelope.getDocumentType(),
+                applicantStep, envelope.getSteps());
     }
 
     /**
@@ -1754,7 +1750,10 @@ public class SignatureWorkflowService {
         // but everyone after them waits until staff have read the document and
         // released it — a mistake must not reach the dean because the system
         // forwarded it on its own.
-        if (!"applicant".equalsIgnoreCase(step.getSlotKey()) && !envelope.isCirculationStarted()) {
+        // ช่องฝั่งผู้ขอ (เช่น ผู้ประพันธ์ในเอกสารที่ 9) ไม่ผ่านด่านนี้: ผู้ขอเลือกผู้ลงนามเองในแบบฟอร์ม
+        // ระบบส่งให้ลงนามต่อทันทีหลังผู้ขอลงนาม
+        if (!SignatureAnchorRegistry.isApplicantSide(envelope.getModule(), envelope.getDocumentType(),
+                step.getSlotKey()) && !envelope.isCirculationStarted()) {
             log.info("Holding signature step {} ({}) for envelope {}: staff have not released it for circulation yet",
                     step.getId(), step.getRoleLabel(), envelope.getId());
             return;
@@ -1821,8 +1820,10 @@ public class SignatureWorkflowService {
         if (envelope.isCirculationStarted()) {
             return Result.failed("เอกสารฉบับนี้ถูกส่งเวียนลงนามไปแล้ว");
         }
+        // ช่องฝั่งผู้ขอเดินเองไม่ต้องปล่อย — นับเฉพาะผู้ลงนามที่รอด่านตรวจจริง
         boolean anyoneToAsk = envelope.getSteps().stream()
-                .anyMatch(step -> !"applicant".equalsIgnoreCase(step.getSlotKey())
+                .anyMatch(step -> !SignatureAnchorRegistry.isApplicantSide(envelope.getModule(),
+                        envelope.getDocumentType(), step.getSlotKey())
                         && step.getStatus() == SignatureStepStatus.WAITING);
         if (!anyoneToAsk) {
             return Result.failed("ยังไม่มีผู้ลงนามลำดับถัดไปให้ส่งต่อ กรุณาเลือกผู้ลงนามก่อน");
@@ -2107,7 +2108,9 @@ public class SignatureWorkflowService {
                 revivableEnvelope,
                 applicantMayWithdraw,
                 SignatureAnchorRegistry.reviewerSignedSlots(module, documentType),
-                SignatureAnchorRegistry.signerNameFields(module, documentType));
+                SignatureAnchorRegistry.signerNameFields(module, documentType),
+                SignatureAnchorRegistry.applicantSideSlots(module, documentType),
+                SignatureAnchorRegistry.rowSlots(module, documentType));
     }
 
     /** ผู้ลงนามหลังจับคู่กับชื่อในแบบฟอร์มแล้ว หรือเหตุที่จับคู่ไม่ได้ */
@@ -2152,6 +2155,10 @@ public class SignatureWorkflowService {
         for (SignatureSlot slot : slotsFor(module, documentType)) {
             if ("applicant".equalsIgnoreCase(slot.slotKey()) || !nameFields.contains(slot.anchorPlaceholder())
                     || SignatureAnchorRegistry.isSignedByReviewer(module, documentType, slot.slotKey())) {
+                continue;
+            }
+            // แถวบรรณกิจเพิ่มเติมที่ไม่อยู่ในเอกสาร (ลบแถวไปแล้วแต่ชื่อยังค้างในร่าง) — ไม่ใช่ผู้ลงนาม
+            if (!SignatureAnchorRegistry.slotInDocument(module, documentType, slot.slotKey(), data)) {
                 continue;
             }
             String name = normalizeName(data.get(slot.anchorPlaceholder()));

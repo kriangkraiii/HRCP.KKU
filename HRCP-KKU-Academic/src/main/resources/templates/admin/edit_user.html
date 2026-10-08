@@ -86,10 +86,9 @@
 								<!--/* ตำแหน่งที่พิมพ์ใต้ชื่อในเอกสาร — ตัวค้นหาชื่อผู้ลงนาม (person_picker.js) เติมช่องตำแหน่งจากค่านี้ */-->
 								<div class="row mb-3 mt-1">
 									<div class="col-md-6">
-										<label class="form-label fw-bold">ตำแหน่งที่พิมพ์ในเอกสาร</label>
+										<label class="form-label fw-bold">ตำแหน่งที่พิมพ์ในเอกสาร<span th:replace="~{academic/_info_tip :: tip('เติมให้อัตโนมัติเมื่อเลือกคนนี้เป็นผู้ลงนามในเอกสาร')}"></span></label>
 										<input type="text" name="positionTitle" class="form-control" maxlength="255"
 											placeholder="เช่น คณบดีวิทยาลัยการคอมพิวเตอร์" th:value="${editUser.positionTitle}">
-										<div class="form-text">เติมให้อัตโนมัติเมื่อเลือกคนนี้เป็นผู้ลงนามในเอกสาร</div>
 									</div>
 									<div class="col-md-6">
 										<label class="form-label fw-bold">หน่วยงาน / สังกัด</label>
@@ -163,11 +162,8 @@
 												data-fallback="/img/profile_img/default.png">
 										</div>
 										<div class="flex-grow-1 text-center text-sm-start">
-											<label for="profileImageInput" class="form-label fw-bold mb-1">เลือกไฟล์รูปภาพใหม่</label>
+											<label for="profileImageInput" class="form-label fw-bold mb-1">เลือกไฟล์รูปภาพใหม่<span th:replace="~{academic/_info_tip :: tip('ไม่บังคับ JPG, PNG, GIF หรือ WEBP ไม่เกิน 5 MB')}"></span></label>
 											<input type="file" name="img" class="form-control" accept="image/jpeg,image/png,image/gif,image/webp" id="profileImageInput">
-											<div class="form-text text-muted mt-1">
-												<i class="fas fa-info-circle me-1"></i>ไม่บังคับ JPG, PNG, GIF หรือ WEBP ไม่เกิน 5 MB
-											</div>
 										</div>
 									</div>
 								</div>

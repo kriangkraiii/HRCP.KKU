@@ -526,7 +526,9 @@
                                                 <span th:if="${st.status.name() == 'ACTIVE'}" class="text-primary text-nowrap">
                                                     <i class="fas fa-clock"></i> ถึงคิว
                                                 </span>
-                                                <span th:if="${st.status.name() == 'WAITING'}" class="text-muted text-nowrap">รอคิว</span>
+                                                <span th:if="${st.status.name() == 'WAITING' and env.isSignedWithApplicant(st)}" class="text-primary text-nowrap"
+                                                      th:text="'ลงนามพร้อมข้อ ' + ${env.applicantStepOrder()}">ลงนามพร้อมข้อ 1</span>
+                                                <span th:if="${st.status.name() == 'WAITING' and !env.isSignedWithApplicant(st)}" class="text-muted text-nowrap">รอคิว</span>
                                             </li>
                                         </ol>
                                     </div>
@@ -627,7 +629,9 @@
                                                     <span th:if="${st.status.name() == 'ACTIVE'}" class="badge bg-primary-subtle text-primary py-0 px-1 font-monospace u-fs-10px">
                                                         <i class="fas fa-clock"></i> ถึงคิวเซ็น
                                                     </span>
-                                                    <span th:if="${st.status.name() == 'WAITING'}" class="badge bg-light text-muted border py-0 px-1 font-monospace u-fs-10px">
+                                                    <span th:if="${st.status.name() == 'WAITING' and env.isSignedWithApplicant(st)}" class="badge bg-primary-subtle text-primary py-0 px-1 font-monospace u-fs-10px"
+                                                          th:text="'ลงนามพร้อมข้อ ' + ${env.applicantStepOrder()}">ลงนามพร้อมข้อ 1</span>
+                                                    <span th:if="${st.status.name() == 'WAITING' and !env.isSignedWithApplicant(st)}" class="badge bg-light text-muted border py-0 px-1 font-monospace u-fs-10px">
                                                         รอคิว
                                                     </span>
                                                 </div>

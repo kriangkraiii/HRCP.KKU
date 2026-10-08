@@ -100,9 +100,8 @@
                                 <input type="text" name="birth_date" class="form-control" placeholder="เช่น ๑ มกราคม พ.ศ. ๒๕๓๐">
                             </div>
                             <div class="col-md-3">
-                                <label class="form-label">๑.๒ อายุ (ปี)</label>
+                                <label class="form-label">๑.๒ อายุ (ปี)<span th:replace="~{academic/_info_tip :: tip('คำนวณจากวันเกิด แก้ไขได้')}"></span></label>
                                 <input type="text" name="age" class="form-control" data-age-of="birth_date">
-                                <div class="form-text">คำนวณจากวันเกิด แก้ไขได้</div>
                             </div>
                         </div>
 

@@ -8,8 +8,10 @@
  *     คนที่เลือกคือผู้ลงนามตำแหน่งนั้น (SignatureWorkflowService.signersNamedInForm)
  *   - เติมช่องตำแหน่ง (data-position-field) จากตำแหน่งที่บันทึกไว้ในบัญชี — ยังแก้เองได้
  *   - data-allow-external: เพิ่มผู้ลงนามจากนอก มข. ด้วยอีเมลได้ (ExternalSignerService)
- *   - data-picker-hint: ข้อความใต้ช่อง แทนข้อความตั้งต้น (เช่น ช่องที่คนที่เลือกไปลงนามในเอกสารฉบับอื่น)
+ *   - data-picker-hint: คำอธิบายของช่อง แทนข้อความตั้งต้น (เช่น ช่องที่คนที่เลือกไปลงนามในเอกสารฉบับอื่น)
+ *     แสดงเป็นปุ่ม (i) ข้างป้ายกำกับ (info_tip.js) — บรรทัดใต้ช่องเหลือไว้แค่คำเตือนและปุ่มเพิ่มผู้ลงนามภายนอก
  *   - data-distinct-group: ช่องในกลุ่มเดียวกันเลือกคนซ้ำกันไม่ได้ (เช่น กรรมการสามคน)
+ *   - ช่องที่สร้างทีหลัง (แถวที่เพิ่มเอง) เรียก window.PersonPicker.attach(input)
  *
  * ดู docs/PLAN-signer-picker.md
  */
@@ -30,6 +32,19 @@
         if (className) node.className = className;
         if (text != null) node.textContent = text;
         return node;
+    }
+
+    /** ป้ายกำกับของช่อง — ที่วางปุ่ม (i) คำอธิบาย */
+    function labelFor(input) {
+        if (input.id) {
+            var byFor = document.querySelector('label[for="' + input.id + '"]');
+            if (byFor) return byFor;
+        }
+        var box = input.closest('[class*="col-"], .mb-3, .form-group, td');
+        var label = box && box.querySelector('label');
+        if (label) return label;
+        var row = input.closest('.row');
+        return row ? row.querySelector('label') : null;
     }
 
     // context: ช่องไหนของเอกสารไหน (inviteContext) — เซิร์ฟเวอร์ใช้หาผู้รักษาการแทนของตำแหน่งนั้น
@@ -89,23 +104,42 @@
             this.input.setAttribute('placeholder', 'พิมพ์เพื่อค้นหาชื่อในระบบ...');
         }
 
-        this.menu = el('div', 'dropdown-menu w-100 shadow-sm person-picker-menu');
-        this.menu.style.maxHeight = '320px';
+        // รายการอยู่ใต้ <body> แบบ fixed: .card-academic มี transform (แอนิเมชัน/hover) ซึ่งกัก fixed ไว้ในการ์ด
+        // และทำให้การ์ดถัดไปทับรายการ — z-index เหนือ modal (1055) เผื่อช่องที่อยู่ใน modal
+        this.menu = el('div', 'dropdown-menu shadow-sm person-picker-menu');
+        this.menu.style.position = 'fixed';
+        this.menu.style.zIndex = '1070';
         this.menu.style.overflowY = 'auto';
-        wrap.appendChild(this.menu);
+        document.body.appendChild(this.menu);
+        this.reposition = function () { self.place(); };
 
-        this.hint = el('div', 'form-text person-picker-hint', this.hintText + ' ');
+        // บรรทัดใต้ช่อง: ข้อความตัวแรกเป็นคำเตือน (ว่างเมื่อไม่มีอะไรผิด) ตามด้วยปุ่มเพิ่มผู้ลงนามภายนอก
+        this.hint = el('div', 'form-text person-picker-hint');
+        this.hint.appendChild(document.createTextNode('')); // mark() เขียนคำเตือนลงโหนดนี้
         wrap.appendChild(this.hint);
+        // คำอธิบายของช่องเป็นปุ่ม (i) ข้างป้ายกำกับ — ไม่มีป้ายกำกับก็วางไว้ในบรรทัดใต้ช่อง
+        this.tip = window.InfoTip ? window.InfoTip.create(this.hintText) : null;
+        if (this.tip) {
+            var label = labelFor(this.input);
+            if (label) {
+                label.appendChild(this.tip);
+            } else {
+                this.hint.appendChild(this.tip);
+                this.tipInHint = true;
+            }
+        }
         if (this.allowExternal) {
-            var add = el('button', 'btn btn-link btn-sm p-0 ms-1 align-baseline', '+ เพิ่มผู้ลงนามภายนอก');
+            var add = el('button', 'btn btn-link btn-sm p-0 align-baseline', '+ เพิ่มผู้ลงนามภายนอก');
             add.type = 'button';
             add.addEventListener('click', function () { self.openExternal(); });
             this.hint.appendChild(add);
         }
 
         if (this.input.disabled || this.input.readOnly) {
-            return; // เอกสารล็อก — แค่แสดงค่า
+            this.hint.hidden = true; // เอกสารล็อก — แค่แสดงค่า ไม่มีปุ่มเพิ่มผู้ลงนามให้กด
+            return;
         }
+        this.hint.hidden = !this.allowExternal && !this.tipInHint;
         this.input.addEventListener('focus', function () { self.query(); });
         // เลือกแล้วช่องยังโฟกัสอยู่ คลิกซ้ำจึงไม่เกิด focus — เปิดรายการให้เลือกคนใหม่
         this.input.addEventListener('click', function () {
@@ -157,8 +191,11 @@
         if (!ok) {
             this.hint.firstChild.textContent = message || 'ชื่อนี้ยังไม่ได้เลือกจากรายชื่อในระบบ — กรุณาค้นหาแล้วเลือกใหม่ ';
         } else {
-            this.hint.firstChild.textContent = this.hintText + ' ';
+            this.hint.firstChild.textContent = '';
         }
+        // ช่องที่ถูกล็อก (เช่น เอกสารที่ 9 ผูกกับผู้ขอ) ไม่มีปุ่มเพิ่มผู้ลงนามให้กด
+        this.hint.hidden = this.input.readOnly || this.input.disabled
+                || (ok && !this.allowExternal && !this.tipInHint);
     };
 
     Picker.prototype.query = function () {
@@ -249,12 +286,36 @@
             this.menu.appendChild(add);
         }
         this.menu.classList.add('show');
+        this.place();
+        window.addEventListener('scroll', this.reposition, true);
+        window.addEventListener('resize', this.reposition);
+    };
+
+    /** วางรายการใต้ช่อง — ที่ว่างด้านล่างไม่พอก็เปิดขึ้นด้านบนแทน */
+    Picker.prototype.place = function () {
+        var rect = this.input.getBoundingClientRect();
+        var below = window.innerHeight - rect.bottom - 8;
+        var above = rect.top - 8;
+        var up = below < 200 && above > below;
+        var s = this.menu.style;
+        s.left = rect.left + 'px';
+        s.width = rect.width + 'px';
+        s.maxHeight = Math.max(120, Math.min(320, up ? above : below)) + 'px';
+        if (up) {
+            s.top = 'auto';
+            s.bottom = (window.innerHeight - rect.top + 2) + 'px';
+        } else {
+            s.top = (rect.bottom + 2) + 'px';
+            s.bottom = 'auto';
+        }
     };
 
     Picker.prototype.close = function () {
         clearTimeout(this.timer);
         this.seq++;
         this.menu.classList.remove('show');
+        window.removeEventListener('scroll', this.reposition, true);
+        window.removeEventListener('resize', this.reposition);
     };
 
     Picker.prototype.choose = function (person) {
@@ -410,10 +471,25 @@
         pickers.push(new Picker(input));
     });
     // ค่าที่บันทึกไว้ถูกเติมตอน DOMContentLoaded/โหลดเสร็จ — อ่านหลังจากนั้น
-    function syncAll() { pickers.forEach(function (p) { p.sync(); }); }
-    if (document.readyState === 'complete') {
+    var loaded = document.readyState === 'complete';
+    function syncAll() { loaded = true; pickers.forEach(function (p) { p.sync(); }); }
+    if (loaded) {
         syncAll();
     } else {
         window.addEventListener('load', syncAll);
     }
+
+    window.PersonPicker = {
+        /**
+         * ผูกตัวค้นหาชื่อกับช่องที่สร้างหลังโหลดหน้า — ตั้งค่า name และ value (ถ้ามี) ก่อนเรียก
+         * ช่องซ่อนรหัสบัญชีถูกสร้างต่อท้ายช่องนี้ ("<name>__signer")
+         */
+        attach: function (input) {
+            if (!input || input.__personPicker) return input && input.__personPicker;
+            var picker = new Picker(input);
+            pickers.push(picker);
+            if (loaded) picker.sync();
+            return picker;
+        }
+    };
 })();

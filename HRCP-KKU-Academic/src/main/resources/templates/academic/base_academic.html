@@ -246,7 +246,7 @@
         </script>
         <script src="/js/auto_draft.js?v=4.1"></script>
         <!--/* ตรวจช่องที่ยังไม่ได้กรอก แล้วบันทึกเอกสารให้ก่อนส่งไปลงนาม */-->
-        <script src="/js/doc_required_validate.js?v=1.1"></script>
+        <script src="/js/doc_required_validate.js?v=1.2"></script>
         <script src="/js/sign_presave.js?v=1.4"></script>
         <!--/* พาผู้ใช้จาก "บันทึกแล้ว" ไปยังแผงลงนามท้ายหน้า */-->
         <script src="/js/doc_step_guide.js?v=1.0"></script>
@@ -961,7 +961,7 @@
     <script src="/vendor/bootstrap/bootstrap.bundle.min.js"></script>
     <script src="/js/data_styles.js?v=1.0"></script>
     <!--/* ปุ่ม (i) ของ academic/_info_tip.html ต้องมาหลัง bootstrap เพราะใช้ bootstrap.Popover */-->
-    <script src="/js/info_tip.js?v=1.0"></script>
+    <script src="/js/info_tip.js?v=1.1"></script>
     <script>
         // Sidebar toggle (Responsive: Mobile Drawer + Desktop Collapse)
         const sToggle = document.getElementById('sidebarToggle');
@@ -1121,10 +1121,10 @@
         });
     </script>
 <!--/* ตัวค้นหาชื่อผู้ลงนาม — ต้องรันก่อน DOMContentLoaded (สร้างช่องซ่อนรหัสบัญชีให้สคริปต์ของหน้าเติมค่าที่บันทึกไว้) */-->
-<script src="/js/person_picker.js?v=4"></script>
+<script src="/js/person_picker.js?v=6"></script>
 <script src="/js/select_to_datalist.js?v=4"></script>
 <!--/* โหมด dev เท่านั้น: ปุ่มกรอกข้อมูลทดสอบในฟอร์มเอกสาร (GlobalModelAdvice.devFormFill) */-->
-<script th:if="${devFormFill}" src="/js/dev_form_filler.js?v=2"></script>
+<script th:if="${devFormFill}" src="/js/dev_form_filler.js?v=3"></script>
 <script src="/js/thai_date_autofill.js"></script>
 <script src="/js/theme-switcher.js"></script>
 
