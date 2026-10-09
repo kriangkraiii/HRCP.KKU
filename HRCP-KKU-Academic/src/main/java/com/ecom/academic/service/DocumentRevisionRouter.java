@@ -56,6 +56,8 @@ public class DocumentRevisionRouter {
                 academicRequestService.openDocumentForRevision(requestId, documentType, note);
             } else {
                 positionRequestService.openDocumentForRevision(requestId, documentType, note);
+                // เหมือนเจ้าหน้าที่กดส่งกลับ (PositionAdminController) — คำร้องเป็น "ส่งแก้ไข" ลูกอยู่ที่ผู้ยื่น
+                positionRequestService.markRevisionRequested(requestId, documentType, null, note);
             }
             return true;
         } catch (Exception e) {

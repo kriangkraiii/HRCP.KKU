@@ -1455,10 +1455,14 @@ public class SignatureWorkflowService {
      */
     @Transactional
     public Result notApproved(Long stepId, UserDtls actingUser, String comment, ActorContext actor) {
+        // คำตอบเชิงลบของช่องนี้ ("ไม่เห็นควร" ในเฟส 1, "ไม่ครบถ้วน"/"ไม่เข้าข่าย" ในเอกสารที่ 1 เฟส 2)
+        SignatureAnchorRegistry.SignerChoice choice = signerChoiceFor(stepId);
+        String answer = choice != null && choice.alertValue() != null
+                ? choice.alertValue() : SignatureAnchorRegistry.NOT_APPROVED;
         return stopCirculation(stepId, actingUser, comment, actor,
-                "กรุณาระบุความเห็นเมื่อเลือกไม่เห็นควร",
-                SignatureAnchorRegistry.NOT_APPROVED,
-                "พิจารณาแล้วไม่เห็นควร: ");
+                "กรุณาระบุความเห็นเมื่อเลือก\"" + answer + "\"",
+                answer,
+                "พิจารณาแล้ว" + answer + ": ");
     }
 
     /**

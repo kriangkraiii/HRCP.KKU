@@ -259,7 +259,9 @@ public class SigningController {
         // ช่องลงนามบางช่องขอคำตอบด้วย ไม่ใช่แค่ลายเซ็น (เช่น ผลการตรวจสอบคุณสมบัติ)
         SignatureAnchorRegistry.SignerChoice choice = workflow.signerChoiceFor(stepId);
         model.addAttribute("signerChoice", choice);
-        model.addAttribute("notApprovedValue", SignatureAnchorRegistry.NOT_APPROVED);
+        // คำตอบที่หยุดการเวียน — "ไม่เห็นควร" หรือคำตอบเชิงลบของคำถามในช่องนี้ เช่น "ไม่ครบถ้วน"
+        model.addAttribute("notApprovedValue", choice != null && choice.alertValue() != null
+                ? choice.alertValue() : SignatureAnchorRegistry.NOT_APPROVED);
 
         // ช่องของผู้ยื่นเองไม่มีปุ่มปฏิเสธ: "ปฏิเสธ" คือการตีเอกสารกลับไปหาเจ้าของ แต่ผู้ยื่นคือ
         // เจ้าของเอง สิ่งที่ผู้ยื่นต้องการจริงคือกลับไปแก้ ซึ่งมีปุ่มของมันเองด้านล่าง
@@ -268,7 +270,7 @@ public class SigningController {
         boolean reviewerSlot = SignatureAnchorRegistry.isSignedByReviewer(
                 envelope.getModule(), envelope.getDocumentType(), step.getSlotKey());
         // ช่องที่มีตัวเลือก "ไม่เห็นควร" ไม่มีปุ่มปฏิเสธซ้ำ — สองทางนี้หยุดการเวียนเหมือนกัน
-        boolean choiceCanStop = choice != null && choice.options().contains(SignatureAnchorRegistry.NOT_APPROVED);
+        boolean choiceCanStop = choice != null && choice.alertValue() != null;
         model.addAttribute("showDeclineForm", isSigner && !applicantSlot && !reviewerSlot && !choiceCanStop);
         model.addAttribute("canApplicantWithdraw",
                 isSigner && applicantSlot && workflow.applicantWithdrawBlocker(envelope, me).isEmpty());
@@ -557,14 +559,15 @@ public class SigningController {
         // "ไม่เห็นควร" ไม่ใช่การลงนาม แต่เป็นการวินิจฉัยว่าเรื่องไม่ควรเดินต่อ จึงแยกทางก่อน
         // ด่านใบรับรอง: การบังคับให้คนติดตั้ง Digital ID ก่อนถึงจะปฏิเสธเอกสารได้ ทำให้คนที่
         // ยังไม่มีใบรับรองค้างอยู่ในคิวโดยบอกใครไม่ได้ว่าไม่เห็นด้วย
-        if (SignatureAnchorRegistry.NOT_APPROVED.equals(signerChoice)) {
+        SignatureAnchorRegistry.SignerChoice stepChoice = workflow.signerChoiceFor(stepId);
+        if (stepChoice != null && stepChoice.stops(signerChoice)) {
             Result outcome = workflow.notApproved(stepId, me, signerComment, actorContext());
             if (!outcome.ok()) {
                 redirectAttributes.addFlashAttribute("errorMsg", outcome.error());
                 return "redirect:/esign/sign/" + stepId;
             }
             redirectAttributes.addFlashAttribute("succMsg",
-                    "บันทึกผลการพิจารณา \"ไม่เห็นควร\" แล้ว — หยุดการเวียนและส่งเอกสารกลับไปแก้ไข");
+                    "บันทึกผลการพิจารณา \"" + signerChoice + "\" แล้ว — หยุดการเวียนและส่งเอกสารกลับไปแก้ไข");
             return "redirect:/esign/inbox";
         }
 

@@ -324,6 +324,62 @@ class ConsiderationDecisionTest extends AbstractFlowTest {
 
     // =================================================================
     @Nested
+    @DisplayName("ไม่ครบถ้วน — ผลตรวจสอบคุณสมบัติของหัวหน้าสาขาในแบบ ก.พ.ว. มข. 03 (เฟส 2)")
+    class QualificationIncomplete {
+
+        @Autowired
+        private com.ecom.academic.repository.PositionRequestRepository positionRequests;
+
+        private PositionRequest request;
+
+        private SignatureStep headStepOnDoc1() {
+            request = data.positionRequest(applicant, PositionRequestStatus.DOCUMENT_RECEIVED, null);
+            data.positionDocument(request, 1, FROZEN);
+            SignatureRequest envelope = workflow.createEnvelope(SignatureModule.POSITION,
+                    request.getId(), 1, "แบบ ก.พ.ว. มข. 03", FROZEN,
+                    List.of(new SignerAssignment("head", head.getId())),
+                    null, applicant, ActorContext.none()).request();
+            envelope = workflow.startCirculation(envelope.getId(), data.admin(), ActorContext.none())
+                    .request();
+            return stepFor(envelope, "head");
+        }
+
+        @Test
+        @DisplayName("คำตอบเชิงลบของทุกคำถามหยุดการเวียน คำตอบเชิงบวกไม่หยุด")
+        void onlyTheNegativeAnswerStops() {
+            var choice = workflow.signerChoiceFor(headStepOnDoc1().getId());
+
+            assertThat(choice.stops("ไม่ครบถ้วน")).isTrue();
+            assertThat(choice.stops("ครบถ้วน")).isFalse();
+            assertThat(choice.stops(null)).isFalse();
+        }
+
+        @Test
+        @DisplayName("หยุดการเวียน บันทึกว่า \"ไม่ครบถ้วน\" เปิดเอกสารให้ผู้ยื่นแก้ และคำร้องเป็นส่งแก้ไข")
+        void theDocumentGoesBackToTheApplicant() {
+            SignatureStep step = headStepOnDoc1();
+
+            Result result = workflow.notApproved(step.getId(), head, "ขาดหลักฐานการสอน",
+                    ActorContext.none());
+
+            assertThat(result.ok()).isTrue();
+            assertThat(result.request().getStatus()).isEqualTo(SignatureRequestStatus.DECLINED);
+            SignatureStep after = reload(step);
+            assertThat(after.getStatus()).isEqualTo(SignatureStepStatus.DECLINED);
+            assertThat(after.getSignerChoiceValue())
+                    .as("บันทึกคำตอบที่เลือกจริง ไม่ใช่ \"ไม่เห็นควร\" ของเฟส 1")
+                    .isEqualTo("ไม่ครบถ้วน");
+            PositionDocument doc = positionDocuments.findByRequestIdAndDocType(request.getId(), 1).get(0);
+            assertThat(doc.getRevisionRequestedAt()).isNotNull();
+            assertThat(doc.getRevisionNote()).isEqualTo("ขาดหลักฐานการสอน");
+            assertThat(positionRequests.findById(request.getId()).orElseThrow().getCurrentStatus())
+                    .as("เหมือนเจ้าหน้าที่กดส่งกลับ")
+                    .isEqualTo(PositionRequestStatus.REVISION_REQUESTED);
+        }
+    }
+
+    // =================================================================
+    @Nested
     @DisplayName("ความเห็นที่พิมพ์ลงเอกสาร (คำสั่งแต่งตั้งคณะอนุกรรมการ)")
     class MarksOnTheAppointmentOrder {
 

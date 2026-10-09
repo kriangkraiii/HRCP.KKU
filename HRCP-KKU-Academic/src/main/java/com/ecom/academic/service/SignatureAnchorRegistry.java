@@ -53,6 +53,14 @@ public class SignatureAnchorRegistry {
             String alertValue,
             boolean renderAsTick) {
 
+        /**
+         * คำตอบนี้หยุดการเวียนและส่งเอกสารกลับไปแก้หรือไม่ — คำตอบเชิงลบของทุกคำถาม
+         * ("ไม่เห็นควร", "ไม่ครบถ้วน", "ไม่เข้าข่าย") คนที่ลงนามถัดไปจะได้ไม่ต้องเซ็นต่อบนผลที่ไม่ผ่าน
+         */
+        public boolean stops(String answer) {
+            return alertValue != null && alertValue.equals(answer);
+        }
+
         /** คำถามที่คำตอบถูกพิมพ์ลงเอกสารเป็นข้อความตรง ๆ เช่น "ครบถ้วน" ในช่องเติมคำ */
         public SignerChoice(String fieldKey, String question, List<String> options, String alertValue) {
             this(fieldKey, question, options, alertValue, false);

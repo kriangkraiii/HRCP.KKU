@@ -480,8 +480,7 @@
                         <!--/* ข้อความของปุ่มตอนเลือกไม่เห็นควรอยู่ใน data- ไม่ใช่ในสคริปต์ เพื่อให้
                              หน้าที่ไม่ได้แสดงปุ่มนี้ไม่มีข้อความปุ่มติดไปกับ HTML */-->
                         <button type="submit" class="btn btn-academic w-100" id="signSubmitBtn"
-                                data-stop-label="ยืนยันไม่เห็นควร และส่งกลับไปแก้ไข"
-                                th:attr="data-stop-confirm='ยืนยันผลการพิจารณา &quot;' + ${notApprovedValue} + '&quot;? การเวียนลงนามฉบับนี้จะหยุดและเอกสารถูกส่งกลับไปแก้ไข'">
+                                th:attr="data-stop-label='ยืนยัน' + ${notApprovedValue} + ' และส่งกลับไปแก้ไข',data-stop-confirm='ยืนยันผลการพิจารณา &quot;' + ${notApprovedValue} + '&quot;? การเวียนลงนามฉบับนี้จะหยุดและเอกสารถูกส่งกลับไปแก้ไข'">
                             <i class="fas fa-signature"></i> ลงนาม
                         </button>
 
